@@ -2,6 +2,7 @@ import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
+import {parseWKBHeader, readWKBLineStringXY} from '../prepare/wkbParser';
 import type {ResolvedGeometryColumn} from '../prepare/types';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
@@ -206,6 +207,15 @@ const ORDER_PATTERNS = [
   'position',
   'sort',
 ];
+const TIMESTAMP_PATTERNS = [
+  'timestamp',
+  'timestamps',
+  'time',
+  't',
+  'elapsed',
+  'seconds',
+  'ms',
+];
 
 function findColumnByPatterns(
   fieldNames: string[],
@@ -338,8 +348,9 @@ function tryAggregateWaypointsToLineStrings(
 
   // Build aggregated table with one row per path (first row's non-geom values)
   const columns: Record<string, arrow.Vector> = {};
+  const timestampCol = findColumnByPatterns(fieldNames, TIMESTAMP_PATTERNS);
   const excludeCols = new Set(
-    [coords.lat, coords.lon, orderCol].filter(Boolean),
+    [coords.lat, coords.lon, orderCol, timestampCol].filter(Boolean),
   );
 
   for (const field of table.schema.fields) {
@@ -355,8 +366,71 @@ function tryAggregateWaypointsToLineStrings(
   }
   columns['__geom'] = geometryVector;
 
+  // Build timestamps list column if a timestamp column exists.
+  // Must be a proper Arrow List<Float64> vector for GeoArrowTripsLayer.
+  if (timestampCol) {
+    const tsVector = table.getChild(timestampCol)!;
+    const tsOffsets = new Int32Array(numPaths + 1);
+    let tsTotalValues = 0;
+    for (let g = 0; g < numPaths; g++) {
+      tsOffsets[g] = tsTotalValues;
+      tsTotalValues += groups.get(groupOrder[g]!)!.indices.length;
+    }
+    tsOffsets[numPaths] = tsTotalValues;
+
+    const tsFlat = new Float64Array(tsTotalValues);
+    let tsWriteIdx = 0;
+    for (const key of groupOrder) {
+      for (const rowIdx of groups.get(key)!.indices) {
+        tsFlat[tsWriteIdx++] = Number(tsVector.get(rowIdx)) || 0;
+      }
+    }
+
+    const tsValueField = new arrow.Field('', new arrow.Float64(), true);
+    const tsListType = new arrow.List(tsValueField);
+    const tsValuesData = arrow.makeData({
+      type: new arrow.Float64(),
+      length: tsTotalValues,
+      data: tsFlat,
+    });
+    const tsListData = arrow.makeData({
+      type: tsListType,
+      length: numPaths,
+      valueOffsets: tsOffsets,
+      child: tsValuesData,
+    });
+    const tsListVector = new arrow.Vector([tsListData]);
+    columns[timestampCol] = tsListVector;
+    if (timestampCol !== 'timestamps') {
+      columns['timestamps'] = tsListVector;
+    }
+  }
+
   const aggregatedTable = new arrow.Table(columns);
   return {table: aggregatedTable, geometryVector};
+}
+
+function decodeWkbToCoordArray(raw: unknown): number[][] | null {
+  if (raw == null) return null;
+  let buf: ArrayBuffer;
+  if (ArrayBuffer.isView(raw)) {
+    const copy = new Uint8Array((raw as Uint8Array).byteLength);
+    copy.set(
+      new Uint8Array(
+        (raw as Uint8Array).buffer,
+        (raw as Uint8Array).byteOffset,
+        (raw as Uint8Array).byteLength,
+      ),
+    );
+    buf = copy.buffer;
+  } else {
+    buf = raw as ArrayBuffer;
+  }
+  const hdr = parseWKBHeader(buf);
+  if (!hdr) return null;
+  const coords = readWKBLineStringXY(buf, hdr);
+  if (!coords) return null;
+  return coords;
 }
 
 function resolveGeoArrowBindings(options: {
@@ -572,9 +646,35 @@ export function createDeckJsonConfiguration(
       }
 
       if (compatibility.representation === 'row') {
-        const table = prepared.table;
+        let table = prepared.table;
         // Determine which column is the H3 index (needs BigInt→hex conversion)
         const hexColumnName = extensionProps._sqlroomsBinding?.hexagonColumn;
+        const timestampColumnName =
+          extensionProps._sqlroomsBinding?.timestampColumn;
+
+        // For TripsLayer/PathLayer: auto-aggregate waypoints if needed
+        const isTripsOrPath =
+          layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer';
+        let aggregatedData: {
+          table: arrow.Table;
+          geometryVector: arrow.Vector;
+        } | null = null;
+
+        if (isTripsOrPath) {
+          // Check if data needs aggregation (per-waypoint rows)
+          const fieldNames = table.schema.fields.map((f) => f.name);
+          const hasGroupCol = findColumnByPatterns(
+            fieldNames,
+            GROUP_ID_PATTERNS,
+          );
+          const hasLatLon = findLatLonColumns(table);
+          if (hasGroupCol && hasLatLon) {
+            aggregatedData = tryAggregateWaypointsToLineStrings(table);
+            if (aggregatedData) {
+              table = aggregatedData.table;
+            }
+          }
+        }
 
         const rows = Array.from({length: table.numRows}, (_, i) => {
           const row: Record<string, unknown> = {};
@@ -589,6 +689,79 @@ export function createDeckJsonConfiguration(
           return row;
         });
 
+        // For TripsLayer: build path and timestamps for row-based rendering
+        if (isTripsOrPath) {
+          const tsColName = timestampColumnName ?? 'timestamps';
+
+          if (aggregatedData) {
+            // Data was auto-aggregated from waypoints
+            const geomVector = aggregatedData.geometryVector;
+            const tsVector =
+              table.getChild(tsColName) ?? table.getChild('timestamp');
+            for (let i = 0; i < rows.length; i++) {
+              const lineString = geomVector.get(i);
+              if (lineString) {
+                const path: number[][] = [];
+                for (let j = 0; j < lineString.length; j++) {
+                  const pt = lineString.get(j);
+                  if (pt) path.push([pt.get(0), pt.get(1)]);
+                }
+                rows[i]!.path = path;
+              }
+              if (tsVector) {
+                const tsList = tsVector.get(i);
+                if (tsList) {
+                  const timestamps: number[] = [];
+                  for (let j = 0; j < tsList.length; j++) {
+                    timestamps.push(Number(tsList.get(j)) || 0);
+                  }
+                  rows[i]!.timestamps = timestamps;
+                }
+              }
+            }
+          } else {
+            // Data already aggregated by SQL — decode WKB geometry and list columns
+            const geomColName =
+              extensionProps._sqlroomsBinding?.geometryColumn ?? 'geom';
+            const geomVector = table.getChild(geomColName as string);
+            const tsVector =
+              table.getChild(tsColName) ?? table.getChild('timestamp');
+
+            if (geomVector) {
+              for (let i = 0; i < rows.length; i++) {
+                const raw = geomVector.get(i);
+                if (raw != null) {
+                  // Decode WKB LineString to coordinate array
+                  const path = decodeWkbToCoordArray(raw);
+                  if (path) rows[i]!.path = path;
+                }
+                if (tsVector) {
+                  const tsList = tsVector.get(i);
+                  if (
+                    tsList &&
+                    typeof tsList === 'object' &&
+                    'length' in tsList
+                  ) {
+                    const timestamps: number[] = [];
+                    for (
+                      let j = 0;
+                      j < (tsList as {length: number}).length;
+                      j++
+                    ) {
+                      timestamps.push(
+                        Number(
+                          (tsList as {get: (i: number) => unknown}).get(j),
+                        ) || 0,
+                      );
+                    }
+                    rows[i]!.timestamps = timestamps;
+                  }
+                }
+              }
+            }
+          }
+        }
+
         const baseProps = applyColorScale({
           props: strippedProps,
           table,
@@ -601,6 +774,40 @@ export function createDeckJsonConfiguration(
         if (hexColumnName && !resolvedProps.getHexagon) {
           resolvedProps.getHexagon = (d: Record<string, unknown>) =>
             d[hexColumnName];
+        }
+        // Resolve trips accessors
+        if (isTripsOrPath) {
+          if (!resolvedProps.getPath) {
+            resolvedProps.getPath = (d: Record<string, unknown>) =>
+              d.path as number[][];
+          }
+          if (!resolvedProps.getTimestamps) {
+            resolvedProps.getTimestamps = (d: Record<string, unknown>) =>
+              d.timestamps as number[];
+          }
+          // Compute max timestamp and store as metadata for animation
+          let maxTs = 0;
+          for (const row of rows) {
+            const ts = row.timestamps as number[] | undefined;
+            if (ts && ts.length > 0) {
+              const last = ts[ts.length - 1]!;
+              if (last > maxTs) maxTs = last;
+            }
+          }
+          if (maxTs > 0) {
+            // Tag for animation — DeckJsonMap reads this to drive currentTime
+            (resolvedProps as Record<string, unknown>)._tripsMaxTimestamp =
+              maxTs;
+            if (!resolvedProps.trailLength) {
+              resolvedProps.trailLength = maxTs;
+            }
+            if (
+              resolvedProps.currentTime === undefined ||
+              resolvedProps.currentTime === 0
+            ) {
+              resolvedProps.currentTime = maxTs;
+            }
+          }
         }
         for (const [key, value] of Object.entries(resolvedProps)) {
           if (

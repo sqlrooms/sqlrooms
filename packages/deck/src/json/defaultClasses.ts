@@ -6,7 +6,7 @@ import {
   OrthographicView,
 } from '@deck.gl/core';
 import {ColumnLayer, GeoJsonLayer} from '@deck.gl/layers';
-import {H3HexagonLayer} from '@deck.gl/geo-layers';
+import {H3HexagonLayer, TripsLayer} from '@deck.gl/geo-layers';
 import {
   GeoArrowArcLayer,
   GeoArrowColumnLayer,
@@ -15,7 +15,6 @@ import {
   GeoArrowPolygonLayer,
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
-  GeoArrowTripsLayer,
 } from '@geoarrow/deck.gl-layers';
 
 // Workaround for deck.gl bug #10021: the ColumnLayer's wireframe index buffer
@@ -66,7 +65,14 @@ export const DEFAULT_DECK_JSON_CLASSES = {
   GeoArrowPolygonLayer,
   GeoArrowSolidPolygonLayer,
   GeoArrowArcLayer,
-  GeoArrowTripsLayer,
+  // GeoArrowTripsLayer from @geoarrow/deck.gl-layers@0.3.2 has the same binary
+  // attribute incompatibility as the H3 wrapper: it passes timestamps as a raw
+  // Float64Array attribute but the native TripsLayer's attribute manager fails to
+  // initialize it correctly, producing "Float64Array Error: Float64Array".
+  // We use the native TripsLayer from @deck.gl/geo-layers instead, fed with
+  // row-based data via the 'row' representation.
+  GeoArrowTripsLayer: TripsLayer,
+  TripsLayer,
   H3HexagonLayer,
   GeoArrowH3HexagonLayer: H3HexagonLayer,
 };

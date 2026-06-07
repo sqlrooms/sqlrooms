@@ -251,11 +251,40 @@ export function DeckJsonMap({
     }
   }, [availableSpec, converter, specError]);
 
+  // Animation for TripsLayer — update currentTime on each frame
+  const hasTripsLayer = useMemo(() => {
+    if (!availableSpec || !Array.isArray(availableSpec.layers)) return false;
+    return availableSpec.layers.some(
+      (l: unknown) =>
+        l &&
+        typeof l === 'object' &&
+        ((l as {'@@type'?: string})['@@type'] === 'GeoArrowTripsLayer' ||
+          (l as {'@@type'?: string})['@@type'] === 'TripsLayer'),
+    );
+  }, [availableSpec]);
+
+  const [tripsTime, setTripsTime] = useState(0);
+  const tripsAnimRef = useRef<number>(0);
   useEffect(() => {
-    if (convertedDeckPropsResult.error) {
-      console.error(convertedDeckPropsResult.error);
+    if (!hasTripsLayer) return;
+    const startTime = Date.now();
+    let raf: number;
+    const tick = () => {
+      setTripsTime(Date.now() - startTime);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    tripsAnimRef.current = startTime;
+    return () => cancelAnimationFrame(raf);
+  }, [hasTripsLayer]);
+
+  const finalDeckPropsResult = convertedDeckPropsResult;
+
+  useEffect(() => {
+    if (finalDeckPropsResult.error) {
+      console.error(finalDeckPropsResult.error);
     }
-  }, [convertedDeckPropsResult.error]);
+  }, [finalDeckPropsResult.error]);
 
   useEffect(() => {
     onDatasetStatesChangeRef.current = onDatasetStatesChange;
@@ -269,22 +298,47 @@ export function DeckJsonMap({
     () => extractFallbackDeckProps(availableSpec),
     [availableSpec],
   );
-  const convertedDeckProps = (convertedDeckPropsResult.props ??
+  const convertedDeckProps = (finalDeckPropsResult.props ??
     fallbackDeckProps ??
     {}) as Record<string, unknown>;
   const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
   const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
-  const hasRenderingError = Boolean(convertedDeckPropsResult.error);
+  const hasRenderingError = Boolean(finalDeckPropsResult.error);
   const mergedLayers = hasRenderingError
     ? []
     : (deckProps?.layers ??
       (convertedDeckProps.layers as unknown[] | undefined) ??
       []);
 
+  // Animate TripsLayer by injecting currentTime from the animation clock
+  const animatedLayers = useMemo(() => {
+    if (!hasTripsLayer || !Array.isArray(mergedLayers)) return mergedLayers;
+    return mergedLayers.map((layer: unknown) => {
+      if (!layer || typeof layer !== 'object') return layer;
+      const layerObj = layer as {
+        props?: Record<string, unknown>;
+        clone?: (props: Record<string, unknown>) => unknown;
+      };
+      const maxTs = (layerObj.props as Record<string, unknown> | undefined)
+        ?._tripsMaxTimestamp as number | undefined;
+      if (maxTs && maxTs > 0 && layerObj.clone) {
+        const loopLength = maxTs;
+        const animationSpeed = 30;
+        const currentTime = (tripsTime / animationSpeed) % loopLength;
+        return layerObj.clone({
+          currentTime,
+          trailLength: loopLength * 0.4,
+        });
+      }
+      return layer;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasTripsLayer, mergedLayers, tripsTime]);
+
   const mergedDeckProps = {
     ...convertedDeckProps,
     ...extraDeckProps,
-    layers: mergedLayers,
+    layers: animatedLayers,
   };
 
   // overlayDeckProps should not contain viewState/initialViewState
