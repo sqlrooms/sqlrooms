@@ -66,6 +66,8 @@ const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
   'solid polygon',
 ]);
 
+const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -95,6 +97,12 @@ export function usesGeometryColumnSetting(layerType: unknown) {
   return (
     typeof layerType === 'string' &&
     GEOMETRY_COLUMN_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesH3ColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' && H3_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 
@@ -182,6 +190,20 @@ export function setDeckMapLayerGeometryColumn(
       },
     },
   };
+}
+
+export function setDeckMapLayerHexagonColumn(
+  config: DeckMapDashboardPanelConfig,
+  layerIndex: number,
+  hexagonColumn: string,
+): DeckMapDashboardPanelConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      hexagonColumn,
+    },
+  }));
 }
 
 export function getDeckMapLayerColorScale(

@@ -217,17 +217,35 @@ export function createDeckJsonConfiguration(
 
       if (compatibility.representation === 'row') {
         const table = prepared.table;
+        // Determine which column is the H3 index (needs BigInt→hex conversion)
+        const hexColumnName = extensionProps._sqlroomsBinding?.hexagonColumn;
+
         const rows = Array.from({length: table.numRows}, (_, i) => {
           const row: Record<string, unknown> = {};
           for (const field of table.schema.fields) {
-            row[field.name] = table.getChild(field.name)?.get(i);
+            let val = table.getChild(field.name)?.get(i);
+            // Convert BigInt H3 indices to hex strings for h3-js compatibility
+            if (field.name === hexColumnName && typeof val === 'bigint') {
+              val = val.toString(16);
+            }
+            row[field.name] = val;
           }
           return row;
         });
+
+        const baseProps = applyColorScale({
+          props: strippedProps,
+          table,
+        });
         const resolvedProps: Record<string, unknown> = {
-          ...strippedProps,
+          ...baseProps,
           data: rows,
         };
+        // Resolve hexagonColumn binding into a getHexagon accessor
+        if (hexColumnName && !resolvedProps.getHexagon) {
+          resolvedProps.getHexagon = (d: Record<string, unknown>) =>
+            d[hexColumnName];
+        }
         for (const [key, value] of Object.entries(resolvedProps)) {
           if (
             typeof value === 'string' &&

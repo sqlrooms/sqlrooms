@@ -40,10 +40,12 @@ import {
   getDeckMapLayerRecords,
   setDeckMapLayerColorScale,
   setDeckMapLayerGeometryColumn,
+  setDeckMapLayerHexagonColumn,
   setDeckMapLayerType,
   updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
   usesGeometryColumnSetting,
+  usesH3ColumnSetting,
 } from './mapLayerConfigUtils';
 
 interface MapSettingsPanelProps {
@@ -96,6 +98,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
   );
+  const showH3ColumnSetting = usesH3ColumnSetting(activeLayer?.['@@type']);
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -366,7 +369,30 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
-        {dataTable && !showGeometryColumnSetting && (
+        {dataTable && showH3ColumnSetting && (
+          <ColumnsProvider columns={dataTable.columns}>
+            <Field label="H3 column" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.hexagonColumn as string | undefined
+                }
+                onChange={(hexagonColumn) =>
+                  applyConfig(
+                    setDeckMapLayerHexagonColumn(
+                      mapConfig,
+                      activeLayerIndex,
+                      hexagonColumn,
+                    ),
+                  )
+                }
+                placeholder="Select H3 index column..."
+              />
+            </Field>
+          </ColumnsProvider>
+        )}
+
+        {dataTable && !showGeometryColumnSetting && !showH3ColumnSetting && (
           <ColumnsProvider columns={dataTable.columns}>
             <Field label="Latitude column" required>
               <LatitudeSelector
