@@ -58,6 +58,8 @@ export const DECK_MAP_COLOR_SCALE_TYPE_OPTIONS: ReadonlyArray<{
 const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
   'geoarrowpolygonlayer',
   'geoarrowsolidpolygonlayer',
+  'geoarrowpathlayer',
+  'geoarrowtripslayer',
   'geojsonlayer',
   'polygonlayer',
   'solidpolygonlayer',

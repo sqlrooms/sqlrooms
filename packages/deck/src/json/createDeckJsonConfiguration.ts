@@ -181,6 +181,184 @@ function trySynthesizeGeometryFromBinding(
   };
 }
 
+const GROUP_ID_PATTERNS = [
+  'path_id',
+  'route_id',
+  'trip_id',
+  'track_id',
+  'line_id',
+  'segment_id',
+  'id',
+  'path',
+  'route',
+  'trip',
+  'track',
+];
+const ORDER_PATTERNS = [
+  'waypoint_order',
+  'point_order',
+  'order',
+  'sequence',
+  'seq',
+  'waypoint',
+  'index',
+  'step',
+  'position',
+  'sort',
+];
+
+function findColumnByPatterns(
+  fieldNames: string[],
+  patterns: string[],
+): string | undefined {
+  const lower = fieldNames.map((n) => n.toLowerCase());
+  for (const pattern of patterns) {
+    const idx = lower.indexOf(pattern);
+    if (idx >= 0) return fieldNames[idx];
+  }
+  return undefined;
+}
+
+function findLatLonColumns(
+  table: arrow.Table,
+): {lat: string; lon: string} | null {
+  const fields = table.schema.fields.map((f) => f.name);
+  const lower = fields.map((n) => n.toLowerCase());
+  const latPatterns = ['lat', 'latitude', 'source_lat'];
+  const lonPatterns = ['lon', 'lng', 'longitude', 'source_lon'];
+  let lat: string | undefined;
+  let lon: string | undefined;
+  for (const p of latPatterns) {
+    const idx = lower.indexOf(p);
+    if (idx >= 0) {
+      lat = fields[idx];
+      break;
+    }
+  }
+  for (const p of lonPatterns) {
+    const idx = lower.indexOf(p);
+    if (idx >= 0) {
+      lon = fields[idx];
+      break;
+    }
+  }
+  if (lat && lon) return {lat, lon};
+  return null;
+}
+
+/**
+ * Auto-aggregates per-waypoint rows into LineString vectors for PathLayer.
+ * Detects group-by ID and order columns by naming patterns, groups rows,
+ * and builds a GeoArrow List<FixedSizeList<2, Float64>> linestring vector.
+ */
+function tryAggregateWaypointsToLineStrings(
+  table: arrow.Table,
+): {table: arrow.Table; geometryVector: arrow.Vector} | null {
+  const fieldNames = table.schema.fields.map((f) => f.name);
+  const groupCol = findColumnByPatterns(fieldNames, GROUP_ID_PATTERNS);
+  if (!groupCol) return null;
+
+  const coords = findLatLonColumns(table);
+  if (!coords) return null;
+
+  const orderCol = findColumnByPatterns(fieldNames, ORDER_PATTERNS);
+
+  const groupVector = table.getChild(groupCol)!;
+  const latVector = table.getChild(coords.lat)!;
+  const lonVector = table.getChild(coords.lon)!;
+  const orderVector = orderCol ? table.getChild(orderCol) : null;
+
+  // Collect rows per group
+  const groups = new Map<string, {indices: number[]}>();
+  const groupOrder: string[] = [];
+  for (let i = 0; i < table.numRows; i++) {
+    const key = String(groupVector.get(i) ?? '');
+    let group = groups.get(key);
+    if (!group) {
+      group = {indices: []};
+      groups.set(key, group);
+      groupOrder.push(key);
+    }
+    group.indices.push(i);
+  }
+
+  // Sort indices within each group by order column
+  if (orderVector) {
+    for (const group of groups.values()) {
+      group.indices.sort((a, b) => {
+        const av = Number(orderVector.get(a)) || 0;
+        const bv = Number(orderVector.get(b)) || 0;
+        return av - bv;
+      });
+    }
+  }
+
+  const numPaths = groupOrder.length;
+  const offsets = new Int32Array(numPaths + 1);
+  let totalPoints = 0;
+
+  for (let g = 0; g < numPaths; g++) {
+    offsets[g] = totalPoints;
+    totalPoints += groups.get(groupOrder[g]!)!.indices.length;
+  }
+  offsets[numPaths] = totalPoints;
+
+  const flatCoords = new Float64Array(totalPoints * 2);
+  let writeIdx = 0;
+  for (const key of groupOrder) {
+    for (const rowIdx of groups.get(key)!.indices) {
+      flatCoords[writeIdx++] = Number(lonVector.get(rowIdx)) || 0;
+      flatCoords[writeIdx++] = Number(latVector.get(rowIdx)) || 0;
+    }
+  }
+
+  // Build GeoArrow LineString vector: List<FixedSizeList<2, Float64>>
+  const coordField = new arrow.Field('xy', new arrow.Float64(), false);
+  const vertexType = new arrow.FixedSizeList(2, coordField);
+  const vertexField = new arrow.Field('', vertexType, true);
+  const lineStringType = new arrow.List(vertexField);
+
+  const floatData = arrow.makeData({
+    type: new arrow.Float64(),
+    length: totalPoints * 2,
+    data: flatCoords,
+  });
+  const vertexData = arrow.makeData({
+    type: vertexType,
+    length: totalPoints,
+    child: floatData,
+  });
+  const lineData = arrow.makeData({
+    type: lineStringType,
+    length: numPaths,
+    valueOffsets: offsets,
+    child: vertexData,
+  });
+  const geometryVector = new arrow.Vector([lineData]);
+
+  // Build aggregated table with one row per path (first row's non-geom values)
+  const columns: Record<string, arrow.Vector> = {};
+  const excludeCols = new Set(
+    [coords.lat, coords.lon, orderCol].filter(Boolean),
+  );
+
+  for (const field of table.schema.fields) {
+    if (excludeCols.has(field.name)) continue;
+    const srcVector = table.getChild(field.name)!;
+    // Take first value from each group
+    const values: unknown[] = [];
+    for (const key of groupOrder) {
+      const firstIdx = groups.get(key)!.indices[0]!;
+      values.push(srcVector.get(firstIdx));
+    }
+    columns[field.name] = arrow.vectorFromArray(values);
+  }
+  columns['__geom'] = geometryVector;
+
+  const aggregatedTable = new arrow.Table(columns);
+  return {table: aggregatedTable, geometryVector};
+}
+
 function resolveGeoArrowBindings(options: {
   layerName: string;
   compatibility: NonNullable<ReturnType<typeof getLayerCompatibility>> & {
@@ -227,6 +405,41 @@ function resolveGeoArrowBindings(options: {
             `Geometry column "${columnName}" was not found and could not be synthesized from lat/lon columns.`,
           );
         }
+      }
+
+      // Detect mismatch: synthesized points can't satisfy a LineString binding.
+      // For PathLayer, try auto-aggregating waypoint rows into linestrings.
+      if (
+        resolvedGeometry.encoding === 'geoarrow.point' &&
+        binding.prop === 'getPath'
+      ) {
+        const aggregated = tryAggregateWaypointsToLineStrings(prepared.table);
+        if (aggregated) {
+          table = aggregated.table;
+          boundProps[binding.prop] = aggregated.geometryVector;
+          continue;
+        }
+        const available = prepared.table.schema.fields
+          .map((f) => f.name)
+          .join(', ');
+        throw new Error(
+          `Layer "${layerName}" requires LineString geometry for getPath, ` +
+            `but only point coordinates were found and auto-aggregation failed. ` +
+            `The dataset sqlQuery must aggregate rows into linestrings using ST_MakeLine. ` +
+            `Available columns: ${available}.`,
+        );
+      }
+      if (
+        resolvedGeometry.encoding === 'geoarrow.point' &&
+        binding.prop === 'getPolygon'
+      ) {
+        const available = prepared.table.schema.fields
+          .map((f) => f.name)
+          .join(', ');
+        throw new Error(
+          `Layer "${layerName}" requires Polygon geometry for ${binding.prop}, ` +
+            `but only point coordinates were found. Available columns: ${available}.`,
+        );
       }
       if (!resolvedGeometry.nativeGeoArrow) {
         if (

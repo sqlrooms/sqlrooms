@@ -17,9 +17,11 @@ import type {
 } from './types';
 import {
   parseWKBHeader,
+  readWKBLineStringXY,
   readWKBPointXY,
   visitWKBMultiPolygonCoordinates,
   visitWKBPolygonCoordinates,
+  WKB_LINESTRING,
   WKB_MULTIPOLYGON,
   WKB_POINT,
   WKB_POLYGON,
@@ -396,6 +398,102 @@ const POLYGON_LAYERS = new Set([
   'GeoArrowSolidPolygonLayer',
 ]);
 
+const PATH_LAYERS = new Set(['GeoArrowPathLayer', 'GeoArrowTripsLayer']);
+
+/**
+ * Promotes WKB/WKT LineString geometries to a native GeoArrow LineString vector
+ * (List<FixedSizeList<2, Float64>>). Returns null if any geometry is not a LineString.
+ */
+function tryPromoteLineStringTable(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+): PreparedGeoArrowLayerData | null {
+  const vector = table.getChild(columnName);
+  if (!vector) return null;
+
+  const n = table.numRows;
+  const allCoords: Float64Array[] = [];
+  const offsets = new Int32Array(n + 1);
+  const isNull = new Uint8Array(n);
+  let nullCount = 0;
+  let totalPoints = 0;
+
+  for (let i = 0; i < n; i++) {
+    offsets[i] = totalPoints;
+    const raw = vector.get(i);
+    if (raw == null) {
+      isNull[i] = 1;
+      nullCount++;
+      continue;
+    }
+
+    let coords: Array<[number, number]> | null = null;
+
+    if (isWKTEncoding(encoding, raw)) {
+      const geom = parseGeometryValue(raw, encoding);
+      if (!geom) {
+        isNull[i] = 1;
+        nullCount++;
+        continue;
+      }
+      if (geom.type !== 'LineString') return null;
+      coords = (geom.coordinates as number[][]).map(
+        (c) => [c[0]!, c[1]!] as [number, number],
+      );
+    } else {
+      const buf = toArrayBuffer(raw);
+      const hdr = parseWKBHeader(buf);
+      if (!hdr) return null;
+      coords = readWKBLineStringXY(buf, hdr);
+      if (!coords) return null;
+    }
+
+    const flat = new Float64Array(coords.length * 2);
+    for (let j = 0; j < coords.length; j++) {
+      flat[j * 2] = coords[j]![0];
+      flat[j * 2 + 1] = coords[j]![1];
+    }
+    allCoords.push(flat);
+    totalPoints += coords.length;
+  }
+  offsets[n] = totalPoints;
+
+  const flatValues = new Float64Array(totalPoints * 2);
+  let writeOffset = 0;
+  for (const chunk of allCoords) {
+    flatValues.set(chunk, writeOffset);
+    writeOffset += chunk.length;
+  }
+
+  const floatData = makeData({
+    type: new Float64(),
+    length: totalPoints * 2,
+    data: flatValues,
+  });
+  const vertexData = makeData({
+    type: VERTEX_TYPE,
+    length: totalPoints,
+    child: floatData,
+  });
+  const lineStringType = new List(VERTEX_FIELD);
+  const lineData = makeData({
+    type: lineStringType,
+    length: n,
+    nullCount,
+    nullBitmap: buildNullBitmap(n, isNull, nullCount),
+    valueOffsets: offsets,
+    child: vertexData,
+  });
+
+  return buildPromotedResult(
+    table,
+    columnName,
+    new Vector([lineData]),
+    'geoarrow.linestring',
+  );
+}
+
 export const wkbGeometryDecoder: GeometryDecoder = {
   supportsGeoArrowPromotion(
     layerType: string,
@@ -433,6 +531,16 @@ export const wkbGeometryDecoder: GeometryDecoder = {
       );
     }
 
+    if (PATH_LAYERS.has(layerType)) {
+      return sampledGeometriesMatch(
+        table,
+        columnName,
+        encoding,
+        (geometryType) => geometryType === 'LineString',
+        (geometryType) => geometryType === WKB_LINESTRING,
+      );
+    }
+
     return false;
   },
 
@@ -443,6 +551,9 @@ export const wkbGeometryDecoder: GeometryDecoder = {
   ) {
     const pointResult = tryPromotePointTable(table, columnName, encoding);
     if (pointResult) return pointResult;
+
+    const lineResult = tryPromoteLineStringTable(table, columnName, encoding);
+    if (lineResult) return lineResult;
 
     const result = tryPromotePolygonTable(table, columnName, encoding);
     if (result) return result;

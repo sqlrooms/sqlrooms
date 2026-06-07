@@ -117,14 +117,22 @@ export function compileColorScale(options: {
   colorScale: ColorScaleConfig;
 }) {
   const {table, colorScale} = options;
-  const {fieldName, vector} = getColumn(table, colorScale.field);
+  const resolved = resolveFieldName(table, colorScale.field);
+  if (!resolved) {
+    // Field not found — return a no-op that yields null (uses layer default color)
+    return () => null;
+  }
+  const vector = table.getChild(resolved);
+  if (!vector) {
+    return () => null;
+  }
   const mapper = createColorScaleMapper({
     colorScale,
     values: getColumnValues(vector),
   });
 
   return (value: unknown) =>
-    mapper(getGeoArrowOrRowValue({value, fieldName, vector}));
+    mapper(getGeoArrowOrRowValue({value, fieldName: resolved, vector}));
 }
 
 export function buildColorScaleLegend(options: {
@@ -133,7 +141,10 @@ export function buildColorScaleLegend(options: {
   title?: string;
 }): ResolvedColorLegend | null {
   const {table, colorScale} = options;
-  const {vector} = getColumn(table, colorScale.field);
+  const resolved = resolveFieldName(table, colorScale.field);
+  if (!resolved) return null;
+  const vector = table.getChild(resolved);
+  if (!vector) return null;
   const values = getColumnValues(vector);
 
   if (
