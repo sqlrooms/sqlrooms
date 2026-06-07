@@ -215,6 +215,32 @@ export function createDeckJsonConfiguration(
         };
       }
 
+      if (compatibility.representation === 'row') {
+        const table = prepared.table;
+        const rows = Array.from({length: table.numRows}, (_, i) => {
+          const row: Record<string, unknown> = {};
+          for (const field of table.schema.fields) {
+            row[field.name] = table.getChild(field.name)?.get(i);
+          }
+          return row;
+        });
+        const resolvedProps: Record<string, unknown> = {
+          ...strippedProps,
+          data: rows,
+        };
+        for (const [key, value] of Object.entries(resolvedProps)) {
+          if (
+            typeof value === 'string' &&
+            value.startsWith('@@=') &&
+            key.startsWith('get')
+          ) {
+            const fieldName = value.slice(3).trim();
+            resolvedProps[key] = (d: Record<string, unknown>) => d[fieldName];
+          }
+        }
+        return resolvedProps;
+      }
+
       const {table, boundProps} = resolveGeoArrowBindings({
         layerName,
         compatibility,

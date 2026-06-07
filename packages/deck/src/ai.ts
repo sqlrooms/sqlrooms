@@ -21,10 +21,20 @@ Deck map tools:
 - create_deck_map_config validates and returns a reusable native Deck JSON map config without requiring a dashboard artifact.
 - create_dashboard_map creates or updates an interactive map panel inside a dashboard from a native Deck JSON map config.
 - Use map tools when the user asks for a map, geospatial/spatial visualization, locations, longitude/latitude data, or geometry columns.
-- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, or GeoArrowArcLayer.
+- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer.
+- LAYER SELECTION: Choose the layer type based on the geometry type in the data:
+  - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowColumnLayer
+  - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer
+  - Line data (roads, routes, paths, rivers): GeoArrowPathLayer
+  - Arc data (origin-destination pairs): GeoArrowArcLayer
+  - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Bind to dataset with _sqlroomsBinding.dataset. Set "getHexagon": "@@=h3_column_name" where h3_column_name is the column containing H3 string indices.
+  - GeoJSON files typically contain polygon or multipolygon features (boundaries, buildings, parcels); use GeoArrowPolygonLayer for these.
+- ELEVATION: For extruded layers, getElevation with @@function "scale" passes the raw field value as meters. Use elevationScale on the layer to multiply values to a useful visual height. For example, if the field is "floors" (1-10), set elevationScale to 3 (meters per floor). Do NOT use negative values for elevation. Avoid using diverging scales for elevation.
 - Bind layers to datasets with _sqlroomsBinding.dataset and put tableName or sqlQuery sources in config.datasets.
 - IMPORTANT: For point data with longitude/latitude columns, the dataset source MUST use a sqlQuery that creates a geometry column, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM tableName WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the same name used in the AS clause (e.g. "__sqlrooms_geom") and geometryEncodingHint to "wkb".
 - IMPORTANT: When providing fitToData, ALWAYS include longitudeColumn and latitudeColumn with the actual column names from the data (e.g. "Longitude", "Latitude"). Missing column names will cause SQL errors.
+- IMPORTANT: For GeoJSON or spatial files that already have a native geometry column (e.g. "geometry", "geom"), use the table directly with tableName (no sqlQuery needed), set geometryColumn to "geom", set geometryEncodingHint to "wkb", and do NOT include fitToData (since there are no separate longitude/latitude columns to reference).
+- IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use the table directly with tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Do NOT include fitToData for GeoJSON data.
 - For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor.
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.

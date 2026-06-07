@@ -24,6 +24,7 @@ const DEFAULT_ACCEPTED_FORMATS = [
   'tsv',
   'parquet',
   'json',
+  'geojson',
   'arrow',
   'shp',
   'kml',

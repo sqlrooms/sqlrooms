@@ -171,6 +171,8 @@ export function createBaseDuckDbConnector(
     await ensureInitialized();
     if (opts && isSpatialLoadFileOptions(opts)) {
       await query(loadSpatial(tableName, fileName, opts));
+    } else if (!opts?.method && /\.geojson$/i.test(fileName)) {
+      await query(loadSpatial(tableName, fileName, opts ?? {}));
     } else {
       await query(load(opts?.method ?? 'auto', tableName, fileName, opts));
     }

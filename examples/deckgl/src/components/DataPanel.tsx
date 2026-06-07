@@ -20,6 +20,7 @@ export const DataPanel: FC = () => {
           'text/tsv': ['.tsv'],
           'text/parquet': ['.parquet'],
           'text/json': ['.json'],
+          'application/geo+json': ['.geojson'],
         }}
         onDrop={async (files: File[]) => {
           for (const file of files) {

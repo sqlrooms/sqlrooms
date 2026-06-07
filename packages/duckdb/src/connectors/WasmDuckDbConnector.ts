@@ -225,6 +225,8 @@ export function createWasmDuckDbConnector(
       await withTempRegisteredFile(file, async (fileName) => {
         if (opts && isSpatialLoadFileOptions(opts)) {
           await conn!.query(loadSpatial(tableName, fileName, opts));
+        } else if (!opts?.method && /\.geojson$/i.test(fileName)) {
+          await conn!.query(loadSpatial(tableName, fileName, opts ?? {}));
         } else {
           await conn!.query(
             load(opts?.method ?? 'auto', tableName, fileName, opts),

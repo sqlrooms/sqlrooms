@@ -139,9 +139,16 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   // Last resort: when geometryEncodingHint signals synthesis ('wkb' or
   // unspecified), try common coordinate column names using DuckDB unquoted
   // identifiers (case-insensitive resolution). Tables that genuinely have a
-  // geometry column would typically have geometryEncodingHint as 'geoarrow'
+  // geometry column (e.g. GeoJSON loaded with ST_Read or having a native
+  // geometry field) would typically have geometryEncodingHint as 'geoarrow',
   // or would already have a sqlQuery/no geometryColumn configured.
-  if (options.dataset?.geometryEncodingHint !== 'geoarrow') {
+  // Skip this fallback if the geometry column name matches a well-known
+  // geometry column name, meaning the table likely already has native geometry.
+  const NATIVE_GEOM_NAMES = ['geometry', 'geom', 'wkb_geometry', 'the_geom'];
+  if (
+    options.dataset?.geometryEncodingHint !== 'geoarrow' &&
+    !NATIVE_GEOM_NAMES.includes(geometryColumn.toLowerCase())
+  ) {
     const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
     const tableParts = resolvedSource.tableName.split('.').map(quote).join('.');
     return {

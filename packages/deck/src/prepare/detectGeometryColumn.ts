@@ -76,10 +76,23 @@ function synthesizeGeoArrowPointColumn(
   };
 }
 
+const KNOWN_GEOM_NAMES = ['geometry', 'geom', 'wkb_geometry', 'the_geom'];
+
 function getFieldVector(table: arrow.Table, fieldName: string) {
   const vector = table.getChild(fieldName);
   if (vector) {
     return {vector, synthesized: false as const};
+  }
+
+  // Fallback: if the requested geometry column doesn't exist, try other common names
+  if (KNOWN_GEOM_NAMES.includes(fieldName.toLowerCase())) {
+    for (const altName of KNOWN_GEOM_NAMES) {
+      if (altName.toLowerCase() === fieldName.toLowerCase()) continue;
+      const altVector = table.getChild(altName);
+      if (altVector) {
+        return {vector: altVector, synthesized: false as const};
+      }
+    }
   }
 
   // Fallback: if the geometry column doesn't exist but the table has

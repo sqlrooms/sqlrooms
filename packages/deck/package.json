@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@deck.gl/core": "^9.3.1",
+    "@deck.gl/geo-layers": "^9.3.1",
     "@deck.gl/json": "^9.3.1",
     "@deck.gl/layers": "^9.3.1",
     "@deck.gl/mapbox": "^9.3.1",
