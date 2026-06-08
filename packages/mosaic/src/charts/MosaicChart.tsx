@@ -7,10 +7,12 @@ import {DataTable} from '@sqlrooms/db';
 
 export type MosaicChartProps = {
   dataTable?: DataTable;
-  selectionName: string;
+  selectionName?: string;
   config: ChartConfig;
   runtimeKey: string;
   onConfigChange?: (config: ChartConfig) => void;
+  dashboardId?: string;
+  panelId?: string;
 };
 
 export const MosaicChart: FC<MosaicChartProps> = ({
@@ -19,6 +21,8 @@ export const MosaicChart: FC<MosaicChartProps> = ({
   config,
   runtimeKey,
   onConfigChange,
+  dashboardId,
+  panelId,
 }) => {
   const handleOpenChange = useCallback(
     (isOpen: boolean) => onConfigChange?.({...config, settingsOpen: isOpen}),
@@ -47,6 +51,8 @@ export const MosaicChart: FC<MosaicChartProps> = ({
         selectionName={selectionName}
         retentionKey={runtimeKey}
         runtimeIssueKey={runtimeKey}
+        dashboardId={dashboardId}
+        panelId={panelId}
       />
     </div>
   );

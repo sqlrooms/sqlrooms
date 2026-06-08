@@ -22,7 +22,10 @@ function resolveSetStateAction<T>(next: SetStateAction<T>, previous: T): T {
     : next;
 }
 
+import type {MosaicClient} from '@uwdata/mosaic-core';
+
 export type DataTableExplorerStoreState = {
+  client: MosaicClient | null;
   filteredCount: DataTableExplorerCountState;
   lastNonEmptyPageTable?: {
     datasetId: string;
@@ -36,6 +39,7 @@ export type DataTableExplorerStoreState = {
     isLoading: boolean;
     tableName?: string;
   };
+  setClient: (client: MosaicClient | null) => void;
   setFilteredCount: (state: DataTableExplorerCountState) => void;
   setPage: (state: DataTableExplorerPageState) => void;
   setPagination: Dispatch<SetStateAction<DataTableExplorerPaginationState>>;
@@ -72,6 +76,7 @@ export function createDataTableExplorerStore(options: {
   const {initialSorting = [], pageSize} = options;
 
   return createStore<DataTableExplorerStoreState>((set) => ({
+    client: null,
     filteredCount: {isLoading: false},
     lastNonEmptyPageTable: undefined,
     page: {isLoading: false},
@@ -79,6 +84,13 @@ export function createDataTableExplorerStore(options: {
     schema: {
       fields: [],
       isLoading: false,
+    },
+    setClient: (client) => {
+      set((state) =>
+        produce(state, (draft) => {
+          draft.client = client as any;
+        }),
+      );
     },
     setFilteredCount: (nextState) => {
       set((state) =>

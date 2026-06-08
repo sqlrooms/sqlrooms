@@ -9,19 +9,6 @@ import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {ChartBlockHeader} from './ChartBlockHeader';
 import {ChartSelectorEmptyState} from './ChartSelectorEmptyState';
 
-function getBlockDocumentChartSelectionName({
-  documentId,
-  blockId,
-  selectionGroupId,
-}: Pick<
-  BlockDocumentChartRendererProps,
-  'documentId' | 'blockId' | 'selectionGroupId'
->) {
-  return selectionGroupId
-    ? `worksheet:${documentId}:chart-group:${selectionGroupId}:brush`
-    : `worksheet:${documentId}:chart-block:${blockId}:brush`;
-}
-
 function getBlockDocumentChartRuntimeKey({
   documentId,
   blockId,
@@ -34,7 +21,6 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   blockId,
   tableName,
   config,
-  selectionGroupId,
   caption,
   readOnly,
   onTableNameChange,
@@ -45,12 +31,6 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   const selectedTable = useDataTable(tableName);
 
   const parseChartConfigResult = useParseChartConfig(config);
-
-  const selectionName = getBlockDocumentChartSelectionName({
-    documentId,
-    blockId,
-    selectionGroupId,
-  });
 
   const runtimeKey = getBlockDocumentChartRuntimeKey({documentId, blockId});
 
@@ -112,7 +92,6 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
       <div className="min-h-0 flex-1">
         <MosaicChart
           dataTable={selectedTable}
-          selectionName={selectionName}
           config={chartConfig}
           runtimeKey={runtimeKey}
           onConfigChange={handleConfigChange}

@@ -247,6 +247,13 @@ export function DeckJsonMap({
     layers: mergedLayers,
   };
 
+  // overlayDeckProps should not contain viewState/initialViewState
+  const {
+    initialViewState,
+    viewState: _viewState,
+    ...overlayDeckProps
+  } = mergedDeckProps as Record<string, unknown>;
+
   const {resolvedTheme} = useTheme();
 
   const mergedMapProps = {
@@ -278,9 +285,12 @@ export function DeckJsonMap({
 
       <Map
         {...(mergedMapProps as object)}
+        {...(initialViewState
+          ? {initialViewState: initialViewState as object}
+          : {})}
         style={{width: '100%', height: '100%', ...mapProps?.style}}
       >
-        <DeckOverlayControl interleaved={interleaved} {...mergedDeckProps} />
+        <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
         {children}
       </Map>
 

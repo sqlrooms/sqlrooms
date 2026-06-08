@@ -1,30 +1,38 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HeatmapChartSettings} from './schema';
 import {ChartSpecError} from '../errors';
+import {CreateSpecOptions} from '../base-types';
 
-export function createHeatmapSpec(
-  tableName: string,
-  {x, y}: HeatmapChartSettings,
-): Spec {
+export function createHeatmapSpec({
+  tableName,
+  settings: {x, y},
+  selectionName,
+}: CreateSpecOptions<HeatmapChartSettings>): Spec {
   if (!x) {
     throw new ChartSpecError('X field is required for heatmap');
   }
   if (!y) {
     throw new ChartSpecError('Y field is required for heatmap');
   }
+
+  const plot: unknown[] = [
+    {
+      mark: 'raster',
+      data: {from: tableName, filterBy: '$brush'},
+      x,
+      y,
+      fill: 'density',
+      bandwidth: 0,
+      pixelSize: 3,
+    },
+  ];
+
+  if (selectionName) {
+    plot.push({select: 'intervalXY', as: '$brush'});
+  }
+
   return {
-    plot: [
-      {
-        mark: 'raster',
-        data: {from: tableName, filterBy: '$brush'},
-        x,
-        y,
-        fill: 'density',
-        bandwidth: 0,
-        pixelSize: 3,
-      },
-      {select: 'intervalXY', as: '$brush'},
-    ],
+    plot,
     colorScale: 'sqrt',
     colorScheme: 'ylorrd',
     xLabel: x,

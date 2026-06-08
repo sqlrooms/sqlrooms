@@ -8,7 +8,7 @@ import {type Tool} from 'ai';
 import type {Coordinator} from '@uwdata/mosaic-core';
 import type {ComponentType} from 'react';
 import type * as z from 'zod';
-import {ChartConfig, ChartType} from './chart-config';
+import {ChartConfig, ChartSettings, ChartType} from './chart-config';
 import {RetainedVgPlotChart} from '../../VgPlotChart';
 import type {Selection} from '@uwdata/mosaic-core';
 import type {DataTableExplorerPanelConfig} from '../../dashboard/core-types';
@@ -185,9 +185,15 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   ) => ChartDataPolicy | null | undefined;
 };
 
+export type CreateSpecOptions<TSettings = ChartSettings> = {
+  tableName: string;
+  settings: TSettings;
+  selectionName?: string;
+};
+
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {
-    createSpec: (tableName: string, config: TConfig['settings']) => Spec;
+    createSpec: (options: CreateSpecOptions<TConfig['settings']>) => Spec;
     canViewSpec?: boolean;
   };
 

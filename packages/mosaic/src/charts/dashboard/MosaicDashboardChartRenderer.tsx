@@ -41,6 +41,8 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
       config={panel.config}
       runtimeKey={runtimeKey}
       onConfigChange={handleConfigChange}
+      dashboardId={dashboardId}
+      panelId={panel.id}
     />
   );
 };

@@ -122,8 +122,11 @@ export function connectDataTableExplorerCountClient(options: {
 
   options.connection.coordinator.connect(client);
 
-  return () => {
-    client.destroy();
+  return {
+    client,
+    cleanup: () => {
+      client.destroy();
+    },
   };
 }
 

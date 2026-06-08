@@ -1,17 +1,18 @@
 import type {FC} from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@sqlrooms/ui';
 import type {AggregateFunction} from '../schemas';
+import {Combobox} from './Combobox';
 
 export interface AggregationSelectorProps {
   value: AggregateFunction;
   onChange: (value: AggregateFunction) => void;
 }
+
+const AGGREGATION_OPTIONS = [
+  {value: 'sum', label: 'SUM'},
+  {value: 'avg', label: 'AVG'},
+  {value: 'min', label: 'MIN'},
+  {value: 'max', label: 'MAX'},
+] as const;
 
 /**
  * Dropdown for selecting an aggregation function (SUM, AVG, MIN, MAX).
@@ -20,25 +21,20 @@ export const AggregationSelector: FC<AggregationSelectorProps> = ({
   value,
   onChange,
 }) => {
+  const selectedOption = AGGREGATION_OPTIONS.find((opt) => opt.value === value);
+
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-8 w-[100px] text-xs shadow-none">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="sum" className="text-xs">
-          SUM
-        </SelectItem>
-        <SelectItem value="avg" className="text-xs">
-          AVG
-        </SelectItem>
-        <SelectItem value="min" className="text-xs">
-          MIN
-        </SelectItem>
-        <SelectItem value="max" className="text-xs">
-          MAX
-        </SelectItem>
-      </SelectContent>
-    </Select>
+    <Combobox value={value} onChange={onChange}>
+      <Combobox.Trigger className="w-[100px] shadow-none">
+        <span>{selectedOption?.label ?? value.toUpperCase()}</span>
+      </Combobox.Trigger>
+      <Combobox.Content>
+        {AGGREGATION_OPTIONS.map((option) => (
+          <Combobox.Item key={option.value} value={option.value}>
+            <span className="text-xs">{option.label}</span>
+          </Combobox.Item>
+        ))}
+      </Combobox.Content>
+    </Combobox>
   );
 };

@@ -85,6 +85,8 @@ export type MosaicConnection =
   | MosaicReadyConnection
   | MosaicErrorConnection;
 
+export type ConnectionStatus = MosaicConnection['status'];
+
 export type MosaicSliceState = {
   mosaic: SliceFunctions & {
     connection: MosaicConnection;
