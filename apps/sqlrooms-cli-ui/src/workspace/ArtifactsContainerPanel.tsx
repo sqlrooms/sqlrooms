@@ -43,6 +43,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       dndMode="shared"
       dndScopeId="cli-artifact-tabs"
       fontSize={13}
+      className="hidden"
       onActivateArtifact={() => setShowArtifactChooser(false)}
       onSelectArtifact={() => setShowArtifactChooser(false)}
       renderTabMenu={(tab) => (

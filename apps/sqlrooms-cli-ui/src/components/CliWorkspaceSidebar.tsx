@@ -105,12 +105,7 @@ export function CliWorkspaceTopbar() {
   return (
     <header className="border-border bg-background/95 grid h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b px-3">
       <div className="flex min-w-0 items-center gap-1.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <SidebarTrigger className="text-muted-foreground hover:text-foreground size-9" />
-          </TooltipTrigger>
-          <TooltipContent>Toggle sidebar</TooltipContent>
-        </Tooltip>
+        <CliSidebarToggleButton />
         <CliAssistantToggleButton />
       </div>
       <EditableText
@@ -437,6 +432,22 @@ function useCliArtifactSidebarTabs() {
   );
 
   return {artifactTypes, selectedTabId, selectArtifact, tabs};
+}
+
+function CliSidebarToggleButton() {
+  const {state} = useSidebar();
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <SidebarTrigger
+          className="text-muted-foreground hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground size-9"
+          data-active={state === 'expanded'}
+        />
+      </TooltipTrigger>
+      <TooltipContent>Toggle sidebar</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function CliAssistantToggleButton() {
