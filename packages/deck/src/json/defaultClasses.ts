@@ -6,7 +6,7 @@ import {
   OrthographicView,
 } from '@deck.gl/core';
 import {ColumnLayer, GeoJsonLayer} from '@deck.gl/layers';
-import {H3HexagonLayer, TripsLayer} from '@deck.gl/geo-layers';
+import {H3HexagonLayer} from '@deck.gl/geo-layers';
 import {
   GeoArrowArcLayer,
   GeoArrowColumnLayer,
@@ -71,7 +71,6 @@ export const DEFAULT_DECK_JSON_CLASSES = {
   // wrapper that extracts binary data from Arrow vectors and passes it correctly
   // to the native TripsLayer.
   GeoArrowTripsLayer: SqlroomsTripsLayer,
-  TripsLayer,
   H3HexagonLayer,
   GeoArrowH3HexagonLayer: H3HexagonLayer,
 };

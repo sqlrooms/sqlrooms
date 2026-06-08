@@ -111,24 +111,6 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
     vectorAccessorProps: ['getPath', 'getTimestamps', 'getColor', 'getWidth'],
     allowGeoArrowPromotion: true,
   },
-  TripsLayer: {
-    representation: 'geoarrow',
-    bindings: [
-      {
-        prop: 'getPath',
-        kind: 'geometry',
-        configKey: 'geometryColumn',
-      },
-      {
-        prop: 'getTimestamps',
-        kind: 'column',
-        configKey: 'timestampColumn',
-        required: true,
-      },
-    ],
-    vectorAccessorProps: ['getPath', 'getTimestamps', 'getColor', 'getWidth'],
-    allowGeoArrowPromotion: true,
-  },
   GeoArrowPolygonLayer: {
     representation: 'geoarrow',
     bindings: [
