@@ -2,7 +2,6 @@ import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
-import {parseWKBHeader, readWKBLineStringXY} from '../prepare/wkbParser';
 import type {ResolvedGeometryColumn} from '../prepare/types';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
@@ -408,29 +407,6 @@ function tryAggregateWaypointsToLineStrings(
 
   const aggregatedTable = new arrow.Table(columns);
   return {table: aggregatedTable, geometryVector};
-}
-
-function decodeWkbToCoordArray(raw: unknown): number[][] | null {
-  if (raw == null) return null;
-  let buf: ArrayBuffer;
-  if (ArrayBuffer.isView(raw)) {
-    const copy = new Uint8Array((raw as Uint8Array).byteLength);
-    copy.set(
-      new Uint8Array(
-        (raw as Uint8Array).buffer,
-        (raw as Uint8Array).byteOffset,
-        (raw as Uint8Array).byteLength,
-      ),
-    );
-    buf = copy.buffer;
-  } else {
-    buf = raw as ArrayBuffer;
-  }
-  const hdr = parseWKBHeader(buf);
-  if (!hdr) return null;
-  const coords = readWKBLineStringXY(buf, hdr);
-  if (!coords) return null;
-  return coords;
 }
 
 function resolveGeoArrowBindings(options: {

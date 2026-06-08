@@ -31,23 +31,6 @@ function resolveFieldName(
   return undefined;
 }
 
-function getColumn(table: arrow.Table, field: string) {
-  const resolvedFieldName = resolveFieldName(table, field);
-  if (!resolvedFieldName) {
-    throw new Error(`Unknown colorScale field "${field}".`);
-  }
-
-  const vector = table.getChild(resolvedFieldName);
-  if (!vector) {
-    throw new Error(`Unable to read colorScale field "${resolvedFieldName}".`);
-  }
-
-  return {
-    fieldName: resolvedFieldName,
-    vector,
-  };
-}
-
 function getRowValue(row: unknown, fieldName: string) {
   if (!row || typeof row !== 'object') {
     return undefined;

@@ -17,9 +17,15 @@ import * as arrow from 'apache-arrow';
 export class SqlroomsH3HexagonLayer extends CompositeLayer<{
   data: arrow.Table;
   getHexagon: arrow.Vector;
-  getFillColor?: arrow.Vector | [number, number, number, number] | ((...args: any[]) => any);
+  getFillColor?:
+    | arrow.Vector
+    | [number, number, number, number]
+    | ((...args: any[]) => any);
   getElevation?: arrow.Vector | number | ((...args: any[]) => any);
-  getLineColor?: arrow.Vector | [number, number, number, number] | ((...args: any[]) => any);
+  getLineColor?:
+    | arrow.Vector
+    | [number, number, number, number]
+    | ((...args: any[]) => any);
   getLineWidth?: arrow.Vector | number | ((...args: any[]) => any);
   [key: string]: unknown;
 }> {
@@ -53,7 +59,7 @@ export class SqlroomsH3HexagonLayer extends CompositeLayer<{
       }
       // Compiled accessor function
       if (typeof hexProp === 'function') {
-        const result = (hexProp as Function)({
+        const result = (hexProp as (...args: unknown[]) => unknown)({
           index: i,
           data: {data: table.batches[0]},
           target: [],
@@ -83,7 +89,10 @@ export class SqlroomsH3HexagonLayer extends CompositeLayer<{
       if (propValue instanceof arrow.Vector) {
         // Arrow Vector → row accessor (H3 layer uses row-based iteration)
         const vec = propValue;
-        layerProps[propName] = (d: Record<string, unknown>, {index}: {index: number}) => {
+        layerProps[propName] = (
+          d: Record<string, unknown>,
+          {index}: {index: number},
+        ) => {
           return vec.get(index);
         };
       } else if (typeof propValue === 'function') {

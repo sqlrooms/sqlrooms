@@ -119,7 +119,7 @@ export class SqlroomsTripsLayer extends CompositeLayer<{
         }
       }
 
-      const {_tripsMaxTimestamp: _maxTs, ...restProps} = otherProps;
+      const {_tripsMaxTimestamp: _, ...restProps} = otherProps;
 
       const binaryAttributes: Record<
         string,

@@ -304,14 +304,14 @@ export function DeckJsonMap({
   const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
   const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
   const hasRenderingError = Boolean(finalDeckPropsResult.error);
-  const mergedLayers = hasRenderingError
-    ? []
-    : (deckProps?.layers ??
-      (convertedDeckProps.layers as unknown[] | undefined) ??
-      []);
 
   // Animate TripsLayer by injecting currentTime from the animation clock
   const animatedLayers = useMemo(() => {
+    const mergedLayers = hasRenderingError
+      ? []
+      : (deckProps?.layers ??
+        (convertedDeckProps.layers as unknown[] | undefined) ??
+        []);
     if (!hasTripsLayer || !Array.isArray(mergedLayers)) return mergedLayers;
     return mergedLayers.map((layer: unknown) => {
       if (!layer || typeof layer !== 'object') return layer;
@@ -332,8 +332,13 @@ export function DeckJsonMap({
       }
       return layer;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasTripsLayer, mergedLayers, tripsTime]);
+  }, [
+    hasTripsLayer,
+    hasRenderingError,
+    deckProps?.layers,
+    convertedDeckProps.layers,
+    tripsTime,
+  ]);
 
   const mergedDeckProps = {
     ...convertedDeckProps,
@@ -344,9 +349,10 @@ export function DeckJsonMap({
   // overlayDeckProps should not contain viewState/initialViewState
   const {
     initialViewState,
-    viewState: _viewState,
+    viewState: _vs,
     ...overlayDeckProps
   } = mergedDeckProps as Record<string, unknown>;
+  void _vs;
 
   const {resolvedTheme} = useTheme();
 
