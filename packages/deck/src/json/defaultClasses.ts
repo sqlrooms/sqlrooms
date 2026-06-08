@@ -16,6 +16,7 @@ import {
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
 } from '@geoarrow/deck.gl-layers';
+import {SqlroomsTripsLayer} from './SqlroomsTripsLayer';
 
 // Workaround for deck.gl bug #10021: the ColumnLayer's wireframe index buffer
 // leaks onto the fill model when using binary data (as GeoArrow does), causing
@@ -65,13 +66,11 @@ export const DEFAULT_DECK_JSON_CLASSES = {
   GeoArrowPolygonLayer,
   GeoArrowSolidPolygonLayer,
   GeoArrowArcLayer,
-  // GeoArrowTripsLayer from @geoarrow/deck.gl-layers@0.3.2 has the same binary
-  // attribute incompatibility as the H3 wrapper: it passes timestamps as a raw
-  // Float64Array attribute but the native TripsLayer's attribute manager fails to
-  // initialize it correctly, producing "Float64Array Error: Float64Array".
-  // We use the native TripsLayer from @deck.gl/geo-layers instead, fed with
-  // row-based data via the 'row' representation.
-  GeoArrowTripsLayer: TripsLayer,
+  // GeoArrowTripsLayer from @geoarrow/deck.gl-layers@0.3.2 is incompatible with
+  // @deck.gl@9.3.x (see SqlroomsTripsLayer.ts for details). We use our own
+  // wrapper that extracts binary data from Arrow vectors and passes it correctly
+  // to the native TripsLayer.
+  GeoArrowTripsLayer: SqlroomsTripsLayer,
   TripsLayer,
   H3HexagonLayer,
   GeoArrowH3HexagonLayer: H3HexagonLayer,

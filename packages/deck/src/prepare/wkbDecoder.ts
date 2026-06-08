@@ -398,7 +398,11 @@ const POLYGON_LAYERS = new Set([
   'GeoArrowSolidPolygonLayer',
 ]);
 
-const PATH_LAYERS = new Set(['GeoArrowPathLayer']);
+const PATH_LAYERS = new Set([
+  'GeoArrowPathLayer',
+  'GeoArrowTripsLayer',
+  'TripsLayer',
+]);
 
 /**
  * Promotes WKB/WKT LineString geometries to a native GeoArrow LineString vector
