@@ -19,14 +19,7 @@ type GeoArrowCompatibility = {
   allowGeoArrowPromotion?: boolean;
 };
 
-type LayerCompatibility =
-  | GeoJsonCompatibility
-  | GeoArrowCompatibility
-  | RowCompatibility;
-
-type RowCompatibility = {
-  representation: 'row';
-};
+type LayerCompatibility = GeoJsonCompatibility | GeoArrowCompatibility;
 
 const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
   GeoJsonLayer: {
@@ -173,10 +166,22 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
     ],
   },
   GeoArrowH3HexagonLayer: {
-    representation: 'row',
-  },
-  H3HexagonLayer: {
-    representation: 'row',
+    representation: 'geoarrow',
+    bindings: [
+      {
+        prop: 'getHexagon',
+        kind: 'column',
+        configKey: 'hexagonColumn',
+        required: true,
+      },
+    ],
+    vectorAccessorProps: [
+      'getHexagon',
+      'getFillColor',
+      'getElevation',
+      'getLineColor',
+      'getLineWidth',
+    ],
   },
 };
 

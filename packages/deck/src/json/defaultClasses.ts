@@ -6,7 +6,6 @@ import {
   OrthographicView,
 } from '@deck.gl/core';
 import {ColumnLayer, GeoJsonLayer} from '@deck.gl/layers';
-import {H3HexagonLayer} from '@deck.gl/geo-layers';
 import {
   GeoArrowArcLayer,
   GeoArrowColumnLayer,
@@ -16,6 +15,7 @@ import {
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
 } from '@geoarrow/deck.gl-layers';
+import {SqlroomsH3HexagonLayer} from './SqlroomsH3HexagonLayer';
 import {SqlroomsTripsLayer} from './SqlroomsTripsLayer';
 
 // Workaround for deck.gl bug #10021: the ColumnLayer's wireframe index buffer
@@ -45,14 +45,10 @@ ColumnLayer.prototype.draw = function (opts: {uniforms: unknown}) {
 // Published 0.3.x uses `@geoarrow/deck.gl-layers`; newer lines may rename the package
 // and/or move the exported layer classes.
 //
-// NOTE: GeoArrowH3HexagonLayer from @geoarrow/deck.gl-layers@0.3.2 is NOT used here.
-// It is incompatible with @deck.gl/geo-layers@9.3.x: the wrapper passes binary
-// attributes to the H3HexagonLayer sublayer, but the sublayer's _calculateH3DataProps
-// iterates data with createIterable and calls getHexagon(object) expecting string H3
-// indices. This causes "Cannot read properties of undefined (reading 'hexagon')" at
-// runtime. We use the native H3HexagonLayer from @deck.gl/geo-layers instead, fed with
-// row-based data via the 'row' representation. Re-enable the GeoArrow version after
-// @geoarrow/deck.gl-layers publishes a compatible release.
+// NOTE: GeoArrowTripsLayer and GeoArrowH3HexagonLayer from @geoarrow/deck.gl-layers@0.3.2
+// are incompatible with @deck.gl@9.3.x. We use our own wrappers that properly interface
+// Arrow data with the native deck.gl layers. See SqlroomsTripsLayer.ts and
+// SqlroomsH3HexagonLayer.ts for details.
 export const DEFAULT_DECK_JSON_CLASSES = {
   MapView,
   FirstPersonView,
@@ -66,13 +62,8 @@ export const DEFAULT_DECK_JSON_CLASSES = {
   GeoArrowPolygonLayer,
   GeoArrowSolidPolygonLayer,
   GeoArrowArcLayer,
-  // GeoArrowTripsLayer from @geoarrow/deck.gl-layers@0.3.2 is incompatible with
-  // @deck.gl@9.3.x (see SqlroomsTripsLayer.ts for details). We use our own
-  // wrapper that extracts binary data from Arrow vectors and passes it correctly
-  // to the native TripsLayer.
   GeoArrowTripsLayer: SqlroomsTripsLayer,
-  H3HexagonLayer,
-  GeoArrowH3HexagonLayer: H3HexagonLayer,
+  GeoArrowH3HexagonLayer: SqlroomsH3HexagonLayer,
 };
 
 export const DEFAULT_DECK_JSON_ENUMERATIONS = {
