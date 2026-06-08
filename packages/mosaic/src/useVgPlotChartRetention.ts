@@ -1,11 +1,15 @@
 import {Param, Selection} from '@uwdata/mosaic-core';
 import {useCallback, useEffect, useRef} from 'react';
 
+type MarkState = 'pending' | 'success' | 'error';
+
 export type RetainedVgPlotChart = {
   element: object;
   params?: Map<string, Param<any> | Selection>;
   specKey: string;
   error?: Error;
+  markStates?: Map<object, MarkState>;
+  markErrors?: Map<object, Error>;
 };
 
 export type VgPlotChartRetention = {

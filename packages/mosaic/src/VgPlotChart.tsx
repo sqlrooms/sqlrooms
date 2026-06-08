@@ -183,8 +183,11 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
 
     useVgPlotChartRender(renderParams);
 
-    // Show error message if present
-    if (error) {
+    // Show error message only if no runtime issue reporter exists
+    // (when runtime issue reporter exists, errors are shown by MosaicChartRuntimeIssuePanel)
+    const hasRuntimeIssueReporter =
+      isSpecProps(props) && props.runtimeIssueReporter;
+    if (error && !hasRuntimeIssueReporter) {
       return <VgPlotChartError error={error} />;
     }
 
@@ -213,6 +216,7 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
         prevProps.runtimeIssueReporter === nextProps.runtimeIssueReporter;
       const issueContextEqual =
         prevProps.runtimeIssueContext === nextProps.runtimeIssueContext;
+
       return (
         specEqual &&
         paramsEqual &&

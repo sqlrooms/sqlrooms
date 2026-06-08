@@ -88,18 +88,24 @@ function createMosaicSpecChartRenderContext<TConfig extends ChartConfig>(
   settings: ChartSettings,
   selectionName?: string,
 ): MosaicSpecChartRenderContext | MosaicChartRenderErrorContext {
+  console.log('[createMosaicSpecChartRenderContext] settings:', settings);
+
   try {
     const spec = chartTypeDefinition.createSpec({
-      tableName: dataTable.table.table,
+      dataTable,
       settings,
       selectionName,
     });
+
+    console.log('[createMosaicSpecChartRenderContext] created spec:', spec);
 
     return {
       type: 'spec',
       spec,
     };
   } catch (error) {
+    console.log('[createMosaicSpecChartRenderContext] error:', error);
+
     if (error instanceof ChartSpecError) {
       // ChartSpecError is expected as part of validation logic, don't log
       return {

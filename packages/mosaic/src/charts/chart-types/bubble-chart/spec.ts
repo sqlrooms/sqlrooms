@@ -2,11 +2,12 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {BubbleChartSettings} from './schema';
 import {ChartSpecError} from '../errors';
 import {CreateSpecOptions} from '../base-types';
+import {validateFieldExists} from '../validation';
 
 const FG_COLOR = 'var(--color-chart-1)';
 
 export function createBubbleChartSpec({
-  tableName,
+  dataTable,
   settings: {x, y},
   selectionName,
 }: CreateSpecOptions<BubbleChartSettings>): Spec {
@@ -17,10 +18,13 @@ export function createBubbleChartSpec({
     throw new ChartSpecError('Y field is required for bubble chart');
   }
 
+  validateFieldExists(dataTable, x, 'X field');
+  validateFieldExists(dataTable, y, 'Y field');
+
   const plot: unknown[] = [
     {
       mark: 'dot',
-      data: {from: tableName, filterBy: '$brush'},
+      data: {from: dataTable.table.table, filterBy: '$brush'},
       x,
       y,
       fill: FG_COLOR,

@@ -3,7 +3,7 @@ import {CustomSpecChartSettings} from './schema';
 import {CreateSpecOptions} from '../base-types';
 
 export function createCustomSpec({
-  tableName,
+  dataTable,
   settings: {vgPlotSpec},
   selectionName,
 }: CreateSpecOptions<CustomSpecChartSettings>): Spec {
@@ -15,7 +15,7 @@ export function createCustomSpec({
   const plot: unknown[] = [
     {
       mark: 'rectY',
-      data: {from: tableName, filterBy: '$brush'},
+      data: {from: dataTable.table.table, filterBy: '$brush'},
       x: {bin: 'field_name', maxbins: 25},
       y: {count: null},
       fill: 'steelblue',

@@ -1,4 +1,4 @@
-import {type FC} from 'react';
+import {type FC, useEffect, useRef} from 'react';
 import {Field} from '../../../components/Field';
 import {ColumnSelector} from '../../../components/ColumnSelector';
 
@@ -18,6 +18,22 @@ export const LineChartSettingsComponent: FC = () => {
 
   const xField = columns.find((c) => c.name === config.settings.x);
   const isXFieldTemporal = xField && isTemporalType(xField.type);
+
+  // Track previous temporal state to detect transitions
+  const prevIsTemporalRef = useRef(isXFieldTemporal);
+
+  // Clear xInterval when switching from temporal to non-temporal x field
+  useEffect(() => {
+    const wasTemporalBefore = prevIsTemporalRef.current;
+    const isTemporalNow = isXFieldTemporal;
+
+    // If we had a temporal field with xInterval set, and now have a non-temporal field
+    if (wasTemporalBefore && !isTemporalNow && config.settings.xInterval) {
+      onChangeConfig('xInterval', undefined);
+    }
+
+    prevIsTemporalRef.current = isTemporalNow;
+  }, [isXFieldTemporal, config.settings.xInterval, onChangeConfig]);
 
   return (
     <div className="space-y-4">

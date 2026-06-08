@@ -2,12 +2,13 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {CountPlotChartSettings} from './schema';
 import {ChartSpecError} from '../errors';
 import {CreateSpecOptions} from '../base-types';
+import {validateFieldExists} from '../validation';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
 
 export function createCountPlotSpec({
-  tableName,
+  dataTable,
   settings: {field},
   selectionName,
 }: CreateSpecOptions<CountPlotChartSettings>): Spec {
@@ -15,12 +16,14 @@ export function createCountPlotSpec({
     throw new ChartSpecError('Field is required for count plot');
   }
 
+  validateFieldExists(dataTable, field, 'Field');
+
   // Count plot shows categorical frequency as horizontal bars
   // Categories on Y-axis, counts on X-axis
   const plot: unknown[] = [
     {
       mark: 'barX',
-      data: {from: tableName},
+      data: {from: dataTable.table.table},
       x: {count: null},
       y: {column: field, sort: {x: 'sum', order: 'desc', limit: 100}},
       fill: BG_COLOR,
@@ -28,7 +31,7 @@ export function createCountPlotSpec({
     },
     {
       mark: 'barX',
-      data: {from: tableName, filterBy: '$brush'},
+      data: {from: dataTable.table.table, filterBy: '$brush'},
       x: {count: null},
       y: {column: field, sort: {x: 'sum', order: 'desc', limit: 100}},
       fill: FG_COLOR,
@@ -36,7 +39,7 @@ export function createCountPlotSpec({
     },
     {
       mark: 'text',
-      data: {from: tableName, filterBy: '$brush'},
+      data: {from: dataTable.table.table, filterBy: '$brush'},
       x: {count: null},
       y: {column: field, sort: {x: 'sum', order: 'desc', limit: 100}},
       text: {count: null},

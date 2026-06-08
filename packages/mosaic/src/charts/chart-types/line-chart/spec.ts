@@ -2,6 +2,8 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {LineChartSettings} from './schema';
 import {ChartSpecError} from '../errors';
 import {CreateSpecOptions} from '../base-types';
+import {isTemporalType} from '../../../column-types-utils';
+import {getValidatedColumn, validateAggregation} from '../validation';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -24,29 +26,53 @@ function getLineColor(
 }
 
 export function createLineChartSpec({
-  tableName,
+  dataTable,
   settings: {x, yFields, xInterval},
   selectionName,
 }: CreateSpecOptions<LineChartSettings>): Spec {
   if (!x) {
     throw new ChartSpecError('X field is required for line chart');
   }
-  if (!yFields || yFields.length === 0) {
+
+  const xColumn = getValidatedColumn(dataTable, x, 'X field');
+
+  if (!yFields?.length) {
+    throw new ChartSpecError('Y fields are required for line chart');
+  }
+
+  const validYFields = (yFields ?? []).map((field) => {
+    const column = getValidatedColumn(dataTable, field.field, 'Y field');
+    const aggregate = field.aggregate || 'sum';
+
+    // Validate aggregation applicability
+    validateAggregation(dataTable, field.field, aggregate, 'Y field');
+
+    return {
+      column,
+      field: field.field,
+      aggregate,
+      color: field.color,
+    };
+  });
+
+  if (validYFields.length === 0) {
     throw new ChartSpecError('At least one Y field is required for line chart');
   }
+
+  const isXTemporal = isTemporalType(xColumn.type);
 
   const plotMarks: unknown[] = [];
 
   // Data source always includes filterBy for brush
-  const dataSource = {from: tableName, filterBy: '$brush'};
+  const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
 
   // Generate lineY and text marks for each Y field
-  yFields.forEach((fieldConfig, index) => {
+  validYFields.forEach((fieldConfig, index) => {
     const color = getLineColor(fieldConfig, index);
-    const aggregate = fieldConfig.aggregate || 'sum';
+    const aggregate = fieldConfig.aggregate;
 
     // When temporal aggregation is active, use bin for X and aggregation for Y
-    if (xInterval) {
+    if (isXTemporal && xInterval) {
       // Use bin syntax for temporal aggregation
       plotMarks.push({
         mark: 'lineY',

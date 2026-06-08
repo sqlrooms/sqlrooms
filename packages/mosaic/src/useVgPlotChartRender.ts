@@ -14,6 +14,7 @@ import {
 type PlotDomElement = HTMLElement | SVGSVGElement;
 
 type QueryableMark = {
+  queryPending?: () => unknown;
   queryResult?: (data: unknown) => unknown;
   queryError?: (error: unknown) => unknown;
 };
@@ -73,6 +74,58 @@ function attachPlotElement(container: HTMLElement, element: PlotDomElement) {
   container.replaceChildren(element);
 }
 
+function checkAndReportAggregateState(
+  chart: RetainedVgPlotChart,
+  onError: (error: Error) => void,
+  runtimeIssueReporter: ChartRuntimeIssueReporter | undefined,
+  runtimeIssueContext: ChartRuntimeIssueContext | undefined,
+  dataPolicy: ChartDataPolicy | null | undefined,
+) {
+  if (!chart.markStates || chart.markStates.size === 0) {
+    return; // No marks tracked yet
+  }
+
+  // Check if all marks are done (no pending)
+  const allDone = Array.from(chart.markStates.values()).every(
+    (state) => state !== 'pending',
+  );
+
+  if (!allDone) {
+    return; // Wait for all marks to finish
+  }
+
+  // All marks done - determine aggregate state
+  const hasError = Array.from(chart.markStates.values()).some(
+    (state) => state === 'error',
+  );
+
+  if (hasError) {
+    // Find first error
+    const firstErrorMark = Array.from(chart.markStates.entries()).find(
+      ([, state]) => state === 'error',
+    )?.[0];
+    const error = firstErrorMark && chart.markErrors?.get(firstErrorMark);
+
+    if (error) {
+      chart.error = error; // For standalone case
+      onError(error);
+      if (runtimeIssueContext) {
+        runtimeIssueReporter?.reportIssue(
+          createChartRuntimeIssueFromError(
+            error,
+            runtimeIssueContext,
+            dataPolicy,
+          ),
+        );
+      }
+    }
+  } else {
+    // All successful
+    delete chart.error;
+    runtimeIssueReporter?.clearIssue();
+  }
+}
+
 function wrapMarkHandlers(
   chart: RetainedVgPlotChart,
   onError: (error: Error) => void,
@@ -85,28 +138,52 @@ function wrapMarkHandlers(
     return;
   }
 
+  // Initialize tracking
+  if (!chart.markStates) {
+    chart.markStates = new Map();
+  }
+  if (!chart.markErrors) {
+    chart.markErrors = new Map();
+  }
+
   plot.marks.forEach((mark: QueryableMark) => {
+    // Wrap queryPending
+    if (mark.queryPending) {
+      const originalPending = mark.queryPending;
+      mark.queryPending = function (this: QueryableMark) {
+        chart.markStates!.set(mark, 'pending');
+        return originalPending.call(this);
+      };
+    }
+
+    // Wrap queryResult
     if (mark.queryResult) {
       const originalQueryResult = mark.queryResult;
-      mark.queryResult = (data: unknown) => {
+      mark.queryResult = function (this: QueryableMark, data: unknown) {
         try {
           assertChartDataPolicy(dataPolicy, data);
-          runtimeIssueReporter?.clearIssue();
-          return originalQueryResult.call(mark, data);
+          chart.markStates!.set(mark, 'success');
+          chart.markErrors!.delete(mark);
+          checkAndReportAggregateState(
+            chart,
+            onError,
+            runtimeIssueReporter,
+            runtimeIssueContext,
+            dataPolicy,
+          );
+          return originalQueryResult.call(this, data);
         } catch (error) {
           const normalizedError =
             error instanceof Error ? error : new Error(String(error));
-          onError(normalizedError);
-          chart.error = normalizedError;
-          if (runtimeIssueContext) {
-            runtimeIssueReporter?.reportIssue(
-              createChartRuntimeIssueFromError(
-                normalizedError,
-                runtimeIssueContext,
-                dataPolicy,
-              ),
-            );
-          }
+          chart.markStates!.set(mark, 'error');
+          chart.markErrors!.set(mark, normalizedError);
+          checkAndReportAggregateState(
+            chart,
+            onError,
+            runtimeIssueReporter,
+            runtimeIssueContext,
+            dataPolicy,
+          );
           if (mark.queryError) {
             return mark.queryError(normalizedError);
           }
@@ -114,23 +191,25 @@ function wrapMarkHandlers(
         }
       };
     }
+
+    // Wrap queryError
     if (mark.queryError) {
       const originalQueryError = mark.queryError;
-      mark.queryError = (error: unknown) => {
+      mark.queryError = function (this: QueryableMark, error: unknown) {
         const normalizedError =
           error instanceof Error ? error : new Error(String(error));
-        onError(normalizedError);
-        chart.error = normalizedError;
-        if (runtimeIssueContext) {
-          runtimeIssueReporter?.reportIssue(
-            createChartRuntimeIssueFromError(
-              normalizedError,
-              runtimeIssueContext,
-              dataPolicy,
-            ),
-          );
-        }
-        originalQueryError.call(mark, error);
+
+        chart.markStates?.set(mark, 'error');
+        chart.markErrors?.set(mark, normalizedError);
+
+        checkAndReportAggregateState(
+          chart,
+          onError,
+          runtimeIssueReporter,
+          runtimeIssueContext,
+          dataPolicy,
+        );
+        originalQueryError.call(this, error);
       };
     }
   });
@@ -175,6 +254,13 @@ export function useVgPlotChartRender({
     }
 
     if (cachedChart) {
+      // Clear mark states when reusing cached chart - marks will re-register on next query
+      if (cachedChart.markStates) {
+        cachedChart.markStates.clear();
+      }
+      if (cachedChart.markErrors) {
+        cachedChart.markErrors.clear();
+      }
       attachPlotElement(container, asPlotDomElement(cachedChart.element));
       if (containerSize) {
         resizeChartElement(cachedChart.element, containerSize);
@@ -189,10 +275,14 @@ export function useVgPlotChartRender({
         runtimeIssueReporter,
       );
 
-      // Restore error state from cached chart
-      if (cachedChart.error) {
-        onError(cachedChart.error);
-      }
+      // Restore aggregate error state from cached chart's mark states
+      checkAndReportAggregateState(
+        cachedChart,
+        onError,
+        runtimeIssueReporter,
+        runtimeIssueContext,
+        dataPolicy,
+      );
 
       return;
     }
