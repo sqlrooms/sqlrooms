@@ -14,18 +14,19 @@ import {
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
 } from '@geoarrow/deck.gl-layers';
-import {SqlroomsColumnLayer} from './SqlroomsColumnLayer';
-import {SqlroomsH3HexagonLayer} from './SqlroomsH3HexagonLayer';
-import {SqlroomsTripsLayer} from './SqlroomsTripsLayer';
+import {
+  SqlroomsColumnLayer,
+  SqlroomsH3HexagonLayer,
+  SqlroomsTripsLayer,
+} from './layers';
 
 // TODO(geoarrow-upgrade): Revisit this import surface on the next GeoArrow bump.
 // Published 0.3.x uses `@geoarrow/deck.gl-layers`; newer lines may rename the package
 // and/or move the exported layer classes.
 //
-// NOTE: GeoArrowTripsLayer and GeoArrowH3HexagonLayer from @geoarrow/deck.gl-layers@0.3.2
-// are incompatible with @deck.gl@9.3.x. We use our own wrappers that properly interface
-// Arrow data with the native deck.gl layers. See SqlroomsTripsLayer.ts and
-// SqlroomsH3HexagonLayer.ts for details.
+// NOTE: Some @geoarrow/deck.gl-layers@0.3.2 layers are incompatible with
+// @deck.gl@9.3.x. We use our own wrappers in ./layers/ that properly interface
+// Arrow data with the native deck.gl layers.
 export const DEFAULT_DECK_JSON_CLASSES = {
   MapView,
   FirstPersonView,
