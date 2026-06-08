@@ -19,6 +19,7 @@ export {createDefaultCellRegistry} from './defaultCellRegistry';
 export {getRenderableDependencyEdges} from './dagUtils';
 export {
   findArtifactIdForCell,
+  getUnqualifiedSqlIdentifier,
   normalizeCellDependencies,
   resolveArtifactSchemaName,
   toDataSourceCell,
