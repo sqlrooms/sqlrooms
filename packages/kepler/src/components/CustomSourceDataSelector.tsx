@@ -63,12 +63,12 @@ function getSelectedDatasetId(
 
 /**
  * Kepler uses the same SourceDataSelector in layer config and filter config.
- * Layer config passes a layer id, so only that version is augmented with
- * SQLRooms table options. Filter selectors keep Kepler's native dataset-only
- * behavior because a filter needs a loaded dataset to expose fields.
+ * Layer config passes a layer id, so only that version includes unloaded
+ * SQLRooms table options. Filter selectors use the same UI with loaded Kepler
+ * datasets only because a filter needs a loaded dataset to expose fields.
  */
 export function CustomSourceDataSelectorFactory(
-  DataSourceSelectorContent: SourceDataSelectorContent,
+  _DataSourceSelectorContent: SourceDataSelectorContent,
 ): React.FC<CustomSourceDataSelectorProps> {
   const SourceDataSelector: React.FC<CustomSourceDataSelectorProps> = ({
     dataId,
@@ -76,7 +76,6 @@ export function CustomSourceDataSelectorFactory(
     disabled,
     onSelect,
     defaultValue = 'Select A Dataset',
-    inputTheme,
     className,
     id: layerId,
   }) => {
@@ -119,13 +118,10 @@ export function CustomSourceDataSelectorFactory(
     );
 
     const options = useMemo(() => {
-      if (!layerId || !mapId) {
-        return [];
-      }
-
       return buildKeplerTableSourceOptions({
         dbTables,
         datasets,
+        includeUnloadedTables: Boolean(layerId && mapId),
         loadedDatasetIds,
         tableSelection,
       });
@@ -173,26 +169,7 @@ export function CustomSourceDataSelectorFactory(
       defaultValue;
     const selectedColor = selectedOption?.color ??
       selectedDataset?.color ?? [143, 149, 161];
-    const isDisabled = Boolean(disabled || isLoadingTable);
-
-    if (!layerId || !mapId) {
-      return (
-        <SidePanelSection className="data-source-selector">
-          <PanelLabel>
-            <FormattedMessage id="misc.dataSource" />
-          </PanelLabel>
-          <DataSourceSelectorContent
-            className={className}
-            inputTheme={inputTheme}
-            datasets={datasets}
-            dataId={dataId}
-            onSelect={onSelect}
-            defaultValue={defaultValue}
-            disabled={disabled}
-          />
-        </SidePanelSection>
-      );
-    }
+    const isDisabled = Boolean(disabled || isLoadingTable || !options.length);
 
     return (
       <SidePanelSection className="data-source-selector">

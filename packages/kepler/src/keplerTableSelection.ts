@@ -46,6 +46,11 @@ export type KeplerTableSourceOption = {
 export type BuildKeplerTableSourceOptionsParams = {
   dbTables: DataTable[];
   datasets?: Record<string, KeplerSourceDataset | undefined>;
+  /**
+   * Set false when the picker should only show datasets already loaded into
+   * Kepler, such as filter data-source selectors.
+   */
+  includeUnloadedTables?: boolean;
   loadedDatasetIds?: string[];
   tableSelection?: KeplerTableSelectionOptions;
 };
@@ -316,6 +321,7 @@ export function findKeplerTableForDatasetId(
 export function buildKeplerTableSourceOptions({
   dbTables,
   datasets = {},
+  includeUnloadedTables = true,
   loadedDatasetIds,
   tableSelection = {},
 }: BuildKeplerTableSourceOptionsParams): KeplerTableSourceOption[] {
@@ -360,27 +366,29 @@ export function buildKeplerTableSourceOptions({
     });
   }
 
-  for (const table of dbTables) {
-    if (!shouldIncludeKeplerTable(table, tableSelection)) {
-      continue;
-    }
+  if (includeUnloadedTables) {
+    for (const table of dbTables) {
+      if (!shouldIncludeKeplerTable(table, tableSelection)) {
+        continue;
+      }
 
-    const tableKey = getKeplerTableKey(table);
-    if (tableKey && loadedTableKeys.has(tableKey)) {
-      continue;
-    }
+      const tableKey = getKeplerTableKey(table);
+      if (tableKey && loadedTableKeys.has(tableKey)) {
+        continue;
+      }
 
-    const value = getKeplerDatasetIdForTable(table, tableSelection);
-    if (optionsByValue.has(value)) {
-      continue;
-    }
+      const value = getKeplerDatasetIdForTable(table, tableSelection);
+      if (optionsByValue.has(value)) {
+        continue;
+      }
 
-    optionsByValue.set(value, {
-      value,
-      label: getKeplerTableLabel(table, tableSelection),
-      color: UNLOADED_TABLE_COLOR,
-      isLoaded: false,
-    });
+      optionsByValue.set(value, {
+        value,
+        label: getKeplerTableLabel(table, tableSelection),
+        color: UNLOADED_TABLE_COLOR,
+        isLoaded: false,
+      });
+    }
   }
 
   return Array.from(optionsByValue.values()).sort(
