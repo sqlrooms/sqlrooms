@@ -33,7 +33,7 @@ export const MosaicDashboardAddPanelDropdown: FC<
               disabled={!canAddAnyPanel}
               aria-label="Add panel"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -49,7 +49,7 @@ export const MosaicDashboardAddPanelDropdown: FC<
               onClick={() => handleAddPanel(action)}
               disabled={!canAddPanel(action)}
             >
-              {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+              {Icon ? <Icon className="mr-2 h-3.5 w-3.5" /> : null}
               {action.label}
             </DropdownMenuItem>
           );

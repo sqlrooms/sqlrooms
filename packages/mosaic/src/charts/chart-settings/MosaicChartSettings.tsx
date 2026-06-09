@@ -22,7 +22,13 @@ import {
 } from './MosaicChartSettingsContext';
 import type {TableColumn} from '@sqlrooms/db';
 import {type ChartConfig, type ChartType} from '../chart-types';
-import {Button} from '@sqlrooms/ui';
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {CodeIcon, XIcon} from 'lucide-react';
 import {useChartTypeDefinition} from '../useChartTypeDefinition';
 import {Field} from '../../components/Field';
@@ -52,16 +58,22 @@ const MosaicChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({
   onClick,
 }) => {
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-5 w-5"
-      onClick={onClick}
-      title="View spec"
-      aria-label="View spec"
-    >
-      <CodeIcon className="h-3.5 w-3.5" />
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={onClick}
+            aria-label="View spec"
+          >
+            <CodeIcon className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>View spec</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
@@ -69,15 +81,22 @@ const MosaicChartSettingsCloseButton: FC<{onClick: () => void}> = ({
   onClick,
 }) => {
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-5 w-5"
-      onClick={onClick}
-      aria-label="Close"
-    >
-      <XIcon className="h-3.5 w-3.5" />
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={onClick}
+            aria-label="Close"
+          >
+            <XIcon className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Close</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

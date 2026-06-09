@@ -156,7 +156,7 @@ function DataTableExplorerCompoundResetButton({
   return (
     <ResetFiltersButton
       className={cn('h-7 w-7', className)}
-      iconClassName="h-4 w-4"
+      iconClassName="h-3.5 w-3.5"
       disabled={disabled}
       onClick={() => {
         explorer.reset();

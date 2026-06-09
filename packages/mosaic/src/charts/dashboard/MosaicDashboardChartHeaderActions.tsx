@@ -1,5 +1,3 @@
-import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
-import {SettingsIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import {
   type ChartPanelRendererProps,
@@ -8,6 +6,7 @@ import {
 import {usePanelClients} from '../../dashboard/usePanelClients';
 import {usePanelResetFilters} from '../../dashboard/hooks/usePanelResetFilters';
 import {ResetFiltersButton} from '../../dashboard/components/ResetFiltersButton';
+import {MosaicChartSettingsButton} from '../MosaicChartSettingsButton';
 
 export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
   dashboardId,
@@ -38,21 +37,10 @@ export const MosaicDashboardChartHeaderActions: FC<ChartPanelRendererProps> = ({
         onClick={reset}
         tooltip="Reset panel filters"
       />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="data-[state=active]:bg-accent h-6 w-6"
-            title="Chart settings"
-            onClick={handleToggleSettings}
-            data-state={isSettingsOpen ? 'active' : 'inactive'}
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Chart settings</TooltipContent>
-      </Tooltip>
+      <MosaicChartSettingsButton
+        isSettingsOpen={isSettingsOpen}
+        onToggleSettings={handleToggleSettings}
+      />
     </>
   );
 };
