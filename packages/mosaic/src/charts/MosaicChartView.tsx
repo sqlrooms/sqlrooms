@@ -97,10 +97,6 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     );
   }
 
-  if (issue) {
-    return <MosaicChartRuntimeIssuePanel issue={issue} />;
-  }
-
   if (renderContext.type === 'error') {
     return (
       <div
@@ -112,6 +108,10 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
         <MosaicChartError error={renderContext.error} />
       </div>
     );
+  }
+
+  if (issue) {
+    return <MosaicChartRuntimeIssuePanel issue={issue} />;
   }
 
   if (renderContext.type === 'spec') {
