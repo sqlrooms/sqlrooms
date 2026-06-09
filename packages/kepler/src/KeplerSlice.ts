@@ -604,16 +604,22 @@ export function createKeplerSlice({
         },
 
         addTableToMap: async (mapId, tableName, options = {}, config = {}) => {
+          const table = findKeplerTableForDatasetId(
+            get().db.tables,
+            tableName,
+            get().kepler.tableSelection,
+          );
+          const sqlTableName = table ? table.table.toString() : tableName;
           const connector = await get().db.getConnector();
           const duckDbColumns = await getDuckDBColumnTypes(
             {
               query: (query: string) => connector.query(query).result,
             } as DatabaseConnection,
-            tableName,
+            sqlTableName,
           );
           const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
           const adjustedQuery = castDuckDBTypesForKepler(
-            tableName,
+            sqlTableName,
             duckDbColumns,
           );
           const arrowResult = await connector.query(adjustedQuery).result;
@@ -626,22 +632,17 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
-            const table = findKeplerTableForDatasetId(
-              get().db.tables,
-              tableName,
-              get().kepler.tableSelection,
-            );
             let label = tableName;
             if (table) {
               label = getKeplerTableLabel(table, get().kepler.tableSelection);
             } else {
               label =
-                getUnqualifiedSqlIdentifier(String(tableName)) ?? tableName;
+                getUnqualifiedSqlIdentifier(String(sqlTableName)) ?? tableName;
             }
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {label, id: tableName},
-              metadata: {tableName},
+              metadata: {tableName: sqlTableName},
             };
             get().kepler.dispatchAction(
               mapId,

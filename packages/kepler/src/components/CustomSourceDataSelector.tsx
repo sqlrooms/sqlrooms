@@ -87,14 +87,13 @@ export function CustomSourceDataSelectorFactory(
     const addTableToMap = useStoreWithKepler(
       (state) => state.kepler.addTableToMap,
     );
-    const mapId = useStoreWithKepler((state) => {
+    const keplerMap = useStoreWithKepler((state) => state.kepler.map);
+    const mapId = useMemo(() => {
       if (!layerId) {
         return undefined;
       }
 
-      for (const [candidateMapId, mapState] of Object.entries(
-        state.kepler.map,
-      )) {
+      for (const [candidateMapId, mapState] of Object.entries(keplerMap)) {
         const hasLayer = mapState?.visState?.layers?.some(
           (layer: {id?: string}) => layer.id === layerId,
         );
@@ -104,14 +103,14 @@ export function CustomSourceDataSelectorFactory(
       }
 
       return undefined;
-    });
-    const mapDatasets = useStoreWithKepler((state) => {
+    }, [keplerMap, layerId]);
+    const mapDatasets = useMemo(() => {
       if (!mapId) {
         return undefined;
       }
 
-      return state.kepler.map[mapId]?.visState.datasets;
-    });
+      return keplerMap[mapId]?.visState.datasets;
+    }, [keplerMap, mapId]);
     const loadedDatasetIds = useMemo(
       () => Object.keys(mapDatasets ?? datasets),
       [datasets, mapDatasets],
