@@ -68,11 +68,13 @@ function validateBubbleChartSettings({
   }
 
   // Validate X and Y field are numeric
-  if (!isNumericType(xColumn.type) || !isNumericType(yColumn.type)) {
+  const xIsNumeric = isNumericType(xColumn.type);
+  const yIsNumeric = isNumericType(yColumn.type);
+  if (!xIsNumeric || !yIsNumeric) {
     throw new InvalidColumnTypeError(
       [
-        ...(!isNumericType(xColumn.type) ? [xColumn.name] : []),
-        ...(!isNumericType(yColumn.type) ? [yColumn.name] : []),
+        ...(!xIsNumeric ? [xColumn.name] : []),
+        ...(!yIsNumeric ? [yColumn.name] : []),
       ],
       'numeric',
     );

@@ -8,6 +8,10 @@ export class ChartSpecError extends Error {
   }
 }
 
+/**
+ * Error thrown when required chart configuration fields are missing.
+ * Used during chart validation to indicate which fields must be provided.
+ */
 export class RequiredFieldsError extends ChartSpecError {
   readonly fieldNames: string[];
 
@@ -19,6 +23,10 @@ export class RequiredFieldsError extends ChartSpecError {
   }
 }
 
+/**
+ * Error thrown when chart configuration references columns that don't exist in the data table.
+ * Used during chart validation to indicate which columns could not be found.
+ */
 export class MissingColumnsError extends ChartSpecError {
   readonly columnNames: string[];
 
@@ -30,6 +38,10 @@ export class MissingColumnsError extends ChartSpecError {
   }
 }
 
+/**
+ * Error thrown when chart configuration uses columns with incompatible data types.
+ * Used during chart validation to indicate which columns have invalid types and what type is expected.
+ */
 export class InvalidColumnTypeError extends ChartSpecError {
   readonly columnNames: string[];
   readonly expectedType: string;

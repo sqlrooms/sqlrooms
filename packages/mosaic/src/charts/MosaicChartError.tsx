@@ -10,6 +10,13 @@ type MosaicChartErrorProps = {
   error: Error;
 };
 
+/**
+ * Displays user-friendly error messages for chart configuration and validation errors.
+ * Renders specialized UI for known error types (RequiredFieldsError, MissingColumnsError,
+ * InvalidColumnTypeError) and a generic message for other errors.
+ *
+ * @param error - The error to display, typically from chart validation or creation
+ */
 export const MosaicChartError: FC<MosaicChartErrorProps> = ({error}) => {
   if (error instanceof RequiredFieldsError) {
     return (

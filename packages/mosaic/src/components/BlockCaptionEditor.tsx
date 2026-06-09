@@ -9,6 +9,15 @@ type BlockCaptionEditorProps = {
   onChange: (value: string) => void;
 };
 
+/**
+ * Editable caption field for blocks (charts, queries, etc.).
+ *
+ * @param value - Current caption text
+ * @param className - Optional CSS class name
+ * @param placeholder - Placeholder text when empty
+ * @param isReadOnly - Whether the caption is editable
+ * @param onChange - Callback when caption changes
+ */
 export const BlockCaptionEditor: FC<BlockCaptionEditorProps> = ({
   value,
   className,
