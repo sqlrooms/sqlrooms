@@ -38,8 +38,9 @@ export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
     : '';
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={cn(
         'group relative w-full cursor-pointer rounded-md border p-3 text-left transition-colors',
         isActive
@@ -47,6 +48,12 @@ export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
           : 'border-border hover:bg-muted',
       )}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -97,6 +104,6 @@ export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
           </Button>
         </div>
       </div>
-    </button>
+    </div>
   );
 };
