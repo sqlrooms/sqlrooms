@@ -66,6 +66,7 @@ import type {
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb-core';
+import {findKeplerTableForDataId} from './keplerTableIdentity';
 
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
@@ -412,7 +413,10 @@ export function createKeplerSlice({
               await get().kepler.syncKeplerDatasets();
             })
             .catch((error) => {
-              console.error('setConfig: failed to restore Kepler config', error);
+              console.error(
+                'setConfig: failed to restore Kepler config',
+                error,
+              );
             });
         },
 
@@ -669,15 +673,21 @@ export function createKeplerSlice({
                   }
                 }
 
-                const availableTableIds = new Set(
-                  get().db.tables.map((t) => t.table.toString()),
-                );
+                const availableTables = get().db.tables;
 
                 for (const dataId of referencedDataIds) {
                   if (keplerDatasets?.[dataId]) {
                     continue;
                   }
-                  if (!availableTableIds.has(dataId)) {
+                  const table = findKeplerTableForDataId(
+                    availableTables,
+                    dataId,
+                    {
+                      currentDatabase: get().db.currentDatabase,
+                      currentSchema: get().db.currentSchema,
+                    },
+                  );
+                  if (!table) {
                     continue;
                   }
                   try {

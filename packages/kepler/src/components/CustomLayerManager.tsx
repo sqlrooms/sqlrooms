@@ -21,6 +21,7 @@ import {
   KeplerActions,
   useKeplerStateActions,
 } from '../hooks/useKeplerStateActions';
+import {buildKeplerTableLayerOptions} from '../keplerTableIdentity';
 import {useStoreWithKepler} from '../KeplerSlice';
 import {RGBColor} from '@kepler.gl/types';
 
@@ -147,20 +148,17 @@ const AddTableLayerButton: React.FC<{
   const intl = useIntl();
 
   const dbTables = useStoreWithKepler((state) => state.db.tables);
+  const currentDatabase = useStoreWithKepler(
+    (state) => state.db.currentDatabase,
+  );
+  const currentSchema = useStoreWithKepler((state) => state.db.currentSchema);
 
   const options: TableOption[] = useMemo(() => {
-    const tableNames = new Set(
-      dbTables
-        .filter((t) => t.table.schema === 'main')
-        .map((t) => t.table.table),
-    );
-    for (const id of keplerDatasetIds) {
-      tableNames.add(id);
-    }
-    return Array.from(tableNames)
-      .sort()
-      .map((name) => ({label: name, value: name}));
-  }, [dbTables, keplerDatasetIds]);
+    return buildKeplerTableLayerOptions(dbTables, keplerDatasetIds, {
+      currentDatabase,
+      currentSchema,
+    });
+  }, [currentDatabase, currentSchema, dbTables, keplerDatasetIds]);
 
   const handleClick = useCallback(async () => {
     if (options.length === 1 && options[0]) {

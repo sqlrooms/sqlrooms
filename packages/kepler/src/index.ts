@@ -13,6 +13,16 @@ export type {
   CreateKeplerSliceOptions,
   KeplerSliceState,
 } from './KeplerSlice';
+export {
+  buildKeplerTableLayerOptions,
+  findKeplerTableForDataId,
+  getKeplerDatasetIdForTable,
+  getKeplerTableLabel,
+} from './keplerTableIdentity';
+export type {
+  KeplerTableIdentityContext,
+  KeplerTableLayerOption,
+} from './keplerTableIdentity';
 
 export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
