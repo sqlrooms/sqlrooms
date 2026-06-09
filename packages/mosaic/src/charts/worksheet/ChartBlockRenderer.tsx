@@ -53,11 +53,8 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   const handleTableChange = useCallback(
     (table: DataTable) => {
       onTableNameChange?.(table.table.toString());
-      if (parseChartConfigResult.success) {
-        onConfigChange?.({...parseChartConfigResult.config, settings: {}});
-      }
     },
-    [onTableNameChange, onConfigChange, parseChartConfigResult],
+    [onTableNameChange],
   );
 
   if (!selectedTable) {

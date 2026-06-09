@@ -1,4 +1,4 @@
-import {type FC, useEffect, useRef} from 'react';
+import {type FC} from 'react';
 import {Field} from '../../../components/Field';
 import {ColumnSelector} from '../../../components/ColumnSelector';
 
@@ -16,24 +16,8 @@ export const LineChartSettingsComponent: FC = () => {
   const {onChangeConfig, config} = useMosaicChartSettingsContext('line-chart');
   const {columns} = useColumnsContext();
 
-  const xField = columns.find((c) => c.name === config.settings.x);
-  const isXFieldTemporal = xField && isTemporalType(xField.type);
-
-  // Track previous temporal state to detect transitions
-  const prevIsTemporalRef = useRef(isXFieldTemporal);
-
-  // Clear xInterval when switching from temporal to non-temporal x field
-  useEffect(() => {
-    const wasTemporalBefore = prevIsTemporalRef.current;
-    const isTemporalNow = isXFieldTemporal;
-
-    // If we had a temporal field with xInterval set, and now have a non-temporal field
-    if (wasTemporalBefore && !isTemporalNow && config.settings.xInterval) {
-      onChangeConfig('xInterval', undefined);
-    }
-
-    prevIsTemporalRef.current = isTemporalNow;
-  }, [isXFieldTemporal, config.settings.xInterval, onChangeConfig]);
+  const xColumn = columns.find((c) => c.name === config.settings.x);
+  const isXFieldTemporal = xColumn && isTemporalType(xColumn.type);
 
   return (
     <div className="space-y-4">
@@ -54,7 +38,7 @@ export const LineChartSettingsComponent: FC = () => {
             <TemporalGranularitySelector
               value={config.settings.xInterval}
               onChange={(xInterval) => onChangeConfig('xInterval', xInterval)}
-              xFieldType={xField.type}
+              xFieldType={xColumn.type}
             />
           )}
         </div>
@@ -64,7 +48,9 @@ export const LineChartSettingsComponent: FC = () => {
         <MultiFieldSelector.Numeric
           value={config.settings.yFields ?? []}
           onChange={(yFields) => onChangeConfig('yFields', yFields)}
-          showAggregation={Boolean(config.settings.xInterval)}
+          showAggregation={Boolean(
+            isXFieldTemporal && config.settings.xInterval,
+          )}
         />
       </Field>
     </div>

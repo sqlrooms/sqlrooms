@@ -42,6 +42,10 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
                 {selectedColumn.type}
               </span>
             </span>
+          ) : value ? (
+            <span className="flex min-w-0 items-baseline gap-1">
+              <span className="truncate text-xs">{value}</span>
+            </span>
           ) : (
             <span className="text-muted-foreground truncate text-xs">
               {placeholder}

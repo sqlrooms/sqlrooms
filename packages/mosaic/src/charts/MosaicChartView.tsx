@@ -109,10 +109,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
           className,
         )}
       >
-        <MosaicChartError
-          title={renderContext.title}
-          message={renderContext.message}
-        />
+        <MosaicChartError error={renderContext.error} />
       </div>
     );
   }

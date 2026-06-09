@@ -1,9 +1,18 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {LineChartSettings} from './schema';
-import {ChartSpecError} from '../errors';
+import {
+  InvalidColumnTypeError,
+  MissingColumnsError,
+  RequiredFieldsError,
+} from '../errors';
 import {CreateSpecOptions} from '../base-types';
-import {isTemporalType} from '../../../column-types-utils';
-import {getValidatedColumn, validateAggregation} from '../validation';
+import {
+  isNumericType,
+  isQuantitativeType,
+  isTemporalType,
+} from '../../../column-types-utils';
+import {TableColumn} from '@sqlrooms/db';
+import {AggregateFunction, TemporalInterval} from '../../../schemas';
 
 // Chart color palette matching theme colors from tailwind-preset.css
 const CHART_COLORS = [
@@ -14,50 +23,20 @@ const CHART_COLORS = [
   '#f4a261', // chart-5: hsl(27, 87%, 67%)
 ];
 
-function getLineColor(
-  fieldConfig: {field: string; color?: string},
-  index: number,
-): string {
-  if (fieldConfig.color) {
-    return fieldConfig.color;
+function getLineColor(color: string | undefined, index: number): string {
+  if (color) {
+    return color;
   }
   // CHART_COLORS is non-empty, so this is always defined
   return CHART_COLORS[index % CHART_COLORS.length]!;
 }
 
-export function createLineChartSpec({
-  dataTable,
-  settings: {x, yFields, xInterval},
-  selectionName,
-}: CreateSpecOptions<LineChartSettings>): Spec {
-  if (!x) {
-    throw new ChartSpecError('X field is required for line chart');
-  }
+export function createLineChartSpec(
+  options: CreateSpecOptions<LineChartSettings>,
+): Spec {
+  const {dataTable, selectionName} = options;
 
-  const xColumn = getValidatedColumn(dataTable, x, 'X field');
-
-  if (!yFields?.length) {
-    throw new ChartSpecError('Y fields are required for line chart');
-  }
-
-  const validYFields = (yFields ?? []).map((field) => {
-    const column = getValidatedColumn(dataTable, field.field, 'Y field');
-    const aggregate = field.aggregate || 'sum';
-
-    // Validate aggregation applicability
-    validateAggregation(dataTable, field.field, aggregate, 'Y field');
-
-    return {
-      column,
-      field: field.field,
-      aggregate,
-      color: field.color,
-    };
-  });
-
-  if (validYFields.length === 0) {
-    throw new ChartSpecError('At least one Y field is required for line chart');
-  }
+  const {xColumn, yColumns, xInterval} = validateLineChartSettings(options);
 
   const isXTemporal = isTemporalType(xColumn.type);
 
@@ -67,9 +46,9 @@ export function createLineChartSpec({
   const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
 
   // Generate lineY and text marks for each Y field
-  validYFields.forEach((fieldConfig, index) => {
-    const color = getLineColor(fieldConfig, index);
-    const aggregate = fieldConfig.aggregate;
+  yColumns.forEach((yColumn, index) => {
+    const color = getLineColor(yColumn.color, index);
+    const aggregate = yColumn.aggregate || 'sum';
 
     // When temporal aggregation is active, use bin for X and aggregation for Y
     if (isXTemporal && xInterval) {
@@ -77,8 +56,8 @@ export function createLineChartSpec({
       plotMarks.push({
         mark: 'lineY',
         data: dataSource,
-        x: {bin: x, interval: xInterval},
-        y: {[aggregate]: fieldConfig.field},
+        x: {bin: xColumn.name, interval: xInterval},
+        y: {[aggregate]: yColumn.column.name},
         stroke: color,
       });
 
@@ -86,9 +65,9 @@ export function createLineChartSpec({
       plotMarks.push({
         mark: 'text',
         data: dataSource,
-        x: {bin: x, interval: xInterval},
-        y: {[aggregate]: fieldConfig.field},
-        text: [`${fieldConfig.field} (${aggregate})`],
+        x: {bin: xColumn.name, interval: xInterval},
+        y: {[aggregate]: yColumn.column.name},
+        text: [`${yColumn.column.name} (${aggregate})`],
         fill: color,
         dx: 5,
         dy: -5,
@@ -98,17 +77,17 @@ export function createLineChartSpec({
       plotMarks.push({
         mark: 'lineY',
         data: dataSource,
-        x,
-        y: fieldConfig.field,
+        x: xColumn.name,
+        y: yColumn.column.name,
         stroke: color,
       });
 
       plotMarks.push({
         mark: 'text',
         data: dataSource,
-        x,
-        y: fieldConfig.field,
-        text: [fieldConfig.field],
+        x: xColumn.name,
+        y: yColumn.column.name,
+        text: [yColumn.column.name],
         fill: color,
         dx: 5,
         dy: -5,
@@ -123,11 +102,75 @@ export function createLineChartSpec({
 
   return {
     plot: plotMarks,
-    xLabel: x,
+    xLabel: xColumn.name,
     yLabel: undefined,
     height: 250,
     width: 380,
     margins: {left: 50, right: 20, top: 20, bottom: 50},
     params: {brush: {select: 'crossfilter'}},
   } as Spec;
+}
+
+type ValidatedLineChartSettings = {
+  xColumn: TableColumn;
+  yColumns: {
+    field: string;
+    column: TableColumn;
+    aggregate?: AggregateFunction;
+    color?: string;
+  }[];
+  xInterval?: TemporalInterval;
+};
+
+function validateLineChartSettings({
+  dataTable,
+  settings: {x, yFields = [], xInterval},
+}: CreateSpecOptions<LineChartSettings>): ValidatedLineChartSettings {
+  // Basic validation for required fields
+  if (!x || yFields.length === 0) {
+    throw new RequiredFieldsError([
+      ...(x ? [] : ['X-axis']),
+      ...(yFields.length > 0 ? [] : ['Y-axis']),
+    ]);
+  }
+
+  // Validate X and Y field existence
+  const xColumn = dataTable.columns.find((col) => col.name === x);
+  const yColumns = yFields.map((y) => ({
+    field: y.field,
+    column: dataTable.columns.find((col) => col.name === y.field),
+    aggregate: y.aggregate,
+    color: y.color,
+  }));
+
+  const missingYColumns = yColumns.filter((y) => !y.column);
+
+  if (!xColumn || missingYColumns.length > 0) {
+    throw new MissingColumnsError([
+      ...(xColumn ? [] : ['X-axis']),
+      ...missingYColumns.map((y) => y.field),
+    ]);
+  }
+
+  // Validate X and Y field types
+  if (!isQuantitativeType(xColumn.type)) {
+    throw new InvalidColumnTypeError(xColumn.name, 'quantitative');
+  }
+
+  const invalidYFields = yColumns.filter((y) => {
+    return y.column && !isNumericType(y.column.type);
+  });
+
+  if (invalidYFields.length > 0) {
+    throw new InvalidColumnTypeError(
+      invalidYFields.map(({field}) => field),
+      'numeric',
+    );
+  }
+
+  return {
+    xColumn,
+    yColumns,
+    xInterval,
+  } as ValidatedLineChartSettings;
 }
