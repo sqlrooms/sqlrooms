@@ -103,3 +103,12 @@ export {
   HoistedRenderersProvider,
   useHoistedRenderers,
 } from './components/HoistedRenderersContext';
+export {
+  findChatSearchMatches,
+  markdownToPlainText,
+  normalizeChatSearchQuery,
+} from './components/ChatSearch';
+export type {
+  ChatSearchBlock,
+  ChatSearchMatch,
+} from './components/ChatSearch';
