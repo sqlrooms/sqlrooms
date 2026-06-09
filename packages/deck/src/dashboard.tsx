@@ -191,11 +191,7 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
 function isDeckMapFitToDataValid(
   fitToData: DeckMapDashboardFitToDataConfig | null | undefined,
 ): fitToData is DeckMapDashboardFitToDataConfig {
-  return Boolean(
-    fitToData &&
-    ((fitToData.longitudeColumn && fitToData.latitudeColumn) ||
-      fitToData.geometryColumn),
-  );
+  return Boolean(fitToData?.dataset);
 }
 
 function createDeckMapBoundsQuery(options: {
@@ -230,9 +226,26 @@ function createDeckMapBoundsQuery(options: {
     `;
   }
 
-  const longitudeColumn = escapeId(fitToData.longitudeColumn!);
-  const latitudeColumn = escapeId(fitToData.latitudeColumn!);
+  if (fitToData.longitudeColumn && fitToData.latitudeColumn) {
+    const longitudeColumn = escapeId(fitToData.longitudeColumn);
+    const latitudeColumn = escapeId(fitToData.latitudeColumn);
+    return `
+      SELECT
+        ST_XMin(extent) AS min_longitude,
+        ST_YMin(extent) AS min_latitude,
+        ST_XMax(extent) AS max_longitude,
+        ST_YMax(extent) AS max_latitude
+      FROM (
+        SELECT ST_Extent_Agg(ST_Point(${longitudeColumn}, ${latitudeColumn})) AS extent
+        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_points"
+        WHERE ${longitudeColumn} IS NOT NULL AND ${latitudeColumn} IS NOT NULL
+      ) AS "__sqlrooms_dashboard_map_extent"
+      WHERE extent IS NOT NULL
+    `;
+  }
 
+  // Fallback: use DuckDB unquoted identifiers for case-insensitive resolution
+  // of common coordinate column names (longitude, lat, etc.)
   return `
     SELECT
       ST_XMin(extent) AS min_longitude,
@@ -240,9 +253,9 @@ function createDeckMapBoundsQuery(options: {
       ST_XMax(extent) AS max_longitude,
       ST_YMax(extent) AS max_latitude
     FROM (
-      SELECT ST_Extent_Agg(ST_Point(${longitudeColumn}, ${latitudeColumn})) AS extent
+      SELECT ST_Extent_Agg(ST_Point(Longitude, Latitude)) AS extent
       FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_points"
-      WHERE ${longitudeColumn} IS NOT NULL AND ${latitudeColumn} IS NOT NULL
+      WHERE Longitude IS NOT NULL AND Latitude IS NOT NULL
     ) AS "__sqlrooms_dashboard_map_extent"
     WHERE extent IS NOT NULL
   `;
@@ -520,16 +533,34 @@ function DeckMapDashboardRenderer({
   const fitToDataRaw = mapConfig?.fitToData ?? null;
   const fitToData: DeckMapDashboardFitToDataConfig | null = useMemo(() => {
     if (!fitToDataRaw) return null;
-    if (fitToDataRaw.geometryColumn || fitToDataRaw.longitudeColumn) {
+    const dataset = mapConfig?.datasets[fitToDataRaw.dataset];
+    const interaction = mapConfig?.interaction;
+
+    if (fitToDataRaw.longitudeColumn && fitToDataRaw.latitudeColumn) {
       return fitToDataRaw;
     }
-    const datasetGeomCol =
-      mapConfig?.datasets[fitToDataRaw.dataset]?.geometryColumn;
-    if (datasetGeomCol) {
-      return {...fitToDataRaw, geometryColumn: datasetGeomCol};
+
+    const geomCol = fitToDataRaw.geometryColumn ?? dataset?.geometryColumn;
+    const hasSourceSqlQuery = Boolean(dataset?.source?.sqlQuery);
+
+    if (geomCol && hasSourceSqlQuery) {
+      return {...fitToDataRaw, geometryColumn: geomCol};
     }
-    return fitToDataRaw;
-  }, [fitToDataRaw, mapConfig?.datasets]);
+
+    if (interaction?.longitudeColumn && interaction?.latitudeColumn) {
+      return {
+        ...fitToDataRaw,
+        geometryColumn: undefined,
+        longitudeColumn: interaction.longitudeColumn,
+        latitudeColumn: interaction.latitudeColumn,
+      };
+    }
+
+    // Strip unverifiable geometryColumn; the bounds query will use
+    // DuckDB case-insensitive column resolution as a fallback.
+    const {geometryColumn: _stripped, ...safeConfig} = fitToDataRaw;
+    return safeConfig;
+  }, [fitToDataRaw, mapConfig?.datasets, mapConfig?.interaction]);
   const fitToDataSource = useMemo(
     () =>
       fitToData
