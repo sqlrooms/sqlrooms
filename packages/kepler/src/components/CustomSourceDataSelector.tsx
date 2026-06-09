@@ -1,42 +1,26 @@
-import {FormattedMessage} from '@kepler.gl/localization';
 import {
   PanelLabel,
   SidePanelSection,
   SourceDataSelectorFactory,
   SourceDataSelectorProps,
 } from '@kepler.gl/components';
+import {FormattedMessage} from '@kepler.gl/localization';
+import {Button, cn} from '@sqlrooms/ui';
 import React, {useCallback, useMemo, useState} from 'react';
-import {
-  buildKeplerTableLayerOptions,
-  findKeplerTableForDatasetId,
-  getKeplerTableLabel,
-} from '../keplerTableSelection';
 import {useStoreWithKepler} from '../KeplerSlice';
-
-const UNLOADED_TABLE_COLOR: [number, number, number] = [143, 149, 161];
+import {
+  buildKeplerTableSourceOptions,
+  type KeplerTableSourceOption,
+} from '../keplerTableSelection';
+import {KeplerTableSourceSelector} from './KeplerTableSourceSelector';
 
 type SourceDataSelectorValue = Parameters<
   SourceDataSelectorProps['onSelect']
 >[0];
-type SelectableDataset = SourceDataSelectorProps['datasets'][string];
 type SourceDataSelectorContent = React.ComponentType<SourceDataSelectorProps>;
 type CustomSourceDataSelectorProps = SourceDataSelectorProps & {
   id?: string;
 };
-
-function getTableKey(
-  table: ReturnType<typeof findKeplerTableForDatasetId>,
-): string | undefined {
-  if (!table) {
-    return undefined;
-  }
-
-  return [
-    table.table.database ?? '',
-    table.table.schema ?? '',
-    table.table.table,
-  ].join('.');
-}
 
 function getSelectedDatasetId(
   value: SourceDataSelectorValue,
@@ -134,86 +118,38 @@ export function CustomSourceDataSelectorFactory(
       [datasets, mapDatasets],
     );
 
-    const selectorDatasets = useMemo(() => {
+    const options = useMemo(() => {
       if (!layerId || !mapId) {
-        return datasets;
+        return [];
       }
 
-      const tableOptions = buildKeplerTableLayerOptions(
+      return buildKeplerTableSourceOptions({
         dbTables,
+        datasets,
         loadedDatasetIds,
         tableSelection,
-      );
-      const nextDatasets: Record<string, SelectableDataset> = {};
-      const loadedTableKeys = new Set<string>();
-
-      for (const [datasetId, dataset] of Object.entries(datasets)) {
-        const table = findKeplerTableForDatasetId(
-          dbTables,
-          datasetId,
-          tableSelection,
-        );
-        const tableKey = getTableKey(table);
-        if (table && tableKey) {
-          loadedTableKeys.add(tableKey);
-          nextDatasets[datasetId] = {
-            ...dataset,
-            label: getKeplerTableLabel(table, tableSelection),
-          };
-        } else {
-          nextDatasets[datasetId] = dataset;
-        }
-      }
-
-      for (const option of tableOptions) {
-        const table = findKeplerTableForDatasetId(
-          dbTables,
-          option.value,
-          tableSelection,
-        );
-        if (!table) {
-          continue;
-        }
-
-        const tableKey = getTableKey(table);
-        if (tableKey && loadedTableKeys.has(tableKey)) {
-          continue;
-        }
-
-        if (nextDatasets[option.value]) {
-          continue;
-        }
-
-        nextDatasets[option.value] = {
-          id: option.value,
-          label: option.label,
-          color: UNLOADED_TABLE_COLOR,
-        };
-      }
-
-      return nextDatasets;
+      });
     }, [datasets, dbTables, layerId, loadedDatasetIds, mapId, tableSelection]);
 
     const handleSelect = useCallback(
-      (value: SourceDataSelectorValue) => {
-        const selectedDatasetId = getSelectedDatasetId(value);
-        if (!selectedDatasetId || !layerId || !mapId) {
-          onSelect(value);
+      (option: KeplerTableSourceOption) => {
+        if (!layerId || !mapId) {
+          onSelect(option.value);
           return;
         }
 
-        if (loadedDatasetIds.includes(selectedDatasetId)) {
-          onSelect(selectedDatasetId);
+        if (option.isLoaded) {
+          onSelect(option.value);
           return;
         }
 
         setIsLoadingTable(true);
-        void addTableToMap(mapId, selectedDatasetId, {
+        void addTableToMap(mapId, option.value, {
           autoCreateLayers: false,
           centerMap: false,
         })
           .then(() => {
-            onSelect(selectedDatasetId);
+            onSelect(option.value);
           })
           .catch((e) => {
             console.error('Failed to load layer data source:', e);
@@ -222,24 +158,78 @@ export function CustomSourceDataSelectorFactory(
             setIsLoadingTable(false);
           });
       },
-      [addTableToMap, layerId, loadedDatasetIds, mapId, onSelect],
+      [addTableToMap, layerId, mapId, onSelect],
     );
 
+    const selectedValue = getSelectedDatasetId(dataId);
+    const selectedDataset = selectedValue ? datasets[selectedValue] : undefined;
+    const selectedOption = options.find(
+      (option) => option.value === selectedValue,
+    );
+    const selectedLabel =
+      selectedOption?.label ??
+      selectedDataset?.label ??
+      selectedValue ??
+      defaultValue;
+    const selectedColor = selectedOption?.color ??
+      selectedDataset?.color ?? [143, 149, 161];
     const isDisabled = Boolean(disabled || isLoadingTable);
+
+    if (!layerId || !mapId) {
+      return (
+        <SidePanelSection className="data-source-selector">
+          <PanelLabel>
+            <FormattedMessage id="misc.dataSource" />
+          </PanelLabel>
+          <DataSourceSelectorContent
+            className={className}
+            inputTheme={inputTheme}
+            datasets={datasets}
+            dataId={dataId}
+            onSelect={onSelect}
+            defaultValue={defaultValue}
+            disabled={disabled}
+          />
+        </SidePanelSection>
+      );
+    }
 
     return (
       <SidePanelSection className="data-source-selector">
         <PanelLabel>
           <FormattedMessage id="misc.dataSource" />
         </PanelLabel>
-        <DataSourceSelectorContent
-          className={className}
-          inputTheme={inputTheme}
-          datasets={selectorDatasets}
-          dataId={dataId}
-          onSelect={handleSelect}
-          defaultValue={defaultValue}
+        <KeplerTableSourceSelector
           disabled={isDisabled}
+          options={options}
+          popoverClassName="w-[360px]"
+          searchPlaceholder="Search"
+          selectedValue={selectedValue}
+          onSelect={handleSelect}
+          renderTrigger={({disabled: triggerDisabled, selectedOption}) => {
+            const triggerColor = selectedOption?.color ?? selectedColor;
+            const triggerLabel = selectedOption?.label ?? selectedLabel;
+
+            return (
+              <Button
+                type="button"
+                variant="secondary"
+                className={cn(
+                  className,
+                  'h-9 w-full justify-start gap-2.5 rounded-sm px-3 text-left text-xs font-semibold',
+                )}
+                disabled={triggerDisabled}
+              >
+                <span
+                  className="h-2.5 w-2.5 shrink-0"
+                  style={{
+                    backgroundColor: `rgb(${triggerColor.join(',')})`,
+                  }}
+                />
+                <span className="min-w-0 truncate">{triggerLabel}</span>
+              </Button>
+            );
+          }}
         />
       </SidePanelSection>
     );

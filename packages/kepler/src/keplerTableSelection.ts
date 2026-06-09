@@ -1,4 +1,7 @@
 import type {DataTable} from '@sqlrooms/duckdb-core';
+import type {RGBColor} from '@kepler.gl/types';
+
+const UNLOADED_TABLE_COLOR: RGBColor = [143, 149, 161];
 
 /**
  * A database/schema pair that can be referred to by bare table name in Kepler
@@ -15,6 +18,36 @@ export type KeplerDbSchemaReference = {
 export type KeplerTableLayerOption = {
   label: string;
   value: string;
+};
+
+/**
+ * Minimal loaded Kepler dataset shape needed to build table source options.
+ */
+export type KeplerSourceDataset = {
+  id: string;
+  label?: string;
+  color?: RGBColor;
+};
+
+/**
+ * One option in a Kepler table source picker.
+ */
+export type KeplerTableSourceOption = {
+  value: string;
+  label: string;
+  color: RGBColor;
+  isLoaded: boolean;
+};
+
+/**
+ * Inputs for building source picker options from loaded Kepler datasets plus
+ * the DuckDB table catalog.
+ */
+export type BuildKeplerTableSourceOptionsParams = {
+  dbTables: DataTable[];
+  datasets?: Record<string, KeplerSourceDataset | undefined>;
+  loadedDatasetIds?: string[];
+  tableSelection?: KeplerTableSelectionOptions;
 };
 
 /**
@@ -103,6 +136,41 @@ function tableMatchesDbSchema(
     table.table.database === reference.database &&
     table.table.schema === reference.schema
   );
+}
+
+function getKeplerTableKey(table: DataTable | undefined): string | undefined {
+  if (!table) {
+    return undefined;
+  }
+
+  return [
+    table.table.database ?? '',
+    table.table.schema ?? '',
+    table.table.table,
+  ].join('.');
+}
+
+function getKeplerDatasetLabel(
+  datasetId: string,
+  dataset: KeplerSourceDataset | undefined,
+  table: DataTable | undefined,
+  tableSelection: KeplerTableSelectionOptions,
+): string {
+  if (table) {
+    return getKeplerTableLabel(table, tableSelection);
+  }
+
+  if (dataset?.label) {
+    return dataset.label;
+  }
+
+  return datasetId;
+}
+
+function getKeplerDatasetColor(
+  dataset: KeplerSourceDataset | undefined,
+): RGBColor {
+  return dataset?.color ?? UNLOADED_TABLE_COLOR;
 }
 
 function findMatchingKeplerTableForDatasetId(
@@ -236,6 +304,90 @@ export function findKeplerTableForDatasetId(
   }
 
   return table;
+}
+
+/**
+ * Build source picker options from loaded Kepler datasets plus unloaded DuckDB
+ * tables that are allowed by the table-selection policy.
+ *
+ * Loaded Kepler datasets keep their existing dataset ids so selecting them does
+ * not duplicate data. Unloaded tables use `getKeplerDatasetIdForTable`.
+ */
+export function buildKeplerTableSourceOptions({
+  dbTables,
+  datasets = {},
+  loadedDatasetIds,
+  tableSelection = {},
+}: BuildKeplerTableSourceOptionsParams): KeplerTableSourceOption[] {
+  const optionsByValue = new Map<string, KeplerTableSourceOption>();
+  const loadedTableKeys = new Set<string>();
+  const loadedIds = loadedDatasetIds ?? Object.keys(datasets);
+
+  for (const datasetId of loadedIds) {
+    const table = findMatchingKeplerTableForDatasetId(
+      dbTables,
+      datasetId,
+      tableSelection,
+    );
+    const tableKey = getKeplerTableKey(table);
+    if (tableKey) {
+      loadedTableKeys.add(tableKey);
+    }
+  }
+
+  for (const [datasetId, dataset] of Object.entries(datasets)) {
+    const table = findMatchingKeplerTableForDatasetId(
+      dbTables,
+      datasetId,
+      tableSelection,
+    );
+    if (table && !shouldIncludeKeplerTable(table, tableSelection)) {
+      continue;
+    }
+
+    const label = getKeplerDatasetLabel(
+      datasetId,
+      dataset,
+      table,
+      tableSelection,
+    );
+
+    optionsByValue.set(datasetId, {
+      value: datasetId,
+      label,
+      color: getKeplerDatasetColor(dataset),
+      isLoaded: true,
+    });
+  }
+
+  for (const table of dbTables) {
+    if (!shouldIncludeKeplerTable(table, tableSelection)) {
+      continue;
+    }
+
+    const tableKey = getKeplerTableKey(table);
+    if (tableKey && loadedTableKeys.has(tableKey)) {
+      continue;
+    }
+
+    const value = getKeplerDatasetIdForTable(table, tableSelection);
+    if (optionsByValue.has(value)) {
+      continue;
+    }
+
+    optionsByValue.set(value, {
+      value,
+      label: getKeplerTableLabel(table, tableSelection),
+      color: UNLOADED_TABLE_COLOR,
+      isLoaded: false,
+    });
+  }
+
+  return Array.from(optionsByValue.values()).sort(
+    (left, right) =>
+      left.label.localeCompare(right.label) ||
+      left.value.localeCompare(right.value),
+  );
 }
 
 /**
