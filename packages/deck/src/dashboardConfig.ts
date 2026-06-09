@@ -35,8 +35,10 @@ export type DeckMapDashboardInteractionConfig = {
 
 export type DeckMapDashboardFitToDataConfig = {
   dataset: string;
-  longitudeColumn: string;
-  latitudeColumn: string;
+  longitudeColumn?: string;
+  latitudeColumn?: string;
+  /** Geometry column name (WKB) for computing bounds from geometry directly. */
+  geometryColumn?: string;
   padding?: number;
   maxZoom?: number;
 };

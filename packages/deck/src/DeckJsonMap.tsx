@@ -3,7 +3,15 @@ import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
@@ -13,7 +21,11 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
-import type {DeckJsonMapProps, PreparedDeckDatasetState} from './types';
+import type {
+  DeckJsonMapHandle,
+  DeckJsonMapProps,
+  PreparedDeckDatasetState,
+} from './types';
 
 const DEFAULT_MAP_STYLES: Record<ResolvedTheme, string> = {
   light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
@@ -185,221 +197,260 @@ function DeckOverlayControl({
   return null;
 }
 
-export function DeckJsonMap({
-  spec,
-  datasets,
-  mapStyle,
-  interleaved = false,
-  deckProps,
-  mapProps,
-  showLegends = true,
-  className,
-  children,
-  onDatasetStatesChange,
-}: DeckJsonMapProps) {
-  const normalizedDatasets = useMemo(
-    () => normalizeDatasets(datasets),
-    [datasets],
-  );
-  const datasetIds = useMemo(
-    () => Object.keys(normalizedDatasets),
-    [normalizedDatasets],
-  );
-  const datasetStates = usePreparedDatasetStates(normalizedDatasets);
-  const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
-
-  const {spec: parsedSpec, error: specError} = useMemo(
-    () => parseSpec(spec),
-    [spec],
-  );
-
-  const availableSpec = useMemo(
-    () =>
-      parsedSpec
-        ? filterUnavailableLayers(parsedSpec, datasetIds, datasetStates)
-        : null,
-    [parsedSpec, datasetIds, datasetStates],
-  );
-
-  const converter = useMemo(
-    () =>
-      new JSONConverter({
-        configuration: createDeckJsonConfiguration({
-          datasetStates,
-          datasetIds,
-        }),
-        onJSONChange: () => {},
-      }),
-    [datasetIds, datasetStates],
-  );
-
-  const convertedDeckPropsResult = useMemo(() => {
-    if (!availableSpec) {
-      return {props: null, error: specError};
-    }
-
-    try {
-      return {
-        props: converter.convert(availableSpec) as Record<string, unknown>,
-        error: null,
-      };
-    } catch (error) {
-      return {
-        props: null,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
-  }, [availableSpec, converter, specError]);
-
-  // Animation for TripsLayer — update currentTime on each frame
-  const hasTripsLayer = useMemo(() => {
-    if (!availableSpec || !Array.isArray(availableSpec.layers)) return false;
-    return availableSpec.layers.some(
-      (l: unknown) =>
-        l &&
-        typeof l === 'object' &&
-        ((l as {'@@type'?: string})['@@type'] === 'GeoArrowTripsLayer' ||
-          (l as {'@@type'?: string})['@@type'] === 'TripsLayer'),
+export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
+  function DeckJsonMap(
+    {
+      spec,
+      datasets,
+      mapStyle,
+      interleaved = false,
+      deckProps,
+      mapProps,
+      showLegends = true,
+      className,
+      children,
+      onDatasetStatesChange,
+    },
+    ref,
+  ) {
+    const normalizedDatasets = useMemo(
+      () => normalizeDatasets(datasets),
+      [datasets],
     );
-  }, [availableSpec]);
+    const datasetIds = useMemo(
+      () => Object.keys(normalizedDatasets),
+      [normalizedDatasets],
+    );
+    const datasetStates = usePreparedDatasetStates(normalizedDatasets);
+    const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
 
-  const [tripsTime, setTripsTime] = useState(0);
-  const tripsAnimRef = useRef<number>(0);
-  useEffect(() => {
-    if (!hasTripsLayer) return;
-    const startTime = Date.now();
-    let raf: number;
-    const tick = () => {
-      setTripsTime(Date.now() - startTime);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    tripsAnimRef.current = startTime;
-    return () => cancelAnimationFrame(raf);
-  }, [hasTripsLayer]);
+    const {spec: parsedSpec, error: specError} = useMemo(
+      () => parseSpec(spec),
+      [spec],
+    );
 
-  const finalDeckPropsResult = convertedDeckPropsResult;
+    const availableSpec = useMemo(
+      () =>
+        parsedSpec
+          ? filterUnavailableLayers(parsedSpec, datasetIds, datasetStates)
+          : null,
+      [parsedSpec, datasetIds, datasetStates],
+    );
 
-  useEffect(() => {
-    if (finalDeckPropsResult.error) {
-      console.error(finalDeckPropsResult.error);
-    }
-  }, [finalDeckPropsResult.error]);
-
-  useEffect(() => {
-    onDatasetStatesChangeRef.current = onDatasetStatesChange;
-  }, [onDatasetStatesChange]);
-
-  useEffect(() => {
-    onDatasetStatesChangeRef.current?.(datasetStates);
-  }, [datasetStates]);
-
-  const fallbackDeckProps = useMemo(
-    () => extractFallbackDeckProps(availableSpec),
-    [availableSpec],
-  );
-  const convertedDeckProps = (finalDeckPropsResult.props ??
-    fallbackDeckProps ??
-    {}) as Record<string, unknown>;
-  const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
-  const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
-  const hasRenderingError = Boolean(finalDeckPropsResult.error);
-
-  // Animate TripsLayer by injecting currentTime from the animation clock
-  const animatedLayers = useMemo(() => {
-    const mergedLayers = hasRenderingError
-      ? []
-      : (deckProps?.layers ??
-        (convertedDeckProps.layers as unknown[] | undefined) ??
-        []);
-    if (!hasTripsLayer || !Array.isArray(mergedLayers)) return mergedLayers;
-    return mergedLayers.map((layer: unknown) => {
-      if (!layer || typeof layer !== 'object') return layer;
-      const layerObj = layer as {
-        props?: Record<string, unknown>;
-        clone?: (props: Record<string, unknown>) => unknown;
-      };
-      const maxTs = (layerObj.props as Record<string, unknown> | undefined)
-        ?._tripsMaxTimestamp as number | undefined;
-      if (maxTs && maxTs > 0 && layerObj.clone) {
-        const loopLength = maxTs;
-        const animationSpeed = 30;
-        const currentTime = (tripsTime / animationSpeed) % loopLength;
-        return layerObj.clone({
-          currentTime,
-          trailLength: loopLength * 0.4,
-        });
-      }
-      return layer;
-    });
-  }, [
-    hasTripsLayer,
-    hasRenderingError,
-    deckProps?.layers,
-    convertedDeckProps.layers,
-    tripsTime,
-  ]);
-
-  const mergedDeckProps = {
-    ...convertedDeckProps,
-    ...extraDeckProps,
-    layers: animatedLayers,
-  };
-
-  // overlayDeckProps should not contain viewState/initialViewState
-  const {
-    initialViewState,
-    viewState: _vs,
-    ...overlayDeckProps
-  } = mergedDeckProps as Record<string, unknown>;
-  void _vs;
-
-  const {resolvedTheme} = useTheme();
-
-  const mergedMapProps = {
-    ...extraMapProps,
-    mapStyle:
-      mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLES[resolvedTheme],
-  };
-  const legends = useMemo(
-    () =>
-      showLegends
-        ? extractColorScaleLegends({
-            spec: availableSpec,
-            datasetIds,
+    const converter = useMemo(
+      () =>
+        new JSONConverter({
+          configuration: createDeckJsonConfiguration({
             datasetStates,
-          })
-        : [],
-    [availableSpec, datasetIds, datasetStates, showLegends],
-  );
+            datasetIds,
+          }),
+          onJSONChange: () => {},
+        }),
+      [datasetIds, datasetStates],
+    );
 
-  return (
-    <div className={cn('relative h-full w-full', className)}>
-      {hasRenderingError ? (
-        <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-          <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
-            {`Map couldn't be rendered. Check the console for details.`}
+    const convertedDeckPropsResult = useMemo(() => {
+      if (!availableSpec) {
+        return {props: null, error: specError};
+      }
+
+      try {
+        return {
+          props: converter.convert(availableSpec) as Record<string, unknown>,
+          error: null,
+        };
+      } catch (error) {
+        return {
+          props: null,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
+      }
+    }, [availableSpec, converter, specError]);
+
+    // Animation for TripsLayer — update currentTime on each frame
+    const hasTripsLayer = useMemo(() => {
+      if (!availableSpec || !Array.isArray(availableSpec.layers)) return false;
+      return availableSpec.layers.some(
+        (l: unknown) =>
+          l &&
+          typeof l === 'object' &&
+          ((l as {'@@type'?: string})['@@type'] === 'GeoArrowTripsLayer' ||
+            (l as {'@@type'?: string})['@@type'] === 'TripsLayer'),
+      );
+    }, [availableSpec]);
+
+    const [tripsTime, setTripsTime] = useState(0);
+    const tripsAnimRef = useRef<number>(0);
+    useEffect(() => {
+      if (!hasTripsLayer) return;
+      const startTime = Date.now();
+      let raf: number;
+      const tick = () => {
+        setTripsTime(Date.now() - startTime);
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      tripsAnimRef.current = startTime;
+      return () => cancelAnimationFrame(raf);
+    }, [hasTripsLayer]);
+
+    const finalDeckPropsResult = convertedDeckPropsResult;
+
+    useEffect(() => {
+      if (finalDeckPropsResult.error) {
+        console.error(finalDeckPropsResult.error);
+      }
+    }, [finalDeckPropsResult.error]);
+
+    useEffect(() => {
+      onDatasetStatesChangeRef.current = onDatasetStatesChange;
+    }, [onDatasetStatesChange]);
+
+    useEffect(() => {
+      onDatasetStatesChangeRef.current?.(datasetStates);
+    }, [datasetStates]);
+
+    const fallbackDeckProps = useMemo(
+      () => extractFallbackDeckProps(availableSpec),
+      [availableSpec],
+    );
+    const convertedDeckProps = (finalDeckPropsResult.props ??
+      fallbackDeckProps ??
+      {}) as Record<string, unknown>;
+    const extraDeckProps = (deckProps ?? {}) as Record<string, unknown>;
+    const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
+    const hasRenderingError = Boolean(finalDeckPropsResult.error);
+
+    // Animate TripsLayer by injecting currentTime from the animation clock
+    const animatedLayers = useMemo(() => {
+      const mergedLayers = hasRenderingError
+        ? []
+        : (deckProps?.layers ??
+          (convertedDeckProps.layers as unknown[] | undefined) ??
+          []);
+      if (!hasTripsLayer || !Array.isArray(mergedLayers)) return mergedLayers;
+      return mergedLayers.map((layer: unknown) => {
+        if (!layer || typeof layer !== 'object') return layer;
+        const layerObj = layer as {
+          props?: Record<string, unknown>;
+          clone?: (props: Record<string, unknown>) => unknown;
+        };
+        const maxTs = (layerObj.props as Record<string, unknown> | undefined)
+          ?._tripsMaxTimestamp as number | undefined;
+        if (maxTs && maxTs > 0 && layerObj.clone) {
+          const loopLength = maxTs;
+          const animationSpeed = 30;
+          const currentTime = (tripsTime / animationSpeed) % loopLength;
+          return layerObj.clone({
+            currentTime,
+            trailLength: loopLength * 0.4,
+          });
+        }
+        return layer;
+      });
+    }, [
+      hasTripsLayer,
+      hasRenderingError,
+      deckProps?.layers,
+      convertedDeckProps.layers,
+      tripsTime,
+    ]);
+
+    const mergedDeckProps = {
+      ...convertedDeckProps,
+      ...extraDeckProps,
+      layers: animatedLayers,
+    };
+
+    // overlayDeckProps should not contain viewState/initialViewState
+    const {
+      initialViewState,
+      viewState: _vs,
+      onViewStateChange: _onViewStateChange,
+      ...overlayDeckProps
+    } = mergedDeckProps as Record<string, unknown>;
+    void _vs;
+    void _onViewStateChange;
+
+    const mapRef = useRef<{jumpTo: (opts: object) => void} | null>(null);
+    const pendingJumpRef = useRef<object | null>(null);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        jumpTo(opts) {
+          const jumpOpts = {
+            center: [opts.longitude, opts.latitude] as [number, number],
+            zoom: opts.zoom,
+            bearing: opts.bearing ?? 0,
+            pitch: opts.pitch ?? 0,
+          };
+          if (mapRef.current) {
+            mapRef.current.jumpTo(jumpOpts);
+          } else {
+            pendingJumpRef.current = jumpOpts;
+          }
+        },
+      }),
+      [],
+    );
+
+    const handleMapLoad = useCallback(() => {
+      if (pendingJumpRef.current && mapRef.current) {
+        mapRef.current.jumpTo(pendingJumpRef.current);
+        pendingJumpRef.current = null;
+      }
+    }, []);
+
+    const {resolvedTheme} = useTheme();
+
+    const mergedMapProps = {
+      ...extraMapProps,
+      mapStyle:
+        mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLES[resolvedTheme],
+    };
+    const legends = useMemo(
+      () =>
+        showLegends
+          ? extractColorScaleLegends({
+              spec: availableSpec,
+              datasetIds,
+              datasetStates,
+            })
+          : [],
+      [availableSpec, datasetIds, datasetStates, showLegends],
+    );
+
+    return (
+      <div className={cn('relative h-full w-full', className)}>
+        {hasRenderingError ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
+            <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
+              {`Map couldn't be rendered. Check the console for details.`}
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <Map
-        {...(mergedMapProps as object)}
-        {...(initialViewState
-          ? {initialViewState: initialViewState as object}
-          : {})}
-        style={{width: '100%', height: '100%', ...mapProps?.style}}
-      >
-        <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
-        {children}
-      </Map>
+        <Map
+          ref={mapRef as any}
+          {...(mergedMapProps as object)}
+          {...(initialViewState
+            ? {initialViewState: initialViewState as object}
+            : {})}
+          onLoad={handleMapLoad}
+          style={{width: '100%', height: '100%', ...mapProps?.style}}
+        >
+          <DeckOverlayControl interleaved={interleaved} {...overlayDeckProps} />
+          {children}
+        </Map>
 
-      {renderDatasetErrorOverlay(datasetStates)}
-      {!hasRenderingError && showLegends ? (
-        <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
-          <ColorScaleLegend legends={legends} />
-        </div>
-      ) : null}
-    </div>
-  );
-}
+        {renderDatasetErrorOverlay(datasetStates)}
+        {!hasRenderingError && showLegends ? (
+          <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
+            <ColorScaleLegend legends={legends} />
+          </div>
+        ) : null}
+      </div>
+    );
+  },
+);

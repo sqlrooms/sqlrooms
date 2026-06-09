@@ -1,8 +1,4 @@
 import {WebMercatorViewport} from '@deck.gl/core';
-import type {ComponentProps} from 'react';
-import type DeckGLReact from '@deck.gl/react';
-
-type DeckProps = ComponentProps<typeof DeckGLReact>;
 import {
   escapeId,
   getColValAsNumber,
@@ -34,6 +30,7 @@ import {FocusIcon, MapIcon, SettingsIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
+import type {DeckJsonMapHandle} from './types';
 import {MapSettingsPanel} from './MapSettings';
 import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
@@ -195,7 +192,9 @@ function isDeckMapFitToDataValid(
   fitToData: DeckMapDashboardFitToDataConfig | null | undefined,
 ): fitToData is DeckMapDashboardFitToDataConfig {
   return Boolean(
-    fitToData && fitToData.longitudeColumn && fitToData.latitudeColumn,
+    fitToData &&
+    ((fitToData.longitudeColumn && fitToData.latitudeColumn) ||
+      fitToData.geometryColumn),
   );
 }
 
@@ -213,8 +212,26 @@ function createDeckMapBoundsQuery(options: {
         .split('.')
         .map(escapeId)
         .join('.')}`;
-  const longitudeColumn = escapeId(fitToData.longitudeColumn);
-  const latitudeColumn = escapeId(fitToData.latitudeColumn);
+
+  if (fitToData.geometryColumn) {
+    const geometryCol = escapeId(fitToData.geometryColumn);
+    return `
+      SELECT
+        ST_XMin(extent) AS min_longitude,
+        ST_YMin(extent) AS min_latitude,
+        ST_XMax(extent) AS max_longitude,
+        ST_YMax(extent) AS max_latitude
+      FROM (
+        SELECT ST_Extent_Agg(${geometryCol}::GEOMETRY) AS extent
+        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
+        WHERE ${geometryCol} IS NOT NULL
+      ) AS "__sqlrooms_dashboard_map_extent"
+      WHERE extent IS NOT NULL
+    `;
+  }
+
+  const longitudeColumn = escapeId(fitToData.longitudeColumn!);
+  const latitudeColumn = escapeId(fitToData.latitudeColumn!);
 
   return `
     SELECT
@@ -264,7 +281,7 @@ function fitViewStateToBounds(options: {
   padding?: number;
   maxZoom?: number;
 }) {
-  const {bounds, width, height, padding = 40, maxZoom = 12} = options;
+  const {bounds, width, height, padding = 40, maxZoom = 18} = options;
   const viewport = new WebMercatorViewport({
     width: Math.max(width, 1),
     height: Math.max(height, 1),
@@ -298,7 +315,6 @@ function emitDeckMapDashboardFitRequest(panelId: string) {
 
 type DeckMapDashboardFitState = {
   key: string;
-  viewState: DeckProps['viewState'];
   didAutoFit: boolean;
   fitRequestVersion: number;
   handledFitRequestVersion: number;
@@ -309,7 +325,6 @@ function createInitialDeckMapDashboardFitState(
 ): DeckMapDashboardFitState {
   return {
     key,
-    viewState: undefined,
     didAutoFit: false,
     fitRequestVersion: 0,
     handledFitRequestVersion: 0,
@@ -435,6 +450,7 @@ function DeckMapDashboardRenderer({
     [getSelection, selectionName],
   );
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const deckMapRef = useRef<DeckJsonMapHandle>(null);
   const [datasetStates, setDatasetStates] = useState<
     Record<string, DeckMapDashboardDatasetClientState>
   >({});
@@ -501,7 +517,19 @@ function DeckMapDashboardRenderer({
     };
   }, []);
 
-  const fitToData = mapConfig?.fitToData ?? null;
+  const fitToDataRaw = mapConfig?.fitToData ?? null;
+  const fitToData: DeckMapDashboardFitToDataConfig | null = useMemo(() => {
+    if (!fitToDataRaw) return null;
+    if (fitToDataRaw.geometryColumn || fitToDataRaw.longitudeColumn) {
+      return fitToDataRaw;
+    }
+    const datasetGeomCol =
+      mapConfig?.datasets[fitToDataRaw.dataset]?.geometryColumn;
+    if (datasetGeomCol) {
+      return {...fitToDataRaw, geometryColumn: datasetGeomCol};
+    }
+    return fitToDataRaw;
+  }, [fitToDataRaw, mapConfig?.datasets]);
   const fitToDataSource = useMemo(
     () =>
       fitToData
@@ -534,7 +562,7 @@ function DeckMapDashboardRenderer({
     fitState.key === fitStateKey
       ? fitState
       : createInitialDeckMapDashboardFitState(fitStateKey);
-  const {didAutoFit, fitRequestVersion, handledFitRequestVersion, viewState} =
+  const {didAutoFit, fitRequestVersion, handledFitRequestVersion} =
     activeFitState;
 
   useEffect(() => {
@@ -618,6 +646,9 @@ function DeckMapDashboardRenderer({
           padding: fitToData.padding,
           maxZoom: fitToData.maxZoom,
         });
+        if (!isCancelled && deckMapRef.current) {
+          deckMapRef.current.jumpTo(nextViewState);
+        }
         setFitState((current) => {
           const scoped =
             current.key === fitStateKey
@@ -625,7 +656,6 @@ function DeckMapDashboardRenderer({
               : createInitialDeckMapDashboardFitState(fitStateKey);
           return {
             ...scoped,
-            viewState: nextViewState,
             didAutoFit: true,
             handledFitRequestVersion: fitRequestVersion,
           };
@@ -700,44 +730,6 @@ function DeckMapDashboardRenderer({
     [datasetStates, mapConfig?.interaction, selection],
   );
 
-  const handleViewStateChange = useCallback(
-    ({
-      viewState: nextViewState,
-      interactionState,
-    }: {
-      viewState: any;
-      interactionState?: any;
-    }) => {
-      const hasUserInteraction = Boolean(
-        interactionState &&
-        ['isDragging', 'isPanning', 'isRotating', 'isZooming'].some((key) =>
-          Boolean(interactionState[key]),
-        ),
-      );
-      if (
-        fitToData &&
-        !didAutoFit &&
-        viewState === null &&
-        !hasUserInteraction
-      ) {
-        return;
-      }
-
-      setFitState((current) => {
-        const scoped =
-          current.key === fitStateKey
-            ? current
-            : createInitialDeckMapDashboardFitState(fitStateKey);
-        return {
-          ...scoped,
-          viewState: nextViewState,
-          didAutoFit: hasUserInteraction || scoped.didAutoFit || !fitToData,
-        };
-      });
-    },
-    [didAutoFit, fitStateKey, fitToData, viewState],
-  );
-
   const settingsContent = (
     <MapSettingsPanel
       dashboardId={dashboardId}
@@ -785,6 +777,7 @@ function DeckMapDashboardRenderer({
           </div>
         ))}
       <DeckJsonMap
+        ref={deckMapRef}
         className="h-full w-full"
         spec={mapConfig.spec}
         datasets={
@@ -797,8 +790,6 @@ function DeckMapDashboardRenderer({
         showLegends={mapConfig.showLegends}
         deckProps={{
           controller: true,
-          ...(viewState ? {viewState} : {}),
-          onViewStateChange: handleViewStateChange,
           ...(mapConfig.interaction
             ? (mapConfig.interaction.event ?? 'hover') === 'click'
               ? {onClick: handleBrushEvent}
