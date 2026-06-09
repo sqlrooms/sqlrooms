@@ -1,9 +1,9 @@
-import {useCallback, useState} from 'react';
+import React, {useCallback} from 'react';
 import {
   Icons,
   MapControlButton,
-  MapControlPanelFactory,
   MapControlTooltipFactory,
+  MapControlPanelFactory,
   MapLegendFactory,
   MapLegendPanelFactory,
   MapLegendPanelProps,
@@ -23,52 +23,48 @@ export function CustomMapLegendPanelFactory(
   );
 
   const SplitPaneLegend = (
-    props: MapLegendPanelProps & {mapIndex?: number},
+    props: MapLegendPanelProps & {mapIndex?: number; isSplit?: boolean},
   ) => {
-    const [isActive, setIsActive] = useState(false);
     const mapLegend = props.mapControls?.mapLegend;
+    const isActive = mapLegend?.active;
+    const {onToggleMapControl} = props;
 
-    const toggleLegend = useCallback((e?: React.MouseEvent) => {
-      e?.preventDefault();
-      setIsActive((prev) => !prev);
-    }, []);
+    const toggleLegend = useCallback(
+      (e?: React.MouseEvent) => {
+        e?.preventDefault();
+        onToggleMapControl('mapLegend');
+      },
+      [onToggleMapControl],
+    );
 
     if (!mapLegend?.show) return null;
 
-    return isActive ? (
-      <>
-        <style>{`.split-legend .map-control__panel-header { display: none !important; }`}</style>
-        <div className="split-legend">
-          <MapControlPanel
-            scale={props.scale}
-            header="header.layerLegend"
-            onClick={toggleLegend}
-            pinnable={false}
-            disableClose={false}
-            isExport={props.isExport}
-            logoComponent={props.logoComponent}
-          >
-            <MapLegend
-              layers={props.layers}
-              mapState={props.mapState}
-              disableEdit={mapLegend.disableEdit}
-              isExport={props.isExport}
-              onLayerVisConfigChange={props.onLayerVisConfigChange}
-              onToggleLayerVisibility={props.onToggleLayerVisibility}
-              {...({onClose: toggleLegend} as any)}
-            />
-          </MapControlPanel>
-        </div>
-      </>
-    ) : (
-      <MapControlTooltip id="show-legend" message="tooltip.showLegend">
-        <MapControlButton
-          className="map-control-button show-legend"
-          onClick={toggleLegend}
+    // The secondary (right) pane only shows the toggle button
+    if (props.mapIndex !== 0) {
+      return (
+        <MapControlTooltip
+          id="show-legend"
+          message={isActive ? 'tooltip.hideLegend' : 'tooltip.showLegend'}
         >
-          <Icons.Legend height="22px" />
-        </MapControlButton>
-      </MapControlTooltip>
+          <MapControlButton
+            className="map-control-button show-legend"
+            active={isActive}
+            onClick={toggleLegend}
+          >
+            <Icons.Legend height="22px" />
+          </MapControlButton>
+        </MapControlTooltip>
+      );
+    }
+
+    // Primary (left) pane: render the full draggable legend panel
+    // (OriginalMapLegendPanel handles DraggableLegend + createPortal,
+    // and MapControlPanel renders "Unlock Viewport" / "Sync Zoom" in its header)
+    return (
+      <>
+        <style>{`.draggable-legend .map-control__panel-header:not(.map-control__panel-split-viewport-tools) { display: none !important; }`}</style>
+        <OriginalMapLegendPanel {...props} />
+      </>
     );
   };
 
@@ -81,7 +77,7 @@ export function CustomMapLegendPanelFactory(
 
     return (
       <>
-        <style>{`.draggable-legend .map-control__panel-header { display: none !important; }`}</style>
+        <style>{`.draggable-legend .map-control__panel-header:not(.map-control__panel-split-viewport-tools) { display: none !important; }`}</style>
         <OriginalMapLegendPanel {...props} />
       </>
     );
