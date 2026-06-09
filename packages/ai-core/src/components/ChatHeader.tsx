@@ -1,4 +1,10 @@
-import {Button, cn} from '@sqlrooms/ui';
+import {
+  Button,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {HistoryIcon, PlusIcon} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
@@ -100,9 +106,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
       {/* Right section */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={handleCreateSession}>
-          <PlusIcon className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCreateSession}
+              aria-label="New session"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>New session</TooltipContent>
+        </Tooltip>
       </div>
 
       <RenameSessionDialog
