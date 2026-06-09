@@ -66,7 +66,11 @@ import type {
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb-core';
-import {findKeplerTableForDataId} from './keplerTableIdentity';
+import {
+  findKeplerTableForDatasetId,
+  type KeplerDbSchemaReference,
+  type KeplerTableSelectionOptions,
+} from './keplerTableSelection';
 
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
@@ -104,6 +108,11 @@ export type CreateKeplerSliceOptions = {
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
+  /**
+   * Controls which DuckDB tables appear in Kepler's Add Layer menu and how
+   * those tables are represented in saved Kepler dataset ids.
+   */
+  tableSelection?: KeplerTableSelectionOptions;
   /**
    * Called when a kepler action is dispatched
    * @param mapId - The map id
@@ -188,6 +197,7 @@ export type KeplerSliceState = {
     config: KeplerSliceConfig;
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
+    tableSelection: KeplerTableSelectionOptions;
     forwardDispatch: {
       [mapId: string]: Dispatch;
     };
@@ -296,6 +306,7 @@ export function createKeplerSlice({
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
   applicationConfig,
+  tableSelection = {},
   onAction,
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
   const initialConfig = createDefaultKeplerConfig(initialConfigProps);
@@ -326,6 +337,30 @@ export function createKeplerSlice({
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DbSliceState
   >((set, get, _store) => {
+    function getDefaultDbSchema():
+      | KeplerDbSchemaReference
+      | undefined {
+      const currentDatabase = get().db.currentDatabase;
+      const currentSchema = get().db.currentSchema;
+
+      if (!currentDatabase || !currentSchema) {
+        return undefined;
+      }
+
+      return {
+        database: currentDatabase,
+        schema: currentSchema,
+      };
+    }
+
+    const resolvedTableSelection: KeplerTableSelectionOptions = {
+      ...tableSelection,
+    };
+
+    if (!resolvedTableSelection.defaultDbSchema) {
+      resolvedTableSelection.defaultDbSchema = getDefaultDbSchema;
+    }
+
     function resolveInitialMapKeplerState(
       context: Omit<
         CreateInitialMapKeplerStateContext,
@@ -392,6 +427,7 @@ export function createKeplerSlice({
       kepler: {
         config: initialConfig,
         basicKeplerProps,
+        tableSelection: resolvedTableSelection,
         map: {},
         isRestoringConfig: false,
         dispatchAction: () => {},
@@ -679,13 +715,10 @@ export function createKeplerSlice({
                   if (keplerDatasets?.[dataId]) {
                     continue;
                   }
-                  const table = findKeplerTableForDataId(
+                  const table = findKeplerTableForDatasetId(
                     availableTables,
                     dataId,
-                    {
-                      currentDatabase: get().db.currentDatabase,
-                      currentSchema: get().db.currentSchema,
-                    },
+                    get().kepler.tableSelection,
                   );
                   if (!table) {
                     continue;

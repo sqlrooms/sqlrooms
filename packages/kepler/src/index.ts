@@ -15,14 +15,16 @@ export type {
 } from './KeplerSlice';
 export {
   buildKeplerTableLayerOptions,
-  findKeplerTableForDataId,
+  findKeplerTableForDatasetId,
   getKeplerDatasetIdForTable,
   getKeplerTableLabel,
-} from './keplerTableIdentity';
+  shouldIncludeKeplerTable,
+} from './keplerTableSelection';
 export type {
-  KeplerTableIdentityContext,
+  KeplerDbSchemaReference,
   KeplerTableLayerOption,
-} from './keplerTableIdentity';
+  KeplerTableSelectionOptions,
+} from './keplerTableSelection';
 
 export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
