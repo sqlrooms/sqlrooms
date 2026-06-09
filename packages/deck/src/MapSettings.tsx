@@ -22,6 +22,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Slider,
   Switch,
 } from '@sqlrooms/ui';
 import {XIcon} from 'lucide-react';
@@ -48,6 +49,8 @@ import {
   usesGeometryColumnSetting,
   usesH3ColumnSetting,
   usesArcColumnSetting,
+  usesRadiusSetting,
+  usesColumnRadiusSetting,
 } from './mapLayerConfigUtils';
 
 interface MapSettingsPanelProps {
@@ -102,6 +105,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   );
   const showH3ColumnSetting = usesH3ColumnSetting(activeLayer?.['@@type']);
   const showArcColumnSetting = usesArcColumnSetting(activeLayer?.['@@type']);
+  const showRadiusSetting = usesRadiusSetting(activeLayer?.['@@type']);
+  const showColumnRadiusSetting = usesColumnRadiusSetting(
+    activeLayer?.['@@type'],
+  );
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -239,6 +246,65 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 </SelectContent>
               </Select>
             </Field>
+
+            {showRadiusSetting && (
+              <Field
+                label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
+              >
+                <Slider
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={[
+                    (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
+                  ]}
+                  onValueChange={(values) => {
+                    const value = values[0] ?? 2;
+                    applyConfig(
+                      updateDeckMapLayer(
+                        mapConfig,
+                        activeLayerIndex,
+                        (layer) => ({
+                          ...layer,
+                          radiusMinPixels: value,
+                          radiusMaxPixels: Math.max(
+                            value,
+                            (layer.radiusMaxPixels as number | undefined) ??
+                              value,
+                          ),
+                        }),
+                      ),
+                    );
+                  }}
+                />
+              </Field>
+            )}
+
+            {showColumnRadiusSetting && (
+              <Field
+                label={`Column radius: ${(activeLayer?.radius as number | undefined) ?? 50}m`}
+              >
+                <Slider
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={[(activeLayer?.radius as number | undefined) ?? 50]}
+                  onValueChange={(values) => {
+                    const value = values[0] ?? 50;
+                    applyConfig(
+                      updateDeckMapLayer(
+                        mapConfig,
+                        activeLayerIndex,
+                        (layer) => ({
+                          ...layer,
+                          radius: value,
+                        }),
+                      ),
+                    );
+                  }}
+                />
+              </Field>
+            )}
 
             <div className="flex flex-col gap-2 rounded-md border p-2">
               <div className="flex items-center justify-between gap-2">

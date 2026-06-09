@@ -34,5 +34,5 @@ ColumnLayer.prototype.draw = function (opts: {uniforms: unknown}) {
 export class SqlroomsColumnLayer<
   ExtraProps extends object = object,
 > extends GeoArrowColumnLayer<ExtraProps> {
-  static layerName = 'SqlroomsColumnLayer';
+  static layerName = 'GeoArrowColumnLayer';
 }

@@ -603,7 +603,7 @@ export function createDeckJsonConfiguration(
       }
 
       if (datasetState.status !== 'ready') {
-        return stripLayerExtensionProps(layerProps);
+        return {...stripLayerExtensionProps(layerProps), data: []};
       }
 
       const prepared = datasetState.prepared;

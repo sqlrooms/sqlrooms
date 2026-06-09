@@ -72,6 +72,16 @@ const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
 
 const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
 
+const RADIUS_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'scatterplotlayer',
+]);
+
+const COLUMN_RADIUS_LAYER_TYPES = new Set([
+  'geoarrowcolumnlayer',
+  'columnlayer',
+]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -114,6 +124,20 @@ export function usesArcColumnSetting(layerType: unknown) {
   return (
     typeof layerType === 'string' &&
     ARC_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesRadiusSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesColumnRadiusSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    COLUMN_RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 
@@ -174,10 +198,22 @@ export function setDeckMapLayerType(
   layerIndex: number,
   layerType: string,
 ): DeckMapDashboardPanelConfig {
-  return updateDeckMapLayer(config, layerIndex, (layer) => ({
-    ...layer,
-    '@@type': layerType,
-  }));
+  return updateDeckMapLayer(config, layerIndex, (layer) => {
+    const nextLayer: DeckMapLayerRecord = {
+      ...layer,
+      '@@type': layerType,
+    };
+    const lt = layerType.toLowerCase();
+    if (
+      lt === 'geoarrowcolumnlayer' ||
+      lt === 'columnlayer' ||
+      lt === 'sqlroomscolumnlayer'
+    ) {
+      nextLayer.radius ??= 3;
+      nextLayer.elevationScale ??= 1;
+    }
+    return nextLayer;
+  });
 }
 
 export function setDeckMapLayerGeometryColumn(
