@@ -114,9 +114,9 @@ function checkAndReportAggregateState(
     return; // No marks tracked yet
   }
 
-  // Check if all marks are done (no pending)
+  // Check if all marks are done (only success or error, not pending or idle)
   const allDone = Array.from(chart.markStates.values()).every(
-    (state) => state !== 'pending',
+    (state) => state === 'success' || state === 'error',
   );
 
   if (!allDone) {
@@ -239,8 +239,11 @@ function wrapMarkHandlers(
             runtimeIssueContext,
             dataPolicy,
           );
-          if (mark.queryError) {
-            return mark.queryError(normalizedError);
+          if (markWithOriginals[ORIGINAL_QUERY_ERROR]) {
+            return markWithOriginals[ORIGINAL_QUERY_ERROR].call(
+              this,
+              normalizedError,
+            );
           }
           return undefined;
         }
@@ -267,7 +270,7 @@ function wrapMarkHandlers(
           runtimeIssueContext,
           dataPolicy,
         );
-        originalQueryError.call(this, error);
+        return originalQueryError.call(this, error);
       };
     }
   });
