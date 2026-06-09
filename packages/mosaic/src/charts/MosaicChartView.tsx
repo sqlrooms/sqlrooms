@@ -82,9 +82,6 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     selectionName,
   );
 
-  console.log('[MosaicChartView] renderContext:', renderContext);
-  console.log('[MosaicChartView] issue:', issue);
-
   if (connection.status === 'loading' || connection.status === 'idle') {
     return <SpinnerPane className="h-full w-full" />;
   }
