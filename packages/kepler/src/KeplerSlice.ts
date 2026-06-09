@@ -68,6 +68,7 @@ import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb-core';
 import {
   findKeplerTableForDatasetId,
+  getKeplerTableLabel,
   type KeplerDbSchemaReference,
   type KeplerTableSelectionOptions,
 } from './keplerTableSelection';
@@ -337,9 +338,7 @@ export function createKeplerSlice({
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DbSliceState
   >((set, get, _store) => {
-    function getDefaultDbSchema():
-      | KeplerDbSchemaReference
-      | undefined {
+    function getDefaultDbSchema(): KeplerDbSchemaReference | undefined {
       const currentDatabase = get().db.currentDatabase;
       const currentSchema = get().db.currentSchema;
 
@@ -627,8 +626,18 @@ export function createKeplerSlice({
           ).filter((col) => col) as arrow.Vector[];
 
           if (fields && cols) {
-            const label =
-              getUnqualifiedSqlIdentifier(String(tableName)) ?? tableName;
+            const table = findKeplerTableForDatasetId(
+              get().db.tables,
+              tableName,
+              get().kepler.tableSelection,
+            );
+            let label = tableName;
+            if (table) {
+              label = getKeplerTableLabel(table, get().kepler.tableSelection);
+            } else {
+              label =
+                getUnqualifiedSqlIdentifier(String(tableName)) ?? tableName;
+            }
             const datasets: AddDataToMapPayload['datasets'] = {
               data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {label, id: tableName},
