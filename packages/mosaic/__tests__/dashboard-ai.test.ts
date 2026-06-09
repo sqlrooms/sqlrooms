@@ -341,7 +341,7 @@ describe('dashboard AI tools', () => {
               type: 'vgplot',
               title: 'Magnitude vs depth',
               config: {
-                chartType: 'bubble-chart',
+                chartType: 'scatter-chart',
                 settings: {x: 'magnitude', y: 'depth'},
               },
             },
@@ -352,7 +352,7 @@ describe('dashboard AI tools', () => {
         [`${dashboardId}:${panelId}`]: {
           kind: 'too-much-data',
           panelId,
-          chartType: 'bubble-chart',
+          chartType: 'scatter-chart',
           message: 'Use a heatmap instead.',
           recoverable: true,
           rowCount: 20,
@@ -370,7 +370,7 @@ describe('dashboard AI tools', () => {
     expect(result.llmResult.success).toBe(true);
     expect(result.llmResult.data.panels[0].issue).toMatchObject({
       kind: 'too-much-data',
-      chartType: 'bubble-chart',
+      chartType: 'scatter-chart',
       rowCount: 20,
       limit: 10,
     });

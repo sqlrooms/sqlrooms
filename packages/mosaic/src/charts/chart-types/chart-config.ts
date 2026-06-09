@@ -9,7 +9,7 @@ import {z} from 'zod';
 import {HistogramChartConfig} from './histogram/schema';
 import {CountPlotChartConfig} from './count-plot/schema';
 import {LineChartConfig} from './line-chart/schema';
-import {BubbleChartConfig} from './bubble-chart/schema';
+import {ScatterChartConfig} from './scatter-chart/schema';
 import {HeatmapChartConfig} from './heatmap/schema';
 import {BoxPlotChartConfig} from './box-plot/schema';
 import {CustomSpecChartConfig} from './custom-spec/schema';
@@ -23,7 +23,7 @@ const KNOWN_CHART_CONFIGS = [
   HistogramChartConfig,
   CountPlotChartConfig,
   LineChartConfig,
-  BubbleChartConfig,
+  ScatterChartConfig,
   HeatmapChartConfig,
   BoxPlotChartConfig,
   CustomSpecChartConfig,
