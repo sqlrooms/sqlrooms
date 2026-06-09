@@ -1,22 +1,22 @@
 import {z} from 'zod';
 import {ChartDataPolicyOverrideConfig} from '../data-policy-schema';
 
-export const BubbleChartSettings = z.object({
+export const ScatterChartSettings = z.object({
   x: z.string().optional().describe('Numeric column for X axis position'),
   y: z.string().optional().describe('Numeric column for Y axis position'),
   size: z
     .string()
     .optional()
-    .describe('Numeric column for bubble size (optional)'),
+    .describe('Numeric column for point size (optional)'),
 });
 
-export type BubbleChartSettings = z.infer<typeof BubbleChartSettings>;
+export type ScatterChartSettings = z.infer<typeof ScatterChartSettings>;
 
-export const BubbleChartConfig = z.object({
-  chartType: z.literal('bubble-chart'),
-  settings: BubbleChartSettings,
+export const ScatterChartConfig = z.object({
+  chartType: z.literal('scatter-chart'),
+  settings: ScatterChartSettings,
   settingsOpen: z.boolean().optional(),
   dataPolicy: ChartDataPolicyOverrideConfig.optional(),
 });
 
-export type BubbleChartConfig = z.infer<typeof BubbleChartConfig>;
+export type ScatterChartConfig = z.infer<typeof ScatterChartConfig>;

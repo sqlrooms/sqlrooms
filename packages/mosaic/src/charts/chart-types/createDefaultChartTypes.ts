@@ -4,7 +4,7 @@ import {lineChartChartType} from './line-chart/definition';
 import {countPlotChartType} from './count-plot/definition';
 import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
-import {bubbleChartChartType} from './bubble-chart/definition';
+import {scatterChartChartType} from './scatter-chart/definition';
 import {customSpecChartType} from './custom-spec/definition';
 
 /**
@@ -24,7 +24,7 @@ export function createDefaultChartTypes(options?: {
     lineChartChartType,
     heatmapChartType,
     boxPlotChartType,
-    bubbleChartChartType,
+    scatterChartChartType,
   ];
 
   if (includeCustomSpec) {

@@ -184,7 +184,7 @@ Dashboard authoring:
   - "update the histogram to use 30 bins"
 
 **Individual dashboard chart tools:**
-- create_dashboard_histogram, create_dashboard_line_chart, create_dashboard_box_plot, create_dashboard_bubble_chart, create_dashboard_count_plot, create_dashboard_heatmap
+- create_dashboard_histogram, create_dashboard_line_chart, create_dashboard_box_plot, create_dashboard_scatter_chart, create_dashboard_count_plot, create_dashboard_heatmap
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
@@ -192,7 +192,7 @@ Dashboard authoring:
 - Use \`set_dashboard_vgplot\` with complete JSON only when no chart tool fits your needs.
 - When calling \`create_dashboard_artifact\`, \`layoutType\` may be \`grid\` or \`dock\`; omitted values default to \`grid\`.
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
-- \`list_dashboard_panels\` includes runtime issues when a chart failed. Use those issues to repair panels in place: convert too-large bubble charts to heatmaps, add \`xInterval\` to too-large line charts, and inspect columns/settings for SQL errors.
+- \`list_dashboard_panels\` includes runtime issues when a chart failed. Use those issues to repair panels in place: convert too-large scatter charts to heatmaps, add \`xInterval\` to too-large line charts, and inspect columns/settings for SQL errors.
 `;
 
 export const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent that creates and modifies interactive data dashboards.
@@ -207,7 +207,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 - create_dashboard_histogram - distribution of numeric values (always safe, aggregates automatically)
 - create_dashboard_line_chart - trends over time or ordered variable (use with aggregations for >10k rows)
 - create_dashboard_box_plot - compare distributions across categories
-- create_dashboard_bubble_chart - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
+- create_dashboard_scatter_chart - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
 - create_dashboard_count_plot - frequency of categorical values (always safe, aggregates automatically)
 - create_dashboard_heatmap - density/patterns across two dimensions (preferred for large datasets)
 
@@ -241,7 +241,7 @@ When user asks to discover insights:
    - Find correlations: CORR(col1, col2)
    - Identify outliers and patterns
 2. Create targeted charts based on discoveries:
-   - If dataset has >10k rows: avoid bubble charts and unaggregated line charts
+   - If dataset has >10k rows: avoid scatter charts and unaggregated line charts
    - Use histogram, count plot, heatmap, or aggregated visualizations instead
 3. Stop when dashboard tells coherent story
 
@@ -266,8 +266,8 @@ To update existing panels:
 
 ## Best Practices
 
-- **Avoid unaggregated charts for large datasets:** For datasets >10k rows, DO NOT use bubble charts or line charts without aggregations. Use aggregated alternatives instead:
-  - For scatter/bubble plots: use heatmap or binned aggregations
+- **Avoid unaggregated charts for large datasets:** For datasets >10k rows, DO NOT use scatter charts or line charts without aggregations. Use aggregated alternatives instead:
+  - For scatter plots: use heatmap or binned aggregations
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Check before update:** Always call list_dashboard_panels before updating/removing panels

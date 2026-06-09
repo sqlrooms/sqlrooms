@@ -1,21 +1,21 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {BubbleChartSettings} from './schema';
+import {ScatterChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
-export const BubbleChartToolParameters = BaseChartToolParameters.extend({
-  settings: BubbleChartSettings.required(),
+export const ScatterChartToolParameters = BaseChartToolParameters.extend({
+  settings: ScatterChartSettings.required(),
 });
 
-export type BubbleChartToolParams = z.infer<typeof BubbleChartToolParameters>;
+export type ScatterChartToolParams = z.infer<typeof ScatterChartToolParameters>;
 
-export function createBubbleChartAiTool(deps: DashboardToolDeps) {
+export function createScatterChartAiTool(deps: DashboardToolDeps) {
   return tool({
-    description: `Bubble/scatter chart: plots individual points positioned by two numeric columns (x, y), with optional size dimension.
+    description: `Scatter chart: plots individual points positioned by two numeric columns (x, y), with optional size dimension.
 
 Use when: user asks to "plot X vs Y", "show relationship between", "scatter plot", "correlation", "compare two numeric columns".
 Example queries: "plot latitude vs longitude", "show correlation between elevation and temperature", "visualize coordinates sized by population", "plot area vs population density".
@@ -23,12 +23,12 @@ Example queries: "plot latitude vs longitude", "show correlation between elevati
 Required: x and y must be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}).
 Optional: size can encode a third numeric dimension (magnitude, frequency, count).
 
-IMPORTANT: Bubble charts render ALL rows as individual points. Do NOT create bubble charts for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead (histogram, count-plot, line-chart with time intervals, or heatmap).
+IMPORTANT: Scatter charts render ALL rows as individual points. Do NOT create scatter charts for tables with more than ${deps.maxDataPoints.toLocaleString()} rows - use aggregated visualizations instead (histogram, count-plot, line-chart with time intervals, or heatmap).
 
-To UPDATE an existing bubble chart: provide the panelId parameter. Otherwise creates new panel.
+To UPDATE an existing scatter chart: provide the panelId parameter. Otherwise creates new panel.
 
 Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${deps.maxDataPoints.toLocaleString()} rows).`,
-    inputSchema: BubbleChartToolParameters,
+    inputSchema: ScatterChartToolParameters,
     execute: async (params, context) => {
       try {
         const artifactId = deps.resolveArtifact(
@@ -62,10 +62,10 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
           tableName,
           title:
             params.settings.x && params.settings.y
-              ? `Bubble chart - ${params.settings.x} vs ${params.settings.y}`
-              : 'Bubble chart',
+              ? `Scatter chart - ${params.settings.x} vs ${params.settings.y}`
+              : 'Scatter chart',
           config: {
-            chartType: 'bubble-chart',
+            chartType: 'scatter-chart',
             settings: params.settings,
           },
         });
@@ -74,8 +74,8 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
           llmResult: {
             success: true,
             details: params.panelId
-              ? `Updated bubble chart "${result.title}".`
-              : `Created bubble chart "${result.title}".`,
+              ? `Updated scatter chart "${result.title}".`
+              : `Created scatter chart "${result.title}".`,
             data: result,
           },
         };
