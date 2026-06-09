@@ -7,7 +7,15 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
-    {className, autoResize = false, onInput, value, defaultValue, ...props},
+    {
+      className,
+      autoResize = false,
+      onInput,
+      value,
+      defaultValue,
+      rows,
+      ...props
+    },
     ref,
   ) => {
     const localRef = React.useRef<HTMLTextAreaElement>(null);
@@ -57,6 +65,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             : undefined,
           className,
         )}
+        rows={rows ?? (autoResize ? 1 : undefined)}
         ref={localRef}
         onInput={handleInput}
         value={value}
