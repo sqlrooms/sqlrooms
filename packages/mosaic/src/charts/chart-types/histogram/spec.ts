@@ -46,8 +46,7 @@ export function createHistogramSpec(
     plot,
     xLabel: fieldColumn.name,
     yLabel: 'Count',
-    height: 200,
-    width: 380,
+
     margins: {left: 50, right: 20, top: 20, bottom: 50},
     params: {brush: {select: 'crossfilter'}},
   } as Spec;

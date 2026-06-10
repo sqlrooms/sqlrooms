@@ -31,10 +31,20 @@ function getLineColor(color: string | undefined, index: number): string {
   return CHART_COLORS[index % CHART_COLORS.length]!;
 }
 
+function getLegendLabel(
+  yColumn: {field: string; aggregate?: AggregateFunction},
+  hasAggregation: boolean,
+): string {
+  if (hasAggregation && yColumn.aggregate) {
+    return `${yColumn.field} (${yColumn.aggregate})`;
+  }
+  return yColumn.field;
+}
+
 export function createLineChartSpec(
   options: CreateSpecOptions<LineChartSettings>,
 ): Spec {
-  const {dataTable, selectionName} = options;
+  const {dataTable, selectionName, settings} = options;
 
   const {xColumn, yColumns, xInterval} = validateLineChartSettings(options);
 
@@ -45,7 +55,7 @@ export function createLineChartSpec(
   // Data source always includes filterBy for brush
   const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
 
-  // Generate lineY and text marks for each Y field
+  // Generate lineY marks for each Y field
   yColumns.forEach((yColumn, index) => {
     const color = getLineColor(yColumn.color, index);
     const aggregate = yColumn.aggregate || 'sum';
@@ -60,18 +70,6 @@ export function createLineChartSpec(
         y: {[aggregate]: yColumn.column.name},
         stroke: color,
       });
-
-      // Text label with aggregation info
-      plotMarks.push({
-        mark: 'text',
-        data: dataSource,
-        x: {bin: xColumn.name, interval: xInterval},
-        y: {[aggregate]: yColumn.column.name},
-        text: [`${yColumn.column.name} (${aggregate})`],
-        fill: color,
-        dx: 5,
-        dy: -5,
-      });
     } else {
       // No aggregation - direct field references
       plotMarks.push({
@@ -81,17 +79,6 @@ export function createLineChartSpec(
         y: yColumn.column.name,
         stroke: color,
       });
-
-      plotMarks.push({
-        mark: 'text',
-        data: dataSource,
-        x: xColumn.name,
-        y: yColumn.column.name,
-        text: [yColumn.column.name],
-        fill: color,
-        dx: 5,
-        dy: -5,
-      });
     }
   });
 
@@ -100,13 +87,46 @@ export function createLineChartSpec(
     plotMarks.push({select: 'intervalX', as: '$brush'});
   }
 
-  return {
+  const showLegend = settings.showLegend ?? true;
+
+  const plotSpec = {
     plot: plotMarks,
+    name: 'lineChart',
     xLabel: xColumn.name,
     yLabel: undefined,
-    height: 250,
-    width: 380,
-    margins: {left: 50, right: 20, top: 20, bottom: 50},
+    margins: {
+      left: 50,
+      right: 20,
+      top: 20,
+      bottom: 50,
+    },
+    colorDomain: yColumns.map((yColumn) =>
+      getLegendLabel(
+        {field: yColumn.column.name, aggregate: yColumn.aggregate},
+        Boolean(isXTemporal && xInterval),
+      ),
+    ),
+    colorRange: yColumns.map((yColumn, index) =>
+      getLineColor(yColumn.color, index),
+    ),
+  };
+
+  if (!showLegend) {
+    return {
+      ...plotSpec,
+      params: {brush: {select: 'crossfilter'}},
+    } as Spec;
+  }
+
+  return {
+    vconcat: [
+      plotSpec,
+      {
+        legend: 'color',
+        for: 'lineChart',
+        columns: yColumns.length,
+      },
+    ],
     params: {brush: {select: 'crossfilter'}},
   } as Spec;
 }

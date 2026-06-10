@@ -1,7 +1,7 @@
 import {type FC} from 'react';
 import {Field} from '../../../components/Field';
 import {ColumnSelector} from '../../../components/ColumnSelector';
-
+import {Switch} from '@sqlrooms/ui';
 import {TemporalGranularitySelector} from '../../../components/TemporalGranularitySelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {MultiFieldSelector} from '../../../components/MultiFieldSelector';
@@ -53,6 +53,19 @@ export const LineChartSettingsComponent: FC = () => {
           )}
         />
       </Field>
+
+      <label className="flex cursor-pointer items-center gap-2">
+        <Switch
+          checked={config.settings.showLegend ?? true}
+          onCheckedChange={(showLegend) =>
+            onChangeConfig('showLegend', showLegend)
+          }
+          className="h-4 w-7 data-[state=checked]:bg-gray-800 data-[state=unchecked]:bg-gray-300"
+        >
+          <Switch.Thumb className="h-3 w-3 data-[state=checked]:translate-x-3 data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-800" />
+        </Switch>
+        <span className="text-xs">Show Legend</span>
+      </label>
     </div>
   );
 };
