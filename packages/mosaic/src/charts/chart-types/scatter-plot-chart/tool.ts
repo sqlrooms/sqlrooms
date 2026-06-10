@@ -1,19 +1,19 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {ScatterChartSettings} from './schema';
+import {ScatterPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 
-export const ScatterChartToolParameters = BaseChartToolParameters.extend({
-  settings: ScatterChartSettings.required(),
+export const ScatterPlotToolParameters = BaseChartToolParameters.extend({
+  settings: ScatterPlotChartSettings.required(),
 });
 
-export type ScatterChartToolParams = z.infer<typeof ScatterChartToolParameters>;
+export type ScatterPlotToolParams = z.infer<typeof ScatterPlotToolParameters>;
 
-export function createScatterChartAiTool(deps: DashboardToolDeps) {
+export function createScatterPlotAiTool(deps: DashboardToolDeps) {
   return tool({
     description: `Scatter chart: plots individual points positioned by two numeric columns (x, y), with optional size dimension.
 
@@ -28,7 +28,7 @@ IMPORTANT: Scatter charts render ALL rows as individual points. Do NOT create sc
 To UPDATE an existing scatter chart: provide the panelId parameter. Otherwise creates new panel.
 
 Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${deps.maxDataPoints.toLocaleString()} rows).`,
-    inputSchema: ScatterChartToolParameters,
+    inputSchema: ScatterPlotToolParameters,
     execute: async (params, context) => {
       try {
         const artifactId = deps.resolveArtifact(
@@ -65,7 +65,7 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
               ? `Scatter chart - ${params.settings.x} vs ${params.settings.y}`
               : 'Scatter chart',
           config: {
-            chartType: 'scatter-chart',
+            chartType: 'scatter-plot-chart',
             settings: params.settings,
           },
         });

@@ -268,7 +268,7 @@ export {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
 export {buildChartTitleForSpec} from './chart-builders/chartSpecTitle';
 export {
   boxPlotChartType,
-  scatterChartChartType,
+  scatterPlotChartType,
   countPlotChartType,
   createDefaultChartTypes,
   customSpecChartType,
@@ -282,7 +282,7 @@ export {
   HistogramChartSettings,
   LineChartSettings,
   CountPlotChartSettings,
-  ScatterChartSettings,
+  ScatterPlotChartSettings,
   HeatmapChartSettings,
   BoxPlotChartSettings,
   // Tool helpers, parameters, and AI tool creators
@@ -292,13 +292,13 @@ export {
   LineChartToolParameters,
   CountPlotToolParameters,
   HeatmapToolParameters,
-  ScatterChartToolParameters,
+  ScatterPlotToolParameters,
   BoxPlotToolParameters,
   createHistogramAiTool,
   createLineChartAiTool,
   createCountPlotAiTool,
   createHeatmapAiTool,
-  createScatterChartAiTool,
+  createScatterPlotAiTool,
   createBoxPlotAiTool,
   createChartTools,
   // New panel and dashboard tools
@@ -321,7 +321,7 @@ export type {
   LineChartToolParams,
   CountPlotToolParams,
   HeatmapToolParams,
-  ScatterChartToolParams,
+  ScatterPlotToolParams,
   BoxPlotToolParams,
   DataTableExplorerToolParams,
   ListPanelsToolParams,

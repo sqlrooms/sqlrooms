@@ -3,9 +3,9 @@ import {Field} from '../../../components/Field';
 import {ColumnSelector} from '../../../components/ColumnSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 
-export const ScatterChartSettingsComponent: FC = () => {
+export const ScatterPlotSettingsComponent: FC = () => {
   const {onChangeConfig, config} =
-    useMosaicChartSettingsContext('scatter-chart');
+    useMosaicChartSettingsContext('scatter-plot-chart');
 
   return (
     <div className="space-y-4">

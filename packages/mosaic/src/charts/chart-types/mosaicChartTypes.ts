@@ -3,7 +3,7 @@ import {lineChartChartType} from './line-chart/definition';
 import {countPlotChartType} from './count-plot/definition';
 import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
-import {scatterChartChartType} from './scatter-chart/definition';
+import {scatterPlotChartType} from './scatter-plot-chart/definition';
 import {customSpecChartType} from './custom-spec/definition';
 
 /**
@@ -15,6 +15,6 @@ export const mosaicChartTypes = {
   lineChart: lineChartChartType,
   heatmap: heatmapChartType,
   boxPlot: boxPlotChartType,
-  scatterChart: scatterChartChartType,
+  scatterPlot: scatterPlotChartType,
   customSpec: customSpecChartType,
 } as const;

@@ -1,5 +1,5 @@
 import type {Spec} from '@uwdata/mosaic-spec';
-import {ScatterChartSettings} from './schema';
+import {ScatterPlotChartSettings} from './schema';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
@@ -10,12 +10,12 @@ import {isNumericType} from '../../../column-types-utils';
 
 const FG_COLOR = 'var(--color-chart-1)';
 
-export function createScatterChartSpec(
-  options: CreateSpecOptions<ScatterChartSettings>,
+export function createScatterPlotSpec(
+  options: CreateSpecOptions<ScatterPlotChartSettings>,
 ): Spec {
   const {dataTable, selectionName} = options;
 
-  const {xColumn, yColumn} = validateScatterChartSettings(options);
+  const {xColumn, yColumn} = validateScatterPlotSettings(options);
 
   const plot: unknown[] = [
     {
@@ -44,10 +44,10 @@ export function createScatterChartSpec(
   } as Spec;
 }
 
-function validateScatterChartSettings({
+function validateScatterPlotSettings({
   dataTable,
   settings: {x, y},
-}: CreateSpecOptions<ScatterChartSettings>) {
+}: CreateSpecOptions<ScatterPlotChartSettings>) {
   // Basic validation for required fields
   if (!x || !y) {
     throw new RequiredFieldsError([
