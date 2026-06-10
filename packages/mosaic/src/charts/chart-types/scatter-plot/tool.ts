@@ -65,7 +65,7 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
               ? `Scatter chart - ${params.settings.x} vs ${params.settings.y}`
               : 'Scatter chart',
           config: {
-            chartType: 'scatter-plot-chart',
+            chartType: 'scatter-plot',
             settings: params.settings,
           },
         });

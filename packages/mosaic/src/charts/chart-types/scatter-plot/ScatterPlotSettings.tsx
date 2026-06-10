@@ -5,7 +5,7 @@ import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSet
 
 export const ScatterPlotSettingsComponent: FC = () => {
   const {onChangeConfig, config} =
-    useMosaicChartSettingsContext('scatter-plot-chart');
+    useMosaicChartSettingsContext('scatter-plot');
 
   return (
     <div className="space-y-4">

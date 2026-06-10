@@ -9,7 +9,7 @@ import {z} from 'zod';
 import {HistogramChartConfig} from './histogram/schema';
 import {CountPlotChartConfig} from './count-plot/schema';
 import {LineChartConfig} from './line-chart/schema';
-import {ScatterPlotChartConfig} from './scatter-plot-chart/schema';
+import {ScatterPlotChartConfig} from './scatter-plot/schema';
 import {HeatmapChartConfig} from './heatmap/schema';
 import {BoxPlotChartConfig} from './box-plot/schema';
 import {CustomSpecChartConfig} from './custom-spec/schema';

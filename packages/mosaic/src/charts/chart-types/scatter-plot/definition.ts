@@ -11,7 +11,7 @@ const DESCRIPTION = 'Create a scatter plot chart';
 
 export const scatterPlotChartType: SpecChartTypeDefinition<ScatterPlotChartConfig> =
   {
-    id: 'scatter-plot-chart',
+    id: 'scatter-plot',
     label: 'Scatter Plot',
     description: DESCRIPTION,
     icon: Workflow,

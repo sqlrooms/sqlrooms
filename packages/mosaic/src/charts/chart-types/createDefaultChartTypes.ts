@@ -4,7 +4,7 @@ import {lineChartChartType} from './line-chart/definition';
 import {countPlotChartType} from './count-plot/definition';
 import {heatmapChartType} from './heatmap/definition';
 import {boxPlotChartType} from './box-plot/definition';
-import {scatterPlotChartType} from './scatter-plot-chart/definition';
+import {scatterPlotChartType} from './scatter-plot/definition';
 import {customSpecChartType} from './custom-spec/definition';
 
 /**

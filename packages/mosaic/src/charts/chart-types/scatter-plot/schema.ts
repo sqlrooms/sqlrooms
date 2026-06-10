@@ -13,7 +13,7 @@ export const ScatterPlotChartSettings = z.object({
 export type ScatterPlotChartSettings = z.infer<typeof ScatterPlotChartSettings>;
 
 export const ScatterPlotChartConfig = z.object({
-  chartType: z.literal('scatter-plot-chart'),
+  chartType: z.literal('scatter-plot'),
   settings: ScatterPlotChartSettings,
   settingsOpen: z.boolean().optional(),
   dataPolicy: ChartDataPolicyOverrideConfig.optional(),
