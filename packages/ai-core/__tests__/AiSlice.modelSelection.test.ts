@@ -296,8 +296,7 @@ describe('AiSlice model selection', () => {
   });
 
   it('clears draft context after capturing it for a run', async () => {
-    let store!: ReturnType<typeof createTestStore>;
-    store = createTestStore({
+    const store = createTestStore({
       getRunContext: () => {
         const draftIds =
           store.getState().ai.getCurrentSession()?.draftContextItemIds;
