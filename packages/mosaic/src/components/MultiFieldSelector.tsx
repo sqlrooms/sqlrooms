@@ -2,8 +2,6 @@ import {Button} from '@sqlrooms/ui';
 import {Trash2} from 'lucide-react';
 import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
-import {AggregationSelector} from './AggregationSelector';
-import {ColorSelector} from './ColorSelector';
 import {ColumnsProvider, useColumnsContext} from './ColumnsContext';
 import {
   NUMERIC_COLUMN_TYPES,
@@ -13,11 +11,17 @@ import {
 import type {YFieldConfig} from '../charts/chart-types/line-chart/schema';
 import {getLineColor} from '../charts/chart-types/line-chart/utils';
 
+type RenderItemFunction = (
+  fieldConfig: YFieldConfig,
+  index: number,
+  handleUpdate: (index: number, updates: Partial<YFieldConfig>) => void,
+) => React.ReactNode;
+
 export interface MultiFieldSelectorProps {
   types?: string[];
   value: YFieldConfig[];
   onChange: (value: YFieldConfig[]) => void;
-  showAggregation?: boolean;
+  renderItem?: RenderItemFunction;
 }
 
 /**
@@ -34,7 +38,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   types,
   value,
   onChange,
-  showAggregation = false,
+  renderItem,
 }) => {
   const {columns} = useColumnsContext();
 
@@ -85,9 +89,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
             key={fieldConfig.field}
             className="grid items-end gap-2"
             style={{
-              gridTemplateColumns: showAggregation
-                ? 'minmax(120px, 1fr) auto auto 32px'
-                : 'minmax(120px, 1fr) auto 32px',
+              gridTemplateColumns: 'minmax(120px, 1fr) auto 32px',
             }}
           >
             <ColumnSelector
@@ -96,19 +98,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
               onChange={(newField) => handleUpdate(index, {field: newField})}
             />
 
-            {showAggregation && (
-              <AggregationSelector
-                value={fieldConfig.aggregate}
-                onChange={(newAggregate) =>
-                  handleUpdate(index, {aggregate: newAggregate})
-                }
-              />
-            )}
-
-            <ColorSelector
-              value={fieldConfig.color}
-              onChange={(color) => handleUpdate(index, {color})}
-            />
+            {renderItem && renderItem(fieldConfig, index, handleUpdate)}
 
             <Button
               variant="ghost"
