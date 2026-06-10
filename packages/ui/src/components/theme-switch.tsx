@@ -1,10 +1,10 @@
 'use client';
 
-import * as SwitchPrimitives from '@radix-ui/react-switch';
 import {MoonIcon, SunIcon} from 'lucide-react';
 import {FC} from 'react';
 import {cn} from '../lib/utils';
 import {useTheme} from '../theme/theme-provider';
+import {Switch} from './switch';
 
 /**
  * A theme toggle switch component that allows users to switch between light and dark themes.
@@ -46,24 +46,17 @@ export const ThemeSwitch: FC<{
   const {theme, setTheme} = useTheme();
 
   return (
-    <SwitchPrimitives.Root
-      className={cn(
-        'focus-visible:ring-ring focus-visible:ring-offset-background data-[state=checked]:bg-primary/20 data-[state=unchecked]:bg-input peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      )}
+    <Switch
+      className={cn('data-[state=checked]:bg-primary/20', className)}
       checked={theme === 'dark'}
       onCheckedChange={(checked) => {
         setTheme(checked ? 'dark' : 'light');
       }}
     >
-      <SwitchPrimitives.Thumb
-        className={cn(
-          'bg-background pointer-events-none flex h-4 w-4 items-center justify-center rounded-full shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0 dark:bg-zinc-900',
-        )}
-      >
+      <Switch.Thumb className="bg-background flex items-center justify-center dark:bg-zinc-900">
         <SunIcon className="dark:text-primary h-2.5 w-2.5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
         <MoonIcon className="dark:text-primary absolute h-2.5 w-2.5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-      </SwitchPrimitives.Thumb>
-    </SwitchPrimitives.Root>
+      </Switch.Thumb>
+    </Switch>
   );
 };
