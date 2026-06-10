@@ -45,7 +45,14 @@ type MarkWithOriginals = QueryableMark & {
 };
 
 function getPlotInstance(element: object): PlotInstance | null {
-  const plot = (element as HTMLElement & {value?: unknown}).value;
+  let htmlElement = element as HTMLElement | null;
+
+  if (!htmlElement?.classList.contains('plot')) {
+    htmlElement = htmlElement?.querySelector('.plot') as HTMLElement | null;
+  }
+
+  const plot = (htmlElement as {value?: unknown}).value;
+
   return plot && typeof plot === 'object' ? (plot as PlotInstance) : null;
 }
 

@@ -23,6 +23,7 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from './chart-runtime';
+import {cn} from '@sqlrooms/ui';
 
 type SpecProps = {
   spec: Spec;
@@ -195,7 +196,12 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
       <ResponsivePlot
         ref={containerRef}
         onResize={handleResize}
-        className="h-full w-full"
+        className={cn(
+          'h-full w-full', // container classes
+          '[&>div]:h-full [&>div]:w-full [&>div]:!items-center', // child div classes
+          '[&_.plot]:h-full [&_.plot]:!min-h-0 [&_.plot]:w-full [&_.plot]:!flex-1', // plot classes
+          '[&_.legend]:!flex [&_.legend]:!flex-none [&_.legend]:!justify-center [&_.legend>*]:!mx-auto', // legend classes
+        )}
       />
     );
   },
