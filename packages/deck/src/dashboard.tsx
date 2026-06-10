@@ -218,7 +218,7 @@ function createDeckMapBoundsQuery(options: {
         ST_XMax(extent) AS max_longitude,
         ST_YMax(extent) AS max_latitude
       FROM (
-        SELECT ST_Extent_Agg(${geometryCol}::GEOMETRY) AS extent
+        SELECT ST_Extent_Agg(ST_GeomFromWKB(${geometryCol})) AS extent
         FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
         WHERE ${geometryCol} IS NOT NULL
       ) AS "__sqlrooms_dashboard_map_extent"

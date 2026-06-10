@@ -68,14 +68,8 @@ function extractTableFromSqlQuery(
   return match?.[1] ?? match?.[2];
 }
 
-interface MapSettingsPanelProps {
-  dashboardId: string;
 const HEATMAP_COLOR_STEPS = 6;
 
-/**
- * Samples a continuous sequential color scheme into an array of RGBA tuples
- * suitable for deck.gl's `colorRange` property.
- */
 function schemeToColorRange(
   scheme: string,
 ): Array<[number, number, number, number]> {
@@ -99,10 +93,7 @@ function schemeToColorRange(
   );
 }
 
-/** Try to detect which scheme a colorRange corresponds to. */
-function detectHeatmapScheme(
-  colorRange: unknown,
-): string {
+function detectHeatmapScheme(colorRange: unknown): string {
   if (!Array.isArray(colorRange) || colorRange.length === 0) return 'Viridis';
   for (const scheme of continuousSequentialSchemes) {
     const sampled = schemeToColorRange(scheme);
@@ -122,6 +113,8 @@ function detectHeatmapScheme(
   return 'Viridis';
 }
 
+interface MapSettingsPanelProps {
+  dashboardId: string;
   panel: MosaicDashboardPanelConfigType;
   onClose?: () => void;
 }
@@ -195,9 +188,9 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     : undefined;
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
+  const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const firstColumnName = dataTable?.columns[0]?.name;
   const maxRows =
-  const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
     mapConfig.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
 
   const applyConfig = useCallback(
@@ -382,13 +375,36 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Field>
             )}
 
-            <div className="flex flex-col gap-2 rounded-md border p-2">
-              <div className="flex items-center justify-between gap-2">
             {isHeatmapLayer ? (
               <div className="flex flex-col gap-2 rounded-md border p-2">
                 <span className="text-xs font-medium">
                   Color scheme (density)
                 </span>
+                <Field
+                  label={`Radius: ${(activeLayer?.radiusPixels as number | undefined) ?? 30}px`}
+                >
+                  <Slider
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={[
+                      (activeLayer?.radiusPixels as number | undefined) ?? 30,
+                    ]}
+                    onValueChange={(values) => {
+                      const value = values[0] ?? 30;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            radiusPixels: value,
+                          }),
+                        ),
+                      );
+                    }}
+                  />
+                </Field>
                 <Field label="Scheme">
                   <Select
                     value={detectHeatmapScheme(activeLayer?.colorRange)}
@@ -419,83 +435,42 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 </Field>
               </div>
             ) : (
-                <span className="text-xs font-medium">Color scale</span>
-                <Switch
-                  checked={Boolean(colorScale)}
-                  onCheckedChange={(checked) => {
-                    if (!effectiveColorAccessor) return;
-                    if (checked) {
-                      updateColorScale({});
-                      return;
-                    }
-                    applyConfig(
-                      clearDeckMapLayerColorScale(
-                        mapConfig,
-                        activeLayerIndex,
-                        effectiveColorAccessor,
-                      ),
-                    );
-                  }}
-                  disabled={!firstColumnName || !effectiveColorAccessor}
-                />
-              </div>
+              <div className="flex flex-col gap-2 rounded-md border p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium">Color scale</span>
+                  <Switch
+                    checked={Boolean(colorScale)}
+                    onCheckedChange={(checked) => {
+                      if (!effectiveColorAccessor) return;
+                      if (checked) {
+                        updateColorScale({});
+                        return;
+                      }
+                      applyConfig(
+                        clearDeckMapLayerColorScale(
+                          mapConfig,
+                          activeLayerIndex,
+                          effectiveColorAccessor,
+                        ),
+                      );
+                    }}
+                    disabled={!firstColumnName || !effectiveColorAccessor}
+                  />
+                </div>
 
-              {effectiveColorAccessor && (
-                <Field label="Color property">
-                  <Select
-                    value={effectiveColorAccessor}
-                    onValueChange={(value) =>
-                      setColorAccessor(value as DeckMapLayerColorAccessor)
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {colorAccessorOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
-
-              {colorScale && dataTable && (
-                <ColumnsProvider columns={dataTable.columns}>
-                  <Field label="Color field" required>
-                    {colorScaleType === 'categorical' ? (
-                      <ColumnSelector.Categorical
-                        value={colorScale.field}
-                        onChange={(field) => updateColorScale({field})}
-                      />
-                    ) : (
-                      <ColumnSelector.Quantitative
-                        value={colorScale.field}
-                        onChange={(field) => updateColorScale({field})}
-                      />
-                    )}
-                  </Field>
-                </ColumnsProvider>
-              )}
-
-              {colorScale && (
-                <>
-                  <Field label="Scale type">
+                {effectiveColorAccessor && (
+                  <Field label="Color property">
                     <Select
-                      value={colorScaleType}
+                      value={effectiveColorAccessor}
                       onValueChange={(value) =>
-                        updateColorScale({
-                          type: value as ColorScaleConfig['type'],
-                        })
+                        setColorAccessor(value as DeckMapLayerColorAccessor)
                       }
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {DECK_MAP_COLOR_SCALE_TYPE_OPTIONS.map((option) => (
+                        {colorAccessorOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -503,32 +478,75 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       </SelectContent>
                     </Select>
                   </Field>
+                )}
 
-                  <Field label="Scheme">
-                    <Select
-                      value={colorScale.scheme}
-                      onValueChange={(value) =>
-                        updateColorScale({scheme: value as ColorScaleScheme})
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {schemeOptions.map((scheme) => (
-                          <SelectItem key={scheme} value={scheme}>
-                            {scheme}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                </>
-              )}
-            </div>
+                {colorScale && dataTable && (
+                  <ColumnsProvider columns={dataTable.columns}>
+                    <Field label="Color field" required>
+                      {colorScaleType === 'categorical' ? (
+                        <ColumnSelector.Categorical
+                          value={colorScale.field}
+                          onChange={(field) => updateColorScale({field})}
+                        />
+                      ) : (
+                        <ColumnSelector.Quantitative
+                          value={colorScale.field}
+                          onChange={(field) => updateColorScale({field})}
+                        />
+                      )}
+                    </Field>
+                  </ColumnsProvider>
+                )}
+
+                {colorScale && (
+                  <>
+                    <Field label="Scale type">
+                      <Select
+                        value={colorScaleType}
+                        onValueChange={(value) =>
+                          updateColorScale({
+                            type: value as ColorScaleConfig['type'],
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DECK_MAP_COLOR_SCALE_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field label="Scheme">
+                      <Select
+                        value={colorScale.scheme}
+                        onValueChange={(value) =>
+                          updateColorScale({scheme: value as ColorScaleScheme})
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {schemeOptions.map((scheme) => (
+                            <SelectItem key={scheme} value={scheme}>
+                              {scheme}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
-            )}
 
         {dataTable && showGeometryColumnSetting && (
           <ColumnsProvider columns={dataTable.columns}>
