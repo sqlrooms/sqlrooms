@@ -1,8 +1,5 @@
-import {
-  getAiRunContextItems,
-  type AiRunContext,
-  type AnalysisSessionSchema,
-} from '@sqlrooms/ai';
+import {getAiRunContextItems} from '@sqlrooms/ai-config';
+import type {AiRunContext, AnalysisSessionSchema} from '@sqlrooms/ai-config';
 
 export function isAnalysisSessionEmpty(
   session: AnalysisSessionSchema | undefined,
@@ -21,11 +18,9 @@ export function getRunContextItemIds(
   return getAiRunContextItems(runContext).map((item) => item.id);
 }
 
-export function getAssistantSessionContextItemIds({
-  session,
-}: {
-  session: AnalysisSessionSchema | undefined;
-}): string[] {
+export function getVisibleSessionContextItemIds(
+  session: AnalysisSessionSchema | undefined,
+): string[] {
   if (session?.draftContextItemIds) {
     return session.draftContextItemIds;
   }
@@ -37,25 +32,18 @@ export function getAssistantSessionContextItemIds({
   return [];
 }
 
-export function getEffectiveContextItemIds({
-  session,
-  currentArtifactId,
-}: {
-  session: AnalysisSessionSchema | undefined;
-  currentArtifactId: string | undefined;
-}): string[] {
+export function getEffectiveSessionContextItemIds(
+  session: AnalysisSessionSchema | undefined,
+  options: {implicitItemIds?: string[]} = {},
+): string[] {
   if (session?.draftContextItemIds) {
     return session.draftContextItemIds.length > 0
       ? session.draftContextItemIds
-      : currentArtifactId
-        ? [currentArtifactId]
-        : [];
+      : (options.implicitItemIds ?? []);
   }
 
   const runContextIds = getRunContextItemIds(session?.runContext);
   return runContextIds.length > 0
     ? runContextIds
-    : currentArtifactId
-      ? [currentArtifactId]
-      : [];
+    : (options.implicitItemIds ?? []);
 }

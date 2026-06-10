@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
+import {getVisibleSessionContextItemIds} from '@sqlrooms/ai';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
-import {getAssistantSessionContextItemIds} from '../context/contextSelection';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 
@@ -34,9 +34,7 @@ export function useAssistantContextDropTarget() {
   );
   const selectedIds = useMemo(
     () =>
-      getAssistantSessionContextItemIds({
-        session: currentSession,
-      }),
+      getVisibleSessionContextItemIds(currentSession),
     [currentSession],
   );
 

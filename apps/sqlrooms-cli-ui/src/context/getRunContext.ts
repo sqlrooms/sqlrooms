@@ -3,14 +3,15 @@ import {
   makeQualifiedTableName,
   type DbSchemaNode,
 } from '@sqlrooms/duckdb';
-import type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai';
+import {
+  getEffectiveSessionContextItemIds,
+  getRunContextItemIds,
+  type AiRunContext,
+  type AiRunContextItem,
+} from '@sqlrooms/ai';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
-import {
-  getEffectiveContextItemIds,
-  getRunContextItemIds,
-} from './contextSelection';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypes';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
@@ -119,9 +120,8 @@ export function getRunContext(
     return session.runContext;
   }
 
-  const contextItemIds = getEffectiveContextItemIds({
-    session,
-    currentArtifactId: implicitArtifactId,
+  const contextItemIds = getEffectiveSessionContextItemIds(session, {
+    implicitItemIds: implicitArtifactId ? [implicitArtifactId] : [],
   });
 
   const items = Array.from(new Set(contextItemIds))

@@ -1,4 +1,8 @@
-import {getAiRunContextItems, type ContextSelectorItem} from '@sqlrooms/ai';
+import {
+  getAiRunContextItems,
+  getVisibleSessionContextItemIds,
+  type ContextSelectorItem,
+} from '@sqlrooms/ai';
 import {
   getAllTablesFromSchemaTrees,
   makeQualifiedTableName,
@@ -8,7 +12,6 @@ import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {useRoomStore} from '../store';
 import {isContextArtifactType} from './assistantUtils';
-import {getAssistantSessionContextItemIds} from '../context/contextSelection';
 
 /**
  * Hook to get context-eligible artifacts from the store
@@ -115,9 +118,7 @@ export function useValidatedSelectedIds(): string[] {
   const tables = useContextTables();
 
   return useMemo(() => {
-    const contextItemIds = getAssistantSessionContextItemIds({
-      session: currentSession,
-    });
+    const contextItemIds = getVisibleSessionContextItemIds(currentSession);
     const tableIdSet = new Set(
       tables.map((table) => makeQualifiedTableName(table.table).toString()),
     );
