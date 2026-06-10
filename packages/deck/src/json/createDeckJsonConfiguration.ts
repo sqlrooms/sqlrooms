@@ -511,13 +511,20 @@ function resolveGeoArrowBindings(options: {
         boundProps[binding.prop] = synthesizedVector;
       } else {
         const layerData = prepared.getGeoArrowLayerData(columnName);
-        if (table !== prepared.table && table !== layerData.table) {
-          throw new Error(
-            `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
-          );
+        if (layerData.source === 'promoted') {
+          boundProps[binding.prop] = layerData.geometryColumn;
+          if (table === prepared.table) {
+            table = layerData.table;
+          }
+        } else {
+          if (table !== prepared.table && table !== layerData.table) {
+            throw new Error(
+              `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
+            );
+          }
+          table = layerData.table;
+          boundProps[binding.prop] = layerData.geometryColumn;
         }
-        table = layerData.table;
-        boundProps[binding.prop] = layerData.geometryColumn;
       }
       continue;
     }

@@ -391,6 +391,7 @@ const POINT_LAYERS = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
   'GeoArrowColumnLayer',
+  'GeoArrowArcLayer',
 ]);
 
 const POLYGON_LAYERS = new Set([

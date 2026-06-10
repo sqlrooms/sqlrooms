@@ -164,6 +164,7 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       'getHeight',
       'getTilt',
     ],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowH3HexagonLayer: {
     representation: 'geoarrow',
