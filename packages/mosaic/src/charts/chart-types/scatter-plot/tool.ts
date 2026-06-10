@@ -56,6 +56,16 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
           'y',
         );
 
+        // Validate size if provided
+        if (params.settings.size) {
+          validateColumnExists(
+            params.settings.size,
+            NUMERIC_COLUMN_TYPES,
+            columns,
+            'size',
+          );
+        }
+
         const result = createOrUpdateChartPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,

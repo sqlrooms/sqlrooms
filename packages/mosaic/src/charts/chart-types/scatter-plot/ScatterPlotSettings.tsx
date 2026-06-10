@@ -22,6 +22,14 @@ export const ScatterPlotSettingsComponent: FC = () => {
           onChange={(y) => onChangeConfig('y', y)}
         />
       </Field>
+
+      <Field label="Size Field">
+        <ColumnSelector.Numeric
+          value={config.settings.size}
+          onChange={(size) => onChangeConfig('size', size)}
+          placeholder="(optional)"
+        />
+      </Field>
     </div>
   );
 };
