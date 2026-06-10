@@ -184,13 +184,13 @@ function DeckOverlayControl({
   }, [layerKey, clearing]);
 
   useEffect(() => {
-    if (clearing) {
+    if (clearing && overlay) {
       overlay.setProps({...deckProps, layers: []});
       requestAnimationFrame(() => setClearing(false));
     }
   }, [clearing, deckProps, overlay]);
 
-  if (!clearing) {
+  if (!clearing && overlay) {
     overlay.setProps(deckProps);
   }
 
