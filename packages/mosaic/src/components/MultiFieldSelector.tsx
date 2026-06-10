@@ -4,7 +4,6 @@ import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
 import {AggregationSelector} from './AggregationSelector';
 import {ColorSelector} from './ColorSelector';
-import type {AggregateFunction} from '../schemas';
 import {ColumnsProvider, useColumnsContext} from './ColumnsContext';
 import {
   NUMERIC_COLUMN_TYPES,
@@ -81,8 +80,6 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   return (
     <div className="space-y-1">
       {value.map((fieldConfig, index) => {
-        const aggregate = fieldConfig.aggregate || 'sum';
-
         return (
           <div
             key={fieldConfig.field}
@@ -101,9 +98,9 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
 
             {showAggregation && (
               <AggregationSelector
-                value={aggregate}
-                onChange={(agg: AggregateFunction) =>
-                  handleUpdate(index, {aggregate: agg})
+                value={fieldConfig.aggregate}
+                onChange={(newAggregate) =>
+                  handleUpdate(index, {aggregate: newAggregate})
                 }
               />
             )}
