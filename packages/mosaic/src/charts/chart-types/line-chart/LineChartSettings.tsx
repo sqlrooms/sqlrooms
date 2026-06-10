@@ -54,15 +54,18 @@ export const LineChartSettingsComponent: FC = () => {
         />
       </Field>
 
-      <div className="flex items-center gap-2">
-        <label className="text-xs">Show Legend</label>
+      <label className="flex cursor-pointer items-center gap-2">
         <Switch
           checked={config.settings.showLegend ?? true}
           onCheckedChange={(showLegend) =>
             onChangeConfig('showLegend', showLegend)
           }
-        />
-      </div>
+          className="h-4 w-7 data-[state=checked]:bg-gray-800 data-[state=unchecked]:bg-gray-300"
+        >
+          <Switch.Thumb className="h-3 w-3 data-[state=checked]:translate-x-3 data-[state=checked]:bg-white data-[state=unchecked]:bg-gray-800" />
+        </Switch>
+        <span className="text-xs">Show Legend</span>
+      </label>
     </div>
   );
 };
