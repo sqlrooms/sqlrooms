@@ -27,7 +27,7 @@ NOTE: Count plots aggregate by counting unique values, so they handle large data
 To UPDATE an existing count plot: provide the panelId parameter. Otherwise creates new panel.
 
 CRITICAL: Only for categorical data (text, categories, enums).
-Do NOT use for: numeric distributions (use histogram), relationships between columns (use bubble-chart), time series (use line-chart).`,
+Do NOT use for: numeric distributions (use histogram), relationships between columns (use scatter-plot), time series (use line-chart).`,
     inputSchema: CountPlotToolParameters,
     execute: async (params, context) => {
       try {
