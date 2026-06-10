@@ -28,7 +28,7 @@ To UPDATE an existing heatmap: provide the panelId parameter. Otherwise creates 
 
 Best for: large datasets with overlapping points, finding patterns/hotspots in 2D space, temporal patterns (hour×day), spatial density visualization.
 
-Do NOT use for: individual point plots (use bubble-chart), single variable distribution (use histogram), time trends (use line-chart).`,
+Do NOT use for: individual point plots (use scatter-plot), single variable distribution (use histogram), time trends (use line-chart).`,
     inputSchema: HeatmapToolParameters,
     execute: async (params, context) => {
       try {

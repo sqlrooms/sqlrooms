@@ -39,7 +39,7 @@ NOTE: Line charts with aggregation (xInterval or aggregate functions) handle lar
 
 To UPDATE an existing line chart: provide the panelId parameter. Otherwise creates new panel.
 
-Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use bubble-chart).`,
+Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use scatter-plot).`,
     inputSchema: LineChartToolParameters,
     execute: async (params, context) => {
       try {
