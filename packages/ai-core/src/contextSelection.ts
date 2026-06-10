@@ -21,7 +21,7 @@ export function getRunContextItemIds(
 export function getVisibleSessionContextItemIds(
   session: AnalysisSessionSchema | undefined,
 ): string[] {
-  if (session?.draftContextItemIds) {
+  if (session?.draftContextItemIds !== undefined) {
     return session.draftContextItemIds;
   }
 
@@ -36,10 +36,8 @@ export function getEffectiveSessionContextItemIds(
   session: AnalysisSessionSchema | undefined,
   options: {implicitItemIds?: string[]} = {},
 ): string[] {
-  if (session?.draftContextItemIds) {
-    return session.draftContextItemIds.length > 0
-      ? session.draftContextItemIds
-      : (options.implicitItemIds ?? []);
+  if (session?.draftContextItemIds !== undefined) {
+    return session.draftContextItemIds;
   }
 
   const runContextIds = getRunContextItemIds(session?.runContext);
