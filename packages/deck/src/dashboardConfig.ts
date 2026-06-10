@@ -39,6 +39,8 @@ export type DeckMapDashboardFitToDataConfig = {
   latitudeColumn?: string;
   /** Geometry column name (WKB) for computing bounds from geometry directly. */
   geometryColumn?: string;
+  /** H3 hex index column for computing bounds from H3 cells. */
+  h3Column?: string;
   padding?: number;
   maxZoom?: number;
 };

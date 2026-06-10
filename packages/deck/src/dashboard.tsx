@@ -209,6 +209,19 @@ function createDeckMapBoundsQuery(options: {
         .map(escapeId)
         .join('.')}`;
 
+  if (fitToData.h3Column) {
+    const h3Col = escapeId(fitToData.h3Column);
+    return `
+      SELECT
+        MIN(h3_cell_to_lng(${h3Col})) AS min_longitude,
+        MIN(h3_cell_to_lat(${h3Col})) AS min_latitude,
+        MAX(h3_cell_to_lng(${h3Col})) AS max_longitude,
+        MAX(h3_cell_to_lat(${h3Col})) AS max_latitude
+      FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_h3"
+      WHERE ${h3Col} IS NOT NULL
+    `;
+  }
+
   if (fitToData.geometryColumn) {
     const geometryCol = escapeId(fitToData.geometryColumn);
     return `
@@ -218,7 +231,7 @@ function createDeckMapBoundsQuery(options: {
         ST_XMax(extent) AS max_longitude,
         ST_YMax(extent) AS max_latitude
       FROM (
-        SELECT ST_Extent_Agg(ST_GeomFromWKB(${geometryCol})) AS extent
+        SELECT ST_Extent_Agg(${geometryCol}::GEOMETRY) AS extent
         FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
         WHERE ${geometryCol} IS NOT NULL
       ) AS "__sqlrooms_dashboard_map_extent"
@@ -556,11 +569,28 @@ function DeckMapDashboardRenderer({
       };
     }
 
+    // Detect H3 layer as last resort: check layers bound to this dataset
+    // for hexagonColumn when no other bounds method is available.
+    const spec = mapConfig?.spec as Record<string, unknown> | undefined;
+    const specLayers = Array.isArray(spec?.layers) ? spec.layers : [];
+    for (const layer of specLayers) {
+      if (!layer || typeof layer !== 'object') continue;
+      const binding = (layer as Record<string, unknown>)._sqlroomsBinding as
+        | Record<string, unknown>
+        | undefined;
+      if (binding?.dataset === fitToDataRaw.dataset && binding?.hexagonColumn) {
+        return {
+          ...fitToDataRaw,
+          h3Column: binding.hexagonColumn as string,
+        };
+      }
+    }
+
     // Strip unverifiable geometryColumn; the bounds query will use
     // DuckDB case-insensitive column resolution as a fallback.
     const {geometryColumn: _stripped, ...safeConfig} = fitToDataRaw;
     return safeConfig;
-  }, [fitToDataRaw, mapConfig?.datasets, mapConfig?.interaction]);
+  }, [fitToDataRaw, mapConfig?.datasets, mapConfig?.interaction, mapConfig?.spec]);
   const fitToDataSource = useMemo(
     () =>
       fitToData
@@ -641,6 +671,19 @@ function DeckMapDashboardRenderer({
 
     const fitToDataBounds = async () => {
       try {
+        // Load H3 extension if needed
+        if (fitToData.h3Column) {
+          try {
+            await executeSql('INSTALL h3 FROM community');
+          } catch {
+            // May already be installed or unavailable
+          }
+          try {
+            await executeSql('LOAD h3');
+          } catch {
+            // May already be loaded
+          }
+        }
         const boundsQuery = createDeckMapBoundsQuery({
           source: fitToDataSource,
           fitToData,
