@@ -5,6 +5,7 @@ import {ColorSelector} from '../../../components/ColorSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {useColumnsContext} from '../../../components/ColumnsContext';
 import {isTemporalType} from '../../../column-types-utils';
+import {getLineColor} from './utils';
 
 /**
  * Field selector specifically for line chart Y-axis fields.
@@ -44,7 +45,7 @@ export const LineChartYFieldsSelector: FC = () => {
           )}
 
           <ColorSelector
-            value={fieldConfig.color}
+            value={getLineColor(fieldConfig.color, index)}
             onChange={(color) => handleUpdate(index, {color})}
           />
         </div>
