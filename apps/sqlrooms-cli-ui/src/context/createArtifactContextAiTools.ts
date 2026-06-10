@@ -175,12 +175,6 @@ function createArtifactContextOptions(
         state.ai.setSessionRunContext(sessionId, runContext);
       }
     },
-    onContextItemsChanged: ({state, items}) => {
-      state.setAiContextItemIds(
-        items.map((item) => item.id),
-        'manual',
-      );
-    },
     readArtifact: ({state, artifactId}) =>
       readCliArtifact({state, artifactId, store}),
   };

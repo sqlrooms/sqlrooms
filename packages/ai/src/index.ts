@@ -103,6 +103,12 @@ export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
+export {
+  getEffectiveSessionContextItemIds,
+  getRunContextItemIds,
+  getVisibleSessionContextItemIds,
+  isAnalysisSessionEmpty,
+} from '@sqlrooms/ai-core';
 export type {
   AddToolOutput,
   AiToolExecutionContext,
