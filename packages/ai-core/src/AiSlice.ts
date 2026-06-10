@@ -172,6 +172,11 @@ export type AiSliceState = {
       sessionId: string,
       runContext: AiRunContext | undefined,
     ) => void;
+    getSessionDraftContextItemIds: (sessionId: string) => string[] | undefined;
+    setSessionDraftContextItemIds: (
+      sessionId: string,
+      itemIds: string[] | undefined,
+    ) => void;
     setSessionUiMessages: (
       sessionId: string,
       uiMessages: UIMessage[],
@@ -752,6 +757,29 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             }),
           );
         },
+        getSessionDraftContextItemIds: (sessionId: string) => {
+          const state = get();
+          return state.ai.config.sessions.find(
+            (session: AnalysisSessionSchema) => session.id === sessionId,
+          )?.draftContextItemIds;
+        },
+        setSessionDraftContextItemIds: (
+          sessionId: string,
+          itemIds: string[] | undefined,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.draftContextItemIds = itemIds
+                  ? Array.from(new Set(itemIds))
+                  : undefined;
+              }
+            }),
+          );
+        },
 
         /**
          * Create a new session with the given name and model settings
@@ -789,6 +817,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 uiMessages: [],
                 messagesRevision: 0,
                 prompt: '',
+                draftContextItemIds: undefined,
                 isRunning: false,
                 lastOpenedAt: now,
               });
@@ -1165,6 +1194,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (draftSession) {
                 draftSession.isRunning = true;
                 draftSession.runContext = getRunContext?.();
+                draftSession.draftContextItemIds = undefined;
                 draftSession.prompt = '';
                 draft.ai.promptSuggestionsVisible = false;
 
