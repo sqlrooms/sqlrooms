@@ -640,7 +640,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
-            getRunContext: () => getRunContext(store),
+            getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             tools: {
@@ -659,17 +659,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
-        aiContextMode: 'auto',
-        aiContextItemIds: [],
-        setAiContextItemIds: (artifactIds, mode) => {
-          set({
-            aiContextItemIds: Array.from(new Set(artifactIds)),
-            ...(mode ? {aiContextMode: mode} : {}),
-          });
-        },
-        replaceAiContextWithArtifact: (artifactId) => {
-          set({aiContextItemIds: [artifactId]});
-        },
       };
     },
   ),

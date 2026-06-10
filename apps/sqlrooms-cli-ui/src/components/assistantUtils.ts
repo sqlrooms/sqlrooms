@@ -1,6 +1,7 @@
 import {useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
+import {getAssistantSessionContextItemIds} from '../context/contextSelection';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 
@@ -27,8 +28,17 @@ export function isContextArtifactType(type: string) {
 
 export function useAssistantContextDropTarget() {
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
-  const aiContextItemIds = useRoomStore((s) => s.aiContextItemIds);
-  const setAiContextItemIds = useRoomStore((s) => s.setAiContextItemIds);
+  const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+  const setSessionDraftContextItemIds = useRoomStore(
+    (s) => s.ai.setSessionDraftContextItemIds,
+  );
+  const selectedIds = useMemo(
+    () =>
+      getAssistantSessionContextItemIds({
+        session: currentSession,
+      }),
+    [currentSession],
+  );
 
   return useMemo(
     () => ({
@@ -42,12 +52,19 @@ export function useAssistantContextDropTarget() {
         if (!isArtifactDragPayload(data)) return;
         const artifact = artifactsById[data.id];
         if (!artifact || !isContextArtifactType(artifact.type)) return;
-        const nextIds = aiContextItemIds.includes(data.id)
-          ? [data.id, ...aiContextItemIds.filter((id) => id !== data.id)]
-          : [...aiContextItemIds, data.id];
-        setAiContextItemIds(nextIds, 'manual');
+        const nextIds = selectedIds.includes(data.id)
+          ? [data.id, ...selectedIds.filter((id) => id !== data.id)]
+          : [...selectedIds, data.id];
+        if (currentSession) {
+          setSessionDraftContextItemIds(currentSession.id, nextIds);
+        }
       },
     }),
-    [aiContextItemIds, artifactsById, setAiContextItemIds],
+    [
+      artifactsById,
+      currentSession,
+      selectedIds,
+      setSessionDraftContextItemIds,
+    ],
   );
 }

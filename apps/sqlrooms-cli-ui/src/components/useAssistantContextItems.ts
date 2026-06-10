@@ -8,6 +8,7 @@ import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {useRoomStore} from '../store';
 import {isContextArtifactType} from './assistantUtils';
+import {getAssistantSessionContextItemIds} from '../context/contextSelection';
 
 /**
  * Hook to get context-eligible artifacts from the store
@@ -109,16 +110,19 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
  * Hook to get filtered selected IDs that are still valid context artifacts or tables
  */
 export function useValidatedSelectedIds(): string[] {
-  const aiContextItemIds = useRoomStore((s) => s.aiContextItemIds);
+  const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
   const tables = useContextTables();
 
   return useMemo(() => {
+    const contextItemIds = getAssistantSessionContextItemIds({
+      session: currentSession,
+    });
     const tableIdSet = new Set(
       tables.map((table) => makeQualifiedTableName(table.table).toString()),
     );
 
-    return aiContextItemIds.filter((id) => {
+    return contextItemIds.filter((id) => {
       const artifact = artifactsById[id];
       if (artifact && isContextArtifactType(artifact.type)) {
         return true;
@@ -126,7 +130,7 @@ export function useValidatedSelectedIds(): string[] {
       // Check if it's a valid table ID
       return tableIdSet.has(id);
     });
-  }, [aiContextItemIds, artifactsById, tables]);
+  }, [currentSession, artifactsById, tables]);
 }
 
 /**
