@@ -237,7 +237,7 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
     session?: AnalysisSessionSchema;
     runContext?: AiRunContext;
   }) => string;
-  getRunContext?: () => AiRunContext | undefined;
+  getRunContext?: (sessionId: string) => AiRunContext | undefined;
   formatRunContextInstructions?: (args: {
     runContext: AiRunContext;
     session?: AnalysisSessionSchema;
@@ -1193,7 +1193,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               );
               if (draftSession) {
                 draftSession.isRunning = true;
-                draftSession.runContext = getRunContext?.();
+                draftSession.runContext = getRunContext?.(sessionId);
                 draftSession.draftContextItemIds = undefined;
                 draftSession.prompt = '';
                 draft.ai.promptSuggestionsVisible = false;

@@ -15,7 +15,7 @@ type TestStoreState = AiSliceState & {
 };
 
 function createTestStore(options?: {
-  getRunContext?: () => AiRunContext | undefined;
+  getRunContext?: (sessionId: string) => AiRunContext | undefined;
 }) {
   const now = Date.now();
   const settingsConfig: AiSettingsSliceConfig = {
@@ -297,9 +297,10 @@ describe('AiSlice model selection', () => {
 
   it('clears draft context after capturing it for a run', async () => {
     const store = createTestStore({
-      getRunContext: () => {
-        const draftIds =
-          store.getState().ai.getCurrentSession()?.draftContextItemIds;
+      getRunContext: (sessionId) => {
+        const draftIds = store
+          .getState()
+          .ai.getSessionDraftContextItemIds(sessionId);
         if (!draftIds || draftIds.length === 0) {
           return undefined;
         }
@@ -328,6 +329,56 @@ describe('AiSlice model selection', () => {
       'map-a',
     ]);
     expect(session?.draftContextItemIds).toBeUndefined();
+    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
+  });
+
+  it('captures draft context for the target session when another session is current', async () => {
+    const store = createTestStore({
+      getRunContext: (sessionId) => {
+        const draftIds = store
+          .getState()
+          .ai.getSessionDraftContextItemIds(sessionId);
+        if (!draftIds || draftIds.length === 0) {
+          return undefined;
+        }
+        return {
+          items: draftIds.map((id) => ({
+            kind: 'artifact',
+            id,
+            type: 'map',
+            title: id,
+          })),
+          capturedAt: 1,
+        };
+      },
+    });
+    const sendMessage = jest.fn();
+
+    store.getState().ai.createSession('Session 2');
+    const currentSessionId = store.getState().ai.getCurrentSession()?.id;
+    expect(currentSessionId).toBeDefined();
+    store
+      .getState()
+      .ai.setSessionDraftContextItemIds(currentSessionId!, ['map-current']);
+
+    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    store
+      .getState()
+      .ai.setSessionDraftContextItemIds('session-1', ['map-target']);
+    store.getState().ai.setPrompt('session-1', 'hello');
+    await store.getState().ai.startAnalysis('session-1');
+
+    const targetSession = store
+      .getState()
+      .ai.config.sessions.find((session) => session.id === 'session-1');
+    const currentSession = store
+      .getState()
+      .ai.config.sessions.find((session) => session.id === currentSessionId);
+    expect(targetSession?.runContext?.items.map((item) => item.id)).toEqual([
+      'map-target',
+    ]);
+    expect(targetSession?.draftContextItemIds).toBeUndefined();
+    expect(currentSession?.draftContextItemIds).toEqual(['map-current']);
     expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
   });
 
