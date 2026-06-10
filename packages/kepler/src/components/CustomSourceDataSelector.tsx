@@ -139,9 +139,13 @@ export function CustomSourceDataSelectorFactory(
         }
 
         setIsLoadingTable(true);
-        void addTableToMap(mapId, option.value, {
-          autoCreateLayers: false,
-          centerMap: false,
+        void addTableToMap({
+          mapId,
+          tableName: option.value,
+          options: {
+            autoCreateLayers: false,
+            centerMap: false,
+          },
         })
           .then(() => {
             onSelect(option.value);

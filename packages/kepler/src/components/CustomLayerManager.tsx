@@ -186,9 +186,13 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
     async (tableName: string) => {
       const keplerDatasets = keplerState?.visState.datasets;
       if (!keplerDatasets?.[tableName]) {
-        await addTableToMap(mapId, tableName, {
-          autoCreateLayers: true,
-          centerMap: true,
+        await addTableToMap({
+          mapId,
+          tableName,
+          options: {
+            autoCreateLayers: true,
+            centerMap: true,
+          },
         });
       } else {
         addLayer(undefined, tableName);

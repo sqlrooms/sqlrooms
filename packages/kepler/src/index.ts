@@ -9,6 +9,9 @@ export {
   useStoreWithKepler,
 } from './KeplerSlice';
 export type {
+  AddTableToMapFn,
+  AddTableToMapLoadOptions,
+  AddTableToMapParams,
   CreateInitialMapKeplerStateContext,
   CreateKeplerSliceOptions,
   KeplerSliceState,

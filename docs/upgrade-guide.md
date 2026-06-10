@@ -120,6 +120,59 @@ const mapId = artifactIdFromPanelMeta;
 <KeplerMapContainer mapId={mapId} />;
 ```
 
+### `@sqlrooms/kepler`: `addTableToMap` now prefers an object parameter
+
+`state.kepler.addTableToMap` now accepts a single object parameter. The older
+positional signature remains supported for compatibility, but host apps should
+migrate to the object form because the API now separates the table reference,
+Kepler `addDataToMap` options, config, and optional dataset id override.
+
+#### Before
+
+```ts
+await state.kepler.addTableToMap(
+  mapId,
+  tableName,
+  {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  config,
+);
+```
+
+#### After
+
+```ts
+await state.kepler.addTableToMap({
+  mapId,
+  tableName,
+  options: {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  config,
+});
+```
+
+If your app restores a previously saved Kepler layer or filter and must load the
+table under an existing `dataId`, pass `datasetId` explicitly:
+
+```ts
+await state.kepler.addTableToMap({
+  mapId,
+  tableName: savedDataId,
+  options: {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  datasetId: savedDataId,
+});
+```
+
+For normal add-table flows, omit `datasetId`. Kepler will derive the persisted
+dataset id from the configured `tableSelection.getDatasetIdForTable` policy.
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
