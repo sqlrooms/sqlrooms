@@ -554,9 +554,8 @@ function DeckMapDashboardRenderer({
     }
 
     const geomCol = fitToDataRaw.geometryColumn ?? dataset?.geometryColumn;
-    const hasSourceSqlQuery = Boolean(dataset?.source?.sqlQuery);
 
-    if (geomCol && hasSourceSqlQuery) {
+    if (geomCol) {
       return {...fitToDataRaw, geometryColumn: geomCol};
     }
 
