@@ -12,6 +12,8 @@ import {
   categoricalSchemes,
   continuousDivergingSchemes,
   continuousSequentialSchemes,
+  continuousSequentialInterpolators,
+  parseColorString,
 } from '@sqlrooms/color-scales';
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
 import {
@@ -68,6 +70,58 @@ function extractTableFromSqlQuery(
 
 interface MapSettingsPanelProps {
   dashboardId: string;
+const HEATMAP_COLOR_STEPS = 6;
+
+/**
+ * Samples a continuous sequential color scheme into an array of RGBA tuples
+ * suitable for deck.gl's `colorRange` property.
+ */
+function schemeToColorRange(
+  scheme: string,
+): Array<[number, number, number, number]> {
+  const interpolator =
+    continuousSequentialInterpolators[
+      scheme as keyof typeof continuousSequentialInterpolators
+    ];
+  if (!interpolator) {
+    return continuousSequentialInterpolators.Viridis
+      ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
+          parseColorString(
+            continuousSequentialInterpolators.Viridis(
+              i / (HEATMAP_COLOR_STEPS - 1),
+            ),
+          ),
+        )
+      : [];
+  }
+  return Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
+    parseColorString(interpolator(i / (HEATMAP_COLOR_STEPS - 1))),
+  );
+}
+
+/** Try to detect which scheme a colorRange corresponds to. */
+function detectHeatmapScheme(
+  colorRange: unknown,
+): string {
+  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'Viridis';
+  for (const scheme of continuousSequentialSchemes) {
+    const sampled = schemeToColorRange(scheme);
+    if (sampled.length === colorRange.length) {
+      const matches = sampled.every((color, idx) => {
+        const actual = colorRange[idx];
+        if (!Array.isArray(actual)) return false;
+        return (
+          Math.abs(color[0] - actual[0]) < 2 &&
+          Math.abs(color[1] - actual[1]) < 2 &&
+          Math.abs(color[2] - actual[2]) < 2
+        );
+      });
+      if (matches) return scheme;
+    }
+  }
+  return 'Viridis';
+}
+
   panel: MosaicDashboardPanelConfigType;
   onClose?: () => void;
 }
@@ -143,6 +197,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const schemeOptions = getSchemeOptions(colorScaleType);
   const firstColumnName = dataTable?.columns[0]?.name;
   const maxRows =
+  const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
     mapConfig.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
 
   const applyConfig = useCallback(
@@ -329,6 +384,41 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
 
             <div className="flex flex-col gap-2 rounded-md border p-2">
               <div className="flex items-center justify-between gap-2">
+            {isHeatmapLayer ? (
+              <div className="flex flex-col gap-2 rounded-md border p-2">
+                <span className="text-xs font-medium">
+                  Color scheme (density)
+                </span>
+                <Field label="Scheme">
+                  <Select
+                    value={detectHeatmapScheme(activeLayer?.colorRange)}
+                    onValueChange={(value) =>
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            colorRange: schemeToColorRange(value),
+                          }),
+                        ),
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {continuousSequentialSchemes.map((scheme) => (
+                        <SelectItem key={scheme} value={scheme}>
+                          {scheme}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+            ) : (
                 <span className="text-xs font-medium">Color scale</span>
                 <Switch
                   checked={Boolean(colorScale)}
@@ -438,6 +528,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
             </div>
           </div>
         )}
+            )}
 
         {dataTable && showGeometryColumnSetting && (
           <ColumnsProvider columns={dataTable.columns}>
