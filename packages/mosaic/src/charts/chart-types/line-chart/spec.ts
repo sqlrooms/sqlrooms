@@ -13,30 +13,14 @@ import {
 } from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/db';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
-
-// Chart color palette matching theme colors from tailwind-preset.css
-const CHART_COLORS = [
-  '#ea7c5c', // chart-1: hsl(12, 76%, 61%)
-  '#2a9d8f', // chart-2: hsl(173, 58%, 39%)
-  '#264653', // chart-3: hsl(197, 37%, 24%)
-  '#e9c46a', // chart-4: hsl(43, 74%, 66%)
-  '#f4a261', // chart-5: hsl(27, 87%, 67%)
-];
-
-function getLineColor(color: string | undefined, index: number): string {
-  if (color) {
-    return color;
-  }
-  // CHART_COLORS is non-empty, so this is always defined
-  return CHART_COLORS[index % CHART_COLORS.length]!;
-}
+import {getLineColor} from './utils';
 
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
   hasAggregation: boolean,
 ): string {
   if (hasAggregation && yColumn.aggregate) {
-    return `${yColumn.field} (${yColumn.aggregate})`;
+    return `${yColumn.field} (${yColumn.aggregate.toLocaleUpperCase()})`;
   }
   return yColumn.field;
 }

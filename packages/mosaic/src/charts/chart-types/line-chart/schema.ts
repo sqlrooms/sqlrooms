@@ -5,7 +5,7 @@ import {TemporalInterval, AggregateFunction} from '../../../schemas';
 // Y-field configuration
 export const YFieldConfig = z.object({
   field: z.string().describe('Numeric column name to plot on Y axis'),
-  color: z.string().optional().describe('Optional color for this line'),
+  color: z.string().describe('Color for this line'),
   aggregate: AggregateFunction.optional()
     .default('sum')
     .describe('Aggregation function: sum, avg, min, or max'),

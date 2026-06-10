@@ -3,6 +3,7 @@ import {Trash2} from 'lucide-react';
 import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
 import {AggregationSelector} from './AggregationSelector';
+import {ColorSelector} from './ColorSelector';
 import type {AggregateFunction} from '../schemas';
 import {ColumnsProvider, useColumnsContext} from './ColumnsContext';
 import {
@@ -11,6 +12,7 @@ import {
   CATEGORICAL_COLUMN_TYPES,
 } from '../column-types-utils';
 import type {YFieldConfig} from '../charts/chart-types/line-chart/schema';
+import {getLineColor} from '../charts/chart-types/line-chart/utils';
 
 export interface MultiFieldSelectorProps {
   types?: string[];
@@ -63,7 +65,14 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   const handleAdd = useCallback(
     (fieldName: string) => {
       if (fieldName) {
-        onChange([...value, {field: fieldName, aggregate: 'sum'}]);
+        onChange([
+          ...value,
+          {
+            field: fieldName,
+            aggregate: 'sum',
+            color: getLineColor(undefined, value.length),
+          },
+        ]);
       }
     },
     [value, onChange],
@@ -80,7 +89,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
             className="grid items-end gap-2"
             style={{
               gridTemplateColumns: showAggregation
-                ? 'minmax(120px, 1fr) 100px 32px'
+                ? 'minmax(120px, 1fr) auto auto 32px'
                 : 'minmax(120px, 1fr) 32px',
             }}
           >
@@ -96,6 +105,13 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
                 onChange={(agg: AggregateFunction) =>
                   handleUpdate(index, {aggregate: agg})
                 }
+              />
+            )}
+
+            {showAggregation && (
+              <ColorSelector
+                value={fieldConfig.color}
+                onChange={(color) => handleUpdate(index, {color})}
               />
             )}
 
