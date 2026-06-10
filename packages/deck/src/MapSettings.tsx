@@ -53,6 +53,19 @@ import {
   usesColumnRadiusSetting,
 } from './mapLayerConfigUtils';
 
+/**
+ * Extracts the primary table name from a simple SQL query.
+ * Handles patterns like: `SELECT ... FROM tableName ...`
+ * and `SELECT ... FROM "tableName" ...`
+ */
+function extractTableFromSqlQuery(
+  sqlQuery: string | undefined,
+): string | undefined {
+  if (!sqlQuery) return undefined;
+  const match = sqlQuery.match(/\bFROM\s+(?:"([^"]+)"|(\w[\w.]*))/i);
+  return match?.[1] ?? match?.[2];
+}
+
 interface MapSettingsPanelProps {
   dashboardId: string;
   panel: MosaicDashboardPanelConfigType;
@@ -81,12 +94,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const [colorAccessor, setColorAccessor] =
     useState<DeckMapLayerColorAccessor>('getFillColor');
 
-  const tableName = useStoreWithMosaicDashboard(
+  const dashboardSelectedTable = useStoreWithMosaicDashboard(
     (state) =>
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
   );
-
-  const dataTable = useDataTable(tableName);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -100,6 +111,16 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const activeLayerDataset = activeLayerDatasetId
     ? mapConfig.datasets?.[activeLayerDatasetId]
     : undefined;
+
+  // Resolve the table for column listing: prefer the dataset's explicit
+  // source table, extract from sqlQuery, then fall back to the dashboard's
+  // selectedTable.
+  const panelTableName =
+    activeLayerDataset?.source?.tableName ||
+    extractTableFromSqlQuery(activeLayerDataset?.source?.sqlQuery) ||
+    dashboardSelectedTable;
+  const dataTable = useDataTable(panelTableName);
+
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
   );

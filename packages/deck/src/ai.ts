@@ -22,16 +22,20 @@ Deck map tools:
 - create_dashboard_map creates or updates an interactive map panel inside a dashboard from a native Deck JSON map config.
 - Use map tools when the user asks for a map, geospatial/spatial visualization, locations, longitude/latitude data, or geometry columns.
 - Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer.
-- LAYER SELECTION: Choose the layer type based on the geometry type in the data:
-  - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowColumnLayer
-  - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer
+- LAYER SELECTION: Choose the layer type based on the geometry type in the data.
+  IMPORTANT: Only create a layer if the table contains data suitable for that layer type, or if you can transform the data into the required format with a sqlQuery. Do NOT create a layer if the data is clearly incompatible (e.g. do not create a path layer from point-only data without aggregation, do not create a polygon layer from point coordinates, do not create an arc layer without origin-destination pairs).
+  - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowColumnLayer. Requires rows with individual point positions — either separate longitude/latitude numeric columns, or a point geometry column. Each row represents one point on the map.
+  - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer. Requires a geometry column containing polygon or multipolygon WKB/GeoArrow data. Typically loaded from GeoJSON/Shapefile/GeoParquet or produced by spatial queries. Do NOT use for point data.
   - Line data (roads, routes, paths, rivers): GeoArrowPathLayer. CRITICAL: GeoArrowPathLayer requires LineString geometry, NOT individual point rows. If the table has one row per waypoint (indicated by columns like path_id/route_id + order/sequence + lat/lon), you MUST aggregate them with a sqlQuery: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom FROM tableName GROUP BY path_id, label". Set geometryColumn to "geom" and geometryEncodingHint to "wkb". If the table already has a geometry/geom column with linestring data, use it directly with tableName. NEVER pass raw waypoint rows to GeoArrowPathLayer — it will fail.
-  - Animated trip data (routes with timestamps): GeoArrowTripsLayer. Same as GeoArrowPathLayer but also requires a timestamps column. The sqlQuery MUST aggregate both the geometry and timestamps: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM tableName GROUP BY path_id, label". Set geometryColumn to "geom", geometryEncodingHint to "wkb", and _sqlroomsBinding.timestampColumn to "timestamps". The timestamps column must be a list of numbers (seconds) matching the order of waypoints in the linestring. Also set currentTime on the layer to control animation position.
-  - Arc data (origin-destination pairs): GeoArrowArcLayer. Requires _sqlroomsBinding.sourceGeometryColumn and _sqlroomsBinding.targetGeometryColumn. The dataset source MUST use a sqlQuery that creates WKB geometry columns from lat/lon, for example: "SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom, ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom FROM tableName". Set sourceGeometryColumn to "source_geom" and targetGeometryColumn to "target_geom". Set geometryEncodingHint to "wkb".
-  - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Bind to dataset with _sqlroomsBinding.dataset. Set "getHexagon": "@@=h3_column_name" where h3_column_name is the column containing H3 string indices.
-  - GeoJSON files typically contain polygon or multipolygon features (boundaries, buildings, parcels); use GeoArrowPolygonLayer for these.
+  - Animated trip data (routes with timestamps): GeoArrowTripsLayer. Same geometry requirements as GeoArrowPathLayer (LineString), plus a timestamps column. The sqlQuery MUST aggregate both the geometry and timestamps: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM tableName GROUP BY path_id, label". Set geometryColumn to "geom", geometryEncodingHint to "wkb", and _sqlroomsBinding.timestampColumn to "timestamps". The timestamps column must be a list of numbers (seconds) matching the order of waypoints in the linestring. Also set currentTime on the layer to control animation position. Do NOT use unless the data has or can produce both paths and ordered timestamps.
+  - Arc data (origin-destination pairs): GeoArrowArcLayer. Requires two sets of coordinates per row (source and target). The table must have source_lon/source_lat AND target_lon/target_lat columns (or equivalent). The dataset source MUST use a sqlQuery that creates WKB geometry columns from lat/lon, for example: "SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom, ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom FROM tableName". Set sourceGeometryColumn to "source_geom" and targetGeometryColumn to "target_geom". Set geometryEncodingHint to "wkb". Do NOT use for data with only one set of coordinates per row.
+  - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Requires a column containing H3 string indices. Bind to dataset with _sqlroomsBinding.dataset. Set "getHexagon": "@@=h3_column_name" where h3_column_name is the column containing H3 string indices. Do NOT use unless the table has an H3 index column.
+  - GeoJSON files typically contain polygon or multipolygon features (boundaries, buildings, parcels); use GeoArrowPolygonLayer for these. If a GeoJSON file contains point features, use GeoArrowScatterplotLayer instead.
+- RADIUS AND WIDTH: For GeoArrowScatterplotLayer use getRadius with radiusUnits: "pixels" (typically 2–6 pixels); large radii cause overdraw and rendering lag, especially with many points. For GeoArrowColumnLayer use the "radius" property (NOT getRadius) — it sets column radius in meters; typical values are 20–200 for city-scale data or smaller for dense datasets. Do NOT use getRadius or radiusUnits on column layers. For GeoArrowArcLayer, GeoArrowPathLayer, and GeoArrowTripsLayer use getWidth with widthUnits: "pixels" (typically 1–3 pixels).
 - ELEVATION: For extruded layers, getElevation with @@function "scale" passes the raw field value as meters. Use elevationScale on the layer to multiply values to a useful visual height. For example, if the field is "floors" (1-10), set elevationScale to 3 (meters per floor). Do NOT use negative values for elevation. Avoid using diverging scales for elevation.
 - Bind layers to datasets with _sqlroomsBinding.dataset and put tableName or sqlQuery sources in config.datasets.
+- IMPORTANT: Each dataset in config.datasets MUST have an explicit source.tableName or source.sqlQuery. Do NOT rely on the dashboard's selectedTable fallback. This is critical when creating multiple map panels with different tables — without explicit sources, all panels will resolve to the same (last-selected) table, causing incorrect data display and fitToData bounds.
+- IMPORTANT: Always pass tableName in the create_dashboard_map tool params (the top-level tableName field). This ensures the dashboard's selected table is set and the panels render. Use any of the tables referenced in the map config.
 - IMPORTANT: When referencing tables in tableName or sqlQuery, use ONLY the bare table name (e.g. "my_table") or schema-qualified name (e.g. "main.my_table"). NEVER include the database/catalog prefix (e.g. do NOT use "sqlrooms-cli.main.my_table") — the catalog does not exist in the query execution context.
 - IMPORTANT: For point data with longitude/latitude columns, the dataset source MUST use a sqlQuery that creates a geometry column, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM tableName WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the same name used in the AS clause (e.g. "__sqlrooms_geom") and geometryEncodingHint to "wkb".
 - IMPORTANT: When providing fitToData, include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}.
@@ -39,7 +43,7 @@ Deck map tools:
 - IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use source.tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Use "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"} to zoom to the data extent.
 - For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. Valid schemes: for "categorical" type use one of Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. For "sequential" use Viridis, Inferno, Magma, Plasma, Turbo, Blues, Greens, Oranges, Reds, Purples, etc. For "diverging" use RdBu, Spectral, RdYlGn, BrBG, PiYG, etc. IMPORTANT: The colorScale "field" must reference a column that exists in the FINAL query output (after any GROUP BY aggregation). Do not reference columns that are lost during aggregation.
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
-- Create maps with a SINGLE layer unless the user explicitly asks for multiple layers.
+- Create maps with a SINGLE layer unless the user explicitly asks for multiple layers. If you think multiple layers would better serve the user's request, ask the user for confirmation before adding them.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
 `;
 
@@ -336,6 +340,23 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
         );
         if (params.tableName) {
           deps.resolveTable(artifactId, params.tableName);
+        } else {
+          // Ensure selectedTable is set even when tableName is not provided,
+          // by extracting a table name from the first dataset source.
+          const dashboard = deps.getDashboard(artifactId);
+          if (!dashboard?.selectedTable && params.config.datasets) {
+            const firstDatasetSource = Object.values(params.config.datasets)
+              .map(
+                (d) =>
+                  (d as Record<string, unknown>)?.source as
+                    | {tableName?: string}
+                    | undefined,
+              )
+              .find((s) => s?.tableName);
+            if (firstDatasetSource?.tableName) {
+              deps.resolveTable(artifactId, firstDatasetSource.tableName);
+            }
+          }
         }
         const panel = createDeckMapPanelFromNativeConfig(params);
 
