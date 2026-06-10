@@ -87,7 +87,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
             style={{
               gridTemplateColumns: showAggregation
                 ? 'minmax(120px, 1fr) auto auto 32px'
-                : 'minmax(120px, 1fr) 32px',
+                : 'minmax(120px, 1fr) auto 32px',
             }}
           >
             <ColumnSelector
@@ -105,12 +105,10 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
               />
             )}
 
-            {showAggregation && (
-              <ColorSelector
-                value={fieldConfig.color}
-                onChange={(color) => handleUpdate(index, {color})}
-              />
-            )}
+            <ColorSelector
+              value={fieldConfig.color}
+              onChange={(color) => handleUpdate(index, {color})}
+            />
 
             <Button
               variant="ghost"
