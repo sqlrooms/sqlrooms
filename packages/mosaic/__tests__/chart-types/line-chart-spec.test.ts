@@ -46,13 +46,17 @@ describe('createLineChartSpec', () => {
       dataTable: mockDataTable,
       settings,
       selectionName: 'test_selection',
-    });
+    }) as any;
 
-    // Verify legend mark exists
-    const legendMark = spec.plot.find((mark: any) => mark.mark === 'legend');
-    expect(legendMark).toBeDefined();
-    expect(legendMark.as).toBe('$legend');
-    expect(legendMark.for).toBe('color');
+    // Verify VConcat structure with legend
+    expect(spec.vconcat).toBeDefined();
+    expect(spec.vconcat.length).toBe(2);
+
+    // Second element should be the legend
+    const legendSpec = spec.vconcat[1];
+    expect(legendSpec.legend).toBe('color');
+    expect(legendSpec.for).toBe('lineChart');
+    expect(legendSpec.columns).toBe(2);
   });
 
   it('generates spec with legend by default', () => {
@@ -66,10 +70,11 @@ describe('createLineChartSpec', () => {
       dataTable: mockDataTable,
       settings,
       selectionName: 'test_selection',
-    });
+    }) as any;
 
-    // Verify legend mark exists by default
-    const legendMark = spec.plot.find((mark: any) => mark.mark === 'legend');
-    expect(legendMark).toBeDefined();
+    // Verify VConcat structure exists by default (showLegend defaults to true)
+    expect(spec.vconcat).toBeDefined();
+    expect(spec.vconcat.length).toBe(2);
+    expect(spec.vconcat[1].legend).toBe('color');
   });
 });
