@@ -120,6 +120,7 @@ function createDefaultMapKeplerState(
     } as MapStyle,
     uiState: {
       ...INITIAL_UI_STATE,
+      activeSidePanel: null,
       currentModal: null,
       mapControls: {
         visibleLayers: INITIAL_UI_STATE.mapControls.visibleLayers,
