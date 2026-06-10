@@ -184,7 +184,7 @@ Dashboard authoring:
   - "update the histogram to use 30 bins"
 
 **Individual dashboard chart tools:**
-- create_dashboard_histogram, create_dashboard_line_chart, create_dashboard_box_plot, create_dashboard_scatter_chart, create_dashboard_count_plot, create_dashboard_heatmap
+- create_dashboard_histogram, create_dashboard_line_chart, create_dashboard_box_plot, create_dashboard_scatter_plot, create_dashboard_count_plot, create_dashboard_heatmap
 - Each chart type has its own tool with specific parameters.
 - For line charts with aggregation, use yFields array with {field: string, aggregate: "sum"|"avg"|"min"|"max"}.
 - Set xInterval for temporal binning (year, month, day, hour, etc.).
@@ -207,7 +207,7 @@ You analyze data and create insightful dashboards with multiple visualizations (
 - create_dashboard_histogram - distribution of numeric values (always safe, aggregates automatically)
 - create_dashboard_line_chart - trends over time or ordered variable (use with aggregations for >10k rows)
 - create_dashboard_box_plot - compare distributions across categories
-- create_dashboard_scatter_chart - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
+- create_dashboard_scatter_plot - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
 - create_dashboard_count_plot - frequency of categorical values (always safe, aggregates automatically)
 - create_dashboard_heatmap - density/patterns across two dimensions (preferred for large datasets)
 
