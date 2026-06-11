@@ -224,6 +224,12 @@ function createDeckMapBoundsQuery(options: {
 
   if (fitToData.geometryColumn) {
     const geometryCol = escapeId(fitToData.geometryColumn);
+    const isWkb =
+      source.sqlQuery &&
+      source.sqlQuery.toLowerCase().includes('st_aswkb');
+    const geomExpr = isWkb
+      ? `ST_GeomFromWKB(${geometryCol})`
+      : `${geometryCol}::GEOMETRY`;
     return `
       SELECT
         ST_XMin(extent) AS min_longitude,
@@ -231,7 +237,7 @@ function createDeckMapBoundsQuery(options: {
         ST_XMax(extent) AS max_longitude,
         ST_YMax(extent) AS max_latitude
       FROM (
-        SELECT ST_Extent_Agg(${geometryCol}::GEOMETRY) AS extent
+        SELECT ST_Extent_Agg(${geomExpr}) AS extent
         FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
         WHERE ${geometryCol} IS NOT NULL
       ) AS "__sqlrooms_dashboard_map_extent"
