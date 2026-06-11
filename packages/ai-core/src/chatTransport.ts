@@ -339,10 +339,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        onFinish: ({totalUsage, usage}) => {
-          const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
-          rememberSessionTokenUsage(sessionId, finalUsage);
-        },
         ...(providerOptions ? {providerOptions} : {}),
       });
 
@@ -352,6 +348,7 @@ export function createLocalChatTransportFactory({
         outputTokens: 0,
         totalTokens: 0,
       };
+      let lastStepInputTokens = 0;
 
       return createAgentUIStreamResponse({
         agent,
@@ -366,6 +363,7 @@ export function createLocalChatTransportFactory({
             accumulatedUsage.inputTokens += u.inputTokens ?? 0;
             accumulatedUsage.outputTokens += u.outputTokens ?? 0;
             accumulatedUsage.totalTokens += u.totalTokens ?? 0;
+            lastStepInputTokens = u.inputTokens ?? 0;
             if (
               u.inputTokenDetails?.cacheReadTokens != null ||
               u.inputTokenDetails?.cacheWriteTokens != null
@@ -396,6 +394,7 @@ export function createLocalChatTransportFactory({
             );
             const finalUsage =
               finishUsage.totalTokens > 0 ? finishUsage : accumulatedUsage;
+            finalUsage.lastStepInputTokens = lastStepInputTokens;
             rememberSessionTokenUsage(sessionId, finalUsage);
             return {
               tokenUsage: finalUsage,

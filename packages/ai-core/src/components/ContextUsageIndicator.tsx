@@ -39,60 +39,86 @@ function buildConversationText(messages: UIMessage[]): string {
     .join('\n\n');
 }
 
-function estimateConversationTokens(messages: UIMessage[]): number {
-  let totalTokens = 0;
-
-  for (const msg of messages) {
-    totalTokens += 4;
-
-    for (const part of msg.parts) {
-      if (part.type === 'text') {
-        totalTokens += estimateTokenCount((part as {text: string}).text);
-        continue;
-      }
-
-      if (part.type === 'reasoning') {
-        totalTokens += estimateTokenCount((part as {text?: string}).text ?? '');
-        continue;
-      }
-
-      if (
-        typeof part.type === 'string' &&
-        (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
-      ) {
-        const serialized = JSON.stringify(part);
-        totalTokens += estimateTokenCount(serialized);
-      }
-    }
-  }
-
-  return totalTokens;
-}
-
 function getStrokeColor(percentage: number): string {
   if (percentage > USAGE_CRITICAL_THRESHOLD) return '#ef4444';
   if (percentage > USAGE_WARNING_THRESHOLD) return '#eab308';
   return 'currentColor';
 }
 
+type TokenUsageResult = {
+  contextTokens: number;
+  cumulativeTokens: number;
+};
+
 /**
- * Sum actual token usage from assistant message metadata.
- * The AI SDK reports cumulative inputTokens + outputTokens per step,
- * which already includes system instructions in the input tokens.
+ * Compute context window usage from conversation messages.
+ *
+ * - contextTokens: the input tokens from the most recent assistant message with
+ *   reported usage. This represents what the model actually received on the last
+ *   turn and approximates what the next request will send (the true context fill).
+ * - cumulativeTokens: sum of all totalTokens across all turns (useful for cost).
+ *
+ * Falls back to text-based estimation when no provider-reported usage exists.
  */
-function sumTokenUsageFromMessages(messages: UIMessage[]): number {
-  let totalTokens = 0;
+function computeTokenUsage(
+  messages: UIMessage[],
+  systemInstructions?: string,
+): TokenUsageResult {
+  let cumulativeTokens = 0;
+  let lastContextTokens = 0;
+  let hasAnyReportedUsage = false;
+
   for (const msg of messages) {
-    if (msg.role !== 'assistant') continue;
-    const meta = msg.metadata as AssistantMessageMetadata | undefined;
-    if (meta?.tokenUsage) {
-      totalTokens += meta.tokenUsage.totalTokens;
+    if (msg.role === 'assistant') {
+      const meta = msg.metadata as AssistantMessageMetadata | undefined;
+      const reported = meta?.tokenUsage;
+      if (reported && reported.totalTokens > 0) {
+        cumulativeTokens += reported.totalTokens;
+        // Prefer lastStepInputTokens (single LLM call's prompt) over
+        // inputTokens (which is accumulated across all steps in a multi-step turn).
+        lastContextTokens =
+          reported.lastStepInputTokens && reported.lastStepInputTokens > 0
+            ? reported.lastStepInputTokens
+            : reported.inputTokens;
+        hasAnyReportedUsage = true;
+        continue;
+      }
+    }
+    // Estimate from content for user messages and assistant messages without usage
+    const estimate = estimateMessageTokens(msg);
+    cumulativeTokens += estimate;
+  }
+
+  if (!hasAnyReportedUsage && systemInstructions) {
+    const sysEstimate = estimateTokenCount(systemInstructions);
+    cumulativeTokens += sysEstimate;
+    return {contextTokens: cumulativeTokens, cumulativeTokens};
+  }
+
+  // Context tokens = last turn's input tokens (what fills the context window now).
+  // If we have reported usage, inputTokens already includes system instructions.
+  const contextTokens = hasAnyReportedUsage
+    ? lastContextTokens
+    : cumulativeTokens;
+
+  return {contextTokens, cumulativeTokens};
+}
+
+function estimateMessageTokens(msg: UIMessage): number {
+  let tokens = 4; // per-message overhead
+  for (const part of msg.parts) {
+    if (part.type === 'text') {
+      tokens += estimateTokenCount((part as {text: string}).text);
+    } else if (part.type === 'reasoning') {
+      tokens += estimateTokenCount((part as {text?: string}).text ?? '');
+    } else if (
+      typeof part.type === 'string' &&
+      (part.type.startsWith('tool-') || part.type === 'dynamic-tool')
+    ) {
+      tokens += estimateTokenCount(JSON.stringify(part));
     }
   }
-  if (totalTokens === 0) {
-    totalTokens = estimateConversationTokens(messages);
-  }
-  return totalTokens;
+  return tokens;
 }
 
 type ContextUsageIndicatorProps = {
@@ -111,6 +137,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
     return sessions.find((session) => session.id === currentSessionId)
       ?.uiMessages as UIMessage[] | undefined;
   });
+  const getFullInstructions = useStoreWithAi((s) => s.ai.getFullInstructions);
   const sendPrompt = useStoreWithAi((s) => s.ai.sendPrompt);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
   const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
@@ -119,12 +146,14 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
 
   const summarizeAbortControllerRef = useRef<AbortController | null>(null);
 
-  const totalTokens = useMemo(() => {
-    if (!uiMessages) return 0;
-    return sumTokenUsageFromMessages(uiMessages);
-  }, [uiMessages]);
+  const {contextTokens, cumulativeTokens} = useMemo(() => {
+    if (!uiMessages) return {contextTokens: 0, cumulativeTokens: 0};
+    const instructions = getFullInstructions();
+    return computeTokenUsage(uiMessages, instructions);
+  }, [uiMessages, getFullInstructions]);
 
-  const percentage = Math.min((totalTokens / contextWindow) * 100, 100);
+  const totalTokens = contextTokens;
+  const percentage = Math.min((contextTokens / contextWindow) * 100, 100);
   const isClickable = percentage > USAGE_CRITICAL_THRESHOLD && !isSummarizing;
 
   const handleSummarizeAndContinue = useCallback(async () => {
@@ -191,7 +220,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
   const dashOffset = circumference * (1 - percentage / 100);
   const strokeColor = getStrokeColor(percentage);
 
-  const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(totalTokens)} / ${formatTokenCount(contextWindow)} context used`;
+  const tooltipText = `${percentage.toFixed(1)}% · ${formatTokenCount(contextTokens)} / ${formatTokenCount(contextWindow)} context used${cumulativeTokens > contextTokens ? `\n${formatTokenCount(cumulativeTokens)} total tokens consumed` : ''}`;
   const fullTooltip =
     percentage > USAGE_CRITICAL_THRESHOLD
       ? `${tooltipText}\nClick to summarize current conversation and start a new session`

@@ -105,6 +105,8 @@ export type MessageTokenUsage = {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+  /** Input tokens from the last step only (approximates current context fill). */
+  lastStepInputTokens?: number;
   inputTokenDetails?: {
     cacheReadTokens?: number;
     cacheWriteTokens?: number;
