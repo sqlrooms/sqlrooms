@@ -4,6 +4,7 @@ import {
   ChartBuilderField,
 } from '../charts/chart-types/base-types';
 import {Combobox} from './Combobox';
+import {cn} from '@sqlrooms/ui';
 
 export interface FieldSelectorInputProps {
   field: ChartBuilderField;
@@ -11,6 +12,7 @@ export interface FieldSelectorInputProps {
   value: string | undefined;
   onChange: (value: string) => void;
   placeholder?: string;
+  className?: string;
 }
 
 /**
@@ -21,6 +23,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
   columns,
   value,
   onChange,
+  className,
   placeholder = 'Select...',
 }) => {
   const filteredColumns = field.types
@@ -32,7 +35,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
   const selectedColumn = filteredColumns.find((col) => col.name === value);
 
   return (
-    <div className="@container flex flex-col gap-1">
+    <div className={cn('@container flex flex-col gap-1', className)}>
       <Combobox value={value ?? ''} onChange={onChange}>
         <Combobox.Trigger className="w-full">
           {selectedColumn ? (
