@@ -102,7 +102,7 @@ export const TableTreeNode: FC<{
   return (
     <>
       <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-        <div className="relative flex w-full items-center space-x-2">
+        <div className="relative flex w-full items-center space-x-1.5">
           {isView ? (
             <ViewIcon size="16px" className="shrink-0 text-blue-500" />
           ) : (

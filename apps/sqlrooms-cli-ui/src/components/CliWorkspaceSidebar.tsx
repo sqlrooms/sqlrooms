@@ -195,7 +195,7 @@ function CliDataSidebarSection() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SchemaExplorer className="border-sidebar-border h-auto max-h-[min(48vh,440px)] border-l py-1 pr-0 pl-3">
+          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] py-1 pr-0 pl-0 [&_h2]:pl-1">
             <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
