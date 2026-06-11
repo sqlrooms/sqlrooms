@@ -8,16 +8,18 @@ import {
 } from '../errors';
 import {isQuantitativeType} from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/duckdb';
+import {CHART_COLORS} from '../../../constants/chart-colors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
-const FG_COLOR = 'var(--color-chart-1)';
+const DEFAULT_FG_COLOR = CHART_COLORS[0]!;
 
 export function createHistogramSpec(
   options: CreateSpecOptions<HistogramChartSettings>,
 ): Spec {
-  const {dataTable, selectionName} = options;
+  const {dataTable, selectionName, settings} = options;
 
   const {fieldColumn, maxBins} = validateHistogramSettings(options);
+  const fgColor = settings.color ?? DEFAULT_FG_COLOR;
 
   const plot: unknown[] = [
     {
@@ -33,7 +35,7 @@ export function createHistogramSpec(
       data: {from: dataTable.table.table, filterBy: '$brush'},
       x: {bin: fieldColumn.name, steps: maxBins},
       y: {count: null},
-      fill: FG_COLOR,
+      fill: fgColor,
       inset: 0.5,
     },
   ];

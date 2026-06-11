@@ -2,8 +2,10 @@ import {type FC} from 'react';
 import {Input} from '@sqlrooms/ui';
 import {Field} from '../../../components/Field';
 import {ColumnSelector} from '../../../components/ColumnSelector';
+import {ColorSelector} from '../../../components/ColorSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {MIN_BINS_COUNT, MAX_BINS_COUNT, DEFAULT_BINS_COUNT} from './schema';
+import {CHART_COLORS} from '../../../constants/chart-colors';
 
 export const HistogramSettingsComponent: FC = () => {
   const {onChangeConfig, config} = useMosaicChartSettingsContext('histogram');
@@ -11,10 +13,18 @@ export const HistogramSettingsComponent: FC = () => {
   return (
     <div className="space-y-4">
       <Field label="Field" required>
-        <ColumnSelector.Quantitative
-          value={config.settings.field}
-          onChange={(field) => onChangeConfig('field', field)}
-        />
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <ColumnSelector.Quantitative
+              value={config.settings.field}
+              onChange={(field) => onChangeConfig('field', field)}
+            />
+          </div>
+          <ColorSelector
+            value={config.settings.color ?? CHART_COLORS[0]!}
+            onChange={(color) => onChangeConfig('color', color)}
+          />
+        </div>
       </Field>
       <Field label="Max Bins">
         <Input
