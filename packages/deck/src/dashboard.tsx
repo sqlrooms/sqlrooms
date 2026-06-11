@@ -617,7 +617,7 @@ function DeckMapDashboardRenderer({
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [issue]);
 
   const fitToDataRaw = mapConfig?.fitToData ?? null;
   const fitToData: DeckMapDashboardFitToDataConfig | null = useMemo(
