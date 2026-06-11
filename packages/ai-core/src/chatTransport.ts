@@ -292,6 +292,7 @@ export function createLocalChatTransportFactory({
           name: provider,
           baseURL: baseUrl ?? 'https://api.openai.com/v1',
           headers,
+          includeUsage: true,
         });
         model = openai.chatModel(modelId);
       }
@@ -387,9 +388,17 @@ export function createLocalChatTransportFactory({
             }
           }
           if (part.type === 'finish') {
-            rememberSessionTokenUsage(sessionId, accumulatedUsage);
+            // Prefer totalUsage from the finish event (authoritative cumulative value
+            // from the agent) over per-step accumulated values which may be zeros
+            // when the provider doesn't report usage in streaming chunks.
+            const finishUsage = toMessageTokenUsage(
+              (part as {totalUsage?: LanguageModelUsage}).totalUsage,
+            );
+            const finalUsage =
+              finishUsage.totalTokens > 0 ? finishUsage : accumulatedUsage;
+            rememberSessionTokenUsage(sessionId, finalUsage);
             return {
-              tokenUsage: accumulatedUsage,
+              tokenUsage: finalUsage,
             } satisfies AssistantMessageMetadata;
           }
           return undefined;

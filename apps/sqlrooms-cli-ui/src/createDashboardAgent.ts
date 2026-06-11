@@ -20,6 +20,7 @@ export function dashboardAgentTool(store: StoreApi<RoomState>) {
         name: provider || '',
         baseURL:
           state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+        includeUsage: true,
       }).chatModel(modelId);
     },
     createQueryTools: () => ({
