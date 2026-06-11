@@ -19,9 +19,9 @@ export const Room = () => {
       <RoomShell className="h-screen" roomStore={roomStore}>
         <SidebarProvider defaultOpen>
           <CliWorkspaceSidebar onToggleSqlEditor={sqlEditor.onToggle} />
-          <SidebarInset className="min-w-0">
+          <SidebarInset className="h-svh min-w-0 overflow-hidden">
             <CliWorkspaceTopbar />
-            <RoomShell.LayoutComposer />
+            <RoomShell.LayoutComposer className="min-h-0 flex-1 overflow-hidden [&_[data-slot=resizable-handle][aria-controls=assistant-sidebar][aria-valuenow='0']]:hidden" />
             <RoomShell.LoadingProgress />
             <RoomShell.CommandPalette />
             <SqlEditorModal

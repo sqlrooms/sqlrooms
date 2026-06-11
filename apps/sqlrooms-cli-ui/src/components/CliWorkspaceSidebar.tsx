@@ -79,7 +79,7 @@ export function CliWorkspaceSidebar({
       <SidebarFooter className="border-sidebar-border border-t group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:py-1">
         <CliSidebarFooterControls onToggleSqlEditor={onToggleSqlEditor} />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail className="after:hidden" />
     </Sidebar>
   );
 }
