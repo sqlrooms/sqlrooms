@@ -194,6 +194,68 @@ function isDeckMapFitToDataValid(
   return Boolean(fitToData?.dataset);
 }
 
+function resolveFitToData(
+  fitToDataRaw: DeckMapDashboardFitToDataConfig | null,
+  datasets: Record<string, unknown> | undefined,
+  interaction: Record<string, unknown> | undefined,
+  spec: unknown,
+): DeckMapDashboardFitToDataConfig | null {
+  if (!fitToDataRaw) return null;
+  const dataset = (
+    datasets as
+      | Record<
+          string,
+          {geometryColumn?: string; source?: {sqlQuery?: string}} | undefined
+        >
+      | undefined
+  )?.[fitToDataRaw.dataset];
+
+  if (fitToDataRaw.longitudeColumn && fitToDataRaw.latitudeColumn) {
+    return fitToDataRaw;
+  }
+
+  const geomCol = fitToDataRaw.geometryColumn ?? dataset?.geometryColumn;
+
+  if (geomCol) {
+    return {...fitToDataRaw, geometryColumn: geomCol};
+  }
+
+  const inter = interaction as
+    | {longitudeColumn?: string; latitudeColumn?: string}
+    | undefined;
+  if (inter?.longitudeColumn && inter?.latitudeColumn) {
+    return {
+      ...fitToDataRaw,
+      geometryColumn: undefined,
+      longitudeColumn: inter.longitudeColumn,
+      latitudeColumn: inter.latitudeColumn,
+    };
+  }
+
+  // Detect H3 layer as last resort: check layers bound to this dataset
+  // for hexagonColumn when no other bounds method is available.
+  const specObj = spec as Record<string, unknown> | undefined;
+  const specLayers = Array.isArray(specObj?.layers) ? specObj.layers : [];
+  for (const layer of specLayers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const binding = (layer as Record<string, unknown>)._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset === fitToDataRaw.dataset && binding?.hexagonColumn) {
+      return {
+        ...fitToDataRaw,
+        h3Column: binding.hexagonColumn as string,
+      };
+    }
+  }
+
+  // Strip unverifiable geometryColumn; the bounds query will use
+  // DuckDB case-insensitive column resolution as a fallback.
+  const {geometryColumn: _geom, ...safeConfig} = fitToDataRaw;
+  void _geom;
+  return safeConfig;
+}
+
 function createDeckMapBoundsQuery(options: {
   source: {tableName?: string; sqlQuery?: string};
   fitToData: DeckMapDashboardFitToDataConfig;
@@ -225,8 +287,7 @@ function createDeckMapBoundsQuery(options: {
   if (fitToData.geometryColumn) {
     const geometryCol = escapeId(fitToData.geometryColumn);
     const isWkb =
-      source.sqlQuery &&
-      source.sqlQuery.toLowerCase().includes('st_aswkb');
+      source.sqlQuery && source.sqlQuery.toLowerCase().includes('st_aswkb');
     const geomExpr = isWkb
       ? `ST_GeomFromWKB(${geometryCol})`
       : `${geometryCol}::GEOMETRY`;
@@ -550,52 +611,21 @@ function DeckMapDashboardRenderer({
   }, []);
 
   const fitToDataRaw = mapConfig?.fitToData ?? null;
-  const fitToData: DeckMapDashboardFitToDataConfig | null = useMemo(() => {
-    if (!fitToDataRaw) return null;
-    const dataset = mapConfig?.datasets[fitToDataRaw.dataset];
-    const interaction = mapConfig?.interaction;
-
-    if (fitToDataRaw.longitudeColumn && fitToDataRaw.latitudeColumn) {
-      return fitToDataRaw;
-    }
-
-    const geomCol = fitToDataRaw.geometryColumn ?? dataset?.geometryColumn;
-
-    if (geomCol) {
-      return {...fitToDataRaw, geometryColumn: geomCol};
-    }
-
-    if (interaction?.longitudeColumn && interaction?.latitudeColumn) {
-      return {
-        ...fitToDataRaw,
-        geometryColumn: undefined,
-        longitudeColumn: interaction.longitudeColumn,
-        latitudeColumn: interaction.latitudeColumn,
-      };
-    }
-
-    // Detect H3 layer as last resort: check layers bound to this dataset
-    // for hexagonColumn when no other bounds method is available.
-    const spec = mapConfig?.spec as Record<string, unknown> | undefined;
-    const specLayers = Array.isArray(spec?.layers) ? spec.layers : [];
-    for (const layer of specLayers) {
-      if (!layer || typeof layer !== 'object') continue;
-      const binding = (layer as Record<string, unknown>)._sqlroomsBinding as
-        | Record<string, unknown>
-        | undefined;
-      if (binding?.dataset === fitToDataRaw.dataset && binding?.hexagonColumn) {
-        return {
-          ...fitToDataRaw,
-          h3Column: binding.hexagonColumn as string,
-        };
-      }
-    }
-
-    // Strip unverifiable geometryColumn; the bounds query will use
-    // DuckDB case-insensitive column resolution as a fallback.
-    const {geometryColumn: _stripped, ...safeConfig} = fitToDataRaw;
-    return safeConfig;
-  }, [fitToDataRaw, mapConfig?.datasets, mapConfig?.interaction, mapConfig?.spec]);
+  const fitToData: DeckMapDashboardFitToDataConfig | null = useMemo(
+    () =>
+      resolveFitToData(
+        fitToDataRaw,
+        mapConfig?.datasets,
+        mapConfig?.interaction,
+        mapConfig?.spec,
+      ),
+    [
+      fitToDataRaw,
+      mapConfig?.datasets,
+      mapConfig?.interaction,
+      mapConfig?.spec,
+    ],
+  );
   const fitToDataSource = useMemo(
     () =>
       fitToData
