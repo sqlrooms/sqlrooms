@@ -50,7 +50,10 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
       />
 
       <div className="min-h-0 flex-1 overflow-hidden">
-        <MosaicDashboardPanelErrorBoundary panelType={panel.type}>
+        <MosaicDashboardPanelErrorBoundary
+          key={dashboard?.selectedTable ?? ''}
+          panelType={panel.type}
+        >
           {RendererComponent ? (
             <RendererComponent
               dashboardId={dashboardId}

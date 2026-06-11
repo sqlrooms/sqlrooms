@@ -172,7 +172,7 @@ export const MAP_TOOL_KEY = 'create_dashboard_map';
 export const DASHBOARD_AI_INSTRUCTIONS = `
 Dashboard authoring:
 
-- IMPORTANT: Always create charts, maps, and data panels using the table currently selected in the dashboard (dashboard.selectedTable). Do not switch the active table without user instruction. If user asks to use a different data source, use the \`resolveTable\` tool to select the appropriate table. Don't create maps from multiple data sources. If asked - reply that a single one can be used at a time.
+- IMPORTANT: Always create charts, maps, and data panels using the table currently selected in the dashboard (dashboard.selectedTable). Call \`list_dashboard_panels\` to see which table is selected — the response includes \`selectedTable\`. Use ONLY that table unless the user explicitly names a different one. Do not pick tables based on what seems "interesting" — respect the user's selection. If asked to use multiple data sources simultaneously, explain that the dashboard works with one active table at a time.
 
 **When to use dashboard_agent vs individual tools:**
 - Use \`dashboard_agent\` for exploratory requests that require data analysis and discovery:

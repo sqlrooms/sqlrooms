@@ -103,16 +103,53 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   fitToData?: DeckMapDashboardFitToDataConfig;
 }): {tableName?: string; sqlQuery?: string} | undefined {
   const datasetSource = options.dataset?.source;
-  const resolvedSource =
-    datasetSource?.sqlQuery || datasetSource?.tableName
-      ? datasetSource
-      : options.dashboard.selectedTable
-        ? {tableName: options.dashboard.selectedTable}
-        : undefined;
+  const dashboardTable = stripCatalogPrefix(options.dashboard.selectedTable);
 
-  if (!resolvedSource || resolvedSource.sqlQuery || !resolvedSource.tableName) {
-    return resolvedSource;
+  // The dashboard's selected table always takes precedence as the data source.
+  // When the user switches the table in the selector, all panels update.
+  const baseTableName = dashboardTable || datasetSource?.tableName;
+  if (!baseTableName && !datasetSource?.sqlQuery) {
+    return undefined;
   }
+
+  // If the dataset has a sqlQuery and the dashboard table differs from the
+  // original source table, rewrite the FROM clause to use the new table.
+  if (datasetSource?.sqlQuery && dashboardTable) {
+    const originalTable = datasetSource.tableName;
+    const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
+    const quotedDashboard = dashboardTable.includes('"')
+      ? dashboardTable
+      : dashboardTable.split('.').map(quote).join('.');
+
+    if (originalTable && dashboardTable !== originalTable) {
+      const quotedOriginal = originalTable.split('.').map(quote).join('.');
+      const rewritten = datasetSource.sqlQuery
+        .replace(
+          new RegExp(`\\bFROM\\s+${escapeRegExp(originalTable)}\\b`, 'gi'),
+          `FROM ${quotedDashboard}`,
+        )
+        .replace(
+          new RegExp(`\\bFROM\\s+${escapeRegExp(quotedOriginal)}\\b`, 'gi'),
+          `FROM ${quotedDashboard}`,
+        );
+      return {sqlQuery: rewritten};
+    }
+
+    if (!originalTable) {
+      // No explicit tableName — replace the first FROM <identifier> with the dashboard table.
+      const rewritten = datasetSource.sqlQuery.replace(
+        /\bFROM\s+((?:"[^"]*"(?:\."[^"]*")*)|(?:[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*))/i,
+        `FROM ${quotedDashboard}`,
+      );
+      if (rewritten !== datasetSource.sqlQuery) {
+        return {sqlQuery: rewritten};
+      }
+    }
+
+    return datasetSource;
+  }
+
+  const resolvedSource = {tableName: baseTableName!};
 
   // When the dataset expects a geometry column but the source is a plain
   // tableName, generate SQL that creates the geometry from coordinate columns.
@@ -165,6 +202,47 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   }
 
   return resolvedSource;
+}
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Strips the catalog/database and schema prefixes from a fully qualified table name.
+ * DuckDB queries run in a context where the catalog prefix is not valid,
+ * and the default schema is typically "main".
+ * E.g. "sqlrooms-cli"."main"."earthquakes" → earthquakes
+ *      "main"."earthquakes" → earthquakes
+ *      earthquakes → earthquakes (unchanged)
+ */
+function stripCatalogPrefix(tableName: string | undefined): string | undefined {
+  if (!tableName) return tableName;
+  // Split on dots that are outside quotes
+  const parts: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < tableName.length; i++) {
+    const ch = tableName[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      current += ch;
+    } else if (ch === '.' && !inQuotes) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+
+  // Use the last part (bare table name), stripping quotes
+  const lastPart = parts[parts.length - 1] ?? tableName;
+  // Remove surrounding quotes if present
+  if (lastPart.startsWith('"') && lastPart.endsWith('"')) {
+    return lastPart.slice(1, -1);
+  }
+  return lastPart;
 }
 
 function buildGeometrySourceSql(

@@ -120,8 +120,9 @@ function DeckMapDashboardDatasetClient({
           ),
     [source],
   );
+  const sourceKey = source?.tableName ?? dashboard.selectedTable ?? '';
   const {data, error, isLoading, client} = useMosaicClient({
-    id: `${panel.id}:${datasetId}`,
+    id: `${panel.id}:${datasetId}:${sourceKey}`,
     selectionName,
     query,
     dataPolicy,
@@ -525,6 +526,14 @@ function DeckMapDashboardRenderer({
     (state) => state.mosaicDashboard.clearPanelIssue,
   );
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
+
+  // Clear runtime issues when the active table changes so the map can
+  // recover after switching from an incompatible table back to a compatible one.
+  useEffect(() => {
+    if (dashboard.selectedTable) {
+      clearPanelIssue(dashboardId, panel.id);
+    }
+  }, [clearPanelIssue, dashboard.selectedTable, dashboardId, panel.id]);
 
   const isSettingsOpen = Boolean(
     (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
