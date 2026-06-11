@@ -1,28 +1,32 @@
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useIntl} from 'react-intl';
 import styled from 'styled-components';
 
 import {
-  Accessor,
-  Button,
-  Icons,
   LayerListFactory,
   DatasetLayerGroupFactory,
   PanelTitleFactory,
   SidePanelSection,
-  Typeahead,
 } from '@kepler.gl/components';
 import {PANEL_VIEW_TOGGLES, SIDEBAR_PANELS} from '@kepler.gl/constants';
 import {LayerClassesType} from '@kepler.gl/layers';
 import {getApplicationConfig} from '@kepler.gl/utils';
+import {Plus} from 'lucide-react';
+import {Button} from '@sqlrooms/ui';
 
 import {getKeplerFactory} from './KeplerInjector';
 import {
   KeplerActions,
   useKeplerStateActions,
 } from '../hooks/useKeplerStateActions';
+import {
+  buildKeplerTableSourceOptions,
+  type KeplerSourceDataset,
+  type KeplerTableSourceOption,
+} from '../keplerTableSelection';
 import {useStoreWithKepler} from '../KeplerSlice';
-import {RGBColor} from '@kepler.gl/types';
+import type {RGBColor} from '@kepler.gl/types';
+import {KeplerTableSourceSelector} from './KeplerTableSourceSelector';
 
 const LayerList = getKeplerFactory(LayerListFactory);
 const DatasetLayerGroup = getKeplerFactory(DatasetLayerGroupFactory);
@@ -70,62 +74,6 @@ const CustomLayerManagerContainer = styled.div`
 }
 `;
 
-const DropdownWrapper = styled.div`
-  position: relative;
-  display: inline-block;
-  overflow: visible;
-`;
-
-const DropdownMenu = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-width: 240px;
-  max-width: 240px;
-  position: fixed;
-  z-index: 100;
-
-  .list-selector {
-    border-top: 1px solid ${(props) => props.theme.secondaryInputBorderColor};
-    width: 100%;
-    max-height: unset;
-  }
-  .list__item > div {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    line-height: 18px;
-    padding: 0;
-  }
-`;
-
-const ListItemWrapper = styled.div`
-  display: flex;
-  color: ${(props) => props.theme.textColor};
-  font-size: 11px;
-  letter-spacing: 0.2px;
-  overflow: auto;
-  .table-name {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-`;
-
-const TYPEAHEAD_CLASS = 'typeahead';
-const TYPEAHEAD_INPUT_CLASS = 'typeahead__input';
-
-type TableOption = {label: string; value: string};
-type TypeaheadListItemComponent =
-  (typeof Typeahead.defaultProps)['customListItemComponent'];
-
-const TableListItem: React.FC<{value: TableOption}> = ({value}) => (
-  <ListItemWrapper>
-    <div className="table-name" title={value.label}>
-      {value.label}
-    </div>
-  </ListItemWrapper>
-);
-
 /**
  * Dropdown button that lists available datasets and DuckDB tables.
  * When a table is selected, it is synced to Kepler on demand and a new
@@ -133,120 +81,57 @@ const TableListItem: React.FC<{value: TableOption}> = ({value}) => (
  */
 const AddTableLayerButton: React.FC<{
   onAdd: (tableName: string) => Promise<void>;
-  keplerDatasetIds: string[];
+  datasets: Record<string, KeplerSourceDataset>;
   disabled?: boolean;
-}> = ({onAdd, keplerDatasetIds, disabled}) => {
-  const [isOpen, setIsOpen] = useState(false);
+}> = ({onAdd, datasets, disabled}) => {
   const [isAdding, setIsAdding] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [menuPos, setMenuPos] = useState<{top: number; right: number}>({
-    top: 0,
-    right: 0,
-  });
   const intl = useIntl();
 
   const dbTables = useStoreWithKepler((state) => state.db.tables);
+  const tableSelection = useStoreWithKepler(
+    (state) => state.kepler.tableSelection,
+  );
 
-  const options: TableOption[] = useMemo(() => {
-    const tableNames = new Set(
-      dbTables
-        .filter((t) => t.table.schema === 'main')
-        .map((t) => t.table.table),
-    );
-    for (const id of keplerDatasetIds) {
-      tableNames.add(id);
-    }
-    return Array.from(tableNames)
-      .sort()
-      .map((name) => ({label: name, value: name}));
-  }, [dbTables, keplerDatasetIds]);
-
-  const handleClick = useCallback(async () => {
-    if (options.length === 1 && options[0]) {
-      setIsAdding(true);
-      try {
-        await onAdd(options[0].value);
-      } catch (e) {
-        console.error('Failed to add layer:', e);
-      } finally {
-        setIsAdding(false);
-      }
-      return;
-    }
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setMenuPos({
-        top: rect.bottom,
-        right: window.innerWidth - rect.right,
-      });
-    }
-    setIsOpen((prev) => !prev);
-  }, [options, onAdd]);
+  const options = useMemo(() => {
+    return buildKeplerTableSourceOptions({
+      dbTables,
+      datasets,
+      tableSelection,
+    });
+  }, [datasets, dbTables, tableSelection]);
 
   const handleSelect = useCallback(
-    (option: TableOption | null) => {
-      if (!option) return;
+    (option: KeplerTableSourceOption) => {
       setIsAdding(true);
       onAdd(option.value)
-        .then(() => setIsOpen(false))
         .catch((e) => console.error('Failed to add layer:', e))
         .finally(() => setIsAdding(false));
     },
     [onAdd],
   );
 
-  // Close dropdown on outside click
-  React.useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
   return (
-    <DropdownWrapper ref={dropdownRef}>
-      <Button
-        ref={buttonRef}
-        className="add-layer-button"
-        onClick={handleClick}
-        disabled={!options.length || disabled || isAdding}
-      >
-        <Icons.Add height="12px" />
-        {intl.formatMessage({id: 'layerManager.addLayer'})}
-      </Button>
-      {isOpen && options.length > 1 && (
-        <DropdownMenu style={{top: menuPos.top, right: menuPos.right}}>
-          <Typeahead
-            className={TYPEAHEAD_CLASS}
-            customClasses={{
-              results: 'list-selector',
-              input: TYPEAHEAD_INPUT_CLASS,
-              listItem: 'list__item',
-            }}
-            placeholder={
-              intl ? intl.formatMessage({id: 'placeholder.search'}) : 'Search'
-            }
-            selectedItems={null}
-            options={options}
-            displayOption={Accessor.generateOptionToStringFor('label')}
-            filterOption={'label'}
-            searchable
-            onOptionSelected={handleSelect}
-            customListItemComponent={
-              TableListItem as unknown as TypeaheadListItemComponent
-            }
-          />
-        </DropdownMenu>
+    <KeplerTableSourceSelector
+      disabled={!options.length || disabled || isAdding}
+      options={options}
+      popoverAlign="end"
+      searchPlaceholder={
+        intl ? intl.formatMessage({id: 'placeholder.search'}) : 'Search'
+      }
+      onSelect={handleSelect}
+      renderTrigger={({disabled: isDisabled}) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          className="add-layer-button"
+          disabled={isDisabled}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {intl.formatMessage({id: 'layerManager.addLayer'})}
+        </Button>
       )}
-    </DropdownWrapper>
+    />
   );
 };
 
@@ -297,18 +182,17 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
 
   const {addLayer} = keplerActions.visStateActions;
 
-  const keplerDatasetIds = useMemo(
-    () => Object.keys(keplerState?.visState.datasets ?? {}),
-    [keplerState?.visState.datasets],
-  );
-
   const onAddTableLayer = useCallback(
     async (tableName: string) => {
       const keplerDatasets = keplerState?.visState.datasets;
       if (!keplerDatasets?.[tableName]) {
-        await addTableToMap(mapId, tableName, {
-          autoCreateLayers: true,
-          centerMap: true,
+        await addTableToMap({
+          mapId,
+          tableName,
+          options: {
+            autoCreateLayers: true,
+            centerMap: true,
+          },
         });
       } else {
         addLayer(undefined, tableName);
@@ -356,7 +240,7 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
           >
             <AddTableLayerButton
               onAdd={onAddTableLayer}
-              keplerDatasetIds={keplerDatasetIds}
+              datasets={keplerState.visState.datasets}
             />
           </PanelTitle>
         </SidePanelSection>

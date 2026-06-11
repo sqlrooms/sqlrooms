@@ -91,6 +91,30 @@ function AiPanel() {
 }
 ```
 
+## Chat search
+
+`Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
+find bar that highlights matches in the current session's messages.
+
+For building search UIs outside the chat (e.g. a session list that searches across
+all sessions), the underlying matching primitives are re-exported and can be used
+without the provider:
+
+- `normalizeChatSearchQuery(query)` — trims + lower-cases a query (the casing rule
+  the search uses).
+- `findChatSearchMatches(blocks, query)` — returns positional matches
+  (`ChatSearchMatch[]`) for a list of `ChatSearchBlock`s. Useful for highlighting
+  matched substrings consistently with `Chat.Search`.
+- `markdownToPlainText(markdown)` — extracts plain text from markdown so message
+  content can be made searchable.
+
+```tsx
+import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai';
+
+const blocks: ChatSearchBlock[] = [{id: 'title', resultId: 'title', text: title}];
+const matches = findChatSearchMatches(blocks, query);
+```
+
 ## Add custom tools
 
 ```tsx

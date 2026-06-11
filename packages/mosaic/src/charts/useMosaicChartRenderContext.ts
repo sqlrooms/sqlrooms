@@ -24,8 +24,7 @@ export type MosaicSpecChartRenderContext = {
 
 export type MosaicChartRenderErrorContext = {
   type: 'error';
-  title: string;
-  message: string;
+  error: Error;
 };
 
 export type MosaicChartRenderContext =
@@ -44,16 +43,14 @@ export function useMosaicChartRenderContext(
     if (!chartTypeDefinition) {
       return {
         type: 'error',
-        title: 'Ooops! Something went wrong',
-        message: 'Invalid chart type definition',
+        error: new Error(`Invalid chart type definition`),
       };
     }
 
     if (!dataTable) {
       return {
         type: 'error',
-        title: 'Ooops! Something went wrong',
-        message: 'Please select a data table first',
+        error: new Error('Data table is required to render the chart'),
       };
     }
 
@@ -76,8 +73,7 @@ export function useMosaicChartRenderContext(
 
     return {
       type: 'error',
-      title: 'Ooops! Something went wrong',
-      message: 'Unsupported chart type definition',
+      error: new Error('Unsupported chart type definition'),
     };
   }, [chartTypeDefinition, dataTable, config, selectionName]);
 }
@@ -90,7 +86,7 @@ function createMosaicSpecChartRenderContext<TConfig extends ChartConfig>(
 ): MosaicSpecChartRenderContext | MosaicChartRenderErrorContext {
   try {
     const spec = chartTypeDefinition.createSpec({
-      tableName: dataTable.table.table,
+      dataTable,
       settings,
       selectionName,
     });
@@ -104,15 +100,17 @@ function createMosaicSpecChartRenderContext<TConfig extends ChartConfig>(
       // ChartSpecError is expected as part of validation logic, don't log
       return {
         type: 'error',
-        title: 'Configure chart to display visualization',
-        message: error.message,
+        error,
       };
     }
 
+    console.error('Unexpected error creating chart spec:', error);
+
     return {
       type: 'error',
-      title: 'Ooops! Something went wrong',
-      message: 'An unexpected error occurred',
+      error: new Error(
+        'An unexpected error occurred while creating the chart spec',
+      ),
     };
   }
 }

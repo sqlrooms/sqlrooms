@@ -25,6 +25,8 @@ import {SessionChatManager} from './SessionChatManager';
 import {SessionControls} from './SessionControls';
 import {ChatSearch, ChatSearchProvider} from './ChatSearch';
 import {ContextSelector} from './context/ContextSelector';
+import {ChatHeader} from './ChatHeader';
+import {ChatHistoryView} from './ChatHistoryView';
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;
@@ -34,6 +36,8 @@ type ChatComponent = FC<RootProps> & {
   Root: FC<RootProps>;
   LocalAgentRoot: FC<LocalAgentChatRootProps>;
   Sessions: typeof SessionControls;
+  Header: typeof ChatHeader;
+  History: typeof ChatHistoryView;
   Messages: FC<ComponentProps<typeof AnalysisResultsContainer>>;
   Composer: FC<ComponentProps<typeof QueryControls>>;
   InlineApiKeyInput: typeof InlineApiKeyInput;
@@ -129,6 +133,8 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Root,
   LocalAgentRoot,
   Sessions: SessionControls,
+  Header: ChatHeader,
+  History: ChatHistoryView,
   Messages,
   Composer,
   InlineApiKeyInput: InlineApiKeyInput,

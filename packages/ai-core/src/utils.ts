@@ -458,6 +458,12 @@ export function shouldEndAnalysis(messages: UIMessage[]): boolean {
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
  * Assumes sequential tool execution (only one tool runs at a time).
  *
+ * For any `output-error` tool part (cancelled or failed), the partial/invalid
+ * `input` is moved to `rawInput` and `input` is set to `undefined`. The AI SDK
+ * only validates `output-error` input when it is defined, so this prevents
+ * "Type validation failed ... parts[n].input" errors from poisoning a session
+ * after the user stops a tool call mid-stream.
+ *
  * @param messages - The messages to validate and complete
  * @returns Cleaned messages with completed tool-call/result pairs
  */
@@ -514,26 +520,43 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
         toolPart.state === 'approval-requested' ||
         toolPart.state === 'approval-responded';
       if (isCompleted) {
-        // An `output-error` part produced from a failed tool-input parse (e.g.
-        // schema validation failure or hallucinated tool name) carries only
-        // `rawInput`, not `input`. The AI SDK's `validateUIMessages` requires
-        // `input` to be defined, so backfill it from `rawInput` to avoid
-        // "Type validation failed ... input: Value: undefined" on later sends.
-        if (toolPart.state === 'output-error' && toolPart.input === undefined) {
+        // `output-error` parts can carry an `input` that does NOT satisfy the
+        // tool's schema. This happens when a tool call is cancelled while its
+        // input is still streaming (e.g. only the partial `reasoning` field
+        // arrived before "Stop"), or when the model produced an invalid tool
+        // input. The AI SDK validates `output-error` input whenever it is
+        // `!== undefined` (see `validateUIMessages`), so an incomplete input
+        // like `{reasoning: "..."}` for a tool that requires `sqlQuery` throws
+        // "Type validation failed ... messages[i].parts[j].input" on every
+        // subsequent send, permanently poisoning the session.
+        //
+        // Since `output-error` parts only convey `errorText` to the model (the
+        // input is never re-executed), we preserve the original value under
+        // `rawInput` and clear `input` so the SDK skips schema validation.
+        // `convertToModelMessages` already falls back to `rawInput`/undefined
+        // for error parts, so no model context is lost.
+        if (toolPart.state === 'output-error' && toolPart.input !== undefined) {
           updatedParts[i] = {
             ...updatedParts[i],
-            input: toolPart.rawInput ?? {},
+            input: undefined,
+            rawInput: toolPart.rawInput ?? toolPart.input,
           } as (typeof message.parts)[number];
         }
         // Completed tool; continue checking earlier parts just in case
         continue;
       }
 
-      // Synthesize a completed error result for the incomplete tool call
+      // Synthesize a completed error result for the incomplete tool call.
+      // Keep `input` undefined (stashing any partial streamed input under
+      // `rawInput`) so the AI SDK skips schema validation for this
+      // `output-error` part on subsequent sends. A partial input such as
+      // `{reasoning: "..."}` — or `{}` for a tool with required fields —
+      // would otherwise fail validation and poison the session.
       const base = {
         toolCallId: toolPart.toolCallId,
         state: 'output-error' as const,
-        input: toolPart.input ?? {},
+        input: undefined,
+        rawInput: toolPart.rawInput ?? toolPart.input,
         errorText: TOOL_CALL_CANCELLED,
         providerExecuted: false,
       };

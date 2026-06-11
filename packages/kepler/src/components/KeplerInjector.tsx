@@ -11,6 +11,7 @@ import {
   MapLegendFactory,
   MapLegendPanelFactory,
   PanelTitleFactory,
+  SourceDataSelectorFactory,
   typeCheckRecipe,
   type InjectorType,
 } from '@kepler.gl/components';
@@ -21,6 +22,7 @@ import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
 import {CustomMapDrawPanelFactory} from './CustomMapDrawPanel';
 import {CustomMapLegendFactory} from './CustomMapLegend';
 import {CustomMapLegendPanelFactory} from './CustomMapLegendPanel';
+import {CustomSourceDataSelectorFactory} from './CustomSourceDataSelector';
 
 export const CustomAddDataButtonFactory = () => {
   return () => null;
@@ -47,6 +49,7 @@ const defaultRecipes: KeplerFactoryRecipe[] = [
   [MapLegendFactory, CustomMapLegendFactory],
   [MapControlTooltipFactory, CustomMapControlTooltipFactory],
   [MapDrawPanelFactory, CustomMapDrawPanelFactory],
+  [SourceDataSelectorFactory, CustomSourceDataSelectorFactory],
 ];
 
 let customRecipes: KeplerFactoryRecipe[] = [];

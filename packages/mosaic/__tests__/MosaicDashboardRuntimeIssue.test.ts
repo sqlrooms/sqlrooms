@@ -27,7 +27,7 @@ describe('Mosaic dashboard runtime issues', () => {
       .getState()
       .mosaicDashboard.createDashboard('Grid dashboard', 'grid');
     const panel = createMosaicDashboardChartPanelConfig('Chart', {
-      chartType: 'bubble-chart',
+      chartType: 'scatter-plot',
       settings: {x: 'longitude', y: 'latitude'},
     });
 
@@ -35,7 +35,7 @@ describe('Mosaic dashboard runtime issues', () => {
     store.getState().mosaicDashboard.reportPanelIssue(dashboardId, panel.id, {
       kind: 'too-much-data',
       panelId: panel.id,
-      chartType: 'bubble-chart',
+      chartType: 'scatter-plot',
       message: 'Too many rows',
       recoverable: true,
       rowCount: 12,

@@ -1,7 +1,6 @@
 import {CHAT_CONTEXT_SELECTOR_SLOT, Chat} from '@sqlrooms/ai';
 import {FC, useCallback} from 'react';
 import {useRoomStore} from '../store';
-import {useAutoContextReplacement} from './useAutoContextReplacement';
 import {
   useContextSelectorItems,
   useRunningContextIds,
@@ -9,21 +8,23 @@ import {
 } from './useAssistantContextItems';
 
 export const AssistantContextSelector: FC = () => {
-  const setAiContextItemIds = useRoomStore((s) => s.setAiContextItemIds);
+  const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+  const setSessionDraftContextItemIds = useRoomStore(
+    (s) => s.ai.setSessionDraftContextItemIds,
+  );
 
   // Get all the data we need via custom hooks
   const items = useContextSelectorItems();
   const selectedIds = useValidatedSelectedIds();
   const runningContextIds = useRunningContextIds();
 
-  // Auto-replace context with current artifact in auto mode
-  useAutoContextReplacement();
-
   const handleSelectedIdsChange = useCallback(
     (nextIds: string[]) => {
-      setAiContextItemIds(nextIds, 'manual');
+      if (currentSession) {
+        setSessionDraftContextItemIds(currentSession.id, nextIds);
+      }
     },
-    [setAiContextItemIds],
+    [currentSession, setSessionDraftContextItemIds],
   );
 
   if (items.length === 0 && selectedIds.length === 0) return null;

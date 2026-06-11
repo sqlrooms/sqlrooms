@@ -54,13 +54,6 @@ export type RoomState = RoomShellSliceState &
   CrdtSliceState &
   WebContainerSliceState &
   DbSettingsSliceState & {
-    aiContextMode: 'auto' | 'manual';
-    aiContextItemIds: string[];
-    setAiContextItemIds: (
-      artifactIds: string[],
-      mode?: 'auto' | 'manual',
-    ) => void;
-    replaceAiContextWithArtifact: (artifactId: string) => void;
     appProject: {
       config: AppBuilderProjectConfig;
       upsertArtifactApp: (

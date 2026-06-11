@@ -80,6 +80,7 @@ export {
   getColValAsNumber,
   getDuckDbTypeCategory,
   getSqlErrorWithPointer,
+  getUnqualifiedSqlIdentifier,
   isNumericDuckType,
   isQualifiedTableName,
   joinStatements,
