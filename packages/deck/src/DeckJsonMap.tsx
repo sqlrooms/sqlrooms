@@ -203,7 +203,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       spec,
       datasets,
       mapStyle,
-      interleaved = false,
+      interleaved = true,
       deckProps,
       mapProps,
       showLegends = true,

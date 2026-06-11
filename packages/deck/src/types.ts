@@ -77,8 +77,10 @@ export type DeckJsonMapProps = {
   /**
    * When true, deck.gl layers are inserted into MapLibre's layer stack sharing
    * the same WebGL2 context. This allows rendering deck layers between basemap
-   * layers (e.g. under labels). Requires WebGL2 (MapLibre GL v3+).
-   * Defaults to false (deck renders in a separate overlay canvas on top).
+   * When true, deck.gl renders into the map's own WebGL context rather than
+   * creating a separate overlay canvas. This halves the number of WebGL
+   * contexts per map panel (from 2 to 1), which matters because browsers
+   * limit active contexts to ~8–16 per page. Defaults to true.
    */
   interleaved?: boolean;
   deckProps?: Partial<DeckProps>;
