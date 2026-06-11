@@ -61,6 +61,10 @@ export type RoomState = RoomShellSliceState &
       mode?: 'auto' | 'manual',
     ) => void;
     replaceAiContextWithArtifact: (artifactId: string) => void;
+    workspaceUi: {
+      showArtifactChooser: boolean;
+      setShowArtifactChooser: (show: boolean) => void;
+    };
     appProject: {
       config: AppBuilderProjectConfig;
       upsertArtifactApp: (

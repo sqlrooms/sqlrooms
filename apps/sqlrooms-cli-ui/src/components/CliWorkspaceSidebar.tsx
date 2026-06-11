@@ -30,7 +30,6 @@ import {
   TooltipContent,
   TooltipTrigger,
   useSidebar,
-  toast,
 } from '@sqlrooms/ui';
 import {
   ArrowUpFromLine,
@@ -60,15 +59,12 @@ export function CliWorkspaceSidebar({
   onToggleSqlEditor: () => void;
 }) {
   return (
-    <Sidebar
-      collapsible="icon"
-      className="[&_[data-sidebar=sidebar]]:border-blue-900/40 [&_[data-sidebar=sidebar]]:bg-blue-950/20"
-    >
-      <SidebarHeader className="gap-3 border-b border-blue-900/40 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1.5">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="border-sidebar-border gap-3 border-b group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1.5">
         <CliSidebarBrand />
       </SidebarHeader>
       <SidebarContent className="group-data-[collapsible=icon]:gap-0">
-        <SidebarGroup className="border-b border-blue-900/40 py-4 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
+        <SidebarGroup className="border-sidebar-border border-b py-4 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
           <SidebarGroupContent>
             <CliDataSidebarSection />
           </SidebarGroupContent>
@@ -80,7 +76,7 @@ export function CliWorkspaceSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-blue-900/40 group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:py-1">
+      <SidebarFooter className="border-sidebar-border border-t group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:py-1">
         <CliSidebarFooterControls onToggleSqlEditor={onToggleSqlEditor} />
       </SidebarFooter>
       <SidebarRail />
@@ -113,7 +109,7 @@ export function CliWorkspaceTopbar() {
         onChange={handleTitleChange}
         placeholder="Untitled Workspace"
         selectOnFocus
-        className="text-foreground h-10 max-w-[min(48rem,60vw)] min-w-0 border-transparent text-center text-2xl leading-none font-bold shadow-none ring-0 hover:bg-blue-950/30 focus-visible:ring-1"
+        className="text-foreground hover:bg-accent h-10 max-w-[min(48rem,60vw)] min-w-0 border-transparent text-center text-2xl leading-none font-bold shadow-none ring-0 focus-visible:ring-1"
       />
       <div />
     </header>
@@ -125,7 +121,7 @@ function CliSidebarBrand() {
 
   return (
     <button
-      className="text-sidebar-foreground hover:text-sidebar-foreground flex min-h-14 w-full min-w-0 items-center gap-3 rounded-md bg-transparent p-1 text-left group-data-[collapsible=icon]:min-h-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0 hover:bg-blue-950/30"
+      className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex min-h-14 w-full min-w-0 items-center gap-3 rounded-md bg-transparent p-1 text-left group-data-[collapsible=icon]:min-h-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
       type="button"
       onClick={() => setOpen(true)}
       aria-label="Open sidebar"
@@ -190,7 +186,7 @@ function CliDataSidebarSection() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="text-primary hover:text-primary h-10 justify-center border border-blue-800/60 bg-blue-950/30 hover:bg-blue-900/30"
+                className="text-primary hover:text-primary border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent h-10 justify-center border"
                 onClick={addData}
                 type="button"
               >
@@ -199,7 +195,7 @@ function CliDataSidebarSection() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] border-l border-blue-900/40 py-1 pr-0 pl-3">
+          <SchemaExplorer className="border-sidebar-border h-auto max-h-[min(48vh,440px)] border-l py-1 pr-0 pl-3">
             <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
@@ -210,7 +206,7 @@ function CliDataSidebarSection() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              className="hover:bg-blue-900/30 data-[state=open]:bg-blue-900/30"
+              className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
               type="button"
               size="lg"
               aria-label="Data"
@@ -219,7 +215,7 @@ function CliDataSidebarSection() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="bg-popover w-72 border-blue-900/40 [&_[role=menuitem]]:focus:bg-blue-950/70"
+            className="bg-popover w-72 border-border [&_[role=menuitem]]:focus:bg-accent"
             align="start"
             side="right"
             sideOffset={8}
@@ -265,8 +261,8 @@ function CliDataSidebarSection() {
 
 function CliArtifactsSidebarSection() {
   const artifactTabs = useCliArtifactSidebarTabs();
-  const createWorksheet = useCreateWorksheetArtifact(
-    artifactTabs.selectArtifact,
+  const openArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.setShowArtifactChooser,
   );
   const {state} = useSidebar();
 
@@ -282,7 +278,7 @@ function CliArtifactsSidebarSection() {
             variant="ghost"
             size="xs"
             className="text-primary hover:bg-primary/10 hover:text-primary h-6 gap-1 px-2 text-sm"
-            onClick={() => void createWorksheet()}
+            onClick={() => openArtifactChooser(true)}
           >
             <Plus className="h-3.5 w-3.5" aria-hidden />
             New
@@ -295,7 +291,7 @@ function CliArtifactsSidebarSection() {
             return (
               <SidebarMenuItem key={artifact.id}>
                 <SidebarMenuButton
-                  className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary h-7 gap-2 px-2 text-sm font-normal hover:bg-blue-950/40 [&>svg]:size-3.5"
+                  className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
                   isActive={artifact.id === artifactTabs.selectedTabId}
                   onClick={() => artifactTabs.selectArtifact(artifact.id)}
                   type="button"
@@ -315,7 +311,7 @@ function CliArtifactsSidebarSection() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton
-          className="hover:bg-blue-900/30 data-[state=open]:bg-blue-900/30"
+          className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
           type="button"
           size="lg"
           aria-label="Artifacts"
@@ -324,7 +320,7 @@ function CliArtifactsSidebarSection() {
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="bg-popover w-72 border-blue-900/40 [&_[role=menuitem]]:focus:bg-blue-950/70"
+        className="bg-popover w-72 border-border [&_[role=menuitem]]:focus:bg-accent"
         align="start"
         side="right"
         sideOffset={8}
@@ -347,9 +343,9 @@ function CliArtifactsSidebarSection() {
           <DropdownMenuItem disabled>No artifacts</DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => void createWorksheet()}>
+        <DropdownMenuItem onClick={() => openArtifactChooser(true)}>
           <Plus className="h-4 w-4" aria-hidden />
-          New Worksheet
+          New Artifact
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -369,7 +365,7 @@ function CliSidebarFooterControls({
             type="button"
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-primary size-8 hover:bg-blue-900/30"
+            className="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8"
             onClick={onToggleSqlEditor}
           >
             <TerminalIcon className="h-4 w-4" />
@@ -378,11 +374,11 @@ function CliSidebarFooterControls({
         </TooltipTrigger>
         <TooltipContent side="right">SQL Editor</TooltipContent>
       </Tooltip>
-      <RoomShell.CommandPalette.Button className="text-muted-foreground hover:text-primary size-8 rounded-md hover:bg-blue-900/30" />
+      <RoomShell.CommandPalette.Button className="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md" />
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex size-8 items-center justify-center rounded-md hover:bg-blue-900/30">
-            <ThemeSwitch className="data-[state=checked]:bg-primary/30 data-[state=unchecked]:bg-blue-950/70" />
+          <div className="hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md">
+            <ThemeSwitch className="data-[state=checked]:bg-primary/30 data-[state=unchecked]:bg-sidebar-accent" />
           </div>
         </TooltipTrigger>
         <TooltipContent side="right">Toggle theme</TooltipContent>
@@ -474,41 +470,6 @@ function CliAssistantToggleButton() {
       <TooltipContent>AI Assistant</TooltipContent>
     </Tooltip>
   );
-}
-
-function useCreateWorksheetArtifact(
-  selectArtifact: (artifactId: string) => void,
-) {
-  const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
-
-  return useCallback(async () => {
-    let result: Awaited<ReturnType<typeof invokeCommand>>;
-    try {
-      result = await invokeCommand('worksheet.create-artifact', undefined, {
-        surface: 'api',
-        actor: 'cli-sidebar',
-      });
-    } catch (error) {
-      toast.error('Failed to create worksheet', {
-        description:
-          error instanceof Error ? error.message : 'An unknown error occurred',
-      });
-      return undefined;
-    }
-
-    const artifactId =
-      result.success &&
-      result.data &&
-      typeof result.data === 'object' &&
-      'artifactId' in result.data &&
-      typeof result.data.artifactId === 'string'
-        ? result.data.artifactId
-        : undefined;
-    if (artifactId) {
-      selectArtifact(artifactId);
-    }
-    return artifactId;
-  }, [invokeCommand, selectArtifact]);
 }
 
 function formatTableMeta(table: TableNodeObject) {

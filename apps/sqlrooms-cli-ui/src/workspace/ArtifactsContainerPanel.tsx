@@ -27,7 +27,12 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     tabId: string;
     tabName: string;
   } | null>(null);
-  const [showArtifactChooser, setShowArtifactChooser] = useState(false);
+  const showArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.showArtifactChooser,
+  );
+  const setShowArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.setShowArtifactChooser,
+  );
 
   const handleDeleteTab = useCallback((tabId: string, tabName: string) => {
     setDeleteConfirm({tabId, tabName});

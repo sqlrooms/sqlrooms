@@ -390,6 +390,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       };
 
       return {
+        workspaceUi: {
+          showArtifactChooser: false,
+          setShowArtifactChooser: (show) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                draft.workspaceUi.showArtifactChooser = show;
+              }),
+            );
+          },
+        },
+
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
           upsertArtifactApp: (artifactId, app) => {
