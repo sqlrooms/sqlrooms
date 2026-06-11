@@ -2,10 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {validateColumnExists} from '../../../ai/tool-validation';
 import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {validateCountPlotSettings} from './validation';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings.required(),
@@ -38,23 +38,17 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
           params.createArtifactIfMissing,
           context,
         );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = deps.resolveTable(artifactId, params.tableName);
 
-        // Validate settings - expect categorical columns
-        validateColumnExists(
-          params.settings.field,
-          CATEGORICAL_COLUMN_TYPES,
-          columns,
-          'field',
-        );
+        validateCountPlotSettings({
+          dataTable,
+          settings: params.settings,
+        });
 
         const result = createOrUpdateChartPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName,
+          tableName: dataTable.tableName,
           title: `Count plot of ${params.settings.field}`,
           config: {
             chartType: 'count-plot',

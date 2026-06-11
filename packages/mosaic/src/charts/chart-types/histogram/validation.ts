@@ -1,5 +1,5 @@
 import {HistogramChartSettings, DEFAULT_BINS_COUNT} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {ValidateSpecOptions} from '../base-types';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
@@ -16,7 +16,7 @@ export type ValidatedHistogramSettings = {
 export function validateHistogramSettings({
   dataTable,
   settings: {field, maxBins = DEFAULT_BINS_COUNT},
-}: CreateSpecOptions<HistogramChartSettings>): ValidatedHistogramSettings {
+}: ValidateSpecOptions<HistogramChartSettings>): ValidatedHistogramSettings {
   // Basic validation for required fields
   if (!field) {
     throw new RequiredFieldsError('Field');

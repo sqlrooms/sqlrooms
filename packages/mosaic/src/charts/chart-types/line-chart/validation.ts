@@ -1,5 +1,5 @@
 import {LineChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {ValidateSpecOptions} from '../base-types';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
@@ -23,7 +23,7 @@ export type ValidatedLineChartSettings = {
 export function validateLineChartSettings({
   dataTable,
   settings: {x, yFields = [], xInterval},
-}: CreateSpecOptions<LineChartSettings>): ValidatedLineChartSettings {
+}: ValidateSpecOptions<LineChartSettings>): ValidatedLineChartSettings {
   // Basic validation for required fields
   if (!x || yFields.length === 0) {
     throw new RequiredFieldsError([

@@ -55,12 +55,12 @@ To UPDATE an existing Data Table Explorer: provide the panelId parameter. Otherw
           params.artifactId,
           params.createArtifactIfMissing,
         );
-        const {tableName} = deps.resolveTable(artifactId, params.tableName);
+        const dataTable = deps.resolveTable(artifactId, params.tableName);
 
         const result = createOrUpdateDataTableExplorerPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName,
+          tableName: dataTable.tableName,
           title: params.title || 'Data Table Explorer',
           config: params.config,
         });

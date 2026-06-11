@@ -2,13 +2,13 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {BoxPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {validateColumnExists} from '../../../ai/tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {validateBoxPlotSettings} from './validation';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
   settings: BoxPlotChartSettings.required(),
@@ -44,29 +44,17 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
           params.createArtifactIfMissing,
           context,
         );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = deps.resolveTable(artifactId, params.tableName);
 
-        // Validate settings
-        validateColumnExists(
-          params.settings.x,
-          CATEGORICAL_COLUMN_TYPES,
-          columns,
-          'x',
-        );
-        validateColumnExists(
-          params.settings.y,
-          NUMERIC_COLUMN_TYPES,
-          columns,
-          'y',
-        );
+        validateBoxPlotSettings({
+          dataTable,
+          settings: params.settings,
+        });
 
         const result = createOrUpdateChartPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName,
+          tableName: dataTable.tableName,
           title: `Box plot - ${params.settings.y} by ${params.settings.x}`,
           config: {
             chartType: 'box-plot',

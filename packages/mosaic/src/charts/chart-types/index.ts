@@ -38,10 +38,9 @@ export * from './box-plot/definition';
 export * from './scatter-plot/definition';
 export * from './custom-spec/definition';
 
-// Re-export tool types, schemas, validation, helpers, and AI tool creators
+// Re-export tool types, schemas, helpers, and AI tool creators
 export * from '../../ai/tool-types';
 export * from '../../ai/tool-schemas';
-export * from '../../ai/tool-validation';
 export * from '../../ai/tool-helpers';
 export * from './histogram/tool';
 export * from './line-chart/tool';

@@ -181,7 +181,6 @@ export type {
   DashboardAgentToolCall,
   DashboardAiAdapter,
   DashboardAiStore,
-  DashboardAiTable,
   CreateDashboardToolDepsOptions,
 } from './ai/ai';
 
@@ -287,7 +286,6 @@ export {
   BoxPlotChartSettings,
   // Tool helpers, parameters, and AI tool creators
   BaseChartToolParameters,
-  validateColumnExists,
   HistogramToolParameters,
   LineChartToolParameters,
   CountPlotToolParameters,
@@ -336,6 +334,7 @@ export {
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from './column-types-utils';
+export {findTableByName, getTableReference} from './utils/table-lookup';
 export type {FieldSelectorInputProps} from './components/FieldSelectorInput';
 export type {
   ChartBuilderColumn,

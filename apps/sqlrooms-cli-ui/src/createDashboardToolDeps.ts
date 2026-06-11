@@ -26,15 +26,7 @@ export function createDashboardAiAdapter(
   store: StoreApi<RoomState>,
 ): DashboardAiAdapter<RoomState> {
   return {
-    getTables: (state) =>
-      state.db.tables.map((table) => ({
-        tableName: table.tableName,
-        columns: table.columns?.map((column) => ({
-          name: column.name,
-          type: column.type,
-        })),
-        rowCount: table.rowCount,
-      })),
+    getTables: (state) => state.db.tables,
     hasRunContext: (_state, context) =>
       getAiRunContextItems(getMutableAiRunContext(context)).length > 0,
     resolveContextDashboardArtifactId: (state, context) => {

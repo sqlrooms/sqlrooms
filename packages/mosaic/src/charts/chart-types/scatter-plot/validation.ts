@@ -1,5 +1,5 @@
 import {ScatterPlotChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {ValidateSpecOptions} from '../base-types';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
@@ -17,7 +17,7 @@ export type ValidatedScatterPlotSettings = {
 export function validateScatterPlotSettings({
   dataTable,
   settings: {x, y, size},
-}: CreateSpecOptions<ScatterPlotChartSettings>): ValidatedScatterPlotSettings {
+}: ValidateSpecOptions<ScatterPlotChartSettings>): ValidatedScatterPlotSettings {
   // Basic validation for required fields
   if (!x || !y) {
     throw new RequiredFieldsError([

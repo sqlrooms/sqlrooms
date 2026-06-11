@@ -15,13 +15,13 @@ import {
   tool,
 } from 'ai';
 import {z} from 'zod';
+import type {DataTable} from '@sqlrooms/db';
 import {
   createChartTools,
   createDefaultChartTypes,
   createListPanelsTool,
   createDataTableExplorerTool,
   createRemovePanelTool,
-  type ChartBuilderColumn,
   type ChartToolExecutionContext,
   type DashboardToolDeps,
   type PanelPatch,
@@ -36,6 +36,7 @@ import {
   DEFAULT_CHART_MAX_DATA_POINTS,
   type ChartRuntimeIssue,
 } from '../chart-runtime';
+import {findTableByName} from '../utils/table-lookup';
 
 export type {ChartToolExecutionContext} from '../charts/chart-types';
 
@@ -43,14 +44,8 @@ export type DashboardAiStore<TState> = {
   getState: () => TState;
 };
 
-export type DashboardAiTable = {
-  tableName: string;
-  columns?: ChartBuilderColumn[];
-  rowCount?: number;
-};
-
 export type DashboardAiAdapter<TState> = {
-  getTables: (state: TState) => DashboardAiTable[];
+  getTables: (state: TState) => DataTable[];
   hasRunContext?: (
     state: TState,
     context?: ChartToolExecutionContext,
@@ -326,28 +321,13 @@ class DashboardAgentException extends Error {
 function getTablesWithColumns<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
-): DashboardAiTable[] {
+): DataTable[] {
   return adapter
     .getTables(state)
     .filter((table) => table.columns && table.columns.length > 0);
 }
 
-function findTableColumns<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
-  tableName: string,
-): ChartBuilderColumn[] | null {
-  const table = getTablesWithColumns(state, adapter).find(
-    (candidate) => candidate.tableName === tableName,
-  );
-  if (!table?.columns) return null;
-  return table.columns.map((column) => ({
-    name: column.name,
-    type: column.type,
-  }));
-}
-
-function formatAvailableTables(tables: DashboardAiTable[]): string {
+function formatAvailableTables(tables: DataTable[]): string {
   return tables.map((table) => table.tableName).join(', ') || '(none)';
 }
 
@@ -410,20 +390,20 @@ export function createDashboardToolDeps<TState>({
     const explicitTableName = tableName?.trim() || undefined;
 
     if (explicitTableName) {
-      const columns = findTableColumns(state, adapter, explicitTableName);
-      if (!columns) {
+      const table = findTableByName(tables, explicitTableName);
+      if (!table) {
         throw new Error(
           `Unknown table "${explicitTableName}". Available tables: ${formatAvailableTables(tables)}.`,
         );
       }
       adapter.setSelectedTable(state, artifactId, explicitTableName);
-      return {tableName: explicitTableName, columns};
+      return table;
     }
 
     if (dashboard?.selectedTable) {
-      const columns = findTableColumns(state, adapter, dashboard.selectedTable);
-      if (columns) {
-        return {tableName: dashboard.selectedTable, columns};
+      const table = findTableByName(tables, dashboard.selectedTable);
+      if (table) {
+        return table;
       }
     }
 
@@ -433,13 +413,7 @@ export function createDashboardToolDeps<TState>({
         throw new Error('The only available table has no column metadata.');
       }
       adapter.setSelectedTable(state, artifactId, onlyTable.tableName);
-      return {
-        tableName: onlyTable.tableName,
-        columns: onlyTable.columns.map((column) => ({
-          name: column.name,
-          type: column.type,
-        })),
-      };
+      return onlyTable;
     }
 
     throw new Error(

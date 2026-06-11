@@ -7,10 +7,10 @@ import {
   DEFAULT_BINS_COUNT,
 } from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {validateColumnExists} from '../../../ai/tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {validateHistogramSettings} from './validation';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
   settings: HistogramChartSettings.required(),
@@ -45,23 +45,18 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
           params.createArtifactIfMissing,
           context,
         );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
 
-        // Validate settings
-        validateColumnExists(
-          params.settings.field,
-          QUANTITATIVE_COLUMN_TYPES,
-          columns,
-          'field',
-        );
+        const dataTable = deps.resolveTable(artifactId, params.tableName);
+
+        validateHistogramSettings({
+          dataTable,
+          settings: params.settings,
+        });
 
         const result = createOrUpdateChartPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName,
+          tableName: dataTable.tableName,
           title: `Histogram of ${params.settings.field}`,
           config: {
             chartType: 'histogram',

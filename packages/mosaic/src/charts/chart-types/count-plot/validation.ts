@@ -1,5 +1,5 @@
 import {CountPlotChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {ValidateSpecOptions} from '../base-types';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
@@ -15,7 +15,7 @@ export type ValidatedCountPlotSettings = {
 export function validateCountPlotSettings({
   dataTable,
   settings: {field},
-}: CreateSpecOptions<CountPlotChartSettings>): ValidatedCountPlotSettings {
+}: ValidateSpecOptions<CountPlotChartSettings>): ValidatedCountPlotSettings {
   // Basic validation for required fields
   if (!field) {
     throw new RequiredFieldsError('Field');

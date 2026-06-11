@@ -1,27 +1,27 @@
-import {HeatmapChartSettings} from './schema';
+import {BoxPlotChartSettings} from './schema';
 import {ValidateSpecOptions} from '../base-types';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
   RequiredFieldsError,
 } from '../errors';
-import {isNumericType} from '../../../column-types-utils';
+import {isCategoricalType, isNumericType} from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/duckdb';
 
-export type ValidatedHeatmapSettings = {
+export type ValidatedBoxPlotSettings = {
   xColumn: TableColumn;
   yColumn: TableColumn;
 };
 
-export function validateHeatmapSettings({
+export function validateBoxPlotSettings({
   dataTable,
   settings: {x, y},
-}: ValidateSpecOptions<HeatmapChartSettings>): ValidatedHeatmapSettings {
+}: ValidateSpecOptions<BoxPlotChartSettings>): ValidatedBoxPlotSettings {
   // Basic validation for required fields
   if (!x || !y) {
     throw new RequiredFieldsError([
-      ...(x ? [] : ['X field']),
-      ...(y ? [] : ['Y field']),
+      ...(x ? [] : ['X field (categorical)']),
+      ...(y ? [] : ['Y field (numeric)']),
     ]);
   }
 
@@ -36,17 +36,13 @@ export function validateHeatmapSettings({
     ]);
   }
 
-  // Validate X and Y field are numeric
-  const xIsNumeric = isNumericType(xColumn.type);
-  const yIsNumeric = isNumericType(yColumn.type);
-  if (!xIsNumeric || !yIsNumeric) {
-    throw new InvalidColumnTypeError(
-      [
-        ...(!xIsNumeric ? [xColumn.name] : []),
-        ...(!yIsNumeric ? [yColumn.name] : []),
-      ],
-      'numeric',
-    );
+  // Validate X is categorical and Y is numeric
+  if (!isCategoricalType(xColumn.type)) {
+    throw new InvalidColumnTypeError(xColumn.name, 'categorical');
+  }
+
+  if (!isNumericType(yColumn.type)) {
+    throw new InvalidColumnTypeError(yColumn.name, 'numeric');
   }
 
   return {

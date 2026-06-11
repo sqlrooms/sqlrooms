@@ -5,8 +5,8 @@ import {
   DASHBOARD_AI_INSTRUCTIONS,
   MAP_TOOL_KEY,
   type DashboardAiAdapter,
-  type DashboardAiTable,
 } from '../src/ai/ai';
+import type {DataTable} from '@sqlrooms/db';
 import type {
   MosaicDashboardEntry,
   MosaicDashboardLayoutType,
@@ -16,7 +16,7 @@ import type {ChartRuntimeIssue} from '../src/chart-runtime';
 type TestState = {
   artifactsById: Record<string, {id: string; type: string; title: string}>;
   currentArtifactId?: string;
-  tables: DashboardAiTable[];
+  tables: DataTable[];
   dashboardsById: Record<string, MosaicDashboardEntry>;
   runtimeIssues: Record<string, ChartRuntimeIssue>;
   setCurrentArtifactCalls: string[];
@@ -48,6 +48,14 @@ function createHarness(overrides: Partial<TestState> = {}): {
     artifactsById: {},
     tables: [
       {
+        table: {
+          database: 'main',
+          schema: 'main',
+          table: 'earthquakes',
+          toString: () => 'main.main.earthquakes',
+        } as any,
+        isView: false,
+        schema: 'main',
         tableName: 'earthquakes',
         rowCount: 10,
         columns: [

@@ -2,10 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {HeatmapChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {validateColumnExists} from '../../../ai/tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {validateHeatmapSettings} from './validation';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({
   settings: HeatmapChartSettings.required(),
@@ -39,31 +39,17 @@ Do NOT use for: individual point plots (use scatter-plot), single variable distr
           params.createArtifactIfMissing,
           context,
         );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = deps.resolveTable(artifactId, params.tableName);
 
-        // Validate settings
-
-        validateColumnExists(
-          params.settings.x,
-          NUMERIC_COLUMN_TYPES,
-          columns,
-          'x',
-        );
-
-        validateColumnExists(
-          params.settings.y,
-          NUMERIC_COLUMN_TYPES,
-          columns,
-          'y',
-        );
+        validateHeatmapSettings({
+          dataTable,
+          settings: params.settings,
+        });
 
         const result = createOrUpdateChartPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName,
+          tableName: dataTable.tableName,
           title:
             params.settings.x && params.settings.y
               ? `Heatmap - ${params.settings.x} vs ${params.settings.y}`

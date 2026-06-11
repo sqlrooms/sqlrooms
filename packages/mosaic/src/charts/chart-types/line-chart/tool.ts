@@ -3,7 +3,6 @@ import {z} from 'zod';
 import {LineChartSettings} from './schema';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {validateColumnExists} from '../../../ai/tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   QUANTITATIVE_COLUMN_TYPES,
@@ -11,6 +10,7 @@ import {
 } from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
 import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {validateLineChartSettings} from './validation';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;
@@ -50,32 +50,17 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
           params.createArtifactIfMissing,
           context,
         );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = deps.resolveTable(artifactId, params.tableName);
 
-        // Validate settings
-        validateColumnExists(
-          params.settings.x,
-          QUANTITATIVE_COLUMN_TYPES,
-          columns,
-          'x',
-        );
-
-        for (const yField of params.settings.yFields) {
-          validateColumnExists(
-            yField.field,
-            NUMERIC_COLUMN_TYPES,
-            columns,
-            'yFields',
-          );
-        }
+        validateLineChartSettings({
+          dataTable,
+          settings: params.settings,
+        });
 
         const result = createOrUpdateChartPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName,
+          tableName: dataTable.tableName,
           title: params.settings.x
             ? `Line chart - ${params.settings.yFields?.map((f) => f.field).join(', ') || ''} over ${params.settings.x}`
             : 'Line chart',

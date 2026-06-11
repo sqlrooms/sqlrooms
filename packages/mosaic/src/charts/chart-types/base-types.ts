@@ -51,14 +51,6 @@ export interface ChartBuilderField {
 }
 
 /**
- * Result of table resolution, includes table name and column metadata.
- */
-export interface ResolvedTable {
-  tableName: string;
-  columns: ChartBuilderColumn[];
-}
-
-/**
  * Partial update to apply to a dashboard panel.
  * Config can be any of the panel config types (chart, dataTableExplorer).
  */
@@ -87,7 +79,7 @@ export interface DashboardToolDeps {
    * Resolves table name and columns for a given dashboard artifact.
    * Use this when you need table-specific information.
    */
-  resolveTable: (artifactId: string, tableName?: string) => ResolvedTable;
+  resolveTable: (artifactId: string, tableName?: string) => DataTable;
 
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
@@ -191,6 +183,11 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
   settings: TSettings;
   selectionName?: string;
 };
+
+export type ValidateSpecOptions<TSettings = ChartSettings> = Pick<
+  CreateSpecOptions<TSettings>,
+  'dataTable' | 'settings'
+>;
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {
