@@ -20,7 +20,7 @@ export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
   value: DeckAutoLayerType | 'GeoArrowSolidPolygonLayer';
   label: string;
 }> = [
-  {value: 'GeoArrowScatterplotLayer', label: 'Scatterplot'},
+  {value: 'GeoArrowScatterplotLayer', label: 'Point'},
   {value: 'GeoArrowHeatmapLayer', label: 'Heatmap'},
   {value: 'GeoArrowColumnLayer', label: 'Column'},
   {value: 'GeoArrowPathLayer', label: 'Path'},
