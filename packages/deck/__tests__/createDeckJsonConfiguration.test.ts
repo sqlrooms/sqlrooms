@@ -341,9 +341,9 @@ describe('createDeckJsonConfiguration', () => {
     const converted = converter.convert({
       layers: [
         {
-          '@@type': 'GeoArrowPathLayer',
-          id: 'paths',
-          getColor: {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'points',
+          getFillColor: {
             '@@function': 'colorScale',
             field: 'magnitude',
             type: 'sequential',
@@ -354,6 +354,6 @@ describe('createDeckJsonConfiguration', () => {
       ],
     }) as {layers: Array<{props: Record<string, unknown>}>};
 
-    expect(typeof converted.layers[0]?.props.getColor).toBe('function');
+    expect(typeof converted.layers[0]?.props.getFillColor).toBe('function');
   });
 });
