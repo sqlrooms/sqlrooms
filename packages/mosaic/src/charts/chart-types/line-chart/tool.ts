@@ -3,7 +3,6 @@ import {z} from 'zod';
 import {LineChartSettings} from './schema';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
@@ -11,6 +10,7 @@ import {
   TEMPORAL_COLUMN_TYPES,
 } from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolFactory, ChartToolOutput} from '../tool-types';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;
@@ -21,8 +21,10 @@ export const LineChartToolParameters = BaseChartToolParameters.extend({
 
 export type LineChartToolParams = z.infer<typeof LineChartToolParameters>;
 
-export function createLineChartAiTool(deps: DashboardToolDeps) {
-  return tool({
+export const createLineChartAiTool: ChartToolFactory<LineChartToolParams> = (
+  deps,
+) => {
+  return tool<LineChartToolParams, ChartToolOutput>({
     description: `Line chart: shows trends and changes over time or ordered continuous variable. Connects data points to show progression.
 
 Use when: user asks about "trend", "over time", "changes in", "time series", "progression of", "track X over Y".
@@ -103,4 +105,4 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
       }
     },
   });
-}
+};

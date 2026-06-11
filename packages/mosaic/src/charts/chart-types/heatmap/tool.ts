@@ -2,10 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {HeatmapChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolFactory, ChartToolOutput} from '../tool-types';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({
   settings: HeatmapChartSettings.required(),
@@ -13,8 +13,10 @@ export const HeatmapToolParameters = BaseChartToolParameters.extend({
 
 export type HeatmapToolParams = z.infer<typeof HeatmapToolParameters>;
 
-export function createHeatmapAiTool(deps: DashboardToolDeps) {
-  return tool({
+export const createHeatmapAiTool: ChartToolFactory<HeatmapToolParams> = (
+  deps,
+) => {
+  return tool<HeatmapToolParams, ChartToolOutput>({
     description: `Heatmap: visualizes density or aggregated values across two dimensions using color intensity in a grid. Each cell color shows count/sum at that x,y position.
 
 Use when: user asks about "heatmap", "density by X and Y", "activity by [category] and [category]", "intensity", "patterns across two dimensions".
@@ -92,4 +94,4 @@ Do NOT use for: individual point plots (use scatter-plot), single variable distr
       }
     },
   });
-}
+};

@@ -2,13 +2,13 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {BoxPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolFactory, ChartToolOutput} from '../tool-types';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
   settings: BoxPlotChartSettings.required(),
@@ -16,8 +16,10 @@ export const BoxPlotToolParameters = BaseChartToolParameters.extend({
 
 export type BoxPlotToolParams = z.infer<typeof BoxPlotToolParameters>;
 
-export function createBoxPlotAiTool(deps: DashboardToolDeps) {
-  return tool({
+export const createBoxPlotAiTool: ChartToolFactory<BoxPlotToolParams> = (
+  deps,
+) => {
+  return tool<BoxPlotToolParams, ChartToolOutput>({
     description: `Box plot: compares distributions of numeric values across categories. Shows median, quartiles (25th, 75th percentiles), and outliers per group.
 
 Use when: user asks to "compare [numeric] across/by [category]", "distribution by group", "show outliers by", "compare ranges".
@@ -92,4 +94,4 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
       }
     },
   });
-}
+};

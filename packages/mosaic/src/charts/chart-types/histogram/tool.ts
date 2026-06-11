@@ -7,10 +7,10 @@ import {
   DEFAULT_BINS_COUNT,
 } from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import type {DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolFactory, ChartToolOutput} from '../tool-types';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
   settings: HistogramChartSettings.required(),
@@ -18,8 +18,10 @@ export const HistogramToolParameters = BaseChartToolParameters.extend({
 
 export type HistogramToolParams = z.infer<typeof HistogramToolParameters>;
 
-export function createHistogramAiTool(deps: DashboardToolDeps) {
-  return tool({
+export const createHistogramAiTool: ChartToolFactory<HistogramToolParams> = (
+  deps,
+) => {
+  return tool<HistogramToolParams, ChartToolOutput>({
     description: `Histogram: shows distribution of numeric values by automatically grouping data into bins/ranges.
 
 Use when: user asks about "distribution of [numeric column]", "spread of", "range of", "how values are distributed", "show histogram".
@@ -87,4 +89,4 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
       }
     },
   });
-}
+};

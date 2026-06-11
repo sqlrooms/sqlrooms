@@ -2,10 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {ScatterPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolFactory, ChartToolOutput} from '../tool-types';
 
 export const ScatterPlotToolParameters = BaseChartToolParameters.extend({
   settings: ScatterPlotChartSettings.required(),
@@ -13,8 +13,10 @@ export const ScatterPlotToolParameters = BaseChartToolParameters.extend({
 
 export type ScatterPlotToolParams = z.infer<typeof ScatterPlotToolParameters>;
 
-export function createScatterPlotAiTool(deps: DashboardToolDeps) {
-  return tool({
+export const createScatterPlotAiTool: ChartToolFactory<
+  ScatterPlotToolParams
+> = (deps) => {
+  return tool<ScatterPlotToolParams, ChartToolOutput>({
     description: `Scatter chart: plots individual points positioned by two numeric columns (x, y), with optional size dimension.
 
 Use when: user asks to "plot X vs Y", "show relationship between", "scatter plot", "correlation", "compare two numeric columns".
@@ -100,4 +102,4 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
       }
     },
   });
-}
+};

@@ -2,10 +2,10 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
 import {validateColumnExists} from '../../../ai/tool-validation';
 import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
 import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolFactory, ChartToolOutput} from '../tool-types';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings.required(),
@@ -13,8 +13,10 @@ export const CountPlotToolParameters = BaseChartToolParameters.extend({
 
 export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;
 
-export function createCountPlotAiTool(deps: DashboardToolDeps) {
-  return tool({
+export const createCountPlotAiTool: ChartToolFactory<CountPlotToolParams> = (
+  deps,
+) => {
+  return tool<CountPlotToolParams, ChartToolOutput>({
     description: `Count plot: horizontal bar chart showing frequency of categorical/text values. Counts how many times each unique value appears.
 
 Use when: user asks to "count", "frequency of", "how many", "breakdown by category", "distribution of [text/category column]".
@@ -80,4 +82,4 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
       }
     },
   });
-}
+};
