@@ -1,11 +1,11 @@
 import {
-  createDashboardAiTools,
-  createDashboardToolDeps,
   DASHBOARD_AGENT_INSTRUCTIONS,
   DASHBOARD_AI_INSTRUCTIONS,
   MAP_TOOL_KEY,
-  type DashboardAiAdapter,
-} from '../src/ai/ai';
+} from '../src/ai/constants';
+import type {DashboardAiAdapter} from '../src/ai/types';
+import {createDashboardToolDeps} from '../src/ai/createDashboardToolDeps';
+import {createDashboardAiTools} from '../src/ai/createDashboardAiTools';
 import type {DataTable} from '@sqlrooms/db';
 import type {
   MosaicDashboardEntry,
