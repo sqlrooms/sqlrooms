@@ -2,16 +2,18 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {HistogramChartSettings} from './schema';
 import {CreateSpecOptions} from '../base-types';
 import {validateHistogramSettings} from './validation';
+import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
-const FG_COLOR = 'var(--color-chart-1)';
+const DEFAULT_FG_COLOR = DEFAULT_CHART_FALLBACK_COLOR;
 
 export function createHistogramSpec(
   options: CreateSpecOptions<HistogramChartSettings>,
 ): Spec {
-  const {dataTable, selectionName} = options;
+  const {dataTable, selectionName, settings} = options;
 
   const {fieldColumn, maxBins} = validateHistogramSettings(options);
+  const fgColor = settings.color ?? DEFAULT_FG_COLOR;
 
   const plot: unknown[] = [
     {
@@ -27,7 +29,7 @@ export function createHistogramSpec(
       data: {from: dataTable.table.table, filterBy: '$brush'},
       x: {bin: fieldColumn.name, steps: maxBins},
       y: {count: null},
-      fill: FG_COLOR,
+      fill: fgColor,
       inset: 0.5,
     },
   ];

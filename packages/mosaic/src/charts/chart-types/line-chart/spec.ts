@@ -3,31 +3,15 @@ import {LineChartSettings} from './schema';
 import {CreateSpecOptions} from '../base-types';
 import {isTemporalType} from '../../../column-types-utils';
 import {AggregateFunction} from '../../../schemas';
+import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 import {validateLineChartSettings} from './validation';
-
-// Chart color palette matching theme colors from tailwind-preset.css
-const CHART_COLORS = [
-  '#ea7c5c', // chart-1: hsl(12, 76%, 61%)
-  '#2a9d8f', // chart-2: hsl(173, 58%, 39%)
-  '#264653', // chart-3: hsl(197, 37%, 24%)
-  '#e9c46a', // chart-4: hsl(43, 74%, 66%)
-  '#f4a261', // chart-5: hsl(27, 87%, 67%)
-];
-
-function getLineColor(color: string | undefined, index: number): string {
-  if (color) {
-    return color;
-  }
-  // CHART_COLORS is non-empty, so this is always defined
-  return CHART_COLORS[index % CHART_COLORS.length]!;
-}
 
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
   hasAggregation: boolean,
 ): string {
   if (hasAggregation && yColumn.aggregate) {
-    return `${yColumn.field} (${yColumn.aggregate})`;
+    return `${yColumn.field} (${yColumn.aggregate.toUpperCase()})`;
   }
   return yColumn.field;
 }
@@ -47,9 +31,9 @@ export function createLineChartSpec(
   const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
 
   // Generate lineY marks for each Y field
-  yColumns.forEach((yColumn, index) => {
-    const color = getLineColor(yColumn.color, index);
-    const aggregate = yColumn.aggregate || 'sum';
+  yColumns.forEach((yColumn) => {
+    const color = yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR;
+    const aggregate = yColumn.aggregate ?? 'sum';
 
     // When temporal aggregation is active, use bin for X and aggregation for Y
     if (isXTemporal && xInterval) {
@@ -97,8 +81,8 @@ export function createLineChartSpec(
         Boolean(isXTemporal && xInterval),
       ),
     ),
-    colorRange: yColumns.map((yColumn, index) =>
-      getLineColor(yColumn.color, index),
+    colorRange: yColumns.map(
+      (yColumn) => yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR,
     ),
   };
 
