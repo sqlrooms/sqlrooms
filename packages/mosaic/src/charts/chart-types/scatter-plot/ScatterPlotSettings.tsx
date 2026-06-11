@@ -3,9 +3,9 @@ import {Field} from '../../../components/Field';
 import {ColumnSelector} from '../../../components/ColumnSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 
-export const BubbleChartSettingsComponent: FC = () => {
+export const ScatterPlotSettingsComponent: FC = () => {
   const {onChangeConfig, config} =
-    useMosaicChartSettingsContext('bubble-chart');
+    useMosaicChartSettingsContext('scatter-plot');
 
   return (
     <div className="space-y-4">
@@ -20,6 +20,14 @@ export const BubbleChartSettingsComponent: FC = () => {
         <ColumnSelector.Numeric
           value={config.settings.y}
           onChange={(y) => onChangeConfig('y', y)}
+        />
+      </Field>
+
+      <Field label="Size Field">
+        <ColumnSelector.Numeric
+          value={config.settings.size}
+          onChange={(size) => onChangeConfig('size', size)}
+          placeholder="(optional)"
         />
       </Field>
     </div>

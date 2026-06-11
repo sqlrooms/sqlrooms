@@ -14,6 +14,7 @@ import {
 type PlotDomElement = HTMLElement | SVGSVGElement;
 
 type QueryableMark = {
+  queryPending?: () => unknown;
   queryResult?: (data: unknown) => unknown;
   queryError?: (error: unknown) => unknown;
 };
@@ -24,8 +25,34 @@ type PlotInstance = {
   setAttribute?: (name: string, value: unknown) => boolean;
 };
 
+/**
+ * Symbols used to store original mark handlers before wrapping.
+ * This allows wrapMarkHandlers to be idempotent - it stores the original
+ * handlers once and reuses them on subsequent calls, preventing nested wrappers.
+ */
+const ORIGINAL_QUERY_PENDING = Symbol('originalQueryPending');
+const ORIGINAL_QUERY_RESULT = Symbol('originalQueryResult');
+const ORIGINAL_QUERY_ERROR = Symbol('originalQueryError');
+
+/**
+ * QueryableMark extended with Symbol properties for storing original handlers.
+ * Used internally by wrapMarkHandlers to detect and prevent re-wrapping.
+ */
+type MarkWithOriginals = QueryableMark & {
+  [ORIGINAL_QUERY_PENDING]?: () => unknown;
+  [ORIGINAL_QUERY_RESULT]?: (data: unknown) => unknown;
+  [ORIGINAL_QUERY_ERROR]?: (error: unknown) => unknown;
+};
+
 function getPlotInstance(element: object): PlotInstance | null {
-  const plot = (element as HTMLElement & {value?: unknown}).value;
+  let htmlElement = element as HTMLElement | null;
+
+  if (!htmlElement?.classList.contains('plot')) {
+    htmlElement = htmlElement?.querySelector('.plot') as HTMLElement | null;
+  }
+
+  const plot = (htmlElement as {value?: unknown}).value;
+
   return plot && typeof plot === 'object' ? (plot as PlotInstance) : null;
 }
 
@@ -73,6 +100,81 @@ function attachPlotElement(container: HTMLElement, element: PlotDomElement) {
   container.replaceChildren(element);
 }
 
+/**
+ * Checks the aggregate state of all chart marks and reports errors when all marks are done.
+ * This function is called after mark handlers complete to determine if the chart succeeded or failed.
+ *
+ * @param chart - Retained chart with mark state tracking
+ * @param onError - Callback invoked with first error when marks fail
+ * @param runtimeIssueReporter - Optional reporter for runtime issues
+ * @param runtimeIssueContext - Context for runtime issue reporting
+ * @param dataPolicy - Optional policy for validating chart data
+ */
+function checkAndReportAggregateState(
+  chart: RetainedVgPlotChart,
+  onError: (error: Error) => void,
+  runtimeIssueReporter: ChartRuntimeIssueReporter | undefined,
+  runtimeIssueContext: ChartRuntimeIssueContext | undefined,
+  dataPolicy: ChartDataPolicy | null | undefined,
+) {
+  if (!chart.markStates || chart.markStates.size === 0) {
+    return; // No marks tracked yet
+  }
+
+  // Check if all marks are done (only success or error, not pending or idle)
+  const allDone = Array.from(chart.markStates.values()).every(
+    (state) => state === 'success' || state === 'error',
+  );
+
+  if (!allDone) {
+    return; // Wait for all marks to finish
+  }
+
+  // All marks done - determine aggregate state
+  const hasError = Array.from(chart.markStates.values()).some(
+    (state) => state === 'error',
+  );
+
+  if (hasError) {
+    // Find first error
+    const firstErrorMark = Array.from(chart.markStates.entries()).find(
+      ([, state]) => state === 'error',
+    )?.[0];
+    const error = firstErrorMark && chart.markErrors?.get(firstErrorMark);
+
+    if (error) {
+      chart.error = error; // For standalone case
+      onError(error);
+      if (runtimeIssueContext) {
+        runtimeIssueReporter?.reportIssue(
+          createChartRuntimeIssueFromError(
+            error,
+            runtimeIssueContext,
+            dataPolicy,
+          ),
+        );
+      }
+    }
+  } else {
+    // All successful
+    delete chart.error;
+    runtimeIssueReporter?.clearIssue();
+  }
+}
+
+/**
+ * Wraps chart mark handlers (queryPending, queryResult, queryError) to track state and report errors.
+ * This function is idempotent - it stores original handlers in Symbols and only wraps once.
+ * Subsequent calls update the closures with fresh dataPolicy/runtimeIssue reporters without nesting wrappers.
+ *
+ * Pre-populates all queryable marks with 'idle' state for proper aggregate state tracking.
+ *
+ * @param chart - Retained chart whose marks will be wrapped
+ * @param onError - Callback invoked when mark errors occur
+ * @param dataPolicy - Optional policy for validating chart data
+ * @param runtimeIssueContext - Context for runtime issue reporting
+ * @param runtimeIssueReporter - Optional reporter for runtime issues
+ */
 function wrapMarkHandlers(
   chart: RetainedVgPlotChart,
   onError: (error: Error) => void,
@@ -85,52 +187,97 @@ function wrapMarkHandlers(
     return;
   }
 
+  // Initialize tracking
+  if (!chart.markStates) {
+    chart.markStates = new Map();
+  }
+  if (!chart.markErrors) {
+    chart.markErrors = new Map();
+  }
+
   plot.marks.forEach((mark: QueryableMark) => {
+    const markWithOriginals = mark as MarkWithOriginals;
+
+    // Pre-populate tracking for all queryable marks
+    if (mark.queryPending || mark.queryResult || mark.queryError) {
+      chart.markStates!.set(mark, 'idle');
+    }
+
+    // Wrap queryPending - store original if not already stored
+    if (mark.queryPending) {
+      if (!markWithOriginals[ORIGINAL_QUERY_PENDING]) {
+        markWithOriginals[ORIGINAL_QUERY_PENDING] = mark.queryPending;
+      }
+      const originalPending = markWithOriginals[ORIGINAL_QUERY_PENDING]!;
+      mark.queryPending = function (this: QueryableMark) {
+        chart.markStates!.set(mark, 'pending');
+        return originalPending.call(this);
+      };
+    }
+
+    // Wrap queryResult - store original if not already stored
     if (mark.queryResult) {
-      const originalQueryResult = mark.queryResult;
-      mark.queryResult = (data: unknown) => {
+      if (!markWithOriginals[ORIGINAL_QUERY_RESULT]) {
+        markWithOriginals[ORIGINAL_QUERY_RESULT] = mark.queryResult;
+      }
+      const originalQueryResult = markWithOriginals[ORIGINAL_QUERY_RESULT]!;
+      mark.queryResult = function (this: QueryableMark, data: unknown) {
         try {
           assertChartDataPolicy(dataPolicy, data);
-          runtimeIssueReporter?.clearIssue();
-          return originalQueryResult.call(mark, data);
+          chart.markStates!.set(mark, 'success');
+          chart.markErrors!.delete(mark);
+          checkAndReportAggregateState(
+            chart,
+            onError,
+            runtimeIssueReporter,
+            runtimeIssueContext,
+            dataPolicy,
+          );
+          return originalQueryResult.call(this, data);
         } catch (error) {
           const normalizedError =
             error instanceof Error ? error : new Error(String(error));
-          onError(normalizedError);
-          chart.error = normalizedError;
-          if (runtimeIssueContext) {
-            runtimeIssueReporter?.reportIssue(
-              createChartRuntimeIssueFromError(
-                normalizedError,
-                runtimeIssueContext,
-                dataPolicy,
-              ),
+          chart.markStates!.set(mark, 'error');
+          chart.markErrors!.set(mark, normalizedError);
+          checkAndReportAggregateState(
+            chart,
+            onError,
+            runtimeIssueReporter,
+            runtimeIssueContext,
+            dataPolicy,
+          );
+          if (markWithOriginals[ORIGINAL_QUERY_ERROR]) {
+            return markWithOriginals[ORIGINAL_QUERY_ERROR].call(
+              this,
+              normalizedError,
             );
-          }
-          if (mark.queryError) {
-            return mark.queryError(normalizedError);
           }
           return undefined;
         }
       };
     }
+
+    // Wrap queryError - store original if not already stored
     if (mark.queryError) {
-      const originalQueryError = mark.queryError;
-      mark.queryError = (error: unknown) => {
+      if (!markWithOriginals[ORIGINAL_QUERY_ERROR]) {
+        markWithOriginals[ORIGINAL_QUERY_ERROR] = mark.queryError;
+      }
+      const originalQueryError = markWithOriginals[ORIGINAL_QUERY_ERROR]!;
+      mark.queryError = function (this: QueryableMark, error: unknown) {
         const normalizedError =
           error instanceof Error ? error : new Error(String(error));
-        onError(normalizedError);
-        chart.error = normalizedError;
-        if (runtimeIssueContext) {
-          runtimeIssueReporter?.reportIssue(
-            createChartRuntimeIssueFromError(
-              normalizedError,
-              runtimeIssueContext,
-              dataPolicy,
-            ),
-          );
-        }
-        originalQueryError.call(mark, error);
+
+        chart.markStates?.set(mark, 'error');
+        chart.markErrors?.set(mark, normalizedError);
+
+        checkAndReportAggregateState(
+          chart,
+          onError,
+          runtimeIssueReporter,
+          runtimeIssueContext,
+          dataPolicy,
+        );
+        return originalQueryError.call(this, error);
       };
     }
   });
@@ -175,6 +322,22 @@ export function useVgPlotChartRender({
     }
 
     if (cachedChart) {
+      // Check aggregate state before clearing to preserve error state
+      checkAndReportAggregateState(
+        cachedChart,
+        onError,
+        runtimeIssueReporter,
+        runtimeIssueContext,
+        dataPolicy,
+      );
+
+      // Clear mark states when reusing cached chart - marks will re-register on next query
+      if (cachedChart.markStates) {
+        cachedChart.markStates.clear();
+      }
+      if (cachedChart.markErrors) {
+        cachedChart.markErrors.clear();
+      }
       attachPlotElement(container, asPlotDomElement(cachedChart.element));
       if (containerSize) {
         resizeChartElement(cachedChart.element, containerSize);
@@ -188,11 +351,6 @@ export function useVgPlotChartRender({
         runtimeIssueContext,
         runtimeIssueReporter,
       );
-
-      // Restore error state from cached chart
-      if (cachedChart.error) {
-        onError(cachedChart.error);
-      }
 
       return;
     }

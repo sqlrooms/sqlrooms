@@ -24,6 +24,11 @@ export const LineChartSettings = z.object({
     .array(YFieldConfig)
     .optional()
     .describe('Array of Y fields to plot, supports multiple lines'),
+  showLegend: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe('Show interactive legend for toggling line visibility'),
 });
 
 export type LineChartSettings = z.infer<typeof LineChartSettings>;

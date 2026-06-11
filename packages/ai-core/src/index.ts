@@ -48,7 +48,17 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  AnalysisSessionSchema,
+} from '@sqlrooms/ai-config';
+export {
+  getEffectiveSessionContextItemIds,
+  getRunContextItemIds,
+  getVisibleSessionContextItemIds,
+  isAnalysisSessionEmpty,
+} from './contextSelection';
 export {AiThinkingDots} from './components/AiThinkingDots';
 export {
   cleanupPendingAnalysisResults,
@@ -103,3 +113,9 @@ export {
   HoistedRenderersProvider,
   useHoistedRenderers,
 } from './components/HoistedRenderersContext';
+export {
+  findChatSearchMatches,
+  markdownToPlainText,
+  normalizeChatSearchQuery,
+} from './components/ChatSearch';
+export type {ChatSearchBlock, ChatSearchMatch} from './components/ChatSearch';

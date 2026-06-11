@@ -1,11 +1,22 @@
 import {Param, Selection} from '@uwdata/mosaic-core';
 import {useCallback, useEffect, useRef} from 'react';
 
+/**
+ * State of a chart mark during its lifecycle.
+ * - idle: Mark is registered but has not started querying
+ * - pending: Mark is actively querying data
+ * - success: Mark query completed successfully
+ * - error: Mark query failed with an error
+ */
+type MarkState = 'idle' | 'pending' | 'success' | 'error';
+
 export type RetainedVgPlotChart = {
   element: object;
   params?: Map<string, Param<any> | Selection>;
   specKey: string;
   error?: Error;
+  markStates?: Map<object, MarkState>;
+  markErrors?: Map<object, Error>;
 };
 
 export type VgPlotChartRetention = {

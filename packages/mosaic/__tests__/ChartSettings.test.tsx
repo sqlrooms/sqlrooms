@@ -49,7 +49,7 @@ describe('MosaicChartSettings Compound Components', () => {
         'line-chart',
         'heatmap',
         'box-plot',
-        'bubble-chart',
+        'scatter-plot',
       ];
 
       chartTypes.forEach((chartType) => {

@@ -3,10 +3,18 @@ import {
   makeQualifiedTableName,
   type DbSchemaNode,
 } from '@sqlrooms/duckdb';
-import type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai';
+import {
+  getEffectiveSessionContextItemIds,
+  getRunContextItemIds,
+  type AiRunContext,
+  type AiRunContextItem,
+} from '@sqlrooms/ai';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+
+const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 
 type TableInfo = {
   database?: string;
@@ -86,14 +94,39 @@ function resolveContextItem(
 
 export function getRunContext(
   store: StoreApi<RoomState>,
+  sessionId: string,
 ): AiRunContext | undefined {
   const state = store.getState();
   const {artifactsById} = state.artifacts.config;
   const {schemaTrees} = state.db;
+  const session = state.ai.config.sessions.find(
+    (candidate) => candidate.id === sessionId,
+  );
+  const currentArtifactId = state.artifacts.config.currentArtifactId;
+  const currentArtifact = currentArtifactId
+    ? artifactsById[currentArtifactId]
+    : undefined;
+  const implicitArtifactId =
+    currentArtifact &&
+    SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type)
+      ? currentArtifact.id
+      : undefined;
 
   const tablesByQualifiedName = buildTablesMap(schemaTrees);
 
-  const items = Array.from(new Set(state.aiContextItemIds))
+  if (
+    session?.draftContextItemIds === undefined &&
+    session?.runContext &&
+    getRunContextItemIds(session.runContext).length > 0
+  ) {
+    return session.runContext;
+  }
+
+  const contextItemIds = getEffectiveSessionContextItemIds(session, {
+    implicitItemIds: implicitArtifactId ? [implicitArtifactId] : [],
+  });
+
+  const items = Array.from(new Set(contextItemIds))
     .map((itemId) =>
       resolveContextItem(itemId, artifactsById, tablesByQualifiedName),
     )

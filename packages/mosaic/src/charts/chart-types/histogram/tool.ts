@@ -34,7 +34,7 @@ To UPDATE an existing histogram: provide the panelId parameter. Otherwise create
 Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.
 
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
-Do NOT use for: categorical data (use count-plot), relationships between columns (use bubble-chart), time series trends (use line-chart).`,
+Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,
     inputSchema: HistogramToolParameters,
     execute: async (params, context) => {
       try {
