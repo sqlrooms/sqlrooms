@@ -398,6 +398,9 @@ function useCliArtifactSidebarTabs() {
   const setCurrentArtifact = useRoomStore(
     (state) => state.artifacts.setCurrentArtifact,
   );
+  const setShowArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.setShowArtifactChooser,
+  );
 
   const tabs = useMemo(
     () =>
@@ -423,8 +426,9 @@ function useCliArtifactSidebarTabs() {
       addTab('workspace', createArtifactLayoutNode(artifactId, 'artifact'));
       setActiveTab('workspace', artifactId);
       setCurrentArtifact(artifactId);
+      setShowArtifactChooser(false);
     },
-    [addTab, setActiveTab, setCurrentArtifact],
+    [addTab, setActiveTab, setCurrentArtifact, setShowArtifactChooser],
   );
 
   return {artifactTypes, selectedTabId, selectArtifact, tabs};
