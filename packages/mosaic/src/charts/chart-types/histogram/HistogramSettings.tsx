@@ -6,6 +6,7 @@ import {ColorSelector} from '../../../components/ColorSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {MIN_BINS_COUNT, MAX_BINS_COUNT, DEFAULT_BINS_COUNT} from './schema';
 import {CHART_COLORS} from '../../../constants/chart-colors';
+import {getChartItemColor} from '../line-chart/utils';
 
 export const HistogramSettingsComponent: FC = () => {
   const {onChangeConfig, config} = useMosaicChartSettingsContext('histogram');
@@ -14,14 +15,14 @@ export const HistogramSettingsComponent: FC = () => {
     <div className="space-y-4">
       <Field label="Field" required>
         <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <ColumnSelector.Quantitative
-              value={config.settings.field}
-              onChange={(field) => onChangeConfig('field', field)}
-            />
-          </div>
+          <ColumnSelector.Quantitative
+            className="flex-1"
+            value={config.settings.field}
+            onChange={(field) => onChangeConfig('field', field)}
+          />
           <ColorSelector
-            value={config.settings.color ?? CHART_COLORS[0]!}
+            items={CHART_COLORS}
+            value={getChartItemColor(config.settings.color, 0)}
             onChange={(color) => onChangeConfig('color', color)}
           />
         </div>

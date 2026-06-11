@@ -12,6 +12,7 @@ export interface ColumnSelectorProps {
   value: string | undefined;
   onChange: (value: string) => void;
   placeholder?: string;
+  className?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
   value,
   onChange,
   placeholder,
+  className,
 }) => {
   const {columns} = useColumnsContext();
 
@@ -42,6 +44,7 @@ const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
       columns={columns}
       onChange={onChange}
       placeholder={placeholder ?? 'Select column…'}
+      className={className}
     />
   );
 };

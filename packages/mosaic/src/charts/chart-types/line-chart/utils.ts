@@ -1,6 +1,9 @@
 import {CHART_COLORS} from '../../../constants/chart-colors';
 
-export function getLineColor(color: string | undefined, index: number): string {
+export function getChartItemColor(
+  color: string | undefined,
+  index: number,
+): string {
   if (color) {
     return color;
   }

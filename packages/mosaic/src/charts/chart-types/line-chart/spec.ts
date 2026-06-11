@@ -13,14 +13,14 @@ import {
 } from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/db';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
-import {getLineColor} from './utils';
+import {getChartItemColor} from './utils';
 
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
   hasAggregation: boolean,
 ): string {
   if (hasAggregation && yColumn.aggregate) {
-    return `${yColumn.field} (${yColumn.aggregate.toLocaleUpperCase()})`;
+    return `${yColumn.field} (${yColumn.aggregate.toUpperCase()})`;
   }
   return yColumn.field;
 }
@@ -41,7 +41,7 @@ export function createLineChartSpec(
 
   // Generate lineY marks for each Y field
   yColumns.forEach((yColumn, index) => {
-    const color = getLineColor(yColumn.color, index);
+    const color = getChartItemColor(yColumn.color, index);
     const aggregate = yColumn.aggregate || 'sum';
 
     // When temporal aggregation is active, use bin for X and aggregation for Y
@@ -91,7 +91,7 @@ export function createLineChartSpec(
       ),
     ),
     colorRange: yColumns.map((yColumn, index) =>
-      getLineColor(yColumn.color, index),
+      getChartItemColor(yColumn.color, index),
     ),
   };
 

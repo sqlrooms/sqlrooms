@@ -1,11 +1,12 @@
-import type {FC} from 'react';
+import {useCallback, useMemo, type FC} from 'react';
 import {MultiFieldSelector} from '../../../components/MultiFieldSelector';
 import {AggregationSelector} from '../../../components/AggregationSelector';
 import {ColorSelector} from '../../../components/ColorSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {useColumnsContext} from '../../../components/ColumnsContext';
 import {isTemporalType} from '../../../column-types-utils';
-import {getLineColor} from './utils';
+import {getChartItemColor} from './utils';
+import {CHART_COLORS} from '../../../constants/chart-colors';
 
 /**
  * Field selector specifically for line chart Y-axis fields.
@@ -15,7 +16,10 @@ export const LineChartYFieldsSelector: FC = () => {
   const {onChangeConfig, config} = useMosaicChartSettingsContext('line-chart');
   const {columns} = useColumnsContext();
 
-  const yFields = config.settings.yFields ?? [];
+  const yFields = useMemo(
+    () => config.settings.yFields ?? [],
+    [config.settings.yFields],
+  );
 
   const xColumn = columns.find((c) => c.name === config.settings.x);
   const isXFieldTemporal = xColumn && isTemporalType(xColumn.type);
@@ -24,10 +28,32 @@ export const LineChartYFieldsSelector: FC = () => {
     isXFieldTemporal && config.settings.xInterval,
   );
 
+  const handleChange = useCallback(
+    (newYFields: typeof yFields) => onChangeConfig('yFields', newYFields),
+    [onChangeConfig],
+  );
+
+  const handleAdd = useCallback(
+    (fieldName: string) => {
+      if (fieldName) {
+        onChangeConfig('yFields', [
+          ...yFields,
+          {
+            field: fieldName,
+            aggregate: 'sum',
+            color: getChartItemColor(undefined, yFields.length),
+          },
+        ]);
+      }
+    },
+    [yFields, onChangeConfig],
+  );
+
   return (
     <MultiFieldSelector.Numeric
       value={yFields}
-      onChange={(newYFields) => onChangeConfig('yFields', newYFields)}
+      onChange={handleChange}
+      onAdd={handleAdd}
       renderItem={(fieldConfig, index, handleUpdate) => (
         <div
           className="grid items-end gap-2"
@@ -37,7 +63,7 @@ export const LineChartYFieldsSelector: FC = () => {
         >
           {showAggregation && (
             <AggregationSelector
-              value={fieldConfig.aggregate}
+              value={fieldConfig.aggregate || 'sum'}
               onChange={(newAggregate) =>
                 handleUpdate(index, {aggregate: newAggregate})
               }
@@ -45,7 +71,8 @@ export const LineChartYFieldsSelector: FC = () => {
           )}
 
           <ColorSelector
-            value={getLineColor(fieldConfig.color, index)}
+            items={CHART_COLORS}
+            value={getChartItemColor(fieldConfig.color, index)}
             onChange={(color) => handleUpdate(index, {color})}
           />
         </div>

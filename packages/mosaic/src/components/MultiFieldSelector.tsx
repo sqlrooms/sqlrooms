@@ -9,7 +9,6 @@ import {
   CATEGORICAL_COLUMN_TYPES,
 } from '../column-types-utils';
 import type {YFieldConfig} from '../charts/chart-types/line-chart/schema';
-import {getLineColor} from '../charts/chart-types/line-chart/utils';
 
 type RenderItemFunction = (
   fieldConfig: YFieldConfig,
@@ -21,6 +20,7 @@ export interface MultiFieldSelectorProps {
   types?: string[];
   value: YFieldConfig[];
   onChange: (value: YFieldConfig[]) => void;
+  onAdd: (fieldName: string) => void;
   renderItem?: RenderItemFunction;
 }
 
@@ -38,6 +38,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   types,
   value,
   onChange,
+  onAdd,
   renderItem,
 }) => {
   const {columns} = useColumnsContext();
@@ -61,22 +62,6 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   const handleRemove = useCallback(
     (index: number) => {
       onChange(value.filter((_, i) => i !== index));
-    },
-    [value, onChange],
-  );
-
-  const handleAdd = useCallback(
-    (fieldName: string) => {
-      if (fieldName) {
-        onChange([
-          ...value,
-          {
-            field: fieldName,
-            aggregate: 'sum',
-            color: getLineColor(undefined, value.length),
-          },
-        ]);
-      }
     },
     [value, onChange],
   );
@@ -116,7 +101,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
         <ColumnSelector
           types={types}
           value={undefined}
-          onChange={handleAdd}
+          onChange={onAdd}
           placeholder="Select field..."
         />
       </ColumnsProvider>
