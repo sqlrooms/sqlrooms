@@ -652,9 +652,10 @@ function DeckMapDashboardRenderer({
         ? JSON.stringify({
             source: fitToDataSource,
             fitToData,
+            selectedTable: dashboard.selectedTable,
           })
         : null,
-    [fitToData, fitToDataSource],
+    [dashboard.selectedTable, fitToData, fitToDataSource],
   );
   const fitStateKey = useMemo(
     () => JSON.stringify({panelId: panel.id, fitToDataKey}),
