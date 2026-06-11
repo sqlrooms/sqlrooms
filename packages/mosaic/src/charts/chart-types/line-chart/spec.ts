@@ -31,10 +31,7 @@ export function createLineChartSpec(
   const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
 
   // Generate lineY marks for each Y field
-  yColumns.forEach((yColumn) => {
-    const color = yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR;
-    const aggregate = yColumn.aggregate ?? 'sum';
-
+  yColumns.forEach(({color, column, aggregate}) => {
     // When temporal aggregation is active, use bin for X and aggregation for Y
     if (isXTemporal && xInterval) {
       // Use bin syntax for temporal aggregation
@@ -42,7 +39,7 @@ export function createLineChartSpec(
         mark: 'lineY',
         data: dataSource,
         x: {bin: xColumn.name, interval: xInterval},
-        y: {[aggregate]: yColumn.column.name},
+        y: {[aggregate]: column.name},
         stroke: color,
       });
     } else {
@@ -51,7 +48,7 @@ export function createLineChartSpec(
         mark: 'lineY',
         data: dataSource,
         x: xColumn.name,
-        y: yColumn.column.name,
+        y: column.name,
         stroke: color,
       });
     }

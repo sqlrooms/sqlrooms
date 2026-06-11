@@ -8,14 +8,15 @@ import {
 import {isNumericType, isQuantitativeType} from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/db';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
+import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 
 export type ValidatedLineChartSettings = {
   xColumn: TableColumn;
   yColumns: {
     field: string;
     column: TableColumn;
-    aggregate?: AggregateFunction;
-    color?: string;
+    aggregate: AggregateFunction;
+    color: string;
   }[];
   xInterval?: TemporalInterval;
 };
@@ -37,8 +38,8 @@ export function validateLineChartSettings({
   const yColumns = yFields.map((y) => ({
     field: y.field,
     column: dataTable.columns.find((col) => col.name === y.field),
-    aggregate: y.aggregate,
-    color: y.color,
+    aggregate: y.aggregate ?? 'sum',
+    color: y.color ?? DEFAULT_CHART_FALLBACK_COLOR,
   }));
 
   const missingYColumns = yColumns.filter((y) => !y.column);
