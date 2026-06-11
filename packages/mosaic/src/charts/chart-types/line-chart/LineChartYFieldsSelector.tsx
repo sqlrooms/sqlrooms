@@ -6,7 +6,7 @@ import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSet
 import {useColumnsContext} from '../../../components/ColumnsContext';
 import {isTemporalType} from '../../../column-types-utils';
 import {getChartItemColor} from './utils';
-import {CHART_COLORS} from '../../../constants/chart-colors';
+import {DEFAULT_CHART_COLORS} from '../../../constants/chart-colors';
 
 /**
  * Field selector specifically for line chart Y-axis fields.
@@ -41,7 +41,11 @@ export const LineChartYFieldsSelector: FC = () => {
           {
             field: fieldName,
             aggregate: 'sum',
-            color: getChartItemColor(undefined, yFields.length),
+            color: getChartItemColor(
+              DEFAULT_CHART_COLORS,
+              undefined,
+              yFields.length,
+            ),
           },
         ]);
       }
@@ -71,8 +75,12 @@ export const LineChartYFieldsSelector: FC = () => {
           )}
 
           <ColorSelector
-            items={CHART_COLORS}
-            value={getChartItemColor(fieldConfig.color, index)}
+            items={DEFAULT_CHART_COLORS}
+            value={getChartItemColor(
+              DEFAULT_CHART_COLORS,
+              fieldConfig.color,
+              index,
+            )}
             onChange={(color) => handleUpdate(index, {color})}
           />
         </div>

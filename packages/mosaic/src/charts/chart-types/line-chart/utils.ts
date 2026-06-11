@@ -1,12 +1,11 @@
-import {CHART_COLORS} from '../../../constants/chart-colors';
-
 export function getChartItemColor(
+  colors: readonly string[],
   color: string | undefined,
-  index: number,
+  index = 0,
 ): string {
   if (color) {
     return color;
   }
-  // CHART_COLORS is non-empty, so this is always defined
-  return CHART_COLORS[index % CHART_COLORS.length]!;
+
+  return colors[index % colors.length]!;
 }

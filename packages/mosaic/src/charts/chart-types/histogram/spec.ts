@@ -8,10 +8,10 @@ import {
 } from '../errors';
 import {isQuantitativeType} from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/duckdb';
-import {CHART_COLORS} from '../../../constants/chart-colors';
+import {DEFAULT_CHART_COLORS} from '../../../constants/chart-colors';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
-const DEFAULT_FG_COLOR = CHART_COLORS[0]!;
+const DEFAULT_FG_COLOR = DEFAULT_CHART_COLORS[0]!;
 
 export function createHistogramSpec(
   options: CreateSpecOptions<HistogramChartSettings>,

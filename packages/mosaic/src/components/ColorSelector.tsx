@@ -21,7 +21,7 @@ const ColorSelectorItem: FC<ColorSelectorItemProps> = ({color, className}) => {
 
 export type ColorSelectorProps = {
   value: string;
-  items: string[];
+  items: readonly string[];
   onChange: (color: string) => void;
 };
 
