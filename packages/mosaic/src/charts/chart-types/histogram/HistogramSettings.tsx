@@ -5,8 +5,10 @@ import {ColumnSelector} from '../../../components/ColumnSelector';
 import {ColorSelector} from '../../../components/ColorSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {MIN_BINS_COUNT, MAX_BINS_COUNT, DEFAULT_BINS_COUNT} from './schema';
-import {DEFAULT_CHART_COLORS} from '../../../constants/chart-colors';
-import {getChartItemColor} from '../line-chart/utils';
+import {
+  DEFAULT_CHART_COLORS,
+  DEFAULT_CHART_FALLBACK_COLOR,
+} from '../../../constants/chart-colors';
 
 export const HistogramSettingsComponent: FC = () => {
   const {onChangeConfig, config} = useMosaicChartSettingsContext('histogram');
@@ -22,10 +24,7 @@ export const HistogramSettingsComponent: FC = () => {
           />
           <ColorSelector
             items={DEFAULT_CHART_COLORS}
-            value={getChartItemColor(
-              DEFAULT_CHART_COLORS,
-              config.settings.color,
-            )}
+            value={config.settings.color ?? DEFAULT_CHART_FALLBACK_COLOR}
             onChange={(color) => onChangeConfig('color', color)}
           />
         </div>

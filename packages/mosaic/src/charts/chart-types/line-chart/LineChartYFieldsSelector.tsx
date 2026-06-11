@@ -5,8 +5,11 @@ import {ColorSelector} from '../../../components/ColorSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {useColumnsContext} from '../../../components/ColumnsContext';
 import {isTemporalType} from '../../../column-types-utils';
-import {getChartItemColor} from './utils';
-import {DEFAULT_CHART_COLORS} from '../../../constants/chart-colors';
+import {getUnusedColor} from './utils';
+import {
+  DEFAULT_CHART_COLORS,
+  DEFAULT_CHART_FALLBACK_COLOR,
+} from '../../../constants/chart-colors';
 
 /**
  * Field selector specifically for line chart Y-axis fields.
@@ -36,16 +39,16 @@ export const LineChartYFieldsSelector: FC = () => {
   const handleAdd = useCallback(
     (fieldName: string) => {
       if (fieldName) {
+        const usedColors = yFields
+          .map((f) => f.color)
+          .filter((c): c is string => Boolean(c));
+
         onChangeConfig('yFields', [
           ...yFields,
           {
             field: fieldName,
             aggregate: 'sum',
-            color: getChartItemColor(
-              DEFAULT_CHART_COLORS,
-              undefined,
-              yFields.length,
-            ),
+            color: getUnusedColor(DEFAULT_CHART_COLORS, usedColors),
           },
         ]);
       }
@@ -76,11 +79,7 @@ export const LineChartYFieldsSelector: FC = () => {
 
           <ColorSelector
             items={DEFAULT_CHART_COLORS}
-            value={getChartItemColor(
-              DEFAULT_CHART_COLORS,
-              fieldConfig.color,
-              index,
-            )}
+            value={fieldConfig.color ?? DEFAULT_CHART_FALLBACK_COLOR}
             onChange={(color) => handleUpdate(index, {color})}
           />
         </div>

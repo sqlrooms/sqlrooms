@@ -13,8 +13,7 @@ import {
 } from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/db';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
-import {getChartItemColor} from './utils';
-import {DEFAULT_CHART_COLORS} from '../../../constants/chart-colors';
+import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
@@ -41,9 +40,9 @@ export function createLineChartSpec(
   const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
 
   // Generate lineY marks for each Y field
-  yColumns.forEach((yColumn, index) => {
-    const color = getChartItemColor(DEFAULT_CHART_COLORS, yColumn.color, index);
-    const aggregate = yColumn.aggregate || 'sum';
+  yColumns.forEach((yColumn) => {
+    const color = yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR;
+    const aggregate = yColumn.aggregate ?? 'sum';
 
     // When temporal aggregation is active, use bin for X and aggregation for Y
     if (isXTemporal && xInterval) {
@@ -91,8 +90,8 @@ export function createLineChartSpec(
         Boolean(isXTemporal && xInterval),
       ),
     ),
-    colorRange: yColumns.map((yColumn, index) =>
-      getChartItemColor(DEFAULT_CHART_COLORS, yColumn.color, index),
+    colorRange: yColumns.map(
+      (yColumn) => yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR,
     ),
   };
 
