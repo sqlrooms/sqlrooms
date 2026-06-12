@@ -161,7 +161,7 @@ const TripsTimeControl: FC<{
     return (
       <button
         onClick={() => setCollapsed(false)}
-        className="bg-background/90 pointer-events-auto rounded-md border px-2 py-1 text-xs shadow-sm"
+        className="border-border/70 bg-background/90 text-muted-foreground hover:text-foreground pointer-events-auto flex w-fit items-center gap-1 rounded-md border px-2 py-1 text-[10px] leading-none font-medium shadow-sm backdrop-blur-sm transition-colors"
       >
         Timeline
       </button>
@@ -254,10 +254,10 @@ function DeckOverlayControl({
 
   useEffect(() => {
     if (clearing && overlay) {
-      overlay.setProps({...deckProps, layers: []});
+      overlay.setProps({layers: []});
       requestAnimationFrame(() => setClearing(false));
     }
-  }, [clearing, deckProps, overlay]);
+  }, [clearing, overlay]);
 
   if (!clearing && overlay) {
     overlay.setProps(deckProps);
