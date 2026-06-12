@@ -402,51 +402,67 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     const extraMapProps = (mapProps ?? {}) as Record<string, unknown>;
     const hasRenderingError = Boolean(finalDeckPropsResult.error);
 
-    // Animate TripsLayer by injecting currentTime from the animation clock
-    const animatedLayersResult = useMemo(() => {
+    // Separate stable layer analysis from per-frame animation to avoid
+    // re-running .map() over all layers 60 times per second.
+    const baseLayers = useMemo(() => {
       const mergedLayers = hasRenderingError
         ? []
         : (deckProps?.layers ??
           (convertedDeckProps.layers as unknown[] | undefined) ??
           []);
       if (!hasTripsLayer || !Array.isArray(mergedLayers))
-        return {layers: mergedLayers, maxTs: 0};
+        return {layers: mergedLayers, maxTs: 0, tripsIndices: [] as number[]};
       let computedMaxTs = 0;
-      const layers = mergedLayers.map((layer: unknown) => {
-        if (!layer || typeof layer !== 'object') return layer;
-        const layerObj = layer as {
-          props?: Record<string, unknown>;
-          clone?: (props: Record<string, unknown>) => unknown;
-        };
+      const tripsIndices: number[] = [];
+      for (let i = 0; i < mergedLayers.length; i++) {
+        const layer = mergedLayers[i];
+        if (!layer || typeof layer !== 'object') continue;
+        const layerObj = layer as {props?: Record<string, unknown>};
         const maxTs = (layerObj.props as Record<string, unknown> | undefined)
           ?._tripsMaxTimestamp as number | undefined;
-        if (maxTs && maxTs > 0 && layerObj.clone) {
+        if (maxTs && maxTs > 0) {
           computedMaxTs = maxTs;
-          const loopLength = maxTs;
-          const animationSpeed = 30;
-          const currentTime = (tripsTime / animationSpeed) % loopLength;
-          const props = layerObj.props as Record<string, unknown> | undefined;
-          const trailFraction =
-            (props?.trailLengthFraction as number | undefined) ?? 0.4;
-          const widthPx = (props?.widthMinPixels as number | undefined) ?? 3;
-          return layerObj.clone({
-            currentTime,
-            trailLength: maxTs * trailFraction,
-            widthMinPixels: widthPx,
-          });
+          tripsIndices.push(i);
         }
-        return layer;
-      });
-      return {layers, maxTs: computedMaxTs};
+      }
+      return {layers: mergedLayers, maxTs: computedMaxTs, tripsIndices};
     }, [
       hasTripsLayer,
       hasRenderingError,
       deckProps?.layers,
       convertedDeckProps.layers,
-      tripsTime,
     ]);
-    const animatedLayers = animatedLayersResult.layers;
-    const tripsMaxTimeValue = animatedLayersResult.maxTs;
+
+    // Per-frame: only clone trips layers with updated currentTime
+    const animatedLayers = useMemo(() => {
+      const {layers, tripsIndices} = baseLayers;
+      if (!tripsIndices.length) return layers;
+      if (!Array.isArray(layers)) return layers;
+      const result = layers.slice();
+      for (const idx of tripsIndices) {
+        const layer = result[idx];
+        if (!layer || typeof layer !== 'object') continue;
+        const layerObj = layer as {
+          props?: Record<string, unknown>;
+          clone?: (props: Record<string, unknown>) => unknown;
+        };
+        if (!layerObj.clone) continue;
+        const props = layerObj.props as Record<string, unknown> | undefined;
+        const maxTs = (props?._tripsMaxTimestamp as number | undefined) ?? 0;
+        const trailFraction =
+          (props?.trailLengthFraction as number | undefined) ?? 0.4;
+        const widthPx = (props?.widthMinPixels as number | undefined) ?? 3;
+        const animationSpeed = 30;
+        const currentTime = (tripsTime / animationSpeed) % maxTs;
+        result[idx] = layerObj.clone({
+          currentTime,
+          trailLength: maxTs * trailFraction,
+          widthMinPixels: widthPx,
+        });
+      }
+      return result;
+    }, [baseLayers, tripsTime]);
+    const tripsMaxTimeValue = baseLayers.maxTs;
 
     const tripsCurrentTime = useMemo(() => {
       if (!tripsMaxTimeValue || tripsMaxTimeValue <= 0) return 0;
