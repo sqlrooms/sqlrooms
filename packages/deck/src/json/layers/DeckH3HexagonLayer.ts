@@ -14,7 +14,7 @@ import * as arrow from 'apache-arrow';
  * This wrapper converts Arrow data to row objects with proper BigInt→hex string
  * conversion, then passes them to the native H3HexagonLayer.
  */
-export class SqlroomsH3HexagonLayer extends CompositeLayer<{
+export class DeckH3HexagonLayer extends CompositeLayer<{
   data: arrow.Table;
   getHexagon: arrow.Vector;
   getFillColor?:

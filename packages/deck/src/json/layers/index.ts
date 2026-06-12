@@ -1,3 +1,3 @@
-export {SqlroomsColumnLayer} from './SqlroomsColumnLayer';
-export {SqlroomsH3HexagonLayer} from './SqlroomsH3HexagonLayer';
-export {SqlroomsTripsLayer} from './SqlroomsTripsLayer';
+export {DeckColumnLayer} from './DeckColumnLayer';
+export {DeckH3HexagonLayer} from './DeckH3HexagonLayer';
+export {DeckTripsLayer} from './DeckTripsLayer';

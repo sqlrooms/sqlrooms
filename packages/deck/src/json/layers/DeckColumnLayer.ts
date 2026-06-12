@@ -31,7 +31,7 @@ ColumnLayer.prototype.draw = function (opts: {uniforms: unknown}) {
  *
  * Remove this wrapper once deck.gl includes the upstream fix (PR #10094).
  */
-export class SqlroomsColumnLayer<
+export class DeckColumnLayer<
   ExtraProps extends object = object,
 > extends GeoArrowColumnLayer<ExtraProps> {
   static layerName = 'GeoArrowColumnLayer';

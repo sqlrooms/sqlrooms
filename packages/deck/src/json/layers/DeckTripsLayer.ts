@@ -50,7 +50,7 @@ function expandToCoords<T extends TypedArray>(
  * native TripsLayer in a compatible format, properly resolving accessor props
  * (Arrow Vectors → binary attributes, functions → wrapped with batch context).
  */
-export class SqlroomsTripsLayer extends CompositeLayer<{
+export class DeckTripsLayer extends CompositeLayer<{
   data: arrow.Table;
   getPath: arrow.Vector;
   getTimestamps: arrow.Vector;
