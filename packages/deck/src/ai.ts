@@ -239,7 +239,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           context,
         );
         if (params.tableName) {
-          deps.resolveTable(artifactId, params.tableName);
+          deps.resolveTable(params.tableName);
         }
         const panel = createDeckMapPanelFromNativeConfig(params);
 

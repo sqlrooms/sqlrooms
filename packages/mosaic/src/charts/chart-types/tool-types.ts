@@ -1,6 +1,5 @@
 import {Tool} from 'ai';
-import {PanelResult} from '../../ai/tool-helpers';
-import {DashboardToolDeps} from './base-types';
+import type {DataTable} from '@sqlrooms/duckdb';
 
 export type ChartToolErrorOutput = {
   llmResult: {
@@ -9,16 +8,33 @@ export type ChartToolErrorOutput = {
   };
 };
 
-export type ChartToolSuccessOutput = {
+export type ChartToolSuccessOutput<T> = {
   llmResult: {
     success: true;
     details?: string;
-    data?: PanelResult;
+    data?: T;
   };
 };
 
-export type ChartToolOutput = ChartToolSuccessOutput | ChartToolErrorOutput;
+export type ChartToolOutput<T> =
+  | ChartToolSuccessOutput<T>
+  | ChartToolErrorOutput;
 
-export type ChartToolFactory<T> = (
-  deps: DashboardToolDeps,
-) => Tool<T, ChartToolOutput>;
+/**
+ * Dependencies for chart configuration tools.
+ * Simple and minimal.
+ */
+export type ChartToolDeps = {
+  /** Resolve table by name, throws if not found */
+  resolveTable: (tableName: string) => DataTable;
+  /** Maximum data points for non-aggregated charts */
+  maxDataPoints: number;
+};
+
+/**
+ * Factory for creating chart configuration tools.
+ * Chart tools generate ChartConfig and use resolveTable for validation.
+ */
+export type ChartToolFactory<TInput, TOutput> = (
+  deps: ChartToolDeps,
+) => Tool<TInput, ChartToolOutput<TOutput>>;

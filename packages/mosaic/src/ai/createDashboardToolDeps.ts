@@ -3,8 +3,7 @@ import type {
   ChartToolExecutionContext,
   DashboardToolDeps,
 } from '../charts/chart-types';
-import {DEFAULT_CHART_MAX_DATA_POINTS} from '../chart-runtime';
-import {findTableByName} from '../utils/table-lookup';
+import {findTableByNameOrThrow} from '../utils/table-lookup';
 import type {DashboardAiAdapter, CreateDashboardToolDepsOptions} from './types';
 
 function getTablesWithColumns<TState>(
@@ -14,10 +13,6 @@ function getTablesWithColumns<TState>(
   return adapter
     .getTables(state)
     .filter((table) => table.columns && table.columns.length > 0);
-}
-
-function formatAvailableTables(tables: DataTable[]): string {
-  return tables.map((table) => table.table.table).join(', ') || '(none)';
 }
 
 export function createDashboardToolDeps<TState>({
@@ -72,46 +67,13 @@ export function createDashboardToolDeps<TState>({
     return targetArtifactId;
   };
 
-  const resolveTable = (artifactId: string, tableName?: string) => {
+  const resolveTable = (tableName: string) => {
     const state = store.getState();
     const tables = getTablesWithColumns(state, adapter);
-    const dashboard = adapter.getDashboard(state, artifactId);
-    const explicitTableName = tableName?.trim() || undefined;
-
-    if (explicitTableName) {
-      const table = findTableByName(tables, explicitTableName);
-      if (!table) {
-        throw new Error(
-          `Unknown table "${explicitTableName}". Available tables: ${formatAvailableTables(tables)}.`,
-        );
-      }
-      adapter.setSelectedTable(state, artifactId, explicitTableName);
-      return table;
-    }
-
-    if (dashboard?.selectedTable) {
-      const table = findTableByName(tables, dashboard.selectedTable);
-      if (table) {
-        return table;
-      }
-    }
-
-    if (tables.length === 1) {
-      const onlyTable = tables[0];
-      if (!onlyTable?.columns) {
-        throw new Error('The only available table has no column metadata.');
-      }
-      adapter.setSelectedTable(state, artifactId, onlyTable.table.table);
-      return onlyTable;
-    }
-
-    throw new Error(
-      `No dashboard table is selected. Provide tableName using one of: ${formatAvailableTables(tables)}.`,
-    );
+    return findTableByNameOrThrow(tables, tableName);
   };
 
   const deps: DashboardToolDeps = {
-    maxDataPoints: DEFAULT_CHART_MAX_DATA_POINTS,
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {

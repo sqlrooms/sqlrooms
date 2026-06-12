@@ -28,6 +28,10 @@ export type {
   ExecuteCommandToolLlmResult,
   ListCommandsToolLlmResult,
 } from './tools/commandTools';
+export {commandToTool} from './tools/commandToTool';
+export type {CommandToToolOptions} from './tools/commandToTool';
+export {commandsToTools} from './tools/commandsToTools';
+export type {CommandsToToolsOptions} from './tools/commandsToTools';
 export {
   createDefaultAiTools,
   createDefaultAiToolRenderers,

@@ -132,6 +132,18 @@ const BlockDocumentCreateChartBlockInput = z.object({
   tableName: z.string().describe('Mosaic table name to render.'),
   config: z
     .unknown()
+    .transform((val) => {
+      // If agent passes config as JSON string, parse it
+      if (typeof val === 'string') {
+        try {
+          return JSON.parse(val);
+        } catch {
+          // If parsing fails, return as-is and let validation catch it
+          return val;
+        }
+      }
+      return val;
+    })
     .describe(
       'Mosaic ChartConfig payload, for example {chartType:"histogram", settings:{field:"revenue"}} or {chartType:"count-plot", settings:{field:"category"}}.',
     ),

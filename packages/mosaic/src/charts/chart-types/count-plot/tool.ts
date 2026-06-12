@@ -1,10 +1,9 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {CountPlotChartSettings} from './schema';
+import {CountPlotChartConfig, CountPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
-import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateCountPlotSettings} from './validation';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
@@ -13,10 +12,8 @@ export const CountPlotToolParameters = BaseChartToolParameters.extend({
 
 export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;
 
-export const createCountPlotAiTool: ChartToolFactory<CountPlotToolParams> = (
-  deps,
-) => {
-  return tool<CountPlotToolParams, ChartToolOutput>({
+export function createCountPlotAiTool(deps: ChartToolDeps) {
+  return tool<CountPlotToolParams, ChartToolOutput<CountPlotChartConfig>>({
     description: `Count plot: horizontal bar chart showing frequency of categorical/text values. Counts how many times each unique value appears.
 
 Use when: user asks to "count", "frequency of", "how many", "breakdown by category", "distribution of [text/category column]".
@@ -26,43 +23,26 @@ Required: field must be categorical/text (${CATEGORICAL_COLUMN_TYPES.join(', ')}
 
 NOTE: Count plots aggregate by counting unique values, so they handle large datasets efficiently (no data point limit).
 
-To UPDATE an existing count plot: provide the panelId parameter. Otherwise creates new panel.
-
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use scatter-plot), time series (use line-chart).`,
     inputSchema: CountPlotToolParameters,
-    execute: async (params, context) => {
+    execute: async (params) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const dataTable = deps.resolveTable(artifactId, params.tableName);
+        const dataTable = deps.resolveTable(params.tableName);
 
         validateCountPlotSettings({
           dataTable,
           settings: params.settings,
         });
 
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
-          tableName: dataTable.tableName,
-          title: `Count plot of ${params.settings.field}`,
-          config: {
-            chartType: 'count-plot',
-            settings: params.settings,
-          },
-        });
-
         return {
           llmResult: {
             success: true,
-            details: params.panelId
-              ? `Updated count plot "${result.title}".`
-              : `Created count plot "${result.title}".`,
-            data: result,
+            details: `Generated count plot configuration for "${params.settings.field}".`,
+            data: {
+              chartType: 'count-plot',
+              settings: params.settings,
+            },
           },
         };
       } catch (error) {
@@ -76,4 +56,4 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
       }
     },
   });
-};
+}

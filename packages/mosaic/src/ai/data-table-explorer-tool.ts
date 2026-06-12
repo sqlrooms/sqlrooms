@@ -49,18 +49,20 @@ Useful for: quick data exploration, understanding data quality, finding missing 
 
 To UPDATE an existing Data Table Explorer: provide the panelId parameter. Otherwise creates new panel.`,
     inputSchema: DataTableExplorerToolParameters,
-    execute: async (params) => {
+    execute: async (params, context) => {
       try {
         const artifactId = deps.resolveArtifact(
           params.artifactId,
           params.createArtifactIfMissing,
+          context,
         );
-        const dataTable = deps.resolveTable(artifactId, params.tableName);
+        const tableName = params.tableName;
+        const dataTable = tableName ? deps.resolveTable(tableName) : undefined;
 
         const result = createOrUpdateDataTableExplorerPanel(deps, {
           panelId: params.panelId,
           dashboardId: artifactId,
-          tableName: dataTable.tableName,
+          tableName: dataTable?.tableName || tableName || '',
           title: params.title || 'Data Table Explorer',
           config: params.config,
         });

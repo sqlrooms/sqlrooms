@@ -1,13 +1,12 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {BoxPlotChartSettings} from './schema';
+import {BoxPlotChartConfig, BoxPlotChartSettings} from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
-import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateBoxPlotSettings} from './validation';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
@@ -16,10 +15,8 @@ export const BoxPlotToolParameters = BaseChartToolParameters.extend({
 
 export type BoxPlotToolParams = z.infer<typeof BoxPlotToolParameters>;
 
-export const createBoxPlotAiTool: ChartToolFactory<BoxPlotToolParams> = (
-  deps,
-) => {
-  return tool<BoxPlotToolParams, ChartToolOutput>({
+export function createBoxPlotAiTool(deps: ChartToolDeps) {
+  return tool<BoxPlotToolParams, ChartToolOutput<BoxPlotChartConfig>>({
     description: `Box plot: compares distributions of numeric values across categories. Shows median, quartiles (25th, 75th percentiles), and outliers per group.
 
 Use when: user asks to "compare [numeric] across/by [category]", "distribution by group", "show outliers by", "compare ranges".
@@ -31,44 +28,27 @@ Required:
 
 NOTE: Box plots aggregate data by computing quartiles and outliers per group, so they handle large datasets efficiently (no data point limit).
 
-To UPDATE an existing box plot: provide the panelId parameter. Otherwise creates new panel.
-
 Best for: comparing distributions between groups, finding outliers per category, seeing spread and variance differences.
 
 Do NOT use for: single distribution (use histogram), time trends (use line-chart), simple counts (use count-plot).`,
     inputSchema: BoxPlotToolParameters,
-    execute: async (params, context) => {
+    execute: async (params) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const dataTable = deps.resolveTable(artifactId, params.tableName);
+        const dataTable = deps.resolveTable(params.tableName);
 
         validateBoxPlotSettings({
           dataTable,
           settings: params.settings,
         });
 
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
-          tableName: dataTable.tableName,
-          title: `Box plot - ${params.settings.y} by ${params.settings.x}`,
-          config: {
-            chartType: 'box-plot',
-            settings: params.settings,
-          },
-        });
-
         return {
           llmResult: {
             success: true,
-            details: params.panelId
-              ? `Updated box plot "${result.title}".`
-              : `Created box plot "${result.title}".`,
-            data: result,
+            details: `Generated box plot configuration.`,
+            data: {
+              chartType: 'box-plot',
+              settings: params.settings,
+            },
           },
         };
       } catch (error) {
@@ -82,4 +62,4 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
       }
     },
   });
-};
+}

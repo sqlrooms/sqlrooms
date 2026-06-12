@@ -64,6 +64,9 @@ export interface PanelPatch {
  * Dependencies injected into dashboard tool creation functions.
  * Provides the resources and operations needed to create dashboard panels.
  */
+/**
+ * Dependencies for dashboard-specific tools that manage panels.
+ */
 export interface DashboardToolDeps {
   /**
    * Resolves the dashboard artifact ID.
@@ -76,10 +79,10 @@ export interface DashboardToolDeps {
   ) => string;
 
   /**
-   * Resolves table name and columns for a given dashboard artifact.
-   * Use this when you need table-specific information.
+   * Resolves table by name for dashboard artifact.
+   * Used by dashboard-specific tools like data table explorer.
    */
-  resolveTable: (artifactId: string, tableName?: string) => DataTable;
+  resolveTable: (tableName: string) => DataTable;
 
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
@@ -94,8 +97,6 @@ export interface DashboardToolDeps {
   ) => ChartRuntimeIssue | undefined;
   removePanel: (dashboardId: string, panelId: string) => void;
   setCurrentArtifact: (artifactId: string) => void;
-
-  maxDataPoints: number;
 }
 
 export type ChartToolExecutionContext = object & {
@@ -170,8 +171,11 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   settingsComponent: ComponentType;
   /** Optional icon component for chart-type grids */
   icon: ComponentType<{className?: string}>;
-  /** Optional function to create an AI tool for this chart type */
-  createTool?: (deps: DashboardToolDeps) => Tool;
+  /** Optional function to create a chart configuration AI tool */
+  createTool?: (deps: {
+    resolveTable: (name: string) => DataTable;
+    maxDataPoints: number;
+  }) => Tool;
   /** Optional runtime data policy for renderer-specific query validation. */
   getDataPolicy?: (
     context: ChartDataPolicyContext<TConfig>,

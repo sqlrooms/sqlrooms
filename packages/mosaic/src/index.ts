@@ -169,16 +169,29 @@ export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
 export {DASHBOARD_AI_INSTRUCTIONS, MAP_TOOL_KEY} from './ai/constants';
 export {createDashboardAgentTool} from './ai/createDashboardAgentTool';
+export {createWorksheetAgentTool} from './ai/createWorksheetAgentTool';
 export {createDashboardAiTools} from './ai/createDashboardAiTools';
 export type {
+  // Common types
+  AiStore,
+  BaseAiAdapter,
+  BaseAgentToolOptions,
+  AgentToolCall,
+  AgentRunResult,
+  // Dashboard types
   CreateDashboardAgentToolOptions,
   CreateDashboardAiToolsOptions,
   DashboardAgentResult,
+  DashboardAiAdapter,
+  CreateDashboardToolDepsOptions,
+  // Worksheet types
+  CreateWorksheetAgentToolOptions,
+  WorksheetAgentResult,
+  WorksheetAiAdapter,
+  // Deprecated (backward compatibility)
   DashboardAgentRunResult,
   DashboardAgentToolCall,
-  DashboardAiAdapter,
   DashboardAiStore,
-  CreateDashboardToolDepsOptions,
 } from './ai/types';
 
 // Compound components
@@ -308,6 +321,7 @@ export type {
   ChartSettings,
   ChartType,
   ChartToolExecutionContext,
+  ChartToolDeps,
   DashboardToolDeps,
   ResolvedChartResources,
   CreateChartParams,
@@ -331,7 +345,11 @@ export {
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from './column-types-utils';
-export {findTableByName, getTableReference} from './utils/table-lookup';
+export {
+  findTableByName,
+  findTableByNameOrThrow,
+  getTableReference,
+} from './utils/table-lookup';
 export type {FieldSelectorInputProps} from './components/FieldSelectorInput';
 export type {
   ChartBuilderColumn,

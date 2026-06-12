@@ -80,11 +80,8 @@ import {
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
-import {
-  createDashboardAiTools,
-  getDashboardAiInstructions,
-} from './createDashboardAiTools';
-import {dashboardAgentTool} from './createDashboardAgent';
+import {getDashboardAiInstructions} from './createDashboardAiTools';
+import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
 import {getRunContext} from './context/getRunContext';
@@ -646,8 +643,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
-              ...createDashboardAiTools(store),
-              dashboard_agent: dashboardAgentTool(store),
+              // ...createDashboardAiTools(store),
+              // dashboard_agent: dashboardAgentTool(store),
+              worksheet_agent: worksheetAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
               chart_image_for_markdown: createChartImageForMarkdownTool(store),

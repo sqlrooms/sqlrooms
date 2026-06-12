@@ -40,6 +40,7 @@ export * from './custom-spec/definition';
 
 // Re-export tool types, schemas, helpers, and AI tool creators
 export * from '../../ai/tool-types';
+export * from './tool-types';
 export * from '../../ai/tool-schemas';
 export * from '../../ai/tool-helpers';
 export * from './histogram/tool';

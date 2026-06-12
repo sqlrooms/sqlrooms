@@ -7,6 +7,7 @@ import {
   createRemovePanelTool,
 } from '../charts/chart-types';
 import {createDashboardToolDeps} from './createDashboardToolDeps';
+import {createChartToolDeps} from './createChartToolDeps';
 import {createDashboardArtifactTool} from './create-dashboard-artifact-tool';
 import type {CreateDashboardAiToolsOptions} from './types';
 
@@ -16,18 +17,20 @@ export function createDashboardAiTools<TState>({
   chartTypes,
   extraTools,
 }: CreateDashboardAiToolsOptions<TState>): Record<string, Tool> {
-  const deps = createDashboardToolDeps({store, adapter});
+  const dashboardToolDeps = createDashboardToolDeps({store, adapter});
+  const chartToolDeps = createChartToolDeps({store, adapter});
   const resolvedChartTypes =
     chartTypes ?? createDefaultChartTypes({includeCustomSpec: false});
-  const chartTools = createChartTools(resolvedChartTypes, deps);
-  const hostTools = extraTools?.(deps) ?? {};
+  const chartTools = createChartTools(resolvedChartTypes, chartToolDeps);
+  const hostTools = extraTools?.(dashboardToolDeps) ?? {};
 
   const builtInTools = {
     create_dashboard_artifact: createDashboardArtifactTool(store, adapter),
     ...chartTools,
-    create_dashboard_data_table_explorer: createDataTableExplorerTool(deps),
-    list_dashboard_panels: createListPanelsTool(deps),
-    remove_dashboard_panel: createRemovePanelTool(deps),
+    create_dashboard_data_table_explorer:
+      createDataTableExplorerTool(dashboardToolDeps),
+    list_dashboard_panels: createListPanelsTool(dashboardToolDeps),
+    remove_dashboard_panel: createRemovePanelTool(dashboardToolDeps),
   };
 
   for (const key of Object.keys(hostTools)) {

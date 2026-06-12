@@ -1,6 +1,7 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {
+  HistogramChartConfig,
   HistogramChartSettings,
   MIN_BINS_COUNT,
   MAX_BINS_COUNT,
@@ -8,8 +9,7 @@ import {
 } from './schema';
 import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
-import {ChartToolFactory, ChartToolOutput} from '../tool-types';
+import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateHistogramSettings} from './validation';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
@@ -18,10 +18,8 @@ export const HistogramToolParameters = BaseChartToolParameters.extend({
 
 export type HistogramToolParams = z.infer<typeof HistogramToolParameters>;
 
-export const createHistogramAiTool: ChartToolFactory<HistogramToolParams> = (
-  deps,
-) => {
-  return tool<HistogramToolParams, ChartToolOutput>({
+export function createHistogramAiTool(deps: ChartToolDeps) {
+  return tool<HistogramToolParams, ChartToolOutput<HistogramChartConfig>>({
     description: `Histogram: shows distribution of numeric values by automatically grouping data into bins/ranges.
 
 Use when: user asks about "distribution of [numeric column]", "spread of", "range of", "how values are distributed", "show histogram".
@@ -31,46 +29,28 @@ Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUM
 
 NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
 
-To UPDATE an existing histogram: provide the panelId parameter. Otherwise creates new panel.
-
 Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.
 
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,
     inputSchema: HistogramToolParameters,
-    execute: async (params, context) => {
+    execute: async (params) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-
-        const dataTable = deps.resolveTable(artifactId, params.tableName);
+        const dataTable = deps.resolveTable(params.tableName);
 
         validateHistogramSettings({
           dataTable,
           settings: params.settings,
         });
 
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
-          tableName: dataTable.tableName,
-          title: `Histogram of ${params.settings.field}`,
-          config: {
-            chartType: 'histogram',
-            settings: params.settings,
-          },
-        });
-
         return {
           llmResult: {
             success: true,
-            details: params.panelId
-              ? `Updated histogram "${result.title}".`
-              : `Created histogram "${result.title}".`,
-            data: result,
+            details: `Generated histogram configuration for "${params.settings.field}".`,
+            data: {
+              chartType: 'histogram',
+              settings: params.settings,
+            },
           },
         };
       } catch (error) {
@@ -84,4 +64,4 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
       }
     },
   });
-};
+}
