@@ -24,7 +24,6 @@ export {
   BlockDocumentImageBlock,
   BlockDocumentListBlock,
   BlockDocumentParagraphBlock,
-  BlockDocumentRichTextBlock,
   BlockDocumentStatefulBlockBlock,
   BlockDocumentTodoBlock,
   blockDocumentBlockToNode,

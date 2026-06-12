@@ -31,7 +31,6 @@ the reusable `BlockDocument` terminology.
 
 The new artifact should support:
 
-- Rich text blocks.
 - Headings, paragraphs, lists, todos, quotes, code, dividers, and images.
 - Standalone vgplot-based chart blocks that reuse the same chart
   implementations and settings UI as Mosaic dashboard chart panels.
@@ -147,7 +146,7 @@ The preferred canonical body for a block document should be
 Tiptap/ProseMirror JSON, not a parallel home-grown `blocks[]` array. The
 command and AI APIs can expose block-shaped DTOs, but the persisted document
 should be the same tree the rich editor edits. This avoids lossy conversion
-once users start mixing rich text, tables, captions, and custom interactive
+once users start mixing formatted text, tables, captions, and custom interactive
 blocks.
 
 For command/AI readability, define a block DTO shape that maps onto top-level
@@ -157,7 +156,6 @@ Tiptap nodes:
 type BlockDocumentBlock =
   | {id: string; type: 'heading'; level: 1 | 2 | 3; text: string}
   | {id: string; type: 'paragraph'; text: string}
-  | {id: string; type: 'richText'; markdown: string}
   | {id: string; type: 'list'; ordered?: boolean; items: string[]}
   | {id: string; type: 'todo'; checked: boolean; text: string}
   | {id: string; type: 'image'; assetId: string; caption?: string}
@@ -549,7 +547,7 @@ Likely changes:
 
 Acceptance criteria:
 
-- A block document artifact renders editable rich text blocks through Tiptap.
+- A block document artifact renders editable text blocks through Tiptap.
 - SQLRooms custom blocks render through React NodeViews.
 - Chart and artifact NodeViews render through host-provided renderer contexts,
   not direct Mosaic imports.
