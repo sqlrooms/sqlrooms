@@ -52,7 +52,54 @@ import {
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
 
+/**
+ * Extracts column names from common DuckDB "column not found" error messages.
+ * Returns the column names if detected, or null for unrecognized errors.
+ */
+function parseMissingColumnsFromError(message: string): string[] | null {
+  // "Referenced column "X" not found in FROM clause!"
+  const refMatch = message.match(/Referenced column "([^"]+)" not found/i);
+  if (refMatch) return [refMatch[1]!];
+
+  // "Binder Error: Column "X" does not exist" or "column X not found"
+  const colMatch = message.match(
+    /(?:Column|column)\s+"([^"]+)"\s+(?:does not exist|not found)/i,
+  );
+  if (colMatch) return [colMatch[1]!];
+
+  // Multiple columns: collect all quoted names from "not found" context
+  const allRefs = [
+    ...message.matchAll(/Referenced column "([^"]+)" not found/gi),
+  ];
+  if (allRefs.length > 0) return allRefs.map((m) => m[1]!);
+
+  return null;
+}
+
 function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
+  if (issue.kind === 'sql-error') {
+    const missingColumns = parseMissingColumnsFromError(issue.message);
+    if (missingColumns) {
+      return (
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+          <div className="mb-2 text-center font-semibold">
+            The visualization can&apos;t be displayed
+          </div>
+          <div className="text-center text-sm">
+            <span>Selected columns are missing in the dataset: </span>
+            {missingColumns.map((col, idx) => (
+              <span key={idx}>
+                <span className="inline-flex items-center rounded-md border border-gray-600 bg-gray-800 px-1 py-0.5 text-xs font-medium text-gray-300">
+                  {col}
+                </span>{' '}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+  }
+
   const title =
     issue.kind === 'too-much-data'
       ? 'Too much data'
