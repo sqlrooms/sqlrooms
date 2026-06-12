@@ -138,7 +138,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
     if (!originalTable) {
       // No explicit tableName — replace the first FROM <identifier> with the dashboard table.
       const rewritten = datasetSource.sqlQuery.replace(
-        /\bFROM\s+((?:"[^"]*"(?:\."[^"]*")*)|(?:[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*))/i,
+        /\bFROM\s+((?:"[^"]*"(?:\."[^"]*")*)|(?:[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*))(?=\s|$|[,;)[\]])/i,
         `FROM ${quotedDashboard}`,
       );
       if (rewritten !== datasetSource.sqlQuery) {
