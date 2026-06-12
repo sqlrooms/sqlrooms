@@ -57,21 +57,17 @@ import {
  * Returns the column names if detected, or null for unrecognized errors.
  */
 function parseMissingColumnsFromError(message: string): string[] | null {
-  // "Referenced column "X" not found in FROM clause!"
-  const refMatch = message.match(/Referenced column "([^"]+)" not found/i);
-  if (refMatch) return [refMatch[1]!];
+  // "Referenced column "X" not found in FROM clause!" — may appear multiple times
+  const refMatches = [
+    ...message.matchAll(/Referenced column "([^"]+)" not found/gi),
+  ];
+  if (refMatches.length > 0) return refMatches.map((m) => m[1]!);
 
   // "Binder Error: Column "X" does not exist" or "column X not found"
   const colMatch = message.match(
     /(?:Column|column)\s+"([^"]+)"\s+(?:does not exist|not found)/i,
   );
   if (colMatch) return [colMatch[1]!];
-
-  // Multiple columns: collect all quoted names from "not found" context
-  const allRefs = [
-    ...message.matchAll(/Referenced column "([^"]+)" not found/gi),
-  ];
-  if (allRefs.length > 0) return allRefs.map((m) => m[1]!);
 
   return null;
 }

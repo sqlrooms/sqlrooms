@@ -405,7 +405,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                   />
                 </Field>
                 <Field
-                  label={`Trail length: ${Math.round(((activeLayer?.trailLengthFraction as number | undefined) ?? 0.4) * 100)}%`}
+                  label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
                 >
                   <Slider
                     min={5}
@@ -413,7 +413,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                     step={5}
                     value={[
                       Math.round(
-                        ((activeLayer?.trailLengthFraction as
+                        ((activeLayer?._trailLengthFactor as
                           | number
                           | undefined) ?? 0.4) * 100,
                       ),
@@ -426,7 +426,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                           activeLayerIndex,
                           (layer) => ({
                             ...layer,
-                            trailLengthFraction: value,
+                            _trailLengthFactor: value,
                           }),
                         ),
                       );

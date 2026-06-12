@@ -74,7 +74,7 @@ const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
 
 const TRIPS_LAYER_TYPES = new Set([
   'geoarrowtripslayer',
-  'sqlroomstripslayer',
+  'decktripslayer',
   'tripslayer',
 ]);
 
@@ -220,7 +220,7 @@ export function setDeckMapLayerType(
     if (
       lt === 'geoarrowcolumnlayer' ||
       lt === 'columnlayer' ||
-      lt === 'sqlroomscolumnlayer'
+      lt === 'deckcolumnlayer'
     ) {
       nextLayer.radius ??= 3;
       nextLayer.elevationScale ??= 1;

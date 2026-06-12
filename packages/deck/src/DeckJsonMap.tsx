@@ -450,7 +450,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         const props = layerObj.props as Record<string, unknown> | undefined;
         const maxTs = (props?._tripsMaxTimestamp as number | undefined) ?? 0;
         const trailFraction =
-          (props?.trailLengthFraction as number | undefined) ?? 0.4;
+          (props?._trailLengthFactor as number | undefined) ?? 0.4;
         const widthPx = (props?.widthMinPixels as number | undefined) ?? 3;
         const animationSpeed = 30;
         const currentTime = (tripsTime / animationSpeed) % maxTs;
