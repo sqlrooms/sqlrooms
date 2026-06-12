@@ -20,6 +20,16 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
   const reduxProviderStore = useStoreWithKepler(
     (state) => state.kepler.__reduxProviderStore,
   );
+  const basicKeplerProps = useStoreWithKepler(
+    (state) => state.kepler.basicKeplerProps,
+  );
+
+  // Merge modal z-index override into the kepler theme so react-modal picks it up
+  const modalOverlayZIndex = basicKeplerProps?.modalOverlayZIndex;
+  const resolvedTheme = useMemo(() => {
+    if (modalOverlayZIndex == null) return darkTheme;
+    return {...darkTheme, modalOverLayZ: modalOverlayZIndex};
+  }, [modalOverlayZIndex]);
 
   const keplerContext = useMemo(
     () => ({
@@ -35,7 +45,7 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
     <IntlProvider locale="en" messages={messages['en']}>
       <Provider store={reduxProviderStore}>
         <StyleSheetManager shouldForwardProp={shouldForwardProp}>
-          <ThemeProvider theme={darkTheme}>
+          <ThemeProvider theme={resolvedTheme}>
             <KeplerGlContext.Provider value={keplerContext}>
               <>{children}</>
             </KeplerGlContext.Provider>

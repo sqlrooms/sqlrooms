@@ -87,6 +87,19 @@ class DesktopKeplerTable extends KeplerTable {
 
 export type KeplerGLBasicProps = {
   mapboxApiAccessToken?: string;
+  /**
+   * Where the Kepler modal (Add Map Style, Export, etc.) should be portaled.
+   * - `'body'`: portals to `document.body` (escapes stacking contexts)
+   * - `'container'`: portals inside the kepler map container element
+   * @default 'container'
+   */
+  modalPortalTarget?: 'body' | 'container';
+  /**
+   * z-index for the Kepler modal overlay. Use this to coordinate layering
+   * with app-level dialogs (e.g., Radix Dialog at z-50).
+   * When undefined, falls back to the styled-components theme value.
+   */
+  modalOverlayZIndex?: number;
 };
 
 export type CreateInitialMapKeplerStateContext = {

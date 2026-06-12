@@ -76,3 +76,6 @@ export {
   CustomAddDataButtonFactory,
   CustomPanelTitleFactory,
 } from './components/KeplerInjector';
+
+export {createKeplerTheme, darkTheme} from './styles/theme';
+export type {KeplerGLBasicProps} from './KeplerSlice';
