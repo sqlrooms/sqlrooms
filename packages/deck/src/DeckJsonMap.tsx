@@ -169,7 +169,7 @@ const TripsTimeControl: FC<{
   }
 
   return (
-    <div className="bg-background/90 pointer-events-auto flex items-center gap-1.5 rounded-md border px-2 py-1.5 shadow-sm">
+    <div className="bg-background/90 border-border/70 pointer-events-auto relative flex items-center gap-1.5 rounded-md border px-2 py-1.5 pr-7 shadow-sm backdrop-blur-sm">
       <button
         onClick={onPlayPause}
         className="text-foreground hover:bg-accent flex h-5 w-5 shrink-0 items-center justify-center rounded"
@@ -196,19 +196,16 @@ const TripsTimeControl: FC<{
       />
       <button
         onClick={() => setCollapsed(true)}
-        className="text-muted-foreground hover:text-foreground flex h-4 w-4 shrink-0 items-center justify-center"
+        className="text-muted-foreground hover:text-foreground absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-sm transition-colors"
         title="Collapse"
       >
-        <svg
-          width="8"
-          height="8"
-          viewBox="0 0 8 8"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          fill="none"
-        >
-          <line x1="1" y1="1" x2="7" y2="7" />
-          <line x1="7" y1="1" x2="1" y2="7" />
+        <svg width="8" height="8" viewBox="0 0 8 8">
+          <path
+            d="M1 1L7 7M7 1L1 7"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
         </svg>
       </button>
     </div>
