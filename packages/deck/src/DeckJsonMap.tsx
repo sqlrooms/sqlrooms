@@ -163,7 +163,7 @@ const TripsTimeControl: FC<{
         onClick={() => setCollapsed(false)}
         className="bg-background/90 pointer-events-auto rounded-md border px-2 py-1 text-xs shadow-sm"
       >
-        Trips
+        Timeline
       </button>
     );
   }
@@ -428,9 +428,14 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
           const loopLength = maxTs;
           const animationSpeed = 30;
           const currentTime = (tripsTime / animationSpeed) % loopLength;
+          const props = layerObj.props as Record<string, unknown> | undefined;
+          const trailFraction =
+            (props?.trailLengthFraction as number | undefined) ?? 0.4;
+          const widthPx = (props?.widthMinPixels as number | undefined) ?? 3;
           return layerObj.clone({
             currentTime,
-            trailLength: Math.min(loopLength * 0.4, maxTs),
+            trailLength: maxTs * trailFraction,
+            widthMinPixels: widthPx,
           });
         }
         return layer;

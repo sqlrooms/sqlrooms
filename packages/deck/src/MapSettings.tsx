@@ -53,6 +53,7 @@ import {
   usesArcColumnSetting,
   usesRadiusSetting,
   usesColumnRadiusSetting,
+  usesTripsSettings,
 } from './mapLayerConfigUtils';
 
 /**
@@ -177,6 +178,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const showColumnRadiusSetting = usesColumnRadiusSetting(
     activeLayer?.['@@type'],
   );
+  const showTripsSettings = usesTripsSettings(activeLayer?.['@@type']);
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -373,6 +375,65 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                   }}
                 />
               </Field>
+            )}
+
+            {showTripsSettings && (
+              <>
+                <Field
+                  label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 3}px`}
+                >
+                  <Slider
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[
+                      (activeLayer?.widthMinPixels as number | undefined) ?? 3,
+                    ]}
+                    onValueChange={(values) => {
+                      const value = values[0] ?? 3;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            widthMinPixels: value,
+                          }),
+                        ),
+                      );
+                    }}
+                  />
+                </Field>
+                <Field
+                  label={`Trail length: ${Math.round(((activeLayer?.trailLengthFraction as number | undefined) ?? 0.4) * 100)}%`}
+                >
+                  <Slider
+                    min={5}
+                    max={100}
+                    step={5}
+                    value={[
+                      Math.round(
+                        ((activeLayer?.trailLengthFraction as
+                          | number
+                          | undefined) ?? 0.4) * 100,
+                      ),
+                    ]}
+                    onValueChange={(values) => {
+                      const value = (values[0] ?? 40) / 100;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            trailLengthFraction: value,
+                          }),
+                        ),
+                      );
+                    }}
+                  />
+                </Field>
+              </>
             )}
 
             {isHeatmapLayer ? (

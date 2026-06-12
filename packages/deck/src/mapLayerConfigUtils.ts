@@ -72,6 +72,12 @@ const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
 
 const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
 
+const TRIPS_LAYER_TYPES = new Set([
+  'geoarrowtripslayer',
+  'sqlroomstripslayer',
+  'tripslayer',
+]);
+
 const RADIUS_LAYER_TYPES = new Set([
   'geoarrowscatterplotlayer',
   'scatterplotlayer',
@@ -138,6 +144,13 @@ export function usesColumnRadiusSetting(layerType: unknown) {
   return (
     typeof layerType === 'string' &&
     COLUMN_RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesTripsSettings(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    TRIPS_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 
