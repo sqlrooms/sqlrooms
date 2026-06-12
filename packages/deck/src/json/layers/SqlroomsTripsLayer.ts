@@ -94,27 +94,51 @@ export class SqlroomsTripsLayer extends CompositeLayer<{
       const nDim = (vertexData.type as arrow.FixedSizeList).listSize;
       const coordData = vertexData.children[0];
       if (!coordData) continue;
-      const flatCoords = coordData.values;
+
+      // Arrow chunks may share a single backing buffer with absolute offsets.
+      // deck.gl expects relative (zero-based) offsets for startIndices.
+      const baseOffset = geomOffsets[0] ?? 0;
+      const relativeOffsets = new Int32Array(geomOffsets.length);
+      for (let i = 0; i < geomOffsets.length; i++) {
+        relativeOffsets[i] = (geomOffsets[i] ?? 0) - baseOffset;
+      }
+      const numVertices = relativeOffsets[relativeOffsets.length - 1] ?? 0;
+
+      // Slice the coordinate buffer to only this chunk's vertices
+      const rawValues = coordData.values;
+      const coordStart = baseOffset * nDim;
+      const coordEnd = coordStart + numVertices * nDim;
+      const flatCoords =
+        coordStart > 0 || coordEnd < rawValues.length
+          ? rawValues.slice(coordStart, coordEnd)
+          : rawValues;
 
       const tsData = getTimestamps.data[chunkIdx];
       if (!tsData) continue;
       const tsChild = tsData.children[0];
       if (!tsChild) continue;
+
+      // Slice timestamps to this chunk's range (same shared-buffer issue)
+      const tsBaseOffset = tsData.valueOffsets[0] ?? 0;
+      const tsRawValues = tsChild.values;
+      const tsStart = tsBaseOffset;
+      const tsEnd = tsStart + numVertices;
+
       // TripsLayer's timestamps attribute does NOT have doublePrecision, so
       // luma.gl's type resolver rejects Float64Array. Timestamps MUST be Float32.
       let tsValues: Float32Array;
-      if (tsChild.values instanceof Float32Array) {
-        tsValues = tsChild.values;
+      if (tsRawValues instanceof Float32Array) {
+        tsValues = tsRawValues.slice(tsStart, tsEnd);
       } else {
-        tsValues = new Float32Array(tsChild.length);
-        const src = tsChild.values;
+        tsValues = new Float32Array(numVertices);
+        const src = tsRawValues;
         if (src instanceof BigInt64Array || src instanceof BigUint64Array) {
-          for (let i = 0; i < tsChild.length; i++) {
-            tsValues[i] = Number(src[i]);
+          for (let i = 0; i < numVertices; i++) {
+            tsValues[i] = Number(src[tsStart + i]);
           }
         } else {
-          for (let i = 0; i < tsChild.length; i++) {
-            tsValues[i] = Number(src[i]) || 0;
+          for (let i = 0; i < numVertices; i++) {
+            tsValues[i] = Number(src[tsStart + i]) || 0;
           }
         }
       }
@@ -145,7 +169,7 @@ export class SqlroomsTripsLayer extends CompositeLayer<{
             const values = expandToCoords(
               childValues as TypedArray,
               chunkData.type.listSize,
-              geomOffsets,
+              relativeOffsets,
             );
             binaryAttributes[propName] = {
               value: values,
@@ -156,7 +180,7 @@ export class SqlroomsTripsLayer extends CompositeLayer<{
             const values = expandToCoords(
               chunkData.values as TypedArray,
               1,
-              geomOffsets,
+              relativeOffsets,
             );
             binaryAttributes[propName] = {value: values, size: 1};
           }
@@ -183,10 +207,9 @@ export class SqlroomsTripsLayer extends CompositeLayer<{
         _pathType: 'open' as const,
         id: `${this.props.id}-geoarrow-trip-${chunkIdx}`,
         data: {
-          // Expose batch for function accessors
           data: batch,
           length: lineData.length,
-          startIndices: geomOffsets,
+          startIndices: relativeOffsets,
           attributes: binaryAttributes,
         },
       };

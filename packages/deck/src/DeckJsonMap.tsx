@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type FC,
 } from 'react';
 import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
@@ -146,6 +147,74 @@ function renderDatasetErrorOverlay(
   );
 }
 
+const TripsTimeControl: FC<{
+  currentTime: number;
+  maxTime: number;
+  playing: boolean;
+  onPlayPause: () => void;
+  onSeek: (time: number) => void;
+}> = ({currentTime, maxTime, playing, onPlayPause, onSeek}) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const progress = maxTime > 0 ? currentTime / maxTime : 0;
+
+  if (collapsed) {
+    return (
+      <button
+        onClick={() => setCollapsed(false)}
+        className="bg-background/90 pointer-events-auto rounded-md border px-2 py-1 text-xs shadow-sm"
+      >
+        Trips
+      </button>
+    );
+  }
+
+  return (
+    <div className="bg-background/90 pointer-events-auto flex items-center gap-1.5 rounded-md border px-2 py-1.5 shadow-sm">
+      <button
+        onClick={onPlayPause}
+        className="text-foreground hover:bg-accent flex h-5 w-5 shrink-0 items-center justify-center rounded"
+        title={playing ? 'Pause' : 'Play'}
+      >
+        {playing ? (
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+            <rect x="1" y="1" width="3" height="8" />
+            <rect x="6" y="1" width="3" height="8" />
+          </svg>
+        ) : (
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+            <polygon points="2,1 9,5 2,9" />
+          </svg>
+        )}
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={1000}
+        value={Math.round(progress * 1000)}
+        onChange={(e) => onSeek((Number(e.target.value) / 1000) * maxTime)}
+        className="h-1 w-24 flex-1 cursor-pointer"
+      />
+      <button
+        onClick={() => setCollapsed(true)}
+        className="text-muted-foreground hover:text-foreground flex h-4 w-4 shrink-0 items-center justify-center"
+        title="Collapse"
+      >
+        <svg
+          width="8"
+          height="8"
+          viewBox="0 0 8 8"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          fill="none"
+        >
+          <line x1="1" y1="1" x2="7" y2="7" />
+          <line x1="7" y1="1" x2="1" y2="7" />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
 // Workaround for deck.gl HeatmapLayer not releasing its WebGL framebuffer
 // when replaced by another layer type (e.g. switching heatmap → scatterplot).
 // We detect layer class changes and clear layers for one animation frame,
@@ -280,19 +349,34 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     }, [availableSpec]);
 
     const [tripsTime, setTripsTime] = useState(0);
-    const tripsAnimRef = useRef<number>(0);
+    const [tripsPlaying, setTripsPlaying] = useState(true);
+    const tripsTimeRef = useRef(0);
+
     useEffect(() => {
-      if (!hasTripsLayer) return;
-      const startTime = Date.now();
+      if (!hasTripsLayer || !tripsPlaying) return;
       let raf: number;
+      let lastFrame = Date.now();
       const tick = () => {
-        setTripsTime(Date.now() - startTime);
+        const now = Date.now();
+        tripsTimeRef.current += now - lastFrame;
+        lastFrame = now;
+        setTripsTime(tripsTimeRef.current);
         raf = requestAnimationFrame(tick);
       };
+      lastFrame = Date.now();
       raf = requestAnimationFrame(tick);
-      tripsAnimRef.current = startTime;
       return () => cancelAnimationFrame(raf);
-    }, [hasTripsLayer]);
+    }, [hasTripsLayer, tripsPlaying]);
+
+    const handleTripsPlayPause = useCallback(() => {
+      setTripsPlaying((p) => !p);
+    }, []);
+
+    const handleTripsSeek = useCallback((time: number) => {
+      const rawTime = time * 30;
+      tripsTimeRef.current = rawTime;
+      setTripsTime(rawTime);
+    }, []);
 
     const finalDeckPropsResult = convertedDeckPropsResult;
 
@@ -322,14 +406,16 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     const hasRenderingError = Boolean(finalDeckPropsResult.error);
 
     // Animate TripsLayer by injecting currentTime from the animation clock
-    const animatedLayers = useMemo(() => {
+    const animatedLayersResult = useMemo(() => {
       const mergedLayers = hasRenderingError
         ? []
         : (deckProps?.layers ??
           (convertedDeckProps.layers as unknown[] | undefined) ??
           []);
-      if (!hasTripsLayer || !Array.isArray(mergedLayers)) return mergedLayers;
-      return mergedLayers.map((layer: unknown) => {
+      if (!hasTripsLayer || !Array.isArray(mergedLayers))
+        return {layers: mergedLayers, maxTs: 0};
+      let computedMaxTs = 0;
+      const layers = mergedLayers.map((layer: unknown) => {
         if (!layer || typeof layer !== 'object') return layer;
         const layerObj = layer as {
           props?: Record<string, unknown>;
@@ -338,16 +424,18 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         const maxTs = (layerObj.props as Record<string, unknown> | undefined)
           ?._tripsMaxTimestamp as number | undefined;
         if (maxTs && maxTs > 0 && layerObj.clone) {
+          computedMaxTs = maxTs;
           const loopLength = maxTs;
           const animationSpeed = 30;
           const currentTime = (tripsTime / animationSpeed) % loopLength;
           return layerObj.clone({
             currentTime,
-            trailLength: loopLength * 0.4,
+            trailLength: Math.min(loopLength * 0.4, maxTs),
           });
         }
         return layer;
       });
+      return {layers, maxTs: computedMaxTs};
     }, [
       hasTripsLayer,
       hasRenderingError,
@@ -355,6 +443,13 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       convertedDeckProps.layers,
       tripsTime,
     ]);
+    const animatedLayers = animatedLayersResult.layers;
+    const tripsMaxTimeValue = animatedLayersResult.maxTs;
+
+    const tripsCurrentTime = useMemo(() => {
+      if (!tripsMaxTimeValue || tripsMaxTimeValue <= 0) return 0;
+      return (tripsTime / 30) % tripsMaxTimeValue;
+    }, [tripsTime, tripsMaxTimeValue]);
 
     const mergedDeckProps = {
       ...convertedDeckProps,
@@ -447,7 +542,28 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         {renderDatasetErrorOverlay(datasetStates)}
         {!hasRenderingError && showLegends ? (
           <div className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-56">
+            {hasTripsLayer && tripsMaxTimeValue > 0 ? (
+              <div className="mb-1">
+                <TripsTimeControl
+                  currentTime={tripsCurrentTime}
+                  maxTime={tripsMaxTimeValue}
+                  playing={tripsPlaying}
+                  onPlayPause={handleTripsPlayPause}
+                  onSeek={handleTripsSeek}
+                />
+              </div>
+            ) : null}
             <ColorScaleLegend legends={legends} />
+          </div>
+        ) : hasTripsLayer && tripsMaxTimeValue > 0 ? (
+          <div className="pointer-events-none absolute bottom-2 left-2 z-10">
+            <TripsTimeControl
+              currentTime={tripsCurrentTime}
+              maxTime={tripsMaxTimeValue}
+              playing={tripsPlaying}
+              onPlayPause={handleTripsPlayPause}
+              onSeek={handleTripsSeek}
+            />
           </div>
         ) : null}
       </div>
