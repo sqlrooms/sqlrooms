@@ -4,7 +4,6 @@ import {
   type DbSchemaNode,
 } from '@sqlrooms/duckdb';
 import {
-  getEffectiveSessionContextItemIds,
   getRunContextItemIds,
   type AiRunContext,
   type AiRunContextItem,
@@ -102,14 +101,14 @@ export function getRunContext(
   const session = state.ai.config.sessions.find(
     (candidate) => candidate.id === sessionId,
   );
-  const currentArtifactId = state.artifacts.config.currentArtifactId;
-  const currentArtifact = currentArtifactId
-    ? artifactsById[currentArtifactId]
+  const owningArtifactId =
+    state.artifactAi.config.aiSessionArtifacts[sessionId];
+  const owningArtifact = owningArtifactId
+    ? artifactsById[owningArtifactId]
     : undefined;
   const implicitArtifactId =
-    currentArtifact &&
-    SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type)
-      ? currentArtifact.id
+    owningArtifact && SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(owningArtifact.type)
+      ? owningArtifact.id
       : undefined;
 
   const tablesByQualifiedName = buildTablesMap(schemaTrees);
@@ -122,9 +121,13 @@ export function getRunContext(
     return session.runContext;
   }
 
-  const contextItemIds = getEffectiveSessionContextItemIds(session, {
-    implicitItemIds: implicitArtifactId ? [implicitArtifactId] : [],
-  });
+  const explicitContextItemIds = session?.draftContextItemIds ?? [];
+  const contextItemIds = implicitArtifactId
+    ? [
+        implicitArtifactId,
+        ...explicitContextItemIds.filter((id) => id !== implicitArtifactId),
+      ]
+    : explicitContextItemIds;
 
   const items = Array.from(new Set(contextItemIds))
     .map((itemId) =>

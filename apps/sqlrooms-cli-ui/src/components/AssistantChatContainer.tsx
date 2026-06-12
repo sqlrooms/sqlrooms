@@ -1,7 +1,7 @@
 import {Chat} from '@sqlrooms/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
-import React, {useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../store';
 import {AssistantContextSelector} from './AssistantContextSelector';
 
@@ -19,11 +19,46 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
   );
+  const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+  const currentArtifactId = useRoomStore(
+    (s) => s.artifacts.config.currentArtifactId,
+  );
+  const sessions = useRoomStore((s) => s.ai.config.sessions);
+  const aiSessionArtifacts = useRoomStore(
+    (s) => s.artifactAi.config.aiSessionArtifacts,
+  );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
-  const createSession = useRoomStore((s) => s.ai.createSession);
+  const createArtifactScopedSession = useRoomStore(
+    (s) => s.artifactAi.createArtifactScopedSession,
+  );
 
   const [showHistory, setShowHistory] = useState(false);
+
+  const handleCreateSession = useCallback(() => {
+    createArtifactScopedSession();
+  }, [createArtifactScopedSession]);
+
+  const filterSession = useCallback(
+    (session: (typeof sessions)[number]) =>
+      Boolean(
+        currentArtifactId &&
+        aiSessionArtifacts[session.id] === currentArtifactId,
+      ),
+    [aiSessionArtifacts, currentArtifactId],
+  );
+
+  const historyIsRunning = useMemo(() => {
+    if (!currentArtifactId || currentSession?.isRunning) {
+      return false;
+    }
+    return sessions.some(
+      (session) =>
+        session.isRunning &&
+        session.id !== currentSession?.id &&
+        aiSessionArtifacts[session.id] === currentArtifactId,
+    );
+  }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
 
   return (
     <Chat.Root>
@@ -34,7 +69,8 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
               type="button"
               variant="outline"
               className="h-12 gap-2 px-4"
-              onClick={() => createSession()}
+              onClick={handleCreateSession}
+              disabled={!currentArtifactId}
             >
               <PlusIcon className="h-4 w-4" />
               New session
@@ -45,12 +81,17 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
             {!showHistory && (
               <Chat.Header
                 onHistoryClick={() => setShowHistory(true)}
+                onCreateSession={handleCreateSession}
+                historyIsRunning={historyIsRunning}
                 className="mb-4"
               />
             )}
             {showHistory ? (
               <Chat.History
                 onBack={() => setShowHistory(false)}
+                onCreateSession={handleCreateSession}
+                filterSession={filterSession}
+                emptyLabel="No chats for this artifact yet"
                 onSelectChat={(sessionId) => {
                   const switchSession =
                     useRoomStore.getState().ai.switchSession;

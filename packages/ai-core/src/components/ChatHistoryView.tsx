@@ -9,12 +9,18 @@ import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 type ChatHistoryViewProps = {
   onBack: () => void;
   onSelectChat: (sessionId: string) => void;
+  onCreateSession?: () => void;
+  filterSession?: (session: AnalysisSessionSchema) => boolean;
+  emptyLabel?: string;
   className?: string;
 };
 
 export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   onBack,
   onSelectChat,
+  onCreateSession,
+  filterSession,
+  emptyLabel = 'No chats yet',
   className,
 }) => {
   const sessions = useStoreWithAi((s) => s.ai.config.sessions);
@@ -29,12 +35,15 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
     useState<AnalysisSessionSchema | null>(null);
 
   const sortedSessions = useMemo(() => {
-    return [...sessions].sort((a, b) => {
+    const filteredSessions = filterSession
+      ? sessions.filter(filterSession)
+      : sessions;
+    return [...filteredSessions].sort((a, b) => {
       const aTime = a.lastOpenedAt ?? 0;
       const bTime = b.lastOpenedAt ?? 0;
       return bTime - aTime;
     });
-  }, [sessions]);
+  }, [filterSession, sessions]);
 
   const handleSelectChat = useCallback(
     (sessionId: string) => {
@@ -59,9 +68,13 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   );
 
   const handleCreateAndBack = useCallback(() => {
-    createSession();
+    if (onCreateSession) {
+      onCreateSession();
+    } else {
+      createSession();
+    }
     onBack();
-  }, [createSession, onBack]);
+  }, [createSession, onBack, onCreateSession]);
 
   const handleCloseRenameDialog = useCallback(() => {
     setSessionToRename(null);
@@ -118,7 +131,7 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 py-12">
-          <p className="text-muted-foreground text-sm">No chats yet</p>
+          <p className="text-muted-foreground text-sm">{emptyLabel}</p>
           <Button
             variant="outline"
             onClick={handleCreateAndBack}

@@ -35,6 +35,7 @@ import {
   ArrowUpFromLine,
   Database,
   FileStackIcon,
+  LoaderCircleIcon,
   Plus,
   SparklesIcon,
   Table2,
@@ -215,7 +216,7 @@ function CliDataSidebarSection() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="bg-popover w-72 border-border [&_[role=menuitem]]:focus:bg-accent"
+            className="bg-popover border-border [&_[role=menuitem]]:focus:bg-accent w-72"
             align="start"
             side="right"
             sideOffset={8}
@@ -297,7 +298,12 @@ function CliArtifactsSidebarSection() {
                   type="button"
                 >
                   <Icon className="h-4 w-4" aria-hidden />
-                  <span>{artifact.name}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {artifact.name}
+                  </span>
+                  {artifact.runningSessionCount > 0 ? (
+                    <LoaderCircleIcon className="text-primary h-3.5 w-3.5 shrink-0 animate-spin" />
+                  ) : null}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
@@ -320,7 +326,7 @@ function CliArtifactsSidebarSection() {
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="bg-popover w-72 border-border [&_[role=menuitem]]:focus:bg-accent"
+        className="bg-popover border-border [&_[role=menuitem]]:focus:bg-accent w-72"
         align="start"
         side="right"
         sideOffset={8}
@@ -335,7 +341,10 @@ function CliArtifactsSidebarSection() {
               onClick={() => artifactTabs.selectArtifact(artifact.id)}
             >
               <Icon className="h-4 w-4" aria-hidden />
-              {artifact.name}
+              <span className="min-w-0 flex-1 truncate">{artifact.name}</span>
+              {artifact.runningSessionCount > 0 ? (
+                <LoaderCircleIcon className="text-primary ml-auto h-3.5 w-3.5 shrink-0 animate-spin" />
+              ) : null}
             </DropdownMenuItem>
           );
         })}
@@ -390,6 +399,10 @@ function CliSidebarFooterControls({
 function useCliArtifactSidebarTabs() {
   const artifactsConfig = useRoomStore((state) => state.artifacts.config);
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
+  const aiSessions = useRoomStore((state) => state.ai.config.sessions);
+  const aiSessionArtifacts = useRoomStore(
+    (state) => state.artifactAi.config.aiSessionArtifacts,
+  );
   const selectedTabId = useRoomStore((state) =>
     state.layout.getActiveTab('workspace'),
   );
@@ -401,6 +414,17 @@ function useCliArtifactSidebarTabs() {
   const setShowArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
+
+  const runningSessionCountsByArtifact = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const session of aiSessions) {
+      if (!session.isRunning) continue;
+      const artifactId = aiSessionArtifacts[session.id];
+      if (!artifactId) continue;
+      counts[artifactId] = (counts[artifactId] ?? 0) + 1;
+    }
+    return counts;
+  }, [aiSessionArtifacts, aiSessions]);
 
   const tabs = useMemo(
     () =>
@@ -417,8 +441,13 @@ function useCliArtifactSidebarTabs() {
           id: artifact.id,
           name: artifact.title,
           type: artifact.type,
+          runningSessionCount: runningSessionCountsByArtifact[artifact.id] ?? 0,
         })),
-    [artifactsConfig.artifactOrder, artifactsConfig.artifactsById],
+    [
+      artifactsConfig.artifactOrder,
+      artifactsConfig.artifactsById,
+      runningSessionCountsByArtifact,
+    ],
   );
 
   const selectArtifact = useCallback(

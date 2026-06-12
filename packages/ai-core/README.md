@@ -84,6 +84,11 @@ export function AiPanel() {
 }
 ```
 
+`Chat.Header` and `Chat.History` can delegate session creation to the host app
+with `onCreateSession`. `Chat.History` also accepts `filterSession` and
+`emptyLabel` so apps can present scoped histories without changing the generic
+AI session schema.
+
 ## Local Agent Chat
 
 Use `Chat.LocalAgentRoot` when a transient surface should be driven by a

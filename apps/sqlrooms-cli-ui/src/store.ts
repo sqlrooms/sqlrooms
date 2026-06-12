@@ -102,6 +102,8 @@ import {
   uploadFileToServer,
 } from './serverApi';
 import {
+  ArtifactAiConfig,
+  ArtifactAiConfigSchema,
   AppBuilderProjectConfig,
   AppBuilderProjectConfigSchema,
   RoomState,
@@ -251,6 +253,7 @@ const sliceConfigSchemas = {
   blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
+  artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
   pivot: PivotSliceConfig,
 } as const;
@@ -279,6 +282,24 @@ function getAvailableAiModels(config: AiSettingsSliceConfig) {
     })),
   ];
 }
+
+function getLatestSessionIdForArtifact(
+  state: RoomState,
+  artifactId: string,
+): string | undefined {
+  return state.ai.config.sessions
+    .filter(
+      (session) =>
+        state.artifactAi.config.aiSessionArtifacts[session.id] === artifactId,
+    )
+    .sort((a, b) => {
+      const aTime = a.lastOpenedAt ?? 0;
+      const bTime = b.lastOpenedAt ?? 0;
+      return bTime - aTime;
+    })[0]?.id;
+}
+
+let artifactAiSyncSuspended = false;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
@@ -314,6 +335,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        state.artifactAi.cleanupSessionArtifacts();
+        state.artifactAi.selectLatestSessionForArtifact(
+          state.artifacts.config.currentArtifactId,
+        );
         cliUiPersistStorage.markStateSnapshotSaved(
           persistHelpers.partialize(state),
         );
@@ -485,6 +510,95 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
           getArtifactApp: (artifactId) =>
             get().appProject.config.appsByArtifactId[artifactId],
+        },
+        artifactAi: {
+          config: ArtifactAiConfig.parse({}),
+          setSessionArtifact: (sessionId, artifactId) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                draft.artifactAi.config.aiSessionArtifacts[sessionId] =
+                  artifactId;
+              }),
+            );
+          },
+          clearSessionArtifact: (sessionId) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                delete draft.artifactAi.config.aiSessionArtifacts[sessionId];
+              }),
+            );
+          },
+          getSessionArtifactId: (sessionId) =>
+            get().artifactAi.config.aiSessionArtifacts[sessionId],
+          createArtifactScopedSession: (name, modelProvider, model) => {
+            const currentArtifactId = get().artifacts.config.currentArtifactId;
+            if (
+              !currentArtifactId ||
+              !get().artifacts.config.artifactsById[currentArtifactId]
+            ) {
+              return undefined;
+            }
+
+            artifactAiSyncSuspended = true;
+            try {
+              get().ai.createSession(name, modelProvider, model);
+              const sessionId = get().ai.getCurrentSession()?.id;
+              if (!sessionId) return undefined;
+              get().artifactAi.setSessionArtifact(sessionId, currentArtifactId);
+              return sessionId;
+            } finally {
+              artifactAiSyncSuspended = false;
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            }
+          },
+          selectLatestSessionForArtifact: (artifactId) => {
+            const sessionId = artifactId
+              ? getLatestSessionIdForArtifact(get(), artifactId)
+              : undefined;
+            if (sessionId) {
+              if (get().ai.config.currentSessionId !== sessionId) {
+                get().ai.switchSession(sessionId);
+              }
+              return;
+            }
+            if (get().ai.config.currentSessionId === undefined) {
+              return;
+            }
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                draft.ai.config.currentSessionId = undefined;
+              }),
+            );
+          },
+          cleanupSessionArtifacts: () => {
+            const state = get();
+            const sessionIds = new Set(
+              state.ai.config.sessions.map((session) => session.id),
+            );
+            const artifactIds = new Set(
+              Object.keys(state.artifacts.config.artifactsById),
+            );
+            const nextEntries = Object.entries(
+              state.artifactAi.config.aiSessionArtifacts,
+            ).filter(
+              ([sessionId, artifactId]) =>
+                sessionIds.has(sessionId) && artifactIds.has(artifactId),
+            );
+            const currentEntryCount = Object.keys(
+              state.artifactAi.config.aiSessionArtifacts,
+            ).length;
+            if (nextEntries.length === currentEntryCount) {
+              return;
+            }
+            set((stateToUpdate) =>
+              produce(stateToUpdate, (draft: RoomState) => {
+                draft.artifactAi.config.aiSessionArtifacts =
+                  Object.fromEntries(nextEntries);
+              }),
+            );
+          },
         },
         dashboard: dashboardSlice,
 
@@ -726,6 +840,26 @@ if (bridgeConfig) {
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
 syncConnectionsToDb(roomStore);
+
+let artifactAiSyncing = false;
+roomStore.subscribe(() => {
+  if (artifactAiSyncing || artifactAiSyncSuspended) return;
+  artifactAiSyncing = true;
+  try {
+    roomStore.getState().artifactAi.cleanupSessionArtifacts();
+    const state = roomStore.getState();
+    const currentArtifactId = state.artifacts.config.currentArtifactId;
+    const currentSessionId = state.ai.config.currentSessionId;
+    const currentSessionArtifactId = currentSessionId
+      ? state.artifactAi.config.aiSessionArtifacts[currentSessionId]
+      : undefined;
+    if (currentSessionArtifactId !== currentArtifactId) {
+      state.artifactAi.selectLatestSessionForArtifact(currentArtifactId);
+    }
+  } finally {
+    artifactAiSyncing = false;
+  }
+});
 
 function getAiSettingsTomlPayload(state: RoomState) {
   const currentSession = state.ai.getCurrentSession();

@@ -5,7 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
-import {HistoryIcon, PlusIcon} from 'lucide-react';
+import {HistoryIcon, LoaderCircleIcon, PlusIcon} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {DeleteSessionDialog, RenameSessionDialog} from './session';
@@ -14,11 +14,15 @@ import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 
 interface ChatHeaderProps {
   onHistoryClick: () => void;
+  onCreateSession?: () => void;
+  historyIsRunning?: boolean;
   className?: string;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onHistoryClick,
+  onCreateSession,
+  historyIsRunning = false,
   className,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -73,8 +77,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   }, []);
 
   const handleCreateSession = useCallback(() => {
+    if (onCreateSession) {
+      onCreateSession();
+      return;
+    }
     createSession();
-  }, [createSession]);
+  }, [createSession, onCreateSession]);
 
   return (
     <div
@@ -91,6 +99,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           className="gap-2"
         >
           <HistoryIcon className="h-3.5 w-3.5" />
+          {historyIsRunning ? (
+            <LoaderCircleIcon className="text-primary h-3 w-3 animate-spin" />
+          ) : null}
           History
         </Button>
         <span className="text-muted-foreground">/</span>
