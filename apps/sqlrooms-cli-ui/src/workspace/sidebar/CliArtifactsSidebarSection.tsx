@@ -41,6 +41,17 @@ export function CliArtifactsSidebarSection() {
           </Button>
         </div>
         <SidebarMenu className="gap-0.5">
+          {artifactTabs.tabs.length === 0 ? (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
+                disabled
+                type="button"
+              >
+                <span className="min-w-0 flex-1 truncate">No artifacts</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ) : null}
           {artifactTabs.tabs.map((artifact) => {
             const type = artifactTabs.artifactTypes[artifact.type];
             const Icon = type?.icon ?? FileStackIcon;
