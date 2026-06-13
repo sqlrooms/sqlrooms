@@ -2,8 +2,6 @@ import {Button} from '@sqlrooms/ui';
 import {Trash2} from 'lucide-react';
 import {useCallback, useMemo, type FC} from 'react';
 import {ColumnSelector} from './ColumnSelector';
-import {AggregationSelector} from './AggregationSelector';
-import type {AggregateFunction} from '../schemas';
 import {ColumnsProvider, useColumnsContext} from './ColumnsContext';
 import {
   NUMERIC_COLUMN_TYPES,
@@ -12,11 +10,18 @@ import {
 } from '../column-types-utils';
 import type {YFieldConfig} from '../charts/chart-types/line-chart/schema';
 
+type RenderItemFunction = (
+  fieldConfig: YFieldConfig,
+  index: number,
+  handleUpdate: (index: number, updates: Partial<YFieldConfig>) => void,
+) => React.ReactNode;
+
 export interface MultiFieldSelectorProps {
   types?: string[];
   value: YFieldConfig[];
   onChange: (value: YFieldConfig[]) => void;
-  showAggregation?: boolean;
+  onAdd: (fieldName: string) => void;
+  renderItem?: RenderItemFunction;
 }
 
 /**
@@ -33,7 +38,8 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
   types,
   value,
   onChange,
-  showAggregation = false,
+  onAdd,
+  renderItem,
 }) => {
   const {columns} = useColumnsContext();
 
@@ -60,28 +66,15 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
     [value, onChange],
   );
 
-  const handleAdd = useCallback(
-    (fieldName: string) => {
-      if (fieldName) {
-        onChange([...value, {field: fieldName, aggregate: 'sum'}]);
-      }
-    },
-    [value, onChange],
-  );
-
   return (
     <div className="space-y-1">
       {value.map((fieldConfig, index) => {
-        const aggregate = fieldConfig.aggregate || 'sum';
-
         return (
           <div
             key={fieldConfig.field}
             className="grid items-end gap-2"
             style={{
-              gridTemplateColumns: showAggregation
-                ? 'minmax(120px, 1fr) 100px 32px'
-                : 'minmax(120px, 1fr) 32px',
+              gridTemplateColumns: 'minmax(120px, 1fr) auto 32px',
             }}
           >
             <ColumnSelector
@@ -90,14 +83,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
               onChange={(newField) => handleUpdate(index, {field: newField})}
             />
 
-            {showAggregation && (
-              <AggregationSelector
-                value={aggregate}
-                onChange={(agg: AggregateFunction) =>
-                  handleUpdate(index, {aggregate: agg})
-                }
-              />
-            )}
+            {renderItem && renderItem(fieldConfig, index, handleUpdate)}
 
             <Button
               variant="ghost"
@@ -115,7 +101,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
         <ColumnSelector
           types={types}
           value={undefined}
-          onChange={handleAdd}
+          onChange={onAdd}
           placeholder="Select field..."
         />
       </ColumnsProvider>
