@@ -6,10 +6,8 @@ import {
   ThemeProvider,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {
-  CliWorkspaceSidebar,
-  CliWorkspaceTopbar,
-} from './components/CliWorkspaceSidebar';
+import {CliWorkspaceTopbar} from './workspace/CliWorkspaceTopbar';
+import {CliWorkspaceSidebar} from './workspace/sidebar';
 import {roomStore} from './store';
 
 export const Room = () => {
