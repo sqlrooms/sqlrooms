@@ -57,24 +57,33 @@ def retrieve(cache, query, get):
 
 
 def get_arrow(con, sql):
-    # Always use explicit transaction to keep it active during .to_arrow_table().
+    # Use explicit transaction to keep it active during .to_arrow_table().
     # Without this, DuckDB's auto-commit closes the transaction after con.query(),
     # causing "ActiveTransaction called without active transaction" when Arrow export
     # needs to look up CRS metadata for geometry columns.
-    con.execute("BEGIN TRANSACTION")
+    started_transaction = False
+    try:
+        con.execute("BEGIN TRANSACTION")
+        started_transaction = True
+    except Exception:
+        # Already inside a transaction — proceed without starting a new one
+        pass
     try:
         result = con.query(sql)
         if result is None:
-            con.execute("COMMIT")
+            if started_transaction:
+                con.execute("COMMIT")
             return None
         arrow_result = result.to_arrow_table()
-        con.execute("COMMIT")
+        if started_transaction:
+            con.execute("COMMIT")
         return arrow_result
     except Exception as e:
-        try:
-            con.execute("ROLLBACK")
-        except Exception:
-            pass
+        if started_transaction:
+            try:
+                con.execute("ROLLBACK")
+            except Exception:
+                pass
         err_msg = str(e)
         if "ActiveTransaction" in err_msg or "active transaction" in err_msg.lower():
             # Explicit transaction wasn't enough; fall back to casting geometry to WKB
