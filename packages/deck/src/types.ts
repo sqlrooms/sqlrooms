@@ -91,6 +91,7 @@ export type DeckJsonMapProps = {
   onDatasetStatesChange?: (
     states: Record<string, PreparedDeckDatasetState>,
   ) => void;
+  onRenderingError?: (error: Error) => void;
 };
 
 export function isSqlDatasetInput(

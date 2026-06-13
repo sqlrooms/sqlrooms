@@ -276,6 +276,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       className,
       children,
       onDatasetStatesChange,
+      onRenderingError,
     },
     ref,
   ) {
@@ -377,9 +378,15 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     const finalDeckPropsResult = convertedDeckPropsResult;
 
+    const onRenderingErrorRef = useRef(onRenderingError);
+    useEffect(() => {
+      onRenderingErrorRef.current = onRenderingError;
+    }, [onRenderingError]);
+
     useEffect(() => {
       if (finalDeckPropsResult.error) {
         console.error(finalDeckPropsResult.error);
+        onRenderingErrorRef.current?.(finalDeckPropsResult.error);
       }
     }, [finalDeckPropsResult.error]);
 
@@ -536,7 +543,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     return (
       <div className={cn('relative h-full w-full', className)}>
-        {hasRenderingError ? (
+        {hasRenderingError && !onRenderingError ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
             <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
               {`Map couldn't be rendered. Check the console for details.`}

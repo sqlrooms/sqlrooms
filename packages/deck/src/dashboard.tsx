@@ -53,7 +53,8 @@ import {
 } from './mapConfigUtils';
 
 /**
- * Extracts column names from common DuckDB "column not found" error messages.
+ * Extracts column names from common DuckDB "column not found" error messages
+ * and layer geometry incompatibility errors.
  * Returns the column names if detected, or null for unrecognized errors.
  */
 function parseMissingColumnsFromError(message: string): string[] | null {
@@ -69,11 +70,30 @@ function parseMissingColumnsFromError(message: string): string[] | null {
   );
   if (colMatch) return [colMatch[1]!];
 
+  // "Geometry column "X" was not found"
+  const geomNotFound = message.match(
+    /Geometry column "([^"]+)" was not found/i,
+  );
+  if (geomNotFound) return [geomNotFound[1]!];
+
+  return null;
+}
+
+/**
+ * Detects geometry type mismatch errors (e.g. polygon layer on point data).
+ */
+function parseGeometryMismatchError(
+  message: string,
+): {required: string; found: string} | null {
+  const match = message.match(
+    /requires (\w+) geometry .+ but only (\w+) coordinates were found/i,
+  );
+  if (match) return {required: match[1]!, found: match[2]!};
   return null;
 }
 
 function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
-  if (issue.kind === 'sql-error') {
+  if (issue.kind === 'sql-error' || issue.kind === 'render-error') {
     const missingColumns = parseMissingColumnsFromError(issue.message);
     if (missingColumns) {
       return (
@@ -90,6 +110,21 @@ function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
                 </span>{' '}
               </span>
             ))}
+          </div>
+        </div>
+      );
+    }
+
+    const geomMismatch = parseGeometryMismatchError(issue.message);
+    if (geomMismatch) {
+      return (
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+          <div className="mb-2 text-center font-semibold">
+            The visualization can&apos;t be displayed
+          </div>
+          <div className="text-center text-sm">
+            This layer requires {geomMismatch.required} geometry, but the
+            current dataset only has {geomMismatch.found} coordinates.
           </div>
         </div>
       );
@@ -642,6 +677,19 @@ function DeckMapDashboardRenderer({
     [clearPanelIssue, dashboardId, panel.id, reportPanelIssue],
   );
 
+  const handleRenderingError = useCallback(
+    (error: Error) => {
+      reportPanelIssue(dashboardId, panel.id, {
+        kind: 'render-error',
+        panelId: panel.id,
+        chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+        message: error.message,
+        recoverable: true,
+      });
+    },
+    [dashboardId, panel.id, reportPanelIssue],
+  );
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -950,6 +998,7 @@ function DeckMapDashboardRenderer({
         mapStyle={mapConfig.mapStyle}
         mapProps={mapConfig.mapProps}
         showLegends={mapConfig.showLegends}
+        onRenderingError={handleRenderingError}
         deckProps={{
           controller: true,
           ...(mapConfig.interaction
