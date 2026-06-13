@@ -95,25 +95,27 @@ function getColumnValues(vector: arrow.Vector) {
   return Array.from({length: vector.length}, (_, index) => vector.get(index));
 }
 
+function getColumn(table: arrow.Table, field: string) {
+  const fieldName = resolveFieldName(table, field);
+  if (!fieldName) return null;
+  const vector = table.getChild(fieldName);
+  if (!vector) return null;
+  return {fieldName, vector};
+}
+
 export function compileColorScale(options: {
   table: arrow.Table;
   colorScale: ColorScaleConfig;
 }) {
   const {table, colorScale} = options;
-  const fieldName = resolveFieldName(table, colorScale.field);
-  if (!fieldName) {
+  const column = getColumn(table, colorScale.field);
+  if (!column) {
     console.warn(
       `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use default colors.`,
     );
     return () => null;
   }
-  const vector = table.getChild(fieldName);
-  if (!vector) {
-    console.warn(
-      `[compileColorScale] Unable to read field "${fieldName}". Color scale will use default colors.`,
-    );
-    return () => null;
-  }
+  const {fieldName, vector} = column;
   const mapper = createColorScaleMapper({
     colorScale,
     values: getColumnValues(vector),
@@ -129,11 +131,9 @@ export function buildColorScaleLegend(options: {
   title?: string;
 }): ResolvedColorLegend | null {
   const {table, colorScale} = options;
-  const fieldName = resolveFieldName(table, colorScale.field);
-  if (!fieldName) return null;
-  const vector = table.getChild(fieldName);
-  if (!vector) return null;
-  const values = getColumnValues(vector);
+  const column = getColumn(table, colorScale.field);
+  if (!column) return null;
+  const values = getColumnValues(column.vector);
 
   if (
     colorScale.type !== 'categorical' &&
