@@ -17,14 +17,28 @@ type DetectGeometryColumnOptions = {
   geometryEncodingHint?: GeometryEncodingHint;
 };
 
-const LON_NAMES = new Set(['longitude', 'lon', 'lng', 'long']);
-const LAT_NAMES = new Set(['latitude', 'lat']);
+const LON_NAMES = new Set([
+  'longitude',
+  'lon',
+  'lng',
+  'long',
+  'source_lon',
+  'target_lon',
+]);
+const LAT_NAMES = new Set(['latitude', 'lat', 'source_lat', 'target_lat']);
 
 function getFieldNames(table: arrow.Table) {
   return table.schema.fields.map((field) => field.name);
 }
 
-function findCoordinateColumns(table: arrow.Table) {
+/**
+ * Detects longitude/latitude columns in an Arrow table by matching
+ * field names against known patterns (case-insensitive).
+ * Returns the original field names if found, or null.
+ */
+export function findCoordinateColumns(
+  table: arrow.Table,
+): {lonField: string; latField: string} | null {
   const fields = table.schema.fields;
   let lonField: string | undefined;
   let latField: string | undefined;

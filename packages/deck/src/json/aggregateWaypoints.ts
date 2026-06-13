@@ -1,4 +1,5 @@
 import * as arrow from 'apache-arrow';
+import {findCoordinateColumns} from '../prepare/detectGeometryColumn';
 
 const GROUP_ID_PATTERNS = [
   'path_id',
@@ -50,28 +51,9 @@ function findColumnByPatterns(
 function findLatLonColumns(
   table: arrow.Table,
 ): {lat: string; lon: string} | null {
-  const fields = table.schema.fields.map((f) => f.name);
-  const lower = fields.map((n) => n.toLowerCase());
-  const latPatterns = ['lat', 'latitude', 'source_lat'];
-  const lonPatterns = ['lon', 'lng', 'longitude', 'source_lon'];
-  let lat: string | undefined;
-  let lon: string | undefined;
-  for (const p of latPatterns) {
-    const idx = lower.indexOf(p);
-    if (idx >= 0) {
-      lat = fields[idx];
-      break;
-    }
-  }
-  for (const p of lonPatterns) {
-    const idx = lower.indexOf(p);
-    if (idx >= 0) {
-      lon = fields[idx];
-      break;
-    }
-  }
-  if (lat && lon) return {lat, lon};
-  return null;
+  const result = findCoordinateColumns(table);
+  if (!result) return null;
+  return {lat: result.latField, lon: result.lonField};
 }
 
 /**
