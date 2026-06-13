@@ -102,11 +102,16 @@ export function compileColorScale(options: {
   const {table, colorScale} = options;
   const resolved = resolveFieldName(table, colorScale.field);
   if (!resolved) {
-    // Field not found — return a no-op that yields null (uses layer default color)
+    console.warn(
+      `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use default colors.`,
+    );
     return () => null;
   }
   const vector = table.getChild(resolved);
   if (!vector) {
+    console.warn(
+      `[compileColorScale] Unable to read field "${resolved}". Color scale will use default colors.`,
+    );
     return () => null;
   }
   const mapper = createColorScaleMapper({
