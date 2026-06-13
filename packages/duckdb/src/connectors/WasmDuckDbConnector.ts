@@ -226,7 +226,11 @@ export function createWasmDuckDbConnector(
         if (opts && isSpatialLoadFileOptions(opts)) {
           await conn!.query(loadSpatial(tableName, fileName, opts));
         } else if (!opts?.method && /\.geojson$/i.test(fileName)) {
-          await conn!.query(loadSpatial(tableName, fileName, opts ?? {}));
+          try {
+            await conn!.query(loadSpatial(tableName, fileName, opts ?? {}));
+          } catch {
+            await conn!.query(load('auto', tableName, fileName, opts));
+          }
         } else {
           await conn!.query(
             load(opts?.method ?? 'auto', tableName, fileName, opts),

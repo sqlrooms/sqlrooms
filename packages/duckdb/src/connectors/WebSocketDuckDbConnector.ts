@@ -395,6 +395,12 @@ export function createWebSocketDuckDbConnector(
         sql = loadSpatial(tableName, filePath, opts);
       } else if (!opts?.method && /\.geojson$/i.test(filePath)) {
         sql = loadSpatial(tableName, filePath, opts ?? {});
+        try {
+          await impl.executeQueryInternal?.(sql, new AbortController().signal);
+          return;
+        } catch {
+          sql = load('auto', tableName, filePath, opts);
+        }
       } else {
         sql = load(opts?.method ?? 'auto', tableName, filePath, opts);
       }
