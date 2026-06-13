@@ -16,8 +16,8 @@ type DetectGeometryColumnOptions = {
   geometryEncodingHint?: GeometryEncodingHint;
 };
 
-const LON_NAMES = new Set(['longitude', 'lon', 'lng', 'long', 'x']);
-const LAT_NAMES = new Set(['latitude', 'lat', 'y']);
+const LON_NAMES = new Set(['longitude', 'lon', 'lng', 'long']);
+const LAT_NAMES = new Set(['latitude', 'lat']);
 
 function getFieldNames(table: arrow.Table) {
   return table.schema.fields.map((field) => field.name);
