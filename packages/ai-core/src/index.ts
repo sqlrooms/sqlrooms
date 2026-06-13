@@ -13,6 +13,20 @@ export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
 export {useElapsedTime} from './hooks/useElapsedTime';
+export {
+  cleanGeneratedSessionTitle,
+  generateSessionTitle,
+  getSessionUserMessageText,
+  isDefaultGeneratedSessionName,
+  useGenerateSessionTitle,
+} from './hooks/useGenerateSessionTitle';
+export type {
+  GenerateSessionTitleArgs,
+  GenerateSessionTitleOptions,
+  GenerateSessionTitlePromptOptions,
+  GenerateSessionTitleResult,
+  UseGenerateSessionTitleOptions,
+} from './hooks/useGenerateSessionTitle';
 export {Chat, type LocalAgentChatRootProps} from './components/Chat';
 export {ContextSelector} from './components/context/ContextSelector';
 export {

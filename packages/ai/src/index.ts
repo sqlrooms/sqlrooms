@@ -99,6 +99,20 @@ export type {
 export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
+export {
+  cleanGeneratedSessionTitle,
+  generateSessionTitle,
+  getSessionUserMessageText,
+  isDefaultGeneratedSessionName,
+  useGenerateSessionTitle,
+} from '@sqlrooms/ai-core';
+export type {
+  GenerateSessionTitleArgs,
+  GenerateSessionTitleOptions,
+  GenerateSessionTitlePromptOptions,
+  GenerateSessionTitleResult,
+  UseGenerateSessionTitleOptions,
+} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';

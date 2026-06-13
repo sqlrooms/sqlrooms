@@ -89,6 +89,14 @@ with `onCreateSession`. `Chat.History` also accepts `filterSession` and
 `emptyLabel` so apps can present scoped histories without changing the generic
 AI session schema.
 
+Use `generateSessionTitle` when apps want an imperative helper that turns a
+session's early user messages into a concise title via `ai.sendPrompt`, cleans
+the model output, and renames the session. Use `useGenerateSessionTitle` in React
+surfaces that should watch the current session and trigger the helper after new
+user messages. The hook handles debouncing and duplicate-generation guards.
+Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
+app-specific readiness checks and model choices outside the shared package.
+
 ## Local Agent Chat
 
 Use `Chat.LocalAgentRoot` when a transient surface should be driven by a
@@ -135,7 +143,7 @@ const matches = findChatSearchMatches(blocks, query);
 
 ## Useful exports
 
-- Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`
+- Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
 - Chat UI: `Chat`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
 - Types: `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
