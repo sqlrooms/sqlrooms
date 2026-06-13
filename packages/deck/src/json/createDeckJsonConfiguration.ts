@@ -2,6 +2,7 @@ import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
+import {synthesizePointVector} from '../prepare/synthesizePointVector';
 import type {ResolvedGeometryColumn} from '../prepare/types';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
@@ -153,29 +154,9 @@ function trySynthesizeGeometryFromBinding(
   const lonVector = table.getChild(lonField);
   if (!latVector || !lonVector) return null;
 
-  const numRows = table.numRows;
-  const flatCoords = new Float64Array(numRows * 2);
-  for (let i = 0; i < numRows; i++) {
-    flatCoords[i * 2] = Number(lonVector.get(i)) || 0;
-    flatCoords[i * 2 + 1] = Number(latVector.get(i)) || 0;
-  }
-
-  const coordField = new arrow.Field('xy', new arrow.Float64(), false);
-  const pointType = new arrow.FixedSizeList(2, coordField);
-  const floatData = arrow.makeData({
-    type: new arrow.Float64(),
-    length: numRows * 2,
-    data: flatCoords,
-  });
-  const pointData = arrow.makeData({
-    type: pointType,
-    length: numRows,
-    child: floatData,
-  });
-
   return {
     columnName: configKey,
-    vector: new arrow.Vector([pointData]),
+    vector: synthesizePointVector(lonVector, latVector, table.numRows),
     encoding: 'geoarrow.point',
     nativeGeoArrow: true,
   };

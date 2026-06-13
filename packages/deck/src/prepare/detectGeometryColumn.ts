@@ -4,6 +4,7 @@ import {
 } from '@loaders.gl/geoarrow';
 import * as arrow from 'apache-arrow';
 import {isDirectGeoArrowEncoding} from './geoarrow';
+import {synthesizePointVector} from './synthesizePointVector';
 import type {
   GeometryEncodingHint,
   ResolvedGeometryColumn,
@@ -48,30 +49,8 @@ function synthesizeGeoArrowPointColumn(
     );
   }
 
-  const numRows = table.numRows;
-  const flatCoords = new Float64Array(numRows * 2);
-
-  for (let i = 0; i < numRows; i++) {
-    flatCoords[i * 2] = Number(lonVector.get(i)) || 0;
-    flatCoords[i * 2 + 1] = Number(latVector.get(i)) || 0;
-  }
-
-  const coordField = new arrow.Field('xy', new arrow.Float64(), false);
-  const pointType = new arrow.FixedSizeList(2, coordField);
-
-  const floatData = arrow.makeData({
-    type: new arrow.Float64(),
-    length: numRows * 2,
-    data: flatCoords,
-  });
-  const pointData = arrow.makeData({
-    type: pointType,
-    length: numRows,
-    child: floatData,
-  });
-
   return {
-    vector: new arrow.Vector([pointData]),
+    vector: synthesizePointVector(lonVector, latVector, table.numRows),
     encoding: 'geoarrow.point' as ResolvedGeometryEncoding,
   };
 }
