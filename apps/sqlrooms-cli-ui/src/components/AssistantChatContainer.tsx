@@ -2,7 +2,7 @@ import {Chat, isAnalysisSessionEmpty} from '@sqlrooms/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
-import {useRoomStore} from '../store';
+import {isAiSessionVisibleForArtifact, useRoomStore} from '../store';
 import {AssistantContextSelector} from './AssistantContextSelector';
 import {
   isDefaultAssistantSessionName,
@@ -55,9 +55,10 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   const filterSession = useCallback(
     (session: (typeof sessions)[number]) =>
-      Boolean(
-        currentArtifactId &&
-        aiSessionArtifacts[session.id] === currentArtifactId,
+      isAiSessionVisibleForArtifact(
+        aiSessionArtifacts,
+        session.id,
+        currentArtifactId,
       ),
     [aiSessionArtifacts, currentArtifactId],
   );
@@ -70,7 +71,11 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
       (session) =>
         session.isRunning &&
         session.id !== currentSession?.id &&
-        aiSessionArtifacts[session.id] === currentArtifactId,
+        isAiSessionVisibleForArtifact(
+          aiSessionArtifacts,
+          session.id,
+          currentArtifactId,
+        ),
     );
   }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
 
