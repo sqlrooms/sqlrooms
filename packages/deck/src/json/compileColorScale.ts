@@ -100,17 +100,17 @@ export function compileColorScale(options: {
   colorScale: ColorScaleConfig;
 }) {
   const {table, colorScale} = options;
-  const resolved = resolveFieldName(table, colorScale.field);
-  if (!resolved) {
+  const fieldName = resolveFieldName(table, colorScale.field);
+  if (!fieldName) {
     console.warn(
       `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use default colors.`,
     );
     return () => null;
   }
-  const vector = table.getChild(resolved);
+  const vector = table.getChild(fieldName);
   if (!vector) {
     console.warn(
-      `[compileColorScale] Unable to read field "${resolved}". Color scale will use default colors.`,
+      `[compileColorScale] Unable to read field "${fieldName}". Color scale will use default colors.`,
     );
     return () => null;
   }
@@ -120,7 +120,7 @@ export function compileColorScale(options: {
   });
 
   return (value: unknown) =>
-    mapper(getGeoArrowOrRowValue({value, fieldName: resolved, vector}));
+    mapper(getGeoArrowOrRowValue({value, fieldName, vector}));
 }
 
 export function buildColorScaleLegend(options: {
@@ -129,9 +129,9 @@ export function buildColorScaleLegend(options: {
   title?: string;
 }): ResolvedColorLegend | null {
   const {table, colorScale} = options;
-  const resolved = resolveFieldName(table, colorScale.field);
-  if (!resolved) return null;
-  const vector = table.getChild(resolved);
+  const fieldName = resolveFieldName(table, colorScale.field);
+  if (!fieldName) return null;
+  const vector = table.getChild(fieldName);
   if (!vector) return null;
   const values = getColumnValues(vector);
 
