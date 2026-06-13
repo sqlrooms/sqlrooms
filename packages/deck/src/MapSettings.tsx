@@ -721,6 +721,45 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
+        {showArcColumnSetting && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">Flat lines</span>
+            <Switch
+              checked={activeLayer?.getHeight === 0}
+              onCheckedChange={(checked) =>
+                applyConfig(
+                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
+                    ...layer,
+                    getHeight: checked ? 0 : undefined,
+                  })),
+                )
+              }
+            />
+          </div>
+        )}
+
+        {showArcColumnSetting && (
+          <Field
+            label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 1}px`}
+          >
+            <Slider
+              min={1}
+              max={20}
+              step={1}
+              value={[(activeLayer?.widthMinPixels as number | undefined) ?? 1]}
+              onValueChange={(values) => {
+                const value = values[0] ?? 1;
+                applyConfig(
+                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
+                    ...layer,
+                    widthMinPixels: value,
+                  })),
+                );
+              }}
+            />
+          </Field>
+        )}
+
         {dataTable &&
           !showGeometryColumnSetting &&
           !showH3ColumnSetting &&
