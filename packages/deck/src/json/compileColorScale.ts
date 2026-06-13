@@ -96,11 +96,20 @@ function getColumnValues(vector: arrow.Vector) {
 }
 
 function getColumn(table: arrow.Table, field: string) {
-  const fieldName = resolveFieldName(table, field);
-  if (!fieldName) return null;
-  const vector = table.getChild(fieldName);
-  if (!vector) return null;
-  return {fieldName, vector};
+  const resolvedFieldName = resolveFieldName(table, field);
+  if (!resolvedFieldName) {
+    throw new Error(`Unknown colorScale field "${field}".`);
+  }
+
+  const vector = table.getChild(resolvedFieldName);
+  if (!vector) {
+    throw new Error(`Unable to read colorScale field "${resolvedFieldName}".`);
+  }
+
+  return {
+    fieldName: resolvedFieldName,
+    vector,
+  };
 }
 
 export function compileColorScale(options: {
@@ -108,8 +117,10 @@ export function compileColorScale(options: {
   colorScale: ColorScaleConfig;
 }) {
   const {table, colorScale} = options;
-  const column = getColumn(table, colorScale.field);
-  if (!column) {
+  let column;
+  try {
+    column = getColumn(table, colorScale.field);
+  } catch {
     console.warn(
       `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use default colors.`,
     );
@@ -131,9 +142,8 @@ export function buildColorScaleLegend(options: {
   title?: string;
 }): ResolvedColorLegend | null {
   const {table, colorScale} = options;
-  const column = getColumn(table, colorScale.field);
-  if (!column) return null;
-  const values = getColumnValues(column.vector);
+  const {vector} = getColumn(table, colorScale.field);
+  const values = getColumnValues(vector);
 
   if (
     colorScale.type !== 'categorical' &&
