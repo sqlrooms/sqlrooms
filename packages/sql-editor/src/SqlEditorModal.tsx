@@ -58,6 +58,7 @@ const SqlEditorModal: React.FC<SqlEditorProps> = (props) => {
       <DialogContent
         className="h-screen max-h-screen w-screen max-w-[100vw] p-3"
         showCloseButton={false}
+        onPointerDownOutside={(event) => event.preventDefault()}
       >
         <DialogHeader className="sr-only">
           <DialogTitle>SQL Editor</DialogTitle>
