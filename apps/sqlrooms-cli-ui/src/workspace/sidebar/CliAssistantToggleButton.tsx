@@ -3,10 +3,17 @@ import {SparklesIcon} from 'lucide-react';
 import {useRoomStore} from '../../store';
 
 export function CliAssistantToggleButton() {
+  const showArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.showArtifactChooser,
+  );
   const toggleCollapsed = useRoomStore((state) => state.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((state) =>
     state.layout.isCollapsed('assistant-sidebar'),
   );
+
+  if (showArtifactChooser) {
+    return null;
+  }
 
   return (
     <Tooltip>
