@@ -75,8 +75,6 @@ export type DeckJsonMapProps = {
   datasets: Record<string, DeckDatasetInput>;
   mapStyle?: string;
   /**
-   * When true, deck.gl layers are inserted into MapLibre's layer stack sharing
-   * the same WebGL2 context. This allows rendering deck layers between basemap
    * When true, deck.gl renders into the map's own WebGL context rather than
    * creating a separate overlay canvas. This halves the number of WebGL
    * contexts per map panel (from 2 to 1), which matters because browsers
