@@ -1,9 +1,13 @@
-import {Chat} from '@sqlrooms/ai';
+import {Chat, isAnalysisSessionEmpty} from '@sqlrooms/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../store';
 import {AssistantContextSelector} from './AssistantContextSelector';
+import {
+  isDefaultAssistantSessionName,
+  useGenSessionTitle,
+} from './useGenSessionTitle';
 
 interface AssistantChatContainerProps {
   contextDropTarget: {
@@ -34,10 +38,20 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   );
 
   const [showHistory, setShowHistory] = useState(false);
+  useGenSessionTitle();
+
+  const createSessionDisabled = Boolean(
+    currentSession &&
+      isAnalysisSessionEmpty(currentSession) &&
+      isDefaultAssistantSessionName(currentSession.name),
+  );
 
   const handleCreateSession = useCallback(() => {
+    if (createSessionDisabled) {
+      return;
+    }
     createArtifactScopedSession();
-  }, [createArtifactScopedSession]);
+  }, [createArtifactScopedSession, createSessionDisabled]);
 
   const filterSession = useCallback(
     (session: (typeof sessions)[number]) =>
@@ -82,6 +96,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
               <Chat.Header
                 onHistoryClick={() => setShowHistory(true)}
                 onCreateSession={handleCreateSession}
+                createSessionDisabled={createSessionDisabled}
                 historyIsRunning={historyIsRunning}
                 className="mb-4"
               />
@@ -90,6 +105,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
               <Chat.History
                 onBack={() => setShowHistory(false)}
                 onCreateSession={handleCreateSession}
+                createSessionDisabled={createSessionDisabled}
                 filterSession={filterSession}
                 emptyLabel="No chats for this artifact yet"
                 onSelectChat={(sessionId) => {

@@ -16,6 +16,7 @@ import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 interface ChatHeaderProps {
   onHistoryClick: () => void;
   onCreateSession?: () => void;
+  createSessionDisabled?: boolean;
   historyIsRunning?: boolean;
   className?: string;
 }
@@ -23,6 +24,7 @@ interface ChatHeaderProps {
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onHistoryClick,
   onCreateSession,
+  createSessionDisabled = false,
   historyIsRunning = false,
   className,
 }) => {
@@ -70,12 +72,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   }, []);
 
   const handleCreateSession = useCallback(() => {
+    if (createSessionDisabled) {
+      return;
+    }
     if (onCreateSession) {
       onCreateSession();
       return;
     }
     createSession();
-  }, [createSession, onCreateSession]);
+  }, [createSession, createSessionDisabled, onCreateSession]);
 
   return (
     <div
@@ -103,9 +108,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <TooltipContent>History</TooltipContent>
         </Tooltip>
         <EditableText
-          value={currentSession?.name || 'New Chat'}
+          value={currentSession?.name || 'Untitled'}
           onChange={handleRename}
-          placeholder="New Chat"
+          placeholder="Untitled"
           selectOnFocus
           isReadOnly={!currentSession}
           className="text-foreground hover:bg-accent h-8 max-w-full min-w-0 border-transparent text-sm leading-none font-semibold shadow-none ring-0 focus-visible:ring-1"
@@ -120,6 +125,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleCreateSession}
+              disabled={createSessionDisabled}
               aria-label="New session"
             >
               <PlusIcon className="h-4 w-4" />

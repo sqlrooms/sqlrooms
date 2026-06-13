@@ -10,6 +10,7 @@ type ChatHistoryViewProps = {
   onBack: () => void;
   onSelectChat: (sessionId: string) => void;
   onCreateSession?: () => void;
+  createSessionDisabled?: boolean;
   filterSession?: (session: AnalysisSessionSchema) => boolean;
   emptyLabel?: string;
   className?: string;
@@ -19,6 +20,7 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   onBack,
   onSelectChat,
   onCreateSession,
+  createSessionDisabled = false,
   filterSession,
   emptyLabel = 'No chats yet',
   className,
@@ -68,13 +70,16 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   );
 
   const handleCreateAndBack = useCallback(() => {
+    if (createSessionDisabled) {
+      return;
+    }
     if (onCreateSession) {
       onCreateSession();
     } else {
       createSession();
     }
     onBack();
-  }, [createSession, onBack, onCreateSession]);
+  }, [createSession, createSessionDisabled, onBack, onCreateSession]);
 
   const handleCloseRenameDialog = useCallback(() => {
     setSessionToRename(null);
@@ -135,6 +140,7 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
           <Button
             variant="outline"
             onClick={handleCreateAndBack}
+            disabled={createSessionDisabled}
             className="gap-2"
           >
             <PlusIcon className="h-4 w-4" />
