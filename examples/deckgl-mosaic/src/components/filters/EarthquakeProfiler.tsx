@@ -30,7 +30,11 @@ export const EarthquakeProfiler: FC<EarthquakeProfilerProps> = ({
     <section
       className={cn('bg-background flex min-h-0 flex-col border-t', className)}
     >
-      <DataTableExplorer pageSize={25} selection={brush} tableName={dataTable}>
+      <DataTableExplorer
+        pageSize={25}
+        selection={brush}
+        tableName={dataTable.table}
+      >
         <div className="flex items-center justify-between gap-4 px-3 py-2">
           <div>
             <h2 className="text-sm font-semibold">Earthquake Profiler</h2>

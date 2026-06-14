@@ -33,7 +33,7 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
       : undefined;
 
   const explorer = useDataTableExplorer({
-    tableName: selectedTable,
+    tableName: selectedTable.table,
     pageSize: pageSize ?? 10,
     selectionName,
   });

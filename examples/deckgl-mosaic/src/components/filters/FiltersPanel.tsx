@@ -32,6 +32,10 @@ export const FiltersPanel: FC<{className?: string}> = ({className}) => {
 const FiltersPanelContent = ({className}: {className?: string}) => {
   const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
   const tables = useRoomStore((state) => state.db.tables);
+  const earthquakesTable = useMemo(
+    () => tables.find((t) => t.tableName === 'earthquakes'),
+    [tables],
+  );
 
   // Shared params map for cross-filtering across all charts
   const paramsMap = useMemo(
@@ -54,10 +58,9 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
 
   // Get columns for the earthquakes table
   const columns: ChartBuilderColumn[] = useMemo(() => {
-    const table = tables.find((t) => t.tableName === 'earthquakes');
-    if (!table?.columns) return [];
-    return table.columns.map((c) => ({name: c.name, type: c.type}));
-  }, [tables]);
+    if (!earthquakesTable?.columns) return [];
+    return earthquakesTable.columns.map((c) => ({name: c.name, type: c.type}));
+  }, [earthquakesTable]);
 
   const handleSpecChange = useCallback((chartId: string, newSpec: Spec) => {
     setCharts((prev) =>
@@ -94,14 +97,22 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
           console.error(`Unknown chart type: ${config.chartType}`);
           return;
         }
+        if (!earthquakesTable) {
+          console.error('Earthquakes table is not available');
+          return;
+        }
         // chartTypes is filtered to only spec-based types, so createSpec exists
-        const spec = chartTypeDef.createSpec('earthquakes', config.settings);
+        const spec = chartTypeDef.createSpec({
+          dataTable: earthquakesTable,
+          settings: config.settings,
+          selectionName: 'brush',
+        });
         setCharts((prev) => [{id, title, spec}, ...prev]);
       } catch (error) {
         console.error('Failed to create chart:', error);
       }
     },
-    [chartTypes],
+    [chartTypes, earthquakesTable],
   );
 
   const handleRemoveChart = useCallback((chartId: string) => {

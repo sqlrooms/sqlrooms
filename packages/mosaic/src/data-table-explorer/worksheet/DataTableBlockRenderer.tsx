@@ -80,7 +80,7 @@ export const DataTableBlockRenderer: FC<
     <DataTableExplorer
       pageSize={25}
       selectionName={selectionName}
-      tableName={selectedTable}
+      tableName={selectedTable.table}
     >
       <div className="flex h-full min-h-0 flex-col">
         <DataTableBlockHeader
