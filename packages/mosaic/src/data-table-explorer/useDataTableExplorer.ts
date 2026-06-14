@@ -1,6 +1,6 @@
 import {useDebounce} from '@sqlrooms/ui';
 import {useStoreWithMosaic} from '../MosaicSlice';
-import {DataTable} from '@sqlrooms/db';
+import type {DataTable} from '@sqlrooms/db';
 import type {
   DataTableExplorerOptions,
   UseDataTableExplorerReturn,
@@ -12,12 +12,6 @@ import {useDataTableExplorerLifecycles} from './hooks/useDataTableExplorerLifecy
 import {useDataTableExplorerColumns} from './hooks/useDataTableExplorerColumns';
 import {useDataTableExplorerStatus} from './hooks/useDataTableExplorerStatus';
 import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisiblePage';
-
-function getTableReference(table: DataTable): string {
-  return [table.table.database, table.table.schema, table.table.table]
-    .filter((part): part is string => Boolean(part))
-    .join('.');
-}
 
 /**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
@@ -37,7 +31,7 @@ export function useDataTableExplorer(
     tableName: table,
   } = options;
 
-  const tableName = getTableReference(table);
+  const tableName = table.table.toString();
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const {selection, selectionVersion} = useDataTableExplorerSelection({

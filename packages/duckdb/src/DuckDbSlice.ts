@@ -8,6 +8,7 @@ import {
   isQualifiedTableName,
   joinStatements,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
   QualifiedTableName,
   QueryHandle,
   SchemaWithTables,
@@ -694,9 +695,12 @@ export function createDuckDbSlice({
               schema: get().db.currentSchema,
               database: get().db.currentDatabase,
               ...(typeof tableName === 'string'
-                ? {table: tableName}
+                ? (parseQualifiedSqlIdentifier(tableName) ?? {})
                 : tableName),
             };
+            if (!table) {
+              return undefined;
+            }
             return get().db.tables.find(
               (t) =>
                 t.table.table === table &&

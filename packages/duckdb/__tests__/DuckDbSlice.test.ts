@@ -168,6 +168,40 @@ describe('DuckDbSlice', () => {
     });
   });
 
+  describe('findTableByName', () => {
+    it('finds the current-schema table from an unqualified name', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE simple_lookup (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(
+        store.getState().db.findTableByName('simple_lookup'),
+      ).toMatchObject({
+        table: {table: 'simple_lookup'},
+      });
+    });
+
+    it('finds tables from quoted qualified SQL references', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE SCHEMA "analytics.2026"');
+      await connector.query(
+        'CREATE TABLE "analytics.2026"."daily events" (id INT)',
+      );
+      const tables = await store.getState().db.refreshTableSchemas();
+      const table = tables.find(
+        (candidate) => candidate.table.table === 'daily events',
+      );
+
+      expect(table).toBeDefined();
+      expect(
+        store.getState().db.findTableByName('"analytics.2026"."daily events"'),
+      ).toBe(table);
+      expect(store.getState().db.findTableByName(table!.table.toString())).toBe(
+        table,
+      );
+    });
+  });
+
   describe('addTable', () => {
     it('should load objects using connector.loadObjects', async () => {
       const data = [

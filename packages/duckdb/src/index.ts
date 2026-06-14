@@ -93,6 +93,7 @@ export {
   loadSpatial,
   makeLimitQuery,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,
