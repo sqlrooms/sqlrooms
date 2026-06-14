@@ -10,7 +10,7 @@ import {
 import {usePanelClientRegistration} from '../../dashboard/usePanelClientRegistration';
 import {useDataTableExplorerPanelClients} from './useDataTableExplorerPanelClients';
 import {FC} from 'react';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 import {useDataTableExplorer} from '../useDataTableExplorer';
 import {MosaicDashboardDataTableExplorerHeaderActions} from './MosaicDashboardDataTableExplorerHeaderActions';
 import type {DataTable} from '@sqlrooms/db';
@@ -33,7 +33,7 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
       : undefined;
 
   const explorer = useDataTableExplorer({
-    tableName: selectedTable,
+    tableName: selectedTable.table,
     pageSize: pageSize ?? 10,
     selectionName,
   });
@@ -76,7 +76,9 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
 const MosaicDashboardDataTableExplorerRenderer: FC<
   DataTableExplorerPanelRendererProps
 > = ({panel, dashboard, selectionName}) => {
-  const selectedTable = useDataTable(dashboard.selectedTable);
+  const selectedTable = useDataTable(dashboard.selectedTable, {
+    requireColumns: true,
+  });
 
   if (!selectedTable) {
     return (

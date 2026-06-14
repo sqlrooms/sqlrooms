@@ -4,7 +4,7 @@ import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
 import {MosaicDashboardDataTableSelector} from './MosaicDashboardDataTableSelector';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
 
 export const MosaicDashboardToolbar: FC = () => {
@@ -16,7 +16,7 @@ export const MosaicDashboardToolbar: FC = () => {
   const selectedTableName = dashboard?.selectedTable;
   const dashboardTitle = dashboard?.title ?? '';
 
-  const selectedTable = useDataTable(selectedTableName);
+  const selectedTable = useDataTable(selectedTableName, {requireColumns: true});
   const tableName = selectedTable?.table.table;
 
   const setDashboardTitle = useStoreWithMosaicDashboard(

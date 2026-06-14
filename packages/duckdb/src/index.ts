@@ -58,6 +58,7 @@ export {
 } from './use-copy-as-tsv';
 
 export {useDuckDb} from './useDuckDb';
+export {useDataTable, type UseDataTableOptions} from './useDataTable';
 
 export {
   useDuckDbQuery,

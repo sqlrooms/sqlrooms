@@ -4,7 +4,7 @@ import {type ChartConfig} from '../chart-types/chart-config';
 import type {ChartPanelConfig} from '../../dashboard/dashboard-types';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
 import {Spec} from '@uwdata/mosaic-spec';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 
 interface MosaicChartSettingsPanelProps {
   dashboardId: string;
@@ -29,7 +29,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     (state) => state.mosaicDashboard.updatePanel,
   );
 
-  const dataTable = useDataTable(tableName);
+  const dataTable = useDataTable(tableName, {requireColumns: true});
 
   const handleSettingsChange = useCallback(
     (config: ChartConfig) => {

@@ -4,8 +4,8 @@ import {
   ColumnSelector,
   ColumnsProvider,
   useStoreWithMosaicDashboard,
-  useDataTable,
 } from '@sqlrooms/mosaic';
+import {useDataTable} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   binnedNumericSchemes,
@@ -78,7 +78,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
   );
 
-  const dataTable = useDataTable(tableName);
+  const dataTable = useDataTable(tableName, {requireColumns: true});
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,

@@ -4,7 +4,7 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 
 ### React Integration & Type Safety
 
-- **React Hooks**: Seamless integration with React applications via `useSql`
+- **React Hooks**: Seamless integration with React applications via `useSql` and `useDataTable`
 - **Runtime Validation**: Optional Zod schema validation for query results with type transformations
 - **Typed Row Accessors**: Type-safe row access with validation and multiple iteration methods
 
@@ -56,6 +56,26 @@ function UserList() {
 ```
 
 For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
+
+### Looking up Table Metadata
+
+```tsx
+import {useDataTable} from '@sqlrooms/duckdb';
+
+function TableColumns() {
+  const table = useDataTable('"memory"."main"."earthquakes"', {
+    requireColumns: true,
+  });
+
+  return (
+    <ul>
+      {table?.columns.map((column) => (
+        <li key={column.name}>{column.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
 
 ### Using Zod for Runtime Validation
 
