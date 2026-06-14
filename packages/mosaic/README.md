@@ -139,7 +139,6 @@ table with per-column summaries on top of `MosaicSlice`.
 
 ```tsx
 import {DataTableExplorer} from '@sqlrooms/mosaic';
-import {makeQualifiedTableName} from '@sqlrooms/db';
 import {ScrollArea} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from './store';
@@ -147,13 +146,9 @@ import {useRoomStore} from './store';
 function EarthquakeExplorer() {
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
-  const tableName = useMemo(
-    () => makeQualifiedTableName({table: 'earthquakes'}),
-    [],
-  );
 
   return (
-    <DataTableExplorer tableName={tableName} selection={brush} pageSize={25}>
+    <DataTableExplorer tableName="earthquakes" selection={brush} pageSize={25}>
       <div className="flex min-h-0 flex-col border">
         <ScrollArea className="min-h-0 flex-1">
           <DataTableExplorer.Table>
