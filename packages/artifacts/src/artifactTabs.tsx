@@ -29,10 +29,7 @@ import React, {
 } from 'react';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
-import type {
-  ArtifactMetadata as ArtifactMetadataType,
-  ArtifactVisibility as ArtifactVisibilityType,
-} from './ArtifactsSliceConfig';
+import type {ArtifactMetadata as ArtifactMetadataType} from './ArtifactsSliceConfig';
 import {
   useStoreWithArtifactsAndLayout,
   type ArtifactsSliceState,
@@ -49,7 +46,6 @@ export type UseArtifactTabsOptions = {
   tabsId?: string;
   types?: readonly string[];
   panelKey?: string;
-  includeEmbedded?: boolean;
 };
 
 export type UseArtifactTabsResult = {
@@ -62,8 +58,6 @@ export type UseArtifactTabsResult = {
     type?: string,
     options?: {
       title?: string;
-      visibility?: ArtifactVisibilityType;
-      parentArtifactId?: string;
     },
   ) => string | undefined;
   openArtifact: (artifactId: string) => void;
@@ -77,15 +71,6 @@ export type UseArtifactTabsResult = {
 
 function isManagedType(types: readonly string[] | undefined, type: string) {
   return !types || types.includes(type);
-}
-
-export function isArtifactVisibleInTabs(
-  artifact: ArtifactMetadataType,
-  options: {includeEmbedded?: boolean} = {},
-) {
-  return (
-    artifact.visibility === 'workspace' || options.includeEmbedded === true
-  );
 }
 
 function getArtifactIdsFromTabsNode(
@@ -198,7 +183,6 @@ export function useArtifactTabs(
       ? layoutContext.node.id
       : undefined);
   const panelKey = options.panelKey ?? DEFAULT_ARTIFACT_PANEL_KEY;
-  const includeEmbedded = options.includeEmbedded ?? false;
   const typesKey = options.types?.join('\u0000') ?? '';
   const managedTypes = useMemo(
     () => (options.types ? [...options.types] : undefined),
@@ -260,16 +244,11 @@ export function useArtifactTabs(
     () =>
       artifactsConfig.artifactOrder.filter((artifactId) => {
         const artifact = artifactsConfig.artifactsById[artifactId];
-        return (
-          artifact &&
-          isManagedType(managedTypes, artifact.type) &&
-          isArtifactVisibleInTabs(artifact, {includeEmbedded})
-        );
+        return artifact && isManagedType(managedTypes, artifact.type);
       }),
     [
       artifactsConfig.artifactsById,
       artifactsConfig.artifactOrder,
-      includeEmbedded,
       managedTypes,
     ],
   );
@@ -314,8 +293,6 @@ export function useArtifactTabs(
       ensureArtifact(artifactId, {
         type: artifact.type,
         title: artifact.title,
-        visibility: artifact.visibility,
-        parentArtifactId: artifact.parentArtifactId,
       });
       if (!layoutArtifactTabIds.includes(artifactId)) {
         didAddTab = true;
@@ -371,21 +348,16 @@ export function useArtifactTabs(
       type?: string,
       createOptions?: {
         title?: string;
-        visibility?: ArtifactVisibilityType;
-        parentArtifactId?: string;
       },
     ) => {
       const artifactType =
         type ?? managedTypes?.[0] ?? Object.keys(artifactTypes)[0];
       if (!artifactType) return undefined;
-      const visibility = createOptions?.visibility ?? 'workspace';
       const artifactId = createArtifactInStore({
         type: artifactType,
         title: createOptions?.title,
-        visibility,
-        parentArtifactId: createOptions?.parentArtifactId,
       });
-      if (tabsId && (visibility === 'workspace' || includeEmbedded)) {
+      if (tabsId) {
         addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
       }
       return artifactId;
@@ -394,7 +366,6 @@ export function useArtifactTabs(
       addTab,
       artifactTypes,
       createArtifactInStore,
-      includeEmbedded,
       managedTypes,
       panelKey,
       tabsId,
@@ -404,11 +375,7 @@ export function useArtifactTabs(
   const openArtifact = useCallback(
     (artifactId: string) => {
       const artifact = artifactsConfig.artifactsById[artifactId];
-      if (
-        !tabsId ||
-        !artifact ||
-        !isArtifactVisibleInTabs(artifact, {includeEmbedded})
-      ) {
+      if (!tabsId || !artifact) {
         return;
       }
       addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
@@ -417,7 +384,6 @@ export function useArtifactTabs(
     [
       addTab,
       artifactsConfig.artifactsById,
-      includeEmbedded,
       panelKey,
       setCurrentArtifact,
       tabsId,
@@ -575,7 +541,6 @@ function ArtifactTabsRoot({
   types,
   tabsId,
   panelKey,
-  includeEmbedded,
   renderTabMenu,
   renderSearchItemActions,
   onActivateArtifact,
@@ -593,7 +558,6 @@ function ArtifactTabsRoot({
     types,
     tabsId,
     panelKey,
-    includeEmbedded,
   });
   const handleSelect = useCallback(
     (artifactId: string) => {

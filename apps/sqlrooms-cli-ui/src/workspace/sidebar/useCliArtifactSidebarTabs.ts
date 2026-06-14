@@ -40,8 +40,7 @@ export function useCliArtifactSidebarTabs() {
         .filter((artifact) => {
           return (
             artifact &&
-            CLI_ARTIFACT_TYPES.includes(artifact.type as CliArtifactType) &&
-            artifact.visibility === 'workspace'
+            CLI_ARTIFACT_TYPES.includes(artifact.type as CliArtifactType)
           );
         })
         .map((artifact) => ({
