@@ -28,9 +28,7 @@ describe('ChatSession migration', () => {
       const result = ChatSessionSchema.parse(raw);
       expect(result.uiMessages).toHaveLength(1);
       expect(result.uiMessages[0]?.id).toBe('msg-1');
-      expect(
-        (result as Record<string, unknown>).analysisResults,
-      ).toBeUndefined();
+      expect(result).not.toHaveProperty('analysisResults');
     });
 
     it('DOES migrate a pre-v0.26.0 session that has no uiMessages', () => {
@@ -55,9 +53,7 @@ describe('ChatSession migration', () => {
           isCompleted: true,
         },
       });
-      expect(
-        (result as Record<string, unknown>).analysisResults,
-      ).toBeUndefined();
+      expect(result).not.toHaveProperty('analysisResults');
     });
 
     it('preserves legacy result error and completion metadata before dropping analysisResults', () => {
@@ -88,9 +84,7 @@ describe('ChatSession migration', () => {
           isCompleted: true,
         },
       });
-      expect(
-        (result as Record<string, unknown>).analysisResults,
-      ).toBeUndefined();
+      expect(result).not.toHaveProperty('analysisResults');
     });
 
     it('strips legacy toolAdditionalData without duplicating existing uiMessages', () => {

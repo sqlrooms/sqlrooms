@@ -50,9 +50,8 @@ import type {
   AssistantMessageMetadata,
 } from './types';
 import {
-  cleanupPendingUiMessages,
+  normalizeAiConfig,
   ToolAbortError,
-  fixIncompleteToolCalls,
 } from './utils';
 import {getAnalysisResultsFromUiMessages} from './chatTurns';
 
@@ -283,26 +282,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       {isRunning: boolean; results: AnalysisResultSchema[]}
     >();
 
-    // Clean up pending analysis results and reset transient state from persisted config
-    const cleanedConfig = params.config?.sessions
-      ? {
-          ...params.config,
-          sessions: params.config.sessions.map((session) => {
-            const cleaned = cleanupPendingUiMessages(session);
-            const completedUiMessages = Array.isArray(cleaned.uiMessages)
-              ? fixIncompleteToolCalls(
-                  (cleaned.uiMessages as unknown as UIMessage[]) || [],
-                )
-              : [];
-            return {
-              ...cleaned,
-              isRunning: false,
-              uiMessages:
-                completedUiMessages as unknown as ChatSessionSchema['uiMessages'],
-            };
-          }),
-        }
-      : params.config;
+    const cleanedConfig = normalizeAiConfig(params.config);
 
     /**
      * Extract toolTimings from UIMessage metadata and agentProgress from
@@ -636,11 +616,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         setConfig: (config: AiSliceConfig) => {
-          const rehydrated = rehydrateFromSessions(config);
+          const normalizedConfig = normalizeAiConfig(config);
+          const rehydrated = rehydrateFromSessions(normalizedConfig);
 
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.config = config;
+              draft.ai.config = normalizedConfig;
               draft.ai.toolTimings = rehydrated.timings;
               draft.ai.agentProgress = rehydrated.progress;
             }),
@@ -1380,15 +1361,29 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         /**
-         * @deprecated Legacy compatibility no-op. New chat behavior should
+         * @deprecated Legacy compatibility adapter. New chat behavior should
          * update `uiMessages` through the chat transport.
          */
-        addAnalysisResult: (_message: UIMessage) => {
+        addAnalysisResult: (message: UIMessage) => {
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) {
             console.error('No current session found');
             return;
           }
+
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: ChatSessionSchema) => s.id === currentSession.id,
+              );
+              if (!session) return;
+              session.uiMessages.push(
+                structuredClone(
+                  message,
+                ) as unknown as (typeof session.uiMessages)[number],
+              );
+            }),
+          );
         },
 
         // Chat transport configuration

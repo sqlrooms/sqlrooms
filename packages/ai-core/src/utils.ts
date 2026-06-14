@@ -5,6 +5,7 @@
 import type {AgentProgressSnapshot} from './types';
 
 import {
+  type AiSliceConfig,
   AiSettingsSliceConfig,
   ChatSessionSchema,
   DynamicToolUIPart,
@@ -242,6 +243,51 @@ export function cleanupPendingUiMessages(
 
 /** @deprecated Use `cleanupPendingUiMessages` instead. */
 export const cleanupPendingAnalysisResults = cleanupPendingUiMessages;
+
+/**
+ * Normalizes a chat session restored from persisted or externally supplied
+ * config so transient in-flight chat state is not resumed after reload.
+ *
+ * The returned session has pending UI message/tool-call state made renderable
+ * through `cleanupPendingUiMessages` and `fixIncompleteToolCalls`, and always
+ * clears `isRunning` because no transport request is active for restored state.
+ */
+export function normalizeAiSession(
+  session: ChatSessionSchema,
+): ChatSessionSchema {
+  const cleaned = cleanupPendingUiMessages(session);
+  const completedUiMessages = Array.isArray(cleaned.uiMessages)
+    ? fixIncompleteToolCalls(
+        (cleaned.uiMessages as unknown as UIMessage[]) || [],
+      )
+    : [];
+
+  return {
+    ...cleaned,
+    isRunning: false,
+    uiMessages:
+      completedUiMessages as unknown as ChatSessionSchema['uiMessages'],
+  };
+}
+
+/**
+ * Normalizes every session in an AI slice config while preserving the caller's
+ * config shape.
+ *
+ * Use this whenever config enters the AI slice from persistence or a public
+ * setter. It keeps constructor initialization and `setConfig()` behavior
+ * consistent without mutating the original config object.
+ */
+export function normalizeAiConfig<
+  T extends Partial<AiSliceConfig> | undefined,
+>(config: T): T {
+  return config?.sessions
+    ? {
+        ...config,
+        sessions: config.sessions.map(normalizeAiSession),
+      } as T
+    : config;
+}
 
 /**
  * Recursively strips `agentToolCalls` from an object so sub-agent

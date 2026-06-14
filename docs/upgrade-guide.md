@@ -304,7 +304,9 @@ import {
 If you render the built-in chat UI, prefer the compound component:
 
 ```tsx
-<Chat.Messages />
+<Chat.Root>
+  <Chat.Messages />
+</Chat.Root>
 ```
 
 For custom chat rendering, derive turns from `uiMessages`:
