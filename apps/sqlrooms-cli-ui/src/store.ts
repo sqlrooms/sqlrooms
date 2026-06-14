@@ -557,11 +557,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createArtifactsSlice<RoomState>({
+        ...createArtifactsSlice({
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
 
-        ...createArtifactAiSlice<RoomState>()(set, get, store),
+        ...createArtifactAiSlice()(set, get, store),
 
         ...createMosaicSlice({
           preagg: {

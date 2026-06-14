@@ -49,7 +49,7 @@ const store = createRoomStore<RoomState>(
       },
     },
     (set, get, store) => ({
-      ...createArtifactsSlice<RoomState>({artifactTypes})(set, get, store),
+      ...createArtifactsSlice({artifactTypes})(set, get, store),
       layout: {
         panels: {
           artifact: createArtifactPanelDefinition(artifactTypes, store),
@@ -166,9 +166,9 @@ const store = createRoomStore<RoomState>(
       },
     },
     (set, get, store) => ({
-      ...createArtifactsSlice<RoomState>({artifactTypes})(set, get, store),
+      ...createArtifactsSlice({artifactTypes})(set, get, store),
       ...createAiSlice(aiOptions)(set, get, store),
-      ...createArtifactAiSlice<RoomState>()(set, get, store),
+      ...createArtifactAiSlice()(set, get, store),
     }),
   ),
 );

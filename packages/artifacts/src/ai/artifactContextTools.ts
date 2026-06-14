@@ -136,6 +136,21 @@ export type SetPrimaryContextArtifactToolLlmResult =
 export type SetPrimaryContextArtifactToolOutput =
   ArtifactContextToolOutput<SetPrimaryContextArtifactToolLlmResult>;
 
+export type ArtifactContextAiTools = {
+  list_context_artifacts: Tool<
+    ListContextArtifactsToolParameters,
+    ListContextArtifactsToolOutput
+  >;
+  read_context_artifact: Tool<
+    ReadContextArtifactToolParameters,
+    ReadContextArtifactToolOutput
+  >;
+  set_primary_context_artifact: Tool<
+    SetPrimaryContextArtifactToolParameters,
+    SetPrimaryContextArtifactToolOutput
+  >;
+};
+
 export type MakeArtifactPrimaryForAiRunResult =
   | {
       success: false;
@@ -351,20 +366,7 @@ export function createArtifactContextAiTools<
   TState extends ArtifactsSliceState,
 >(
   options: ArtifactContextToolsOptions<TState>,
-): {
-  list_context_artifacts: Tool<
-    ListContextArtifactsToolParameters,
-    ListContextArtifactsToolOutput
-  >;
-  read_context_artifact: Tool<
-    ReadContextArtifactToolParameters,
-    ReadContextArtifactToolOutput
-  >;
-  set_primary_context_artifact: Tool<
-    SetPrimaryContextArtifactToolParameters,
-    SetPrimaryContextArtifactToolOutput
-  >;
-} {
+): ArtifactContextAiTools {
   return {
     list_context_artifacts: tool({
       description:

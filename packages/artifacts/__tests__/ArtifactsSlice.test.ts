@@ -35,7 +35,7 @@ function createTestStore(events: string[] = []) {
 
   return createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
+    ...createArtifactsSlice({artifactTypes})(...args),
   }));
 }
 
@@ -154,7 +154,7 @@ describe('ArtifactsSlice', () => {
     });
     const store = createStore<TestRoomState>()((...args) => ({
       ...createBaseRoomSlice()(...args),
-      ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
+      ...createArtifactsSlice({artifactTypes})(...args),
     }));
 
     store.getState().artifacts.createArtifact({

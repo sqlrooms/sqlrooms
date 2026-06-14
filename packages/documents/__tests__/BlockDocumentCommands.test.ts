@@ -37,7 +37,7 @@ function createTestStore() {
   const store = createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     ...createCommandSlice<TestRoomState>()(...args),
-    ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
+    ...createArtifactsSlice({artifactTypes})(...args),
     ...createBlockDocumentsSlice<TestRoomState>({now})(...args),
   }));
 

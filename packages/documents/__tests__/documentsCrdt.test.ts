@@ -42,7 +42,7 @@ function createTestStore(doc: LoroDoc) {
 
   return createStore<TestRoomState>()((set, get, store) => ({
     ...createBaseRoomSlice()(set, get, store),
-    ...createArtifactsSlice<TestRoomState>({artifactTypes})(set, get, store),
+    ...createArtifactsSlice({artifactTypes})(set, get, store),
     ...createDocumentsSlice<TestRoomState>({now: () => 123})(set, get, store),
     ...createBlockDocumentsSlice<TestRoomState>({now: () => 456})(
       set,

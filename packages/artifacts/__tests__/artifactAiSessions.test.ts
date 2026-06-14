@@ -74,11 +74,7 @@ function createTestStore() {
 
   const store = createStore<TestRoomState>()((set, get, storeApi) => ({
     ...createBaseRoomSlice()(set, get, storeApi),
-    ...createArtifactsSlice<TestRoomState>({artifactTypes})(
-      set,
-      get,
-      storeApi,
-    ),
+    ...createArtifactsSlice({artifactTypes})(set, get, storeApi),
     ai: {
       config: {
         sessions: [],
@@ -118,11 +114,7 @@ function createTestStore() {
         );
       },
     },
-    ...createArtifactAiSlice<TestRoomState>({autoSync: false})(
-      set,
-      get,
-      storeApi,
-    ),
+    ...createArtifactAiSlice({autoSync: false})(set, get, storeApi),
   }));
 
   store.getState().artifacts.ensureArtifact('artifact-a', {
