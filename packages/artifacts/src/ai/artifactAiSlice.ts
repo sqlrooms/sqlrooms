@@ -80,6 +80,20 @@ export type RoomStateWithArtifactAi = BaseRoomStoreState &
   ArtifactAiSliceState &
   ArtifactAiCompatibleAiState;
 
+/**
+ * Minimal state observed by the artifact AI auto-sync subscription.
+ *
+ * The slice uses this snapshot to avoid running session/artifact alignment for
+ * unrelated room-store updates while still reacting to artifact selection, AI
+ * session config, artifact registry, and session ownership changes.
+ */
+type ArtifactAiSyncSnapshot = {
+  currentArtifactId?: string;
+  artifactsById: RoomStateWithArtifactAi['artifacts']['config']['artifactsById'];
+  aiConfig: ArtifactAiCompatibleAiState['ai']['config'];
+  aiSessionArtifacts: ArtifactAiConfig['aiSessionArtifacts'];
+};
+
 export type CreateArtifactAiSliceOptions = {
   /** Initial or persisted artifact AI config. */
   config?: z.input<typeof ArtifactAiConfig>;
@@ -110,6 +124,23 @@ export function createArtifactAiSlice<
   let unsubscribe: (() => void) | undefined;
 
   return createSlice<ArtifactAiSliceState, TRoomState>((set, get, store) => {
+    const getArtifactAiSyncSnapshot = (
+      state: TRoomState,
+    ): ArtifactAiSyncSnapshot => ({
+      currentArtifactId: state.artifacts.config.currentArtifactId,
+      artifactsById: state.artifacts.config.artifactsById,
+      aiConfig: state.ai.config,
+      aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
+    });
+    const isSameArtifactAiSyncSnapshot = (
+      left: ArtifactAiSyncSnapshot,
+      right: ArtifactAiSyncSnapshot,
+    ) =>
+      left.currentArtifactId === right.currentArtifactId &&
+      left.artifactsById === right.artifactsById &&
+      left.aiConfig === right.aiConfig &&
+      left.aiSessionArtifacts === right.aiSessionArtifacts;
+
     const cleanupSessionArtifacts = () => {
       const state = get();
       const nextAiSessionArtifacts = cleanupAiSessionArtifacts({
@@ -130,6 +161,9 @@ export function createArtifactAiSlice<
       );
     };
 
+    // Keeps the current AI session aligned with the current artifact, pruning
+    // stale ownership records before selecting the latest session for the
+    // active artifact.
     const syncCurrentArtifactAiSession = () => {
       if (artifactAiSyncing || artifactAiSyncSuspended) return;
       artifactAiSyncing = true;
@@ -165,7 +199,13 @@ export function createArtifactAiSlice<
         config: ArtifactAiConfig.parse(options.config ?? {}),
         initialize: async () => {
           if (!autoSync || unsubscribe) return;
-          unsubscribe = (store as StoreApi<TRoomState>).subscribe(() => {
+          let previousSnapshot = getArtifactAiSyncSnapshot(get());
+          unsubscribe = (store as StoreApi<TRoomState>).subscribe((state) => {
+            const nextSnapshot = getArtifactAiSyncSnapshot(state);
+            if (isSameArtifactAiSyncSnapshot(previousSnapshot, nextSnapshot)) {
+              return;
+            }
+            previousSnapshot = nextSnapshot;
             syncCurrentArtifactAiSession();
           });
         },

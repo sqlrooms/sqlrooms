@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef} from 'react';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import {useStoreWithAi, type AiSliceState} from '../AiSlice';
 
@@ -44,11 +44,7 @@ export type GenerateSessionTitleResult =
       title: string;
     }
   | {
-      status:
-        | 'empty'
-        | 'custom-title'
-        | 'unchanged'
-        | 'blank-generated-title';
+      status: 'empty' | 'custom-title' | 'unchanged' | 'blank-generated-title';
       title?: string;
     };
 
@@ -77,9 +73,7 @@ export function isDefaultGeneratedSessionName(name: string) {
 
 function isTextPart(part: SessionMessagePart): part is SessionTextPart {
   return (
-    part.type === 'text' &&
-    'text' in part &&
-    typeof part.text === 'string'
+    part.type === 'text' && 'text' in part && typeof part.text === 'string'
   );
 }
 
@@ -105,10 +99,7 @@ ${userMessages.join('\n')}
 Return only the title text, without quotes or explanation.`;
 }
 
-export function cleanGeneratedSessionTitle(
-  title: string,
-  maxTitleLength = 50,
-) {
+export function cleanGeneratedSessionTitle(title: string, maxTitleLength = 50) {
   return title
     .trim()
     .replace(/^["']|["']$/g, '')
@@ -174,10 +165,12 @@ export function useGenerateSessionTitle({
   onError,
 }: UseGenerateSessionTitleOptions = {}) {
   const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const uiMessagesLength = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.uiMessages?.length ?? 0,
+  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
+  const currentSession = useMemo(
+    () => sessions.find((session) => session.id === currentSessionId),
+    [currentSessionId, sessions],
   );
+  const uiMessagesLength = currentSession?.uiMessages?.length ?? 0;
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
   const sendPrompt = useStoreWithAi((s) => s.ai.sendPrompt);
 
