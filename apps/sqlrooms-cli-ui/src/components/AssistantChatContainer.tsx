@@ -1,8 +1,9 @@
 import {Chat, isAnalysisSessionEmpty} from '@sqlrooms/ai';
+import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
-import {isAiSessionVisibleForArtifact, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 import {AssistantContextSelector} from './AssistantContextSelector';
 import {
   isDefaultAssistantSessionName,

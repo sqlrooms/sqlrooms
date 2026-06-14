@@ -1,5 +1,9 @@
 import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
+import {
+  ArtifactAiConfigSchema,
+  type ArtifactAiSliceState,
+} from '@sqlrooms/artifacts/ai';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
 import {CrdtSliceState} from '@sqlrooms/crdt';
@@ -38,14 +42,9 @@ export const AppBuilderProjectConfig = z.object({
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
 export const AppBuilderProjectConfigSchema = AppBuilderProjectConfig;
 
-export const ArtifactAiConfig = z.object({
-  aiSessionArtifacts: z.record(z.string(), z.string()).default({}),
-});
-export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
-export const ArtifactAiConfigSchema = ArtifactAiConfig;
-
 export type RoomState = RoomShellSliceState &
   ArtifactsSliceState &
+  ArtifactAiSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState &
   AiSliceState &
@@ -80,19 +79,6 @@ export type RoomState = RoomShellSliceState &
       getArtifactApp: (
         artifactId: string,
       ) => AppBuilderProjectConfig['appsByArtifactId'][string] | undefined;
-    };
-    artifactAi: {
-      config: ArtifactAiConfig;
-      setSessionArtifact: (sessionId: string, artifactId: string) => void;
-      clearSessionArtifact: (sessionId: string) => void;
-      getSessionArtifactId: (sessionId: string) => string | undefined;
-      createArtifactScopedSession: (
-        name?: string,
-        modelProvider?: string,
-        model?: string,
-      ) => string | undefined;
-      selectLatestSessionForArtifact: (artifactId?: string) => void;
-      cleanupSessionArtifacts: () => void;
     };
     dashboard: {
       initialize?: () => Promise<void>;

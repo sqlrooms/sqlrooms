@@ -1,4 +1,5 @@
 import {createArtifactLayoutNode} from '@sqlrooms/artifacts';
+import {getRunningAiSessionCountsByArtifact} from '@sqlrooms/artifacts/ai';
 import {useCallback, useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
 import {useRoomStore} from '../../store';
@@ -23,14 +24,10 @@ export function useCliArtifactSidebarTabs() {
   );
 
   const runningSessionCountsByArtifact = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const session of aiSessions) {
-      if (!session.isRunning) continue;
-      const artifactId = aiSessionArtifacts[session.id];
-      if (!artifactId) continue;
-      counts[artifactId] = (counts[artifactId] ?? 0) + 1;
-    }
-    return counts;
+    return getRunningAiSessionCountsByArtifact({
+      sessions: aiSessions,
+      aiSessionArtifacts,
+    });
   }, [aiSessionArtifacts, aiSessions]);
 
   const tabs = useMemo(

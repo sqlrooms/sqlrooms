@@ -140,3 +140,67 @@ Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 `@sqlrooms/artifacts` with `@sqlrooms/ai`. The factory handles primary artifact
 selection and run-context updates; the app supplies artifact payload readers for
 domain-specific types such as documents or dashboards.
+
+## Artifact-Owned AI Sessions
+
+`@sqlrooms/artifacts/ai` also provides `createArtifactAiSlice()` for apps that
+want AI chats to belong to the current artifact without changing the generic
+AI session schema.
+
+Add `ArtifactAiConfigSchema` to persistence and compose the slice after
+`createArtifactsSlice()` and the app's AI slice:
+
+```tsx
+import {
+  ArtifactAiConfigSchema,
+  createArtifactAiSlice,
+} from '@sqlrooms/artifacts/ai';
+
+const store = createRoomStore<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'my-room',
+      sliceConfigSchemas: {
+        artifacts: ArtifactsSliceConfig,
+        artifactAi: ArtifactAiConfigSchema,
+      },
+    },
+    (set, get, store) => ({
+      ...createArtifactsSlice<RoomState>({artifactTypes})(set, get, store),
+      ...createAiSlice(aiOptions)(set, get, store),
+      ...createArtifactAiSlice<RoomState>()(set, get, store),
+    }),
+  ),
+);
+```
+
+The slice stores:
+
+```ts
+aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
+```
+
+Use `artifactAi.createArtifactScopedSession()` when creating chats from an
+artifact-scoped assistant. `artifactAi.selectLatestSessionForArtifact()` and
+`artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
+with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
+ownership are ignored by artifact-scoped history.
+
+Reusable helpers include:
+
+- `isAiSessionVisibleForArtifact`
+- `getLatestAiSessionIdForArtifact`
+- `getAiSessionIdsForArtifact`
+- `getAiSessionGroupsByArtifact`
+- `getRunningAiSessionCountsByArtifact`
+- `getOwningArtifactRunContextItems`
+
+`Chat.History` should remain generic: pass a `filterSession` callback built
+with `isAiSessionVisibleForArtifact()` and keep artifact-specific labels in the
+host app. For run context, use `getOwningArtifactRunContextItems()` to prepend
+the owning artifact as the implicit primary context item.
+
+Artifact-owned AI sessions attach to artifact shells. If a stateful block is
+wrapped as a top-level artifact, use that artifact id. Stateful blocks hosted
+directly inside a block document should use the containing artifact's chat
+unless the host app intentionally introduces a block-scoped chat model.
