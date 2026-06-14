@@ -17,6 +17,10 @@ npm install @sqlrooms/ai-config
 - Compatibility exports: `AnalysisSessionSchema`, `AnalysisResultSchema`
 - `ToolUIPart`, `UIMessagePart` types
 
+`ChatSessionSchema` accepts legacy persisted sessions that still contain
+`analysisResults`, but parsed/new session state no longer includes that field.
+Use `uiMessages` for current chat state.
+
 ## Basic usage
 
 ### Validate and load AI session config

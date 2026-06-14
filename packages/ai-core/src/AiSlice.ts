@@ -810,7 +810,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 name: sessionName,
                 modelProvider: modelSelection.modelProvider,
                 model: modelSelection.model,
-                analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
                 messagesRevision: 0,

@@ -153,6 +153,9 @@ and `AnalysisResult` remain compatibility exports for existing apps, but new
 code should prefer `Chat.Messages`, `uiMessages`, and derived `ChatTurn` helpers
 such as `getChatTurnsFromUiMessages`.
 
+Old persisted sessions that contain `analysisResults` still load, but parsed and
+new `ChatSessionSchema` state no longer includes that field.
+
 ## Add custom tools
 
 ```tsx

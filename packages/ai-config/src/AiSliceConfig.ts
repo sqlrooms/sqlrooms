@@ -21,7 +21,6 @@ export function createDefaultAiConfig(
         name: 'Untitled',
         modelProvider: 'openai',
         model: 'gpt-4.1',
-        analysisResults: [],
         createdAt: new Date(),
         uiMessages: [],
         messagesRevision: 0,

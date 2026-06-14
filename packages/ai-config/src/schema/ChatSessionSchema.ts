@@ -147,7 +147,6 @@ const ChatSessionBaseSchema = z.object({
   model: z.string(),
   customModelName: z.string().optional(),
   baseUrl: z.string().optional(),
-  analysisResults: z.array(AnalysisResultSchema),
   createdAt: z.coerce.date().optional(),
   uiMessages: z.array(UIMessageSchema),
   /** Revision counter that increments when messages are deleted, used to force useChat reset */

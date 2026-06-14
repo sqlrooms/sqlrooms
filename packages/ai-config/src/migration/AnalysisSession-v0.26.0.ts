@@ -4,7 +4,8 @@
  * Version: 0.26.x
  *
  * Changes:
- * - add uiMessages (AI SDK v5) to AnalysisSession along with legacy analysisResults
+ * - add uiMessages (AI SDK v5) to AnalysisSession
+ * - remove legacy analysisResults from the active parsed session shape
  * - remove toolAdditionalData (in-chat editing removed)
  * - deprecate the following properties in AnalysisResult:
  *   - streamMessage
@@ -36,12 +37,6 @@
  *   customModelName?: string,
  *   baseUrl?: string,
  *   createdAt?: Date
- *   analysisResults: Array<{
- *     id: string,
- *     prompt: string,
- *     isCompleted: boolean,
- *     errorMessage?: { error: string },
- *   }>,
  *   uiMessages: Array<UIMessageSchema>, //<-- NEW FIELD
  *   messagesRevision?: number, //<-- NEW FIELD
  *   prompt: string, //<-- NEW FIELD
@@ -68,13 +63,17 @@ function needsV0_26_0Migration(data: unknown): boolean {
   return !hasUiMessages || hasLegacyToolData;
 }
 
-/** Perform migration to AI SDK v5 uiMessages, strip toolAdditionalData */
+/** Perform migration to AI SDK v5 uiMessages and strip legacy fields. */
 function migrateFromV0_26_0(data: unknown) {
-  const {toolAdditionalData: _legacyToolAdditionalData, ...session} = {
+  const {toolAdditionalData: _legacyToolAdditionalData, ...sessionWithLegacy} = {
     ...(data as UnknownRecord),
   };
-  const analysisResults = (session.analysisResults as UnknownRecord[]) || [];
-  const existingUiMessages = (session.uiMessages as UnknownRecord[]) || [];
+  const analysisResults =
+    (sessionWithLegacy.analysisResults as UnknownRecord[]) || [];
+  const existingUiMessages =
+    (sessionWithLegacy.uiMessages as UnknownRecord[]) || [];
+  const {analysisResults: _legacyAnalysisResults, ...session} =
+    sessionWithLegacy;
 
   // Only synthesize messages from legacy analysisResults when uiMessages is
   // absent entirely. If it's already present (e.g. only key cleanup is needed),
@@ -145,19 +144,8 @@ function migrateFromV0_26_0(data: unknown) {
     }
   }
 
-  // Remove deprecated streamMessage field from analysisResults
-  const cleanedAnalysisResults = analysisResults.map((result) => {
-    if (!isObject(result)) return result;
-
-    const {streamMessage, ...rest} = result as UnknownRecord & {
-      streamMessage?: unknown;
-    };
-    return rest;
-  });
-
   return {
     ...session,
-    analysisResults: cleanedAnalysisResults,
     uiMessages: [...existingUiMessages, ...synthesizedMessages],
     prompt: '',
     isRunning: false,

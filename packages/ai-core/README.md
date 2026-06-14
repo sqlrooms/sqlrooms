@@ -160,6 +160,10 @@ exports for existing apps. New code should prefer `ChatSessionSchema`,
 `isChatSessionEmpty`, `Chat.Messages`, `uiMessages`, and derived `ChatTurn`
 helpers.
 
+Legacy persisted sessions that contain `analysisResults` still load through
+schema migration, but parsed and newly created chat sessions no longer include
+that field.
+
 ## Related packages
 
 - `@sqlrooms/ai` (recommended high-level integration)

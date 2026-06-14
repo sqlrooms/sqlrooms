@@ -277,6 +277,9 @@ but new code should use the chat-named APIs.
   `cleanupPendingAnalysisResults` remain compatibility APIs for existing apps.
 - New code should prefer `uiMessages` and derived `ChatTurn` helpers such as
   `getChatTurnsFromUiMessages`.
+- Persisted legacy `analysisResults` is still accepted when loading old rooms,
+  but `ChatSessionSchema` no longer emits `analysisResults` in parsed session
+  state and new sessions no longer persist it.
 
 #### Migration Example
 
