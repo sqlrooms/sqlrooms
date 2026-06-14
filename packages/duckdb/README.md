@@ -63,9 +63,7 @@ For more information and examples on using the `useSql` hook, see the [useSql AP
 import {useDataTable} from '@sqlrooms/duckdb';
 
 function TableColumns() {
-  const table = useDataTable('"memory"."main"."earthquakes"', {
-    requireColumns: true,
-  });
+  const table = useDataTable('"memory"."main"."earthquakes"');
 
   return (
     <ul>

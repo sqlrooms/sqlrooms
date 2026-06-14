@@ -19,7 +19,7 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   selectionName,
 }) => {
   const tableName = dashboard.selectedTable;
-  const dataTable = useDataTable(tableName, {requireColumns: true});
+  const dataTable = useDataTable(tableName);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,

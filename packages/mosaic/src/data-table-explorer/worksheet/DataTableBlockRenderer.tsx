@@ -25,7 +25,7 @@ export const DataTableBlockRenderer: FC<
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
 
   const tables = useTablesWithColumns();
-  const selectedTable = useDataTable(title, {requireColumns: true});
+  const selectedTable = useDataTable(title);
 
   const selectionName = `block-document:${documentId}:data-table:${blockId}:brush`;
   const selection = useStoreWithMosaic(

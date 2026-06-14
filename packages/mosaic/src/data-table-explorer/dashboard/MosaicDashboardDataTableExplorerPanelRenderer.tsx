@@ -76,9 +76,7 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
 const MosaicDashboardDataTableExplorerRenderer: FC<
   DataTableExplorerPanelRendererProps
 > = ({panel, dashboard, selectionName}) => {
-  const selectedTable = useDataTable(dashboard.selectedTable, {
-    requireColumns: true,
-  });
+  const selectedTable = useDataTable(dashboard.selectedTable);
 
   if (!selectedTable) {
     return (

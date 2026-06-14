@@ -36,5 +36,5 @@ export type {
   GroupedFunctionSuggestion,
 } from '@sqlrooms/duckdb-core';
 
-export {useDataTable, useSql, type UseDataTableOptions} from '@sqlrooms/duckdb';
+export {useDataTable, useSql} from '@sqlrooms/duckdb';
 export * from '@sqlrooms/duckdb-core';

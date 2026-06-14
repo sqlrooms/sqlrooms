@@ -78,7 +78,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
   );
 
-  const dataTable = useDataTable(tableName, {requireColumns: true});
+  const dataTable = useDataTable(tableName);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,

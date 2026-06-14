@@ -16,7 +16,7 @@ export const MosaicDashboardToolbar: FC = () => {
   const selectedTableName = dashboard?.selectedTable;
   const dashboardTitle = dashboard?.title ?? '';
 
-  const selectedTable = useDataTable(selectedTableName, {requireColumns: true});
+  const selectedTable = useDataTable(selectedTableName);
   const tableName = selectedTable?.table.table;
 
   const setDashboardTitle = useStoreWithMosaicDashboard(

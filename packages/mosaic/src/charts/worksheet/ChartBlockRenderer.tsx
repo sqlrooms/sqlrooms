@@ -28,7 +28,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   onCaptionChange,
 }) => {
   const tables = useTablesWithColumns();
-  const selectedTable = useDataTable(tableName, {requireColumns: true});
+  const selectedTable = useDataTable(tableName);
 
   const parseChartConfigResult = useParseChartConfig(config);
 

@@ -12,7 +12,7 @@ export const EarthquakeProfiler: FC<EarthquakeProfilerProps> = ({
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
 
-  const dataTable = useDataTable('earthquakes', {requireColumns: true});
+  const dataTable = useDataTable('earthquakes');
 
   if (!dataTable) {
     return (

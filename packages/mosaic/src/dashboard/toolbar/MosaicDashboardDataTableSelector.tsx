@@ -18,7 +18,7 @@ export const MosaicDashboardDataTableSelector: FC<
   );
   const selectedTableName = dashboard?.selectedTable;
 
-  const selectedTable = useDataTable(selectedTableName, {requireColumns: true});
+  const selectedTable = useDataTable(selectedTableName);
 
   const setSelectedTable = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setSelectedTable,

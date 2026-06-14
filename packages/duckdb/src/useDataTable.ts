@@ -1,24 +1,24 @@
 import type {DataTable, QualifiedTableName} from '@sqlrooms/duckdb-core';
 import {useStoreWithDuckDb} from './DuckDbSlice';
 
-export type UseDataTableOptions = {
-  requireColumns?: boolean;
-};
-
+/**
+ * Resolves a table reference against the DuckDB table schema cache.
+ *
+ * String inputs are delegated to `db.findTableByName`, which parses qualified
+ * SQL identifiers such as `main.events` and
+ * `"memory"."main"."events.2026"`. Unqualified names resolve in the current
+ * schema/database from the last schema refresh.
+ *
+ * @param tableName - A bare, qualified, or structured table reference.
+ * @returns The matching data table, including its loaded columns, or undefined.
+ */
 export function useDataTable(
   tableName: string | QualifiedTableName | undefined,
-  options?: UseDataTableOptions,
 ): DataTable | undefined {
-  const requireColumns = options?.requireColumns ?? false;
-
   return useStoreWithDuckDb((state) => {
     if (!tableName) {
       return undefined;
     }
-    const table = state.db.findTableByName(tableName);
-    if (requireColumns && !table?.columns.length) {
-      return undefined;
-    }
-    return table;
+    return state.db.findTableByName(tableName);
   });
 }

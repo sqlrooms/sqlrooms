@@ -29,7 +29,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     (state) => state.mosaicDashboard.updatePanel,
   );
 
-  const dataTable = useDataTable(tableName, {requireColumns: true});
+  const dataTable = useDataTable(tableName);
 
   const handleSettingsChange = useCallback(
     (config: ChartConfig) => {
