@@ -4,15 +4,15 @@ import {
   type DbSchemaNode,
 } from '@sqlrooms/duckdb';
 import {
-  getEffectiveSessionContextItemIds,
   getRunContextItemIds,
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai';
-import type {ArtifactMetadata} from '@sqlrooms/artifacts';
+import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
+import {getOwningArtifactRunContextItems} from '@sqlrooms/artifacts/ai';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
-import {CLI_ARTIFACT_TYPES} from '../artifactTypes';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 
@@ -49,7 +49,7 @@ function buildTablesMap(
 }
 
 function createArtifactContextItem(
-  artifact: ArtifactMetadata,
+  artifact: ArtifactMetadataType,
 ): AiRunContextItem {
   return {
     kind: 'artifact',
@@ -74,7 +74,7 @@ function createTableContextItem(
 
 function resolveContextItem(
   itemId: string,
-  artifactsById: Record<string, ArtifactMetadata>,
+  artifactsById: Record<string, ArtifactMetadataType>,
   tablesByQualifiedName: Map<string, TableInfo>,
 ): AiRunContextItem | undefined {
   // Check if it's an artifact
@@ -102,14 +102,6 @@ export function getRunContext(
   const session = state.ai.config.sessions.find(
     (candidate) => candidate.id === sessionId,
   );
-  const currentArtifactId = state.artifacts.config.currentArtifactId;
-  const currentArtifact =
-    currentArtifactId ? artifactsById[currentArtifactId] : undefined;
-  const implicitArtifactId =
-    currentArtifact && SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type)
-      ? currentArtifact.id
-      : undefined;
-
   const tablesByQualifiedName = buildTablesMap(schemaTrees);
 
   if (
@@ -120,15 +112,20 @@ export function getRunContext(
     return session.runContext;
   }
 
-  const contextItemIds = getEffectiveSessionContextItemIds(session, {
-    implicitItemIds: implicitArtifactId ? [implicitArtifactId] : [],
-  });
-
-  const items = Array.from(new Set(contextItemIds))
+  const explicitContextItemIds = session?.draftContextItemIds ?? [];
+  const extraItems = Array.from(new Set(explicitContextItemIds))
     .map((itemId) =>
       resolveContextItem(itemId, artifactsById, tablesByQualifiedName),
     )
     .filter(Boolean) as AiRunContextItem[];
+  const items = getOwningArtifactRunContextItems({
+    sessionId,
+    aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
+    artifactsById,
+    extraItems,
+    isSupportedArtifactType: (artifactType) =>
+      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(artifactType),
+  });
 
   if (items.length === 0) {
     return undefined;

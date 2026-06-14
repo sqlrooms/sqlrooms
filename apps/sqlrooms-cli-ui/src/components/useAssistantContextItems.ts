@@ -48,15 +48,23 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
   const tables = useContextTables();
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
   const runContext = useRoomStore((s) => s.ai.getCurrentSession()?.runContext);
+  const currentSessionId = useRoomStore((s) => s.ai.getCurrentSession()?.id);
+  const owningArtifactId = useRoomStore((s) =>
+    currentSessionId
+      ? s.artifactAi.config.aiSessionArtifacts[currentSessionId]
+      : undefined,
+  );
 
   return useMemo<ContextSelectorItem[]>(() => {
-    const artifactItems = artifacts.map((artifact) => ({
-      id: artifact.id,
-      kind: 'artifact',
-      title: artifact.title,
-      type: artifact.type,
-      keywords: [artifact.title, artifact.type],
-    }));
+    const artifactItems = artifacts
+      .filter((artifact) => artifact.id !== owningArtifactId)
+      .map((artifact) => ({
+        id: artifact.id,
+        kind: 'artifact',
+        title: artifact.title,
+        type: artifact.type,
+        keywords: [artifact.title, artifact.type],
+      }));
 
     const tableItems = tables.map((table) => {
       const qualifiedName = makeQualifiedTableName({
@@ -84,6 +92,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
       .filter((item) => {
         if (item.kind === 'artifact') {
           return (
+            item.id !== owningArtifactId &&
             !artifactsById[item.id] &&
             item.type &&
             isContextArtifactType(item.type)
@@ -106,7 +115,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
       }));
 
     return [...artifactItems, ...tableItems, ...missingRunningItems];
-  }, [artifacts, tables, artifactsById, runContext]);
+  }, [artifacts, tables, artifactsById, owningArtifactId, runContext]);
 }
 
 /**
@@ -115,6 +124,11 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
 export function useValidatedSelectedIds(): string[] {
   const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
+  const owningArtifactId = useRoomStore((s) =>
+    currentSession
+      ? s.artifactAi.config.aiSessionArtifacts[currentSession.id]
+      : undefined,
+  );
   const tables = useContextTables();
 
   return useMemo(() => {
@@ -124,6 +138,9 @@ export function useValidatedSelectedIds(): string[] {
     );
 
     return contextItemIds.filter((id) => {
+      if (id === owningArtifactId) {
+        return false;
+      }
       const artifact = artifactsById[id];
       if (artifact && isContextArtifactType(artifact.type)) {
         return true;
@@ -131,7 +148,7 @@ export function useValidatedSelectedIds(): string[] {
       // Check if it's a valid table ID
       return tableIdSet.has(id);
     });
-  }, [currentSession, artifactsById, tables]);
+  }, [currentSession, artifactsById, owningArtifactId, tables]);
 }
 
 /**

@@ -1,7 +1,13 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
-import {ThemeProvider, ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
-import {TerminalIcon} from 'lucide-react';
+import {
+  SidebarInset,
+  SidebarProvider,
+  ThemeProvider,
+  useDisclosure,
+} from '@sqlrooms/ui';
+import {CliWorkspaceTopbar} from './workspace/CliWorkspaceTopbar';
+import {CliWorkspaceSidebar} from './workspace/sidebar';
 import {roomStore} from './store';
 
 export const Room = () => {
@@ -9,22 +15,19 @@ export const Room = () => {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-cli-ui-theme">
       <RoomShell className="h-screen" roomStore={roomStore}>
-        <RoomShell.SidebarContainer>
-          <RoomShell.TabButtons tabsId="left-sidebar" />
-          <div className="flex-1" />
-          <RoomShell.SidebarButton
-            title="SQL Editor"
-            onClick={sqlEditor.onToggle}
-            isSelected={false}
-            icon={TerminalIcon}
-          />
-          <RoomShell.CommandPalette.Button />
-          <ThemeSwitch />
-        </RoomShell.SidebarContainer>
-        <RoomShell.LayoutComposer />
-        <RoomShell.LoadingProgress />
-        <RoomShell.CommandPalette />
-        <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
+        <SidebarProvider defaultOpen>
+          <CliWorkspaceSidebar onToggleSqlEditor={sqlEditor.onToggle} />
+          <SidebarInset className="h-svh min-w-0 overflow-hidden">
+            <CliWorkspaceTopbar />
+            <RoomShell.LayoutComposer className="min-h-0 flex-1 overflow-hidden [&_[data-slot=resizable-handle][aria-controls=assistant-sidebar][aria-valuenow='0']]:hidden" />
+            <RoomShell.LoadingProgress />
+            <RoomShell.CommandPalette />
+            <SqlEditorModal
+              isOpen={sqlEditor.isOpen}
+              onClose={sqlEditor.onClose}
+            />
+          </SidebarInset>
+        </SidebarProvider>
       </RoomShell>
     </ThemeProvider>
   );

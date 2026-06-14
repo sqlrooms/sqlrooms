@@ -236,7 +236,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createArtifactsSlice<RoomState>({
+      ...createArtifactsSlice({
         artifactTypes: KEPLER_ARTIFACT_TYPES,
         config: {
           artifactsById: {

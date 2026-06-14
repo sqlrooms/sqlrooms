@@ -23,6 +23,7 @@ type TestRoomState = BaseRoomStoreState &
 
 function createTestStore() {
   let timestamp = 100;
+  const ensuredStatefulBlocks: Array<{id: string; title: string}> = [];
   const now = () => timestamp++;
   const artifactTypes = defineArtifactTypes({
     'block-document': {
@@ -36,7 +37,7 @@ function createTestStore() {
   const store = createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     ...createCommandSlice<TestRoomState>()(...args),
-    ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
+    ...createArtifactsSlice({artifactTypes})(...args),
     ...createBlockDocumentsSlice<TestRoomState>({now})(...args),
   }));
 
@@ -48,24 +49,19 @@ function createTestStore() {
           blockType: 'dashboard',
           label: 'Dashboard',
           defaultTitle: 'Embedded Dashboard',
-          ensureState: ({state, blockInstanceId, title}) => {
-            state.artifacts.createArtifact({
-              id: blockInstanceId,
-              type: 'dashboard',
-              title,
-              visibility: 'embedded',
-            });
+          ensureState: ({blockInstanceId, title}) => {
+            ensuredStatefulBlocks.push({id: blockInstanceId, title});
           },
         },
       ],
     }),
   );
-  return store;
+  return {store, ensuredStatefulBlocks};
 }
 
 describe('block document commands', () => {
   it('creates, lists, and reads block document artifacts', async () => {
-    const store = createTestStore();
+    const {store} = createTestStore();
 
     const createResult = await store
       .getState()
@@ -111,7 +107,7 @@ describe('block document commands', () => {
   });
 
   it('mutates block document blocks by command', async () => {
-    const store = createTestStore();
+    const {store} = createTestStore();
     const createResult = await store
       .getState()
       .commands.invokeCommand('block-document.create');
@@ -155,7 +151,7 @@ describe('block document commands', () => {
   });
 
   it('creates chart blocks', async () => {
-    const store = createTestStore();
+    const {store} = createTestStore();
     const createResult = await store
       .getState()
       .commands.invokeCommand('block-document.create');
@@ -184,7 +180,7 @@ describe('block document commands', () => {
   });
 
   it('creates hosted stateful blocks', async () => {
-    const store = createTestStore();
+    const {store, ensuredStatefulBlocks} = createTestStore();
     const createResult = await store
       .getState()
       .commands.invokeCommand('block-document.create');
@@ -212,18 +208,16 @@ describe('block document commands', () => {
         caption: 'Regions',
       },
     ]);
+    expect(ensuredStatefulBlocks).toEqual([
+      {id: 'dashboard-block', title: 'Regional Dashboard'},
+    ]);
     expect(
       store.getState().artifacts.getArtifact('dashboard-block'),
-    ).toMatchObject({
-      id: 'dashboard-block',
-      type: 'dashboard',
-      title: 'Regional Dashboard',
-      visibility: 'embedded',
-    });
+    ).toBeUndefined();
   });
 
   it('rejects unsupported hosted stateful block types when configured', async () => {
-    const store = createTestStore();
+    const {store} = createTestStore();
     const createResult = await store
       .getState()
       .commands.invokeCommand('block-document.create');
@@ -243,7 +237,7 @@ describe('block document commands', () => {
   });
 
   it('fails clearly for invalid targets', async () => {
-    const store = createTestStore();
+    const {store} = createTestStore();
     const documentId = store.getState().artifacts.createArtifact({
       type: 'document',
       title: 'Document',

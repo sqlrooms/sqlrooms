@@ -30,7 +30,7 @@ function createTestStore() {
 
   const store = createStore<TestRoomState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
-    ...createArtifactsSlice<TestRoomState>({artifactTypes})(...args),
+    ...createArtifactsSlice({artifactTypes})(...args),
   }));
 
   store.getState().artifacts.ensureArtifact('doc-1', {

@@ -1,5 +1,6 @@
 import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
+import {type ArtifactAiSliceState} from '@sqlrooms/artifacts/ai';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
 import {CrdtSliceState} from '@sqlrooms/crdt';
@@ -40,6 +41,7 @@ export const AppBuilderProjectConfigSchema = AppBuilderProjectConfig;
 
 export type RoomState = RoomShellSliceState &
   ArtifactsSliceState &
+  ArtifactAiSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState &
   AiSliceState &
@@ -54,6 +56,10 @@ export type RoomState = RoomShellSliceState &
   CrdtSliceState &
   WebContainerSliceState &
   DbSettingsSliceState & {
+    workspaceUi: {
+      showArtifactChooser: boolean;
+      setShowArtifactChooser: (show: boolean) => void;
+    };
     appProject: {
       config: AppBuilderProjectConfig;
       upsertArtifactApp: (

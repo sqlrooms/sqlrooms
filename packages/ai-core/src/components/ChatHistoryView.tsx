@@ -4,17 +4,25 @@ import {FC, useCallback, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {DeleteSessionDialog, RenameSessionDialog} from './session';
 import {ChatHistoryItem} from './ChatHistoryItem';
-import {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 
 type ChatHistoryViewProps = {
   onBack: () => void;
   onSelectChat: (sessionId: string) => void;
+  onCreateSession?: () => void;
+  createSessionDisabled?: boolean;
+  filterSession?: (session: AnalysisSessionSchema) => boolean;
+  emptyLabel?: string;
   className?: string;
 };
 
 export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   onBack,
   onSelectChat,
+  onCreateSession,
+  createSessionDisabled = false,
+  filterSession,
+  emptyLabel = 'No chats yet',
   className,
 }) => {
   const sessions = useStoreWithAi((s) => s.ai.config.sessions);
@@ -28,14 +36,16 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   const [sessionToDelete, setSessionToDelete] =
     useState<AnalysisSessionSchema | null>(null);
 
-  // Sort sessions by lastOpenedAt (most recent first)
   const sortedSessions = useMemo(() => {
-    return [...sessions].sort((a, b) => {
+    const filteredSessions = filterSession
+      ? sessions.filter(filterSession)
+      : sessions;
+    return [...filteredSessions].sort((a, b) => {
       const aTime = a.lastOpenedAt ?? 0;
       const bTime = b.lastOpenedAt ?? 0;
       return bTime - aTime;
     });
-  }, [sessions]);
+  }, [filterSession, sessions]);
 
   const handleSelectChat = useCallback(
     (sessionId: string) => {
@@ -50,7 +60,6 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
 
   const handleDeleteSession = useCallback(
     (session: AnalysisSessionSchema) => {
-      // If no messages, delete immediately; otherwise show confirmation
       if (!session.uiMessages?.length) {
         deleteSession(session.id);
       } else {
@@ -61,9 +70,16 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   );
 
   const handleCreateAndBack = useCallback(() => {
-    createSession();
+    if (createSessionDisabled) {
+      return;
+    }
+    if (onCreateSession) {
+      onCreateSession();
+    } else {
+      createSession();
+    }
     onBack();
-  }, [createSession, onBack]);
+  }, [createSession, createSessionDisabled, onBack, onCreateSession]);
 
   const handleCloseRenameDialog = useCallback(() => {
     setSessionToRename(null);
@@ -92,7 +108,6 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
-      {/* Header */}
       <div className="flex items-center gap-3 border-b pb-3 text-sm">
         <Button
           variant="ghost"
@@ -106,7 +121,6 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
         <span className="font-semibold">History</span>
       </div>
 
-      {/* Session list */}
       {sortedSessions.length > 0 ? (
         <div className="flex flex-col gap-2">
           {sortedSessions.map((session) => (
@@ -122,10 +136,11 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 py-12">
-          <p className="text-muted-foreground text-sm">No chats yet</p>
+          <p className="text-muted-foreground text-sm">{emptyLabel}</p>
           <Button
             variant="outline"
             onClick={handleCreateAndBack}
+            disabled={createSessionDisabled}
             className="gap-2"
           >
             <PlusIcon className="h-4 w-4" />
