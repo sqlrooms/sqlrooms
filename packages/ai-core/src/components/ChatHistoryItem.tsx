@@ -2,10 +2,10 @@ import {Button, cn} from '@sqlrooms/ui';
 import {LoaderCircleIcon, PencilIcon, TrashIcon} from 'lucide-react';
 import {FC, useState} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 
 type ChatHistoryItemProps = {
-  session: AnalysisSessionSchema;
+  session: ChatSessionSchema;
   isActive: boolean;
   onClick: () => void;
   onRename: () => void;

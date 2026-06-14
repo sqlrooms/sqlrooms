@@ -11,6 +11,7 @@ import React, {useMemo} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {TOOL_CALL_CANCELLED} from '../constants';
+import type {ChatTurn} from '../chatTurns';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {
   isDynamicToolPart,
@@ -36,7 +37,8 @@ import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {ToolPartRenderer} from './ToolPartRenderer';
 
 type AnalysisResultProps = {
-  analysisResult: AnalysisResultSchema;
+  analysisResult?: AnalysisResultSchema;
+  chatTurn?: ChatTurn;
   customMarkdownComponents?: Partial<Components>;
   hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
@@ -154,6 +156,7 @@ const ReasoningBox: React.FC<{
 
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
+  chatTurn,
   customMarkdownComponents,
   hoistedRenderers: userTools,
   ErrorMessageComponent,
@@ -162,10 +165,25 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
 
-  const uiMessageParts = useAssistantMessageParts(
+  const fallbackMessageParts = useAssistantMessageParts(
     uiMessages,
-    analysisResult.id,
+    analysisResult?.id ?? '',
   );
+
+  const uiMessageParts = useMemo(
+    () =>
+      chatTurn
+        ? chatTurn.assistantMessages.flatMap(
+            (message) => message.parts as UIMessagePart[],
+          )
+        : fallbackMessageParts,
+    [chatTurn, fallbackMessageParts],
+  );
+  const turnId = chatTurn?.id ?? analysisResult?.id ?? '';
+  const prompt = chatTurn?.prompt ?? analysisResult?.prompt ?? '';
+  const isCompleted =
+    chatTurn?.isCompleted ?? analysisResult?.isCompleted ?? true;
+  const errorMessage = chatTurn?.errorMessage ?? analysisResult?.errorMessage;
 
   const allTextContent = uiMessageParts
     .flatMap((part) =>
@@ -205,7 +223,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const currentSessionId = useStoreWithAi(
     (s) => s.ai.config.currentSessionId ?? '',
   );
-  const searchBlockPrefix = `${currentSessionId}:${analysisResult.id}`;
+  const searchBlockPrefix = `${currentSessionId}:${turnId}`;
 
   const search = useOptionalChatSearch();
   const hasActiveQuery =
@@ -216,8 +234,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     const blocks: ChatSearchBlock[] = [
       {
         id: `${searchBlockPrefix}:prompt`,
-        resultId: analysisResult.id,
-        text: analysisResult.prompt,
+        resultId: turnId,
+        text: prompt,
       },
     ];
 
@@ -225,7 +243,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       if (isTextPart(part)) {
         blocks.push({
           id: `${searchBlockPrefix}:text:${index}`,
-          resultId: analysisResult.id,
+          resultId: turnId,
           text: markdownToPlainText(
             processAnalysisAnswerContent(part.text).processedContent,
           ),
@@ -233,7 +251,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       } else if (isReasoningPart(part)) {
         blocks.push({
           id: `${searchBlockPrefix}:reasoning:${index}`,
-          resultId: analysisResult.id,
+          resultId: turnId,
           text: part.text,
         });
       } else if (isToolPart(part) || isDynamicToolPart(part)) {
@@ -241,7 +259,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         if (toolName) {
           blocks.push({
             id: `${searchBlockPrefix}:tool:${index}`,
-            resultId: analysisResult.id,
+            resultId: turnId,
             text: toolName,
           });
         }
@@ -250,8 +268,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
     return blocks.filter((block) => block.text.trim().length > 0);
   }, [
-    analysisResult.id,
-    analysisResult.prompt,
+    turnId,
+    prompt,
     hasActiveQuery,
     searchBlockPrefix,
     uiMessageParts,
@@ -270,14 +288,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                 <div className="break-words">
                   <HighlightedChatSearchText
                     blockId={`${searchBlockPrefix}:prompt`}
-                    text={analysisResult.prompt}
+                    text={prompt}
                   />
                 </div>
               </ExpandableContent>
             </div>
             <div className="shrink-0 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
               <CopyButton
-                text={analysisResult.prompt}
+                text={prompt}
                 className="relative top-[2px] h-4 w-6"
                 tooltipLabel="Copy prompt"
               />
@@ -298,7 +316,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               const toolCount = seg.parts.length;
               const allToolsDone = !anyPending && toolCount > 0;
               const summaryLabel =
-                allToolsDone && analysisResult.isCompleted
+                allToolsDone && isCompleted
                   ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
                   : undefined;
               return (
@@ -380,7 +398,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               return (
                 <ReasoningBox
                   key={`reasoning-${index}`}
-                  isRunning={!analysisResult.isCompleted}
+                  isRunning={!isCompleted}
                 >
                   <HighlightedChatSearchText
                     blockId={`${searchBlockPrefix}:reasoning:${index}`}
@@ -392,16 +410,16 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
             return null;
           })}
-          {analysisResult.errorMessage &&
-            !analysisResult.errorMessage.error.startsWith(
+          {errorMessage &&
+            !errorMessage.error.startsWith(
               TOOL_CALL_CANCELLED,
             ) &&
             (ErrorMessageComponent ? (
               <ErrorMessageComponent
-                errorMessage={analysisResult.errorMessage.error}
+                errorMessage={errorMessage.error}
               />
             ) : (
-              <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
+              <ErrorMessage errorMessage={errorMessage.error} />
             ))}
           {hasTextContent && (
             <div className="flex justify-start">

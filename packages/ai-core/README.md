@@ -144,13 +144,21 @@ const matches = findChatSearchMatches(blocks, query);
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
-- Chat UI: `Chat`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Chat UI: `Chat`, `ChatMessagesContainer`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
-- Types: `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
+- Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
+- Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
 - Tool/agent utilities:
+  - `cleanupPendingUiMessages`
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
   - `streamSubAgent`
+
+`AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+`AnalysisResult`, and `cleanupPendingAnalysisResults` remain compatibility
+exports for existing apps. New code should prefer `ChatSessionSchema`,
+`isChatSessionEmpty`, `Chat.Messages`, `uiMessages`, and derived `ChatTurn`
+helpers.
 
 ## Related packages
 

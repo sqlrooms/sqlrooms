@@ -144,6 +144,15 @@ const blocks: ChatSearchBlock[] = [
 const matches = findChatSearchMatches(blocks, query);
 ```
 
+## Chat Session Types
+
+Use `ChatSessionSchema` for persisted chat session validation and
+`isChatSessionEmpty` for session emptiness checks. `AnalysisSessionSchema`,
+`AnalysisResultSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+and `AnalysisResult` remain compatibility exports for existing apps, but new
+code should prefer `Chat.Messages`, `uiMessages`, and derived `ChatTurn` helpers
+such as `getChatTurnsFromUiMessages`.
+
 ## Add custom tools
 
 ```tsx

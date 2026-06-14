@@ -9,7 +9,7 @@
  * @packageDocumentation
  */
 
-import {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {ChatSessionSchema} from '@sqlrooms/ai-config';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -62,7 +62,7 @@ export type ArtifactAiSliceState = {
 type ArtifactAiCompatibleAiState = {
   ai: {
     config: {
-      sessions: AnalysisSessionSchema[];
+      sessions: ChatSessionSchema[];
       currentSessionId?: string;
     };
     createSession: (
@@ -71,7 +71,7 @@ type ArtifactAiCompatibleAiState = {
       model?: string,
     ) => void;
     switchSession: (sessionId: string) => void;
-    getCurrentSession: () => AnalysisSessionSchema | undefined;
+    getCurrentSession: () => ChatSessionSchema | undefined;
   };
 };
 

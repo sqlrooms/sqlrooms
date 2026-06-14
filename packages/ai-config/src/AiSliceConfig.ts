@@ -1,9 +1,9 @@
 import {z} from 'zod';
-import {AnalysisSessionSchema} from './schema/AnalysisSessionSchema';
+import {ChatSessionSchema} from './schema/ChatSessionSchema';
 import {createId} from '@paralleldrive/cuid2';
 
 export const AiSliceConfig = z.object({
-  sessions: z.array(AnalysisSessionSchema),
+  sessions: z.array(ChatSessionSchema),
   currentSessionId: z.string().optional(),
   /** IDs of sessions that are open as tabs */
   openSessionTabs: z.array(z.string()).optional(),

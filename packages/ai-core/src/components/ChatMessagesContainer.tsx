@@ -1,5 +1,6 @@
 import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
+import type {UIMessage} from 'ai';
 import React, {useEffect, useRef} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
@@ -7,8 +8,9 @@ import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
 import {AiThinkingDots} from './AiThinkingDots';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
+import {getChatTurnsFromUiMessages} from '../chatTurns';
 
-export const AnalysisResultsContainer: React.FC<{
+export const ChatMessagesContainer: React.FC<{
   className?: string;
   customMarkdownComponents?: Partial<Components>;
   hoistedRenderers?: string[];
@@ -24,11 +26,14 @@ export const AnalysisResultsContainer: React.FC<{
   const isRunning = useStoreWithAi((s) =>
     sessionId ? s.ai.getIsRunning(sessionId) : false,
   );
-  const currentAnalysisResults = useStoreWithAi((s) =>
-    s.ai.getAnalysisResults(),
-  );
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages,
+  );
+  const chatTurns = React.useMemo(
+    () => getChatTurnsFromUiMessages(uiMessages as UIMessage[] | undefined, {
+      isRunning,
+    }),
+    [isRunning, uiMessages],
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,10 +64,10 @@ export const AnalysisResultsContainer: React.FC<{
         className="flex w-full grow flex-col gap-5"
       >
         <div className="pr-3">
-          {currentAnalysisResults?.map((analysisResult) => (
+          {chatTurns.map((chatTurn) => (
             <AnalysisResult
-              key={analysisResult.id}
-              analysisResult={analysisResult}
+              key={chatTurn.id}
+              chatTurn={chatTurn}
               customMarkdownComponents={customMarkdownComponents}
               hoistedRenderers={hoistedRenderers}
               ErrorMessageComponent={ErrorMessageComponent}

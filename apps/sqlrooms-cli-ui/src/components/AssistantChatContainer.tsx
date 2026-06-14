@@ -1,4 +1,4 @@
-import {Chat, isAnalysisSessionEmpty} from '@sqlrooms/ai';
+import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
 import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
@@ -43,7 +43,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   const createSessionDisabled = Boolean(
     currentSession &&
-      isAnalysisSessionEmpty(currentSession) &&
+      isChatSessionEmpty(currentSession) &&
       isDefaultAssistantSessionName(currentSession.name),
   );
 

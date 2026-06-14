@@ -13,7 +13,8 @@ npm install @sqlrooms/ai-config
 - `AiSliceConfig`
 - `createDefaultAiConfig()`
 - `AiSettingsSliceConfig`
-- `AnalysisSessionSchema`, `AnalysisResultSchema`, `ErrorMessageSchema`
+- `ChatSessionSchema`, `ErrorMessageSchema`
+- Compatibility exports: `AnalysisSessionSchema`, `AnalysisResultSchema`
 - `ToolUIPart`, `UIMessagePart` types
 
 ## Basic usage
