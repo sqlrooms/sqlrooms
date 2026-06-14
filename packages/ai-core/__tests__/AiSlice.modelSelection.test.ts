@@ -152,6 +152,31 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
+  it('returns stable derived analysis results for unchanged UI messages', () => {
+    const store = createTestStore();
+    const messages = [
+      {
+        id: 'user-1',
+        role: 'user' as const,
+        parts: [{type: 'text' as const, text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant' as const,
+        parts: [{type: 'text' as const, text: 'hi'}],
+      },
+    ];
+
+    expect(store.getState().ai.setSessionUiMessages('session-1', messages)).toBe(
+      true,
+    );
+
+    const first = store.getState().ai.getAnalysisResults();
+    const second = store.getState().ai.getAnalysisResults();
+
+    expect(second).toBe(first);
+  });
+
   it('uses the first available model when creating a session with no valid default', () => {
     const store = createStore<AiSliceState>((set, get, store) =>
       createAiSlice({

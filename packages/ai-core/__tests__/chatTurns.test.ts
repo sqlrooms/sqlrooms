@@ -60,4 +60,48 @@ describe('chat turn derivation', () => {
       },
     ]);
   });
+
+  it('treats migrated legacy errors as completed even with stale incomplete metadata', () => {
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      metadata: {
+        sqlrooms: {
+          errorMessage: {error: 'Request failed'},
+          isCompleted: false,
+        },
+      },
+      parts: [{type: 'text', text: 'prompt'}],
+    };
+
+    expect(getAnalysisResultsFromUiMessages([userMessage])).toEqual([
+      {
+        id: 'user-1',
+        prompt: 'prompt',
+        isCompleted: true,
+        errorMessage: {error: 'Request failed'},
+      },
+    ]);
+  });
+
+  it('uses migrated legacy completion metadata for prompt-only completed turns', () => {
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      metadata: {
+        sqlrooms: {
+          isCompleted: true,
+        },
+      },
+      parts: [{type: 'text', text: 'prompt'}],
+    };
+
+    expect(getAnalysisResultsFromUiMessages([userMessage])).toEqual([
+      {
+        id: 'user-1',
+        prompt: 'prompt',
+        isCompleted: true,
+      },
+    ]);
+  });
 });

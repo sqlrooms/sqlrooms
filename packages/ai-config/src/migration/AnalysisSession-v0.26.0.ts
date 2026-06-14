@@ -56,11 +56,49 @@ function needsV0_26_0Migration(data: unknown): boolean {
 
   const d = data as UnknownRecord;
 
-  // Needs migration if uiMessages is missing, or if legacy toolAdditionalData is present
+  // Needs migration if uiMessages is missing, or if legacy keys need to be
+  // folded into the current uiMessages-only shape.
   const hasUiMessages = 'uiMessages' in d;
+  const hasLegacyAnalysisResults = 'analysisResults' in d;
   const hasLegacyToolData = 'toolAdditionalData' in d;
 
-  return !hasUiMessages || hasLegacyToolData;
+  return !hasUiMessages || hasLegacyAnalysisResults || hasLegacyToolData;
+}
+
+function getLegacyResultMetadata(result: UnknownRecord) {
+  const metadata: UnknownRecord = {};
+  const errorMessage = result.errorMessage;
+  const error = isObject(errorMessage) ? errorMessage.error : undefined;
+  if (typeof error === 'string') {
+    metadata.errorMessage = {error};
+  }
+
+  if (typeof result.isCompleted === 'boolean') {
+    metadata.isCompleted = result.isCompleted;
+  }
+
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
+
+function withLegacyResultMetadata(
+  message: UnknownRecord,
+  legacyMetadata: UnknownRecord | undefined,
+) {
+  if (!legacyMetadata) return message;
+
+  const metadata = isObject(message.metadata) ? message.metadata : {};
+  const sqlrooms = isObject(metadata.sqlrooms) ? metadata.sqlrooms : {};
+
+  return {
+    ...message,
+    metadata: {
+      ...metadata,
+      sqlrooms: {
+        ...sqlrooms,
+        ...legacyMetadata,
+      },
+    },
+  };
 }
 
 /** Perform migration to AI SDK v5 uiMessages and strip legacy fields. */
@@ -74,28 +112,50 @@ function migrateFromV0_26_0(data: unknown) {
     (sessionWithLegacy.uiMessages as UnknownRecord[]) || [];
   const {analysisResults: _legacyAnalysisResults, ...session} =
     sessionWithLegacy;
+  const uiMessages = [...existingUiMessages];
 
   // Only synthesize messages from legacy analysisResults when uiMessages is
-  // absent entirely. If it's already present (e.g. only key cleanup is needed),
-  // skip synthesis to avoid duplicating messages.
+  // absent entirely. If uiMessages is already present, only copy legacy result
+  // metadata onto matching user messages to avoid duplicating messages.
   const synthesizedMessages: UnknownRecord[] = [];
   const needsMessageSynthesis = !('uiMessages' in (data as UnknownRecord));
 
-  if (needsMessageSynthesis) {
-    for (const result of analysisResults) {
-      if (!isObject(result)) continue;
-      const id = (result.id as string) || '';
-      const prompt = (result.prompt as string) || '';
-      const streamMessage = (result.streamMessage as UnknownRecord) || {};
-      const parts = (streamMessage.parts as UnknownRecord[]) || [];
+  for (const result of analysisResults) {
+    if (!isObject(result)) continue;
+    const id = (result.id as string) || '';
+    const prompt = (result.prompt as string) || '';
+    const streamMessage = (result.streamMessage as UnknownRecord) || {};
+    const parts = (streamMessage.parts as UnknownRecord[]) || [];
+    const legacyMetadata = getLegacyResultMetadata(result);
 
+    if (!needsMessageSynthesis) {
+      const matchingUserMessageIndex = uiMessages.findIndex(
+        (message) => message.id === id && message.role === 'user',
+      );
+      if (matchingUserMessageIndex !== -1) {
+        const matchingUserMessage = uiMessages[matchingUserMessageIndex];
+        if (!matchingUserMessage) continue;
+        uiMessages[matchingUserMessageIndex] = withLegacyResultMetadata(
+          matchingUserMessage,
+          legacyMetadata,
+        );
+      }
+      continue;
+    }
+
+    if (needsMessageSynthesis) {
       // Create user message for the prompt
       if (prompt) {
-        synthesizedMessages.push({
-          id,
-          role: 'user',
-          parts: [{type: 'text', text: prompt}],
-        });
+        synthesizedMessages.push(
+          withLegacyResultMetadata(
+            {
+              id,
+              role: 'user',
+              parts: [{type: 'text', text: prompt}],
+            },
+            legacyMetadata,
+          ),
+        );
       }
 
       // Create assistant message mapping the parts
@@ -146,7 +206,7 @@ function migrateFromV0_26_0(data: unknown) {
 
   return {
     ...session,
-    uiMessages: [...existingUiMessages, ...synthesizedMessages],
+    uiMessages: [...uiMessages, ...synthesizedMessages],
     prompt: '',
     isRunning: false,
   };

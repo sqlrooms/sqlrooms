@@ -41,6 +41,7 @@ describe('ChatSession migration', () => {
             id: 'r1',
             prompt: 'What is 2+2?',
             isCompleted: true,
+            errorMessage: {error: 'Request failed'},
             streamMessage: {parts: []},
           },
         ],
@@ -48,6 +49,45 @@ describe('ChatSession migration', () => {
       const result = ChatSessionSchema.parse(raw);
       expect(Array.isArray(result.uiMessages)).toBe(true);
       expect(result.uiMessages.some((m) => m.role === 'user')).toBe(true);
+      expect(result.uiMessages[0]?.metadata).toEqual({
+        sqlrooms: {
+          errorMessage: {error: 'Request failed'},
+          isCompleted: true,
+        },
+      });
+      expect(
+        (result as Record<string, unknown>).analysisResults,
+      ).toBeUndefined();
+    });
+
+    it('preserves legacy result error and completion metadata before dropping analysisResults', () => {
+      const raw = {
+        ...baseFields,
+        uiMessages: [
+          {
+            id: 'r1',
+            role: 'user' as const,
+            parts: [{type: 'text', text: 'Why did this fail?'}],
+          },
+        ],
+        analysisResults: [
+          {
+            id: 'r1',
+            prompt: 'Why did this fail?',
+            isCompleted: true,
+            errorMessage: {error: 'Request cancelled'},
+            streamMessage: {parts: []},
+          },
+        ],
+      };
+
+      const result = ChatSessionSchema.parse(raw);
+      expect(result.uiMessages[0]?.metadata).toEqual({
+        sqlrooms: {
+          errorMessage: {error: 'Request cancelled'},
+          isCompleted: true,
+        },
+      });
       expect(
         (result as Record<string, unknown>).analysisResults,
       ).toBeUndefined();

@@ -278,6 +278,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
+    const analysisResultsCache = new WeakMap<
+      UIMessage[],
+      {isRunning: boolean; results: AnalysisResultSchema[]}
+    >();
+
     // Clean up pending analysis results and reset transient state from persisted config
     const cleanedConfig = params.config?.sessions
       ? {
@@ -1358,10 +1363,20 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) return undefined;
 
-          return getAnalysisResultsFromUiMessages(
-            currentSession.uiMessages as UIMessage[],
-            {isRunning: currentSession.isRunning},
-          );
+          const uiMessages = currentSession.uiMessages as UIMessage[];
+          const cached = analysisResultsCache.get(uiMessages);
+          if (cached && cached.isRunning === currentSession.isRunning) {
+            return cached.results;
+          }
+
+          const results = getAnalysisResultsFromUiMessages(uiMessages, {
+            isRunning: currentSession.isRunning,
+          });
+          analysisResultsCache.set(uiMessages, {
+            isRunning: currentSession.isRunning,
+            results,
+          });
+          return results;
         },
 
         /**

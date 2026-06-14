@@ -8,6 +8,7 @@ export type ChatRequestErrorMessage = {
 export type ChatMessageMetadata = {
   sqlrooms?: {
     errorMessage?: ChatRequestErrorMessage;
+    isCompleted?: boolean;
   };
 };
 
@@ -34,6 +35,15 @@ export function getChatRequestErrorMessage(
   const metadata = message?.metadata as ChatMessageMetadata | undefined;
   const error = metadata?.sqlrooms?.errorMessage?.error;
   return typeof error === 'string' ? {error} : undefined;
+}
+
+export function getChatRequestCompletionState(
+  message: UIMessage | undefined,
+): boolean | undefined {
+  const metadata = message?.metadata as ChatMessageMetadata | undefined;
+  return typeof metadata?.sqlrooms?.isCompleted === 'boolean'
+    ? metadata.sqlrooms.isCompleted
+    : undefined;
 }
 
 export function setChatRequestErrorMessage(
@@ -101,16 +111,17 @@ export function getChatTurnsFromUiMessages(
       .slice(nextIndex)
       .some((candidate) => candidate.role === 'user');
     const errorMessage = getChatRequestErrorMessage(message);
+    const completedOverride = getChatRequestCompletionState(message);
+    const derivedCompleted =
+      assistantMessages.length > 0 &&
+      areAssistantMessagesComplete(assistantMessages) &&
+      !(options.isRunning && isLastTurn);
     turns.push({
       id: message.id,
       prompt: getMessageText(message),
       userMessage: message,
       assistantMessages,
-      isCompleted:
-        !!errorMessage ||
-        (assistantMessages.length > 0 &&
-          areAssistantMessagesComplete(assistantMessages) &&
-          !(options.isRunning && isLastTurn)),
+      isCompleted: !!errorMessage || (completedOverride ?? derivedCompleted),
       errorMessage,
     });
   }
