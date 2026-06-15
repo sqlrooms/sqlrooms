@@ -53,7 +53,7 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
     return (
       <div className="flex w-full items-center space-x-1">
         <div
-          className="shrink-0"
+          className="ml-2 mr-px shrink-0"
           style={{width: DROPDOWN_ICON_PLACEHOLDER_WIDTH}}
         />
         {renderNode(treeData, isOpen)}
@@ -65,15 +65,18 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
       <CollapsibleTrigger className="w-full" asChild>
         <div className="flex w-full cursor-pointer items-center space-x-1">
           <ChevronRightIcon
-            className={cn('shrink-0 text-gray-500', {
-              'rotate-90 transform': isOpen,
-            })}
+            className={cn(
+              'ml-2 mr-px shrink-0 text-gray-500',
+              {
+                'rotate-90 transform': isOpen,
+              },
+            )}
             size={DROPDOWN_ICON_PLACEHOLDER_WIDTH}
           />
           {renderNode(treeData, isOpen)}
         </div>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-4">
+      <CollapsibleContent className="pl-2">
         {isOpen
           ? children?.map((child) => (
               <TreeNode<T>

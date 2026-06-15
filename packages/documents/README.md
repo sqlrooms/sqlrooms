@@ -117,7 +117,7 @@ managing image assets alongside Markdown content. SVG assets may use `utf8` or
 ## Block Documents
 
 `createBlockDocumentsSlice()` exposes structured state for artifact types
-backed by composable blocks: rich text, lists, images, standalone Mosaic/vgplot
+backed by composable blocks: text, lists, images, standalone Mosaic/vgplot
 charts, and direct stateful blocks such as dashboards, pivots, or Markdown
 documents.
 
@@ -152,7 +152,7 @@ const roomStore = createRoomStore(
 
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
-include headings, paragraphs, rich text, lists, todos, images, chart images,
+include headings, paragraphs, lists, todos, images, chart images,
 standalone chart blocks, and direct stateful blocks.
 
 `BlockDocumentArtifact` and `BlockDocumentEditor` provide the first rich

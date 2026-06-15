@@ -1,15 +1,6 @@
 /**
- * AI tool helpers for SQLRooms apps that use the artifacts slice.
- *
- * This subpath intentionally lives in `@sqlrooms/artifacts/ai` rather than
- * `@sqlrooms/ai`: the AI packages own generic run-context transport, while this
- * module owns the artifact-specific interpretation of that context. Apps supply
- * artifact payload readers for their domain types, and this module handles the
- * common assistant-facing tools for listing context artifacts, reading only
- * artifacts that were added to the run context, and updating the primary
- * artifact for the current AI run.
- *
- * @packageDocumentation
+ * Artifact-context AI tools for apps that compose `@sqlrooms/artifacts` with
+ * AI sessions.
  */
 
 import {
@@ -19,12 +10,13 @@ import {
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai-config';
-import {tool} from 'ai';
+import {tool, type Tool} from 'ai';
 import {z} from 'zod';
-import type {ArtifactsSliceState} from './ArtifactsSlice';
-import type {ArtifactMetadata as ArtifactMetadataType} from './ArtifactsSliceConfig';
+import type {ArtifactsSliceState} from '../ArtifactsSlice';
+import type {ArtifactMetadata as ArtifactMetadataType} from '../ArtifactsSliceConfig';
 
 const EmptyInput = z.object({});
+export type ListContextArtifactsToolParameters = z.infer<typeof EmptyInput>;
 
 const ReadContextArtifactInput = z.object({
   artifactId: z
@@ -32,10 +24,23 @@ const ReadContextArtifactInput = z.object({
     .optional()
     .describe('Context artifact ID. Defaults to the primary context artifact.'),
 });
+export type ReadContextArtifactToolParameters = z.infer<
+  typeof ReadContextArtifactInput
+>;
 
 const SetPrimaryContextArtifactInput = z.object({
   artifactId: z.string().describe('Artifact ID to make primary for this run.'),
 });
+export type SetPrimaryContextArtifactToolParameters = z.infer<
+  typeof SetPrimaryContextArtifactInput
+>;
+
+/**
+ * Wrapper shape used by artifact context tools for assistant-facing payloads.
+ */
+export type ArtifactContextToolOutput<TLlmResult> = {
+  llmResult: TLlmResult;
+};
 
 /**
  * Hidden execution context that `@sqlrooms/ai-core` passes as the second
@@ -88,6 +93,73 @@ export type ArtifactContextReadResult =
         type: string;
       };
       payload: unknown;
+    };
+
+export type ArtifactContextArtifactSummary = {
+  kind: string;
+  artifactId: string;
+  id: string;
+  title: string;
+  type?: string;
+  role: 'primary' | 'reference';
+  missing: boolean;
+  subtitle?: string;
+};
+
+export type ListContextArtifactsToolLlmResult = {
+  success: true;
+  primaryArtifactId: string | undefined;
+  artifacts: ArtifactContextArtifactSummary[];
+  details: string;
+};
+
+export type ListContextArtifactsToolOutput =
+  ArtifactContextToolOutput<ListContextArtifactsToolLlmResult>;
+
+export type ReadContextArtifactToolLlmResult = ArtifactContextReadResult;
+
+export type ReadContextArtifactToolOutput =
+  ArtifactContextToolOutput<ReadContextArtifactToolLlmResult>;
+
+export type SetPrimaryContextArtifactToolLlmResult =
+  | {
+      success: false;
+      errorMessage: string;
+    }
+  | {
+      success: true;
+      primaryArtifactId: string;
+      contextItems: AiRunContextItem[];
+      details: string;
+    };
+
+export type SetPrimaryContextArtifactToolOutput =
+  ArtifactContextToolOutput<SetPrimaryContextArtifactToolLlmResult>;
+
+export type ArtifactContextAiTools = {
+  list_context_artifacts: Tool<
+    ListContextArtifactsToolParameters,
+    ListContextArtifactsToolOutput
+  >;
+  read_context_artifact: Tool<
+    ReadContextArtifactToolParameters,
+    ReadContextArtifactToolOutput
+  >;
+  set_primary_context_artifact: Tool<
+    SetPrimaryContextArtifactToolParameters,
+    SetPrimaryContextArtifactToolOutput
+  >;
+};
+
+export type MakeArtifactPrimaryForAiRunResult =
+  | {
+      success: false;
+      errorMessage: string;
+    }
+  | {
+      success: true;
+      context: AiRunContext;
+      item: AiRunContextItem;
     };
 
 /**
@@ -176,7 +248,7 @@ function contextArtifactSummary<TState extends ArtifactsSliceState>(
   state: TState,
   item: AiRunContextItem,
   primaryItemId: string | undefined,
-) {
+): ArtifactContextArtifactSummary {
   const artifact = state.artifacts.config.artifactsById[item.id];
   return {
     kind: item.kind,
@@ -215,7 +287,7 @@ function setPrimaryArtifact<TState extends ArtifactsSliceState>(
   state: TState,
   context: ArtifactContextToolExecutionContext | undefined,
   artifactId: string,
-) {
+): MakeArtifactPrimaryForAiRunResult {
   const item = artifactToContextItem(state, artifactId);
   if (!item) {
     return {
@@ -264,7 +336,7 @@ export function makeArtifactPrimaryForAiRun<TState extends ArtifactsSliceState>(
   options: ArtifactContextToolsOptions<TState>,
   artifactId: string,
   context?: ArtifactContextToolExecutionContext,
-) {
+): MakeArtifactPrimaryForAiRunResult {
   return setPrimaryArtifact(
     options,
     options.store.getState(),
@@ -292,13 +364,18 @@ export function makeArtifactPrimaryForAiRun<TState extends ArtifactsSliceState>(
  */
 export function createArtifactContextAiTools<
   TState extends ArtifactsSliceState,
->(options: ArtifactContextToolsOptions<TState>) {
+>(
+  options: ArtifactContextToolsOptions<TState>,
+): ArtifactContextAiTools {
   return {
     list_context_artifacts: tool({
       description:
         'List artifacts that the user added to the current AI run context, including which artifact is primary.',
       inputSchema: EmptyInput,
-      execute: async (_params, executionOptions) => {
+      execute: async (
+        _params,
+        executionOptions,
+      ): Promise<ListContextArtifactsToolOutput> => {
         const context = executionOptions as
           | ArtifactContextToolExecutionContext
           | undefined;
@@ -323,7 +400,10 @@ export function createArtifactContextAiTools<
       description:
         'Read one artifact from the current AI run context. Defaults to the primary artifact. Use list_context_artifacts first when unsure.',
       inputSchema: ReadContextArtifactInput,
-      execute: async (params, executionOptions) => {
+      execute: async (
+        params,
+        executionOptions,
+      ): Promise<ReadContextArtifactToolOutput> => {
         const context = executionOptions as
           | ArtifactContextToolExecutionContext
           | undefined;
@@ -378,7 +458,10 @@ export function createArtifactContextAiTools<
       description:
         'Make an existing artifact the primary artifact for this AI run. Use after creating a new artifact or when the user asks to work on a specific artifact.',
       inputSchema: SetPrimaryContextArtifactInput,
-      execute: async (params, executionOptions) => {
+      execute: async (
+        params,
+        executionOptions,
+      ): Promise<SetPrimaryContextArtifactToolOutput> => {
         const context = executionOptions as
           | ArtifactContextToolExecutionContext
           | undefined;
@@ -389,9 +472,12 @@ export function createArtifactContextAiTools<
           context,
           params.artifactId,
         );
-        if (!result.success || !result.item || !result.context) {
+        if (!result.success) {
           return {
-            llmResult: result,
+            llmResult: {
+              success: false,
+              errorMessage: result.errorMessage,
+            },
           };
         }
 

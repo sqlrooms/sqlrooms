@@ -1,5 +1,6 @@
-import {DbSettings} from '@sqlrooms/db-settings';
+import {DbSettings, useStoreWithDbSettings} from '@sqlrooms/db-settings';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -9,23 +10,22 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
-import {FC} from 'react';
+import {HousePlugIcon} from 'lucide-react';
+import {useMemo} from 'react';
 
-export const DbConnectionsSection: FC = () => {
+export function DbConnectionsSection() {
+  const missingDriverCount = useMissingDriverCount();
+
   return (
     <Dialog>
-      <div className="border-border flex items-center justify-between rounded-md border px-3 py-2">
-        <div className="min-w-0">
-          <div className="text-sm font-medium">Connections</div>
-          <div className="text-muted-foreground text-xs">
-            Configure local and bridged database connections.
-          </div>
-        </div>
-        <DialogTrigger asChild>
-          <DbSettings.TriggerButton />
-        </DialogTrigger>
-      </div>
+      <DbConnectionsTriggerButton
+        className="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md"
+        missingDriverCount={missingDriverCount}
+      />
 
       <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col">
         <DialogHeader>
@@ -70,4 +70,49 @@ export const DbConnectionsSection: FC = () => {
       </DialogContent>
     </Dialog>
   );
-};
+}
+
+function DbConnectionsTriggerButton({
+  className,
+  missingDriverCount,
+}: {
+  className?: string;
+  missingDriverCount: number;
+}) {
+  const tooltipLabel =
+    missingDriverCount > 0
+      ? `DB connections (${missingDriverCount} driver${
+          missingDriverCount > 1 ? 's' : ''
+        } missing)`
+      : 'DB connections';
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className={className}
+            aria-label="Database connections"
+          >
+            <HousePlugIcon className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      </TooltipTrigger>
+      <TooltipContent side="right">{tooltipLabel}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function useMissingDriverCount() {
+  const diagnostics = useStoreWithDbSettings(
+    (s) => s.dbSettings.config.diagnostics,
+  );
+
+  return useMemo(
+    () => diagnostics.filter((diagnostic) => !diagnostic.available).length,
+    [diagnostics],
+  );
+}

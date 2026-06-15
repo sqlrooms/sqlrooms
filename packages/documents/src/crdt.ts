@@ -55,8 +55,6 @@ type IncomingArtifact = {
   id: string;
   type?: string;
   title: string;
-  visibility?: 'workspace' | 'embedded';
-  parentArtifactId?: string | null;
 };
 
 export const documentsMirrorSchema = schema.LoroMap({
@@ -116,8 +114,6 @@ export const documentsMirrorSchema = schema.LoroMap({
       id: schema.String(),
       type: schema.String(),
       title: schema.String(),
-      visibility: schema.Any(),
-      parentArtifactId: schema.Any(),
     }),
     (artifact) => artifact.id,
   ),
@@ -164,8 +160,7 @@ export function createDocumentsCrdtMirror<
   );
   const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
     artifact.type === 'document' ||
-    blockDocumentArtifactTypes.has(artifact.type) ||
-    artifact.visibility === 'embedded';
+    blockDocumentArtifactTypes.has(artifact.type);
   const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
     !isSyncedArtifact(artifact);
 
@@ -229,8 +224,6 @@ export function createDocumentsCrdtMirror<
           id: artifact.id,
           type: artifact.type,
           title: artifact.title,
-          visibility: artifact.visibility,
-          parentArtifactId: artifact.parentArtifactId ?? null,
         })),
         artifactOrder: artifactOrder.filter((id) => syncedArtifactIds.has(id)),
       };
@@ -250,8 +243,6 @@ export function createDocumentsCrdtMirror<
               id: artifact.id,
               type: artifact.type ?? 'document',
               title: artifact.title,
-              visibility: artifact.visibility,
-              parentArtifactId: artifact.parentArtifactId ?? undefined,
             }),
           ]),
         );

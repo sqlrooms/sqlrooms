@@ -20,18 +20,7 @@ import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
-
-export const CLI_ARTIFACT_TYPES = [
-  'worksheet',
-  'dashboard',
-  'pivot',
-  'notebook',
-  'document',
-  'sql-query',
-  'canvas',
-  'app',
-] as const;
-export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
+import {type CliArtifactType} from './artifactTypeIds';
 
 const dashboardBlockDefinition =
   createMosaicDashboardBlockDefinition<RoomState>({

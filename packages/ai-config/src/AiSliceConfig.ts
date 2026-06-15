@@ -18,7 +18,7 @@ export function createDefaultAiConfig(
     sessions: [
       {
         id: defaultSessionId,
-        name: 'Default Session',
+        name: 'Untitled',
         modelProvider: 'openai',
         model: 'gpt-4.1',
         analysisResults: [],

@@ -58,7 +58,6 @@ import {
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
-import {formatDateTimeSimple} from '@sqlrooms/utils';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -799,8 +798,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // Generate a default name if none is provided
           let sessionName = name;
           if (!sessionName) {
-            // Generate a human-readable date and time for the session name
-            sessionName = formatDateTimeSimple();
+            sessionName = 'Untitled';
           }
 
           set((state) =>

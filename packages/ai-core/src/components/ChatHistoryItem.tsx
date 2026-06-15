@@ -1,5 +1,5 @@
 import {Button, cn} from '@sqlrooms/ui';
-import {PencilIcon, TrashIcon} from 'lucide-react';
+import {LoaderCircleIcon, PencilIcon, TrashIcon} from 'lucide-react';
 import {FC, useState} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
@@ -59,7 +59,12 @@ export const ChatHistoryItem: FC<ChatHistoryItemProps> = ({
     >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <div className="mb-1 text-sm font-medium">{session.name}</div>
+          <div className="mb-1 flex min-w-0 items-center gap-2 text-sm font-medium">
+            <span className="truncate">{session.name}</span>
+            {session.isRunning ? (
+              <LoaderCircleIcon className="text-primary h-3.5 w-3.5 shrink-0 animate-spin" />
+            ) : null}
+          </div>
           <div className="text-muted-foreground mb-2 text-xs">
             {messageCount} {messageCount === 1 ? 'message' : 'messages'}
             {relativeTime && ` · ${relativeTime}`}

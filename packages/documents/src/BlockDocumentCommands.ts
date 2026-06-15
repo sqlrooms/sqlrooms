@@ -67,8 +67,6 @@ type BlockDocumentCommandState = BaseRoomStoreState & {
       type: string;
       id?: string;
       title?: string;
-      visibility?: 'workspace' | 'embedded';
-      parentArtifactId?: string;
     }) => string;
     setCurrentArtifact: (id?: string) => void;
     getArtifact: (id: string) => ArtifactMetadataType | undefined;
