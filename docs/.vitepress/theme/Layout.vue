@@ -75,6 +75,79 @@ function dismiss() {
         <div class="site-footer">
           <div class="sponsors-footer">
             <div class="sponsor-item">
+              <a
+                href="https://www.openvisualization.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  width="132"
+                  height="40"
+                  src="/openvis.svg"
+                  alt="Open Visualization Logo"
+                  decoding="async"
+                  class="openvis-logo openvis-light"
+                />
+                <img
+                  width="132"
+                  height="40"
+                  src="/openvis-white.svg"
+                  alt="Open Visualization Logo"
+                  decoding="async"
+                  class="openvis-logo openvis-dark"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item">
+              <a
+                href="https://openjsf.org"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  width="126"
+                  height="40"
+                  src="/openjsf-logo.svg"
+                  alt="OpenJS Foundation Logo"
+                  decoding="async"
+                  class="openjsf-logo openjsf-light"
+                />
+                <img
+                  width="127"
+                  height="40"
+                  src="/openjs-foundation-logo-horizontal-white.svg"
+                  alt="OpenJS Foundation Logo"
+                  decoding="async"
+                  class="openjsf-logo openjsf-dark"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item">
+              <a
+                href="https://vis.gl/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="visgl-link"
+              >
+                <img
+                  width="117"
+                  height="30"
+                  src="/visgl-logo-color.svg"
+                  alt="VIS.GL Logo"
+                  decoding="async"
+                  class="visgl-logo visgl-light"
+                />
+                <img
+                  width="117"
+                  height="30"
+                  src="/visgl-logo-color-dark_background.svg"
+                  alt="VIS.GL Logo"
+                  decoding="async"
+                  class="visgl-logo visgl-dark"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item">
               Supported by
               <a
                 href="https://location.foursquare.com"
@@ -136,9 +209,7 @@ function dismiss() {
               | <a href="https://terms-of-use.openjsf.org">Terms of Use</a> |
               <a href="https://privacy-policy.openjsf.org">Privacy Policy</a> |
               <a href="https://bylaws.openjsf.org">Bylaws</a> |
-              <a href="https://code-of-conduct.openjsf.org"
-                >Code of Conduct</a
-              >
+              <a href="https://code-of-conduct.openjsf.org">Code of Conduct</a>
               |
               <a href="https://trademark-policy.openjsf.org"
                 >Trademark Policy</a
@@ -182,6 +253,30 @@ html:not(.dark) .netlify-dark {
   display: none;
 }
 
+html:not(.dark) .openvis-dark {
+  display: none !important;
+}
+
+.dark .openvis-light {
+  display: none !important;
+}
+
+html:not(.dark) .openjsf-dark {
+  display: none !important;
+}
+
+.dark .openjsf-light {
+  display: none !important;
+}
+
+html:not(.dark) .visgl-dark {
+  display: none !important;
+}
+
+.dark .visgl-light {
+  display: none !important;
+}
+
 @media (min-width: 960px) {
   .VPContent.has-sidebar ~ .site-footer {
     margin-left: var(--vp-sidebar-width);
@@ -219,6 +314,7 @@ html:not(.dark) .video.dark {
 .sponsors-footer {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: 3rem;
   align-items: center;
   justify-content: center;
@@ -241,6 +337,34 @@ html:not(.dark) .video.dark {
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
+}
+
+.openjsf-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.openvis-logo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.visgl-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.visgl-link:hover {
+  text-decoration: none;
+}
+
+.visgl-logo {
+  display: block;
+  height: 30px;
+  width: auto;
 }
 
 .footer__copyright {
