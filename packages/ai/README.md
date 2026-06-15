@@ -91,6 +91,33 @@ function AiPanel() {
 }
 ```
 
+## Generate Chat Titles
+
+`generateSessionTitle` turns a session's early user messages into a concise title
+via `ai.sendPrompt`, cleans the model output, and renames the session.
+`useGenerateSessionTitle` wraps that helper for React surfaces that should watch
+the current session and trigger title generation after new user messages. Apps
+can keep product-specific policy outside the shared package by passing options
+such as `enabled`, `isDefaultSessionName`, and `getPromptOptions`.
+
+```tsx
+import {Chat, useGenerateSessionTitle} from '@sqlrooms/ai';
+
+function AiPanel() {
+  useGenerateSessionTitle({
+    enabled: true,
+    getPromptOptions: () => ({useTools: false}),
+  });
+
+  return (
+    <Chat>
+      <Chat.Messages />
+      <Chat.Composer />
+    </Chat>
+  );
+}
+```
+
 ## Chat search
 
 `Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
@@ -111,7 +138,9 @@ without the provider:
 ```tsx
 import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai';
 
-const blocks: ChatSearchBlock[] = [{id: 'title', resultId: 'title', text: title}];
+const blocks: ChatSearchBlock[] = [
+  {id: 'title', resultId: 'title', text: title},
+];
 const matches = findChatSearchMatches(blocks, query);
 ```
 

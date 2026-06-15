@@ -149,6 +149,8 @@ const AnalysisSessionBaseSchema = z.object({
   messagesRevision: z.number().optional().default(0),
   /** Per-session analysis prompt text */
   prompt: z.string().default(''),
+  /** Per-session draft context selected in the composer before the next request. */
+  draftContextItemIds: z.array(z.string()).optional(),
   /** Per-session flag indicating if analysis is running */
   isRunning: z.boolean().default(false),
   /** Last time the session was opened/selected (epoch ms) */

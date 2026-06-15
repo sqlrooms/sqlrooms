@@ -1,9 +1,14 @@
-import {Chat} from '@sqlrooms/ai';
+import {Chat, isAnalysisSessionEmpty} from '@sqlrooms/ai';
+import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
-import React from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../store';
 import {AssistantContextSelector} from './AssistantContextSelector';
+import {
+  isDefaultAssistantSessionName,
+  useGenSessionTitle,
+} from './useGenSessionTitle';
 
 interface AssistantChatContainerProps {
   contextDropTarget: {
@@ -19,44 +24,124 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
   );
+  const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+  const currentArtifactId = useRoomStore(
+    (s) => s.artifacts.config.currentArtifactId,
+  );
+  const sessions = useRoomStore((s) => s.ai.config.sessions);
+  const aiSessionArtifacts = useRoomStore(
+    (s) => s.artifactAi.config.aiSessionArtifacts,
+  );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
-  const createSession = useRoomStore((s) => s.ai.createSession);
+  const createArtifactScopedSession = useRoomStore(
+    (s) => s.artifactAi.createArtifactScopedSession,
+  );
+
+  const [showHistory, setShowHistory] = useState(false);
+  useGenSessionTitle();
+
+  const createSessionDisabled = Boolean(
+    currentSession &&
+      isAnalysisSessionEmpty(currentSession) &&
+      isDefaultAssistantSessionName(currentSession.name),
+  );
+
+  const handleCreateSession = useCallback(() => {
+    if (createSessionDisabled) {
+      return;
+    }
+    createArtifactScopedSession();
+  }, [createArtifactScopedSession, createSessionDisabled]);
+
+  const filterSession = useCallback(
+    (session: (typeof sessions)[number]) =>
+      isAiSessionVisibleForArtifact(
+        aiSessionArtifacts,
+        session.id,
+        currentArtifactId,
+      ),
+    [aiSessionArtifacts, currentArtifactId],
+  );
+
+  const historyIsRunning = useMemo(() => {
+    if (!currentArtifactId || currentSession?.isRunning) {
+      return false;
+    }
+    return sessions.some(
+      (session) =>
+        session.isRunning &&
+        session.id !== currentSession?.id &&
+        isAiSessionVisibleForArtifact(
+          aiSessionArtifacts,
+          session.id,
+          currentArtifactId,
+        ),
+    );
+  }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
 
   return (
     <Chat.Root>
       <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
-        {currentSessionId && (
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <Chat.Sessions className="w-full" />
+        {!currentSessionId ? (
+          <div className="flex h-full w-full items-center justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 gap-2 px-4"
+              onClick={handleCreateSession}
+              disabled={!currentArtifactId}
+            >
+              <PlusIcon className="h-4 w-4" />
+              New session
+            </Button>
           </div>
+        ) : (
+          <>
+            {!showHistory && (
+              <Chat.Header
+                onHistoryClick={() => setShowHistory(true)}
+                onCreateSession={handleCreateSession}
+                createSessionDisabled={createSessionDisabled}
+                historyIsRunning={historyIsRunning}
+                className="mb-4"
+              />
+            )}
+            {showHistory ? (
+              <Chat.History
+                onBack={() => setShowHistory(false)}
+                onCreateSession={handleCreateSession}
+                createSessionDisabled={createSessionDisabled}
+                filterSession={filterSession}
+                emptyLabel="No chats for this artifact yet"
+                onSelectChat={(sessionId) => {
+                  const switchSession =
+                    useRoomStore.getState().ai.switchSession;
+                  switchSession(sessionId);
+                  setShowHistory(false);
+                }}
+                className="flex-1"
+              />
+            ) : (
+              <div className="print-container grow overflow-auto">
+                {isDataAvailable ? (
+                  <Chat.Messages
+                    key={currentSessionId}
+                    hoistedRenderers={['chart']}
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center">
+                    <SkeletonPane className="p-4" />
+                    <p className="text-muted-foreground mt-4">
+                      Loading database...
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
-        <div className="print-container grow overflow-auto">
-          {!currentSessionId ? (
-            <div className="flex h-full w-full items-center justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 gap-2 px-4"
-                onClick={() => createSession()}
-              >
-                <PlusIcon className="h-4 w-4" />
-                New session
-              </Button>
-            </div>
-          ) : isDataAvailable ? (
-            <Chat.Messages
-              key={currentSessionId}
-              hoistedRenderers={['chart']}
-            />
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center">
-              <SkeletonPane className="p-4" />
-              <p className="text-muted-foreground mt-4">Loading database...</p>
-            </div>
-          )}
-        </div>
-        {currentSessionId && (
+        {currentSessionId && !showHistory && (
           <>
             <Chat.PromptSuggestions>
               <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />

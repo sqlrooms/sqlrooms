@@ -492,7 +492,6 @@ describe('BlockDocumentsSlice', () => {
     const blocks: BlockDocumentBlockType[] = [
       {id: 'heading', type: 'heading', level: 3, text: 'Findings'},
       {id: 'paragraph', type: 'paragraph', text: 'A note'},
-      {id: 'rich', type: 'richText', markdown: '**Bold** note'},
       {id: 'list', type: 'list', ordered: true, items: ['One', 'Two']},
       {id: 'todo', type: 'todo', checked: true, text: 'Review'},
       {id: 'image', type: 'image', assetId: 'asset-1', caption: 'Image'},

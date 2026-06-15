@@ -14,7 +14,6 @@ export const MosaicDashboardResetFiltersButton: FC<
   return (
     <ResetFiltersButton
       className="h-8 w-8"
-      iconClassName="h-4 w-4"
       disabled={!hasActiveFilters}
       onClick={reset}
       tooltip="Reset all filters"

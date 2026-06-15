@@ -39,14 +39,14 @@ describe('chart runtime data policy helpers', () => {
   it('creates AI-visible too-much-data issues from limit errors', () => {
     const issue = createChartRuntimeIssueFromError(
       new DataPointLimitError(12, 10),
-      {panelId: 'panel-1', chartType: 'bubble-chart'},
+      {panelId: 'panel-1', chartType: 'scatter-plot'},
       {reason: 'Use a heatmap instead.'},
     );
 
     expect(issue).toMatchObject({
       kind: 'too-much-data',
       panelId: 'panel-1',
-      chartType: 'bubble-chart',
+      chartType: 'scatter-plot',
       recoverable: true,
       rowCount: 12,
       limit: 10,

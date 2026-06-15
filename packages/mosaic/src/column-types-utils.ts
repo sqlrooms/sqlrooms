@@ -2,6 +2,15 @@
  * Column type constants for chart field type filtering
  */
 
+/**
+ * Normalizes DuckDB column types by removing parameter lists.
+ * E.g., "DECIMAL(10,2)" → "DECIMAL", "VARCHAR(255)" → "VARCHAR"
+ */
+function normalizeColumnType(columnType: string): string {
+  const parenIndex = columnType.indexOf('(');
+  return parenIndex === -1 ? columnType : columnType.substring(0, parenIndex);
+}
+
 export const NUMERIC_COLUMN_TYPES = [
   'BIGINT',
   'BIT',
@@ -38,17 +47,17 @@ export const QUANTITATIVE_COLUMN_TYPES = [
 export const CATEGORICAL_COLUMN_TYPES = ['VARCHAR', 'TEXT', 'BLOB', 'ENUM'];
 
 export function isTemporalType(columnType: string): boolean {
-  return TEMPORAL_COLUMN_TYPES.includes(columnType);
+  return TEMPORAL_COLUMN_TYPES.includes(normalizeColumnType(columnType));
 }
 
 export function isQuantitativeType(columnType: string): boolean {
-  return QUANTITATIVE_COLUMN_TYPES.includes(columnType);
+  return QUANTITATIVE_COLUMN_TYPES.includes(normalizeColumnType(columnType));
 }
 
 export function isNumericType(columnType: string): boolean {
-  return NUMERIC_COLUMN_TYPES.includes(columnType);
+  return NUMERIC_COLUMN_TYPES.includes(normalizeColumnType(columnType));
 }
 
 export function isCategoricalType(columnType: string): boolean {
-  return CATEGORICAL_COLUMN_TYPES.includes(columnType);
+  return CATEGORICAL_COLUMN_TYPES.includes(normalizeColumnType(columnType));
 }

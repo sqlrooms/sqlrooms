@@ -1,10 +1,14 @@
 import {createArtifactPanelDefinition} from '@sqlrooms/artifacts';
-import {CreateLayoutSliceProps} from '@sqlrooms/layout';
-import {DatabaseIcon, FolderIcon, SparklesIcon} from 'lucide-react';
+import {
+  CreateLayoutSliceProps,
+  getLayoutNodeId,
+  isLayoutSplitNode,
+  type LayoutConfig,
+} from '@sqlrooms/layout';
+import {FolderIcon, SparklesIcon} from 'lucide-react';
 import {StoreApi} from 'zustand';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {AssistantPanel} from './components/AssistantPanel';
-import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {RoomState} from './store-types';
 import {ArtifactsContainerPanel} from './workspace/ArtifactsContainerPanel';
 
@@ -19,25 +23,6 @@ export const createLayout = ({
     direction: 'row',
     children: [
       {
-        type: 'tabs',
-        id: 'left-sidebar',
-        defaultSize: '30%',
-        minSize: 250,
-        maxSize: 400,
-        children: ['data-sources'],
-        activeTabIndex: 0,
-        collapsible: true,
-        collapsedSize: 0,
-      },
-      {
-        type: 'tabs',
-        id: 'workspace',
-        panel: 'workspace',
-        defaultSize: '70%',
-        children: [],
-        activeTabIndex: 0,
-      },
-      {
         type: 'panel',
         id: 'assistant-sidebar',
         panel: {
@@ -49,14 +34,17 @@ export const createLayout = ({
         collapsible: true,
         collapsedSize: 0,
       },
+      {
+        type: 'tabs',
+        id: 'workspace',
+        panel: 'workspace',
+        defaultSize: '70%',
+        children: [],
+        activeTabIndex: 0,
+      },
     ],
   },
   panels: {
-    'data-sources': {
-      title: 'Data',
-      icon: DatabaseIcon,
-      component: DataSourcesPanel,
-    },
     assistant: {
       component: AssistantPanel,
       title: 'AI Assistant',
@@ -70,3 +58,44 @@ export const createLayout = ({
     artifact: createArtifactPanelDefinition(ARTIFACT_TYPES, store),
   },
 });
+
+export function migrateCliLayoutConfig(config: LayoutConfig): LayoutConfig {
+  if (!isLayoutSplitNode(config)) {
+    return config;
+  }
+
+  const children = config.children.filter(
+    (child) => getLayoutNodeId(child) !== 'left-sidebar',
+  );
+  const assistantNode = children.find(
+    (child) => getLayoutNodeId(child) === 'assistant-sidebar',
+  );
+  if (!assistantNode) {
+    return {
+      ...config,
+      children,
+    };
+  }
+
+  const childrenWithoutAssistant = children.filter(
+    (child) => getLayoutNodeId(child) !== 'assistant-sidebar',
+  );
+  const workspaceIndex = childrenWithoutAssistant.findIndex(
+    (child) => getLayoutNodeId(child) === 'workspace',
+  );
+
+  if (workspaceIndex === -1) {
+    return {
+      ...config,
+      children,
+    };
+  }
+
+  const reorderedChildren = [...childrenWithoutAssistant];
+  reorderedChildren.splice(workspaceIndex, 0, assistantNode);
+
+  return {
+    ...config,
+    children: reorderedChildren,
+  };
+}

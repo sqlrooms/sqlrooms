@@ -20,6 +20,7 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
+import {DataTable} from '@sqlrooms/duckdb';
 
 export type {ChartType};
 
@@ -186,7 +187,7 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
 };
 
 export type CreateSpecOptions<TSettings = ChartSettings> = {
-  tableName: string;
+  dataTable: DataTable;
   settings: TSettings;
   selectionName?: string;
 };

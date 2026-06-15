@@ -1,5 +1,5 @@
 import {SpinnerPane, cn} from '@sqlrooms/ui';
-import {type FC, createElement, useMemo} from 'react';
+import {type FC, createElement, useMemo, useEffect} from 'react';
 import {VgPlotChart} from '../VgPlotChart';
 import type {ChartRuntimeIssueContext} from '../chart-runtime';
 import type {ChartConfig} from './chart-types/chart-config';
@@ -64,6 +64,18 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
       : undefined,
   );
 
+  const clearPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.clearPanelIssueByKey,
+  );
+
+  // Clear issue when config changes - new config means user is trying different settings
+  useEffect(() => {
+    if (runtimeIssueKey && issue) {
+      clearPanelIssue(runtimeIssueKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config, runtimeIssueKey, clearPanelIssue]);
+
   const renderContext = useMosaicChartRenderContext(
     dataTable,
     config,
@@ -82,10 +94,6 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     );
   }
 
-  if (issue) {
-    return <MosaicChartRuntimeIssuePanel issue={issue} />;
-  }
-
   if (renderContext.type === 'error') {
     return (
       <div
@@ -94,12 +102,13 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
           className,
         )}
       >
-        <MosaicChartError
-          title={renderContext.title}
-          message={renderContext.message}
-        />
+        <MosaicChartError error={renderContext.error} />
       </div>
     );
+  }
+
+  if (issue) {
+    return <MosaicChartRuntimeIssuePanel issue={issue} />;
   }
 
   if (renderContext.type === 'spec') {

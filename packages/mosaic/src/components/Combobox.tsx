@@ -137,7 +137,7 @@ const ComboboxItem: FC<PropsWithChildren<ComboboxItemProps>> = ({
     <CommandItem value={value} onSelect={handleSelect}>
       <Check
         className={cn(
-          'mr-2 h-3.5 w-3.5 shrink-0',
+          'h-3.5 w-3.5 shrink-0',
           selected ? 'opacity-100' : 'opacity-0',
         )}
       />

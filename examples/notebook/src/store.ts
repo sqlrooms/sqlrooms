@@ -132,7 +132,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createArtifactsSlice<RoomState>({
+      ...createArtifactsSlice({
         artifactTypes: NOTEBOOK_ARTIFACT_TYPES,
         config: {
           artifactsById: {

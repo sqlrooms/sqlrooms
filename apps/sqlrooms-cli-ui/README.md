@@ -71,7 +71,7 @@ or Data Table Explorer flows use `grid`.
 ## Worksheet Artifacts
 
 Worksheet artifacts are block-composed documents for active analytical work.
-They can contain rich text, images, standalone Mosaic/vgplot chart blocks, and
+They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
 

@@ -9,10 +9,25 @@ export {
   useStoreWithKepler,
 } from './KeplerSlice';
 export type {
+  AddTableToMapFn,
+  AddTableToMapLoadOptions,
+  AddTableToMapParams,
   CreateInitialMapKeplerStateContext,
   CreateKeplerSliceOptions,
   KeplerSliceState,
 } from './KeplerSlice';
+export {
+  buildKeplerTableLayerOptions,
+  findKeplerTableForDatasetId,
+  getKeplerDatasetIdForTable,
+  getKeplerTableLabel,
+  shouldIncludeKeplerTable,
+} from './keplerTableSelection';
+export type {
+  KeplerDbSchemaReference,
+  KeplerTableLayerOption,
+  KeplerTableSelectionOptions,
+} from './keplerTableSelection';
 
 export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
