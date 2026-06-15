@@ -1,5 +1,9 @@
 import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
+  ArtifactAiConfigSchema,
+  createArtifactAiSlice,
+} from '@sqlrooms/artifacts/ai';
+import {
   AiSettingsSliceConfig,
   AiSliceConfig,
   getAiRunContextPrimaryItem,
@@ -43,6 +47,7 @@ import {
   createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
+  DEFAULT_ROOM_TITLE,
   LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
@@ -90,8 +95,8 @@ import {
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {createLayout} from './layout';
-import {fetchRuntimeConfig} from './runtimeConfig';
+import {createLayout, migrateCliLayoutConfig} from './layout';
+import {fetchRuntimeConfig, type RuntimeConfig} from './runtimeConfig';
 import {
   createDuckDbPersistStorage,
   saveAiSettingsToServer,
@@ -123,6 +128,7 @@ const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
   (runtimeAiSettings.providers as AiSettingsSliceConfig['providers']) ||
@@ -144,6 +150,42 @@ const CRDT_STORAGE_KEY = [
   'documents',
 ].join(':');
 const AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS = 500;
+
+function getDefaultWorkspaceTitle(config: RuntimeConfig) {
+  const dbPath = config.dbPath?.trim();
+  if (!dbPath || dbPath === ':memory:' || dbPath === 'memory') {
+    return 'Untitled Workspace';
+  }
+
+  const normalizedPath = dbPath.replace(/[/\\]+$/, '');
+  const fileName =
+    normalizedPath.split(/[\\/]/).filter(Boolean).pop() ?? normalizedPath;
+  const extensionIndex = fileName.lastIndexOf('.');
+  const title =
+    extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName;
+
+  return title || 'Untitled Workspace';
+}
+
+function migrateCliRoomConfig(roomConfig: unknown) {
+  if (!roomConfig || typeof roomConfig !== 'object') {
+    return roomConfig;
+  }
+
+  const title = (roomConfig as {title?: unknown}).title;
+  if (
+    typeof title !== 'string' ||
+    title.trim().length === 0 ||
+    title === DEFAULT_ROOM_TITLE
+  ) {
+    return {
+      ...roomConfig,
+      title: defaultWorkspaceTitle,
+    };
+  }
+
+  return roomConfig;
+}
 
 function createCliCrdtSyncConnector() {
   if (!runtimeConfig.syncEnabled) return undefined;
@@ -210,6 +252,7 @@ const sliceConfigSchemas = {
   blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
+  artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
   pivot: PivotSliceConfig,
 } as const;
@@ -263,12 +306,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...persistedRecord,
             artifacts: persistedArtifacts,
             cells: persistedCells,
+            room: migrateCliRoomConfig(persistedRecord.room),
+            layout: persistedRecord.layout
+              ? migrateCliLayoutConfig(persistedRecord.layout as LayoutConfig)
+              : persistedRecord.layout,
           },
           currentState,
         );
       },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
+        state.artifactAi.syncCurrentArtifactAiSession();
         cliUiPersistStorage.markStateSnapshotSaved(
           persistHelpers.partialize(state),
         );
@@ -384,6 +432,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       };
 
       return {
+        workspaceUi: {
+          showArtifactChooser: false,
+          setShowArtifactChooser: (show) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                draft.workspaceUi.showArtifactChooser = show;
+              }),
+            );
+          },
+        },
+
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
           upsertArtifactApp: (artifactId, app) => {
@@ -455,7 +514,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createRoomShellSlice({
           connector,
-          config: {dataSources: []},
+          config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
           createDbProps: {
             duckDb: {
@@ -495,9 +554,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createArtifactsSlice<RoomState>({
+        ...createArtifactsSlice({
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
+
+        ...createArtifactAiSlice()(set, get, store),
 
         ...createMosaicSlice({
           preagg: {

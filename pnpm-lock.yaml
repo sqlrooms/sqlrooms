@@ -190,9 +190,6 @@ importers:
       '@sqlrooms/documents':
         specifier: workspace:*
         version: link:../../packages/documents
-      '@sqlrooms/dropzone':
-        specifier: workspace:*
-        version: link:../../packages/dropzone
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb

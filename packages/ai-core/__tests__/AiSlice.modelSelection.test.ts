@@ -222,16 +222,12 @@ describe('AiSlice model selection', () => {
   it('keeps draft context item IDs isolated per session', () => {
     const store = createTestStore();
 
-    store
-      .getState()
-      .ai.setSessionDraftContextItemIds('session-1', ['map-a']);
+    store.getState().ai.setSessionDraftContextItemIds('session-1', ['map-a']);
     store.getState().ai.createSession('Session 2');
     const session2Id = store.getState().ai.getCurrentSession()?.id;
 
     expect(session2Id).toBeDefined();
-    store
-      .getState()
-      .ai.setSessionDraftContextItemIds(session2Id!, ['map-b']);
+    store.getState().ai.setSessionDraftContextItemIds(session2Id!, ['map-b']);
 
     expect(
       store.getState().ai.getSessionDraftContextItemIds('session-1'),
@@ -318,9 +314,7 @@ describe('AiSlice model selection', () => {
     const sendMessage = jest.fn();
 
     store.getState().ai.setChatSendMessage('session-1', sendMessage);
-    store
-      .getState()
-      .ai.setSessionDraftContextItemIds('session-1', ['map-a']);
+    store.getState().ai.setSessionDraftContextItemIds('session-1', ['map-a']);
     store.getState().ai.setPrompt('session-1', 'hello');
     await store.getState().ai.startAnalysis('session-1');
 

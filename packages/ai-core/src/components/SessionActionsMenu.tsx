@@ -12,7 +12,7 @@ import {
 import {MoreVertical, PencilIcon, TrashIcon} from 'lucide-react';
 
 type SessionActionsMenuProps = {
-  onRename: () => void;
+  onRename?: () => void;
   onDelete: () => void;
 };
 
@@ -38,11 +38,15 @@ export const SessionActionsMenu: React.FC<SessionActionsMenuProps> = ({
         <TooltipContent>Session actions</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={onRename}>
-          <PencilIcon className="mr-2 h-4 w-4" />
-          Rename
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        {onRename ? (
+          <>
+            <DropdownMenuItem onClick={onRename}>
+              <PencilIcon className="mr-2 h-4 w-4" />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
           onClick={onDelete}

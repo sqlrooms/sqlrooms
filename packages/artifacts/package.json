@@ -16,8 +16,8 @@
       "default": "./dist/index.js"
     },
     "./ai": {
-      "types": "./dist/ai.d.ts",
-      "import": "./dist/ai.js"
+      "types": "./dist/ai/index.d.ts",
+      "import": "./dist/ai/index.js"
     }
   },
   "main": "dist/index.js",
