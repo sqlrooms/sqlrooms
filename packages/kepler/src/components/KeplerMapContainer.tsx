@@ -155,8 +155,12 @@ const KeplerGl: FC<{
     };
   }, [hasFilters, hasAnimatableLayers, mergedKeplerProps, theme]);
 
-  const modalPortalNode =
-    modalPortalTarget === 'body' ? document.body : containerNode;
+  const modalPortalNode = useMemo(() => {
+    if (modalPortalTarget === 'body') {
+      return typeof document !== 'undefined' ? document.body : null;
+    }
+    return containerNode;
+  }, [modalPortalTarget, containerNode]);
 
   const modalContainerFields = keplerState?.visState
     ? modalContainerSelector(mergedKeplerProps, modalPortalNode)

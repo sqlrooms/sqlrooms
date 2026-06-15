@@ -146,13 +146,26 @@ dataset-id override remain clear at the call site.
 Pass options to `createKeplerSlice()`:
 
 ```ts
+import {createKeplerTheme, type KeplerThemeOverrides} from '@sqlrooms/kepler';
+
 createKeplerSlice({
   basicKeplerProps: {
     mapboxApiAccessToken: import.meta.env.VITE_MAPBOX_TOKEN,
   },
+  keplerTheme: createKeplerTheme({
+    modalOverLayZ: 40,
+  } satisfies KeplerThemeOverrides),
+  modalPortalTarget: 'body',
   actionLogging: false,
 });
 ```
+
+Notes:
+
+- `basicKeplerProps` is for base Kepler registration/component props.
+- `keplerTheme` (optional) sets the theme passed to Kepler `ThemeProvider`.
+- `modalPortalTarget` controls modal portal placement: `'container'` (default)
+  or `'body'`.
 
 ### Table selection and dataset ids
 
