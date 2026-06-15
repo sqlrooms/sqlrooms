@@ -362,13 +362,17 @@ function DeckMapDashboardRenderer({
     (state) => state.mosaicDashboard.clearPanelIssue,
   );
 
-  // Clear runtime issues when the active table changes so the map can
-  // recover after switching from an incompatible table back to a compatible one.
+  // Clear runtime issues when the active table or panel config changes so
+  // the map can recover (e.g., after switching tables or AI updating the map).
   useEffect(() => {
-    if (dashboard.selectedTable) {
-      clearPanelIssue(dashboardId, panel.id);
-    }
-  }, [clearPanelIssue, dashboard.selectedTable, dashboardId, panel.id]);
+    clearPanelIssue(dashboardId, panel.id);
+  }, [
+    clearPanelIssue,
+    dashboard.selectedTable,
+    dashboardId,
+    panel.config,
+    panel.id,
+  ]);
 
   const isSettingsOpen = Boolean(
     (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
