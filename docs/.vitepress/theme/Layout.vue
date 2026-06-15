@@ -110,8 +110,32 @@ function dismiss() {
             </a>
           </div>
         </div>
-        <div class="copyright-row">
-          Copyright © {{ currentYear }} SQLRooms contributors
+        <div class="footer__copyright">
+          <div class="footer-copy">
+            Copyright <a href="https://openjsf.org">OpenJS Foundation</a> and
+            vis.gl contributors. All rights reserved. The
+            <a href="https://openjsf.org">OpenJS Foundation</a> has registered
+            trademarks and uses trademarks. For a list of trademarks of the
+            <a href="https://openjsf.org">OpenJS Foundation</a>, please see our
+            <a href="https://trademark-policy.openjsf.org">Trademark Policy</a>
+            and <a href="https://trademark-list.openjsf.org">Trademark List</a>.
+            Trademarks and logos not indicated on the
+            <a href="https://trademark-list.openjsf.org"
+              >list of OpenJS Foundation trademarks</a
+            >
+            are trademarks™ or registered® trademarks of their respective
+            holders. Use of them does not imply any affiliation with or
+            endorsement by them.<br /><br /><a href="https://openjsf.org"
+              >The OpenJS Foundation</a
+            >
+            | <a href="https://terms-of-use.openjsf.org">Terms of Use</a> |
+            <a href="https://privacy-policy.openjsf.org">Privacy Policy</a> |
+            <a href="https://bylaws.openjsf.org">Bylaws</a> |
+            <a href="https://code-of-conduct.openjsf.org">Code of Conduct</a> |
+            <a href="https://trademark-policy.openjsf.org">Trademark Policy</a>
+            | <a href="https://trademark-list.openjsf.org">Trademark List</a> |
+            <a href="https://www.linuxfoundation.org/cookies">Cookie Policy</a>
+          </div>
         </div>
       </template>
     </DefaultTheme.Layout>
@@ -191,12 +215,28 @@ html:not(.dark) .video.dark {
   align-items: center;
 }
 
-.copyright-row {
+.footer__copyright {
   text-align: center;
   font-size: 0.75rem;
   color: var(--vp-c-text-2);
-  margin-top: 1rem;
-  padding-bottom: 2rem;
+  border-top: 1px solid var(--vp-c-divider);
+  padding: 2rem 1.5rem;
+}
+
+.footer-copy {
+  max-width: 920px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.footer-copy a {
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.footer-copy a:hover {
+  text-decoration: underline;
 }
 
 .sponsors-footer a {
