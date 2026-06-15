@@ -36,7 +36,7 @@ Deck map tools:
 - ELEVATION: For extruded layers, getElevation with @@function "scale" passes the raw field value as meters. Use elevationScale on the layer to multiply values to a useful visual height. For example, if the field is "floors" (1-10), set elevationScale to 3 (meters per floor). Do NOT use negative values for elevation. Avoid using diverging scales for elevation.
 - Bind layers to datasets with _sqlroomsBinding.dataset and put tableName or sqlQuery sources in config.datasets.
 - Each dataset in config.datasets should have a source.tableName or source.sqlQuery that describes the original table the map was authored against. At runtime, the dashboard's selected table (from the table selector) overrides the source table — when the user switches the active table, all map panels automatically update. If the new table lacks required columns, an incompatibility error is shown.
-- IMPORTANT: Always pass tableName in the create_dashboard_map tool params (the top-level tableName field). This sets the dashboard's selected table so panels know which table to use. Use the table that the user is currently working with.
+- IMPORTANT: Always pass tableName in the create_dashboard_map tool params (the top-level tableName field). Use the table currently selected in the dashboard (dashboard.selectedTable from list_dashboard_panels). At runtime, the dashboard's selected table always overrides the authored table — this param only seeds the initial selection when no table is selected yet.
 - IMPORTANT: When referencing tables in tableName or sqlQuery, use ONLY the bare table name (e.g. "my_table") or schema-qualified name (e.g. "main.my_table"). NEVER include the database/catalog prefix (e.g. do NOT use "sqlrooms-cli.main.my_table") — the catalog does not exist in the query execution context.
 - IMPORTANT: For point data with longitude/latitude columns, the dataset source MUST use a sqlQuery that creates a geometry column, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM tableName WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the same name used in the AS clause (e.g. "__sqlrooms_geom") and geometryEncodingHint to "wkb".
 - IMPORTANT: When providing fitToData, include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}.
@@ -340,12 +340,17 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           params.createArtifactIfMissing,
           context,
         );
+        const dashboard = deps.getDashboard(artifactId);
         if (params.tableName) {
-          deps.resolveTable(artifactId, params.tableName);
+          // Only change the dashboard's selected table if it's not already set.
+          // The runtime rewriting in resolveDeckMapDashboardDatasetSource will
+          // use dashboard.selectedTable regardless, so we don't need to override.
+          if (!dashboard?.selectedTable) {
+            deps.resolveTable(artifactId, params.tableName);
+          }
         } else {
           // Ensure selectedTable is set even when tableName is not provided,
           // by extracting a table name from the first dataset source.
-          const dashboard = deps.getDashboard(artifactId);
           if (!dashboard?.selectedTable && params.config.datasets) {
             const firstDatasetSource = Object.values(params.config.datasets)
               .map(
