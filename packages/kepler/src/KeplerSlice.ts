@@ -65,6 +65,7 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+import type {DefaultTheme} from 'styled-components';
 import {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb-core';
 import {
   findKeplerTableForDatasetId,
@@ -87,20 +88,9 @@ class DesktopKeplerTable extends KeplerTable {
 
 export type KeplerGLBasicProps = {
   mapboxApiAccessToken?: string;
-  /**
-   * Where the Kepler modal (Add Map Style, Export, etc.) should be portaled.
-   * - `'body'`: portals to `document.body` (escapes stacking contexts)
-   * - `'container'`: portals inside the kepler map container element
-   * @default 'container'
-   */
-  modalPortalTarget?: 'body' | 'container';
-  /**
-   * z-index for the Kepler modal overlay. Use this to coordinate layering
-   * with app-level dialogs (e.g., Radix Dialog at z-50).
-   * When undefined, falls back to the styled-components theme value.
-   */
-  modalOverlayZIndex?: number;
 };
+
+export type KeplerModalPortalTarget = 'body' | 'container';
 
 export type CreateInitialMapKeplerStateContext = {
   reason:
@@ -120,6 +110,18 @@ export type CreateKeplerSliceOptions = {
     context: CreateInitialMapKeplerStateContext,
   ) => Partial<KeplerGlState>;
   basicKeplerProps?: Partial<KeplerGLBasicProps>;
+  /**
+   * Theme passed to Kepler's ThemeProvider.
+   * Use createKeplerTheme() to merge app-level overrides into the default theme.
+   */
+  keplerTheme?: DefaultTheme;
+  /**
+   * Where the Kepler modal (Add Map Style, Export, etc.) should be portaled.
+   * - 'body': portals to document.body (escapes stacking contexts)
+   * - 'container': portals inside the kepler map container element
+   * @default 'container'
+   */
+  modalPortalTarget?: KeplerModalPortalTarget;
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
@@ -278,6 +280,8 @@ export type KeplerSliceState = {
     config: KeplerSliceConfig;
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
+    keplerTheme?: DefaultTheme;
+    modalPortalTarget: KeplerModalPortalTarget;
     tableSelection: KeplerTableSelectionOptions;
     forwardDispatch: {
       [mapId: string]: Dispatch;
@@ -377,6 +381,8 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
 
 export function createKeplerSlice({
   basicKeplerProps = {},
+  keplerTheme,
+  modalPortalTarget = 'container',
   config: initialConfigProps,
   createInitialMapKeplerState,
   actionLogging = false,
@@ -501,6 +507,8 @@ export function createKeplerSlice({
       kepler: {
         config: initialConfig,
         basicKeplerProps,
+        keplerTheme,
+        modalPortalTarget,
         tableSelection: resolvedTableSelection,
         map: {},
         isRestoringConfig: false,

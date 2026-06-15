@@ -14,6 +14,7 @@ export type {
   AddTableToMapParams,
   CreateInitialMapKeplerStateContext,
   CreateKeplerSliceOptions,
+  KeplerModalPortalTarget,
   KeplerSliceState,
 } from './KeplerSlice';
 export {
@@ -78,4 +79,5 @@ export {
 } from './components/KeplerInjector';
 
 export {createKeplerTheme, darkTheme} from './styles/theme';
+export type {KeplerThemeOverrides} from './styles/theme';
 export type {KeplerGLBasicProps} from './KeplerSlice';

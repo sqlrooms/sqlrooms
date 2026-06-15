@@ -71,6 +71,9 @@ const KeplerGl: FC<{
   const basicKeplerProps = useStoreWithKepler(
     (state) => state.kepler.basicKeplerProps,
   );
+  const modalPortalTarget = useStoreWithKepler(
+    (state) => state.kepler.modalPortalTarget,
+  );
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
@@ -153,9 +156,7 @@ const KeplerGl: FC<{
   }, [hasFilters, hasAnimatableLayers, mergedKeplerProps, theme]);
 
   const modalPortalNode =
-    basicKeplerProps?.modalPortalTarget === 'body'
-      ? document.body
-      : containerNode;
+    modalPortalTarget === 'body' ? document.body : containerNode;
 
   const modalContainerFields = keplerState?.visState
     ? modalContainerSelector(mergedKeplerProps, modalPortalNode)

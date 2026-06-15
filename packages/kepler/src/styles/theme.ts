@@ -87,6 +87,9 @@ export const darkTheme: DefaultTheme = {
   panelHeaderBorderRadius: '4px',
 };
 
+export type KeplerThemeOverrides = Partial<typeof theme> &
+  Partial<DefaultTheme>;
+
 /**
  * Create a custom Kepler theme by merging overrides into the base dark theme.
  * Use this to set modal z-indices, colors, or other theme values from the app level.
@@ -97,7 +100,7 @@ export const darkTheme: DefaultTheme = {
  * ```
  */
 export function createKeplerTheme(
-  overrides?: Partial<DefaultTheme>,
+  overrides?: KeplerThemeOverrides,
 ): DefaultTheme {
   return {...darkTheme, ...overrides};
 }
