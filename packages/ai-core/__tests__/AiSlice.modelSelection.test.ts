@@ -168,9 +168,9 @@ describe('AiSlice model selection', () => {
       },
     ];
 
-    expect(store.getState().ai.setSessionUiMessages('session-1', messages)).toBe(
-      true,
-    );
+    expect(
+      store.getState().ai.setSessionUiMessages('session-1', messages),
+    ).toBe(true);
 
     const first = store.getState().ai.getAnalysisResults();
     const second = store.getState().ai.getAnalysisResults();
@@ -183,6 +183,13 @@ describe('AiSlice model selection', () => {
     const config: AiSliceConfig = {
       currentSessionId: 'session-2',
       openSessionTabs: ['session-2'],
+      sessionForks: {
+        'deleted-session': {
+          sourceSessionId: 'session-1',
+          sourceSessionNameAtFork: 'Deleted target',
+          createdAt: Date.now(),
+        },
+      },
       sessions: [
         {
           id: 'session-2',
@@ -220,6 +227,111 @@ describe('AiSlice model selection', () => {
       | undefined;
     expect(session?.isRunning).toBe(false);
     expect(part?.state).toBe('output-error');
+    expect(store.getState().ai.config.sessionForks).toEqual({});
+  });
+
+  it('forks a session through the selected assistant message', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'first'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'first answer'}],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'second'}],
+      },
+      {
+        id: 'assistant-2',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'second answer'}],
+      },
+      {
+        id: 'user-3',
+        role: 'user',
+        parts: [{type: 'text', text: 'later'}],
+      },
+    ];
+
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    store
+      .getState()
+      .ai.setSessionDraftContextItemIds('session-1', ['map-a', 'map-a']);
+
+    const forkedSessionId = store.getState().ai.forkSessionFromMessage({
+      sourceSessionId: 'session-1',
+      sourceTurnId: 'user-2',
+      sourceMessageId: 'assistant-2',
+    });
+
+    expect(forkedSessionId).toBeDefined();
+    expect(store.getState().ai.config.currentSessionId).toBe(forkedSessionId);
+
+    const sourceSession = store
+      .getState()
+      .ai.config.sessions.find((session) => session.id === 'session-1');
+    const forkedSession = store.getState().ai.getCurrentSession();
+
+    expect(sourceSession?.uiMessages.map((message) => message.id)).toEqual([
+      'user-1',
+      'assistant-1',
+      'user-2',
+      'assistant-2',
+      'user-3',
+    ]);
+    expect(forkedSession?.uiMessages.map((message) => message.id)).toEqual([
+      'user-1',
+      'assistant-1',
+      'user-2',
+      'assistant-2',
+    ]);
+    expect(forkedSession?.modelProvider).toBe('openai');
+    expect(forkedSession?.model).toBe('shared-model');
+    expect(forkedSession?.draftContextItemIds).toEqual(['map-a']);
+    expect(
+      store.getState().ai.getSessionForkOrigin(forkedSessionId!),
+    ).toMatchObject({
+      sourceSessionId: 'session-1',
+      sourceMessageId: 'assistant-2',
+      sourceTurnId: 'user-2',
+      sourceMessageIndex: 3,
+      sourceSessionNameAtFork: 'Session 1',
+    });
+  });
+
+  it('removes fork metadata when the fork target session is deleted', () => {
+    const store = createTestStore();
+    store.getState().ai.setSessionUiMessages('session-1', [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ]);
+    const forkedSessionId = store.getState().ai.forkSessionFromMessage({
+      sourceSessionId: 'session-1',
+      sourceTurnId: 'user-1',
+      sourceMessageId: 'assistant-1',
+    });
+
+    expect(forkedSessionId).toBeDefined();
+    store.getState().ai.deleteSession(forkedSessionId!);
+
+    expect(store.getState().ai.config.sessionForks[forkedSessionId!]).toBe(
+      undefined,
+    );
   });
 
   it('appends legacy addAnalysisResult messages to the current session', () => {

@@ -5,12 +5,14 @@
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
-export type {AiSliceState, AiSliceOptions} from './AiSlice';
+export type {
+  AiSliceState,
+  AiSliceOptions,
+  ForkSessionFromMessageArgs,
+} from './AiSlice';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
 // @deprecated Use `Chat.Messages` instead.
-export {
-  ChatMessagesContainer as AnalysisResultsContainer,
-} from './components/ChatMessagesContainer';
+export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
 export {AnalysisResult} from './components/AnalysisResult';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
@@ -70,16 +72,14 @@ export {
   AiRunContextItemSchema,
   AiRunContextSchema,
   AiSliceConfig,
+  AiSessionForkOrigin,
   ChatSessionSchema,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {
-  AiRunContext,
-  AiRunContextItem,
-} from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,

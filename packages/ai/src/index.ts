@@ -159,6 +159,7 @@ export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ShowToolCallDetailsProvider} from '@sqlrooms/ai-core';
 export type {
+  ForkSessionFromMessageArgs,
   ToolRenderBehavior,
   ToolStructureBehavior,
   ToolDisplayBehavior,
@@ -191,6 +192,7 @@ export {
   AiRunContextItemSchema,
   AiRunContextSchema,
   AiSliceConfig,
+  AiSessionForkOrigin,
   ChatSessionSchema,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
@@ -201,10 +203,7 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {
-  AiRunContext,
-  AiRunContextItem,
-} from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

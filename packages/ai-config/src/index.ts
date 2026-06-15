@@ -1,4 +1,8 @@
-export {AiSliceConfig, createDefaultAiConfig} from './AiSliceConfig';
+export {
+  AiSliceConfig,
+  AiSessionForkOrigin,
+  createDefaultAiConfig,
+} from './AiSliceConfig';
 export {AiSettingsSliceConfig} from './AiSettingsSliceConfig';
 export {
   AiRunContextItemSchema,
@@ -11,10 +15,7 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from './schema/ChatSessionSchema';
-export type {
-  AiRunContext,
-  AiRunContextItem,
-} from './schema/ChatSessionSchema';
+export type {AiRunContext, AiRunContextItem} from './schema/ChatSessionSchema';
 export type {
   DynamicToolUIPart,
   ToolUIPart,
