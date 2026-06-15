@@ -318,65 +318,6 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Select>
             </Field>
 
-            {showRadiusSetting && (
-              <Field
-                label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
-              >
-                <Slider
-                  min={1}
-                  max={50}
-                  step={1}
-                  value={[
-                    (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
-                  ]}
-                  onValueChange={(values) => {
-                    const value = values[0] ?? 2;
-                    applyConfig(
-                      updateDeckMapLayer(
-                        mapConfig,
-                        activeLayerIndex,
-                        (layer) => ({
-                          ...layer,
-                          radiusMinPixels: value,
-                          radiusMaxPixels: Math.max(
-                            value,
-                            (layer.radiusMaxPixels as number | undefined) ??
-                              value,
-                          ),
-                        }),
-                      ),
-                    );
-                  }}
-                />
-              </Field>
-            )}
-
-            {showColumnRadiusSetting && (
-              <Field
-                label={`Column radius: ${(activeLayer?.radius as number | undefined) ?? 50}m`}
-              >
-                <Slider
-                  min={1}
-                  max={50}
-                  step={1}
-                  value={[(activeLayer?.radius as number | undefined) ?? 50]}
-                  onValueChange={(values) => {
-                    const value = values[0] ?? 50;
-                    applyConfig(
-                      updateDeckMapLayer(
-                        mapConfig,
-                        activeLayerIndex,
-                        (layer) => ({
-                          ...layer,
-                          radius: value,
-                        }),
-                      ),
-                    );
-                  }}
-                />
-              </Field>
-            )}
-
             {showTripsSettings && (
               <>
                 <Field
@@ -441,31 +382,6 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 <span className="text-xs font-medium">
                   Color scheme (density)
                 </span>
-                <Field
-                  label={`Radius: ${(activeLayer?.radiusPixels as number | undefined) ?? 30}px`}
-                >
-                  <Slider
-                    min={1}
-                    max={100}
-                    step={1}
-                    value={[
-                      (activeLayer?.radiusPixels as number | undefined) ?? 30,
-                    ]}
-                    onValueChange={(values) => {
-                      const value = values[0] ?? 30;
-                      applyConfig(
-                        updateDeckMapLayer(
-                          mapConfig,
-                          activeLayerIndex,
-                          (layer) => ({
-                            ...layer,
-                            radiusPixels: value,
-                          }),
-                        ),
-                      );
-                    }}
-                  />
-                </Field>
                 <Field label="Scheme">
                   <Select
                     value={detectHeatmapScheme(activeLayer?.colorRange)}
@@ -607,6 +523,99 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </div>
             )}
           </div>
+        )}
+
+        {isHeatmapLayer && (
+          <Field
+            label={`Radius: ${(activeLayer?.radiusPixels as number | undefined) ?? 30}px`}
+          >
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={100}
+                step={1}
+                value={[
+                  (activeLayer?.radiusPixels as number | undefined) ?? 30,
+                ]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 30;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        radiusPixels: value,
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </Field>
+        )}
+
+        {showRadiusSetting && (
+          <Field
+            label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
+          >
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={50}
+                step={1}
+                value={[
+                  (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
+                ]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 2;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        radiusMinPixels: value,
+                        radiusMaxPixels: Math.max(
+                          value,
+                          (layer.radiusMaxPixels as number | undefined) ??
+                            value,
+                        ),
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </Field>
+        )}
+
+        {showColumnRadiusSetting && (
+          <Field
+            label={`Column radius: ${(activeLayer?.radius as number | undefined) ?? 50}m`}
+          >
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={10000}
+                step={1}
+                value={[(activeLayer?.radius as number | undefined) ?? 50]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 50;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        radius: value,
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </Field>
         )}
 
         {dataTable && showGeometryColumnSetting && (
