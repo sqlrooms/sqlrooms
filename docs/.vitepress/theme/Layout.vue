@@ -72,69 +72,83 @@ function dismiss() {
 
       <template #layout-bottom>
         <CaseStudiesCarousel v-if="frontmatter.layout === 'home'" />
-        <div class="sponsors-footer">
-          <div class="sponsor-item">
-            Supported by
-            <a
-              href="https://location.foursquare.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                width="100"
-                height="32"
-                src="/public/foursquare-logo.svg"
-                alt="Foursquare Logo"
-                decoding="async"
-                class="foursquare-logo"
-              />
-            </a>
+        <div class="site-footer">
+          <div class="sponsors-footer">
+            <div class="sponsor-item">
+              Supported by
+              <a
+                href="https://location.foursquare.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  width="100"
+                  height="32"
+                  src="/public/foursquare-logo.svg"
+                  alt="Foursquare Logo"
+                  decoding="async"
+                  class="foursquare-logo"
+                />
+              </a>
+            </div>
+            <div class="sponsor-item horizontal">
+              Deploys by
+              <a
+                href="https://www.netlify.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src="https://www.netlify.com/assets/badges/netlify-badge-light.svg"
+                  alt="Deploys by Netlify"
+                  class="netlify-logo netlify-light"
+                />
+                <img
+                  src="https://www.netlify.com/assets/badges/netlify-badge-dark.svg"
+                  alt="Deploys by Netlify"
+                  class="netlify-logo netlify-dark"
+                />
+              </a>
+            </div>
           </div>
-          <div class="sponsor-item horizontal">
-            Deploys by
-            <a
-              href="https://www.netlify.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img
-                src="https://www.netlify.com/assets/badges/netlify-badge-light.svg"
-                alt="Deploys by Netlify"
-                class="netlify-logo netlify-light"
-              />
-              <img
-                src="https://www.netlify.com/assets/badges/netlify-badge-dark.svg"
-                alt="Deploys by Netlify"
-                class="netlify-logo netlify-dark"
-              />
-            </a>
-          </div>
-        </div>
-        <div class="footer__copyright">
-          <div class="footer-copy">
-            Copyright <a href="https://openjsf.org">OpenJS Foundation</a> and
-            vis.gl contributors. All rights reserved. The
-            <a href="https://openjsf.org">OpenJS Foundation</a> has registered
-            trademarks and uses trademarks. For a list of trademarks of the
-            <a href="https://openjsf.org">OpenJS Foundation</a>, please see our
-            <a href="https://trademark-policy.openjsf.org">Trademark Policy</a>
-            and <a href="https://trademark-list.openjsf.org">Trademark List</a>.
-            Trademarks and logos not indicated on the
-            <a href="https://trademark-list.openjsf.org"
-              >list of OpenJS Foundation trademarks</a
-            >
-            are trademarks™ or registered® trademarks of their respective
-            holders. Use of them does not imply any affiliation with or
-            endorsement by them.<br /><br /><a href="https://openjsf.org"
-              >The OpenJS Foundation</a
-            >
-            | <a href="https://terms-of-use.openjsf.org">Terms of Use</a> |
-            <a href="https://privacy-policy.openjsf.org">Privacy Policy</a> |
-            <a href="https://bylaws.openjsf.org">Bylaws</a> |
-            <a href="https://code-of-conduct.openjsf.org">Code of Conduct</a> |
-            <a href="https://trademark-policy.openjsf.org">Trademark Policy</a>
-            | <a href="https://trademark-list.openjsf.org">Trademark List</a> |
-            <a href="https://www.linuxfoundation.org/cookies">Cookie Policy</a>
+          <div class="footer__copyright">
+            <div class="footer-copy">
+              Copyright <a href="https://openjsf.org">OpenJS Foundation</a> and
+              vis.gl contributors. All rights reserved. The
+              <a href="https://openjsf.org">OpenJS Foundation</a> has registered
+              trademarks and uses trademarks. For a list of trademarks of the
+              <a href="https://openjsf.org">OpenJS Foundation</a>, please see
+              our
+              <a href="https://trademark-policy.openjsf.org"
+                >Trademark Policy</a
+              >
+              and
+              <a href="https://trademark-list.openjsf.org">Trademark List</a>.
+              Trademarks and logos not indicated on the
+              <a href="https://trademark-list.openjsf.org"
+                >list of OpenJS Foundation trademarks</a
+              >
+              are trademarks™ or registered® trademarks of their respective
+              holders. Use of them does not imply any affiliation with or
+              endorsement by them.<br /><br /><a href="https://openjsf.org"
+                >The OpenJS Foundation</a
+              >
+              | <a href="https://terms-of-use.openjsf.org">Terms of Use</a> |
+              <a href="https://privacy-policy.openjsf.org">Privacy Policy</a> |
+              <a href="https://bylaws.openjsf.org">Bylaws</a> |
+              <a href="https://code-of-conduct.openjsf.org"
+                >Code of Conduct</a
+              >
+              |
+              <a href="https://trademark-policy.openjsf.org"
+                >Trademark Policy</a
+              >
+              |
+              <a href="https://trademark-list.openjsf.org">Trademark List</a> |
+              <a href="https://www.linuxfoundation.org/cookies"
+                >Cookie Policy</a
+              >
+            </div>
           </div>
         </div>
       </template>
@@ -166,6 +180,20 @@ html:not(.dark) .netlify-dark {
 
 .dark .netlify-light {
   display: none;
+}
+
+@media (min-width: 960px) {
+  .VPContent.has-sidebar ~ .site-footer {
+    margin-left: var(--vp-sidebar-width);
+  }
+}
+
+@media (min-width: 1440px) {
+  .VPContent.has-sidebar ~ .site-footer {
+    margin-left: calc(
+      (100vw - var(--vp-layout-max-width)) / 2 + var(--vp-sidebar-width)
+    );
+  }
 }
 </style>
 
