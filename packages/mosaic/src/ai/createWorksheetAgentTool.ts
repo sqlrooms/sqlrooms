@@ -23,8 +23,7 @@ CRITICAL RULES:
 3. You MUST create at least 3-5 chart blocks for exploratory requests
 4. Charts are MANDATORY - text/narrative blocks are optional and should be minimal
 5. If you only create text blocks without charts, you have FAILED the task
-6. DO NOT create richText blocks (type: 'richText', markdown: '...') - use simple heading or paragraph blocks instead
-7. ONLY create chart blocks with worksheet_create-chart-block
+6. ONLY create chart blocks with worksheet_create-chart-block
 
 ## Two-Step Workflow for Creating Charts (MANDATORY)
 
@@ -164,13 +163,11 @@ WRONG PATTERN:
 ❌ Writing long narratives instead of showing data visually
 ❌ Calling generate_chart_* multiple times then worksheet_append-blocks once (THIS FAILS!)
 ❌ Using worksheet_append-blocks for charts - it's for text/markdown blocks only
-❌ Creating richText blocks (type: 'richText', markdown: '...') - DON'T USE THESE!
 
 ✅ Create 3-5+ diverse chart blocks for exploratory requests
 ✅ Pattern: generate_chart_* → worksheet_create-chart-block → repeat
 ✅ Each chart needs its own worksheet_create-chart-block call
-✅ Mix different chart types to show different patterns
-✅ If text blocks are needed, use simple types: heading or paragraph (NOT richText)`;
+✅ Mix different chart types to show different patterns`;
 
 const WorksheetAgentInputSchema = z.object({
   reasoning: z
