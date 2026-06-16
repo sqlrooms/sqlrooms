@@ -157,7 +157,7 @@ function dismiss() {
                 <img
                   width="100"
                   height="32"
-                  src="/public/foursquare-logo.svg"
+                  src="/foursquare-logo.svg"
                   alt="Foursquare Logo"
                   decoding="async"
                   class="foursquare-logo"
