@@ -10,7 +10,7 @@ import {
 } from '../../dashboard/MosaicDashboardSlice';
 import {ChartConfig} from '../chart-types/chart-config';
 import {MosaicChart} from '../MosaicChart';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 
 const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   panel,

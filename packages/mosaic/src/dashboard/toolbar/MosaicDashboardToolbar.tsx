@@ -4,7 +4,7 @@ import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
 import {MosaicDashboardDataTableSelector} from './MosaicDashboardDataTableSelector';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
 
 export const MosaicDashboardToolbar: FC = () => {

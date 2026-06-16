@@ -73,6 +73,7 @@ export {
   AiRunContextSchema,
   AiSliceConfig,
   AiSessionForkOrigin,
+  AnalysisSessionSchema,
   ChatSessionSchema,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,

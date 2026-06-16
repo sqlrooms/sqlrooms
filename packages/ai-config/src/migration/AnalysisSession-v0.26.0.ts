@@ -103,9 +103,10 @@ function withLegacyResultMetadata(
 
 /** Perform migration to AI SDK v5 uiMessages and strip legacy fields. */
 function migrateFromV0_26_0(data: unknown) {
-  const {toolAdditionalData: _legacyToolAdditionalData, ...sessionWithLegacy} = {
-    ...(data as UnknownRecord),
-  };
+  const {toolAdditionalData: _legacyToolAdditionalData, ...sessionWithLegacy} =
+    {
+      ...(data as UnknownRecord),
+    };
   const analysisResults =
     (sessionWithLegacy.analysisResults as UnknownRecord[]) || [];
   const existingUiMessages =
@@ -143,71 +144,69 @@ function migrateFromV0_26_0(data: unknown) {
       continue;
     }
 
-    if (needsMessageSynthesis) {
-      // Create user message for the prompt
-      if (prompt) {
-        synthesizedMessages.push(
-          withLegacyResultMetadata(
-            {
-              id,
-              role: 'user',
-              parts: [{type: 'text', text: prompt}],
-            },
-            legacyMetadata,
-          ),
-        );
-      }
+    // Create user message for the prompt
+    if (prompt) {
+      synthesizedMessages.push(
+        withLegacyResultMetadata(
+          {
+            id,
+            role: 'user',
+            parts: [{type: 'text', text: prompt}],
+          },
+          legacyMetadata,
+        ),
+      );
+    }
 
-      // Create assistant message mapping the parts
-      const assistantParts: UnknownRecord[] = [];
-      for (const part of parts) {
-        if (part.type === 'text') {
-          const text = part.text as string;
-          assistantParts.push({type: 'text', text});
-        } else if (part.type === 'tool-invocation') {
-          const toolInvocation = part.toolInvocation;
-          if (isObject(toolInvocation)) {
-            const toolCallId = toolInvocation.toolCallId as string;
-            const toolName = toolInvocation.toolName as string;
-            const state = toolInvocation.state as string;
-            const args = toolInvocation.args;
-            const llmResult = toolInvocation.result;
+    // Create assistant message mapping the parts
+    const assistantParts: UnknownRecord[] = [];
+    for (const part of parts) {
+      if (part.type === 'text') {
+        const text = part.text as string;
+        assistantParts.push({type: 'text', text});
+      } else if (part.type === 'tool-invocation') {
+        const toolInvocation = part.toolInvocation;
+        if (isObject(toolInvocation)) {
+          const toolCallId = toolInvocation.toolCallId as string;
+          const toolName = toolInvocation.toolName as string;
+          const state = toolInvocation.state as string;
+          const args = toolInvocation.args;
+          const llmResult = toolInvocation.result;
 
-            // Map state to AI SDK v5 tool-* parts
-            if (state === 'call') {
-              assistantParts.push({
-                type: `tool-${toolName}`,
-                toolCallId,
-                state: 'input-available',
-                input: args,
-              });
-            } else {
-              assistantParts.push({
-                type: `tool-${toolName}`,
-                toolCallId,
-                state: 'output-available',
-                input: args,
-                output: llmResult,
-              });
-            }
+          // Map state to AI SDK v5 tool-* parts
+          if (state === 'call') {
+            assistantParts.push({
+              type: `tool-${toolName}`,
+              toolCallId,
+              state: 'input-available',
+              input: args,
+            });
+          } else {
+            assistantParts.push({
+              type: `tool-${toolName}`,
+              toolCallId,
+              state: 'output-available',
+              input: args,
+              output: llmResult,
+            });
           }
         }
       }
+    }
 
-      if (assistantParts.length > 0) {
-        synthesizedMessages.push({
-          id: `${id}-assistant`,
-          role: 'assistant',
-          parts: assistantParts,
-        });
-      }
+    if (assistantParts.length > 0) {
+      synthesizedMessages.push({
+        id: `${id}-assistant`,
+        role: 'assistant',
+        parts: assistantParts,
+      });
     }
   }
 
   return {
     ...session,
     uiMessages: [...uiMessages, ...synthesizedMessages],
-    prompt: '',
+    prompt: typeof session.prompt === 'string' ? session.prompt : '',
     isRunning: false,
   };
 }

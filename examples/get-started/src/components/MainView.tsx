@@ -10,9 +10,7 @@ import {useRoomStore} from '../store.js';
 import type {FC} from 'react';
 
 export const MainView: FC = () => {
-  const tableReady = useRoomStore((state) =>
-    state.db.findTableByName('earthquakes'),
-  );
+  const tableReady = useRoomStore((state) => state.db.findTable('earthquakes'));
   const {data, isLoading, error} = useSql<{
     count: number;
     maxMag: number;

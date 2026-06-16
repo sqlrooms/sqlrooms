@@ -5,10 +5,10 @@ import {MapView} from './MapView';
 
 export const MainView: React.FC = () => {
   const airportsTable = useRoomStore((s) =>
-    s.db.findTableByName(AIRPORTS_TABLE_NAME),
+    s.db.findTable(AIRPORTS_TABLE_NAME),
   );
   const buildingsTable = useRoomStore((s) =>
-    s.db.findTableByName(BUILDINGS_TABLE_NAME),
+    s.db.findTable(BUILDINGS_TABLE_NAME),
   );
 
   if (!airportsTable || !buildingsTable) {

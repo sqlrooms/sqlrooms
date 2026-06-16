@@ -59,6 +59,7 @@ describe('ChatSession migration', () => {
     it('preserves legacy result error and completion metadata before dropping analysisResults', () => {
       const raw = {
         ...baseFields,
+        prompt: 'draft question',
         uiMessages: [
           {
             id: 'r1',
@@ -78,6 +79,7 @@ describe('ChatSession migration', () => {
       };
 
       const result = ChatSessionSchema.parse(raw);
+      expect(result.prompt).toBe('draft question');
       expect(result.uiMessages[0]?.metadata).toEqual({
         sqlrooms: {
           errorMessage: {error: 'Request cancelled'},

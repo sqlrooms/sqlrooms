@@ -4,8 +4,8 @@ import {
   ColumnSelector,
   ColumnsProvider,
   useStoreWithMosaicDashboard,
-  useDataTable,
 } from '@sqlrooms/mosaic';
+import {useDataTable} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   binnedNumericSchemes,

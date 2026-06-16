@@ -2,7 +2,7 @@ import {FC, useCallback} from 'react';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {DataTableSelector} from '../../components/DataTableSelector';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 import type {DataTable} from '@sqlrooms/db';
 
 interface MosaicDashboardDataTableSelectorProps {
