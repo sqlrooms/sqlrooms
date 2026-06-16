@@ -1,4 +1,4 @@
-import {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {ChatSessionSchema} from '@sqlrooms/ai-config';
 import {
   createBaseRoomSlice,
   type BaseRoomStoreState,
@@ -27,7 +27,7 @@ type TestRoomState = BaseRoomStoreState &
   ArtifactAiSliceState & {
     ai: {
       config: {
-        sessions: AnalysisSessionSchema[];
+        sessions: ChatSessionSchema[];
         currentSessionId?: string;
       };
       createSession: (
@@ -36,7 +36,7 @@ type TestRoomState = BaseRoomStoreState &
         model?: string,
       ) => void;
       switchSession: (sessionId: string) => void;
-      getCurrentSession: () => AnalysisSessionSchema | undefined;
+      getCurrentSession: () => ChatSessionSchema | undefined;
     };
   };
 
@@ -44,13 +44,12 @@ function createSession(
   id: string,
   lastOpenedAt: number,
   isRunning = false,
-): AnalysisSessionSchema {
+): ChatSessionSchema {
   return {
     id,
     name: id,
     modelProvider: 'openai',
     model: 'gpt-4.1',
-    analysisResults: [],
     createdAt: new Date(0),
     uiMessages: [],
     messagesRevision: 0,

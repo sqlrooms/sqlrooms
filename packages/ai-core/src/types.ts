@@ -3,7 +3,7 @@ import type {
   AiRunContext,
   AiRunContextItem,
   AiSliceConfig,
-  AnalysisSessionSchema,
+  ChatSessionSchema,
 } from '@sqlrooms/ai-config';
 import type {
   UIMessage,
@@ -192,7 +192,7 @@ export interface AiStateForTransport {
   config: AiSliceConfig;
   tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
-  getCurrentSession: () => AnalysisSessionSchema | undefined;
+  getCurrentSession: () => ChatSessionSchema | undefined;
   getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
   setSessionRunContext: (
     sessionId: string,

@@ -1,6 +1,6 @@
 import {
   AiRunContextItem,
-  AnalysisSessionSchema,
+  ChatSessionSchema,
 } from '@sqlrooms/ai-config';
 import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
 
@@ -8,7 +8,7 @@ import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
  * Minimal AI session fields needed by artifact ownership helpers.
  */
 export type ArtifactAiSession = Pick<
-  AnalysisSessionSchema,
+  ChatSessionSchema,
   'id' | 'isRunning' | 'lastOpenedAt'
 >;
 

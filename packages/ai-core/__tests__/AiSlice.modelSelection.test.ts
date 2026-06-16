@@ -2,8 +2,9 @@ import {
   AiSettingsSliceConfig,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-import type {AiRunContext} from '@sqlrooms/ai-config';
+import type {AiRunContext, AiSliceConfig} from '@sqlrooms/ai-config';
 import {jest} from '@jest/globals';
+import type {UIMessage} from 'ai';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
 import {withRunContextTools} from '../src/chatTransport';
@@ -58,7 +59,6 @@ function createTestStore(options?: {
             name: 'Session 1',
             modelProvider: 'openai',
             model: 'shared-model',
-            analysisResults: [],
             createdAt: new Date(now),
             uiMessages: [],
             messagesRevision: 0,
@@ -111,7 +111,6 @@ describe('AiSlice model selection', () => {
               name: 'Session 1',
               modelProvider: 'openai',
               model: 'shared-model',
-              analysisResults: [],
               createdAt: new Date(now),
               uiMessages: [],
               messagesRevision: 0,
@@ -124,7 +123,6 @@ describe('AiSlice model selection', () => {
               name: 'Session 2',
               modelProvider: 'openai',
               model: 'shared-model',
-              analysisResults: [],
               createdAt: new Date(now),
               uiMessages: [],
               messagesRevision: 0,
@@ -153,6 +151,90 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.config.currentSessionId).toBeUndefined();
     expect(store.getState().ai.config.openSessionTabs).toEqual([]);
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+  });
+
+  it('returns stable derived analysis results for unchanged UI messages', () => {
+    const store = createTestStore();
+    const messages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ];
+
+    expect(store.getState().ai.setSessionUiMessages('session-1', messages)).toBe(
+      true,
+    );
+
+    const first = store.getState().ai.getAnalysisResults();
+    const second = store.getState().ai.getAnalysisResults();
+
+    expect(second).toBe(first);
+  });
+
+  it('normalizes restored config passed through setConfig', () => {
+    const store = createTestStore();
+    const config: AiSliceConfig = {
+      currentSessionId: 'session-2',
+      openSessionTabs: ['session-2'],
+      sessions: [
+        {
+          id: 'session-2',
+          name: 'Restored session',
+          modelProvider: 'openai',
+          model: 'shared-model',
+          createdAt: new Date(),
+          uiMessages: [
+            {
+              id: 'assistant-1',
+              role: 'assistant',
+              parts: [
+                {
+                  type: 'tool-query',
+                  toolCallId: 'tool-1',
+                  state: 'input-streaming',
+                  input: {sqlQuery: 'SELECT'},
+                },
+              ],
+            },
+          ],
+          messagesRevision: 0,
+          prompt: '',
+          isRunning: true,
+          lastOpenedAt: Date.now(),
+        },
+      ],
+    };
+
+    store.getState().ai.setConfig(config);
+
+    const session = store.getState().ai.getCurrentSession();
+    const part = session?.uiMessages[0]?.parts[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(session?.isRunning).toBe(false);
+    expect(part?.state).toBe('output-error');
+  });
+
+  it('appends legacy addAnalysisResult messages to the current session', () => {
+    const store = createTestStore();
+    const message: UIMessage = {
+      id: 'user-legacy',
+      role: 'user',
+      parts: [{type: 'text', text: 'hello'}],
+    };
+
+    store.getState().ai.addAnalysisResult(message);
+
+    expect(store.getState().ai.getCurrentSession()?.uiMessages).toEqual([
+      message,
+    ]);
   });
 
   it('uses the first available model when creating a session with no valid default', () => {

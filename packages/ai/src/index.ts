@@ -121,6 +121,7 @@ export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,
   getVisibleSessionContextItemIds,
+  isChatSessionEmpty,
   isAnalysisSessionEmpty,
 } from '@sqlrooms/ai-core';
 export type {
@@ -139,6 +140,7 @@ export type {
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components
+export {ChatMessagesContainer} from '@sqlrooms/ai-core';
 // @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from '@sqlrooms/ai-core';
 export {AnalysisResult} from '@sqlrooms/ai-core';
@@ -166,10 +168,19 @@ export {Chat} from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
 export {
   findChatSearchMatches,
+  getAnalysisResultsFromUiMessages,
+  getChatRequestErrorMessage,
+  getChatTurnsFromUiMessages,
   markdownToPlainText,
   normalizeChatSearchQuery,
 } from '@sqlrooms/ai-core';
-export type {ChatSearchBlock, ChatSearchMatch} from '@sqlrooms/ai-core';
+export type {
+  ChatMessageMetadata,
+  ChatRequestErrorMessage,
+  ChatSearchBlock,
+  ChatSearchMatch,
+  ChatTurn,
+} from '@sqlrooms/ai-core';
 export type {
   ContextSelectorItem,
   ContextSelectorRootProps,
@@ -180,6 +191,7 @@ export {
   AiRunContextItemSchema,
   AiRunContextSchema,
   AiSliceConfig,
+  ChatSessionSchema,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,
@@ -189,7 +201,10 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

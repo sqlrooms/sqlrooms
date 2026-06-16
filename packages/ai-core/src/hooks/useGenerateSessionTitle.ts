@@ -1,9 +1,9 @@
 import {useCallback, useEffect, useMemo, useRef} from 'react';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 import {useStoreWithAi, type AiSliceState} from '../AiSlice';
 
 type SessionMessagePart =
-  AnalysisSessionSchema['uiMessages'][number]['parts'][number];
+  ChatSessionSchema['uiMessages'][number]['parts'][number];
 type SessionTextPart = SessionMessagePart & {type: 'text'; text: string};
 
 export type GenerateSessionTitlePromptOptions = Parameters<
@@ -11,7 +11,7 @@ export type GenerateSessionTitlePromptOptions = Parameters<
 >[1];
 
 type GenerateSessionTitlePromptArgs = {
-  session: AnalysisSessionSchema;
+  session: ChatSessionSchema;
   userMessages: string[];
 };
 
@@ -33,7 +33,7 @@ export type GenerateSessionTitleOptions = {
 };
 
 export type GenerateSessionTitleArgs = GenerateSessionTitleOptions & {
-  session: AnalysisSessionSchema;
+  session: ChatSessionSchema;
   sendPrompt: AiSliceState['ai']['sendPrompt'];
   renameSession: AiSliceState['ai']['renameSession'];
 };
@@ -77,7 +77,7 @@ function isTextPart(part: SessionMessagePart): part is SessionTextPart {
   );
 }
 
-export function getSessionUserMessageText(session: AnalysisSessionSchema) {
+export function getSessionUserMessageText(session: ChatSessionSchema) {
   return session.uiMessages
     .filter((message) => message.role === 'user')
     .map((message) =>

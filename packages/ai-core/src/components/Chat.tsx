@@ -1,5 +1,5 @@
 import type {ComponentProps, FC, PropsWithChildren} from 'react';
-import {AnalysisResultsContainer} from './AnalysisResultsContainer';
+import {ChatMessagesContainer} from './ChatMessagesContainer';
 import {
   LocalAgentChatRuntimeProvider,
   SessionChatRuntimeProvider,
@@ -38,7 +38,7 @@ type ChatComponent = FC<RootProps> & {
   Sessions: typeof SessionControls;
   Header: typeof ChatHeader;
   History: typeof ChatHistoryView;
-  Messages: FC<ComponentProps<typeof AnalysisResultsContainer>>;
+  Messages: FC<ComponentProps<typeof ChatMessagesContainer>>;
   Composer: FC<ComponentProps<typeof QueryControls>>;
   InlineApiKeyInput: typeof InlineApiKeyInput;
   PromptSuggestions: typeof PromptSuggestions.Container & {
@@ -79,14 +79,14 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
   </ToolRenderBehaviorProvider>
 );
 
-const Messages: FC<ComponentProps<typeof AnalysisResultsContainer>> = (
+const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (
   props,
 ) => {
   const runtime = useChatRuntime();
   if (runtime.mode === 'local-agent') {
     return <LocalAgentChatMessages className={props.className} />;
   }
-  return <AnalysisResultsContainer {...props} />;
+  return <ChatMessagesContainer {...props} />;
 };
 
 const Composer: FC<ComponentProps<typeof QueryControls>> = (props) => {
