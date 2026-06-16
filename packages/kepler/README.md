@@ -63,7 +63,7 @@ function MapPanel() {
   const mapId = useRoomStore((state) => state.kepler.config.maps[0]?.id);
   const addTableToMap = useRoomStore((state) => state.kepler.addTableToMap);
   const isTableReady = useRoomStore((state) =>
-    Boolean(state.db.findTableByName('earthquakes')),
+    Boolean(state.db.findTable('earthquakes')),
   );
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import {useStoreWithDuckDb} from './DuckDbSlice';
 /**
  * Resolves a table reference against the DuckDB table schema cache.
  *
- * String inputs are delegated to `db.findTableByName`, which parses qualified
+ * String inputs are delegated to `db.findTable`, which parses qualified
  * SQL identifiers such as `main.events` and
  * `"memory"."main"."events.2026"`. Unqualified names resolve in the current
  * schema/database from the last schema refresh.
@@ -19,6 +19,6 @@ export function useDataTable(
     if (!tableName) {
       return undefined;
     }
-    return state.db.findTableByName(tableName);
+    return state.db.findTable(tableName);
   });
 }

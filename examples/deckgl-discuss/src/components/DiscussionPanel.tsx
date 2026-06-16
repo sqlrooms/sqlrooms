@@ -14,7 +14,7 @@ import {useRoomStore} from '../store';
 export const DiscussionPanel: FC = () => {
   const discussions = useRoomStore((state) => state.discuss.config.discussions);
 
-  const table = useRoomStore((s) => s.db.findTableByName('airports'));
+  const table = useRoomStore((s) => s.db.findTable('airports'));
   const {data} = useSql<{name: string; abbrev: string}>({
     query: `SELECT name, abbrev FROM airports`,
     enabled: Boolean(table),

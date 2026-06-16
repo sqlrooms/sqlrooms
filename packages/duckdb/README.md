@@ -59,6 +59,10 @@ For more information and examples on using the `useSql` hook, see the [useSql AP
 
 ### Looking up Table Metadata
 
+Use `useDataTable()` in React components or `db.findTable()` from the room
+store. String references are parsed like SQL identifiers, so use quotes for
+literal dots in table names.
+
 ```tsx
 import {useDataTable} from '@sqlrooms/duckdb';
 
