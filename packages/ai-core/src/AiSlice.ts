@@ -903,17 +903,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const sourceTurns = getChatTurnsFromUiMessages(sourceMessages, {
             isRunning: sourceSession.isRunning,
           });
-          const sourceTurn = args.sourceTurnId
+          let sourceTurn = args.sourceTurnId
             ? sourceTurns.find((turn) => turn.id === args.sourceTurnId)
             : args.legacySourceAnalysisResultId
               ? sourceTurns.find(
                   (turn) => turn.id === args.legacySourceAnalysisResultId,
                 )
               : undefined;
-
-          if (sourceTurn && !sourceTurn.isCompleted) {
-            return undefined;
-          }
 
           let sourceMessageIndex =
             typeof args.sourceMessageIndex === 'number'
@@ -950,13 +946,25 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const selectedMessage = sourceMessages[sourceMessageIndex];
           if (!selectedMessage) return undefined;
           if (selectedMessage.role !== 'assistant') return undefined;
-          if (sourceTurn) {
-            const selectedMessageBelongsToTurn =
-              sourceTurn.assistantMessages.some(
+
+          if (!sourceTurn) {
+            if (args.sourceTurnId || args.legacySourceAnalysisResultId) {
+              return undefined;
+            }
+            sourceTurn = sourceTurns.find((turn) =>
+              turn.assistantMessages.some(
                 (message) => message.id === selectedMessage.id,
-              );
-            if (!selectedMessageBelongsToTurn) return undefined;
-          } else if (args.sourceTurnId || args.legacySourceAnalysisResultId) {
+              ),
+            );
+          }
+          if (!sourceTurn) return undefined;
+          if (!sourceTurn.isCompleted) return undefined;
+
+          const selectedMessageBelongsToTurn =
+            sourceTurn.assistantMessages.some(
+              (message) => message.id === selectedMessage.id,
+            );
+          if (!selectedMessageBelongsToTurn) {
             return undefined;
           }
 
@@ -1000,7 +1008,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const forkOrigin: AiSessionForkOrigin = {
             sourceSessionId: sourceSession.id,
             sourceMessageId: selectedMessage.id,
-            ...(sourceTurn?.id ? {sourceTurnId: sourceTurn.id} : {}),
+            sourceTurnId: sourceTurn.id,
             sourceMessageIndex,
             ...(args.legacySourceAnalysisResultId
               ? {

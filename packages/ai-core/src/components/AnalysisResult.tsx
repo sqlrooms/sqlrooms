@@ -12,7 +12,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
-import {GitForkIcon, SquareTerminalIcon} from 'lucide-react';
+import {SplitIcon, SquareTerminalIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
@@ -460,7 +460,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                         });
                       }}
                     >
-                      <GitForkIcon className="h-4 w-4" />
+                      <SplitIcon className="h-4 w-4 rotate-90" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Fork</TooltipContent>

@@ -406,6 +406,55 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.config.sessionForks).toEqual({});
   });
 
+  it('rejects message-only forks from incomplete assistant turns', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'stream'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: 'partial',
+            state: 'streaming',
+          } as UIMessage['parts'][number],
+        ],
+      },
+    ];
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    store.getState().ai.setIsRunning('session-1', true);
+    const initialSessions = store.getState().ai.config.sessions;
+    const initialCurrentSessionId = store.getState().ai.config.currentSessionId;
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceMessageId: 'assistant-1',
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceMessageIndex: 1,
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+    expect(store.getState().ai.config.sessionForks).toEqual({});
+  });
+
   it('copies run context and matching agent progress into forked sessions', () => {
     const store = createTestStore();
     const sourceMessages: UIMessage[] = [

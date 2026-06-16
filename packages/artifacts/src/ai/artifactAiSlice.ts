@@ -162,7 +162,7 @@ export function createArtifactAiSlice<
       );
     };
 
-    const inheritForkedSessionArtifacts = () => {
+    const syncForkedSessionArtifactOwnership = () => {
       const state = get();
       const sessionIds = new Set(
         state.ai.config.sessions.map((session) => session.id),
@@ -202,7 +202,7 @@ export function createArtifactAiSlice<
       if (artifactAiSyncing || artifactAiSyncSuspended) return;
       artifactAiSyncing = true;
       try {
-        inheritForkedSessionArtifacts();
+        syncForkedSessionArtifactOwnership();
         cleanupSessionArtifacts();
         const state = get();
         const currentArtifactId = state.artifacts.config.currentArtifactId;

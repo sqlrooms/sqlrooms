@@ -1,5 +1,5 @@
 import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
-import {ChevronDown, GitForkIcon} from 'lucide-react';
+import {ChevronDown, SplitIcon} from 'lucide-react';
 import type {UIMessage} from 'ai';
 import React, {useEffect, useRef} from 'react';
 import {Components} from 'react-markdown';
@@ -25,7 +25,7 @@ function ChatForkProvenance({
   return (
     <div className="text-muted-foreground my-4 flex items-center gap-3 text-sm">
       <div className="bg-border h-px min-w-8 flex-1" />
-      <GitForkIcon className="h-4 w-4 shrink-0" />
+      <SplitIcon className="h-4 w-4 shrink-0 rotate-90" />
       {sourceSession ? (
         <button
           type="button"
