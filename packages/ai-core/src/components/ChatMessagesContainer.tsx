@@ -82,6 +82,16 @@ export const ChatMessagesContainer: React.FC<{
         : undefined,
     [forkOrigin, sessions],
   );
+  const forkProvenanceTurnId = React.useMemo(() => {
+    if (!forkOrigin || chatTurns.length === 0) return undefined;
+    if (
+      forkOrigin.sourceTurnId &&
+      chatTurns.some((chatTurn) => chatTurn.id === forkOrigin.sourceTurnId)
+    ) {
+      return forkOrigin.sourceTurnId;
+    }
+    return chatTurns[chatTurns.length - 1]?.id;
+  }, [chatTurns, forkOrigin]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
@@ -111,23 +121,24 @@ export const ChatMessagesContainer: React.FC<{
         className="flex w-full grow flex-col gap-5"
       >
         <div className="pr-3">
-          {forkOrigin && (
-            <ChatForkProvenance
-              forkOrigin={forkOrigin}
-              sourceSession={sourceSession}
-              onSwitchToSource={() => {
-                if (sourceSession) switchSession(sourceSession.id);
-              }}
-            />
-          )}
           {chatTurns.map((chatTurn) => (
-            <AnalysisResult
-              key={chatTurn.id}
-              chatTurn={chatTurn}
-              customMarkdownComponents={customMarkdownComponents}
-              hoistedRenderers={hoistedRenderers}
-              ErrorMessageComponent={ErrorMessageComponent}
-            />
+            <React.Fragment key={chatTurn.id}>
+              <AnalysisResult
+                chatTurn={chatTurn}
+                customMarkdownComponents={customMarkdownComponents}
+                hoistedRenderers={hoistedRenderers}
+                ErrorMessageComponent={ErrorMessageComponent}
+              />
+              {forkOrigin && forkProvenanceTurnId === chatTurn.id && (
+                <ChatForkProvenance
+                  forkOrigin={forkOrigin}
+                  sourceSession={sourceSession}
+                  onSwitchToSource={() => {
+                    if (sourceSession) switchSession(sourceSession.id);
+                  }}
+                />
+              )}
+            </React.Fragment>
           ))}
           {isRunning && (
             <AiThinkingDots className="text-muted-foreground p-4" />
