@@ -70,6 +70,7 @@ export {
   AiRunContextItemSchema,
   AiRunContextSchema,
   AiSliceConfig,
+  AnalysisSessionSchema,
   ChatSessionSchema,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,
