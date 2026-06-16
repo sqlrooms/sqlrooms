@@ -207,7 +207,7 @@ function migrateFromV0_26_0(data: unknown) {
   return {
     ...session,
     uiMessages: [...uiMessages, ...synthesizedMessages],
-    prompt: '',
+    prompt: typeof session.prompt === 'string' ? session.prompt : '',
     isRunning: false,
   };
 }
