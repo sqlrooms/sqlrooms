@@ -272,9 +272,13 @@ but new code should use the chat-named APIs.
 - `isAnalysisSessionEmpty` is deprecated in favor of `isChatSessionEmpty`.
 - `AnalysisResultsContainer` is deprecated in favor of `ChatMessagesContainer`
   or the preferred compound component API, `Chat.Messages`.
-- `AnalysisResultSchema`, `AnalysisResult`, `getAnalysisResults`,
-  `addAnalysisResult`, `deleteAnalysisResult`, and
-  `cleanupPendingAnalysisResults` remain compatibility APIs for existing apps.
+- `AnalysisResult` is deprecated in favor of `ChatTurnView`.
+- `AnalysisAnswer` is deprecated in favor of `MessageContent`.
+- `processAnalysisAnswerContent` is deprecated in favor of
+  `processMessageContent`.
+- `AnalysisResultSchema`, `getAnalysisResults`, `addAnalysisResult`,
+  `deleteAnalysisResult`, and `cleanupPendingAnalysisResults` remain
+  compatibility APIs for existing apps.
 - New code should prefer `uiMessages` and derived `ChatTurn` helpers such as
   `getChatTurnsFromUiMessages`.
 - Persisted legacy `analysisResults` is still accepted when loading old rooms,
@@ -286,19 +290,13 @@ but new code should use the chat-named APIs.
 Before:
 
 ```ts
-import {
-  AnalysisSessionSchema,
-  isAnalysisSessionEmpty,
-} from '@sqlrooms/ai';
+import {AnalysisSessionSchema, isAnalysisSessionEmpty} from '@sqlrooms/ai';
 ```
 
 After:
 
 ```ts
-import {
-  ChatSessionSchema,
-  isChatSessionEmpty,
-} from '@sqlrooms/ai';
+import {ChatSessionSchema, isChatSessionEmpty} from '@sqlrooms/ai';
 ```
 
 If you render the built-in chat UI, prefer the compound component:

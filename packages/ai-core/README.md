@@ -150,8 +150,8 @@ const matches = findChatSearchMatches(blocks, query);
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
-- Chat UI: `Chat`, `ChatMessagesContainer`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
-- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
+- Chat UI: `Chat`, `ChatMessagesContainer`, `ChatTurnView`, `MessageContent`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
 - Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
 - Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
@@ -162,10 +162,11 @@ const matches = findChatSearchMatches(blocks, query);
   - `streamSubAgent`
 
 `AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
-`AnalysisResult`, and `cleanupPendingAnalysisResults` remain compatibility
-exports for existing apps. New code should prefer `ChatSessionSchema`,
-`isChatSessionEmpty`, `Chat.Messages`, `uiMessages`, and derived `ChatTurn`
-helpers.
+`AnalysisResult`, `AnalysisAnswer`, `processAnalysisAnswerContent`, and
+`cleanupPendingAnalysisResults` remain compatibility exports for existing apps.
+New code should prefer `ChatSessionSchema`, `isChatSessionEmpty`,
+`Chat.Messages`, `ChatTurnView`, `MessageContent`, `uiMessages`, and derived
+`ChatTurn` helpers.
 
 Legacy persisted sessions that contain `analysisResults` still load through
 schema migration, but parsed and newly created chat sessions no longer include

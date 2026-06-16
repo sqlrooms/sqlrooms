@@ -5,7 +5,7 @@ import React, {useEffect, useRef} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
-import {AnalysisResult} from './AnalysisResult';
+import {ChatTurnView} from './ChatTurnView';
 import {AiThinkingDots} from './AiThinkingDots';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {getChatTurnsFromUiMessages} from '../chatTurns';
@@ -123,7 +123,7 @@ export const ChatMessagesContainer: React.FC<{
         <div className="pr-3">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
-              <AnalysisResult
+              <ChatTurnView
                 chatTurn={chatTurn}
                 customMarkdownComponents={customMarkdownComponents}
                 hoistedRenderers={hoistedRenderers}
