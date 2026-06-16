@@ -4,9 +4,15 @@ import {
   type ToolUIPart,
   type DynamicToolUIPart,
 } from '@sqlrooms/ai-config';
-import {CopyButton} from '@sqlrooms/ui';
+import {
+  Button,
+  CopyButton,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
-import {SquareTerminalIcon} from 'lucide-react';
+import {SplitIcon, SquareTerminalIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
@@ -164,6 +170,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
+  const forkSessionFromMessage = useStoreWithAi(
+    (s) => s.ai.forkSessionFromMessage,
+  );
 
   const fallbackMessageParts = useAssistantMessageParts(
     uiMessages,
@@ -223,6 +232,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const currentSessionId = useStoreWithAi(
     (s) => s.ai.config.currentSessionId ?? '',
   );
+  const forkSourceMessage = chatTurn?.assistantMessages.at(-1);
+  const forkSourceMessageIndex =
+    forkSourceMessage && uiMessages
+      ? uiMessages.findIndex((message) => message.id === forkSourceMessage.id)
+      : undefined;
+  const canFork =
+    !!chatTurn && !!forkSourceMessage && !!currentSessionId && isCompleted;
   const searchBlockPrefix = `${currentSessionId}:${turnId}`;
 
   const search = useOptionalChatSearch();
@@ -267,13 +283,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     });
 
     return blocks.filter((block) => block.text.trim().length > 0);
-  }, [
-    turnId,
-    prompt,
-    hasActiveQuery,
-    searchBlockPrefix,
-    uiMessageParts,
-  ]);
+  }, [turnId, prompt, hasActiveQuery, searchBlockPrefix, uiMessageParts]);
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
@@ -411,23 +421,51 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             return null;
           })}
           {errorMessage &&
-            !errorMessage.error.startsWith(
-              TOOL_CALL_CANCELLED,
-            ) &&
+            !errorMessage.error.startsWith(TOOL_CALL_CANCELLED) &&
             (ErrorMessageComponent ? (
-              <ErrorMessageComponent
-                errorMessage={errorMessage.error}
-              />
+              <ErrorMessageComponent errorMessage={errorMessage.error} />
             ) : (
               <ErrorMessage errorMessage={errorMessage.error} />
             ))}
-          {hasTextContent && (
-            <div className="flex justify-start">
-              <CopyButton
-                text={allTextContent}
-                tooltipLabel="Copy message"
-                className="border-muted border"
-              />
+          {(hasTextContent || canFork) && (
+            <div className="flex justify-start gap-1">
+              {hasTextContent && (
+                <CopyButton
+                  text={allTextContent}
+                  tooltipLabel="Copy message"
+                  className="border-muted border"
+                />
+              )}
+              {canFork && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="border-muted text-muted-foreground hover:text-foreground h-8 w-8 border"
+                      aria-label="Fork chat from this message"
+                      onClick={() => {
+                        forkSessionFromMessage({
+                          sourceSessionId: currentSessionId,
+                          sourceMessageId: forkSourceMessage.id,
+                          sourceTurnId: chatTurn.id,
+                          ...(forkSourceMessageIndex !== undefined &&
+                          forkSourceMessageIndex >= 0
+                            ? {sourceMessageIndex: forkSourceMessageIndex}
+                            : {}),
+                          ...(analysisResult?.id
+                            ? {legacySourceAnalysisResultId: analysisResult.id}
+                            : {}),
+                        });
+                      }}
+                    >
+                      <SplitIcon className="h-4 w-4 rotate-90" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Fork</TooltipContent>
+                </Tooltip>
+              )}
             </div>
           )}
         </div>

@@ -29,6 +29,7 @@ type TestRoomState = BaseRoomStoreState &
       config: {
         sessions: ChatSessionSchema[];
         currentSessionId?: string;
+        sessionForks?: Record<string, {sourceSessionId: string}>;
       };
       createSession: (
         name?: string,
@@ -252,6 +253,35 @@ describe('createArtifactAiSlice', () => {
       'artifact-a',
     );
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+  });
+
+  it('inherits artifact ownership for forked sessions', () => {
+    const store = createTestStore();
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('target-session', 2),
+          createSession('source-session', 1),
+        ];
+        draft.ai.config.currentSessionId = 'target-session';
+        draft.ai.config.sessionForks = {
+          'target-session': {
+            sourceSessionId: 'source-session',
+          },
+        };
+        draft.artifactAi.config.aiSessionArtifacts = {
+          'source-session': 'artifact-a',
+        };
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(
+      store.getState().artifactAi.getSessionArtifactId('target-session'),
+    ).toBe('artifact-a');
+    expect(store.getState().ai.config.currentSessionId).toBe('target-session');
   });
 
   it('selects the latest mapped session and ignores unowned sessions', () => {

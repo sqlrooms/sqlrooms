@@ -64,6 +64,7 @@ type ArtifactAiCompatibleAiState = {
     config: {
       sessions: ChatSessionSchema[];
       currentSessionId?: string;
+      sessionForks?: Record<string, {sourceSessionId: string}>;
     };
     createSession: (
       name?: string,
@@ -161,6 +162,39 @@ export function createArtifactAiSlice<
       );
     };
 
+    const syncForkedSessionArtifactOwnership = () => {
+      const state = get();
+      const sessionIds = new Set(
+        state.ai.config.sessions.map((session) => session.id),
+      );
+      const inheritedEntries = Object.entries(
+        state.ai.config.sessionForks ?? {},
+      ).flatMap(([targetSessionId, forkOrigin]) => {
+        if (!sessionIds.has(targetSessionId)) return [];
+        if (state.artifactAi.config.aiSessionArtifacts[targetSessionId]) {
+          return [];
+        }
+        const sourceArtifactId =
+          state.artifactAi.config.aiSessionArtifacts[
+            forkOrigin.sourceSessionId
+          ];
+        if (!sourceArtifactId) return [];
+        if (!state.artifacts.config.artifactsById[sourceArtifactId]) return [];
+        return [[targetSessionId, sourceArtifactId] as const];
+      });
+
+      if (inheritedEntries.length === 0) return;
+
+      set((stateToUpdate) =>
+        produce(stateToUpdate, (draft: TRoomState) => {
+          for (const [targetSessionId, artifactId] of inheritedEntries) {
+            draft.artifactAi.config.aiSessionArtifacts[targetSessionId] =
+              artifactId;
+          }
+        }),
+      );
+    };
+
     // Keeps the current AI session aligned with the current artifact, pruning
     // stale ownership records before selecting the latest session for the
     // active artifact.
@@ -168,6 +202,7 @@ export function createArtifactAiSlice<
       if (artifactAiSyncing || artifactAiSyncSuspended) return;
       artifactAiSyncing = true;
       try {
+        syncForkedSessionArtifactOwnership();
         cleanupSessionArtifacts();
         const state = get();
         const currentArtifactId = state.artifacts.config.currentArtifactId;

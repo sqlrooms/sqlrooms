@@ -271,14 +271,14 @@ export function normalizeAiSession(
  * setter. It keeps constructor initialization and `setConfig()` behavior
  * consistent without mutating the original config object.
  */
-export function normalizeAiConfig<
-  T extends Partial<AiSliceConfig> | undefined,
->(config: T): T {
+export function normalizeAiConfig<T extends Partial<AiSliceConfig> | undefined>(
+  config: T,
+): T {
   return config?.sessions
-    ? {
+    ? ({
         ...config,
         sessions: config.sessions.map(normalizeAiSession),
-      } as T
+      } as T)
     : config;
 }
 

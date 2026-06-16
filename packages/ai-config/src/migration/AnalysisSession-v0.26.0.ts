@@ -103,9 +103,10 @@ function withLegacyResultMetadata(
 
 /** Perform migration to AI SDK v5 uiMessages and strip legacy fields. */
 function migrateFromV0_26_0(data: unknown) {
-  const {toolAdditionalData: _legacyToolAdditionalData, ...sessionWithLegacy} = {
+  const sessionWithLegacy = {
     ...(data as UnknownRecord),
   };
+  delete sessionWithLegacy.toolAdditionalData;
   const analysisResults =
     (sessionWithLegacy.analysisResults as UnknownRecord[]) || [];
   const existingUiMessages =
