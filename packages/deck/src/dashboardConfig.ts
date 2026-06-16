@@ -9,7 +9,7 @@ import type {Table as ArrowTable} from 'apache-arrow';
 import type {DeckJsonMapProps, DeckSqlDatasetInput} from './types';
 
 export const DECK_MAP_DASHBOARD_PANEL_TYPE = 'deck-json-map';
-export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 10_000;
+export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 100_000;
 
 export type DeckMapDataPolicyOverride = {
   disabled?: boolean;

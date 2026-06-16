@@ -195,11 +195,24 @@ function DeckMapDashboardDatasetClient({
           ),
     [maxRows, source],
   );
+  const queryError = useCallback(
+    (err: Error) => {
+      onDatasetState(datasetId, {
+        arrowTable: undefined,
+        error: err,
+        isLoading: false,
+        client: null,
+        isSampled: false,
+      });
+    },
+    [datasetId, onDatasetState],
+  );
   const sourceKey = source?.tableName ?? dashboard.selectedTable ?? '';
   const {data, error, isLoading, client} = useMosaicClient({
     id: `${panel.id}:${datasetId}:${sourceKey}`,
     selectionName,
     query,
+    queryError,
     enabled: Boolean(source),
     runtimeIssueContext,
     runtimeIssueReporter,
@@ -466,18 +479,23 @@ function DeckMapDashboardRenderer({
     />
   );
 
+  const datasetError = useMemo(() => {
+    for (const state of Object.values(datasetStates)) {
+      if (state.error) return state.error;
+    }
+    return undefined;
+  }, [datasetStates]);
+
   const mapContent = !mapConfig ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Invalid map panel config.
     </div>
-  ) : issue ? (
-    <DeckMapRuntimeIssuePanel issue={issue} />
   ) : Object.entries(mapConfig.datasets).length === 0 ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Map panels require at least one dataset.
     </div>
   ) : (
-    <div ref={containerRef} className="relative h-full w-full">
+    <>
       {Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => (
         <DeckMapDashboardDatasetClient
           key={datasetId}
@@ -493,55 +511,60 @@ function DeckMapDashboardRenderer({
           maxRows={DEFAULT_DECK_MAP_MAX_DATA_POINTS}
         />
       ))}
-      {Object.entries(datasetStates)
-        .filter(([, state]) => state.error)
-        .map(([datasetId, state]) => (
-          <div
-            key={datasetId}
-            className="bg-background/90 text-destructive absolute inset-x-4 top-4 z-10 rounded-md border p-3 text-sm shadow"
-          >
-            Failed to load dataset &quot;{datasetId}&quot;:{' '}
-            {state.error?.message}
-          </div>
-        ))}
-      {Object.values(datasetStates).some((s) => s.isSampled) &&
-        !sampledDismissed && (
-          <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
-            <span>
-              Data sampled to{' '}
-              {DEFAULT_DECK_MAP_MAX_DATA_POINTS.toLocaleString()} rows
-            </span>
-            <button
-              className="text-muted-foreground/60 hover:text-foreground -mr-0.5 ml-0.5"
-              onClick={() => setSampledDismissed(true)}
-            >
-              ×
-            </button>
-          </div>
-        )}
-      <DeckJsonMap
-        ref={deckMapRef}
-        className="h-full w-full"
-        spec={mapConfig.spec}
-        datasets={
-          mapConfig
-            ? createDeckMapDashboardDatasets(mapConfig, datasetStates)
-            : {}
-        }
-        mapStyle={mapConfig.mapStyle}
-        mapProps={mapConfig.mapProps}
-        showLegends={mapConfig.showLegends}
-        onRenderingError={handleRenderingError}
-        deckProps={{
-          controller: true,
-          ...(mapConfig.interaction
-            ? (mapConfig.interaction.event ?? 'hover') === 'click'
-              ? {onClick: handleBrushEvent}
-              : {onHover: handleBrushEvent}
-            : {}),
-        }}
-      />
-    </div>
+      {issue ? (
+        <DeckMapRuntimeIssuePanel issue={issue} />
+      ) : datasetError ? (
+        <DeckMapRuntimeIssuePanel
+          issue={{
+            kind: 'sql-error',
+            panelId: panel.id,
+            chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+            message: datasetError.message,
+            recoverable: true,
+          }}
+        />
+      ) : (
+        <div ref={containerRef} className="relative h-full w-full">
+          {Object.values(datasetStates).some((s) => s.isSampled) &&
+            !sampledDismissed && (
+              <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
+                <span>
+                  Data sampled to{' '}
+                  {DEFAULT_DECK_MAP_MAX_DATA_POINTS.toLocaleString()} rows
+                </span>
+                <button
+                  className="text-muted-foreground/60 hover:text-foreground -mr-0.5 ml-0.5"
+                  onClick={() => setSampledDismissed(true)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          <DeckJsonMap
+            ref={deckMapRef}
+            className="h-full w-full"
+            spec={mapConfig.spec}
+            datasets={
+              mapConfig
+                ? createDeckMapDashboardDatasets(mapConfig, datasetStates)
+                : {}
+            }
+            mapStyle={mapConfig.mapStyle}
+            mapProps={mapConfig.mapProps}
+            showLegends={mapConfig.showLegends}
+            onRenderingError={handleRenderingError}
+            deckProps={{
+              controller: true,
+              ...(mapConfig.interaction
+                ? (mapConfig.interaction.event ?? 'hover') === 'click'
+                  ? {onClick: handleBrushEvent}
+                  : {onHover: handleBrushEvent}
+                : {}),
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 
   return (

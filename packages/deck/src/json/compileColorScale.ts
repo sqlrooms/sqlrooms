@@ -127,10 +127,19 @@ export function compileColorScale(options: {
     return () => null;
   }
   const {fieldName, vector} = column;
-  const mapper = createColorScaleMapper({
-    colorScale,
-    values: getColumnValues(vector),
-  });
+  let mapper: ReturnType<typeof createColorScaleMapper>;
+  try {
+    mapper = createColorScaleMapper({
+      colorScale,
+      values: getColumnValues(vector),
+    });
+  } catch (err) {
+    console.warn(
+      `[compileColorScale] Failed to create color scale for field "${colorScale.field}":`,
+      err,
+    );
+    return () => null;
+  }
 
   return (value: unknown) =>
     mapper(getGeoArrowOrRowValue({value, fieldName, vector}));
@@ -142,7 +151,13 @@ export function buildColorScaleLegend(options: {
   title?: string;
 }): ResolvedColorLegend | null {
   const {table, colorScale} = options;
-  const {vector} = getColumn(table, colorScale.field);
+  let column;
+  try {
+    column = getColumn(table, colorScale.field);
+  } catch {
+    return null;
+  }
+  const {vector} = column;
   const values = getColumnValues(vector);
 
   if (

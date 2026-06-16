@@ -45,8 +45,18 @@ export function useDeckMapDatasets(options: {
         }
         return next;
       });
+
+      if (state?.error) {
+        reportPanelIssue(dashboardId, panel.id, {
+          kind: 'sql-error',
+          panelId: panel.id,
+          chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+          message: state.error.message,
+          recoverable: true,
+        });
+      }
     },
-    [],
+    [dashboardId, panel.id, reportPanelIssue],
   );
 
   const runtimeIssueContext = useMemo<ChartRuntimeIssueContext>(

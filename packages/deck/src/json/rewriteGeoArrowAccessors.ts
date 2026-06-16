@@ -57,6 +57,12 @@ export function rewriteGeoArrowAccessors(options: {
         nextProps[propName] = vector;
         continue;
       }
+      if (!vector) {
+        const available = table.schema.fields.map((f) => f.name).join(', ');
+        throw new Error(
+          `Column "${expression.trim()}" not found in dataset. Available columns: ${available}`,
+        );
+      }
     }
 
     // TODO(geoarrow-upgrade): This fallback exists because 0.3.x GeoArrow layers do
