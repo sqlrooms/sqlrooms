@@ -1,17 +1,14 @@
 import {useStoreWithMosaicDashboard} from '@sqlrooms/mosaic';
 import type {
-  ChartDataPolicy,
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
   MosaicDashboardPanelConfigType,
 } from '@sqlrooms/mosaic';
 import {useCallback, useMemo, useState} from 'react';
 import {
-  asDeckJsonMapConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   type DeckMapDashboardDatasetClientState,
 } from './dashboardConfig';
-import {getDeckMapDataPolicy} from './mapDataPolicy';
 
 /**
  * Manages dataset state tracking, data policy, and runtime issue reporting
@@ -22,7 +19,6 @@ export function useDeckMapDatasets(options: {
   panel: MosaicDashboardPanelConfigType;
 }) {
   const {dashboardId, panel} = options;
-  const mapConfig = asDeckJsonMapConfig(panel.config);
 
   const reportPanelIssue = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.reportPanelIssue,
@@ -51,11 +47,6 @@ export function useDeckMapDatasets(options: {
       });
     },
     [],
-  );
-
-  const dataPolicy = useMemo<ChartDataPolicy>(
-    () => getDeckMapDataPolicy(mapConfig),
-    [mapConfig],
   );
 
   const runtimeIssueContext = useMemo<ChartRuntimeIssueContext>(
@@ -94,7 +85,6 @@ export function useDeckMapDatasets(options: {
   return {
     datasetStates,
     handleDatasetState,
-    dataPolicy,
     runtimeIssueContext,
     runtimeIssueReporter,
     handleRenderingError,

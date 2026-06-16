@@ -5,7 +5,6 @@ import {
   type MosaicDashboardPanelRenderer,
   type MosaicDashboardPanelRendererProps,
   sql,
-  type ChartDataPolicy,
   type ChartRuntimeIssue,
   type ChartRuntimeIssueContext,
   type ChartRuntimeIssueReporter,
@@ -28,6 +27,7 @@ import {
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
+  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
@@ -146,18 +146,17 @@ function DeckMapDashboardDatasetClient({
   dashboard,
   dataset,
   datasetId,
-  dataPolicy,
   fitToData,
   panel,
   onDatasetState,
   runtimeIssueContext,
   runtimeIssueReporter,
   selectionName,
+  maxRows,
 }: {
   dashboard: MosaicDashboardEntryType;
   dataset: DeckMapDashboardDatasetConfig;
   datasetId: string;
-  dataPolicy?: ChartDataPolicy | null;
   fitToData?: DeckMapDashboardFitToDataConfig;
   panel: MosaicDashboardPanelConfigType;
   onDatasetState: (
@@ -167,6 +166,7 @@ function DeckMapDashboardDatasetClient({
   runtimeIssueContext?: ChartRuntimeIssueContext;
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selectionName: string;
+  maxRows: number;
 }) {
   const datasetFitToData = useMemo(
     () => (fitToData?.dataset === datasetId ? fitToData : undefined),
@@ -185,19 +185,21 @@ function DeckMapDashboardDatasetClient({
   const query = useCallback(
     (filter: unknown) =>
       source
-        ? createDeckMapDashboardDatasetQuery(source, filter)
+        ? createDeckMapDashboardDatasetQuery(source, filter, {
+            sampleRows: maxRows,
+          })
         : createDeckMapDashboardDatasetQuery(
             {tableName: '__missing_dashboard_map_dataset__'},
             filter,
+            {sampleRows: maxRows},
           ),
-    [source],
+    [maxRows, source],
   );
   const sourceKey = source?.tableName ?? dashboard.selectedTable ?? '';
   const {data, error, isLoading, client} = useMosaicClient({
     id: `${panel.id}:${datasetId}:${sourceKey}`,
     selectionName,
     query,
-    dataPolicy,
     enabled: Boolean(source),
     runtimeIssueContext,
     runtimeIssueReporter,
@@ -206,18 +208,21 @@ function DeckMapDashboardDatasetClient({
   // Register client for panel reset button
   usePanelClientRegistration(dashboard.id, panel.id, client ? [client] : []);
 
+  const isSampled = Boolean(data && data.numRows >= maxRows);
+
   useEffect(() => {
     onDatasetState(datasetId, {
       arrowTable: data ?? undefined,
       error,
       isLoading,
       client,
+      isSampled,
     });
 
     return () => {
       onDatasetState(datasetId, undefined);
     };
-  }, [client, data, datasetId, error, isLoading, onDatasetState]);
+  }, [client, data, datasetId, error, isLoading, isSampled, onDatasetState]);
 
   return null;
 }
@@ -379,11 +384,11 @@ function DeckMapDashboardRenderer({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const deckMapRef = useRef<DeckJsonMapHandle>(null);
   const [containerSize, setContainerSize] = useState({width: 0, height: 0});
+  const [sampledDismissed, setSampledDismissed] = useState(false);
 
   const {
     datasetStates,
     handleDatasetState,
-    dataPolicy,
     runtimeIssueContext,
     runtimeIssueReporter,
     handleRenderingError,
@@ -479,13 +484,13 @@ function DeckMapDashboardRenderer({
           dashboard={dashboard}
           dataset={dataset}
           datasetId={datasetId}
-          dataPolicy={dataPolicy}
           fitToData={fitToData ?? undefined}
           panel={panel}
           onDatasetState={handleDatasetState}
           runtimeIssueContext={runtimeIssueContext}
           runtimeIssueReporter={runtimeIssueReporter}
           selectionName={selectionName}
+          maxRows={DEFAULT_DECK_MAP_MAX_DATA_POINTS}
         />
       ))}
       {Object.entries(datasetStates)
@@ -499,6 +504,21 @@ function DeckMapDashboardRenderer({
             {state.error?.message}
           </div>
         ))}
+      {Object.values(datasetStates).some((s) => s.isSampled) &&
+        !sampledDismissed && (
+          <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
+            <span>
+              Data sampled to{' '}
+              {DEFAULT_DECK_MAP_MAX_DATA_POINTS.toLocaleString()} rows
+            </span>
+            <button
+              className="text-muted-foreground/60 hover:text-foreground -mr-0.5 ml-0.5"
+              onClick={() => setSampledDismissed(true)}
+            >
+              ×
+            </button>
+          </div>
+        )}
       <DeckJsonMap
         ref={deckMapRef}
         className="h-full w-full"

@@ -9,7 +9,7 @@ import type {Table as ArrowTable} from 'apache-arrow';
 import type {DeckJsonMapProps, DeckSqlDatasetInput} from './types';
 
 export const DECK_MAP_DASHBOARD_PANEL_TYPE = 'deck-json-map';
-export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 100_000;
+export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 10_000;
 
 export type DeckMapDataPolicyOverride = {
   disabled?: boolean;
@@ -67,6 +67,7 @@ export type DeckMapDashboardDatasetClientState = {
   isLoading: boolean;
   error?: Error;
   client: unknown;
+  isSampled?: boolean;
 };
 
 export function asDeckJsonMapConfig(
@@ -265,12 +266,23 @@ function buildGeometrySourceSql(
 export function createDeckMapDashboardDatasetQuery(
   source: {tableName?: string; sqlQuery?: string},
   filter: unknown,
+  options?: {sampleRows?: number},
 ) {
-  const query = source.sqlQuery
-    ? Query.from({
-        __dashboard_map_dataset: verbatim(`(${source.sqlQuery})`),
-      })
-    : Query.from(source.tableName ?? '');
+  // Apply USING SAMPLE at the source level so Mosaic filters work on top.
+  const sourceExpr = source.sqlQuery
+    ? `(${source.sqlQuery})`
+    : (source.tableName ?? '');
+
+  const sampledSource = options?.sampleRows
+    ? `(SELECT * FROM ${sourceExpr} USING SAMPLE ${options.sampleRows} ROWS)`
+    : sourceExpr;
+
+  const query =
+    source.sqlQuery || options?.sampleRows
+      ? Query.from({
+          __dashboard_map_dataset: verbatim(sampledSource),
+        })
+      : Query.from(source.tableName ?? '');
 
   return query.select('*').where(filter as never);
 }

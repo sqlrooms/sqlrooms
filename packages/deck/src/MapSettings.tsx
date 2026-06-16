@@ -18,7 +18,6 @@ import {
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
 import {
   Button,
-  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -31,7 +30,6 @@ import {XIcon} from 'lucide-react';
 import {LatitudeSelector} from './LatitudeSelector';
 import {LongitudeSelector} from './LongitudeSelector';
 import type {DeckMapDashboardPanelConfig} from './dashboardConfig';
-import {DEFAULT_DECK_MAP_MAX_DATA_POINTS} from './dashboardConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -192,8 +190,6 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const schemeOptions = getSchemeOptions(colorScaleType);
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const firstColumnName = dataTable?.columns[0]?.name;
-  const maxRows =
-    mapConfig.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
@@ -790,27 +786,6 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Field>
             </ColumnsProvider>
           )}
-
-        <Field label="Max rows">
-          <Input
-            type="number"
-            min={1}
-            value={maxRows}
-            className="no-spinner"
-            onChange={(event) => {
-              const parsed = Number.parseInt(event.target.value, 10);
-              if (!Number.isFinite(parsed) || parsed < 1) return;
-              applyConfig({
-                ...mapConfig,
-                dataPolicy: {
-                  ...mapConfig.dataPolicy,
-                  maxRows: parsed,
-                },
-              });
-            }}
-            placeholder={String(DEFAULT_DECK_MAP_MAX_DATA_POINTS)}
-          />
-        </Field>
       </div>
     </div>
   );
