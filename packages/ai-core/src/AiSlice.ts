@@ -321,9 +321,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
       {isRunning: boolean; results: AnalysisResultSchema[]}
     >();
 
-    const cleanedConfig = cleanupSessionForks(
-      createDefaultAiConfig(normalizeAiConfig(params.config)),
-    );
+    const cleanedConfig = normalizeAiConfig(params.config);
 
     /**
      * Extract toolTimings from UIMessage metadata and agentProgress from
@@ -412,7 +410,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     };
 
     // Initialize base config and ensure the initial session respects default provider/model
-    const baseConfig = cleanedConfig;
+    const baseConfig = cleanupSessionForks(
+      createDefaultAiConfig(cleanedConfig),
+    );
     if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
       const firstSession = baseConfig.sessions[0];
       if (firstSession) {
@@ -913,6 +913,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           const selectedMessage = sourceMessages[sourceMessageIndex];
           if (!selectedMessage) return undefined;
+          if (selectedMessage.role !== 'assistant') return undefined;
+          if (sourceTurn) {
+            const selectedMessageBelongsToTurn =
+              sourceTurn.assistantMessages.some(
+                (message) => message.id === selectedMessage.id,
+              );
+            if (!selectedMessageBelongsToTurn) return undefined;
+          } else if (args.sourceTurnId || args.legacySourceAnalysisResultId) {
+            return undefined;
+          }
 
           const now = Date.now();
           const targetSessionId = createId();

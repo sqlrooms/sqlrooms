@@ -1,4 +1,5 @@
 import {
+  AiSessionForkOrigin,
   AiSettingsSliceConfig,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
@@ -94,6 +95,24 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
+  it('honors custom defaults when initialized without persisted config', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'anthropic',
+        defaultModel: 'claude-test',
+        initialPrompt: 'start here',
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.getCurrentSession()).toMatchObject({
+      modelProvider: 'anthropic',
+      model: 'claude-test',
+      prompt: 'start here',
+    });
+  });
+
   it('opens the repaired current session when initialized with a stale current session id', () => {
     const now = Date.now();
     const store = createStore<AiSliceState>((set, get, store) =>
@@ -176,6 +195,33 @@ describe('AiSlice model selection', () => {
     const second = store.getState().ai.getAnalysisResults();
 
     expect(second).toBe(first);
+  });
+
+  it('validates fork source message indexes as non-negative integers', () => {
+    const baseOrigin = {
+      sourceSessionId: 'source-session',
+      sourceSessionNameAtFork: 'Source',
+      createdAt: Date.now(),
+    };
+
+    expect(
+      AiSessionForkOrigin.safeParse({
+        ...baseOrigin,
+        sourceMessageIndex: 0,
+      }).success,
+    ).toBe(true);
+    expect(
+      AiSessionForkOrigin.safeParse({
+        ...baseOrigin,
+        sourceMessageIndex: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      AiSessionForkOrigin.safeParse({
+        ...baseOrigin,
+        sourceMessageIndex: 1.5,
+      }).success,
+    ).toBe(false);
   });
 
   it('normalizes restored config passed through setConfig', () => {
@@ -304,6 +350,49 @@ describe('AiSlice model selection', () => {
       sourceMessageIndex: 3,
       sourceSessionNameAtFork: 'Session 1',
     });
+  });
+
+  it('rejects fork metadata when the selected message is not an assistant message in the selected turn', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'first'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'first answer'}],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'second'}],
+      },
+      {
+        id: 'assistant-2',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'second answer'}],
+      },
+    ];
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceTurnId: 'user-2',
+        sourceMessageId: 'assistant-1',
+      }),
+    ).toBeUndefined();
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceTurnId: 'user-1',
+        sourceMessageId: 'user-1',
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessionForks).toEqual({});
   });
 
   it('removes fork metadata when the fork target session is deleted', () => {

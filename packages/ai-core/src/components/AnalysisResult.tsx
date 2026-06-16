@@ -238,11 +238,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       ? uiMessages.findIndex((message) => message.id === forkSourceMessage.id)
       : undefined;
   const canFork =
-    !!chatTurn &&
-    !!forkSourceMessage &&
-    !!currentSessionId &&
-    isCompleted &&
-    hasTextContent;
+    !!chatTurn && !!forkSourceMessage && !!currentSessionId && isCompleted;
   const searchBlockPrefix = `${currentSessionId}:${turnId}`;
 
   const search = useOptionalChatSearch();
@@ -431,13 +427,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             ) : (
               <ErrorMessage errorMessage={errorMessage.error} />
             ))}
-          {hasTextContent && (
+          {(hasTextContent || canFork) && (
             <div className="flex justify-start gap-1">
-              <CopyButton
-                text={allTextContent}
-                tooltipLabel="Copy message"
-                className="border-muted border"
-              />
+              {hasTextContent && (
+                <CopyButton
+                  text={allTextContent}
+                  tooltipLabel="Copy message"
+                  className="border-muted border"
+                />
+              )}
               {canFork && (
                 <Tooltip>
                   <TooltipTrigger asChild>

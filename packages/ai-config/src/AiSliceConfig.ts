@@ -6,7 +6,7 @@ export const AiSessionForkOrigin = z.object({
   sourceSessionId: z.string(),
   sourceMessageId: z.string().optional(),
   sourceTurnId: z.string().optional(),
-  sourceMessageIndex: z.number().optional(),
+  sourceMessageIndex: z.number().int().nonnegative().optional(),
   legacySourceAnalysisResultId: z.string().optional(),
   sourceSessionNameAtFork: z.string(),
   createdAt: z.number(),
