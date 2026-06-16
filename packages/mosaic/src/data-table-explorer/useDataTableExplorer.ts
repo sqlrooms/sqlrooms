@@ -1,6 +1,5 @@
 import {useDebounce} from '@sqlrooms/ui';
 import {useStoreWithMosaic} from '../MosaicSlice';
-import {DataTable} from '@sqlrooms/db';
 import type {
   DataTableExplorerOptions,
   UseDataTableExplorerReturn,
@@ -13,10 +12,10 @@ import {useDataTableExplorerColumns} from './hooks/useDataTableExplorerColumns';
 import {useDataTableExplorerStatus} from './hooks/useDataTableExplorerStatus';
 import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisiblePage';
 
-function getTableReference(table: DataTable): string {
-  return [table.table.database, table.table.schema, table.table.table]
-    .filter((part): part is string => Boolean(part))
-    .join('.');
+function getTableReference(
+  tableName: DataTableExplorerOptions['tableName'],
+): string {
+  return typeof tableName === 'string' ? tableName : tableName.toString();
 }
 
 /**
