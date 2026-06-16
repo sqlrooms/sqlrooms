@@ -51,83 +51,19 @@ import type {
   AssistantMessageMetadata,
 } from './types';
 import {normalizeAiConfig, ToolAbortError} from './utils';
+import {getAnalysisResultsFromUiMessages} from './chatTurns';
 import {
-  getAnalysisResultsFromUiMessages,
-  getChatTurnsFromUiMessages,
-} from './chatTurns';
+  cleanupSessionForks,
+  createForkedChatSessionFromMessage,
+  type ForkSessionFromMessageArgs,
+} from './chatSessionForking';
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
-export type ForkSessionFromMessageArgs = {
-  sourceSessionId: string;
-  sourceMessageId?: string;
-  sourceTurnId?: string;
-  sourceMessageIndex?: number;
-  legacySourceAnalysisResultId?: string;
-  name?: string;
-};
-
-function cleanupSessionForks(config: AiSliceConfig): AiSliceConfig {
-  const sessionIds = new Set(config.sessions.map((session) => session.id));
-  const existingSessionForks = config.sessionForks ?? {};
-  const sessionForks = Object.fromEntries(
-    Object.entries(existingSessionForks).filter(([targetSessionId]) =>
-      sessionIds.has(targetSessionId),
-    ),
-  );
-
-  if (
-    config.sessionForks &&
-    Object.keys(sessionForks).length ===
-      Object.keys(existingSessionForks).length
-  ) {
-    return config;
-  }
-
-  return {
-    ...config,
-    sessionForks,
-  };
-}
-
-function getToolCallIdsFromMessages(
-  messages: ChatSessionSchema['uiMessages'],
-): Set<string> {
-  const toolCallIds = new Set<string>();
-  for (const message of messages) {
-    for (const part of message.parts ?? []) {
-      const toolCallId = (part as {toolCallId?: unknown}).toolCallId;
-      if (typeof toolCallId === 'string') {
-        toolCallIds.add(toolCallId);
-      }
-    }
-  }
-  return toolCallIds;
-}
-
-function getForkedAgentProgress({
-  sourceSession,
-  targetMessages,
-}: {
-  sourceSession: ChatSessionSchema;
-  targetMessages: ChatSessionSchema['uiMessages'];
-}): ChatSessionSchema['agentProgress'] | undefined {
-  if (!sourceSession.agentProgress) return undefined;
-
-  const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
-  const agentProgress = Object.fromEntries(
-    Object.entries(sourceSession.agentProgress).filter(([toolCallId]) =>
-      copiedToolCallIds.has(toolCallId),
-    ),
-  );
-
-  return Object.keys(agentProgress).length > 0
-    ? (structuredClone(agentProgress) as ChatSessionSchema['agentProgress'])
-    : undefined;
-}
+export type {ForkSessionFromMessageArgs} from './chatSessionForking';
 
 export type AiSliceState = {
   ai: {
@@ -899,136 +835,25 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
           if (!sourceSession) return undefined;
 
-          const sourceMessages = sourceSession.uiMessages as UIMessage[];
-          const sourceTurns = getChatTurnsFromUiMessages(sourceMessages, {
-            isRunning: sourceSession.isRunning,
-          });
-          let sourceTurn = args.sourceTurnId
-            ? sourceTurns.find((turn) => turn.id === args.sourceTurnId)
-            : args.legacySourceAnalysisResultId
-              ? sourceTurns.find(
-                  (turn) => turn.id === args.legacySourceAnalysisResultId,
-                )
-              : undefined;
-
-          let sourceMessageIndex =
-            typeof args.sourceMessageIndex === 'number'
-              ? args.sourceMessageIndex
-              : -1;
-
-          if (sourceMessageIndex < 0 && args.sourceMessageId) {
-            sourceMessageIndex = sourceMessages.findIndex(
-              (message) => message.id === args.sourceMessageId,
-            );
-          }
-
-          if (sourceMessageIndex < 0 && sourceTurn) {
-            const turnMessageIds = new Set([
-              sourceTurn.userMessage.id,
-              ...sourceTurn.assistantMessages.map((message) => message.id),
-            ]);
-            for (let index = sourceMessages.length - 1; index >= 0; index--) {
-              const message = sourceMessages[index];
-              if (message && turnMessageIds.has(message.id)) {
-                sourceMessageIndex = index;
-                break;
-              }
-            }
-          }
-
-          if (
-            sourceMessageIndex < 0 ||
-            sourceMessageIndex >= sourceMessages.length
-          ) {
-            return undefined;
-          }
-
-          const selectedMessage = sourceMessages[sourceMessageIndex];
-          if (!selectedMessage) return undefined;
-          if (selectedMessage.role !== 'assistant') return undefined;
-
-          if (!sourceTurn) {
-            if (args.sourceTurnId || args.legacySourceAnalysisResultId) {
-              return undefined;
-            }
-            sourceTurn = sourceTurns.find((turn) =>
-              turn.assistantMessages.some(
-                (message) => message.id === selectedMessage.id,
-              ),
-            );
-          }
-          if (!sourceTurn) return undefined;
-          if (!sourceTurn.isCompleted) return undefined;
-
-          const selectedMessageBelongsToTurn =
-            sourceTurn.assistantMessages.some(
-              (message) => message.id === selectedMessage.id,
-            );
-          if (!selectedMessageBelongsToTurn) {
-            return undefined;
-          }
-
           const now = Date.now();
           const targetSessionId = createId();
-          const targetSessionName =
-            args.name ?? `Fork of ${sourceSession.name || 'Untitled'}`;
-          const targetMessages = structuredClone(
-            sourceMessages.slice(0, sourceMessageIndex + 1),
-          ) as ChatSessionSchema['uiMessages'];
-          const draftContextItemIds = sourceSession.draftContextItemIds
-            ? Array.from(new Set(sourceSession.draftContextItemIds))
-            : undefined;
-          const agentProgress = getForkedAgentProgress({
+          const fork = createForkedChatSessionFromMessage({
             sourceSession,
-            targetMessages,
+            args,
+            targetSessionId,
+            now,
           });
-          const forkedSession: ChatSessionSchema = {
-            id: targetSessionId,
-            name: targetSessionName,
-            modelProvider: sourceSession.modelProvider,
-            model: sourceSession.model,
-            ...(sourceSession.customModelName
-              ? {customModelName: sourceSession.customModelName}
-              : {}),
-            ...(sourceSession.baseUrl ? {baseUrl: sourceSession.baseUrl} : {}),
-            createdAt: new Date(now),
-            uiMessages: targetMessages,
-            messagesRevision: 0,
-            prompt: '',
-            ...(draftContextItemIds ? {draftContextItemIds} : {}),
-            ...(!draftContextItemIds && sourceSession.runContext
-              ? {
-                  runContext: structuredClone(sourceSession.runContext),
-                }
-              : {}),
-            ...(agentProgress ? {agentProgress} : {}),
-            isRunning: false,
-            lastOpenedAt: now,
-          };
-          const forkOrigin: AiSessionForkOrigin = {
-            sourceSessionId: sourceSession.id,
-            sourceMessageId: selectedMessage.id,
-            sourceTurnId: sourceTurn.id,
-            sourceMessageIndex,
-            ...(args.legacySourceAnalysisResultId
-              ? {
-                  legacySourceAnalysisResultId:
-                    args.legacySourceAnalysisResultId,
-                }
-              : {}),
-            sourceSessionNameAtFork: sourceSession.name,
-            createdAt: now,
-          };
+          if (!fork) return undefined;
 
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.config.sessions.unshift(forkedSession);
+              draft.ai.config.sessions.unshift(fork.forkedSession);
               draft.ai.config.currentSessionId = targetSessionId;
               if (!draft.ai.config.openSessionTabs) {
                 draft.ai.config.openSessionTabs = [];
               }
               draft.ai.config.openSessionTabs.push(targetSessionId);
-              draft.ai.config.sessionForks[targetSessionId] = forkOrigin;
+              draft.ai.config.sessionForks[targetSessionId] = fork.forkOrigin;
             }),
           );
 
