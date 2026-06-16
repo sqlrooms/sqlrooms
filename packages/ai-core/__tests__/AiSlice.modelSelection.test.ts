@@ -377,6 +377,8 @@ describe('AiSlice model selection', () => {
       },
     ];
     store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    const initialSessions = store.getState().ai.config.sessions;
+    const initialCurrentSessionId = store.getState().ai.config.currentSessionId;
 
     expect(
       store.getState().ai.forkSessionFromMessage({
@@ -385,6 +387,11 @@ describe('AiSlice model selection', () => {
         sourceMessageId: 'assistant-1',
       }),
     ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+
     expect(
       store.getState().ai.forkSessionFromMessage({
         sourceSessionId: 'session-1',
@@ -392,7 +399,113 @@ describe('AiSlice model selection', () => {
         sourceMessageId: 'user-1',
       }),
     ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
     expect(store.getState().ai.config.sessionForks).toEqual({});
+  });
+
+  it('copies run context and matching agent progress into forked sessions', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'use a tool'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent-run',
+            toolCallId: 'agent-tool-1',
+            state: 'output-available',
+            input: {},
+            output: {},
+          } as UIMessage['parts'][number],
+        ],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'later'}],
+      },
+      {
+        id: 'assistant-2',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent-run',
+            toolCallId: 'agent-tool-2',
+            state: 'output-available',
+            input: {},
+            output: {},
+          } as UIMessage['parts'][number],
+        ],
+      },
+    ];
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'map-a',
+          type: 'map',
+          title: 'Map A',
+        },
+      ],
+      capturedAt: 123,
+    };
+
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    store.getState().ai.setSessionRunContext('session-1', runContext);
+    const config = store.getState().ai.config;
+    store.getState().ai.setConfig({
+      ...config,
+      sessions: config.sessions.map((session) =>
+        session.id === 'session-1'
+          ? {
+              ...session,
+              agentProgress: {
+                'agent-tool-1': [
+                  {
+                    toolCallId: 'child-tool',
+                    toolName: 'child',
+                    state: 'success',
+                  },
+                ],
+                'agent-tool-2': [
+                  {
+                    toolCallId: 'later-child-tool',
+                    toolName: 'later-child',
+                    state: 'success',
+                  },
+                ],
+              },
+            }
+          : session,
+      ),
+    });
+
+    const forkedSessionId = store.getState().ai.forkSessionFromMessage({
+      sourceSessionId: 'session-1',
+      sourceTurnId: 'user-1',
+      sourceMessageId: 'assistant-1',
+    });
+
+    const forkedSession = store.getState().ai.getCurrentSession();
+    expect(forkedSessionId).toBeDefined();
+    expect(forkedSession?.runContext).toEqual(runContext);
+    expect(forkedSession?.agentProgress).toEqual({
+      'agent-tool-1': [
+        {
+          toolCallId: 'child-tool',
+          toolName: 'child',
+          state: 'success',
+        },
+      ],
+    });
   });
 
   it('removes fork metadata when the fork target session is deleted', () => {

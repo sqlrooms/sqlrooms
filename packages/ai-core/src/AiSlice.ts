@@ -93,6 +93,42 @@ function cleanupSessionForks(config: AiSliceConfig): AiSliceConfig {
   };
 }
 
+function getToolCallIdsFromMessages(
+  messages: ChatSessionSchema['uiMessages'],
+): Set<string> {
+  const toolCallIds = new Set<string>();
+  for (const message of messages) {
+    for (const part of message.parts ?? []) {
+      const toolCallId = (part as {toolCallId?: unknown}).toolCallId;
+      if (typeof toolCallId === 'string') {
+        toolCallIds.add(toolCallId);
+      }
+    }
+  }
+  return toolCallIds;
+}
+
+function getForkedAgentProgress({
+  sourceSession,
+  targetMessages,
+}: {
+  sourceSession: ChatSessionSchema;
+  targetMessages: ChatSessionSchema['uiMessages'];
+}): ChatSessionSchema['agentProgress'] | undefined {
+  if (!sourceSession.agentProgress) return undefined;
+
+  const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
+  const agentProgress = Object.fromEntries(
+    Object.entries(sourceSession.agentProgress).filter(([toolCallId]) =>
+      copiedToolCallIds.has(toolCallId),
+    ),
+  );
+
+  return Object.keys(agentProgress).length > 0
+    ? (structuredClone(agentProgress) as ChatSessionSchema['agentProgress'])
+    : undefined;
+}
+
 export type AiSliceState = {
   ai: {
     initialize?: () => Promise<void>;
@@ -934,6 +970,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const draftContextItemIds = sourceSession.draftContextItemIds
             ? Array.from(new Set(sourceSession.draftContextItemIds))
             : undefined;
+          const agentProgress = getForkedAgentProgress({
+            sourceSession,
+            targetMessages,
+          });
           const forkedSession: ChatSessionSchema = {
             id: targetSessionId,
             name: targetSessionName,
@@ -948,6 +988,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             messagesRevision: 0,
             prompt: '',
             ...(draftContextItemIds ? {draftContextItemIds} : {}),
+            ...(!draftContextItemIds && sourceSession.runContext
+              ? {
+                  runContext: structuredClone(sourceSession.runContext),
+                }
+              : {}),
+            ...(agentProgress ? {agentProgress} : {}),
             isRunning: false,
             lastOpenedAt: now,
           };
