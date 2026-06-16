@@ -249,24 +249,17 @@ export const cleanupPendingAnalysisResults = cleanupPendingUiMessages;
  * config so transient in-flight chat state is not resumed after reload.
  *
  * The returned session has pending UI message/tool-call state made renderable
- * through `cleanupPendingUiMessages` and `fixIncompleteToolCalls`, and always
- * clears `isRunning` because no transport request is active for restored state.
+ * through `cleanupPendingUiMessages`, and always clears `isRunning` because no
+ * transport request is active for restored state.
  */
 export function normalizeAiSession(
   session: ChatSessionSchema,
 ): ChatSessionSchema {
   const cleaned = cleanupPendingUiMessages(session);
-  const completedUiMessages = Array.isArray(cleaned.uiMessages)
-    ? fixIncompleteToolCalls(
-        (cleaned.uiMessages as unknown as UIMessage[]) || [],
-      )
-    : [];
 
   return {
     ...cleaned,
     isRunning: false,
-    uiMessages:
-      completedUiMessages as unknown as ChatSessionSchema['uiMessages'],
   };
 }
 
