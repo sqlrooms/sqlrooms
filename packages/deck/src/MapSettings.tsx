@@ -158,14 +158,15 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     ? mapConfig.datasets?.[activeLayerDatasetId]
     : undefined;
 
-  // Resolve the table for column listing: prefer the dataset's explicit
-  // source table, extract from sqlQuery, then fall back to the dashboard's
-  // selectedTable.
-  const panelTableName =
+  // Resolve the table for column listing: prefer the dashboard's selected
+  // table (which represents the user's active choice), falling back to the
+  // dataset's explicit source table when no dashboard table is selected.
+  const fallbackTableName =
     activeLayerDataset?.source?.tableName ||
-    extractTableFromSqlQuery(activeLayerDataset?.source?.sqlQuery) ||
-    dashboardSelectedTable;
-  const dataTable = useDataTable(panelTableName);
+    extractTableFromSqlQuery(activeLayerDataset?.source?.sqlQuery);
+  const primaryTable = useDataTable(dashboardSelectedTable);
+  const fallbackTable = useDataTable(fallbackTableName);
+  const dataTable = primaryTable ?? fallbackTable;
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
