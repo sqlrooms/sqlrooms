@@ -13,13 +13,6 @@ SQLRooms is part of the [OpenJS Foundation](https://openjsf.org/) through [vis.g
     <img src="docs/public/openjsf-logo.svg" alt="OpenJS Foundation" height="42">
   </a>
 
-  <a href="https://vis.gl/">
-    <img src="docs/public/visgl-logo-color.svg" alt="Vis.gl" height="30">
-  </a>
-
-  <a href="https://www.openvisualization.org/">
-    <img src="docs/public/openvis.svg" alt="Open Visualization Collaboration Space " height="42">
-  </a>
 </div>
 
 ---
