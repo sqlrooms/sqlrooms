@@ -54,6 +54,29 @@ function getMessageTextPreview(message: {parts?: unknown[]}): string {
   return text.length > 120 ? `${text.slice(0, 117)}...` : text;
 }
 
+function getToolCallId(part: unknown): string | undefined {
+  if (!part || typeof part !== 'object') return undefined;
+  const record = part as {type?: unknown; toolCallId?: unknown};
+  const type = typeof record.type === 'string' ? record.type : '';
+  if (
+    !type.startsWith('tool-') &&
+    type !== 'dynamic-tool' &&
+    type !== 'tool-call'
+  ) {
+    return undefined;
+  }
+  return typeof record.toolCallId === 'string' ? record.toolCallId : undefined;
+}
+
+function filterRecordByKeys<T>(
+  record: Record<string, T>,
+  keys: ReadonlySet<string>,
+): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => keys.has(key)),
+  );
+}
+
 export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
   triggerClassName,
 }) => {
@@ -112,6 +135,48 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
     [selectedSession],
   );
 
+  const selectedToolCallIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const message of selectedSession?.uiMessages ?? []) {
+      for (const part of message.parts ?? []) {
+        const toolCallId = getToolCallId(part);
+        if (toolCallId) ids.add(toolCallId);
+      }
+
+      const metadata = message.metadata as
+        | {toolTimings?: Record<string, unknown>}
+        | undefined;
+      for (const toolCallId of Object.keys(metadata?.toolTimings ?? {})) {
+        ids.add(toolCallId);
+      }
+    }
+    return ids;
+  }, [selectedSession]);
+
+  const selectedAgentProgress = useMemo(
+    () => filterRecordByKeys(agentProgress, selectedToolCallIds),
+    [agentProgress, selectedToolCallIds],
+  );
+  const selectedToolTimings = useMemo(
+    () => filterRecordByKeys(toolTimings, selectedToolCallIds),
+    [selectedToolCallIds, toolTimings],
+  );
+  const selectedPendingSubAgentApprovals = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(pendingSubAgentApprovals).filter(([, approval]) =>
+          selectedToolCallIds.has(approval.toolCallId),
+        ),
+      ),
+    [pendingSubAgentApprovals, selectedToolCallIds],
+  );
+
+  const selectedToolStateIsEmpty =
+    selectedToolCallIds.size === 0 &&
+    Object.keys(selectedAgentProgress).length === 0 &&
+    Object.keys(selectedToolTimings).length === 0 &&
+    Object.keys(selectedPendingSubAgentApprovals).length === 0;
+
   const summary = useMemo(
     () => ({
       currentSessionId,
@@ -124,22 +189,25 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
       selectedMessageCount: selectedSession?.uiMessages?.length ?? 0,
       selectedMessagesRevision: selectedSession?.messagesRevision ?? 0,
       selectedIsRunning: selectedSession?.isRunning ?? false,
-      agentProgressCount: Object.keys(agentProgress).length,
-      pendingApprovalCount: Object.keys(pendingSubAgentApprovals).length,
-      toolTimingCount: Object.keys(toolTimings).length,
+      selectedToolCallCount: selectedToolCallIds.size,
+      agentProgressCount: Object.keys(selectedAgentProgress).length,
+      pendingApprovalCount: Object.keys(selectedPendingSubAgentApprovals)
+        .length,
+      toolTimingCount: Object.keys(selectedToolTimings).length,
     }),
     [
-      agentProgress,
       chatEndpoint,
       currentArtifactId,
       currentSessionId,
       openSessionTabs,
-      pendingSubAgentApprovals,
+      selectedAgentProgress,
       selectedArtifactId,
+      selectedPendingSubAgentApprovals,
       selectedSession,
       selectedSessionId,
+      selectedToolCallIds,
+      selectedToolTimings,
       sessions.length,
-      toolTimings,
     ],
   );
 
@@ -149,17 +217,19 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
         summary,
         selectedSession,
         messageRows,
-        agentProgress,
-        toolTimings,
-        pendingSubAgentApprovals,
+        selectedAgentProgress,
+        selectedToolCallIds: Array.from(selectedToolCallIds),
+        selectedToolTimings,
+        selectedPendingSubAgentApprovals,
       }),
     [
-      agentProgress,
       messageRows,
-      pendingSubAgentApprovals,
+      selectedAgentProgress,
+      selectedPendingSubAgentApprovals,
       selectedSession,
       summary,
-      toolTimings,
+      selectedToolCallIds,
+      selectedToolTimings,
     ],
   );
 
@@ -343,13 +413,21 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
 
             <TabsContent value="tools" className="min-h-0 flex-1">
               <ScrollArea className="h-full rounded-md border">
-                <pre className="p-3 text-xs whitespace-pre-wrap">
-                  {stringifyDebugValue({
-                    agentProgress,
-                    toolTimings,
-                    pendingSubAgentApprovals,
-                  })}
-                </pre>
+                {selectedToolStateIsEmpty ? (
+                  <div className="text-muted-foreground p-4 text-sm">
+                    No tool calls recorded for this session.
+                  </div>
+                ) : (
+                  <pre className="p-3 text-xs whitespace-pre-wrap">
+                    {stringifyDebugValue({
+                      toolCallIds: Array.from(selectedToolCallIds),
+                      agentProgress: selectedAgentProgress,
+                      toolTimings: selectedToolTimings,
+                      pendingSubAgentApprovals:
+                        selectedPendingSubAgentApprovals,
+                    })}
+                  </pre>
+                )}
               </ScrollArea>
             </TabsContent>
 
