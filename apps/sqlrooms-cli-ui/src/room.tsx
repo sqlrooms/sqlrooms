@@ -9,6 +9,7 @@ import {
 import {CliWorkspaceTopbar} from './workspace/CliWorkspaceTopbar';
 import {CliWorkspaceSidebar} from './workspace/sidebar';
 import {roomStore} from './store';
+import {AiDebugInspector} from './components/AiDebugInspector';
 
 export const Room = () => {
   const sqlEditor = useDisclosure();
@@ -26,6 +27,7 @@ export const Room = () => {
               isOpen={sqlEditor.isOpen}
               onClose={sqlEditor.onClose}
             />
+            {import.meta.env.DEV && <AiDebugInspector />}
           </SidebarInset>
         </SidebarProvider>
       </RoomShell>

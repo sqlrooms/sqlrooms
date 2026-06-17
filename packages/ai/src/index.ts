@@ -97,6 +97,7 @@ export type {
 
 // From @sqlrooms/ai-core - State/Logic
 export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
+export {wrapModelWithSqlroomsAiDevtools} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {

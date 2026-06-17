@@ -33,3 +33,4 @@ packages/*/CHANGELOG.md
 examples/*/CHANGELOG.md
 .worktrees/
 .wrangler/
+.devtools

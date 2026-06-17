@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
+import aiDevtoolsPlugin from './plugins/ai-devtools';
 import scaffoldsPlugin from './plugins/scaffolds';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,7 +62,14 @@ function getSqlroomsPackageAliases(): ViteAlias[] {
 }
 
 export default defineConfig({
-  plugins: [react(), topLevelAwait(), wasm(), scaffoldsPlugin(), tailwindcss()],
+  plugins: [
+    react(),
+    topLevelAwait(),
+    wasm(),
+    aiDevtoolsPlugin(),
+    scaffoldsPlugin(),
+    tailwindcss(),
+  ],
   resolve: {
     alias: [
       ...getSqlroomsPackageAliases(),

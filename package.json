@@ -58,6 +58,7 @@
     "version-prerelease": "node scripts/version-prerelease.mjs"
   },
   "devDependencies": {
+    "@ai-sdk/devtools": "^0.0.20",
     "@eslint/js": "^9.36.0",
     "@lerna-lite/cli": "^4.8.0",
     "@lerna-lite/publish": "^4.8.0",

@@ -57,6 +57,7 @@ import {
   createForkedChatSessionFromMessage,
   type ForkSessionFromMessageArgs,
 } from './chatSessionForking';
+import {wrapModelWithSqlroomsAiDevtools} from './devtools';
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
@@ -1159,11 +1160,19 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(),
-            name: provider,
-            baseURL,
-          }).chatModel(modelId);
+          const model = wrapModelWithSqlroomsAiDevtools(
+            createOpenAICompatible({
+              apiKey: state.ai.getApiKeyFromSettings(),
+              name: provider,
+              baseURL,
+            }).chatModel(modelId),
+            {
+              label: 'SQLRooms sendPrompt',
+              sessionId: currentSession?.id,
+              provider,
+              modelId,
+            },
+          );
 
           try {
             const response = await generateText({

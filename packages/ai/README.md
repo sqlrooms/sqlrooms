@@ -156,6 +156,13 @@ such as `getChatTurnsFromUiMessages`.
 Old persisted sessions that contain `analysisResults` still load, but parsed and
 new `ChatSessionSchema` state no longer includes that field.
 
+## AI SDK DevTools
+
+`wrapModelWithSqlroomsAiDevtools(model, context)` is re-exported from
+`@sqlrooms/ai-core` for apps that construct custom AI SDK models. It only wraps
+provider-v3 model objects when the host app enables
+`globalThis.__SQLROOMS_AI_DEVTOOLS__`, and otherwise returns the model unchanged.
+
 ## Add custom tools
 
 ```tsx

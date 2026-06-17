@@ -147,6 +147,15 @@ const blocks: ChatSearchBlock[] = [
 const matches = findChatSearchMatches(blocks, query);
 ```
 
+## AI SDK DevTools
+
+`wrapModelWithSqlroomsAiDevtools(model, context)` wraps provider-v3 AI SDK
+language models with a SQLRooms dev-only middleware when
+`globalThis.__SQLROOMS_AI_DEVTOOLS__` is enabled. Apps can use it to send
+browser-side model runs to a local devtools bridge without importing Node-only
+DevTools code into the browser bundle. Provider-v2 models and string model IDs
+are returned unchanged.
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
@@ -154,6 +163,7 @@ const matches = findChatSearchMatches(blocks, query);
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
 - Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
+- Devtools: `wrapModelWithSqlroomsAiDevtools`
 - Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
 - Tool/agent utilities:
   - `cleanupPendingUiMessages`

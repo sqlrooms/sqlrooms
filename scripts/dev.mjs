@@ -175,6 +175,7 @@ if (target !== 'cli') {
       cliArgs,
     )} node scripts/dev.mjs)`,
   );
+  console.log('(pnpm exec devtools)');
   process.exit(0);
 }
 
@@ -200,7 +201,12 @@ function stopChildren(signal = 'SIGTERM') {
 function startProcess(
   label,
   args,
-  {allowCleanExit = false, command = pnpmCommand, cwd = process.cwd()} = {},
+  {
+    allowCleanExit = false,
+    allowFailure = false,
+    command = pnpmCommand,
+    cwd = process.cwd(),
+  } = {},
 ) {
   const child = spawn(command, args, {
     cwd,
@@ -219,6 +225,13 @@ function startProcess(
       return;
     }
 
+    if (allowFailure) {
+      console.warn(
+        `${label} exited${typeof code === 'number' ? ` with code ${code}` : ` from signal ${signal}`}.`,
+      );
+      return;
+    }
+
     exiting = true;
     stopChildren();
 
@@ -232,6 +245,11 @@ function startProcess(
 
   child.on('error', (error) => {
     if (exiting) return;
+
+    if (allowFailure) {
+      console.warn(`Failed to launch ${label}.`, error);
+      return;
+    }
 
     exiting = true;
     stopChildren();
@@ -262,6 +280,10 @@ if (target === 'cli') {
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,
     cwd: path.resolve('python/sqlrooms-cli'),
+  });
+  startProcess('AI SDK DevTools viewer', ['exec', 'devtools'], {
+    allowFailure: true,
+    cwd: process.cwd(),
   });
 } else {
   startProcess(

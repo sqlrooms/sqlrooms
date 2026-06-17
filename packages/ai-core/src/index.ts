@@ -4,6 +4,7 @@
  */
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
+export {wrapModelWithSqlroomsAiDevtools} from './devtools';
 
 export type {
   AiSliceState,
