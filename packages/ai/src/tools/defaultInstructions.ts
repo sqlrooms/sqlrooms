@@ -3,41 +3,53 @@ import {DuckDbSliceState, DataTable} from '@sqlrooms/duckdb';
 import {StoreApi} from '@sqlrooms/room-shell';
 
 /**
- * Formats table schema information in a clean, LLM-friendly format
+ * Formats table schema information in a clean, LLM-friendly format.
+ *
+ * When `options.maxChars` is provided and the full (per-column) rendering would
+ * exceed that budget, the output collapses to a compact form (table name, row
+ * count, and column *count* only) plus a hint telling the model how to fetch a
+ * specific table's columns on demand via `information_schema.columns`. This
+ * keeps always-on grounding (table names) while cutting the dominant token cost
+ * (per-column listing across every table). Omitting `maxChars` preserves the
+ * full rendering for backward compatibility.
+ *
  * @param tables Array of DataTable objects from the DuckDB state
  * @param currentDatabase The current local database name to filter by
+ * @param options Optional rendering options. `maxChars` sets a character budget
+ *   above which the output falls back to the compact, names-only form.
  * @returns Formatted string representation of table schemas
  */
 export function formatTablesForLLM(
   tables: DataTable[],
   currentDatabase?: string,
+  options?: {maxChars?: number},
 ): string {
   if (!tables || tables.length === 0) {
     return 'No tables available in the database.';
   }
 
-  return tables
-    .filter((table) => {
-      const schemaName = table.table?.schema || table.schema;
-      const databaseName = table.table?.database || table.database;
+  const localTables = tables.filter((table) => {
+    const schemaName = table.table?.schema || table.schema;
+    const databaseName = table.table?.database || table.database;
 
-      // Only include tables from 'main' schema and the current local database
-      // This excludes tables from attached databases (MotherDuck, Iceberg, knowledge base, etc.)
-      const isMainSchema = !schemaName || schemaName === 'main';
-      const isLocalDatabase = !databaseName || databaseName === currentDatabase;
+    // Only include tables from 'main' schema and the current local database
+    // This excludes tables from attached databases (MotherDuck, Iceberg, knowledge base, etc.)
+    const isMainSchema = !schemaName || schemaName === 'main';
+    const isLocalDatabase = !databaseName || databaseName === currentDatabase;
 
-      return isMainSchema && isLocalDatabase;
-    })
+    return isMainSchema && isLocalDatabase;
+  });
+
+  const fullTableNameOf = (table: DataTable): string => {
+    const tableName = table.table?.table || table.tableName;
+    const schemaName = table.table?.schema || table.schema;
+    return schemaName && schemaName !== 'main' ? `${schemaName}.${tableName}` : tableName;
+  };
+
+  const full = localTables
     .map((table) => {
-      const tableName = table.table?.table || table.tableName;
-      const schemaName = table.table?.schema || table.schema;
-      const fullTableName =
-        schemaName && schemaName !== 'main'
-          ? `${schemaName}.${tableName}`
-          : tableName;
-
       // Build table header with metadata
-      const header = [fullTableName];
+      const header = [fullTableNameOf(table)];
       if (table.rowCount !== undefined)
         header.push(`[${table.rowCount.toLocaleString()} rows]`);
 
@@ -50,6 +62,26 @@ export function formatTablesForLLM(
       return `${header.join(' ')}\n${columns}${comment ? '\n' + comment : ''}`;
     })
     .join('\n\n');
+
+  const maxChars = options?.maxChars;
+  if (maxChars === undefined || full.length <= maxChars) {
+    return full;
+  }
+
+  // Over budget: collapse to a compact list (name + row count + column count)
+  // and tell the model how to fetch columns for a specific table on demand.
+  const compact = localTables
+    .map((table) => {
+      const header = [fullTableNameOf(table)];
+      if (table.rowCount !== undefined)
+        header.push(`[${table.rowCount.toLocaleString()} rows]`);
+      header.push(`(${table.columns.length} columns)`);
+      const comment = table.comment ? `  # ${table.comment}` : '';
+      return `${header.join(' ')}${comment}`;
+    })
+    .join('\n');
+
+  return `${compact}\n# Columns omitted to save space. Get columns for a table with: SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='main' AND table_name='<table>'`;
 }
 
 /**
