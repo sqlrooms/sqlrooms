@@ -5,12 +5,11 @@ import {
   getFunctionSuggestions,
   getFunctionDocumentation,
 } from '@sqlrooms/duckdb';
-import {createDuckDbSql} from './duckdb-sql';
+import {createDuckDbSql, SqlRoomsDuckDBDialect} from './duckdb-sql';
 import {convertToSQLNamespace} from '../../utils/schema-converter';
 import {createCompletion} from '../completion';
 import {createDuckDbSqlExtension} from './duckdb-sql-extension';
 import {createHover} from '../hover';
-import {DUCKDB_SQL_KEYWORDS} from './duckdb-keywords';
 
 type DuckDbExtensionOptions = {
   currentSchemas: DataTable[];
@@ -27,7 +26,8 @@ export function createDuckDbExtension({
   return [
     createDuckDbSql(schema),
     createCompletion({
-      getKeywordSuggestions: () => DUCKDB_SQL_KEYWORDS,
+      language: SqlRoomsDuckDBDialect.language,
+      currentSchemas,
       getFunctionSuggestions: connector
         ? (query: string) => getFunctionSuggestions(connector, query)
         : undefined,

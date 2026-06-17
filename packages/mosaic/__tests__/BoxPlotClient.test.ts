@@ -1,5 +1,8 @@
 import {Selection, clausePoint} from '@uwdata/mosaic-core';
-import {BoxPlotClient, buildBoxPlotQuery} from '../src/boxplot/BoxPlotClient';
+import {
+  BoxPlotClient,
+  buildBoxPlotQuery,
+} from '../src/charts/chart-types/box-plot/renderer/BoxPlotClient';
 
 describe('BoxPlotClient', () => {
   it('builds grouped box plot SQL with quantiles, whiskers, and outliers', () => {

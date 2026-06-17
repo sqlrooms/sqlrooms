@@ -5,6 +5,7 @@ import {
   AiSliceState,
 } from '@sqlrooms/ai';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
+import {type ArtifactAiSliceState} from '@sqlrooms/artifacts/ai';
 import {CanvasSliceState} from '@sqlrooms/canvas';
 import {CellsSliceState} from '@sqlrooms/cells';
 import {CrdtSliceState} from '@sqlrooms/crdt';
@@ -45,6 +46,7 @@ export const AppBuilderProjectConfigSchema = AppBuilderProjectConfig;
 
 export type RoomState = RoomShellSliceState &
   ArtifactsSliceState &
+  ArtifactAiSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState &
   AiSliceState &
@@ -61,13 +63,10 @@ export type RoomState = RoomShellSliceState &
   CrdtSliceState &
   WebContainerSliceState &
   DbSettingsSliceState & {
-    aiContextMode: 'auto' | 'manual';
-    aiContextItemIds: string[];
-    setAiContextItemIds: (
-      artifactIds: string[],
-      mode?: 'auto' | 'manual',
-    ) => void;
-    replaceAiContextWithArtifact: (artifactId: string) => void;
+    workspaceUi: {
+      showArtifactChooser: boolean;
+      setShowArtifactChooser: (show: boolean) => void;
+    };
     appProject: {
       config: AppBuilderProjectConfig;
       upsertArtifactApp: (
@@ -89,7 +88,7 @@ export type RoomState = RoomShellSliceState &
       initialize?: () => Promise<void>;
       destroy?: () => Promise<void>;
       ensureDashboardArtifact: (artifactId: string) => void;
-      addProfilerForTable: (tableName: string) => string | undefined;
+      addDataTableExplorerForTable: (tableName: string) => string | undefined;
       getCurrentDashboardArtifactId: () => string | undefined;
       createDashboardArtifact: (
         title?: string,

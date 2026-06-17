@@ -12,6 +12,7 @@ import {
   FileStackIcon,
   LayoutDashboardIcon,
 } from 'lucide-react';
+import {createSqlQueryBlockDefinition} from '@sqlrooms/sql-editor';
 import type {RoomState} from './store-types';
 import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
 import {WorksheetArtifact} from './workspace/WorksheetArtifact';
@@ -19,17 +20,7 @@ import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
-
-export const CLI_ARTIFACT_TYPES = [
-  'worksheet',
-  'dashboard',
-  'pivot',
-  'notebook',
-  'document',
-  'canvas',
-  'app',
-] as const;
-export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
+import {type CliArtifactType} from './artifactTypeIds';
 
 const dashboardBlockDefinition =
   createMosaicDashboardBlockDefinition<RoomState>({
@@ -48,6 +39,11 @@ const markdownDocumentBlockDefinition =
     label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.label,
     defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.defaultTitle,
   });
+
+const sqlQueryBlockDefinition = createSqlQueryBlockDefinition<RoomState>({
+  label: STATEFUL_BLOCK_ARTIFACT_CONFIGS['sql-query'].label,
+  defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS['sql-query'].defaultTitle,
+});
 
 export const ARTIFACT_TYPES = defineArtifactTypes({
   worksheet: {
@@ -85,6 +81,7 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
   document: createArtifactTypeFromStatefulBlock(
     markdownDocumentBlockDefinition,
   ),
+  'sql-query': createArtifactTypeFromStatefulBlock(sqlQueryBlockDefinition),
   canvas: {
     label: 'Canvas',
     defaultTitle: 'Canvas',

@@ -37,6 +37,115 @@ export function makeQualifiedTableName({
   };
 }
 
+function unquoteSqlIdentifierSegment(identifier: string): string {
+  const segment = identifier.trim();
+  if (segment.startsWith('"') && segment.endsWith('"') && segment.length >= 2) {
+    return segment.slice(1, -1).split('""').join('"');
+  }
+  return segment;
+}
+
+function splitSqlIdentifierSegments(
+  qualifiedName: string | undefined,
+): string[] | undefined {
+  if (!qualifiedName) return undefined;
+  const input = qualifiedName.trim();
+  if (!input) return undefined;
+
+  const parts: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+    if (ch === '"') {
+      if (inQuotes && input[i + 1] === '"') {
+        current += '""';
+        i += 1;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '.' && !inQuotes) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+
+    current += ch;
+  }
+  parts.push(current);
+
+  if (inQuotes) {
+    return undefined;
+  }
+
+  const identifiers = parts.map(unquoteSqlIdentifierSegment);
+
+  if (
+    identifiers.length === 0 ||
+    identifiers.some((part) => part.length === 0)
+  ) {
+    return undefined;
+  }
+  return identifiers;
+}
+
+/**
+ * Parses a possibly-qualified SQL identifier into database, schema, and table
+ * segments. The parser is quote-aware, so dots inside double-quoted identifiers
+ * are treated as part of the current segment.
+ *
+ * @example
+ * parseQualifiedSqlIdentifier('schema.table')
+ * // {schema: 'schema', table: 'table'}
+ * parseQualifiedSqlIdentifier('"memory"."main"."events.2026"')
+ * // {database: 'memory', schema: 'main', table: 'events.2026'}
+ */
+export function parseQualifiedSqlIdentifier(
+  qualifiedName: string | undefined,
+): Partial<QualifiedTableName> | undefined {
+  const identifiers = splitSqlIdentifierSegments(qualifiedName);
+
+  if (!identifiers || identifiers.length > 3) {
+    return undefined;
+  }
+
+  if (identifiers.length === 3) {
+    return {
+      database: identifiers[0],
+      schema: identifiers[1],
+      table: identifiers[2],
+    };
+  }
+  if (identifiers.length === 2) {
+    return {schema: identifiers[0], table: identifiers[1]};
+  }
+  return {table: identifiers[0]};
+}
+
+/**
+ * Returns the final identifier segment from a possibly-qualified SQL name.
+ *
+ * The parser is quote-aware: dots inside double-quoted identifiers are treated
+ * as part of the identifier rather than as qualification separators. Embedded
+ * quotes inside a quoted segment use the standard `""` escape.
+ *
+ * @example
+ * getUnqualifiedSqlIdentifier('schema.table')              // 'table'
+ * getUnqualifiedSqlIdentifier('db.schema.table')           // 'table'
+ * getUnqualifiedSqlIdentifier('schema."my.funny.table"')   // 'my.funny.table'
+ * getUnqualifiedSqlIdentifier('"weird""name"')             // 'weird"name'
+ */
+export function getUnqualifiedSqlIdentifier(
+  qualifiedName: string | undefined,
+): string | undefined {
+  return splitSqlIdentifierSegments(qualifiedName)?.at(-1);
+}
+
 /**
  * Escapes a value for use in DuckDB SQL queries by wrapping it in single quotes
  * and escaping any existing single quotes by doubling them.

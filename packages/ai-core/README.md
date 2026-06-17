@@ -84,6 +84,25 @@ export function AiPanel() {
 }
 ```
 
+`Chat.Header` and `Chat.History` can delegate session creation to the host app
+with `onCreateSession`. `Chat.History` also accepts `filterSession` and
+`emptyLabel` so apps can present scoped histories without changing the generic
+AI session schema.
+
+Assistant messages can be forked into a new active chat through
+`ai.forkSessionFromMessage()`. The action snapshots the source session's
+`uiMessages` through the selected message or chat turn, inherits the source
+session's model and draft context item ids, records `sessionForks` provenance,
+and lets `Chat.Messages` show a `Forked from` link back to the source chat.
+
+Use `generateSessionTitle` when apps want an imperative helper that turns a
+session's early user messages into a concise title via `ai.sendPrompt`, cleans
+the model output, and renames the session. Use `useGenerateSessionTitle` in React
+surfaces that should watch the current session and trigger the helper after new
+user messages. The hook handles debouncing and duplicate-generation guards.
+Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
+app-specific readiness checks and model choices outside the shared package.
+
 ## Local Agent Chat
 
 Use `Chat.LocalAgentRoot` when a transient surface should be driven by a
@@ -102,17 +121,57 @@ message and composer components stay under the same `Chat` compound API.
 </Chat.LocalAgentRoot>
 ```
 
+## Chat search
+
+`Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
+find bar that highlights matches in the current session's messages.
+
+For building search UIs outside the chat (e.g. a session list that searches across
+all sessions), the underlying matching primitives are exported and can be used
+without the provider:
+
+- `normalizeChatSearchQuery(query)` — trims + lower-cases a query (the casing rule
+  the search uses).
+- `findChatSearchMatches(blocks, query)` — returns positional matches
+  (`ChatSearchMatch[]`) for a list of `ChatSearchBlock`s. Useful for highlighting
+  matched substrings consistently with `Chat.Search`.
+- `markdownToPlainText(markdown)` — extracts plain text from markdown so message
+  content can be made searchable.
+
+```tsx
+import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai-core';
+
+const blocks: ChatSearchBlock[] = [
+  {id: 'title', resultId: 'title', text: title},
+];
+const matches = findChatSearchMatches(blocks, query);
+```
+
 ## Useful exports
 
-- Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`
-- Chat UI: `Chat`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
+- Chat UI: `Chat`, `ChatMessagesContainer`, `ChatTurnView`, `MessageContent`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
   - `ModelSelector` accepts `onOpenSettings` to expose a "Configure models..." dropdown action. Pass `showConfigureModels={false}` to hide it.
-- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
-- Types: `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
+- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
+- Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
+- Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
+- Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
 - Tool/agent utilities:
+  - `cleanupPendingUiMessages`
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
   - `streamSubAgent`
+
+`AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+`AnalysisResult`, `AnalysisAnswer`, `processAnalysisAnswerContent`, and
+`cleanupPendingAnalysisResults` remain compatibility exports for existing apps.
+New code should prefer `ChatSessionSchema`, `isChatSessionEmpty`,
+`Chat.Messages`, `ChatTurnView`, `MessageContent`, `uiMessages`, and derived
+`ChatTurn` helpers.
+
+Legacy persisted sessions that contain `analysisResults` still load through
+schema migration, but parsed and newly created chat sessions no longer include
+that field.
 
 ## Related packages
 

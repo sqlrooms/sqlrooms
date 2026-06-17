@@ -12,7 +12,7 @@ import {
 } from './chart-builders/ChartBuilderRoot';
 import {ChartBuilderFields} from './chart-builders/ChartBuilderFields';
 import {ChartBuilderTypeGrid} from './chart-builders/ChartBuilderTypeGrid';
-import {FieldSelectorInput} from './chart-builders/FieldSelectorInput';
+import {FieldSelectorInput} from './components/FieldSelectorInput';
 
 /**
  * Compound component for building Mosaic charts from templates.

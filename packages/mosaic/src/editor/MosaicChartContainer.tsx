@@ -40,15 +40,15 @@ export interface MosaicChartContainerProps {
  *
  * @example
  * ```tsx
- * <MosaicChart.Container
+ * <MosaicSpecChart.Container
  *   spec={mySpec}
  *   params={paramsMap}
  *   editable={true}
  *   onSpecChange={(spec) => saveSpec(spec)}
  * >
- *   <MosaicChart.Chart />
- *   <MosaicChart.SpecEditor />
- *   <MosaicChart.Actions />
+ *   <MosaicSpecChart.Chart />
+ *   <MosaicSpecChart.SpecEditor />
+ *   <MosaicSpecChart.Actions />
  * </MosaicChart.Container>
  * ```
  */

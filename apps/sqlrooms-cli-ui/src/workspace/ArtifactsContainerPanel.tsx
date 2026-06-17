@@ -16,9 +16,11 @@ import {
   PlusIcon,
   SparklesIcon,
   TrashIcon,
+  XIcon,
 } from 'lucide-react';
-import {useCallback, useMemo, useState} from 'react';
-import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {
@@ -26,11 +28,37 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     tabId: string;
     tabName: string;
   } | null>(null);
-  const [showArtifactChooser, setShowArtifactChooser] = useState(false);
+  const showArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.showArtifactChooser,
+  );
+  const setShowArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.setShowArtifactChooser,
+  );
+  const isAssistantCollapsed = useRoomStore((state) =>
+    state.layout.isCollapsed('assistant-sidebar'),
+  );
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
+  const previousAssistantCollapsedRef = useRef<boolean | null>(null);
 
   const handleDeleteTab = useCallback((tabId: string, tabName: string) => {
     setDeleteConfirm({tabId, tabName});
   }, []);
+
+  useEffect(() => {
+    if (showArtifactChooser) {
+      previousAssistantCollapsedRef.current ??= isAssistantCollapsed;
+      if (!isAssistantCollapsed) {
+        setCollapsed('assistant-sidebar', true);
+      }
+      return;
+    }
+
+    const previousAssistantCollapsed = previousAssistantCollapsedRef.current;
+    if (previousAssistantCollapsed !== null) {
+      setCollapsed('assistant-sidebar', previousAssistantCollapsed);
+      previousAssistantCollapsedRef.current = null;
+    }
+  }, [isAssistantCollapsed, setCollapsed, showArtifactChooser]);
 
   return (
     <ArtifactTabs
@@ -42,6 +70,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       dndMode="shared"
       dndScopeId="cli-artifact-tabs"
       fontSize={13}
+      className="hidden"
       onActivateArtifact={() => setShowArtifactChooser(false)}
       onSelectArtifact={() => setShowArtifactChooser(false)}
       renderTabMenu={(tab) => (
@@ -137,37 +166,45 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
   );
 }
 
-function isCliArtifactType(
-  artifactType: string,
-): artifactType is keyof typeof ARTIFACT_TYPES {
-  return artifactType in ARTIFACT_TYPES;
-}
-
 function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const artifactTabs = ArtifactTabs.useActions();
   const invokeCreateArtifactCommand = useCreateCliArtifactCommand();
   const WorksheetIcon = ARTIFACT_TYPES.worksheet.icon;
-
-  const recentArtifacts = useMemo(
-    () => [...artifactTabs.tabs].reverse().slice(0, 5),
-    [artifactTabs.tabs],
-  );
+  const returnArtifactId =
+    artifactTabs.selectedTabId ?? artifactTabs.openTabs[0];
   const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
     (artifactType) => artifactType !== 'worksheet',
   );
 
+  const handleClose = useCallback(() => {
+    if (!returnArtifactId) return;
+    artifactTabs.selectArtifact(returnArtifactId);
+    onDone?.();
+  }, [artifactTabs, onDone, returnArtifactId]);
+
   return (
-    <div className="bg-background flex min-h-0 flex-1 items-center justify-center overflow-auto">
+    <div className="bg-background relative flex min-h-0 flex-1 items-center justify-center overflow-auto">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:text-foreground absolute top-4 right-4 size-9"
+        disabled={!returnArtifactId}
+        aria-label="Close new artifact panel"
+        onClick={handleClose}
+      >
+        <XIcon className="h-4 w-4" aria-hidden />
+      </Button>
       <div className="flex w-full max-w-3xl flex-col items-center gap-8 px-8 py-12 text-center">
         <Button
           size="lg"
           className="h-12 px-6 text-base"
           onClick={() => {
-            void invokeCreateArtifactCommand(
-              'worksheet.create-artifact',
-            ).then((artifactId) => {
-              if (artifactId) onDone?.();
-            });
+            void invokeCreateArtifactCommand('worksheet.create-artifact').then(
+              (artifactId) => {
+                if (artifactId) onDone?.();
+              },
+            );
           }}
         >
           {WorksheetIcon ? <WorksheetIcon className="h-5 w-5" /> : null}
@@ -219,55 +256,21 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
             );
           })}
         </section>
-
-        {recentArtifacts.length > 0 ? (
-          <section className="space-y-3">
-            <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              Recent Artifacts
-            </h3>
-            <div className="border-border divide-border overflow-hidden rounded-md border">
-              {recentArtifacts.map((tab) => {
-                const type = isCliArtifactType(tab.type)
-                  ? ARTIFACT_TYPES[tab.type]
-                  : undefined;
-                const Icon = type?.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    className="hover:bg-muted/60 focus-visible:ring-ring flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                    onClick={() => {
-                      artifactTabs.selectArtifact(tab.id);
-                      onDone?.();
-                    }}
-                  >
-                    {Icon ? (
-                      <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
-                    ) : null}
-                    <span className="min-w-0 flex-1 truncate">
-                      {tab.name}
-                    </span>
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {type?.label ?? tab.type}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
       </div>
     </div>
   );
 }
 
 function AssistantToggleButton() {
+  const showArtifactChooser = useRoomStore(
+    (s) => s.workspaceUi.showArtifactChooser,
+  );
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
     s.layout.isCollapsed('assistant-sidebar'),
   );
 
-  if (!isAssistantCollapsed) {
+  if (showArtifactChooser || !isAssistantCollapsed) {
     return null;
   }
 

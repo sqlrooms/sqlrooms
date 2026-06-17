@@ -7,6 +7,7 @@ import {
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
+import type {z} from 'zod';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
 import type {
@@ -16,34 +17,27 @@ import type {
 import {ArtifactMetadata, ArtifactsSliceConfig} from './ArtifactsSliceConfig';
 import {normalizeOrder} from './helpers';
 
+type ArtifactsSliceConfigInput = z.input<typeof ArtifactsSliceConfig>;
+
 function createDefaultArtifactsConfig(
-  overrides?: Partial<ArtifactsSliceConfigType>,
+  overrides?: ArtifactsSliceConfigInput,
 ): ArtifactsSliceConfigType {
   return ArtifactsSliceConfig.parse(overrides ?? {});
 }
 
-function getFirstWorkspaceArtifactId(config: ArtifactsSliceConfigType) {
-  return config.artifactOrder.find(
-    (artifactId) =>
-      config.artifactsById[artifactId]?.visibility === 'workspace',
+function getFirstArtifactId(config: ArtifactsSliceConfigType) {
+  return config.artifactOrder.find((artifactId) =>
+    Boolean(config.artifactsById[artifactId]),
   );
 }
 
-type CreateArtifactInput = Omit<
-  ArtifactMetadataType,
-  'id' | 'title' | 'visibility'
-> & {
+type CreateArtifactInput = Omit<ArtifactMetadataType, 'id' | 'title'> & {
   id?: string;
   title?: string;
-  visibility?: ArtifactMetadataType['visibility'];
 };
 
-type EnsureArtifactInput = Omit<
-  ArtifactMetadataType,
-  'id' | 'title' | 'visibility'
-> & {
+type EnsureArtifactInput = Omit<ArtifactMetadataType, 'id' | 'title'> & {
   title?: string;
-  visibility?: ArtifactMetadataType['visibility'];
 };
 
 export type ArtifactsSliceState = {
@@ -65,7 +59,7 @@ export type ArtifactsSliceState = {
 export type CreateArtifactsSliceProps<
   TRoomState extends BaseRoomStoreState = BaseRoomStoreState,
 > = {
-  config?: Partial<ArtifactsSliceConfigType>;
+  config?: ArtifactsSliceConfigInput;
   artifactTypes?: ArtifactTypeDefinitions<TRoomState>;
 };
 
@@ -132,9 +126,7 @@ export function createArtifactsSlice<
             if (!draft.artifacts.config.artifactOrder.includes(id)) {
               draft.artifacts.config.artifactOrder.push(id);
             }
-            if (next.visibility === 'workspace') {
-              draft.artifacts.config.currentArtifactId = id;
-            }
+            draft.artifacts.config.currentArtifactId = id;
           }),
         );
         const context = {
@@ -159,9 +151,6 @@ export function createArtifactsSlice<
             artifact.type,
             artifact.title ?? current?.title,
           ),
-          visibility: artifact.visibility ?? current?.visibility,
-          parentArtifactId:
-            artifact.parentArtifactId ?? current?.parentArtifactId,
         });
         set((state) =>
           produce(state, (draft) => {
@@ -169,8 +158,6 @@ export function createArtifactsSlice<
             if (
               current?.type === next.type &&
               current.title === next.title &&
-              current.visibility === next.visibility &&
-              current.parentArtifactId === next.parentArtifactId &&
               draft.artifacts.config.artifactOrder.includes(id)
             ) {
               return;
@@ -236,8 +223,9 @@ export function createArtifactsSlice<
                 (candidate: string) => candidate !== id,
               );
             if (draft.artifacts.config.currentArtifactId === id) {
-              draft.artifacts.config.currentArtifactId =
-                getFirstWorkspaceArtifactId(draft.artifacts.config);
+              draft.artifacts.config.currentArtifactId = getFirstArtifactId(
+                draft.artifacts.config,
+              );
             }
           }),
         );

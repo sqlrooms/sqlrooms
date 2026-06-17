@@ -1,6 +1,10 @@
 import {createAnthropic} from '@ai-sdk/anthropic';
 import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
+  ArtifactAiConfigSchema,
+  createArtifactAiSlice,
+} from '@sqlrooms/artifacts/ai';
+import {
   HttpAiAuthClient,
   AiLoginTarget,
   AiSettingsSliceConfig,
@@ -36,10 +40,10 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
@@ -49,6 +53,7 @@ import {
   createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
+  DEFAULT_ROOM_TITLE,
   LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
@@ -99,8 +104,8 @@ import {
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {createLayout} from './layout';
-import {fetchRuntimeConfig} from './runtimeConfig';
+import {createLayout, migrateCliLayoutConfig} from './layout';
+import {fetchRuntimeConfig, type RuntimeConfig} from './runtimeConfig';
 import {
   createDuckDbPersistStorage,
   saveAiSettingsToServer,
@@ -132,6 +137,7 @@ const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 
 function hasRuntimeProviders(
@@ -218,6 +224,42 @@ const CRDT_STORAGE_KEY = [
 ].join(':');
 const AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS = 500;
 
+function getDefaultWorkspaceTitle(config: RuntimeConfig) {
+  const dbPath = config.dbPath?.trim();
+  if (!dbPath || dbPath === ':memory:' || dbPath === 'memory') {
+    return 'Untitled Workspace';
+  }
+
+  const normalizedPath = dbPath.replace(/[/\\]+$/, '');
+  const fileName =
+    normalizedPath.split(/[\\/]/).filter(Boolean).pop() ?? normalizedPath;
+  const extensionIndex = fileName.lastIndexOf('.');
+  const title =
+    extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName;
+
+  return title || 'Untitled Workspace';
+}
+
+function migrateCliRoomConfig(roomConfig: unknown) {
+  if (!roomConfig || typeof roomConfig !== 'object') {
+    return roomConfig;
+  }
+
+  const title = (roomConfig as {title?: unknown}).title;
+  if (
+    typeof title !== 'string' ||
+    title.trim().length === 0 ||
+    title === DEFAULT_ROOM_TITLE
+  ) {
+    return {
+      ...roomConfig,
+      title: defaultWorkspaceTitle,
+    };
+  }
+
+  return roomConfig;
+}
+
 function createCliCrdtSyncConnector() {
   if (!runtimeConfig.syncEnabled) return undefined;
   return createWebSocketSyncConnector({
@@ -283,11 +325,20 @@ const sliceConfigSchemas = {
   blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
+  artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
   pivot: PivotSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+type PersistedRoomState = ReturnType<typeof persistHelpers.partialize>;
+const cliUiPersistStorage = createDuckDbPersistStorage<PersistedRoomState>(
+  connector,
+  {
+    namespace: runtimeConfig.metaNamespace || '__sqlrooms',
+  },
+);
+export const uiStatePersistenceController = cliUiPersistStorage.controller;
 
 function getAvailableAiModels(config: AiSettingsSliceConfig) {
   return [
@@ -305,13 +356,12 @@ function getAvailableAiModels(config: AiSettingsSliceConfig) {
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs<RoomState>(
+  persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas,
-      storage: createDuckDbPersistStorage(connector, {
-        namespace: runtimeConfig.metaNamespace || '__sqlrooms',
-      }),
+      storage: cliUiPersistStorage,
+      partialize: persistHelpers.partialize,
       merge: (persistedState, currentState) => {
         const persistedRecord = (persistedState ?? {}) as Record<
           string,
@@ -329,8 +379,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...persistedRecord,
             artifacts: persistedArtifacts,
             cells: persistedCells,
+            room: migrateCliRoomConfig(persistedRecord.room),
+            layout: persistedRecord.layout
+              ? migrateCliLayoutConfig(persistedRecord.layout as LayoutConfig)
+              : persistedRecord.layout,
           },
           currentState,
+        );
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.artifactAi.syncCurrentArtifactAiSession();
+        cliUiPersistStorage.markStateSnapshotSaved(
+          persistHelpers.partialize(state),
         );
       },
     },
@@ -382,7 +443,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
         },
-        addProfilerForTable: (tableName) => {
+        addDataTableExplorerForTable: (tableName) => {
           const existingDashboardArtifactId =
             get().dashboard.getCurrentDashboardArtifactId();
           const artifactId =
@@ -399,15 +460,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().mosaicDashboard.setSelectedTable(artifactId, tableName);
           }
 
-          const hasProfilerForTable = dashboard.panels.some(
-            (panel) => panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+          const hasDataTableExplorerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
           );
 
-          if (!hasProfilerForTable) {
+          if (!hasDataTableExplorerForTable) {
             get().mosaicDashboard.addPanel(
               artifactId,
-              createMosaicDashboardProfilerPanelConfig({
-                title: `${tableName} profiler`,
+              createMosaicDashboardDataTableExplorerPanelConfig({
+                title: `${tableName} explorer`,
               }),
             );
           }
@@ -443,6 +505,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       };
 
       return {
+        workspaceUi: {
+          showArtifactChooser: false,
+          setShowArtifactChooser: (show) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                draft.workspaceUi.showArtifactChooser = show;
+              }),
+            );
+          },
+        },
+
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
           upsertArtifactApp: (artifactId, app) => {
@@ -514,7 +587,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createRoomShellSlice({
           connector,
-          config: {dataSources: []},
+          config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
           createDbProps: {
             duckDb: {
@@ -554,9 +627,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createArtifactsSlice<RoomState>({
+        ...createArtifactsSlice({
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
+
+        ...createArtifactAiSlice()(set, get, store),
 
         ...createMosaicSlice({
           preagg: {
@@ -745,7 +820,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
-            getRunContext: () => getRunContext(store),
+            getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             tools: {
@@ -764,17 +839,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
-        aiContextMode: 'auto',
-        aiContextItemIds: [],
-        setAiContextItemIds: (artifactIds, mode) => {
-          set({
-            aiContextItemIds: Array.from(new Set(artifactIds)),
-            ...(mode ? {aiContextMode: mode} : {}),
-          });
-        },
-        replaceAiContextWithArtifact: (artifactId) => {
-          set({aiContextItemIds: [artifactId]});
-        },
       };
     },
   ),
@@ -838,8 +902,8 @@ function getAiSettingsTomlPayload(state: RoomState) {
     currentSession?.modelProvider || defaultProviderFromConfig;
   const shouldWriteDefaultProvider = Boolean(
     defaultProvider &&
-      (settings.providers[defaultProvider] ||
-        (defaultProvider === 'custom' && settings.customModels.length > 0)),
+    (settings.providers[defaultProvider] ||
+      (defaultProvider === 'custom' && settings.customModels.length > 0)),
   );
   const defaultModel = currentSession?.model || defaultModelFromConfig;
   return {
@@ -879,7 +943,10 @@ function startAiSettingsTomlAutosave() {
           })
           .catch((error) => {
             if (saveRequestId !== latestSaveRequestId) return;
-            console.warn('Failed to save AI settings to SQLRooms config', error);
+            console.warn(
+              'Failed to save AI settings to SQLRooms config',
+              error,
+            );
             toast.error('Failed to save AI settings', {
               id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
               description:

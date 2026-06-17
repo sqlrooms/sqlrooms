@@ -23,7 +23,6 @@ import {
 import {BlockDocumentChartImageNode} from './extensions/BlockDocumentChartImageNode';
 import {BlockDocumentChartNode} from './extensions/BlockDocumentChartNode';
 import {BlockDocumentImageNode} from './extensions/BlockDocumentImageNode';
-import {BlockDocumentRichTextNode} from './extensions/BlockDocumentRichTextNode';
 import {BlockDocumentStatefulBlockNode} from './extensions/BlockDocumentStatefulBlockNode';
 import {
   BLOCK_DOCUMENT_TITLE_NODE_NAME,
@@ -178,7 +177,6 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
       TableRow,
       TableHeader,
       TableCell,
-      BlockDocumentRichTextNode,
       BlockDocumentImageNode,
       BlockDocumentChartImageNode,
       BlockDocumentChartNode,

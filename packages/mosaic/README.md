@@ -132,40 +132,45 @@ The hook accepts the following options:
 - `queryResult` - Optional callback when query results are received
 - `enabled` - Whether to automatically connect when mosaic is ready (default: `true`)
 
-### Mosaic Profiler Primitives
+### Data Table Explorer Primitives
 
-The profiler primitives let you build a Quake-style cross-filtered table with
-per-column summaries on top of `MosaicSlice`.
+The Data Table Explorer primitives let you build a Quake-style cross-filtered
+table with per-column summaries on top of `MosaicSlice`.
 
 ```tsx
-import {MosaicProfiler} from '@sqlrooms/mosaic';
+import {DataTableExplorer} from '@sqlrooms/mosaic';
 import {ScrollArea} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from './store';
 
-function EarthquakeProfiler() {
+function EarthquakeExplorer() {
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
 
   return (
-    <MosaicProfiler tableName="earthquakes" selection={brush} pageSize={25}>
+    <DataTableExplorer tableName="earthquakes" selection={brush} pageSize={25}>
       <div className="flex min-h-0 flex-col border">
         <ScrollArea className="min-h-0 flex-1">
-          <MosaicProfiler.Table>
-            <MosaicProfiler.Header />
-            <MosaicProfiler.Rows />
-          </MosaicProfiler.Table>
+          <DataTableExplorer.Table>
+            <DataTableExplorer.Header />
+            <DataTableExplorer.Rows />
+          </DataTableExplorer.Table>
         </ScrollArea>
-        <MosaicProfiler.StatusBar />
+        <DataTableExplorer.StatusBar />
       </div>
-    </MosaicProfiler>
+    </DataTableExplorer>
   );
 }
 ```
 
-For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
-is still available when you need direct access to the profiler state for custom
-layout, sizing, or advanced composition.
+For the common case, prefer the compound `DataTableExplorer` API.
+`useDataTableExplorer` is still available when you need direct access to the
+explorer state for custom layout, sizing, or advanced composition.
+
+`DataTableBlockRenderer` wraps the same explorer UI as a stateful block
+renderer for `@sqlrooms/documents` block documents. Register it with a
+host-provided stateful block type such as `data-table` when a document or
+worksheet surface should embed an interactive Data Table Explorer directly.
 
 ### Mosaic Dashboard Panels
 
@@ -176,7 +181,7 @@ runtime add-panel actions when creating the dashboard slice.
 ```tsx
 import {
   createDefaultMosaicDashboardPanelRenderers,
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
   createMosaicDashboardSlice,
   MosaicDashboard,
@@ -192,10 +197,10 @@ function Dashboard() {
   return <MosaicDashboard dashboardId="main" />;
 }
 
-function addProfiler(store: RoomStore) {
+function addDataTableExplorer(store: RoomStore) {
   store.getState().mosaicDashboard.addPanel(
     'main',
-    createMosaicDashboardProfilerPanelConfig({
+    createMosaicDashboardDataTableExplorerPanelConfig({
       source: {tableName: 'earthquakes'},
     }),
   );
@@ -226,6 +231,101 @@ panel omits a source it falls back to the dashboard selected table. Panel render
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
 
+### Reset Filters
+
+The package provides hooks and components for resetting cross-filter selections at both dashboard and panel levels:
+
+#### Dashboard-Level Reset
+
+Use `useDashboardResetFilters` to track and reset all filters for a dashboard:
+
+```tsx
+import {useDashboardResetFilters} from '@sqlrooms/mosaic';
+
+function DashboardToolbar({dashboardId}: {dashboardId: string}) {
+  const {hasActiveFilters, reset} = useDashboardResetFilters({dashboardId});
+
+  return (
+    <button onClick={reset} disabled={!hasActiveFilters}>
+      Reset All Filters
+    </button>
+  );
+}
+```
+
+The hook returns:
+
+- `hasActiveFilters` - Boolean indicating whether any filters are active
+- `reset` - Function to clear all filters for the dashboard
+
+#### Panel-Level Reset
+
+Use `usePanelResetFilters` to track and reset only the filters originating from a specific panel:
+
+```tsx
+import {
+  usePanelResetFilters,
+  usePanelClients,
+  ResetFiltersButton,
+} from '@sqlrooms/mosaic';
+
+function ChartPanelHeader({
+  dashboardId,
+  panelId,
+  selectionName,
+}: {
+  dashboardId: string;
+  panelId: string;
+  selectionName: string;
+}) {
+  const panelClients = usePanelClients(dashboardId, panelId);
+  const {hasActiveFilters, reset} = usePanelResetFilters({
+    panelClients,
+    selectionName,
+  });
+
+  return (
+    <div className="panel-header">
+      <h3>My Chart</h3>
+      <ResetFiltersButton disabled={!hasActiveFilters} onClick={reset} />
+    </div>
+  );
+}
+```
+
+Panel-level reset requires registering the panel's Mosaic clients. Use `usePanelClientRegistration` in your panel renderer:
+
+```tsx
+import {usePanelClientRegistration} from '@sqlrooms/mosaic';
+
+function ChartPanelRenderer({dashboardId, panelId}: PanelProps) {
+  const {client} = useMosaicClient({
+    selectionName: 'brush',
+    query: /* ... */,
+  });
+
+  // Register this client so the panel reset button can track its filters
+  usePanelClientRegistration(dashboardId, panelId, [client]);
+
+  return <VgPlotChart /* ... */ />;
+}
+```
+
+#### Reset Filters Button Component
+
+The `ResetFiltersButton` is a pre-styled UI component:
+
+```tsx
+import {ResetFiltersButton} from '@sqlrooms/mosaic';
+
+<ResetFiltersButton
+  disabled={!hasActiveFilters}
+  onClick={reset}
+  tooltip="Reset filters" // optional
+  className="custom-class" // optional
+/>;
+```
+
 ### Dashboard Stateful Block Adapter
 
 `createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful
@@ -253,7 +353,7 @@ dashboard slice.
 ### Dashboard AI Tools
 
 `@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,
-including chart tools, profiler/text panel tools, panel management tools, and an
+including chart tools, Data Table Explorer/text panel tools, panel management tools, and an
 optional exploratory `dashboard_agent`. Client apps supply a small adapter that
 maps Mosaic's generic dashboard operations to their store, artifact model, table
 metadata, and AI run context. When an AI run context is present, implicit
@@ -373,6 +473,45 @@ Available compound components:
 - `ChartBuilderActions` - Back/Create buttons
 
 For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
+
+### Combobox Component
+
+The package provides a reusable compound `Combobox` component for building searchable select dropdowns. This component is used internally by chart settings fields like `AggregationSelector`, `FieldSelectorInput`, and `TemporalGranularitySelector`.
+
+```tsx
+import {Combobox} from '@sqlrooms/mosaic';
+
+function MySelector() {
+  const [value, setValue] = useState('');
+
+  return (
+    <Combobox value={value} onChange={setValue}>
+      <Combobox.Trigger placeholder="Select option..." />
+      <Combobox.Content>
+        <Combobox.Search placeholder="Search..." />
+        <Combobox.Empty>No results found.</Combobox.Empty>
+        <Combobox.List>
+          <Combobox.Item value="option1">Option 1</Combobox.Item>
+          <Combobox.Item value="option2">Option 2</Combobox.Item>
+          <Combobox.Item value="option3">Option 3</Combobox.Item>
+        </Combobox.List>
+      </Combobox.Content>
+    </Combobox>
+  );
+}
+```
+
+Available compound components:
+
+- `Combobox` (root) - Manages state and provides context
+- `Combobox.Trigger` - Button to open the dropdown
+- `Combobox.Content` - Popover content wrapper
+- `Combobox.Search` - Search input field
+- `Combobox.Empty` - Empty state message
+- `Combobox.List` - Items container
+- `Combobox.Item` - Individual selectable item
+
+For advanced use cases, the underlying `useCombobox` hook is also exported.
 
 ### Working with Selections
 

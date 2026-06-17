@@ -42,9 +42,20 @@ function unwrapForwardedArgs(args) {
   return args.slice(separatorIndex + 1);
 }
 
-const cliArgs = target === 'cli' ? unwrapForwardedArgs(restArgs) : [];
+function getControlArgs(args) {
+  const separatorIndex = args.indexOf('--');
+  if (separatorIndex === -1) return args;
+  return args.slice(0, separatorIndex);
+}
+
+const controlArgs = getControlArgs(restArgs);
+const forwardedCliArgs =
+  restArgs.indexOf('--') === -1
+    ? controlArgs.filter((arg) => arg !== '--dry' && !arg.startsWith('--dry='))
+    : unwrapForwardedArgs(restArgs);
+const cliArgs = target === 'cli' ? forwardedCliArgs : [];
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;
-const isDryRun = restArgs.some(
+const isDryRun = controlArgs.some(
   (arg) => arg === '--dry' || arg.startsWith('--dry='),
 );
 
@@ -106,52 +117,65 @@ if (!targetConfig) {
 const dryRunArgs = isDryRun
   ? restArgs.filter((arg) => arg === '--dry' || arg.startsWith('--dry='))
   : [];
-const buildResult = runSync(
-  turboRunArgs('build', targetConfig.dependencyFilters, dryRunArgs),
-);
 
-if (typeof buildResult.status === 'number' && buildResult.status !== 0) {
-  process.exit(buildResult.status);
-}
-
-if (typeof buildResult.status !== 'number') {
-  console.error(
-    'Failed to launch turbo dependency build command via pnpm.',
-    buildResult.error,
-  );
-  process.exit(1);
-}
-
-if (isDryRun) {
-  const watchResult = runSync(
-    turboRunArgs('dev', targetConfig.dependencyFilters, dryRunArgs),
+if (target !== 'cli') {
+  const buildResult = runSync(
+    turboRunArgs('build', targetConfig.dependencyFilters, dryRunArgs),
   );
 
-  if (typeof watchResult.status === 'number' && watchResult.status !== 0) {
-    process.exit(watchResult.status);
+  if (typeof buildResult.status === 'number' && buildResult.status !== 0) {
+    process.exit(buildResult.status);
   }
 
-  if (typeof watchResult.status !== 'number') {
+  if (typeof buildResult.status !== 'number') {
     console.error(
-      'Failed to launch turbo dependency watcher dry run via pnpm.',
-      watchResult.error,
+      'Failed to launch turbo dependency build command via pnpm.',
+      buildResult.error,
     );
     process.exit(1);
   }
 
-  const targetResult = runSync(
-    turboRunArgs('dev', targetConfig.targetDevFilters, dryRunArgs),
-  );
+  if (isDryRun) {
+    const watchResult = runSync(
+      turboRunArgs('dev', targetConfig.dependencyFilters, dryRunArgs),
+    );
 
-  if (typeof targetResult.status === 'number') {
-    process.exit(targetResult.status);
+    if (typeof watchResult.status === 'number' && watchResult.status !== 0) {
+      process.exit(watchResult.status);
+    }
+
+    if (typeof watchResult.status !== 'number') {
+      console.error(
+        'Failed to launch turbo dependency watcher dry run via pnpm.',
+        watchResult.error,
+      );
+      process.exit(1);
+    }
+
+    const targetResult = runSync(
+      turboRunArgs('dev', targetConfig.targetDevFilters, dryRunArgs),
+    );
+
+    if (typeof targetResult.status === 'number') {
+      process.exit(targetResult.status);
+    }
+
+    console.error(
+      'Failed to launch turbo target dev dry run via pnpm.',
+      targetResult.error,
+    );
+    process.exit(1);
   }
-
-  console.error(
-    'Failed to launch turbo target dev dry run via pnpm.',
-    targetResult.error,
+} else if (isDryRun) {
+  console.log(
+    '(cd apps/sqlrooms-cli-ui && ./node_modules/.bin/vite --host --port 4174)',
   );
-  process.exit(1);
+  console.log(
+    `(cd python/sqlrooms-cli && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
+      cliArgs,
+    )} node scripts/dev.mjs)`,
+  );
+  process.exit(0);
 }
 
 const children = new Set();
@@ -173,8 +197,13 @@ function stopChildren(signal = 'SIGTERM') {
   }
 }
 
-function startProcess(label, args, {allowCleanExit = false} = {}) {
-  const child = spawn(pnpmCommand, args, {
+function startProcess(
+  label,
+  args,
+  {allowCleanExit = false, command = pnpmCommand, cwd = process.cwd()} = {},
+) {
+  const child = spawn(command, args, {
+    cwd,
     stdio: 'inherit',
     env: childEnv,
     detached: process.platform !== 'win32',
@@ -206,7 +235,7 @@ function startProcess(label, args, {allowCleanExit = false} = {}) {
 
     exiting = true;
     stopChildren();
-    console.error(`Failed to launch ${label} via pnpm.`, error);
+    console.error(`Failed to launch ${label}.`, error);
     process.exit(1);
   });
 
@@ -225,12 +254,23 @@ process.on('SIGTERM', () => {
   setTimeout(() => process.exit(143), 1000).unref();
 });
 
-startProcess(
-  'turbo dependency dev watchers',
-  turboRunArgs('dev', targetConfig.dependencyFilters),
-  {allowCleanExit: true},
-);
-startProcess(
-  'turbo target dev command',
-  turboRunArgs('dev', targetConfig.targetDevFilters, turboArgsForTarget),
-);
+if (target === 'cli') {
+  startProcess('sqlrooms CLI UI dev server', ['--host', '--port', '4174'], {
+    command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
+    cwd: path.resolve('apps/sqlrooms-cli-ui'),
+  });
+  startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
+    command: process.execPath,
+    cwd: path.resolve('python/sqlrooms-cli'),
+  });
+} else {
+  startProcess(
+    'turbo dependency dev watchers',
+    turboRunArgs('dev', targetConfig.dependencyFilters),
+    {allowCleanExit: true},
+  );
+  startProcess(
+    'turbo target dev command',
+    turboRunArgs('dev', targetConfig.targetDevFilters, turboArgsForTarget),
+  );
+}

@@ -30,13 +30,17 @@ function formatArtifactContextInstructions(
   const artifactType = mainItem?.type ?? 'artifact';
 
   return [
-    'Current artifact context:',
-    `- Primary target: ${artifactType} "${mainItem?.title}" (id: ${mainItem?.id}). Pass this id as artifactId when using a tool that should modify it.`,
+    `Current artifact: ${artifactType} "${mainItem?.title}" (id: ${mainItem?.id}). Tools should target this artifact by default unless the user explicitly asks otherwise.`,
+    ...(additionalItems.length > 0 ? ['Additional artifact context:'] : []),
     ...additionalItems.map(
       (item) =>
-        `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
+        `- ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
     ),
-    '- Additional context items are reference-only by default; tools will not implicitly target them. Use set_primary_context_artifact before modifying a reference artifact.',
+    ...(additionalItems.length > 0
+      ? [
+          '- Additional artifact context items are reference-only by default; tools will not implicitly target them. Use set_primary_context_artifact before modifying a reference artifact.',
+        ]
+      : []),
   ];
 }
 

@@ -1,28 +1,51 @@
-import React from 'react';
+import {FC, useCallback} from 'react';
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
+import {MosaicDashboardDataTableSelector} from './MosaicDashboardDataTableSelector';
+import {useDataTable} from '@sqlrooms/db';
+import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
 
-export const MosaicDashboardToolbar: React.FC = () => {
+export const MosaicDashboardToolbar: FC = () => {
   const {dashboardId} = useMosaicDashboardContext();
-  const hasPanels = useStoreWithMosaicDashboard(
-    (state) =>
-      (state.mosaicDashboard.config.dashboardsById[dashboardId]?.panels
-        ?.length ?? 0) > 0,
+
+  const dashboard = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
+  );
+  const selectedTableName = dashboard?.selectedTable;
+  const dashboardTitle = dashboard?.title ?? '';
+
+  const selectedTable = useDataTable(selectedTableName);
+  const tableName = selectedTable?.table.table;
+
+  const setDashboardTitle = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.setDashboardTitle,
   );
 
-  if (!hasPanels) {
+  const handleTitleChange = useCallback(
+    (title: string | undefined) => {
+      setDashboardTitle(dashboardId, title || '');
+    },
+    [dashboardId, setDashboardTitle],
+  );
+
+  if (!selectedTableName) {
     return null;
   }
 
   return (
-    <div className="flex items-center justify-between border-b px-5 py-2">
-      <div className="flex items-center gap-2">
-        <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
-      </div>
+    <div className="flex items-center justify-between gap-2 border-b px-5 py-2">
+      <BlockCaptionEditor
+        value={dashboardTitle}
+        placeholder={tableName || 'Dashboard title'}
+        onChange={handleTitleChange}
+      />
+
       <div className="flex items-center gap-2">
         <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
+        <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
+        <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 import {createId} from '@paralleldrive/cuid2';
 import {
   AiSliceConfig,
+  AiSessionForkOrigin,
   AnalysisResultSchema,
-  AnalysisSessionSchema,
+  ChatSessionSchema,
   createDefaultAiConfig,
 } from '@sqlrooms/ai-config';
 import type {AiRunContext} from '@sqlrooms/ai-config';
@@ -30,7 +31,6 @@ import {
 } from './chatTransport';
 import {
   ANALYSIS_CANCELLED,
-  ANALYSIS_PENDING_ID,
   SESSION_DELETED,
   TOOL_CALL_CANCELLED,
 } from './constants';
@@ -52,17 +52,20 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
+import {normalizeAiConfig, ToolAbortError} from './utils';
+import {getAnalysisResultsFromUiMessages} from './chatTurns';
 import {
-  cleanupPendingAnalysisResults,
-  ToolAbortError,
-  fixIncompleteToolCalls,
-} from './utils';
+  cleanupSessionForks,
+  createForkedChatSessionFromMessage,
+  type ForkSessionFromMessageArgs,
+} from './chatSessionForking';
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
-import {formatDateTimeSimple} from '@sqlrooms/utils';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
+
+export type {ForkSessionFromMessageArgs} from './chatSessionForking';
 
 export type AiSliceState = {
   ai: {
@@ -164,15 +167,26 @@ export type AiSliceState = {
       modelProvider?: string,
       model?: string,
     ) => void;
+    forkSessionFromMessage: (
+      args: ForkSessionFromMessageArgs,
+    ) => string | undefined;
+    getSessionForkOrigin: (
+      sessionId: string,
+    ) => AiSessionForkOrigin | undefined;
     switchSession: (sessionId: string) => void;
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
-    getCurrentSession: () => AnalysisSessionSchema | undefined;
+    getCurrentSession: () => ChatSessionSchema | undefined;
     getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
     setSessionRunContext: (
       sessionId: string,
       runContext: AiRunContext | undefined,
+    ) => void;
+    getSessionDraftContextItemIds: (sessionId: string) => string[] | undefined;
+    setSessionDraftContextItemIds: (
+      sessionId: string,
+      itemIds: string[] | undefined,
     ) => void;
     setSessionUiMessages: (
       sessionId: string,
@@ -235,13 +249,13 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   tools: TTools;
   toolRenderers?: ToolRenderers<TTools>;
   getInstructions: (args?: {
-    session?: AnalysisSessionSchema;
+    session?: ChatSessionSchema;
     runContext?: AiRunContext;
   }) => string;
-  getRunContext?: () => AiRunContext | undefined;
+  getRunContext?: (sessionId: string) => AiRunContext | undefined;
   formatRunContextInstructions?: (args: {
     runContext: AiRunContext;
-    session?: AnalysisSessionSchema;
+    session?: ChatSessionSchema;
   }) => string;
   defaultProvider?: string;
   defaultModel?: string;
@@ -286,26 +300,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
-    // Clean up pending analysis results and reset transient state from persisted config
-    const cleanedConfig = params.config?.sessions
-      ? {
-          ...params.config,
-          sessions: params.config.sessions.map((session) => {
-            const cleaned = cleanupPendingAnalysisResults(session);
-            const completedUiMessages = Array.isArray(cleaned.uiMessages)
-              ? fixIncompleteToolCalls(
-                  (cleaned.uiMessages as unknown as UIMessage[]) || [],
-                )
-              : [];
-            return {
-              ...cleaned,
-              isRunning: false,
-              uiMessages:
-                completedUiMessages as unknown as AnalysisSessionSchema['uiMessages'],
-            };
-          }),
-        }
-      : params.config;
+    const analysisResultsCache = new WeakMap<
+      UIMessage[],
+      {isRunning: boolean; results: AnalysisResultSchema[]}
+    >();
+
+    const cleanedConfig = normalizeAiConfig(params.config);
 
     /**
      * Extract toolTimings from UIMessage metadata and agentProgress from
@@ -406,7 +406,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     };
 
     // Initialize base config and ensure the initial session respects default provider/model
-    const baseConfig = createDefaultAiConfig(cleanedConfig);
+    const baseConfig = cleanupSessionForks(
+      createDefaultAiConfig(cleanedConfig),
+    );
     if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
       const firstSession = baseConfig.sessions[0];
       if (firstSession) {
@@ -651,11 +653,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         setConfig: (config: AiSliceConfig) => {
-          const rehydrated = rehydrateFromSessions(config);
+          const normalizedConfig = cleanupSessionForks(
+            normalizeAiConfig(config),
+          );
+          const rehydrated = rehydrateFromSessions(normalizedConfig);
 
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.config = config;
+              draft.ai.config = normalizedConfig;
               draft.ai.toolTimings = rehydrated.timings;
               draft.ai.agentProgress = rehydrated.progress;
             }),
@@ -693,7 +698,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
                 session.prompt = prompt;
@@ -704,7 +709,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         getPrompt: (sessionId: string) => {
           const state = get();
           const session = state.ai.config.sessions.find(
-            (s: AnalysisSessionSchema) => s.id === sessionId,
+            (s: ChatSessionSchema) => s.id === sessionId,
           );
           return session?.prompt || '';
         },
@@ -713,7 +718,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
                 session.isRunning = isRunning;
@@ -724,7 +729,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         getIsRunning: (sessionId: string) => {
           const state = get();
           const session = state.ai.config.sessions.find(
-            (s: AnalysisSessionSchema) => s.id === sessionId,
+            (s: ChatSessionSchema) => s.id === sessionId,
           );
           return session?.isRunning || false;
         },
@@ -757,7 +762,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         getSessionRunContext: (sessionId: string) => {
           const state = get();
           return state.ai.config.sessions.find(
-            (session: AnalysisSessionSchema) => session.id === sessionId,
+            (session: ChatSessionSchema) => session.id === sessionId,
           )?.runContext;
         },
 
@@ -768,10 +773,33 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
                 session.runContext = runContext;
+              }
+            }),
+          );
+        },
+        getSessionDraftContextItemIds: (sessionId: string) => {
+          const state = get();
+          return state.ai.config.sessions.find(
+            (session: ChatSessionSchema) => session.id === sessionId,
+          )?.draftContextItemIds;
+        },
+        setSessionDraftContextItemIds: (
+          sessionId: string,
+          itemIds: string[] | undefined,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: ChatSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.draftContextItemIds = itemIds
+                  ? Array.from(new Set(itemIds))
+                  : undefined;
               }
             }),
           );
@@ -795,8 +823,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // Generate a default name if none is provided
           let sessionName = name;
           if (!sessionName) {
-            // Generate a human-readable date and time for the session name
-            sessionName = formatDateTimeSimple();
+            sessionName = 'Untitled';
           }
 
           set((state) =>
@@ -808,11 +835,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 name: sessionName,
                 modelProvider: modelSelection.modelProvider,
                 model: modelSelection.model,
-                analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
                 messagesRevision: 0,
                 prompt: '',
+                draftContextItemIds: undefined,
                 isRunning: false,
                 lastOpenedAt: now,
               });
@@ -825,6 +852,40 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             }),
           );
         },
+
+        forkSessionFromMessage: (args) => {
+          const sourceSession = get().ai.config.sessions.find(
+            (session: ChatSessionSchema) => session.id === args.sourceSessionId,
+          );
+          if (!sourceSession) return undefined;
+
+          const now = Date.now();
+          const targetSessionId = createId();
+          const fork = createForkedChatSessionFromMessage({
+            sourceSession,
+            args,
+            targetSessionId,
+            now,
+          });
+          if (!fork) return undefined;
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.config.sessions.unshift(fork.forkedSession);
+              draft.ai.config.currentSessionId = targetSessionId;
+              if (!draft.ai.config.openSessionTabs) {
+                draft.ai.config.openSessionTabs = [];
+              }
+              draft.ai.config.openSessionTabs.push(targetSessionId);
+              draft.ai.config.sessionForks[targetSessionId] = fork.forkOrigin;
+            }),
+          );
+
+          return targetSessionId;
+        },
+
+        getSessionForkOrigin: (sessionId) =>
+          get().ai.config.sessionForks[sessionId],
 
         /**
          * Switch to a different session
@@ -842,7 +903,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 draft.ai.config.openSessionTabs.push(sessionId);
               }
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
                 session.lastOpenedAt = now;
@@ -875,7 +936,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
                 session.name = name;
@@ -903,10 +964,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               const sessionIndex = draft.ai.config.sessions.findIndex(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (sessionIndex !== -1) {
                 draft.ai.config.sessions.splice(sessionIndex, 1);
+                delete draft.ai.config.sessionForks[sessionId];
                 if (draft.ai.config.openSessionTabs) {
                   draft.ai.config.openSessionTabs =
                     draft.ai.config.openSessionTabs.filter(
@@ -950,7 +1012,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             set((state) =>
               produce(state, (draft) => {
                 const session = draft.ai.config.sessions.find(
-                  (s: AnalysisSessionSchema) => s.id === sessionId,
+                  (s: ChatSessionSchema) => s.id === sessionId,
                 );
                 if (session) {
                   session.uiMessages = structuredClone(
@@ -1073,8 +1135,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const store = get();
           const session = sessionId
             ? store.ai.config.sessions.find(
-                (candidate: AnalysisSessionSchema) =>
-                  candidate.id === sessionId,
+                (candidate: ChatSessionSchema) => candidate.id === sessionId,
               )
             : getCurrentSessionFromState(store);
           const runContext = session?.runContext;
@@ -1212,7 +1273,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         startAnalysis: async (sessionId: string) => {
           const state = get();
           const session = state.ai.config.sessions.find(
-            (s: AnalysisSessionSchema) => s.id === sessionId,
+            (s: ChatSessionSchema) => s.id === sessionId,
           );
 
           if (!session) {
@@ -1238,27 +1299,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
               const draftSession = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (draftSession) {
                 draftSession.isRunning = true;
-                draftSession.runContext = getRunContext?.();
+                draftSession.runContext = getRunContext?.(sessionId);
+                draftSession.draftContextItemIds = undefined;
                 draftSession.prompt = '';
                 draft.ai.promptSuggestionsVisible = false;
-
-                // Remove any existing pending results
-                draftSession.analysisResults =
-                  draftSession.analysisResults.filter(
-                    (result: AnalysisResultSchema) =>
-                      result.id !== ANALYSIS_PENDING_ID,
-                  );
-
-                // Add incomplete analysis result with a temporary ID
-                draftSession.analysisResults.push({
-                  id: ANALYSIS_PENDING_ID,
-                  prompt: promptText,
-                  isCompleted: false,
-                });
               }
             }),
           );
@@ -1329,7 +1377,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
                 session.isRunning = false;
@@ -1378,12 +1426,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (session) {
-                session.analysisResults = session.analysisResults.filter(
-                  (r: AnalysisResultSchema) => r.id !== resultId,
-                );
                 // Remove corresponding prompt-response pair from uiMessages
                 const uiMessages = session.uiMessages as UIMessage[];
                 const userMessageIndex = uiMessages.findIndex(
@@ -1417,8 +1462,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         /**
-         * Get analysis results for the current session by transforming UI messages
-         * into structured analysis results (user prompt → AI response pairs).
+         * Get legacy analysis-result-shaped data for the current session by
+         * deriving it from UI messages.
          *
          * @returns Array of analysis results for the current session
          */
@@ -1426,13 +1471,25 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) return undefined;
 
-          return currentSession.analysisResults;
+          const uiMessages = currentSession.uiMessages as UIMessage[];
+          const cached = analysisResultsCache.get(uiMessages);
+          if (cached && cached.isRunning === currentSession.isRunning) {
+            return cached.results;
+          }
+
+          const results = getAnalysisResultsFromUiMessages(uiMessages, {
+            isRunning: currentSession.isRunning,
+          });
+          analysisResultsCache.set(uiMessages, {
+            isRunning: currentSession.isRunning,
+            results,
+          });
+          return results;
         },
 
         /**
-         * Add an analysis result to the current session
-         * - add the message to the uiMessages
-         * - add the analysis result to the analysisResults
+         * @deprecated Legacy compatibility adapter. New chat behavior should
+         * update `uiMessages` through the chat transport.
          */
         addAnalysisResult: (message: UIMessage) => {
           const currentSession = get().ai.getCurrentSession();
@@ -1440,22 +1497,18 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             console.error('No current session found');
             return;
           }
+
           set((state) =>
             produce(state, (draft) => {
-              // Extract text content from message parts
-              const textContent =
-                message.parts
-                  ?.filter((part) => part.type === 'text')
-                  ?.map((part) => (part as {text: string}).text)
-                  ?.join('') || '';
-
-              draft.ai.config.sessions
-                .find((s: AnalysisSessionSchema) => s.id === currentSession?.id)
-                ?.analysisResults.push({
-                  id: message.id,
-                  prompt: textContent,
-                  isCompleted: true,
-                });
+              const session = draft.ai.config.sessions.find(
+                (s: ChatSessionSchema) => s.id === currentSession.id,
+              );
+              if (!session) return;
+              session.uiMessages.push(
+                structuredClone(
+                  message,
+                ) as unknown as (typeof session.uiMessages)[number],
+              );
             }),
           );
         },
@@ -1501,7 +1554,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
  */
 function getCurrentSessionFromState(
   state: AiSliceState,
-): AnalysisSessionSchema | undefined {
+): ChatSessionSchema | undefined {
   const {currentSessionId, sessions} = state.ai.config;
   return sessions.find((session) => session.id === currentSessionId);
 }

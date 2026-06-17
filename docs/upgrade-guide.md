@@ -120,6 +120,59 @@ const mapId = artifactIdFromPanelMeta;
 <KeplerMapContainer mapId={mapId} />;
 ```
 
+### `@sqlrooms/kepler`: `addTableToMap` now prefers an object parameter
+
+`state.kepler.addTableToMap` now accepts a single object parameter. The older
+positional signature remains supported for compatibility, but host apps should
+migrate to the object form because the API now separates the table reference,
+Kepler `addDataToMap` options, config, and optional dataset id override.
+
+#### Before
+
+```ts
+await state.kepler.addTableToMap(
+  mapId,
+  tableName,
+  {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  config,
+);
+```
+
+#### After
+
+```ts
+await state.kepler.addTableToMap({
+  mapId,
+  tableName,
+  options: {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  config,
+});
+```
+
+If your app restores a previously saved Kepler layer or filter and must load the
+table under an existing `dataId`, pass `datasetId` explicitly:
+
+```ts
+await state.kepler.addTableToMap({
+  mapId,
+  tableName: savedDataId,
+  options: {
+    autoCreateLayers: false,
+    centerMap: false,
+  },
+  datasetId: savedDataId,
+});
+```
+
+For normal add-table flows, omit `datasetId`. Kepler will derive the persisted
+dataset id from the configured `tableSelection.getDatasetIdForTable` policy.
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 This release introduces explicit panel identity and dock boundaries, replacing the previous path-based panel lookup system.
@@ -206,6 +259,63 @@ const trees = createDbSchemaTrees(Array.from(grouped.values()));
 ### `@sqlrooms/ai-core`, `@sqlrooms/ai`: Upgraded to AI SDK v6 with `ToolLoopAgent` (breaking)
 
 The AI SDK dependency has been upgraded from v5 to v6. Tool execution now uses `ToolLoopAgent` instead of `streamText`. If you only use `createAiSlice` without customization, no changes are needed — the transport layer is updated internally.
+
+### `@sqlrooms/ai-config`, `@sqlrooms/ai-core`, `@sqlrooms/ai`: chat session terminology
+
+The public AI session API now uses chat terminology. Existing analysis-named
+exports remain available as compatibility aliases during the migration window,
+but new code should use the chat-named APIs.
+
+#### API Changes
+
+- `AnalysisSessionSchema` is deprecated in favor of `ChatSessionSchema`.
+- `isAnalysisSessionEmpty` is deprecated in favor of `isChatSessionEmpty`.
+- `AnalysisResultsContainer` is deprecated in favor of `ChatMessagesContainer`
+  or the preferred compound component API, `Chat.Messages`.
+- `AnalysisResult` is deprecated in favor of `ChatTurnView`.
+- `AnalysisAnswer` is deprecated in favor of `MessageContent`.
+- `processAnalysisAnswerContent` is deprecated in favor of
+  `processMessageContent`.
+- `AnalysisResultSchema`, `getAnalysisResults`, `addAnalysisResult`,
+  `deleteAnalysisResult`, and `cleanupPendingAnalysisResults` remain
+  compatibility APIs for existing apps.
+- New code should prefer `uiMessages` and derived `ChatTurn` helpers such as
+  `getChatTurnsFromUiMessages`.
+- Persisted legacy `analysisResults` is still accepted when loading old rooms,
+  but `ChatSessionSchema` no longer emits `analysisResults` in parsed session
+  state and new sessions no longer persist it.
+
+#### Migration Example
+
+Before:
+
+```ts
+import {AnalysisSessionSchema, isAnalysisSessionEmpty} from '@sqlrooms/ai';
+```
+
+After:
+
+```ts
+import {ChatSessionSchema, isChatSessionEmpty} from '@sqlrooms/ai';
+```
+
+If you render the built-in chat UI, prefer the compound component:
+
+```tsx
+<Chat.Root>
+  <Chat.Messages />
+</Chat.Root>
+```
+
+For custom chat rendering, derive turns from `uiMessages`:
+
+```ts
+import {getChatTurnsFromUiMessages} from '@sqlrooms/ai';
+
+const turns = getChatTurnsFromUiMessages(session.uiMessages, {
+  isRunning: session.isRunning,
+});
+```
 
 #### Sub-agent composition
 

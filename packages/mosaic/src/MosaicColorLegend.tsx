@@ -151,7 +151,6 @@ export function MosaicColorLegend({
     tickFormat,
   });
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const plot = useMemo(
     () =>
       createMosaicColorLegendPlot({

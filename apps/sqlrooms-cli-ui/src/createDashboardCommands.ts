@@ -10,6 +10,7 @@ type CliArtifactType =
   | 'pivot'
   | 'notebook'
   | 'document'
+  | 'sql-query'
   | 'canvas'
   | 'app';
 
@@ -93,6 +94,8 @@ function createArtifactCommand(
         state.blockDocuments.ensureBlockDocument(artifactId);
       } else if (artifactType === 'document') {
         state.documents.ensureDocument(artifactId);
+      } else if (artifactType === 'sql-query') {
+        state.sqlEditor.ensureQuery(artifactId, {name: uniqueTitle});
       } else if (artifactType === 'canvas') {
         state.canvas.ensureArtifact(artifactId);
       } else if (artifactType === 'pivot') {
@@ -196,6 +199,9 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
         if (artifact.type === 'document') {
           state.documents.ensureDocument(artifactId);
         }
+        if (artifact.type === 'sql-query') {
+          state.sqlEditor.ensureQuery(artifactId, {name: artifact.title});
+        }
         if (artifact.type === 'canvas') {
           state.canvas.ensureArtifact(artifactId);
         }
@@ -218,6 +224,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
     createArtifactCommand('pivot', 'Pivot Table'),
     createArtifactCommand('notebook', 'Notebook'),
     createArtifactCommand('document', 'Document'),
+    createArtifactCommand('sql-query', 'SQL Query'),
     createArtifactCommand('canvas', 'Canvas'),
     createArtifactCommand('app', 'App'),
     createDashboardCreateArtifactCommand(),

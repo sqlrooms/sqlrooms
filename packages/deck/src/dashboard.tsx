@@ -21,6 +21,10 @@ import {
   type ChartRuntimeIssueReporter,
   useMosaicClient,
   useStoreWithMosaicDashboard,
+  usePanelClientRegistration,
+  usePanelClients,
+  usePanelResetFilters,
+  ResetFiltersButton,
 } from '@sqlrooms/mosaic';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
@@ -121,6 +125,9 @@ function DeckMapDashboardDatasetClient({
     runtimeIssueContext,
     runtimeIssueReporter,
   });
+
+  // Register client for panel reset button
+  usePanelClientRegistration(dashboard.id, panel.id, client ? [client] : []);
 
   useEffect(() => {
     onDatasetState(datasetId, {
@@ -294,10 +301,17 @@ function createInitialDeckMapDashboardFitState(
 function DeckMapDashboardHeaderActions({
   dashboardId,
   panel,
+  selectionName,
 }: MosaicDashboardPanelRendererProps) {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
+  const panelClients = usePanelClients(dashboardId, panel.id);
+  const {hasActiveFilters, reset} = usePanelResetFilters({
+    panelClients,
+    selectionName,
+  });
+
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
 
@@ -320,6 +334,11 @@ function DeckMapDashboardHeaderActions({
 
   return (
     <div className="flex items-center gap-0.5">
+      <ResetFiltersButton
+        disabled={!hasActiveFilters}
+        onClick={reset}
+        tooltip="Reset panel filters"
+      />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

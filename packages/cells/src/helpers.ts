@@ -101,59 +101,7 @@ export function normalizeCellsConfigStructure(
   return {artifacts};
 }
 
-/**
- * Returns the final identifier segment from a possibly-qualified SQL name.
- *
- * The parser is quote-aware: dots inside double-quoted identifiers are treated
- * as part of the identifier rather than as qualification separators.
- *
- * Examples:
- * - `schema.table` -> `table`
- * - `db.schema.table` -> `table`
- * - `schema."my.funny.table"` -> `my.funny.table`
- */
-export function getUnqualifiedSqlIdentifier(
-  qualifiedName: string | undefined,
-): string | undefined {
-  if (!qualifiedName) return undefined;
-  const input = qualifiedName.trim();
-  if (!input) return undefined;
-
-  const parts: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < input.length; i += 1) {
-    const ch = input[i];
-    if (ch === '"') {
-      // In SQL identifiers, escaped quotes inside quoted identifiers are doubled.
-      if (inQuotes && input[i + 1] === '"') {
-        current += '"';
-        i += 1;
-        continue;
-      }
-      inQuotes = !inQuotes;
-      current += ch;
-      continue;
-    }
-
-    if (ch === '.' && !inQuotes) {
-      parts.push(current);
-      current = '';
-      continue;
-    }
-
-    current += ch;
-  }
-  parts.push(current);
-
-  const last = parts[parts.length - 1]?.trim();
-  if (!last) return undefined;
-  if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
-    return last.slice(1, -1).replaceAll('""', '"');
-  }
-  return last;
-}
+export {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb';
 
 /**
  * Resolves the schema name for an artifact runtime, falling back to a stable id-based name.

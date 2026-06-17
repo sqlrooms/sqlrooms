@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {type DataTable} from '@sqlrooms/db';
 import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
-import {useTablesWithColumns} from './useTablesWithColumns';
+import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 
 /**
  * Returns the last selected table for a dashboard if it exists,

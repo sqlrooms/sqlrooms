@@ -47,7 +47,7 @@ export const ModifierScrollOverlay = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          'bg-background/70 absolute inset-0 z-20 flex items-center justify-center px-4',
+          'bg-background/70 absolute inset-0 z-50 flex items-center justify-center px-4',
           className,
         )}
         onPointerDownCapture={(event) => {

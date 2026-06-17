@@ -5,9 +5,9 @@
 import type {AgentProgressSnapshot} from './types';
 
 import {
+  type AiSliceConfig,
   AiSettingsSliceConfig,
-  AnalysisResultSchema,
-  AnalysisSessionSchema,
+  ChatSessionSchema,
   DynamicToolUIPart,
   ToolUIPart,
   UIMessagePart,
@@ -17,11 +17,7 @@ import {
   UIMessage,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import {
-  ABORT_EVENT,
-  ANALYSIS_PENDING_ID,
-  TOOL_CALL_CANCELLED,
-} from './constants';
+import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -223,72 +219,67 @@ export function shouldSuppressTextPart(
 }
 
 /**
- * Cleans up pending analysis results from interrupted conversations and restores them
- * with proper IDs from actual user messages. This handles the case where a page refresh
- * occurred during an active analysis, leaving orphaned "__pending__" results.
+ * Cleans up interrupted chat UI messages after reload/abort.
  *
  * Should be called once when loading persisted session data, not in migrations.
  *
  * @param session - The session to clean up
- * @returns The cleaned session with restored analysis results
+ * @returns The cleaned session with valid UI messages
  */
-export function cleanupPendingAnalysisResults(
-  session: AnalysisSessionSchema,
-): AnalysisSessionSchema {
-  const {analysisResults, uiMessages} = session;
-
-  if (!Array.isArray(analysisResults) || !Array.isArray(uiMessages)) {
+export function cleanupPendingUiMessages(
+  session: ChatSessionSchema,
+): ChatSessionSchema {
+  if (!Array.isArray(session.uiMessages)) {
     return session;
   }
 
-  // Remove all pending results
-  const nonPendingResults = analysisResults.filter(
-    (result) => result.id !== ANALYSIS_PENDING_ID,
-  );
-
-  // Find all user messages that don't have a corresponding assistant response
-  const orphanedUserMessages: Array<{id: string; prompt: string}> = [];
-
-  for (let i = 0; i < uiMessages.length; i++) {
-    const message = uiMessages[i];
-    if (!message || message.role !== 'user') {
-      continue;
-    }
-
-    // Check if there's an assistant message after this user message
-    const hasAssistantResponse = uiMessages
-      .slice(i + 1)
-      .some((m) => m && m.role === 'assistant');
-
-    if (!hasAssistantResponse) {
-      // Extract text from message parts
-      const prompt = message.parts
-        .filter((part) => part.type === 'text')
-        .map((part) => (part as {text: string}).text)
-        .join('');
-
-      orphanedUserMessages.push({
-        id: message.id,
-        prompt,
-      });
-    }
-  }
-
-  // For each orphaned user message, check if it already has an analysis result
-  // If not, create one
-  const existingResultIds = new Set(nonPendingResults.map((r) => r.id));
-  const restoredResults: AnalysisResultSchema[] = orphanedUserMessages
-    .filter(({id}) => !existingResultIds.has(id))
-    .map(({id, prompt}) => ({
-      id,
-      prompt,
-      isCompleted: true, // Mark as completed since the user did submit it
-    }));
-
   return {
     ...session,
-    analysisResults: [...nonPendingResults, ...restoredResults],
+    uiMessages: fixIncompleteToolCalls(
+      session.uiMessages as UIMessage[],
+    ) as ChatSessionSchema['uiMessages'],
   };
+}
+
+/** @deprecated Use `cleanupPendingUiMessages` instead. */
+export const cleanupPendingAnalysisResults = cleanupPendingUiMessages;
+
+/**
+ * Normalizes a chat session restored from persisted or externally supplied
+ * config so transient in-flight chat state is not resumed after reload.
+ *
+ * The returned session has pending UI message/tool-call state made renderable
+ * through `cleanupPendingUiMessages`, and always clears `isRunning` because no
+ * transport request is active for restored state.
+ */
+export function normalizeAiSession(
+  session: ChatSessionSchema,
+): ChatSessionSchema {
+  const cleaned = cleanupPendingUiMessages(session);
+
+  return {
+    ...cleaned,
+    isRunning: false,
+  };
+}
+
+/**
+ * Normalizes every session in an AI slice config while preserving the caller's
+ * config shape.
+ *
+ * Use this whenever config enters the AI slice from persistence or a public
+ * setter. It keeps constructor initialization and `setConfig()` behavior
+ * consistent without mutating the original config object.
+ */
+export function normalizeAiConfig<T extends Partial<AiSliceConfig> | undefined>(
+  config: T,
+): T {
+  return config?.sessions
+    ? ({
+        ...config,
+        sessions: config.sessions.map(normalizeAiSession),
+      } as T)
+    : config;
 }
 
 /**
@@ -314,23 +305,54 @@ function stripAgentToolCalls(output: unknown): unknown {
 /**
  * Sanitizes UIMessages before sending to LLM APIs to prevent errors from malformed content.
  *
- * This handles issues that can occur when conversations are interrupted mid-stream:
+ * This handles issues that can occur when conversations are interrupted mid-stream
+ * or when the model produced an invalid tool call:
  * - Empty text parts (causes Bedrock error: "text field in ContentBlock is blank")
  * - Assistant messages with no meaningful content after cleanup
  * - Nested `agentToolCalls` in tool outputs that bloat the LLM context
+ * - Tool parts that reference an unavailable/hallucinated tool name (e.g. the
+ *   model called `agent-spatial_utilities` instead of `agent-spatial-utilities`).
+ *   These get persisted as `output-error` parts with only `rawInput`, and the AI
+ *   SDK's `validateUIMessages` throws "No tool schema found ... input: Value:
+ *   undefined" on every subsequent send. Such parts are dropped here so the
+ *   poisoned session can continue.
  *
  * @param messages - The messages to sanitize
+ * @param availableToolNames - Optional set of tool names that the current agent
+ *   exposes. When provided, tool parts whose tool name is not in this set are
+ *   removed. When omitted, no tool-name filtering is performed.
  * @returns Sanitized messages safe to send to LLM APIs
  */
-export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
+export function sanitizeMessagesForLLM(
+  messages: UIMessage[],
+  availableToolNames?: Iterable<string>,
+): UIMessage[] {
+  const knownTools =
+    availableToolNames !== undefined ? new Set(availableToolNames) : undefined;
+
+  const isUnavailableToolPart = (part: UIMessagePart): boolean => {
+    if (knownTools === undefined) return false;
+    if (typeof part.type !== 'string') return false;
+    if (part.type === 'dynamic-tool') {
+      const toolName = (part as Record<string, unknown>).toolName;
+      return typeof toolName === 'string' && !knownTools.has(toolName);
+    }
+    if (part.type.startsWith('tool-')) {
+      const toolName = part.type.slice('tool-'.length);
+      return !knownTools.has(toolName);
+    }
+    return false;
+  };
+
   return messages
     .map((message) => {
       if (!message.parts || message.parts.length === 0) {
         return message;
       }
 
-      // Filter out empty text parts and empty reasoning parts,
-      // and strip agentToolCalls from tool outputs
+      // Filter out empty text parts and empty reasoning parts, and drop tool
+      // parts that reference an unavailable tool. Also strip agentToolCalls
+      // from tool outputs.
       const sanitizedParts = message.parts
         .filter((part) => {
           if (part.type === 'text') {
@@ -340,6 +362,9 @@ export function sanitizeMessagesForLLM(messages: UIMessage[]): UIMessage[] {
           if (part.type === 'reasoning') {
             const reasoningPart = part as {type: 'reasoning'; text: string};
             return reasoningPart.text && reasoningPart.text.trim().length > 0;
+          }
+          if (isUnavailableToolPart(part)) {
+            return false;
           }
           return true;
         })
@@ -424,6 +449,12 @@ export function shouldEndAnalysis(messages: UIMessage[]): boolean {
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
  * Assumes sequential tool execution (only one tool runs at a time).
  *
+ * For any `output-error` tool part (cancelled or failed), the partial/invalid
+ * `input` is moved to `rawInput` and `input` is set to `undefined`. The AI SDK
+ * only validates `output-error` input when it is defined, so this prevents
+ * "Type validation failed ... parts[n].input" errors from poisoning a session
+ * after the user stops a tool call mid-stream.
+ *
  * @param messages - The messages to validate and complete
  * @returns Cleaned messages with completed tool-call/result pairs
  */
@@ -474,21 +505,49 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       if (!isToolPart(current)) {
         continue;
       }
-      const toolPart = current as ToolPart;
+      const toolPart = current as ToolPart & {rawInput?: unknown};
       const isCompleted =
         toolPart.state?.startsWith('output') ||
         toolPart.state === 'approval-requested' ||
         toolPart.state === 'approval-responded';
       if (isCompleted) {
+        // `output-error` parts can carry an `input` that does NOT satisfy the
+        // tool's schema. This happens when a tool call is cancelled while its
+        // input is still streaming (e.g. only the partial `reasoning` field
+        // arrived before "Stop"), or when the model produced an invalid tool
+        // input. The AI SDK validates `output-error` input whenever it is
+        // `!== undefined` (see `validateUIMessages`), so an incomplete input
+        // like `{reasoning: "..."}` for a tool that requires `sqlQuery` throws
+        // "Type validation failed ... messages[i].parts[j].input" on every
+        // subsequent send, permanently poisoning the session.
+        //
+        // Since `output-error` parts only convey `errorText` to the model (the
+        // input is never re-executed), we preserve the original value under
+        // `rawInput` and clear `input` so the SDK skips schema validation.
+        // `convertToModelMessages` already falls back to `rawInput`/undefined
+        // for error parts, so no model context is lost.
+        if (toolPart.state === 'output-error' && toolPart.input !== undefined) {
+          updatedParts[i] = {
+            ...updatedParts[i],
+            input: undefined,
+            rawInput: toolPart.rawInput ?? toolPart.input,
+          } as (typeof message.parts)[number];
+        }
         // Completed tool; continue checking earlier parts just in case
         continue;
       }
 
-      // Synthesize a completed error result for the incomplete tool call
+      // Synthesize a completed error result for the incomplete tool call.
+      // Keep `input` undefined (stashing any partial streamed input under
+      // `rawInput`) so the AI SDK skips schema validation for this
+      // `output-error` part on subsequent sends. A partial input such as
+      // `{reasoning: "..."}` — or `{}` for a tool with required fields —
+      // would otherwise fail validation and poison the session.
       const base = {
         toolCallId: toolPart.toolCallId,
         state: 'output-error' as const,
-        input: toolPart.input ?? {},
+        input: undefined,
+        rawInput: toolPart.rawInput ?? toolPart.input,
         errorText: TOOL_CALL_CANCELLED,
         providerExecuted: false,
       };

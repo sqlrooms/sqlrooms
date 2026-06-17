@@ -117,11 +117,11 @@ managing image assets alongside Markdown content. SVG assets may use `utf8` or
 ## Block Documents
 
 `createBlockDocumentsSlice()` exposes structured state for artifact types
-backed by composable blocks: rich text, lists, images, standalone Mosaic/vgplot
+backed by composable blocks: text, lists, images, standalone Mosaic/vgplot
 charts, and direct stateful blocks such as dashboards, pivots, or Markdown
 documents.
 
-The shared block vocabulary lives in [`@sqlrooms/blocks`](../blocks).
+The shared block vocabulary lives in [`@sqlrooms/blocks`](../blocks/README.md).
 `@sqlrooms/documents` builds on those contracts with the concrete
 Tiptap-backed `BlockDocument` editor, persistence slice, commands, and AI
 authoring helpers.
@@ -152,7 +152,7 @@ const roomStore = createRoomStore(
 
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
-include headings, paragraphs, rich text, lists, todos, images, chart images,
+include headings, paragraphs, lists, todos, images, chart images,
 standalone chart blocks, and direct stateful blocks.
 
 `BlockDocumentArtifact` and `BlockDocumentEditor` provide the first rich
@@ -192,7 +192,9 @@ does not import Mosaic, pivot, or other feature packages:
     <BlockDocumentArtifact
       artifactId={blockDocumentArtifactId}
       title="Worksheet"
-      onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
+      onTitleChange={(title) =>
+        renameBlockDocument(blockDocumentArtifactId, title)
+      }
     />
   </BlockDocumentStatefulBlockRendererProvider>
 </BlockDocumentChartRendererProvider>
@@ -207,7 +209,7 @@ hosts can use it to seed stateful blocks such as embedded Markdown documents.
 Stateful block types can opt into persisted vertical resizing with
 `resizableHeight`, `defaultHeight`, `minHeight`, and `maxHeight`; the editor
 stores the resulting `height` on the block node and renders a bottom resize
-handle for writable documents. Interactive blocks can also opt into
+handle just below the block for writable documents. Interactive blocks can also opt into
 `requireScrollModifier`; ordinary wheel gestures then keep scrolling the
 document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
 elsewhere scrolls nested overflow regions inside the block. Use
@@ -250,7 +252,9 @@ Hosts provide renderers through `BlockDocumentStatefulBlockRendererProvider`:
   <BlockDocumentArtifact
     artifactId={blockDocumentArtifactId}
     title="Embedded Report"
-    onTitleChange={(title) => renameBlockDocument(blockDocumentArtifactId, title)}
+    onTitleChange={(title) =>
+      renameBlockDocument(blockDocumentArtifactId, title)
+    }
   />
 </BlockDocumentStatefulBlockRendererProvider>
 ```
@@ -267,7 +271,9 @@ Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
 by the documents slice.
 Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
 changes into the backing feature state. Captions stay local to the blocks
-document.
+document. Stateful block renderers receive `onTitleChange` and
+`onCaptionChange` callbacks when a writable document lets the embedded surface
+edit its own block metadata.
 
 The editor normalizes pasted or duplicated owned stateful blocks by assigning
 fresh top-level block IDs and fresh `blockInstanceId` values when a duplicate

@@ -1,4 +1,8 @@
-export {AiSliceConfig, createDefaultAiConfig} from './AiSliceConfig';
+export {
+  AiSliceConfig,
+  AiSessionForkOrigin,
+  createDefaultAiConfig,
+} from './AiSliceConfig';
 export {
   AiProviderAuthMethodSchema,
   AiProviderAuthMethodType,
@@ -9,17 +13,15 @@ export {
 export {
   AiRunContextItemSchema,
   AiRunContextSchema,
+  ChatSessionSchema,
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
   getAiRunContextPrimaryItem,
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
-} from './schema/AnalysisSessionSchema';
-export type {
-  AiRunContext,
-  AiRunContextItem,
-} from './schema/AnalysisSessionSchema';
+} from './schema/ChatSessionSchema';
+export type {AiRunContext, AiRunContextItem} from './schema/ChatSessionSchema';
 export type {
   DynamicToolUIPart,
   ToolUIPart,

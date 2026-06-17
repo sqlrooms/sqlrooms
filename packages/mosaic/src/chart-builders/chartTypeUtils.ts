@@ -1,10 +1,4 @@
-import type {ChartTypeDefinition} from '../chart-types/base-types';
-
-export {
-  NUMERIC_COLUMN_TYPES,
-  TEMPORAL_COLUMN_TYPES,
-  QUANTITATIVE_COLUMN_TYPES,
-} from './constants';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
 
 /**
  * Type guard to check if value has a field property (e.g., YFieldConfig)

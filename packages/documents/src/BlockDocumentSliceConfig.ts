@@ -87,12 +87,6 @@ export const BlockDocumentParagraphBlock = z.object({
   text: z.string(),
 });
 
-export const BlockDocumentRichTextBlock = z.object({
-  ...BlockDocumentTextBlockBase,
-  type: z.literal('richText'),
-  markdown: z.string(),
-});
-
 export const BlockDocumentListBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('list'),
@@ -144,7 +138,6 @@ export const BlockDocumentStatefulBlockBlock = z.object({
 export const BlockDocumentBlock = z.discriminatedUnion('type', [
   BlockDocumentHeadingBlock,
   BlockDocumentParagraphBlock,
-  BlockDocumentRichTextBlock,
   BlockDocumentListBlock,
   BlockDocumentTodoBlock,
   BlockDocumentImageBlock,
@@ -197,11 +190,6 @@ export function blockDocumentBlockToNode(
         type: 'paragraph',
         attrs: {id: block.id},
         content: textContent(block.text),
-      };
-    case 'richText':
-      return {
-        type: 'blockDocumentRichText',
-        attrs: {id: block.id, markdown: block.markdown},
       };
     case 'list':
       return {
@@ -301,13 +289,6 @@ export function blockDocumentNodeToBlock(
     }
     case 'paragraph':
       return {id, type: 'paragraph', text: textFromNode(node)};
-    case 'blockDocumentRichText':
-      return {
-        id,
-        type: 'richText',
-        markdown:
-          typeof node.attrs?.markdown === 'string' ? node.attrs.markdown : '',
-      };
     case 'bulletList':
     case 'orderedList':
       return {

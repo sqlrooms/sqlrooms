@@ -1,8 +1,12 @@
+import {createRequire} from 'node:module';
 import {defineConfig} from 'vitepress';
+import {withMermaid} from 'vitepress-plugin-mermaid';
 import llmstxt from 'vitepress-plugin-llms';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
 const SITE_URL = 'https://sqlrooms.org';
+const require = createRequire(import.meta.url);
+const mermaidRequire = createRequire(require.resolve('mermaid/package.json'));
 
 function publicUrl(relativePath?: string) {
   const normalizedRelativePath = (relativePath || '').replace(/^\/+/, '');
@@ -60,8 +64,32 @@ const PACKAGE_CATEGORIES = {
 };
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+const config = defineConfig({
   vite: {
+    resolve: {
+      alias: [
+        {
+          find: /^dayjs$/,
+          replacement: mermaidRequire.resolve('dayjs/esm/index.js'),
+        },
+        {
+          find: /^@braintree\/sanitize-url$/,
+          replacement: mermaidRequire.resolve('@braintree/sanitize-url'),
+        },
+        {
+          find: /^cytoscape$/,
+          replacement: mermaidRequire.resolve('cytoscape'),
+        },
+        {
+          find: /^cytoscape-cose-bilkent$/,
+          replacement: mermaidRequire.resolve('cytoscape-cose-bilkent'),
+        },
+        {
+          find: /^debug$/,
+          replacement: mermaidRequire.resolve('debug'),
+        },
+      ],
+    },
     plugins: [
       // @ts-ignore
       llmstxt({
@@ -212,6 +240,10 @@ Canonical package combos:
             link: '/state-management',
           },
           {
+            text: 'Persistence',
+            link: '/persistence',
+          },
+          {
             text: 'Commands',
             link: '/commands',
           },
@@ -319,3 +351,5 @@ Canonical package combos:
     }
   },
 });
+
+export default withMermaid(config);

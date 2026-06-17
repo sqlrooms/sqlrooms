@@ -6,10 +6,9 @@ Artifacts are durable workspace entries. Artifact tabs are the layout/UI adapter
 for opening, closing, renaming, reordering, searching, and deleting those
 entries.
 
-Artifacts can be top-level workspace entries or embedded child entries. Embedded
-artifacts use `visibility: 'embedded'` and `parentArtifactId` on their metadata;
-they stay in the artifact registry for lifecycle and persistence, but
-`ArtifactTabs` hides them by default.
+Artifacts are workspace-level entries. Embedded document content should be
+modeled as blocks, usually hosted stateful blocks, rather than as hidden child
+artifacts in the artifact registry.
 
 ## Usage
 
@@ -50,7 +49,7 @@ const store = createRoomStore<RoomState>(
       },
     },
     (set, get, store) => ({
-      ...createArtifactsSlice<RoomState>({artifactTypes})(set, get, store),
+      ...createArtifactsSlice({artifactTypes})(set, get, store),
       layout: {
         panels: {
           artifact: createArtifactPanelDefinition(artifactTypes, store),
@@ -96,27 +95,10 @@ tab adapter hides the layout tab so it can be reopened from search.
 `deleteArtifact` is destructive. It runs close and delete lifecycle hooks, then
 removes the artifact registry entry.
 
-`createArtifact` and `ensureArtifact` accept optional embedded-child metadata:
-
-```ts
-artifacts.createArtifact({
-  type: 'dashboard',
-  title: 'Embedded Dashboard',
-  visibility: 'embedded',
-  parentArtifactId: analysisArtifactId,
-});
-```
-
-Deleting a parent artifact does not cascade-delete child artifacts by default.
-Callers that own embedded children should apply their own cascade policy in the
-parent artifact lifecycle hook.
-
 ## Artifact Tabs
 
 - `useArtifactTabs({tabsId?, types?, panelKey?})` returns TabStrip-compatible
   descriptors, open tab ids, selected id, and handlers.
-- Embedded artifacts are omitted from tabs and search by default. Pass
-  `includeEmbedded: true` when a specialized surface needs to show or open them.
 - `ArtifactTabs` is a compound component over `TabStrip` and
   `TabsLayout.TabContent`.
 - Pass `forceMountContent` to `ArtifactTabs` to keep visible artifact tab
@@ -142,8 +124,8 @@ const artifactTypes = defineArtifactTypes({
 });
 ```
 
-The artifact shell still owns workspace metadata such as id, title, visibility,
-tabs, current selection, and AI context. The stateful block definition owns the
+The artifact shell still owns workspace metadata such as id, title, tabs,
+current selection, and AI context. The stateful block definition owns the
 feature-specific rendering and backing-state lifecycle.
 
 ## AI Context Tools
@@ -158,3 +140,67 @@ Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 `@sqlrooms/artifacts` with `@sqlrooms/ai`. The factory handles primary artifact
 selection and run-context updates; the app supplies artifact payload readers for
 domain-specific types such as documents or dashboards.
+
+## Artifact-Owned AI Sessions
+
+`@sqlrooms/artifacts/ai` also provides `createArtifactAiSlice()` for apps that
+want AI chats to belong to the current artifact without changing the generic
+chat session schema.
+
+Add `ArtifactAiConfigSchema` to persistence and compose the slice after
+`createArtifactsSlice()` and the app's AI slice:
+
+```tsx
+import {
+  ArtifactAiConfigSchema,
+  createArtifactAiSlice,
+} from '@sqlrooms/artifacts/ai';
+
+const store = createRoomStore<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'my-room',
+      sliceConfigSchemas: {
+        artifacts: ArtifactsSliceConfig,
+        artifactAi: ArtifactAiConfigSchema,
+      },
+    },
+    (set, get, store) => ({
+      ...createArtifactsSlice({artifactTypes})(set, get, store),
+      ...createAiSlice(aiOptions)(set, get, store),
+      ...createArtifactAiSlice()(set, get, store),
+    }),
+  ),
+);
+```
+
+The slice stores:
+
+```ts
+aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
+```
+
+Use `artifactAi.createArtifactScopedSession()` when creating chats from an
+artifact-scoped assistant. `artifactAi.selectLatestSessionForArtifact()` and
+`artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
+with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
+ownership are ignored by artifact-scoped history.
+
+Reusable helpers include:
+
+- `isAiSessionVisibleForArtifact`
+- `getLatestAiSessionIdForArtifact`
+- `getAiSessionIdsForArtifact`
+- `getAiSessionGroupsByArtifact`
+- `getRunningAiSessionCountsByArtifact`
+- `getOwningArtifactRunContextItems`
+
+`Chat.History` should remain generic: pass a `filterSession` callback built
+with `isAiSessionVisibleForArtifact()` and keep artifact-specific labels in the
+host app. For run context, use `getOwningArtifactRunContextItems()` to prepend
+the owning artifact as the implicit primary context item.
+
+Artifact-owned AI sessions attach to artifact shells. If a stateful block is
+wrapped as a top-level artifact, use that artifact id. Stateful blocks hosted
+directly inside a block document should use the containing artifact's chat
+unless the host app intentionally introduces a block-scoped chat model.
