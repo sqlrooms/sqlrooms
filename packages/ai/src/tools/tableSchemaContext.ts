@@ -54,6 +54,24 @@ export function getTableNameForAi(table: DataTable): string {
   return table.table?.table || table.tableName;
 }
 
+function escapeTableIdPart(id: string): string {
+  const str = String(id);
+  if (str.startsWith('"') && str.endsWith('"')) return str;
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+export function getTableIdForAi(table: DataTable): string {
+  const tableName = table.table?.table || table.tableName;
+  return [
+    table.table?.database || table.database,
+    table.table?.schema || table.schema,
+    tableName,
+  ]
+    .filter((id) => id !== undefined && id !== null)
+    .map((id) => escapeTableIdPart(id))
+    .join('.');
+}
+
 export function getSchemaNameForAi(table: DataTable): string | undefined {
   return table.table?.schema || table.schema;
 }
@@ -188,7 +206,7 @@ export function formatOtherTableScopesForAi(
 
   return [
     `${summary.outsideCurrentDatabaseMainSchemaCount.toLocaleString()} additional visible tables/views exist outside the current local main schema.`,
-    `Use list_tables with scope "current_database" or "all", or pass schema/database filters, to inspect them.`,
+    `Use list_tables with database, schema, or pattern filters to inspect them.`,
     locationSummary
       ? `Outside-main locations: ${locationSummary}${hiddenLocationCount}.`
       : '',
@@ -224,7 +242,9 @@ export function formatTableSchemaForAi(table: DataTable): string {
 
 export function formatTableSummaryForAi(table: DataTable): string {
   const rowCount = formatRowCount(table.rowCount);
-  return `- ${getFullTableNameForAi(table)}${rowCount ? ` [${rowCount}]` : ''}`;
+  return `- ${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(
+    table,
+  )})${rowCount ? ` [${rowCount}]` : ''}`;
 }
 
 function fitTextToMaxChars(text: string, maxChars?: number): string {
@@ -259,7 +279,7 @@ function formatBudgetedTableContextForAi(
 
   addSectionWithinBudget(
     sections,
-    'Available tables shown by name only:',
+    'Available tables shown by tableId only:',
     maxChars,
   );
 
@@ -298,7 +318,7 @@ function formatBudgetedTableContextForAi(
  *
  * For small current-database main-schema catalogs, every table includes full
  * columns. Larger catalogs include full schemas for the first few tables,
- * names/row counts for the next group, and a hidden-table count for the rest.
+ * table IDs/row counts for the next group, and a hidden-table count for the rest.
  */
 export function formatTablesForLLM(
   tables: DataTable[],
@@ -360,7 +380,7 @@ export function formatTablesForLLM(
     fullSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
     summaryTables.length > 0
       ? [
-          'Additional tables shown by name and row count only:',
+          'Additional tables shown by tableId and row count only:',
           summaryTables.map(formatTableSummaryForAi).join('\n'),
         ].join('\n')
       : '',

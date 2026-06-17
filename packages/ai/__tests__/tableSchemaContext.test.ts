@@ -33,11 +33,11 @@ describe('table schema context formatting', () => {
   it('does not filter by database when currentDatabase is unavailable', () => {
     const tables = [
       makeTable('local_events', {database: 'local'}),
-      makeTable('analytics_view', {database: 'analytics', schema: 'analytics'}),
+      makeTable('analytics_events', {database: 'analytics', schema: 'main'}),
     ];
 
     expect(formatTablesForLLM(tables)).toContain('local_events');
-    expect(formatTablesForLLM(tables)).not.toContain('analytics_view');
+    expect(formatTablesForLLM(tables)).toContain('analytics_events');
   });
 
   it('filters main-scope tables to the current database when known', () => {
@@ -69,6 +69,7 @@ describe('table schema context formatting', () => {
 
     expect(output).toContain('magnitude DOUBLE');
     expect(output).toContain('- stations');
+    expect(output).toContain('tableId: "local"."main"."stations"');
     expect(output).toContain(
       '1 more tables are available via list_tables and read_table_schema.',
     );

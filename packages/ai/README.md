@@ -17,8 +17,8 @@ counts, and instructions to call
 `createDefaultAiTools` registers `list_tables` and `read_table_schema` by
 default so apps can expose the same table discovery workflow. These tools
 search the current database `main` schema by default, and accept broader
-`scope`, `schema`, and `database` parameters for other visible schemas or
-attached databases.
+`schema`, `database`, and pattern filters for other visible schemas or attached
+databases.
 
 ## Installation
 
