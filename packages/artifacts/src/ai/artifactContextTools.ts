@@ -364,9 +364,7 @@ export function makeArtifactPrimaryForAiRun<TState extends ArtifactsSliceState>(
  */
 export function createArtifactContextAiTools<
   TState extends ArtifactsSliceState,
->(
-  options: ArtifactContextToolsOptions<TState>,
-): ArtifactContextAiTools {
+>(options: ArtifactContextToolsOptions<TState>): ArtifactContextAiTools {
   return {
     list_context_artifacts: tool({
       description:

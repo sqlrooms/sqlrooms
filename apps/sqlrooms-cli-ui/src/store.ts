@@ -1,11 +1,17 @@
+import {createAnthropic} from '@ai-sdk/anthropic';
 import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
   ArtifactAiConfigSchema,
   createArtifactAiSlice,
 } from '@sqlrooms/artifacts/ai';
 import {
+  HttpAiAuthClient,
+  AiLoginTarget,
   AiSettingsSliceConfig,
   AiSliceConfig,
+  createAiConnectSlice,
+  createAiQuickLoginSlice,
+  createDefaultAiSettingsConfig,
   getAiRunContextPrimaryItem,
   createAiSettingsSlice,
   createAiSlice,
@@ -133,16 +139,80 @@ const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
 export const runtimeConfig = await fetchRuntimeConfig();
 const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
-const runtimeAiProviders =
-  (runtimeAiSettings.providers as AiSettingsSliceConfig['providers']) ||
-  (runtimeConfig.aiProviders as AiSettingsSliceConfig['providers']) ||
-  {};
+
+function hasRuntimeProviders(
+  providers: AiSettingsSliceConfig['providers'] | undefined,
+) {
+  return Boolean(providers && Object.keys(providers).length > 0);
+}
+
+const runtimeAiSettingsProviders = runtimeAiSettings.providers as
+  | AiSettingsSliceConfig['providers']
+  | undefined;
+const runtimeConfigAiProviders = runtimeConfig.aiProviders as
+  | AiSettingsSliceConfig['providers']
+  | undefined;
+const runtimeAiProviders = hasRuntimeProviders(runtimeAiSettingsProviders)
+  ? runtimeAiSettingsProviders
+  : hasRuntimeProviders(runtimeConfigAiProviders)
+    ? runtimeConfigAiProviders
+    : undefined;
+
+function normalizeRuntimeProvidersForSettings(
+  providers: AiSettingsSliceConfig['providers'] | undefined,
+) {
+  if (!providers) return undefined;
+  return Object.fromEntries(
+    Object.entries(providers).map(([providerId, provider]) => [
+      providerId,
+      {
+        ...provider,
+        baseUrl: provider.upstreamBaseUrl || provider.baseUrl,
+      },
+    ]),
+  ) as AiSettingsSliceConfig['providers'];
+}
+
+const runtimeAiProvidersForSettings =
+  normalizeRuntimeProvidersForSettings(runtimeAiProviders);
+const runtimeLoginTargets = (runtimeConfig.loginTargets ||
+  []) as AiLoginTarget[];
+const defaultAiSettingsConfig = createDefaultAiSettingsConfig();
 const defaultProviderFromConfig =
-  runtimeConfig.llmProvider || Object.keys(runtimeAiProviders)[0] || 'openai';
+  runtimeConfig.llmProvider ||
+  Object.keys(runtimeAiProviders || {})[0] ||
+  defaultAiSettingsConfig.defaultProvider ||
+  'openai';
 const defaultModelFromProvider =
-  runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
+  runtimeAiProviders?.[defaultProviderFromConfig]?.models?.[0]?.modelName ||
+  defaultAiSettingsConfig.providers[defaultProviderFromConfig]?.models?.[0]
+    ?.modelName;
 const defaultModelFromConfig =
-  runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
+  runtimeConfig.llmModel ||
+  runtimeAiSettings.defaultModel ||
+  defaultModelFromProvider ||
+  defaultAiSettingsConfig.defaultModel ||
+  '';
+const builtinAiProviderIds = new Set(
+  Object.keys(defaultAiSettingsConfig.providers),
+);
+const proxyPlaceholderKey = 'sqlrooms-local-proxy';
+const aiAuthClient = new HttpAiAuthClient({
+  apiBaseUrl: runtimeConfig.apiBaseUrl || '',
+});
+const initialAiSettingsConfig: Partial<AiSettingsSliceConfig> = {
+  defaultProvider: defaultProviderFromConfig,
+  defaultModel: defaultModelFromConfig,
+  ...(runtimeAiProvidersForSettings
+    ? {providers: runtimeAiProvidersForSettings}
+    : {}),
+  customModels: runtimeAiSettings.customModels || [],
+  modelParameters: {
+    maxSteps: runtimeAiSettings.modelParameters?.maxSteps ?? 50,
+    additionalInstruction:
+      runtimeAiSettings.modelParameters?.additionalInstruction ?? '',
+  },
+};
 const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
 const MOSAIC_PREAGG_SCHEMA = 'mosaic';
 const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
@@ -668,22 +738,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createAiSettingsSlice({
-          config: {
-            providers: runtimeAiProviders,
-            ...(runtimeAiSettings.customModels
-              ? {customModels: runtimeAiSettings.customModels}
-              : {}),
-            ...(runtimeAiSettings.modelParameters
-              ? {
-                  modelParameters: {
-                    maxSteps: runtimeAiSettings.modelParameters.maxSteps ?? 50,
-                    additionalInstruction:
-                      runtimeAiSettings.modelParameters.additionalInstruction ??
-                      '',
-                  },
-                }
-              : {}),
-          },
+          config: initialAiSettingsConfig,
+        })(set, get, store),
+
+        ...createAiConnectSlice({
+          authClient: aiAuthClient,
+        })(set, get, store),
+
+        ...createAiQuickLoginSlice({
+          loginTargets: runtimeLoginTargets,
         })(set, get, store),
 
         ...(() => {
@@ -698,7 +761,63 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||
               '',
-            getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
+            getBaseUrl: (provider) =>
+              get().aiSettings.config.providers[provider]?.baseUrl ||
+              runtimeConfig.apiBaseUrl ||
+              undefined,
+            getProviderRuntime: ({provider, modelId: _modelId}) => {
+              const settingsProvider =
+                get().aiSettings.config.providers[provider];
+              const providerConfig =
+                settingsProvider || runtimeAiProviders?.[provider];
+              const upstreamBaseUrl =
+                providerConfig?.upstreamBaseUrl ||
+                providerConfig?.baseUrl ||
+                settingsProvider?.baseUrl;
+
+              if (providerConfig?.proxyEnabled) {
+                const proxyBaseUrl = `${
+                  runtimeConfig.apiBaseUrl || ''
+                }/api/ai/proxy/${provider}`;
+                return {
+                  apiKey: proxyPlaceholderKey,
+                  baseUrl: proxyBaseUrl,
+                  customModelFactory:
+                    provider === 'anthropic'
+                      ? (activeModelId) =>
+                          createAnthropic({
+                            apiKey: proxyPlaceholderKey,
+                            baseURL: proxyBaseUrl,
+                          }).messages(activeModelId) as any
+                      : undefined,
+                };
+              }
+
+              if (provider === 'anthropic') {
+                const directApiKey =
+                  providerConfig?.apiKey || runtimeConfig.apiKey;
+                if (!directApiKey) {
+                  return {
+                    baseUrl: upstreamBaseUrl,
+                  };
+                }
+                return {
+                  apiKey: directApiKey,
+                  baseUrl: upstreamBaseUrl,
+                  customModelFactory: (activeModelId) =>
+                    createAnthropic({
+                      apiKey: directApiKey,
+                      baseURL: upstreamBaseUrl,
+                    }).messages(activeModelId) as any,
+                };
+              }
+
+              return {
+                apiKey: providerConfig?.apiKey || runtimeConfig.apiKey,
+                baseUrl: upstreamBaseUrl,
+                customModelFactory: undefined,
+              };
+            },
             getInstructions: () =>
               `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
             getRunContext: (sessionId) => getRunContext(store, sessionId),
@@ -734,53 +853,108 @@ if (bridgeConfig) {
   roomStore.getState().db.connectors.registerBridge(bridge);
 }
 syncConnectionsToDb(roomStore);
+const initialAiSettingsLoadPromise = roomStore
+  .getState()
+  .aiSettings.loadFromServer(runtimeConfig.apiBaseUrl || '');
+
+function isTomlSavableProvider(
+  providerId: string,
+  provider: AiSettingsSliceConfig['providers'][string],
+) {
+  if (!builtinAiProviderIds.has(providerId)) return true;
+  return Boolean(provider.configured || provider.apiKey);
+}
+
+function getTomlSettingsConfig(
+  config: AiSettingsSliceConfig,
+): AiSettingsSliceConfig {
+  const providers = Object.fromEntries(
+    Object.entries(config.providers).flatMap(([providerId, provider]) => {
+      if (!isTomlSavableProvider(providerId, provider)) return [];
+      return [
+        [
+          providerId,
+          {
+            title: provider.title,
+            kind: provider.kind,
+            configured: provider.configured,
+            baseUrl: provider.upstreamBaseUrl || provider.baseUrl,
+            apiKey: provider.apiKey || '',
+            models: provider.models || [],
+            defaultAuthMethod: provider.defaultAuthMethod,
+            experimental: provider.experimental,
+          },
+        ],
+      ];
+    }),
+  ) as AiSettingsSliceConfig['providers'];
+
+  return {
+    ...config,
+    providers,
+  };
+}
 
 function getAiSettingsTomlPayload(state: RoomState) {
   const currentSession = state.ai.getCurrentSession();
+  const settings = getTomlSettingsConfig(state.aiSettings.config);
+  const defaultProvider =
+    currentSession?.modelProvider || defaultProviderFromConfig;
+  const shouldWriteDefaultProvider = Boolean(
+    defaultProvider &&
+    (settings.providers[defaultProvider] ||
+      (defaultProvider === 'custom' && settings.customModels.length > 0)),
+  );
+  const defaultModel = currentSession?.model || defaultModelFromConfig;
   return {
-    settings: state.aiSettings.config,
-    defaultProvider: currentSession?.modelProvider || defaultProviderFromConfig,
-    defaultModel: currentSession?.model || defaultModelFromConfig,
+    settings,
+    defaultProvider: shouldWriteDefaultProvider ? defaultProvider : undefined,
+    defaultModel: shouldWriteDefaultProvider ? defaultModel : undefined,
   };
 }
 
 function startAiSettingsTomlAutosave() {
   if (!runtimeConfig.configWritable) return;
 
-  let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  let latestSaveRequestId = 0;
-  let lastSnapshot = JSON.stringify(
-    getAiSettingsTomlPayload(roomStore.getState()),
-  );
+  void initialAiSettingsLoadPromise.finally(() => {
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    let latestSaveRequestId = 0;
+    let lastSnapshot = JSON.stringify(
+      getAiSettingsTomlPayload(roomStore.getState()),
+    );
 
-  roomStore.subscribe((state) => {
-    const snapshot = JSON.stringify(getAiSettingsTomlPayload(state));
-    if (snapshot === lastSnapshot) return;
+    roomStore.subscribe((state) => {
+      const snapshot = JSON.stringify(getAiSettingsTomlPayload(state));
+      if (snapshot === lastSnapshot) return;
 
-    if (saveTimer) {
-      clearTimeout(saveTimer);
-    }
-    saveTimer = setTimeout(() => {
-      saveTimer = null;
-      const saveRequestId = ++latestSaveRequestId;
-      void saveAiSettingsToServer(
-        runtimeConfig,
-        JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
-      )
-        .then(() => {
-          if (saveRequestId !== latestSaveRequestId) return;
-          lastSnapshot = snapshot;
-        })
-        .catch((error) => {
-          if (saveRequestId !== latestSaveRequestId) return;
-          console.warn('Failed to save AI settings to SQLRooms config', error);
-          toast.error('Failed to save AI settings', {
-            id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
-            description:
-              'Your changes are still in this session, but could not be written to the SQLRooms config file.',
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+      }
+      saveTimer = setTimeout(() => {
+        saveTimer = null;
+        const saveRequestId = ++latestSaveRequestId;
+        void saveAiSettingsToServer(
+          runtimeConfig,
+          JSON.parse(snapshot) as ReturnType<typeof getAiSettingsTomlPayload>,
+        )
+          .then(() => {
+            if (saveRequestId !== latestSaveRequestId) return;
+            lastSnapshot = snapshot;
+          })
+          .catch((error) => {
+            if (saveRequestId !== latestSaveRequestId) return;
+            console.warn(
+              'Failed to save AI settings to SQLRooms config',
+              error,
+            );
+            toast.error('Failed to save AI settings', {
+              id: AI_SETTINGS_SAVE_FAILED_TOAST_ID,
+              description:
+                'Your changes are still in this session, but could not be written to the SQLRooms config file.',
+            });
           });
-        });
-    }, AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS);
+      }, AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS);
+    });
   });
 }
 

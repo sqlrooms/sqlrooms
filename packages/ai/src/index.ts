@@ -137,6 +137,8 @@ export type {
   StoredTool,
   StoredToolSet,
   AiSliceOptions,
+  ProviderRuntime,
+  CustomModelArgs,
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components
@@ -230,3 +232,39 @@ export {AiModelsSettings} from '@sqlrooms/ai-settings';
 export {AiModelParameters} from '@sqlrooms/ai-settings';
 export {AiModelUsage} from '@sqlrooms/ai-settings';
 export type {ModelUsageData} from '@sqlrooms/ai-settings';
+
+// From @sqlrooms/ai-connect
+export {
+  BrowserAiAuthClient,
+  HttpAiAuthClient,
+  createAiAssistantSettingsSlices,
+  createAiConnectSlice,
+  createAiQuickLoginSlice,
+  createLocalStorageAiCredentialStore,
+  AiConnectDialog,
+  AiQuickLoginDialog,
+  AiQuickLoginButton,
+  AiProviderConnectButton,
+  AiProviderStatusList,
+  resolveLoginTargetsFromProviders,
+  useAiProviderAuth,
+  useStoreWithAiConnect,
+  useStoreWithAiQuickLogin,
+} from '@sqlrooms/ai-connect';
+export type {
+  AiAuthClient,
+  AiAuthCompletionPayload,
+  AiAuthCompletionResult,
+  AiConnectFlowType,
+  AiConnectSliceState,
+  AiConnectStep,
+  AiCredentialStore,
+  AiLoginTarget,
+  AiProviderAdapter,
+  AiProviderAuthInstructions,
+  AiProviderCredential,
+  AiProviderRuntimeResolver,
+  AiProviderStatus,
+  AiQuickLoginMode,
+  AiQuickLoginSliceState,
+} from '@sqlrooms/ai-connect';

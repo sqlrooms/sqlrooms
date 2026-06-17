@@ -160,6 +160,9 @@ importers:
 
   apps/sqlrooms-cli-ui:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^3.0.64
+        version: 3.0.84(zod@4.1.13)
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.22
         version: 1.0.39(zod@4.1.13)
@@ -226,6 +229,9 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.4
+      ai:
+        specifier: ^5.0.155
+        version: 5.0.203(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -278,12 +284,21 @@ importers:
 
   examples/ai:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^3.0.64
+        version: 3.0.84(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/ai-connect':
+        specifier: workspace:*
+        version: link:../../packages/ai-connect
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
+      '@sqlrooms/ai-settings':
+        specifier: workspace:*
+        version: link:../../packages/ai-settings
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -2363,6 +2378,9 @@ importers:
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
+      '@sqlrooms/ai-connect':
+        specifier: workspace:*
+        version: link:../ai-connect
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../ai-core
@@ -2439,6 +2457,36 @@ importers:
       ts-jest:
         specifier: ^29.4.4
         version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
+
+  packages/ai-connect:
+    dependencies:
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
+      '@sqlrooms/ai-settings':
+        specifier: workspace:*
+        version: link:../ai-settings
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
 
   packages/ai-core:
     dependencies:
@@ -4467,6 +4515,18 @@ packages:
   '@adobe/css-tools@4.4.4':
     resolution: {integrity: sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg==}
 
+  '@ai-sdk/anthropic@3.0.84':
+    resolution: {integrity: sha512-BIDaHmCHs6Sr5VUsEkTbbVlAN4GWjg97X9x/IfXyviLtzsXvffui9XIcZugkAi1Ri6FnvI5T5qDGh5YLnSuzRg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
+  '@ai-sdk/gateway@2.0.102':
+    resolution: {integrity: sha512-5OxMbtF4AFeyHjKS2smzCYDvjkE+nWktLCS0xsWNnI71cP0mTKXqkygta5lq1WTytVVkonLMP9J0OqEbteBzfQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
   '@ai-sdk/gateway@3.0.112':
     resolution: {integrity: sha512-jiBao9pR4owWyjo0BnuNc7WSQBGOD0thysE4AFgZXaG+zMFbISQXUkJr7ePw/phBvePy7jE5FSA2Lf7lwqUiiQ==}
     engines: {node: '>=18'}
@@ -4491,8 +4551,20 @@ packages:
     peerDependencies:
       zod: 4.1.13
 
+  '@ai-sdk/provider-utils@3.0.26':
+    resolution: {integrity: sha512-dNciNI4knep6z3cqDNng7yORCcBnEDBHZYj8rJLcLn9pLzEtNVkf6WLg9HR6AnVDDRxHsUeGAEqyF8M+FAtRgg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
   '@ai-sdk/provider-utils@4.0.27':
     resolution: {integrity: sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
+
+  '@ai-sdk/provider-utils@4.0.29':
+    resolution: {integrity: sha512-uhukHaCBvqkwBHkT8C2PrnqKTCoLn3pdHXqtcR9I8ErH+flbzgW4o7VHSNIup9LRu+WBvZIZDQLsx6rwl2tiOA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
@@ -10162,6 +10234,10 @@ packages:
     resolution: {integrity: sha512-8r4TNknD7OJQADe3VygeofFR7UNAXZ2/jjBFP5dgI8+2uMfnuGYgbuHivasKr9WSQ64sPej6m8rDoM1uSllXjQ==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  '@vercel/oidc@3.1.0':
+    resolution: {integrity: sha512-Fw28YZpRnA3cAHHDlkt7xQHiJ0fcL+NRcIqsocZQUSmbzeIKRpwttJjik5ZGanXP+vlA4SbTg+AbA3bP363l+w==}
+    engines: {node: '>= 20'}
+
   '@vercel/oidc@3.2.0':
     resolution: {integrity: sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug==}
     engines: {node: '>= 20'}
@@ -10341,6 +10417,12 @@ packages:
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
+
+  ai@5.0.203:
+    resolution: {integrity: sha512-U50l+Np0IDzkUJ59QOBb80y3x1QH8+XJqzoIIxkO756mPlOuoRfj80CFIBKtaHmDSTJoEAMdt0iaaDOqMCGZkQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: 4.1.13
 
   ai@6.0.177:
     resolution: {integrity: sha512-1xQtbeWwNcLyyM86ixZhkKvT+WRXc1lvarIKqPVtsyn8F9NDikwUMBqYu+aQKDgMht50SMXh4qboYuU8MeHZZA==}
@@ -16863,6 +16945,19 @@ snapshots:
 
   '@adobe/css-tools@4.4.4': {}
 
+  '@ai-sdk/anthropic@3.0.84(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.10
+      '@ai-sdk/provider-utils': 4.0.29(zod@4.1.13)
+      zod: 4.1.13
+
+  '@ai-sdk/gateway@2.0.102(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.26(zod@4.1.13)
+      '@vercel/oidc': 3.1.0
+      zod: 4.1.13
+
   '@ai-sdk/gateway@3.0.112(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
@@ -16889,7 +16984,21 @@ snapshots:
       eventsource-parser: 3.0.8
       zod: 4.1.13
 
+  '@ai-sdk/provider-utils@3.0.26(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.1.13
+
   '@ai-sdk/provider-utils@4.0.27(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.10
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.1.13
+
+  '@ai-sdk/provider-utils@4.0.29(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
       '@standard-schema/spec': 1.1.0
@@ -24505,6 +24614,8 @@ snapshots:
     dependencies:
       '@vaadin/vaadin-development-mode-detector': 2.0.7
 
+  '@vercel/oidc@3.1.0': {}
+
   '@vercel/oidc@3.2.0': {}
 
   '@vis.gl/react-mapbox@8.1.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
@@ -24721,6 +24832,14 @@ snapshots:
   acorn@8.16.0: {}
 
   agent-base@7.1.4: {}
+
+  ai@5.0.203(zod@4.1.13):
+    dependencies:
+      '@ai-sdk/gateway': 2.0.102(zod@4.1.13)
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.26(zod@4.1.13)
+      '@opentelemetry/api': 1.9.0
+      zod: 4.1.13
 
   ai@6.0.177(zod@4.1.13):
     dependencies:

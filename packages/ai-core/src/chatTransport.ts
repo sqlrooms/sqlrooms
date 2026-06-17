@@ -28,6 +28,7 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
   MessageTokenUsage,
+  CustomModelArgs,
 } from './types';
 import {
   fixIncompleteToolCalls,
@@ -119,10 +120,10 @@ export type ChatTransportConfig = {
   /**
    * Optional: supply a pre-configured custom model.
    * e.g. import {anthropic} from "@ai-sdk/anthropic";
-   * getCustomModel: () => anthropic('claude-sonnet-4-5')
+   * getCustomModel: ({ modelId }) => anthropic('claude-sonnet-4-5')
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
-  getCustomModel?: () => LanguageModel | undefined;
+  getCustomModel?: (args: CustomModelArgs) => LanguageModel | undefined;
 };
 
 function getSessionById(
@@ -279,12 +280,25 @@ export function createLocalChatTransportFactory({
         state.ai.setSessionRunContext(sessionId, nextContext);
       };
 
+      const runtime = state.ai.getProviderRuntime(provider, modelId);
       // Fetch API key and base URL dynamically to pick up settings changes
-      const apiKey = state.ai.getApiKeyFromSettings();
-      const baseUrl = state.ai.getBaseUrlFromSettings();
+      const apiKey =
+        runtime?.apiKey ||
+        runtime?.authToken ||
+        state.ai.getApiKeyFromSettings();
+      const baseUrl = runtime?.baseUrl || state.ai.getBaseUrlFromSettings();
 
       // Prefer a user-supplied model if available
-      let model: LanguageModel | undefined = getCustomModel?.();
+      let model: LanguageModel | undefined =
+        runtime?.customModelFactory?.(modelId) ||
+        getCustomModel?.({
+          provider,
+          modelId,
+          apiKey,
+          authToken: runtime?.authToken,
+          baseUrl,
+          headers: runtime?.headers,
+        });
 
       // Fallback to OpenAI-compatible if no custom model provided
       if (!model) {
@@ -292,7 +306,10 @@ export function createLocalChatTransportFactory({
           apiKey,
           name: provider,
           baseURL: baseUrl ?? 'https://api.openai.com/v1',
-          headers,
+          headers: {
+            ...(headers || {}),
+            ...(runtime?.headers || {}),
+          },
         });
         model = openai.chatModel(modelId);
       }

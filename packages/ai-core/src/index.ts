@@ -112,6 +112,8 @@ export type {
   AddToolOutput,
   AiToolExecutionContext,
   AgentProgressSnapshot,
+  CustomModelArgs,
+  ProviderRuntime,
   StoredTool,
   StoredToolSet,
   ToolRendererProps,

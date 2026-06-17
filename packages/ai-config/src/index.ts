@@ -3,7 +3,13 @@ export {
   AiSessionForkOrigin,
   createDefaultAiConfig,
 } from './AiSliceConfig';
-export {AiSettingsSliceConfig} from './AiSettingsSliceConfig';
+export {
+  AiProviderAuthMethodSchema,
+  AiProviderAuthMethodType,
+  AiProviderSchema,
+  AiProviderStatusSchema,
+  AiSettingsSliceConfig,
+} from './AiSettingsSliceConfig';
 export {
   AiRunContextItemSchema,
   AiRunContextSchema,

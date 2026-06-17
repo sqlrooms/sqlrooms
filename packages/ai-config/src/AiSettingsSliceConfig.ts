@@ -8,19 +8,76 @@ import {z} from 'zod';
  */
 const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
 
+export const AiProviderAuthMethodType = z.enum([
+  'api_key',
+  'env_api_key',
+  'oauth_auto',
+  'oauth_popup',
+  'oauth_redirect',
+  'oauth_code',
+  'device_code',
+  'local',
+  'external_credentials',
+  'oauth_to_api_key',
+]);
+
+export const AiProviderAuthMethodSchema = z.object({
+  id: z.string(),
+  type: AiProviderAuthMethodType,
+  label: z.string(),
+  description: z.string().optional().default(''),
+  experimental: z.boolean().optional().default(false),
+  envVar: z.string().optional(),
+  metadata: z.record(z.string(), z.string()).optional().default({}),
+});
+
+export const AiProviderStatusSchema = z.object({
+  hasCredentials: z.boolean().optional().default(false),
+  credentialType: z.string().nullable().optional(),
+  expiresAt: z.number().nullable().optional(),
+  selectedAuthMethod: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+});
+
 const AiProviderModelSchema = z.object({
   modelName: z.string(),
 });
 
-const AiProviderSchema = z.object({
+const OptionalStringFromNullableSchema = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().optional(),
+);
+
+const AiProviderSchemaBase = z.object({
+  title: z.string().optional().default(''),
+  kind: z.string().optional().default('builtin'),
   baseUrl: z.string(),
-  apiKey: z.string(),
+  apiKey: z.string().optional(),
   models: z.array(AiProviderModelSchema),
+  defaultAuthMethod: OptionalStringFromNullableSchema,
+  authMethods: z.array(AiProviderAuthMethodSchema).optional().default([]),
+  experimental: z.boolean().optional().default(false),
+  status: AiProviderStatusSchema.optional(),
+  selectedAuthMethod: z.string().nullable().optional(),
+  hasCredentials: z.boolean().optional(),
+  credentialType: z.string().nullable().optional(),
+  expiresAt: z.number().nullable().optional(),
+  proxyEnabled: z.boolean().optional(),
+  upstreamBaseUrl: OptionalStringFromNullableSchema,
+  authMethodType: OptionalStringFromNullableSchema,
+  configured: z.boolean().optional().default(false),
 });
+
+export const AiProviderSchema = z.object({
+  ...AiProviderSchemaBase.shape,
+}).transform((provider) => ({
+  ...provider,
+  baseUrl: provider.upstreamBaseUrl || provider.baseUrl,
+}));
 
 const AiCustomModelSchema = z.object({
   baseUrl: z.string(),
-  apiKey: z.string(),
+  apiKey: z.string().optional(),
   modelName: z.string(),
 });
 
@@ -30,6 +87,8 @@ const AiModelParametersSchema = z.object({
 });
 
 const AiSettingsSliceConfigSchema = z.object({
+  defaultProvider: z.string().optional(),
+  defaultModel: z.string().optional(),
   providers: z.record(
     z.string(), // provider name
     AiProviderSchema,
@@ -87,6 +146,25 @@ function mergeProviderModels(
   ];
 }
 
+function mergeProvider(
+  defaultProvider: AiSettingsProviderConfig,
+  persistedProvider: unknown,
+): AiSettingsProviderConfig {
+  if (!isRecord(persistedProvider)) {
+    return defaultProvider;
+  }
+
+  const parsedPartial =
+    AiProviderSchemaBase.partial().safeParse(persistedProvider);
+  const persisted = parsedPartial.success ? parsedPartial.data : {};
+  return AiProviderSchema.parse({
+    ...defaultProvider,
+    ...persisted,
+    baseUrl: persisted.upstreamBaseUrl || persisted.baseUrl || defaultProvider.baseUrl,
+    models: mergeProviderModels(defaultProvider, persistedProvider),
+  });
+}
+
 export function mergeAiSettingsWithDefaults(
   defaults: AiSettingsSliceConfig,
   persisted: unknown,
@@ -109,19 +187,8 @@ export function mergeAiSettingsWithDefaults(
 
         return [
           providerName,
-          {
-            ...defaultProvider,
-            baseUrl:
-              persistedProvider && typeof persistedProvider.baseUrl === 'string'
-                ? persistedProvider.baseUrl
-                : defaultProvider.baseUrl,
-            apiKey:
-              persistedProvider && typeof persistedProvider.apiKey === 'string'
-                ? persistedProvider.apiKey
-                : defaultProvider.apiKey,
-            models: mergeProviderModels(defaultProvider, persistedProvider),
-          },
-        ];
+          mergeProvider(defaultProvider, persistedProvider),
+        ] as const;
       },
     ),
     ...Object.entries(persistedProviders ?? {})
@@ -142,6 +209,14 @@ export function mergeAiSettingsWithDefaults(
 
   return AiSettingsSliceConfigSchema.parse({
     ...defaults,
+    defaultProvider:
+      typeof persisted.defaultProvider === 'string'
+        ? persisted.defaultProvider
+        : defaults.defaultProvider,
+    defaultModel:
+      typeof persisted.defaultModel === 'string'
+        ? persisted.defaultModel
+        : defaults.defaultModel,
     providers,
     customModels: customModels.success
       ? customModels.data

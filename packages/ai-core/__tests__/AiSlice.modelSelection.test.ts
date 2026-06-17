@@ -24,12 +24,10 @@ function createTestStore(options?: {
     providers: {
       openai: {
         baseUrl: 'https://api.openai.com/v1',
-        apiKey: 'openai-key',
         models: [{modelName: 'shared-model'}],
       },
       anthropic: {
         baseUrl: 'https://api.anthropic.com',
-        apiKey: 'anthropic-key',
         models: [{modelName: 'shared-model'}],
       },
     },
@@ -44,6 +42,13 @@ function createTestStore(options?: {
     ...createAiSlice({
       tools: {} as any,
       getInstructions: () => 'test instructions',
+      getProviderRuntime: ({provider}) => ({
+        apiKey: provider === 'openai' ? 'openai-key' : 'anthropic-key',
+        baseUrl:
+          provider === 'openai'
+            ? 'https://api.openai.com/v1'
+            : 'https://api.anthropic.com',
+      }),
       getRunContext: options?.getRunContext,
       formatRunContextInstructions: ({runContext}) => {
         const mainItem = runContext.items[0];

@@ -2,9 +2,11 @@ AI provider/model settings state and UI components for SQLRooms.
 
 This package gives you:
 
-- `createAiSettingsSlice()` to manage providers, models, custom models, and model parameters
+- `createAiSettingsSlice()` to manage provider manifests, models, custom models, and model parameters
 - settings UI components (`AiSettingsPanel`, `AiProvidersSettings`, `AiModelsSettings`, etc.)
 - settings actions/selectors accessible from your app's `useRoomStore`
+
+This package is config-only. Secrets, tokens, and provider login flows belong in `@sqlrooms/ai-connect`.
 
 ## Installation
 
@@ -36,7 +38,6 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
         providers: {
           openai: {
             baseUrl: 'https://api.openai.com/v1',
-            apiKey: '',
             models: [{modelName: 'gpt-4.1'}],
           },
         },

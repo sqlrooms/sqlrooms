@@ -277,7 +277,9 @@ const CompactSqlQueryBlock: FC<CompactSqlQueryBlockProps> = ({
         )}
       </div>
       {queryResult ? (
-        <div className={cn('border-border relative border-t', resultsClassName)}>
+        <div
+          className={cn('border-border relative border-t', resultsClassName)}
+        >
           <Button
             size="icon"
             variant="ghost"
@@ -381,7 +383,10 @@ function CompactResultTimestampTooltip({
   );
 }
 
-function getCompactResultLabel(queryResult: QueryResult | undefined, now: number) {
+function getCompactResultLabel(
+  queryResult: QueryResult | undefined,
+  now: number,
+) {
   if (!queryResult) return '';
   if (queryResult.status === 'loading') return 'Running query...';
   if (!queryResult.completedAt) return 'Last run';
@@ -408,7 +413,9 @@ function getCompactResultTooltip(
 }
 
 function getQueryResultCompletedAt(queryResult: QueryResult | undefined) {
-  return queryResult?.status === 'loading' ? undefined : queryResult?.completedAt;
+  return queryResult?.status === 'loading'
+    ? undefined
+    : queryResult?.completedAt;
 }
 
 function formatCompactRelativeTime(timestamp: number, now: number) {

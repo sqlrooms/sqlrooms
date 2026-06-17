@@ -5,6 +5,16 @@ export type RuntimeConfig = {
   llmProvider?: string;
   llmModel?: string;
   apiKey?: string;
+  loginTargets?: Array<{
+    id: string;
+    label: string;
+    providerId: string;
+    authMethodId: string;
+    description?: string;
+    experimental?: boolean;
+    hidden?: boolean;
+    priority?: number;
+  }>;
   configWritable?: boolean;
   syncEnabled?: boolean;
   crdtWsUrl?: string;
@@ -12,9 +22,47 @@ export type RuntimeConfig = {
   aiProviders?: Record<
     string,
     {
+      title?: string;
+      kind?: string;
+      configured?: boolean;
       baseUrl: string;
-      apiKey: string;
+      apiKey?: string;
       models: Array<{modelName: string}>;
+      defaultAuthMethod?: string;
+      authMethods?: Array<{
+        id: string;
+        type:
+          | 'api_key'
+          | 'env_api_key'
+          | 'oauth_auto'
+          | 'oauth_popup'
+          | 'oauth_redirect'
+          | 'oauth_code'
+          | 'device_code'
+          | 'local'
+          | 'external_credentials'
+          | 'oauth_to_api_key';
+        label: string;
+        description?: string;
+        experimental?: boolean;
+        envVar?: string;
+        metadata?: Record<string, string>;
+      }>;
+      experimental?: boolean;
+      status?: {
+        hasCredentials?: boolean;
+        credentialType?: string;
+        expiresAt?: number;
+        selectedAuthMethod?: string;
+        status?: string;
+      };
+      selectedAuthMethod?: string;
+      hasCredentials?: boolean;
+      credentialType?: string;
+      expiresAt?: number;
+      proxyEnabled?: boolean;
+      upstreamBaseUrl?: string;
+      authMethodType?: string;
     }
   >;
   aiSettings?: {

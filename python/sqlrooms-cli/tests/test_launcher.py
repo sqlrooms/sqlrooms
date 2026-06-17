@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from fastapi import UploadFile
 from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
+from sqlrooms.web.ai_settings import _parse_models_response
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
@@ -33,10 +34,183 @@ def test_api_config(server):
     assert "dbPath" in data
     assert "dbBridge" in data
     assert "aiProviders" in data
+    assert "loginTargets" in data
+    assert len(data["loginTargets"]) == 2
+    assert data["loginTargets"][0]["providerId"] == "anthropic"
+    assert data["loginTargets"][1]["providerId"] == "openai"
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
     assert "wsAuthToken" in data
+
+
+def test_parse_models_response_normalizes_provider_payloads():
+    assert _parse_models_response(
+        {
+            "data": [
+                {
+                    "id": "gpt-5",
+                    "object": "model",
+                    "created": 1710000000,
+                    "supports_tools": True,
+                },
+                {"id": "gpt-5"},
+                {
+                    "id": "claude-sonnet-4-5",
+                    "display_name": "Claude Sonnet 4.5",
+                    "supported_features": ["tool_use"],
+                },
+                {
+                    "id": "gemini-pro",
+                    "type": "chat",
+                    "capabilities": {"function_calling": True},
+                },
+                {"id": "qwen-max", "capabilities": ["tools"]},
+                {"name": "custom-model"},
+                "string-model",
+                {"id": ""},
+            ]
+        }
+    ) == [
+        {
+            "modelName": "gpt-5",
+            "type": "model",
+            "releasedAt": 1710000000000,
+            "supportsTools": True,
+        },
+        {
+            "modelName": "claude-sonnet-4-5",
+            "title": "Claude Sonnet 4.5",
+            "supportsTools": True,
+        },
+        {"modelName": "gemini-pro", "type": "chat", "supportsTools": True},
+        {"modelName": "qwen-max", "supportsTools": True},
+        {"modelName": "custom-model"},
+        {"modelName": "string-model"},
+    ]
+
+
+def test_api_config_bootstraps_env_ai_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        auth_path=tmp_path / "auth.toml",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    openai = data["aiProviders"]["openai"]
+    assert data["apiKey"] == ""
+    assert openai["proxyEnabled"] is True
+    assert openai["status"]["hasCredentials"] is True
+    assert openai["status"]["credentialType"] == "env_api_key"
+    assert openai["status"]["selectedAuthMethod"] == "env_api_key"
+
+
+@pytest.mark.asyncio
+async def test_api_config_keeps_custom_provider_api_key_server_side(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[ai]
+
+[[ai.providers]]
+id = "litellm-staging"
+base_url = "https://litellm.example/"
+api_key = "sk-test"
+models = ["claude-sonnet-4.5"]
+
+[ai.model_parameters]
+max_steps = 50
+additional_instruction = ""
+""".strip(),
+        encoding="utf-8",
+    )
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=4173,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+        auth_path=tmp_path / "auth.toml",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    provider = data["aiProviders"]["litellm-staging"]
+    assert "apiKey" not in provider
+    assert "defaultAuthMethod" not in provider
+    assert "authMethodType" not in provider
+    assert provider["proxyEnabled"] is True
+    assert provider["baseUrl"] == "http://127.0.0.1:4173/api/ai/proxy/litellm-staging"
+    assert provider["status"]["hasCredentials"] is True
+    assert provider["status"]["credentialType"] == "config_api_key"
+
+    prepared = await server.ai_auth_manager.prepare_proxy_request(
+        provider_id="litellm-staging",
+        path="chat/completions",
+        headers={},
+        body=b"{}",
+        query={},
+    )
+    assert prepared.url == "https://litellm.example/chat/completions"
+    assert prepared.headers["authorization"] == "Bearer sk-test"
+
+
+def test_api_config_ignores_generated_builtin_provider_entries(tmp_path):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "openai"
+
+[[ai.providers]]
+id = "openai"
+base_url = "http://127.0.0.1:4173/api/ai/proxy/openai/v1"
+models = []
+
+[[ai.providers]]
+id = "anthropic"
+base_url = "http://127.0.0.1:4173/api/ai/proxy/anthropic/v1"
+models = []
+
+[[ai.providers]]
+id = "ollama"
+base_url = "http://127.0.0.1:11434/v1"
+models = []
+""".strip(),
+        encoding="utf-8",
+    )
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=4173,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+        auth_path=tmp_path / "auth.toml",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["aiProviders"]["openai"]["configured"] is False
+    assert data["aiProviders"]["anthropic"]["configured"] is False
+    assert data["aiProviders"]["ollama"]["configured"] is False
+    assert data["aiProviders"]["openai"]["models"] == []
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):
@@ -66,6 +240,89 @@ def test_api_config_with_ai_provider_metadata(tmp_path):
     assert data["llmProvider"] == "openai"
     assert data["llmModel"] == "gpt-5"
     assert "openai" in data["aiProviders"]
+    assert data["loginTargets"] == []
+
+
+def test_ai_settings_routes_and_manual_auth(tmp_path):
+    db_path = tmp_path / "test.db"
+    config_path = tmp_path / "config.toml"
+    auth_path = tmp_path / "auth.toml"
+    config_path.write_text(
+        """
+[ai]
+default_provider = "openai"
+default_model = "gpt-5"
+
+[[ai.providers]]
+id = "openai"
+title = "OpenAI"
+kind = "builtin"
+base_url = "https://api.openai.com/v1"
+default_auth_method = "manual_api_key"
+models = ["gpt-5"]
+
+[[ai.providers.auth_methods]]
+id = "manual_api_key"
+type = "api_key"
+label = "Manually enter API Key"
+""".strip(),
+        encoding="utf-8",
+    )
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=4173,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+        auth_path=auth_path,
+    )
+    client = TestClient(server._build_app())
+
+    settings_response = client.get("/api/ai/settings")
+    assert settings_response.status_code == 200
+    settings = settings_response.json()
+    assert settings["config"]["defaultProvider"] == "openai"
+    assert (
+        settings["config"]["providers"]["openai"]["status"]["hasCredentials"] is False
+    )
+
+    start_response = client.post(
+        "/api/ai/auth/start",
+        json={"providerId": "openai", "authMethodId": "manual_api_key"},
+    )
+    assert start_response.status_code == 200
+    assert start_response.json()["flowType"] == "api_key"
+
+    complete_response = client.post(
+        "/api/ai/auth/complete",
+        json={
+            "providerId": "openai",
+            "authMethodId": "manual_api_key",
+            "apiKey": "test-openai-key",
+        },
+    )
+    assert complete_response.status_code == 200
+    assert auth_path.exists()
+    assert "test-openai-key" in auth_path.read_text(encoding="utf-8")
+
+    status_response = client.get("/api/ai/auth/status", params={"providerId": "openai"})
+    assert status_response.status_code == 200
+    assert status_response.json()["provider"]["status"]["hasCredentials"] is True
+
+    test_response = client.post("/api/ai/auth/test", json={"providerId": "openai"})
+    assert test_response.status_code == 200
+    assert test_response.json()["ok"] is True
+
+    logout_response = client.post("/api/ai/auth/logout", json={"providerId": "openai"})
+    assert logout_response.status_code == 200
+
+    status_after_logout = client.get(
+        "/api/ai/auth/status",
+        params={"providerId": "openai"},
+    )
+    assert status_after_logout.status_code == 200
+    assert status_after_logout.json()["provider"]["status"]["hasCredentials"] is False
 
 
 def test_api_upload(server, tmp_path):
@@ -435,6 +692,89 @@ models = ["gpt-4.1"]
     assert provider["models"] == ["gpt-5"]
     assert doc["ai"]["custom_models"][0]["model_name"] == "local-qwen"
     assert doc["ai"]["model_parameters"]["max_steps"] == 12
+
+
+def test_write_ai_settings_to_toml_skips_unconfigured_builtin_templates(tmp_path):
+    config_path = tmp_path / "config.toml"
+
+    _write_ai_settings_to_toml(
+        config_path,
+        {
+            "defaultProvider": "openai",
+            "defaultModel": "",
+            "settings": {
+                "providers": {
+                    "openai": {
+                        "kind": "builtin",
+                        "configured": False,
+                        "baseUrl": "http://127.0.0.1:4173/api/ai/proxy/openai/v1",
+                        "upstreamBaseUrl": "https://api.openai.com/v1",
+                        "models": [],
+                    },
+                    "anthropic": {
+                        "kind": "builtin",
+                        "configured": False,
+                        "baseUrl": "http://127.0.0.1:4173/api/ai/proxy/anthropic/v1",
+                        "upstreamBaseUrl": "https://api.anthropic.com/v1",
+                        "models": [],
+                    },
+                    "ollama": {
+                        "kind": "builtin",
+                        "configured": False,
+                        "baseUrl": "http://127.0.0.1:11434/v1",
+                        "models": [],
+                    },
+                },
+                "customModels": [],
+                "modelParameters": {
+                    "maxSteps": 50,
+                    "additionalInstruction": "",
+                },
+            },
+        },
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert "default_provider" not in doc["ai"]
+    assert "providers" not in doc["ai"]
+    assert doc["ai"]["model_parameters"]["max_steps"] == 50
+
+
+def test_write_ai_settings_to_toml_uses_upstream_url_for_configured_provider(
+    tmp_path,
+):
+    config_path = tmp_path / "config.toml"
+
+    _write_ai_settings_to_toml(
+        config_path,
+        {
+            "defaultProvider": "openai",
+            "defaultModel": "",
+            "settings": {
+                "providers": {
+                    "openai": {
+                        "kind": "builtin",
+                        "configured": True,
+                        "baseUrl": "http://127.0.0.1:4173/api/ai/proxy/openai/v1",
+                        "upstreamBaseUrl": "https://api.openai.com/v1",
+                        "models": [],
+                    },
+                },
+                "customModels": [],
+                "modelParameters": {},
+            },
+        },
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["ai"]["default_provider"] == "openai"
+    assert doc["ai"]["providers"][0]["base_url"] == "https://api.openai.com/v1"
 
 
 def test_api_put_ai_settings_writes_config(tmp_path):

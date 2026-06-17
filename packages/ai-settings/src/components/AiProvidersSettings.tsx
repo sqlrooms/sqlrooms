@@ -1,35 +1,36 @@
-import React, {FC, useState} from 'react';
+import React, {FC, useMemo, useState} from 'react';
 import {
+  Badge,
   Button,
-  Input,
-  Label,
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-  DialogFooter,
-  useDisclosure,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   toast,
+  useDisclosure,
 } from '@sqlrooms/ui';
-import {
-  Cone,
-  Settings,
-  Plus,
-  Server,
-  Key,
-  Trash2,
-  CirclePlus,
-} from 'lucide-react';
+import {CirclePlus, Cone, Key, Server, Settings, Trash2} from 'lucide-react';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
 export interface AiProvidersSettingsProps {
+  apiBaseUrl?: string;
   showTitle?: boolean;
+  showBuiltinTemplates?: boolean;
 }
 
 export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
+  apiBaseUrl,
   showTitle = true,
+  showBuiltinTemplates = true,
 }) => {
   const updateProvider = useStoreWithAiSettings(
     (state) => state.aiSettings.updateProvider,
@@ -40,146 +41,192 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
   const removeProvider = useStoreWithAiSettings(
     (state) => state.aiSettings.removeProvider,
   );
+  const saveToServer = useStoreWithAiSettings(
+    (state) => state.aiSettings.saveToServer,
+  );
   const providers = useStoreWithAiSettings(
     (state) => state.aiSettings.config.providers,
   );
-  const modelProviders = React.useMemo(() => {
-    const result: Record<string, {apiKey: string; baseUrl: string}> = {};
-    Object.entries(providers).forEach(([key, provider]) => {
-      result[key] = {
-        apiKey: provider.apiKey,
-        baseUrl: provider.baseUrl,
-      };
-    });
-    return result;
-  }, [providers]);
+  const isSaving = useStoreWithAiSettings(
+    (state) => state.aiSettings.isSaving,
+  );
+  const hasUnsavedChanges = useStoreWithAiSettings(
+    (state) => state.aiSettings.hasUnsavedChanges,
+  );
+  const lastSaveError = useStoreWithAiSettings(
+    (state) => state.aiSettings.lastSaveError,
+  );
 
+  const providerEntries = useMemo(
+    () =>
+      Object.entries(providers).filter(([, provider]) => {
+        if (showBuiltinTemplates) return true;
+        const credentialType =
+          provider.status?.credentialType || provider.credentialType;
+        const hasSavedCredentials =
+          Boolean(provider.status?.hasCredentials || provider.hasCredentials) &&
+          credentialType !== 'local';
+        return Boolean(
+          provider.configured || provider.apiKey || hasSavedCredentials,
+        );
+      }),
+    [providers, showBuiltinTemplates],
+  );
   const [expandedProviders, setExpandedProviders] = useState<Set<string>>(
     new Set(),
   );
-
-  // Dialog state for adding a new provider
   const {isOpen, onOpen, onClose} = useDisclosure();
   const [newProviderKey, setNewProviderKey] = useState('');
+  const [newProviderTitle, setNewProviderTitle] = useState('');
   const [newProviderApiKey, setNewProviderApiKey] = useState('');
   const [newProviderBaseUrl, setNewProviderBaseUrl] = useState('');
 
-  // Dialog state for delete confirmation
   const {
     isOpen: isDeleteOpen,
     onOpen: onDeleteOpen,
     onClose: onDeleteClose,
   } = useDisclosure();
-  const [providerToDelete, setProviderToDelete] = useState<{
-    key: string;
-  } | null>(null);
-
-  const handleAddProvider = () => {
-    if (newProviderKey) {
-      // Check if provider already exists
-      if (providers[newProviderKey]) {
-        toast.error('Provider already exists', {
-          description: `A provider with the key "${newProviderKey}" already exists. Please choose a different key.`,
-        });
-        return;
-      }
-
-      addProvider(newProviderKey, newProviderBaseUrl, newProviderApiKey);
-      setNewProviderKey('');
-      setNewProviderApiKey('');
-      setNewProviderBaseUrl('');
-      onClose();
-
-      toast.success('Provider added successfully', {
-        description: `Provider "${newProviderKey}" has been added.`,
-      });
-    }
-  };
-
-  const handleUpdateProvider = (
-    providerKey: string,
-    field: 'apiKey' | 'baseUrl',
-    value: string,
-  ) => {
-    updateProvider(providerKey, {[field]: value});
-  };
-
-  const handleDeleteProvider = (providerKey: string) => {
-    setProviderToDelete({key: providerKey});
-    onDeleteOpen();
-  };
-
-  const confirmDeleteProvider = () => {
-    if (providerToDelete) {
-      removeProvider(providerToDelete.key);
-      onDeleteClose();
-      setProviderToDelete(null);
-
-      toast.success('Provider deleted successfully', {
-        description: `Provider "${providerToDelete.key}" and its associated models have been removed.`,
-      });
-    }
-  };
+  const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
 
   const toggleProviderExpanded = (providerKey: string) => {
     setExpandedProviders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(providerKey)) {
-        newSet.delete(providerKey);
+      const next = new Set(prev);
+      if (next.has(providerKey)) {
+        next.delete(providerKey);
       } else {
-        newSet.add(providerKey);
+        next.add(providerKey);
       }
-      return newSet;
+      return next;
     });
   };
 
+  const handleSave = async () => {
+    const ok = await saveToServer(apiBaseUrl || '');
+    if (ok) {
+      toast.success('AI settings saved');
+    }
+  };
+
+  const handleAddProvider = () => {
+    const providerKey = newProviderKey.trim();
+    if (!providerKey) return;
+    if (providers[providerKey]) {
+      toast.error('Provider already exists', {
+        description: `A provider with the key "${providerKey}" already exists.`,
+      });
+      return;
+    }
+    addProvider(
+      providerKey,
+      newProviderBaseUrl.trim(),
+      newProviderTitle.trim() || providerKey,
+    );
+    if (newProviderApiKey.trim()) {
+      updateProvider(providerKey, {apiKey: newProviderApiKey.trim()});
+    }
+    setNewProviderKey('');
+    setNewProviderTitle('');
+    setNewProviderApiKey('');
+    setNewProviderBaseUrl('');
+    onClose();
+    toast.success('Provider added');
+  };
+
+  const handleDeleteProvider = () => {
+    if (!providerToDelete) return;
+    removeProvider(providerToDelete);
+    toast.success('Provider deleted');
+    setProviderToDelete(null);
+    onDeleteClose();
+  };
+
   return (
-    <div className="space-y-2">
-      {showTitle && (
-        <label className="text-md flex items-center gap-2 pb-6 font-medium">
-          <Cone className="h-4 w-4" />
-          Providers
-        </label>
-      )}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        {showTitle ? (
+          <label className="text-md flex items-center gap-2 font-medium">
+            <Cone className="h-4 w-4" />
+            Providers
+          </label>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-2">
+          {lastSaveError ? (
+            <Badge variant="destructive">Save failed</Badge>
+          ) : hasUnsavedChanges ? (
+            <Badge variant="outline">Unsaved</Badge>
+          ) : (
+            <Badge variant="secondary">Saved</Badge>
+          )}
+          <Button onClick={handleSave} size="sm" disabled={isSaving}>
+            {isSaving ? 'Saving…' : 'Save'}
+          </Button>
+          <Button onClick={onOpen} variant="secondary" size="sm">
+            <CirclePlus className="h-3 w-3" />
+            Add
+          </Button>
+        </div>
+      </div>
 
-      {/* Existing Providers */}
-      <div className="space-y-1">
-        {Object.entries(modelProviders).map(([providerKey, provider]) => {
+      <div className="space-y-2">
+        {providerEntries.length === 0 && (
+          <div className="border-border text-muted-foreground rounded-lg border p-4 text-sm">
+            No AI providers configured.
+          </div>
+        )}
+        {providerEntries.map(([providerKey, provider]) => {
           const isExpanded = expandedProviders.has(providerKey);
-
           return (
-            <div key={providerKey} className="space-y-0 rounded-lg p-0">
-              <div className="grid items-end gap-3 sm:grid-cols-[minmax(8rem,9rem)_minmax(18rem,1fr)_2rem_2rem]">
+            <div
+              key={providerKey}
+              className="border-border rounded-lg border p-3"
+            >
+              <div className="grid items-end gap-3 sm:grid-cols-[minmax(8rem,10rem)_minmax(14rem,1fr)_minmax(14rem,1fr)_2rem_2rem]">
                 <Label className="pb-2 text-sm font-medium whitespace-nowrap">
-                  {providerKey.charAt(0).toUpperCase() + providerKey.slice(1)}
+                  {provider.title || providerKey}
                 </Label>
                 <div className="min-w-0 space-y-1">
                   <Label
-                    htmlFor={`${providerKey}-apiKey`}
+                    htmlFor={`${providerKey}-api-key`}
                     className="text-muted-foreground text-xs"
                   >
                     API key
                   </Label>
                   <Input
-                    id={`${providerKey}-apiKey`}
+                    id={`${providerKey}-api-key`}
                     type="password"
-                    value={provider.apiKey}
+                    value={provider.apiKey || ''}
                     onChange={(e) =>
-                      handleUpdateProvider(
-                        providerKey,
-                        'apiKey',
-                        e.target.value,
-                      )
+                      updateProvider(providerKey, {apiKey: e.target.value})
                     }
                     placeholder="Enter API key"
-                    className="w-full"
+                  />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Label
+                    htmlFor={`${providerKey}-base-url`}
+                    className="text-muted-foreground text-xs"
+                  >
+                    Base URL
+                  </Label>
+                  <Input
+                    id={`${providerKey}-base-url`}
+                    value={provider.baseUrl}
+                    onChange={(e) =>
+                      updateProvider(providerKey, {baseUrl: e.target.value})
+                    }
+                    placeholder="Provider base URL"
                   />
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDeleteProvider(providerKey)}
-                  className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  onClick={() => {
+                    setProviderToDelete(providerKey);
+                    onDeleteOpen();
+                  }}
+                  className="h-8 w-8"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -187,40 +234,88 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
                   variant="ghost"
                   size="icon"
                   onClick={() => toggleProviderExpanded(providerKey)}
-                  className="h-8 w-8 shrink-0"
+                  className="h-8 w-8"
                 >
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* Second row: baseUrl input (toggleable) */}
               {isExpanded && (
-                <div className="grid items-end gap-3 pt-2 sm:grid-cols-[minmax(8rem,9rem)_minmax(18rem,1fr)_2rem_2rem]">
-                  <div />
-                  <div className="min-w-0 space-y-1">
-                    <Label
-                      htmlFor={`${providerKey}-baseUrl`}
-                      className="text-muted-foreground text-xs"
-                    >
-                      Base URL
-                    </Label>
-                    <Input
-                      id={`${providerKey}-baseUrl`}
-                      type="url"
-                      value={provider.baseUrl}
-                      onChange={(e) =>
-                        handleUpdateProvider(
-                          providerKey,
-                          'baseUrl',
-                          e.target.value,
-                        )
-                      }
-                      placeholder="Enter base URL"
-                      className="w-full"
-                    />
+                <div className="mt-3 space-y-3 sm:pl-40">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label>Title</Label>
+                      <Input
+                        value={provider.title || ''}
+                        onChange={(e) =>
+                          updateProvider(providerKey, {title: e.target.value})
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Kind</Label>
+                      <Input
+                        value={provider.kind || ''}
+                        onChange={(e) =>
+                          updateProvider(providerKey, {kind: e.target.value})
+                        }
+                      />
+                    </div>
                   </div>
-                  <div />
-                  <div />
+
+                  {provider.experimental && (
+                    <Badge variant="secondary">Experimental</Badge>
+                  )}
+
+                  <div className="space-y-1">
+                    <Label>Default auth method</Label>
+                    <Select
+                      value={provider.defaultAuthMethod}
+                      onValueChange={(value) =>
+                        updateProvider(providerKey, {
+                          defaultAuthMethod: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a default auth method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(provider.authMethods || []).map((method) => (
+                          <SelectItem key={method.id} value={method.id}>
+                            {method.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Auth methods</Label>
+                    <div className="space-y-2">
+                      {(provider.authMethods || []).map((method) => (
+                        <div
+                          key={method.id}
+                          className="bg-muted/40 rounded-md border p-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {method.label}
+                            </span>
+                            <Badge variant="outline">{method.type}</Badge>
+                            {method.experimental && (
+                              <Badge variant="secondary">Experimental</Badge>
+                            )}
+                          </div>
+                          {method.description && (
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {method.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -228,55 +323,44 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
         })}
       </div>
 
-      {/* Add New Provider */}
-      <div className="flex w-full p-2">
-        <Button onClick={onOpen} variant="secondary" size="sm">
-          <CirclePlus className="h-3 w-3" />
-          Add
-        </Button>
-      </div>
-
-      {/* Add New Provider Dialog */}
       <Dialog
         open={isOpen}
         onOpenChange={(open) => (open ? onOpen() : onClose())}
       >
-        <DialogTrigger asChild>
-          {/* handled via onOpen button above */}
-        </DialogTrigger>
         <DialogContent className="border-0 p-5">
-          <DialogHeader className="mb-1">
+          <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base">
-              <Cone className="h-4 w-4" /> Add New Provider
+              <Server className="h-4 w-4" />
+              Add provider
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Configure a new model provider with API credentials.
+              Configure a model provider and optional API credentials.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Label htmlFor="new-provider-key" className="w-20 text-sm">
-                Key
-              </Label>
-              <div className="relative flex-1">
-                <Cone className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="new-provider-key"
-                  value={newProviderKey}
-                  onChange={(e) => setNewProviderKey(e.target.value)}
-                  placeholder="e.g., anthropic"
-                  className="pl-8"
-                />
-              </div>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="new-provider-key">Key</Label>
+              <Input
+                id="new-provider-key"
+                value={newProviderKey}
+                onChange={(e) => setNewProviderKey(e.target.value)}
+                placeholder="e.g. openrouter"
+              />
             </div>
-
-            <div className="flex items-center gap-3">
-              <Label htmlFor="new-provider-api-key" className="w-20 text-sm">
-                API Key
-              </Label>
-              <div className="relative flex-1">
-                <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
+            <div className="space-y-1">
+              <Label htmlFor="new-provider-title">Title</Label>
+              <Input
+                id="new-provider-title"
+                value={newProviderTitle}
+                onChange={(e) => setNewProviderTitle(e.target.value)}
+                placeholder="e.g. OpenRouter"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="new-provider-api-key">API key</Label>
+              <div className="relative">
+                <Key className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-api-key"
                   type="password"
@@ -287,70 +371,49 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
                 />
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Label htmlFor="new-provider-url" className="w-20 text-sm">
-                baseUrl
-              </Label>
-              <div className="relative flex-1">
-                <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="new-provider-url"
-                  type="url"
-                  value={newProviderBaseUrl}
-                  onChange={(e) => setNewProviderBaseUrl(e.target.value)}
-                  placeholder="Enter base URL"
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-1">
-              <Button size="sm" onClick={handleAddProvider}>
-                <Plus className="mr-2 h-4 w-4" /> Add Provider
-              </Button>
+            <div className="space-y-1">
+              <Label htmlFor="new-provider-url">Base URL</Label>
+              <Input
+                id="new-provider-url"
+                value={newProviderBaseUrl}
+                onChange={(e) => setNewProviderBaseUrl(e.target.value)}
+                placeholder="https://api.example.com/v1"
+              />
             </div>
           </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddProvider}>Add provider</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={isDeleteOpen}
         onOpenChange={(open) => (open ? onDeleteOpen() : onDeleteClose())}
       >
         <DialogContent className="border-0 p-5">
-          <DialogHeader className="mb-1">
+          <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2 text-base">
-              <Trash2 className="h-4 w-4" /> Delete Provider
+              <Trash2 className="h-4 w-4" />
+              Delete provider
             </DialogTitle>
             <DialogDescription className="text-xs">
-              This action cannot be undone. This will permanently delete the
-              provider and all its associated models.
+              This removes the provider and its models from these settings.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="py-2">
-            <p className="text-sm">
-              Are you sure you want to delete the provider{' '}
-              <strong>&ldquo;{providerToDelete?.key}&rdquo;</strong>?
-            </p>
-            <p className="text-muted-foreground mt-1 text-xs">
-              All models associated with this provider will also be removed.
-            </p>
-          </div>
-
-          <DialogFooter className="gap-2">
+          <p className="text-sm">
+            Delete <strong>{providerToDelete}</strong>?
+          </p>
+          <DialogFooter>
             <Button variant="outline" size="sm" onClick={onDeleteClose}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={confirmDeleteProvider}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Provider
+            <Button variant="destructive" size="sm" onClick={handleDeleteProvider}>
+              Delete provider
             </Button>
           </DialogFooter>
         </DialogContent>

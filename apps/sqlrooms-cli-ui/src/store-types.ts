@@ -1,4 +1,9 @@
-import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
+import {
+  AiConnectSliceState,
+  AiQuickLoginSliceState,
+  AiSettingsSliceState,
+  AiSliceState,
+} from '@sqlrooms/ai';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {type ArtifactAiSliceState} from '@sqlrooms/artifacts/ai';
 import {CanvasSliceState} from '@sqlrooms/canvas';
@@ -45,6 +50,8 @@ export type RoomState = RoomShellSliceState &
   MosaicSliceState &
   MosaicDashboardSliceState &
   AiSliceState &
+  AiConnectSliceState &
+  AiQuickLoginSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState &
   CellsSliceState &

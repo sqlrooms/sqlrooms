@@ -1,4 +1,12 @@
-import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
+import {
+  AiConnectDialog,
+  AiProviderConnectButton,
+  AiQuickLoginButton,
+  AiQuickLoginDialog,
+  Chat,
+  isChatSessionEmpty,
+  resolveLoginTargetsFromProviders,
+} from '@sqlrooms/ai';
 import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
@@ -16,10 +24,14 @@ interface AssistantChatContainerProps {
     canAccept: (data: unknown) => boolean;
     onDrop: (data: unknown) => void;
   };
+  onOpenSettings?: (
+    tab?: 'connect' | 'providers' | 'models' | 'parameters',
+  ) => void;
 }
 
 export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   contextDropTarget,
+  onOpenSettings,
 }) => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
@@ -37,14 +49,54 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const createArtifactScopedSession = useRoomStore(
     (s) => s.artifactAi.createArtifactScopedSession,
   );
+  const currentProviderId = useRoomStore(
+    (s) =>
+      s.ai.getCurrentSession()?.modelProvider ||
+      s.aiSettings.config.defaultProvider ||
+      null,
+  );
+  const providers = useRoomStore((s) => s.aiSettings.config.providers);
+  const loginTargets = useRoomStore((s) => s.aiQuickLogin.loginTargets);
+  const providerLoginTargets = useMemo(
+    () =>
+      resolveLoginTargetsFromProviders(providers, loginTargets).filter(
+        (target) => target.providerId === currentProviderId,
+      ),
+    [currentProviderId, providers, loginTargets],
+  );
+  const currentProvider = currentProviderId
+    ? providers[currentProviderId]
+    : undefined;
+  const currentProviderHasCredentials = Boolean(
+    currentProvider?.status?.hasCredentials ||
+    currentProvider?.hasCredentials ||
+    currentProvider?.apiKey,
+  );
+  const canConnectCurrentProvider = Boolean(
+    currentProviderId && currentProvider?.authMethods?.length,
+  );
+  const hasConfiguredProvider = useMemo(
+    () =>
+      Object.values(providers).some((provider) => {
+        const credentialType =
+          provider.status?.credentialType || provider.credentialType;
+        const hasSavedCredentials =
+          Boolean(provider.status?.hasCredentials || provider.hasCredentials) &&
+          credentialType !== 'local';
+        return Boolean(
+          provider.configured || provider.apiKey || hasSavedCredentials,
+        );
+      }),
+    [providers],
+  );
 
   const [showHistory, setShowHistory] = useState(false);
   useGenSessionTitle();
 
   const createSessionDisabled = Boolean(
     currentSession &&
-      isChatSessionEmpty(currentSession) &&
-      isDefaultAssistantSessionName(currentSession.name),
+    isChatSessionEmpty(currentSession) &&
+    isDefaultAssistantSessionName(currentSession.name),
   );
 
   const handleCreateSession = useCallback(() => {
@@ -82,19 +134,28 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   return (
     <Chat.Root>
+      <AiConnectDialog />
+      <AiQuickLoginDialog />
       <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
         {!currentSessionId ? (
           <div className="flex h-full w-full items-center justify-center">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 gap-2 px-4"
-              onClick={handleCreateSession}
-              disabled={!currentArtifactId}
-            >
-              <PlusIcon className="h-4 w-4" />
-              New session
-            </Button>
+            {hasConfiguredProvider ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 gap-2 px-4"
+                onClick={handleCreateSession}
+                disabled={!currentArtifactId || createSessionDisabled}
+              >
+                <PlusIcon className="h-4 w-4" />
+                New session
+              </Button>
+            ) : (
+              <AiProviderConnectButton
+                variant="outline"
+                className="h-12 gap-2 px-4"
+              />
+            )}
           </div>
         ) : (
           <>
@@ -139,31 +200,49 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 )}
               </div>
             )}
-          </>
-        )}
-        {currentSessionId && !showHistory && (
-          <>
-            <Chat.PromptSuggestions>
-              <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
-              <Chat.PromptSuggestions.Item text="Show me a summary of the data" />
-              <Chat.PromptSuggestions.Item text="What are the key trends?" />
-              <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
-            </Chat.PromptSuggestions>
-            <Chat.Composer
-              placeholder="What would you like to learn about the data?"
-              contextDropTarget={contextDropTarget}
-            >
-              <Chat.InlineApiKeyInput
-                onSaveApiKey={(provider, apiKey) => {
-                  updateProvider(provider, {apiKey});
-                }}
-              />
-              <AssistantContextSelector />
-              <div className="flex items-center justify-end gap-2">
-                <Chat.PromptSuggestions.VisibilityToggle />
-                <Chat.ModelSelector />
-              </div>
-            </Chat.Composer>
+            {!showHistory && (
+              <>
+                <Chat.PromptSuggestions>
+                  <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
+                  <Chat.PromptSuggestions.Item text="Show me a summary of the data" />
+                  <Chat.PromptSuggestions.Item text="What are the key trends?" />
+                  <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
+                </Chat.PromptSuggestions>
+                <Chat.Composer
+                  placeholder="What would you like to learn about the data?"
+                  contextDropTarget={contextDropTarget}
+                >
+                  <Chat.InlineApiKeyInput
+                    onSaveApiKey={(provider, apiKey) => {
+                      updateProvider(provider, {apiKey});
+                    }}
+                  />
+                  <AssistantContextSelector />
+                  <div className="flex items-center justify-end gap-2">
+                    {!currentProviderHasCredentials &&
+                      canConnectCurrentProvider && (
+                        <AiProviderConnectButton
+                          providerId={currentProviderId || undefined}
+                          variant="outline"
+                          size="sm"
+                        />
+                      )}
+                    {!currentProviderHasCredentials &&
+                      providerLoginTargets.length > 0 && (
+                        <AiQuickLoginButton
+                          targetId={providerLoginTargets[0]?.id}
+                          variant="outline"
+                          size="sm"
+                        />
+                      )}
+                    <Chat.PromptSuggestions.VisibilityToggle />
+                    <Chat.ModelSelector
+                      onOpenSettings={() => onOpenSettings?.('models')}
+                    />
+                  </div>
+                </Chat.Composer>
+              </>
+            )}
           </>
         )}
       </div>

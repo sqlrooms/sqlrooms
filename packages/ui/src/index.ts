@@ -42,8 +42,6 @@ export {
 
 export {Checkbox} from './components/checkbox';
 
-export {ComboboxDemo} from './components/combobox';
-
 export {
   Collapsible,
   CollapsibleContent,

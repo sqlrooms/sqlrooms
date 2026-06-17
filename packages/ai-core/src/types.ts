@@ -11,6 +11,7 @@ import type {
   Tool,
   InferToolOutput,
   InferToolInput,
+  LanguageModel,
   ToolLoopAgentSettings,
 } from 'ai';
 /**
@@ -120,6 +121,23 @@ export type MessageTokenUsage = {
 export type AssistantMessageMetadata = {
   toolTimings?: Record<string, ToolTimingEntry>;
   tokenUsage?: MessageTokenUsage;
+};
+
+export type CustomModelArgs = {
+  provider: string;
+  modelId: string;
+  apiKey?: string;
+  authToken?: string;
+  baseUrl?: string;
+  headers?: Record<string, string>;
+};
+
+export type ProviderRuntime = {
+  apiKey?: string;
+  authToken?: string;
+  baseUrl?: string;
+  headers?: Record<string, string>;
+  customModelFactory?: (modelId: string) => LanguageModel | undefined;
 };
 
 /**
@@ -234,6 +252,10 @@ export interface AiStateForTransport {
   readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
   clearAbortSnapshots?: () => void;
   getFullInstructions: (sessionId?: string) => string;
+  getProviderRuntime: (
+    provider?: string,
+    modelId?: string,
+  ) => ProviderRuntime | undefined;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;
   /** Get base URL from settings for the current session's provider */

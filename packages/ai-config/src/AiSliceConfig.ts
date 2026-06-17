@@ -33,7 +33,7 @@ export function createDefaultAiConfig(
         id: defaultSessionId,
         name: 'Untitled',
         modelProvider: 'openai',
-        model: 'gpt-4.1',
+        model: '',
         createdAt: new Date(),
         uiMessages: [],
         messagesRevision: 0,

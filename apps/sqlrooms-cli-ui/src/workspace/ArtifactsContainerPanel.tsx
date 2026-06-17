@@ -170,7 +170,8 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const artifactTabs = ArtifactTabs.useActions();
   const invokeCreateArtifactCommand = useCreateCliArtifactCommand();
   const WorksheetIcon = ARTIFACT_TYPES.worksheet.icon;
-  const returnArtifactId = artifactTabs.selectedTabId ?? artifactTabs.openTabs[0];
+  const returnArtifactId =
+    artifactTabs.selectedTabId ?? artifactTabs.openTabs[0];
   const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
     (artifactType) => artifactType !== 'worksheet',
   );
@@ -199,11 +200,11 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
           size="lg"
           className="h-12 px-6 text-base"
           onClick={() => {
-            void invokeCreateArtifactCommand(
-              'worksheet.create-artifact',
-            ).then((artifactId) => {
-              if (artifactId) onDone?.();
-            });
+            void invokeCreateArtifactCommand('worksheet.create-artifact').then(
+              (artifactId) => {
+                if (artifactId) onDone?.();
+              },
+            );
           }}
         >
           {WorksheetIcon ? <WorksheetIcon className="h-5 w-5" /> : null}

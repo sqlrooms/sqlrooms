@@ -4,25 +4,44 @@ export function createDefaultAiSettingsConfig(
   props?: Partial<AiSettingsSliceConfig>,
 ): AiSettingsSliceConfig {
   return {
+    defaultProvider: 'openai',
+    defaultModel: '',
     providers: {
       openai: {
+        title: 'OpenAI',
+        kind: 'builtin',
+        configured: false,
         baseUrl: 'https://api.openai.com/v1',
-        apiKey: '',
-        models: [
+        models: [],
+        defaultAuthMethod: 'manual_api_key',
+        experimental: false,
+        authMethods: [
           {
-            modelName: 'gpt-4.1',
-          },
-          {
-            modelName: 'gpt-5',
+            id: 'manual_api_key',
+            type: 'api_key',
+            label: 'Manually enter API Key',
+            description: '',
+            experimental: false,
+            metadata: {},
           },
         ],
       },
       anthropic: {
-        baseUrl: 'https://api.anthropic.com',
-        apiKey: '',
-        models: [
+        title: 'Anthropic',
+        kind: 'builtin',
+        configured: false,
+        baseUrl: 'https://api.anthropic.com/v1',
+        models: [],
+        defaultAuthMethod: 'manual_api_key',
+        experimental: false,
+        authMethods: [
           {
-            modelName: 'claude-4-sonnet',
+            id: 'manual_api_key',
+            type: 'api_key',
+            label: 'Manually enter API Key',
+            description: '',
+            experimental: false,
+            metadata: {},
           },
         ],
       },
@@ -30,7 +49,6 @@ export function createDefaultAiSettingsConfig(
     customModels: [
       // {
       //   baseUrl: 'http://localhost:11434/v1',
-      //   apiKey: '',
       //   modelName: 'qwen3',
       // },
     ],

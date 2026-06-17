@@ -18,6 +18,7 @@ from .web.db_bridge import (
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
 )
+from .web.ai_settings import DEFAULT_AUTH_PATH, build_runtime_ai_providers
 from .web.launcher import SqlroomsHttpServer
 
 logging.basicConfig(
@@ -156,48 +157,17 @@ def _load_ai_runtime_config(
     list[dict[str, Any]],
     dict[str, Any],
 ]:
+    default_provider, default_model, providers = build_runtime_ai_providers(
+        path,
+        DEFAULT_AUTH_PATH,
+        "",
+    )
     if path is None:
-        return (None, None, {}, [], {})
+        return (default_provider, default_model, providers, [], {})
     raw = _read_toml(path)
     ai = raw.get("ai")
     if not isinstance(ai, dict):
-        return (None, None, {}, [], {})
-
-    default_provider = _normalize_config_string(ai.get("default_provider"))
-    default_model = _normalize_config_string(ai.get("default_model"))
-    providers_raw = ai.get("providers") or []
-    if not isinstance(providers_raw, list):
-        raise RuntimeError("'ai.providers' must be an array in SQLRooms config.")
-
-    providers: dict[str, dict[str, Any]] = {}
-    for idx, item in enumerate(providers_raw):
-        if not isinstance(item, dict):
-            raise RuntimeError(f"AI provider entry at index {idx} must be an object.")
-        provider_id = _require_config_string(
-            item, "id", connector_id=f"ai#{idx}", engine="ai"
-        )
-        if provider_id in providers:
-            raise RuntimeError(f"Duplicate AI provider id in config: {provider_id}")
-        base_url = _normalize_config_string(item.get("base_url")) or ""
-        api_key = _normalize_config_string(item.get("api_key")) or ""
-        api_key_env = _normalize_config_string(item.get("api_key_env"))
-        if api_key_env and not api_key:
-            api_key = os.environ.get(api_key_env, "")
-        models_raw = item.get("models") or []
-        if not isinstance(models_raw, list):
-            raise RuntimeError(
-                f"AI provider '{provider_id}' has invalid 'models' (must be an array)."
-            )
-        models = []
-        for model in models_raw:
-            model_name = _normalize_config_string(model)
-            if model_name:
-                models.append({"modelName": model_name})
-        providers[provider_id] = {
-            "baseUrl": base_url,
-            "apiKey": api_key,
-            "models": models,
-        }
+        return (default_provider, default_model, providers, [], {})
 
     custom_models_raw = ai.get("custom_models") or []
     if not isinstance(custom_models_raw, list):
@@ -484,6 +454,7 @@ def main(
         ai_providers=ai_providers,
         ai_custom_models=ai_custom_models,
         ai_model_parameters=ai_model_parameters,
+        legacy_ai_config=False,
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,

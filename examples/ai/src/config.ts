@@ -1,59 +1,162 @@
-import {AiSettingsSliceConfig} from '@sqlrooms/ai';
+import type {AiSettingsSliceConfig} from '@sqlrooms/ai-settings';
 
-// Constants for commonly used values
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/v1';
 
-// Default base URLs for each provider
-export const PROVIDER_DEFAULT_BASE_URLS = {
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com/v1',
-  google: 'https://generativelanguage.googleapis.com/v1beta',
-  deepseek: 'https://api.deepseek.com/v1',
-  ollama: OLLAMA_DEFAULT_BASE_URL,
-} as const;
-
-export const LLM_MODELS = [
-  {
-    name: 'openai',
-    models: ['gpt-5.2', 'gpt-5'],
+export const AI_SETTINGS: Pick<
+  AiSettingsSliceConfig,
+  'defaultProvider' | 'defaultModel' | 'providers'
+> = {
+  defaultProvider: 'openai',
+  defaultModel: 'gpt-5',
+  providers: {
+    openai: {
+      title: 'OpenAI',
+      kind: 'builtin',
+      baseUrl: 'https://api.openai.com/v1',
+      models: [{modelName: 'gpt-5'}, {modelName: 'gpt-4.1'}],
+      defaultAuthMethod: 'manual_api_key',
+      authMethods: [
+        {
+          id: 'manual_api_key',
+          type: 'api_key',
+          label: 'Manually enter API Key',
+          description: 'Works with the standard OpenAI API.',
+          experimental: false,
+          metadata: {},
+        },
+        {
+          id: 'chatgpt_browser',
+          type: 'oauth_popup',
+          label: 'ChatGPT Pro/Plus (browser)',
+          description:
+            'Experimental browser-first sign-in flow for ChatGPT-backed access.',
+          experimental: true,
+          metadata: {
+            authUrl: 'https://chatgpt.com/',
+          },
+        },
+        {
+          id: 'chatgpt_headless',
+          type: 'device_code',
+          label: 'ChatGPT Pro/Plus (headless)',
+          description:
+            'Experimental code-based flow that can be completed without popup handling.',
+          experimental: true,
+          metadata: {
+            authUrl: 'https://chatgpt.com/',
+          },
+        },
+      ],
+      experimental: true,
+      status: {
+        hasCredentials: false,
+        credentialType: null,
+        selectedAuthMethod: null,
+        expiresAt: null,
+        status: 'disconnected',
+      },
+    },
+    anthropic: {
+      title: 'Anthropic',
+      kind: 'builtin',
+      baseUrl: 'https://api.anthropic.com/v1',
+      models: [
+        {modelName: 'claude-opus-4-6'},
+        {modelName: 'claude-sonnet-4-6'},
+      ],
+      defaultAuthMethod: 'manual_api_key',
+      authMethods: [
+        {
+          id: 'manual_api_key',
+          type: 'api_key',
+          label: 'Manually enter API Key',
+          description: 'Works with the standard Anthropic API.',
+          experimental: false,
+          metadata: {},
+        },
+        {
+          id: 'claude_pro_max',
+          type: 'oauth_redirect',
+          label: 'Claude Pro/Max',
+          description:
+            'Experimental browser flow for Claude account-based access.',
+          experimental: true,
+          metadata: {
+            authUrl: 'https://claude.ai/',
+          },
+        },
+        {
+          id: 'create_api_key',
+          type: 'oauth_to_api_key',
+          label: 'Create an API Key',
+          description:
+            'Experimental browser flow that ends with an API-compatible key.',
+          experimental: true,
+          metadata: {
+            authUrl: 'https://console.anthropic.com/',
+          },
+        },
+      ],
+      experimental: true,
+      status: {
+        hasCredentials: false,
+        credentialType: null,
+        selectedAuthMethod: null,
+        expiresAt: null,
+        status: 'disconnected',
+      },
+    },
+    ollama: {
+      title: 'Ollama',
+      kind: 'local',
+      baseUrl: OLLAMA_DEFAULT_BASE_URL,
+      models: [{modelName: 'qwen3:32b'}, {modelName: 'gpt-oss'}],
+      defaultAuthMethod: 'local_runtime',
+      authMethods: [
+        {
+          id: 'local_runtime',
+          type: 'local',
+          label: 'Use local runtime',
+          description:
+            'Connect to a local Ollama server running on your machine.',
+          experimental: false,
+          metadata: {},
+        },
+      ],
+      experimental: false,
+      status: {
+        hasCredentials: false,
+        credentialType: null,
+        selectedAuthMethod: null,
+        expiresAt: null,
+        status: 'disconnected',
+      },
+    },
+    custom_openai: {
+      title: 'OpenAI-compatible',
+      kind: 'custom',
+      baseUrl: 'https://api.example.com/v1',
+      models: [{modelName: 'my-compatible-model'}],
+      defaultAuthMethod: 'manual_api_key',
+      authMethods: [
+        {
+          id: 'manual_api_key',
+          type: 'api_key',
+          label: 'Manually enter API Key',
+          description:
+            'Use this for self-hosted or third-party OpenAI-compatible APIs.',
+          experimental: false,
+          metadata: {},
+        },
+      ],
+      experimental: false,
+      status: {
+        hasCredentials: false,
+        credentialType: null,
+        selectedAuthMethod: null,
+        expiresAt: null,
+        status: 'disconnected',
+      },
+    },
   },
-  {
-    name: 'anthropic',
-    models: ['claude-3-5-sonnet', 'claude-3-5-haiku'],
-  },
-  {
-    name: 'google',
-    models: [
-      'gemini-2.0-pro-exp-02-05',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash',
-    ],
-  },
-  {
-    name: 'deepseek',
-    models: ['deepseek-chat'],
-  },
-  {
-    name: 'ollama',
-    models: ['qwen3:32b', 'gpt-oss'],
-  },
-];
-
-export const AI_SETTINGS = {
-  providers: LLM_MODELS.reduce((acc: Record<string, any>, provider) => {
-    acc[provider.name] = {
-      baseUrl:
-        PROVIDER_DEFAULT_BASE_URLS[
-          provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS
-        ],
-      apiKey: '',
-      models: provider.models.map((model) => ({
-        id: model,
-        modelName: model,
-      })),
-    };
-    return acc;
-  }, {}),
-} satisfies Pick<AiSettingsSliceConfig, 'providers'>;
+};
