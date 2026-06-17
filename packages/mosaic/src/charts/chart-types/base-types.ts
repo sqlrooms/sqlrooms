@@ -199,6 +199,10 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
   selectionName?: string;
 };
 
+export function getChartTableReference(dataTable: DataTable): string {
+  return dataTable.table.toString();
+}
+
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {
     createSpec: (options: CreateSpecOptions<TConfig['settings']>) => Spec;

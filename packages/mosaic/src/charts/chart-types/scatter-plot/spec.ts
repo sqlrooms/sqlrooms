@@ -5,7 +5,7 @@ import {
   MissingColumnsError,
   RequiredFieldsError,
 } from '../errors';
-import {CreateSpecOptions} from '../base-types';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {isNumericType} from '../../../column-types-utils';
 
 const FG_COLOR = 'var(--color-chart-1)';
@@ -20,7 +20,7 @@ export function createScatterPlotSpec(
 
   const dotMark: Record<string, unknown> = {
     mark: 'dot',
-    data: {from: dataTable.table.table, filterBy: '$brush'},
+    data: {from: getChartTableReference(dataTable), filterBy: '$brush'},
     x: xColumn.name,
     y: yColumn.name,
     fill: FG_COLOR,
