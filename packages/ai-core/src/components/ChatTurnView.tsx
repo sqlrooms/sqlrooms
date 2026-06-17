@@ -257,7 +257,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     ];
 
     uiMessageParts.forEach((part, index) => {
-      if (isTextPart(part)) {
+      if (isTextPart(part) && !suppressedIndices.has(index)) {
         blocks.push({
           id: `${searchBlockPrefix}:text:${index}`,
           resultId: turnId,
@@ -284,7 +284,14 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     });
 
     return blocks.filter((block) => block.text.trim().length > 0);
-  }, [turnId, prompt, hasActiveQuery, searchBlockPrefix, uiMessageParts]);
+  }, [
+    turnId,
+    prompt,
+    hasActiveQuery,
+    searchBlockPrefix,
+    uiMessageParts,
+    suppressedIndices,
+  ]);
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 

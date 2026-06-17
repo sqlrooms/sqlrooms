@@ -4,12 +4,14 @@ import {BrainIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
 import Markdown, {Components} from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import type {PluggableList} from 'unified';
 import {
   createChatSearchRehypePlugin,
   useOptionalChatSearch,
 } from './ChatSearch';
+import {markdownSanitizeSchema} from './markdown-sanitize';
 import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
 
@@ -86,7 +88,7 @@ const ThinkBlock = React.memo<{
   className?: string;
   thinkContent: ThinkContent;
   isExpanded: boolean;
-  onToggleExpansion: (content: string) => void;
+  onToggleExpansion: (index: number) => void;
 }>(({thinkContent, isExpanded, onToggleExpansion, className}) => {
   const {content, isComplete, index} = thinkContent;
 
@@ -115,7 +117,7 @@ const ThinkBlock = React.memo<{
       </span>{' '}
       {needsTruncation && (
         <button
-          onClick={() => onToggleExpansion(content)}
+          onClick={() => onToggleExpansion(index)}
           className="text-xs text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           {isExpanded ? 'Show less' : 'Show more thinking'}
@@ -139,14 +141,14 @@ export const MessageContent = React.memo(function MessageContent(
 ) {
   const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
   const search = useOptionalChatSearch();
-  const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const toggleThinkExpansion = useCallback((content: string) => {
+  const [expandedThink, setExpandedThink] = useState<Set<number>>(new Set());
+  const toggleThinkExpansion = useCallback((index: number) => {
     setExpandedThink((prev) => {
       const newExpanded = new Set(prev);
-      if (newExpanded.has(content)) {
-        newExpanded.delete(content);
+      if (newExpanded.has(index)) {
+        newExpanded.delete(index);
       } else {
-        newExpanded.add(content);
+        newExpanded.add(index);
       }
       return newExpanded;
     });
@@ -164,7 +166,10 @@ export const MessageContent = React.memo(function MessageContent(
     [search, searchBlockId],
   );
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeRaw];
+    const plugins: PluggableList = [
+      rehypeRaw,
+      [rehypeSanitize, markdownSanitizeSchema],
+    ];
     if (searchBlockId && searchMatches.length > 0) {
       plugins.push(
         createChatSearchRehypePlugin({
@@ -189,7 +194,7 @@ export const MessageContent = React.memo(function MessageContent(
           return null;
         }
 
-        const isExpanded = expandedThink.has(thinkContent.content);
+        const isExpanded = expandedThink.has(index);
 
         return (
           <ThinkBlock

@@ -143,7 +143,16 @@ export type {
 export {ChatMessagesContainer} from '@sqlrooms/ai-core';
 // @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from '@sqlrooms/ai-core';
+export {ChatTurnView} from '@sqlrooms/ai-core';
+export type {ChatTurnViewProps} from '@sqlrooms/ai-core';
+/** @deprecated Use `ChatTurnView` instead. */
 export {AnalysisResult} from '@sqlrooms/ai-core';
+export {MessageContent, processMessageContent} from '@sqlrooms/ai-core';
+export type {MessageContentProps} from '@sqlrooms/ai-core';
+/** @deprecated Use `MessageContent` instead. */
+export {AnalysisAnswer} from '@sqlrooms/ai-core';
+/** @deprecated Use `processMessageContent` instead. */
+export {processAnalysisAnswerContent} from '@sqlrooms/ai-core';
 export {ErrorMessage} from '@sqlrooms/ai-core';
 export type {ErrorMessageComponentProps} from '@sqlrooms/ai-core';
 export {PromptSuggestions} from '@sqlrooms/ai-core';
