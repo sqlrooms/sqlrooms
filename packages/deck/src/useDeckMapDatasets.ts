@@ -54,9 +54,11 @@ export function useDeckMapDatasets(options: {
           message: state.error.message,
           recoverable: true,
         });
+      } else {
+        clearPanelIssue(dashboardId, panel.id);
       }
     },
-    [dashboardId, panel.id, reportPanelIssue],
+    [clearPanelIssue, dashboardId, panel.id, reportPanelIssue],
   );
 
   const runtimeIssueContext = useMemo<ChartRuntimeIssueContext>(

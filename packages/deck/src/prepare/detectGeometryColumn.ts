@@ -4,7 +4,6 @@ import {
 } from '@loaders.gl/geoarrow';
 import * as arrow from 'apache-arrow';
 import {isDirectGeoArrowEncoding} from './geoarrow';
-import {synthesizePointVector} from './synthesizePointVector';
 import type {
   GeometryEncodingHint,
   ResolvedGeometryColumn,
@@ -50,31 +49,12 @@ export function findCoordinateColumns(
   return lonField && latField ? {lonField, latField} : null;
 }
 
-function synthesizeGeoArrowPointColumn(
-  table: arrow.Table,
-  lonField: string,
-  latField: string,
-): {vector: arrow.Vector; encoding: ResolvedGeometryEncoding} {
-  const lonVector = table.getChild(lonField);
-  const latVector = table.getChild(latField);
-  if (!lonVector || !latVector) {
-    throw new Error(
-      `Could not access coordinate columns "${lonField}" / "${latField}".`,
-    );
-  }
-
-  return {
-    vector: synthesizePointVector(lonVector, latVector, table.numRows),
-    encoding: 'geoarrow.point' as ResolvedGeometryEncoding,
-  };
-}
-
 const KNOWN_GEOM_NAMES = ['geometry', 'geom', 'wkb_geometry', 'the_geom'];
 
 function getFieldVector(table: arrow.Table, fieldName: string) {
   const vector = table.getChild(fieldName);
   if (vector) {
-    return {vector, synthesized: false as const};
+    return {vector};
   }
 
   // Fallback: if the requested geometry column doesn't exist, try other common names
@@ -83,25 +63,9 @@ function getFieldVector(table: arrow.Table, fieldName: string) {
       if (altName.toLowerCase() === fieldName.toLowerCase()) continue;
       const altVector = table.getChild(altName);
       if (altVector) {
-        return {vector: altVector, synthesized: false as const};
+        return {vector: altVector};
       }
     }
-  }
-
-  // Fallback: if the geometry column doesn't exist but the table has
-  // recognizable longitude/latitude columns, synthesize GeoArrow point geometry.
-  const coords = findCoordinateColumns(table);
-  if (coords) {
-    const result = synthesizeGeoArrowPointColumn(
-      table,
-      coords.lonField,
-      coords.latField,
-    );
-    return {
-      vector: result.vector,
-      synthesized: true as const,
-      encoding: result.encoding,
-    };
   }
 
   const available = table.schema.fields.map((f) => f.name).join(', ');
@@ -192,17 +156,6 @@ export function detectGeometryColumn(
   }
 
   const fieldResult = getFieldVector(table, detectedGeometryColumn);
-
-  // When geometry was synthesized from lon/lat columns, use the encoding
-  // determined during synthesis (geoarrow.point) instead of inferring from hints.
-  if (fieldResult.synthesized) {
-    return {
-      columnName: detectedGeometryColumn,
-      vector: fieldResult.vector,
-      encoding: fieldResult.encoding,
-      nativeGeoArrow: isDirectGeoArrowEncoding(fieldResult.encoding),
-    };
-  }
 
   const metadataEncoding =
     normalizeEncoding(fieldMetadata[detectedGeometryColumn]?.encoding) ??

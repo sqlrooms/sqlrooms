@@ -2,8 +2,6 @@ import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
-import {synthesizePointVector} from '../prepare/synthesizePointVector';
-import type {ResolvedGeometryColumn} from '../prepare/types';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
@@ -65,104 +63,6 @@ function applyColorScale(options: {
   };
 }
 
-const ARC_COORD_PATTERNS: Record<
-  string,
-  {latKeys: string[]; lonKeys: string[]}
-> = {
-  sourceGeometryColumn: {
-    latKeys: ['source_lat', 'source_latitude', 'src_lat', 'origin_lat'],
-    lonKeys: [
-      'source_lon',
-      'source_lng',
-      'source_longitude',
-      'src_lon',
-      'origin_lon',
-    ],
-  },
-  targetGeometryColumn: {
-    latKeys: [
-      'target_lat',
-      'target_latitude',
-      'dst_lat',
-      'dest_lat',
-      'destination_lat',
-    ],
-    lonKeys: [
-      'target_lon',
-      'target_lng',
-      'target_longitude',
-      'dst_lon',
-      'dest_lon',
-      'destination_lon',
-    ],
-  },
-};
-
-function trySynthesizeGeometryFromBinding(
-  table: arrow.Table,
-  configKey: string,
-  layerProps: LayerBindingProps & Record<string, unknown>,
-): ResolvedGeometryColumn | null {
-  const patterns = ARC_COORD_PATTERNS[configKey];
-  if (!patterns) return null;
-
-  const fieldNames = table.schema.fields.map((f) => f.name);
-  const fieldNamesLower = fieldNames.map((n) => n.toLowerCase());
-
-  // Check explicit binding columns first
-  const binding = layerProps._sqlroomsBinding;
-  const prefix = configKey === 'sourceGeometryColumn' ? 'source' : 'target';
-  const explicitLat = (binding as Record<string, unknown>)?.[
-    `${prefix}LatitudeColumn`
-  ] as string | undefined;
-  const explicitLon = (binding as Record<string, unknown>)?.[
-    `${prefix}LongitudeColumn`
-  ] as string | undefined;
-
-  let latField: string | undefined;
-  let lonField: string | undefined;
-
-  if (explicitLat && explicitLon) {
-    latField =
-      fieldNames.find((n) => n === explicitLat) ??
-      fieldNames.find((n) => n.toLowerCase() === explicitLat.toLowerCase());
-    lonField =
-      fieldNames.find((n) => n === explicitLon) ??
-      fieldNames.find((n) => n.toLowerCase() === explicitLon.toLowerCase());
-  }
-
-  if (!latField || !lonField) {
-    // Try pattern matching
-    for (const key of patterns.latKeys) {
-      const idx = fieldNamesLower.indexOf(key);
-      if (idx >= 0) {
-        latField = fieldNames[idx];
-        break;
-      }
-    }
-    for (const key of patterns.lonKeys) {
-      const idx = fieldNamesLower.indexOf(key);
-      if (idx >= 0) {
-        lonField = fieldNames[idx];
-        break;
-      }
-    }
-  }
-
-  if (!latField || !lonField) return null;
-
-  const latVector = table.getChild(latField);
-  const lonVector = table.getChild(lonField);
-  if (!latVector || !lonVector) return null;
-
-  return {
-    columnName: configKey,
-    vector: synthesizePointVector(lonVector, latVector, table.numRows),
-    encoding: 'geoarrow.point',
-    nativeGeoArrow: true,
-  };
-}
-
 function resolveGeoArrowBindings(options: {
   layerName: string;
   compatibility: NonNullable<ReturnType<typeof getLayerCompatibility>> & {
@@ -190,25 +90,12 @@ function resolveGeoArrowBindings(options: {
       }
 
       let resolvedGeometry;
-      let synthesizedVector: arrow.Vector | null = null;
       try {
         resolvedGeometry = prepared.resolveGeometry(columnName);
       } catch {
-        // Geometry column not found — try synthesizing from lat/lon columns
-        // for arc layers where source/target have separate coordinate columns
-        const synthesized = trySynthesizeGeometryFromBinding(
-          prepared.table,
-          binding.configKey,
-          layerProps,
+        throw new Error(
+          `Geometry column "${columnName}" was not found in dataset "${prepared.datasetId}".`,
         );
-        if (synthesized) {
-          resolvedGeometry = synthesized;
-          synthesizedVector = synthesized.vector;
-        } else {
-          throw new Error(
-            `Geometry column "${columnName}" was not found and could not be synthesized from lat/lon columns.`,
-          );
-        }
       }
 
       // Detect mismatch: synthesized points can't satisfy a LineString binding.
@@ -261,24 +148,20 @@ function resolveGeoArrowBindings(options: {
         }
       }
 
-      if (synthesizedVector) {
-        boundProps[binding.prop] = synthesizedVector;
-      } else {
-        const layerData = prepared.getGeoArrowLayerData(columnName);
-        if (layerData.source === 'promoted') {
-          boundProps[binding.prop] = layerData.geometryColumn;
-          if (table === prepared.table) {
-            table = layerData.table;
-          }
-        } else {
-          if (table !== prepared.table && table !== layerData.table) {
-            throw new Error(
-              `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
-            );
-          }
+      const layerData = prepared.getGeoArrowLayerData(columnName);
+      if (layerData.source === 'promoted') {
+        boundProps[binding.prop] = layerData.geometryColumn;
+        if (table === prepared.table) {
           table = layerData.table;
-          boundProps[binding.prop] = layerData.geometryColumn;
         }
+      } else {
+        if (table !== prepared.table && table !== layerData.table) {
+          throw new Error(
+            `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
+          );
+        }
+        table = layerData.table;
+        boundProps[binding.prop] = layerData.geometryColumn;
       }
       continue;
     }

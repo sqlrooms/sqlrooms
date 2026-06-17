@@ -259,6 +259,7 @@ export function setDeckMapLayerHexagonColumn(
 ): DeckMapDashboardPanelConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
+    getHexagon: `@@=${hexagonColumn}`,
     _sqlroomsBinding: {
       ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
       hexagonColumn,

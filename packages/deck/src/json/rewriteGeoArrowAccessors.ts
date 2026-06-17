@@ -58,10 +58,11 @@ export function rewriteGeoArrowAccessors(options: {
         continue;
       }
       if (!vector) {
-        const available = table.schema.fields.map((f) => f.name).join(', ');
-        throw new Error(
-          `Column "${expression.trim()}" not found in dataset. Available columns: ${available}`,
+        console.warn(
+          `Column "${expression.trim()}" not found in dataset for accessor "${propName}". Skipping accessor.`,
         );
+        delete nextProps[propName];
+        continue;
       }
     }
 
