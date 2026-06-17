@@ -1,15 +1,14 @@
 import {getEffectiveSessionContextItemIds} from '../src/contextSelection';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 
 function createSession(
-  props: Partial<AnalysisSessionSchema> = {},
-): AnalysisSessionSchema {
+  props: Partial<ChatSessionSchema> = {},
+): ChatSessionSchema {
   return {
     id: 'session-1',
     name: 'Session 1',
     modelProvider: 'openai',
     model: 'gpt-4.1',
-    analysisResults: [],
     uiMessages: [],
     messagesRevision: 0,
     prompt: '',

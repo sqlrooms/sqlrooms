@@ -5,9 +5,9 @@
 import type {AgentProgressSnapshot} from './types';
 
 import {
+  type AiSliceConfig,
   AiSettingsSliceConfig,
-  AnalysisResultSchema,
-  AnalysisSessionSchema,
+  ChatSessionSchema,
   DynamicToolUIPart,
   ToolUIPart,
   UIMessagePart,
@@ -17,11 +17,7 @@ import {
   UIMessage,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import {
-  ABORT_EVENT,
-  ANALYSIS_PENDING_ID,
-  TOOL_CALL_CANCELLED,
-} from './constants';
+import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -223,72 +219,67 @@ export function shouldSuppressTextPart(
 }
 
 /**
- * Cleans up pending analysis results from interrupted conversations and restores them
- * with proper IDs from actual user messages. This handles the case where a page refresh
- * occurred during an active analysis, leaving orphaned "__pending__" results.
+ * Cleans up interrupted chat UI messages after reload/abort.
  *
  * Should be called once when loading persisted session data, not in migrations.
  *
  * @param session - The session to clean up
- * @returns The cleaned session with restored analysis results
+ * @returns The cleaned session with valid UI messages
  */
-export function cleanupPendingAnalysisResults(
-  session: AnalysisSessionSchema,
-): AnalysisSessionSchema {
-  const {analysisResults, uiMessages} = session;
-
-  if (!Array.isArray(analysisResults) || !Array.isArray(uiMessages)) {
+export function cleanupPendingUiMessages(
+  session: ChatSessionSchema,
+): ChatSessionSchema {
+  if (!Array.isArray(session.uiMessages)) {
     return session;
   }
 
-  // Remove all pending results
-  const nonPendingResults = analysisResults.filter(
-    (result) => result.id !== ANALYSIS_PENDING_ID,
-  );
-
-  // Find all user messages that don't have a corresponding assistant response
-  const orphanedUserMessages: Array<{id: string; prompt: string}> = [];
-
-  for (let i = 0; i < uiMessages.length; i++) {
-    const message = uiMessages[i];
-    if (!message || message.role !== 'user') {
-      continue;
-    }
-
-    // Check if there's an assistant message after this user message
-    const hasAssistantResponse = uiMessages
-      .slice(i + 1)
-      .some((m) => m && m.role === 'assistant');
-
-    if (!hasAssistantResponse) {
-      // Extract text from message parts
-      const prompt = message.parts
-        .filter((part) => part.type === 'text')
-        .map((part) => (part as {text: string}).text)
-        .join('');
-
-      orphanedUserMessages.push({
-        id: message.id,
-        prompt,
-      });
-    }
-  }
-
-  // For each orphaned user message, check if it already has an analysis result
-  // If not, create one
-  const existingResultIds = new Set(nonPendingResults.map((r) => r.id));
-  const restoredResults: AnalysisResultSchema[] = orphanedUserMessages
-    .filter(({id}) => !existingResultIds.has(id))
-    .map(({id, prompt}) => ({
-      id,
-      prompt,
-      isCompleted: true, // Mark as completed since the user did submit it
-    }));
-
   return {
     ...session,
-    analysisResults: [...nonPendingResults, ...restoredResults],
+    uiMessages: fixIncompleteToolCalls(
+      session.uiMessages as UIMessage[],
+    ) as ChatSessionSchema['uiMessages'],
   };
+}
+
+/** @deprecated Use `cleanupPendingUiMessages` instead. */
+export const cleanupPendingAnalysisResults = cleanupPendingUiMessages;
+
+/**
+ * Normalizes a chat session restored from persisted or externally supplied
+ * config so transient in-flight chat state is not resumed after reload.
+ *
+ * The returned session has pending UI message/tool-call state made renderable
+ * through `cleanupPendingUiMessages`, and always clears `isRunning` because no
+ * transport request is active for restored state.
+ */
+export function normalizeAiSession(
+  session: ChatSessionSchema,
+): ChatSessionSchema {
+  const cleaned = cleanupPendingUiMessages(session);
+
+  return {
+    ...cleaned,
+    isRunning: false,
+  };
+}
+
+/**
+ * Normalizes every session in an AI slice config while preserving the caller's
+ * config shape.
+ *
+ * Use this whenever config enters the AI slice from persistence or a public
+ * setter. It keeps constructor initialization and `setConfig()` behavior
+ * consistent without mutating the original config object.
+ */
+export function normalizeAiConfig<T extends Partial<AiSliceConfig> | undefined>(
+  config: T,
+): T {
+  return config?.sessions
+    ? ({
+        ...config,
+        sessions: config.sessions.map(normalizeAiSession),
+      } as T)
+    : config;
 }
 
 /**

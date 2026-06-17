@@ -58,6 +58,7 @@ export {
 } from './use-copy-as-tsv';
 
 export {useDuckDb} from './useDuckDb';
+export {useDataTable} from './useDataTable';
 
 export {
   useDuckDbQuery,
@@ -93,6 +94,7 @@ export {
   loadSpatial,
   makeLimitQuery,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,

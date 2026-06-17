@@ -4,7 +4,7 @@ import {SpinnerPane} from '@sqlrooms/ui';
 import {FC, useCallback} from 'react';
 import {useStoreWithMosaic} from '../../MosaicSlice';
 import {DataTableSelectorEmptyState} from '../../components/DataTableSelector';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {DataTableExplorer} from '../DataTableExplorer';
 import {DataTableBlockHeader} from './DataTableBlockHeader';
@@ -80,7 +80,7 @@ export const DataTableBlockRenderer: FC<
     <DataTableExplorer
       pageSize={25}
       selectionName={selectionName}
-      tableName={selectedTable}
+      tableName={selectedTable.table}
     >
       <div className="flex h-full min-h-0 flex-col">
         <DataTableBlockHeader

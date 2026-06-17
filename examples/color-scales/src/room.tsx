@@ -224,7 +224,7 @@ function LegendCard({
 
 function ColorScalesApp() {
   const isTableReady = useRoomStore((state) =>
-    Boolean(state.db.findTableByName('cars')),
+    Boolean(state.db.findTable('cars')),
   );
   const queryResult = useSql<CarRow>({
     query: `SELECT * FROM cars ORDER BY Model, Car`,

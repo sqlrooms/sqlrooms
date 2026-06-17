@@ -4,7 +4,7 @@ import {FC, useCallback} from 'react';
 import type {ChartConfig} from '../chart-types/chart-config';
 import {MosaicChart} from '../MosaicChart';
 import {useParseChartConfig} from '../useParseChartConfig';
-import {useDataTable} from '../../hooks/useDataTable';
+import {useDataTable} from '@sqlrooms/db';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {ChartBlockHeader} from './ChartBlockHeader';
 import {ChartSelectorEmptyState} from './ChartSelectorEmptyState';

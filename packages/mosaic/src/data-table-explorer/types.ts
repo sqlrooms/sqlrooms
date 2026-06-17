@@ -1,4 +1,4 @@
-import {DataTable} from '@sqlrooms/db';
+import type {QualifiedTableName} from '@sqlrooms/db';
 import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
 import type {Interval1D} from '@uwdata/mosaic-plot';
 import type {Field, Table} from 'apache-arrow';
@@ -77,6 +77,8 @@ export type DataTableExplorerColumnState = {
   summary: DataTableExplorerSummaryState;
 };
 
+export type DataTableExplorerTableReference = string | QualifiedTableName;
+
 export type DataTableExplorerOptions = {
   categoryLimit?: number;
   columns?: string[];
@@ -85,7 +87,7 @@ export type DataTableExplorerOptions = {
   selection?: Selection;
   selectionName?: string;
   summaryBins?: number;
-  tableName: DataTable;
+  tableName: DataTableExplorerTableReference;
 };
 
 export type UseDataTableExplorerReturn = {

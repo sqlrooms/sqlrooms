@@ -18,12 +18,17 @@ export const ErrorMessageSchema = z.object({
 });
 export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
 
+/**
+ * @deprecated Compatibility schema for the legacy `analysisResults` session
+ * field. New chat behavior should prefer `uiMessages`.
+ */
 export const AnalysisResultSchema = z.object({
   id: z.string(), // allow any string ID to match UI message ID from AI SDK v5
   prompt: z.string(),
   errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });
+/** @deprecated Use `uiMessages`-oriented types for new chat behavior. */
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
 
 export const AiRunContextItemSchema = z
@@ -135,14 +140,13 @@ export function setAiRunContextPrimaryItem(
   };
 }
 
-const AnalysisSessionBaseSchema = z.object({
+const ChatSessionBaseSchema = z.object({
   id: z.string(),
   name: z.string(),
   modelProvider: z.string(),
   model: z.string(),
   customModelName: z.string().optional(),
   baseUrl: z.string().optional(),
-  analysisResults: z.array(AnalysisResultSchema),
   createdAt: z.coerce.date().optional(),
   uiMessages: z.array(UIMessageSchema),
   /** Revision counter that increments when messages are deleted, used to force useChat reset */
@@ -165,7 +169,7 @@ const AnalysisSessionBaseSchema = z.object({
  * Apply all migrations in sequence from oldest to newest.
  * This ensures that old data can be migrated through multiple versions.
  */
-const migrateAnalysisSession = z.preprocess((data) => {
+const migrateChatSession = z.preprocess((data) => {
   let migrated = data;
 
   // Apply v0.24.14 migration (ollamaBaseUrl → baseUrl)
@@ -184,7 +188,16 @@ const migrateAnalysisSession = z.preprocess((data) => {
   }
 
   return migrated;
-}, AnalysisSessionBaseSchema);
+}, ChatSessionBaseSchema);
 
-export const AnalysisSessionSchema = migrateAnalysisSession;
+export const ChatSessionSchema = migrateChatSession;
+export type ChatSessionSchema = z.infer<typeof ChatSessionSchema>;
+
+/**
+ * @deprecated Use `ChatSessionSchema` instead.
+ */
+export const AnalysisSessionSchema = ChatSessionSchema;
+/**
+ * @deprecated Use `ChatSessionSchema` instead.
+ */
 export type AnalysisSessionSchema = z.infer<typeof AnalysisSessionSchema>;
