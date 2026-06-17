@@ -537,7 +537,7 @@ const FlatSegmentList: React.FC<{
 
 // ---------------------------------------------------------------------------
 // OrchestratorToolLogLine — compact log line for orchestrator-level tool parts
-// Used by AnalysisResult to render non-agent tools inside an ActivityBox.
+// Used by ChatTurnView to render non-agent tools inside an ActivityBox.
 // ---------------------------------------------------------------------------
 
 export const OrchestratorToolLogLine: React.FC<{

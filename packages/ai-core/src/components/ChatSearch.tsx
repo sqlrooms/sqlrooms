@@ -10,17 +10,20 @@ import React, {
 } from 'react';
 import type {PropsWithChildren} from 'react';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import {unified} from 'unified';
 import {useStoreWithAi} from '../AiSlice';
+import {markdownSanitizeSchema} from './markdown-sanitize';
 
 const markdownHastProcessor = unified()
   .use(remarkParse)
   .use(remarkGfm)
   .use(remarkRehype, {allowDangerousHtml: true})
-  .use(rehypeRaw);
+  .use(rehypeRaw)
+  .use(rehypeSanitize, markdownSanitizeSchema);
 
 function collectHastText(node: any): string {
   if (!node) return '';

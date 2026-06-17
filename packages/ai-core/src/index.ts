@@ -11,9 +11,21 @@ export type {
   ForkSessionFromMessageArgs,
 } from './AiSlice';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
-// @deprecated Use `Chat.Messages` instead.
+/** @deprecated Use `Chat.Messages` instead. */
 export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
-export {AnalysisResult} from './components/AnalysisResult';
+export {ChatTurnView} from './components/ChatTurnView';
+export type {ChatTurnViewProps} from './components/ChatTurnView';
+/** @deprecated Use `ChatTurnView` instead. */
+export {ChatTurnView as AnalysisResult} from './components/ChatTurnView';
+export {
+  MessageContent,
+  processMessageContent,
+} from './components/MessageContent';
+export type {MessageContentProps} from './components/MessageContent';
+/** @deprecated Use `MessageContent` instead. */
+export {MessageContent as AnalysisAnswer} from './components/MessageContent';
+/** @deprecated Use `processMessageContent` instead. */
+export {processMessageContent as processAnalysisAnswerContent} from './components/MessageContent';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';

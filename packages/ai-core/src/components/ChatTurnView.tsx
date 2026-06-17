@@ -27,7 +27,7 @@ import {
   shouldSuppressTextPart,
 } from '../utils';
 import {ActivityBox} from './ActivityBox';
-import {AnalysisAnswer, processAnalysisAnswerContent} from './AnalysisAnswer';
+import {MessageContent, processMessageContent} from './MessageContent';
 import {
   HighlightedChatSearchText,
   markdownToPlainText,
@@ -42,7 +42,8 @@ import {OrchestratorToolLogLine} from './FlatAgentRenderer';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {ToolPartRenderer} from './ToolPartRenderer';
 
-type AnalysisResultProps = {
+export type ChatTurnViewProps = {
+  /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
   analysisResult?: AnalysisResultSchema;
   chatTurn?: ChatTurn;
   customMarkdownComponents?: Partial<Components>;
@@ -157,10 +158,10 @@ const ReasoningBox: React.FC<{
 };
 
 // ---------------------------------------------------------------------------
-// AnalysisResult
+// ChatTurnView
 // ---------------------------------------------------------------------------
 
-export const AnalysisResult: React.FC<AnalysisResultProps> = ({
+export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   analysisResult,
   chatTurn,
   customMarkdownComponents,
@@ -256,12 +257,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     ];
 
     uiMessageParts.forEach((part, index) => {
-      if (isTextPart(part)) {
+      if (isTextPart(part) && !suppressedIndices.has(index)) {
         blocks.push({
           id: `${searchBlockPrefix}:text:${index}`,
           resultId: turnId,
           text: markdownToPlainText(
-            processAnalysisAnswerContent(part.text).processedContent,
+            processMessageContent(part.text).processedContent,
           ),
         });
       } else if (isReasoningPart(part)) {
@@ -283,7 +284,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     });
 
     return blocks.filter((block) => block.text.trim().length > 0);
-  }, [turnId, prompt, hasActiveQuery, searchBlockPrefix, uiMessageParts]);
+  }, [
+    turnId,
+    prompt,
+    hasActiveQuery,
+    searchBlockPrefix,
+    uiMessageParts,
+    suppressedIndices,
+  ]);
 
   useRegisterChatSearchBlocks(searchBlockPrefix, searchBlocks);
 
@@ -393,7 +401,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
             if (isTextPart(part)) {
               return (
-                <AnalysisAnswer
+                <MessageContent
                   key={`text-${index}`}
                   content={part.text}
                   isAnswer={index === uiMessageParts.length - 1}
