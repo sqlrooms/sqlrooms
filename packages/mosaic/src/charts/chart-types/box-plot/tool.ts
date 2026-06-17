@@ -41,6 +41,16 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
           settings: params.settings,
         });
 
+        const chartConfig: BoxPlotChartConfig = {
+          chartType: 'box-plot' as const,
+          settings: params.settings,
+        };
+
+        deps.addChart({
+          tableName: params.tableName,
+          config: chartConfig,
+        });
+
         return {
           llmResult: {
             success: true,

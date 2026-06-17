@@ -35,6 +35,16 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
           settings: params.settings,
         });
 
+        const chartConfig: ScatterPlotChartConfig = {
+          chartType: 'scatter-plot' as const,
+          settings: params.settings,
+        };
+
+        deps.addChart({
+          tableName: params.tableName,
+          config: chartConfig,
+        });
+
         return {
           llmResult: {
             success: true,

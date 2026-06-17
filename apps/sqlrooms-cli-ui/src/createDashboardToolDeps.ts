@@ -11,6 +11,7 @@ import {
 import type {StoreApi} from 'zustand';
 import {makeArtifactPrimaryForAiRun} from './context/createArtifactContextAiTools';
 import type {RoomState} from './store-types';
+import {DashboardToolDeps} from '@sqlrooms/mosaic';
 
 function getMutableAiRunContext(context?: ChartToolExecutionContext) {
   return (
@@ -24,51 +25,53 @@ function getMutableAiRunContext(context?: ChartToolExecutionContext) {
 
 export function createDashboardAiAdapter(
   store: StoreApi<RoomState>,
-): DashboardAiAdapter<RoomState> {
+): DashboardAiAdapter {
   return {
-    getTables: (state) => state.db.tables,
-    hasRunContext: (_state, context) =>
+    getTables: () => store.getState().db.tables,
+    hasRunContext: (context) =>
       getAiRunContextItems(getMutableAiRunContext(context)).length > 0,
-    resolveContextDashboardArtifactId: (state, context) => {
+    resolveContextDashboardArtifactId: (context) => {
       const primaryItem = getAiRunContextPrimaryItem(
         getMutableAiRunContext(context),
       );
       if (!primaryItem) return undefined;
-      const artifact = state.artifacts.config.artifactsById[primaryItem.id];
+      const artifact =
+        store.getState().artifacts.config.artifactsById[primaryItem.id];
       return artifact?.type === 'dashboard' ? primaryItem.id : undefined;
     },
-    makeDashboardPrimaryForRun: (_state, dashboardId, context) =>
+    makeDashboardPrimaryForRun: (dashboardId, context) =>
       makeArtifactPrimaryForAiRun(
         store,
         dashboardId,
         context as AiToolExecutionContext | undefined,
       ),
-    getCurrentDashboardArtifactId: (state) =>
-      state.dashboard.getCurrentDashboardArtifactId(),
-    createDashboardArtifact: (state, title, layoutType) =>
-      state.dashboard.createDashboardArtifact(title, layoutType),
-    isDashboardArtifact: (state, artifactId) =>
-      state.artifacts.getArtifact(artifactId)?.type === 'dashboard',
-    setCurrentArtifact: (state, artifactId) =>
-      state.artifacts.setCurrentArtifact(artifactId),
-    ensureDashboard: (state, dashboardId) =>
-      state.dashboard.ensureDashboardArtifact(dashboardId),
-    getDashboard: (state, dashboardId) =>
-      state.mosaicDashboard.getDashboard(dashboardId),
-    setSelectedTable: (state, dashboardId, tableName) =>
-      state.mosaicDashboard.setSelectedTable(dashboardId, tableName),
-    addPanel: (state, dashboardId, panel) =>
-      state.mosaicDashboard.addPanel(dashboardId, panel),
-    updatePanel: (state, dashboardId, panelId, patch) =>
-      state.mosaicDashboard.updatePanel(dashboardId, panelId, patch),
-    removePanel: (state, dashboardId, panelId) =>
-      state.mosaicDashboard.removePanel(dashboardId, panelId),
+    getCurrentDashboardArtifactId: () =>
+      store.getState().dashboard.getCurrentDashboardArtifactId(),
+    createDashboardArtifact: (title, layoutType) =>
+      store.getState().dashboard.createDashboardArtifact(title, layoutType),
+    isDashboardArtifact: (artifactId) =>
+      store.getState().artifacts.getArtifact(artifactId)?.type === 'dashboard',
+    setCurrentArtifact: (artifactId) =>
+      store.getState().artifacts.setCurrentArtifact(artifactId),
+    ensureDashboard: (dashboardId) =>
+      store.getState().dashboard.ensureDashboardArtifact(dashboardId),
+    getDashboard: (dashboardId) =>
+      store.getState().mosaicDashboard.getDashboard(dashboardId),
+    setSelectedTable: (dashboardId, tableName) =>
+      store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
+    addPanel: (dashboardId, panel) =>
+      store.getState().mosaicDashboard.addPanel(dashboardId, panel),
+    updatePanel: (dashboardId, panelId, patch) =>
+      store.getState().mosaicDashboard.updatePanel(dashboardId, panelId, patch),
+    removePanel: (dashboardId, panelId) =>
+      store.getState().mosaicDashboard.removePanel(dashboardId, panelId),
   };
 }
 
-export function createDashboardToolDeps(store: StoreApi<RoomState>) {
-  return createReusableDashboardToolDeps({
-    store,
-    adapter: createDashboardAiAdapter(store),
-  });
+export function createDashboardToolDeps(
+  store: StoreApi<RoomState>,
+): DashboardToolDeps {
+  const adapter = createDashboardAiAdapter(store);
+
+  return createReusableDashboardToolDeps(adapter);
 }

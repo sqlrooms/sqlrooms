@@ -20,6 +20,13 @@ export type ChartToolOutput<T> =
   | ChartToolSuccessOutput<T>
   | ChartToolErrorOutput;
 
+type AddChartFunctionArgs = {
+  tableName: string;
+  config: any;
+};
+
+export type AddChartFunction = (args: AddChartFunctionArgs) => string;
+
 /**
  * Dependencies for chart configuration tools.
  * Simple and minimal.
@@ -27,6 +34,8 @@ export type ChartToolOutput<T> =
 export type ChartToolDeps = {
   /** Resolve table by name, throws if not found */
   resolveTable: (tableName: string) => DataTable;
+  /** Add chart to dashboard */
+  addChart: AddChartFunction;
   /** Maximum data points for non-aggregated charts */
   maxDataPoints: number;
 };

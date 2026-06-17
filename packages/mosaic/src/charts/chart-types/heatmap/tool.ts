@@ -36,6 +36,16 @@ Do NOT use for: individual point plots (use scatter-plot), single variable distr
           settings: params.settings,
         });
 
+        const chartConfig: HeatmapChartConfig = {
+          chartType: 'heatmap' as const,
+          settings: params.settings,
+        };
+
+        deps.addChart({
+          tableName: params.tableName,
+          config: chartConfig,
+        });
+
         return {
           llmResult: {
             success: true,

@@ -35,6 +35,16 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
           settings: params.settings,
         });
 
+        const chartConfig: CountPlotChartConfig = {
+          chartType: 'count-plot' as const,
+          settings: params.settings,
+        };
+
+        deps.addChart({
+          tableName: params.tableName,
+          config: chartConfig,
+        });
+
         return {
           llmResult: {
             success: true,

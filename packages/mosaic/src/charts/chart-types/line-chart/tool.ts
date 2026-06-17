@@ -47,6 +47,16 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
           settings: params.settings,
         });
 
+        const chartConfig: LineChartConfig = {
+          chartType: 'line-chart' as const,
+          settings: params.settings,
+        };
+
+        deps.addChart({
+          tableName: params.tableName,
+          config: chartConfig,
+        });
+
         return {
           llmResult: {
             success: true,

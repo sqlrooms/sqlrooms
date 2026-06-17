@@ -21,6 +21,7 @@ import type {
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
 import {DataTable} from '@sqlrooms/duckdb';
+import {ChartToolDeps} from './tool-types';
 
 export type {ChartType};
 
@@ -172,10 +173,7 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   /** Optional icon component for chart-type grids */
   icon: ComponentType<{className?: string}>;
   /** Optional function to create a chart configuration AI tool */
-  createTool?: (deps: {
-    resolveTable: (name: string) => DataTable;
-    maxDataPoints: number;
-  }) => Tool;
+  createTool?: (deps: ChartToolDeps) => Tool;
   /** Optional runtime data policy for renderer-specific query validation. */
   getDataPolicy?: (
     context: ChartDataPolicyContext<TConfig>,

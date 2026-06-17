@@ -1,10 +1,13 @@
-import type {ChartToolDeps} from '../charts/chart-types/tool-types';
+import type {
+  AddChartFunction,
+  ChartToolDeps,
+} from '../charts/chart-types/tool-types';
 import {findTableByNameOrThrow} from '../utils/table-lookup';
-import type {AiStore, BaseAiAdapter} from './types';
+import type {BaseAiAdapter} from './types';
 
-export type CreateChartToolDepsOptions<TState> = {
-  store: AiStore<TState>;
-  adapter: BaseAiAdapter<TState>;
+export type CreateChartToolDepsOptions = {
+  adapter: BaseAiAdapter;
+  addChart: AddChartFunction;
 };
 
 /**
@@ -12,17 +15,16 @@ export type CreateChartToolDepsOptions<TState> = {
  * This is used to provide dependencies for chart configuration tools.
  *
  * @param adapter Adapter with getTables method
- * @param state Current state to pass to adapter
  * @returns ChartToolDeps with resolveTable and maxDataPoints
  */
-export function createChartToolDeps<TState>({
-  store,
+export function createChartToolDeps({
   adapter,
-}: CreateChartToolDepsOptions<TState>): ChartToolDeps {
+  addChart,
+}: CreateChartToolDepsOptions): ChartToolDeps {
   return {
+    addChart,
     resolveTable: (tableName: string) => {
-      const state = store.getState();
-      const tables = adapter.getTables(state);
+      const tables = adapter.getTables();
       return findTableByNameOrThrow(tables, tableName);
     },
     maxDataPoints: 10000, // Standard limit for non-aggregated visualizations

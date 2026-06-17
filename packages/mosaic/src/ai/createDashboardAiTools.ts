@@ -11,21 +11,31 @@ import {createChartToolDeps} from './createChartToolDeps';
 import {createDashboardArtifactTool} from './create-dashboard-artifact-tool';
 import type {CreateDashboardAiToolsOptions} from './types';
 
-export function createDashboardAiTools<TState>({
-  store,
+export function createDashboardAiTools({
   adapter,
   chartTypes,
   extraTools,
-}: CreateDashboardAiToolsOptions<TState>): Record<string, Tool> {
-  const dashboardToolDeps = createDashboardToolDeps({store, adapter});
-  const chartToolDeps = createChartToolDeps({store, adapter});
+}: CreateDashboardAiToolsOptions): Record<string, Tool> {
+  const dashboardToolDeps = createDashboardToolDeps(adapter);
+  const chartToolDeps = createChartToolDeps({
+    adapter,
+    addChart: ({tableName, config}) => {
+      const dashboardId = dashboardToolDeps.resolveArtifact(undefined, true);
+      return dashboardToolDeps.addPanel(dashboardId, {
+        type: 'chart',
+        tableName,
+        config,
+      });
+    },
+  });
+
   const resolvedChartTypes =
     chartTypes ?? createDefaultChartTypes({includeCustomSpec: false});
   const chartTools = createChartTools(resolvedChartTypes, chartToolDeps);
   const hostTools = extraTools?.(dashboardToolDeps) ?? {};
 
   const builtInTools = {
-    create_dashboard_artifact: createDashboardArtifactTool(store, adapter),
+    create_dashboard_artifact: createDashboardArtifactTool(adapter),
     ...chartTools,
     create_dashboard_data_table_explorer:
       createDataTableExplorerTool(dashboardToolDeps),

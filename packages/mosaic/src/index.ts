@@ -183,7 +183,6 @@ export type {
   CreateDashboardAiToolsOptions,
   DashboardAgentResult,
   DashboardAiAdapter,
-  CreateDashboardToolDepsOptions,
   // Worksheet types
   CreateWorksheetAgentToolOptions,
   WorksheetAgentResult,

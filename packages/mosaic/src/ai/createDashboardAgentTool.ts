@@ -130,14 +130,13 @@ function formatAvailableTables(tables: DataTable[]): string {
   return tables.map((table) => table.tableName).join(', ') || '(none)';
 }
 
-function buildAgentPrompt<TState>(
+function buildAgentPrompt(
   userPrompt: string,
   tableName: string,
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
+  adapter: DashboardAiAdapter,
 ): string {
   const table = adapter
-    .getTables(state)
+    .getTables()
     .find((candidate) => candidate.tableName === tableName);
   const columnNames =
     table?.columns?.map((column) => column.name).join(', ') || 'unknown';
@@ -154,12 +153,11 @@ User request: ${userPrompt}
 Focus on discovering meaningful patterns and creating visualizations that tell a clear story.`;
 }
 
-function validateTableExists<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
+function validateTableExists(
+  adapter: DashboardAiAdapter,
   tableName: string,
 ): void {
-  const tables = adapter.getTables(state);
+  const tables = adapter.getTables();
   const table = tables.find((candidate) => candidate.tableName === tableName);
   if (!table) {
     throw new DashboardAgentException(
@@ -168,15 +166,14 @@ function validateTableExists<TState>(
   }
 }
 
-function getOrCreateDashboard<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
+function getOrCreateDashboard(
+  adapter: DashboardAiAdapter,
   tableName: string,
   dashboardTitle?: string,
 ): string {
-  const dashboardId = adapter.getCurrentDashboardArtifactId(state);
+  const dashboardId = adapter.getCurrentDashboardArtifactId();
   if (dashboardId) {
-    adapter.ensureDashboard(state, dashboardId);
+    adapter.ensureDashboard(dashboardId);
     return dashboardId;
   }
 
@@ -184,22 +181,20 @@ function getOrCreateDashboard<TState>(
     dashboardTitle ||
     `${tableName.charAt(0).toUpperCase() + tableName.slice(1)} Insights`;
   const newDashboardId = adapter.createDashboardArtifact(
-    state,
     suggestedTitle,
     'grid',
   );
-  adapter.setCurrentArtifact(state, newDashboardId);
+  adapter.setCurrentArtifact(newDashboardId);
   return newDashboardId;
 }
 
-function calculateAgentMetadata<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
+function calculateAgentMetadata(
+  adapter: DashboardAiAdapter,
   dashboardId: string,
   tableName: string,
   agentToolCalls: DashboardAgentToolCall[],
 ): DashboardAgentResult['metadata'] {
-  const dashboard = adapter.getDashboard(state, dashboardId);
+  const dashboard = adapter.getDashboard(dashboardId);
   return {
     tableName,
     panelsCreated: dashboard?.panels?.length || 0,
@@ -232,15 +227,10 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
       try {
         const state = store.getState();
-        validateTableExists(state, adapter, tableName);
+        validateTableExists(adapter, tableName);
 
-        dashboardId = getOrCreateDashboard(
-          state,
-          adapter,
-          tableName,
-          dashboardTitle,
-        );
-        adapter.setSelectedTable(state, dashboardId, tableName);
+        dashboardId = getOrCreateDashboard(adapter, tableName, dashboardTitle);
+        adapter.setSelectedTable(dashboardId, tableName);
         const queryTools = options.createQueryTools?.({store});
 
         const dashboardAgent = new ToolLoopAgent({
@@ -248,7 +238,6 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
           tools: {
             ...(queryTools ? {query: queryTools.query} : {}),
             ...createDashboardAiTools({
-              store,
               adapter,
               chartTypes: options.chartTypes,
               extraTools: options.extraTools,
@@ -261,15 +250,13 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
         const result = await options.runSubAgent({
           agent: dashboardAgent,
-          prompt: buildAgentPrompt(prompt, tableName, state, adapter),
+          prompt: buildAgentPrompt(prompt, tableName, adapter),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const finalState = store.getState();
         const metadata = calculateAgentMetadata(
-          finalState,
           adapter,
           dashboardId,
           tableName,

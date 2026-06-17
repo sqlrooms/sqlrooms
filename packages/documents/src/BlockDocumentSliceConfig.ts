@@ -81,11 +81,19 @@ export const BlockDocumentHeadingBlock = z.object({
   text: z.string(),
 });
 
+export type BlockDocumentHeadingBlock = z.infer<
+  typeof BlockDocumentHeadingBlock
+>;
+
 export const BlockDocumentParagraphBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('paragraph'),
   text: z.string(),
 });
+
+export type BlockDocumentParagraphBlock = z.infer<
+  typeof BlockDocumentParagraphBlock
+>;
 
 export const BlockDocumentListBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -94,12 +102,16 @@ export const BlockDocumentListBlock = z.object({
   items: z.array(z.string()),
 });
 
+export type BlockDocumentListBlock = z.infer<typeof BlockDocumentListBlock>;
+
 export const BlockDocumentTodoBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('todo'),
   checked: z.boolean(),
   text: z.string(),
 });
+
+export type BlockDocumentTodoBlock = z.infer<typeof BlockDocumentTodoBlock>;
 
 export const BlockDocumentImageBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -108,12 +120,18 @@ export const BlockDocumentImageBlock = z.object({
   caption: z.string().optional(),
 });
 
+export type BlockDocumentImageBlock = z.infer<typeof BlockDocumentImageBlock>;
+
 export const BlockDocumentChartImageBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('chartImage'),
   assetId: z.string(),
   caption: z.string().optional(),
 });
+
+export type BlockDocumentChartImageBlock = z.infer<
+  typeof BlockDocumentChartImageBlock
+>;
 
 export const BlockDocumentChartBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -123,6 +141,8 @@ export const BlockDocumentChartBlock = z.object({
   selectionGroupId: z.string().optional(),
   caption: z.string().optional(),
 });
+
+export type BlockDocumentChartBlock = z.infer<typeof BlockDocumentChartBlock>;
 
 export const BlockDocumentStatefulBlockBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -134,6 +154,10 @@ export const BlockDocumentStatefulBlockBlock = z.object({
   caption: z.string().optional(),
   height: z.number().optional(),
 });
+
+export type BlockDocumentStatefulBlockBlock = z.infer<
+  typeof BlockDocumentStatefulBlockBlock
+>;
 
 export const BlockDocumentBlock = z.discriminatedUnion('type', [
   BlockDocumentHeadingBlock,

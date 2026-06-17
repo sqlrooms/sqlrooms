@@ -43,14 +43,21 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
           settings: params.settings,
         });
 
+        const chartConfig: HistogramChartConfig = {
+          chartType: 'histogram' as const,
+          settings: params.settings,
+        };
+
+        deps.addChart({
+          tableName: params.tableName,
+          config: chartConfig,
+        });
+
         return {
           llmResult: {
             success: true,
             details: `Generated histogram configuration for "${params.settings.field}".`,
-            data: {
-              chartType: 'histogram',
-              settings: params.settings,
-            },
+            data: chartConfig,
           },
         };
       } catch (error) {

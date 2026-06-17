@@ -4,36 +4,29 @@ import type {
   DashboardToolDeps,
 } from '../charts/chart-types';
 import {findTableByNameOrThrow} from '../utils/table-lookup';
-import type {DashboardAiAdapter, CreateDashboardToolDepsOptions} from './types';
+import type {DashboardAiAdapter} from './types';
 
-function getTablesWithColumns<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
-): DataTable[] {
+function getTablesWithColumns(adapter: DashboardAiAdapter): DataTable[] {
   return adapter
-    .getTables(state)
+    .getTables()
     .filter((table) => table.columns && table.columns.length > 0);
 }
 
-export function createDashboardToolDeps<TState>({
-  store,
-  adapter,
-}: CreateDashboardToolDepsOptions<TState>): DashboardToolDeps {
+export function createDashboardToolDeps(
+  adapter: DashboardAiAdapter,
+): DashboardToolDeps {
   const resolveArtifact = (
     artifactId?: string,
     createIfMissing?: boolean,
     context?: ChartToolExecutionContext,
   ): string => {
-    const state = store.getState();
-    const hasRunContext = adapter.hasRunContext?.(state, context) ?? false;
+    const hasRunContext = adapter.hasRunContext?.(context) ?? false;
     const contextDashboardArtifactId =
-      adapter.resolveContextDashboardArtifactId?.(state, context);
+      adapter.resolveContextDashboardArtifactId?.(context);
     let targetArtifactId =
       artifactId ??
       contextDashboardArtifactId ??
-      (!hasRunContext
-        ? adapter.getCurrentDashboardArtifactId(state)
-        : undefined);
+      (!hasRunContext ? adapter.getCurrentDashboardArtifactId() : undefined);
 
     if (!targetArtifactId && hasRunContext) {
       throw new Error(
@@ -42,13 +35,9 @@ export function createDashboardToolDeps<TState>({
     }
 
     if (!targetArtifactId && createIfMissing) {
-      targetArtifactId = adapter.createDashboardArtifact(
-        state,
-        undefined,
-        'grid',
-      );
-      adapter.setCurrentArtifact(state, targetArtifactId);
-      adapter.makeDashboardPrimaryForRun?.(state, targetArtifactId, context);
+      targetArtifactId = adapter.createDashboardArtifact(undefined, 'grid');
+      adapter.setCurrentArtifact(targetArtifactId);
+      adapter.makeDashboardPrimaryForRun?.(targetArtifactId, context);
     }
 
     if (!targetArtifactId) {
@@ -57,19 +46,18 @@ export function createDashboardToolDeps<TState>({
       );
     }
 
-    if (!adapter.isDashboardArtifact(state, targetArtifactId)) {
+    if (!adapter.isDashboardArtifact(targetArtifactId)) {
       throw new Error(
         `Artifact "${targetArtifactId}" is not a dashboard artifact.`,
       );
     }
 
-    adapter.ensureDashboard(state, targetArtifactId);
+    adapter.ensureDashboard(targetArtifactId);
     return targetArtifactId;
   };
 
   const resolveTable = (tableName: string) => {
-    const state = store.getState();
-    const tables = getTablesWithColumns(state, adapter);
+    const tables = getTablesWithColumns(adapter);
     return findTableByNameOrThrow(tables, tableName);
   };
 
@@ -77,31 +65,25 @@ export function createDashboardToolDeps<TState>({
     resolveArtifact,
     resolveTable,
     addPanel: (dashboardId, panel) => {
-      const state = store.getState();
-      return adapter.addPanel(state, dashboardId, panel);
+      return adapter.addPanel(dashboardId, panel);
     },
     updatePanel: (dashboardId, panelId, patch) => {
-      const state = store.getState();
-      adapter.updatePanel(state, dashboardId, panelId, patch);
+      adapter.updatePanel(dashboardId, panelId, patch);
     },
     getDashboard: (dashboardId) => {
-      const state = store.getState();
-      return adapter.getDashboard(state, dashboardId);
+      return adapter.getDashboard(dashboardId);
     },
     removePanel: (dashboardId, panelId) => {
-      const state = store.getState();
-      adapter.removePanel(state, dashboardId, panelId);
+      adapter.removePanel(dashboardId, panelId);
     },
     setCurrentArtifact: (artifactId) => {
-      const state = store.getState();
-      adapter.setCurrentArtifact(state, artifactId);
+      adapter.setCurrentArtifact(artifactId);
     },
   };
 
   if (adapter.getPanelIssue) {
     deps.getPanelIssue = (dashboardId, panelId) => {
-      const state = store.getState();
-      return adapter.getPanelIssue?.(state, dashboardId, panelId);
+      return adapter.getPanelIssue?.(dashboardId, panelId);
     };
   }
 

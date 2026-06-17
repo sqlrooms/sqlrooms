@@ -40,8 +40,8 @@ export function getDashboardWithDeckMapAiInstructions() {
   return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
 }
 
-export function createDashboardWithDeckMapAiTools<TState>(
-  options: CreateDashboardAiToolsOptions<TState>,
+export function createDashboardWithDeckMapAiTools(
+  options: CreateDashboardAiToolsOptions,
 ): Record<string, Tool> {
   return createMosaicDashboardAiTools({
     ...options,
