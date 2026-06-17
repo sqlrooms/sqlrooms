@@ -30,7 +30,7 @@ export function createDashboardAiAdapter(
   return {
     getTables: (state) =>
       getTablesForAiScope(state.db.tables, state.db.currentDatabase, {
-        scope: 'main',
+        scope: 'all',
       }).map((table) => ({
         tableName: table.table?.table || table.tableName,
         tableId: getTableIdForAi(table),

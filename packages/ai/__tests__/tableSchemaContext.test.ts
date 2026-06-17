@@ -53,6 +53,23 @@ describe('table schema context formatting', () => {
     ).toEqual(['current_events']);
   });
 
+  it('keeps all visible tables in all scope when currentDatabase is known', () => {
+    const tables = [
+      makeTable('current_events', {database: 'local'}),
+      makeTable('local_analytics_events', {
+        database: 'local',
+        schema: 'analytics',
+      }),
+      makeTable('attached_events', {database: 'attached'}),
+    ];
+
+    expect(
+      getTablesForAiScope(tables, 'local', {scope: 'all'}).map(
+        (table) => table.tableName,
+      ),
+    ).toEqual(['current_events', 'local_analytics_events', 'attached_events']);
+  });
+
   it('uses hybrid table context for larger catalogs', () => {
     const output = formatTablesForLLM(
       [
