@@ -29,7 +29,10 @@ export function getAllTablesFromSchemaTrees(schemaTrees: unknown): DataTable[] {
   for (const dbNode of schemaTrees) {
     for (const schemaNode of dbNode?.children ?? []) {
       for (const tableNode of schemaNode?.children ?? []) {
-        if (tableNode?.object?.type === 'table') {
+        if (
+          tableNode?.object?.type === 'table' ||
+          tableNode?.object?.type === 'view'
+        ) {
           tables.push(tableNode.object as DataTable);
         }
       }

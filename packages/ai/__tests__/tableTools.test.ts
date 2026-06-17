@@ -2,6 +2,7 @@ import type {DataTable, QualifiedTableName} from '@sqlrooms/duckdb';
 import {
   createTableIdentitySummary,
   formatAmbiguousTableMessage,
+  getAllTablesFromSchemaTrees,
   resolveTableFromCatalog,
 } from '../src/tools/tables/tableIdentity';
 
@@ -102,5 +103,33 @@ describe('table identity helpers', () => {
 
     expect(result.table?.table.database).toBe('remote');
     expect(result.ambiguousMatches).toBeUndefined();
+  });
+
+  it('extracts tables and views from schema trees', () => {
+    const table = makeTable('events', {database: 'local'});
+    const view = {
+      ...makeTable('event_summary', {database: 'local'}),
+      isView: true,
+    };
+
+    const tables = getAllTablesFromSchemaTrees([
+      {
+        children: [
+          {
+            children: [
+              {object: {type: 'table', ...table}},
+              {object: {type: 'view', ...view}},
+              {object: {type: 'column', name: 'id', columnType: 'INTEGER'}},
+            ],
+          },
+        ],
+      },
+    ]);
+
+    expect(tables).toHaveLength(2);
+    expect(tables.map((item) => item.table.table)).toEqual([
+      'events',
+      'event_summary',
+    ]);
   });
 });
