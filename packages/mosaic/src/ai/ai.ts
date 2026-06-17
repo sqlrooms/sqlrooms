@@ -7,10 +7,7 @@
  * @packageDocumentation
  */
 
-import {
-  parseQualifiedSqlIdentifier,
-  type QualifiedTableName,
-} from '@sqlrooms/duckdb';
+import {resolveTableReference, type QualifiedTableName} from '@sqlrooms/duckdb';
 import {
   type LanguageModel,
   type Tool,
@@ -58,7 +55,7 @@ export type DashboardAiTable = {
 };
 
 type ResolvedDashboardAiTable = {
-  qualifiedName: QualifiedTableName;
+  table: QualifiedTableName;
   tableName: string;
   tableId: string;
   columns?: ChartBuilderColumn[];
@@ -356,7 +353,7 @@ function normalizeDashboardAiTable(
   const tableId = qualifiedName.toString();
 
   return {
-    qualifiedName,
+    table: qualifiedName,
     tableName: qualifiedName.table,
     tableId,
     columns: table.columns,
@@ -373,73 +370,13 @@ function formatAmbiguousTableError(
     .join(', ')}.`;
 }
 
-function matchesQualifiedTableName(
-  table: ResolvedDashboardAiTable,
-  tableName: Partial<QualifiedTableName>,
-): boolean {
-  const {qualifiedName} = table;
-  return (
-    qualifiedName.table === tableName.table &&
-    (!tableName.schema || qualifiedName.schema === tableName.schema) &&
-    (!tableName.database || qualifiedName.database === tableName.database)
-  );
-}
-
-function resolveDashboardTable(
-  tables: ResolvedDashboardAiTable[],
-  tableName: string | QualifiedTableName,
-): {
-  table?: ResolvedDashboardAiTable;
-  ambiguousMatches?: ResolvedDashboardAiTable[];
-} {
-  if (typeof tableName !== 'string') {
-    return {
-      table: tables.find(
-        (candidate) =>
-          candidate.qualifiedName.toString() === tableName.toString(),
-      ),
-    };
-  }
-
-  const trimmedTableName = tableName.trim();
-  const canonicalMatches = tables.filter(
-    (candidate) => candidate.tableId === trimmedTableName,
-  );
-  if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};
-  if (canonicalMatches.length > 1) {
-    return {ambiguousMatches: canonicalMatches};
-  }
-
-  const parsedTableName = parseQualifiedSqlIdentifier(trimmedTableName);
-  if (
-    parsedTableName?.table &&
-    (parsedTableName.schema || parsedTableName.database)
-  ) {
-    const qualifiedMatches = tables.filter((candidate) =>
-      matchesQualifiedTableName(candidate, parsedTableName),
-    );
-    if (qualifiedMatches.length === 1) return {table: qualifiedMatches[0]};
-    if (qualifiedMatches.length > 1) {
-      return {ambiguousMatches: qualifiedMatches};
-    }
-  }
-
-  const bareMatches = tables.filter(
-    (candidate) => candidate.tableName === trimmedTableName,
-  );
-  if (bareMatches.length === 1) return {table: bareMatches[0]};
-  if (bareMatches.length > 1) return {ambiguousMatches: bareMatches};
-
-  return {};
-}
-
 function getResolvedTable(table: ResolvedDashboardAiTable) {
   if (!table.columns) {
     throw new Error(`Table "${table.tableName}" has no column metadata.`);
   }
   return {
     tableName: table.tableId,
-    qualifiedName: table.qualifiedName,
+    qualifiedName: table.table,
     columns: table.columns.map((column) => ({
       name: column.name,
       type: column.type,
@@ -522,7 +459,7 @@ export function createDashboardToolDeps<TState>({
       typeof tableName === 'string' ? tableName.trim() || undefined : tableName;
 
     if (explicitTableName) {
-      const {table, ambiguousMatches} = resolveDashboardTable(
+      const {table, ambiguousMatches} = resolveTableReference(
         tables,
         explicitTableName,
       );
@@ -550,7 +487,7 @@ export function createDashboardToolDeps<TState>({
     }
 
     if (dashboard?.selectedTable) {
-      const {table} = resolveDashboardTable(tables, dashboard.selectedTable);
+      const {table} = resolveTableReference(tables, dashboard.selectedTable);
       if (table) {
         return getResolvedTable(table);
       }
@@ -671,7 +608,7 @@ function buildAgentPrompt<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
 ): string {
-  const table = resolveDashboardTable(
+  const table = resolveTableReference(
     adapter.getTables(state).map(normalizeDashboardAiTable),
     tableName,
   ).table;
@@ -705,7 +642,7 @@ function validateTableExists<TState>(
   tableName: string,
 ): ResolvedDashboardAiTable {
   const tables = adapter.getTables(state).map(normalizeDashboardAiTable);
-  const {table, ambiguousMatches} = resolveDashboardTable(tables, tableName);
+  const {table, ambiguousMatches} = resolveTableReference(tables, tableName);
   if (ambiguousMatches) {
     throw new DashboardAgentException(
       formatAmbiguousTableError(tableName, ambiguousMatches),

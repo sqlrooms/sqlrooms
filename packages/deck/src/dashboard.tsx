@@ -6,6 +6,7 @@ type DeckProps = ComponentProps<typeof DeckGLReact>;
 import {
   escapeId,
   getColValAsNumber,
+  quoteTableReference,
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import {
@@ -184,17 +185,14 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
   return Boolean(info.picked || info.object || (info.index ?? -1) >= 0);
 }
 
-function createDeckMapBoundsQuery(options: {
+export function createDeckMapBoundsQuery(options: {
   source: {tableName?: string; sqlQuery?: string};
   fitToData: DeckMapDashboardFitToDataConfig;
 }) {
   const {source, fitToData} = options;
   const baseSourceSql = source.sqlQuery
     ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : `SELECT * FROM ${(source.tableName ?? '')
-        .split('.')
-        .map(escapeId)
-        .join('.')}`;
+    : `SELECT * FROM ${quoteTableReference(source.tableName ?? '')}`;
   const longitudeColumn = escapeId(fitToData.longitudeColumn);
   const latitudeColumn = escapeId(fitToData.latitudeColumn);
 

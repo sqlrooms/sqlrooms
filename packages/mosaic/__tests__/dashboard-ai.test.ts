@@ -257,6 +257,12 @@ describe('dashboard AI deps', () => {
     );
     expect(state.dashboardsById[dashboardId]!.selectedTable).toBe(tableId);
     expect(deps.resolveTable(dashboardId, tableId).tableName).toBe(tableId);
+    expect(deps.resolveTable(dashboardId, qualifiedName).tableName).toBe(
+      tableId,
+    );
+    expect(
+      deps.resolveTable(dashboardId, 'local.main.earthquakes').tableName,
+    ).toBe(tableId);
     expect(deps.resolveTable(dashboardId).tableName).toBe(tableId);
   });
 
