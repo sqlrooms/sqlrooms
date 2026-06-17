@@ -1,5 +1,12 @@
 import {resolveTableReference, type DataTable} from '@sqlrooms/duckdb-core';
 
+/**
+ * Compact, model-facing description of a table or view in the AI table catalog.
+ *
+ * Used by `list_tables` and schema context summaries to expose enough identity
+ * and metadata for an agent to choose a table, while keeping the canonical
+ * string boundary value in `tableId`.
+ */
 export type TableIdentitySummary = {
   /**
    * Fully quoted SQL identifier from QualifiedTableName.toString(), used at

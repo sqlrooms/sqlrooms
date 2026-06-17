@@ -4,20 +4,48 @@ import type {
   TableColumn,
 } from '@sqlrooms/duckdb';
 
+/**
+ * Prompt-size limits used when formatting table schema context for an AI model.
+ *
+ * @property fullSchemaThreshold - Maximum number of scoped tables that can be
+ *   shown with complete column schemas before switching to hybrid summaries.
+ * @property namesOnlyThreshold - Maximum number of scoped tables to mention in
+ *   the hybrid summary before reporting an omitted-table count.
+ * @property maxChars - Optional hard character budget for the generated schema
+ *   context string.
+ */
 export type TableSchemaContextLimits = {
   fullSchemaThreshold?: number;
   namesOnlyThreshold?: number;
   maxChars?: number;
 };
 
+/**
+ * Table visibility scope used when selecting the catalog slice to expose to AI.
+ *
+ * `main` means the current database's `main` schema, `current_database` means
+ * all schemas in the current database, and `all` means every visible table.
+ */
 export type AiTableScope = 'main' | 'current_database' | 'all';
 
+/**
+ * Filters used to select which tables from the catalog are exposed to AI.
+ *
+ * @property scope - Broad catalog scope to include.
+ * @property schema - Optional exact schema name filter.
+ * @property database - Optional exact database name filter.
+ */
 export type AiTableScopeOptions = {
   scope?: AiTableScope;
   schema?: string;
   database?: string;
 };
 
+/**
+ * Default thresholds for AI table schema context formatting.
+ *
+ * @returns Default full-schema and names-only table thresholds.
+ */
 export const DEFAULT_TABLE_SCHEMA_CONTEXT_LIMITS = {
   fullSchemaThreshold: 5,
   namesOnlyThreshold: 25,
@@ -25,6 +53,22 @@ export const DEFAULT_TABLE_SCHEMA_CONTEXT_LIMITS = {
   Pick<TableSchemaContextLimits, 'fullSchemaThreshold' | 'namesOnlyThreshold'>
 >;
 
+/**
+ * Count summary for tables outside the current database's `main` schema.
+ *
+ * Used to tell the model when additional visible tables exist without flooding
+ * the prompt with every schema.
+ *
+ * @property currentDatabaseMainSchemaTableCount - Number of tables in the
+ *   current database's `main` schema.
+ * @property outsideCurrentDatabaseMainSchemaCount - Number of visible tables
+ *   outside the current database's `main` schema.
+ * @property otherCurrentDatabaseSchemaCount - Number of visible tables in other
+ *   schemas of the current database.
+ * @property otherDatabaseCount - Number of visible tables in other databases.
+ * @property outsideCurrentDatabaseMainSchemaByLocation - Counts grouped by
+ *   database/schema location.
+ */
 export type AiTableScopeSummary = {
   currentDatabaseMainSchemaTableCount: number;
   outsideCurrentDatabaseMainSchemaCount: number;
@@ -37,6 +81,13 @@ export type AiTableScopeSummary = {
   }[];
 };
 
+/**
+ * Normalizes optional AI table schema context limits.
+ *
+ * @param limits - Optional partial limit overrides.
+ * @returns Resolved limits with default thresholds and a names-only threshold
+ *   that is never lower than the full-schema threshold.
+ */
 export function getAiTableSchemaContextLimits(
   limits?: TableSchemaContextLimits,
 ) {
@@ -54,6 +105,12 @@ export function getAiTableSchemaContextLimits(
   };
 }
 
+/**
+ * Gets the display table name for AI-facing context.
+ *
+ * @param table - Data table metadata from the DuckDB catalog.
+ * @returns The bare table name when available, falling back to `tableName`.
+ */
 export function getTableNameForAi(table: DataTable): string {
   return table.table?.table || table.tableName;
 }
@@ -81,6 +138,13 @@ function makeQualifiedTableNameForAi({
   };
 }
 
+/**
+ * Builds the canonical qualified identity for an AI-visible table.
+ *
+ * @param table - Data table metadata from the DuckDB catalog.
+ * @returns A `QualifiedTableName` whose `toString()` is the fully quoted table
+ *   identifier expected at string-only tool boundaries.
+ */
 export function getQualifiedTableNameForAi(
   table: DataTable,
 ): QualifiedTableName {
@@ -92,18 +156,42 @@ export function getQualifiedTableNameForAi(
   });
 }
 
+/**
+ * Gets the fully quoted canonical table identifier for AI tools.
+ *
+ * @param table - Data table metadata from the DuckDB catalog.
+ * @returns Fully quoted table ID derived from the table's qualified identity.
+ */
 export function getTableIdForAi(table: DataTable): string {
   return getQualifiedTableNameForAi(table).toString();
 }
 
+/**
+ * Gets the schema name for an AI-visible table.
+ *
+ * @param table - Data table metadata from the DuckDB catalog.
+ * @returns Schema name when known.
+ */
 export function getSchemaNameForAi(table: DataTable): string | undefined {
   return table.table?.schema || table.schema;
 }
 
+/**
+ * Gets the database name for an AI-visible table.
+ *
+ * @param table - Data table metadata from the DuckDB catalog.
+ * @returns Database name when known.
+ */
 export function getDatabaseNameForAi(table: DataTable): string | undefined {
   return table.table?.database || table.database;
 }
 
+/**
+ * Gets a compact display name for a table in AI-facing summaries.
+ *
+ * @param table - Data table metadata from the DuckDB catalog.
+ * @returns `schema.table` for non-main schemas, otherwise the bare table name.
+ */
 export function getFullTableNameForAi(table: DataTable): string {
   const tableName = getTableNameForAi(table);
   const schemaName = getSchemaNameForAi(table);
@@ -132,6 +220,14 @@ function isTableInAiScope(
   return true;
 }
 
+/**
+ * Filters a table catalog to the subset that should be exposed in AI context.
+ *
+ * @param tables - Flat DuckDB table catalog.
+ * @param currentDatabase - Name of the active database, when known.
+ * @param options - Optional scope and exact database/schema filters.
+ * @returns Tables matching the requested AI scope.
+ */
 export function getTablesForAiScope(
   tables: DataTable[],
   currentDatabase?: string,
@@ -142,6 +238,13 @@ export function getTablesForAiScope(
   );
 }
 
+/**
+ * Summarizes visible tables outside the default AI table scope.
+ *
+ * @param tables - Flat DuckDB table catalog.
+ * @param currentDatabase - Name of the active database, when known.
+ * @returns Counts for current-main tables and additional locations.
+ */
 export function getAiTableScopeSummary(
   tables: DataTable[],
   currentDatabase?: string,
@@ -210,6 +313,14 @@ function formatScopeLocation(location: {
   return `${parts.join(', ')}: ${location.count.toLocaleString()}`;
 }
 
+/**
+ * Formats a compact notice about tables outside the current database's main schema.
+ *
+ * @param tables - Flat DuckDB table catalog.
+ * @param currentDatabase - Name of the active database, when known.
+ * @returns Prompt text describing additional visible table locations, or an
+ *   empty string when there are no additional scoped tables.
+ */
 export function formatOtherTableScopesForAi(
   tables: DataTable[],
   currentDatabase?: string,
@@ -249,6 +360,13 @@ function formatColumnForAi(column: TableColumn): string {
   return column.type ? `${column.name} ${column.type}` : column.name;
 }
 
+/**
+ * Formats a table with full column schema for AI context.
+ *
+ * @param table - Data table metadata to format.
+ * @returns Multi-line schema text including display name, canonical table ID,
+ *   optional row count, columns, and optional comment.
+ */
 export function formatTableSchemaForAi(table: DataTable): string {
   const header = [
     `${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(table)})`,
@@ -266,6 +384,13 @@ export function formatTableSchemaForAi(table: DataTable): string {
   }`;
 }
 
+/**
+ * Formats a one-line table summary for AI context.
+ *
+ * @param table - Data table metadata to summarize.
+ * @returns Summary line containing display name, canonical table ID, and
+ *   optional row count.
+ */
 export function formatTableSummaryForAi(table: DataTable): string {
   const rowCount = formatRowCount(table.rowCount);
   return `- ${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(
@@ -345,6 +470,12 @@ function formatBudgetedTableContextForAi(
  * For small current-database main-schema catalogs, every table includes full
  * columns. Larger catalogs include full schemas for the first few tables,
  * table IDs/row counts for the next group, and a hidden-table count for the rest.
+ *
+ * @param tables - Flat DuckDB table catalog to expose.
+ * @param currentDatabase - Name of the active database, when known.
+ * @param limits - Optional prompt-size thresholds and character budget.
+ * @returns AI prompt text that includes usable canonical table IDs and guidance
+ *   for resolving bare user table names before downstream tool calls.
  */
 export function formatTablesForLLM(
   tables: DataTable[],
