@@ -56,7 +56,9 @@ export type UseArtifactTabsResult = {
   artifactTypes: ArtifactTypeDefinitions<any>;
   createArtifact: (
     type?: string,
-    options?: {title?: string},
+    options?: {
+      title?: string;
+    },
   ) => string | undefined;
   openArtifact: (artifactId: string) => void;
   closeArtifact: (artifactId: string) => void;
@@ -342,7 +344,12 @@ export function useArtifactTabs(
   ]);
 
   const createArtifact = useCallback(
-    (type?: string, createOptions?: {title?: string}) => {
+    (
+      type?: string,
+      createOptions?: {
+        title?: string;
+      },
+    ) => {
       const artifactType =
         type ?? managedTypes?.[0] ?? Object.keys(artifactTypes)[0];
       if (!artifactType) return undefined;
@@ -367,7 +374,10 @@ export function useArtifactTabs(
 
   const openArtifact = useCallback(
     (artifactId: string) => {
-      if (!tabsId || !artifactsConfig.artifactsById[artifactId]) return;
+      const artifact = artifactsConfig.artifactsById[artifactId];
+      if (!tabsId || !artifact) {
+        return;
+      }
       addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
       setCurrentArtifact(artifactId);
     },
@@ -503,6 +513,16 @@ export type ArtifactTabsProps = Omit<
       tab: ArtifactTabDescriptor,
       actions: UseArtifactTabsResult,
     ) => React.ReactNode;
+    /**
+     * Called when an artifact tab is activated by the user, including clicks on
+     * the already-selected tab. Use this for transient UI that should dismiss
+     * whenever the user returns attention to an artifact tab.
+     */
+    onActivateArtifact?: (artifactId: string) => void;
+    /**
+     * Called when artifact selection changes through the tab strip.
+     */
+    onSelectArtifact?: (artifactId: string) => void;
     emptyContent?: React.ReactNode;
     content?: React.ReactNode;
     /**
@@ -523,6 +543,8 @@ function ArtifactTabsRoot({
   panelKey,
   renderTabMenu,
   renderSearchItemActions,
+  onActivateArtifact,
+  onSelectArtifact,
   emptyContent,
   content,
   forceMountContent = false,
@@ -532,7 +554,18 @@ function ArtifactTabsRoot({
   getTabDragData,
   ...props
 }: ArtifactTabsProps) {
-  const artifactTabs = useArtifactTabs({types, tabsId, panelKey});
+  const artifactTabs = useArtifactTabs({
+    types,
+    tabsId,
+    panelKey,
+  });
+  const handleSelect = useCallback(
+    (artifactId: string) => {
+      artifactTabs.selectArtifact(artifactId);
+      onSelectArtifact?.(artifactId);
+    },
+    [artifactTabs.selectArtifact, onSelectArtifact],
+  );
 
   return (
     <ArtifactTabsContext.Provider value={artifactTabs}>
@@ -544,7 +577,8 @@ function ArtifactTabsRoot({
         closeable={closeable}
         preventCloseLastTab={preventCloseLastTab}
         onOpenTabsChange={artifactTabs.handleOpenTabsChange}
-        onSelect={artifactTabs.selectArtifact}
+        onActivate={onActivateArtifact}
+        onSelect={handleSelect}
         onClose={artifactTabs.closeArtifact}
         onRename={artifactTabs.renameArtifact}
         renderTabMenu={
@@ -581,10 +615,15 @@ function ArtifactTabsRoot({
           </>
         )}
       </TabStrip>
-      <TabsLayout.TabContentContainer>
-        {content ?? <TabsLayout.TabContent forceMount={forceMountContent} />}
-        {artifactTabs.tabs.length === 0 ? emptyContent : null}
-      </TabsLayout.TabContentContainer>
+      {artifactTabs.openTabs.length === 0 && emptyContent ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {emptyContent}
+        </div>
+      ) : (
+        <TabsLayout.TabContentContainer>
+          {content ?? <TabsLayout.TabContent forceMount={forceMountContent} />}
+        </TabsLayout.TabContentContainer>
+      )}
       {typeof overlay === 'function' ? overlay(artifactTabs) : overlay}
     </ArtifactTabsContext.Provider>
   );

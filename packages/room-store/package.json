@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/room-store",
-  "version": "0.29.0-rc.6",
+  "version": "0.29.0-rc.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -31,8 +31,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@sqlrooms/ai-config": "workspace:*",
     "@jest/globals": "^30.2.0",
+    "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/preset-jest": "workspace:*",
     "@types/jest": "^30.0.0",
     "jest": "^30.1.3",

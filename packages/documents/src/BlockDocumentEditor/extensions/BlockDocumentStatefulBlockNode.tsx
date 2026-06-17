@@ -1,0 +1,44 @@
+import {mergeAttributes, Node} from '@tiptap/core';
+import {ReactNodeViewRenderer} from '@tiptap/react';
+import {BlockDocumentStatefulBlockNodeView} from '../node-views/BlockDocumentStatefulBlockNodeView';
+import {stopWidgetNodeViewEvent} from './nodeViewEvents';
+
+export const BlockDocumentStatefulBlockNode = Node.create({
+  name: 'blockDocumentStatefulBlock',
+  group: 'block',
+  atom: true,
+  selectable: false,
+  draggable: false,
+  isolating: true,
+
+  addAttributes() {
+    return {
+      id: {default: null},
+      blockType: {default: null},
+      blockInstanceId: {default: null},
+      ownership: {default: 'owned'},
+      title: {default: null},
+      caption: {default: null},
+      height: {default: null},
+    };
+  },
+
+  parseHTML() {
+    return [{tag: 'div[data-type="block-document-stateful-block"]'}];
+  },
+
+  renderHTML({HTMLAttributes}) {
+    return [
+      'div',
+      mergeAttributes(HTMLAttributes, {
+        'data-type': 'block-document-stateful-block',
+      }),
+    ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(BlockDocumentStatefulBlockNodeView, {
+      stopEvent: stopWidgetNodeViewEvent,
+    });
+  },
+});

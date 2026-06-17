@@ -1,11 +1,13 @@
 import {
   cn,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
+import {ChevronDown} from 'lucide-react';
 import React, {useMemo} from 'react';
 
 export interface QueryResultLimitSelectProps {
@@ -47,22 +49,33 @@ export const QueryResultLimitSelect: React.FC<QueryResultLimitSelectProps> = ({
   }, [options, value]);
 
   return (
-    <Select
-      value={value.toString()}
-      onValueChange={(v) => onChange(parseInt(v))}
-    >
-      <SelectTrigger className={cn('h-6 w-fit', className)}>
-        <div className="text-xs text-gray-500">
-          {`Limit results to ${formatCount(value)} rows`}
-        </div>
-      </SelectTrigger>
-      <SelectContent>
-        {limitOptions.map((limit) => (
-          <SelectItem key={limit} value={limit.toString()}>
-            {`${formatCount(limit)} rows`}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'border-input bg-background flex h-6 w-fit items-center justify-between gap-1 rounded-md border px-2 py-1 shadow-sm outline-hidden focus:ring-1 disabled:cursor-not-allowed disabled:opacity-50',
+            className,
+          )}
+        >
+          <span className="text-xs text-gray-500">
+            {`Limit results to ${formatCount(value)} rows`}
+          </span>
+          <ChevronDown className="h-3 w-3 opacity-50" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={value.toString()}
+          onValueChange={(v) => onChange(parseInt(v, 10))}
+        >
+          {limitOptions.map((limit) => (
+            <DropdownMenuRadioItem key={limit} value={limit.toString()}>
+              {`${formatCount(limit)} rows`}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

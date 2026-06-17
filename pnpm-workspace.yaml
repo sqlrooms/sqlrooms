@@ -6,7 +6,7 @@ packages:
   - 'apps/*'
   - 'python/*'
 overrides:
-  '@duckdb/duckdb-wasm': 1.33.1-dev55.0
+  '@duckdb/duckdb-wasm': 1.32.0
   '@loaders.gl/wms': 4.4.2
   '@loaders.gl/xml': 4.4.2
   '@types/react': 19.2.7

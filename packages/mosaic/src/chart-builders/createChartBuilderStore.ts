@@ -1,6 +1,6 @@
 import {produce} from 'immer';
 import {createStore} from 'zustand/vanilla';
-import {ChartType} from '../chart-types';
+import {ChartType} from '../charts/chart-types';
 
 export type ChartBuilderStoreState = {
   selectedTemplateId?: ChartType;

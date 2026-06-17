@@ -4,7 +4,7 @@ import {
   FC,
   memo,
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -23,6 +23,7 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from './chart-runtime';
+import {cn} from '@sqlrooms/ui';
 
 type SpecProps = {
   spec: Spec;
@@ -127,13 +128,18 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
     const cachedChart = useMemo(() => getCachedChart(), [getCachedChart]);
 
     // Handle PlotProps: directly render the provided plot element
-    useEffect(() => {
+    useLayoutEffect(() => {
       const container = containerRef.current;
       if (!container || !isPlotProps(props)) {
         return;
       }
 
-      container.replaceChildren(props.plot);
+      if (
+        container.childNodes.length !== 1 ||
+        container.firstChild !== props.plot
+      ) {
+        container.replaceChildren(props.plot);
+      }
     }, [props]);
 
     // Handle SpecProps: render from spec using hooks
@@ -178,8 +184,11 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
 
     useVgPlotChartRender(renderParams);
 
-    // Show error message if present
-    if (error) {
+    // Show error message only if no runtime issue reporter exists
+    // (when runtime issue reporter exists, errors are shown by MosaicChartRuntimeIssuePanel)
+    const hasRuntimeIssueReporter =
+      isSpecProps(props) && props.runtimeIssueReporter;
+    if (error && !hasRuntimeIssueReporter) {
       return <VgPlotChartError error={error} />;
     }
 
@@ -187,7 +196,12 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
       <ResponsivePlot
         ref={containerRef}
         onResize={handleResize}
-        className="h-full w-full"
+        className={cn(
+          'h-full w-full', // container classes
+          '[&>div]:h-full [&>div]:w-full [&>div]:!items-center', // child div classes
+          '[&_.plot]:h-full [&_.plot]:!min-h-0 [&_.plot]:w-full [&_.plot]:!flex-1', // plot classes
+          '[&_.legend]:!flex [&_.legend]:!flex-none [&_.legend]:!justify-center [&_.legend>*]:!mx-auto', // legend classes
+        )}
       />
     );
   },
@@ -208,6 +222,7 @@ export const VgPlotChart: FC<VgPlotChartProps> = memo(
         prevProps.runtimeIssueReporter === nextProps.runtimeIssueReporter;
       const issueContextEqual =
         prevProps.runtimeIssueContext === nextProps.runtimeIssueContext;
+
       return (
         specEqual &&
         paramsEqual &&

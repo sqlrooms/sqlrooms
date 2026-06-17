@@ -2,7 +2,7 @@ import {
   promoteContextSelectorItem,
   reorderContextSelectorItems,
   toggleContextSelectorItem,
-} from '../src/components/ContextSelector';
+} from '../src/components/context/utils';
 
 describe('ContextSelector selection helpers', () => {
   it('adds and removes selected ids without changing order', () => {

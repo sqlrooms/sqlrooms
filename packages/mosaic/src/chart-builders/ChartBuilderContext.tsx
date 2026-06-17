@@ -1,6 +1,6 @@
 import {createContext, useContext} from 'react';
 import {useStore} from 'zustand';
-import type {ChartConfig} from '../chart-types';
+import type {ChartConfig} from '../charts/chart-types';
 import type {
   ChartBuilderStore,
   ChartBuilderStoreState,
@@ -8,7 +8,7 @@ import type {
 import type {
   ChartBuilderColumn,
   ChartTypeDefinition,
-} from '../chart-types/base-types';
+} from '../charts/chart-types/base-types';
 
 export type ChartBuilderContextValue = {
   tableName: string;

@@ -3,6 +3,7 @@ import type {DataTable, TableColumn} from '@sqlrooms/duckdb';
 export type TableSchemaContextLimits = {
   fullSchemaThreshold?: number;
   namesOnlyThreshold?: number;
+  maxChars?: number;
 };
 
 export type AiTableScope = 'main' | 'current_database' | 'all';
@@ -16,7 +17,9 @@ export type AiTableScopeOptions = {
 export const DEFAULT_TABLE_SCHEMA_CONTEXT_LIMITS = {
   fullSchemaThreshold: 5,
   namesOnlyThreshold: 25,
-} as const satisfies Required<TableSchemaContextLimits>;
+} as const satisfies Required<
+  Pick<TableSchemaContextLimits, 'fullSchemaThreshold' | 'namesOnlyThreshold'>
+>;
 
 export type AiTableScopeSummary = {
   currentDatabaseMainSchemaTableCount: number;
@@ -43,6 +46,7 @@ export function getAiTableSchemaContextLimits(
   return {
     fullSchemaThreshold,
     namesOnlyThreshold: Math.max(namesOnlyThreshold, fullSchemaThreshold),
+    maxChars: limits?.maxChars,
   };
 }
 
@@ -77,7 +81,7 @@ function isTableInAiScope(
 
   if (database && tableDatabase !== database) return false;
   if (schema && tableSchema !== schema) return false;
-  if (!database && scope !== 'all') {
+  if (!database && currentDatabase && scope !== 'all') {
     if (tableDatabase && tableDatabase !== currentDatabase) return false;
   }
   if (!schema && scope === 'main') {
@@ -223,6 +227,72 @@ export function formatTableSummaryForAi(table: DataTable): string {
   return `- ${getFullTableNameForAi(table)}${rowCount ? ` [${rowCount}]` : ''}`;
 }
 
+function fitTextToMaxChars(text: string, maxChars?: number): string {
+  if (maxChars === undefined || text.length <= maxChars) return text;
+  if (maxChars <= 0) return '';
+  return text.slice(0, maxChars);
+}
+
+function joinSections(sections: string[]): string {
+  return sections.filter(Boolean).join('\n\n');
+}
+
+function addSectionWithinBudget(
+  sections: string[],
+  section: string,
+  maxChars: number,
+): boolean {
+  const candidate = joinSections([...sections, section]);
+  if (candidate.length > maxChars) return false;
+  sections.push(section);
+  return true;
+}
+
+function formatBudgetedTableContextForAi(
+  currentMainSchemaTables: DataTable[],
+  otherScopes: string,
+  maxChars: number,
+): string {
+  const sections = [
+    'Schema context trimmed to fit the character budget. Use list_tables to find tables and read_table_schema with a tableId to inspect columns before writing SQL.',
+  ];
+
+  addSectionWithinBudget(
+    sections,
+    'Available tables shown by name only:',
+    maxChars,
+  );
+
+  let shownCount = 0;
+  const tableLines: string[] = [];
+  for (const table of currentMainSchemaTables) {
+    const nextLines = [...tableLines, formatTableSummaryForAi(table)];
+    const nextSections = [...sections, nextLines.join('\n')];
+    if (joinSections(nextSections).length > maxChars) break;
+    tableLines.push(nextLines[nextLines.length - 1]!);
+    shownCount += 1;
+  }
+
+  if (tableLines.length > 0) {
+    sections.push(tableLines.join('\n'));
+  }
+
+  const hiddenCount = currentMainSchemaTables.length - shownCount;
+  if (hiddenCount > 0) {
+    addSectionWithinBudget(
+      sections,
+      `${hiddenCount.toLocaleString()} more tables omitted from this prompt. Use list_tables to page through them.`,
+      maxChars,
+    );
+  }
+
+  if (otherScopes) {
+    addSectionWithinBudget(sections, otherScopes, maxChars);
+  }
+
+  return fitTextToMaxChars(joinSections(sections), maxChars);
+}
+
 /**
  * Formats table schema information using a hybrid prompt strategy.
  *
@@ -254,16 +324,21 @@ export function formatTablesForLLM(
       .join('\n\n');
   }
 
-  const {fullSchemaThreshold, namesOnlyThreshold} =
+  const {fullSchemaThreshold, namesOnlyThreshold, maxChars} =
     getAiTableSchemaContextLimits(limits);
 
   if (currentMainSchemaTables.length <= fullSchemaThreshold) {
-    return [
+    const fullContext = joinSections([
       currentMainSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
       otherScopes,
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    ]);
+    return fullContext.length <= (maxChars ?? Infinity)
+      ? fullContext
+      : formatBudgetedTableContextForAi(
+          currentMainSchemaTables,
+          otherScopes,
+          maxChars!,
+        );
   }
 
   const fullSchemaTables = currentMainSchemaTables.slice(
@@ -280,7 +355,7 @@ export function formatTablesForLLM(
     fullSchemaTables.length -
     summaryTables.length;
 
-  return [
+  const hybridContext = joinSections([
     `Full schemas shown for the first ${fullSchemaTables.length} of ${currentMainSchemaTables.length} available tables:`,
     fullSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
     summaryTables.length > 0
@@ -290,10 +365,16 @@ export function formatTablesForLLM(
         ].join('\n')
       : '',
     hiddenCount > 0
-      ? `${hiddenCount.toLocaleString()} more tables are available via list_tables and describe_table_schema.`
+      ? `${hiddenCount.toLocaleString()} more tables are available via list_tables and read_table_schema.`
       : '',
     otherScopes,
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+  ]);
+
+  return hybridContext.length <= (maxChars ?? Infinity)
+    ? hybridContext
+    : formatBudgetedTableContextForAi(
+        currentMainSchemaTables,
+        otherScopes,
+        maxChars!,
+      );
 }

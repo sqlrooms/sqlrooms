@@ -2,10 +2,11 @@ import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {
   DocumentAsset,
-  DocumentArtifact,
   DocumentsSliceConfig,
+  MarkdownDocumentState,
   type DocumentAsset as DocumentAssetType,
   type DocumentsSliceConfig as DocumentsSliceConfigType,
+  type MarkdownDocumentState as MarkdownDocumentStateType,
 } from './DocumentsSliceConfig';
 
 export type DocumentAssetInput = Omit<
@@ -27,7 +28,7 @@ export type DocumentsSliceState = {
       artifactId: string,
       assetId: string,
     ) => DocumentAssetType | undefined;
-    getDocument: (artifactId: string) => DocumentArtifact | undefined;
+    getDocument: (artifactId: string) => MarkdownDocumentStateType | undefined;
   };
 };
 
@@ -64,7 +65,7 @@ export function createDocumentsSlice<
           produce(state, (draft) => {
             if (draft.documents.config.artifacts[artifactId]) return;
             draft.documents.config.artifacts[artifactId] =
-              DocumentArtifact.parse({
+              MarkdownDocumentState.parse({
                 id: artifactId,
                 markdown,
                 updatedAt: now(),
@@ -91,7 +92,7 @@ export function createDocumentsSlice<
               return;
             }
             draft.documents.config.artifacts[artifactId] =
-              DocumentArtifact.parse({
+              MarkdownDocumentState.parse({
                 id: artifactId,
                 markdown,
                 updatedAt: now(),
@@ -108,7 +109,7 @@ export function createDocumentsSlice<
               draft.documents.config.artifacts[artifactId];
             if (!existingDocument) {
               draft.documents.config.artifacts[artifactId] =
-                DocumentArtifact.parse({
+                MarkdownDocumentState.parse({
                   id: artifactId,
                   assets: {
                     [asset.id]: DocumentAsset.parse({

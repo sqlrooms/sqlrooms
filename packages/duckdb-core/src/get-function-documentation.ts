@@ -1,6 +1,5 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {memoizeOnce} from '@sqlrooms/utils';
 import {DuckDbConnector} from './DuckDbConnector';
 import {escapeVal} from './duckdb-utils';
 import {
@@ -8,7 +7,7 @@ import {
   type GroupedFunctionSuggestion,
 } from './duckdb-function-utils';
 
-const getFunctionDocumentationImpl = async (
+export const getFunctionDocumentation = async (
   connector: DuckDbConnector,
   functionName: string,
 ): Promise<GroupedFunctionSuggestion | null> => {
@@ -42,8 +41,3 @@ const getFunctionDocumentationImpl = async (
     overloads,
   };
 };
-
-// Memoized version to get exact function documentation
-export const getFunctionDocumentation = memoizeOnce(
-  getFunctionDocumentationImpl,
-);

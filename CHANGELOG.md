@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.7](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.6...v0.29.0-rc.7) (2026-06-05)
+
+### Bug Fixes
+
+* Accept artifact config input shape in artifacts slice ([#693](https://github.com/sqlrooms/sqlrooms/issues/693)) ([5cda1db](https://github.com/sqlrooms/sqlrooms/commit/5cda1db15f949411c0de1fd989a8b4dc783b3c9a))
+* Deckgl example load error (downgrading duckdb-wasm) ([#667](https://github.com/sqlrooms/sqlrooms/issues/667)) ([ff2ae6a](https://github.com/sqlrooms/sqlrooms/commit/ff2ae6a11f7740abc9508166f4a26c2efc411a1b))
+* Incomplete and malformed tool-call part in conversation ([#679](https://github.com/sqlrooms/sqlrooms/issues/679)) ([0290981](https://github.com/sqlrooms/sqlrooms/commit/0290981bfa45e4949b30ed0bfaaebb37d5501949))
+* not show tool call cancelled by user ([#688](https://github.com/sqlrooms/sqlrooms/issues/688)) ([2379043](https://github.com/sqlrooms/sqlrooms/commit/237904389513ff7dd5397e2058cfc50093256e7f))
+* Query result timestamp formatting for Arrow values ([#680](https://github.com/sqlrooms/sqlrooms/issues/680)) ([adebb03](https://github.com/sqlrooms/sqlrooms/commit/adebb035f37fcad3cf72c929554113efc09aae8a))
+
+### Features
+
+* Add a storage-agnostic persistence controller to SQLRooms ([#682](https://github.com/sqlrooms/sqlrooms/issues/682)) ([ddd5a86](https://github.com/sqlrooms/sqlrooms/commit/ddd5a86deb0eaccdd75cbe43b162b13eefbfcf37))
+* Add data table explorer blocks to Mosaic dashboards ([#668](https://github.com/sqlrooms/sqlrooms/issues/668)) ([72c628a](https://github.com/sqlrooms/sqlrooms/commit/72c628acf51028796b04bb0d5eabb8ec41b085d5))
+* Add reusable SQL query blocks and artifact tabs ([#669](https://github.com/sqlrooms/sqlrooms/issues/669)) ([42eb60c](https://github.com/sqlrooms/sqlrooms/commit/42eb60c5c90e3ffb2d18b6feb256f403137cd124))
+* Add tables to AI agent context ([#664](https://github.com/sqlrooms/sqlrooms/issues/664)) ([b556abe](https://github.com/sqlrooms/sqlrooms/commit/b556abed19d9a976e39bfd1895e5a03b2d10ff15))
+* Ai model persistence migration ([#361](https://github.com/sqlrooms/sqlrooms/issues/361)) ([01fab51](https://github.com/sqlrooms/sqlrooms/commit/01fab51b7f5c3bbc00ab95c0d21522bd8e44863f))
+* Blocks and BlockDocument ([#666](https://github.com/sqlrooms/sqlrooms/issues/666)) ([aa9d9e1](https://github.com/sqlrooms/sqlrooms/commit/aa9d9e1a037fde0a6914993fd192366cc7b51e86))
+* charts refactoring ([#673](https://github.com/sqlrooms/sqlrooms/issues/673)) ([ed3c814](https://github.com/sqlrooms/sqlrooms/commit/ed3c8142e01e69b3b4374776cbd4742ed40a17b6))
+* Improve SQL editor completions for DuckDB functions and columns ([#665](https://github.com/sqlrooms/sqlrooms/issues/665)) ([87549ca](https://github.com/sqlrooms/sqlrooms/commit/87549ca85cff8f75ff80ea2abe5613c5b6b80ece))
+* Persist AI settings to TOML in the CLI ([#653](https://github.com/sqlrooms/sqlrooms/issues/653)) ([1589d5d](https://github.com/sqlrooms/sqlrooms/commit/1589d5de7b1581f32339c046f59a91a90010e3a0))
+* render agent reasoning text instead of agent title ([#687](https://github.com/sqlrooms/sqlrooms/issues/687)) ([86186b8](https://github.com/sqlrooms/sqlrooms/commit/86186b8ebab4a63872582177732fa20cba631dc3))
+
 # [0.29.0-rc.6](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.5...v0.29.0-rc.6) (2026-05-26)
 
 ### Bug Fixes

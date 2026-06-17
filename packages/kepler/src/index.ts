@@ -9,10 +9,26 @@ export {
   useStoreWithKepler,
 } from './KeplerSlice';
 export type {
+  AddTableToMapFn,
+  AddTableToMapLoadOptions,
+  AddTableToMapParams,
   CreateInitialMapKeplerStateContext,
   CreateKeplerSliceOptions,
+  KeplerModalPortalTarget,
   KeplerSliceState,
 } from './KeplerSlice';
+export {
+  buildKeplerTableLayerOptions,
+  findKeplerTableForDatasetId,
+  getKeplerDatasetIdForTable,
+  getKeplerTableLabel,
+  shouldIncludeKeplerTable,
+} from './keplerTableSelection';
+export type {
+  KeplerDbSchemaReference,
+  KeplerTableLayerOption,
+  KeplerTableSelectionOptions,
+} from './keplerTableSelection';
 
 export {FileDropInput} from './components/FileDropInput';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
@@ -61,3 +77,7 @@ export {
   CustomAddDataButtonFactory,
   CustomPanelTitleFactory,
 } from './components/KeplerInjector';
+
+export {createKeplerTheme, darkTheme} from './styles/theme';
+export type {KeplerThemeOverrides} from './styles/theme';
+export type {KeplerGLBasicProps} from './KeplerSlice';

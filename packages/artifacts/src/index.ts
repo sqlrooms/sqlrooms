@@ -14,7 +14,10 @@ export type {
   ArtifactType as ArtifactTypeType,
 } from './ArtifactsSliceConfig';
 
-export {defineArtifactTypes} from './ArtifactTypes';
+export {
+  createArtifactTypeFromStatefulBlock,
+  defineArtifactTypes,
+} from './ArtifactTypes';
 export type {
   ArtifactLifecycleContext,
   ArtifactRenameLifecycleContext,

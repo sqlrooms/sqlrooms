@@ -58,6 +58,7 @@ export {
 } from './use-copy-as-tsv';
 
 export {useDuckDb} from './useDuckDb';
+export {useDataTable} from './useDataTable';
 
 export {
   useDuckDbQuery,
@@ -74,10 +75,13 @@ export {
   createTypedRowAccessor,
   escapeId,
   escapeVal,
+  findTableInSchemaTrees,
+  getAllTablesFromSchemaTrees,
   getArrowColumnTypeCategory,
   getColValAsNumber,
   getDuckDbTypeCategory,
   getSqlErrorWithPointer,
+  getUnqualifiedSqlIdentifier,
   isNumericDuckType,
   isQualifiedTableName,
   joinStatements,
@@ -90,6 +94,7 @@ export {
   loadSpatial,
   makeLimitQuery,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,

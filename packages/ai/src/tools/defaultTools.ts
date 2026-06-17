@@ -12,45 +12,59 @@ import type {ToolRenderer} from '@sqlrooms/ai-core';
 import {createCommandTools} from './commandTools';
 import type {CommandToolsOptions, DefaultCommandTools} from './commandTools';
 import {QueryToolResult} from './query/QueryToolResult';
-import {createTableSchemaTools} from './tableSchemaTools';
-import type {DefaultTableSchemaTools} from './tableSchemaTools';
+import {createListTablesTool, createReadTableSchemaTool} from './tables';
+import type {
+  ListTablesParameters,
+  ListTablesOutput,
+  ReadTableSchemaParameters,
+  ReadTableSchemaOutput,
+} from './tables';
 
 export type DefaultToolsOptions = {
   query?: QueryToolOptions;
   commands?: CommandToolsOptions | false;
-  tables?: false;
+  tables?: boolean;
 };
 
 type QueryTool = Tool<QueryToolParameters, QueryToolOutput>;
-type QueryToolSet = {query: QueryTool};
+type ListTablesTool = Tool<ListTablesParameters, ListTablesOutput>;
+type ReadTableSchemaTool = Tool<
+  ReadTableSchemaParameters,
+  ReadTableSchemaOutput
+>;
+
+export type DefaultTableTools = {
+  list_tables: ListTablesTool;
+  read_table_schema: ReadTableSchemaTool;
+};
 
 /**
  * Default tools available to the AI assistant for data analysis.
  * Includes:
  * - query: Executes SQL queries against DuckDB
- * - list_tables / describe_table_schema: Discover available table metadata
+ * - list_tables / read_table_schema: Discover and inspect database tables
  * - list_commands / execute_command: Bridge to room command registry
  *
  * Pass `commands: false` to opt out of the command tools (e.g. in rooms
  * without a command registry).
- * Pass `tables: false` to opt out of the table schema tools.
+ * Pass `tables: false` to opt out of the table discovery tools.
  */
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options: DefaultToolsOptions & {commands: false; tables: false},
-): QueryToolSet;
-export function createDefaultAiTools(
-  store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
-  options: DefaultToolsOptions & {tables: false},
-): QueryToolSet & DefaultCommandTools;
+): {query: QueryTool};
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options: DefaultToolsOptions & {commands: false},
-): QueryToolSet & DefaultTableSchemaTools;
+): {query: QueryTool} & DefaultTableTools;
+export function createDefaultAiTools(
+  store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
+  options: DefaultToolsOptions & {tables: false},
+): {query: QueryTool} & DefaultCommandTools;
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,
-): QueryToolSet & DefaultTableSchemaTools & DefaultCommandTools;
+): {query: QueryTool} & DefaultCommandTools & DefaultTableTools;
 export function createDefaultAiTools(
   store: StoreApi<BaseRoomStoreState & AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,
@@ -62,12 +76,17 @@ export function createDefaultAiTools(
       : commands != null
         ? createCommandTools(store, commands)
         : createCommandTools(store);
-  const tableSchemaTools =
-    tables === false ? {} : createTableSchemaTools(store);
+  const tableTools =
+    tables === false
+      ? null
+      : {
+          list_tables: createListTablesTool(store),
+          read_table_schema: createReadTableSchemaTool(store),
+        };
   return {
     query: createQueryTool(store, query),
-    ...tableSchemaTools,
     ...commandTools,
+    ...(tableTools ?? {}),
   };
 }
 

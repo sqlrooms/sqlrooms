@@ -29,6 +29,8 @@ export {arrowTableToJson} from './arrow-utils';
 export {
   isQualifiedTableName,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  getUnqualifiedSqlIdentifier,
   escapeVal,
   escapeId,
   isNumericDuckType,
@@ -50,6 +52,10 @@ export {
 } from './schema-tree/typeCategories';
 
 export {createDbSchemaTrees} from './schema-tree/schemaTree';
+export {
+  getAllTablesFromSchemaTrees,
+  findTableInSchemaTrees,
+} from './schema-tree/schemaTreeUtils';
 
 export {
   type DbSchemaNode,

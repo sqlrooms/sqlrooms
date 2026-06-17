@@ -8,10 +8,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
   toast,
 } from '@sqlrooms/ui';
 import {
@@ -20,9 +16,11 @@ import {
   PlusIcon,
   SparklesIcon,
   TrashIcon,
+  XIcon,
 } from 'lucide-react';
-import {useCallback, useState} from 'react';
-import {ARTIFACT_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypes';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {
@@ -30,10 +28,37 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
     tabId: string;
     tabName: string;
   } | null>(null);
+  const showArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.showArtifactChooser,
+  );
+  const setShowArtifactChooser = useRoomStore(
+    (state) => state.workspaceUi.setShowArtifactChooser,
+  );
+  const isAssistantCollapsed = useRoomStore((state) =>
+    state.layout.isCollapsed('assistant-sidebar'),
+  );
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
+  const previousAssistantCollapsedRef = useRef<boolean | null>(null);
 
   const handleDeleteTab = useCallback((tabId: string, tabName: string) => {
     setDeleteConfirm({tabId, tabName});
   }, []);
+
+  useEffect(() => {
+    if (showArtifactChooser) {
+      previousAssistantCollapsedRef.current ??= isAssistantCollapsed;
+      if (!isAssistantCollapsed) {
+        setCollapsed('assistant-sidebar', true);
+      }
+      return;
+    }
+
+    const previousAssistantCollapsed = previousAssistantCollapsedRef.current;
+    if (previousAssistantCollapsed !== null) {
+      setCollapsed('assistant-sidebar', previousAssistantCollapsed);
+      previousAssistantCollapsedRef.current = null;
+    }
+  }, [isAssistantCollapsed, setCollapsed, showArtifactChooser]);
 
   return (
     <ArtifactTabs
@@ -45,6 +70,9 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       dndMode="shared"
       dndScopeId="cli-artifact-tabs"
       fontSize={13}
+      className="hidden"
+      onActivateArtifact={() => setShowArtifactChooser(false)}
+      onSelectArtifact={() => setShowArtifactChooser(false)}
       renderTabMenu={(tab) => (
         <>
           <ArtifactTabs.MenuItem disabled>
@@ -67,21 +95,44 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
           onClear={() => setDeleteConfirm(null)}
         />
       }
+      content={
+        showArtifactChooser ? (
+          <CliArtifactsStartScreen
+            onDone={() => setShowArtifactChooser(false)}
+          />
+        ) : undefined
+      }
+      emptyContent={
+        <CliArtifactsStartScreen onDone={() => setShowArtifactChooser(false)} />
+      }
     >
       <ArtifactTabs.SearchDropdown />
       <ArtifactTabs.Tabs />
-      <CliArtifactAddMenu />
+      <Button
+        size="icon"
+        variant="ghost"
+        className="h-full shrink-0"
+        aria-label="Add new artifact"
+        onClick={() => setShowArtifactChooser(true)}
+      >
+        <PlusIcon className="h-4 w-4" />
+      </Button>
       <div className="flex-1" />
       <AssistantToggleButton />
     </ArtifactTabs>
   );
 };
 
-function CliArtifactAddMenu() {
+type CreateCliArtifactCommand = (
+  commandId: string,
+  input?: Record<string, unknown>,
+) => Promise<string | undefined>;
+
+function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
   const artifactTabs = ArtifactTabs.useActions();
   const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
 
-  const invokeCreateArtifactCommand = useCallback(
+  return useCallback(
     async (commandId: string, input?: Record<string, unknown>) => {
       let result: Awaited<ReturnType<typeof invokeCommand>>;
       try {
@@ -96,7 +147,7 @@ function CliArtifactAddMenu() {
               ? error.message
               : 'An unknown error occurred',
         });
-        return;
+        return undefined;
       }
       const artifactId =
         result.success &&
@@ -109,70 +160,117 @@ function CliArtifactAddMenu() {
       if (artifactId) {
         artifactTabs.selectArtifact(artifactId);
       }
+      return artifactId;
     },
     [artifactTabs, invokeCommand],
   );
+}
+
+function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
+  const artifactTabs = ArtifactTabs.useActions();
+  const invokeCreateArtifactCommand = useCreateCliArtifactCommand();
+  const WorksheetIcon = ARTIFACT_TYPES.worksheet.icon;
+  const returnArtifactId =
+    artifactTabs.selectedTabId ?? artifactTabs.openTabs[0];
+  const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
+    (artifactType) => artifactType !== 'worksheet',
+  );
+
+  const handleClose = useCallback(() => {
+    if (!returnArtifactId) return;
+    artifactTabs.selectArtifact(returnArtifactId);
+    onDone?.();
+  }, [artifactTabs, onDone, returnArtifactId]);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <div className="bg-background relative flex min-h-0 flex-1 items-center justify-center overflow-auto">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:text-foreground absolute top-4 right-4 size-9"
+        disabled={!returnArtifactId}
+        aria-label="Close new artifact panel"
+        onClick={handleClose}
+      >
+        <XIcon className="h-4 w-4" aria-hidden />
+      </Button>
+      <div className="flex w-full max-w-3xl flex-col items-center gap-8 px-8 py-12 text-center">
         <Button
-          size="icon"
-          variant="ghost"
-          className="h-full shrink-0"
-          aria-label="Add new artifact"
+          size="lg"
+          className="h-12 px-6 text-base"
+          onClick={() => {
+            void invokeCreateArtifactCommand('worksheet.create-artifact').then(
+              (artifactId) => {
+                if (artifactId) onDone?.();
+              },
+            );
+          }}
         >
-          <PlusIcon className="h-4 w-4" />
+          {WorksheetIcon ? <WorksheetIcon className="h-5 w-5" /> : null}
+          New Worksheet
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuItem
-          onClick={() =>
-            void invokeCreateArtifactCommand('dashboard.create-artifact', {
-              layoutType: 'grid',
-            })
-          }
-        >
-          <BarChart3Icon /> Dashboard
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() =>
-            void invokeCreateArtifactCommand('dashboard.create-artifact', {
-              layoutType: 'dock',
-            })
-          }
-        >
-          <BarChart3Icon /> Dashboard (dock)
-        </DropdownMenuItem>
-        {CLI_ARTIFACT_TYPES.filter(
-          (artifactType) => artifactType !== 'dashboard',
-        ).map((artifactType) => {
-          const type = ARTIFACT_TYPES[artifactType];
-          return (
-            <DropdownMenuItem
-              key={artifactType}
-              onClick={() =>
-                void invokeCreateArtifactCommand(
-                  `${artifactType}.create-artifact`,
-                )
-              }
-            >
-              <type.icon /> {`New ${type.label}`}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+
+        <section className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {secondaryArtifactTypes.map((artifactType) => {
+            const type = ARTIFACT_TYPES[artifactType];
+            const Icon = type.icon;
+            if (artifactType === 'dashboard') {
+              return (
+                <Button
+                  key={artifactType}
+                  variant="outline"
+                  size="lg"
+                  className="h-12 justify-start gap-3 px-5 text-base"
+                  onClick={() => {
+                    void invokeCreateArtifactCommand(
+                      'dashboard.create-artifact',
+                      {layoutType: 'grid'},
+                    ).then((artifactId) => {
+                      if (artifactId) onDone?.();
+                    });
+                  }}
+                >
+                  <BarChart3Icon className="h-5 w-5" />
+                  Dashboard
+                </Button>
+              );
+            }
+            return (
+              <Button
+                key={artifactType}
+                variant="outline"
+                size="lg"
+                className="h-12 justify-start gap-3 px-5 text-base"
+                onClick={() => {
+                  void invokeCreateArtifactCommand(
+                    `${artifactType}.create-artifact`,
+                  ).then((artifactId) => {
+                    if (artifactId) onDone?.();
+                  });
+                }}
+              >
+                {Icon ? <Icon className="h-5 w-5" /> : null}
+                {type.label}
+              </Button>
+            );
+          })}
+        </section>
+      </div>
+    </div>
   );
 }
 
 function AssistantToggleButton() {
+  const showArtifactChooser = useRoomStore(
+    (s) => s.workspaceUi.showArtifactChooser,
+  );
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((s) =>
     s.layout.isCollapsed('assistant-sidebar'),
   );
 
-  if (!isAssistantCollapsed) {
+  if (showArtifactChooser || !isAssistantCollapsed) {
     return null;
   }
 

@@ -5,7 +5,6 @@ import styled from 'styled-components';
 import {
   FilterPanelFactory,
   PanelTitleFactory,
-  AddFilterButtonFactory,
   SidePanelSection,
 } from '@kepler.gl/components';
 import {FILTER_VIEW_TYPES, SIDEBAR_PANELS} from '@kepler.gl/constants';
@@ -19,6 +18,14 @@ import {
   KeplerActions,
   useKeplerStateActions,
 } from '../hooks/useKeplerStateActions';
+import {
+  buildKeplerTableSourceOptions,
+  type KeplerTableSourceOption,
+} from '../keplerTableSelection';
+import {KeplerTableSourceSelector} from './KeplerTableSourceSelector';
+import {useStoreWithKepler} from '../KeplerSlice';
+import {Button} from '@sqlrooms/ui';
+import {Plus} from 'lucide-react';
 
 const filterPanelMetadata = SIDEBAR_PANELS.find((p) => p.id === 'filter');
 
@@ -74,7 +81,6 @@ type FilterPanelCallbacks = Record<
 // Get the kepler.gl components through the injector
 const FilterPanel = getKeplerFactory(FilterPanelFactory);
 const PanelTitle = getKeplerFactory(PanelTitleFactory);
-const AddFilterButton = getKeplerFactory(AddFilterButtonFactory);
 
 // Filter List Component
 const FilterList: React.FC<FilterListProps> = ({
@@ -149,7 +155,7 @@ function useCustomFilterActions(keplerActions: KeplerActions) {
   const {addFilter} = keplerActions.visStateActions;
 
   const onClickAddFilter = useCallback(
-    (dataset: string) => addFilter(dataset),
+    (option: KeplerTableSourceOption) => addFilter(option.value),
     [addFilter],
   );
 
@@ -164,6 +170,10 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
 }) => {
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const intl = useIntl();
+  const dbTables = useStoreWithKepler((state) => state.db.tables);
+  const tableSelection = useStoreWithKepler(
+    (state) => state.kepler.tableSelection,
+  );
 
   const {onClickAddFilter} = useCustomFilterActions(keplerActions);
 
@@ -181,6 +191,16 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
         idx,
       })) ?? [],
     [filters],
+  );
+  const addFilterOptions = useMemo(
+    () =>
+      buildKeplerTableSourceOptions({
+        dbTables,
+        datasets,
+        includeUnloadedTables: false,
+        tableSelection,
+      }),
+    [datasets, dbTables, tableSelection],
   );
 
   if (!keplerState || !keplerActions) {
@@ -201,7 +221,27 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
               id: filterPanelMetadata?.label || 'Filters',
             })}
           >
-            <AddFilterButton datasets={datasets} onAdd={onClickAddFilter} />
+            <KeplerTableSourceSelector
+              disabled={!addFilterOptions.length}
+              options={addFilterOptions}
+              popoverAlign="end"
+              searchPlaceholder={
+                intl ? intl.formatMessage({id: 'placeholder.search'}) : 'Search'
+              }
+              onSelect={onClickAddFilter}
+              renderTrigger={({disabled}) => (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  className="add-filter-button"
+                  disabled={disabled}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  {intl.formatMessage({id: 'filterManager.addFilter'})}
+                </Button>
+              )}
+            />
           </PanelTitle>
         </SidePanelSection>
 

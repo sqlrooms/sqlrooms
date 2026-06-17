@@ -9,13 +9,13 @@ import {
 } from '@sqlrooms/ui';
 import {Plus} from 'lucide-react';
 import React, {PropsWithChildren} from 'react';
-import type {ChartConfig} from '../chart-types';
+import type {ChartConfig} from '../charts/chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
 import {ChartBuilderRoot} from './ChartBuilderRoot';
 import type {
   ChartBuilderColumn,
   ChartTypeDefinition,
-} from '../chart-types/base-types';
+} from '../charts/chart-types/base-types';
 
 export type ChartBuilderTriggerProps = ButtonProps;
 

@@ -427,8 +427,10 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
         }
       }
     } catch (err) {
+      markPendingToolCallsAsCancelled(toolCallMap);
+      pushProgress();
+
       if (abortSignal?.aborted) {
-        markPendingToolCallsAsCancelled(toolCallMap);
         const snapshot = buildAbortSnapshot(
           parentToolCallId,
           toolCallMap,
@@ -436,7 +438,6 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
           store,
         );
         store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
-        pushProgress();
         throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
       }
       throw err;

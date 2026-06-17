@@ -1,12 +1,11 @@
 import type {ComponentProps, FC, PropsWithChildren} from 'react';
-import {AnalysisResultsContainer} from './AnalysisResultsContainer';
+import {ChatMessagesContainer} from './ChatMessagesContainer';
 import {
   LocalAgentChatRuntimeProvider,
   SessionChatRuntimeProvider,
   useChatRuntime,
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
-import {ContextSelector} from './ContextSelector';
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
@@ -25,6 +24,9 @@ import {QueryControls} from './QueryControls';
 import {SessionChatManager} from './SessionChatManager';
 import {SessionControls} from './SessionControls';
 import {ChatSearch, ChatSearchProvider} from './ChatSearch';
+import {ContextSelector} from './context/ContextSelector';
+import {ChatHeader} from './ChatHeader';
+import {ChatHistoryView} from './ChatHistoryView';
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;
@@ -34,7 +36,9 @@ type ChatComponent = FC<RootProps> & {
   Root: FC<RootProps>;
   LocalAgentRoot: FC<LocalAgentChatRootProps>;
   Sessions: typeof SessionControls;
-  Messages: FC<ComponentProps<typeof AnalysisResultsContainer>>;
+  Header: typeof ChatHeader;
+  History: typeof ChatHistoryView;
+  Messages: FC<ComponentProps<typeof ChatMessagesContainer>>;
   Composer: FC<ComponentProps<typeof QueryControls>>;
   InlineApiKeyInput: typeof InlineApiKeyInput;
   PromptSuggestions: typeof PromptSuggestions.Container & {
@@ -75,14 +79,12 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
   </ToolRenderBehaviorProvider>
 );
 
-const Messages: FC<ComponentProps<typeof AnalysisResultsContainer>> = (
-  props,
-) => {
+const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (props) => {
   const runtime = useChatRuntime();
   if (runtime.mode === 'local-agent') {
     return <LocalAgentChatMessages className={props.className} />;
   }
-  return <AnalysisResultsContainer {...props} />;
+  return <ChatMessagesContainer {...props} />;
 };
 
 const Composer: FC<ComponentProps<typeof QueryControls>> = (props) => {
@@ -129,6 +131,8 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Root,
   LocalAgentRoot,
   Sessions: SessionControls,
+  Header: ChatHeader,
+  History: ChatHistoryView,
   Messages,
   Composer,
   InlineApiKeyInput: InlineApiKeyInput,

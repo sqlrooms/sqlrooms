@@ -10,7 +10,9 @@
  *
  * Usage:
  *   pnpm setup-trusted-publishing
+ *   pnpm setup-trusted-publishing @sqlrooms/data-table @sqlrooms/duckdb
  *   pnpm setup-trusted-publishing --dry-run
+ *   pnpm setup-trusted-publishing --dry-run @sqlrooms/data-table
  */
 import {spawnSync} from 'node:child_process';
 import {readFileSync, readdirSync, existsSync} from 'node:fs';
@@ -20,9 +22,11 @@ const REPO = 'sqlrooms/sqlrooms';
 const WORKFLOW_FILE = 'npm-publish.yml';
 const DELAY_MS = 2000;
 const MIN_NPM_VERSION = '11.10.0';
+const TRUST_LIST_TIMEOUT_MS = 30_000;
 
-const npmVersion = spawnSync('npm', ['--version'], {encoding: 'utf-8'})
-  .stdout?.trim();
+const npmVersion = spawnSync('npm', ['--version'], {
+  encoding: 'utf-8',
+}).stdout?.trim();
 if (
   !npmVersion ||
   npmVersion.localeCompare(MIN_NPM_VERSION, undefined, {numeric: true}) < 0
@@ -34,7 +38,18 @@ if (
   process.exit(1);
 }
 
-const dryRun = process.argv.includes('--dry-run');
+const rawArgs = process.argv.slice(2);
+const dryRun = rawArgs.includes('--dry-run');
+const selectedPackages = rawArgs.filter(
+  (arg) => arg !== '--dry-run' && arg !== '--',
+);
+const unknownOptions = selectedPackages.filter((arg) => arg.startsWith('-'));
+
+if (unknownOptions.length) {
+  console.error(`Unknown option(s): ${unknownOptions.join(', ')}`);
+  process.exit(1);
+}
+
 const packagesDir = join(import.meta.dirname, '..', 'packages');
 
 const dirs = readdirSync(packagesDir, {withFileTypes: true})
@@ -42,28 +57,77 @@ const dirs = readdirSync(packagesDir, {withFileTypes: true})
   .map((d) => d.name)
   .sort();
 
-const packages = [];
+const allPackages = [];
 for (const dir of dirs) {
   const pkgPath = join(packagesDir, dir, 'package.json');
   if (!existsSync(pkgPath)) continue;
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
   if (pkg.private) continue;
-  packages.push({name: pkg.name, version: pkg.version, dir});
+  allPackages.push({name: pkg.name, version: pkg.version, dir});
+}
+
+const selectedPackageSet = new Set(selectedPackages);
+const packages = selectedPackageSet.size
+  ? allPackages.filter(
+      ({name, dir}) =>
+        selectedPackageSet.has(name) || selectedPackageSet.has(dir),
+    )
+  : allPackages;
+
+const matchedSelections = new Set(
+  packages.flatMap(({name, dir}) => [
+    ...(selectedPackageSet.has(name) ? [name] : []),
+    ...(selectedPackageSet.has(dir) ? [dir] : []),
+  ]),
+);
+const unmatchedSelections = selectedPackages.filter(
+  (name) => !matchedSelections.has(name),
+);
+
+if (unmatchedSelections.length) {
+  console.error(
+    `Package(s) not found in packages/: ${unmatchedSelections.join(', ')}`,
+  );
+  process.exit(1);
+}
+
+const trustHelp = spawnSync('npm', ['help', 'trust'], {
+  encoding: 'utf-8',
+}).stdout;
+if (!trustHelp?.includes('--allow-publish')) {
+  console.error(
+    `npm trust must support --allow-publish (found npm ${npmVersion}).` +
+      `\nRun: npm install -g npm@latest`,
+  );
+  process.exit(1);
 }
 
 console.log(
-  `Found ${packages.length} public packages to configure.\n` +
+  `Found ${packages.length} public package${
+    packages.length === 1 ? '' : 's'
+  } to configure.\n` +
     `Repository: ${REPO}\n` +
     `Workflow:   ${WORKFLOW_FILE}\n` +
+    (selectedPackageSet.size
+      ? `Selected:   ${packages.map(({name}) => name).join(', ')}\n`
+      : '') +
     (dryRun ? '(dry run — no changes will be made)\n' : ''),
 );
 
 function hasTrust(name) {
   const result = spawnSync('npm', ['trust', 'list', name, '--json'], {
     encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe'],
     shell: false,
     env: process.env,
+    timeout: TRUST_LIST_TIMEOUT_MS,
   });
+  if (result.error) {
+    console.warn(
+      `Unable to check existing trusted publishing config for ${name}: ${result.error.message}`,
+    );
+    return false;
+  }
   if (result.status !== 0) return false;
   try {
     const data = JSON.parse(result.stdout);
@@ -77,6 +141,18 @@ const configured = [];
 const alreadySetUp = [];
 const notFound = [];
 const errored = [];
+
+function summarizeNpmError(stderr) {
+  const lines = stderr
+    ?.split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (
+    lines?.find((line) => line.startsWith('npm error 400 ')) ??
+    lines?.find((line) => line.startsWith('npm error ')) ??
+    null
+  );
+}
 
 for (let i = 0; i < packages.length; i++) {
   const {name, version, dir} = packages[i];
@@ -98,6 +174,7 @@ for (let i = 0; i < packages.length; i++) {
     REPO,
     '--file',
     WORKFLOW_FILE,
+    '--allow-publish',
     '--yes',
   ];
   if (dryRun) args.push('--dry-run');
@@ -114,7 +191,7 @@ for (let i = 0; i < packages.length; i++) {
       notFound.push({name, version, dir});
     } else {
       if (result.stderr) process.stderr.write(result.stderr);
-      errored.push(name);
+      errored.push({name, error: summarizeNpmError(result.stderr)});
     }
   } else {
     configured.push(name);
@@ -148,7 +225,9 @@ if (notFound.length) {
     const isPrerelease = version.includes('-');
     const tagFlag = isPrerelease ? ' --tag next' : '';
     console.log(`    # ${name}`);
-    console.log(`    cd packages/${dir} && npm publish --access public${tagFlag}`);
+    console.log(
+      `    cd packages/${dir} && npm publish --access public${tagFlag}`,
+    );
     console.log(
       `    npm trust github ${name} --repo ${REPO} --file ${WORKFLOW_FILE} --yes`,
     );
@@ -159,7 +238,9 @@ if (notFound.length) {
 
 if (errored.length) {
   console.log(`\n  ✗ Failed (${errored.length}):`);
-  errored.forEach((n) => console.log(`    ${n}`));
+  errored.forEach(({name, error}) => {
+    console.log(`    ${name}${error ? ` — ${error}` : ''}`);
+  });
 }
 
 console.log();

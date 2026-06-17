@@ -1,16 +1,17 @@
 import {ArtifactsSliceConfig, createArtifactsSlice} from '@sqlrooms/artifacts';
 import {
+  ArtifactAiConfigSchema,
+  createArtifactAiSlice,
+} from '@sqlrooms/artifacts/ai';
+import {
   AiSettingsSliceConfig,
   AiSliceConfig,
   getAiRunContextPrimaryItem,
-  getAiRunContextItems,
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiToolRenderers,
   createDefaultAiTools,
-  type AiRunContext,
-  type AiRunContextItem,
 } from '@sqlrooms/ai';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
@@ -33,18 +34,20 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
-  createMosaicDashboardProfilerPanelConfig,
+  createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
-  MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
+import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
   BaseRoomConfig,
   createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
+  DEFAULT_ROOM_TITLE,
   LayoutConfig,
   persistSliceConfigs,
   registerCommandsForOwner,
@@ -69,6 +72,11 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
+  createBlockDocumentAiInstructions,
+  BlockDocumentsSliceConfig,
+  createBlockDocumentCommands,
+  createBlockDocumentAuthoringInstructions,
+  createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DOCUMENT_AI_INSTRUCTIONS,
@@ -82,14 +90,16 @@ import {
   getDashboardAiInstructions,
 } from './createDashboardAiTools';
 import {dashboardAgentTool} from './createDashboardAgent';
-import {createArtifactContextAiTools} from './createArtifactContextAiTools';
+import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
+import {formatRunContextInstructions} from './context/formatRunContextInstructions';
+import {getRunContext} from './context/getRunContext';
 import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
 import {getDefaultScaffoldTree} from './helpers';
-import {createLayout} from './layout';
-import {fetchRuntimeConfig} from './runtimeConfig';
+import {createLayout, migrateCliLayoutConfig} from './layout';
+import {fetchRuntimeConfig, type RuntimeConfig} from './runtimeConfig';
 import {
   createDuckDbPersistStorage,
   saveAiSettingsToServer,
@@ -100,13 +110,28 @@ import {
   AppBuilderProjectConfigSchema,
   RoomState,
 } from './store-types';
+import {
+  createStatefulBlockCommandTypes,
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
+} from './statefulBlockArtifactConfigs';
 
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
+const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
+  artifactType: 'worksheet',
+  artifactLabel: 'Worksheet',
+  commandNamespace: 'worksheet',
+  commandGroup: 'Worksheet',
+  defaultTitle: 'Worksheet',
+  blockDocumentAgentToolName: 'worksheet_agent',
+} as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
+const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
   (runtimeAiSettings.providers as AiSettingsSliceConfig['providers']) ||
@@ -128,6 +153,42 @@ const CRDT_STORAGE_KEY = [
   'documents',
 ].join(':');
 const AI_SETTINGS_TOML_SAVE_DEBOUNCE_MS = 500;
+
+function getDefaultWorkspaceTitle(config: RuntimeConfig) {
+  const dbPath = config.dbPath?.trim();
+  if (!dbPath || dbPath === ':memory:' || dbPath === 'memory') {
+    return 'Untitled Workspace';
+  }
+
+  const normalizedPath = dbPath.replace(/[/\\]+$/, '');
+  const fileName =
+    normalizedPath.split(/[\\/]/).filter(Boolean).pop() ?? normalizedPath;
+  const extensionIndex = fileName.lastIndexOf('.');
+  const title =
+    extensionIndex > 0 ? fileName.slice(0, extensionIndex) : fileName;
+
+  return title || 'Untitled Workspace';
+}
+
+function migrateCliRoomConfig(roomConfig: unknown) {
+  if (!roomConfig || typeof roomConfig !== 'object') {
+    return roomConfig;
+  }
+
+  const title = (roomConfig as {title?: unknown}).title;
+  if (
+    typeof title !== 'string' ||
+    title.trim().length === 0 ||
+    title === DEFAULT_ROOM_TITLE
+  ) {
+    return {
+      ...roomConfig,
+      title: defaultWorkspaceTitle,
+    };
+  }
+
+  return roomConfig;
+}
 
 function createCliCrdtSyncConnector() {
   if (!runtimeConfig.syncEnabled) return undefined;
@@ -191,12 +252,23 @@ const sliceConfigSchemas = {
   notebook: NotebookSliceConfig,
   canvas: CanvasSliceConfig,
   documents: DocumentsSliceConfig,
+  blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
   appProject: AppBuilderProjectConfigSchema,
+  artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
+  pivot: PivotSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
+type PersistedRoomState = ReturnType<typeof persistHelpers.partialize>;
+const cliUiPersistStorage = createDuckDbPersistStorage<PersistedRoomState>(
+  connector,
+  {
+    namespace: runtimeConfig.metaNamespace || '__sqlrooms',
+  },
+);
+export const uiStatePersistenceController = cliUiPersistStorage.controller;
 
 function getAvailableAiModels(config: AiSettingsSliceConfig) {
   return [
@@ -214,13 +286,12 @@ function getAvailableAiModels(config: AiSettingsSliceConfig) {
 }
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs<RoomState>(
+  persistSliceConfigs<RoomState, typeof sliceConfigSchemas>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas,
-      storage: createDuckDbPersistStorage(connector, {
-        namespace: runtimeConfig.metaNamespace || '__sqlrooms',
-      }),
+      storage: cliUiPersistStorage,
+      partialize: persistHelpers.partialize,
       merge: (persistedState, currentState) => {
         const persistedRecord = (persistedState ?? {}) as Record<
           string,
@@ -238,8 +309,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...persistedRecord,
             artifacts: persistedArtifacts,
             cells: persistedCells,
+            room: migrateCliRoomConfig(persistedRecord.room),
+            layout: persistedRecord.layout
+              ? migrateCliLayoutConfig(persistedRecord.layout as LayoutConfig)
+              : persistedRecord.layout,
           },
           currentState,
+        );
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.artifactAi.syncCurrentArtifactAiSession();
+        cliUiPersistStorage.markStateSnapshotSaved(
+          persistHelpers.partialize(state),
         );
       },
     },
@@ -270,10 +352,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DOCUMENT_COMMAND_OWNER,
             createDocumentCommands<RoomState>(),
           );
+          registerCommandsForOwner(
+            store,
+            WORKSHEET_COMMAND_OWNER,
+            createBlockDocumentCommands<RoomState>({
+              ...WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
+              statefulBlockTypes: createStatefulBlockCommandTypes(),
+            }),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -282,7 +373,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           get().mosaicDashboard.ensureDashboard(artifactId, artifact.title);
         },
-        addProfilerForTable: (tableName) => {
+        addDataTableExplorerForTable: (tableName) => {
           const existingDashboardArtifactId =
             get().dashboard.getCurrentDashboardArtifactId();
           const artifactId =
@@ -299,15 +390,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             get().mosaicDashboard.setSelectedTable(artifactId, tableName);
           }
 
-          const hasProfilerForTable = dashboard.panels.some(
-            (panel) => panel.type === MOSAIC_DASHBOARD_PROFILER_PANEL_TYPE,
+          const hasDataTableExplorerForTable = dashboard.panels.some(
+            (panel) =>
+              panel.type === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
           );
 
-          if (!hasProfilerForTable) {
+          if (!hasDataTableExplorerForTable) {
             get().mosaicDashboard.addPanel(
               artifactId,
-              createMosaicDashboardProfilerPanelConfig({
-                title: `${tableName} profiler`,
+              createMosaicDashboardDataTableExplorerPanelConfig({
+                title: `${tableName} explorer`,
               }),
             );
           }
@@ -343,6 +435,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       };
 
       return {
+        workspaceUi: {
+          showArtifactChooser: false,
+          setShowArtifactChooser: (show) => {
+            set((state) =>
+              produce(state, (draft: RoomState) => {
+                draft.workspaceUi.showArtifactChooser = show;
+              }),
+            );
+          },
+        },
+
         appProject: {
           config: AppBuilderProjectConfig.parse({}),
           upsertArtifactApp: (artifactId, app) => {
@@ -414,7 +517,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createRoomShellSlice({
           connector,
-          config: {dataSources: []},
+          config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
           createDbProps: {
             duckDb: {
@@ -454,9 +557,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createArtifactsSlice<RoomState>({
+        ...createArtifactsSlice({
           artifactTypes: ARTIFACT_TYPES,
         })(set, get, store),
+
+        ...createArtifactAiSlice()(set, get, store),
 
         ...createMosaicSlice({
           preagg: {
@@ -478,16 +583,78 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createNotebookSlice()(set, get, store),
 
+        ...createPivotSlice()(set, get, store),
+
         ...createCanvasSlice()(set, get, store),
 
         ...createDocumentsSlice()(set, get, store),
+
+        ...createBlockDocumentsSlice<RoomState>({
+          onCreateOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on create', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.ensureState(
+              getState(),
+              blockInstanceId,
+              title ?? config.embeddedTitle,
+            );
+          },
+          onDeleteOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on delete', {
+                blockType,
+                blockInstanceId,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            config.deleteState(getState(), blockInstanceId);
+          },
+          onRenameOwnedStatefulBlock: ({
+            blockInstanceId,
+            blockType,
+            getState,
+            title,
+          }) => {
+            if (!isStatefulBlockArtifactType(blockType)) {
+              console.warn('Unknown stateful block type on rename', {
+                blockType,
+                blockInstanceId,
+                title,
+              });
+              return;
+            }
+            const config = getStatefulBlockArtifactConfig(blockType);
+            if (config.renameState) {
+              config.renameState(getState(), blockInstanceId, title);
+            }
+          },
+        })(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({
               storage: createIndexedDbDocStorage({key: CRDT_STORAGE_KEY}),
               sync: createCliCrdtSyncConnector(),
               mirrors: {
-                documentState: createDocumentsCrdtMirror<RoomState>(),
+                documentState: createDocumentsCrdtMirror<RoomState>({
+                  blockDocumentArtifactTypes: ['worksheet'],
+                }),
               },
             })(set, get, store)
           : createDisabledCrdtState()),
@@ -533,51 +700,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}`,
-            getRunContext: () => {
-              const state = store.getState();
-              const {artifactsById} = state.artifacts.config;
-              const items = Array.from(new Set(state.aiContextItemIds))
-                .map((artifactId): AiRunContextItem | undefined => {
-                  const artifact = artifactsById[artifactId];
-                  if (!artifact) return undefined;
-                  return {
-                    kind: 'artifact',
-                    id: artifact.id,
-                    type: artifact.type,
-                    title: artifact.title,
-                  };
-                })
-                .filter(Boolean) as AiRunContextItem[];
-              if (items.length === 0) return undefined;
-              return {
-                items,
-                primaryItemId: items[0]?.id,
-                capturedAt: Date.now(),
-              } satisfies AiRunContext;
-            },
-            formatRunContextInstructions: ({runContext}) => {
-              const artifactItems = getAiRunContextItems(runContext).filter(
-                (item) => item.kind === 'artifact',
-              );
-              if (artifactItems.length === 0) return '';
-              const mainItem =
-                getAiRunContextPrimaryItem(runContext) ?? artifactItems[0];
-              if (!mainItem) return '';
-              const additionalItems = artifactItems.filter(
-                (item) => item.id !== mainItem.id,
-              );
-              const artifactType = mainItem.type ?? 'artifact';
-              return [
-                'Current artifact context:',
-                `- Primary target: ${artifactType} "${mainItem.title}" (id: ${mainItem.id}). Pass this id as artifactId when using a tool that should modify it.`,
-                ...additionalItems.map(
-                  (item) =>
-                    `- Additional reference context: ${item.type ?? 'artifact'} "${item.title}" (id: ${item.id}).`,
-                ),
-                '- Additional context items are reference-only by default; tools will not implicitly target them. Use set_primary_context_artifact before modifying a reference artifact.',
-              ].join('\n');
-            },
+              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
+            getRunContext: (sessionId) => getRunContext(store, sessionId),
+            formatRunContextInstructions: ({runContext}) =>
+              formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
@@ -594,17 +720,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           })(set, get, store);
         })(),
-        aiContextMode: 'auto',
-        aiContextItemIds: [],
-        setAiContextItemIds: (artifactIds, mode) => {
-          set({
-            aiContextItemIds: Array.from(new Set(artifactIds)),
-            ...(mode ? {aiContextMode: mode} : {}),
-          });
-        },
-        replaceAiContextWithArtifact: (artifactId) => {
-          set({aiContextItemIds: [artifactId]});
-        },
       };
     },
   ),

@@ -4,6 +4,19 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 
 [Documentation](https://sqlrooms.org/) | [Examples](https://sqlrooms.org/examples.html)
 
+---
+
+SQLRooms is part of the [OpenJS Foundation](https://openjsf.org/) through [vis.gl](http://vis.gl) and [Open Visualization Collaboration Space](https://www.openvisualization.org/).
+
+<div style="display:flex; gap:20px; align-items:center">
+  <a href="https://openjsf.org/">
+    <img src="docs/public/openjsf-logo.svg" alt="OpenJS Foundation" height="42">
+  </a>
+
+</div>
+
+---
+
 <!-- INCLUDE:overview.md -->
 
 # Overview

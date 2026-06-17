@@ -5,7 +5,7 @@ This package combines:
 - AI slice state/logic (`@sqlrooms/ai-core`)
 - AI settings UI/state (`@sqlrooms/ai-settings`)
 - AI config schemas (`@sqlrooms/ai-config`)
-- SQL query and schema discovery tool helpers (`createDefaultAiTools`, `createQueryTool`, `createTableSchemaTools`)
+- SQL query and schema discovery tool helpers (`createDefaultAiTools`, `createQueryTool`)
 
 Use this package when you want AI chat + tool execution in a SQLRooms app without wiring low-level pieces manually.
 
@@ -13,8 +13,8 @@ Use this package when you want AI chat + tool execution in a SQLRooms app withou
 current-database `main` catalogs include full schemas for every table, while
 larger catalogs include a few full schemas, additional table names with row
 counts, and instructions to call
-`describe_table_schema` before querying tables whose columns are not shown.
-`createDefaultAiTools` registers `list_tables` and `describe_table_schema` by
+`read_table_schema` before querying tables whose columns are not shown.
+`createDefaultAiTools` registers `list_tables` and `read_table_schema` by
 default so apps can expose the same table discovery workflow. These tools
 search the current database `main` schema by default, and accept broader
 `scope`, `schema`, and `database` parameters for other visible schemas or
@@ -101,6 +101,71 @@ function AiPanel() {
   );
 }
 ```
+
+## Generate Chat Titles
+
+`generateSessionTitle` turns a session's early user messages into a concise title
+via `ai.sendPrompt`, cleans the model output, and renames the session.
+`useGenerateSessionTitle` wraps that helper for React surfaces that should watch
+the current session and trigger title generation after new user messages. Apps
+can keep product-specific policy outside the shared package by passing options
+such as `enabled`, `isDefaultSessionName`, and `getPromptOptions`.
+
+```tsx
+import {Chat, useGenerateSessionTitle} from '@sqlrooms/ai';
+
+function AiPanel() {
+  useGenerateSessionTitle({
+    enabled: true,
+    getPromptOptions: () => ({useTools: false}),
+  });
+
+  return (
+    <Chat>
+      <Chat.Messages />
+      <Chat.Composer />
+    </Chat>
+  );
+}
+```
+
+## Chat search
+
+`Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
+find bar that highlights matches in the current session's messages.
+
+For building search UIs outside the chat (e.g. a session list that searches across
+all sessions), the underlying matching primitives are re-exported and can be used
+without the provider:
+
+- `normalizeChatSearchQuery(query)` — trims + lower-cases a query (the casing rule
+  the search uses).
+- `findChatSearchMatches(blocks, query)` — returns positional matches
+  (`ChatSearchMatch[]`) for a list of `ChatSearchBlock`s. Useful for highlighting
+  matched substrings consistently with `Chat.Search`.
+- `markdownToPlainText(markdown)` — extracts plain text from markdown so message
+  content can be made searchable.
+
+```tsx
+import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai';
+
+const blocks: ChatSearchBlock[] = [
+  {id: 'title', resultId: 'title', text: title},
+];
+const matches = findChatSearchMatches(blocks, query);
+```
+
+## Chat Session Types
+
+Use `ChatSessionSchema` for persisted chat session validation and
+`isChatSessionEmpty` for session emptiness checks. `AnalysisSessionSchema`,
+`AnalysisResultSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+and `AnalysisResult` remain compatibility exports for existing apps, but new
+code should prefer `Chat.Messages`, `uiMessages`, and derived `ChatTurn` helpers
+such as `getChatTurnsFromUiMessages`.
+
+Old persisted sessions that contain `analysisResults` still load, but parsed and
+new `ChatSessionSchema` state no longer includes that field.
 
 ## Add custom tools
 

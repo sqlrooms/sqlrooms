@@ -140,7 +140,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         },
       })(set, get, store),
-      ...createArtifactsSlice<RoomState>({
+      ...createArtifactsSlice({
         artifactTypes: PIVOT_ARTIFACT_TYPES,
         config: {
           artifactsById: {

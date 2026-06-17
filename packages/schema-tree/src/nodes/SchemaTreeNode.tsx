@@ -17,7 +17,7 @@ export const SchemaTreeNode: FC<{
   const {className, nodeObject, additionalMenuItems} = props;
   return (
     <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-      <div className="flex w-full items-center space-x-2">
+      <div className="flex w-full items-center space-x-1.5">
         <FolderIcon size="16px" className="shrink-0 text-yellow-500" />
         <span className="truncate whitespace-nowrap" title={nodeObject.name}>
           {nodeObject.name}

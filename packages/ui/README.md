@@ -94,7 +94,7 @@ function MyComponent() {
 - **Forms**: Button, Checkbox, Input, Select, Slider, Switch, Textarea
 - **Feedback**: Alert, Progress, Spinner, Toast
 - **Navigation**: Accordion, Breadcrumb, Dropdown Menu, TabStrip
-- **Overlay**: Dialog, Popover, Tooltip
+- **Overlay**: Dialog, ModifierScrollOverlay, Popover, Tooltip
 - **Data Display**: Badge, Table
 - **Utility**: Error Boundary, Theme Switch
 

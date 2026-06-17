@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/pivot",
-  "version": "0.29.0-rc.6",
+  "version": "0.29.0-rc.7",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -28,6 +28,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/blocks": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",

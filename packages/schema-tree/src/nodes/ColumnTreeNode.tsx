@@ -19,7 +19,7 @@ export const ColumnTreeNode: FC<{
   const {className, nodeObject, additionalMenuItems} = props;
   return (
     <BaseTreeNode asChild className={cn(className)} nodeObject={nodeObject}>
-      <div className="relative flex w-full items-center space-x-2">
+      <div className="relative flex w-full items-center space-x-1.5">
         <ColumnTypeBadge
           className="flex opacity-60"
           columnType={nodeObject.columnType}

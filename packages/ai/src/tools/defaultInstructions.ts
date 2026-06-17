@@ -35,7 +35,7 @@ Instructions for analysis:
   * Include only the most relevant values if necessary
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
-- Before writing SQL against a table whose columns are not shown, call describe_table_schema.
+- Before writing SQL against a table whose columns are not shown, call read_table_schema.
 - Use list_tables to search or page through available tables when the prompt mentions a table that is not shown below, including other visible schemas or databases when relevant.
 - Please don't modify data
 - IMPORTANT: When you receive an error response from a tool call (where success: false):

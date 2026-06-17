@@ -7,6 +7,7 @@ import {
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
+import type {z} from 'zod';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
 import type {
@@ -16,27 +17,36 @@ import type {
 import {ArtifactMetadata, ArtifactsSliceConfig} from './ArtifactsSliceConfig';
 import {normalizeOrder} from './helpers';
 
+type ArtifactsSliceConfigInput = z.input<typeof ArtifactsSliceConfig>;
+
 function createDefaultArtifactsConfig(
-  overrides?: Partial<ArtifactsSliceConfigType>,
+  overrides?: ArtifactsSliceConfigInput,
 ): ArtifactsSliceConfigType {
   return ArtifactsSliceConfig.parse(overrides ?? {});
 }
+
+function getFirstArtifactId(config: ArtifactsSliceConfigType) {
+  return config.artifactOrder.find((artifactId) =>
+    Boolean(config.artifactsById[artifactId]),
+  );
+}
+
+type CreateArtifactInput = Omit<ArtifactMetadataType, 'id' | 'title'> & {
+  id?: string;
+  title?: string;
+};
+
+type EnsureArtifactInput = Omit<ArtifactMetadataType, 'id' | 'title'> & {
+  title?: string;
+};
 
 export type ArtifactsSliceState = {
   artifacts: SliceFunctions & {
     config: ArtifactsSliceConfigType;
     artifactTypes: ArtifactTypeDefinitions<any>;
     setConfig: (config: ArtifactsSliceConfigType) => void;
-    createArtifact: (
-      artifact: Omit<ArtifactMetadataType, 'id' | 'title'> & {
-        id?: string;
-        title?: string;
-      },
-    ) => string;
-    ensureArtifact: (
-      id: string,
-      artifact: Omit<ArtifactMetadataType, 'id' | 'title'> & {title?: string},
-    ) => void;
+    createArtifact: (artifact: CreateArtifactInput) => string;
+    ensureArtifact: (id: string, artifact: EnsureArtifactInput) => void;
     renameArtifact: (id: string, title: string) => void;
     closeArtifact: (id: string) => void;
     deleteArtifact: (id: string) => void;
@@ -49,7 +59,7 @@ export type ArtifactsSliceState = {
 export type CreateArtifactsSliceProps<
   TRoomState extends BaseRoomStoreState = BaseRoomStoreState,
 > = {
-  config?: Partial<ArtifactsSliceConfigType>;
+  config?: ArtifactsSliceConfigInput;
   artifactTypes?: ArtifactTypeDefinitions<TRoomState>;
 };
 
@@ -105,6 +115,7 @@ export function createArtifactsSlice<
         assertKnownArtifactType(artifactTypes, artifact.type);
         const id = artifact.id ?? createId();
         const next = ArtifactMetadata.parse({
+          ...artifact,
           id,
           type: artifact.type,
           title: getArtifactTitle(artifactTypes, artifact.type, artifact.title),
@@ -129,10 +140,17 @@ export function createArtifactsSlice<
 
       ensureArtifact(id, artifact) {
         assertKnownArtifactType(artifactTypes, artifact.type);
+        const current = get().artifacts.config.artifactsById[id];
         const next = ArtifactMetadata.parse({
+          ...current,
+          ...artifact,
           id,
           type: artifact.type,
-          title: getArtifactTitle(artifactTypes, artifact.type, artifact.title),
+          title: getArtifactTitle(
+            artifactTypes,
+            artifact.type,
+            artifact.title ?? current?.title,
+          ),
         });
         set((state) =>
           produce(state, (draft) => {
@@ -205,8 +223,9 @@ export function createArtifactsSlice<
                 (candidate: string) => candidate !== id,
               );
             if (draft.artifacts.config.currentArtifactId === id) {
-              draft.artifacts.config.currentArtifactId =
-                draft.artifacts.config.artifactOrder[0];
+              draft.artifacts.config.currentArtifactId = getFirstArtifactId(
+                draft.artifacts.config,
+              );
             }
           }),
         );

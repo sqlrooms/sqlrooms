@@ -1,9 +1,11 @@
 import {
+  AiSessionForkOrigin,
   AiSettingsSliceConfig,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-import type {AiRunContext} from '@sqlrooms/ai-config';
+import type {AiRunContext, AiSliceConfig} from '@sqlrooms/ai-config';
 import {jest} from '@jest/globals';
+import type {UIMessage} from 'ai';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
 import {withRunContextTools} from '../src/chatTransport';
@@ -15,7 +17,7 @@ type TestStoreState = AiSliceState & {
 };
 
 function createTestStore(options?: {
-  getRunContext?: () => AiRunContext | undefined;
+  getRunContext?: (sessionId: string) => AiRunContext | undefined;
 }) {
   const now = Date.now();
   const settingsConfig: AiSettingsSliceConfig = {
@@ -58,7 +60,6 @@ function createTestStore(options?: {
             name: 'Session 1',
             modelProvider: 'openai',
             model: 'shared-model',
-            analysisResults: [],
             createdAt: new Date(now),
             uiMessages: [],
             messagesRevision: 0,
@@ -94,6 +95,24 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
+  it('honors custom defaults when initialized without persisted config', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'anthropic',
+        defaultModel: 'claude-test',
+        initialPrompt: 'start here',
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.getCurrentSession()).toMatchObject({
+      modelProvider: 'anthropic',
+      model: 'claude-test',
+      prompt: 'start here',
+    });
+  });
+
   it('opens the repaired current session when initialized with a stale current session id', () => {
     const now = Date.now();
     const store = createStore<AiSliceState>((set, get, store) =>
@@ -111,7 +130,6 @@ describe('AiSlice model selection', () => {
               name: 'Session 1',
               modelProvider: 'openai',
               model: 'shared-model',
-              analysisResults: [],
               createdAt: new Date(now),
               uiMessages: [],
               messagesRevision: 0,
@@ -124,7 +142,6 @@ describe('AiSlice model selection', () => {
               name: 'Session 2',
               modelProvider: 'openai',
               model: 'shared-model',
-              analysisResults: [],
               createdAt: new Date(now),
               uiMessages: [],
               messagesRevision: 0,
@@ -153,6 +170,434 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.config.currentSessionId).toBeUndefined();
     expect(store.getState().ai.config.openSessionTabs).toEqual([]);
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+  });
+
+  it('returns stable derived analysis results for unchanged UI messages', () => {
+    const store = createTestStore();
+    const messages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ];
+
+    expect(
+      store.getState().ai.setSessionUiMessages('session-1', messages),
+    ).toBe(true);
+
+    const first = store.getState().ai.getAnalysisResults();
+    const second = store.getState().ai.getAnalysisResults();
+
+    expect(second).toBe(first);
+  });
+
+  it('validates fork source message indexes as non-negative integers', () => {
+    const baseOrigin = {
+      sourceSessionId: 'source-session',
+      sourceSessionNameAtFork: 'Source',
+      createdAt: Date.now(),
+    };
+
+    expect(
+      AiSessionForkOrigin.safeParse({
+        ...baseOrigin,
+        sourceMessageIndex: 0,
+      }).success,
+    ).toBe(true);
+    expect(
+      AiSessionForkOrigin.safeParse({
+        ...baseOrigin,
+        sourceMessageIndex: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      AiSessionForkOrigin.safeParse({
+        ...baseOrigin,
+        sourceMessageIndex: 1.5,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('normalizes restored config passed through setConfig', () => {
+    const store = createTestStore();
+    const config: AiSliceConfig = {
+      currentSessionId: 'session-2',
+      openSessionTabs: ['session-2'],
+      sessionForks: {
+        'deleted-session': {
+          sourceSessionId: 'session-1',
+          sourceSessionNameAtFork: 'Deleted target',
+          createdAt: Date.now(),
+        },
+      },
+      sessions: [
+        {
+          id: 'session-2',
+          name: 'Restored session',
+          modelProvider: 'openai',
+          model: 'shared-model',
+          createdAt: new Date(),
+          uiMessages: [
+            {
+              id: 'assistant-1',
+              role: 'assistant',
+              parts: [
+                {
+                  type: 'tool-query',
+                  toolCallId: 'tool-1',
+                  state: 'input-streaming',
+                  input: {sqlQuery: 'SELECT'},
+                },
+              ],
+            },
+          ],
+          messagesRevision: 0,
+          prompt: '',
+          isRunning: true,
+          lastOpenedAt: Date.now(),
+        },
+      ],
+    };
+
+    store.getState().ai.setConfig(config);
+
+    const session = store.getState().ai.getCurrentSession();
+    const part = session?.uiMessages[0]?.parts[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(session?.isRunning).toBe(false);
+    expect(part?.state).toBe('output-error');
+    expect(store.getState().ai.config.sessionForks).toEqual({});
+  });
+
+  it('forks a session through the selected assistant message', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'first'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'first answer'}],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'second'}],
+      },
+      {
+        id: 'assistant-2',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'second answer'}],
+      },
+      {
+        id: 'user-3',
+        role: 'user',
+        parts: [{type: 'text', text: 'later'}],
+      },
+    ];
+
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    store
+      .getState()
+      .ai.setSessionDraftContextItemIds('session-1', ['map-a', 'map-a']);
+
+    const forkedSessionId = store.getState().ai.forkSessionFromMessage({
+      sourceSessionId: 'session-1',
+      sourceTurnId: 'user-2',
+      sourceMessageId: 'assistant-2',
+    });
+
+    expect(forkedSessionId).toBeDefined();
+    expect(store.getState().ai.config.currentSessionId).toBe(forkedSessionId);
+
+    const sourceSession = store
+      .getState()
+      .ai.config.sessions.find((session) => session.id === 'session-1');
+    const forkedSession = store.getState().ai.getCurrentSession();
+
+    expect(sourceSession?.uiMessages.map((message) => message.id)).toEqual([
+      'user-1',
+      'assistant-1',
+      'user-2',
+      'assistant-2',
+      'user-3',
+    ]);
+    expect(forkedSession?.uiMessages.map((message) => message.id)).toEqual([
+      'user-1',
+      'assistant-1',
+      'user-2',
+      'assistant-2',
+    ]);
+    expect(forkedSession?.modelProvider).toBe('openai');
+    expect(forkedSession?.model).toBe('shared-model');
+    expect(forkedSession?.draftContextItemIds).toEqual(['map-a']);
+    expect(
+      store.getState().ai.getSessionForkOrigin(forkedSessionId!),
+    ).toMatchObject({
+      sourceSessionId: 'session-1',
+      sourceMessageId: 'assistant-2',
+      sourceTurnId: 'user-2',
+      sourceMessageIndex: 3,
+      sourceSessionNameAtFork: 'Session 1',
+    });
+  });
+
+  it('rejects fork metadata when the selected message is not an assistant message in the selected turn', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'first'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'first answer'}],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'second'}],
+      },
+      {
+        id: 'assistant-2',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'second answer'}],
+      },
+    ];
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    const initialSessions = store.getState().ai.config.sessions;
+    const initialCurrentSessionId = store.getState().ai.config.currentSessionId;
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceTurnId: 'user-2',
+        sourceMessageId: 'assistant-1',
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceTurnId: 'user-1',
+        sourceMessageId: 'user-1',
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+    expect(store.getState().ai.config.sessionForks).toEqual({});
+  });
+
+  it('rejects message-only forks from incomplete assistant turns', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'stream'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: 'partial',
+            state: 'streaming',
+          } as UIMessage['parts'][number],
+        ],
+      },
+    ];
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    store.getState().ai.setIsRunning('session-1', true);
+    const initialSessions = store.getState().ai.config.sessions;
+    const initialCurrentSessionId = store.getState().ai.config.currentSessionId;
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceMessageId: 'assistant-1',
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+
+    expect(
+      store.getState().ai.forkSessionFromMessage({
+        sourceSessionId: 'session-1',
+        sourceMessageIndex: 1,
+      }),
+    ).toBeUndefined();
+    expect(store.getState().ai.config.sessions).toBe(initialSessions);
+    expect(store.getState().ai.config.currentSessionId).toBe(
+      initialCurrentSessionId,
+    );
+    expect(store.getState().ai.config.sessionForks).toEqual({});
+  });
+
+  it('copies run context and matching agent progress into forked sessions', () => {
+    const store = createTestStore();
+    const sourceMessages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'use a tool'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent-run',
+            toolCallId: 'agent-tool-1',
+            state: 'output-available',
+            input: {},
+            output: {},
+          } as UIMessage['parts'][number],
+        ],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'later'}],
+      },
+      {
+        id: 'assistant-2',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent-run',
+            toolCallId: 'agent-tool-2',
+            state: 'output-available',
+            input: {},
+            output: {},
+          } as UIMessage['parts'][number],
+        ],
+      },
+    ];
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'map-a',
+          type: 'map',
+          title: 'Map A',
+        },
+      ],
+      capturedAt: 123,
+    };
+
+    store.getState().ai.setSessionUiMessages('session-1', sourceMessages);
+    store.getState().ai.setSessionRunContext('session-1', runContext);
+    const config = store.getState().ai.config;
+    store.getState().ai.setConfig({
+      ...config,
+      sessions: config.sessions.map((session) =>
+        session.id === 'session-1'
+          ? {
+              ...session,
+              agentProgress: {
+                'agent-tool-1': [
+                  {
+                    toolCallId: 'child-tool',
+                    toolName: 'child',
+                    state: 'success',
+                  },
+                ],
+                'agent-tool-2': [
+                  {
+                    toolCallId: 'later-child-tool',
+                    toolName: 'later-child',
+                    state: 'success',
+                  },
+                ],
+              },
+            }
+          : session,
+      ),
+    });
+
+    const forkedSessionId = store.getState().ai.forkSessionFromMessage({
+      sourceSessionId: 'session-1',
+      sourceTurnId: 'user-1',
+      sourceMessageId: 'assistant-1',
+    });
+
+    const forkedSession = store.getState().ai.getCurrentSession();
+    expect(forkedSessionId).toBeDefined();
+    expect(forkedSession?.runContext).toEqual(runContext);
+    expect(forkedSession?.agentProgress).toEqual({
+      'agent-tool-1': [
+        {
+          toolCallId: 'child-tool',
+          toolName: 'child',
+          state: 'success',
+        },
+      ],
+    });
+  });
+
+  it('removes fork metadata when the fork target session is deleted', () => {
+    const store = createTestStore();
+    store.getState().ai.setSessionUiMessages('session-1', [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ]);
+    const forkedSessionId = store.getState().ai.forkSessionFromMessage({
+      sourceSessionId: 'session-1',
+      sourceTurnId: 'user-1',
+      sourceMessageId: 'assistant-1',
+    });
+
+    expect(forkedSessionId).toBeDefined();
+    store.getState().ai.deleteSession(forkedSessionId!);
+
+    expect(store.getState().ai.config.sessionForks[forkedSessionId!]).toBe(
+      undefined,
+    );
+  });
+
+  it('appends legacy addAnalysisResult messages to the current session', () => {
+    const store = createTestStore();
+    const message: UIMessage = {
+      id: 'user-legacy',
+      role: 'user',
+      parts: [{type: 'text', text: 'hello'}],
+    };
+
+    store.getState().ai.addAnalysisResult(message);
+
+    expect(store.getState().ai.getCurrentSession()?.uiMessages).toEqual([
+      message,
+    ]);
   });
 
   it('uses the first available model when creating a session with no valid default', () => {
@@ -219,6 +664,33 @@ describe('AiSlice model selection', () => {
     expect(currentSession?.model).toBe('shared-model');
   });
 
+  it('keeps draft context item IDs isolated per session', () => {
+    const store = createTestStore();
+
+    store.getState().ai.setSessionDraftContextItemIds('session-1', ['map-a']);
+    store.getState().ai.createSession('Session 2');
+    const session2Id = store.getState().ai.getCurrentSession()?.id;
+
+    expect(session2Id).toBeDefined();
+    store.getState().ai.setSessionDraftContextItemIds(session2Id!, ['map-b']);
+
+    expect(
+      store.getState().ai.getSessionDraftContextItemIds('session-1'),
+    ).toEqual(['map-a']);
+    expect(
+      store.getState().ai.getSessionDraftContextItemIds(session2Id!),
+    ).toEqual(['map-b']);
+
+    store.getState().ai.switchSession('session-1');
+    expect(
+      store
+        .getState()
+        .ai.getSessionDraftContextItemIds(
+          store.getState().ai.getCurrentSession()!.id,
+        ),
+    ).toEqual(['map-a']);
+  });
+
   it('captures run context once when starting analysis', async () => {
     const contextA: AiRunContext = {
       items: [
@@ -261,6 +733,91 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getFullInstructions('session-1')).not.toContain(
       'Map B',
     );
+    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
+  });
+
+  it('clears draft context after capturing it for a run', async () => {
+    const store = createTestStore({
+      getRunContext: (sessionId) => {
+        const draftIds = store
+          .getState()
+          .ai.getSessionDraftContextItemIds(sessionId);
+        if (!draftIds || draftIds.length === 0) {
+          return undefined;
+        }
+        return {
+          items: draftIds.map((id) => ({
+            kind: 'artifact',
+            id,
+            type: 'map',
+            title: id,
+          })),
+          capturedAt: 1,
+        };
+      },
+    });
+    const sendMessage = jest.fn();
+
+    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    store.getState().ai.setSessionDraftContextItemIds('session-1', ['map-a']);
+    store.getState().ai.setPrompt('session-1', 'hello');
+    await store.getState().ai.startAnalysis('session-1');
+
+    const session = store.getState().ai.config.sessions[0];
+    expect(session?.runContext?.items.map((item) => item.id)).toEqual([
+      'map-a',
+    ]);
+    expect(session?.draftContextItemIds).toBeUndefined();
+    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
+  });
+
+  it('captures draft context for the target session when another session is current', async () => {
+    const store = createTestStore({
+      getRunContext: (sessionId) => {
+        const draftIds = store
+          .getState()
+          .ai.getSessionDraftContextItemIds(sessionId);
+        if (!draftIds || draftIds.length === 0) {
+          return undefined;
+        }
+        return {
+          items: draftIds.map((id) => ({
+            kind: 'artifact',
+            id,
+            type: 'map',
+            title: id,
+          })),
+          capturedAt: 1,
+        };
+      },
+    });
+    const sendMessage = jest.fn();
+
+    store.getState().ai.createSession('Session 2');
+    const currentSessionId = store.getState().ai.getCurrentSession()?.id;
+    expect(currentSessionId).toBeDefined();
+    store
+      .getState()
+      .ai.setSessionDraftContextItemIds(currentSessionId!, ['map-current']);
+
+    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    store
+      .getState()
+      .ai.setSessionDraftContextItemIds('session-1', ['map-target']);
+    store.getState().ai.setPrompt('session-1', 'hello');
+    await store.getState().ai.startAnalysis('session-1');
+
+    const targetSession = store
+      .getState()
+      .ai.config.sessions.find((session) => session.id === 'session-1');
+    const currentSession = store
+      .getState()
+      .ai.config.sessions.find((session) => session.id === currentSessionId);
+    expect(targetSession?.runContext?.items.map((item) => item.id)).toEqual([
+      'map-target',
+    ]);
+    expect(targetSession?.draftContextItemIds).toBeUndefined();
+    expect(currentSession?.draftContextItemIds).toEqual(['map-current']);
     expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
   });
 

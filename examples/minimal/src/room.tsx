@@ -46,7 +46,7 @@ export const Room = () => (
 
 const MyComponent: FC = () => {
   const isTableReady = useRoomStore((state) =>
-    Boolean(state.db.findTableByName('earthquakes')),
+    Boolean(state.db.findTable('earthquakes')),
   );
 
   const queryResult = useSql<{maxMagnitude: number}>({

@@ -1,4 +1,8 @@
-import {PersistStorage, StorageValue} from 'zustand/middleware';
+import {
+  createRoomStorePersistence,
+  type PersistenceController,
+} from '@sqlrooms/room-shell';
+import {PersistStorage} from 'zustand/middleware';
 import {RuntimeConfig} from './runtimeConfig';
 import type {AiSettingsSliceConfig} from '@sqlrooms/ai';
 
@@ -8,6 +12,12 @@ type DuckDbLikeConnector = {
 
 const UI_STATE_KEY = 'default';
 const PERSIST_DEBOUNCE_MS = 300;
+
+export type DuckDbPersistStorage<TPersisted> = PersistStorage<TPersisted> & {
+  controller: PersistenceController<string>;
+  flush: () => Promise<void>;
+  markStateSnapshotSaved: (state: TPersisted) => void;
+};
 
 function sanitizeIdent(ident: string): string {
   // Minimal guardrail: we only allow typical DuckDB identifier characters.
@@ -40,57 +50,64 @@ function escapeLiteral(json: string) {
   return json.replace(/'/g, "''");
 }
 
-export function createDuckDbPersistStorage(
+export function createDuckDbPersistStorage<TPersisted>(
   connector: DuckDbLikeConnector,
   options?: {namespace?: string},
-): PersistStorage<any> {
+): DuckDbPersistStorage<TPersisted> {
   const namespace = options?.namespace || '__sqlrooms';
   let ensured: Promise<void> | null = null;
-  let pendingBody: string | null = null;
-  let pendingTimer: ReturnType<typeof setTimeout> | null = null;
-  let flushInFlight: Promise<void> | null = null;
   let handlersRegistered = false;
   const ensure = () => {
     ensured = ensured ?? ensureUiStateTable(connector, namespace);
     return ensured;
   };
-  const clearPendingTimer = () => {
-    if (pendingTimer) {
-      clearTimeout(pendingTimer);
-      pendingTimer = null;
-    }
-  };
-  const flushPending = async () => {
-    if (flushInFlight) return flushInFlight;
-    flushInFlight = (async () => {
-      while (pendingBody) {
-        const body = pendingBody;
-        pendingBody = null;
-        await ensure();
-        const escaped = escapeLiteral(body);
-        const ns = nsRef(namespace);
-        await connector.query(
-          `INSERT OR REPLACE INTO ${ns}.ui_state (key, payload_json, updated_at) VALUES ('${UI_STATE_KEY}', CAST('${escaped}' AS JSON), now())`,
-        );
+  const persistence = createRoomStorePersistence<
+    TPersisted,
+    TPersisted,
+    string
+  >({
+    partialize: (state) => state,
+    serialize: (state) => JSON.stringify(state),
+    deserialize: (snapshot) => {
+      try {
+        return JSON.parse(snapshot) as TPersisted;
+      } catch {
+        return snapshot as TPersisted;
       }
-    })().finally(() => {
-      flushInFlight = null;
-    });
-    return flushInFlight;
-  };
-  const scheduleFlush = () => {
-    clearPendingTimer();
-    pendingTimer = setTimeout(() => {
-      pendingTimer = null;
-      void flushPending();
-    }, PERSIST_DEBOUNCE_MS);
-  };
+    },
+    autosaveDelayMs: PERSIST_DEBOUNCE_MS,
+    load: async () => {
+      await ensure();
+      const ns = nsRef(namespace);
+      const result: any = await connector.query(
+        `SELECT payload_json FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}' LIMIT 1`,
+      );
+      const rows = result?.toArray ? result.toArray() : [];
+      const payload = rows?.[0]?.payload_json;
+      if (payload === undefined) return null;
+      return typeof payload === 'string' ? payload : JSON.stringify(payload);
+    },
+    save: async (body) => {
+      await ensure();
+      const escaped = escapeLiteral(body);
+      const ns = nsRef(namespace);
+      await connector.query(
+        `INSERT OR REPLACE INTO ${ns}.ui_state (key, payload_json, updated_at) VALUES ('${UI_STATE_KEY}', CAST('${escaped}' AS JSON), now())`,
+      );
+    },
+    remove: async () => {
+      await ensure();
+      const ns = nsRef(namespace);
+      await connector.query(
+        `DELETE FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}'`,
+      );
+    },
+  });
   const registerFlushHandlers = () => {
     if (handlersRegistered || typeof window === 'undefined') return;
     handlersRegistered = true;
     const flushNow = () => {
-      clearPendingTimer();
-      void flushPending();
+      void persistence.flush('final-flush');
     };
     window.addEventListener('beforeunload', flushNow);
     document.addEventListener('visibilitychange', () => {
@@ -101,43 +118,14 @@ export function createDuckDbPersistStorage(
   };
 
   return {
-    getItem: async (_name: string): Promise<StorageValue<any> | null> => {
-      await ensure();
-      const ns = nsRef(namespace);
-      const result: any = await connector.query(
-        `SELECT payload_json FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}' LIMIT 1`,
-      );
-      const rows = result?.toArray ? result.toArray() : [];
-      const payload = rows?.[0]?.payload_json;
-      if (payload === undefined) return null;
-      let parsed = payload;
-      if (typeof payload === 'string') {
-        try {
-          parsed = JSON.parse(payload);
-        } catch {
-          parsed = payload;
-        }
-      }
-      return {state: parsed, version: 0};
-    },
+    ...persistence.storage,
+    controller: persistence.controller,
+    flush: persistence.flush,
+    markStateSnapshotSaved: persistence.markStateSnapshotSaved,
 
-    setItem: async (_name: string, value: StorageValue<any>): Promise<void> => {
-      pendingBody = JSON.stringify(value.state ?? value);
+    setItem: async (...args) => {
       registerFlushHandlers();
-      scheduleFlush();
-    },
-
-    removeItem: async (_name: string): Promise<void> => {
-      clearPendingTimer();
-      pendingBody = null;
-      if (flushInFlight) {
-        await flushInFlight;
-      }
-      await ensure();
-      const ns = nsRef(namespace);
-      await connector.query(
-        `DELETE FROM ${ns}.ui_state WHERE key='${UI_STATE_KEY}'`,
-      );
+      return persistence.storage.setItem(...args);
     },
   };
 }

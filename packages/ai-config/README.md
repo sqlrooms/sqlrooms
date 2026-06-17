@@ -11,10 +11,20 @@ npm install @sqlrooms/ai-config
 ## Exports
 
 - `AiSliceConfig`
+- `AiSessionForkOrigin`
 - `createDefaultAiConfig()`
 - `AiSettingsSliceConfig`
-- `AnalysisSessionSchema`, `AnalysisResultSchema`, `ErrorMessageSchema`
+- `ChatSessionSchema`, `ErrorMessageSchema`
+- Compatibility exports: `AnalysisSessionSchema`, `AnalysisResultSchema`
 - `ToolUIPart`, `UIMessagePart` types
+
+`ChatSessionSchema` accepts legacy persisted sessions that still contain
+`analysisResults`, but parsed/new session state no longer includes that field.
+Use `uiMessages` for current chat state.
+
+`AiSliceConfig.sessionForks` stores optional chat-session fork provenance keyed
+by target session id. Fork metadata uses chat/message terminology and keeps
+legacy analysis-result ids only as compatibility fields when needed.
 
 ## Basic usage
 
