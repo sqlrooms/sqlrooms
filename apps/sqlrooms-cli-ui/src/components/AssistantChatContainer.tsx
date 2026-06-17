@@ -43,8 +43,8 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   const createSessionDisabled = Boolean(
     currentSession &&
-      isChatSessionEmpty(currentSession) &&
-      isDefaultAssistantSessionName(currentSession.name),
+    isChatSessionEmpty(currentSession) &&
+    isDefaultAssistantSessionName(currentSession.name),
   );
 
   const handleCreateSession = useCallback(() => {

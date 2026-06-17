@@ -42,6 +42,7 @@ SQLRooms is a local-first, modular analytics workspace built around DuckDB, Reac
 
 - When changing the public API of an `@sqlrooms/*` package, or when adding new public API, update the package’s `README.md`.
 - If behavior changes in examples, update the relevant example docs or comments.
+- Add tsdoc to exported types and functions
 
 ## Gotchas
 

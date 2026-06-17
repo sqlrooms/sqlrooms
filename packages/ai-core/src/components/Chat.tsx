@@ -79,9 +79,7 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
   </ToolRenderBehaviorProvider>
 );
 
-const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (
-  props,
-) => {
+const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (props) => {
   const runtime = useChatRuntime();
   if (runtime.mode === 'local-agent') {
     return <LocalAgentChatMessages className={props.className} />;

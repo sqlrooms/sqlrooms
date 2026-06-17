@@ -30,6 +30,8 @@ export {
   isQualifiedTableName,
   makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
+  quoteTableReference,
+  resolveTableReference,
   getUnqualifiedSqlIdentifier,
   escapeVal,
   escapeId,
@@ -42,6 +44,7 @@ export {
   separateLastStatement,
   joinStatements,
   type QualifiedTableName,
+  type ResolveTableReferenceResult,
   type SeparatedStatements,
 } from './duckdb-utils';
 

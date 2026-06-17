@@ -14,10 +14,7 @@ import {
 import {Plus, Trash2Icon} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {useRoomStore} from '../store';
-import {
-  CliAssistantToggleButton,
-  CliSidebarToggleButton,
-} from './sidebar';
+import {CliAssistantToggleButton, CliSidebarToggleButton} from './sidebar';
 
 export function CliWorkspaceTopbar() {
   const roomTitle = useRoomStore((state) => state.room.config.title);
@@ -30,11 +27,15 @@ export function CliWorkspaceTopbar() {
       ? state.artifacts.config.artifactsById[currentArtifactId]
       : undefined,
   );
-  const renameArtifact = useRoomStore((state) => state.artifacts.renameArtifact);
+  const renameArtifact = useRoomStore(
+    (state) => state.artifacts.renameArtifact,
+  );
   const setShowArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
-  const deleteArtifact = useRoomStore((state) => state.artifacts.deleteArtifact);
+  const deleteArtifact = useRoomStore(
+    (state) => state.artifacts.deleteArtifact,
+  );
   const deleteTab = useRoomStore((state) => state.layout.deleteTab);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -72,13 +73,13 @@ export function CliWorkspaceTopbar() {
         <CliSidebarToggleButton />
         <CliAssistantToggleButton />
       </div>
-      <div className="flex min-w-0 max-w-[min(48rem,58vw)] items-center justify-center gap-1 text-center">
+      <div className="flex max-w-[min(48rem,58vw)] min-w-0 items-center justify-center gap-1 text-center">
         <EditableText
           value={roomTitle}
           onChange={handleTitleChange}
           placeholder="Untitled Workspace"
           selectOnFocus
-          className="text-foreground hover:bg-accent h-10 min-w-0 max-w-[24rem] border-transparent text-right text-2xl leading-none font-bold shadow-none ring-0 focus-visible:ring-1"
+          className="text-foreground hover:bg-accent h-10 max-w-[24rem] min-w-0 border-transparent text-right text-2xl leading-none font-bold shadow-none ring-0 focus-visible:ring-1"
         />
         {currentArtifact ? (
           <>
@@ -90,7 +91,7 @@ export function CliWorkspaceTopbar() {
               onChange={handleArtifactTitleChange}
               placeholder="Untitled artifact"
               selectOnFocus
-              className="text-foreground hover:bg-accent h-10 min-w-0 max-w-[20rem] border-transparent text-left text-2xl leading-none font-bold shadow-none ring-0 focus-visible:ring-1"
+              className="text-foreground hover:bg-accent h-10 max-w-[20rem] min-w-0 border-transparent text-left text-2xl leading-none font-bold shadow-none ring-0 focus-visible:ring-1"
             />
           </>
         ) : null}

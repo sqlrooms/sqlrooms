@@ -1,7 +1,4 @@
-import {
-  AiRunContextItem,
-  ChatSessionSchema,
-} from '@sqlrooms/ai-config';
+import {AiRunContextItem, ChatSessionSchema} from '@sqlrooms/ai-config';
 import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
 
 /**

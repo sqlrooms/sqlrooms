@@ -5,7 +5,7 @@ import {
   MissingColumnsError,
   RequiredFieldsError,
 } from '../errors';
-import {CreateSpecOptions} from '../base-types';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {
   isNumericType,
   isQuantitativeType,
@@ -37,7 +37,10 @@ export function createLineChartSpec(
   const plotMarks: unknown[] = [];
 
   // Data source always includes filterBy for brush
-  const dataSource = {from: dataTable.table.table, filterBy: '$brush'};
+  const dataSource = {
+    from: getChartTableReference(dataTable),
+    filterBy: '$brush',
+  };
 
   // Generate lineY marks for each Y field
   yColumns.forEach((yColumn) => {

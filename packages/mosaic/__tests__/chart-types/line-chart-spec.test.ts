@@ -1,10 +1,19 @@
 import {createLineChartSpec} from '../../src/charts/chart-types/line-chart/spec';
 import {LineChartSettings} from '../../src/charts/chart-types/line-chart/schema';
-import {DataTableWithColumns} from '../../src/charts/chart-types/base-types';
+import type {DataTable} from '@sqlrooms/duckdb';
 
 describe('createLineChartSpec', () => {
-  const mockDataTable: DataTableWithColumns = {
-    table: {table: 'test_table'},
+  const tableId = '"attached"."main"."test_table"';
+  const mockDataTable: DataTable = {
+    table: {
+      database: 'attached',
+      schema: 'main',
+      table: 'test_table',
+      toString: () => tableId,
+    },
+    tableName: 'test_table',
+    schema: 'main',
+    isView: false,
     columns: [
       {name: 'date', type: 'TIMESTAMP'},
       {name: 'sales', type: 'DOUBLE'},
@@ -29,6 +38,22 @@ describe('createLineChartSpec', () => {
     // Verify legend is not present
     const hasLegend = spec.plot.some((mark: any) => 'legend' in mark);
     expect(hasLegend).toBe(false);
+  });
+
+  it('uses the qualified table reference in generated data sources', () => {
+    const settings: LineChartSettings = {
+      x: 'date',
+      yFields: [{field: 'sales'}],
+      showLegend: false,
+    };
+
+    const spec = createLineChartSpec({
+      dataTable: mockDataTable,
+      settings,
+      selectionName: 'test_selection',
+    }) as any;
+
+    expect(spec.plot[0].data.from).toBe(tableId);
   });
 
   it('generates spec with legend when showLegend is true', () => {

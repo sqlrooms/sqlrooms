@@ -1,11 +1,11 @@
-import {
-  getAllTablesFromSchemaTrees,
-  makeQualifiedTableName,
-  type DuckDbSliceState,
-} from '@sqlrooms/duckdb';
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {tool} from 'ai';
 import {z} from 'zod';
 import type {StoreApi} from '@sqlrooms/room-shell';
+import {
+  createTableIdentitySummary,
+  type TableIdentitySummary,
+} from './tableIdentity';
 
 const ListTablesInput = z.object({
   database: z
@@ -31,15 +31,7 @@ const ListTablesInput = z.object({
 
 export type ListTablesParameters = z.infer<typeof ListTablesInput>;
 
-export type TableSummary = {
-  qualifiedName: string;
-  database?: string;
-  schema?: string;
-  tableName: string;
-  isView: boolean;
-  columnCount: number;
-  rowCount?: number;
-};
+export type TableSummary = TableIdentitySummary;
 
 export type ListTablesOutput = {
   success: boolean;
@@ -78,11 +70,11 @@ function likePatternToRegex(pattern: string): RegExp {
 export function createListTablesTool(store: StoreApi<DuckDbSliceState>) {
   return tool({
     description:
-      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas. Lists tables and views visible in the SQLRooms schema tree. Internal SQLRooms schemas/tables may be hidden; use this for user-facing data discovery, not exhaustive DuckDB catalog inspection.',
+      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas. Results include tableId, the fully quoted SQL identifier string from QualifiedTableName.toString() to pass to string-only table tools after choosing a table. Lists tables and views visible in the SQLRooms table catalog. Internal SQLRooms schemas/tables may be hidden; use this for user-facing data discovery, not exhaustive DuckDB catalog inspection.',
     inputSchema: ListTablesInput,
     execute: async (input) => {
       const state = store.getState();
-      const allTables = getAllTablesFromSchemaTrees(state.db.schemaTrees);
+      const allTables = state.db.tables;
 
       // Apply filters
       let filtered = allTables;
@@ -118,22 +110,7 @@ export function createListTablesTool(store: StoreApi<DuckDbSliceState>) {
       );
 
       // Map to summary format
-      const summaries = filtered.map(
-        (table) =>
-          ({
-            qualifiedName: makeQualifiedTableName({
-              database: table.table.database,
-              schema: table.table.schema,
-              table: table.table.table,
-            }).toString(),
-            database: table.table.database,
-            schema: table.table.schema,
-            tableName: table.table.table,
-            isView: table.isView,
-            columnCount: table.columns.length,
-            rowCount: table.rowCount,
-          }) satisfies TableSummary,
-      );
+      const summaries = filtered.map(createTableIdentitySummary);
 
       // Sort by database, schema, table
       summaries.sort((a, b) => {

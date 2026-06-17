@@ -1,6 +1,7 @@
 import {
   getAiRunContextItems,
   getAiRunContextPrimaryItem,
+  getTablesForAiScope,
   type AiToolExecutionContext,
 } from '@sqlrooms/ai';
 import {
@@ -27,8 +28,10 @@ export function createDashboardAiAdapter(
 ): DashboardAiAdapter<RoomState> {
   return {
     getTables: (state) =>
-      state.db.tables.map((table) => ({
-        tableName: table.tableName,
+      getTablesForAiScope(state.db.tables, state.db.currentDatabase, {
+        scope: 'all',
+      }).map((table) => ({
+        qualifiedName: table.table,
         columns: table.columns?.map((column) => ({
           name: column.name,
           type: column.type,
