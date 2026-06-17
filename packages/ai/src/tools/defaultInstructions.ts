@@ -36,7 +36,8 @@ Instructions for analysis:
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
 - Before writing SQL against a table whose columns are not shown, call read_table_schema.
-- Use list_tables to search or page through available tables when the prompt mentions a table that is not shown below, including other visible schemas or databases when relevant.
+- Users may refer to tables by bare names such as "events"; after selecting or resolving a concrete table from the candidates, forward its canonical identity. When a tool accepts only a string, pass the exact fully-qualified tableId shown in table context or list_tables, not only the bare/display table name.
+- Use list_tables to search or page through available tables when the prompt mentions a table that is not shown below, including other visible schemas or databases when relevant. Use its database, schema, and pattern filters when needed.
 - Please don't modify data
 - IMPORTANT: When you receive an error response from a tool call (where success: false):
   * Stop making any further tool calls immediately

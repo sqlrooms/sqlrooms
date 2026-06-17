@@ -1,4 +1,8 @@
-import type {DataTable, TableColumn} from '@sqlrooms/duckdb';
+import type {
+  DataTable,
+  QualifiedTableName,
+  TableColumn,
+} from '@sqlrooms/duckdb';
 
 export type TableSchemaContextLimits = {
   fullSchemaThreshold?: number;
@@ -60,16 +64,36 @@ function escapeTableIdPart(id: string): string {
   return `"${str.replace(/"/g, '""')}"`;
 }
 
-export function getTableIdForAi(table: DataTable): string {
-  const tableName = table.table?.table || table.tableName;
-  return [
-    table.table?.database || table.database,
-    table.table?.schema || table.schema,
-    tableName,
-  ]
+function makeQualifiedTableNameForAi({
+  database,
+  schema,
+  table,
+}: QualifiedTableName): QualifiedTableName {
+  const tableId = [database, schema, table]
     .filter((id) => id !== undefined && id !== null)
     .map((id) => escapeTableIdPart(id))
     .join('.');
+  return {
+    database,
+    schema,
+    table,
+    toString: () => tableId,
+  };
+}
+
+export function getQualifiedTableNameForAi(
+  table: DataTable,
+): QualifiedTableName {
+  const tableName = table.table?.table || table.tableName;
+  return makeQualifiedTableNameForAi({
+    database: table.table?.database || table.database,
+    schema: table.table?.schema || table.schema,
+    table: tableName,
+  });
+}
+
+export function getTableIdForAi(table: DataTable): string {
+  return getQualifiedTableNameForAi(table).toString();
 }
 
 export function getSchemaNameForAi(table: DataTable): string | undefined {
@@ -206,7 +230,7 @@ export function formatOtherTableScopesForAi(
 
   return [
     `${summary.outsideCurrentDatabaseMainSchemaCount.toLocaleString()} additional visible tables/views exist outside the current local main schema.`,
-    `Use list_tables with database, schema, or pattern filters to inspect them.`,
+    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved tableId rather than only a bare table name.`,
     locationSummary
       ? `Outside-main locations: ${locationSummary}${hiddenLocationCount}.`
       : '',
@@ -226,7 +250,9 @@ function formatColumnForAi(column: TableColumn): string {
 }
 
 export function formatTableSchemaForAi(table: DataTable): string {
-  const header = [getFullTableNameForAi(table)];
+  const header = [
+    `${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(table)})`,
+  ];
   const rowCount = formatRowCount(table.rowCount);
   if (rowCount) header.push(`[${rowCount}]`);
 
@@ -274,7 +300,7 @@ function formatBudgetedTableContextForAi(
   maxChars: number,
 ): string {
   const sections = [
-    'Schema context trimmed to fit the character budget. Use list_tables to find tables and read_table_schema with a tableId to inspect columns before writing SQL.',
+    'Schema context trimmed to fit the character budget. Users may say bare table names, but after resolving a table, forward the canonical tableId. Use list_tables to find tables and read_table_schema with a tableId to inspect columns before writing SQL.',
   ];
 
   addSectionWithinBudget(
@@ -376,6 +402,7 @@ export function formatTablesForLLM(
     summaryTables.length;
 
   const hybridContext = joinSections([
+    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here rather than only the bare/display name.',
     `Full schemas shown for the first ${fullSchemaTables.length} of ${currentMainSchemaTables.length} available tables:`,
     fullSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
     summaryTables.length > 0

@@ -1,19 +1,21 @@
-import {
-  findTableInSchemaTrees,
-  makeQualifiedTableName,
-  type DuckDbSliceState,
-} from '@sqlrooms/duckdb';
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {getAiRunContextItems, type AiRunContext} from '@sqlrooms/ai-core';
 import {tool} from 'ai';
 import {z} from 'zod';
 import type {StoreApi} from '@sqlrooms/room-shell';
+import {
+  formatAmbiguousTableMessage,
+  getAllTablesFromSchemaTrees,
+  getCanonicalTableId,
+  resolveTableFromCatalog,
+} from './tableIdentity';
 
 const ReadTableSchemaInput = z.object({
   tableId: z
     .string()
     .optional()
     .describe(
-      'Qualified table name (e.g., "database.schema.table"). Defaults to the primary context table if not specified.',
+      'Fully-qualified tableId from table context/list_tables. A bare table name is accepted only when it uniquely identifies one visible table. Defaults to the primary context table if not specified.',
     ),
 });
 
@@ -81,11 +83,22 @@ export function createReadTableSchemaTool(store: StoreApi<DuckDbSliceState>) {
       }
 
       // Find the table object in schema trees
-      const tableObj = findTableInSchemaTrees(
-        state.db.schemaTrees,
+      const {table: tableObj, ambiguousMatches} = resolveTableFromCatalog(
+        getAllTablesFromSchemaTrees(state.db.schemaTrees),
         targetTableId,
-        makeQualifiedTableName,
       );
+
+      if (ambiguousMatches) {
+        return {
+          llmResult: {
+            success: false,
+            errorMessage: formatAmbiguousTableMessage(
+              targetTableId,
+              ambiguousMatches,
+            ),
+          },
+        };
+      }
 
       if (!tableObj) {
         return {
@@ -100,7 +113,7 @@ export function createReadTableSchemaTool(store: StoreApi<DuckDbSliceState>) {
         llmResult: {
           success: true,
           table: {
-            id: targetTableId,
+            id: getCanonicalTableId(tableObj),
             name: tableObj.table.table,
             database: tableObj.table.database,
             schema: tableObj.table.schema,

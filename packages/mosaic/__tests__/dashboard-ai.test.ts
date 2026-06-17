@@ -1,4 +1,9 @@
 import {
+  makeQualifiedTableName,
+  type QualifiedTableName,
+} from '@sqlrooms/duckdb';
+import {
+  createDashboardAgentTool,
   createDashboardAiTools,
   createDashboardToolDeps,
   DASHBOARD_AGENT_INSTRUCTIONS,
@@ -22,6 +27,19 @@ type TestState = {
   setCurrentArtifactCalls: string[];
   nextDashboardId: number;
 };
+
+function qTable(
+  table: string,
+  options: {database?: string; schema?: string} = {},
+): QualifiedTableName {
+  return makeQualifiedTableName({
+    database: options.database,
+    schema: options.schema,
+    table,
+  });
+}
+
+const defaultTableId = '"local"."main"."earthquakes"';
 
 function createDashboardEntry(
   id: string,
@@ -49,6 +67,10 @@ function createHarness(overrides: Partial<TestState> = {}): {
     tables: [
       {
         tableName: 'earthquakes',
+        qualifiedName: qTable('earthquakes', {
+          database: 'local',
+          schema: 'main',
+        }),
         rowCount: 10,
         columns: [
           {name: 'magnitude', type: 'DOUBLE'},
@@ -191,22 +213,26 @@ describe('dashboard AI deps', () => {
     const deps = createDashboardToolDeps({store, adapter});
 
     expect(deps.resolveTable(dashboardId, 'earthquakes').tableName).toBe(
-      'earthquakes',
+      defaultTableId,
     );
     expect(state.dashboardsById[dashboardId]!.selectedTable).toBe(
-      'earthquakes',
+      defaultTableId,
     );
 
-    state.dashboardsById[dashboardId]!.selectedTable = 'earthquakes';
-    expect(deps.resolveTable(dashboardId).tableName).toBe('earthquakes');
+    state.dashboardsById[dashboardId]!.selectedTable = defaultTableId;
+    expect(deps.resolveTable(dashboardId).tableName).toBe(defaultTableId);
 
     state.dashboardsById[dashboardId]!.selectedTable = undefined;
-    expect(deps.resolveTable(dashboardId).tableName).toBe('earthquakes');
+    expect(deps.resolveTable(dashboardId).tableName).toBe(defaultTableId);
   });
 
   it('accepts display table names while selecting the stable table id', () => {
     const dashboardId = 'dashboard';
-    const tableId = '"local"."main"."earthquakes"';
+    const qualifiedName = qTable('earthquakes', {
+      database: 'local',
+      schema: 'main',
+    });
+    const tableId = qualifiedName.toString();
     const {store, adapter, state} = createHarness({
       artifactsById: {
         [dashboardId]: {id: dashboardId, type: 'dashboard', title: 'Dashboard'},
@@ -214,7 +240,7 @@ describe('dashboard AI deps', () => {
       tables: [
         {
           tableName: 'earthquakes',
-          tableId,
+          qualifiedName,
           rowCount: 10,
           columns: [
             {name: 'magnitude', type: 'DOUBLE'},
@@ -234,6 +260,47 @@ describe('dashboard AI deps', () => {
     expect(state.dashboardsById[dashboardId]!.selectedTable).toBe(tableId);
     expect(deps.resolveTable(dashboardId, tableId).tableName).toBe(tableId);
     expect(deps.resolveTable(dashboardId).tableName).toBe(tableId);
+  });
+
+  it('rejects ambiguous display table names with canonical options', () => {
+    const dashboardId = 'dashboard';
+    const {store, adapter} = createHarness({
+      artifactsById: {
+        [dashboardId]: {id: dashboardId, type: 'dashboard', title: 'Dashboard'},
+      },
+      tables: [
+        {
+          tableName: 'earthquakes',
+          qualifiedName: qTable('earthquakes', {
+            database: 'local',
+            schema: 'main',
+          }),
+          columns: [{name: 'magnitude', type: 'DOUBLE'}],
+        },
+        {
+          tableName: 'earthquakes',
+          qualifiedName: qTable('earthquakes', {
+            database: 'remote',
+            schema: 'main',
+          }),
+          columns: [{name: 'magnitude', type: 'DOUBLE'}],
+        },
+      ],
+      dashboardsById: {
+        [dashboardId]: createDashboardEntry(dashboardId),
+      },
+    });
+    const deps = createDashboardToolDeps({store, adapter});
+
+    expect(() => deps.resolveTable(dashboardId, 'earthquakes')).toThrow(
+      'Ambiguous table "earthquakes"',
+    );
+    expect(() => deps.resolveTable(dashboardId, 'earthquakes')).toThrow(
+      '"local"."main"."earthquakes"',
+    );
+    expect(() => deps.resolveTable(dashboardId, 'earthquakes')).toThrow(
+      '"remote"."main"."earthquakes"',
+    );
   });
 
   it('returns useful errors for unknown tables and non-dashboard artifacts', () => {
@@ -257,6 +324,41 @@ describe('dashboard AI tools', () => {
   it('includes the shared map tool key in dashboard prompts', () => {
     expect(DASHBOARD_AI_INSTRUCTIONS).toContain(MAP_TOOL_KEY);
     expect(DASHBOARD_AGENT_INSTRUCTIONS).toContain(MAP_TOOL_KEY);
+  });
+
+  it('forwards canonical table identity for dashboard-agent inferred table selection', async () => {
+    const {store, adapter, state} = createHarness();
+    let capturedPrompt = '';
+    const tool = createDashboardAgentTool({
+      store,
+      adapter,
+      getModel: () => ({}) as any,
+      runSubAgent: async ({prompt}) => {
+        capturedPrompt = prompt;
+        return {
+          finalOutput: 'done',
+          agentToolCalls: [],
+        };
+      },
+    });
+
+    const result = await (tool as any).execute(
+      {
+        reasoning: 'analyze the table',
+        prompt: 'Analyze earthquakes',
+        tableName: 'earthquakes',
+      },
+      {toolCallId: 'tool-call'},
+    );
+
+    expect(result.success).toBe(true);
+    expect(state.dashboardsById[result.dashboardId]!.selectedTable).toBe(
+      defaultTableId,
+    );
+    expect(result.metadata?.tableName).toBe(defaultTableId);
+    expect(capturedPrompt).toContain(
+      `Table ID for tool calls: ${defaultTableId}`,
+    );
   });
 
   it('rejects host tools that collide with built-in dashboard tools', () => {

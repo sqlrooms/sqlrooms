@@ -33,6 +33,7 @@ export function createDashboardAiAdapter(
         scope: 'all',
       }).map((table) => ({
         tableName: table.table?.table || table.tableName,
+        qualifiedName: table.table,
         tableId: getTableIdForAi(table),
         columns: table.columns?.map((column) => ({
           name: column.name,

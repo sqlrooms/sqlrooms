@@ -84,12 +84,27 @@ describe('table schema context formatting', () => {
       {fullSchemaThreshold: 1, namesOnlyThreshold: 2},
     );
 
+    expect(output).toContain('events (tableId: "local"."main"."events")');
     expect(output).toContain('magnitude DOUBLE');
     expect(output).toContain('- stations');
     expect(output).toContain('tableId: "local"."main"."stations"');
+    expect(output).toContain('forward the canonical tableId');
     expect(output).toContain(
       '1 more tables are available via list_tables and read_table_schema.',
     );
+  });
+
+  it('does not mention unsupported list_tables scope arguments', () => {
+    const output = formatTablesForLLM(
+      [
+        makeTable('events', {database: 'local'}),
+        makeTable('remote_events', {database: 'remote'}),
+      ],
+      'local',
+    );
+
+    expect(output).toContain('database, schema, or pattern filters');
+    expect(output).not.toContain('scope');
   });
 
   it('enforces maxChars with a names-only fallback', () => {

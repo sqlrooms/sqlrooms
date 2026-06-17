@@ -20,7 +20,7 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
-import {DataTable} from '@sqlrooms/duckdb';
+import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
 
 export type {ChartType};
 
@@ -55,6 +55,7 @@ export interface ChartBuilderField {
  */
 export interface ResolvedTable {
   tableName: string;
+  qualifiedName?: QualifiedTableName;
   columns: ChartBuilderColumn[];
 }
 
@@ -87,7 +88,10 @@ export interface DashboardToolDeps {
    * Resolves table name and columns for a given dashboard artifact.
    * Use this when you need table-specific information.
    */
-  resolveTable: (artifactId: string, tableName?: string) => ResolvedTable;
+  resolveTable: (
+    artifactId: string,
+    tableName?: string | QualifiedTableName,
+  ) => ResolvedTable;
 
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
