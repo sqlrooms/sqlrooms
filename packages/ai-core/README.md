@@ -106,6 +106,7 @@ message and composer components stay under the same `Chat` compound API.
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `AiSliceState`
 - Chat UI: `Chat`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+  - `ModelSelector` accepts `onOpenSettings` to expose a "Configure models..." dropdown action. Pass `showConfigureModels={false}` to hide it.
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
 - Types: `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
 - Tool/agent utilities:

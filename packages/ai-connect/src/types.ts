@@ -65,6 +65,22 @@ export type AiAuthCompletionResult = {
   credentialType?: string;
 };
 
+export type AiAuthTestResult = {
+  ok: boolean;
+  message?: string;
+  error?: string;
+  checkedAt?: number;
+  status?: AiProviderStatus;
+};
+
+export type AiDiscoveredModel = {
+  modelName: string;
+  title?: string;
+  type?: string;
+  releasedAt?: number;
+  supportsTools?: boolean;
+};
+
 export interface AiCredentialStore {
   load(providerId: string): Promise<AiProviderCredential | null>;
   save(providerId: string, credential: AiProviderCredential): Promise<void>;
@@ -88,7 +104,8 @@ export type AiAuthClient = {
     payload?: AiAuthCompletionPayload,
   ) => Promise<AiAuthCompletionResult>;
   logout: (providerId: string) => Promise<void>;
-  testAuth?: (providerId: string) => Promise<{ok: boolean}>;
+  testAuth?: (providerId: string) => Promise<AiAuthTestResult>;
+  discoverModels?: (providerId: string) => Promise<AiDiscoveredModel[]>;
 };
 
 export type AiProviderAdapterContext = {

@@ -45,6 +45,7 @@ from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
+BUILTIN_AI_PROVIDER_IDS = {"openai", "anthropic", "ollama"}
 
 
 async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
@@ -99,26 +100,32 @@ def _write_ai_settings_to_toml(config_path: Path, payload: dict[str, Any]) -> No
                 if provider_id:
                     existing_by_id[provider_id] = dict(entry)
 
-    ai_table = tomlkit.table()
-    if default_provider:
-        ai_table.add("default_provider", default_provider)
-    if default_model:
-        ai_table.add("default_model", default_model)
-
     providers_aot = tomlkit.aot()
+    written_provider_ids: set[str] = set()
     for provider_id, provider in providers.items():
         if not isinstance(provider, dict):
             continue
         provider_name = _normalize_config_string(provider_id)
         if not provider_name:
             continue
+        api_key = _normalize_config_string(provider.get("apiKey")) or ""
+        if (
+            provider_name in BUILTIN_AI_PROVIDER_IDS
+            and not bool(provider.get("configured"))
+            and not api_key
+        ):
+            continue
 
         existing = existing_by_id.get(provider_name, {})
         item = tomlkit.table()
         item.add("id", provider_name)
-        item.add("base_url", _normalize_config_string(provider.get("baseUrl")) or "")
+        item.add(
+            "base_url",
+            _normalize_config_string(provider.get("upstreamBaseUrl"))
+            or _normalize_config_string(provider.get("baseUrl"))
+            or "",
+        )
 
-        api_key = _normalize_config_string(provider.get("apiKey")) or ""
         api_key_env = _normalize_config_string(existing.get("api_key_env"))
         env_value = os.environ.get(api_key_env, "") if api_key_env else ""
         if api_key_env and (not api_key or api_key == env_value):
@@ -136,7 +143,7 @@ def _write_ai_settings_to_toml(config_path: Path, payload: dict[str, Any]) -> No
                 models.append(model_name)
         item.add("models", models)
         providers_aot.append(item)
-    ai_table.add("providers", providers_aot)
+        written_provider_ids.add(provider_name)
 
     custom_models_raw = settings.get("customModels") or []
     if not isinstance(custom_models_raw, list):
@@ -156,10 +163,9 @@ def _write_ai_settings_to_toml(config_path: Path, payload: dict[str, Any]) -> No
         if api_key:
             item.add("api_key", api_key)
         custom_models_aot.append(item)
-    if custom_models_aot:
-        ai_table.add("custom_models", custom_models_aot)
 
     model_parameters = settings.get("modelParameters") or {}
+    params_table = None
     if isinstance(model_parameters, dict):
         params_table = tomlkit.table()
         if "maxSteps" in model_parameters:
@@ -172,8 +178,21 @@ def _write_ai_settings_to_toml(config_path: Path, payload: dict[str, Any]) -> No
         additional_instruction = model_parameters.get("additionalInstruction")
         if isinstance(additional_instruction, str):
             params_table.add("additional_instruction", additional_instruction)
-        if params_table:
-            ai_table.add("model_parameters", params_table)
+
+    ai_table = tomlkit.table()
+    if default_provider and (
+        default_provider in written_provider_ids
+        or (default_provider == "custom" and bool(custom_models_aot))
+    ):
+        ai_table.add("default_provider", default_provider)
+        if default_model:
+            ai_table.add("default_model", default_model)
+    if providers_aot:
+        ai_table.add("providers", providers_aot)
+    if custom_models_aot:
+        ai_table.add("custom_models", custom_models_aot)
+    if params_table:
+        ai_table.add("model_parameters", params_table)
 
     if "ai" in doc:
         del doc["ai"]
@@ -376,6 +395,7 @@ class SqlroomsHttpServer:
         ai_providers: dict[str, dict[str, Any]] | None = None,
         ai_custom_models: list[dict[str, Any]] | None = None,
         ai_model_parameters: dict[str, Any] | None = None,
+        legacy_ai_config: bool | None = None,
         connector_settings: list[PostgresConnectorSettings | SnowflakeConnectorSettings]
         | None = None,
         open_browser: bool = True,
@@ -407,7 +427,11 @@ class SqlroomsHttpServer:
         self.llm_model = llm_model
         self.api_key = api_key
         self.ai_providers = ai_providers or {}
-        self._legacy_ai_config = bool(llm_provider or llm_model or ai_providers)
+        self._legacy_ai_config = (
+            bool(llm_provider or llm_model or ai_providers)
+            if legacy_ai_config is None
+            else legacy_ai_config
+        )
         self.ai_custom_models = ai_custom_models or []
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
@@ -757,6 +781,18 @@ class SqlroomsHttpServer:
                     provider_id,
                     self._api_base_url(),
                 )
+            except Exception as exc:
+                return JSONResponse({"error": str(exc)}, status_code=400)
+
+        @app.post("/api/ai/auth/models")
+        async def post_ai_auth_models(payload: Dict[str, Any]):
+            provider_id = payload.get("providerId")
+            if not isinstance(provider_id, str) or not provider_id.strip():
+                return JSONResponse(
+                    {"error": "providerId is required"}, status_code=400
+                )
+            try:
+                return await self.ai_auth_manager.discover_models(provider_id)
             except Exception as exc:
                 return JSONResponse({"error": str(exc)}, status_code=400)
 

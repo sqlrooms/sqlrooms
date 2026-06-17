@@ -10,6 +10,8 @@ import {
 } from '@sqlrooms/ai-settings';
 import type {
   AiAuthClient,
+  AiDiscoveredModel,
+  AiAuthTestResult,
   AiConnectStep,
   AiProviderAuthInstructions,
 } from './types';
@@ -21,8 +23,19 @@ export type AiConnectSliceState = {
     currentMethodId?: string;
     step: AiConnectStep;
     pending: boolean;
+    testingProviderId?: string;
+    discoveringModelsProviderId?: string;
     instructions: AiProviderAuthInstructions | null;
     error: string | null;
+    testResults: Record<string, AiAuthTestResult>;
+    discoveredModels: Record<
+      string,
+      {
+        models: AiDiscoveredModel[];
+        error?: string;
+        checkedAt: number;
+      }
+    >;
     apiKeyDraft: string;
     codeDraft: string;
     openConnect: (providerId?: string, methodId?: string) => void;
@@ -34,6 +47,8 @@ export type AiConnectSliceState = {
     submitApiKey: (apiKey: string) => Promise<boolean>;
     cancelAuth: () => void;
     logout: (providerId: string) => Promise<boolean>;
+    testProvider: (providerId: string) => Promise<boolean>;
+    discoverModels: (providerId: string) => Promise<AiDiscoveredModel[]>;
     refreshProviderStatus: (providerId?: string) => Promise<boolean>;
     clearError: () => void;
     setApiKeyDraft: (apiKey: string) => void;
@@ -83,8 +98,12 @@ export function createAiConnectSlice(
       currentMethodId: undefined,
       step: 'idle',
       pending: false,
+      testingProviderId: undefined,
+      discoveringModelsProviderId: undefined,
       instructions: null,
       error: null,
+      testResults: {},
+      discoveredModels: {},
       apiKeyDraft: '',
       codeDraft: '',
 
@@ -116,6 +135,7 @@ export function createAiConnectSlice(
             draft.aiConnect.currentMethodId = undefined;
             draft.aiConnect.step = 'idle';
             draft.aiConnect.pending = false;
+            draft.aiConnect.discoveringModelsProviderId = undefined;
             draft.aiConnect.instructions = null;
             draft.aiConnect.error = null;
             draft.aiConnect.apiKeyDraft = '';
@@ -300,6 +320,104 @@ export function createAiConnectSlice(
             }),
           );
           return false;
+        }
+      },
+
+      testProvider: async (providerId) => {
+        if (!authClient.testAuth) {
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.testResults[providerId] = {
+                ok: false,
+                message: 'Connection testing is not available here.',
+                checkedAt: Date.now(),
+              };
+            }),
+          );
+          return false;
+        }
+
+        set((draft) =>
+          produce(draft, (next) => {
+            next.aiConnect.testingProviderId = providerId;
+            next.aiConnect.error = null;
+          }),
+        );
+
+        try {
+          const result = await authClient.testAuth(providerId);
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.testingProviderId = undefined;
+              next.aiConnect.testResults[providerId] = {
+                ...result,
+                checkedAt: result.checkedAt ?? Date.now(),
+              };
+            }),
+          );
+          return result.ok;
+        } catch (error) {
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.testingProviderId = undefined;
+              next.aiConnect.testResults[providerId] = {
+                ok: false,
+                message: error instanceof Error ? error.message : String(error),
+                checkedAt: Date.now(),
+              };
+            }),
+          );
+          return false;
+        }
+      },
+
+      discoverModels: async (providerId) => {
+        if (!authClient.discoverModels) {
+          const result = {
+            models: [],
+            error: 'Model discovery is not available here.',
+            checkedAt: Date.now(),
+          };
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.discoveredModels[providerId] = result;
+            }),
+          );
+          return [];
+        }
+
+        set((draft) =>
+          produce(draft, (next) => {
+            next.aiConnect.discoveringModelsProviderId = providerId;
+            next.aiConnect.error = null;
+          }),
+        );
+
+        try {
+          const models = await authClient.discoverModels(providerId);
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.discoveringModelsProviderId = undefined;
+              next.aiConnect.discoveredModels[providerId] = {
+                models,
+                checkedAt: Date.now(),
+              };
+            }),
+          );
+          return models;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          set((draft) =>
+            produce(draft, (next) => {
+              next.aiConnect.discoveringModelsProviderId = undefined;
+              next.aiConnect.discoveredModels[providerId] = {
+                models: [],
+                error: message,
+                checkedAt: Date.now(),
+              };
+            }),
+          );
+          return [];
         }
       },
 

@@ -84,4 +84,47 @@ describe('AiSettingsSliceConfig', () => {
 
     expect(merged).toEqual(AiSettingsSliceConfig.parse(defaults));
   });
+
+  it('normalizes nullable provider metadata from runtime config', () => {
+    const parsed = AiSettingsSliceConfig.parse({
+      providers: {
+        'litellm-staging': {
+          baseUrl: 'https://litellm.example/',
+          models: [{modelName: 'claude-sonnet-4.5'}],
+          defaultAuthMethod: null,
+          authMethodType: null,
+        },
+      },
+      customModels: [],
+      modelParameters: {
+        maxSteps: 50,
+        additionalInstruction: '',
+      },
+    });
+
+    expect(parsed.providers['litellm-staging'].defaultAuthMethod).toBeUndefined();
+    expect(parsed.providers['litellm-staging'].authMethodType).toBeUndefined();
+  });
+
+  it('uses upstream URLs for editable provider settings when runtime config is proxied', () => {
+    const parsed = AiSettingsSliceConfig.parse({
+      providers: {
+        openai: {
+          baseUrl: 'http://127.0.0.1:4173/api/ai/proxy/openai/v1',
+          upstreamBaseUrl: 'https://api.openai.com/v1',
+          models: [],
+        },
+      },
+      customModels: [],
+      modelParameters: {
+        maxSteps: 50,
+        additionalInstruction: '',
+      },
+    });
+
+    expect(parsed.providers.openai.baseUrl).toBe('https://api.openai.com/v1');
+    expect(parsed.providers.openai.upstreamBaseUrl).toBe(
+      'https://api.openai.com/v1',
+    );
+  });
 });

@@ -5,6 +5,7 @@ import type {
   AiAuthCompletionPayload,
   AiAuthCompletionResult,
   AiCredentialStore,
+  AiDiscoveredModel,
   AiProviderAdapter,
   AiProviderAuthInstructions,
   AiProviderCredential,
@@ -339,7 +340,89 @@ export class BrowserAiAuthClient implements AiAuthClient {
 
   async testAuth(providerId: string) {
     const credential = await this.options.credentialStore.load(providerId);
-    return {ok: Boolean(credential)};
+    return {
+      ok: Boolean(credential),
+      message: credential ? 'Credentials are available.' : 'No credentials saved.',
+      checkedAt: Date.now(),
+      status: createStatusFromCredential(credential),
+    };
+  }
+
+  async discoverModels(providerId: string): Promise<AiDiscoveredModel[]> {
+    const providers = await this.getProvidersInternal();
+    const provider = providers[providerId];
+    const credential = await this.options.credentialStore.load(providerId);
+    const apiKey = credential?.apiKey;
+    if (!provider?.baseUrl || !apiKey) {
+      throw new Error('Saved API key credentials are required to fetch models.');
+    }
+    const baseUrl = provider.baseUrl.replace(/\/$/, '');
+    const res = await fetch(`${baseUrl}/models`, {
+      headers: {Authorization: `Bearer ${apiKey}`},
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      data?: Array<{
+        id?: string;
+        name?: string;
+        modelName?: string;
+        display_name?: string;
+        title?: string;
+        type?: string;
+        object?: string;
+        created?: number;
+        supports_tools?: boolean;
+        supportsTools?: boolean;
+        capabilities?: string[] | Record<string, unknown>;
+        supported_features?: string[];
+      }>;
+      error?: {message?: string} | string;
+    };
+    if (!res.ok) {
+      const error =
+        typeof body.error === 'string' ? body.error : body.error?.message;
+      throw new Error(error || `Server returned ${res.status}`);
+    }
+    return (body.data || [])
+      .flatMap((model) => {
+        const modelName = model.id || model.name || model.modelName || '';
+        if (!modelName) return [];
+        const capabilities = model.capabilities;
+        const capabilityList = Array.isArray(capabilities)
+          ? capabilities
+          : model.supported_features;
+        const supportsToolsFromList = capabilityList?.some((feature) =>
+          ['tools', 'tool_use', 'function_calling'].includes(feature),
+        );
+        const supportsToolsFromMap =
+          !Array.isArray(capabilities) && capabilities
+            ? Boolean(
+                capabilities.tools ||
+                  capabilities.tool_use ||
+                  capabilities.function_calling,
+              )
+            : undefined;
+        const supportsTools =
+          model.supports_tools ??
+          model.supportsTools ??
+          supportsToolsFromMap ??
+          supportsToolsFromList;
+        return [
+          {
+            modelName,
+            ...(model.display_name || model.title
+              ? {title: model.display_name || model.title}
+              : {}),
+            ...(model.type || model.object
+              ? {type: model.type || model.object}
+              : {}),
+            ...(typeof model.created === 'number'
+              ? {releasedAt: model.created * 1000}
+              : {}),
+            ...(typeof supportsTools === 'boolean' ? {supportsTools} : {}),
+          },
+        ];
+      })
+      .sort((a, b) => a.modelName.localeCompare(b.modelName));
   }
 
   async resolveRuntime(args: {
@@ -445,10 +528,28 @@ export class HttpAiAuthClient implements AiAuthClient {
   }
 
   async testAuth(providerId: string) {
-    return this.json<{ok: boolean}>('/api/ai/auth/test', {
+    return this.json<{
+      ok: boolean;
+      message?: string;
+      error?: string;
+      checkedAt?: number;
+      status?: AiProviderStatus;
+    }>('/api/ai/auth/test', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({providerId}),
     });
+  }
+
+  async discoverModels(providerId: string) {
+    const body = await this.json<{models: AiDiscoveredModel[]}>(
+      '/api/ai/auth/models',
+      {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({providerId}),
+      },
+    );
+    return body.models;
   }
 }

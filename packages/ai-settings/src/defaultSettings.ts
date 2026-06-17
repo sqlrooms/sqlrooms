@@ -5,20 +5,14 @@ export function createDefaultAiSettingsConfig(
 ): AiSettingsSliceConfig {
   return {
     defaultProvider: 'openai',
-    defaultModel: 'gpt-4.1',
+    defaultModel: '',
     providers: {
       openai: {
         title: 'OpenAI',
         kind: 'builtin',
+        configured: false,
         baseUrl: 'https://api.openai.com/v1',
-        models: [
-          {
-            modelName: 'gpt-4.1',
-          },
-          {
-            modelName: 'gpt-5',
-          },
-        ],
+        models: [],
         defaultAuthMethod: 'manual_api_key',
         experimental: false,
         authMethods: [
@@ -35,12 +29,9 @@ export function createDefaultAiSettingsConfig(
       anthropic: {
         title: 'Anthropic',
         kind: 'builtin',
+        configured: false,
         baseUrl: 'https://api.anthropic.com/v1',
-        models: [
-          {
-            modelName: 'claude-opus-4-6',
-          },
-        ],
+        models: [],
         defaultAuthMethod: 'manual_api_key',
         experimental: false,
         authMethods: [

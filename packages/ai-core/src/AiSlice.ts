@@ -274,7 +274,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     maxSteps,
     getInstructions,
     defaultProvider = 'openai',
-    defaultModel = 'gpt-4.1',
+    defaultModel = '',
     getAvailableModels,
     getCustomModel,
     getProviderRuntime,

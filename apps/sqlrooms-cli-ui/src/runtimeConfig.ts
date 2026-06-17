@@ -24,6 +24,7 @@ export type RuntimeConfig = {
     {
       title?: string;
       kind?: string;
+      configured?: boolean;
       baseUrl: string;
       apiKey?: string;
       models: Array<{modelName: string}>;

@@ -82,14 +82,15 @@ def _generate_pkce() -> tuple[str, str]:
 def _default_ai_settings_config() -> dict[str, Any]:
     return {
         "defaultProvider": "openai",
-        "defaultModel": "gpt-5",
+        "defaultModel": "",
         "providers": {
             "openai": {
                 "title": "OpenAI",
                 "kind": "builtin",
+                "configured": False,
                 "baseUrl": "https://api.openai.com/v1",
                 "apiKey": "",
-                "models": [{"modelName": "gpt-5"}, {"modelName": "gpt-4.1"}],
+                "models": [],
                 "defaultAuthMethod": "manual_api_key",
                 "authMethods": [
                     {
@@ -123,9 +124,10 @@ def _default_ai_settings_config() -> dict[str, Any]:
             "anthropic": {
                 "title": "Anthropic",
                 "kind": "builtin",
+                "configured": False,
                 "baseUrl": "https://api.anthropic.com/v1",
                 "apiKey": "",
-                "models": [{"modelName": "claude-opus-4-6"}],
+                "models": [],
                 "defaultAuthMethod": "manual_api_key",
                 "authMethods": [
                     {
@@ -159,23 +161,8 @@ def _default_ai_settings_config() -> dict[str, Any]:
             "ollama": {
                 "title": "Ollama",
                 "kind": "builtin",
+                "configured": False,
                 "baseUrl": "http://127.0.0.1:11434/v1",
-                "apiKey": "",
-                "models": [{"modelName": "llama3.1"}],
-                "defaultAuthMethod": "local",
-                "authMethods": [
-                    {
-                        "id": "local",
-                        "type": "local",
-                        "label": "Use local runtime",
-                    }
-                ],
-                "experimental": False,
-            },
-            "lmstudio": {
-                "title": "LM Studio",
-                "kind": "builtin",
-                "baseUrl": "http://127.0.0.1:1234/v1",
                 "apiKey": "",
                 "models": [],
                 "defaultAuthMethod": "local",
@@ -187,7 +174,7 @@ def _default_ai_settings_config() -> dict[str, Any]:
                     }
                 ],
                 "experimental": False,
-            },
+            }
         },
         "customModels": [],
         "modelParameters": {
@@ -245,16 +232,57 @@ def _parse_provider(raw: dict[str, Any]) -> dict[str, Any]:
     return {
         "title": _normalize_config_string(raw.get("title")) or "",
         "kind": _normalize_config_string(raw.get("kind")) or "builtin",
+        "configured": True,
         "baseUrl": _normalize_config_string(raw.get("base_url"))
         or _normalize_config_string(raw.get("baseUrl"))
         or "",
-        "apiKey": "",
+        "apiKey": _normalize_config_string(raw.get("api_key"))
+        or _normalize_config_string(raw.get("apiKey"))
+        or "",
         "models": models,
         "defaultAuthMethod": _normalize_config_string(raw.get("default_auth_method"))
         or _normalize_config_string(raw.get("defaultAuthMethod")),
         "authMethods": auth_methods,
         "experimental": bool(raw.get("experimental")),
     }
+
+
+def _looks_like_generated_builtin_provider(
+    provider_id: str,
+    raw: dict[str, Any],
+) -> bool:
+    if provider_id not in _default_ai_settings_config()["providers"]:
+        return False
+
+    has_credentials = bool(
+        _normalize_config_string(raw.get("api_key"))
+        or _normalize_config_string(raw.get("apiKey"))
+        or _normalize_config_string(raw.get("api_key_env"))
+        or _normalize_config_string(raw.get("apiKeyEnv"))
+    )
+    if has_credentials:
+        return False
+
+    if raw.get("auth_methods") or raw.get("authMethods"):
+        return False
+
+    models = raw.get("models") or []
+    if models:
+        return False
+
+    base_url = _normalize_config_string(raw.get("base_url")) or _normalize_config_string(
+        raw.get("baseUrl")
+    )
+    default_base_url = _default_ai_settings_config()["providers"][provider_id][
+        "baseUrl"
+    ]
+    return bool(
+        base_url
+        and (
+            f"/api/ai/proxy/{provider_id}" in base_url
+            or (provider_id == "ollama" and base_url == default_base_url)
+        )
+    )
 
 
 def load_ai_settings_config(path: Path | None) -> dict[str, Any]:
@@ -289,6 +317,8 @@ def load_ai_settings_config(path: Path | None) -> dict[str, Any]:
                 raise RuntimeError(
                     f"AI provider entry at index {idx} must include a non-empty id."
                 )
+            if _looks_like_generated_builtin_provider(provider_id, item):
+                continue
             current = config["providers"].get(provider_id, {})
             config["providers"][provider_id] = {
                 **current,
@@ -323,17 +353,23 @@ def _replace_ai_section(
     if "ai" in doc:
         del doc["ai"]  # type: ignore[arg-type]
 
-    ai_table = tomlkit.table()
-    ai_table.add("default_provider", config.get("defaultProvider") or "")
-    ai_table.add("default_model", config.get("defaultModel") or "")
-
     providers_aot = tomlkit.aot()
+    written_provider_ids: set[str] = set()
     for provider_id, provider in config.get("providers", {}).items():
+        if (
+            provider_id in _default_ai_settings_config()["providers"]
+            and not bool(provider.get("configured"))
+            and not _normalize_config_string(provider.get("apiKey"))
+        ):
+            continue
         item = tomlkit.table()
         item.add("id", provider_id)
         item.add("title", provider.get("title") or provider_id)
         item.add("kind", provider.get("kind") or "builtin")
-        item.add("base_url", provider.get("baseUrl") or "")
+        item.add(
+            "base_url",
+            provider.get("upstreamBaseUrl") or provider.get("baseUrl") or "",
+        )
         item.add(
             "models",
             [model.get("modelName") for model in provider.get("models", [])],
@@ -361,8 +397,15 @@ def _replace_ai_section(
             auth_methods.append(method_item)
         item.add("auth_methods", auth_methods)
         providers_aot.append(item)
-    ai_table.add("providers", providers_aot)
+        written_provider_ids.add(provider_id)
 
+    ai_table = tomlkit.table()
+    default_provider = config.get("defaultProvider") or ""
+    if default_provider in written_provider_ids:
+        ai_table.add("default_provider", default_provider)
+        ai_table.add("default_model", config.get("defaultModel") or "")
+    if providers_aot:
+        ai_table.add("providers", providers_aot)
     doc.add("ai", ai_table)
     return doc
 
@@ -436,6 +479,14 @@ def _resolve_selected_method(
     selected = _normalize_config_string((credential or {}).get("selected_auth_method"))
     if selected:
         return selected
+
+    for method in provider.get("authMethods", []):
+        if method.get("type") != "env_api_key":
+            continue
+        env_var = _normalize_config_string(method.get("envVar"))
+        if env_var and _normalize_config_string(os.environ.get(env_var)):
+            return _normalize_config_string(method.get("id"))
+
     return _normalize_config_string(provider.get("defaultAuthMethod"))
 
 
@@ -453,6 +504,11 @@ def _provider_status(
     status = _default_status()
     selected = _resolve_selected_method(provider, credential)
     status["selectedAuthMethod"] = selected
+    if not selected and provider.get("apiKey"):
+        status["hasCredentials"] = True
+        status["credentialType"] = "config_api_key"
+        status["status"] = "connected"
+        return status
     if not selected:
         return status
 
@@ -506,7 +562,9 @@ def _browser_provider(
     selected = status.get("selectedAuthMethod")
     method = _find_auth_method(provider, selected)
     method_type = (method or {}).get("type")
-    is_server_managed = provider_id in {"openai", "anthropic"}
+    is_server_managed = provider_id in {"openai", "anthropic"} or bool(
+        provider.get("apiKey")
+    )
     base_url = provider.get("baseUrl") or ""
     if is_server_managed:
         upstream_parts = urlsplit(base_url)
@@ -514,12 +572,12 @@ def _browser_provider(
         base_url = (f"{api_base_url}/api/ai/proxy/{provider_id}{upstream_path}").rstrip(
             "/"
         )
-    return {
+    browser_provider = {
         "title": provider.get("title") or provider_id,
         "kind": provider.get("kind") or "builtin",
+        "configured": bool(provider.get("configured")),
         "baseUrl": base_url,
         "models": provider.get("models") or [],
-        "defaultAuthMethod": provider.get("defaultAuthMethod"),
         "authMethods": provider.get("authMethods") or [],
         "experimental": bool(provider.get("experimental")),
         "status": status,
@@ -529,8 +587,13 @@ def _browser_provider(
         "expiresAt": status.get("expiresAt"),
         "proxyEnabled": is_server_managed,
         "upstreamBaseUrl": provider.get("baseUrl") or "",
-        "authMethodType": method_type,
     }
+    default_auth_method = provider.get("defaultAuthMethod")
+    if default_auth_method:
+        browser_provider["defaultAuthMethod"] = default_auth_method
+    if method_type:
+        browser_provider["authMethodType"] = method_type
+    return browser_provider
 
 
 def build_ai_settings_response(
@@ -862,6 +925,8 @@ class OpenAIAdapter(AiProviderAdapter):
             api_key = _resolve_env_api_key(provider, method_id)
         elif credential and credential.get("type") == "api_key":
             api_key = _normalize_config_string(credential.get("api_key"))
+        if not api_key:
+            api_key = _normalize_config_string(provider.get("apiKey"))
 
         upstream_url = _join_upstream_url(provider.get("baseUrl", ""), path)
         out_headers = {
@@ -1039,6 +1104,11 @@ class AnthropicAdapter(AiProviderAdapter):
             if not api_key:
                 raise RuntimeError("Anthropic API key is missing.")
             out_headers["x-api-key"] = api_key
+        elif provider.get("apiKey"):
+            api_key = _normalize_config_string(provider.get("apiKey"))
+            if not api_key:
+                raise RuntimeError("Anthropic API key is missing.")
+            out_headers["x-api-key"] = api_key
         elif credential and credential.get("type") == "oauth":
             access_token = _normalize_config_string(credential.get("access_token"))
             if not access_token:
@@ -1151,6 +1221,10 @@ class DefaultAdapter(AiProviderAdapter):
             api_key = _normalize_config_string(credential.get("api_key"))
             if api_key:
                 out_headers["authorization"] = f"Bearer {api_key}"
+        elif provider.get("apiKey"):
+            api_key = _normalize_config_string(provider.get("apiKey"))
+            if api_key:
+                out_headers["authorization"] = f"Bearer {api_key}"
         return PreparedProxyRequest(
             url=upstream_url,
             headers=out_headers,
@@ -1198,6 +1272,73 @@ def _prefix_anthropic_mcp_body(body: bytes) -> bytes:
                     ):
                         part["name"] = f"mcp_{part['name']}"
     return json.dumps(payload).encode("utf-8")
+
+
+def _parse_models_response(payload: Any) -> list[dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return []
+    data = payload.get("data")
+    if not isinstance(data, list):
+        return []
+
+    seen: set[str] = set()
+    models: list[dict[str, Any]] = []
+    for item in data:
+        if isinstance(item, str):
+            model_name = _normalize_config_string(item)
+            title = None
+            model_type = None
+            created = None
+            supports_tools = None
+        elif isinstance(item, dict):
+            model_name = (
+                _normalize_config_string(item.get("id"))
+                or _normalize_config_string(item.get("name"))
+                or _normalize_config_string(item.get("modelName"))
+            )
+            title = _normalize_config_string(item.get("display_name")) or (
+                _normalize_config_string(item.get("title"))
+            )
+            model_type = _normalize_config_string(item.get("type")) or (
+                _normalize_config_string(item.get("object"))
+            )
+            created = item.get("created")
+            supports_tools = item.get("supports_tools")
+            if supports_tools is None:
+                supports_tools = item.get("supportsTools")
+            if supports_tools is None and isinstance(item.get("capabilities"), dict):
+                capabilities = item["capabilities"]
+                for key in ("tools", "tool_use", "function_calling"):
+                    value = capabilities.get(key)
+                    if isinstance(value, bool):
+                        supports_tools = value
+                        break
+            if supports_tools is None and isinstance(item.get("capabilities"), list):
+                supports_tools = any(
+                    feature in {"tools", "tool_use", "function_calling"}
+                    for feature in item["capabilities"]
+                )
+            if supports_tools is None and isinstance(item.get("supported_features"), list):
+                supports_tools = any(
+                    feature in {"tools", "tool_use", "function_calling"}
+                    for feature in item["supported_features"]
+                )
+        else:
+            continue
+        if not model_name or model_name in seen:
+            continue
+        seen.add(model_name)
+        model = {"modelName": model_name}
+        if title:
+            model["title"] = title
+        if model_type:
+            model["type"] = model_type
+        if isinstance(created, (int, float)) and not isinstance(created, bool):
+            model["releasedAt"] = int(created * 1000)
+        if isinstance(supports_tools, bool):
+            model["supportsTools"] = supports_tools
+        models.append(model)
+    return models
 
 
 class AiAuthManager:
@@ -1248,7 +1389,7 @@ class AiAuthManager:
             "defaultProvider": _normalize_config_string(config.get("defaultProvider"))
             or "openai",
             "defaultModel": _normalize_config_string(config.get("defaultModel"))
-            or "gpt-5",
+            or "",
             "providers": {},
             "customModels": config.get("customModels") or [],
             "modelParameters": config.get("modelParameters")
@@ -1259,12 +1400,22 @@ class AiAuthManager:
             raise RuntimeError("config.providers must be an object")
         for provider_id, provider in providers_raw.items():
             if isinstance(provider_id, str) and isinstance(provider, dict):
+                if (
+                    not bool(provider.get("configured"))
+                    and not _normalize_config_string(provider.get("apiKey"))
+                    and provider_id in _default_ai_settings_config()["providers"]
+                ):
+                    continue
                 parsed["providers"][provider_id] = {
                     **_parse_provider(provider),
                     "title": _normalize_config_string(provider.get("title"))
                     or provider_id,
+                    "configured": bool(provider.get("configured")),
                     "apiKey": "",
                 }
+        if parsed["defaultProvider"] not in parsed["providers"]:
+            parsed["defaultProvider"] = ""
+            parsed["defaultModel"] = ""
         target = self.config_path or (_config_base / "config.toml")
         write_ai_settings_to_toml(target, parsed)
         self.config_path = target
@@ -1378,11 +1529,51 @@ class AiAuthManager:
         ) or {}
         provider = providers.get(provider_id)
         status = (provider or {}).get("status") or {}
+        ok = bool(status.get("hasCredentials"))
+        method = status.get("selectedAuthMethod")
         return {
-            "ok": bool(status.get("hasCredentials")),
+            "ok": ok,
             "providerId": provider_id,
+            "message": (
+                f"{provider_id} is connected via {method}."
+                if ok and method
+                else f"{provider_id} is connected."
+                if ok
+                else f"{provider_id} is not connected."
+            ),
+            "checkedAt": int(time.time() * 1000),
             "status": status,
         }
+
+    async def discover_models(self, provider_id: str) -> dict[str, Any]:
+        headers: dict[str, str] = {}
+        if provider_id == "anthropic":
+            headers["anthropic-version"] = "2023-06-01"
+        prepared = await self.prepare_proxy_request(
+            provider_id=provider_id,
+            path="models",
+            headers=headers,
+            body=b"",
+            query={},
+        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                prepared.url,
+                headers=prepared.headers,
+                params=prepared.query,
+            )
+        if response.status_code >= 400:
+            try:
+                payload = response.json()
+            except Exception:
+                payload = {}
+            error = payload.get("error") if isinstance(payload, dict) else None
+            if isinstance(error, dict):
+                message = _normalize_config_string(error.get("message"))
+            else:
+                message = _normalize_config_string(error)
+            raise RuntimeError(message or f"Provider returned {response.status_code}.")
+        return {"models": _parse_models_response(response.json())}
 
     async def prepare_proxy_request(
         self,

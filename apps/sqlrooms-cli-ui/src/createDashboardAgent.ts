@@ -12,12 +12,15 @@ export function dashboardAgentTool(store: StoreApi<RoomState>) {
     adapter: createDashboardAiAdapter(store),
     getModel: ({state}) => {
       const currentSession = state.ai.getCurrentSession();
-      const provider = currentSession?.modelProvider || 'openai';
-      const modelId = currentSession?.model || 'gpt-4.1';
+      const provider = currentSession?.modelProvider;
+      const modelId = currentSession?.model;
+      if (!provider || !modelId) {
+        throw new Error('Select an AI model before running the dashboard agent.');
+      }
 
       return createOpenAICompatible({
         apiKey: state.ai.getApiKeyFromSettings(),
-        name: provider || '',
+        name: provider,
         baseURL:
           state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
       }).chatModel(modelId);

@@ -162,6 +162,7 @@ export function createAiSettingsSlice(
             draft.aiSettings.config.providers[provider] = {
               title: title || provider,
               kind: 'custom',
+              configured: true,
               baseUrl,
               models: [],
               defaultAuthMethod: 'manual_api_key',
@@ -199,6 +200,7 @@ export function createAiSettingsSlice(
               ].models.some((model) => model.modelName === modelName);
 
               if (!modelExists) {
+                draft.aiSettings.config.providers[provider].configured = true;
                 draft.aiSettings.config.providers[provider].models.push({
                   modelName: modelName,
                 });

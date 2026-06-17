@@ -454,6 +454,7 @@ def main(
         ai_providers=ai_providers,
         ai_custom_models=ai_custom_models,
         ai_model_parameters=ai_model_parameters,
+        legacy_ai_config=False,
         connector_settings=connector_settings,
         open_browser=not no_open_browser,
         ui_dir=ui,

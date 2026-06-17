@@ -13,7 +13,18 @@ export const AssistantPanel: React.FC = () => {
   );
   const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
   const settingsPanelOpen = useDisclosure();
+  const [settingsInitialTab, setSettingsInitialTab] = React.useState<
+    'connect' | 'providers' | 'models' | 'parameters'
+  >('connect');
   const contextDropTarget = useAssistantContextDropTarget();
+
+  const openAssistantSettings = React.useCallback(
+    (tab: 'connect' | 'providers' | 'models' | 'parameters' = 'connect') => {
+      setSettingsInitialTab(tab);
+      settingsPanelOpen.onOpen();
+    },
+    [settingsPanelOpen],
+  );
 
   useEffect(() => {
     if (!currentSessionId && settingsPanelOpen.isOpen) {
@@ -28,9 +39,10 @@ export const AssistantPanel: React.FC = () => {
           {currentSessionId && (
             <AssistantSettingsDialog
               isOpen={settingsPanelOpen.isOpen}
+              initialTab={settingsInitialTab}
               onOpenChange={(open) => {
                 if (open) {
-                  settingsPanelOpen.onOpen();
+                  openAssistantSettings(settingsInitialTab);
                 } else {
                   settingsPanelOpen.onClose();
                 }
@@ -49,7 +61,10 @@ export const AssistantPanel: React.FC = () => {
           </Button>
         </div>
       </RoomPanelHeader>
-      <AssistantChatContainer contextDropTarget={contextDropTarget} />
+      <AssistantChatContainer
+        contextDropTarget={contextDropTarget}
+        onOpenSettings={openAssistantSettings}
+      />
     </div>
   );
 };

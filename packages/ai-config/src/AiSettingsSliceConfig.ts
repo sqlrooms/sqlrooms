@@ -43,13 +43,18 @@ const AiProviderModelSchema = z.object({
   modelName: z.string(),
 });
 
-export const AiProviderSchema = z.object({
+const OptionalStringFromNullableSchema = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().optional(),
+);
+
+const AiProviderSchemaBase = z.object({
   title: z.string().optional().default(''),
   kind: z.string().optional().default('builtin'),
   baseUrl: z.string(),
   apiKey: z.string().optional(),
   models: z.array(AiProviderModelSchema),
-  defaultAuthMethod: z.string().optional(),
+  defaultAuthMethod: OptionalStringFromNullableSchema,
   authMethods: z.array(AiProviderAuthMethodSchema).optional().default([]),
   experimental: z.boolean().optional().default(false),
   status: AiProviderStatusSchema.optional(),
@@ -58,9 +63,17 @@ export const AiProviderSchema = z.object({
   credentialType: z.string().nullable().optional(),
   expiresAt: z.number().nullable().optional(),
   proxyEnabled: z.boolean().optional(),
-  upstreamBaseUrl: z.string().optional(),
-  authMethodType: z.string().optional(),
+  upstreamBaseUrl: OptionalStringFromNullableSchema,
+  authMethodType: OptionalStringFromNullableSchema,
+  configured: z.boolean().optional().default(false),
 });
+
+export const AiProviderSchema = z.object({
+  ...AiProviderSchemaBase.shape,
+}).transform((provider) => ({
+  ...provider,
+  baseUrl: provider.upstreamBaseUrl || provider.baseUrl,
+}));
 
 const AiCustomModelSchema = z.object({
   baseUrl: z.string(),
@@ -141,11 +154,13 @@ function mergeProvider(
     return defaultProvider;
   }
 
-  const parsedPartial = AiProviderSchema.partial().safeParse(persistedProvider);
+  const parsedPartial =
+    AiProviderSchemaBase.partial().safeParse(persistedProvider);
   const persisted = parsedPartial.success ? parsedPartial.data : {};
   return AiProviderSchema.parse({
     ...defaultProvider,
     ...persisted,
+    baseUrl: persisted.upstreamBaseUrl || persisted.baseUrl || defaultProvider.baseUrl,
     models: mergeProviderModels(defaultProvider, persistedProvider),
   });
 }

@@ -24,11 +24,13 @@ import {useStoreWithAiSettings} from '../AiSettingsSlice';
 export interface AiProvidersSettingsProps {
   apiBaseUrl?: string;
   showTitle?: boolean;
+  showBuiltinTemplates?: boolean;
 }
 
 export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
   apiBaseUrl,
   showTitle = true,
+  showBuiltinTemplates = true,
 }) => {
   const updateProvider = useStoreWithAiSettings(
     (state) => state.aiSettings.updateProvider,
@@ -45,8 +47,31 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
   const providers = useStoreWithAiSettings(
     (state) => state.aiSettings.config.providers,
   );
+  const isSaving = useStoreWithAiSettings(
+    (state) => state.aiSettings.isSaving,
+  );
+  const hasUnsavedChanges = useStoreWithAiSettings(
+    (state) => state.aiSettings.hasUnsavedChanges,
+  );
+  const lastSaveError = useStoreWithAiSettings(
+    (state) => state.aiSettings.lastSaveError,
+  );
 
-  const providerEntries = useMemo(() => Object.entries(providers), [providers]);
+  const providerEntries = useMemo(
+    () =>
+      Object.entries(providers).filter(([, provider]) => {
+        if (showBuiltinTemplates) return true;
+        const credentialType =
+          provider.status?.credentialType || provider.credentialType;
+        const hasSavedCredentials =
+          Boolean(provider.status?.hasCredentials || provider.hasCredentials) &&
+          credentialType !== 'local';
+        return Boolean(
+          provider.configured || provider.apiKey || hasSavedCredentials,
+        );
+      }),
+    [providers, showBuiltinTemplates],
+  );
   const [expandedProviders, setExpandedProviders] = useState<Set<string>>(
     new Set(),
   );
@@ -127,8 +152,15 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
           <span />
         )}
         <div className="flex items-center gap-2">
-          <Button onClick={handleSave} size="sm">
-            Save
+          {lastSaveError ? (
+            <Badge variant="destructive">Save failed</Badge>
+          ) : hasUnsavedChanges ? (
+            <Badge variant="outline">Unsaved</Badge>
+          ) : (
+            <Badge variant="secondary">Saved</Badge>
+          )}
+          <Button onClick={handleSave} size="sm" disabled={isSaving}>
+            {isSaving ? 'Saving…' : 'Save'}
           </Button>
           <Button onClick={onOpen} variant="secondary" size="sm">
             <CirclePlus className="h-3 w-3" />
@@ -138,6 +170,11 @@ export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
       </div>
 
       <div className="space-y-2">
+        {providerEntries.length === 0 && (
+          <div className="border-border text-muted-foreground rounded-lg border p-4 text-sm">
+            No AI providers configured.
+          </div>
+        )}
         {providerEntries.map(([providerKey, provider]) => {
           const isExpanded = expandedProviders.has(providerKey);
           return (

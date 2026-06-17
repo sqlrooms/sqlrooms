@@ -23,9 +23,12 @@ interface Model {
 interface ModelSelectorProps {
   className?: string;
   models?: Model[];
+  onOpenSettings?: () => void;
+  showConfigureModels?: boolean;
 }
 
 const MODEL_KEY_SEPARATOR = '::';
+const CONFIGURE_MODELS_VALUE = '__sqlrooms_configure_models__';
 
 /**
  * Encodes one part of a model select key.
@@ -80,6 +83,8 @@ const parseModelSelectKey = (
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
   className,
   models: passedModels,
+  onOpenSettings,
+  showConfigureModels,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
@@ -93,8 +98,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   );
 
   const models = passedModels ?? settingsModels;
+  const shouldShowConfigureModels =
+    showConfigureModels ?? Boolean(onOpenSettings);
 
   const handleModelChange = (selectValue: string) => {
+    if (selectValue === CONFIGURE_MODELS_VALUE) {
+      onOpenSettings?.();
+      return;
+    }
     const parsed = parseModelSelectKey(selectValue);
     if (parsed) {
       setAiModel(parsed.provider, parsed.modelValue);
@@ -135,6 +146,16 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           <SelectValue placeholder="Select model" />
         </SelectTrigger>
         <SelectContent>
+          {shouldShowConfigureModels && onOpenSettings && (
+            <>
+              <SelectGroup>
+                <SelectItem value={CONFIGURE_MODELS_VALUE}>
+                  Configure models…
+                </SelectItem>
+              </SelectGroup>
+              <SelectSeparator />
+            </>
+          )}
           {Object.entries(modelsByProvider).map(
             ([provider, providerModels]) => (
               <React.Fragment key={provider}>
