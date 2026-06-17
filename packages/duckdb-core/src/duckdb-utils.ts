@@ -147,6 +147,31 @@ export function getUnqualifiedSqlIdentifier(
 }
 
 /**
+ * Quotes a table reference for SQL.
+ *
+ * Accepts bare names, unquoted qualified names, or already-quoted qualified
+ * identifiers. The result is always the fully quoted form produced by
+ * QualifiedTableName.toString() when the input parses as a table reference.
+ *
+ * @example
+ * quoteTableReference('events') // '"events"'
+ * quoteTableReference('main.events') // '"main"."events"'
+ * quoteTableReference('"memory"."main"."events.2026"') // '"memory"."main"."events.2026"'
+ */
+export function quoteTableReference(tableName: string): string {
+  const parsed = parseQualifiedSqlIdentifier(tableName);
+  if (parsed?.table) {
+    return makeQualifiedTableName({
+      database: parsed.database,
+      schema: parsed.schema,
+      table: parsed.table,
+    }).toString();
+  }
+
+  return escapeId(tableName);
+}
+
+/**
  * Escapes a value for use in DuckDB SQL queries by wrapping it in single quotes
  * and escaping any existing single quotes by doubling them.
  *

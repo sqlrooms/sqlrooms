@@ -30,6 +30,7 @@ export {
   isQualifiedTableName,
   makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
+  quoteTableReference,
   getUnqualifiedSqlIdentifier,
   escapeVal,
   escapeId,

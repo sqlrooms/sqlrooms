@@ -206,7 +206,7 @@ function DatabaseManager() {
 ### Working with Qualified Table Names
 
 ```tsx
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName, quoteTableReference} from '@sqlrooms/duckdb';
 
 // Support for database.schema.table naming
 const qualifiedTable = makeQualifiedTableName({
@@ -214,6 +214,9 @@ const qualifiedTable = makeQualifiedTableName({
   schema: 'public',
   table: 'users',
 });
+
+const tableSql = quoteTableReference('"mydb"."public"."users"');
+// tableSql: '"mydb"."public"."users"'
 
 // Use with table operations
 await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');

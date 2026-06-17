@@ -95,6 +95,7 @@ export {
   makeLimitQuery,
   makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
+  quoteTableReference,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,
