@@ -58,7 +58,6 @@ describe('table identity helpers', () => {
 
     expect(summary).toMatchObject({
       tableId: '"local"."main"."earthquakes"',
-      qualifiedName: '"local"."main"."earthquakes"',
       tableName: 'earthquakes',
     });
   });

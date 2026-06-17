@@ -10,10 +10,6 @@ export type TableIdentitySummary = {
    * string-only tool boundaries.
    */
   tableId: string;
-  /**
-   * @deprecated Use tableId for string-only tools.
-   */
-  qualifiedName: string;
   database?: string;
   schema?: string;
   tableName: string;
@@ -51,7 +47,6 @@ export function createTableIdentitySummary(
   const tableId = getCanonicalTableId(table);
   return {
     tableId,
-    qualifiedName: tableId,
     database: table.table.database,
     schema: table.table.schema,
     tableName: table.table.table,

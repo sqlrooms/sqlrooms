@@ -58,7 +58,7 @@ export interface ChartBuilderField {
  */
 export interface ResolvedTable {
   tableName: string;
-  qualifiedName?: QualifiedTableName;
+  qualifiedName: QualifiedTableName;
   columns: ChartBuilderColumn[];
 }
 

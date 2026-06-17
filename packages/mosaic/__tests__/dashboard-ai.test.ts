@@ -66,7 +66,6 @@ function createHarness(overrides: Partial<TestState> = {}): {
     artifactsById: {},
     tables: [
       {
-        tableName: 'earthquakes',
         qualifiedName: qTable('earthquakes', {
           database: 'local',
           schema: 'main',
@@ -239,7 +238,6 @@ describe('dashboard AI deps', () => {
       },
       tables: [
         {
-          tableName: 'earthquakes',
           qualifiedName,
           rowCount: 10,
           columns: [
@@ -262,6 +260,40 @@ describe('dashboard AI deps', () => {
     expect(deps.resolveTable(dashboardId).tableName).toBe(tableId);
   });
 
+  it('derives resolved table name and id from qualifiedName only', () => {
+    const dashboardId = 'dashboard';
+    const qualifiedName = qTable('earthquakes', {
+      database: 'local',
+      schema: 'main',
+    });
+    const tableId = qualifiedName.toString();
+    const {store, adapter, state} = createHarness({
+      artifactsById: {
+        [dashboardId]: {id: dashboardId, type: 'dashboard', title: 'Dashboard'},
+      },
+      tables: [
+        {
+          qualifiedName,
+          rowCount: 10,
+          columns: [{name: 'magnitude', type: 'DOUBLE'}],
+        },
+      ],
+      dashboardsById: {
+        [dashboardId]: createDashboardEntry(dashboardId),
+      },
+    });
+    const deps = createDashboardToolDeps({store, adapter});
+
+    const resolvedByCanonicalName = deps.resolveTable(
+      dashboardId,
+      'earthquakes',
+    );
+
+    expect(resolvedByCanonicalName.tableName).toBe(tableId);
+    expect(resolvedByCanonicalName.qualifiedName).toBe(qualifiedName);
+    expect(state.dashboardsById[dashboardId]!.selectedTable).toBe(tableId);
+  });
+
   it('rejects ambiguous display table names with canonical options', () => {
     const dashboardId = 'dashboard';
     const {store, adapter} = createHarness({
@@ -270,7 +302,6 @@ describe('dashboard AI deps', () => {
       },
       tables: [
         {
-          tableName: 'earthquakes',
           qualifiedName: qTable('earthquakes', {
             database: 'local',
             schema: 'main',
@@ -278,7 +309,6 @@ describe('dashboard AI deps', () => {
           columns: [{name: 'magnitude', type: 'DOUBLE'}],
         },
         {
-          tableName: 'earthquakes',
           qualifiedName: qTable('earthquakes', {
             database: 'remote',
             schema: 'main',
