@@ -30,6 +30,7 @@
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/duckdb-core": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "ai": "^6.0.154",

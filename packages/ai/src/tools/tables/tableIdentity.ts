@@ -1,4 +1,8 @@
-import type {DataTable, QualifiedTableName} from '@sqlrooms/duckdb';
+import {
+  parseQualifiedSqlIdentifier,
+  type DataTable,
+  type QualifiedTableName,
+} from '@sqlrooms/duckdb-core';
 
 export type TableIdentitySummary = {
   /**
@@ -55,66 +59,6 @@ export function createTableIdentitySummary(
     columnCount: table.columns.length,
     rowCount: table.rowCount,
   };
-}
-
-function unquoteSqlIdentifierSegment(identifier: string): string {
-  const segment = identifier.trim();
-  if (segment.startsWith('"') && segment.endsWith('"') && segment.length >= 2) {
-    return segment.slice(1, -1).split('""').join('"');
-  }
-  return segment;
-}
-
-function parseQualifiedSqlIdentifier(
-  qualifiedName: string | undefined,
-): Partial<QualifiedTableName> | undefined {
-  if (!qualifiedName) return undefined;
-  const input = qualifiedName.trim();
-  if (!input) return undefined;
-
-  const parts: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let index = 0; index < input.length; index += 1) {
-    const char = input[index];
-    if (char === '"') {
-      if (inQuotes && input[index + 1] === '"') {
-        current += '""';
-        index += 1;
-        continue;
-      }
-      inQuotes = !inQuotes;
-      current += char;
-      continue;
-    }
-
-    if (char === '.' && !inQuotes) {
-      parts.push(current);
-      current = '';
-      continue;
-    }
-
-    current += char;
-  }
-  parts.push(current);
-
-  if (inQuotes || parts.length === 0 || parts.length > 3) return undefined;
-
-  const identifiers = parts.map(unquoteSqlIdentifierSegment);
-  if (identifiers.some((part) => part.length === 0)) return undefined;
-
-  if (identifiers.length === 3) {
-    return {
-      database: identifiers[0],
-      schema: identifiers[1],
-      table: identifiers[2],
-    };
-  }
-  if (identifiers.length === 2) {
-    return {schema: identifiers[0], table: identifiers[1]};
-  }
-  return {table: identifiers[0]};
 }
 
 function matchesQualifiedTableName(

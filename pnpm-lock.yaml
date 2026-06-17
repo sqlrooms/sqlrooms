@@ -2375,6 +2375,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../duckdb-core
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../room-shell
