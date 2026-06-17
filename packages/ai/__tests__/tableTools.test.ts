@@ -50,7 +50,7 @@ function makeQualifiedTableName({
 }
 
 describe('table identity helpers', () => {
-  it('lists usable canonical table ids', async () => {
+  it('lists usable quoted canonical table ids', async () => {
     const summary = createTableIdentitySummary(
       makeTable('earthquakes', {database: 'local'}),
     );
@@ -62,7 +62,7 @@ describe('table identity helpers', () => {
     });
   });
 
-  it('resolves a unique bare table name to its canonical table id', async () => {
+  it('resolves a unique bare table name to its quoted canonical table id', async () => {
     const result = resolveTableFromCatalog(
       [makeTable('earthquakes', {database: 'local'})],
       'earthquakes',

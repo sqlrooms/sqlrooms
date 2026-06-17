@@ -71,7 +71,7 @@ function likePatternToRegex(pattern: string): RegExp {
 export function createListTablesTool(store: StoreApi<DuckDbSliceState>) {
   return tool({
     description:
-      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas. Results include tableId, the fully-qualified table identifier to pass to string-only table tools after choosing a table. Lists tables and views visible in the SQLRooms schema tree. Internal SQLRooms schemas/tables may be hidden; use this for user-facing data discovery, not exhaustive DuckDB catalog inspection.',
+      'List available tables and views in the database. Supports filtering by database, schema, and table name pattern. Use this to discover what tables exist before reading their schemas. Results include tableId, the fully quoted SQL identifier string from QualifiedTableName.toString() to pass to string-only table tools after choosing a table. Lists tables and views visible in the SQLRooms schema tree. Internal SQLRooms schemas/tables may be hidden; use this for user-facing data discovery, not exhaustive DuckDB catalog inspection.',
     inputSchema: ListTablesInput,
     execute: async (input) => {
       const state = store.getState();

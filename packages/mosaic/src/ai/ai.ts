@@ -59,8 +59,8 @@ export type DashboardAiTable = {
    */
   qualifiedName?: QualifiedTableName;
   /**
-   * Stable string table identifier for compatibility with string-only tool
-   * boundaries.
+   * Fully quoted SQL identifier string from QualifiedTableName.toString().
+   * Use only at string-only tool boundaries.
    */
   tableId?: string;
   columns?: ChartBuilderColumn[];

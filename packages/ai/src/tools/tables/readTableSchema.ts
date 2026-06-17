@@ -15,7 +15,7 @@ const ReadTableSchemaInput = z.object({
     .string()
     .optional()
     .describe(
-      'Fully-qualified tableId from table context/list_tables. A bare table name is accepted only when it uniquely identifies one visible table. Defaults to the primary context table if not specified.',
+      'Fully quoted tableId from table context/list_tables, produced by QualifiedTableName.toString() (for example "db"."schema"."table"). A bare table name is accepted only when it uniquely identifies one visible table. Defaults to the primary context table if not specified.',
     ),
 });
 

@@ -230,7 +230,7 @@ export function formatOtherTableScopesForAi(
 
   return [
     `${summary.outsideCurrentDatabaseMainSchemaCount.toLocaleString()} additional visible tables/views exist outside the current local main schema.`,
-    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved tableId rather than only a bare table name.`,
+    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved fully quoted tableId rather than only a bare table name.`,
     locationSummary
       ? `Outside-main locations: ${locationSummary}${hiddenLocationCount}.`
       : '',
@@ -300,7 +300,7 @@ function formatBudgetedTableContextForAi(
   maxChars: number,
 ): string {
   const sections = [
-    'Schema context trimmed to fit the character budget. Users may say bare table names, but after resolving a table, forward the canonical tableId. Use list_tables to find tables and read_table_schema with a tableId to inspect columns before writing SQL.',
+    'Schema context trimmed. Users may say bare names; after resolving, forward tableId, the fully quoted QualifiedTableName.toString() string. Use list_tables and read_table_schema with tableId before SQL.',
   ];
 
   addSectionWithinBudget(
@@ -402,7 +402,7 @@ export function formatTablesForLLM(
     summaryTables.length;
 
   const hybridContext = joinSections([
-    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here rather than only the bare/display name.',
+    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here, which is the fully quoted SQL identifier string from QualifiedTableName.toString(), rather than only the bare/display name.',
     `Full schemas shown for the first ${fullSchemaTables.length} of ${currentMainSchemaTables.length} available tables:`,
     fullSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
     summaryTables.length > 0

@@ -51,7 +51,10 @@ export interface ChartBuilderField {
 }
 
 /**
- * Result of table resolution, includes table name and column metadata.
+ * Result of table resolution.
+ * tableName is the fully quoted string boundary form
+ * (QualifiedTableName.toString()); qualifiedName is the canonical structured
+ * identity when available.
  */
 export interface ResolvedTable {
   tableName: string;
@@ -85,8 +88,8 @@ export interface DashboardToolDeps {
   ) => string;
 
   /**
-   * Resolves table name and columns for a given dashboard artifact.
-   * Use this when you need table-specific information.
+   * Resolves user/display table input to canonical table identity and columns.
+   * Bare names are accepted only when unambiguous.
    */
   resolveTable: (
     artifactId: string,

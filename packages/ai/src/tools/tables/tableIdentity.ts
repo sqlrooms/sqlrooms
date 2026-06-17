@@ -2,7 +2,8 @@ import type {DataTable, QualifiedTableName} from '@sqlrooms/duckdb';
 
 export type TableIdentitySummary = {
   /**
-   * Fully-qualified table id to pass to string-only table tools.
+   * Fully quoted SQL identifier from QualifiedTableName.toString(), used at
+   * string-only tool boundaries.
    */
   tableId: string;
   /**
