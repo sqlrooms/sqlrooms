@@ -7,6 +7,15 @@ export type QualifiedTableName = {
   toString: () => string;
 };
 
+export type ResolveTableReferenceResult<T> = {
+  table?: T;
+  ambiguousMatches?: T[];
+};
+
+type TableReferenceCandidate = {
+  table: QualifiedTableName;
+};
+
 export function isQualifiedTableName(
   tableName: string | QualifiedTableName,
 ): tableName is QualifiedTableName {
@@ -169,6 +178,74 @@ export function quoteTableReference(tableName: string): string {
   }
 
   return escapeId(tableName);
+}
+
+function matchesQualifiedTableName<T extends TableReferenceCandidate>(
+  candidate: T,
+  tableName: Partial<QualifiedTableName>,
+): boolean {
+  return (
+    candidate.table.table === tableName.table &&
+    (!tableName.schema || candidate.table.schema === tableName.schema) &&
+    (!tableName.database || candidate.table.database === tableName.database)
+  );
+}
+
+/**
+ * Resolves a table reference against an already-flat table catalog.
+ *
+ * Resolution prefers exact canonical table ids, then qualified SQL identifiers,
+ * then unique bare table names. Ambiguous bare names are returned as matches
+ * instead of silently selecting one table.
+ *
+ * @param tables - Flat catalog whose entries carry a QualifiedTableName.
+ * @param tableReference - Table reference string or QualifiedTableName.
+ * @returns Matching table, ambiguous matches, or an empty result.
+ */
+export function resolveTableReference<T extends TableReferenceCandidate>(
+  tables: T[],
+  tableReference: string | QualifiedTableName,
+): ResolveTableReferenceResult<T> {
+  if (typeof tableReference !== 'string') {
+    return {
+      table: tables.find(
+        (candidate) => candidate.table.toString() === tableReference.toString(),
+      ),
+    };
+  }
+
+  const trimmedTableReference = tableReference.trim();
+  const canonicalMatches = tables.filter(
+    (candidate) => candidate.table.toString() === trimmedTableReference,
+  );
+  if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};
+  if (canonicalMatches.length > 1) {
+    return {ambiguousMatches: canonicalMatches};
+  }
+
+  const parsedTableReference = parseQualifiedSqlIdentifier(
+    trimmedTableReference,
+  );
+  if (
+    parsedTableReference?.table &&
+    (parsedTableReference.schema || parsedTableReference.database)
+  ) {
+    const qualifiedMatches = tables.filter((candidate) =>
+      matchesQualifiedTableName(candidate, parsedTableReference),
+    );
+    if (qualifiedMatches.length === 1) return {table: qualifiedMatches[0]};
+    if (qualifiedMatches.length > 1) {
+      return {ambiguousMatches: qualifiedMatches};
+    }
+  }
+
+  const bareMatches = tables.filter(
+    (candidate) => candidate.table.table === trimmedTableReference,
+  );
+  if (bareMatches.length === 1) return {table: bareMatches[0]};
+  if (bareMatches.length > 1) return {ambiguousMatches: bareMatches};
+
+  return {};
 }
 
 /**

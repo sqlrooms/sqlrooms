@@ -2,15 +2,16 @@ import type {DataTable, QualifiedTableName} from '@sqlrooms/duckdb';
 import {
   createTableIdentitySummary,
   formatAmbiguousTableMessage,
-  getAllTablesFromSchemaTrees,
   resolveTableFromCatalog,
 } from '../src/tools/tables/tableIdentity';
+import {createListTablesTool} from '../src/tools/tables/listTables';
 
 function makeTable(
   tableName: string,
   options: {
     database?: string;
     schema?: string;
+    isView?: boolean;
     columns?: {name: string; type: string}[];
   } = {},
 ): DataTable {
@@ -21,7 +22,7 @@ function makeTable(
   });
   return {
     table,
-    isView: false,
+    isView: options.isView ?? false,
     database: options.database,
     schema: options.schema ?? 'main',
     tableName,
@@ -104,31 +105,43 @@ describe('table identity helpers', () => {
     expect(result.ambiguousMatches).toBeUndefined();
   });
 
-  it('extracts tables and views from schema trees', () => {
+  it('list_tables includes views from the flat table catalog', async () => {
     const table = makeTable('events', {database: 'local'});
-    const view = {
-      ...makeTable('event_summary', {database: 'local'}),
+    const view = makeTable('event_summary', {
+      database: 'local',
       isView: true,
-    };
+    });
+    const tool = createListTablesTool({
+      getState: () => ({
+        db: {
+          tables: [table, view],
+          schemaTrees: [],
+        },
+      }),
+    } as any);
 
-    const tables = getAllTablesFromSchemaTrees([
-      {
-        children: [
-          {
-            children: [
-              {object: {type: 'table', ...table}},
-              {object: {type: 'view', ...view}},
-              {object: {type: 'column', name: 'id', columnType: 'INTEGER'}},
-            ],
-          },
-        ],
-      },
-    ]);
+    const includeViewsResult = await (tool as any).execute({
+      includeViews: true,
+    });
+    const excludeViewsResult = await (tool as any).execute({
+      includeViews: false,
+    });
 
-    expect(tables).toHaveLength(2);
-    expect(tables.map((item) => item.table.table)).toEqual([
-      'events',
-      'event_summary',
-    ]);
+    expect(
+      includeViewsResult.llmResult.tables.map(
+        (item: {tableName: string}) => item.tableName,
+      ),
+    ).toEqual(['event_summary', 'events']);
+    expect(
+      excludeViewsResult.llmResult.tables.map(
+        (item: {tableName: string}) => item.tableName,
+      ),
+    ).toEqual(['events']);
+    expect(includeViewsResult.llmResult.tables).toContainEqual(
+      expect.objectContaining({
+        tableId: '"local"."main"."event_summary"',
+        isView: true,
+      }),
+    );
   });
 });

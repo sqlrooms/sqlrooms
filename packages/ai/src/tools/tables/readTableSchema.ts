@@ -5,7 +5,6 @@ import {z} from 'zod';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {
   formatAmbiguousTableMessage,
-  getAllTablesFromSchemaTrees,
   getCanonicalTableId,
   resolveTableFromCatalog,
 } from './tableIdentity';
@@ -82,9 +81,9 @@ export function createReadTableSchemaTool(store: StoreApi<DuckDbSliceState>) {
         targetTableId = primaryTable.id;
       }
 
-      // Find the table object in schema trees
+      // Find the table object in the flat schema catalog
       const {table: tableObj, ambiguousMatches} = resolveTableFromCatalog(
-        getAllTablesFromSchemaTrees(state.db.schemaTrees),
+        state.db.tables,
         targetTableId,
       );
 

@@ -31,6 +31,7 @@ export {
   makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
   quoteTableReference,
+  resolveTableReference,
   getUnqualifiedSqlIdentifier,
   escapeVal,
   escapeId,
@@ -43,6 +44,7 @@ export {
   separateLastStatement,
   joinStatements,
   type QualifiedTableName,
+  type ResolveTableReferenceResult,
   type SeparatedStatements,
 } from './duckdb-utils';
 
@@ -56,8 +58,6 @@ export {createDbSchemaTrees} from './schema-tree/schemaTree';
 export {
   getAllTablesFromSchemaTrees,
   findTableInSchemaTrees,
-  resolveTableReference,
-  type ResolveTableReferenceResult,
 } from './schema-tree/schemaTreeUtils';
 
 export {

@@ -1,8 +1,4 @@
-import {
-  getAllTablesFromSchemaTrees as getCoreAllTablesFromSchemaTrees,
-  resolveTableReference,
-  type DataTable,
-} from '@sqlrooms/duckdb-core';
+import {resolveTableReference, type DataTable} from '@sqlrooms/duckdb-core';
 
 export type TableIdentitySummary = {
   /**
@@ -26,18 +22,6 @@ export type TableIdentitySummary = {
  */
 export function getCanonicalTableId(table: DataTable): string {
   return table.table.toString();
-}
-
-/**
- * Extracts table and view objects from SQLRooms schema tree nodes.
- *
- * @param schemaTrees - Unknown schema tree value, usually state.db.schemaTrees.
- * @returns DataTable entries found under database/schema/table tree nodes.
- */
-export function getAllTablesFromSchemaTrees(schemaTrees: unknown): DataTable[] {
-  return getCoreAllTablesFromSchemaTrees(
-    Array.isArray(schemaTrees) ? schemaTrees : undefined,
-  ) as DataTable[];
 }
 
 /**

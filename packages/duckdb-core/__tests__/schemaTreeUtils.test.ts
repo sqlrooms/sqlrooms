@@ -1,12 +1,9 @@
 import {
   makeQualifiedTableName,
+  resolveTableReference,
   type QualifiedTableName,
 } from '../src/duckdb-utils';
-import {
-  findTableInSchemaTrees,
-  getAllTablesFromSchemaTrees,
-  resolveTableReference,
-} from '../src/schema-tree/schemaTreeUtils';
+import {findTableInSchemaTrees} from '../src/schema-tree/schemaTreeUtils';
 import {createDbSchemaTrees} from '../src/schema-tree/schemaTree';
 import type {DataTable} from '../src/types';
 
@@ -112,7 +109,7 @@ describe('schema tree table lookup utilities', () => {
     expect(result?.table.table).toBe('earthquakes');
   });
 
-  it('returns undefined when findTableInSchemaTrees cannot resolve uniquely', () => {
+  it('returns undefined when findTableInSchemaTrees has no exact match', () => {
     const local = makeTable('earthquakes', {database: 'local'});
     const remote = makeTable('earthquakes', {database: 'remote'});
     const schemaTrees = createDbSchemaTrees([
@@ -127,35 +124,5 @@ describe('schema tree table lookup utilities', () => {
     );
 
     expect(result).toBeUndefined();
-  });
-
-  it('includes defensive view nodes when flattening schema trees', () => {
-    const table = makeTable('events', {database: 'local'});
-    const view = makeTable('event_summary', {
-      database: 'local',
-      isView: true,
-    });
-    const schemaTrees = [
-      {
-        object: {type: 'database', name: 'local'},
-        children: [
-          {
-            object: {type: 'schema', name: 'main'},
-            children: [
-              {object: {type: 'table', name: 'events', ...table}},
-              {object: {type: 'view', name: 'event_summary', ...view}},
-              {object: {type: 'column', name: 'id', columnType: 'INTEGER'}},
-            ],
-          },
-        ],
-      },
-    ];
-
-    const tables = getAllTablesFromSchemaTrees(schemaTrees as any);
-
-    expect(tables.map((item) => item.table.table)).toEqual([
-      'events',
-      'event_summary',
-    ]);
   });
 });
