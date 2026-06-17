@@ -1,7 +1,7 @@
 import {
-  parseQualifiedSqlIdentifier,
+  getAllTablesFromSchemaTrees as getCoreAllTablesFromSchemaTrees,
+  resolveTableReference,
   type DataTable,
-  type QualifiedTableName,
 } from '@sqlrooms/duckdb-core';
 
 export type TableIdentitySummary = {
@@ -35,22 +35,9 @@ export function getCanonicalTableId(table: DataTable): string {
  * @returns DataTable entries found under database/schema/table tree nodes.
  */
 export function getAllTablesFromSchemaTrees(schemaTrees: unknown): DataTable[] {
-  const tables: DataTable[] = [];
-  if (!Array.isArray(schemaTrees)) return tables;
-
-  for (const dbNode of schemaTrees) {
-    for (const schemaNode of dbNode?.children ?? []) {
-      for (const tableNode of schemaNode?.children ?? []) {
-        if (
-          tableNode?.object?.type === 'table' ||
-          tableNode?.object?.type === 'view'
-        ) {
-          tables.push(tableNode.object as DataTable);
-        }
-      }
-    }
-  }
-  return tables;
+  return getCoreAllTablesFromSchemaTrees(
+    Array.isArray(schemaTrees) ? schemaTrees : undefined,
+  ) as DataTable[];
 }
 
 /**
@@ -74,17 +61,6 @@ export function createTableIdentitySummary(
   };
 }
 
-function matchesQualifiedTableName(
-  table: DataTable,
-  tableName: Partial<QualifiedTableName>,
-): boolean {
-  return (
-    table.table.table === tableName.table &&
-    (!tableName.schema || table.table.schema === tableName.schema) &&
-    (!tableName.database || table.table.database === tableName.database)
-  );
-}
-
 /**
  * Resolves user or tool table input against a visible table catalog.
  *
@@ -100,37 +76,7 @@ export function resolveTableFromCatalog(
   tables: DataTable[],
   tableId: string,
 ): {table?: DataTable; ambiguousMatches?: DataTable[]} {
-  const trimmedTableId = tableId.trim();
-
-  const canonicalMatches = tables.filter(
-    (table) => getCanonicalTableId(table) === trimmedTableId,
-  );
-  if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};
-  if (canonicalMatches.length > 1) {
-    return {ambiguousMatches: canonicalMatches};
-  }
-
-  const parsedTableId = parseQualifiedSqlIdentifier(trimmedTableId);
-  if (
-    parsedTableId?.table &&
-    (parsedTableId.schema || parsedTableId.database)
-  ) {
-    const qualifiedMatches = tables.filter((table) =>
-      matchesQualifiedTableName(table, parsedTableId),
-    );
-    if (qualifiedMatches.length === 1) return {table: qualifiedMatches[0]};
-    if (qualifiedMatches.length > 1) {
-      return {ambiguousMatches: qualifiedMatches};
-    }
-  }
-
-  const bareMatches = tables.filter(
-    (table) => table.table.table === trimmedTableId,
-  );
-  if (bareMatches.length === 1) return {table: bareMatches[0]};
-  if (bareMatches.length > 1) return {ambiguousMatches: bareMatches};
-
-  return {};
+  return resolveTableReference(tables, tableId);
 }
 
 /**

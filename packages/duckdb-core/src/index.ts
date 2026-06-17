@@ -56,6 +56,8 @@ export {createDbSchemaTrees} from './schema-tree/schemaTree';
 export {
   getAllTablesFromSchemaTrees,
   findTableInSchemaTrees,
+  resolveTableReference,
+  type ResolveTableReferenceResult,
 } from './schema-tree/schemaTreeUtils';
 
 export {

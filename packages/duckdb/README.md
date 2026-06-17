@@ -229,7 +229,11 @@ function DatabaseManager() {
 ### Working with Qualified Table Names
 
 ```tsx
-import {makeQualifiedTableName, quoteTableReference} from '@sqlrooms/duckdb';
+import {
+  makeQualifiedTableName,
+  quoteTableReference,
+  resolveTableReference,
+} from '@sqlrooms/duckdb';
 import {useRoomStore} from './store';
 import {Button} from '@sqlrooms/ui';
 
@@ -248,9 +252,11 @@ function QualifiedTableOps() {
       table: 'users',
     });
     const tableSql = quoteTableReference(qualifiedTable.toString());
+    const resolved = resolveTableReference([{table: qualifiedTable}], 'users');
 
     await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
     console.log('Quoted table reference:', tableSql);
+    console.log('Resolved table:', resolved.table?.table.toString());
     const tableExists = await checkTableExists(qualifiedTable);
     console.log('Table exists after create:', tableExists);
     await dropTable(qualifiedTable);
