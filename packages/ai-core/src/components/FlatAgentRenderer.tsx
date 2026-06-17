@@ -198,7 +198,7 @@ const ParentSummaryLine: React.FC<{
   }
 
   return (
-    <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
+    <div className="min-w-0 py-1 px-5 text-xs leading-4 break-words whitespace-normal italic">
       {reasoning}
     </div>
   );
