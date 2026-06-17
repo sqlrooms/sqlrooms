@@ -44,7 +44,15 @@ export type DashboardAiStore<TState> = {
 };
 
 export type DashboardAiTable = {
+  /**
+   * Human-friendly table name exposed to agents and users.
+   */
   tableName: string;
+  /**
+   * Stable table identifier used for queries and dashboard state when it differs
+   * from the display name.
+   */
+  tableId?: string;
   columns?: ChartBuilderColumn[];
   rowCount?: number;
 };
@@ -332,23 +340,45 @@ function getTablesWithColumns<TState>(
     .filter((table) => table.columns && table.columns.length > 0);
 }
 
-function findTableColumns<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
+function getDashboardTableId(table: DashboardAiTable): string {
+  return table.tableId ?? table.tableName;
+}
+
+function tableMatchesName(table: DashboardAiTable, tableName: string): boolean {
+  return table.tableName === tableName || table.tableId === tableName;
+}
+
+function findDashboardTable(
+  tables: DashboardAiTable[],
   tableName: string,
-): ChartBuilderColumn[] | null {
-  const table = getTablesWithColumns(state, adapter).find(
-    (candidate) => candidate.tableName === tableName,
-  );
-  if (!table?.columns) return null;
-  return table.columns.map((column) => ({
-    name: column.name,
-    type: column.type,
-  }));
+): DashboardAiTable | undefined {
+  return tables.find((candidate) => tableMatchesName(candidate, tableName));
+}
+
+function getResolvedTable(table: DashboardAiTable) {
+  if (!table.columns) {
+    throw new Error(`Table "${table.tableName}" has no column metadata.`);
+  }
+  return {
+    tableName: getDashboardTableId(table),
+    columns: table.columns.map((column) => ({
+      name: column.name,
+      type: column.type,
+    })),
+  };
 }
 
 function formatAvailableTables(tables: DashboardAiTable[]): string {
-  return tables.map((table) => table.tableName).join(', ') || '(none)';
+  return (
+    tables
+      .map((table) => {
+        const tableId = getDashboardTableId(table);
+        return tableId === table.tableName
+          ? table.tableName
+          : `${table.tableName} (${tableId})`;
+      })
+      .join(', ') || '(none)'
+  );
 }
 
 export function createDashboardToolDeps<TState>({
@@ -410,36 +440,32 @@ export function createDashboardToolDeps<TState>({
     const explicitTableName = tableName?.trim() || undefined;
 
     if (explicitTableName) {
-      const columns = findTableColumns(state, adapter, explicitTableName);
-      if (!columns) {
+      const table = findDashboardTable(tables, explicitTableName);
+      if (!table) {
         throw new Error(
           `Unknown table "${explicitTableName}". Available tables: ${formatAvailableTables(tables)}.`,
         );
       }
-      adapter.setSelectedTable(state, artifactId, explicitTableName);
-      return {tableName: explicitTableName, columns};
+      const resolvedTable = getResolvedTable(table);
+      adapter.setSelectedTable(state, artifactId, resolvedTable.tableName);
+      return resolvedTable;
     }
 
     if (dashboard?.selectedTable) {
-      const columns = findTableColumns(state, adapter, dashboard.selectedTable);
-      if (columns) {
-        return {tableName: dashboard.selectedTable, columns};
+      const table = findDashboardTable(tables, dashboard.selectedTable);
+      if (table) {
+        return getResolvedTable(table);
       }
     }
 
     if (tables.length === 1) {
       const onlyTable = tables[0];
-      if (!onlyTable?.columns) {
+      if (!onlyTable) {
         throw new Error('The only available table has no column metadata.');
       }
-      adapter.setSelectedTable(state, artifactId, onlyTable.tableName);
-      return {
-        tableName: onlyTable.tableName,
-        columns: onlyTable.columns.map((column) => ({
-          name: column.name,
-          type: column.type,
-        })),
-      };
+      const resolvedTable = getResolvedTable(onlyTable);
+      adapter.setSelectedTable(state, artifactId, resolvedTable.tableName);
+      return resolvedTable;
     }
 
     throw new Error(
@@ -547,9 +573,12 @@ function buildAgentPrompt<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
 ): string {
-  const table = adapter
-    .getTables(state)
-    .find((candidate) => candidate.tableName === tableName);
+  const table = findDashboardTable(adapter.getTables(state), tableName);
+  const resolvedTableName = table ? getDashboardTableId(table) : tableName;
+  const tableIdInfo =
+    table && table.tableName !== resolvedTableName
+      ? `\n- Table ID for tool calls: ${resolvedTableName}`
+      : '';
   const columnNames =
     table?.columns
       ?.map((column) =>
@@ -559,10 +588,10 @@ function buildAgentPrompt<TState>(
   const rowInfo =
     table?.rowCount !== undefined ? `Approximate rows: ${table.rowCount}` : '';
 
-  return `Analyze the "${tableName}" table.
+  return `Analyze the "${table?.tableName ?? tableName}" table.
 
 Table info:
-- Columns: ${columnNames}${rowInfo ? `\n- ${rowInfo}` : ''}
+- Columns: ${columnNames}${tableIdInfo}${rowInfo ? `\n- ${rowInfo}` : ''}
 
 User request: ${userPrompt}
 
@@ -573,20 +602,21 @@ function validateTableExists<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
   tableName: string,
-): void {
+): DashboardAiTable {
   const tables = adapter.getTables(state);
-  const table = tables.find((candidate) => candidate.tableName === tableName);
+  const table = findDashboardTable(tables, tableName);
   if (!table) {
     throw new DashboardAgentException(
       `Table "${tableName}" not found. Available tables: ${formatAvailableTables(tables)}`,
     );
   }
+  return table;
 }
 
 function getOrCreateDashboard<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
-  tableName: string,
+  displayTableName: string,
   dashboardTitle?: string,
 ): string {
   const dashboardId = adapter.getCurrentDashboardArtifactId(state);
@@ -597,7 +627,7 @@ function getOrCreateDashboard<TState>(
 
   const suggestedTitle =
     dashboardTitle ||
-    `${tableName.charAt(0).toUpperCase() + tableName.slice(1)} Insights`;
+    `${displayTableName.charAt(0).toUpperCase() + displayTableName.slice(1)} Insights`;
   const newDashboardId = adapter.createDashboardArtifact(
     state,
     suggestedTitle,
@@ -647,15 +677,16 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
       try {
         const state = store.getState();
-        validateTableExists(state, adapter, tableName);
+        const table = validateTableExists(state, adapter, tableName);
+        const resolvedTableName = getDashboardTableId(table);
 
         dashboardId = getOrCreateDashboard(
           state,
           adapter,
-          tableName,
+          table.tableName,
           dashboardTitle,
         );
-        adapter.setSelectedTable(state, dashboardId, tableName);
+        adapter.setSelectedTable(state, dashboardId, resolvedTableName);
         const queryTools = options.createQueryTools?.({store});
 
         const dashboardAgent = new ToolLoopAgent({
@@ -676,7 +707,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
         const result = await options.runSubAgent({
           agent: dashboardAgent,
-          prompt: buildAgentPrompt(prompt, tableName, state, adapter),
+          prompt: buildAgentPrompt(prompt, resolvedTableName, state, adapter),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
@@ -687,7 +718,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
           finalState,
           adapter,
           dashboardId,
-          tableName,
+          resolvedTableName,
           result.agentToolCalls || [],
         );
 

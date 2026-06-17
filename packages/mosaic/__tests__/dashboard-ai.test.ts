@@ -204,6 +204,38 @@ describe('dashboard AI deps', () => {
     expect(deps.resolveTable(dashboardId).tableName).toBe('earthquakes');
   });
 
+  it('accepts display table names while selecting the stable table id', () => {
+    const dashboardId = 'dashboard';
+    const tableId = '"local"."main"."earthquakes"';
+    const {store, adapter, state} = createHarness({
+      artifactsById: {
+        [dashboardId]: {id: dashboardId, type: 'dashboard', title: 'Dashboard'},
+      },
+      tables: [
+        {
+          tableName: 'earthquakes',
+          tableId,
+          rowCount: 10,
+          columns: [
+            {name: 'magnitude', type: 'DOUBLE'},
+            {name: 'region', type: 'VARCHAR'},
+          ],
+        },
+      ],
+      dashboardsById: {
+        [dashboardId]: createDashboardEntry(dashboardId),
+      },
+    });
+    const deps = createDashboardToolDeps({store, adapter});
+
+    expect(deps.resolveTable(dashboardId, 'earthquakes').tableName).toBe(
+      tableId,
+    );
+    expect(state.dashboardsById[dashboardId]!.selectedTable).toBe(tableId);
+    expect(deps.resolveTable(dashboardId, tableId).tableName).toBe(tableId);
+    expect(deps.resolveTable(dashboardId).tableName).toBe(tableId);
+  });
+
   it('returns useful errors for unknown tables and non-dashboard artifacts', () => {
     const {store, adapter} = createHarness({
       artifactsById: {
