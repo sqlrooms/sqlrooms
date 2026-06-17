@@ -5,6 +5,110 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
   autoResize?: boolean;
 };
 
+const useIsomorphicLayoutEffect =
+  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+function useAutoResizeTextarea({
+  autoResize,
+  textareaRef,
+  value,
+  defaultValue,
+}: {
+  autoResize: boolean;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  value: React.ComponentProps<'textarea'>['value'];
+  defaultValue: React.ComponentProps<'textarea'>['defaultValue'];
+}) {
+  const [hasOverflow, setHasOverflow] = React.useState(false);
+  const lastMeasuredWidthRef = React.useRef<number>(0);
+  const resizeFrameRef = React.useRef<number | null>(null);
+
+  const applyResizeToFitContent = React.useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || !autoResize || typeof window === 'undefined') return;
+
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+
+    const computedStyle = window.getComputedStyle(el);
+    const maxHeight = computedStyle.maxHeight;
+    if (maxHeight && maxHeight !== 'none') {
+      const maxHeightValue = parseFloat(maxHeight);
+      setHasOverflow(el.scrollHeight > maxHeightValue);
+    } else {
+      setHasOverflow(false);
+    }
+  }, [autoResize, textareaRef]);
+
+  const resizeToFitContent = React.useCallback(() => {
+    if (!autoResize || typeof window === 'undefined') return;
+
+    // Keep input/effect-triggered resize paths for robustness, but collapse
+    // same-frame calls into one DOM measurement/write cycle.
+    if (resizeFrameRef.current !== null) return;
+
+    resizeFrameRef.current = window.requestAnimationFrame(() => {
+      resizeFrameRef.current = null;
+      applyResizeToFitContent();
+    });
+  }, [autoResize, applyResizeToFitContent]);
+
+  useIsomorphicLayoutEffect(() => {
+    resizeToFitContent();
+  }, [resizeToFitContent, value, defaultValue]);
+
+  React.useEffect(() => {
+    if (!autoResize) return;
+
+    const el = textareaRef.current;
+    if (!el || typeof window === 'undefined') return;
+
+    // Re-measure after layout settles so hidden/collapsed mount states
+    // don't leave a stale oversized height.
+    resizeToFitContent();
+
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    lastMeasuredWidthRef.current = el.getBoundingClientRect().width;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      const nextWidth = entry.contentRect.width;
+      if (Math.abs(nextWidth - lastMeasuredWidthRef.current) < 1) {
+        return;
+      }
+
+      lastMeasuredWidthRef.current = nextWidth;
+      resizeToFitContent();
+    });
+
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [autoResize, resizeToFitContent, textareaRef]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    return () => {
+      if (resizeFrameRef.current !== null) {
+        window.cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+    };
+  }, []);
+
+  return {
+    hasOverflow,
+    resizeToFitContent,
+  };
+}
+
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
@@ -25,29 +129,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       () => localRef.current as HTMLTextAreaElement,
     );
 
-    const [hasOverflow, setHasOverflow] = React.useState(false);
-
-    const resizeToFitContent = React.useCallback(() => {
-      const el = localRef.current;
-      if (!el || !autoResize) return;
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
-
-      // Check if content exceeds the max-height constraint
-      const computedStyle = window.getComputedStyle(el);
-      const maxHeight = computedStyle.maxHeight;
-      if (maxHeight && maxHeight !== 'none') {
-        const maxHeightValue = parseFloat(maxHeight);
-        setHasOverflow(el.scrollHeight > maxHeightValue);
-      } else {
-        setHasOverflow(false);
-      }
-    }, [autoResize]);
-
-    React.useEffect(() => {
-      // Trigger on mount and whenever the controlled value changes
-      resizeToFitContent();
-    }, [resizeToFitContent, value, defaultValue]);
+    const {hasOverflow, resizeToFitContent} = useAutoResizeTextarea({
+      autoResize,
+      textareaRef: localRef,
+      value,
+      defaultValue,
+    });
 
     const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
       if (autoResize) resizeToFitContent();
