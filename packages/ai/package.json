@@ -41,6 +41,9 @@
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
+  "devDependencies": {
+    "ts-jest": "^29.4.4"
+  },
   "peerDependencies": {
     "apache-arrow": "17.0.0",
     "react": ">=18",
