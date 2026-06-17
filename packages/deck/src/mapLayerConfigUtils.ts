@@ -88,6 +88,17 @@ const COLUMN_RADIUS_LAYER_TYPES = new Set([
   'columnlayer',
 ]);
 
+const EXTRUDABLE_LAYER_TYPES = new Set([
+  'geoarrowh3hexagonlayer',
+  'h3hexagonlayer',
+  'geoarrowcolumnlayer',
+  'columnlayer',
+  'geoarrowpolygonlayer',
+  'polygonlayer',
+  'geoarrowsolidpolygonlayer',
+  'solidpolygonlayer',
+]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -151,6 +162,13 @@ export function usesTripsSettings(layerType: unknown) {
   return (
     typeof layerType === 'string' &&
     TRIPS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesExtrusionSettings(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    EXTRUDABLE_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 

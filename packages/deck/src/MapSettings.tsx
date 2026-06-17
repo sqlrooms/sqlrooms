@@ -52,6 +52,7 @@ import {
   usesRadiusSetting,
   usesColumnRadiusSetting,
   usesTripsSettings,
+  usesExtrusionSettings,
 } from './mapLayerConfigUtils';
 
 /**
@@ -178,6 +179,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     activeLayer?.['@@type'],
   );
   const showTripsSettings = usesTripsSettings(activeLayer?.['@@type']);
+  const showExtrusionSettings = usesExtrusionSettings(activeLayer?.['@@type']);
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -764,6 +766,76 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               }}
             />
           </Field>
+        )}
+
+        {showExtrusionSettings && (
+          <div className="flex flex-col gap-2 rounded-md border p-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium">Extrusion</span>
+              <Switch
+                checked={Boolean(activeLayer?.extruded)}
+                onCheckedChange={(checked) =>
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        extruded: checked,
+                      }),
+                    ),
+                  )
+                }
+              />
+            </div>
+
+            {Boolean(activeLayer?.extruded) && dataTable && (
+              <ColumnsProvider columns={dataTable.columns}>
+                <Field label="Elevation column">
+                  <ColumnSelector.Numeric
+                    value={(() => {
+                      const elev = activeLayer?.getElevation;
+                      if (
+                        elev &&
+                        typeof elev === 'object' &&
+                        '@@function' in (elev as object)
+                      ) {
+                        return (elev as Record<string, unknown>).field as
+                          | string
+                          | undefined;
+                      }
+                      if (typeof elev === 'string' && elev.startsWith('@@=')) {
+                        return elev.slice(3);
+                      }
+                      return undefined;
+                    })()}
+                    onChange={(elevationColumn) =>
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            getElevation: elevationColumn
+                              ? {
+                                  '@@function': 'scale',
+                                  field: elevationColumn,
+                                  type: 'linear',
+                                  domain: 'auto',
+                                  range: [0, 200],
+                                }
+                              : undefined,
+                            elevationScale: layer.elevationScale ?? 1,
+                          }),
+                        ),
+                      )
+                    }
+                    placeholder="Select elevation column..."
+                  />
+                </Field>
+              </ColumnsProvider>
+            )}
+          </div>
         )}
 
         {dataTable &&
