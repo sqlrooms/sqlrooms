@@ -11,6 +11,9 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
 import {
   BugIcon,
@@ -51,7 +54,9 @@ function getMessageTextPreview(message: {parts?: unknown[]}): string {
   return text.length > 120 ? `${text.slice(0, 117)}...` : text;
 }
 
-export const AiDebugInspector: React.FC = () => {
+export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
+  triggerClassName,
+}) => {
   const [open, setOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
@@ -168,17 +173,21 @@ export const AiDebugInspector: React.FC = () => {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <Button
-        type="button"
-        size="icon"
-        variant="secondary"
-        className="fixed right-4 bottom-4 z-40 h-9 w-9 shadow-lg"
-        title="AI debug inspector"
-        aria-label="AI debug inspector"
-        onClick={() => setOpen(true)}
-      >
-        <BugIcon className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className={triggerClassName}
+            aria-label="AI DevTools"
+            onClick={() => setOpen(true)}
+          >
+            <BugIcon className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">AI DevTools</TooltipContent>
+      </Tooltip>
       <SheetContent className="flex w-[min(100vw,760px)] max-w-none flex-col gap-4 p-4 sm:max-w-none">
         <SheetHeader>
           <div className="flex items-start justify-between gap-3 pr-8">

@@ -7,6 +7,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
+import {AiDebugInspector} from '../../components/AiDebugInspector';
 import {DbConnectionsSection} from './DbConnectionsSection';
 
 export function CliSidebarFooterControls({
@@ -33,6 +34,9 @@ export function CliSidebarFooterControls({
       </Tooltip>
       <RoomShell.CommandPalette.Button className="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md" />
       <DbConnectionsSection />
+      {import.meta.env.DEV && (
+        <AiDebugInspector triggerClassName="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md" />
+      )}
       <Tooltip>
         <TooltipTrigger asChild>
           <div className="hover:bg-sidebar-accent flex size-8 items-center justify-center rounded-md">
