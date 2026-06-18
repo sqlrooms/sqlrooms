@@ -116,6 +116,23 @@ export type AgentSnapshot = {
   startedAt: number;
 };
 
+/** Devtools-only state and controls nested under the AI slice. */
+export type AiDevtoolsState = {
+  /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId. */
+  agentSnapshots: Record<string, AgentSnapshot>;
+  /** Whether agent metadata snapshots should be captured in memory. */
+  shouldCaptureAgentSnapshots: () => boolean;
+  /** Whether captured agent metadata snapshots should be persisted to sessions. */
+  shouldPersistAgentSnapshots: () => boolean;
+  /** Writes a bounded serializable snapshot for a parent agent tool call. */
+  writeAgentSnapshot: (
+    parentToolCallId: string,
+    snapshot: AgentSnapshot,
+  ) => void;
+  /** Clears all captured agent metadata snapshots. */
+  clearAgentSnapshots: () => void;
+};
+
 /**
  * Per-tool-call timing entry stored in assistant message metadata.
  */
@@ -248,15 +265,8 @@ export interface AiStateForTransport {
     toolCalls: AgentToolCall[],
   ) => void;
   clearAgentProgress: (parentToolCallId: string) => void;
-  /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId */
-  agentSnapshots: Record<string, AgentSnapshot>;
-  shouldCaptureAgentSnapshots: () => boolean;
-  shouldPersistAgentSnapshots: () => boolean;
-  writeAgentSnapshot: (
-    parentToolCallId: string,
-    snapshot: AgentSnapshot,
-  ) => void;
-  clearAgentSnapshots: () => void;
+  /** Devtools-only agent snapshot state and controls. */
+  devtools: AiDevtoolsState;
   /** Pending approval requests from sub-agent tools with needsApproval */
   pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
   requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;

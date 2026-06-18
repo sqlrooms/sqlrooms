@@ -398,7 +398,9 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
   const tools = useStoreWithAi((state) => state.ai.tools);
   const toolRenderers = useStoreWithAi((state) => state.ai.toolRenderers);
   const liveAgentProgress = useStoreWithAi((state) => state.ai.agentProgress);
-  const liveAgentSnapshots = useStoreWithAi((state) => state.ai.agentSnapshots);
+  const liveAgentSnapshots = useStoreWithAi(
+    (state) => state.ai.devtools.agentSnapshots,
+  );
   const toolTimings = useStoreWithAi((state) => state.ai.toolTimings);
 
   const session = useMemo(

@@ -21,11 +21,13 @@ interface AgentStreamStore {
         toolCalls: AgentToolCall[],
       ) => void;
       clearAgentProgress: (parentToolCallId: string) => void;
-      shouldCaptureAgentSnapshots?: () => boolean;
-      writeAgentSnapshot?: (
-        parentToolCallId: string,
-        snapshot: AgentSnapshot,
-      ) => void;
+      devtools?: {
+        shouldCaptureAgentSnapshots?: () => boolean;
+        writeAgentSnapshot?: (
+          parentToolCallId: string,
+          snapshot: AgentSnapshot,
+        ) => void;
+      };
       requestSubAgentApproval?: (approval: PendingSubAgentApproval) => void;
       resolveSubAgentApproval?: (approvalId: string, approved: boolean) => void;
       clearSubAgentApproval?: (approvalId: string) => void;
@@ -308,8 +310,9 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   let finalText = '';
   const toolCallMap = new Map<string, AgentToolCall>();
 
-  if (store.getState().ai.shouldCaptureAgentSnapshots?.()) {
-    store.getState().ai.writeAgentSnapshot?.(parentToolCallId, {
+  const devtools = store.getState().ai.devtools;
+  if (devtools?.shouldCaptureAgentSnapshots?.()) {
+    devtools.writeAgentSnapshot?.(parentToolCallId, {
       agentName: parentToolCallId,
       parentToolCallId,
       availableTools: getAgentAvailableTools(agent),

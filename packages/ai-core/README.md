@@ -192,6 +192,14 @@ store executable tools, closures, secrets, or unbounded prompt/output content.
 Persist snapshots only for debugging workflows where cross-tab or post-mortem
 inspection is useful.
 
+Captured snapshots and snapshot controls live under the AI state's devtools
+namespace:
+
+```ts
+const snapshots = useRoomStore((state) => state.ai.devtools.agentSnapshots);
+state.ai.devtools.clearAgentSnapshots();
+```
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`

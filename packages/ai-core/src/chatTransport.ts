@@ -121,9 +121,9 @@ function writeAgentDebugStateToSession(
     filterRecordByKeys(state.ai.agentProgress, sessionToolCallIds),
   ) as ChatSessionSchema['agentProgress'];
 
-  if (state.ai.shouldPersistAgentSnapshots()) {
+  if (state.ai.devtools.shouldPersistAgentSnapshots()) {
     session.agentSnapshots = structuredClone(
-      filterRecordByKeys(state.ai.agentSnapshots, sessionToolCallIds),
+      filterRecordByKeys(state.ai.devtools.agentSnapshots, sessionToolCallIds),
     ) as ChatSessionSchema['agentSnapshots'];
   } else {
     delete session.agentSnapshots;
