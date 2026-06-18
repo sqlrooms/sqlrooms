@@ -9,7 +9,8 @@ const restrictedSqlroomsSubpathPatterns = [
   '@sqlrooms/*/dist/**',
   '@sqlrooms/*/src',
   '@sqlrooms/*/src/**',
-  '@sqlrooms/*/*/**',
+  '@sqlrooms/*/*/*',
+  '@sqlrooms/*/*/*/**',
   '!@sqlrooms/preset-*/**',
 ];
 

@@ -531,7 +531,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           let clonedSnapshot: AgentSnapshot;
           try {
             const serialized = JSON.stringify(snapshot);
-            if (serialized.length > devtoolsOptions.maxAgentSnapshotBytes) {
+            const byteLength = new TextEncoder().encode(serialized).byteLength;
+            if (byteLength > devtoolsOptions.maxAgentSnapshotBytes) {
               return;
             }
             clonedSnapshot = JSON.parse(serialized) as AgentSnapshot;

@@ -24,6 +24,7 @@ import {
   type DebugTimelineMessage,
 } from './sessionDebugModel';
 
+/** Props for embedding the chat session debug inspector in host panels. */
 export type ChatSessionDebugViewProps = {
   /** Chat session id to inspect from the current AI store context. */
   sessionId: string;
@@ -57,6 +58,15 @@ function formatDate(date: Date | undefined): string {
 
 function formatNumber(value: number | undefined): string {
   return typeof value === 'number' ? value.toLocaleString() : 'n/a';
+}
+
+function formatTiming(
+  timing: {startedAt?: number; completedAt?: number} | undefined,
+): string {
+  return typeof timing?.startedAt === 'number' &&
+    typeof timing.completedAt === 'number'
+    ? `${timing.completedAt - timing.startedAt}ms`
+    : 'n/a';
 }
 
 const KeyValue: React.FC<{label: string; value: React.ReactNode}> = ({
@@ -368,7 +378,12 @@ function timelineMessageMatchesFilters(
   });
 }
 
-/** Development inspector for a chat session, including messages, tool calls, and nested agent work. */
+/**
+ * Development inspector for a chat session.
+ *
+ * Renders messages, tool calls, model metadata, available tools, raw JSON, and
+ * nested agent debug state for a session id from the current AI store context.
+ */
 export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
   sessionId,
   className,
@@ -678,9 +693,9 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
                                 <span>part #{toolCall.partIndex}</span>
                                 <span>
                                   timing:{' '}
-                                  {toolTimings[toolCall.toolCallId]?.completedAt
-                                    ? `${toolTimings[toolCall.toolCallId]!.completedAt! - toolTimings[toolCall.toolCallId]!.startedAt}ms`
-                                    : 'n/a'}
+                                  {formatTiming(
+                                    toolTimings[toolCall.toolCallId],
+                                  )}
                                 </span>
                               </div>
                               <div className="grid gap-2">

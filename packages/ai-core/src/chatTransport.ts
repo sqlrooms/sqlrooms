@@ -28,6 +28,7 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
   MessageTokenUsage,
+  AgentToolCall,
 } from './types';
 import {
   fixIncompleteToolCalls,
@@ -113,17 +114,83 @@ function writeAgentDebugStateToSession(
   session: ChatSessionSchema,
   state: AiSliceStateForTransport,
 ): void {
+  const sessionToolCallIds = getSessionToolCallIds(session);
+  addReachableAgentToolCallIds(sessionToolCallIds, state.ai.agentProgress);
+
   session.agentProgress = structuredClone(
-    state.ai.agentProgress,
+    filterRecordByKeys(state.ai.agentProgress, sessionToolCallIds),
   ) as ChatSessionSchema['agentProgress'];
 
   if (state.ai.shouldPersistAgentSnapshots()) {
     session.agentSnapshots = structuredClone(
-      state.ai.agentSnapshots,
+      filterRecordByKeys(state.ai.agentSnapshots, sessionToolCallIds),
     ) as ChatSessionSchema['agentSnapshots'];
   } else {
     delete session.agentSnapshots;
   }
+}
+
+function getSessionToolCallIds(session: ChatSessionSchema): Set<string> {
+  const toolCallIds = new Set<string>();
+
+  for (const message of (session.uiMessages ?? []) as UIMessage[]) {
+    for (const part of message.parts ?? []) {
+      const toolCallId = (part as {toolCallId?: unknown}).toolCallId;
+      if (typeof toolCallId === 'string') {
+        toolCallIds.add(toolCallId);
+      }
+    }
+  }
+
+  return toolCallIds;
+}
+
+function addReachableAgentToolCallIds(
+  toolCallIds: Set<string>,
+  agentProgress: Record<string, AgentToolCall[]>,
+): void {
+  let foundNewToolCall = true;
+
+  while (foundNewToolCall) {
+    foundNewToolCall = false;
+
+    for (const [parentToolCallId, toolCalls] of Object.entries(agentProgress)) {
+      if (!toolCallIds.has(parentToolCallId)) continue;
+
+      for (const toolCall of toolCalls) {
+        foundNewToolCall =
+          addAgentToolCallIds(toolCallIds, toolCall) || foundNewToolCall;
+      }
+    }
+  }
+}
+
+function addAgentToolCallIds(
+  toolCallIds: Set<string>,
+  toolCall: AgentToolCall,
+): boolean {
+  let foundNewToolCall = false;
+
+  if (!toolCallIds.has(toolCall.toolCallId)) {
+    toolCallIds.add(toolCall.toolCallId);
+    foundNewToolCall = true;
+  }
+
+  for (const nestedCall of toolCall.agentToolCalls ?? []) {
+    foundNewToolCall =
+      addAgentToolCallIds(toolCallIds, nestedCall) || foundNewToolCall;
+  }
+
+  return foundNewToolCall;
+}
+
+function filterRecordByKeys<T>(
+  record: Record<string, T>,
+  keys: Set<string>,
+): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => keys.has(key)),
+  );
 }
 
 export type ChatTransportConfig = {

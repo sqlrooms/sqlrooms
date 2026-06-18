@@ -7,6 +7,7 @@ import type {
   ToolRendererRegistry,
 } from '../types';
 
+/** High-level counts and model/session metadata for a debugged chat session. */
 export type SessionDebugSummary = {
   sessionId: string;
   name: string;
@@ -25,6 +26,7 @@ export type SessionDebugSummary = {
   agentSnapshotCount: number;
 };
 
+/** Normalized message row used by the session debug timeline. */
 export type DebugMessage = {
   id: string;
   index: number;
@@ -34,6 +36,7 @@ export type DebugMessage = {
   raw: UIMessage;
 };
 
+/** Normalized tool-call part with message position and debug payloads. */
 export type DebugToolCall = {
   messageId: string;
   messageIndex: number;
@@ -49,18 +52,21 @@ export type DebugToolCall = {
   hasAgentProgress: boolean;
 };
 
+/** Agent progress tree attached to a parent tool call. */
 export type DebugAgentProgressEntry = {
   parentToolCallId: string;
   toolCalls: AgentToolCall[];
   source: 'live' | 'session';
 };
 
+/** Captured agent metadata attached to a parent tool call. */
 export type DebugAgentSnapshotEntry = {
   parentToolCallId: string;
   snapshot: AgentSnapshot;
   source: 'live' | 'session';
 };
 
+/** One displayable part in a chronological debug timeline message. */
 export type DebugTimelinePart =
   | {
       kind: 'text' | 'reasoning';
@@ -82,11 +88,13 @@ export type DebugTimelinePart =
       raw: unknown;
     };
 
+/** A chat message and its normalized debug timeline parts. */
 export type DebugTimelineMessage = {
   message: DebugMessage;
   parts: DebugTimelinePart[];
 };
 
+/** Debug metadata for a tool registered in the current AI store. */
 export type AvailableToolDebugInfo = {
   name: string;
   description?: string;
@@ -189,6 +197,11 @@ function getToolCallFromPart({
   };
 }
 
+/**
+ * Builds aggregate debug metadata for a chat session.
+ *
+ * @param session - Chat session to summarize.
+ */
 export function getSessionDebugSummary(
   session: ChatSessionSchema,
 ): SessionDebugSummary {
@@ -216,6 +229,11 @@ export function getSessionDebugSummary(
   };
 }
 
+/**
+ * Normalizes session UI messages for debug display.
+ *
+ * @param session - Chat session whose messages should be listed.
+ */
 export function getSessionDebugMessages(
   session: ChatSessionSchema,
 ): DebugMessage[] {
@@ -229,6 +247,12 @@ export function getSessionDebugMessages(
   }));
 }
 
+/**
+ * Extracts top-level tool calls from session UI messages.
+ *
+ * @param session - Chat session to inspect.
+ * @param agentProgress - Optional agent-progress map used to mark tool calls.
+ */
 export function getSessionDebugToolCalls(
   session: ChatSessionSchema,
   agentProgress: Record<string, unknown[]> = {},
@@ -248,6 +272,12 @@ export function getSessionDebugToolCalls(
   );
 }
 
+/**
+ * Merges persisted and live agent progress, preferring live entries.
+ *
+ * @param session - Chat session containing persisted progress.
+ * @param liveAgentProgress - In-memory progress from the current store.
+ */
 export function getSessionDebugAgentProgress(
   session: ChatSessionSchema,
   liveAgentProgress: Record<string, AgentToolCall[]> = {},
@@ -275,13 +305,18 @@ export function getSessionDebugAgentProgress(
     });
 }
 
+/**
+ * Merges persisted and live agent snapshots, preferring live entries.
+ *
+ * @param session - Chat session containing persisted snapshots.
+ * @param liveAgentSnapshots - In-memory snapshots from the current store.
+ */
 export function getSessionDebugAgentSnapshots(
   session: ChatSessionSchema,
   liveAgentSnapshots: Record<string, AgentSnapshot> = {},
 ): DebugAgentSnapshotEntry[] {
   const sessionSnapshots =
-    (session.agentSnapshots as Record<string, AgentSnapshot> | undefined) ??
-    {};
+    (session.agentSnapshots as Record<string, AgentSnapshot> | undefined) ?? {};
   const keys = new Set([
     ...Object.keys(sessionSnapshots),
     ...Object.keys(liveAgentSnapshots),
@@ -301,6 +336,9 @@ export function getSessionDebugAgentSnapshots(
     });
 }
 
+/**
+ * Builds a chronological message timeline with tool calls and agent debug data.
+ */
 export function getSessionDebugTimeline({
   session,
   liveAgentProgress = {},
@@ -391,6 +429,12 @@ export function getSessionDebugTimeline({
   );
 }
 
+/**
+ * Lists registered tools with execute/renderer availability for debug display.
+ *
+ * @param tools - Tool registry from the AI store.
+ * @param toolRenderers - Renderer registry from the AI store.
+ */
 export function getAvailableToolDebugInfo(
   tools: StoredToolSet,
   toolRenderers: ToolRendererRegistry = {},

@@ -79,6 +79,13 @@ export function getForkedAgentProgress({
     : undefined;
 }
 
+/**
+ * Copies agent snapshots relevant to the forked message subset.
+ *
+ * @param sourceSession - Session being forked from.
+ * @param targetMessages - Messages retained in the forked session.
+ * @returns The matching cloned snapshots, or `undefined` when none match.
+ */
 export function getForkedAgentSnapshots({
   sourceSession,
   targetMessages,

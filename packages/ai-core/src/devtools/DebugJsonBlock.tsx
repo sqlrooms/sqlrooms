@@ -13,11 +13,17 @@ import {
 import {ChevronRightIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 
+/** Props for a collapsible, copyable JSON block in the AI debug view. */
 export type DebugJsonBlockProps = {
+  /** Header label shown above the JSON editor. */
   title: string;
+  /** Value to stringify and display. Strings are shown as-is. */
   value: unknown;
+  /** Whether the outer block starts expanded. */
   defaultOpen?: boolean;
+  /** Optional class for the outer collapsible container. */
   className?: string;
+  /** Optional class for the embedded editor scroll area. */
   editorClassName?: string;
 };
 
@@ -30,6 +36,12 @@ function stringifyDebugValue(value: unknown): string {
   }
 }
 
+/**
+ * Collapsible JSON inspector used by AI devtools.
+ *
+ * Displays a stringified value in a read-only CodeMirror editor with copy
+ * support and default folding that keeps top-level JSON fields visible.
+ */
 export const DebugJsonBlock: React.FC<DebugJsonBlockProps> = ({
   title,
   value,
