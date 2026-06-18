@@ -84,37 +84,7 @@ def get_arrow(con, sql):
                 con.execute("ROLLBACK")
             except Exception:
                 pass
-        err_msg = str(e)
-        if "ActiveTransaction" in err_msg or "active transaction" in err_msg.lower():
-            # Explicit transaction wasn't enough; fall back to casting geometry to WKB
-            logger.warning(
-                "Transaction error during Arrow export despite explicit transaction; "
-                "falling back to ST_AsWKB cast"
-            )
-            return _get_arrow_cast_geometry(con, sql)
-        logger.error(f"Failed to convert result to Arrow: {err_msg}")
-        raise
-
-
-def _get_arrow_cast_geometry(con, sql):
-    """Cast GEOMETRY columns to WKB BLOB to avoid Arrow export CRS lookup entirely."""
-    try:
-        wrapped = f"SELECT * FROM ({sql}) AS __q"
-        desc = con.query(wrapped).description
-        projections = []
-        for col_desc in desc:
-            col_name = col_desc[0]
-            col_type = col_desc[1] if len(col_desc) > 1 else ""
-            type_str = str(col_type).upper() if col_type else ""
-            if "GEOMETRY" in type_str or "GEO" in type_str:
-                projections.append(f'ST_AsWKB("{col_name}") AS "{col_name}"')
-            else:
-                projections.append(f'"{col_name}"')
-        cast_sql = f"SELECT {', '.join(projections)} FROM ({sql}) AS __q"
-        result = con.query(cast_sql)
-        return result.to_arrow_table()
-    except Exception as fallback_err:
-        logger.error(f"Geometry WKB cast workaround also failed: {fallback_err}")
+        logger.error(f"Failed to convert result to Arrow: {str(e)}")
         raise
 
 
