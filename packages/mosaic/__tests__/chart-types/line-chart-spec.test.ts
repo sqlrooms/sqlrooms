@@ -51,7 +51,30 @@ describe('createLineChartSpec', () => {
       selectionName: 'test_selection',
     }) as any;
 
-    expect(spec.plot[0].data.from).toBe('main.test_table');
+    expect(spec.plot[0].data.from.toString()).toBe('"main"."test_table"');
+  });
+
+  it('preserves dotted table-name parts in generated data sources', () => {
+    const settings: LineChartSettings = {
+      x: 'date',
+      yFields: [{field: 'sales'}],
+      showLegend: false,
+    };
+
+    const spec = createLineChartSpec({
+      dataTable: {
+        ...mockDataTable,
+        table: makeQualifiedTableName({
+          database: 'attached',
+          schema: 'main',
+          table: 'events.2026',
+        }),
+      },
+      settings,
+      selectionName: 'test_selection',
+    }) as any;
+
+    expect(spec.plot[0].data.from.toString()).toBe('"main"."events.2026"');
   });
 
   it('generates spec with legend when showLegend is true', () => {

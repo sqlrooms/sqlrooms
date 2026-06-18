@@ -55,6 +55,15 @@ export function getDataTableExplorerValueType(
   return 'string';
 }
 
+/**
+ * Builds a one-row schema probe query for a dataTableExplorer table.
+ *
+ * @param tableName Table reference to query. Pass a TableRefNode when the table
+ * reference is qualified or contains dotted identifier parts.
+ * @param columns Optional list of columns to include; when omitted, the query
+ * selects all columns.
+ * @returns Mosaic query used to infer Arrow field metadata from the table.
+ */
 export function buildSchemaQuery(
   tableName: DataTableExplorerSqlTableReference,
   columns?: string[],
@@ -120,6 +129,18 @@ export function fieldInfoToDataTableExplorerField(
   );
 }
 
+/**
+ * Builds the base dataTableExplorer query before pagination is applied.
+ *
+ * @param args.columns Optional selected column names; when omitted, all columns
+ * are selected.
+ * @param args.filter Optional Mosaic where clause or clause array.
+ * @param args.sorting Optional sort descriptors applied in order.
+ * @param args.tableName Table reference to query. This accepts
+ * DataTableExplorerSqlTableReference so callers can pass TableRefNode values
+ * that preserve qualified identifier boundaries.
+ * @returns Mosaic query with projection, filtering, and sorting applied.
+ */
 export function buildDataTableExplorerBaseQuery(args: {
   columns?: string[];
   filter?: QueryWhereInput;
@@ -140,6 +161,13 @@ export function buildDataTableExplorerBaseQuery(args: {
   return query;
 }
 
+/**
+ * Applies normalized dataTableExplorer pagination to a base query.
+ *
+ * @param baseQuery Query returned by buildDataTableExplorerBaseQuery.
+ * @param pagination Requested page index and page size.
+ * @returns A cloned Mosaic query with limit and offset applied.
+ */
 export function buildDataTableExplorerPageQuery(
   baseQuery: ReturnType<typeof buildDataTableExplorerBaseQuery>,
   pagination: DataTableExplorerPaginationState,
@@ -165,6 +193,14 @@ export function normalizeDataTableExplorerPagination(
   return {pageIndex, pageSize};
 }
 
+/**
+ * Builds a row-count query for a dataTableExplorer table.
+ *
+ * @param args.filter Optional Mosaic where clause or clause array.
+ * @param args.tableName Table reference to query. Pass a TableRefNode for
+ * qualified references that should not be reparsed from a string.
+ * @returns Mosaic query that returns a single count column.
+ */
 export function buildCountQuery(args: {
   filter?: QueryWhereInput;
   tableName: DataTableExplorerSqlTableReference;
@@ -174,6 +210,15 @@ export function buildCountQuery(args: {
     .where(args.filter ?? []);
 }
 
+/**
+ * Builds a distinct-value count query for one dataTableExplorer field.
+ *
+ * @param args.filter Optional Mosaic where clause or clause array.
+ * @param args.fieldName Field whose distinct non-null values should be counted.
+ * @param args.tableName Table reference to query. Pass a TableRefNode for
+ * qualified references that should not be reparsed from a string.
+ * @returns Mosaic query that returns a single distinct count column.
+ */
 export function buildDistinctCountQuery(args: {
   filter?: QueryWhereInput;
   fieldName: string;
@@ -215,6 +260,19 @@ export function rowsFromQueryResult<T>(data: unknown): T[] {
   return Array.from((data as {toArray(): T[]}).toArray());
 }
 
+/**
+ * Builds the category summary query used by dataTableExplorer categorical
+ * columns.
+ *
+ * @param tableName Table reference to query. This accepts
+ * DataTableExplorerSqlTableReference so callers can use TableRefNode when
+ * identifier boundaries must be preserved.
+ * @param fieldName Field to summarize into value, null, unique, and overflow
+ * buckets.
+ * @param filter Optional Mosaic where clause or clause array.
+ * @returns Mosaic query that produces bucket kind, typed value, and total count
+ * rows for category summaries.
+ */
 export function buildCategorySummaryQuery(
   tableName: DataTableExplorerSqlTableReference,
   fieldName: string,

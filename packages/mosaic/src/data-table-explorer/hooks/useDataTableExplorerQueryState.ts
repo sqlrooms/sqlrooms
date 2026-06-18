@@ -11,6 +11,9 @@ import {
   buildDataTableExplorerPageQuery,
 } from '../utils';
 
+/**
+ * Inputs used to derive memoized query state for a dataTableExplorer instance.
+ */
 export type UseDataTableExplorerQueryStateOptions = {
   pagination: DataTableExplorerPaginationState;
   rowSelectionVersion: number;
@@ -18,7 +21,14 @@ export type UseDataTableExplorerQueryStateOptions = {
   selection: Selection;
   selectionVersion: number;
   sorting: DataTableExplorerSorting;
+  /**
+   * Stable SQLRooms table identity used to build dataset IDs and distinguish
+   * tables that share schema/table names across catalogs.
+   */
   tableIdentity: string;
+  /**
+   * Mosaic SQL table reference used in generated queries.
+   */
   tableReference: DataTableExplorerSqlTableReference;
 };
 
@@ -35,6 +45,9 @@ export type UseDataTableExplorerQueryStateReturn = {
 /**
  * Derives the dataTableExplorer's field and SQL state from the current schema,
  * selection, sorting, and pagination state.
+ *
+ * @param options Current schema, selection, pagination, sorting, and table
+ * reference inputs for query generation.
  */
 export function useDataTableExplorerQueryState({
   pagination,

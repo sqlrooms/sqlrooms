@@ -49,7 +49,6 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     x2: ExprNode;
     y: ExprNode;
   };
-  private readonly tableName: string;
   private readonly tableReference: DataTableExplorerSqlTableReference;
   private totalBins?: HistogramRow[];
   private totalError?: Error;
@@ -61,7 +60,6 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     super(options.selection);
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableName = options.tableName;
     this.tableReference = options.tableReference ?? options.tableName;
     this.valueType = options.valueType;
 
@@ -119,7 +117,7 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     if (!this.fieldInfoPromise) {
       this.fieldInfoPromise = queryFieldInfo(this.coordinator!, [
         {
-          table: this.tableName,
+          table: this.tableReference as unknown as string,
           column: this.field.name,
           stats: ['min', 'max'],
         },

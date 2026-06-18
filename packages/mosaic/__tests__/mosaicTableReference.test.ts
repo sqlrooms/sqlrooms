@@ -22,14 +22,31 @@ describe('mosaic table references', () => {
     expect(getMosaicTableIdentity(second)).toBe('"db2"."main"."orders"');
   });
 
-  it('drops the catalog and keeps schema/table for Mosaic string APIs', () => {
+  it('drops the catalog and quotes schema/table for Mosaic string APIs', () => {
     const table = makeQualifiedTableName({
       database: 'sqlrooms-cli',
       schema: 'main',
       table: 'earthquakes',
     });
 
-    expect(getMosaicTableReferenceString(table)).toBe('main.earthquakes');
+    expect(getMosaicTableReferenceString(table)).toBe(
+      '"main"."earthquakes"',
+    );
+  });
+
+  it('preserves dotted and quoted identifier boundaries', () => {
+    const table = makeQualifiedTableName({
+      database: 'db',
+      schema: 'ma.in',
+      table: 'events"2026',
+    });
+
+    expect(getMosaicTableReferenceString(table)).toBe(
+      '"ma.in"."events""2026"',
+    );
+    expect(getMosaicSqlTableReference(table).toString()).toContain(
+      '"ma.in"."events""2026"',
+    );
   });
 
   it('parses quoted qualified strings before building Mosaic SQL refs', () => {

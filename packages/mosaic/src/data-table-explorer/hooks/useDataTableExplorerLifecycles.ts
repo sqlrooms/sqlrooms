@@ -15,6 +15,10 @@ import {
   loadDataTableExplorerSchema,
 } from '../dataTableExplorerController';
 
+/**
+ * Inputs required to synchronize a dataTableExplorer instance with Mosaic
+ * connection, selection, schema, row, count, and summary lifecycles.
+ */
 export type UseDataTableExplorerLifecyclesOptions = {
   categoryLimit: number;
   columns?: string[];
@@ -29,8 +33,20 @@ export type UseDataTableExplorerLifecyclesOptions = {
   selectionVersion: number;
   sorting: DataTableExplorerSorting;
   summaryBins: number;
+  /**
+   * Stable SQLRooms table identity used for store keys, selection resets, and
+   * dataset IDs. This should keep catalog/database identity when available.
+   */
   tableIdentity: string;
+  /**
+   * String table reference used for readiness checks and legacy client inputs.
+   */
   tableName: string;
+  /**
+   * Mosaic SQL table reference used by generated queries. Use a TableRefNode for
+   * qualified names to preserve identifier boundaries such as dots inside table
+   * names.
+   */
   tableReference: DataTableExplorerSqlTableReference;
 };
 
@@ -41,6 +57,10 @@ export type UseDataTableExplorerLifecyclesReturn = {
 /**
  * Owns the coordinator-backed schema, row, count, and summary client
  * lifecycles for a dataTableExplorer instance.
+ *
+ * The hook keeps SQLRooms identity state separate from Mosaic SQL references:
+ * tableIdentity drives local store keys, while tableReference is used at query
+ * boundaries.
  */
 export function useDataTableExplorerLifecycles(
   options: UseDataTableExplorerLifecyclesOptions,
@@ -94,9 +114,16 @@ export function useDataTableExplorerLifecycles(
       coordinator: connection.coordinator,
       store: dataTableExplorerStore,
       tableIdentity,
-      tableName,
+      tableReference,
     });
-  }, [columns, connection, dataTableExplorerStore, tableIdentity, tableName]);
+  }, [
+    columns,
+    connection,
+    dataTableExplorerStore,
+    tableIdentity,
+    tableName,
+    tableReference,
+  ]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName || !fieldNames.length) {

@@ -31,13 +31,15 @@ export function getMosaicTableIdentity(
 }
 
 /**
- * Converts SQLRooms table identity into the plain schema/table string expected
- * by Mosaic metadata and spec APIs.
+ * Converts SQLRooms table identity into a schema/table SQL string for APIs that
+ * only accept string table references.
  */
 export function getMosaicTableReferenceString(
   tableName: MosaicTableReferenceInput,
 ): string {
-  return getMosaicTableReferenceParts(tableName).join('.');
+  return getMosaicTableReferenceParts(tableName)
+    .map(quoteMosaicTableReferencePart)
+    .join('.');
 }
 
 function getMosaicTableReferenceParts(
@@ -56,4 +58,8 @@ function getMosaicTableReferenceParts(
   }
 
   return [String(tableName).trim()];
+}
+
+function quoteMosaicTableReferencePart(part: string): string {
+  return `"${part.replaceAll('"', '""')}"`;
 }
