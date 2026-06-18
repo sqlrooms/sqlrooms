@@ -200,7 +200,11 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
 };
 
 export function getChartTableReference(dataTable: DataTable): string {
-  return dataTable.table.toString();
+  const {schema, table} = dataTable.table;
+  if (schema && schema !== 'main') {
+    return `"${schema}"."${table}"`;
+  }
+  return table;
 }
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =

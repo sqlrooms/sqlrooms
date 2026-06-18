@@ -65,7 +65,9 @@ function resizeChartElement(element: object, size: PlotSize): boolean {
   const widthChanged = plot.setAttribute('width', size.width);
   const heightChanged = plot.setAttribute('height', size.height);
   if (widthChanged || heightChanged) {
-    void plot.render();
+    void Promise.resolve(plot.render()).catch((err) => {
+      console.warn('[VgPlotChart] Error during resize render:', err);
+    });
   }
   return true;
 }
