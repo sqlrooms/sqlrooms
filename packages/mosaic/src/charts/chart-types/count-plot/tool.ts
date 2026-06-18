@@ -5,6 +5,7 @@ import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
 import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateCountPlotSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
 export const CountPlotToolParameters = BaseChartToolParameters.extend({
   settings: CountPlotChartSettings.required(),
@@ -26,33 +27,31 @@ NOTE: Count plots aggregate by counting unique values, so they handle large data
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use scatter-plot), time series (use line-chart).`,
     inputSchema: CountPlotToolParameters,
-    execute: async (params) => {
+    execute: async ({tableName, title, settings}) => {
       try {
-        const dataTable = deps.resolveTable(params.tableName);
+        const dataTable = ensureTable(deps.adapter, tableName);
 
         validateCountPlotSettings({
           dataTable,
-          settings: params.settings,
+          settings,
         });
 
         const chartConfig: CountPlotChartConfig = {
           chartType: 'count-plot' as const,
-          settings: params.settings,
+          settings,
         };
 
         deps.addChart({
-          tableName: params.tableName,
+          tableName,
+          title,
           config: chartConfig,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Generated count plot configuration for "${params.settings.field}".`,
-            data: {
-              chartType: 'count-plot',
-              settings: params.settings,
-            },
+            details: `Generated count plot configuration for "${settings.field}".`,
+            data: chartConfig,
           },
         };
       } catch (error) {

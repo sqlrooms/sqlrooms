@@ -5,7 +5,7 @@ import {
 } from '../src/ai/constants';
 import type {DashboardAiAdapter} from '../src/ai/types';
 import {createDashboardToolDeps} from '../src/ai/createDashboardToolDeps';
-import {createDashboardAiTools} from '../src/ai/createDashboardAiTools';
+import {createDashboardAiTools} from '../src/ai/dashboard/createDashboardAiTools';
 import type {DataTable} from '@sqlrooms/db';
 import type {
   MosaicDashboardEntry,
@@ -96,8 +96,6 @@ function createHarness(overrides: Partial<TestState> = {}): {
       );
       return artifactId;
     },
-    isDashboardArtifact: (current, artifactId) =>
-      current.artifactsById[artifactId]?.type === 'dashboard',
     setCurrentArtifact: (current, artifactId) => {
       current.currentArtifactId = artifactId;
       current.setCurrentArtifactCalls.push(artifactId);

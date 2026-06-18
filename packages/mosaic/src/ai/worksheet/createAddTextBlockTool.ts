@@ -7,12 +7,7 @@ import {
   BlockDocumentListBlock,
   BlockDocumentHeadingBlock,
 } from '@sqlrooms/documents';
-import type {WorksheetAiAdapter} from './types';
-
-export type CreateAddTextBlockToolOptions = {
-  adapter: WorksheetAiAdapter;
-  worksheetId: string;
-};
+import type {WorksheetAiAdapter} from '../types';
 
 const AddTextBlockParameters = z.object({
   type: z
@@ -80,6 +75,11 @@ function createTextBlock(
       } satisfies BlockDocumentParagraphBlock;
   }
 }
+
+export type CreateAddTextBlockToolOptions = {
+  adapter: WorksheetAiAdapter;
+  worksheetId: string;
+};
 
 /**
  * Creates a tool for adding text blocks to a worksheet.

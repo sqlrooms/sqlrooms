@@ -1,30 +1,33 @@
 import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
-import type {DataTable} from '@sqlrooms/db';
-import {createDashboardAiTools} from './createDashboardAiTools';
-import {MAP_TOOL_KEY} from './constants';
+import {MAP_TOOL_KEY} from '../constants';
 import type {
-  DashboardAiAdapter,
-  CreateDashboardAgentToolOptions,
   DashboardAgentResult,
-  DashboardAgentToolCall,
-} from './types';
+  BaseAgentToolOptions,
+  WorksheetAiAdapter,
+  DashboardAiAdapter,
+} from '../types';
+import {AiAgentError} from '../errors';
+import {ensureTable} from '../tool-helpers';
+import {createDashboardAiTools} from '../dashboard/createDashboardAiTools';
+import {StoreApi} from '@sqlrooms/room-store';
+import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
 
-const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent that creates and modifies interactive data dashboards.
+const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard block builder agent that creates interactive dashboard blocks within worksheets.
 
 ## Your Role
 
-You analyze data and create insightful dashboards with multiple visualizations (charts, Data Table Explorers). You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
+You create DASHBOARD BLOCKS that are embedded in worksheets as stateful blocks. Each dashboard block contains multiple visualizations (charts, Data Table Explorers) analyzing a specific dataset. You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
 
 ## Available Tools
 
 **Chart Tools:**
-- create_dashboard_histogram - distribution of numeric values (always safe, aggregates automatically)
-- create_dashboard_line_chart - trends over time or ordered variable (use with aggregations for >10k rows)
-- create_dashboard_box_plot - compare distributions across categories
-- create_dashboard_scatter_plot - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
-- create_dashboard_count_plot - frequency of categorical values (always safe, aggregates automatically)
-- create_dashboard_heatmap - density/patterns across two dimensions (preferred for large datasets)
+- create_dashboard_panel_histogram - distribution of numeric values (always safe, aggregates automatically)
+- create_dashboard_panel_line_chart - trends over time or ordered variable (use with aggregations for >10k rows)
+- create_dashboard_panel_box_plot - compare distributions across categories
+- create_dashboard_panel_scatter_plot - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
+- create_dashboard_panel_count_plot - frequency of categorical values (always safe, aggregates automatically)
+- create_dashboard_panel_heatmap - density/patterns across two dimensions (preferred for large datasets)
 
 **Panel Tools:**
 - create_dashboard_data_table_explorer - table statistics and column summaries
@@ -37,6 +40,10 @@ You analyze data and create insightful dashboards with multiple visualizations (
 - list_dashboard_panels - discover panel IDs and what's on the dashboard
 - remove_dashboard_panel - delete a panel by ID
 
+## Context
+
+You are building a dashboard BLOCK within a WORKSHEET. The dashboard block is a stateful, interactive component embedded in the worksheet alongside other blocks (text, charts, etc.). Your goal is to populate this dashboard block with multiple panels that provide comprehensive insights into the specified dataset.
+
 ## Workflows
 
 ### Direct Requests
@@ -46,7 +53,7 @@ When user provides specific instructions:
 3. Done
 
 Example: "create histogram of magnitude with 20 bins"
--> create_dashboard_histogram(settings: {field: "magnitude", bins: 20})
+-> create_dashboard_panel_histogram(settings: {field: "magnitude", bins: 20})
 
 ### Exploratory Requests
 When user asks to discover insights:
@@ -55,10 +62,11 @@ When user asks to discover insights:
    - Check distributions: GROUP BY with COUNT
    - Find correlations: CORR(col1, col2)
    - Identify outliers and patterns
-2. Create targeted charts based on discoveries:
+2. Create targeted panels based on discoveries:
+   - Create 3-5 panels showing different aspects of the data
    - If dataset has >10k rows: avoid scatter charts and unaggregated line charts
    - Use histogram, count plot, heatmap, or aggregated visualizations instead
-3. Stop when dashboard tells coherent story
+3. Stop when dashboard block tells coherent story
 
 ### Update Requests
 To update existing panels:
@@ -119,118 +127,62 @@ const DashboardAgentInputSchema = z.object({
 });
 type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
 
-class DashboardAgentException extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'DashboardAgentException';
-  }
-}
+// function calculateAgentMetadata(
+//   adapter: DashboardAiAdapter,
+//   dashboardId: string,
+//   tableName: string,
+//   agentToolCalls: AgentToolCall[],
+// ): DashboardAgentResult['metadata'] {
+//   const dashboard = adapter.getDashboard(dashboardId);
+//   return {
+//     tableName,
+//     panelsCreated: dashboard?.panels?.length || 0,
+//     stepsExecuted: agentToolCalls.length,
+//     queriesRun: agentToolCalls.filter((call) => call.toolName === 'query')
+//       .length,
+//   };
+// }
 
-function formatAvailableTables(tables: DataTable[]): string {
-  return tables.map((table) => table.tableName).join(', ') || '(none)';
-}
-
-function buildAgentPrompt(
-  userPrompt: string,
-  tableName: string,
-  adapter: DashboardAiAdapter,
-): string {
-  const table = adapter
-    .getTables()
-    .find((candidate) => candidate.tableName === tableName);
-  const columnNames =
-    table?.columns?.map((column) => column.name).join(', ') || 'unknown';
-  const rowInfo =
-    table?.rowCount !== undefined ? `Approximate rows: ${table.rowCount}` : '';
-
-  return `Analyze the "${tableName}" table.
-
-Table info:
-- Columns: ${columnNames}${rowInfo ? `\n- ${rowInfo}` : ''}
-
-User request: ${userPrompt}
-
-Focus on discovering meaningful patterns and creating visualizations that tell a clear story.`;
-}
-
-function validateTableExists(
-  adapter: DashboardAiAdapter,
-  tableName: string,
-): void {
-  const tables = adapter.getTables();
-  const table = tables.find((candidate) => candidate.tableName === tableName);
-  if (!table) {
-    throw new DashboardAgentException(
-      `Table "${tableName}" not found. Available tables: ${formatAvailableTables(tables)}`,
-    );
-  }
-}
-
-function getOrCreateDashboard(
-  adapter: DashboardAiAdapter,
-  tableName: string,
-  dashboardTitle?: string,
-): string {
-  const dashboardId = adapter.getCurrentDashboardArtifactId();
-  if (dashboardId) {
-    adapter.ensureDashboard(dashboardId);
-    return dashboardId;
-  }
-
-  const suggestedTitle =
-    dashboardTitle ||
-    `${tableName.charAt(0).toUpperCase() + tableName.slice(1)} Insights`;
-  const newDashboardId = adapter.createDashboardArtifact(
-    suggestedTitle,
-    'grid',
-  );
-  adapter.setCurrentArtifact(newDashboardId);
-  return newDashboardId;
-}
-
-function calculateAgentMetadata(
-  adapter: DashboardAiAdapter,
-  dashboardId: string,
-  tableName: string,
-  agentToolCalls: DashboardAgentToolCall[],
-): DashboardAgentResult['metadata'] {
-  const dashboard = adapter.getDashboard(dashboardId);
-  return {
-    tableName,
-    panelsCreated: dashboard?.panels?.length || 0,
-    stepsExecuted: agentToolCalls.length,
-    queriesRun: agentToolCalls.filter((call) => call.toolName === 'query')
-      .length,
+export type CreateWorksheetDashboardBlockAgentToolOptions<TState> =
+  BaseAgentToolOptions<TState> & {
+    worksheetId: string;
+    adapter: WorksheetAiAdapter;
   };
-}
 
-export function createDashboardAgentTool<TState>(
-  options: CreateDashboardAgentToolOptions<TState>,
+export function createWorksheetDashboardBlockAgentTool<TState>(
+  options: CreateWorksheetDashboardBlockAgentToolOptions<TState>,
 ): Tool {
-  const {store, adapter} = options;
+  const {store, adapter, worksheetId} = options;
 
   return tool({
-    description: `An AI agent that explores datasets and creates comprehensive dashboards with multiple visualizations.
+    description: `An AI agent that adds DASHBOARD BLOCKS to worksheets with multiple visualizations.
 
-Use this for exploratory data analysis tasks like "analyze the earthquakes dataset" or "create insights dashboard for sales data".
+Use this to:
+- Add an interactive dashboard block to a worksheet: "add dashboard analyzing sales data"
+- Create exploratory analysis as a dashboard block: "create insights dashboard for earthquakes dataset"
 
-The agent will query the data, discover patterns, and create charts and Data Table Explorers with findings.
+The agent creates a stateful dashboard block within the worksheet, queries the data, discovers patterns, and populates the dashboard with charts and Data Table Explorers.
 
-For simple tasks like "create a histogram of magnitude", use the individual chart tools instead.
+Output: A dashboard block embedded in the worksheet with multiple interactive panels.
 
-IMPORTANT: Always provide tableName parameter when the user mentions a specific dataset.`,
+REQUIRED: Always provide tableName parameter - the dataset the dashboard will analyze.`,
     inputSchema: DashboardAgentInputSchema,
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
       const {prompt, tableName, dashboardTitle, maxSteps, temperature} = params;
 
-      let dashboardId = '';
+      const {dashboardId, blockId} = adapter.addDashboardBlock(
+        worksheetId,
+        dashboardTitle || 'New Dashboard',
+        tableName,
+      );
+
+      const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
 
       try {
         const state = store.getState();
-        validateTableExists(adapter, tableName);
 
-        dashboardId = getOrCreateDashboard(adapter, tableName, dashboardTitle);
-        adapter.setSelectedTable(dashboardId, tableName);
+        ensureTable(adapter, tableName);
+
         const queryTools = options.createQueryTools?.({store});
 
         const dashboardAgent = new ToolLoopAgent({
@@ -238,9 +190,9 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
           tools: {
             ...(queryTools ? {query: queryTools.query} : {}),
             ...createDashboardAiTools({
-              adapter,
+              adapter: dashboardAdapter,
+              dashboardId,
               chartTypes: options.chartTypes,
-              extraTools: options.extraTools,
             }),
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
@@ -250,30 +202,31 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
         const result = await options.runSubAgent({
           agent: dashboardAgent,
-          prompt: buildAgentPrompt(prompt, tableName, adapter),
+          prompt,
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const metadata = calculateAgentMetadata(
-          adapter,
-          dashboardId,
-          tableName,
-          result.agentToolCalls || [],
-        );
+        // const metadata = calculateAgentMetadata(
+        //   adapter,
+        //   dashboardId,
+        //   tableName,
+        //   result.agentToolCalls || [],
+        // );
 
         return {
           success: true,
           finalOutput: result.finalOutput || 'Dashboard created successfully.',
           dashboardId,
-          metadata,
+          // metadata,
         };
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
+
         const friendlyMessage =
-          error instanceof DashboardAgentException
+          error instanceof AiAgentError
             ? errorMessage
             : 'Dashboard agent execution failed.';
 
@@ -286,4 +239,15 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
       }
     },
   });
+}
+
+export function createDashboardAiAdapter(
+  store: StoreApi<MosaicDashboardStoreState>,
+  dashboardId: string,
+): DashboardAiAdapter {
+  return {
+    addPanel: (panel) =>
+      store.getState().mosaicDashboard.addPanel(dashboardId, panel),
+    findTable: (tableName) => store.getState().db.findTable(tableName),
+  } as DashboardAiAdapter;
 }

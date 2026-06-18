@@ -5,6 +5,7 @@ import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateHeatmapSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
 export const HeatmapToolParameters = BaseChartToolParameters.extend({
   settings: HeatmapChartSettings.required(),
@@ -27,22 +28,23 @@ Best for: large datasets with overlapping points, finding patterns/hotspots in 2
 
 Do NOT use for: individual point plots (use scatter-plot), single variable distribution (use histogram), time trends (use line-chart).`,
     inputSchema: HeatmapToolParameters,
-    execute: async (params) => {
+    execute: async ({tableName, title, settings}) => {
       try {
-        const dataTable = deps.resolveTable(params.tableName);
+        const dataTable = ensureTable(deps.adapter, tableName);
 
         validateHeatmapSettings({
           dataTable,
-          settings: params.settings,
+          settings,
         });
 
         const chartConfig: HeatmapChartConfig = {
           chartType: 'heatmap' as const,
-          settings: params.settings,
+          settings,
         };
 
         deps.addChart({
-          tableName: params.tableName,
+          tableName,
+          title,
           config: chartConfig,
         });
 
@@ -50,10 +52,7 @@ Do NOT use for: individual point plots (use scatter-plot), single variable distr
           llmResult: {
             success: true,
             details: `Generated heatmap configuration.`,
-            data: {
-              chartType: 'heatmap',
-              settings: params.settings,
-            },
+            data: chartConfig,
           },
         };
       } catch (error) {

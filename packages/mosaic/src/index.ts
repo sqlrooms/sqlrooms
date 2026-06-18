@@ -168,19 +168,21 @@ export {
 export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
 export {DASHBOARD_AI_INSTRUCTIONS, MAP_TOOL_KEY} from './ai/constants';
-export {createDashboardAgentTool} from './ai/createDashboardAgentTool';
-export {createWorksheetAgentTool} from './ai/createWorksheetAgentTool';
-export {createDashboardAiTools} from './ai/createDashboardAiTools';
+export {createDashboardAgentTool} from './ai/dashboard/createDashboardAgentTool';
+export {createWorksheetAgentTool} from './ai/worksheet/createWorksheetAgentTool';
+export {
+  createDashboardAiTools,
+  type CreateDashboardAiToolsOptions,
+} from './ai/dashboard/createDashboardAiTools';
 export type {
   // Common types
   AiStore,
-  BaseAiAdapter,
+  BaseMosaicAiAdapter as BaseAiAdapter,
   BaseAgentToolOptions,
   AgentToolCall,
   AgentRunResult,
   // Dashboard types
   CreateDashboardAgentToolOptions,
-  CreateDashboardAiToolsOptions,
   DashboardAgentResult,
   DashboardAiAdapter,
   // Worksheet types
@@ -311,11 +313,7 @@ export {
   createChartTools,
   // New panel and dashboard tools
   createDataTableExplorerTool,
-  createListPanelsTool,
-  createRemovePanelTool,
   DataTableExplorerToolParameters,
-  ListPanelsToolParameters,
-  RemovePanelToolParameters,
 } from './charts/chart-types';
 export type {
   ChartSettings,
@@ -332,9 +330,7 @@ export type {
   HeatmapToolParams,
   ScatterPlotToolParams,
   BoxPlotToolParams,
-  DataTableExplorerToolParams,
-  ListPanelsToolParams,
-  RemovePanelToolParams,
+  DataTableExplorerToolParameters as DataTableExplorerToolParams,
 } from './charts/chart-types';
 export {
   buildChartTypeTitle,
@@ -345,11 +341,7 @@ export {
   QUANTITATIVE_COLUMN_TYPES,
   TEMPORAL_COLUMN_TYPES,
 } from './column-types-utils';
-export {
-  findTableByName,
-  findTableByNameOrThrow,
-  getTableReference,
-} from './utils/table-lookup';
+export {getTableReference} from './utils/table-lookup';
 export type {FieldSelectorInputProps} from './components/FieldSelectorInput';
 export type {
   ChartBuilderColumn,
@@ -365,3 +357,4 @@ export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
 export {MosaicChart} from './charts/MosaicChart';
 export {useParseChartConfig} from './charts/useParseChartConfig';
 export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';
+export {ensurePanel, ensureDashboard, ensureTable} from './ai/tool-helpers';

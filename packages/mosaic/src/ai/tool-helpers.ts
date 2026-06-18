@@ -1,22 +1,24 @@
-import type {DashboardToolDeps} from '../charts/chart-types/base-types';
+import {createMosaicDashboardDataTableExplorerPanelConfig} from '../dashboard/MosaicDashboardSlice';
 import {
-  createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardDataTableExplorerPanelConfig,
-} from '../dashboard/MosaicDashboardSlice';
-import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
+  MosaicDashboardEntry,
+  MosaicDashboardPanelConfig,
+} from '../dashboard/dashboard-types';
 import type {DataTableExplorerPanelConfig} from '../dashboard/core-types';
 import type {ChartConfig} from '../charts/chart-types/chart-config';
+import {AiAgentError} from './errors';
+import {BaseMosaicAiAdapter, DashboardAiAdapter} from './types';
+import {DataTable} from '@sqlrooms/duckdb';
+import {Tool} from 'ai';
 
 export interface PanelResult {
   panelId: string;
-  artifactId: string;
   title: string;
   config: ChartConfig | DataTableExplorerPanelConfig;
 }
 
 export interface CreateOrUpdateChartPanelParams {
   panelId?: string;
-  dashboardId: string;
   tableName: string;
   title: string;
   config: ChartConfig;
@@ -24,22 +26,37 @@ export interface CreateOrUpdateChartPanelParams {
 
 export interface CreateOrUpdateDataTableExplorerPanelParams {
   panelId?: string;
-  dashboardId: string;
   tableName: string;
   title: string;
   config: DataTableExplorerPanelConfig;
 }
 
 /**
+ * Validates that a table exists. Throws if not found.
+ */
+export function ensureTable(
+  adapter: BaseMosaicAiAdapter,
+  tableName: string,
+): DataTable {
+  const table = adapter.findTable(tableName);
+
+  if (!table) {
+    throw new AiAgentError(`Table "${tableName}" not found.`);
+  }
+
+  return table;
+}
+
+/**
  * Validates that a dashboard exists. Throws if not found.
  */
-function ensureDashboard(
-  deps: DashboardToolDeps,
+export function ensureDashboard(
+  adapter: DashboardAiAdapter,
   dashboardId: string,
-): NonNullable<ReturnType<DashboardToolDeps['getDashboard']>> {
-  const dashboard = deps.getDashboard(dashboardId);
+): MosaicDashboardEntry {
+  const dashboard = adapter.getDashboard(dashboardId);
   if (!dashboard) {
-    throw new Error(
+    throw new AiAgentError(
       `Dashboard "${dashboardId}" not found. Cannot update panel.`,
     );
   }
@@ -49,104 +66,82 @@ function ensureDashboard(
 /**
  * Validates that a panel exists in a dashboard. Throws if not found.
  */
-function ensurePanel(
-  dashboard: MosaicDashboardEntry,
-  dashboardId: string,
+export function ensurePanel(
+  adapter: DashboardAiAdapter,
   panelId: string,
-): void {
-  const panelExists = dashboard.panels.some((p) => p.id === panelId);
-  if (!panelExists) {
-    throw new Error(
-      `Panel "${panelId}" not found in dashboard "${dashboardId}". Cannot update.`,
+  type?: string,
+): MosaicDashboardPanelConfig {
+  const panel = adapter.getPanel(panelId);
+
+  if (!panel) {
+    throw new AiAgentError(`Panel not found.`);
+  }
+
+  if (type !== undefined && panel.type !== type) {
+    throw new AiAgentError(
+      `Panel is of type "${panel.type}", expected type "${type}".`,
     );
   }
-}
 
-/**
- * Universal helper to create or update a chart panel.
- * Handles everything: panel config creation, add/update logic, artifact switching.
- * When updating, both source and config are updated to allow changing the data source.
- */
-export function createOrUpdateChartPanel(
-  deps: DashboardToolDeps,
-  params: CreateOrUpdateChartPanelParams,
-): PanelResult {
-  if (params.panelId) {
-    // Validate panel exists before attempting update
-    const dashboard = ensureDashboard(deps, params.dashboardId);
-    ensurePanel(dashboard, params.dashboardId, params.panelId);
-
-    // Update existing panel - update both source and config
-    deps.updatePanel(params.dashboardId, params.panelId, {
-      title: params.title,
-      source: {tableName: params.tableName},
-      config: params.config,
-    });
-
-    return {
-      panelId: params.panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  } else {
-    // Create new panel - create config and add to dashboard
-    const panel = createMosaicDashboardChartPanelConfig(
-      params.title,
-      params.config,
-    );
-
-    const panelId = deps.addPanel(params.dashboardId, panel);
-    deps.setCurrentArtifact(params.dashboardId);
-
-    return {
-      panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  }
+  return panel;
 }
 
 /**
  * Universal helper to create or update a dataTableExplorer panel.
  */
 export function createOrUpdateDataTableExplorerPanel(
-  deps: DashboardToolDeps,
-  params: CreateOrUpdateDataTableExplorerPanelParams,
+  {
+    panelId,
+    config,
+    title,
+    tableName,
+  }: CreateOrUpdateDataTableExplorerPanelParams,
+  adapter: DashboardAiAdapter,
 ): PanelResult {
-  if (params.panelId) {
-    // Validate panel exists before attempting update
-    const dashboard = ensureDashboard(deps, params.dashboardId);
-    ensurePanel(dashboard, params.dashboardId, params.panelId);
+  if (panelId) {
+    ensurePanel(
+      adapter,
+      panelId,
+      MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
+    );
 
-    deps.updatePanel(params.dashboardId, params.panelId, {
-      config: params.config,
-      source: {tableName: params.tableName},
-      title: params.title,
+    adapter.updatePanel(panelId, {
+      config,
+      title,
+      source: {tableName},
     });
-
-    return {
-      panelId: params.panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  } else {
-    // Create new panel - create full panel config
-    const panel = createMosaicDashboardDataTableExplorerPanelConfig({
-      title: params.title,
-      config: params.config,
-    });
-
-    const panelId = deps.addPanel(params.dashboardId, panel);
-    deps.setCurrentArtifact(params.dashboardId);
 
     return {
       panelId,
-      artifactId: params.dashboardId,
-      title: panel.title,
-      config: panel.config,
+      title,
+      config,
     };
+  }
+
+  // Create new panel - create full panel config
+  const panel = createMosaicDashboardDataTableExplorerPanelConfig({
+    title,
+    config,
+  });
+
+  const newPanelId = adapter.addPanel(panel);
+
+  return {
+    panelId: newPanelId,
+    title: panel.title,
+    config: panel.config,
+  };
+}
+
+export function ensureNoOverride(
+  builtInTools: Record<string, Tool>,
+  extraTools: Record<string, Tool>,
+) {
+  for (const key of Object.keys(extraTools)) {
+    if (key in builtInTools) {
+      throw new AiAgentError(
+        `Dashboard extraTools cannot override built-in tool "${key}". Register the host tool under a unique key.`,
+      );
+    }
   }
 }

@@ -11,6 +11,7 @@ import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
 import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateHistogramSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
 export const HistogramToolParameters = BaseChartToolParameters.extend({
   settings: HistogramChartSettings.required(),
@@ -34,29 +35,30 @@ Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_C
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,
     inputSchema: HistogramToolParameters,
-    execute: async (params) => {
+    execute: async ({tableName, settings, title}) => {
       try {
-        const dataTable = deps.resolveTable(params.tableName);
+        const dataTable = ensureTable(deps.adapter, tableName);
 
         validateHistogramSettings({
           dataTable,
-          settings: params.settings,
+          settings,
         });
 
         const chartConfig: HistogramChartConfig = {
           chartType: 'histogram' as const,
-          settings: params.settings,
+          settings,
         };
 
         deps.addChart({
-          tableName: params.tableName,
+          tableName,
           config: chartConfig,
+          title,
         });
 
         return {
           llmResult: {
             success: true,
-            details: `Generated histogram configuration for "${params.settings.field}".`,
+            details: `Generated histogram configuration for "${settings.field}".`,
             data: chartConfig,
           },
         };

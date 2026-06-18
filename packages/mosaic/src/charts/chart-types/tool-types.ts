@@ -1,5 +1,5 @@
 import {Tool} from 'ai';
-import type {DataTable} from '@sqlrooms/duckdb';
+import {BaseMosaicAiAdapter} from '../../ai';
 
 export type ChartToolErrorOutput = {
   llmResult: {
@@ -22,6 +22,7 @@ export type ChartToolOutput<T> =
 
 type AddChartFunctionArgs = {
   tableName: string;
+  title: string;
   config: any;
 };
 
@@ -32,12 +33,12 @@ export type AddChartFunction = (args: AddChartFunctionArgs) => string;
  * Simple and minimal.
  */
 export type ChartToolDeps = {
-  /** Resolve table by name, throws if not found */
-  resolveTable: (tableName: string) => DataTable;
   /** Add chart to dashboard */
   addChart: AddChartFunction;
   /** Maximum data points for non-aggregated charts */
   maxDataPoints: number;
+  /** Adapter */
+  adapter: BaseMosaicAiAdapter;
 };
 
 /**

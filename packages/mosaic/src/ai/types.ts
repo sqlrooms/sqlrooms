@@ -1,8 +1,7 @@
 import type {LanguageModel, Tool, ToolLoopAgent} from 'ai';
-import type {DataTable} from '@sqlrooms/db';
+import type {DataTable, QualifiedTableName} from '@sqlrooms/db';
 import type {
   ChartToolExecutionContext,
-  DashboardToolDeps,
   PanelPatch,
   ChartTypeDefinition,
 } from '../charts/chart-types';
@@ -51,9 +50,12 @@ export type ChartAiAdapter = {
  *
  * Note: This has state-full methods while ChartAiAdapter is state-less.
  */
-export type BaseAiAdapter = {
+export type BaseMosaicAiAdapter = {
   /** Get all available tables */
   getTables: () => DataTable[];
+
+  /** Find table by name, returns undefined if not found */
+  findTable(tableName: string | QualifiedTableName): DataTable | undefined;
 
   /** Set the current active artifact */
   setCurrentArtifact: (artifactId: string) => void;
@@ -87,7 +89,7 @@ export type BaseAgentToolOptions<TState> = {
  * Dashboard adapter with full dashboard panel management capabilities.
  * Extends BaseAiAdapter with dashboard-specific operations.
  */
-export type DashboardAiAdapter = BaseAiAdapter & {
+export type DashboardAiAdapter = BaseMosaicAiAdapter & {
   hasRunContext?: (context?: ChartToolExecutionContext) => boolean;
   resolveContextDashboardArtifactId?: (
     context?: ChartToolExecutionContext,
@@ -101,7 +103,6 @@ export type DashboardAiAdapter = BaseAiAdapter & {
     title?: string,
     layoutType?: MosaicDashboardLayoutType,
   ) => string;
-  isDashboardArtifact: (artifactId: string) => boolean;
   ensureDashboard: (
     dashboardId: string,
     title?: string,
@@ -113,31 +114,15 @@ export type DashboardAiAdapter = BaseAiAdapter & {
     panelId: string,
   ) => ChartRuntimeIssue | undefined;
   setSelectedTable: (dashboardId: string, tableName: string) => void;
-  addPanel: (dashboardId: string, panel: MosaicDashboardPanelConfig) => string;
-  updatePanel: (
-    dashboardId: string,
-    panelId: string,
-    patch: Partial<PanelPatch>,
-  ) => void;
-  removePanel: (dashboardId: string, panelId: string) => void;
+
+  getPanel(panelId: string): MosaicDashboardPanelConfig | undefined;
+  updatePanel(panelId: string, patch: Partial<PanelPatch>): void;
+  removePanel(panelId: string): void;
+  addPanel(panel: MosaicDashboardPanelConfig): string;
 };
 
 /** @deprecated Use AiStore instead */
 export type DashboardAiStore<TState> = AiStore<TState>;
-
-export type CreateDashboardAiToolsOptions = {
-  /** Adapter for managing dashboard artifacts and panels */
-  adapter: DashboardAiAdapter;
-
-  /** Optional chart types for the dashboard */
-  chartTypes?: ChartTypeDefinition<any>[];
-  /**
-   * Host-provided dashboard tools keyed by their registered tool name.
-   * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
-   * stay in sync.
-   */
-  extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
-};
 
 /** @deprecated Use AgentToolCall instead */
 export type DashboardAgentToolCall = AgentToolCall;
@@ -166,7 +151,7 @@ export type CreateDashboardAgentToolOptions<TState> =
      * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
      * stay in sync.
      */
-    extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>;
+    extraTools?: (adapter: DashboardAiAdapter) => Record<string, Tool>;
   };
 
 // ============================================================================
@@ -178,30 +163,37 @@ export type CreateDashboardAgentToolOptions<TState> =
  * Worksheets are collections of blocks, not panels.
  * Worksheet adapter manages its own state internally via the store.
  */
-export type WorksheetAiAdapter = BaseAiAdapter & {
+export type WorksheetAiAdapter = BaseMosaicAiAdapter & {
   /** Get all available tables */
-  getTables: () => DataTable[];
+  getTables(): DataTable[];
 
   /** Set the current active artifact */
-  setCurrentArtifact: (artifactId: string) => void;
+  setCurrentArtifact(artifactId: string): void;
 
   /** Get current worksheet artifact ID, if any */
-  getCurrentWorksheetId: () => string | undefined;
+  getCurrentWorksheetId(): string | undefined;
 
   /** Create a new worksheet artifact and return its ID */
-  createWorksheet: (title?: string) => string;
+  createWorksheet(title?: string): string;
 
   /** Check if artifact is a worksheet */
-  isWorksheet: (artifactId: string) => boolean;
+  isWorksheet(artifactId: string): boolean;
 
   /** Ensure worksheet's block document exists */
-  ensureWorksheet: (worksheetId: string) => void;
+  ensureWorksheet(worksheetId: string): void;
 
   /** Get worksheet's blocks */
-  getWorksheetBlocks: (worksheetId: string) => any[] | undefined;
+  getWorksheetBlocks(worksheetId: string): any[] | undefined;
 
   /** Add a block to the worksheet */
-  addBlock: (worksheetId: string, block: BlockDocumentBlock) => string;
+  addBlock(worksheetId: string, block: BlockDocumentBlock): string;
+
+  /** Add a dashboard block to the worksheet */
+  addDashboardBlock(
+    worksheetId: string,
+    title: string,
+    tableName: string,
+  ): {dashboardId: string; blockId: string};
 };
 
 export type WorksheetAgentResult = {

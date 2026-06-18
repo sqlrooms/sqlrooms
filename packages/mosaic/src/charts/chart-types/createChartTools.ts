@@ -24,7 +24,7 @@ import type {ChartToolDeps} from './tool-types';
 export function createChartTools(
   chartTypes: ChartTypeDefinition<any>[],
   deps: ChartToolDeps,
-  toolNamePrefix: string = 'create_dashboard_',
+  toolNamePrefix: string,
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {};
 

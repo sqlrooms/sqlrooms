@@ -69,22 +69,6 @@ export interface PanelPatch {
  * Dependencies for dashboard-specific tools that manage panels.
  */
 export interface DashboardToolDeps {
-  /**
-   * Resolves the dashboard artifact ID.
-   * Use this when you only need the artifact and not table information.
-   */
-  resolveArtifact: (
-    artifactId?: string,
-    createIfMissing?: boolean,
-    context?: ChartToolExecutionContext,
-  ) => string;
-
-  /**
-   * Resolves table by name for dashboard artifact.
-   * Used by dashboard-specific tools like data table explorer.
-   */
-  resolveTable: (tableName: string) => DataTable;
-
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
     dashboardId: string,

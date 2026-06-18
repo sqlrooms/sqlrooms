@@ -2,12 +2,14 @@ import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import {
   DASHBOARD_AI_INSTRUCTIONS,
+  DashboardAiAdapter,
   MAP_TOOL_KEY,
   createDashboardAgentTool,
   createDashboardAiTools as createMosaicDashboardAiTools,
   type CreateDashboardAgentToolOptions,
   type CreateDashboardAiToolsOptions,
-  type DashboardToolDeps,
+  ensureTable,
+  ensurePanel,
 } from '@sqlrooms/mosaic';
 import {
   createDeckMapDashboardPanelConfig,
@@ -28,11 +30,11 @@ Deck map tools:
 `;
 
 function createDeckMapDashboardExtraTools(
-  extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>,
+  extraTools?: (adapter: DashboardAiAdapter) => Record<string, Tool>,
 ) {
-  return (deps: DashboardToolDeps) => ({
-    ...createDeckMapDashboardAiTools(deps),
-    ...(extraTools?.(deps) ?? {}),
+  return (adapter: DashboardAiAdapter) => ({
+    ...createDeckMapDashboardAiTools(adapter),
+    ...(extraTools?.(adapter) ?? {}),
   });
 }
 
@@ -138,23 +140,12 @@ export type DeckMapConfigToolParams = z.infer<
 
 export const DeckMapDashboardToolParameters =
   DeckMapConfigToolParameters.extend({
-    artifactId: z
-      .string()
-      .optional()
-      .describe(
-        'Optional dashboard artifact ID. Defaults to current dashboard.',
-      ),
     tableName: z
       .string()
       .optional()
       .describe(
         'Optional table name used only to select/resolve the target dashboard table. Data sources still come from config.datasets.',
       ),
-    createArtifactIfMissing: z
-      .boolean()
-      .optional()
-      .default(true)
-      .describe('If true, create dashboard artifact if missing.'),
     panelId: z
       .string()
       .optional()
@@ -225,43 +216,27 @@ export function createDeckMapAiTools(): Record<string, Tool> {
   };
 }
 
-export function createDeckMapDashboardTool(deps: DashboardToolDeps): Tool {
+export function createDeckMapDashboardTool(adapter: DashboardAiAdapter): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
 Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"Viridis", "domain":"auto"}.`,
     inputSchema: DeckMapDashboardToolParameters,
-    execute: async (params, context) => {
+    execute: async (params) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
         if (params.tableName) {
-          deps.resolveTable(params.tableName);
+          ensureTable(adapter, params.tableName);
         }
+
         const panel = createDeckMapPanelFromNativeConfig(params);
 
         if (params.panelId) {
-          const dashboard = deps.getDashboard(artifactId);
-          const existingPanel = dashboard?.panels.find(
-            (candidate) => candidate.id === params.panelId,
-          );
-          if (!existingPanel) {
-            throw new Error(
-              `Panel "${params.panelId}" not found in dashboard "${artifactId}". Cannot update.`,
-            );
-          }
-          if (existingPanel.type !== DECK_MAP_DASHBOARD_PANEL_TYPE) {
-            throw new Error(
-              `Panel "${params.panelId}" is not a map panel. Cannot update it with ${MAP_TOOL_KEY}.`,
-            );
-          }
-          deps.updatePanel(artifactId, params.panelId, {
+          ensurePanel(adapter, params.panelId, DECK_MAP_DASHBOARD_PANEL_TYPE);
+
+          adapter.updatePanel(params.panelId, {
             title: panel.title,
             config: panel.config,
-          } as never);
+          });
 
           return {
             llmResult: {
@@ -269,7 +244,6 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
               details: `Updated map panel "${panel.title}".`,
               data: {
                 panelId: params.panelId,
-                artifactId,
                 title: panel.title,
                 type: DECK_MAP_DASHBOARD_PANEL_TYPE,
                 config: panel.config,
@@ -278,8 +252,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           };
         }
 
-        const panelId = deps.addPanel(artifactId, panel);
-        deps.setCurrentArtifact(artifactId);
+        const panelId = adapter.addPanel(panel);
 
         return {
           llmResult: {
@@ -287,7 +260,6 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
             details: `Created map panel "${panel.title}".`,
             data: {
               panelId,
-              artifactId,
               title: panel.title,
               type: DECK_MAP_DASHBOARD_PANEL_TYPE,
               config: panel.config,
@@ -308,9 +280,9 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
 }
 
 export function createDeckMapDashboardAiTools(
-  deps: DashboardToolDeps,
+  adapter: DashboardAiAdapter,
 ): Record<string, Tool> {
   return {
-    [MAP_TOOL_KEY]: createDeckMapDashboardTool(deps),
+    [MAP_TOOL_KEY]: createDeckMapDashboardTool(adapter),
   };
 }

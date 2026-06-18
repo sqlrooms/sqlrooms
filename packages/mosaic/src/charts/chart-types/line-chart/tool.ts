@@ -10,6 +10,7 @@ import {
 } from '../../../column-types-utils';
 import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateLineChartSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
 const AGGREGATE_FUNCTIONS = AggregateFunction.options;
 const TEMPORAL_INTERVALS = TemporalInterval.options;
@@ -38,22 +39,23 @@ NOTE: Line charts with aggregation (xInterval or aggregate functions) handle lar
 
 Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use scatter-plot).`,
     inputSchema: LineChartToolParameters,
-    execute: async (params) => {
+    execute: async ({tableName, title, settings}) => {
       try {
-        const dataTable = deps.resolveTable(params.tableName);
+        const dataTable = ensureTable(deps.adapter, tableName);
 
         validateLineChartSettings({
           dataTable,
-          settings: params.settings,
+          settings,
         });
 
         const chartConfig: LineChartConfig = {
           chartType: 'line-chart' as const,
-          settings: params.settings,
+          settings,
         };
 
         deps.addChart({
-          tableName: params.tableName,
+          tableName,
+          title,
           config: chartConfig,
         });
 
@@ -61,10 +63,7 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
           llmResult: {
             success: true,
             details: `Generated line chart configuration.`,
-            data: {
-              chartType: 'line-chart',
-              settings: params.settings,
-            },
+            data: chartConfig,
           },
         };
       } catch (error) {

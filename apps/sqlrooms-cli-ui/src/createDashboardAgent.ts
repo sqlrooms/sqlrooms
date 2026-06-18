@@ -4,7 +4,7 @@ import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import type {CreateDashboardAgentToolOptions} from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
-import {createDashboardAiAdapter} from './createDashboardToolDeps';
+import {createDashboardAiAdapter} from './createDashboardAiAdapter';
 
 export function dashboardAgentTool(store: StoreApi<RoomState>) {
   const options: CreateDashboardAgentToolOptions<RoomState> = {

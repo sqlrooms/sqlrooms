@@ -6,12 +6,10 @@ import {
 import {
   type ChartToolExecutionContext,
   type DashboardAiAdapter,
-  createDashboardToolDeps as createReusableDashboardToolDeps,
 } from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import {makeArtifactPrimaryForAiRun} from './context/createArtifactContextAiTools';
 import type {RoomState} from './store-types';
-import {DashboardToolDeps} from '@sqlrooms/mosaic';
 
 function getMutableAiRunContext(context?: ChartToolExecutionContext) {
   return (
@@ -49,8 +47,6 @@ export function createDashboardAiAdapter(
       store.getState().dashboard.getCurrentDashboardArtifactId(),
     createDashboardArtifact: (title, layoutType) =>
       store.getState().dashboard.createDashboardArtifact(title, layoutType),
-    isDashboardArtifact: (artifactId) =>
-      store.getState().artifacts.getArtifact(artifactId)?.type === 'dashboard',
     setCurrentArtifact: (artifactId) =>
       store.getState().artifacts.setCurrentArtifact(artifactId),
     ensureDashboard: (dashboardId) =>
@@ -59,19 +55,11 @@ export function createDashboardAiAdapter(
       store.getState().mosaicDashboard.getDashboard(dashboardId),
     setSelectedTable: (dashboardId, tableName) =>
       store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
-    addPanel: (dashboardId, panel) =>
+    addPanel: (panel) =>
       store.getState().mosaicDashboard.addPanel(dashboardId, panel),
-    updatePanel: (dashboardId, panelId, patch) =>
+    updatePanel: (panelId, patch) =>
       store.getState().mosaicDashboard.updatePanel(dashboardId, panelId, patch),
-    removePanel: (dashboardId, panelId) =>
+    removePanel: (panelId) =>
       store.getState().mosaicDashboard.removePanel(dashboardId, panelId),
   };
-}
-
-export function createDashboardToolDeps(
-  store: StoreApi<RoomState>,
-): DashboardToolDeps {
-  const adapter = createDashboardAiAdapter(store);
-
-  return createReusableDashboardToolDeps(adapter);
 }

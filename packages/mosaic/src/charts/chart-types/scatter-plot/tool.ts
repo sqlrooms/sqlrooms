@@ -5,6 +5,7 @@ import {BaseChartToolParameters} from '../../../ai/tool-schemas';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
 import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateScatterPlotSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
 export const ScatterPlotToolParameters = BaseChartToolParameters.extend({
   settings: ScatterPlotChartSettings.required(),
@@ -26,33 +27,31 @@ IMPORTANT: Scatter charts render ALL rows as individual points. Do NOT create sc
 
 Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${deps.maxDataPoints.toLocaleString()} rows).`,
     inputSchema: ScatterPlotToolParameters,
-    execute: async (params) => {
+    execute: async ({tableName, title, settings}) => {
       try {
-        const dataTable = deps.resolveTable(params.tableName);
+        const dataTable = ensureTable(deps.adapter, tableName);
 
         validateScatterPlotSettings({
           dataTable,
-          settings: params.settings,
+          settings,
         });
 
         const chartConfig: ScatterPlotChartConfig = {
           chartType: 'scatter-plot' as const,
-          settings: params.settings,
+          settings,
         };
 
         deps.addChart({
-          tableName: params.tableName,
+          tableName,
           config: chartConfig,
+          title,
         });
 
         return {
           llmResult: {
             success: true,
             details: `Generated scatter chart configuration.`,
-            data: {
-              chartType: 'scatter-plot',
-              settings: params.settings,
-            },
+            data: chartConfig,
           },
         };
       } catch (error) {

@@ -2,11 +2,10 @@ import type {
   AddChartFunction,
   ChartToolDeps,
 } from '../charts/chart-types/tool-types';
-import {findTableByNameOrThrow} from '../utils/table-lookup';
-import type {BaseAiAdapter} from './types';
+import type {BaseMosaicAiAdapter} from './types';
 
 export type CreateChartToolDepsOptions = {
-  adapter: BaseAiAdapter;
+  adapter: BaseMosaicAiAdapter;
   addChart: AddChartFunction;
 };
 
@@ -15,7 +14,7 @@ export type CreateChartToolDepsOptions = {
  * This is used to provide dependencies for chart configuration tools.
  *
  * @param adapter Adapter with getTables method
- * @returns ChartToolDeps with resolveTable and maxDataPoints
+ * @returns ChartToolDeps with adapter and maxDataPoints
  */
 export function createChartToolDeps({
   adapter,
@@ -23,10 +22,7 @@ export function createChartToolDeps({
 }: CreateChartToolDepsOptions): ChartToolDeps {
   return {
     addChart,
-    resolveTable: (tableName: string) => {
-      const tables = adapter.getTables();
-      return findTableByNameOrThrow(tables, tableName);
-    },
+    adapter,
     maxDataPoints: 10000, // Standard limit for non-aggregated visualizations
   };
 }

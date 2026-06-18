@@ -8,6 +8,7 @@ import {
 } from '../../../column-types-utils';
 import {ChartToolDeps, ChartToolOutput} from '../tool-types';
 import {validateBoxPlotSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
 export const BoxPlotToolParameters = BaseChartToolParameters.extend({
   settings: BoxPlotChartSettings.required(),
@@ -32,33 +33,31 @@ Best for: comparing distributions between groups, finding outliers per category,
 
 Do NOT use for: single distribution (use histogram), time trends (use line-chart), simple counts (use count-plot).`,
     inputSchema: BoxPlotToolParameters,
-    execute: async (params) => {
+    execute: async ({tableName, title, settings}) => {
       try {
-        const dataTable = deps.resolveTable(params.tableName);
+        const dataTable = ensureTable(deps.adapter, tableName);
 
         validateBoxPlotSettings({
           dataTable,
-          settings: params.settings,
+          settings,
         });
 
-        const chartConfig: BoxPlotChartConfig = {
+        const config: BoxPlotChartConfig = {
           chartType: 'box-plot' as const,
-          settings: params.settings,
+          settings,
         };
 
         deps.addChart({
-          tableName: params.tableName,
-          config: chartConfig,
+          tableName,
+          title,
+          config,
         });
 
         return {
           llmResult: {
             success: true,
             details: `Generated box plot configuration.`,
-            data: {
-              chartType: 'box-plot',
-              settings: params.settings,
-            },
+            data: config,
           },
         };
       } catch (error) {

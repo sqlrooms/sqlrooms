@@ -48,6 +48,7 @@ export type LegacyPanelConfig = z.infer<typeof LegacyPanelConfig>;
 export const MosaicDashboardPanelConfig = z
   .discriminatedUnion('type', [ChartPanelConfig, DataTableExplorerPanel])
   .or(LegacyPanelConfig);
+
 export type MosaicDashboardPanelConfig = z.infer<
   typeof MosaicDashboardPanelConfig
 >;

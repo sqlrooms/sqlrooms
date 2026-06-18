@@ -85,7 +85,6 @@ import {
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
-import {getDashboardAiInstructions} from './createDashboardAiTools';
 import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
@@ -112,6 +111,7 @@ import {
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
+import {dashboardAgentTool} from './createDashboardAgent';
 
 export type {RoomState} from './store-types';
 
@@ -697,14 +697,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
+              `
+              IF primary artefact in run context is a worksheet, prioritize using worksheet_agent tool for any queries or data analysis tasks.\n\n
+              USE execute_command only ifg agent does not fit.
+            ${createDefaultAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
             getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
-              // ...createDashboardAiTools(store),
               // dashboard_agent: dashboardAgentTool(store),
               worksheet_agent: worksheetAgentTool(store),
               ...webContainerToolkit.tools,
