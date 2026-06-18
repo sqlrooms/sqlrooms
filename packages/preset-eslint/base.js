@@ -4,6 +4,17 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 import turboPlugin from 'eslint-plugin-turbo';
 import tseslint from 'typescript-eslint';
 
+const publicSqlroomsSubexports = [
+  '@sqlrooms/ai/devtools',
+  '@sqlrooms/ai-core/devtools',
+];
+
+const restrictedSqlroomsSubpathPatterns = [
+  '@sqlrooms/*/**',
+  '!@sqlrooms/preset-*/**',
+  ...publicSqlroomsSubexports.map((specifier) => `!${specifier}`),
+];
+
 /**
  * A shared ESLint configuration for the repository.
  *
@@ -27,9 +38,9 @@ export const config = [
         {
           patterns: [
             {
-              group: ['@sqlrooms/*/**', '!@sqlrooms/preset-*/**'],
+              group: restrictedSqlroomsSubpathPatterns,
               message:
-                "Only import from '@sqlrooms/<package>', not subpaths like '@sqlrooms/<package>/...'",
+                "Only import from '@sqlrooms/<package>' or an explicit public subexport, not arbitrary subpaths like '@sqlrooms/<package>/...'",
             },
           ],
         },
@@ -39,9 +50,9 @@ export const config = [
         {
           patterns: [
             {
-              group: ['@sqlrooms/*/**', '!@sqlrooms/preset-*/**'],
+              group: restrictedSqlroomsSubpathPatterns,
               message:
-                "Only import from '@sqlrooms/<package>', not subpaths like '@sqlrooms/<package>/...'",
+                "Only import from '@sqlrooms/<package>' or an explicit public subexport, not arbitrary subpaths like '@sqlrooms/<package>/...'",
             },
           ],
         },
