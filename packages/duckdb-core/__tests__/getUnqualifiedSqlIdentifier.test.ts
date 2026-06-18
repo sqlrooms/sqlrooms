@@ -1,8 +1,85 @@
 import {
   getUnqualifiedSqlIdentifier,
+  makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
   quoteTableReference,
 } from '../src/duckdb-utils';
+
+describe('makeQualifiedTableName', () => {
+  it('returns database, schema, and table parts by default', () => {
+    const table = makeQualifiedTableName({
+      database: 'local',
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(table.toArray()).toEqual(['local', 'main', 'earthquakes']);
+  });
+
+  it('returns schema and table when no database is present', () => {
+    const table = makeQualifiedTableName({
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(table.toArray()).toEqual(['main', 'earthquakes']);
+  });
+
+  it('returns table only when no database or schema is present', () => {
+    const table = makeQualifiedTableName({table: 'earthquakes'});
+
+    expect(table.toArray()).toEqual(['earthquakes']);
+  });
+
+  it('can omit the database part', () => {
+    const table = makeQualifiedTableName({
+      database: 'local',
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(table.toArray({includeDatabase: false})).toEqual([
+      'main',
+      'earthquakes',
+    ]);
+  });
+
+  it('can omit the schema part', () => {
+    const table = makeQualifiedTableName({
+      database: 'local',
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(table.toArray({includeSchema: false})).toEqual([
+      'local',
+      'earthquakes',
+    ]);
+  });
+
+  it('can omit database and schema together', () => {
+    const table = makeQualifiedTableName({
+      database: 'local',
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(
+      table.toArray({includeDatabase: false, includeSchema: false}),
+    ).toEqual(['earthquakes']);
+  });
+
+  it('keeps raw dotted and quoted identifier parts in arrays', () => {
+    const table = makeQualifiedTableName({
+      database: 'local.db',
+      schema: 'ma"in',
+      table: 'events.2026',
+    });
+
+    expect(table.toArray()).toEqual(['local.db', 'ma"in', 'events.2026']);
+    expect(table.toString()).toBe('"local.db"."ma""in"."events.2026"');
+  });
+});
 
 describe('parseQualifiedSqlIdentifier', () => {
   it('returns undefined for empty input', () => {

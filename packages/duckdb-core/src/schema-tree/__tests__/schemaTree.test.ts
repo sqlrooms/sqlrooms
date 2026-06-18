@@ -1,4 +1,5 @@
 import {createDbSchemaTrees} from '../schemaTree';
+import {makeQualifiedTableName} from '../../duckdb-utils';
 import type {SchemaWithTables} from '../types';
 
 describe('schemaTree', () => {
@@ -11,12 +12,11 @@ describe('schemaTree', () => {
             schema: 'schema1',
             tables: [
               {
-                table: {
+                table: makeQualifiedTableName({
                   database: 'db1',
                   schema: 'schema1',
                   table: 'table1',
-                  toString: () => 'db1.schema1.table1',
-                },
+                }),
                 isView: false,
                 database: 'db1',
                 schema: 'schema1',

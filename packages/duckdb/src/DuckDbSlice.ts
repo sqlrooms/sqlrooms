@@ -578,7 +578,9 @@ export function createDuckDbSlice({
            * @deprecated Use .loadTableRowCount() instead
            */
           async getTableRowCount(table, schema = 'main') {
-            return get().db.loadTableRowCount({table, schema});
+            return get().db.loadTableRowCount(
+              makeQualifiedTableName({table, schema}),
+            );
           },
 
           async loadTableRowCount(tableName: string | QualifiedTableName) {

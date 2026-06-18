@@ -34,10 +34,11 @@ export function getMosaicTableReferenceString(
 function getMosaicTableReferenceParts(
   tableName: MosaicTableReferenceInput,
 ): string[] {
-  const parsed =
-    typeof tableName === 'string'
-      ? parseQualifiedSqlIdentifier(tableName)
-      : tableName;
+  if (typeof tableName !== 'string') {
+    return tableName.toArray({includeDatabase: false});
+  }
+
+  const parsed = parseQualifiedSqlIdentifier(tableName);
 
   if (parsed?.table) {
     return [parsed.schema, parsed.table].filter(
