@@ -15,7 +15,12 @@ import {
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
-import {FocusIcon, MapIcon, SettingsIcon} from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  FocusIcon,
+  MapIcon,
+  SettingsIcon,
+} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
@@ -84,6 +89,64 @@ function parseGeometryMismatchError(
   );
   if (match) return {required: match[1]!, found: match[2]!};
   return null;
+}
+
+/**
+ * Detects columns referenced in layer config that are missing from the loaded dataset.
+ */
+function detectMissingColumns(
+  mapConfig: DeckMapDashboardPanelConfig | undefined,
+  datasetStates: Record<string, DeckMapDashboardDatasetClientState>,
+): string[] {
+  if (!mapConfig?.spec) return [];
+  const missing: string[] = [];
+  const spec = mapConfig.spec as Record<string, unknown>;
+  const layers = Array.isArray(spec.layers) ? spec.layers : [];
+
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerObj = layer as Record<string, unknown>;
+    const binding = layerObj._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    const datasetId = binding?.dataset as string | undefined;
+    const arrowTable = datasetId
+      ? datasetStates[datasetId]?.arrowTable
+      : undefined;
+    if (!arrowTable) continue;
+
+    const fieldNames = new Set(
+      arrowTable.schema.fields.map((f) => f.name.toLowerCase()),
+    );
+    const check = (col: string | undefined) => {
+      if (col && !fieldNames.has(col.toLowerCase())) {
+        missing.push(col);
+      }
+    };
+
+    // Check @@= accessors
+    for (const [propName, propValue] of Object.entries(layerObj)) {
+      // Skip elevation references when extrusion is disabled
+      if (propName === 'getElevation' && !layerObj.extruded) continue;
+
+      if (typeof propValue === 'string' && propValue.startsWith('@@=')) {
+        check(propValue.slice(3).trim());
+      }
+      // Check @@function colorScale/scale field references
+      if (
+        propValue &&
+        typeof propValue === 'object' &&
+        '@@function' in (propValue as object)
+      ) {
+        const fn = propValue as Record<string, unknown>;
+        if (typeof fn.field === 'string') {
+          check(fn.field);
+        }
+      }
+    }
+  }
+
+  return [...new Set(missing)];
 }
 
 function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
@@ -487,6 +550,11 @@ function DeckMapDashboardRenderer({
     return undefined;
   }, [datasetStates]);
 
+  const missingColumns = useMemo(
+    () => detectMissingColumns(mapConfig ?? undefined, datasetStates),
+    [mapConfig, datasetStates],
+  );
+
   const mapContent = !mapConfig ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Invalid map panel config.
@@ -541,6 +609,27 @@ function DeckMapDashboardRenderer({
                 </button>
               </div>
             )}
+          {missingColumns.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={`absolute left-2 z-10 flex h-5 w-5 items-center justify-center ${
+                    Object.values(datasetStates).some((s) => s.isSampled) &&
+                    !sampledDismissed
+                      ? 'top-9'
+                      : 'top-2'
+                  }`}
+                  onClick={() => handleSettingsOpenChange(true)}
+                >
+                  <AlertTriangleIcon className="h-4 w-4 text-amber-500 drop-shadow-sm" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p className="text-xs font-medium">Missing columns:</p>
+                <p className="text-xs">{missingColumns.join(', ')}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           <DeckJsonMap
             ref={deckMapRef}
             className="h-full w-full"
