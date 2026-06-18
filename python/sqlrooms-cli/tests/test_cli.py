@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import click
 from typer.testing import CliRunner
 from sqlrooms.cli import (
     DEFAULT_CONFIG_PATH,
@@ -16,16 +17,18 @@ runner = CliRunner()
 
 def test_cli_help():
     result = runner.invoke(app, ["--help"])
+    stdout = click.unstyle(result.stdout)
     assert result.exit_code == 0
-    assert "Start the SQLRooms local experience" in result.stdout
-    assert "--ai-devtools" in result.stdout
+    assert "Start the SQLRooms local experience" in stdout
+    assert "--ai-devtools" in stdout
 
 
 def test_cli_export_help():
     result = runner.invoke(app, ["export", "--help"])
+    stdout = click.unstyle(result.stdout)
     assert result.exit_code == 0
-    assert "Usage" in result.stdout
-    assert "export" in result.stdout
+    assert "Usage" in stdout
+    assert "export" in stdout
 
 
 def test_load_connector_config_toml(tmp_path):
