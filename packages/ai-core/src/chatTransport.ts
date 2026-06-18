@@ -36,6 +36,7 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
+import {maybeWrapModelWithDevTools} from './devtools';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -296,6 +297,8 @@ export function createLocalChatTransportFactory({
         });
         model = openai.chatModel(modelId);
       }
+
+      model = await maybeWrapModelWithDevTools(model);
 
       const messagesCopy = Array.isArray(parsedObj.messages)
         ? (parsedObj.messages as UIMessage[])
