@@ -16,6 +16,23 @@ import {
 } from './dashboardConfig';
 import {quoteDeckMapSqlIdentifier} from './mapConfigUtils';
 
+function splitIdentifierPathOutsideQuotes(input: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (const ch of input) {
+    if (ch === '"') inQuotes = !inQuotes;
+    if (ch === '.' && !inQuotes) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+  return parts.filter(Boolean);
+}
+
 export const DECK_MAP_AI_INSTRUCTIONS = `
 Deck map tools:
 - create_deck_map_config validates and returns a reusable native Deck JSON map config without requiring a dashboard artifact.
@@ -249,9 +266,10 @@ function normalizeAiMapConfig(
   const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
   const quotedLat = quoteDeckMapSqlIdentifier(latCol);
   const quotedGeom = quoteDeckMapSqlIdentifier(geometryColumn);
-  const tableParts = source.tableName
-    .split('.')
-    .map((p) => quoteDeckMapSqlIdentifier(p))
+  const tableParts = splitIdentifierPathOutsideQuotes(source.tableName)
+    .map((p) =>
+      p.startsWith('"') && p.endsWith('"') ? p : quoteDeckMapSqlIdentifier(p),
+    )
     .join('.');
   const sqlQuery = [
     `SELECT *, ST_AsWKB(ST_Point(${quotedLon}, ${quotedLat})) AS ${quotedGeom}`,
@@ -344,12 +362,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
         );
         const dashboard = deps.getDashboard(artifactId);
         if (params.tableName) {
-          // Only change the dashboard's selected table if it's not already set.
-          // The runtime rewriting in resolveDeckMapDashboardDatasetSource will
-          // use dashboard.selectedTable regardless, so we don't need to override.
-          if (!dashboard?.selectedTable) {
-            deps.resolveTable(artifactId, params.tableName);
-          }
+          deps.resolveTable(artifactId, params.tableName);
         } else {
           // Ensure selectedTable is set even when tableName is not provided,
           // by extracting a table name from the first dataset source.

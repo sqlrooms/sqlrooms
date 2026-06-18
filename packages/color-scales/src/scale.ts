@@ -175,7 +175,7 @@ function extent(values: number[]): [number, number] {
 
 export function getSequentialDomain(values: number[]) {
   const [min, max] = extent(values);
-  if (min == null || max == null) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
     return [0, 1] as [number, number];
   }
   if (min === max) {
@@ -187,7 +187,7 @@ export function getSequentialDomain(values: number[]) {
 
 export function getDivergingDomain(values: number[]) {
   const [min, max] = extent(values);
-  if (min == null || max == null) {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
     return [-1, 0, 1] as [number, number, number];
   }
   if (min === max) {

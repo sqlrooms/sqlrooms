@@ -126,11 +126,17 @@ export function resolveDeckMapDashboardDatasetSource(options: {
       const quotedOriginal = originalTable.split('.').map(quote).join('.');
       const rewritten = datasetSource.sqlQuery
         .replace(
-          new RegExp(`\\bFROM\\s+${escapeRegExp(originalTable)}\\b`, 'gi'),
+          new RegExp(
+            `\\bFROM\\s+${escapeRegExp(originalTable)}(?=\\s|$|[,;)\\[\\]])`,
+            'gi',
+          ),
           `FROM ${quotedDashboard}`,
         )
         .replace(
-          new RegExp(`\\bFROM\\s+${escapeRegExp(quotedOriginal)}\\b`, 'gi'),
+          new RegExp(
+            `\\bFROM\\s+${escapeRegExp(quotedOriginal)}(?=\\s|$|[,;)\\[\\]])`,
+            'gi',
+          ),
           `FROM ${quotedDashboard}`,
         );
       return {sqlQuery: rewritten};

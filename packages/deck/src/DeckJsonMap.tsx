@@ -160,6 +160,7 @@ const TripsTimeControl: FC<{
   if (collapsed) {
     return (
       <button
+        type="button"
         onClick={() => setCollapsed(false)}
         className="border-border/70 bg-background/90 text-muted-foreground hover:text-foreground pointer-events-auto flex w-fit items-center gap-1 rounded-md border px-2 py-1 text-[10px] leading-none font-medium shadow-sm backdrop-blur-sm transition-colors"
       >
@@ -171,6 +172,7 @@ const TripsTimeControl: FC<{
   return (
     <div className="bg-background/90 border-border/70 pointer-events-auto relative flex items-center gap-1.5 rounded-md border px-2 py-1.5 pr-7 shadow-sm backdrop-blur-sm">
       <button
+        type="button"
         onClick={onPlayPause}
         className="text-foreground hover:bg-accent flex h-5 w-5 shrink-0 items-center justify-center rounded"
         title={playing ? 'Pause' : 'Play'}
@@ -195,6 +197,7 @@ const TripsTimeControl: FC<{
         className="h-1 w-24 flex-1 cursor-pointer"
       />
       <button
+        type="button"
         onClick={() => setCollapsed(true)}
         className="text-muted-foreground hover:text-foreground absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-sm transition-colors"
         title="Collapse"
@@ -428,7 +431,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
         const maxTs = (layerObj.props as Record<string, unknown> | undefined)
           ?._tripsMaxTimestamp as number | undefined;
         if (maxTs && maxTs > 0) {
-          computedMaxTs = maxTs;
+          computedMaxTs = Math.max(computedMaxTs, maxTs);
           tripsIndices.push(i);
         }
       }
@@ -515,12 +518,19 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       [],
     );
 
-    const handleMapLoad = useCallback(() => {
-      if (pendingJumpRef.current && mapRef.current) {
-        mapRef.current.jumpTo(pendingJumpRef.current);
-        pendingJumpRef.current = null;
-      }
-    }, []);
+    const handleMapLoad = useCallback(
+      (event?: unknown) => {
+        if (pendingJumpRef.current && mapRef.current) {
+          mapRef.current.jumpTo(pendingJumpRef.current);
+          pendingJumpRef.current = null;
+        }
+        const externalOnLoad = (
+          extraMapProps as {onLoad?: (e?: unknown) => void}
+        ).onLoad;
+        externalOnLoad?.(event);
+      },
+      [extraMapProps],
+    );
 
     const {resolvedTheme} = useTheme();
 

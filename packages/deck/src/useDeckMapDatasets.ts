@@ -4,7 +4,7 @@ import type {
   ChartRuntimeIssueReporter,
   MosaicDashboardPanelConfigType,
 } from '@sqlrooms/mosaic';
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   type DeckMapDashboardDatasetClientState,
@@ -45,21 +45,26 @@ export function useDeckMapDatasets(options: {
         }
         return next;
       });
-
-      if (state?.error) {
-        reportPanelIssue(dashboardId, panel.id, {
-          kind: 'sql-error',
-          panelId: panel.id,
-          chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
-          message: state.error.message,
-          recoverable: true,
-        });
-      } else {
-        clearPanelIssue(dashboardId, panel.id);
-      }
     },
-    [clearPanelIssue, dashboardId, panel.id, reportPanelIssue],
+    [],
   );
+
+  useEffect(() => {
+    const firstError = Object.values(datasetStates).find(
+      (s) => s?.error,
+    )?.error;
+    if (firstError) {
+      reportPanelIssue(dashboardId, panel.id, {
+        kind: 'sql-error',
+        panelId: panel.id,
+        chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+        message: firstError.message,
+        recoverable: true,
+      });
+    } else {
+      clearPanelIssue(dashboardId, panel.id);
+    }
+  }, [datasetStates, dashboardId, panel.id, reportPanelIssue, clearPanelIssue]);
 
   const runtimeIssueContext = useMemo<ChartRuntimeIssueContext>(
     () => ({
