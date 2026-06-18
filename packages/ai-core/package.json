@@ -25,7 +25,6 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@ai-sdk/devtools": "^0.0.20",
     "@ai-sdk/openai-compatible": "^1.0.18",
     "@ai-sdk/react": "^3.0.118",
     "@dnd-kit/core": "^6.3.1",

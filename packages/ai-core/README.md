@@ -103,6 +103,13 @@ user messages. The hook handles debouncing and duplicate-generation guards.
 Apps can pass `enabled`, `isDefaultSessionName`, and `getPromptOptions` to keep
 app-specific readiness checks and model choices outside the shared package.
 
+## Model wrappers
+
+`createAiSlice` accepts an optional `wrapModel(model)` callback. SQLRooms calls
+it for locally-created chat and one-shot generation models before passing them
+to the AI SDK. Use this for instrumentation or provider middleware that should
+remain outside `@sqlrooms/ai-core` itself.
+
 ## Local Agent Chat
 
 Use `Chat.LocalAgentRoot` when a transient surface should be driven by a

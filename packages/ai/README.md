@@ -224,6 +224,25 @@ If you want server-side model calls, set `chatEndPoint` and optional `chatHeader
 })(set, get, store),
 ```
 
+## AI SDK DevTools
+
+`@sqlrooms/ai/devtools` provides an optional wrapper for Vercel AI SDK DevTools.
+It is not part of `@sqlrooms/ai-core`; apps opt in through `createAiSlice`:
+
+```tsx
+import {maybeWrapModelWithAiSdkDevTools} from '@sqlrooms/ai/devtools';
+
+createAiSlice({
+  tools,
+  getInstructions,
+  wrapModel: maybeWrapModelWithAiSdkDevTools,
+});
+```
+
+Run the DevTools viewer separately and enable capture with
+`SQLROOMS_AI_SDK_DEVTOOLS=1`. Captured runs are written to `.devtools/`, which
+may include prompts, tool inputs, and provider responses.
+
 ## Skills
 
 The skills subsystem lets you define, store, and author reusable AI "skills" — named instruction sets that can be loaded into an agent at runtime.

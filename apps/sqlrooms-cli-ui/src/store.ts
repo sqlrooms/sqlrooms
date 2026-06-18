@@ -13,6 +13,7 @@ import {
   createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
+import {maybeWrapModelWithAiSdkDevTools} from '@sqlrooms/ai/devtools';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
   CellsSliceConfig,
@@ -694,6 +695,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             defaultModel: defaultModelFromConfig,
             getAvailableModels: () =>
               getAvailableAiModels(get().aiSettings.config),
+            wrapModel: maybeWrapModelWithAiSdkDevTools,
             getApiKey: (provider) =>
               get().aiSettings.config.providers[provider]?.apiKey ||
               runtimeConfig.apiKey ||

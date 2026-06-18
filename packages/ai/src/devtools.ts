@@ -26,7 +26,7 @@ export function isAiSdkDevToolsEnabled(): boolean {
   return env?.SQLROOMS_AI_SDK_DEVTOOLS === '1' && env.NODE_ENV !== 'production';
 }
 
-export async function maybeWrapModelWithDevTools(
+export async function maybeWrapModelWithAiSdkDevTools(
   model: LanguageModel,
 ): Promise<LanguageModel> {
   if (!isAiSdkDevToolsEnabled()) {

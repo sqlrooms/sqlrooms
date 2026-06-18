@@ -36,7 +36,6 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
-import {maybeWrapModelWithDevTools} from './devtools';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -124,6 +123,7 @@ export type ChatTransportConfig = {
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;
+  wrapModel?: (model: LanguageModel) => LanguageModel | Promise<LanguageModel>;
 };
 
 function getSessionById(
@@ -252,6 +252,7 @@ export function createLocalChatTransportFactory({
   headers,
   getInstructions,
   getCustomModel,
+  wrapModel,
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -298,7 +299,7 @@ export function createLocalChatTransportFactory({
         model = openai.chatModel(modelId);
       }
 
-      model = await maybeWrapModelWithDevTools(model);
+      model = wrapModel ? await wrapModel(model) : model;
 
       const messagesCopy = Array.isArray(parsedObj.messages)
         ? (parsedObj.messages as UIMessage[])

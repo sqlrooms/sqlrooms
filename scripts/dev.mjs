@@ -80,6 +80,7 @@ const childEnv = {
   ...process.env,
   [pathKey]: childPath,
   SQLROOMS_CLI_DEV_ARGS: JSON.stringify(cliArgs),
+  ...(target === 'cli' ? {SQLROOMS_AI_SDK_DEVTOOLS: '1'} : {}),
 };
 
 function turboRunArgs(task, filters, extraArgs = []) {
@@ -170,6 +171,7 @@ if (target !== 'cli') {
   console.log(
     '(cd apps/sqlrooms-cli-ui && ./node_modules/.bin/vite --host --port 4174)',
   );
+  console.log('(cd packages/ai && pnpm exec devtools)');
   console.log(
     `(cd python/sqlrooms-cli && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
       cliArgs,
@@ -258,6 +260,9 @@ if (target === 'cli') {
   startProcess('sqlrooms CLI UI dev server', ['--host', '--port', '4174'], {
     command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
     cwd: path.resolve('apps/sqlrooms-cli-ui'),
+  });
+  startProcess('AI SDK DevTools', ['exec', 'devtools'], {
+    cwd: path.resolve('packages/ai'),
   });
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,

@@ -2360,6 +2360,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@ai-sdk/devtools':
+        specifier: ^0.0.20
+        version: 0.0.20
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
@@ -2449,9 +2452,6 @@ importers:
 
   packages/ai-core:
     dependencies:
-      '@ai-sdk/devtools':
-        specifier: ^0.0.20
-        version: 0.0.20
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
         version: 1.0.39(zod@4.1.13)

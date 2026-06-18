@@ -20,6 +20,7 @@ This starts:
 
 - the Python API server on `http://127.0.0.1:4173` without serving static UI
 - the Vite UI on `http://localhost:4174` (proxying `/api` and `/config.json` to 4173)
+- AI SDK DevTools on `http://localhost:4983`
 
 If you hit `address already in use`, pass different ports to the Python server:
 

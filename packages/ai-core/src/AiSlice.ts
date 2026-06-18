@@ -57,7 +57,6 @@ import {
   createForkedChatSessionFromMessage,
   type ForkSessionFromMessageArgs,
 } from './chatSessionForking';
-import {maybeWrapModelWithDevTools} from './devtools';
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
@@ -257,6 +256,8 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   getAvailableModels?: () => Array<{provider: string; value: string}>;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: () => LanguageModel | undefined;
+  /** Optionally wrap model clients for instrumentation or provider middleware. */
+  wrapModel?: (model: LanguageModel) => LanguageModel | Promise<LanguageModel>;
   getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
@@ -281,6 +282,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     defaultModel = 'gpt-4.1',
     getAvailableModels,
     getCustomModel,
+    wrapModel,
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
@@ -1160,13 +1162,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
-          const model = await maybeWrapModelWithDevTools(
-            createOpenAICompatible({
-              apiKey: state.ai.getApiKeyFromSettings(),
-              name: provider,
-              baseURL,
-            }).chatModel(modelId),
-          );
+          const rawModel = createOpenAICompatible({
+            apiKey: state.ai.getApiKeyFromSettings(),
+            name: provider,
+            baseURL,
+          }).chatModel(modelId);
+          const model = wrapModel ? await wrapModel(rawModel) : rawModel;
 
           try {
             const response = await generateText({
@@ -1450,6 +1451,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             getInstructions: () =>
               store.getState().ai.getFullInstructions(sessionId),
             getCustomModel,
+            wrapModel,
             sessionId,
           })();
         },
