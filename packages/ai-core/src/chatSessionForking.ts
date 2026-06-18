@@ -58,6 +58,59 @@ function getToolCallIdsFromMessages(
   return toolCallIds;
 }
 
+function addReachableAgentToolCallIds(
+  toolCallIds: Set<string>,
+  agentProgress: ChatSessionSchema['agentProgress'],
+): void {
+  if (!agentProgress) return;
+
+  let foundNewToolCall = true;
+  while (foundNewToolCall) {
+    foundNewToolCall = false;
+
+    for (const [parentToolCallId, toolCalls] of Object.entries(agentProgress)) {
+      if (!toolCallIds.has(parentToolCallId) || !Array.isArray(toolCalls)) {
+        continue;
+      }
+
+      for (const toolCall of toolCalls) {
+        foundNewToolCall =
+          addAgentToolCallIds(toolCallIds, toolCall) || foundNewToolCall;
+      }
+    }
+  }
+}
+
+function addAgentToolCallIds(
+  toolCallIds: Set<string>,
+  toolCall: unknown,
+): boolean {
+  if (!toolCall || typeof toolCall !== 'object') return false;
+
+  let foundNewToolCall = false;
+  const record = toolCall as {
+    toolCallId?: unknown;
+    agentToolCalls?: unknown;
+  };
+
+  if (
+    typeof record.toolCallId === 'string' &&
+    !toolCallIds.has(record.toolCallId)
+  ) {
+    toolCallIds.add(record.toolCallId);
+    foundNewToolCall = true;
+  }
+
+  if (Array.isArray(record.agentToolCalls)) {
+    for (const nestedCall of record.agentToolCalls) {
+      foundNewToolCall =
+        addAgentToolCallIds(toolCallIds, nestedCall) || foundNewToolCall;
+    }
+  }
+
+  return foundNewToolCall;
+}
+
 export function getForkedAgentProgress({
   sourceSession,
   targetMessages,
@@ -68,6 +121,7 @@ export function getForkedAgentProgress({
   if (!sourceSession.agentProgress) return undefined;
 
   const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
+  addReachableAgentToolCallIds(copiedToolCallIds, sourceSession.agentProgress);
   const agentProgress = Object.fromEntries(
     Object.entries(sourceSession.agentProgress).filter(([toolCallId]) =>
       copiedToolCallIds.has(toolCallId),
@@ -96,6 +150,7 @@ export function getForkedAgentSnapshots({
   if (!sourceSession.agentSnapshots) return undefined;
 
   const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
+  addReachableAgentToolCallIds(copiedToolCallIds, sourceSession.agentProgress);
   const agentSnapshots = Object.fromEntries(
     Object.entries(sourceSession.agentSnapshots).filter(([toolCallId]) =>
       copiedToolCallIds.has(toolCallId),
