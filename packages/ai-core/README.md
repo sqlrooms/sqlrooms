@@ -89,6 +89,12 @@ with `onCreateSession`. `Chat.History` also accepts `filterSession` and
 `emptyLabel` so apps can present scoped histories without changing the generic
 AI session schema.
 
+Assistant messages can be forked into a new active chat through
+`ai.forkSessionFromMessage()`. The action snapshots the source session's
+`uiMessages` through the selected message or chat turn, inherits the source
+session's model and draft context item ids, records `sessionForks` provenance,
+and lets `Chat.Messages` show a `Forked from` link back to the source chat.
+
 Use `generateSessionTitle` when apps want an imperative helper that turns a
 session's early user messages into a concise title via `ai.sendPrompt`, cleans
 the model output, and renames the session. Use `useGenerateSessionTitle` in React
@@ -144,13 +150,27 @@ const matches = findChatSearchMatches(blocks, query);
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
-- Chat UI: `Chat`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
-- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `ErrorMessage`
-- Types: `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
+- Chat UI: `Chat`, `ChatMessagesContainer`, `ChatTurnView`, `MessageContent`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
+- Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
+- Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
+- Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
 - Tool/agent utilities:
+  - `cleanupPendingUiMessages`
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
   - `streamSubAgent`
+
+`AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+`AnalysisResult`, `AnalysisAnswer`, `processAnalysisAnswerContent`, and
+`cleanupPendingAnalysisResults` remain compatibility exports for existing apps.
+New code should prefer `ChatSessionSchema`, `isChatSessionEmpty`,
+`Chat.Messages`, `ChatTurnView`, `MessageContent`, `uiMessages`, and derived
+`ChatTurn` helpers.
+
+Legacy persisted sessions that contain `analysisResults` still load through
+schema migration, but parsed and newly created chat sessions no longer include
+that field.
 
 ## Related packages
 

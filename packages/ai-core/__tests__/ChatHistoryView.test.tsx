@@ -8,7 +8,7 @@ import {RoomStateProvider} from '@sqlrooms/room-store';
 import {createStore} from 'zustand';
 import {TransformStream} from 'node:stream/web';
 import {jest} from '@jest/globals';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 import type {AiSliceState} from '../src/AiSlice';
 
 Object.assign(globalThis, {
@@ -22,13 +22,12 @@ function createSession(
   id: string,
   name: string,
   lastOpenedAt: number,
-): AnalysisSessionSchema {
+): ChatSessionSchema {
   return {
     id,
     name,
     modelProvider: 'openai',
     model: 'gpt-4.1',
-    analysisResults: [],
     createdAt: new Date(lastOpenedAt),
     uiMessages: [],
     messagesRevision: 0,
@@ -39,8 +38,8 @@ function createSession(
 }
 
 function renderHistory(options?: {
-  sessions?: AnalysisSessionSchema[];
-  filterSession?: (session: AnalysisSessionSchema) => boolean;
+  sessions?: ChatSessionSchema[];
+  filterSession?: (session: ChatSessionSchema) => boolean;
   emptyLabel?: string;
   onCreateSession?: () => void;
 }) {

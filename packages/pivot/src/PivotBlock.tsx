@@ -28,7 +28,9 @@ const DefaultPivotBlock = ({blockId}: PivotBlockRenderProps) => {
 export function createPivotBlockDefinition<
   TRoomState extends PivotSliceState = PivotSliceState,
 >({
-  render = DefaultPivotBlock as ComponentType<PivotBlockRenderProps<TRoomState>>,
+  render = DefaultPivotBlock as ComponentType<
+    PivotBlockRenderProps<TRoomState>
+  >,
   label = 'Pivot Table',
   defaultTitle = 'Pivot Table',
   source,

@@ -7,6 +7,7 @@
  * @packageDocumentation
  */
 
+import {resolveTableReference, type QualifiedTableName} from '@sqlrooms/duckdb';
 import {
   type LanguageModel,
   type Tool,
@@ -44,7 +45,19 @@ export type DashboardAiStore<TState> = {
 };
 
 export type DashboardAiTable = {
+  /**
+   * Canonical table identity used for routing after natural-language table
+   * selection resolves to a concrete table.
+   */
+  qualifiedName: QualifiedTableName;
+  columns?: ChartBuilderColumn[];
+  rowCount?: number;
+};
+
+type ResolvedDashboardAiTable = {
+  table: QualifiedTableName;
   tableName: string;
+  tableId: string;
   columns?: ChartBuilderColumn[];
   rowCount?: number;
 };
@@ -149,7 +162,7 @@ export type CreateDashboardAgentToolOptions<TState> =
     getModel: (args: {state: TState}) => LanguageModel;
     createQueryTools?: (args: {store: DashboardAiStore<TState>}) => {
       query: Tool;
-    };
+    } & Record<string, Tool>;
     runSubAgent: (args: {
       agent: ToolLoopAgent<any, any, any>;
       prompt: string;
@@ -328,29 +341,61 @@ class DashboardAgentException extends Error {
 function getTablesWithColumns<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
-): DashboardAiTable[] {
+): ResolvedDashboardAiTable[] {
   return adapter
     .getTables(state)
+    .map(normalizeDashboardAiTable)
     .filter((table) => table.columns && table.columns.length > 0);
 }
 
-function findTableColumns<TState>(
-  state: TState,
-  adapter: DashboardAiAdapter<TState>,
-  tableName: string,
-): ChartBuilderColumn[] | null {
-  const table = getTablesWithColumns(state, adapter).find(
-    (candidate) => candidate.tableName === tableName,
-  );
-  if (!table?.columns) return null;
-  return table.columns.map((column) => ({
-    name: column.name,
-    type: column.type,
-  }));
+function normalizeDashboardAiTable(
+  table: DashboardAiTable,
+): ResolvedDashboardAiTable {
+  const {qualifiedName} = table;
+  const tableId = qualifiedName.toString();
+
+  return {
+    table: qualifiedName,
+    tableName: qualifiedName.table,
+    tableId,
+    columns: table.columns,
+    rowCount: table.rowCount,
+  };
 }
 
-function formatAvailableTables(tables: DashboardAiTable[]): string {
-  return tables.map((table) => table.tableName).join(', ') || '(none)';
+function formatAmbiguousTableError(
+  tableName: string,
+  matches: ResolvedDashboardAiTable[],
+): string {
+  return `Ambiguous table "${tableName}". Matching tables: ${matches
+    .map((table) => table.tableId)
+    .join(', ')}.`;
+}
+
+function getResolvedTable(table: ResolvedDashboardAiTable) {
+  if (!table.columns) {
+    throw new Error(`Table "${table.tableName}" has no column metadata.`);
+  }
+  return {
+    tableName: table.tableId,
+    qualifiedName: table.table,
+    columns: table.columns.map((column) => ({
+      name: column.name,
+      type: column.type,
+    })),
+  };
+}
+
+function formatAvailableTables(tables: ResolvedDashboardAiTable[]): string {
+  return (
+    tables
+      .map((table) => {
+        return table.tableId === table.tableName
+          ? table.tableName
+          : `${table.tableName} (${table.tableId})`;
+      })
+      .join(', ') || '(none)'
+  );
 }
 
 export function createDashboardToolDeps<TState>({
@@ -405,43 +450,59 @@ export function createDashboardToolDeps<TState>({
     return targetArtifactId;
   };
 
-  const resolveTable = (artifactId: string, tableName?: string) => {
+  const resolveTable = (
+    artifactId: string,
+    tableName?: string | QualifiedTableName,
+  ) => {
     const state = store.getState();
     const tables = getTablesWithColumns(state, adapter);
     const dashboard = adapter.getDashboard(state, artifactId);
-    const explicitTableName = tableName?.trim() || undefined;
+    const explicitTableName =
+      typeof tableName === 'string' ? tableName.trim() || undefined : tableName;
 
     if (explicitTableName) {
-      const columns = findTableColumns(state, adapter, explicitTableName);
-      if (!columns) {
+      const {table, ambiguousMatches} = resolveTableReference(
+        tables,
+        explicitTableName,
+      );
+      if (ambiguousMatches) {
+        const requestedTableName =
+          typeof explicitTableName === 'string'
+            ? explicitTableName
+            : explicitTableName.toString();
         throw new Error(
-          `Unknown table "${explicitTableName}". Available tables: ${formatAvailableTables(tables)}.`,
+          formatAmbiguousTableError(requestedTableName, ambiguousMatches),
         );
       }
-      adapter.setSelectedTable(state, artifactId, explicitTableName);
-      return {tableName: explicitTableName, columns};
+      if (!table) {
+        const requestedTableName =
+          typeof explicitTableName === 'string'
+            ? explicitTableName
+            : explicitTableName.toString();
+        throw new Error(
+          `Unknown table "${requestedTableName}". Available tables: ${formatAvailableTables(tables)}.`,
+        );
+      }
+      const resolvedTable = getResolvedTable(table);
+      adapter.setSelectedTable(state, artifactId, resolvedTable.tableName);
+      return resolvedTable;
     }
 
     if (dashboard?.selectedTable) {
-      const columns = findTableColumns(state, adapter, dashboard.selectedTable);
-      if (columns) {
-        return {tableName: dashboard.selectedTable, columns};
+      const {table} = resolveTableReference(tables, dashboard.selectedTable);
+      if (table) {
+        return getResolvedTable(table);
       }
     }
 
     if (tables.length === 1) {
       const onlyTable = tables[0];
-      if (!onlyTable?.columns) {
+      if (!onlyTable) {
         throw new Error('The only available table has no column metadata.');
       }
-      adapter.setSelectedTable(state, artifactId, onlyTable.tableName);
-      return {
-        tableName: onlyTable.tableName,
-        columns: onlyTable.columns.map((column) => ({
-          name: column.name,
-          type: column.type,
-        })),
-      };
+      const resolvedTable = getResolvedTable(onlyTable);
+      adapter.setSelectedTable(state, artifactId, resolvedTable.tableName);
+      return resolvedTable;
     }
 
     throw new Error(
@@ -549,18 +610,28 @@ function buildAgentPrompt<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
 ): string {
-  const table = adapter
-    .getTables(state)
-    .find((candidate) => candidate.tableName === tableName);
+  const table = resolveTableReference(
+    adapter.getTables(state).map(normalizeDashboardAiTable),
+    tableName,
+  ).table;
+  const resolvedTableName = table ? table.tableId : tableName;
+  const tableIdInfo =
+    table && table.tableName !== resolvedTableName
+      ? `\n- Table ID for tool calls: ${resolvedTableName}`
+      : '';
   const columnNames =
-    table?.columns?.map((column) => column.name).join(', ') || 'unknown';
+    table?.columns
+      ?.map((column) =>
+        column.type ? `${column.name} (${column.type})` : column.name,
+      )
+      .join(', ') || 'unknown';
   const rowInfo =
     table?.rowCount !== undefined ? `Approximate rows: ${table.rowCount}` : '';
 
-  return `Analyze the "${tableName}" table.
+  return `Analyze the "${table?.tableName ?? tableName}" table.
 
 Table info:
-- Columns: ${columnNames}${rowInfo ? `\n- ${rowInfo}` : ''}
+- Columns: ${columnNames}${tableIdInfo}${rowInfo ? `\n- ${rowInfo}` : ''}
 
 User request: ${userPrompt}
 
@@ -571,20 +642,26 @@ function validateTableExists<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
   tableName: string,
-): void {
-  const tables = adapter.getTables(state);
-  const table = tables.find((candidate) => candidate.tableName === tableName);
+): ResolvedDashboardAiTable {
+  const tables = adapter.getTables(state).map(normalizeDashboardAiTable);
+  const {table, ambiguousMatches} = resolveTableReference(tables, tableName);
+  if (ambiguousMatches) {
+    throw new DashboardAgentException(
+      formatAmbiguousTableError(tableName, ambiguousMatches),
+    );
+  }
   if (!table) {
     throw new DashboardAgentException(
       `Table "${tableName}" not found. Available tables: ${formatAvailableTables(tables)}`,
     );
   }
+  return table;
 }
 
 function getOrCreateDashboard<TState>(
   state: TState,
   adapter: DashboardAiAdapter<TState>,
-  tableName: string,
+  displayTableName: string,
   dashboardTitle?: string,
 ): string {
   const dashboardId = adapter.getCurrentDashboardArtifactId(state);
@@ -595,7 +672,7 @@ function getOrCreateDashboard<TState>(
 
   const suggestedTitle =
     dashboardTitle ||
-    `${tableName.charAt(0).toUpperCase() + tableName.slice(1)} Insights`;
+    `${displayTableName.charAt(0).toUpperCase() + displayTableName.slice(1)} Insights`;
   const newDashboardId = adapter.createDashboardArtifact(
     state,
     suggestedTitle,
@@ -645,21 +722,22 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
       try {
         const state = store.getState();
-        validateTableExists(state, adapter, tableName);
+        const table = validateTableExists(state, adapter, tableName);
+        const resolvedTableName = table.tableId;
 
         dashboardId = getOrCreateDashboard(
           state,
           adapter,
-          tableName,
+          table.tableName,
           dashboardTitle,
         );
-        adapter.setSelectedTable(state, dashboardId, tableName);
+        adapter.setSelectedTable(state, dashboardId, resolvedTableName);
         const queryTools = options.createQueryTools?.({store});
 
         const dashboardAgent = new ToolLoopAgent({
           model: options.getModel({state}),
           tools: {
-            ...(queryTools ? {query: queryTools.query} : {}),
+            ...(queryTools ?? {}),
             ...createDashboardAiTools({
               store,
               adapter,
@@ -674,7 +752,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
 
         const result = await options.runSubAgent({
           agent: dashboardAgent,
-          prompt: buildAgentPrompt(prompt, tableName, state, adapter),
+          prompt: buildAgentPrompt(prompt, resolvedTableName, state, adapter),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
@@ -685,7 +763,7 @@ IMPORTANT: Always provide tableName parameter when the user mentions a specific 
           finalState,
           adapter,
           dashboardId,
-          tableName,
+          resolvedTableName,
           result.agentToolCalls || [],
         );
 

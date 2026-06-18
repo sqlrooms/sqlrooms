@@ -7,6 +7,15 @@ export type QualifiedTableName = {
   toString: () => string;
 };
 
+export type ResolveTableReferenceResult<T> = {
+  table?: T;
+  ambiguousMatches?: T[];
+};
+
+type TableReferenceCandidate = {
+  table: QualifiedTableName;
+};
+
 export function isQualifiedTableName(
   tableName: string | QualifiedTableName,
 ): tableName is QualifiedTableName {
@@ -37,22 +46,17 @@ export function makeQualifiedTableName({
   };
 }
 
-/**
- * Returns the final identifier segment from a possibly-qualified SQL name.
- *
- * The parser is quote-aware: dots inside double-quoted identifiers are treated
- * as part of the identifier rather than as qualification separators. Embedded
- * quotes inside a quoted segment use the standard `""` escape.
- *
- * @example
- * getUnqualifiedSqlIdentifier('schema.table')              // 'table'
- * getUnqualifiedSqlIdentifier('db.schema.table')           // 'table'
- * getUnqualifiedSqlIdentifier('schema."my.funny.table"')   // 'my.funny.table'
- * getUnqualifiedSqlIdentifier('"weird""name"')             // 'weird"name'
- */
-export function getUnqualifiedSqlIdentifier(
+function unquoteSqlIdentifierSegment(identifier: string): string {
+  const segment = identifier.trim();
+  if (segment.startsWith('"') && segment.endsWith('"') && segment.length >= 2) {
+    return segment.slice(1, -1).split('""').join('"');
+  }
+  return segment;
+}
+
+function splitSqlIdentifierSegments(
   qualifiedName: string | undefined,
-): string | undefined {
+): string[] | undefined {
   if (!qualifiedName) return undefined;
   const input = qualifiedName.trim();
   if (!input) return undefined;
@@ -64,9 +68,8 @@ export function getUnqualifiedSqlIdentifier(
   for (let i = 0; i < input.length; i += 1) {
     const ch = input[i];
     if (ch === '"') {
-      // In SQL identifiers, escaped quotes inside quoted identifiers are doubled.
       if (inQuotes && input[i + 1] === '"') {
-        current += '"';
+        current += '""';
         i += 1;
         continue;
       }
@@ -85,12 +88,164 @@ export function getUnqualifiedSqlIdentifier(
   }
   parts.push(current);
 
-  const last = parts[parts.length - 1]?.trim();
-  if (!last) return undefined;
-  if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
-    return last.slice(1, -1).split('""').join('"');
+  if (inQuotes) {
+    return undefined;
   }
-  return last;
+
+  const identifiers = parts.map(unquoteSqlIdentifierSegment);
+
+  if (
+    identifiers.length === 0 ||
+    identifiers.some((part) => part.length === 0)
+  ) {
+    return undefined;
+  }
+  return identifiers;
+}
+
+/**
+ * Parses a possibly-qualified SQL identifier into database, schema, and table
+ * segments. The parser is quote-aware, so dots inside double-quoted identifiers
+ * are treated as part of the current segment.
+ *
+ * @example
+ * parseQualifiedSqlIdentifier('schema.table')
+ * // {schema: 'schema', table: 'table'}
+ * parseQualifiedSqlIdentifier('"memory"."main"."events.2026"')
+ * // {database: 'memory', schema: 'main', table: 'events.2026'}
+ */
+export function parseQualifiedSqlIdentifier(
+  qualifiedName: string | undefined,
+): Partial<QualifiedTableName> | undefined {
+  const identifiers = splitSqlIdentifierSegments(qualifiedName);
+
+  if (!identifiers || identifiers.length > 3) {
+    return undefined;
+  }
+
+  if (identifiers.length === 3) {
+    return {
+      database: identifiers[0],
+      schema: identifiers[1],
+      table: identifiers[2],
+    };
+  }
+  if (identifiers.length === 2) {
+    return {schema: identifiers[0], table: identifiers[1]};
+  }
+  return {table: identifiers[0]};
+}
+
+/**
+ * Returns the final identifier segment from a possibly-qualified SQL name.
+ *
+ * The parser is quote-aware: dots inside double-quoted identifiers are treated
+ * as part of the identifier rather than as qualification separators. Embedded
+ * quotes inside a quoted segment use the standard `""` escape.
+ *
+ * @example
+ * getUnqualifiedSqlIdentifier('schema.table')              // 'table'
+ * getUnqualifiedSqlIdentifier('db.schema.table')           // 'table'
+ * getUnqualifiedSqlIdentifier('schema."my.funny.table"')   // 'my.funny.table'
+ * getUnqualifiedSqlIdentifier('"weird""name"')             // 'weird"name'
+ */
+export function getUnqualifiedSqlIdentifier(
+  qualifiedName: string | undefined,
+): string | undefined {
+  return splitSqlIdentifierSegments(qualifiedName)?.at(-1);
+}
+
+/**
+ * Quotes a table reference for SQL.
+ *
+ * Accepts bare names, unquoted qualified names, or already-quoted qualified
+ * identifiers. The result is always the fully quoted form produced by
+ * QualifiedTableName.toString() when the input parses as a table reference.
+ *
+ * @example
+ * quoteTableReference('events') // '"events"'
+ * quoteTableReference('main.events') // '"main"."events"'
+ * quoteTableReference('"memory"."main"."events.2026"') // '"memory"."main"."events.2026"'
+ */
+export function quoteTableReference(tableName: string): string {
+  const parsed = parseQualifiedSqlIdentifier(tableName);
+  if (parsed?.table) {
+    return makeQualifiedTableName({
+      database: parsed.database,
+      schema: parsed.schema,
+      table: parsed.table,
+    }).toString();
+  }
+
+  return escapeId(tableName);
+}
+
+function matchesQualifiedTableName<T extends TableReferenceCandidate>(
+  candidate: T,
+  tableName: Partial<QualifiedTableName>,
+): boolean {
+  return (
+    candidate.table.table === tableName.table &&
+    (!tableName.schema || candidate.table.schema === tableName.schema) &&
+    (!tableName.database || candidate.table.database === tableName.database)
+  );
+}
+
+/**
+ * Resolves a table reference against an already-flat table catalog.
+ *
+ * Resolution prefers exact canonical table ids, then qualified SQL identifiers,
+ * then unique bare table names. Ambiguous bare names are returned as matches
+ * instead of silently selecting one table.
+ *
+ * @param tables - Flat catalog whose entries carry a QualifiedTableName.
+ * @param tableReference - Table reference string or QualifiedTableName.
+ * @returns Matching table, ambiguous matches, or an empty result.
+ */
+export function resolveTableReference<T extends TableReferenceCandidate>(
+  tables: T[],
+  tableReference: string | QualifiedTableName,
+): ResolveTableReferenceResult<T> {
+  if (typeof tableReference !== 'string') {
+    return {
+      table: tables.find(
+        (candidate) => candidate.table.toString() === tableReference.toString(),
+      ),
+    };
+  }
+
+  const trimmedTableReference = tableReference.trim();
+  const canonicalMatches = tables.filter(
+    (candidate) => candidate.table.toString() === trimmedTableReference,
+  );
+  if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};
+  if (canonicalMatches.length > 1) {
+    return {ambiguousMatches: canonicalMatches};
+  }
+
+  const parsedTableReference = parseQualifiedSqlIdentifier(
+    trimmedTableReference,
+  );
+  if (
+    parsedTableReference?.table &&
+    (parsedTableReference.schema || parsedTableReference.database)
+  ) {
+    const qualifiedMatches = tables.filter((candidate) =>
+      matchesQualifiedTableName(candidate, parsedTableReference),
+    );
+    if (qualifiedMatches.length === 1) return {table: qualifiedMatches[0]};
+    if (qualifiedMatches.length > 1) {
+      return {ambiguousMatches: qualifiedMatches};
+    }
+  }
+
+  const bareMatches = tables.filter(
+    (candidate) => candidate.table.table === trimmedTableReference,
+  );
+  if (bareMatches.length === 1) return {table: bareMatches[0]};
+  if (bareMatches.length > 1) return {ambiguousMatches: bareMatches};
+
+  return {};
 }
 
 /**

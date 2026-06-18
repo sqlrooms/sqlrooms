@@ -25,9 +25,7 @@ import {
 import type {FC} from 'react';
 
 export const MainView: FC = () => {
-  const table = useRoomStore((state) =>
-    state.db.findTableByName('earthquakes'),
-  );
+  const table = useRoomStore((state) => state.db.findTable('earthquakes'));
   const result = useSql<{year: string; magnitude: number; depth: number}>({
     query: `
       SELECT 

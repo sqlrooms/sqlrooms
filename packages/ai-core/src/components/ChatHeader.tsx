@@ -11,7 +11,7 @@ import {useCallback, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {DeleteSessionDialog} from './session';
 import {SessionActionsMenu} from './SessionActionsMenu';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 
 interface ChatHeaderProps {
   onHistoryClick: () => void;
@@ -34,7 +34,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
 
   const [sessionToDelete, setSessionToDelete] =
-    useState<AnalysisSessionSchema | null>(null);
+    useState<ChatSessionSchema | null>(null);
 
   const handleDelete = useCallback(() => {
     if (currentSession) {

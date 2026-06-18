@@ -40,6 +40,25 @@ export {
   createDefaultAiInstructions,
   formatTablesForLLM,
 } from './tools/defaultInstructions';
+export {
+  DEFAULT_TABLE_SCHEMA_CONTEXT_LIMITS,
+  formatOtherTableScopesForAi,
+  formatTableSchemaForAi,
+  formatTableSummaryForAi,
+  getAiTableScopeSummary,
+  getAiTableSchemaContextLimits,
+  getDatabaseNameForAi,
+  getFullTableNameForAi,
+  getSchemaNameForAi,
+  getTableIdForAi,
+  getTablesForAiScope,
+  getTableNameForAi,
+} from './tools/tableSchemaContext';
+export type {
+  AiTableScope,
+  AiTableScopeOptions,
+  TableSchemaContextLimits,
+} from './tools/tableSchemaContext';
 
 // Skills
 export {
@@ -121,6 +140,7 @@ export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,
   getVisibleSessionContextItemIds,
+  isChatSessionEmpty,
   isAnalysisSessionEmpty,
 } from '@sqlrooms/ai-core';
 export type {
@@ -139,9 +159,19 @@ export type {
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components
+export {ChatMessagesContainer} from '@sqlrooms/ai-core';
 // @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from '@sqlrooms/ai-core';
+export {ChatTurnView} from '@sqlrooms/ai-core';
+export type {ChatTurnViewProps} from '@sqlrooms/ai-core';
+/** @deprecated Use `ChatTurnView` instead. */
 export {AnalysisResult} from '@sqlrooms/ai-core';
+export {MessageContent, processMessageContent} from '@sqlrooms/ai-core';
+export type {MessageContentProps} from '@sqlrooms/ai-core';
+/** @deprecated Use `MessageContent` instead. */
+export {AnalysisAnswer} from '@sqlrooms/ai-core';
+/** @deprecated Use `processMessageContent` instead. */
+export {processAnalysisAnswerContent} from '@sqlrooms/ai-core';
 export {ErrorMessage} from '@sqlrooms/ai-core';
 export type {ErrorMessageComponentProps} from '@sqlrooms/ai-core';
 export {PromptSuggestions} from '@sqlrooms/ai-core';
@@ -157,6 +187,7 @@ export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ShowToolCallDetailsProvider} from '@sqlrooms/ai-core';
 export type {
+  ForkSessionFromMessageArgs,
   ToolRenderBehavior,
   ToolStructureBehavior,
   ToolDisplayBehavior,
@@ -166,10 +197,19 @@ export {Chat} from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
 export {
   findChatSearchMatches,
+  getAnalysisResultsFromUiMessages,
+  getChatRequestErrorMessage,
+  getChatTurnsFromUiMessages,
   markdownToPlainText,
   normalizeChatSearchQuery,
 } from '@sqlrooms/ai-core';
-export type {ChatSearchBlock, ChatSearchMatch} from '@sqlrooms/ai-core';
+export type {
+  ChatMessageMetadata,
+  ChatRequestErrorMessage,
+  ChatSearchBlock,
+  ChatSearchMatch,
+  ChatTurn,
+} from '@sqlrooms/ai-core';
 export type {
   ContextSelectorItem,
   ContextSelectorRootProps,
@@ -180,6 +220,8 @@ export {
   AiRunContextItemSchema,
   AiRunContextSchema,
   AiSliceConfig,
+  AiSessionForkOrigin,
+  ChatSessionSchema,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,

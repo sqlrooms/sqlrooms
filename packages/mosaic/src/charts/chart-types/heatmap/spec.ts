@@ -5,7 +5,7 @@ import {
   MissingColumnsError,
   RequiredFieldsError,
 } from '../errors';
-import {CreateSpecOptions} from '../base-types';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {isNumericType} from '../../../column-types-utils';
 
 export function createHeatmapSpec(
@@ -18,7 +18,7 @@ export function createHeatmapSpec(
   const plot: unknown[] = [
     {
       mark: 'raster',
-      data: {from: dataTable.table.table, filterBy: '$brush'},
+      data: {from: getChartTableReference(dataTable), filterBy: '$brush'},
       x: xColumn.name,
       y: yColumn.name,
       fill: 'density',

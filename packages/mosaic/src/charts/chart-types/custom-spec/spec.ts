@@ -1,6 +1,6 @@
 import {Spec} from '@uwdata/mosaic-spec';
 import {CustomSpecChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 
 export function createCustomSpec({
   dataTable,
@@ -15,7 +15,7 @@ export function createCustomSpec({
   const plot: unknown[] = [
     {
       mark: 'rectY',
-      data: {from: dataTable.table.table, filterBy: '$brush'},
+      data: {from: getChartTableReference(dataTable), filterBy: '$brush'},
       x: {bin: 'field_name', maxbins: 25},
       y: {count: null},
       fill: 'steelblue',

@@ -8,6 +8,7 @@ import {
   isQualifiedTableName,
   joinStatements,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
   QualifiedTableName,
   QueryHandle,
   SchemaWithTables,
@@ -200,7 +201,7 @@ export type DuckDbSliceState = {
     loadTableSchemas(filter?: LoadTableSchemasFilter): Promise<DataTable[]>;
 
     /**
-     * @deprecated Use findTableByName instead
+     * @deprecated Use findTable instead
      */
     getTable(tableName: string): DataTable | undefined;
 
@@ -213,11 +214,18 @@ export type DuckDbSliceState = {
     ): void;
 
     /**
-     * Find a table by name in the last refreshed table schemas.
-     * If no schema or database is provided, the table will be found in the current schema
-     * and database (from last table schemas refresh).
-     * @param tableName - The name of the table to find or a qualified table name.
+     * Find a table by reference in the last refreshed table schemas.
+     * String references are parsed as SQL identifiers, so dots separate
+     * database/schema/table segments unless quoted. If no schema or database is
+     * provided, the table is resolved in the current schema and database from
+     * the last schema refresh.
+     * @param tableName - The table reference to find.
      * @returns The table or undefined if not found.
+     */
+    findTable(tableName: string | QualifiedTableName): DataTable | undefined;
+
+    /**
+     * @deprecated Use findTable instead
      */
     findTableByName(
       tableName: string | QualifiedTableName,
@@ -617,7 +625,7 @@ export function createDuckDbSlice({
               ? tableName
               : makeQualifiedTableName({table: tableName});
             const table =
-              get().db.findTableByName(qualifiedTable) ??
+              get().db.findTable(qualifiedTable) ??
               (await loadTableSchemaByName(qualifiedTable));
             const isView = table?.isView;
             if (isView) {
@@ -634,7 +642,7 @@ export function createDuckDbSlice({
               ? tableName
               : makeQualifiedTableName({table: tableName});
             const table =
-              get().db.findTableByName(qualifiedTable) ??
+              get().db.findTable(qualifiedTable) ??
               (await loadTableSchemaByName(qualifiedTable));
 
             if (table?.isView) {
@@ -686,23 +694,37 @@ export function createDuckDbSlice({
           },
 
           getTable(tableName) {
-            return get().db.findTableByName(tableName);
+            return get().db.findTable(tableName);
+          },
+
+          findTable(tableName: string | QualifiedTableName) {
+            const {currentSchema, currentDatabase, tables} = get().db;
+            const findMatchingTable = ({
+              table,
+              schema,
+              database,
+            }: Partial<QualifiedTableName>) =>
+              table
+                ? tables.find(
+                    (t) =>
+                      t.table.table === table &&
+                      (!schema || t.table.schema === schema) &&
+                      (!database || t.table.database === database),
+                  )
+                : undefined;
+
+            const {table, schema, database} = {
+              schema: currentSchema,
+              database: currentDatabase,
+              ...(typeof tableName === 'string'
+                ? (parseQualifiedSqlIdentifier(tableName) ?? {})
+                : tableName),
+            };
+            return findMatchingTable({table, schema, database});
           },
 
           findTableByName(tableName: string | QualifiedTableName) {
-            const {table, schema, database} = {
-              schema: get().db.currentSchema,
-              database: get().db.currentDatabase,
-              ...(typeof tableName === 'string'
-                ? {table: tableName}
-                : tableName),
-            };
-            return get().db.tables.find(
-              (t) =>
-                t.table.table === table &&
-                (!schema || t.table.schema === schema) &&
-                (!database || t.table.database === database),
-            );
+            return get().db.findTable(tableName);
           },
 
           async refreshTableSchemas(): Promise<DataTable[]> {

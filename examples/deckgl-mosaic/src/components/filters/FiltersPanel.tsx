@@ -50,7 +50,7 @@ const FiltersPanelContent = ({className}: {className?: string}) => {
   // Chart builder dialog state
   const [builderOpen, setBuilderOpen] = useState(false);
   const earthquakesTable = useRoomStore((state) =>
-    state.db.findTableByName('earthquakes'),
+    state.db.findTable('earthquakes'),
   );
 
   const handleSpecChange = useCallback((chartId: string, newSpec: Spec) => {

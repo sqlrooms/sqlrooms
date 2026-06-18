@@ -6,7 +6,10 @@ import {
   createDeckMapDashboardTool,
   getDashboardWithDeckMapAiInstructions,
 } from '../src/ai';
-import {deckMapDashboardAddPanelAction} from '../src/dashboard';
+import {
+  createDeckMapBoundsQuery,
+  deckMapDashboardAddPanelAction,
+} from '../src/dashboard';
 import {createDeckMapDashboardSliceOptions} from '../src/dashboardIntegration';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
 import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
@@ -132,6 +135,22 @@ function createDeps(): DashboardToolDeps & {
     },
   };
 }
+
+describe('createDeckMapBoundsQuery', () => {
+  it('builds fit-to-data bounds queries without double-quoting table ids', () => {
+    const query = createDeckMapBoundsQuery({
+      source: {tableName: '"local"."main"."events"'},
+      fitToData: {
+        dataset: 'events',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    });
+
+    expect(query).toContain('SELECT * FROM "local"."main"."events"');
+    expect(query).not.toContain('"""local"""');
+  });
+});
 
 describe('createDeckMapConfigTool', () => {
   it('accepts and returns a native scatterplot Deck JSON map config', async () => {

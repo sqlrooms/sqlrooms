@@ -5,10 +5,27 @@
 
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
-export type {AiSliceState, AiSliceOptions} from './AiSlice';
-// @deprecated Use `Chat.Messages` instead.
-export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
-export {AnalysisResult} from './components/AnalysisResult';
+export type {
+  AiSliceState,
+  AiSliceOptions,
+  ForkSessionFromMessageArgs,
+} from './AiSlice';
+export {ChatMessagesContainer} from './components/ChatMessagesContainer';
+/** @deprecated Use `Chat.Messages` instead. */
+export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
+export {ChatTurnView} from './components/ChatTurnView';
+export type {ChatTurnViewProps} from './components/ChatTurnView';
+/** @deprecated Use `ChatTurnView` instead. */
+export {ChatTurnView as AnalysisResult} from './components/ChatTurnView';
+export {
+  MessageContent,
+  processMessageContent,
+} from './components/MessageContent';
+export type {MessageContentProps} from './components/MessageContent';
+/** @deprecated Use `MessageContent` instead. */
+export {MessageContent as AnalysisAnswer} from './components/MessageContent';
+/** @deprecated Use `processMessageContent` instead. */
+export {processMessageContent as processAnalysisAnswerContent} from './components/MessageContent';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
@@ -28,6 +45,16 @@ export type {
   UseGenerateSessionTitleOptions,
 } from './hooks/useGenerateSessionTitle';
 export {Chat, type LocalAgentChatRootProps} from './components/Chat';
+export {
+  getAnalysisResultsFromUiMessages,
+  getChatRequestErrorMessage,
+  getChatTurnsFromUiMessages,
+} from './chatTurns';
+export type {
+  ChatMessageMetadata,
+  ChatRequestErrorMessage,
+  ChatTurn,
+} from './chatTurns';
 export {ContextSelector} from './components/context/ContextSelector';
 export {
   toggleContextSelectorItem,
@@ -57,20 +84,20 @@ export {
   AiRunContextItemSchema,
   AiRunContextSchema,
   AiSliceConfig,
+  AiSessionForkOrigin,
+  AnalysisSessionSchema,
+  ChatSessionSchema,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {
-  AiRunContext,
-  AiRunContextItem,
-  AnalysisSessionSchema,
-} from '@sqlrooms/ai-config';
+export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,
   getVisibleSessionContextItemIds,
+  isChatSessionEmpty,
   isAnalysisSessionEmpty,
 } from './contextSelection';
 export {AiThinkingDots} from './components/AiThinkingDots';

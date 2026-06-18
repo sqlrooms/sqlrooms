@@ -168,6 +168,74 @@ describe('DuckDbSlice', () => {
     });
   });
 
+  describe('findTable', () => {
+    it('finds the current-schema table from an unqualified name', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE simple_lookup (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(store.getState().db.findTable('simple_lookup')).toMatchObject({
+        table: {table: 'simple_lookup'},
+      });
+    });
+
+    it('finds tables from quoted qualified SQL references', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE SCHEMA "analytics.2026"');
+      await connector.query(
+        'CREATE TABLE "analytics.2026"."daily events" (id INT)',
+      );
+      const tables = await store.getState().db.refreshTableSchemas();
+      const table = tables.find(
+        (candidate) => candidate.table.table === 'daily events',
+      );
+
+      expect(table).toBeDefined();
+      expect(
+        store.getState().db.findTable('"analytics.2026"."daily events"'),
+      ).toBe(table);
+      expect(store.getState().db.findTable(table!.table.toString())).toBe(
+        table,
+      );
+    });
+
+    it('parses dotted strings as qualified references and quoted dots as literal names', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE "events.2026" (id INT)');
+      await connector.query('CREATE SCHEMA events');
+      await connector.query('CREATE TABLE events."2026" (id INT)');
+      const tables = await store.getState().db.refreshTableSchemas();
+      const dottedTable = tables.find(
+        (candidate) =>
+          candidate.table.schema === 'main' &&
+          candidate.table.table === 'events.2026',
+      );
+      const qualifiedTable = tables.find(
+        (candidate) =>
+          candidate.table.schema === 'events' &&
+          candidate.table.table === '2026',
+      );
+
+      expect(dottedTable).toBeDefined();
+      expect(qualifiedTable).toBeDefined();
+      expect(store.getState().db.findTable('events.2026')).toBe(qualifiedTable);
+      expect(store.getState().db.findTable('"events.2026"')).toBe(dottedTable);
+      expect(store.getState().db.findTable('events."2026"')).toBe(
+        qualifiedTable,
+      );
+    });
+
+    it('keeps findTableByName as a deprecated alias', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE alias_lookup (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(store.getState().db.findTableByName('alias_lookup')).toBe(
+        store.getState().db.findTable('alias_lookup'),
+      );
+    });
+  });
+
   describe('addTable', () => {
     it('should load objects using connector.loadObjects', async () => {
       const data = [

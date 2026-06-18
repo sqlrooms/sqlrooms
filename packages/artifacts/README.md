@@ -145,7 +145,7 @@ domain-specific types such as documents or dashboards.
 
 `@sqlrooms/artifacts/ai` also provides `createArtifactAiSlice()` for apps that
 want AI chats to belong to the current artifact without changing the generic
-AI session schema.
+chat session schema.
 
 Add `ArtifactAiConfigSchema` to persistence and compose the slice after
 `createArtifactsSlice()` and the app's AI slice:

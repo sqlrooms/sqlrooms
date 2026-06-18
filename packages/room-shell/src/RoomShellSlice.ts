@@ -507,7 +507,7 @@ export function createRoomShellSlice(
               }
             }),
           );
-          return get().db.findTableByName(tableName);
+          return get().db.findTable(tableName);
         },
         removeSqlQueryDataSource: async (tableName) => {
           await get().room.removeDataSource(tableName);

@@ -20,7 +20,7 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
-import {DataTable} from '@sqlrooms/duckdb';
+import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
 
 export type {ChartType};
 
@@ -51,10 +51,14 @@ export interface ChartBuilderField {
 }
 
 /**
- * Result of table resolution, includes table name and column metadata.
+ * Result of table resolution.
+ * tableName is the fully quoted string boundary form
+ * (QualifiedTableName.toString()); qualifiedName is the canonical structured
+ * identity when available.
  */
 export interface ResolvedTable {
   tableName: string;
+  qualifiedName: QualifiedTableName;
   columns: ChartBuilderColumn[];
 }
 
@@ -84,10 +88,13 @@ export interface DashboardToolDeps {
   ) => string;
 
   /**
-   * Resolves table name and columns for a given dashboard artifact.
-   * Use this when you need table-specific information.
+   * Resolves user/display table input to canonical table identity and columns.
+   * Bare names are accepted only when unambiguous.
    */
-  resolveTable: (artifactId: string, tableName?: string) => ResolvedTable;
+  resolveTable: (
+    artifactId: string,
+    tableName?: string | QualifiedTableName,
+  ) => ResolvedTable;
 
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
@@ -191,6 +198,10 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
   settings: TSettings;
   selectionName?: string;
 };
+
+export function getChartTableReference(dataTable: DataTable): string {
+  return dataTable.table.toString();
+}
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {

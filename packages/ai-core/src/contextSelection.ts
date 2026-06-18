@@ -1,16 +1,15 @@
 import {getAiRunContextItems} from '@sqlrooms/ai-config';
-import type {AiRunContext, AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {AiRunContext, ChatSessionSchema} from '@sqlrooms/ai-config';
 
-export function isAnalysisSessionEmpty(
-  session: AnalysisSessionSchema | undefined,
-) {
+export function isChatSessionEmpty(session: ChatSessionSchema | undefined) {
   if (!session) return true;
   const hasMessages = session.uiMessages.length > 0;
-  const hasCompletedResults = session.analysisResults.some(
-    (result) => result.id !== '__pending__',
-  );
-  return !hasMessages && !hasCompletedResults;
+  const hasPrompt = session.prompt.trim().length > 0;
+  return !hasMessages && !hasPrompt;
 }
+
+/** @deprecated Use `isChatSessionEmpty` instead. */
+export const isAnalysisSessionEmpty = isChatSessionEmpty;
 
 export function getRunContextItemIds(
   runContext: AiRunContext | undefined,
@@ -19,13 +18,13 @@ export function getRunContextItemIds(
 }
 
 export function getVisibleSessionContextItemIds(
-  session: AnalysisSessionSchema | undefined,
+  session: ChatSessionSchema | undefined,
 ): string[] {
   if (session?.draftContextItemIds !== undefined) {
     return session.draftContextItemIds;
   }
 
-  if (!isAnalysisSessionEmpty(session)) {
+  if (!isChatSessionEmpty(session)) {
     return getRunContextItemIds(session?.runContext);
   }
 
@@ -33,7 +32,7 @@ export function getVisibleSessionContextItemIds(
 }
 
 export function getEffectiveSessionContextItemIds(
-  session: AnalysisSessionSchema | undefined,
+  session: ChatSessionSchema | undefined,
   options: {implicitItemIds?: string[]} = {},
 ): string[] {
   if (session?.draftContextItemIds !== undefined) {

@@ -1,19 +1,20 @@
-import {
-  findTableInSchemaTrees,
-  makeQualifiedTableName,
-  type DuckDbSliceState,
-} from '@sqlrooms/duckdb';
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {getAiRunContextItems, type AiRunContext} from '@sqlrooms/ai-core';
 import {tool} from 'ai';
 import {z} from 'zod';
 import type {StoreApi} from '@sqlrooms/room-shell';
+import {
+  formatAmbiguousTableMessage,
+  getCanonicalTableId,
+  resolveTableFromCatalog,
+} from './tableIdentity';
 
 const ReadTableSchemaInput = z.object({
   tableId: z
     .string()
     .optional()
     .describe(
-      'Qualified table name (e.g., "database.schema.table"). Defaults to the primary context table if not specified.',
+      'Fully quoted tableId from table context/list_tables, produced by QualifiedTableName.toString() (for example "db"."schema"."table"). A bare table name is accepted only when it uniquely identifies one visible table. Defaults to the primary context table if not specified.',
     ),
 });
 
@@ -80,12 +81,23 @@ export function createReadTableSchemaTool(store: StoreApi<DuckDbSliceState>) {
         targetTableId = primaryTable.id;
       }
 
-      // Find the table object in schema trees
-      const tableObj = findTableInSchemaTrees(
-        state.db.schemaTrees,
+      // Find the table object in the flat schema catalog
+      const {table: tableObj, ambiguousMatches} = resolveTableFromCatalog(
+        state.db.tables,
         targetTableId,
-        makeQualifiedTableName,
       );
+
+      if (ambiguousMatches) {
+        return {
+          llmResult: {
+            success: false,
+            errorMessage: formatAmbiguousTableMessage(
+              targetTableId,
+              ambiguousMatches,
+            ),
+          },
+        };
+      }
 
       if (!tableObj) {
         return {
@@ -100,7 +112,7 @@ export function createReadTableSchemaTool(store: StoreApi<DuckDbSliceState>) {
         llmResult: {
           success: true,
           table: {
-            id: targetTableId,
+            id: getCanonicalTableId(tableObj),
             name: tableObj.table.table,
             database: tableObj.table.database,
             schema: tableObj.table.schema,

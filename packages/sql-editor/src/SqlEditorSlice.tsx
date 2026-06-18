@@ -109,7 +109,10 @@ export type SqlEditorSliceState = {
      * Ensure an id-addressable query exists without requiring it to be an open
      * workbench tab.
      */
-    ensureQuery(queryId: string, options?: EnsureSqlQueryOptions): SqlEditorQuery;
+    ensureQuery(
+      queryId: string,
+      options?: EnsureSqlQueryOptions,
+    ): SqlEditorQuery;
 
     /**
      * Remove an id-addressable query and its runtime result.
@@ -400,9 +403,7 @@ export function createSqlEditorSlice({
               const deletingOpenIndex = config.openTabs.indexOf(queryId);
 
               config.queries = config.queries.filter((q) => q.id !== queryId);
-              config.openTabs = config.openTabs.filter(
-                (id) => id !== queryId,
-              );
+              config.openTabs = config.openTabs.filter((id) => id !== queryId);
               delete draft.sqlEditor.queryResultsById[queryId];
 
               // If we deleted the selected query, select another one
@@ -414,10 +415,7 @@ export function createSqlEditorSlice({
                   // Select from remaining open tabs
                   const baseIndex =
                     deletingOpenIndex <= 0 ? 0 : deletingOpenIndex - 1;
-                  const newIndex = Math.min(
-                    baseIndex,
-                    newOpenTabs.length - 1,
-                  );
+                  const newIndex = Math.min(baseIndex, newOpenTabs.length - 1);
                   const newSelectedId =
                     newOpenTabs[newIndex] ?? remainingQueries[0]?.id;
                   if (newSelectedId) {
@@ -538,7 +536,9 @@ export function createSqlEditorSlice({
           get().sqlEditor.runQueryById(get().sqlEditor.config.selectedQueryId),
 
         abortCurrentQuery: () => {
-          get().sqlEditor.abortQueryById(get().sqlEditor.config.selectedQueryId);
+          get().sqlEditor.abortQueryById(
+            get().sqlEditor.config.selectedQueryId,
+          );
         },
 
         setQueryResultLimit: (limit) => {
@@ -588,8 +588,7 @@ export function createSqlEditorSlice({
             (query) => query.id === queryId,
           );
           const query = queryOverride ?? storedQuery?.query ?? '';
-          const existingResult =
-            get().sqlEditor.queryResultsById[queryId];
+          const existingResult = get().sqlEditor.queryResultsById[queryId];
           if (existingResult?.status === 'loading') {
             throw new Error('Query already running');
           }

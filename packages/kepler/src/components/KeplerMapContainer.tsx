@@ -71,11 +71,14 @@ const KeplerGl: FC<{
   const basicKeplerProps = useStoreWithKepler(
     (state) => state.kepler.basicKeplerProps,
   );
+  const modalPortalTarget = useStoreWithKepler(
+    (state) => state.kepler.modalPortalTarget,
+  );
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
 
-  // Capture the current container DOM node outside of render logic
+  // Capture container DOM node outside of render for portal use
   useEffect(() => {
     setContainerNode(containerRef.current);
   }, [containerRef]);
@@ -152,8 +155,15 @@ const KeplerGl: FC<{
     };
   }, [hasFilters, hasAnimatableLayers, mergedKeplerProps, theme]);
 
+  const modalPortalNode = useMemo(() => {
+    if (modalPortalTarget === 'body') {
+      return typeof document !== 'undefined' ? document.body : null;
+    }
+    return containerNode;
+  }, [modalPortalTarget, containerNode]);
+
   const modalContainerFields = keplerState?.visState
-    ? modalContainerSelector(mergedKeplerProps, containerNode)
+    ? modalContainerSelector(mergedKeplerProps, modalPortalNode)
     : null;
 
   const mapboxApiAccessToken =

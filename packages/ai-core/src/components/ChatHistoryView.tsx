@@ -4,14 +4,14 @@ import {FC, useCallback, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {DeleteSessionDialog, RenameSessionDialog} from './session';
 import {ChatHistoryItem} from './ChatHistoryItem';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
 
 type ChatHistoryViewProps = {
   onBack: () => void;
   onSelectChat: (sessionId: string) => void;
   onCreateSession?: () => void;
   createSessionDisabled?: boolean;
-  filterSession?: (session: AnalysisSessionSchema) => boolean;
+  filterSession?: (session: ChatSessionSchema) => boolean;
   emptyLabel?: string;
   className?: string;
 };
@@ -32,9 +32,9 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
 
   const [sessionToRename, setSessionToRename] =
-    useState<AnalysisSessionSchema | null>(null);
+    useState<ChatSessionSchema | null>(null);
   const [sessionToDelete, setSessionToDelete] =
-    useState<AnalysisSessionSchema | null>(null);
+    useState<ChatSessionSchema | null>(null);
 
   const sortedSessions = useMemo(() => {
     const filteredSessions = filterSession
@@ -54,12 +54,12 @@ export const ChatHistoryView: FC<ChatHistoryViewProps> = ({
     [onSelectChat],
   );
 
-  const handleRenameSession = useCallback((session: AnalysisSessionSchema) => {
+  const handleRenameSession = useCallback((session: ChatSessionSchema) => {
     setSessionToRename(session);
   }, []);
 
   const handleDeleteSession = useCallback(
-    (session: AnalysisSessionSchema) => {
+    (session: ChatSessionSchema) => {
       if (!session.uiMessages?.length) {
         deleteSession(session.id);
       } else {

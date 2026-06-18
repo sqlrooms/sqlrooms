@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HistogramChartSettings, DEFAULT_BINS_COUNT} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {
   InvalidColumnTypeError,
   MissingColumnsError,
@@ -20,11 +20,12 @@ export function createHistogramSpec(
 
   const {fieldColumn, maxBins} = validateHistogramSettings(options);
   const fgColor = settings.color ?? DEFAULT_FG_COLOR;
+  const tableReference = getChartTableReference(dataTable);
 
   const plot: unknown[] = [
     {
       mark: 'rectY',
-      data: {from: dataTable.table.table},
+      data: {from: tableReference},
       x: {bin: fieldColumn.name, steps: maxBins},
       y: {count: null},
       fill: BG_COLOR,
@@ -32,7 +33,7 @@ export function createHistogramSpec(
     },
     {
       mark: 'rectY',
-      data: {from: dataTable.table.table, filterBy: '$brush'},
+      data: {from: tableReference, filterBy: '$brush'},
       x: {bin: fieldColumn.name, steps: maxBins},
       y: {count: null},
       fill: fgColor,

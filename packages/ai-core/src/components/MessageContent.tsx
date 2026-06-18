@@ -4,16 +4,18 @@ import {BrainIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
 import Markdown, {Components} from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import type {PluggableList} from 'unified';
 import {
   createChatSearchRehypePlugin,
   useOptionalChatSearch,
 } from './ChatSearch';
+import {markdownSanitizeSchema} from './markdown-sanitize';
 import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
 
-type AnalysisAnswerProps = {
+export type MessageContentProps = {
   content: string;
   isAnswer: boolean;
   searchBlockId?: string;
@@ -34,7 +36,7 @@ const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
 /**
  * Processes content and extracts think content in one pass
  */
-export const processAnalysisAnswerContent = (
+export const processMessageContent = (
   originalContent: string,
 ): {
   processedContent: string;
@@ -86,7 +88,7 @@ const ThinkBlock = React.memo<{
   className?: string;
   thinkContent: ThinkContent;
   isExpanded: boolean;
-  onToggleExpansion: (content: string) => void;
+  onToggleExpansion: (index: number) => void;
 }>(({thinkContent, isExpanded, onToggleExpansion, className}) => {
   const {content, isComplete, index} = thinkContent;
 
@@ -115,7 +117,7 @@ const ThinkBlock = React.memo<{
       </span>{' '}
       {needsTruncation && (
         <button
-          onClick={() => onToggleExpansion(content)}
+          onClick={() => onToggleExpansion(index)}
           className="text-xs text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           {isExpanded ? 'Show less' : 'Show more thinking'}
@@ -128,25 +130,25 @@ const ThinkBlock = React.memo<{
 ThinkBlock.displayName = 'ThinkBlock';
 
 /**
- * Renders an analysis answer with markdown content of the final streaming response.
+ * Renders message content with markdown content of the final streaming response.
  * Supports streaming think content that may arrive in chunks (e.g., "<think>Hello" before "</think>").
  *
- * @param {AnalysisAnswerProps} props - The component props. See {@link AnalysisAnswerProps} for more details.
+ * @param {MessageContentProps} props - The component props. See {@link MessageContentProps} for more details.
  * @returns {JSX.Element} The rendered answer tool call
  */
-export const AnalysisAnswer = React.memo(function AnalysisAnswer(
-  props: AnalysisAnswerProps,
+export const MessageContent = React.memo(function MessageContent(
+  props: MessageContentProps,
 ) {
   const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
   const search = useOptionalChatSearch();
-  const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const toggleThinkExpansion = useCallback((content: string) => {
+  const [expandedThink, setExpandedThink] = useState<Set<number>>(new Set());
+  const toggleThinkExpansion = useCallback((index: number) => {
     setExpandedThink((prev) => {
       const newExpanded = new Set(prev);
-      if (newExpanded.has(content)) {
-        newExpanded.delete(content);
+      if (newExpanded.has(index)) {
+        newExpanded.delete(index);
       } else {
-        newExpanded.add(content);
+        newExpanded.add(index);
       }
       return newExpanded;
     });
@@ -154,7 +156,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 
   // Memoize content processing to avoid recalculation on every render
   const {processedContent, thinkContents} = useMemo(
-    () => processAnalysisAnswerContent(content),
+    () => processMessageContent(content),
     [content],
   );
 
@@ -164,7 +166,10 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     [search, searchBlockId],
   );
   const rehypePlugins = useMemo<PluggableList>(() => {
-    const plugins: PluggableList = [rehypeRaw];
+    const plugins: PluggableList = [
+      rehypeRaw,
+      [rehypeSanitize, markdownSanitizeSchema],
+    ];
     if (searchBlockId && searchMatches.length > 0) {
       plugins.push(
         createChatSearchRehypePlugin({
@@ -189,7 +194,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
           return null;
         }
 
-        const isExpanded = expandedThink.has(thinkContent.content);
+        const isExpanded = expandedThink.has(index);
 
         return (
           <ThinkBlock
