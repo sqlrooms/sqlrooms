@@ -156,15 +156,6 @@ browser-side model runs to a local devtools bridge without importing Node-only
 DevTools code into the browser bundle. Provider-v2 models and string model IDs
 are returned unchanged.
 
-## Debug inspector
-
-`@sqlrooms/ai-core/debug` exports `AiDebugInspector`, a development-oriented
-sheet for inspecting generic `AiSliceState`: sessions, current/selected session
-messages, message parts and metadata, message revisions, running state, local vs
-remote transport, agent progress, tool timings, and pending sub-agent approvals.
-It does not include app-specific context; apps can pass `extraSummary` to add
-their own debug fields.
-
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
@@ -173,7 +164,6 @@ their own debug fields.
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
 - Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
 - Devtools: `wrapModelWithSqlroomsAiDevtools`
-- Debug entrypoint: `@sqlrooms/ai-core/debug`
 - Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
 - Tool/agent utilities:
   - `cleanupPendingUiMessages`

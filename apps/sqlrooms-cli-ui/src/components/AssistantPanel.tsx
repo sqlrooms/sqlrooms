@@ -1,6 +1,12 @@
 import {RoomPanelHeader} from '@sqlrooms/room-shell';
-import {Button, useDisclosure} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
+import {
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useDisclosure,
+} from '@sqlrooms/ui';
+import {BugIcon, XIcon} from 'lucide-react';
 import React, {useEffect} from 'react';
 import {useRoomStore} from '../store';
 import {AssistantChatContainer} from './AssistantChatContainer';
@@ -36,6 +42,24 @@ export const AssistantPanel: React.FC = () => {
                 }
               }}
             />
+          )}
+          {import.meta.env.DEV && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6 shrink-0 focus-visible:ring-offset-0 focus-visible:ring-inset"
+                  aria-label="AI DevTools"
+                  onClick={() =>
+                    window.open('http://localhost:4983', '_blank', 'noreferrer')
+                  }
+                >
+                  <BugIcon className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">AI DevTools</TooltipContent>
+            </Tooltip>
           )}
           <Button
             variant="ghost"
