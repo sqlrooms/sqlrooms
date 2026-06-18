@@ -1,4 +1,5 @@
 import {type FC, useCallback} from 'react';
+import {ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {MosaicDashboardPanelLayout} from '../dashboard/panel/MosaicDashboardPanelLayout';
 import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
 import type {ChartConfig} from './chart-types/chart-config';
@@ -44,17 +45,21 @@ export const MosaicChart: FC<MosaicChartProps> = ({
   );
 
   const chartContent = (
-    <div className="h-full overflow-auto p-2">
-      <MosaicChartView
-        dataTable={dataTable}
-        config={config}
-        selectionName={selectionName}
-        retentionKey={runtimeKey}
-        runtimeIssueKey={runtimeKey}
-        dashboardId={dashboardId}
-        panelId={panelId}
-      />
-    </div>
+    <ScrollArea className="h-full">
+      <div className="h-full p-2">
+        <MosaicChartView
+          dataTable={dataTable}
+          config={config}
+          selectionName={selectionName}
+          retentionKey={runtimeKey}
+          runtimeIssueKey={runtimeKey}
+          dashboardId={dashboardId}
+          panelId={panelId}
+        />
+      </div>
+      <ScrollBar orientation="vertical" />
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 
   return (

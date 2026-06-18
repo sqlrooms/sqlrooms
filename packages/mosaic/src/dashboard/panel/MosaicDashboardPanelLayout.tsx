@@ -2,6 +2,8 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
+  ScrollArea,
+  ScrollBar,
   type ResizablePanelHandle,
 } from '@sqlrooms/ui';
 import React, {FC, useEffect, useRef, useState} from 'react';
@@ -64,8 +66,11 @@ export const MosaicDashboardPanelLayout: FC<
   // If container is too small and settings are open, show only settings
   if (containerWidth < MIN_WIDTH_FOR_SPLIT_VIEW && isOpen) {
     return (
-      <div ref={containerRef} className="h-full overflow-auto">
-        {settings}
+      <div ref={containerRef} className="h-full overflow-hidden">
+        <ScrollArea className="h-full">
+          {settings}
+          <ScrollBar orientation="vertical" />
+        </ScrollArea>
       </div>
     );
   }
@@ -80,10 +85,13 @@ export const MosaicDashboardPanelLayout: FC<
           maxSize="70%"
           collapsible={true}
           collapsedSize={0}
-          className="overflow-auto"
+          className="overflow-hidden"
           onResize={onResize}
         >
-          {settings}
+          <ScrollArea className="h-full">
+            {settings}
+            <ScrollBar orientation="vertical" />
+          </ScrollArea>
         </ResizablePanel>
         <ResizableHandle className="w-px" />
         <ResizablePanel>{content}</ResizablePanel>

@@ -123,7 +123,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 className="flex-1"
               />
             ) : (
-              <div className="print-container grow overflow-auto">
+              <div className="print-container grow overflow-hidden">
                 {isDataAvailable ? (
                   <Chat.Messages
                     key={currentSessionId}
