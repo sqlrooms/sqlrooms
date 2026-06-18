@@ -5,9 +5,18 @@ type TextareaProps = React.ComponentProps<'textarea'> & {
   autoResize?: boolean;
 };
 
+/**
+ * Uses layout effect in the browser and falls back to effect during SSR.
+ */
 const useIsomorphicLayoutEffect =
   typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
+/**
+ * Keeps a textarea height synchronized with its content and container width.
+ *
+ * The resize path is intentionally triggered from multiple sources (input,
+ * value changes, and width changes) and then deduped per frame.
+ */
 function useAutoResizeTextarea({
   autoResize,
   textareaRef,
@@ -109,6 +118,9 @@ function useAutoResizeTextarea({
   };
 }
 
+/**
+ * Textarea component with optional auto-resize behavior.
+ */
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
