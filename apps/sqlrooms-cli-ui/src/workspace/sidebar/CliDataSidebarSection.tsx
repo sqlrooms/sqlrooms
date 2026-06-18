@@ -14,6 +14,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  ScrollArea,
+  ScrollBar,
   useSidebar,
 } from '@sqlrooms/ui';
 import {ArrowUpFromLine, Database, Table2} from 'lucide-react';
@@ -69,7 +71,7 @@ export function CliDataSidebarSection() {
   return (
     <>
       {state === 'expanded' ? (
-        <div className="grid min-h-0 gap-3">
+        <div className="flex h-full min-h-0 flex-col gap-3">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -82,12 +84,16 @@ export function CliDataSidebarSection() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] py-1 pr-0 pl-0 [&_h2]:pl-1">
+          <div className="flex min-h-0 flex-1 flex-col py-1 pr-0 pl-0">
             <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
-            <SchemaExplorer.Tree />
-          </SchemaExplorer>
+            <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
+              <SchemaExplorer.Tree />
+              <ScrollBar orientation="vertical" />
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
         </div>
       ) : (
         <DropdownMenu>

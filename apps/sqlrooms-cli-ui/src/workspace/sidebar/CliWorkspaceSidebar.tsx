@@ -6,8 +6,6 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarRail,
-  ScrollArea,
-  ScrollBar,
 } from '@sqlrooms/ui';
 import {CliArtifactsSidebarSection} from './CliArtifactsSidebarSection';
 import {CliDataSidebarSection} from './CliDataSidebarSection';
@@ -25,22 +23,17 @@ export function CliWorkspaceSidebar({
         <CliSidebarBrand />
       </SidebarHeader>
       <SidebarContent className="overflow-hidden group-data-[collapsible=icon]:gap-0">
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="flex min-h-full flex-col gap-2 group-data-[collapsible=icon]:gap-0">
-            <SidebarGroup className="border-sidebar-border border-b py-4 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
-              <SidebarGroupContent>
-                <CliDataSidebarSection />
-              </SidebarGroupContent>
-            </SidebarGroup>
+        <SidebarGroup className="border-sidebar-border min-h-0 flex-[0_1_46%] border-b py-4 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
+          <SidebarGroupContent className="h-full min-h-0">
+            <CliDataSidebarSection />
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-            <SidebarGroup className="group-data-[collapsible=icon]:py-1">
-              <SidebarGroupContent>
-                <CliArtifactsSidebarSection />
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </div>
-          <ScrollBar orientation="vertical" />
-        </ScrollArea>
+        <SidebarGroup className="min-h-0 flex-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:py-1">
+          <SidebarGroupContent className="h-full min-h-0">
+            <CliArtifactsSidebarSection />
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-sidebar-border border-t group-data-[collapsible=icon]:border-t-0 group-data-[collapsible=icon]:py-1">
         <CliSidebarFooterControls onToggleSqlEditor={onToggleSqlEditor} />
