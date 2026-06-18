@@ -20,8 +20,8 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
-import {DataTable} from '@sqlrooms/duckdb';
 import {ChartToolDeps} from './tool-types';
+import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
 
 export type {ChartType};
 
@@ -49,6 +49,18 @@ export interface ChartBuilderField {
   description?: string;
   /** Whether this field accepts multiple values (array) */
   multiple?: boolean;
+}
+
+/**
+ * Result of table resolution.
+ * tableName is the fully quoted string boundary form
+ * (QualifiedTableName.toString()); qualifiedName is the canonical structured
+ * identity when available.
+ */
+export interface ResolvedTable {
+  tableName: string;
+  qualifiedName: QualifiedTableName;
+  columns: ChartBuilderColumn[];
 }
 
 /**
@@ -174,6 +186,10 @@ export type ValidateSpecOptions<TSettings = ChartSettings> = Pick<
   CreateSpecOptions<TSettings>,
   'dataTable' | 'settings'
 >;
+
+export function getChartTableReference(dataTable: DataTable): string {
+  return dataTable.table.toString();
+}
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {

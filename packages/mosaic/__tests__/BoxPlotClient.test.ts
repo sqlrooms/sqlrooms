@@ -24,6 +24,17 @@ describe('BoxPlotClient', () => {
     expect(sql).toContain('UNION ALL');
   });
 
+  it('uses pre-quoted qualified table references without double quoting', () => {
+    const sql = buildBoxPlotQuery({
+      tableName: '"local"."main"."earthquakes"',
+      x: 'region',
+      y: 'magnitude',
+    });
+
+    expect(sql).toContain('FROM "local"."main"."earthquakes"');
+    expect(sql).not.toContain('"""local"""');
+  });
+
   it('applies external selection predicates to the box plot query', () => {
     const selection = Selection.crossfilter();
     selection.update(clausePoint('status', 'active', {source: {}}));

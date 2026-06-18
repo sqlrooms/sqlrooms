@@ -1,6 +1,7 @@
 import {
   getAiRunContextItems,
   getAiRunContextPrimaryItem,
+  getTablesForAiScope,
   type AiToolExecutionContext,
 } from '@sqlrooms/ai';
 import {
@@ -25,7 +26,16 @@ export function createDashboardAiAdapter(
   store: StoreApi<RoomState>,
 ): DashboardAiAdapter {
   return {
-    getTables: () => store.getState().db.tables,
+    getTables: () => {
+      const state = store.getState();
+
+      return getTablesForAiScope(state.db.tables, state.db.currentDatabase, {
+        scope: 'all',
+      });
+    },
+    findTable: (tableName) => {
+      return store.getState().db.findTable(tableName);
+    },
     hasRunContext: (context) =>
       getAiRunContextItems(getMutableAiRunContext(context)).length > 0,
     resolveContextDashboardArtifactId: (context) => {

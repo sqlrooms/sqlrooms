@@ -3,6 +3,7 @@ import {
   clauseInterval,
   type Selection,
 } from '@uwdata/mosaic-core';
+import {escapeId, quoteTableReference} from '@sqlrooms/duckdb';
 import type {ExprNode, FilterExpr} from '@uwdata/mosaic-sql';
 import {
   assertChartDataPolicy,
@@ -51,14 +52,6 @@ export type BoxPlotClientOptions = {
 type BoxPlotQueryRow = Partial<BoxPlotSummaryRow & BoxPlotOutlierRow> & {
   rowKind?: 'summary' | 'outlier';
 };
-
-function quoteIdentifier(identifier: string): string {
-  return `"${identifier.replace(/"/g, '""')}"`;
-}
-
-function quoteTableReference(tableName: string): string {
-  return tableName.split('.').map(quoteIdentifier).join('.');
-}
 
 function normalizeFilter(filter?: FilterExpr | null): string[] {
   if (!filter) {
@@ -137,8 +130,8 @@ type BuildBoxPlotQueryArgs = {
 
 export function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
   const table = quoteTableReference(args.tableName);
-  const x = quoteIdentifier(args.x);
-  const y = quoteIdentifier(args.y);
+  const x = escapeId(args.x);
+  const y = escapeId(args.y);
   const filters = normalizeFilter(args.filter).join(' AND ');
   const where = [`${y} IS NOT NULL`, filters].filter(Boolean).join(' AND ');
 

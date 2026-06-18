@@ -1,7 +1,9 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {ScatterPlotChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
+
 import {validateScatterPlotSettings} from './validation';
+
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 
 const FG_COLOR = 'var(--color-chart-1)';
 const DEFAULT_POINT_SIZE = 3;
@@ -15,7 +17,7 @@ export function createScatterPlotSpec(
 
   const dotMark: Record<string, unknown> = {
     mark: 'dot',
-    data: {from: dataTable.table.table, filterBy: '$brush'},
+    data: {from: getChartTableReference(dataTable), filterBy: '$brush'},
     x: xColumn.name,
     y: yColumn.name,
     fill: FG_COLOR,

@@ -1,6 +1,7 @@
 import {
   getUnqualifiedSqlIdentifier,
   parseQualifiedSqlIdentifier,
+  quoteTableReference,
 } from '../src/duckdb-utils';
 
 describe('parseQualifiedSqlIdentifier', () => {
@@ -71,6 +72,30 @@ describe('getUnqualifiedSqlIdentifier', () => {
   it('unescapes doubled quotes in quoted identifiers', () => {
     expect(getUnqualifiedSqlIdentifier('myschema."my""table"')).toBe(
       'my"table',
+    );
+  });
+});
+
+describe('quoteTableReference', () => {
+  it('quotes bare table names', () => {
+    expect(quoteTableReference('earthquakes')).toBe('"earthquakes"');
+  });
+
+  it('quotes unquoted qualified table names', () => {
+    expect(quoteTableReference('local.main.earthquakes')).toBe(
+      '"local"."main"."earthquakes"',
+    );
+  });
+
+  it('does not double quote pre-quoted qualified table names', () => {
+    expect(quoteTableReference('"local"."main"."earthquakes"')).toBe(
+      '"local"."main"."earthquakes"',
+    );
+  });
+
+  it('keeps dots inside quoted identifier segments', () => {
+    expect(quoteTableReference('"local"."main"."earthquakes.v1"')).toBe(
+      '"local"."main"."earthquakes.v1"',
     );
   });
 });

@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.8](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.7...v0.29.0-rc.8) (2026-06-17)
+
+### Bug Fixes
+
+* fixes to overlay mode regressions ([#672](https://github.com/sqlrooms/sqlrooms/issues/672)) ([a38155a](https://github.com/sqlrooms/sqlrooms/commit/a38155a6df04a207a31edb9c11d5455242388f78))
+* handle output-error parts to prevent session poisoning ([#697](https://github.com/sqlrooms/sqlrooms/issues/697)) ([48249d3](https://github.com/sqlrooms/sqlrooms/commit/48249d3af52039dff32306d1a56217879ff20a4f))
+* Improve qualified table lookup and expose data table hooks ([#715](https://github.com/sqlrooms/sqlrooms/issues/715)) ([baee75b](https://github.com/sqlrooms/sqlrooms/commit/baee75b8475e3a11c74c6702138d00d95e90e5c8))
+* Inconsistent agent chat height ([#704](https://github.com/sqlrooms/sqlrooms/issues/704)) ([be3ec76](https://github.com/sqlrooms/sqlrooms/commit/be3ec769b9eedc22a18f6a29fadfab00c877bce0))
+* Kepler table-layer dataset identity handling for DuckDB-backed maps ([#703](https://github.com/sqlrooms/sqlrooms/issues/703)) ([aa35765](https://github.com/sqlrooms/sqlrooms/commit/aa357655a798cba124e77466f42aad46a6cf542c))
+* Switch component fallback ([#719](https://github.com/sqlrooms/sqlrooms/issues/719)) ([2d81730](https://github.com/sqlrooms/sqlrooms/commit/2d81730059e4ce98ae4ed05f938d471d654df874))
+
+### Features
+
+* Add chat history ([#698](https://github.com/sqlrooms/sqlrooms/issues/698)) ([ba95750](https://github.com/sqlrooms/sqlrooms/commit/ba957507822205b5dd52e14866ad454c21c8b502))
+* add chat search functionality and related exports to ai-core ([#695](https://github.com/sqlrooms/sqlrooms/issues/695)) ([f52b642](https://github.com/sqlrooms/sqlrooms/commit/f52b642d135f549a646a4435beec9778ce327aad))
+* Add createKeplerTheme ([#712](https://github.com/sqlrooms/sqlrooms/issues/712)) ([85e004f](https://github.com/sqlrooms/sqlrooms/commit/85e004f4499c79f05fcd1589de9bb4bff6be1da0))
+* Add lline chart color selector ([#708](https://github.com/sqlrooms/sqlrooms/issues/708)) ([b790206](https://github.com/sqlrooms/sqlrooms/commit/b790206a0e773d1674dc5fc0b76104fffc5f4c39))
+* Add per-session draft AI context state ([#707](https://github.com/sqlrooms/sqlrooms/issues/707)) ([8a3ae18](https://github.com/sqlrooms/sqlrooms/commit/8a3ae180dfbc62923205c282e7b1851ba3403e91))
+* Adding a datasource from a non main schema using fully qualified table name  ([#671](https://github.com/sqlrooms/sqlrooms/issues/671)) ([364ac78](https://github.com/sqlrooms/sqlrooms/commit/364ac7837aef212b53b9aca55b010eacaeda8a7f))
+* Chat forking ([#716](https://github.com/sqlrooms/sqlrooms/issues/716)) ([fa95749](https://github.com/sqlrooms/sqlrooms/commit/fa95749e2dc1b8d603d852b3bef48423cc3e9527))
+* enable split map view with unlock viewport and sync zoom ([#701](https://github.com/sqlrooms/sqlrooms/issues/701)) ([6ee09ac](https://github.com/sqlrooms/sqlrooms/commit/6ee09acb93a58c6706d6d27221b472f7e904545a))
+* error handling in charts and UI\UX imporovements ([#702](https://github.com/sqlrooms/sqlrooms/issues/702)) ([48c1edb](https://github.com/sqlrooms/sqlrooms/commit/48c1edb5b2fe727c1626e5dfa4b04f0e0fb9d987))
+* Improving tableSchema AI tools ([#683](https://github.com/sqlrooms/sqlrooms/issues/683)) ([1948bfd](https://github.com/sqlrooms/sqlrooms/commit/1948bfdc196c72b0d364a4da58190bc83cdf1fb2))
+* Line chart legend ([#706](https://github.com/sqlrooms/sqlrooms/issues/706)) ([c1bba26](https://github.com/sqlrooms/sqlrooms/commit/c1bba26551a767bb16ef6d543ed59b4486fe62da))
+* Rename bubble chart to scatter chart ([#705](https://github.com/sqlrooms/sqlrooms/issues/705)) ([bbbf173](https://github.com/sqlrooms/sqlrooms/commit/bbbf173fe937c9da909f307091ce88c56eac240b))
+* reset filters in worksheets and block captions ([#690](https://github.com/sqlrooms/sqlrooms/issues/690)) ([f9f87cd](https://github.com/sqlrooms/sqlrooms/commit/f9f87cd0587ddbb70dd3979af18b57798e9b6f09))
+* Update cli UI ([#699](https://github.com/sqlrooms/sqlrooms/issues/699)) ([75367c9](https://github.com/sqlrooms/sqlrooms/commit/75367c97f39bbd6afc250c8354d7707686ea6ba7))
+
 # [0.29.0-rc.7](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.6...v0.29.0-rc.7) (2026-06-05)
 
 ### Bug Fixes

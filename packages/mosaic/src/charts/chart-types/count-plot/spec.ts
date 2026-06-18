@@ -1,6 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {CountPlotChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {validateCountPlotSettings} from './validation';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
@@ -12,13 +12,14 @@ export function createCountPlotSpec(
   const {dataTable, selectionName} = options;
 
   const {fieldColumn} = validateCountPlotSettings(options);
+  const tableReference = getChartTableReference(dataTable);
 
   // Count plot shows categorical frequency as horizontal bars
   // Categories on Y-axis, counts on X-axis
   const plot: unknown[] = [
     {
       mark: 'barX',
-      data: {from: dataTable.table.table},
+      data: {from: tableReference},
       x: {count: null},
       y: {
         column: fieldColumn.name,
@@ -29,7 +30,7 @@ export function createCountPlotSpec(
     },
     {
       mark: 'barX',
-      data: {from: dataTable.table.table, filterBy: '$brush'},
+      data: {from: tableReference, filterBy: '$brush'},
       x: {count: null},
       y: {
         column: fieldColumn.name,
@@ -40,7 +41,7 @@ export function createCountPlotSpec(
     },
     {
       mark: 'text',
-      data: {from: dataTable.table.table, filterBy: '$brush'},
+      data: {from: tableReference, filterBy: '$brush'},
       x: {count: null},
       y: {
         column: fieldColumn.name,

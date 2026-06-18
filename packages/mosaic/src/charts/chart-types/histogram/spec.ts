@@ -1,8 +1,8 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HistogramChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
-import {validateHistogramSettings} from './validation';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
+import {validateHistogramSettings} from './validation';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const DEFAULT_FG_COLOR = DEFAULT_CHART_FALLBACK_COLOR;
@@ -14,11 +14,12 @@ export function createHistogramSpec(
 
   const {fieldColumn, maxBins} = validateHistogramSettings(options);
   const fgColor = settings.color ?? DEFAULT_FG_COLOR;
+  const tableReference = getChartTableReference(dataTable);
 
   const plot: unknown[] = [
     {
       mark: 'rectY',
-      data: {from: dataTable.table.table},
+      data: {from: tableReference},
       x: {bin: fieldColumn.name, steps: maxBins},
       y: {count: null},
       fill: BG_COLOR,
@@ -26,7 +27,7 @@ export function createHistogramSpec(
     },
     {
       mark: 'rectY',
-      data: {from: dataTable.table.table, filterBy: '$brush'},
+      data: {from: tableReference, filterBy: '$brush'},
       x: {bin: fieldColumn.name, steps: maxBins},
       y: {count: null},
       fill: fgColor,

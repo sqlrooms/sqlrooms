@@ -43,7 +43,9 @@ export function useLocalFileLoader() {
         console.error('Failed to refresh table schemas', error);
         toast.error('Failed to refresh table schemas', {
           description:
-            error instanceof Error ? error.message : 'An unknown error occurred',
+            error instanceof Error
+              ? error.message
+              : 'An unknown error occurred',
         });
         return;
       }

@@ -57,7 +57,10 @@ function selfNamespace(
   };
 }
 
-function getChildren(namespace: NamespaceRecord, name: string): NamespaceRecord {
+function getChildren(
+  namespace: NamespaceRecord,
+  name: string,
+): NamespaceRecord {
   const key = namespaceKey(name);
   const existing = namespace[key];
 
