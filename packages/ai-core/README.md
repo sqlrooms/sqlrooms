@@ -147,10 +147,56 @@ const blocks: ChatSearchBlock[] = [
 const matches = findChatSearchMatches(blocks, query);
 ```
 
+## Devtools
+
+`@sqlrooms/ai-core/devtools` exposes development-only inspection helpers and UI
+for session debugging without adding the debug surface to the main
+`@sqlrooms/ai-core` barrel.
+
+```tsx
+import {ChatSessionDebugView} from '@sqlrooms/ai-core/devtools';
+
+function DebugPanel({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose?: () => void;
+}) {
+  return <ChatSessionDebugView sessionId={sessionId} onClose={onClose} />;
+}
+```
+
+`ChatSessionDebugView` reads the current AI store context and renders a tabbed
+debug view for one chat session: the chronological timeline, registered tools,
+run context, raw session JSON, model settings, tool calls, nested agent work,
+and optional agent snapshots.
+
+Agent snapshot capture is opt-in on `createAiSlice`:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureAgentSnapshots: true,
+    persistAgentSnapshots: true,
+    maxAgentSnapshotBytes: 64_000,
+  },
+});
+```
+
+Snapshots are bounded serializable metadata only: agent/tool names,
+descriptions, capability flags, approval hints, and settings. They must not
+store executable tools, closures, secrets, or unbounded prompt/output content.
+Persist snapshots only for debugging workflows where cross-tab or post-mortem
+inspection is useful.
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
 - Chat UI: `Chat`, `ChatMessagesContainer`, `ChatTurnView`, `MessageContent`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Devtools subexport: `@sqlrooms/ai-core/devtools`
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
 - Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
