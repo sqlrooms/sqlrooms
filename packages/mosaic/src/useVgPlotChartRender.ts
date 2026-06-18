@@ -10,6 +10,7 @@ import {
   type ChartRuntimeIssueContext,
   type ChartRuntimeIssueReporter,
 } from './chart-runtime';
+import {getMosaicSqlTableReference} from './mosaicTableReference';
 
 type PlotDomElement = HTMLElement | SVGSVGElement;
 
@@ -24,6 +25,38 @@ type PlotInstance = {
   render?: () => Promise<unknown> | unknown;
   setAttribute?: (name: string, value: unknown) => boolean;
 };
+
+function normalizeSpecTableReferences(value: unknown, key?: string): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeSpecTableReferences(item));
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return value;
+  }
+
+  const entries = Object.entries(value).map(([entryKey, entryValue]) => [
+    entryKey,
+    normalizeSpecTableReferences(entryValue, entryKey),
+  ]);
+  const normalized = Object.fromEntries(entries) as Record<string, unknown>;
+
+  if (
+    key === 'data' &&
+    typeof normalized.from === 'string' &&
+    normalized.from.trim() &&
+    !normalized.from.trim().startsWith('$')
+  ) {
+    normalized.from = getMosaicSqlTableReference(normalized.from);
+  }
+
+  return normalized;
+}
 
 /**
  * Symbols used to store original mark handlers before wrapping.
@@ -81,7 +114,7 @@ async function createSpecChartElement(
     height: size.height,
   } as Spec;
 
-  const ast = await parseSpec(sizedSpec);
+  const ast = await parseSpec(normalizeSpecTableReferences(sizedSpec) as Spec);
   const options = params
     ? {params: params as unknown as Map<string, Param<any>>}
     : undefined;

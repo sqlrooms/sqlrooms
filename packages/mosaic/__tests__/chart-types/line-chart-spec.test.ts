@@ -51,7 +51,10 @@ describe('createLineChartSpec', () => {
       selectionName: 'test_selection',
     }) as any;
 
-    expect(spec.plot[0].data.from.toString()).toBe('"main"."test_table"');
+    expect(spec.plot[0].data.from).toBe('"main"."test_table"');
+    expect(JSON.parse(JSON.stringify(spec)).plot[0].data.from).toBe(
+      '"main"."test_table"',
+    );
   });
 
   it('preserves dotted table-name parts in generated data sources', () => {
@@ -74,7 +77,10 @@ describe('createLineChartSpec', () => {
       selectionName: 'test_selection',
     }) as any;
 
-    expect(spec.plot[0].data.from.toString()).toBe('"main"."events.2026"');
+    expect(spec.plot[0].data.from).toBe('"main"."events.2026"');
+    expect(JSON.parse(JSON.stringify(spec)).plot[0].data.from).toBe(
+      '"main"."events.2026"',
+    );
   });
 
   it('generates spec with legend when showLegend is true', () => {

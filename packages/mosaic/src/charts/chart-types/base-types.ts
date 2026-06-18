@@ -6,7 +6,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {type Tool} from 'ai';
 import type {Coordinator} from '@uwdata/mosaic-core';
-import type {TableRefNode} from '@uwdata/mosaic-sql';
 import type {ComponentType} from 'react';
 import type * as z from 'zod';
 import {ChartConfig, ChartSettings, ChartType} from './chart-config';
@@ -22,10 +21,7 @@ import type {
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
-import {
-  getMosaicSqlTableReference,
-  getMosaicTableReferenceString,
-} from '../../mosaicTableReference';
+import {getMosaicTableReferenceString} from '../../mosaicTableReference';
 
 export type {ChartType};
 
@@ -204,13 +200,11 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
   selectionName?: string;
 };
 
-export function getChartTableReference(dataTable: DataTable): TableRefNode {
-  return getMosaicSqlTableReference(dataTable.table);
-}
-
-export function getChartTableReferenceString(dataTable: DataTable): string {
+export function getChartTableReference(dataTable: DataTable): string {
   return getMosaicTableReferenceString(dataTable.table);
 }
+
+export const getChartTableReferenceString = getChartTableReference;
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {

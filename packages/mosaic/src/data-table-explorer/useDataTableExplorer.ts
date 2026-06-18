@@ -42,8 +42,8 @@ export function useDataTableExplorer(
     [table],
   );
   const tableReference = useMemo(
-    () => getMosaicSqlTableReference(table),
-    [table],
+    () => getMosaicSqlTableReference(tableName),
+    [tableName],
   );
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
