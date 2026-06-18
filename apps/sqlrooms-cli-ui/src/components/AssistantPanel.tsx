@@ -102,6 +102,7 @@ export const AssistantPanel: React.FC = () => {
                 <ChatSessionDebugView
                   sessionId={currentSessionId}
                   className="h-full"
+                  onClose={() => setDebugOpen(false)}
                 />
               </Suspense>
             ) : null

@@ -176,8 +176,14 @@ barrel.
 ```tsx
 import {ChatSessionDebugView} from '@sqlrooms/ai/devtools';
 
-function DebugPanel({sessionId}: {sessionId: string}) {
-  return <ChatSessionDebugView sessionId={sessionId} />;
+function DebugPanel({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose?: () => void;
+}) {
+  return <ChatSessionDebugView sessionId={sessionId} onClose={onClose} />;
 }
 ```
 

@@ -1,4 +1,5 @@
 import {
+  Button,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -8,8 +9,10 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  ToggleGroup,
+  ToggleGroupItem,
 } from '@sqlrooms/ui';
-import {ChevronRightIcon} from 'lucide-react';
+import {ChevronRightIcon, FilterIcon, XIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import type {AgentSnapshot, AgentToolCall} from '../types';
@@ -18,6 +21,7 @@ import {
   getAvailableToolDebugInfo,
   getSessionDebugSummary,
   getSessionDebugTimeline,
+  type DebugTimelineMessage,
 } from './sessionDebugModel';
 
 export type ChatSessionDebugViewProps = {
@@ -27,11 +31,25 @@ export type ChatSessionDebugViewProps = {
   className?: string;
   /** Initial tab to show. Defaults to the chronological timeline. */
   defaultTab?: string;
+  /** Optional close handler for host panels that can dismiss the inspector. */
+  onClose?: () => void;
   /** @deprecated Use defaultTab. Kept as a no-op for the initial accordion API. */
   defaultExpandedSections?: string[];
 };
 
 const DEFAULT_TAB = 'timeline';
+
+type TimelineFilterKind = 'user' | 'assistant' | 'tool' | 'agent';
+
+type TimelineFilterOption = {
+  value: TimelineFilterKind;
+  label: string;
+  count: number;
+};
+
+type TimelineFilterMode =
+  | {type: 'all'}
+  | {type: 'custom'; filters: TimelineFilterKind[]};
 
 function formatDate(date: Date | undefined): string {
   return date ? date.toLocaleString() : 'n/a';
@@ -102,6 +120,70 @@ const EmptyState: React.FC<{children: React.ReactNode}> = ({children}) => (
     {children}
   </div>
 );
+
+const TimelineFilterBar: React.FC<{
+  mode: TimelineFilterMode;
+  options: TimelineFilterOption[];
+  onModeChange: (mode: TimelineFilterMode) => void;
+}> = ({mode, options, onModeChange}) => {
+  const filters =
+    mode.type === 'all' ? options.map((option) => option.value) : mode.filters;
+  const allFiltersSelected = options.every((option) =>
+    filters.includes(option.value),
+  );
+
+  return (
+    <div className="flex w-full gap-2 overflow-x-auto px-3 pt-1 pb-2">
+      <ToggleGroup
+        type="multiple"
+        value={filters}
+        onValueChange={(nextValue) => {
+          const nextFilters = nextValue as TimelineFilterKind[];
+
+          if (mode.type === 'all') {
+            const clickedFilter = options.find(
+              (option) => !nextFilters.includes(option.value),
+            )?.value;
+            onModeChange({
+              type: 'custom',
+              filters: clickedFilter ? [clickedFilter] : nextFilters,
+            });
+            return;
+          }
+
+          onModeChange({type: 'custom', filters: nextFilters});
+        }}
+        className="shrink-0 justify-start"
+      >
+        {options.map((option) => (
+          <ToggleGroupItem
+            key={option.value}
+            value={option.value}
+            size="sm"
+            variant="outline"
+            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground h-6 shrink-0 gap-1 rounded-full px-2 text-[11px]"
+          >
+            <span>{option.label}</span>
+            <span className="opacity-70">{option.count}</span>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+      <Button
+        type="button"
+        size="xs"
+        variant="ghost"
+        className="text-muted-foreground hover:text-foreground h-6 w-14 shrink-0 px-1.5 text-[11px]"
+        onClick={() =>
+          onModeChange(
+            allFiltersSelected ? {type: 'custom', filters: []} : {type: 'all'},
+          )
+        }
+      >
+        {allFiltersSelected ? 'Hide all' : 'Show all'}
+      </Button>
+    </div>
+  );
+};
 
 type DebugToolListItem = {
   name: string;
@@ -260,12 +342,43 @@ const AgentToolCallTree: React.FC<{
   );
 };
 
+function timelineMessageHasToolCall(message: DebugTimelineMessage): boolean {
+  return message.parts.some((part) => part.kind === 'tool');
+}
+
+function timelineMessageHasAgentWork(message: DebugTimelineMessage): boolean {
+  return message.parts.some(
+    (part) =>
+      part.kind === 'tool' &&
+      (Boolean(part.agentProgress) || Boolean(part.agentSnapshot)),
+  );
+}
+
+function timelineMessageMatchesFilters(
+  message: DebugTimelineMessage,
+  filters: TimelineFilterKind[],
+): boolean {
+  if (filters.length === 0) return false;
+
+  return filters.some((filter) => {
+    if (filter === 'user') return message.message.role === 'user';
+    if (filter === 'assistant') return message.message.role === 'assistant';
+    if (filter === 'tool') return timelineMessageHasToolCall(message);
+    return timelineMessageHasAgentWork(message);
+  });
+}
+
 /** Development inspector for a chat session, including messages, tool calls, and nested agent work. */
 export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
   sessionId,
   className,
   defaultTab = DEFAULT_TAB,
+  onClose,
 }) => {
+  const [activeTab, setActiveTab] = React.useState(defaultTab);
+  const [timelineFiltersOpen, setTimelineFiltersOpen] = React.useState(false);
+  const [timelineFilterMode, setTimelineFilterMode] =
+    React.useState<TimelineFilterMode>({type: 'all'});
   const sessions = useStoreWithAi((state) => state.ai.config.sessions);
   const tools = useStoreWithAi((state) => state.ai.tools);
   const toolRenderers = useStoreWithAi((state) => state.ai.toolRenderers);
@@ -315,6 +428,43 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
     () => getAvailableToolDebugInfo(tools, toolRenderers),
     [toolRenderers, tools],
   );
+  const timelineFilterOptions = useMemo<TimelineFilterOption[]>(() => {
+    const userCount = timeline.filter(
+      (item) => item.message.role === 'user',
+    ).length;
+    const assistantCount = timeline.filter(
+      (item) => item.message.role === 'assistant',
+    ).length;
+    const toolCallCount = timeline.reduce(
+      (count, item) =>
+        count + item.parts.filter((part) => part.kind === 'tool').length,
+      0,
+    );
+    const agentCount = timeline.reduce(
+      (count, item) =>
+        count +
+        item.parts.filter(
+          (part) =>
+            part.kind === 'tool' &&
+            (Boolean(part.agentProgress) || Boolean(part.agentSnapshot)),
+        ).length,
+      0,
+    );
+
+    return [
+      {value: 'user', label: 'User', count: userCount},
+      {value: 'assistant', label: 'Assistant', count: assistantCount},
+      {value: 'tool', label: 'Tool calls', count: toolCallCount},
+      {value: 'agent', label: 'Agent', count: agentCount},
+    ];
+  }, [timeline]);
+  const filteredTimeline = useMemo(() => {
+    if (timelineFilterMode.type === 'all') return timeline;
+
+    return timeline.filter((message) =>
+      timelineMessageMatchesFilters(message, timelineFilterMode.filters),
+    );
+  }, [timeline, timelineFilterMode]);
 
   if (!session || !summary) {
     return (
@@ -331,9 +481,13 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col text-sm', className)}>
-      <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
-        <div className="px-2 pt-0 pb-1">
-          <TabsList className="h-8 w-full justify-start overflow-x-auto bg-transparent p-0">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <div className="flex items-center gap-1 px-2 pt-0 pb-1">
+          <TabsList className="h-8 min-w-0 flex-1 justify-start overflow-x-auto bg-transparent p-0">
             <TabsTrigger value="timeline" className="h-7 px-2 text-xs">
               Timeline
             </TabsTrigger>
@@ -350,7 +504,47 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
               Summary
             </TabsTrigger>
           </TabsList>
+          {activeTab === 'timeline' && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'text-muted-foreground hover:text-foreground h-7 w-7 shrink-0',
+                timelineFiltersOpen && 'bg-muted text-foreground',
+              )}
+              aria-label={
+                timelineFiltersOpen
+                  ? 'Hide timeline filters'
+                  : 'Show timeline filters'
+              }
+              aria-pressed={timelineFiltersOpen}
+              onClick={() => setTimelineFiltersOpen((open) => !open)}
+            >
+              <FilterIcon className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {onClose && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground h-7 w-7 shrink-0"
+              aria-label="Close debug panel"
+              onClick={onClose}
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
+
+        {activeTab === 'timeline' && timelineFiltersOpen && (
+          <TimelineFilterBar
+            mode={timelineFilterMode}
+            options={timelineFilterOptions}
+            onModeChange={setTimelineFilterMode}
+          />
+        )}
 
         <ScrollArea className="min-h-0 flex-1">
           <TabsContent value="summary" className="m-0 px-3 pt-1 pb-8">
@@ -412,9 +606,13 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
           <TabsContent value="timeline" className="m-0 px-3 pt-1 pb-10">
             {timeline.length === 0 ? (
               <EmptyState>No messages recorded.</EmptyState>
+            ) : filteredTimeline.length === 0 ? (
+              <EmptyState>
+                No timeline entries match the selected filters.
+              </EmptyState>
             ) : (
               <div className="flex flex-col gap-3">
-                {timeline.map(({message, parts}) => (
+                {filteredTimeline.map(({message, parts}) => (
                   <div key={message.id} className="bg-muted/15 rounded-md p-2">
                     <div className="mb-2 flex min-w-0 items-center gap-2">
                       <StatusPill>{message.role}</StatusPill>
