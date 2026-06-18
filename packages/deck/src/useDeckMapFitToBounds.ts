@@ -2,6 +2,7 @@ import {WebMercatorViewport} from '@deck.gl/core';
 import {
   escapeId,
   getColValAsNumber,
+  quoteTableReference,
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import type {
@@ -101,7 +102,7 @@ function resolveFitToData(
   return safeConfig;
 }
 
-function createDeckMapBoundsQuery(options: {
+export function createDeckMapBoundsQuery(options: {
   source: {tableName?: string; sqlQuery?: string};
   fitToData: DeckMapDashboardFitToDataConfig;
 }) {
@@ -111,10 +112,7 @@ function createDeckMapBoundsQuery(options: {
   }
   const baseSourceSql = source.sqlQuery
     ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : `SELECT * FROM ${(source.tableName ?? '')
-        .split('.')
-        .map(escapeId)
-        .join('.')}`;
+    : `SELECT * FROM ${quoteTableReference(source.tableName ?? '')}`;
 
   if (fitToData.h3Column) {
     const h3Col = escapeId(fitToData.h3Column);

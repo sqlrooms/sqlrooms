@@ -1,15 +1,3 @@
-import {WebMercatorViewport} from '@deck.gl/core';
-import type {ComponentProps} from 'react';
-import type DeckGLReact from '@deck.gl/react';
-
-type DeckProps = ComponentProps<typeof DeckGLReact>;
-import {
-  escapeId,
-  getColValAsNumber,
-  quoteTableReference,
-  useStoreWithDuckDb,
-} from '@sqlrooms/duckdb';
-
 import {
   column,
   type MosaicDashboardEntryType,
@@ -55,7 +43,9 @@ import {
 import {
   useDeckMapFitToBounds,
   emitDeckMapDashboardFitRequest,
+  createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
+export {createDeckMapBoundsQuery};
 import {useDeckMapDatasets} from './useDeckMapDatasets';
 import {
   createDeckMapDashboardPanelConfigForTable,
@@ -353,117 +343,6 @@ function getCoordinate(
 
 function isPickedMapFeature(info: DeckMapInteractionEvent) {
   return Boolean(info.picked || info.object || (info.index ?? -1) >= 0);
-}
-
-export function createDeckMapBoundsQuery(options: {
-  source: {tableName?: string; sqlQuery?: string};
-  fitToData: DeckMapDashboardFitToDataConfig;
-}) {
-  const {source, fitToData} = options;
-  const baseSourceSql = source.sqlQuery
-    ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : `SELECT * FROM ${quoteTableReference(source.tableName ?? '')}`;
-  const longitudeColumn = escapeId(fitToData.longitudeColumn);
-  const latitudeColumn = escapeId(fitToData.latitudeColumn);
-
-  return `
-    SELECT
-      ST_XMin(extent) AS min_longitude,
-      ST_YMin(extent) AS min_latitude,
-      ST_XMax(extent) AS max_longitude,
-      ST_YMax(extent) AS max_latitude
-    FROM (
-      SELECT ST_Extent_Agg(ST_Point(${longitudeColumn}, ${latitudeColumn})) AS extent
-      FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_points"
-      WHERE ${longitudeColumn} IS NOT NULL AND ${latitudeColumn} IS NOT NULL
-    ) AS "__sqlrooms_dashboard_map_extent"
-    WHERE extent IS NOT NULL
-  `;
-}
-
-function readBoundsFromExtentResult(result: ArrowTable) {
-  const minLongitude = getColValAsNumber(result, 'min_longitude');
-  const minLatitude = getColValAsNumber(result, 'min_latitude');
-  const maxLongitude = getColValAsNumber(result, 'max_longitude');
-  const maxLatitude = getColValAsNumber(result, 'max_latitude');
-  if (
-    !Number.isFinite(minLongitude) ||
-    !Number.isFinite(minLatitude) ||
-    !Number.isFinite(maxLongitude) ||
-    !Number.isFinite(maxLatitude)
-  ) {
-    return null;
-  }
-
-  return [
-    [
-      minLongitude === maxLongitude ? minLongitude - 0.01 : minLongitude,
-      minLatitude === maxLatitude ? minLatitude - 0.01 : minLatitude,
-    ],
-    [
-      minLongitude === maxLongitude ? maxLongitude + 0.01 : maxLongitude,
-      minLatitude === maxLatitude ? maxLatitude + 0.01 : maxLatitude,
-    ],
-  ] as const;
-}
-
-function fitViewStateToBounds(options: {
-  bounds: readonly [readonly [number, number], readonly [number, number]];
-  width: number;
-  height: number;
-  padding?: number;
-  maxZoom?: number;
-}) {
-  const {bounds, width, height, padding = 40, maxZoom = 12} = options;
-  const viewport = new WebMercatorViewport({
-    width: Math.max(width, 1),
-    height: Math.max(height, 1),
-  });
-  const fitted = viewport.fitBounds(
-    [
-      [bounds[0][0], bounds[0][1]],
-      [bounds[1][0], bounds[1][1]],
-    ],
-    {padding},
-  ) as WebMercatorViewport & {
-    longitude: number;
-    latitude: number;
-    zoom: number;
-  };
-
-  return {
-    longitude: fitted.longitude,
-    latitude: fitted.latitude,
-    zoom: Math.min(fitted.zoom, maxZoom),
-  };
-}
-
-const deckMapDashboardFitRequestTarget = new EventTarget();
-
-function emitDeckMapDashboardFitRequest(panelId: string) {
-  deckMapDashboardFitRequestTarget.dispatchEvent(
-    new CustomEvent('fit-view', {detail: {panelId}}),
-  );
-}
-
-type DeckMapDashboardFitState = {
-  key: string;
-  viewState: DeckProps['viewState'];
-  didAutoFit: boolean;
-  fitRequestVersion: number;
-  handledFitRequestVersion: number;
-};
-
-function createInitialDeckMapDashboardFitState(
-  key: string,
-): DeckMapDashboardFitState {
-  return {
-    key,
-    viewState: undefined,
-    didAutoFit: false,
-    fitRequestVersion: 0,
-    handledFitRequestVersion: 0,
-  };
 }
 
 function DeckMapDashboardHeaderActions({
