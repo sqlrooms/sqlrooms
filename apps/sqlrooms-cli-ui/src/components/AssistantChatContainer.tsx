@@ -152,11 +152,9 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                   <ResizablePanelGroup
                     orientation="vertical"
                     className="h-full min-h-0"
-                    autoSaveId="sqlrooms-cli-ai-debug-split"
                   >
                     <ResizablePanel
                       id="ai-debug-panel"
-                      order={1}
                       defaultSize={50}
                       minSize={20}
                       className="min-h-0 overflow-hidden"
@@ -166,7 +164,6 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                     <ResizableHandle withHandle className="my-1" />
                     <ResizablePanel
                       id="ai-chat-panel"
-                      order={2}
                       defaultSize={50}
                       minSize={20}
                       className="min-h-0 pt-2"
