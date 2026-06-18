@@ -133,7 +133,7 @@ const TimelineFilterBar: React.FC<{
   );
 
   return (
-    <div className="flex w-full gap-2 overflow-x-auto px-3 pt-1 pb-2">
+    <div className="flex w-full gap-2 overflow-x-auto px-3 pt-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <ToggleGroup
         type="multiple"
         value={filters}
@@ -487,7 +487,7 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="flex items-center gap-1 px-2 pt-0 pb-1">
-          <TabsList className="h-8 min-w-0 flex-1 justify-start overflow-x-auto bg-transparent p-0">
+          <TabsList className="h-8 min-w-0 flex-1 justify-start overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="timeline" className="h-7 px-2 text-xs">
               Timeline
             </TabsTrigger>
