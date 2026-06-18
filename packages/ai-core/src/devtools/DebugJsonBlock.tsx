@@ -1,4 +1,7 @@
-import {JsonCodeMirrorEditor} from '@sqlrooms/codemirror';
+import {
+  JsonCodeMirrorEditor,
+  foldAllExceptFirstFoldableRange,
+} from '@sqlrooms/codemirror';
 import {
   Collapsible,
   CollapsibleContent,
@@ -55,8 +58,10 @@ export const DebugJsonBlock: React.FC<DebugJsonBlockProps> = ({
           <div className="bg-background/70">
             <ScrollArea className={cn('h-40', editorClassName)}>
               <JsonCodeMirrorEditor
+                key={text}
                 value={text}
                 readOnly
+                onMount={foldAllExceptFirstFoldableRange}
                 options={{
                   lineNumbers: false,
                   lineWrapping: true,

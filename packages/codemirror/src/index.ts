@@ -5,6 +5,7 @@ export type {Diagnostic as CodeMirrorDiagnostic} from '@codemirror/lint';
 
 export {JsonCodeMirrorEditor} from './components/JsonCodeMirrorEditor';
 export type {JsonCodeMirrorEditorProps} from './components/JsonCodeMirrorEditor';
+export {foldAllExceptFirstFoldableRange} from './utils/folding';
 
 export {JavascriptCodeMirrorEditor} from './components/JavascriptCodeMirrorEditor';
 export type {JavascriptCodeMirrorEditorProps} from './components/JavascriptCodeMirrorEditor';
