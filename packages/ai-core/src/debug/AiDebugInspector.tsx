@@ -22,7 +22,22 @@ import {
   MessageSquareIcon,
 } from 'lucide-react';
 import React, {useEffect, useMemo, useState} from 'react';
-import {useRoomStore} from '../store';
+import {useStoreWithAi} from '../AiSlice';
+import type {ChatSessionSchema} from '@sqlrooms/ai-config';
+
+export type AiDebugInspectorExtraSummary =
+  | Record<string, unknown>
+  | ((context: {
+      currentSessionId: string | null;
+      selectedSessionId: string | null;
+      selectedSession: ChatSessionSchema | undefined;
+    }) => Record<string, unknown> | undefined);
+
+export type AiDebugInspectorProps = {
+  triggerClassName?: string;
+  extraSummary?: AiDebugInspectorExtraSummary;
+  devToolsUrl?: string;
+};
 
 function stringifyDebugValue(value: unknown): string {
   return JSON.stringify(value, null, 2);
@@ -77,8 +92,25 @@ function filterRecordByKeys<T>(
   );
 }
 
-export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
+function resolveExtraSummary(
+  extraSummary: AiDebugInspectorExtraSummary | undefined,
+  context: {
+    currentSessionId: string | null;
+    selectedSessionId: string | null;
+    selectedSession: ChatSessionSchema | undefined;
+  },
+): Record<string, unknown> {
+  if (!extraSummary) return {};
+  if (typeof extraSummary === 'function') {
+    return extraSummary(context) ?? {};
+  }
+  return extraSummary;
+}
+
+export const AiDebugInspector: React.FC<AiDebugInspectorProps> = ({
   triggerClassName,
+  extraSummary,
+  devToolsUrl = 'http://localhost:4983',
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
@@ -86,24 +118,18 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
   );
   const [copied, setCopied] = useState(false);
 
-  const sessions = useRoomStore((state) => state.ai.config.sessions);
-  const openSessionTabs = useRoomStore(
+  const sessions = useStoreWithAi((state) => state.ai.config.sessions);
+  const openSessionTabs = useStoreWithAi(
     (state) => state.ai.config.openSessionTabs,
   );
-  const currentSessionId = useRoomStore(
+  const currentSessionId = useStoreWithAi(
     (state) => state.ai.getCurrentSession()?.id ?? null,
   );
-  const chatEndpoint = useRoomStore((state) => state.ai.chatEndPoint);
-  const agentProgress = useRoomStore((state) => state.ai.agentProgress);
-  const toolTimings = useRoomStore((state) => state.ai.toolTimings);
-  const pendingSubAgentApprovals = useRoomStore(
+  const chatEndpoint = useStoreWithAi((state) => state.ai.chatEndPoint);
+  const agentProgress = useStoreWithAi((state) => state.ai.agentProgress);
+  const toolTimings = useStoreWithAi((state) => state.ai.toolTimings);
+  const pendingSubAgentApprovals = useStoreWithAi(
     (state) => state.ai.pendingSubAgentApprovals,
-  );
-  const aiSessionArtifacts = useRoomStore(
-    (state) => state.artifactAi.config.aiSessionArtifacts,
-  );
-  const currentArtifactId = useRoomStore(
-    (state) => state.artifacts.config.currentArtifactId,
   );
 
   useEffect(() => {
@@ -117,10 +143,6 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
     () => sessions.find((session) => session.id === selectedSessionId),
     [selectedSessionId, sessions],
   );
-
-  const selectedArtifactId = selectedSessionId
-    ? aiSessionArtifacts[selectedSessionId]
-    : undefined;
 
   const messageRows = useMemo(
     () =>
@@ -177,12 +199,21 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
     Object.keys(selectedToolTimings).length === 0 &&
     Object.keys(selectedPendingSubAgentApprovals).length === 0;
 
+  const resolvedExtraSummary = useMemo(
+    () =>
+      resolveExtraSummary(extraSummary, {
+        currentSessionId,
+        selectedSessionId,
+        selectedSession,
+      }),
+    [currentSessionId, extraSummary, selectedSession, selectedSessionId],
+  );
+
   const summary = useMemo(
     () => ({
       currentSessionId,
       selectedSessionId,
-      currentArtifactId,
-      selectedArtifactId,
+      ...resolvedExtraSummary,
       transport: chatEndpoint?.trim() ? 'remote' : 'local',
       openSessionTabs,
       sessionCount: sessions.length,
@@ -197,11 +228,10 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
     }),
     [
       chatEndpoint,
-      currentArtifactId,
       currentSessionId,
       openSessionTabs,
+      resolvedExtraSummary,
       selectedAgentProgress,
-      selectedArtifactId,
       selectedPendingSubAgentApprovals,
       selectedSession,
       selectedSessionId,
@@ -239,8 +269,6 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
     window.setTimeout(() => setCopied(false), 1200);
   };
 
-  if (!import.meta.env.DEV) return null;
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <Tooltip>
@@ -273,9 +301,7 @@ export const AiDebugInspector: React.FC<{triggerClassName?: string}> = ({
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() =>
-                  window.open('http://localhost:4983', '_blank', 'noreferrer')
-                }
+                onClick={() => window.open(devToolsUrl, '_blank', 'noreferrer')}
               >
                 <ExternalLinkIcon className="h-3.5 w-3.5" />
                 DevTools

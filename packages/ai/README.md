@@ -163,6 +163,24 @@ new `ChatSessionSchema` state no longer includes that field.
 provider-v3 model objects when the host app enables
 `globalThis.__SQLROOMS_AI_DEVTOOLS__`, and otherwise returns the model unchanged.
 
+## Debug inspector
+
+`@sqlrooms/ai/debug` exports `AiDebugInspector`, a development utility for
+inspecting generic AI slice state without coupling to a specific app. Render it
+from a dev-only app surface and optionally pass `extraSummary` for app context:
+
+```tsx
+import {AiDebugInspector} from '@sqlrooms/ai/debug';
+
+<AiDebugInspector
+  triggerClassName="text-muted-foreground hover:text-primary size-8"
+  extraSummary={{
+    currentArtifactId,
+    selectedArtifactId,
+  }}
+/>;
+```
+
 ## Add custom tools
 
 ```tsx

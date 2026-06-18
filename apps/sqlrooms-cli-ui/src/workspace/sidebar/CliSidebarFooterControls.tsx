@@ -1,3 +1,4 @@
+import {AiDebugInspector} from '@sqlrooms/ai/debug';
 import {RoomShell} from '@sqlrooms/room-shell';
 import {
   Button,
@@ -7,7 +8,8 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
-import {AiDebugInspector} from '../../components/AiDebugInspector';
+import {useCallback} from 'react';
+import {useRoomStore} from '../../store';
 import {DbConnectionsSection} from './DbConnectionsSection';
 
 export function CliSidebarFooterControls({
@@ -15,6 +17,22 @@ export function CliSidebarFooterControls({
 }: {
   onToggleSqlEditor: () => void;
 }) {
+  const currentArtifactId = useRoomStore(
+    (state) => state.artifacts.config.currentArtifactId,
+  );
+  const aiSessionArtifacts = useRoomStore(
+    (state) => state.artifactAi.config.aiSessionArtifacts,
+  );
+  const getExtraSummary = useCallback(
+    ({selectedSessionId}: {selectedSessionId: string | null}) => ({
+      currentArtifactId,
+      selectedArtifactId: selectedSessionId
+        ? aiSessionArtifacts[selectedSessionId]
+        : undefined,
+    }),
+    [aiSessionArtifacts, currentArtifactId],
+  );
+
   return (
     <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
       <Tooltip>
@@ -35,7 +53,10 @@ export function CliSidebarFooterControls({
       <RoomShell.CommandPalette.Button className="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md" />
       <DbConnectionsSection />
       {import.meta.env.DEV && (
-        <AiDebugInspector triggerClassName="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md" />
+        <AiDebugInspector
+          triggerClassName="text-muted-foreground hover:bg-sidebar-accent hover:text-primary size-8 rounded-md"
+          extraSummary={getExtraSummary}
+        />
       )}
       <Tooltip>
         <TooltipTrigger asChild>
