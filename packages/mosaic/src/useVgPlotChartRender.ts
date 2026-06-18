@@ -28,7 +28,7 @@ type PlotInstance = {
 
 function normalizeSpecTableReferences(value: unknown, key?: string): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) => normalizeSpecTableReferences(item));
+    return value.map((item) => normalizeSpecTableReferences(item, key));
   }
 
   if (!value || typeof value !== 'object') {
@@ -52,7 +52,7 @@ function normalizeSpecTableReferences(value: unknown, key?: string): unknown {
     normalized.from.trim() &&
     !normalized.from.trim().startsWith('$')
   ) {
-    normalized.from = getMosaicSqlTableReference(normalized.from);
+    normalized.from = getMosaicSqlTableReference(normalized.from.trim());
   }
 
   return normalized;
