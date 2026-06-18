@@ -61,6 +61,32 @@ export type DebugAgentSnapshotEntry = {
   source: 'live' | 'session';
 };
 
+export type DebugTimelinePart =
+  | {
+      kind: 'text' | 'reasoning';
+      index: number;
+      text: string;
+      raw: unknown;
+    }
+  | {
+      kind: 'tool';
+      index: number;
+      toolCall: DebugToolCall;
+      agentProgress?: DebugAgentProgressEntry;
+      agentSnapshot?: DebugAgentSnapshotEntry;
+    }
+  | {
+      kind: 'other';
+      index: number;
+      type: string;
+      raw: unknown;
+    };
+
+export type DebugTimelineMessage = {
+  message: DebugMessage;
+  parts: DebugTimelinePart[];
+};
+
 export type AvailableToolDebugInfo = {
   name: string;
   description?: string;
@@ -118,6 +144,51 @@ function countToolCalls(messages: UIMessage[]): number {
   );
 }
 
+function getPartText(part: unknown): string | undefined {
+  if (!part || typeof part !== 'object') return undefined;
+  const record = part as {text?: unknown};
+  return typeof record.text === 'string' ? record.text : undefined;
+}
+
+function getPartType(part: unknown): string {
+  if (!part || typeof part !== 'object') return 'unknown';
+  const type = (part as {type?: unknown}).type;
+  return typeof type === 'string' ? type : 'unknown';
+}
+
+function getToolCallFromPart({
+  message,
+  messageIndex,
+  part,
+  partIndex,
+  agentProgress,
+}: {
+  message: UIMessage;
+  messageIndex: number;
+  part: unknown;
+  partIndex: number;
+  agentProgress: Record<string, unknown[]>;
+}): DebugToolCall | undefined {
+  if (!isToolLikePart(part)) return undefined;
+  const toolCallId = part.toolCallId;
+  if (!toolCallId) return undefined;
+
+  return {
+    messageId: message.id,
+    messageIndex,
+    partIndex,
+    role: message.role,
+    toolCallId,
+    toolName: getToolName(part),
+    state: part.state,
+    input: part.input,
+    output: part.output,
+    errorText: part.errorText,
+    raw: part,
+    hasAgentProgress: (agentProgress[toolCallId]?.length ?? 0) > 0,
+  };
+}
+
 export function getSessionDebugSummary(
   session: ChatSessionSchema,
 ): SessionDebugSummary {
@@ -165,25 +236,14 @@ export function getSessionDebugToolCalls(
   return ((session.uiMessages ?? []) as UIMessage[]).flatMap(
     (message, messageIndex) =>
       getMessageParts(message).flatMap((part, partIndex) => {
-        if (!isToolLikePart(part)) return [];
-        const toolCallId = part.toolCallId;
-        if (!toolCallId) return [];
-        return [
-          {
-            messageId: message.id,
-            messageIndex,
-            partIndex,
-            role: message.role,
-            toolCallId,
-            toolName: getToolName(part),
-            state: part.state,
-            input: part.input,
-            output: part.output,
-            errorText: part.errorText,
-            raw: part,
-            hasAgentProgress: (agentProgress[toolCallId]?.length ?? 0) > 0,
-          },
-        ];
+        const toolCall = getToolCallFromPart({
+          message,
+          messageIndex,
+          part,
+          partIndex,
+          agentProgress,
+        });
+        return toolCall ? [toolCall] : [];
       }),
   );
 }
@@ -239,6 +299,96 @@ export function getSessionDebugAgentSnapshots(
         ? [{parentToolCallId, snapshot, source: 'session' as const}]
         : [];
     });
+}
+
+export function getSessionDebugTimeline({
+  session,
+  liveAgentProgress = {},
+  liveAgentSnapshots = {},
+}: {
+  session: ChatSessionSchema;
+  liveAgentProgress?: Record<string, AgentToolCall[]>;
+  liveAgentSnapshots?: Record<string, AgentSnapshot>;
+}): DebugTimelineMessage[] {
+  const agentProgress = getSessionDebugAgentProgress(
+    session,
+    liveAgentProgress,
+  );
+  const agentSnapshots = getSessionDebugAgentSnapshots(
+    session,
+    liveAgentSnapshots,
+  );
+  const agentProgressById = Object.fromEntries(
+    agentProgress.map((entry) => [entry.parentToolCallId, entry]),
+  );
+  const agentSnapshotsById = Object.fromEntries(
+    agentSnapshots.map((entry) => [entry.parentToolCallId, entry]),
+  );
+  const toolProgressById = Object.fromEntries(
+    agentProgress.map((entry) => [entry.parentToolCallId, entry.toolCalls]),
+  );
+
+  return ((session.uiMessages ?? []) as UIMessage[]).map(
+    (message, messageIndex) => {
+      const parts = getMessageParts(message).map((part, partIndex) => {
+        const toolCall = getToolCallFromPart({
+          message,
+          messageIndex,
+          part,
+          partIndex,
+          agentProgress: toolProgressById,
+        });
+        if (toolCall) {
+          return {
+            kind: 'tool' as const,
+            index: partIndex,
+            toolCall,
+            agentProgress: agentProgressById[toolCall.toolCallId],
+            agentSnapshot: agentSnapshotsById[toolCall.toolCallId],
+          };
+        }
+
+        const type = getPartType(part);
+        const text = getPartText(part);
+        if (type === 'text' && text !== undefined) {
+          return {
+            kind: 'text' as const,
+            index: partIndex,
+            text,
+            raw: part,
+          };
+        }
+
+        if (type === 'reasoning' && text !== undefined) {
+          return {
+            kind: 'reasoning' as const,
+            index: partIndex,
+            text,
+            raw: part,
+          };
+        }
+
+        return {
+          kind: 'other' as const,
+          index: partIndex,
+          type,
+          raw: part,
+        };
+      });
+
+      return {
+        message: {
+          id: message.id,
+          index: messageIndex,
+          role: message.role,
+          partCount: parts.length,
+          textPreview: getTextPreview(message),
+          raw: message,
+        },
+        parts,
+      };
+    },
+  );
 }
 
 export function getAvailableToolDebugInfo(

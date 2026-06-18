@@ -5,6 +5,7 @@ export {
   getSessionDebugAgentSnapshots,
   getSessionDebugMessages,
   getSessionDebugSummary,
+  getSessionDebugTimeline,
   getSessionDebugToolCalls,
 } from '@sqlrooms/ai-core/devtools';
 export type {
@@ -13,6 +14,8 @@ export type {
   DebugAgentProgressEntry,
   DebugAgentSnapshotEntry,
   DebugMessage,
+  DebugTimelineMessage,
+  DebugTimelinePart,
   DebugToolCall,
   SessionDebugSummary,
 } from '@sqlrooms/ai-core/devtools';

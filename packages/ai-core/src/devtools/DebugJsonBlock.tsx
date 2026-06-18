@@ -4,6 +4,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
   CopyButton,
+  ScrollArea,
   cn,
 } from '@sqlrooms/ui';
 import {ChevronRightIcon} from 'lucide-react';
@@ -37,7 +38,7 @@ export const DebugJsonBlock: React.FC<DebugJsonBlockProps> = ({
 
   return (
     <Collapsible defaultOpen={defaultOpen} className={cn('w-full', className)}>
-      <div className="border-border bg-muted/30 rounded-md border">
+      <div className="bg-muted/20 rounded-md">
         <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
           <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-medium">
             <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
@@ -51,19 +52,20 @@ export const DebugJsonBlock: React.FC<DebugJsonBlockProps> = ({
           />
         </div>
         <CollapsibleContent>
-          <div className="border-border/70 border-t">
-            <JsonCodeMirrorEditor
-              value={text}
-              readOnly
-              hideGutter
-              options={{
-                lineNumbers: false,
-                lineWrapping: true,
-                foldGutter: false,
-                autocompletion: false,
-              }}
-              className={cn('h-40 text-xs', editorClassName)}
-            />
+          <div className="bg-background/70">
+            <ScrollArea className={cn('h-40', editorClassName)}>
+              <JsonCodeMirrorEditor
+                value={text}
+                readOnly
+                options={{
+                  lineNumbers: false,
+                  lineWrapping: true,
+                  foldGutter: true,
+                  autocompletion: false,
+                }}
+                className="h-auto min-h-full text-xs [&_.cm-editor]:h-auto [&_.cm-gutters]:pl-1 [&_.cm-scroller]:overflow-visible"
+              />
+            </ScrollArea>
           </div>
         </CollapsibleContent>
       </div>

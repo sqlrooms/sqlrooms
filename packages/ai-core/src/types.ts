@@ -93,8 +93,8 @@ export type AgentProgressSnapshot = {
  * Serializable agent metadata captured for AI devtools.
  *
  * Snapshot capture is optional and intentionally stores descriptions, names,
- * and bounded settings only. It must not contain executable tool objects,
- * closures, API keys, or unbounded prompt/output content.
+ * capability flags, and bounded settings only. It must not contain executable
+ * tool objects, closures, API keys, or unbounded prompt/output content.
  */
 export type AgentSnapshot = {
   agentName?: string;
@@ -102,6 +102,10 @@ export type AgentSnapshot = {
   availableTools: Array<{
     name: string;
     description?: string;
+    /** Whether the captured tool exposed an execute function. */
+    hasExecute?: boolean;
+    /** Whether the captured tool exposed a renderer-like function. */
+    hasRenderer?: boolean;
     needsApproval?: boolean;
   }>;
   settings?: {

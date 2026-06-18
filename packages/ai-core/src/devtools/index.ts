@@ -6,6 +6,7 @@ export {
   getSessionDebugAgentSnapshots,
   getSessionDebugMessages,
   getSessionDebugSummary,
+  getSessionDebugTimeline,
   getSessionDebugToolCalls,
 } from './sessionDebugModel';
 export type {
@@ -13,6 +14,8 @@ export type {
   DebugAgentProgressEntry,
   DebugAgentSnapshotEntry,
   DebugMessage,
+  DebugTimelineMessage,
+  DebugTimelinePart,
   DebugToolCall,
   SessionDebugSummary,
 } from './sessionDebugModel';

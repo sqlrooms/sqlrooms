@@ -40,20 +40,32 @@ interface AgentStreamStore {
   };
 }
 
-function getAgentAvailableTools(agent: unknown): AgentSnapshot['availableTools'] {
+function getAgentAvailableTools(
+  agent: unknown,
+): AgentSnapshot['availableTools'] {
   const tools = (agent as {tools?: unknown}).tools;
   if (!tools || typeof tools !== 'object') return [];
 
-  return Object.entries(tools as Record<string, unknown>).map(([name, tool]) => {
-    const record =
-      tool && typeof tool === 'object' ? (tool as Record<string, unknown>) : {};
-    return {
-      name,
-      description:
-        typeof record.description === 'string' ? record.description : undefined,
-      needsApproval: Boolean(record.needsApproval),
-    };
-  });
+  return Object.entries(tools as Record<string, unknown>).map(
+    ([name, tool]) => {
+      const record =
+        tool && typeof tool === 'object'
+          ? (tool as Record<string, unknown>)
+          : {};
+      return {
+        name,
+        description:
+          typeof record.description === 'string'
+            ? record.description
+            : undefined,
+        hasExecute: typeof record.execute === 'function',
+        hasRenderer:
+          typeof record.renderer === 'function' ||
+          typeof record.render === 'function',
+        needsApproval: Boolean(record.needsApproval),
+      };
+    },
+  );
 }
 
 /**

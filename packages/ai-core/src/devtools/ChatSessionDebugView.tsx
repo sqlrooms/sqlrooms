@@ -1,31 +1,37 @@
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
   cn,
+  ScrollArea,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@sqlrooms/ui';
-import {BugIcon} from 'lucide-react';
+import {ChevronRightIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import type {AgentToolCall} from '../types';
+import type {AgentSnapshot, AgentToolCall} from '../types';
 import {DebugJsonBlock} from './DebugJsonBlock';
 import {
   getAvailableToolDebugInfo,
-  getSessionDebugAgentProgress,
-  getSessionDebugAgentSnapshots,
-  getSessionDebugMessages,
   getSessionDebugSummary,
-  getSessionDebugToolCalls,
+  getSessionDebugTimeline,
 } from './sessionDebugModel';
 
 export type ChatSessionDebugViewProps = {
+  /** Chat session id to inspect from the current AI store context. */
   sessionId: string;
+  /** Optional wrapper class for embedding the inspector in panels or overlays. */
   className?: string;
+  /** Initial tab to show. Defaults to the chronological timeline. */
+  defaultTab?: string;
+  /** @deprecated Use defaultTab. Kept as a no-op for the initial accordion API. */
   defaultExpandedSections?: string[];
 };
 
-const DEFAULT_EXPANDED_SECTIONS = ['summary', 'messages', 'tools'];
+const DEFAULT_TAB = 'timeline';
 
 function formatDate(date: Date | undefined): string {
   return date ? date.toLocaleString() : 'n/a';
@@ -45,21 +51,51 @@ const KeyValue: React.FC<{label: string; value: React.ReactNode}> = ({
   </div>
 );
 
-const StatusPill: React.FC<{children: React.ReactNode; tone?: 'ok' | 'warn'}> =
-  ({children, tone}) => (
-    <span
-      className={cn(
-        'inline-flex items-center rounded border px-1.5 py-0.5 text-[11px] font-medium',
-        tone === 'ok' &&
-          'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-        tone === 'warn' &&
-          'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-        !tone && 'border-border bg-muted text-muted-foreground',
+const StatusPill: React.FC<{
+  children: React.ReactNode;
+  tone?: 'ok' | 'warn';
+  size?: 'default' | 'compact';
+}> = ({children, tone, size = 'default'}) => (
+  <span
+    className={cn(
+      'inline-flex items-center rounded border font-medium',
+      size === 'compact'
+        ? 'px-1 py-0 text-[10px]'
+        : 'px-1.5 py-0.5 text-[11px]',
+      tone === 'ok' &&
+        'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+      tone === 'warn' &&
+        'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+      !tone && 'border-border bg-muted text-muted-foreground',
+    )}
+  >
+    {children}
+  </span>
+);
+
+const ToolCapabilityBadges: React.FC<{
+  hasExecute?: boolean;
+  hasRenderer?: boolean;
+}> = ({hasExecute, hasRenderer}) => {
+  if (typeof hasExecute !== 'boolean' && typeof hasRenderer !== 'boolean') {
+    return null;
+  }
+
+  return (
+    <>
+      {typeof hasExecute === 'boolean' && (
+        <StatusPill size="compact" tone={hasExecute ? 'ok' : undefined}>
+          {hasExecute ? 'execute' : 'no execute'}
+        </StatusPill>
       )}
-    >
-      {children}
-    </span>
+      {typeof hasRenderer === 'boolean' && (
+        <StatusPill size="compact" tone={hasRenderer ? 'ok' : undefined}>
+          {hasRenderer ? 'renderer' : 'no renderer'}
+        </StatusPill>
+      )}
+    </>
   );
+};
 
 const EmptyState: React.FC<{children: React.ReactNode}> = ({children}) => (
   <div className="text-muted-foreground py-6 text-center text-xs">
@@ -67,73 +103,168 @@ const EmptyState: React.FC<{children: React.ReactNode}> = ({children}) => (
   </div>
 );
 
+type DebugToolListItem = {
+  name: string;
+  badges?: React.ReactNode;
+  details: React.ReactNode;
+};
+
+const DebugToolRows: React.FC<{tools: DebugToolListItem[]}> = ({tools}) => (
+  <div className="grid gap-1">
+    {tools.map((tool) => (
+      <Collapsible key={tool.name}>
+        <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-1.5 py-1 text-left text-xs">
+          <ChevronRightIcon className="text-muted-foreground h-3 w-3 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+          <span className="min-w-0 flex-1 truncate font-medium">
+            {tool.name}
+          </span>
+          {tool.badges && (
+            <span className="ml-auto flex shrink-0 items-center justify-end gap-1">
+              {tool.badges}
+            </span>
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="text-muted-foreground grid gap-1 pb-2 pl-4 text-[11px]">
+            {tool.details}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    ))}
+  </div>
+);
+
+const DebugToolList: React.FC<{
+  title: string;
+  tools: DebugToolListItem[];
+}> = ({title, tools}) => {
+  if (tools.length === 0) return null;
+
+  return (
+    <Collapsible className="bg-muted/20 rounded-md">
+      <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
+        <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-medium">
+          <ChevronRightIcon className="text-muted-foreground h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+          <span className="truncate">{title}</span>
+          <span className="text-muted-foreground text-[11px]">
+            {tools.length}
+          </span>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent>
+        <div className="grid gap-1 px-2 pb-2">
+          <DebugToolRows tools={tools} />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+const AgentAvailableTools: React.FC<{
+  snapshot: AgentSnapshot | undefined;
+}> = ({snapshot}) => (
+  <DebugToolList
+    title="Agent tools"
+    tools={(snapshot?.availableTools ?? []).map((tool) => ({
+      name: tool.name,
+      badges: (
+        <>
+          <ToolCapabilityBadges
+            hasExecute={tool.hasExecute}
+            hasRenderer={tool.hasRenderer}
+          />
+          {tool.needsApproval && (
+            <StatusPill size="compact" tone="warn">
+              approval
+            </StatusPill>
+          )}
+        </>
+      ),
+      details: <div>{tool.description || 'No description.'}</div>,
+    }))}
+  />
+);
+
 const AgentToolCallTree: React.FC<{
   toolCalls: AgentToolCall[];
+  agentProgressById: Record<string, AgentToolCall[]>;
+  agentSnapshotsById: Record<string, AgentSnapshot>;
   depth?: number;
-}> = ({toolCalls, depth = 0}) => {
-  if (toolCalls.length === 0) return <EmptyState>No agent calls recorded.</EmptyState>;
+}> = ({toolCalls, agentProgressById, agentSnapshotsById, depth = 0}) => {
+  if (toolCalls.length === 0) {
+    return <EmptyState>No agent calls recorded.</EmptyState>;
+  }
 
   return (
     <div className="flex flex-col gap-2">
-      {toolCalls.map((toolCall) => (
-        <div
-          key={toolCall.toolCallId}
-          className={cn(
-            'border-border bg-background rounded-md border p-2',
-            depth > 0 && 'ml-3',
-          )}
-        >
-          <div className="mb-2 flex min-w-0 items-center gap-2">
-            <StatusPill
-              tone={
-                toolCall.state === 'success'
-                  ? 'ok'
-                  : toolCall.state === 'pending' ||
-                      toolCall.state === 'approval-requested'
-                    ? 'warn'
-                    : undefined
-              }
-            >
-              {toolCall.state}
-            </StatusPill>
-            <span className="truncate text-xs font-medium">
-              {toolCall.toolName}
-            </span>
-            <span className="text-muted-foreground ml-auto truncate text-[11px]">
-              {toolCall.toolCallId}
-            </span>
+      {toolCalls.map((toolCall) => {
+        const nestedCalls =
+          agentProgressById[toolCall.toolCallId] ??
+          toolCall.agentToolCalls ??
+          [];
+        const snapshot = agentSnapshotsById[toolCall.toolCallId];
+
+        return (
+          <div
+            key={toolCall.toolCallId}
+            className={cn('bg-muted/20 rounded-md p-2', depth > 0 && 'ml-3')}
+          >
+            <div className="mb-2 flex min-w-0 items-center gap-2">
+              <StatusPill
+                tone={
+                  toolCall.state === 'success'
+                    ? 'ok'
+                    : toolCall.state === 'pending' ||
+                        toolCall.state === 'approval-requested'
+                      ? 'warn'
+                      : undefined
+                }
+              >
+                {toolCall.state}
+              </StatusPill>
+              <span className="truncate text-xs font-medium">
+                {toolCall.toolName}
+              </span>
+              <span className="text-muted-foreground ml-auto truncate text-[11px]">
+                {toolCall.toolCallId}
+              </span>
+            </div>
+            <div className="grid gap-2">
+              <AgentAvailableTools snapshot={snapshot} />
+              {toolCall.input !== undefined && (
+                <DebugJsonBlock title="Input" value={toolCall.input} />
+              )}
+              {toolCall.output !== undefined && (
+                <DebugJsonBlock title="Output" value={toolCall.output} />
+              )}
+              {toolCall.errorText && (
+                <DebugJsonBlock
+                  title="Error"
+                  value={toolCall.errorText}
+                  defaultOpen
+                />
+              )}
+              {nestedCalls.length > 0 && (
+                <AgentToolCallTree
+                  toolCalls={nestedCalls}
+                  agentProgressById={agentProgressById}
+                  agentSnapshotsById={agentSnapshotsById}
+                  depth={depth + 1}
+                />
+              )}
+            </div>
           </div>
-          <div className="grid gap-2">
-            {toolCall.input !== undefined && (
-              <DebugJsonBlock title="Input" value={toolCall.input} />
-            )}
-            {toolCall.output !== undefined && (
-              <DebugJsonBlock title="Output" value={toolCall.output} />
-            )}
-            {toolCall.errorText && (
-              <DebugJsonBlock
-                title="Error"
-                value={toolCall.errorText}
-                defaultOpen
-              />
-            )}
-            {toolCall.agentToolCalls?.length ? (
-              <AgentToolCallTree
-                toolCalls={toolCall.agentToolCalls}
-                depth={depth + 1}
-              />
-            ) : null}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
 
+/** Development inspector for a chat session, including messages, tool calls, and nested agent work. */
 export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
   sessionId,
   className,
-  defaultExpandedSections = DEFAULT_EXPANDED_SECTIONS,
+  defaultTab = DEFAULT_TAB,
 }) => {
   const sessions = useStoreWithAi((state) => state.ai.config.sessions);
   const tools = useStoreWithAi((state) => state.ai.tools);
@@ -151,37 +282,34 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
     () => (session ? getSessionDebugSummary(session) : undefined),
     [session],
   );
-  const messages = useMemo(
-    () => (session ? getSessionDebugMessages(session) : []),
-    [session],
-  );
-  const agentProgress = useMemo(
+  const timeline = useMemo(
     () =>
       session
-        ? getSessionDebugAgentProgress(session, liveAgentProgress)
+        ? getSessionDebugTimeline({
+            session,
+            liveAgentProgress,
+            liveAgentSnapshots,
+          })
         : [],
+    [liveAgentProgress, liveAgentSnapshots, session],
+  );
+  const allAgentProgressById = useMemo(
+    () => ({
+      ...(((session?.agentProgress as
+        | Record<string, AgentToolCall[]>
+        | undefined) ?? {}) as Record<string, AgentToolCall[]>),
+      ...liveAgentProgress,
+    }),
     [liveAgentProgress, session],
   );
-  const agentProgressById = useMemo(
-    () =>
-      Object.fromEntries(
-        agentProgress.map((entry) => [entry.parentToolCallId, entry.toolCalls]),
-      ),
-    [agentProgress],
-  );
-  const agentSnapshots = useMemo(
-    () =>
-      session
-        ? getSessionDebugAgentSnapshots(session, liveAgentSnapshots)
-        : [],
+  const allAgentSnapshotsById = useMemo(
+    () => ({
+      ...(((session?.agentSnapshots as
+        | Record<string, AgentSnapshot>
+        | undefined) ?? {}) as Record<string, AgentSnapshot>),
+      ...liveAgentSnapshots,
+    }),
     [liveAgentSnapshots, session],
-  );
-  const toolCalls = useMemo(
-    () =>
-      session
-        ? getSessionDebugToolCalls(session, agentProgressById)
-        : [],
-    [agentProgressById, session],
   );
   const availableTools = useMemo(
     () => getAvailableToolDebugInfo(tools, toolRenderers),
@@ -203,317 +331,234 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
 
   return (
     <div className={cn('flex h-full min-h-0 flex-col text-sm', className)}>
-      <div className="border-border flex items-center gap-2 border-b px-3 py-2">
-        <BugIcon className="text-muted-foreground h-4 w-4" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{summary.name}</div>
-          <div className="text-muted-foreground truncate text-xs">
-            {summary.sessionId}
-          </div>
-        </div>
-        <StatusPill tone={summary.isRunning ? 'warn' : 'ok'}>
-          {summary.isRunning ? 'running' : 'idle'}
-        </StatusPill>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto">
-        <Accordion
-          type="multiple"
-          defaultValue={defaultExpandedSections}
-          className="w-full"
-        >
-          <AccordionItem value="summary">
-            <AccordionTrigger className="px-3 py-2 text-sm">
+      <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
+        <div className="px-2 pt-0 pb-1">
+          <TabsList className="h-8 w-full justify-start overflow-x-auto bg-transparent p-0">
+            <TabsTrigger value="timeline" className="h-7 px-2 text-xs">
+              Timeline
+            </TabsTrigger>
+            <TabsTrigger value="tools" className="h-7 px-2 text-xs">
+              Tools
+            </TabsTrigger>
+            <TabsTrigger value="context" className="h-7 px-2 text-xs">
+              Context
+            </TabsTrigger>
+            <TabsTrigger value="raw-session" className="h-7 px-2 text-xs">
+              Raw
+            </TabsTrigger>
+            <TabsTrigger value="summary" className="h-7 px-2 text-xs">
               Summary
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <KeyValue label="Provider" value={summary.modelProvider} />
-                <KeyValue label="Model" value={summary.model} />
-                <KeyValue
-                  label="Custom model"
-                  value={summary.customModelName ?? 'n/a'}
-                />
-                <KeyValue label="Base URL" value={summary.baseUrl ?? 'n/a'} />
-                <KeyValue
-                  label="Created"
-                  value={formatDate(summary.createdAt)}
-                />
-                <KeyValue
-                  label="Last opened"
-                  value={formatNumber(summary.lastOpenedAt)}
-                />
-                <KeyValue label="Messages" value={summary.messageCount} />
-                <KeyValue label="Tool calls" value={summary.toolCallCount} />
-                <KeyValue
-                  label="Agent snapshots"
-                  value={summary.agentSnapshotCount}
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-          <AccordionItem value="tools">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Available Tools
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              {availableTools.length === 0 ? (
-                <EmptyState>No tools registered.</EmptyState>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {availableTools.map((tool) => (
-                    <div
-                      key={tool.name}
-                      className="border-border rounded-md border px-2 py-1.5"
-                    >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-xs font-medium">
-                          {tool.name}
-                        </span>
-                        <div className="ml-auto flex gap-1">
-                          <StatusPill tone={tool.hasExecute ? 'ok' : undefined}>
-                            {tool.hasExecute ? 'execute' : 'no execute'}
-                          </StatusPill>
-                          <StatusPill tone={tool.hasRenderer ? 'ok' : undefined}>
-                            {tool.hasRenderer ? 'renderer' : 'no renderer'}
-                          </StatusPill>
-                        </div>
-                      </div>
-                      {tool.description && (
-                        <div className="text-muted-foreground mt-1 line-clamp-2 text-xs">
-                          {tool.description}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="context">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Run Context
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              <DebugJsonBlock
-                title="session.runContext"
-                value={session.runContext ?? null}
-                defaultOpen
-                editorClassName="h-56"
+        <ScrollArea className="min-h-0 flex-1">
+          <TabsContent value="summary" className="m-0 px-3 pt-1 pb-8">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <KeyValue label="Session ID" value={summary.sessionId} />
+              <KeyValue label="Provider" value={summary.modelProvider} />
+              <KeyValue label="Model" value={summary.model} />
+              <KeyValue
+                label="Custom model"
+                value={summary.customModelName ?? 'n/a'}
               />
-            </AccordionContent>
-          </AccordionItem>
+              <KeyValue label="Base URL" value={summary.baseUrl ?? 'n/a'} />
+              <KeyValue label="Created" value={formatDate(summary.createdAt)} />
+              <KeyValue
+                label="Last opened"
+                value={formatNumber(summary.lastOpenedAt)}
+              />
+              <KeyValue label="Messages" value={summary.messageCount} />
+              <KeyValue label="Tool calls" value={summary.toolCallCount} />
+              <KeyValue
+                label="Agent snapshots"
+                value={summary.agentSnapshotCount}
+              />
+              <KeyValue
+                label="Status"
+                value={summary.isRunning ? 'running' : 'idle'}
+              />
+            </div>
+          </TabsContent>
 
-          <AccordionItem value="messages">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Messages
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              {messages.length === 0 ? (
-                <EmptyState>No messages recorded.</EmptyState>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className="border-border rounded-md border p-2"
-                    >
-                      <div className="mb-2 flex min-w-0 items-center gap-2">
-                        <StatusPill>{message.role}</StatusPill>
-                        <span className="truncate text-xs font-medium">
-                          #{message.index} {message.id}
-                        </span>
-                        <span className="text-muted-foreground ml-auto text-[11px]">
-                          {message.partCount} parts
-                        </span>
-                      </div>
-                      {message.textPreview && (
-                        <div className="text-muted-foreground mb-2 line-clamp-2 text-xs">
-                          {message.textPreview}
-                        </div>
-                      )}
+          <TabsContent value="tools" className="m-0 px-3 pt-1 pb-8">
+            {availableTools.length === 0 ? (
+              <EmptyState>No tools registered.</EmptyState>
+            ) : (
+              <DebugToolRows
+                tools={availableTools.map((tool) => ({
+                  name: tool.name,
+                  badges: (
+                    <ToolCapabilityBadges
+                      hasExecute={tool.hasExecute}
+                      hasRenderer={tool.hasRenderer}
+                    />
+                  ),
+                  details: <div>{tool.description || 'No description.'}</div>,
+                }))}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="context" className="m-0 px-3 pt-1 pb-8">
+            <DebugJsonBlock
+              title="session.runContext"
+              value={session.runContext ?? null}
+              defaultOpen
+              editorClassName="h-56"
+            />
+          </TabsContent>
+
+          <TabsContent value="timeline" className="m-0 px-3 pt-1 pb-10">
+            {timeline.length === 0 ? (
+              <EmptyState>No messages recorded.</EmptyState>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {timeline.map(({message, parts}) => (
+                  <div key={message.id} className="bg-muted/15 rounded-md p-2">
+                    <div className="mb-2 flex min-w-0 items-center gap-2">
+                      <StatusPill>{message.role}</StatusPill>
+                      <span className="truncate text-xs font-medium">
+                        #{message.index} {message.id}
+                      </span>
+                      <span className="text-muted-foreground ml-auto text-[11px]">
+                        {message.partCount} parts
+                      </span>
+                    </div>
+                    <div className="grid gap-2">
+                      {parts.map((part) => {
+                        if (part.kind === 'text' || part.kind === 'reasoning') {
+                          return (
+                            <div
+                              key={part.index}
+                              className={cn(
+                                'rounded-md px-2 py-1.5 text-xs whitespace-pre-wrap',
+                                part.kind === 'reasoning'
+                                  ? 'bg-muted/40 text-muted-foreground italic'
+                                  : 'bg-muted/30',
+                              )}
+                            >
+                              {part.text}
+                            </div>
+                          );
+                        }
+
+                        if (part.kind === 'tool') {
+                          const {toolCall} = part;
+                          const agentSnapshot =
+                            part.agentSnapshot?.snapshot ??
+                            allAgentSnapshotsById[toolCall.toolCallId];
+
+                          return (
+                            <div
+                              key={part.index}
+                              className="bg-background/70 rounded-md p-2"
+                            >
+                              <div className="mb-1.5 flex min-w-0 items-center gap-2">
+                                <StatusPill>tool call</StatusPill>
+                                <span className="min-w-0 truncate text-xs font-medium">
+                                  {toolCall.toolName}
+                                </span>
+                              </div>
+                              <div className="text-muted-foreground mb-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                                <StatusPill
+                                  tone={
+                                    toolCall.state === 'output-available'
+                                      ? 'ok'
+                                      : toolCall.state === 'input-available' ||
+                                          toolCall.state ===
+                                            'approval-requested'
+                                        ? 'warn'
+                                        : undefined
+                                  }
+                                >
+                                  {toolCall.state ?? 'unknown'}
+                                </StatusPill>
+                                <span className="min-w-0 truncate">
+                                  {toolCall.toolCallId}
+                                </span>
+                                <span>part #{toolCall.partIndex}</span>
+                                <span>
+                                  timing:{' '}
+                                  {toolTimings[toolCall.toolCallId]?.completedAt
+                                    ? `${toolTimings[toolCall.toolCallId]!.completedAt! - toolTimings[toolCall.toolCallId]!.startedAt}ms`
+                                    : 'n/a'}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                <AgentAvailableTools snapshot={agentSnapshot} />
+                                {toolCall.input !== undefined && (
+                                  <DebugJsonBlock
+                                    title="Input"
+                                    value={toolCall.input}
+                                    defaultOpen
+                                  />
+                                )}
+                                {toolCall.output !== undefined && (
+                                  <DebugJsonBlock
+                                    title="Output"
+                                    value={toolCall.output}
+                                  />
+                                )}
+                                {toolCall.errorText && (
+                                  <DebugJsonBlock
+                                    title="Error"
+                                    value={toolCall.errorText}
+                                    defaultOpen
+                                  />
+                                )}
+                                {part.agentSnapshot && (
+                                  <DebugJsonBlock
+                                    title={`Agent snapshot (${part.agentSnapshot.source})`}
+                                    value={part.agentSnapshot.snapshot}
+                                  />
+                                )}
+                                {part.agentProgress && (
+                                  <AgentToolCallTree
+                                    toolCalls={part.agentProgress.toolCalls}
+                                    agentProgressById={allAgentProgressById}
+                                    agentSnapshotsById={allAgentSnapshotsById}
+                                  />
+                                )}
+                                <DebugJsonBlock
+                                  title="Raw tool part"
+                                  value={toolCall.raw}
+                                />
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (part.kind === 'other') {
+                          return (
+                            <DebugJsonBlock
+                              key={part.index}
+                              title={`Part ${part.index}: ${part.type}`}
+                              value={part.raw}
+                            />
+                          );
+                        }
+
+                        return null;
+                      })}
                       <DebugJsonBlock title="Raw message" value={message.raw} />
                     </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-          <AccordionItem value="tool-calls">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Tool Calls
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              {toolCalls.length === 0 ? (
-                <EmptyState>No tool calls recorded.</EmptyState>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {toolCalls.map((toolCall) => (
-                    <div
-                      key={`${toolCall.messageId}:${toolCall.partIndex}`}
-                      className="border-border rounded-md border p-2"
-                    >
-                      <div className="mb-2 flex min-w-0 items-center gap-2">
-                        <StatusPill
-                          tone={
-                            toolCall.state === 'output-available'
-                              ? 'ok'
-                              : toolCall.state === 'input-available' ||
-                                  toolCall.state === 'approval-requested'
-                                ? 'warn'
-                                : undefined
-                          }
-                        >
-                          {toolCall.state ?? 'unknown'}
-                        </StatusPill>
-                        <span className="truncate text-xs font-medium">
-                          {toolCall.toolName}
-                        </span>
-                        <span className="text-muted-foreground ml-auto truncate text-[11px]">
-                          {toolCall.toolCallId}
-                        </span>
-                      </div>
-                      <div className="text-muted-foreground mb-2 grid grid-cols-2 gap-2 text-[11px]">
-                        <span>message #{toolCall.messageIndex}</span>
-                        <span>part #{toolCall.partIndex}</span>
-                        <span>{toolCall.role}</span>
-                        <span>
-                          timing:{' '}
-                          {toolTimings[toolCall.toolCallId]?.completedAt
-                            ? `${toolTimings[toolCall.toolCallId]!.completedAt! - toolTimings[toolCall.toolCallId]!.startedAt}ms`
-                            : 'n/a'}
-                        </span>
-                      </div>
-                      <div className="grid gap-2">
-                        {toolCall.input !== undefined && (
-                          <DebugJsonBlock
-                            title="Input"
-                            value={toolCall.input}
-                            defaultOpen
-                          />
-                        )}
-                        {toolCall.output !== undefined && (
-                          <DebugJsonBlock
-                            title="Output"
-                            value={toolCall.output}
-                          />
-                        )}
-                        {toolCall.errorText && (
-                          <DebugJsonBlock
-                            title="Error"
-                            value={toolCall.errorText}
-                            defaultOpen
-                          />
-                        )}
-                        {toolCall.hasAgentProgress && (
-                          <StatusPill tone="warn">agent progress available</StatusPill>
-                        )}
-                        <DebugJsonBlock title="Raw tool part" value={toolCall.raw} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="agent-work">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Agent Work
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              {agentProgress.length === 0 ? (
-                <EmptyState>No nested agent progress recorded.</EmptyState>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {agentProgress.map((entry) => (
-                    <div
-                      key={entry.parentToolCallId}
-                      className="border-border bg-muted/20 rounded-md border p-2"
-                    >
-                      <div className="mb-2 flex min-w-0 items-center gap-2">
-                        <StatusPill
-                          tone={entry.source === 'live' ? 'warn' : undefined}
-                        >
-                          {entry.source}
-                        </StatusPill>
-                        <span className="truncate text-xs font-medium">
-                          parent {entry.parentToolCallId}
-                        </span>
-                      </div>
-                      <AgentToolCallTree toolCalls={entry.toolCalls} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="agent-snapshots">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Agent Snapshots
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              {agentSnapshots.length === 0 ? (
-                <EmptyState>No agent snapshots captured.</EmptyState>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {agentSnapshots.map((entry) => (
-                    <div
-                      key={entry.parentToolCallId}
-                      className="border-border rounded-md border p-2"
-                    >
-                      <div className="mb-2 flex min-w-0 items-center gap-2">
-                        <StatusPill
-                          tone={entry.source === 'live' ? 'warn' : undefined}
-                        >
-                          {entry.source}
-                        </StatusPill>
-                        <span className="truncate text-xs font-medium">
-                          {entry.snapshot.agentName ?? entry.parentToolCallId}
-                        </span>
-                        <span className="text-muted-foreground ml-auto truncate text-[11px]">
-                          {entry.parentToolCallId}
-                        </span>
-                      </div>
-                      {entry.snapshot.availableTools.length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-1">
-                          {entry.snapshot.availableTools.map((tool) => (
-                            <StatusPill key={tool.name}>
-                              {tool.name}
-                            </StatusPill>
-                          ))}
-                        </div>
-                      )}
-                      <DebugJsonBlock
-                        title="Agent snapshot"
-                        value={entry.snapshot}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="raw-session">
-            <AccordionTrigger className="px-3 py-2 text-sm">
-              Raw Session JSON
-            </AccordionTrigger>
-            <AccordionContent className="px-3 pb-3">
-              <DebugJsonBlock
-                title="Session"
-                value={session}
-                defaultOpen
-                editorClassName="h-80"
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
+          <TabsContent value="raw-session" className="m-0 px-3 pt-1 pb-8">
+            <DebugJsonBlock
+              title="Session"
+              value={session}
+              defaultOpen
+              editorClassName="h-80"
+            />
+          </TabsContent>
+        </ScrollArea>
+      </Tabs>
     </div>
   );
 };

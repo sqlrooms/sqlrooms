@@ -5,6 +5,7 @@ import {
   getSessionDebugAgentSnapshots,
   getSessionDebugMessages,
   getSessionDebugSummary,
+  getSessionDebugTimeline,
   getSessionDebugToolCalls,
 } from '../src/devtools/sessionDebugModel';
 
@@ -104,6 +105,41 @@ describe('sessionDebugModel', () => {
         hasAgentProgress: true,
       }),
     ]);
+  });
+
+  it('derives a chronological message timeline with tool-attached agent work', () => {
+    const timeline = getSessionDebugTimeline({session: createSession()});
+
+    expect(timeline).toHaveLength(2);
+    expect(timeline[1]?.message).toMatchObject({
+      id: 'assistant-1',
+      role: 'assistant',
+      partCount: 2,
+    });
+    expect(timeline[1]?.parts.map((part) => part.kind)).toEqual([
+      'text',
+      'tool',
+    ]);
+
+    const toolPart = timeline[1]?.parts[1];
+    expect(toolPart).toMatchObject({
+      kind: 'tool',
+      toolCall: {
+        toolCallId: 'call-1',
+        toolName: 'query',
+      },
+      agentProgress: {
+        parentToolCallId: 'call-1',
+        source: 'session',
+      },
+      agentSnapshot: {
+        parentToolCallId: 'call-1',
+        source: 'session',
+        snapshot: {
+          agentName: 'agent-query',
+        },
+      },
+    });
   });
 
   it('prefers live agent progress over persisted progress', () => {

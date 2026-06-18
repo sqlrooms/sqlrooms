@@ -176,15 +176,15 @@ barrel.
 ```tsx
 import {ChatSessionDebugView} from '@sqlrooms/ai/devtools';
 
-function DebugPopover({sessionId}: {sessionId: string}) {
+function DebugPanel({sessionId}: {sessionId: string}) {
   return <ChatSessionDebugView sessionId={sessionId} />;
 }
 ```
 
 `ChatSessionDebugView` reads the existing AI store context and shows session
-metadata, model selection, registered tools, run context, raw `uiMessages`, tool
-parts, nested `agentProgress`, optional agent snapshots, and copyable JSON
-blocks.
+metadata, model selection, registered tools, run context, raw `uiMessages`, and
+a tabbed chronological timeline that keeps message parts, tool calls, nested
+`agentProgress`, optional agent snapshots, and copyable JSON blocks together.
 
 Agent snapshot capture is opt-in on the AI slice:
 
@@ -202,6 +202,7 @@ createAiSlice({
 
 Keep persistence disabled unless you explicitly need post-mortem debugging in
 saved workspace state. Snapshots are serializable metadata only; tool
+names, descriptions, capability flags, and approval hints may be stored, but
 implementations, closures, secrets, and unbounded prompt/output content should
 not be stored.
 
