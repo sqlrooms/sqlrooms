@@ -243,6 +243,16 @@ Run the DevTools viewer separately and enable capture with
 `SQLROOMS_AI_SDK_DEVTOOLS=1`. Captured runs are written to `.devtools/`, which
 may include prompts, tool inputs, and provider responses.
 
+For browser-local model calls, also run the SQLRooms DevTools bridge from the
+same working directory as the DevTools viewer:
+
+```bash
+cd packages/ai
+node scripts/devtools-bridge.mjs
+```
+
+`pnpm dev cli` starts both the viewer and the bridge automatically.
+
 ## Skills
 
 The skills subsystem lets you define, store, and author reusable AI "skills" — named instruction sets that can be loaded into an agent at runtime.
