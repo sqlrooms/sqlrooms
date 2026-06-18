@@ -18,7 +18,7 @@ export type UseDataTableExplorerQueryStateOptions = {
   selection: Selection;
   selectionVersion: number;
   sorting: DataTableExplorerSorting;
-  tableName: string;
+  tableIdentity: string;
   tableReference: DataTableExplorerSqlTableReference;
 };
 
@@ -43,7 +43,7 @@ export function useDataTableExplorerQueryState({
   selection,
   selectionVersion,
   sorting,
-  tableName,
+  tableIdentity,
   tableReference,
 }: UseDataTableExplorerQueryStateOptions): UseDataTableExplorerQueryStateReturn {
   const fields = schema.fields;
@@ -79,7 +79,7 @@ export function useDataTableExplorerQueryState({
 
   return {
     baseQuery,
-    datasetId: [tableName, ...fieldNames].join(''),
+    datasetId: [tableIdentity, ...fieldNames].join(''),
     fieldNames,
     fields,
     hasFilters: Array.isArray(filter) ? filter.length > 0 : Boolean(filter),

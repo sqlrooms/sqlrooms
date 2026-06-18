@@ -37,10 +37,11 @@ export async function loadDataTableExplorerSchema(options: {
   columns?: string[];
   coordinator: Parameters<typeof queryFieldInfo>[0];
   store: DataTableExplorerStore;
+  tableIdentity: string;
   tableName: string;
 }) {
-  const {columns, coordinator, store, tableName} = options;
-  store.getState().setSchemaLoading(true, tableName);
+  const {columns, coordinator, store, tableIdentity, tableName} = options;
+  store.getState().setSchemaLoading(true, tableIdentity);
 
   try {
     const fieldInfo = await queryFieldInfo(
@@ -53,11 +54,11 @@ export async function loadDataTableExplorerSchema(options: {
       .getState()
       .setSchemaSuccess(
         fieldInfo.map(fieldInfoToDataTableExplorerField),
-        tableName,
+        tableIdentity,
       );
   } catch (error: unknown) {
-    store.getState().setSchemaSuccess([], tableName);
-    store.getState().setSchemaError(toError(error), tableName);
+    store.getState().setSchemaSuccess([], tableIdentity);
+    store.getState().setSchemaError(toError(error), tableIdentity);
   }
 }
 

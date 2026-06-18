@@ -14,6 +14,7 @@ import {useDataTableExplorerStatus} from './hooks/useDataTableExplorerStatus';
 import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisiblePage';
 import {
   getMosaicSqlTableReference,
+  getMosaicTableIdentity,
   getMosaicTableReferenceString,
 } from '../mosaicTableReference';
 
@@ -35,6 +36,7 @@ export function useDataTableExplorer(
     tableName: table,
   } = options;
 
+  const tableIdentity = useMemo(() => getMosaicTableIdentity(table), [table]);
   const tableName = useMemo(
     () => getMosaicTableReferenceString(table),
     [table],
@@ -68,7 +70,7 @@ export function useDataTableExplorer(
     pageSize,
   });
   const schema =
-    rawSchema.tableName === tableName
+    rawSchema.tableName === tableIdentity
       ? rawSchema
       : {...rawSchema, fields: [], isLoading: true};
   const {
@@ -86,7 +88,7 @@ export function useDataTableExplorer(
     selection,
     selectionVersion,
     sorting,
-    tableName,
+    tableIdentity,
     tableReference,
   });
   useDataTableExplorerLifecycles({
@@ -103,6 +105,7 @@ export function useDataTableExplorer(
     selectionVersion,
     sorting,
     summaryBins,
+    tableIdentity,
     tableName,
     tableReference,
   });

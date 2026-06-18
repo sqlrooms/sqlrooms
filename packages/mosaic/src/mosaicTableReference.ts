@@ -22,6 +22,15 @@ export function getMosaicSqlTableReference(
 }
 
 /**
+ * Returns the full SQLRooms table identity for React/store keys.
+ */
+export function getMosaicTableIdentity(
+  tableName: MosaicTableReferenceInput,
+): string {
+  return typeof tableName === 'string' ? tableName.trim() : tableName.toString();
+}
+
+/**
  * Converts SQLRooms table identity into the plain schema/table string expected
  * by Mosaic metadata and spec APIs.
  */

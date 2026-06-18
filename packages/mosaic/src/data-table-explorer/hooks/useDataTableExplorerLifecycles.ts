@@ -29,6 +29,7 @@ export type UseDataTableExplorerLifecyclesOptions = {
   selectionVersion: number;
   sorting: DataTableExplorerSorting;
   summaryBins: number;
+  tableIdentity: string;
   tableName: string;
   tableReference: DataTableExplorerSqlTableReference;
 };
@@ -58,24 +59,25 @@ export function useDataTableExplorerLifecycles(
     selectionVersion,
     sorting,
     summaryBins,
+    tableIdentity,
     tableName,
     tableReference,
   } = options;
-  const previousTableNameRef = useRef(tableName);
+  const previousTableNameRef = useRef(tableIdentity);
 
   useEffect(() => {
     dataTableExplorerStore.getState().syncPageSize(pageSize);
   }, [pageSize, dataTableExplorerStore]);
 
   useEffect(() => {
-    if (previousTableNameRef.current === tableName) return;
+    if (previousTableNameRef.current === tableIdentity) return;
     selection.reset();
-    previousTableNameRef.current = tableName;
-  }, [selection, tableName]);
+    previousTableNameRef.current = tableIdentity;
+  }, [selection, tableIdentity]);
 
   useEffect(() => {
     dataTableExplorerStore.getState().resetPageIndex();
-  }, [dataTableExplorerStore, selectionVersion, tableName]);
+  }, [dataTableExplorerStore, selectionVersion, tableIdentity]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
@@ -91,9 +93,10 @@ export function useDataTableExplorerLifecycles(
       columns,
       coordinator: connection.coordinator,
       store: dataTableExplorerStore,
+      tableIdentity,
       tableName,
     });
-  }, [columns, connection, dataTableExplorerStore, tableName]);
+  }, [columns, connection, dataTableExplorerStore, tableIdentity, tableName]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName || !fieldNames.length) {
@@ -108,7 +111,7 @@ export function useDataTableExplorerLifecycles(
       pagination,
       sorting,
       store: dataTableExplorerStore,
-      tableName,
+      tableName: tableIdentity,
       tableReference,
     });
   }, [
@@ -118,6 +121,7 @@ export function useDataTableExplorerLifecycles(
     dataTableExplorerStore,
     rowFilter,
     sorting,
+    tableIdentity,
     tableName,
     tableReference,
   ]);
@@ -134,7 +138,7 @@ export function useDataTableExplorerLifecycles(
       filterStable: true,
       selection,
       store: dataTableExplorerStore,
-      tableName,
+      tableName: tableIdentity,
       tableReference,
       target: 'filtered',
     });
@@ -144,7 +148,14 @@ export function useDataTableExplorerLifecycles(
       cleanup();
       dataTableExplorerStore.getState().setClient(null);
     };
-  }, [connection, dataTableExplorerStore, selection, tableName, tableReference]);
+  }, [
+    connection,
+    dataTableExplorerStore,
+    selection,
+    tableIdentity,
+    tableName,
+    tableReference,
+  ]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
@@ -155,13 +166,19 @@ export function useDataTableExplorerLifecycles(
     const {cleanup} = connectDataTableExplorerCountClient({
       connection,
       store: dataTableExplorerStore,
-      tableName,
+      tableName: tableIdentity,
       tableReference,
       target: 'total',
     });
 
     return cleanup;
-  }, [connection, dataTableExplorerStore, tableName, tableReference]);
+  }, [
+    connection,
+    dataTableExplorerStore,
+    tableIdentity,
+    tableName,
+    tableReference,
+  ]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !fields.length) {
@@ -186,6 +203,7 @@ export function useDataTableExplorerLifecycles(
     dataTableExplorerStore,
     selection,
     summaryBins,
+    tableIdentity,
     tableName,
     tableReference,
   ]);
