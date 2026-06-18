@@ -1,16 +1,14 @@
 import {createLineChartSpec} from '../../src/charts/chart-types/line-chart/spec';
 import {LineChartSettings} from '../../src/charts/chart-types/line-chart/schema';
-import type {DataTable} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 
 describe('createLineChartSpec', () => {
-  const tableId = '"attached"."main"."test_table"';
   const mockDataTable: DataTable = {
-    table: {
+    table: makeQualifiedTableName({
       database: 'attached',
       schema: 'main',
       table: 'test_table',
-      toString: () => tableId,
-    },
+    }),
     tableName: 'test_table',
     schema: 'main',
     isView: false,

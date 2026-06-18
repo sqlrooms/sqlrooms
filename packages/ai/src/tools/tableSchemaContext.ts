@@ -1,7 +1,8 @@
-import type {
-  DataTable,
-  QualifiedTableName,
-  TableColumn,
+import {
+  makeQualifiedTableName,
+  type DataTable,
+  type QualifiedTableName,
+  type TableColumn,
 } from '@sqlrooms/duckdb';
 
 /**
@@ -115,29 +116,6 @@ export function getTableNameForAi(table: DataTable): string {
   return table.table?.table || table.tableName;
 }
 
-function escapeTableIdPart(id: string): string {
-  const str = String(id);
-  if (str.startsWith('"') && str.endsWith('"')) return str;
-  return `"${str.replace(/"/g, '""')}"`;
-}
-
-function makeQualifiedTableNameForAi({
-  database,
-  schema,
-  table,
-}: QualifiedTableName): QualifiedTableName {
-  const tableId = [database, schema, table]
-    .filter((id) => id !== undefined && id !== null)
-    .map((id) => escapeTableIdPart(id))
-    .join('.');
-  return {
-    database,
-    schema,
-    table,
-    toString: () => tableId,
-  };
-}
-
 /**
  * Builds the canonical qualified identity for an AI-visible table.
  *
@@ -149,7 +127,7 @@ export function getQualifiedTableNameForAi(
   table: DataTable,
 ): QualifiedTableName {
   const tableName = table.table?.table || table.tableName;
-  return makeQualifiedTableNameForAi({
+  return makeQualifiedTableName({
     database: table.table?.database || table.database,
     schema: table.table?.schema || table.schema,
     table: tableName,

@@ -1,4 +1,5 @@
-import type {DataTable, QualifiedTableName} from '@sqlrooms/duckdb';
+import type {DataTable} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName} from '../../duckdb-core/src/duckdb-utils';
 import {
   createTableIdentitySummary,
   formatAmbiguousTableMessage,
@@ -27,27 +28,6 @@ function makeTable(
     schema: options.schema ?? 'main',
     tableName,
     columns: options.columns ?? [{name: 'id', type: 'INTEGER'}],
-  };
-}
-
-function quoteIdentifier(id: string): string {
-  return `"${id.replace(/"/g, '""')}"`;
-}
-
-function makeQualifiedTableName({
-  database,
-  schema,
-  table,
-}: QualifiedTableName): QualifiedTableName {
-  const tableId = [database, schema, table]
-    .filter((id) => id !== undefined && id !== null)
-    .map((id) => quoteIdentifier(id))
-    .join('.');
-  return {
-    database,
-    schema,
-    table,
-    toString: () => tableId,
   };
 }
 
