@@ -2,7 +2,7 @@ import type {Tool} from 'ai';
 import {createDataTableExplorerTool} from '../../charts/chart-types';
 
 import {createMosaicDashboardDataTableExplorerPanelConfig} from '../../dashboard/MosaicDashboardSlice';
-import {DashboardAiAdapter} from '../types';
+import {DashboardAiAdapter} from '../dashboard-types';
 
 export function createDashboardDataTableExplorerTool(
   adapter: DashboardAiAdapter,

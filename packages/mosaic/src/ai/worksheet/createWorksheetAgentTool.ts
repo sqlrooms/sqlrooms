@@ -2,14 +2,18 @@ import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
 import {createAddTextBlockTool} from './createAddTextBlockTool';
 import {createWorksheetChartTools} from './createWorksheetChartTools';
+import type {AgentToolCall} from '../types';
 import type {
   WorksheetAiAdapter,
   CreateWorksheetAgentToolOptions,
   WorksheetAgentResult,
-  AgentToolCall,
-} from '../types';
+} from '../worksheet-types';
 import {AiAgentError} from '../errors';
 import {createWorksheetDashboardBlockAgentTool} from './createWorksheetDashboardBlockAgentTool';
+import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
+
+export const WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS = `
+IF primary artefact in run context is a worksheet, prioritize using worksheet_agent tool for any queries or data analysis tasks.`;
 
 const WORKSHEET_AGENT_INSTRUCTIONS = `You are a worksheet builder agent that creates and modifies interactive data worksheets.
 
@@ -166,9 +170,9 @@ function calculateAgentMetadata(
   };
 }
 
-export function createWorksheetAgentTool<TState>(
-  options: CreateWorksheetAgentToolOptions<TState>,
-): Tool {
+export function createWorksheetAgentTool<
+  TState extends MosaicDashboardStoreState,
+>(options: CreateWorksheetAgentToolOptions<TState>): Tool {
   const {store, adapter} = options;
 
   return tool({

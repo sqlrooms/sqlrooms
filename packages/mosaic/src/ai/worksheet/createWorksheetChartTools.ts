@@ -3,7 +3,7 @@ import {createChartTools} from '../../charts/chart-types/createChartTools';
 import {createDefaultChartTypes} from '../../charts/chart-types/createDefaultChartTypes';
 import {createChartToolDeps} from '../createChartToolDeps';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
-import type {CreateWorksheetAgentToolOptions} from '../types';
+import type {CreateWorksheetAgentToolOptions} from '../worksheet-types';
 
 export function createWorksheetChartTools<TState>(
   options: CreateWorksheetAgentToolOptions<TState>,

@@ -7,7 +7,8 @@ import {
 import type {DataTableExplorerPanelConfig} from '../dashboard/core-types';
 import type {ChartConfig} from '../charts/chart-types/chart-config';
 import {AiAgentError} from './errors';
-import {BaseMosaicAiAdapter, DashboardAiAdapter} from './types';
+import {BaseMosaicAiAdapter} from './types';
+import {DashboardAiAdapter} from './dashboard-types';
 import {DataTable} from '@sqlrooms/duckdb';
 import {Tool} from 'ai';
 

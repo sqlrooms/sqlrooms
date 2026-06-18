@@ -169,7 +169,10 @@ export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';
 export {DASHBOARD_AI_INSTRUCTIONS, MAP_TOOL_KEY} from './ai/constants';
 export {createDashboardAgentTool} from './ai/dashboard/createDashboardAgentTool';
-export {createWorksheetAgentTool} from './ai/worksheet/createWorksheetAgentTool';
+export {
+  createWorksheetAgentTool,
+  WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS,
+} from './ai/worksheet/createWorksheetAgentTool';
 export {
   createDashboardAiTools,
   type CreateDashboardAiToolsOptions,
@@ -181,19 +184,23 @@ export type {
   BaseAgentToolOptions,
   AgentToolCall,
   AgentRunResult,
+} from './ai/types';
+export type {
   // Dashboard types
   CreateDashboardAgentToolOptions,
   DashboardAgentResult,
   DashboardAiAdapter,
-  // Worksheet types
-  CreateWorksheetAgentToolOptions,
-  WorksheetAgentResult,
-  WorksheetAiAdapter,
   // Deprecated (backward compatibility)
   DashboardAgentRunResult,
   DashboardAgentToolCall,
   DashboardAiStore,
-} from './ai/types';
+} from './ai/dashboard-types';
+export type {
+  // Worksheet types
+  CreateWorksheetAgentToolOptions,
+  WorksheetAgentResult,
+  WorksheetAiAdapter,
+} from './ai/worksheet-types';
 
 // Compound components
 export {MosaicSpecChart} from './MosaicChart';

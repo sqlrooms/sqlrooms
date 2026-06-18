@@ -4,6 +4,8 @@
  */
 export type {ChartToolExecutionContext} from './charts/chart-types';
 export * from './ai/types';
+export * from './ai/dashboard-types';
+export * from './ai/worksheet-types';
 export * from './ai/constants';
 export {createDashboardAiTools} from './ai/dashboard/createDashboardAiTools';
 export {createDashboardAgentTool} from './ai/dashboard/createDashboardAgentTool';

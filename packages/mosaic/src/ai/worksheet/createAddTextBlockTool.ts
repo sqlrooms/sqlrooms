@@ -7,7 +7,7 @@ import {
   BlockDocumentListBlock,
   BlockDocumentHeadingBlock,
 } from '@sqlrooms/documents';
-import type {WorksheetAiAdapter} from '../types';
+import type {WorksheetAiAdapter} from '../worksheet-types';
 
 const AddTextBlockParameters = z.object({
   type: z

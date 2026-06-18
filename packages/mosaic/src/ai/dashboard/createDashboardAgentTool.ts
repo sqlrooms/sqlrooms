@@ -2,12 +2,12 @@ import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
 import {createDashboardAiTools} from './createDashboardAiTools';
 import {MAP_TOOL_KEY} from '../constants';
+import type {AgentToolCall} from '../types';
 import type {
   DashboardAiAdapter,
   CreateDashboardAgentToolOptions,
   DashboardAgentResult,
-  AgentToolCall,
-} from '../types';
+} from '../dashboard-types';
 import {AiAgentError} from '../errors';
 import {ensureTable} from '../tool-helpers';
 

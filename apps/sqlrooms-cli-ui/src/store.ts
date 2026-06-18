@@ -39,6 +39,7 @@ import {
   createMosaicSlice,
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
+  WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
@@ -111,7 +112,6 @@ import {
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
-import {dashboardAgentTool} from './createDashboardAgent';
 
 export type {RoomState} from './store-types';
 
@@ -697,10 +697,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `
-              IF primary artefact in run context is a worksheet, prioritize using worksheet_agent tool for any queries or data analysis tasks.\n\n
-              USE execute_command only ifg agent does not fit.
-            ${createDefaultAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
+              [
+                WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS,
+                createDefaultAiInstructions(store),
+                DOCUMENT_AI_INSTRUCTIONS,
+                createBlockDocumentAiInstructions(
+                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
+                ),
+                createBlockDocumentAuthoringInstructions(
+                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
+                ),
+              ].join('\n\n'),
             getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),

@@ -1,12 +1,10 @@
 import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
 import {MAP_TOOL_KEY} from '../constants';
-import type {
-  DashboardAgentResult,
-  BaseAgentToolOptions,
-  WorksheetAiAdapter,
-  DashboardAiAdapter,
-} from '../types';
+import type {BaseAgentToolOptions, AiStore} from '../types';
+import type {DashboardAiAdapter} from '../dashboard-types';
+import type {DashboardAgentResult} from '../dashboard-types';
+import type {WorksheetAiAdapter} from '../worksheet-types';
 import {AiAgentError} from '../errors';
 import {ensureTable} from '../tool-helpers';
 import {createDashboardAiTools} from '../dashboard/createDashboardAiTools';
@@ -108,10 +106,7 @@ const DashboardAgentInputSchema = z.object({
   tableName: z
     .string()
     .describe('REQUIRED: The name of the table/dataset to analyze.'),
-  dashboardTitle: z
-    .string()
-    .optional()
-    .describe('Optional title for the dashboard artifact'),
+  dashboardTitle: z.string().describe('REQUIRED: Title for the dashboard'),
   maxSteps: z
     .number()
     .optional()
@@ -143,15 +138,16 @@ type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
 //   };
 // }
 
-export type CreateWorksheetDashboardBlockAgentToolOptions<TState> =
-  BaseAgentToolOptions<TState> & {
-    worksheetId: string;
-    adapter: WorksheetAiAdapter;
-  };
+export type CreateWorksheetDashboardBlockAgentToolOptions<
+  TState extends MosaicDashboardStoreState,
+> = BaseAgentToolOptions<TState> & {
+  worksheetId: string;
+  adapter: WorksheetAiAdapter;
+};
 
-export function createWorksheetDashboardBlockAgentTool<TState>(
-  options: CreateWorksheetDashboardBlockAgentToolOptions<TState>,
-): Tool {
+export function createWorksheetDashboardBlockAgentTool<
+  TState extends MosaicDashboardStoreState,
+>(options: CreateWorksheetDashboardBlockAgentToolOptions<TState>): Tool {
   const {store, adapter, worksheetId} = options;
 
   return tool({
@@ -172,7 +168,7 @@ REQUIRED: Always provide tableName parameter - the dataset the dashboard will an
 
       const {dashboardId, blockId} = adapter.addDashboardBlock(
         worksheetId,
-        dashboardTitle || 'New Dashboard',
+        dashboardTitle,
         tableName,
       );
 
@@ -241,10 +237,9 @@ REQUIRED: Always provide tableName parameter - the dataset the dashboard will an
   });
 }
 
-export function createDashboardAiAdapter(
-  store: StoreApi<MosaicDashboardStoreState>,
-  dashboardId: string,
-): DashboardAiAdapter {
+export function createDashboardAiAdapter<
+  TState extends MosaicDashboardStoreState,
+>(store: AiStore<TState>, dashboardId: string): DashboardAiAdapter {
   return {
     addPanel: (panel) =>
       store.getState().mosaicDashboard.addPanel(dashboardId, panel),
