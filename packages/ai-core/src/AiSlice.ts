@@ -35,6 +35,7 @@ import {
   TOOL_CALL_CANCELLED,
 } from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
+import {cloneBoundedAgentSnapshot} from './devtools/agentSnapshots';
 import type {
   AddToolApprovalResponse,
   AddToolOutput,
@@ -330,10 +331,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         }
 
         if (session.agentSnapshots) {
-          Object.assign(
-            snapshots,
+          for (const [toolCallId, snapshot] of Object.entries(
             session.agentSnapshots as Record<string, AgentSnapshot>,
-          );
+          )) {
+            const clonedSnapshot = cloneBoundedAgentSnapshot(
+              snapshot,
+              devtoolsOptions.maxAgentSnapshotBytes,
+            );
+            if (clonedSnapshot) {
+              snapshots[toolCallId] = clonedSnapshot;
+            }
+          }
         }
 
         // Restore toolTimings from assistant message metadata
@@ -523,19 +531,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             snapshot: AgentSnapshot,
           ) => {
             if (!devtoolsOptions.captureAgentSnapshots) return;
-            let clonedSnapshot: AgentSnapshot;
-            try {
-              const serialized = JSON.stringify(snapshot);
-              const byteLength = new TextEncoder().encode(
-                serialized,
-              ).byteLength;
-              if (byteLength > devtoolsOptions.maxAgentSnapshotBytes) {
-                return;
-              }
-              clonedSnapshot = JSON.parse(serialized) as AgentSnapshot;
-            } catch {
-              return;
-            }
+            const clonedSnapshot = cloneBoundedAgentSnapshot(
+              snapshot,
+              devtoolsOptions.maxAgentSnapshotBytes,
+            );
+            if (!clonedSnapshot) return;
 
             set((state) =>
               produce(state, (draft) => {
