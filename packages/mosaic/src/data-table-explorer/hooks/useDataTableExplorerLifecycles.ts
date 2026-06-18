@@ -4,6 +4,7 @@ import type {MosaicSliceState} from '../../MosaicSlice';
 import type {DataTableExplorerStore} from '../createDataTableExplorerStore';
 import type {
   DataTableExplorerPaginationState,
+  DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
 } from '../types';
 import type {DataTableExplorerStoreState} from '../createDataTableExplorerStore';
@@ -29,6 +30,7 @@ export type UseDataTableExplorerLifecyclesOptions = {
   sorting: DataTableExplorerSorting;
   summaryBins: number;
   tableName: string;
+  tableReference: DataTableExplorerSqlTableReference;
 };
 
 export type UseDataTableExplorerLifecyclesReturn = {
@@ -57,6 +59,7 @@ export function useDataTableExplorerLifecycles(
     sorting,
     summaryBins,
     tableName,
+    tableReference,
   } = options;
   const previousTableNameRef = useRef(tableName);
 
@@ -106,6 +109,7 @@ export function useDataTableExplorerLifecycles(
       sorting,
       store: dataTableExplorerStore,
       tableName,
+      tableReference,
     });
   }, [
     connection,
@@ -115,6 +119,7 @@ export function useDataTableExplorerLifecycles(
     rowFilter,
     sorting,
     tableName,
+    tableReference,
   ]);
 
   useEffect(() => {
@@ -130,6 +135,7 @@ export function useDataTableExplorerLifecycles(
       selection,
       store: dataTableExplorerStore,
       tableName,
+      tableReference,
       target: 'filtered',
     });
     dataTableExplorerStore.getState().setClient(newClient);
@@ -138,7 +144,7 @@ export function useDataTableExplorerLifecycles(
       cleanup();
       dataTableExplorerStore.getState().setClient(null);
     };
-  }, [connection, dataTableExplorerStore, selection, tableName]);
+  }, [connection, dataTableExplorerStore, selection, tableName, tableReference]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
@@ -150,11 +156,12 @@ export function useDataTableExplorerLifecycles(
       connection,
       store: dataTableExplorerStore,
       tableName,
+      tableReference,
       target: 'total',
     });
 
     return cleanup;
-  }, [connection, dataTableExplorerStore, tableName]);
+  }, [connection, dataTableExplorerStore, tableName, tableReference]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !fields.length) {
@@ -170,6 +177,7 @@ export function useDataTableExplorerLifecycles(
       store: dataTableExplorerStore,
       summaryBins,
       tableName,
+      tableReference,
     });
   }, [
     categoryLimit,
@@ -179,6 +187,7 @@ export function useDataTableExplorerLifecycles(
     selection,
     summaryBins,
     tableName,
+    tableReference,
   ]);
 
   // Client is not returned - it's stored in the dataTableExplorerStore

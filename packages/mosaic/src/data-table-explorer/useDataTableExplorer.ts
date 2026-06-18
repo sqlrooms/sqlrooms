@@ -1,4 +1,5 @@
 import {useDebounce} from '@sqlrooms/ui';
+import {useMemo} from 'react';
 import {useStoreWithMosaic} from '../MosaicSlice';
 import type {
   DataTableExplorerOptions,
@@ -11,12 +12,10 @@ import {useDataTableExplorerLifecycles} from './hooks/useDataTableExplorerLifecy
 import {useDataTableExplorerColumns} from './hooks/useDataTableExplorerColumns';
 import {useDataTableExplorerStatus} from './hooks/useDataTableExplorerStatus';
 import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisiblePage';
-
-function getTableReference(
-  tableName: DataTableExplorerOptions['tableName'],
-): string {
-  return typeof tableName === 'string' ? tableName : tableName.toString();
-}
+import {
+  getMosaicSqlTableReference,
+  getMosaicTableReferenceString,
+} from '../mosaicTableReference';
 
 /**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
@@ -36,7 +35,14 @@ export function useDataTableExplorer(
     tableName: table,
   } = options;
 
-  const tableName = getTableReference(table);
+  const tableName = useMemo(
+    () => getMosaicTableReferenceString(table),
+    [table],
+  );
+  const tableReference = useMemo(
+    () => getMosaicSqlTableReference(table),
+    [table],
+  );
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const {selection, selectionVersion} = useDataTableExplorerSelection({
@@ -81,6 +87,7 @@ export function useDataTableExplorer(
     selectionVersion,
     sorting,
     tableName,
+    tableReference,
   });
   useDataTableExplorerLifecycles({
     categoryLimit,
@@ -97,6 +104,7 @@ export function useDataTableExplorer(
     sorting,
     summaryBins,
     tableName,
+    tableReference,
   });
   const dataTableExplorerColumns = useDataTableExplorerColumns({
     fields,

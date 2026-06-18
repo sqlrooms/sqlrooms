@@ -3,6 +3,7 @@ import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import type {Table} from 'apache-arrow';
 import type {
   DataTableExplorerPaginationState,
+  DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
 } from './types';
 import {
@@ -24,6 +25,7 @@ type DataTableExplorerPageClientOptions = {
   pagination: DataTableExplorerPaginationState;
   sorting: DataTableExplorerSorting;
   tableName: string;
+  tableReference?: DataTableExplorerSqlTableReference;
 };
 
 export class DataTableExplorerPageClient extends MosaicClient {
@@ -36,6 +38,7 @@ export class DataTableExplorerPageClient extends MosaicClient {
   private pageTable?: Table;
   private readonly sorting: DataTableExplorerSorting;
   private readonly tableName: string;
+  private readonly tableReference: DataTableExplorerSqlTableReference;
 
   constructor(options: DataTableExplorerPageClientOptions) {
     super();
@@ -46,6 +49,7 @@ export class DataTableExplorerPageClient extends MosaicClient {
     this.pagination = options.pagination;
     this.sorting = options.sorting;
     this.tableName = options.tableName;
+    this.tableReference = options.tableReference ?? options.tableName;
   }
 
   override get filterStable(): boolean {
@@ -69,7 +73,7 @@ export class DataTableExplorerPageClient extends MosaicClient {
         columns: this.columns,
         filter: resolvedFilter,
         sorting: this.sorting,
-        tableName: this.tableName,
+        tableName: this.tableReference,
       }),
       this.pagination,
     );

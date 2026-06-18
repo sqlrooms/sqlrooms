@@ -14,6 +14,7 @@ import {DataTableExplorerPageClient} from './DataTableExplorerPageClient';
 import {DataTableExplorerUnsupportedSummaryClient} from './DataTableExplorerUnsupportedSummaryClient';
 import type {
   DataTableExplorerSummaryState,
+  DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
 } from './types';
 import type {DataTableExplorerStore} from './createDataTableExplorerStore';
@@ -79,6 +80,7 @@ export function connectDataTableExplorerPageClient(options: {
   sorting: DataTableExplorerSorting;
   store: DataTableExplorerStore;
   tableName: string;
+  tableReference: DataTableExplorerSqlTableReference;
 }) {
   const client = new DataTableExplorerPageClient({
     columns: options.fieldNames,
@@ -87,6 +89,7 @@ export function connectDataTableExplorerPageClient(options: {
     pagination: options.pagination,
     sorting: options.sorting,
     tableName: options.tableName,
+    tableReference: options.tableReference,
   });
 
   options.connection.coordinator.connect(client);
@@ -106,6 +109,7 @@ export function connectDataTableExplorerCountClient(options: {
   selection?: Selection;
   store: DataTableExplorerStore;
   tableName: string;
+  tableReference: DataTableExplorerSqlTableReference;
   target: 'filtered' | 'total';
 }) {
   const setCountState =
@@ -118,6 +122,7 @@ export function connectDataTableExplorerCountClient(options: {
     onStateChange: setCountState,
     selection: options.selection,
     tableName: options.tableName,
+    tableReference: options.tableReference,
   });
 
   options.connection.coordinator.connect(client);
@@ -142,6 +147,7 @@ export function connectDataTableExplorerSummaryClients(options: {
   store: DataTableExplorerStore;
   summaryBins: number;
   tableName: string;
+  tableReference: DataTableExplorerSqlTableReference;
 }) {
   const {
     categoryLimit,
@@ -151,6 +157,7 @@ export function connectDataTableExplorerSummaryClients(options: {
     store,
     summaryBins,
     tableName,
+    tableReference,
   } = options;
 
   store.getState().initializeSummaries(fields);
@@ -167,6 +174,7 @@ export function connectDataTableExplorerSummaryClients(options: {
           onStateChange: update,
           selection,
           tableName,
+          tableReference,
         }),
       ];
     }
@@ -178,6 +186,7 @@ export function connectDataTableExplorerSummaryClients(options: {
         selection,
         steps: summaryBins,
         tableName,
+        tableReference,
         valueType:
           getDataTableExplorerValueType(field.type) === 'date'
             ? 'date'
@@ -198,6 +207,7 @@ export function connectDataTableExplorerSummaryClients(options: {
       onStateChange: update,
       selection,
       tableName,
+      tableReference,
     });
 
     return [

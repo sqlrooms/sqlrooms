@@ -3,6 +3,7 @@ import type {Selection} from '@uwdata/mosaic-core';
 import type {DataTableExplorerStoreState} from '../createDataTableExplorerStore';
 import type {
   DataTableExplorerPaginationState,
+  DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
 } from '../types';
 import {
@@ -18,6 +19,7 @@ export type UseDataTableExplorerQueryStateOptions = {
   selectionVersion: number;
   sorting: DataTableExplorerSorting;
   tableName: string;
+  tableReference: DataTableExplorerSqlTableReference;
 };
 
 export type UseDataTableExplorerQueryStateReturn = {
@@ -42,6 +44,7 @@ export function useDataTableExplorerQueryState({
   selectionVersion,
   sorting,
   tableName,
+  tableReference,
 }: UseDataTableExplorerQueryStateOptions): UseDataTableExplorerQueryStateReturn {
   const fields = schema.fields;
   const fieldNames = useMemo(() => fields.map((field) => field.name), [fields]);
@@ -59,9 +62,9 @@ export function useDataTableExplorerQueryState({
         columns: fieldNames,
         filter,
         sorting,
-        tableName,
+        tableName: tableReference,
       }),
-    [fieldNames, filter, sorting, tableName],
+    [fieldNames, filter, sorting, tableReference],
   );
   const pageBaseQuery = useMemo(
     () =>
@@ -69,9 +72,9 @@ export function useDataTableExplorerQueryState({
         columns: fieldNames,
         filter: rowFilter,
         sorting,
-        tableName,
+        tableName: tableReference,
       }),
-    [fieldNames, rowFilter, sorting, tableName],
+    [fieldNames, rowFilter, sorting, tableReference],
   );
 
   return {

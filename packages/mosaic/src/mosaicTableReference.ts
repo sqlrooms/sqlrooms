@@ -1,0 +1,49 @@
+import {
+  parseQualifiedSqlIdentifier,
+  type QualifiedTableName,
+} from '@sqlrooms/db';
+import {asTableRef, type TableRefNode} from '@uwdata/mosaic-sql';
+
+export type MosaicTableReferenceInput = string | QualifiedTableName;
+
+/**
+ * Converts SQLRooms table identity into a Mosaic query table reference.
+ *
+ * SQLRooms keeps the DuckDB catalog/database in QualifiedTableName for stable
+ * identity, but Mosaic queries execute against the active connector. Including
+ * that catalog in generated SQL can target a catalog that is not attached in
+ * the query connection. Mosaic also is not quote-aware when parsing table
+ * strings, so return a TableRefNode for generated SQL.
+ */
+export function getMosaicSqlTableReference(
+  tableName: MosaicTableReferenceInput,
+): TableRefNode {
+  return asTableRef(getMosaicTableReferenceParts(tableName))!;
+}
+
+/**
+ * Converts SQLRooms table identity into the plain schema/table string expected
+ * by Mosaic metadata and spec APIs.
+ */
+export function getMosaicTableReferenceString(
+  tableName: MosaicTableReferenceInput,
+): string {
+  return getMosaicTableReferenceParts(tableName).join('.');
+}
+
+function getMosaicTableReferenceParts(
+  tableName: MosaicTableReferenceInput,
+): string[] {
+  const parsed =
+    typeof tableName === 'string'
+      ? parseQualifiedSqlIdentifier(tableName)
+      : tableName;
+
+  if (parsed?.table) {
+    return [parsed.schema, parsed.table].filter(
+      (part): part is string => Boolean(part),
+    );
+  }
+
+  return [String(tableName).trim()];
+}

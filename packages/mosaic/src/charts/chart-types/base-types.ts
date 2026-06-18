@@ -21,6 +21,7 @@ import type {
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
+import {getMosaicTableReferenceString} from '../../mosaicTableReference';
 
 export type {ChartType};
 
@@ -200,7 +201,7 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
 };
 
 export function getChartTableReference(dataTable: DataTable): string {
-  return dataTable.table.toString();
+  return getMosaicTableReferenceString(dataTable.table);
 }
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =

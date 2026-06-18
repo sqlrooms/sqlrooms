@@ -5,6 +5,7 @@ import type {
   DataTableExplorerBin,
   DataTableExplorerCategoryBucket,
   DataTableExplorerPaginationState,
+  DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
   DataTableExplorerSummaryState,
 } from './types';
@@ -55,7 +56,7 @@ export function getDataTableExplorerValueType(
 }
 
 export function buildSchemaQuery(
-  tableName: string,
+  tableName: DataTableExplorerSqlTableReference,
   columns?: string[],
 ): ReturnType<typeof Query.from> {
   return Query.from(tableName)
@@ -123,7 +124,7 @@ export function buildDataTableExplorerBaseQuery(args: {
   columns?: string[];
   filter?: QueryWhereInput;
   sorting?: DataTableExplorerSorting;
-  tableName: string;
+  tableName: DataTableExplorerSqlTableReference;
 }) {
   const {columns, filter, sorting, tableName} = args;
   const query = Query.from(tableName)
@@ -166,7 +167,7 @@ export function normalizeDataTableExplorerPagination(
 
 export function buildCountQuery(args: {
   filter?: QueryWhereInput;
-  tableName: string;
+  tableName: DataTableExplorerSqlTableReference;
 }) {
   return Query.from(args.tableName)
     .select({count: count()})
@@ -176,7 +177,7 @@ export function buildCountQuery(args: {
 export function buildDistinctCountQuery(args: {
   filter?: QueryWhereInput;
   fieldName: string;
-  tableName: string;
+  tableName: DataTableExplorerSqlTableReference;
 }) {
   return Query.from(args.tableName)
     .select({
@@ -215,7 +216,7 @@ export function rowsFromQueryResult<T>(data: unknown): T[] {
 }
 
 export function buildCategorySummaryQuery(
-  tableName: string,
+  tableName: DataTableExplorerSqlTableReference,
   fieldName: string,
   filter?: QueryWhereInput,
 ) {

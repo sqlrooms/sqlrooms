@@ -1,5 +1,6 @@
 import type {QualifiedTableName} from '@sqlrooms/db';
 import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
+import type {TableRefNode} from '@uwdata/mosaic-sql';
 import type {Interval1D} from '@uwdata/mosaic-plot';
 import type {Field, Table} from 'apache-arrow';
 import type {Dispatch, SetStateAction} from 'react';
@@ -78,6 +79,8 @@ export type DataTableExplorerColumnState = {
 };
 
 export type DataTableExplorerTableReference = string | QualifiedTableName;
+
+export type DataTableExplorerSqlTableReference = string | TableRefNode;
 
 export type DataTableExplorerOptions = {
   categoryLimit?: number;
