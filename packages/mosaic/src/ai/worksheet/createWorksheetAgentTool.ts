@@ -7,7 +7,7 @@ import type {
   WorksheetAiAdapter,
   CreateWorksheetAgentToolOptions,
   WorksheetAgentResult,
-} from '../worksheet-types';
+} from './worksheet-types';
 import {AiAgentError} from '../errors';
 import {createWorksheetDashboardBlockAgentTool} from './createWorksheetDashboardBlockAgentTool';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';

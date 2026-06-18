@@ -7,7 +7,7 @@ import {
 } from '../../charts/chart-types';
 
 import {createMosaicDashboardChartPanelConfig} from '../../dashboard/MosaicDashboardSlice';
-import {DashboardAiAdapter} from '../dashboard-types';
+import {DashboardAiAdapter} from './dashboard-types';
 
 export function createDashboardChartTools(
   adapter: DashboardAiAdapter,

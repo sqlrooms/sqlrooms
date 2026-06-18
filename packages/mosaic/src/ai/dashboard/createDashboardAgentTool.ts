@@ -7,7 +7,7 @@ import type {
   DashboardAiAdapter,
   CreateDashboardAgentToolOptions,
   DashboardAgentResult,
-} from '../dashboard-types';
+} from './dashboard-types';
 import {AiAgentError} from '../errors';
 import {ensureTable} from '../tool-helpers';
 

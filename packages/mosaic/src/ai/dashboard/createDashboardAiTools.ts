@@ -1,7 +1,7 @@
 import type {Tool} from 'ai';
 import {ChartTypeDefinition, ensureNoOverride} from '../../charts/chart-types';
 
-import {DashboardAiAdapter} from '../dashboard-types';
+import {DashboardAiAdapter} from './dashboard-types';
 import {createDashboardChartTools} from './createDashboardChartTools';
 import {createDashboardDataTableExplorerTool} from './createDashboardDataTableExplorerTool';
 

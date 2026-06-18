@@ -194,13 +194,13 @@ export type {
   DashboardAgentRunResult,
   DashboardAgentToolCall,
   DashboardAiStore,
-} from './ai/dashboard-types';
+} from './ai/dashboard/dashboard-types';
 export type {
   // Worksheet types
   CreateWorksheetAgentToolOptions,
   WorksheetAgentResult,
   WorksheetAiAdapter,
-} from './ai/worksheet-types';
+} from './ai/worksheet/worksheet-types';
 
 // Compound components
 export {MosaicSpecChart} from './MosaicChart';

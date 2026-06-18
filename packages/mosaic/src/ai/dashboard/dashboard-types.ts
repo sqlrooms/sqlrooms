@@ -3,20 +3,20 @@ import type {
   ChartToolExecutionContext,
   PanelPatch,
   ChartTypeDefinition,
-} from '../charts/chart-types';
+} from '../../charts/chart-types';
 import type {
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,
-} from '../dashboard/dashboard-types';
-import type {MosaicDashboardLayoutType} from '../dashboard/core-types';
-import type {ChartRuntimeIssue} from '../chart-runtime';
+} from '../../dashboard/dashboard-types';
+import type {MosaicDashboardLayoutType} from '../../dashboard/core-types';
+import type {ChartRuntimeIssue} from '../../chart-runtime';
 import type {
   BaseMosaicAiAdapter,
   BaseAgentToolOptions,
   AiStore,
   AgentToolCall,
   AgentRunResult,
-} from './types';
+} from '../types';
 
 /**
  * Dashboard-specific AI types

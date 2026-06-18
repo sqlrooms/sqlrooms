@@ -2,7 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {ensureTable} from './tool-helpers';
 import {DataTableExplorerPanelConfig} from '../dashboard/core-types';
-import {DashboardAiAdapter} from './dashboard-types';
+import {DashboardAiAdapter} from './dashboard/dashboard-types';
 
 export const DataTableExplorerParameters = z.object({
   tableName: z

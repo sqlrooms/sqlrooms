@@ -1,6 +1,6 @@
 import type {BlockDocumentBlock} from '@sqlrooms/documents';
 import type {DataTable} from '@sqlrooms/db';
-import type {BaseMosaicAiAdapter, BaseAgentToolOptions} from './types';
+import type {BaseMosaicAiAdapter, BaseAgentToolOptions} from '../types';
 
 /**
  * Worksheet-specific AI types
