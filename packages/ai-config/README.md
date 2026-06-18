@@ -26,6 +26,13 @@ Use `uiMessages` for current chat state.
 by target session id. Fork metadata uses chat/message terminology and keeps
 legacy analysis-result ids only as compatibility fields when needed.
 
+`ChatSessionSchema.agentProgress` stores persisted sub-agent tool-call trees
+keyed by the parent tool call id. `ChatSessionSchema.agentSnapshots` optionally
+stores persisted devtools metadata for those agent calls, such as available tool
+names, descriptions, capability flags, approval hints, and bounded settings.
+Snapshots are intended for debugging and should not contain executable tools,
+closures, secrets, or unbounded prompt/output content.
+
 ## Basic usage
 
 ### Validate and load AI session config

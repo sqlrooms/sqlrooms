@@ -90,6 +90,50 @@ export type AgentProgressSnapshot = {
 };
 
 /**
+ * Serializable agent metadata captured for AI devtools.
+ *
+ * Snapshot capture is optional and intentionally stores descriptions, names,
+ * capability flags, and bounded settings only. It must not contain executable
+ * tool objects, closures, API keys, or unbounded prompt/output content.
+ */
+export type AgentSnapshot = {
+  agentName?: string;
+  parentToolCallId: string;
+  availableTools: Array<{
+    name: string;
+    description?: string;
+    /** Whether the captured tool exposed an execute function. */
+    hasExecute?: boolean;
+    /** Whether the captured tool exposed a renderer-like function. */
+    hasRenderer?: boolean;
+    needsApproval?: boolean;
+  }>;
+  settings?: {
+    maxSteps?: number;
+    model?: string;
+    provider?: string;
+  };
+  startedAt: number;
+};
+
+/** Devtools-only state and controls nested under the AI slice. */
+export type AiDevtoolsState = {
+  /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId. */
+  agentSnapshots: Record<string, AgentSnapshot>;
+  /** Whether agent metadata snapshots should be captured in memory. */
+  shouldCaptureAgentSnapshots: () => boolean;
+  /** Whether captured agent metadata snapshots should be persisted to sessions. */
+  shouldPersistAgentSnapshots: () => boolean;
+  /** Writes a bounded serializable snapshot for a parent agent tool call. */
+  writeAgentSnapshot: (
+    parentToolCallId: string,
+    snapshot: AgentSnapshot,
+  ) => void;
+  /** Clears all captured agent metadata snapshots. */
+  clearAgentSnapshots: () => void;
+};
+
+/**
  * Per-tool-call timing entry stored in assistant message metadata.
  */
 export type ToolTimingEntry = {
@@ -221,6 +265,8 @@ export interface AiStateForTransport {
     toolCalls: AgentToolCall[],
   ) => void;
   clearAgentProgress: (parentToolCallId: string) => void;
+  /** Devtools-only agent snapshot state and controls. */
+  devtools: AiDevtoolsState;
   /** Pending approval requests from sub-agent tools with needsApproval */
   pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
   requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;

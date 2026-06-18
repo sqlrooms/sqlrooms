@@ -1,6 +1,12 @@
 import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
 import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
-import {Button, SkeletonPane} from '@sqlrooms/ui';
+import {
+  Button,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  SkeletonPane,
+} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../store';
@@ -16,10 +22,14 @@ interface AssistantChatContainerProps {
     canAccept: (data: unknown) => boolean;
     onDrop: (data: unknown) => void;
   };
+  beforeCreateSessionAction?: React.ReactNode;
+  debugPanel?: React.ReactNode;
 }
 
 export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   contextDropTarget,
+  beforeCreateSessionAction,
+  debugPanel,
 }) => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
@@ -80,6 +90,19 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
     );
   }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
 
+  const messagesPane = (
+    <div className="print-container h-full min-h-0 grow overflow-auto">
+      {isDataAvailable ? (
+        <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+      ) : (
+        <div className="flex h-full w-full flex-col items-center justify-center">
+          <SkeletonPane className="p-4" />
+          <p className="text-muted-foreground mt-4">Loading database...</p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Chat.Root>
       <div className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden">
@@ -104,7 +127,8 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 onCreateSession={handleCreateSession}
                 createSessionDisabled={createSessionDisabled}
                 historyIsRunning={historyIsRunning}
-                className="mb-4"
+                beforeCreateSessionAction={beforeCreateSessionAction}
+                className={debugPanel ? 'mb-2' : 'mb-4'}
               />
             )}
             {showHistory ? (
@@ -123,19 +147,32 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 className="flex-1"
               />
             ) : (
-              <div className="print-container grow overflow-auto">
-                {isDataAvailable ? (
-                  <Chat.Messages
-                    key={currentSessionId}
-                    hoistedRenderers={['chart']}
-                  />
+              <div className="min-h-0 flex-1">
+                {debugPanel ? (
+                  <ResizablePanelGroup
+                    orientation="vertical"
+                    className="h-full min-h-0"
+                  >
+                    <ResizablePanel
+                      id="ai-debug-panel"
+                      defaultSize={50}
+                      minSize={20}
+                      className="min-h-0 overflow-hidden"
+                    >
+                      {debugPanel}
+                    </ResizablePanel>
+                    <ResizableHandle withHandle className="my-1" />
+                    <ResizablePanel
+                      id="ai-chat-panel"
+                      defaultSize={50}
+                      minSize={20}
+                      className="min-h-0 pt-2"
+                    >
+                      {messagesPane}
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
                 ) : (
-                  <div className="flex h-full w-full flex-col items-center justify-center">
-                    <SkeletonPane className="p-4" />
-                    <p className="text-muted-foreground mt-4">
-                      Loading database...
-                    </p>
-                  </div>
+                  messagesPane
                 )}
               </div>
             )}
