@@ -194,15 +194,15 @@ createAiSlice({
   getInstructions,
   devtools: {
     captureAgentSnapshots: true,
-    persistAgentSnapshots: false,
+    persistAgentSnapshots: true,
     maxAgentSnapshotBytes: 64_000,
   },
 });
 ```
 
-Keep persistence disabled unless you explicitly need post-mortem debugging in
-saved workspace state. Snapshots are serializable metadata only; tool
-names, descriptions, capability flags, and approval hints may be stored, but
+Enable persistence when you need post-mortem or cross-tab debugging in saved
+workspace state. Snapshots are serializable metadata only; tool names,
+descriptions, capability flags, and approval hints may be stored, but
 implementations, closures, secrets, and unbounded prompt/output content should
 not be stored.
 

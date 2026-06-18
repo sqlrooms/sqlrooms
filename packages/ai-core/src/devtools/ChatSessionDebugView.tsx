@@ -192,7 +192,7 @@ const AgentToolCallTree: React.FC<{
   depth?: number;
 }> = ({toolCalls, agentProgressById, agentSnapshotsById, depth = 0}) => {
   if (toolCalls.length === 0) {
-    return <EmptyState>No agent calls recorded.</EmptyState>;
+    return <EmptyState>No nested agent tool calls recorded.</EmptyState>;
   }
 
   return (

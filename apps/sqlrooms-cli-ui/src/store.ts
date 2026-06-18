@@ -722,7 +722,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
             devtools: {
               captureAgentSnapshots: aiDevtoolsEnabled,
-              persistAgentSnapshots: false,
+              persistAgentSnapshots: aiDevtoolsEnabled,
             },
           })(set, get, store);
         })(),
