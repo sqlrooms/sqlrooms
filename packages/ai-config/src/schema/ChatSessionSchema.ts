@@ -163,6 +163,8 @@ const ChatSessionBaseSchema = z.object({
   runContext: AiRunContextSchema.optional(),
   /** Persisted sub-agent tool call trees, keyed by parent toolCallId */
   agentProgress: z.record(z.string(), z.array(z.unknown())).optional(),
+  /** Optional persisted agent devtools snapshots, keyed by parent toolCallId */
+  agentSnapshots: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

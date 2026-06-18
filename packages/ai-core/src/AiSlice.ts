@@ -39,6 +39,7 @@ import type {
   AddToolApprovalResponse,
   AddToolOutput,
   AgentProgressSnapshot,
+  AgentSnapshot,
   AgentToolCall,
   AiChatSendMessage,
   GetProviderOptions,
@@ -119,6 +120,15 @@ export type AiSliceState = {
       toolCalls: AgentToolCall[],
     ) => void;
     clearAgentProgress: (parentToolCallId: string) => void;
+    /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId */
+    agentSnapshots: Record<string, AgentSnapshot>;
+    shouldCaptureAgentSnapshots: () => boolean;
+    shouldPersistAgentSnapshots: () => boolean;
+    writeAgentSnapshot: (
+      parentToolCallId: string,
+      snapshot: AgentSnapshot,
+    ) => void;
+    clearAgentSnapshots: () => void;
     /** Pending approval requests from sub-agent tools with needsApproval */
     pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
     requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
@@ -264,6 +274,12 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   chatEndPoint?: string;
   /** Optional headers to send with remote endpoint */
   chatHeaders?: Record<string, string>;
+  /** Optional devtools-only capture controls. Defaults are all disabled. */
+  devtools?: {
+    captureAgentSnapshots?: boolean;
+    persistAgentSnapshots?: boolean;
+    maxAgentSnapshotBytes?: number;
+  };
 }
 
 export function createAiSlice<TTools extends ToolSet = ToolSet>(
@@ -286,6 +302,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getRunContext,
     formatRunContextInstructions,
   } = params;
+  const devtoolsOptions = {
+    captureAgentSnapshots: params.devtools?.captureAgentSnapshots ?? false,
+    persistAgentSnapshots: params.devtools?.persistAgentSnapshots ?? false,
+    maxAgentSnapshotBytes: params.devtools?.maxAgentSnapshotBytes ?? 64_000,
+  };
 
   return createSlice<AiSliceState>((set, get, store) => {
     const analysisResultsCache = new WeakMap<
@@ -303,6 +324,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     function rehydrateFromSessions(config: AiSliceConfig) {
       const timings: Record<string, ToolTimingEntry> = {};
       const progress: Record<string, AgentToolCall[]> = {};
+      const snapshots: Record<string, AgentSnapshot> = {};
 
       for (const session of config.sessions) {
         // Restore agentProgress from the session-level field
@@ -310,6 +332,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           Object.assign(
             progress,
             session.agentProgress as Record<string, AgentToolCall[]>,
+          );
+        }
+
+        if (session.agentSnapshots) {
+          Object.assign(
+            snapshots,
+            session.agentSnapshots as Record<string, AgentSnapshot>,
           );
         }
 
@@ -324,7 +353,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         }
       }
 
-      return {timings, progress};
+      return {timings, progress, snapshots};
     }
 
     // Create persistent Maps (outside of immer draft)
@@ -441,6 +470,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             produce(state, (draft) => {
               draft.ai.toolTimings = rehydrated.timings;
               draft.ai.agentProgress = rehydrated.progress;
+              draft.ai.agentSnapshots = rehydrated.snapshots;
             }),
           );
         },
@@ -485,6 +515,40 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               delete draft.ai.agentProgress[parentToolCallId];
+            }),
+          );
+        },
+        agentSnapshots: initialRehydrated.snapshots,
+        shouldCaptureAgentSnapshots: () =>
+          devtoolsOptions.captureAgentSnapshots,
+        shouldPersistAgentSnapshots: () =>
+          devtoolsOptions.persistAgentSnapshots,
+        writeAgentSnapshot: (
+          parentToolCallId: string,
+          snapshot: AgentSnapshot,
+        ) => {
+          if (!devtoolsOptions.captureAgentSnapshots) return;
+          let clonedSnapshot: AgentSnapshot;
+          try {
+            const serialized = JSON.stringify(snapshot);
+            if (serialized.length > devtoolsOptions.maxAgentSnapshotBytes) {
+              return;
+            }
+            clonedSnapshot = JSON.parse(serialized) as AgentSnapshot;
+          } catch {
+            return;
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.agentSnapshots[parentToolCallId] = clonedSnapshot;
+            }),
+          );
+        },
+        clearAgentSnapshots: () => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.agentSnapshots = {};
             }),
           );
         },
@@ -639,6 +703,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               draft.ai.config = normalizedConfig;
               draft.ai.toolTimings = rehydrated.timings;
               draft.ai.agentProgress = rehydrated.progress;
+              draft.ai.agentSnapshots = rehydrated.snapshots;
             }),
           );
         },

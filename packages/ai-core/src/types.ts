@@ -90,6 +90,29 @@ export type AgentProgressSnapshot = {
 };
 
 /**
+ * Serializable agent metadata captured for AI devtools.
+ *
+ * Snapshot capture is optional and intentionally stores descriptions, names,
+ * and bounded settings only. It must not contain executable tool objects,
+ * closures, API keys, or unbounded prompt/output content.
+ */
+export type AgentSnapshot = {
+  agentName?: string;
+  parentToolCallId: string;
+  availableTools: Array<{
+    name: string;
+    description?: string;
+    needsApproval?: boolean;
+  }>;
+  settings?: {
+    maxSteps?: number;
+    model?: string;
+    provider?: string;
+  };
+  startedAt: number;
+};
+
+/**
  * Per-tool-call timing entry stored in assistant message metadata.
  */
 export type ToolTimingEntry = {
@@ -221,6 +244,15 @@ export interface AiStateForTransport {
     toolCalls: AgentToolCall[],
   ) => void;
   clearAgentProgress: (parentToolCallId: string) => void;
+  /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId */
+  agentSnapshots: Record<string, AgentSnapshot>;
+  shouldCaptureAgentSnapshots: () => boolean;
+  shouldPersistAgentSnapshots: () => boolean;
+  writeAgentSnapshot: (
+    parentToolCallId: string,
+    snapshot: AgentSnapshot,
+  ) => void;
+  clearAgentSnapshots: () => void;
   /** Pending approval requests from sub-agent tools with needsApproval */
   pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
   requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;

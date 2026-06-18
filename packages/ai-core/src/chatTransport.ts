@@ -109,6 +109,23 @@ function enrichMessagesWithAbortSnapshots(
   }
 }
 
+function writeAgentDebugStateToSession(
+  session: ChatSessionSchema,
+  state: AiSliceStateForTransport,
+): void {
+  session.agentProgress = structuredClone(
+    state.ai.agentProgress,
+  ) as ChatSessionSchema['agentProgress'];
+
+  if (state.ai.shouldPersistAgentSnapshots()) {
+    session.agentSnapshots = structuredClone(
+      state.ai.agentSnapshots,
+    ) as ChatSessionSchema['agentSnapshots'];
+  } else {
+    delete session.agentSnapshots;
+  }
+}
+
 export type ChatTransportConfig = {
   sessionId: string;
   store: StoreApi<AiSliceStateForTransport>;
@@ -529,9 +546,7 @@ export function createChatHandlers({
               );
               if (sess) {
                 sess.messagesRevision = (sess.messagesRevision || 0) + 1;
-                sess.agentProgress = structuredClone(
-                  state.ai.agentProgress,
-                ) as ChatSessionSchema['agentProgress'];
+                writeAgentDebugStateToSession(sess, state);
               }
             }),
           );
@@ -558,9 +573,7 @@ export function createChatHandlers({
             );
             if (!targetSession) return;
 
-            targetSession.agentProgress = structuredClone(
-              state.ai.agentProgress,
-            ) as ChatSessionSchema['agentProgress'];
+            writeAgentDebugStateToSession(targetSession, state);
           }),
         );
 
@@ -589,8 +602,8 @@ export function createChatHandlers({
           store.getState().ai.setApiKeyError(provider, true);
         }
 
-        const toolTimings = store.getState().ai.getToolTimings();
-        const currentAgentProgress = store.getState().ai.agentProgress;
+        const currentState = store.getState();
+        const toolTimings = currentState.ai.getToolTimings();
 
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
@@ -606,9 +619,7 @@ export function createChatHandlers({
               writeToolTimingsToMetadata(completedMessages, toolTimings);
               targetSession.uiMessages =
                 completedMessages as ChatSessionSchema['uiMessages'];
-              targetSession.agentProgress = structuredClone(
-                currentAgentProgress,
-              ) as ChatSessionSchema['agentProgress'];
+              writeAgentDebugStateToSession(targetSession, currentState);
 
               const uiMessages = targetSession.uiMessages as UIMessage[];
               const lastUserMessage = uiMessages

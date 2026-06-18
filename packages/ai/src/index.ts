@@ -147,6 +147,7 @@ export type {
   AddToolOutput,
   AiToolExecutionContext,
   AgentStreamOutput,
+  AgentSnapshot,
   AgentToolCall,
   AgentToolCallAdditionalData,
   ToolRenderers,

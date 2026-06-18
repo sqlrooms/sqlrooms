@@ -79,6 +79,27 @@ export function getForkedAgentProgress({
     : undefined;
 }
 
+export function getForkedAgentSnapshots({
+  sourceSession,
+  targetMessages,
+}: {
+  sourceSession: ChatSessionSchema;
+  targetMessages: ChatSessionSchema['uiMessages'];
+}): ChatSessionSchema['agentSnapshots'] | undefined {
+  if (!sourceSession.agentSnapshots) return undefined;
+
+  const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
+  const agentSnapshots = Object.fromEntries(
+    Object.entries(sourceSession.agentSnapshots).filter(([toolCallId]) =>
+      copiedToolCallIds.has(toolCallId),
+    ),
+  );
+
+  return Object.keys(agentSnapshots).length > 0
+    ? (structuredClone(agentSnapshots) as ChatSessionSchema['agentSnapshots'])
+    : undefined;
+}
+
 export function createForkedChatSessionFromMessage({
   sourceSession,
   args,
@@ -163,6 +184,10 @@ export function createForkedChatSessionFromMessage({
     sourceSession,
     targetMessages,
   });
+  const agentSnapshots = getForkedAgentSnapshots({
+    sourceSession,
+    targetMessages,
+  });
   const forkedSession: ChatSessionSchema = {
     id: targetSessionId,
     name: args.name ?? `Fork of ${sourceSession.name || 'Untitled'}`,
@@ -183,6 +208,7 @@ export function createForkedChatSessionFromMessage({
         }
       : {}),
     ...(agentProgress ? {agentProgress} : {}),
+    ...(agentSnapshots ? {agentSnapshots} : {}),
     isRunning: false,
     lastOpenedAt: now,
   };

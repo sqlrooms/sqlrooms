@@ -374,6 +374,7 @@ class SqlroomsHttpServer:
         ui_dir: str | None = None,
         serve_ui: bool = True,
         config_path: Path | None = None,
+        ai_devtools: bool = False,
     ):
         db_path_str = str(db_path)
         self.is_in_memory = db_path_str == ":memory:"
@@ -402,6 +403,7 @@ class SqlroomsHttpServer:
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
+        self.ai_devtools = bool(ai_devtools)
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
@@ -484,6 +486,7 @@ class SqlroomsHttpServer:
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
             "configWritable": self.config_path is not None,
+            "aiDevtools": self.ai_devtools,
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": f"ws://{self._public_host()}:{self.ws_port}",
             "crdtRoomId": (
