@@ -7,7 +7,7 @@ import {
 } from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
-import {DuckDbConnector} from '@sqlrooms/duckdb-core';
+import {DuckDbConnector, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
 import {loadSchemaCatalog} from '../src/loadTableSchemas';
 
 type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
@@ -203,7 +203,7 @@ describe('DuckDbSlice', () => {
       );
     });
 
-    it('resolves stale fully-qualified default database ids by unique schema/table', async () => {
+    it('resolves stale default database refs by unique schema/table when metadata marks them as default', async () => {
       const connector = await store.getState().db.getConnector();
       await connector.query('CREATE TABLE stale_default_db_lookup (id INT)');
       const tables = await store.getState().db.refreshTableSchemas();
@@ -215,10 +215,27 @@ describe('DuckDbSlice', () => {
 
       expect(table).toBeDefined();
       expect(
+        store.getState().db.findTable(
+          makeQualifiedTableName({
+            database: 'renamed-file',
+            schema: 'main',
+            table: 'stale_default_db_lookup',
+            defaultDatabase: 'renamed-file',
+          }),
+        ),
+      ).toBe(table);
+    });
+
+    it('does not resolve explicit database-qualified misses by schema/table fallback', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE explicit_database_miss (id INT)');
+      await store.getState().db.refreshTableSchemas();
+
+      expect(
         store
           .getState()
-          .db.findTable('"renamed-file"."main"."stale_default_db_lookup"'),
-      ).toBe(table);
+          .db.findTable('"remote"."main"."explicit_database_miss"'),
+      ).toBeUndefined();
     });
 
     it('parses dotted strings as qualified references and quoted dots as literal names', async () => {
@@ -322,6 +339,22 @@ describe('DuckDbSlice', () => {
       await expect(
         store.getState().db.dropTable('view_via_drop_table'),
       ).rejects.toThrow('Use dropRelation() to remove views.');
+    });
+
+    it('does not drop a local table for an explicit database-qualified miss', async () => {
+      await store
+        .getState()
+        .db.createTableFromQuery('drop_database_miss', 'SELECT 1 as id');
+      const connector = await store.getState().db.getConnector();
+
+      await store
+        .getState()
+        .db.dropTable('"remote"."main"."drop_database_miss"')
+        .catch(() => undefined);
+
+      await expect(
+        connector.query('SELECT * FROM drop_database_miss'),
+      ).resolves.toBeTruthy();
     });
   });
 

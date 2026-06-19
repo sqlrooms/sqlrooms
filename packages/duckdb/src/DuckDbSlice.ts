@@ -439,7 +439,34 @@ export function createDuckDbSlice({
           table: qualifiedName.table,
           defaultDatabase: get().db.currentDatabase,
         });
-        return table;
+        return table &&
+          table.table.table === qualifiedName.table &&
+          (!qualifiedName.schema ||
+            table.table.schema === qualifiedName.schema) &&
+          (!qualifiedName.database ||
+            table.table.database === qualifiedName.database)
+          ? table
+          : undefined;
+      };
+
+      const throwIfUnresolvedExplicitDatabaseReference = (
+        tableName: string | QualifiedTableName,
+        table: DataTable | undefined,
+      ) => {
+        if (table) {
+          return;
+        }
+        const database =
+          typeof tableName === 'string'
+            ? parseTableReferenceParts(tableName).database
+            : tableName.database;
+        if (!database) {
+          return;
+        }
+        const qualifiedName = isQualifiedTableName(tableName)
+          ? get().db.qualifyTableName(tableName)
+          : get().db.qualifyTableName(parseTableReferenceParts(tableName));
+        throw new Error(`Relation "${qualifiedName}" not found.`);
       };
 
       return {
@@ -675,6 +702,7 @@ export function createDuckDbSlice({
             const table =
               get().db.findTable(tableName) ??
               (await loadTableSchemaByName(tableName));
+            throwIfUnresolvedExplicitDatabaseReference(tableName, table);
             const qualifiedTable =
               table?.table ??
               (isQualifiedTableName(tableName)
@@ -696,6 +724,7 @@ export function createDuckDbSlice({
             const table =
               get().db.findTable(tableName) ??
               (await loadTableSchemaByName(tableName));
+            throwIfUnresolvedExplicitDatabaseReference(tableName, table);
             const qualifiedTable =
               table?.table ??
               (isQualifiedTableName(tableName)
@@ -780,16 +809,24 @@ export function createDuckDbSlice({
               return matches.length === 1 ? matches[0] : undefined;
             };
 
-            const {table, schema, database} = {
+            const resolvedTableName =
+              typeof tableName === 'string'
+                ? (parseQualifiedSqlIdentifier(tableName) ?? {})
+                : tableName;
+            const {table, schema, database, defaultDatabase} = {
               schema: currentSchema,
               database: currentDatabase,
-              ...(typeof tableName === 'string'
-                ? (parseQualifiedSqlIdentifier(tableName) ?? {})
-                : tableName),
+              ...resolvedTableName,
             };
             const exactMatch = findMatchingTable({table, schema, database});
             if (exactMatch) return exactMatch;
-            if (database && database !== currentDatabase) {
+            const isStaleDefaultDatabaseReference =
+              typeof tableName !== 'string' &&
+              database &&
+              defaultDatabase &&
+              database === defaultDatabase &&
+              database !== currentDatabase;
+            if (isStaleDefaultDatabaseReference) {
               return findUniqueMatchingTable({table, schema});
             }
             return undefined;
