@@ -1,5 +1,5 @@
 import type {Tool} from 'ai';
-import {ensureNoOverride} from '../../charts/chart-types';
+import {ensureNoOverride} from '../tool-helpers';
 
 import {DatabaseAiAdapter} from '../database-types';
 import {ChartToolsOptions} from '../types';

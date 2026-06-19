@@ -318,10 +318,12 @@ export type {
   ChartToolExecutionContext,
   ChartToolParams,
   DashboardToolDeps,
+} from './charts/chart-types';
+export type {
   ResolvedChartResources,
   CreateChartParams,
   CreateChartResult,
-} from './charts/chart-types';
+} from './ai/tool-types';
 
 // Column type utilities
 export {
@@ -335,8 +337,8 @@ export {
 // ============================================================================
 
 // AI tool input schemas (for chart creation)
+export {BaseChartToolInput} from './ai/tool-schemas';
 export {
-  BaseChartToolInput,
   HistogramToolInput,
   LineChartToolInput,
   CountPlotToolInput,
@@ -354,9 +356,11 @@ export {
   createScatterPlotAiTool,
   createBoxPlotAiTool,
   createChartTools,
+} from './charts/chart-types';
+export {
   createDataTableExplorerTool,
   DataTableExplorerToolInput,
-} from './charts/chart-types';
+} from './ai/createDataTableExplorerTool';
 
 // Dashboard and worksheet AI tools
 export {DASHBOARD_AI_INSTRUCTIONS, MAP_TOOL_KEY} from './ai/constants';
@@ -393,8 +397,14 @@ export type {
 } from './ai/worksheet/worksheet-types';
 
 // AI helpers and error handling
-export {ensurePanel, ensureDashboard, ensureTable} from './ai/tool-helpers';
+export {
+  ensurePanel,
+  ensureDashboard,
+  ensureTable,
+  ensureNoOverride,
+} from './ai/tool-helpers';
 export {AiAgentError} from './ai/errors';
+export type {ToolOutput} from './ai/tool-types';
 
 // Block renderers for worksheets
 export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';

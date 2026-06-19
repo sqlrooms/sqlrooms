@@ -1,4 +1,4 @@
-import type {PanelPatch} from '../../charts/chart-types';
+import type {PanelPatch} from '../../charts/chart-types/base-types';
 import type {
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,

@@ -5,7 +5,7 @@ import {createMosaicDashboardChartPanelConfig} from '../../dashboard/MosaicDashb
 import {DatabaseAiAdapter} from '../database-types';
 import {DashboardAiAdapter} from './dashboard-types';
 import {ChartToolsOptions} from '../types';
-import {DEFAULT_CHART_MAX_DATA_POINTS} from '../..';
+import {DEFAULT_CHART_MAX_DATA_POINTS} from '../../chart-runtime';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {DASHBOARD_CHART_TOOL_PREFIX} from './constants';
 

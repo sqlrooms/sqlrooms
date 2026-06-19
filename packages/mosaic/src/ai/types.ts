@@ -1,6 +1,6 @@
 import type {LanguageModel, Tool, ToolLoopAgent} from 'ai';
 import type {DataTable} from '@sqlrooms/db';
-import type {ChartTypeDefinition} from '../charts/chart-types';
+import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
 
 /**
  * Common types used by both dashboard and worksheet agents

@@ -1,5 +1,5 @@
 import {Tool} from 'ai';
-import {DatabaseAiAdapter} from '../../ai';
+import {DatabaseAiAdapter} from '../../ai/database-types';
 import {ToolOutput} from '../../ai/tool-types';
 
 export type ChartToolOutput<T> = ToolOutput<{

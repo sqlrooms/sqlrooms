@@ -23,16 +23,10 @@ import type {
 import {ChartToolParams} from './tool-types';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
 import {getMosaicTableReferenceString} from '../../mosaicTableReference';
+import type {ChartBuilderColumn} from './column-types';
 
 export type {ChartType};
-
-/**
- * Column info passed to chart builder UI
- */
-export interface ChartBuilderColumn {
-  name: string;
-  type: string;
-}
+export type {ChartBuilderColumn};
 
 /**
  * Describes a field selector in a chart builder UI

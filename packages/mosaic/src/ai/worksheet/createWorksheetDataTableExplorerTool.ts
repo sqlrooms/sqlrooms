@@ -1,5 +1,5 @@
 import type {Tool} from 'ai';
-import {createDataTableExplorerTool} from '../../charts/chart-types';
+import {createDataTableExplorerTool} from '../createDataTableExplorerTool';
 
 import {DatabaseAiAdapter} from '../database-types';
 import {WorksheetAiAdapter} from './worksheet-types';

@@ -1,5 +1,5 @@
 import {ChartConfig} from '../charts/chart-types/chart-config';
-import type {ChartBuilderColumn} from '../charts/chart-types/base-types';
+import type {ChartBuilderColumn} from '../charts/chart-types/column-types';
 
 export interface ResolvedChartResourcesParams {
   artifactId?: string;

@@ -1,9 +1,9 @@
 import type {Tool} from 'ai';
-import {createDataTableExplorerTool} from '../../charts/chart-types';
+import {createDataTableExplorerTool} from '../createDataTableExplorerTool';
 
 import {createMosaicDashboardDataTableExplorerPanelConfig} from '../../dashboard/MosaicDashboardSlice';
 import {DatabaseAiAdapter} from '../database-types';
-import {DashboardAiAdapter} from '../..';
+import {DashboardAiAdapter} from './dashboard-types';
 
 export type CreateDashboardDataTableExplorerToolParams = {
   databaseAdapter: DatabaseAiAdapter;

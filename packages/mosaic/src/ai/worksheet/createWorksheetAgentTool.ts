@@ -7,7 +7,7 @@ import type {
 import {AiAgentError} from '../errors';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
 import {calculateWorksheetAgentResultMetadata} from './utils';
-import {ensureNoOverride} from '../../charts/chart-types';
+import {ensureNoOverride} from '../tool-helpers';
 import {createWorksheetAiTools} from './createWorksheetAiTools';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
