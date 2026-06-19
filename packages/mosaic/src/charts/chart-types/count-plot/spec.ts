@@ -1,7 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {CountPlotChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
-import {getChartTableReference} from '../utils';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {validateCountPlotSettings} from './validation';
 
 const BG_COLOR = 'var(--color-chart-overlay)';

@@ -1,7 +1,6 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HeatmapChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
-import {getChartTableReference} from '../utils';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 import {validateHeatmapSettings} from './validation';
 
 export function createHeatmapSpec(

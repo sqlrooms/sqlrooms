@@ -1,7 +1,6 @@
 import {Spec} from '@uwdata/mosaic-spec';
 import {CustomSpecChartSettings} from './schema';
-import {CreateSpecOptions} from '../base-types';
-import {getChartTableReference} from '../utils';
+import {CreateSpecOptions, getChartTableReference} from '../base-types';
 
 export function createCustomSpec({
   dataTable,
