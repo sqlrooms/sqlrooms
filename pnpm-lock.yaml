@@ -178,6 +178,9 @@ importers:
       '@sqlrooms/crdt':
         specifier: workspace:*
         version: link:../../packages/crdt
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../../packages/data-table
       '@sqlrooms/db':
         specifier: workspace:*
         version: link:../../packages/db

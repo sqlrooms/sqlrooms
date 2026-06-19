@@ -33,6 +33,8 @@ export function useCliArtifactSidebarTabs() {
   const tabs = useMemo(
     () =>
       artifactsConfig.artifactOrder
+        .slice()
+        .reverse()
         .map((artifactId) => artifactsConfig.artifactsById[artifactId])
         .filter((artifact) => {
           return (
