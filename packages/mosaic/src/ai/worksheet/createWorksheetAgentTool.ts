@@ -226,9 +226,6 @@ Use this for:
 - Multi-chart requests: "create worksheet with depth and magnitude histograms"
 - Dashboard requests: "add dashboard analyzing sales data" (use two-step workflow)
 
-OPTIONAL:
-- tableName: provide if user mentions a specific primary dataset for context
-
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: WorksheetAgentInputSchema,
     execute: async (params, toolOptions): Promise<WorksheetAgentResult> => {

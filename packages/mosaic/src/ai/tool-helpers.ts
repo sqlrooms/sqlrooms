@@ -46,6 +46,14 @@ export function ensurePanel(
   return panel;
 }
 
+/**
+ * Validates that extra tools do not override built-in tools.
+ * Prevents accidental shadowing of core functionality by custom tools.
+ *
+ * @param builtInTools - Record of built-in tool names to tools
+ * @param extraTools - Record of extra tool names to tools being registered
+ * @throws {AiAgentError} When a key from extraTools exists in builtInTools
+ */
 export function ensureNoOverride(
   builtInTools: Record<string, Tool>,
   extraTools: Record<string, Tool>,

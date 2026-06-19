@@ -2,6 +2,15 @@ import {DashboardAiAdapter} from './dashboard-types';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
 import {AiStore} from '../types';
 
+/**
+ * Creates a dashboard adapter for AI operations scoped to a specific dashboard.
+ * The adapter provides methods for managing panels, tables, and dashboard state.
+ *
+ * @template TState - Store state type extending MosaicDashboardStoreState
+ * @param store - Zustand store instance with dashboard management capabilities
+ * @param dashboardId - ID of the dashboard to scope adapter operations to
+ * @returns Dashboard adapter instance with panel and table management methods
+ */
 export function createDashboardAiAdapter<
   TState extends MosaicDashboardStoreState,
 >(store: AiStore<TState>, dashboardId: string): DashboardAiAdapter {

@@ -9,6 +9,7 @@ import {DatabaseAiAdapter} from './database-types';
 export const DataTableExplorerParameters = z.object({
   tableName: z
     .string()
+    .min(1, 'tableName cannot be empty')
     .optional()
     .describe('Optional table name. Use when no table is selected yet.'),
   title: z

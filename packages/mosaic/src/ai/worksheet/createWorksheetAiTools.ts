@@ -13,15 +13,32 @@ import {createAddDashboardBlockTool} from './createAddDashboardBlockTool';
 import {KnownWorksheetTools} from './constants';
 import {createWorksheetDataTableExplorerTool} from './createWorksheetDataTableExplorerTool';
 
+/**
+ * Options for creating worksheet AI tools.
+ * Provides all necessary adapters, configuration, and context for worksheet tool creation.
+ */
 export type CreateWorksheetAiToolsOptions = {
+  /** Database adapter for table validation and queries */
   databaseAdapter: DatabaseAiAdapter;
+  /** Worksheet adapter for adding blocks to worksheets */
   worksheetAdapter: WorksheetAiAdapter;
+  /** Dashboard agent tool for embedded dashboard creation */
   dashboardAgentTool: Tool;
+  /** Optional chart configuration and type restrictions */
   chartToolsOptions?: ChartToolsOptions;
+  /** ID of the worksheet where tools will add blocks */
   worksheetId: string;
+  /** Optional factory for additional custom tools */
   extraTools?: ExtraWorksheetAiToolsFactory;
 };
 
+/**
+ * Creates a collection of AI tools for building worksheets.
+ * Returns tools for creating charts, text blocks, dashboard blocks, and data table explorers.
+ *
+ * @param options - Configuration options for worksheet tools
+ * @returns Record mapping tool names to tool instances
+ */
 export function createWorksheetAiTools({
   worksheetAdapter,
   databaseAdapter,

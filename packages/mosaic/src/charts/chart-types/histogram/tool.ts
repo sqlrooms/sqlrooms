@@ -13,12 +13,28 @@ import {ChartToolParams, ChartToolOutput} from '../tool-types';
 import {validateHistogramSettings} from './validation';
 import {ensureTable} from '../../../ai/tool-helpers';
 
+/**
+ * Input schema for the histogram chart tool.
+ * Extends base chart input with histogram-specific settings including field and bin configuration.
+ */
 export const HistogramToolInput = BaseChartToolInput.extend({
   settings: HistogramChartSettings.required(),
 });
 
+/**
+ * Type representing validated input for histogram chart creation.
+ */
 export type HistogramToolInput = z.infer<typeof HistogramToolInput>;
 
+/**
+ * Creates an AI tool for generating histogram charts.
+ * Histograms show distribution of numeric values by grouping data into bins/ranges.
+ *
+ * @param params - Chart tool parameters
+ * @param params.databaseAdapter - Database adapter for table and column validation
+ * @param params.addChart - Function to add the generated chart to the target artifact
+ * @returns AI tool instance for histogram chart creation
+ */
 export function createHistogramAiTool({
   databaseAdapter,
   addChart,

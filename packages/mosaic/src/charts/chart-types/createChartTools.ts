@@ -6,21 +6,20 @@ import {getChartToolName} from './utils';
 /**
  * Dynamically generate chart configuration tools from chart type definitions.
  *
- * Chart tools generate ChartConfig objects using findTableByName for validation.
- *
- * @param chartTypes Array of chart type definitions
- * @param params Chart tool dependencies (findTableByName + maxDataPoints)
- * @param toolNamePrefix Prefix for generated tool names (default: 'create_dashboard_')
+ * @param chartTypes - Array of chart type definitions
+ * @param params - Chart tool parameters containing addChart function, maxDataPoints limit, and databaseAdapter for table/column resolution
+ * @param toolNamePrefix - Required prefix for generated tool names (e.g., 'create_dashboard_' or 'create_worksheet_block_')
  * @returns Record mapping tool names to tool instances
  *
  * @example
- * const chartTypes = createDefaultChartTypes({includeCustomSpec: false});
- * const deps = {
- *   findTableByName: (name) => tables.find(t => t.tableName === name) || throw...,
- *   maxDataPoints: 10000
+ * const chartTypes = resolveChartTypes();
+ * const params: ChartToolParams = {
+ *   addChart: (chartParams) => dashboardAdapter.addPanel(chartParams),
+ *   maxDataPoints: 10000,
+ *   databaseAdapter: myDatabaseAdapter
  * };
- * const tools = createChartTools(chartTypes, deps);
- * // Returns: { create_dashboard_histogram: ..., create_dashboard_line_chart: ..., ... }
+ * const tools = createChartTools(chartTypes, params, 'create_dashboard_');
+ * // Returns: { create_dashboard_histogram: Tool, create_dashboard_line_chart: Tool, ... }
  */
 export function createChartTools(
   chartTypes: ChartTypeDefinition<any>[],

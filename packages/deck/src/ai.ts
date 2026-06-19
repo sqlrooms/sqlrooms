@@ -41,10 +41,23 @@ function createDeckMapDashboardExtraTools(
   });
 }
 
+/**
+ * Returns AI instructions for dashboards with Deck.gl map support.
+ * Provides guidance on when and how to use map visualizations.
+ *
+ * @returns Instructions string for AI agents
+ */
 export function getDashboardWithDeckMapAiInstructions() {
   return `${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
 }
 
+/**
+ * Creates dashboard AI tools with built-in Deck.gl map support.
+ * Extends standard dashboard tools with map visualization capabilities.
+ *
+ * @param options - Dashboard AI tools configuration options
+ * @returns Record mapping tool names to tool instances, including map tools
+ */
 export function createDashboardWithDeckMapAiTools(
   options: CreateDashboardAiToolsOptions,
 ): Record<string, Tool> {
@@ -54,6 +67,14 @@ export function createDashboardWithDeckMapAiTools(
   });
 }
 
+/**
+ * Creates a dashboard agent tool with built-in Deck.gl map support.
+ * Extends the standard dashboard agent with map creation capabilities.
+ *
+ * @template TState - Store state type extending MosaicDashboardStoreState
+ * @param options - Dashboard agent configuration options
+ * @returns Dashboard agent tool with map support
+ */
 export function createDashboardAgentToolWithDeckMaps<
   TState extends MosaicDashboardStoreState,
 >(options: CreateDashboardAgentToolOptions<TState>): Tool {
@@ -213,17 +234,36 @@ Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map 
   });
 }
 
+/**
+ * Creates AI tools for Deck.gl map configuration.
+ * Returns tools for creating and configuring Deck.gl map panels.
+ *
+ * @returns Record mapping tool names to map configuration tools
+ */
 export function createDeckMapAiTools(): Record<string, Tool> {
   return {
     create_deck_map_config: createDeckMapConfigTool(),
   };
 }
 
+/**
+ * Parameters for creating a Deck.gl map dashboard tool.
+ * Provides adapters for dashboard and database operations.
+ */
 export type CreateDeckMapDashboardToolParams = {
+  /** Dashboard adapter for adding and updating map panels */
   dashboardAdapter: DashboardAiAdapter;
+  /** Database adapter for table validation */
   databaseAdapter: DatabaseAiAdapter;
 };
 
+/**
+ * Creates a tool for adding Deck.gl map panels to dashboards.
+ * Supports creating new map panels or updating existing ones with native Deck JSON configs.
+ *
+ * @param params - Parameters containing dashboard and database adapters
+ * @returns Tool instance for creating/updating Deck.gl map panels
+ */
 export function createDeckMapDashboardTool({
   dashboardAdapter,
   databaseAdapter,

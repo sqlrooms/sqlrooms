@@ -19,6 +19,10 @@ export type DashboardAiAdapter = {
   addPanel(panel: MosaicDashboardPanelConfig): string;
 };
 
+/**
+ * Result returned by the dashboard agent after completing a task.
+ * Contains execution status, final output, and optional metadata about the run.
+ */
 export type DashboardAgentResult = {
   success: boolean;
   finalOutput: string;
@@ -27,15 +31,27 @@ export type DashboardAgentResult = {
   metadata?: AgentResultMetadata;
 };
 
+/**
+ * Parameters passed to extra dashboard AI tools factory.
+ * Provides adapters for dashboard and database operations.
+ */
 export type ExtraDashboardAiToolsParams = {
   dashboardAdapter: DashboardAiAdapter;
   databaseAdapter: DatabaseAiAdapter;
 };
 
+/**
+ * Factory function for creating additional dashboard AI tools.
+ * Allows hosts to register custom tools that extend the dashboard agent's capabilities.
+ */
 export type ExtraDashboardAiToolsFactory = (
   params: ExtraDashboardAiToolsParams,
 ) => Record<string, Tool>;
 
+/**
+ * Options for creating a dashboard agent tool.
+ * Extends base agent options with dashboard-specific database adapter and optional extra tools.
+ */
 export type CreateDashboardAgentToolOptions<TState> =
   BaseAgentToolOptions<TState> & {
     databaseAdapter: DatabaseAiAdapter;

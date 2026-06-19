@@ -80,8 +80,14 @@ function createTextBlock(params: AddTextBlockToolInput): BlockDocumentBlock {
   }
 }
 
+/**
+ * Options for creating the add text block tool.
+ * Provides worksheet context for adding text blocks to a specific worksheet.
+ */
 export type CreateAddTextBlockToolOptions = {
+  /** Adapter for worksheet operations */
   worksheetAdapter: WorksheetAiAdapter;
+  /** ID of the worksheet where text blocks will be added */
   worksheetId: string;
 };
 

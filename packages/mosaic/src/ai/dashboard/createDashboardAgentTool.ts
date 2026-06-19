@@ -124,6 +124,18 @@ const DashboardAgentInputSchema = z.object({
 
 type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
 
+/**
+ * Creates an AI agent tool for populating dashboards with charts and interactive panels.
+ * The agent explores data through queries and creates multiple panels showing different aspects.
+ *
+ * @template TState - Store state type extending MosaicDashboardStoreState
+ * @param options - Configuration options for the dashboard agent
+ * @param options.store - Zustand store instance for state management
+ * @param options.databaseAdapter - Adapter for database operations and queries
+ * @param options.chartToolsOptions - Optional chart configuration and type restrictions
+ * @param options.extraTools - Optional factory for additional custom tools (e.g., map panels)
+ * @returns Tool instance that orchestrates multi-turn dashboard creation via a ToolLoopAgent
+ */
 export function createDashboardAgentTool<
   TState extends MosaicDashboardStoreState,
 >(options: CreateDashboardAgentToolOptions<TState>): Tool {

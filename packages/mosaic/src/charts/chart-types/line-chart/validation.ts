@@ -6,7 +6,7 @@ import {
   RequiredFieldsError,
 } from '../errors';
 import {isNumericType, isQuantitativeType} from '../../../column-types-utils';
-import {TableColumn} from '@sqlrooms/db';
+import {TableColumn} from '@sqlrooms/duckdb';
 import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 
