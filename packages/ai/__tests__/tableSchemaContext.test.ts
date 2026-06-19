@@ -9,6 +9,7 @@ function makeTable(
   tableName: string,
   options: {
     database?: string;
+    defaultDatabase?: string;
     schema?: string;
     columns?: {name: string; type?: string}[];
     rowCount?: number;
@@ -21,6 +22,7 @@ function makeTable(
       database: options.database,
       schema: options.schema ?? 'main',
       table: tableName,
+      defaultDatabase: options.defaultDatabase ?? 'local',
     }),
     isView: false,
     database: options.database,
@@ -86,9 +88,9 @@ describe('table schema context formatting', () => {
       {fullSchemaThreshold: 1, namesOnlyThreshold: 2},
     );
 
-    expect(output).toContain('tableId: "local"."main"."events"');
+    expect(output).toContain('tableId: "main"."events"');
     expect(output).toContain('magnitude DOUBLE');
-    expect(output).toContain('tableId: "local"."main"."stations"');
+    expect(output).toContain('tableId: "main"."stations"');
     expect(output).toContain('forward the canonical tableId');
     expect(output).toContain(
       '1 more tables are available via list_tables and read_table_schema.',

@@ -189,6 +189,16 @@ type DeckMapBoundsQuerySource =
   | {table: QualifiedTableName; sqlQuery?: never}
   | {sqlQuery: string; table?: never};
 
+/**
+ * Builds the SQL query used to compute map bounds for fit-to-data.
+ *
+ * @param options - Bounds query options.
+ * @param options.source - Dataset source to inspect, either a structured table
+ *   identity or a SQL query that will be wrapped as a subquery.
+ * @param options.fitToData - Fit-to-data configuration containing the longitude
+ *   and latitude columns to aggregate.
+ * @returns SQL that returns one row with min/max longitude and latitude bounds.
+ */
 export function createDeckMapBoundsQuery(options: {
   source: DeckMapBoundsQuerySource;
   fitToData: DeckMapDashboardFitToDataConfig;
@@ -403,6 +413,9 @@ function DeckMapDashboardRenderer({
   );
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
   const findTable = useStoreWithDuckDb((state) => state.db.findTable);
+  const qualifyTableName = useStoreWithDuckDb(
+    (state) => state.db.qualifyTableName,
+  );
 
   const isSettingsOpen = Boolean(
     (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
@@ -512,8 +525,10 @@ function DeckMapDashboardRenderer({
       return undefined;
     }
     const table = findTable(fitToDataSource.tableName);
-    return table ? {table: table.table} : undefined;
-  }, [findTable, fitToDataSource]);
+    return {
+      table: table?.table ?? qualifyTableName(fitToDataSource.tableName),
+    };
+  }, [findTable, fitToDataSource, qualifyTableName]);
   const fitToDataKey = useMemo(
     () =>
       fitToData && fitToDataBoundsSource

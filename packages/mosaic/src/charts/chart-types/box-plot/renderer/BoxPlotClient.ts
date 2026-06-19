@@ -39,6 +39,20 @@ export type BoxPlotState = {
   yBrush?: [number, number];
 };
 
+/**
+ * Options used to construct a {@link BoxPlotClient}.
+ *
+ * @property dataPolicy - Optional row-limit policy to validate query results.
+ * @property onStateChange - Callback invoked whenever query or brush state changes.
+ * @property runtimeIssueContext - Optional context attached to reported runtime issues.
+ * @property runtimeIssueReporter - Optional reporter used for query and policy failures.
+ * @property selection - Mosaic selection used for external filters and y-axis brushing.
+ * @property table - Canonical SQLRooms table identity. The client converts it
+ *   with `getMosaicSqlTableReference`, so callers should pass the structured
+ *   `QualifiedTableName` instead of a pre-rendered SQL string.
+ * @property x - Category column name.
+ * @property y - Numeric value column name.
+ */
 export type BoxPlotClientOptions = {
   dataPolicy?: ChartDataPolicy | null;
   onStateChange: (state: BoxPlotState) => void;
@@ -129,6 +143,17 @@ type BuildBoxPlotQueryArgs = {
   y: string;
 };
 
+/**
+ * Builds the SQL used by {@link BoxPlotClient} to compute box plot summaries.
+ *
+ * @param args - Query inputs including the source table, selected columns, and
+ *   optional Mosaic filter expression.
+ * @returns SQL that returns summary rows and outlier rows for the box plot.
+ *
+ * The structured `QualifiedTableName` is converted with
+ * `getMosaicSqlTableReference`, which intentionally produces the table
+ * reference shape expected by Mosaic queries.
+ */
 export function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
   const tableReference = getMosaicSqlTableReference(args.table);
   const x = escapeId(args.x);
@@ -212,6 +237,14 @@ ORDER BY "category", "rowKind", "value"
 `.trim();
 }
 
+/**
+ * Mosaic query client that powers the custom box plot renderer.
+ *
+ * The client owns SQL generation, query-result normalization, runtime issue
+ * reporting, and y-axis brush selection updates. It accepts a structured
+ * `QualifiedTableName` so table identity remains canonical until the query is
+ * rendered for Mosaic SQL.
+ */
 export class BoxPlotClient extends MosaicClient {
   private readonly onStateChange: (state: BoxPlotState) => void;
   private readonly table: QualifiedTableName;

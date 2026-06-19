@@ -10,6 +10,16 @@ import type {
 } from '../../../../chart-runtime';
 import {BoxPlotChartSettings} from '../schema';
 
+/**
+ * Creates and connects the Mosaic client used by the box plot renderer.
+ *
+ * @param args - Hook inputs including chart settings, Mosaic coordinator,
+ *   optional dashboard services, and the resolved source table.
+ * @param args.table - Canonical `QualifiedTableName` for the source table. The
+ *   hook passes this structured identity through to {@link BoxPlotClient}, where
+ *   it is converted to a Mosaic SQL table reference at query-build time.
+ * @returns The active client ref and normalized renderer state.
+ */
 export function useBoxPlotClient(args: {
   config: BoxPlotChartSettings | null;
   coordinator: Coordinator;
