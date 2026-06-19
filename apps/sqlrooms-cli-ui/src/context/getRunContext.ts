@@ -1,8 +1,4 @@
-import {
-  getAllTablesFromSchemaTrees,
-  makeQualifiedTableName,
-  type DbSchemaNode,
-} from '@sqlrooms/duckdb';
+import {type DataTable} from '@sqlrooms/duckdb';
 import {
   getRunContextItemIds,
   type AiRunContext,
@@ -24,20 +20,12 @@ type TableInfo = {
 };
 
 function buildTablesMap(
-  schemaTrees: DbSchemaNode[] | undefined,
+  tables: DataTable[] | undefined,
 ): Map<string, TableInfo> {
-  if (!schemaTrees) return new Map();
-
   const tablesByQualifiedName = new Map<string, TableInfo>();
 
-  const allTables = getAllTablesFromSchemaTrees(schemaTrees);
-  for (const tableObj of allTables) {
-    const qualifiedName = makeQualifiedTableName({
-      database: tableObj.table.database,
-      schema: tableObj.table.schema,
-      table: tableObj.table.table,
-    }).toString();
-    tablesByQualifiedName.set(qualifiedName, {
+  for (const tableObj of tables ?? []) {
+    tablesByQualifiedName.set(tableObj.table.toString(), {
       database: tableObj.table.database,
       schema: tableObj.table.schema,
       table: tableObj.table.table,
@@ -98,11 +86,11 @@ export function getRunContext(
 ): AiRunContext | undefined {
   const state = store.getState();
   const {artifactsById} = state.artifacts.config;
-  const {schemaTrees} = state.db;
+  const {tables} = state.db;
   const session = state.ai.config.sessions.find(
     (candidate) => candidate.id === sessionId,
   );
-  const tablesByQualifiedName = buildTablesMap(schemaTrees);
+  const tablesByQualifiedName = buildTablesMap(tables);
 
   if (
     session?.draftContextItemIds === undefined &&

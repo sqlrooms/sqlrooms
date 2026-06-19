@@ -1,8 +1,4 @@
-import {
-  getAllTablesFromSchemaTrees,
-  makeQualifiedTableName,
-  type TableNodeObject,
-} from '@sqlrooms/duckdb';
+import {type DataTable} from '@sqlrooms/duckdb';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {
   DropdownMenu,
@@ -17,7 +13,7 @@ import {
   useSidebar,
 } from '@sqlrooms/ui';
 import {ArrowUpFromLine, Database, Table2} from 'lucide-react';
-import {useCallback, useMemo, useRef, type ChangeEvent} from 'react';
+import {useCallback, useRef, type ChangeEvent} from 'react';
 import {useRoomStore} from '../../store';
 import {
   LOCAL_DATA_ACCEPTED_FORMATS,
@@ -31,12 +27,8 @@ const acceptedDataFileExtensions = Object.values(LOCAL_DATA_ACCEPTED_FORMATS)
 export function CliDataSidebarSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const loadLocalFiles = useLocalFileLoader();
-  const schemaTrees = useRoomStore((state) => state.db.schemaTrees);
   const selectTable = useRoomStore((state) => state.sqlEditor.selectTable);
-  const tables = useMemo(
-    () => getAllTablesFromSchemaTrees(schemaTrees),
-    [schemaTrees],
-  );
+  const tables = useRoomStore((state) => state.db.tables);
   const {state} = useSidebar();
 
   const addData = useCallback(() => {
@@ -55,13 +47,8 @@ export function CliDataSidebarSection() {
   );
 
   const handleSelectTable = useCallback(
-    (table: TableNodeObject) => {
-      const qualifiedTableName = makeQualifiedTableName({
-        database: table.table.database,
-        schema: table.table.schema,
-        table: table.table.table,
-      }).toString();
-      selectTable(qualifiedTableName);
+    (table: DataTable) => {
+      selectTable(table.table.toString());
     },
     [selectTable],
   );
@@ -115,7 +102,7 @@ export function CliDataSidebarSection() {
               >
                 <Table2 className="h-4 w-4" aria-hidden />
                 <div className="grid min-w-0 gap-px">
-                  <span className="truncate">{table.name}</span>
+                  <span className="truncate">{table.table.table}</span>
                   <small className="text-muted-foreground truncate text-xs">
                     {formatTableMeta(table)}
                   </small>
@@ -146,7 +133,7 @@ export function CliDataSidebarSection() {
   );
 }
 
-function formatTableMeta(table: TableNodeObject) {
+function formatTableMeta(table: DataTable) {
   const columnCount = table.columns.length;
   const columnLabel = `${columnCount} ${columnCount === 1 ? 'column' : 'columns'}`;
   if (table.rowCount === undefined) return columnLabel;

@@ -3,7 +3,6 @@ import {
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai';
-import {findTableInSchemaTrees, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
 
@@ -53,14 +52,9 @@ function formatTableContextInstructions(
   }
 
   const state = store.getState();
-  const {schemaTrees} = state.db;
 
   const tableDetails = tableItems.map((item) => {
-    const tableObj = findTableInSchemaTrees(
-      schemaTrees,
-      item.id,
-      makeQualifiedTableName,
-    );
+    const tableObj = state.db.findTable(item.id);
 
     const columnCount = tableObj?.columns.length ?? 0;
     const rowCount = tableObj?.rowCount;

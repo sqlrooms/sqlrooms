@@ -4,6 +4,7 @@ import type {DbSchemaNode, TableNodeObject} from './types';
  * Flattens a schema tree and extracts all table nodes.
  * @param schemaTrees - Array of database schema tree nodes
  * @returns Array of all table objects found in the tree
+ * @deprecated Use state.db.tables
  */
 export function getAllTablesFromSchemaTrees(
   schemaTrees: DbSchemaNode[] | undefined,
