@@ -40,7 +40,7 @@ describe('createLineChartSpec', () => {
     expect(hasLegend).toBe(false);
   });
 
-  it('uses the table name in generated data sources', () => {
+  it('uses the qualified table reference in generated data sources', () => {
     const settings: LineChartSettings = {
       x: 'date',
       yFields: [{field: 'sales'}],
@@ -53,7 +53,7 @@ describe('createLineChartSpec', () => {
       selectionName: 'test_selection',
     }) as any;
 
-    expect(spec.plot[0].data.from).toBe('test_table');
+    expect(spec.plot[0].data.from).toBe(tableId);
   });
 
   it('generates spec with legend when showLegend is true', () => {
