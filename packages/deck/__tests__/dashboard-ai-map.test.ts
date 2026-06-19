@@ -1,4 +1,8 @@
-import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
+import {
+  MAP_TOOL_KEY,
+  type DashboardAiAdapter,
+  type DatabaseAiAdapter,
+} from '@sqlrooms/mosaic';
 import {
   createDashboardWithDeckMapAiTools,
   createDeckMapConfigTool,
@@ -6,13 +10,11 @@ import {
   createDeckMapDashboardTool,
   getDashboardWithDeckMapAiInstructions,
 } from '../src/ai';
-import {
-  createDeckMapBoundsQuery,
-  deckMapDashboardAddPanelAction,
-} from '../src/dashboard';
+import {createDeckMapBoundsQuery} from '../src/dashboard';
 import {createDeckMapDashboardSliceOptions} from '../src/dashboardIntegration';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
 import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
+import type {MosaicDashboardEntry} from '@sqlrooms/mosaic';
 
 const scatterConfig = {
   spec: {
@@ -73,52 +75,86 @@ const multiLayerConfig = {
   },
 };
 
-function createDeps(): DashboardToolDeps & {
+type TestDashboard = MosaicDashboardEntry & {
   panels: any[];
-  currentArtifacts: string[];
-} {
-  const panels: any[] = [];
-  const currentArtifacts: string[] = [];
+};
 
-  return {
-    panels,
-    currentArtifacts,
-    maxDataPoints: 10_000,
-    resolveArtifact: () => 'dashboard-1',
-    resolveTable: () => ({
+function createTestAdapters() {
+  const dashboards: Record<string, TestDashboard> = {
+    'dashboard-1': {
+      id: 'dashboard-1',
+      title: 'Dashboard',
+      layoutType: 'grid',
+      selectedTable: undefined,
+      panels: [],
+      layout: null,
+      updatedAt: 0,
+    },
+  };
+
+  const tables: any[] = [
+    {
+      table: {
+        database: 'main',
+        schema: 'main',
+        table: 'earthquakes',
+        toString: () => 'earthquakes',
+        toArray: () => ['main', 'earthquakes'],
+      } as any,
       tableName: 'earthquakes',
+      schema: 'main',
+      isView: false,
+      rowCount: 1000,
       columns: [
         {name: 'id', type: 'INTEGER'},
         {name: 'longitude', type: 'DOUBLE'},
         {name: 'latitude', type: 'DOUBLE'},
         {name: 'magnitude', type: 'DOUBLE'},
       ],
-    }),
-    addPanel: (_dashboardId, panel) => {
-      panels.push(panel);
-      return panel.id;
     },
-    updatePanel: (_dashboardId, panelId, patch) => {
-      const panel = panels.find((candidate) => candidate.id === panelId);
-      if (panel) Object.assign(panel, patch);
-    },
-    getDashboard: (dashboardId) =>
-      ({
-        id: dashboardId,
-        title: 'Dashboard',
-        layoutType: 'grid',
-        panels,
-        layout: null,
-        updatedAt: 0,
-      }) as any,
-    removePanel: (_dashboardId, panelId) => {
-      const index = panels.findIndex((candidate) => candidate.id === panelId);
-      if (index >= 0) panels.splice(index, 1);
-    },
-    setCurrentArtifact: (artifactId) => {
-      currentArtifacts.push(artifactId);
+  ];
+
+  const databaseAdapter: DatabaseAiAdapter = {
+    getTables: () => tables,
+    findTable: (tableName) => {
+      const nameStr =
+        typeof tableName === 'string' ? tableName : tableName.toString();
+      return tables.find(
+        (t) =>
+          t.tableName === nameStr ||
+          t.table.table === nameStr ||
+          t.table.toString() === nameStr,
+      );
     },
   };
+
+  const dashboardAdapter: DashboardAiAdapter = {
+    getDashboard: () => dashboards['dashboard-1'],
+    setSelectedTable: (tableName) => {
+      dashboards['dashboard-1']!.selectedTable = tableName;
+    },
+    addPanel: (panel) => {
+      const dashboard = dashboards['dashboard-1']!;
+      const panelId = `panel-${dashboard.panels.length + 1}`;
+      dashboard.panels.push({...panel, id: panelId});
+      return panelId;
+    },
+    updatePanel: (panelId, patch) => {
+      const panel = dashboards['dashboard-1']!.panels.find(
+        (p) => p.id === panelId,
+      );
+      if (panel) Object.assign(panel, patch);
+    },
+    removePanel: (panelId) => {
+      const dashboard = dashboards['dashboard-1']!;
+      dashboard.panels = dashboard.panels.filter((p) => p.id !== panelId);
+    },
+    getPanel: (panelId) =>
+      dashboards['dashboard-1']!.panels.find((p) => p.id === panelId),
+    getPanelIssue: () => undefined,
+  };
+
+  return {dashboards, databaseAdapter, dashboardAdapter};
 }
 
 describe('createDeckMapBoundsQuery', () => {
@@ -174,31 +210,35 @@ describe('createDeckMapConfigTool', () => {
 
 describe('createDeckMapDashboardTool', () => {
   it('registers the dashboard map tool under the shared map tool key', () => {
-    const tools = createDeckMapDashboardAiTools(createDeps());
+    const {dashboardAdapter, databaseAdapter} = createTestAdapters();
+    const tools = createDeckMapDashboardAiTools({
+      dashboardAdapter,
+      databaseAdapter,
+    });
 
     expect(tools[MAP_TOOL_KEY]).toBeDefined();
   });
 
   it('composes reusable dashboard tools with the deck map dashboard tool', () => {
     const tools = createDashboardWithDeckMapAiTools({
-      store: {getState: () => ({})},
-      adapter: {
+      databaseAdapter: {
         getTables: () => [],
-        getCurrentDashboardArtifactId: () => undefined,
-        createDashboardArtifact: () => 'dashboard-1',
-        isDashboardArtifact: () => true,
-        setCurrentArtifact: () => {},
-        ensureDashboard: () => {},
+        findTable: () => undefined,
+      },
+      dashboardAdapter: {
         getDashboard: () => undefined,
         setSelectedTable: () => {},
         addPanel: () => 'panel-1',
         updatePanel: () => {},
         removePanel: () => {},
+        getPanel: () => undefined,
+        getPanelIssue: () => undefined,
       },
     });
 
     expect(tools[MAP_TOOL_KEY]).toBeDefined();
-    expect(tools.create_dashboard_artifact).toBeDefined();
+    // Check that chart tools are also present
+    expect(Object.keys(tools).length).toBeGreaterThan(1);
   });
 
   it('includes deck map guidance in reusable dashboard instructions', () => {
@@ -213,13 +253,21 @@ describe('createDeckMapDashboardTool', () => {
     expect(
       options.panelRenderers?.[DECK_MAP_DASHBOARD_PANEL_TYPE],
     ).toBeDefined();
-    expect(options.addPanelActions).toContain(deckMapDashboardAddPanelAction);
+    expect(options.addPanelActions).toContainEqual(
+      expect.objectContaining({
+        type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+      }),
+    );
     expect(options.chartTypes?.length).toBeGreaterThan(0);
   });
 
   it('creates a deck map panel from a native Deck JSON config', async () => {
-    const deps = createDeps();
-    const tool = createDeckMapDashboardTool(deps);
+    const {dashboards, dashboardAdapter, databaseAdapter} =
+      createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
 
     const result = await (tool as any).execute({
       title: 'Earthquake map',
@@ -228,18 +276,21 @@ describe('createDeckMapDashboardTool', () => {
     });
 
     expect(result.llmResult.success).toBe(true);
-    expect(deps.panels).toHaveLength(1);
-    expect(deps.panels[0]).toMatchObject({
+    expect(dashboards['dashboard-1']!.panels).toHaveLength(1);
+    expect(dashboards['dashboard-1']!.panels[0]).toMatchObject({
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Earthquake map',
       config: scatterConfig,
     });
-    expect(deps.currentArtifacts).toEqual(['dashboard-1']);
   });
 
   it('updates an existing map panel from a native Deck JSON config', async () => {
-    const deps = createDeps();
-    const tool = createDeckMapDashboardTool(deps);
+    const {dashboards, dashboardAdapter, databaseAdapter} =
+      createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
     const createResult = await (tool as any).execute({
       title: 'Original map',
       config: scatterConfig,
@@ -255,8 +306,8 @@ describe('createDeckMapDashboardTool', () => {
     });
 
     expect(updateResult.llmResult.success).toBe(true);
-    expect(deps.panels).toHaveLength(1);
-    expect(deps.panels[0]).toMatchObject({
+    expect(dashboards['dashboard-1']!.panels).toHaveLength(1);
+    expect(dashboards['dashboard-1']!.panels[0]).toMatchObject({
       title: 'Updated map',
       config: multiLayerConfig,
     });
