@@ -30,11 +30,10 @@ export function createDashboardDataTableExplorerTool({
 }: CreateDashboardDataTableExplorerToolParams): Tool {
   return createDataTableExplorerTool({
     databaseAdapter,
-    addDataTable: ({title, config}) =>
+    addDataTable: ({title}) =>
       dashboardAdapter.addPanel(
         createMosaicDashboardDataTableExplorerPanelConfig({
           title,
-          config,
         }),
       ),
   });

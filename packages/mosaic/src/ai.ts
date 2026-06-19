@@ -9,4 +9,5 @@ export * from './ai/dashboard/dashboard-types';
 export * from './ai/worksheet/worksheet-types';
 export * from './ai/constants';
 export {createDashboardAiTools} from './ai/dashboard/createDashboardAiTools';
+export {createDashboardAgentTool} from './ai/dashboard/createDashboardAgentTool';
 export {createWorksheetAgentTool} from './ai/worksheet/createWorksheetAgentTool';

@@ -1,7 +1,6 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {ensureTable} from './tool-helpers';
-import {DataTableExplorerPanelConfig} from '../dashboard/core-types';
 import {DatabaseAiAdapter} from './database-types';
 
 /**
@@ -17,7 +16,6 @@ export const DataTableExplorerParameters = z.object({
     .optional()
     .default('Data Table Explorer')
     .describe('Title for the Data Table Explorer panel.'),
-  config: DataTableExplorerPanelConfig,
 });
 
 /**

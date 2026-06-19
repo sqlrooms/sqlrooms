@@ -23,8 +23,14 @@ type AddDashboardBlockToolOutput = ToolOutput<{
   message?: string;
 }>;
 
+/**
+ * Options for creating the add dashboard block tool.
+ * Provides worksheet context for adding dashboard blocks to a specific worksheet.
+ */
 export type CreateAddDashboardBlockToolOptions = {
+  /** Adapter for worksheet operations */
   worksheetAdapter: WorksheetAiAdapter;
+  /** ID of the worksheet where dashboard blocks will be added */
   worksheetId: string;
 };
 
@@ -38,13 +44,9 @@ export function createAddDashboardBlockTool({
   return tool<AddDashboardBlockToolInput, AddDashboardBlockToolOutput>({
     description: `Create an EMPTY dashboard block container in the worksheet.
 
-This tool ONLY creates the container structure. To populate it with charts and panels, use the dashboard_agent tool afterward.
+This tool ONLY creates the container structure. To populate it with charts and panels, use other tools afterward.
 
-WORKFLOW:
-1. Call add_dashboard_block to create the empty container (returns dashboardId)
-2. Call dashboard_agent with the dashboardId to fill it with charts and panels
-
-Use this when you need to create a dashboard block in a worksheet as part of a two-step process.`,
+Use this when you need to create a dashboard block in a worksheet.`,
     inputSchema: AddDashboardBlockToolInput,
     execute: async ({dashboardTitle, tableName}) => {
       try {
