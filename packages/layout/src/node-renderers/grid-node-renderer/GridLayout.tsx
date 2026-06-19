@@ -671,7 +671,6 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
             })}
           </ResponsiveGridLayout>
         </div>
-        <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>

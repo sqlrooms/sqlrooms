@@ -3,7 +3,6 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
   ScrollArea,
-  ScrollBar,
   type ResizablePanelHandle,
 } from '@sqlrooms/ui';
 import React, {FC, useEffect, useRef, useState} from 'react';
@@ -69,7 +68,6 @@ export const MosaicDashboardPanelLayout: FC<
       <div ref={containerRef} className="h-full overflow-hidden">
         <ScrollArea className="h-full">
           {settings}
-          <ScrollBar orientation="vertical" />
         </ScrollArea>
       </div>
     );
@@ -90,7 +88,6 @@ export const MosaicDashboardPanelLayout: FC<
         >
           <ScrollArea className="h-full">
             {settings}
-            <ScrollBar orientation="vertical" />
           </ScrollArea>
         </ResizablePanel>
         <ResizableHandle className="w-px" />

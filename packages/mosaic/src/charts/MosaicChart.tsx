@@ -45,7 +45,7 @@ export const MosaicChart: FC<MosaicChartProps> = ({
   );
 
   const chartContent = (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full [&_[data-radix-scroll-area-viewport]>div]:h-full">
       <div className="h-full p-2">
         <MosaicChartView
           dataTable={dataTable}
@@ -57,7 +57,6 @@ export const MosaicChart: FC<MosaicChartProps> = ({
           panelId={panelId}
         />
       </div>
-      <ScrollBar orientation="vertical" />
       <ScrollBar orientation="horizontal" />
     </ScrollArea>
   );

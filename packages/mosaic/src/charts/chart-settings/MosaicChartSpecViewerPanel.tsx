@@ -1,5 +1,5 @@
 import {type FC, useMemo} from 'react';
-import {ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {ScrollArea} from '@sqlrooms/ui';
 import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {MosaicChartSettings} from './MosaicChartSettings';
 import {Spec} from '@uwdata/mosaic-spec';
@@ -41,7 +41,6 @@ export const MosaicChartSpecViewerPanel: FC<
             />
           </div>
         </div>
-        <ScrollBar orientation="vertical" />
       </ScrollArea>
     </div>
   );
