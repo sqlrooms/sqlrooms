@@ -397,12 +397,7 @@ export type {
 } from './ai/worksheet/worksheet-types';
 
 // AI helpers and error handling
-export {
-  ensurePanel,
-  ensureDashboard,
-  ensureTable,
-  ensureNoOverride,
-} from './ai/tool-helpers';
+export {ensurePanel, ensureTable, ensureNoOverride} from './ai/tool-helpers';
 export {AiAgentError} from './ai/errors';
 export type {ToolOutput} from './ai/tool-types';
 

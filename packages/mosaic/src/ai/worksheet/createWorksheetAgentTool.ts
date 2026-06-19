@@ -6,7 +6,7 @@ import type {
 } from './worksheet-types';
 import {AiAgentError} from '../errors';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
-import {calculateWorksheetAgentResultMetadata} from './utils';
+import {calculateAgentResultMetadata} from '../tool-helpers';
 import {createWorksheetAiTools} from './createWorksheetAiTools';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
@@ -267,9 +267,8 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const metadata = calculateWorksheetAgentResultMetadata(
-          worksheetAdapter,
-          worksheetId,
+        const metadata = calculateAgentResultMetadata(
+          undefined,
           result.agentToolCalls,
         );
 

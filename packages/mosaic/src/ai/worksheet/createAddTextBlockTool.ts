@@ -105,11 +105,11 @@ Block types:
       try {
         const block = createTextBlock(params);
 
-        worksheetAdapter.addBlock(worksheetId, block);
+        const blockId = worksheetAdapter.addBlock(worksheetId, block);
 
         return {
           success: true,
-          blockId: block.id,
+          blockId,
           message: `Added ${params.type} block to worksheet`,
         };
       } catch (error) {

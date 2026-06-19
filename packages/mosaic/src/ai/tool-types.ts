@@ -40,3 +40,13 @@ export type ToolOutput<
   | ({
       success: false;
     } & TError);
+
+/**
+ * Metadata about agent execution.
+ * Tracks statistics like steps executed and queries run during agent operation.
+ */
+export type AgentResultMetadata = {
+  tableName?: string;
+  stepsExecuted: number;
+  queriesRun: number;
+};

@@ -1,19 +1,16 @@
 import type {PanelPatch} from '../../charts/chart-types/base-types';
-import type {
-  MosaicDashboardEntry,
-  MosaicDashboardPanelConfig,
-} from '../../dashboard/dashboard-types';
+import type {MosaicDashboardPanelConfig} from '../../dashboard/dashboard-types';
 import type {ChartRuntimeIssue} from '../../chart-runtime';
 import type {BaseAgentToolOptions} from '../types';
 import {DatabaseAiAdapter} from '../database-types';
 import {Tool} from 'ai';
+import {AgentResultMetadata} from '../tool-types';
 
 /**
  * Dashboard adapter with full dashboard panel management capabilities.
  * Extends BaseAiAdapter with dashboard-specific operations.
  */
 export type DashboardAiAdapter = {
-  getDashboard: () => MosaicDashboardEntry | undefined;
   getPanelIssue?: (panelId: string) => ChartRuntimeIssue | undefined;
   setSelectedTable: (tableName: string) => void;
   getPanel(panelId: string): MosaicDashboardPanelConfig | undefined;
@@ -27,14 +24,7 @@ export type DashboardAgentResult = {
   finalOutput: string;
   dashboardId: string;
   error?: string;
-  metadata?: DashboardAgentResultMetadata;
-};
-
-export type DashboardAgentResultMetadata = {
-  tableName?: string;
-  panelsCreated: number;
-  stepsExecuted: number;
-  queriesRun: number;
+  metadata?: AgentResultMetadata;
 };
 
 export type ExtraDashboardAiToolsParams = {

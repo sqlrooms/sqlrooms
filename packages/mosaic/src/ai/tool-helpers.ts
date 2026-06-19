@@ -1,12 +1,11 @@
-import {
-  MosaicDashboardEntry,
-  MosaicDashboardPanelConfig,
-} from '../dashboard/dashboard-types';
+import {MosaicDashboardPanelConfig} from '../dashboard/dashboard-types';
 import {AiAgentError} from './errors';
 import {DashboardAiAdapter} from './dashboard/dashboard-types';
 import {DataTable} from '@sqlrooms/duckdb';
 import {Tool} from 'ai';
 import {DatabaseAiAdapter} from './database-types';
+import {AgentResultMetadata} from './tool-types';
+import {AgentToolCall} from './types';
 
 /**
  * Validates that a table exists. Throws if not found.
@@ -22,20 +21,6 @@ export function ensureTable(
   }
 
   return table;
-}
-
-/**
- * Validates that a dashboard exists. Throws if not found.
- */
-export function ensureDashboard(
-  adapter: DashboardAiAdapter,
-  dashboardId: string,
-): MosaicDashboardEntry {
-  const dashboard = adapter.getDashboard();
-  if (!dashboard) {
-    throw new AiAgentError(`Dashboard "${dashboardId}" not found.`);
-  }
-  return dashboard;
 }
 
 /**
@@ -72,4 +57,23 @@ export function ensureNoOverride(
       );
     }
   }
+}
+
+/**
+ * Calculate metadata about agent execution results.
+ *
+ * @param tableName - Optional table name associated with the agent execution
+ * @param agentToolCalls - Array of tool calls made during agent execution
+ * @returns Metadata including steps executed and queries run
+ */
+export function calculateAgentResultMetadata(
+  tableName: string | undefined,
+  agentToolCalls: AgentToolCall[] = [],
+): AgentResultMetadata {
+  return {
+    tableName,
+    stepsExecuted: agentToolCalls.length,
+    queriesRun: agentToolCalls.filter((call) => call.toolName === 'query')
+      .length,
+  };
 }

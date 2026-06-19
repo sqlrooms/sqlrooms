@@ -2,6 +2,7 @@ import type {Tool} from 'ai';
 import type {BlockDocumentBlock, BlockDocumentNode} from '@sqlrooms/documents';
 import type {BaseAgentToolOptions} from '../types';
 import {DatabaseAiAdapter} from '../database-types';
+import {AgentResultMetadata} from '../tool-types';
 
 /**
  * Worksheet-specific AI types
@@ -44,30 +45,39 @@ export type WorksheetAiAdapter = {
   ) => string;
 };
 
+/**
+ * Result returned by the worksheet agent after completing a task.
+ * Contains execution status, final output, and optional metadata about the run.
+ */
 export type WorksheetAgentResult = {
   success: boolean;
   finalOutput: string;
   worksheetId: string;
   error?: string;
-  metadata?: WorksheetAgentResultMetadata;
+  metadata?: AgentResultMetadata;
 };
 
-export type WorksheetAgentResultMetadata = {
-  tableName?: string;
-  blocksCreated: number;
-  stepsExecuted: number;
-  queriesRun: number;
-};
-
+/**
+ * Parameters passed to extra worksheet AI tools factory.
+ * Provides adapters for worksheet and database operations.
+ */
 export type ExtraWorksheetAiToolsParams = {
   worksheetAdapter: WorksheetAiAdapter;
   databaseAdapter: DatabaseAiAdapter;
 };
 
+/**
+ * Factory function for creating additional worksheet AI tools.
+ * Allows hosts to register custom tools that extend the worksheet agent's capabilities.
+ */
 export type ExtraWorksheetAiToolsFactory = (
   params: ExtraWorksheetAiToolsParams,
 ) => Record<string, Tool>;
 
+/**
+ * Options for creating a worksheet agent tool.
+ * Extends base agent options with worksheet-specific adapters and tools.
+ */
 export type CreateWorksheetAgentToolOptions<TState> =
   BaseAgentToolOptions<TState> & {
     worksheetAdapter: WorksheetAiAdapter;

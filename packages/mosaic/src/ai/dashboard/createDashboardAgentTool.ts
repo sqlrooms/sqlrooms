@@ -6,11 +6,10 @@ import type {
   DashboardAgentResult,
 } from './dashboard-types';
 import {AiAgentError} from '../errors';
-import {ensureTable} from '../tool-helpers';
+import {ensureTable, calculateAgentResultMetadata} from '../tool-helpers';
 import {createDashboardAiTools} from './createDashboardAiTools';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
 import {createDashboardAiAdapter} from './createDashboardAiAdapter';
-import {calculateDashboardAgentResultMetadata} from './utils';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {DASHBOARD_CHART_TOOL_PREFIX, KnownDashboardTools} from './constants';
@@ -187,8 +186,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const metadata = calculateDashboardAgentResultMetadata(
-          dashboardAdapter,
+        const metadata = calculateAgentResultMetadata(
           tableName,
           result.agentToolCalls,
         );
