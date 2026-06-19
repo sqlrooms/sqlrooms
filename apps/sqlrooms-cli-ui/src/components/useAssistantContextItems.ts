@@ -3,11 +3,7 @@ import {
   getVisibleSessionContextItemIds,
   type ContextSelectorItem,
 } from '@sqlrooms/ai';
-import {
-  getAllTablesFromSchemaTrees,
-  makeQualifiedTableName,
-  type TableNodeObject,
-} from '@sqlrooms/duckdb';
+import {type DataTable} from '@sqlrooms/duckdb';
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {useRoomStore} from '../store';
@@ -35,9 +31,8 @@ export function useContextArtifacts(): ArtifactMetadata[] {
 /**
  * Hook to get context-eligible tables from the store
  */
-export function useContextTables(): TableNodeObject[] {
-  const schemaTrees = useRoomStore((s) => s.db.schemaTrees);
-  return useMemo(() => getAllTablesFromSchemaTrees(schemaTrees), [schemaTrees]);
+export function useContextTables(): DataTable[] {
+  return useRoomStore((s) => s.db.tables);
 }
 
 /**
@@ -67,13 +62,8 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
       }));
 
     const tableItems = tables.map((table) => {
-      const qualifiedName = makeQualifiedTableName({
-        database: table.table.database,
-        schema: table.table.schema,
-        table: table.table.table,
-      });
       return {
-        id: qualifiedName.toString(),
+        id: table.table.toString(),
         kind: 'table',
         title: table.table.table,
         type: table.isView ? 'view' : 'table',
@@ -133,9 +123,7 @@ export function useValidatedSelectedIds(): string[] {
 
   return useMemo(() => {
     const contextItemIds = getVisibleSessionContextItemIds(currentSession);
-    const tableIdSet = new Set(
-      tables.map((table) => makeQualifiedTableName(table.table).toString()),
-    );
+    const tableIdSet = new Set(tables.map((table) => table.table.toString()));
 
     return contextItemIds.filter((id) => {
       if (id === owningArtifactId) {

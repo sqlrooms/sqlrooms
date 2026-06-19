@@ -1,16 +1,14 @@
 import {createLineChartSpec} from '../../src/charts/chart-types/line-chart/spec';
 import {LineChartSettings} from '../../src/charts/chart-types/line-chart/schema';
-import type {DataTable} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 
 describe('createLineChartSpec', () => {
-  const tableId = '"attached"."main"."test_table"';
   const mockDataTable: DataTable = {
-    table: {
+    table: makeQualifiedTableName({
       database: 'attached',
       schema: 'main',
       table: 'test_table',
-      toString: () => tableId,
-    },
+    }),
     tableName: 'test_table',
     schema: 'main',
     isView: false,
@@ -40,7 +38,7 @@ describe('createLineChartSpec', () => {
     expect(hasLegend).toBe(false);
   });
 
-  it('uses the qualified table reference in generated data sources', () => {
+  it('uses the Mosaic query table reference in generated data sources', () => {
     const settings: LineChartSettings = {
       x: 'date',
       yFields: [{field: 'sales'}],
@@ -53,7 +51,36 @@ describe('createLineChartSpec', () => {
       selectionName: 'test_selection',
     }) as any;
 
-    expect(spec.plot[0].data.from).toBe(tableId);
+    expect(spec.plot[0].data.from).toBe('"main"."test_table"');
+    expect(JSON.parse(JSON.stringify(spec)).plot[0].data.from).toBe(
+      '"main"."test_table"',
+    );
+  });
+
+  it('preserves dotted table-name parts in generated data sources', () => {
+    const settings: LineChartSettings = {
+      x: 'date',
+      yFields: [{field: 'sales'}],
+      showLegend: false,
+    };
+
+    const spec = createLineChartSpec({
+      dataTable: {
+        ...mockDataTable,
+        table: makeQualifiedTableName({
+          database: 'attached',
+          schema: 'main',
+          table: 'events.2026',
+        }),
+      },
+      settings,
+      selectionName: 'test_selection',
+    }) as any;
+
+    expect(spec.plot[0].data.from).toBe('"main"."events.2026"');
+    expect(JSON.parse(JSON.stringify(spec)).plot[0].data.from).toBe(
+      '"main"."events.2026"',
+    );
   });
 
   it('generates spec with legend when showLegend is true', () => {

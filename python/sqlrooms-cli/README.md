@@ -26,6 +26,7 @@ What happens:
 - `--host` / `--port`: HTTP host/port for the UI (default `127.0.0.1:4173`).
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
+- `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--no-open-browser`: Skip automatically opening the browser tab.

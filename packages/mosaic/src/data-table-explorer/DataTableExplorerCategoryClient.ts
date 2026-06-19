@@ -1,7 +1,10 @@
 import {MosaicClient, clausePoint, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import type {DataTableExplorerCategorySummary} from './types';
+import type {
+  DataTableExplorerCategorySummary,
+  DataTableExplorerSqlTableReference,
+} from './types';
 import {
   buildCategoryBuckets,
   buildCategorySummaryQuery,
@@ -17,6 +20,7 @@ type CategoryClientOptions = {
   onStateChange: (summary: DataTableExplorerCategorySummary) => void;
   selection: Selection;
   tableName: string;
+  tableReference?: DataTableExplorerSqlTableReference;
 };
 
 export class DataTableExplorerCategoryClient extends MosaicClient {
@@ -29,7 +33,7 @@ export class DataTableExplorerCategoryClient extends MosaicClient {
   ) => void;
   private selectedKey?: string;
   private filteredRows?: CategoryCountRow[];
-  private readonly tableName: string;
+  private readonly tableReference: DataTableExplorerSqlTableReference;
   private totalError?: Error;
   private totalLoading = true;
   private totalRows?: CategoryCountRow[];
@@ -39,7 +43,7 @@ export class DataTableExplorerCategoryClient extends MosaicClient {
     this.categoryLimit = options.categoryLimit;
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableName = options.tableName;
+    this.tableReference = options.tableReference ?? options.tableName;
   }
 
   override get filterStable(): boolean {
@@ -104,7 +108,11 @@ export class DataTableExplorerCategoryClient extends MosaicClient {
   }
 
   override query(filter: Array<ExprNode> = []): Query {
-    return buildCategorySummaryQuery(this.tableName, this.field.name, filter);
+    return buildCategorySummaryQuery(
+      this.tableReference,
+      this.field.name,
+      filter,
+    );
   }
 
   override queryResult(data: unknown): this {

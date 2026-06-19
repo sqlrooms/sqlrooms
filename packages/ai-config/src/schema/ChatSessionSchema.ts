@@ -140,6 +140,30 @@ export function setAiRunContextPrimaryItem(
   };
 }
 
+const AgentSnapshotSchema = z
+  .object({
+    agentName: z.string().optional(),
+    parentToolCallId: z.string(),
+    availableTools: z.array(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        hasExecute: z.boolean().optional(),
+        hasRenderer: z.boolean().optional(),
+        needsApproval: z.boolean().optional(),
+      }),
+    ),
+    settings: z
+      .object({
+        maxSteps: z.number().int().optional(),
+        model: z.string().optional(),
+        provider: z.string().optional(),
+      })
+      .optional(),
+    startedAt: z.number(),
+  })
+  .passthrough();
+
 const ChatSessionBaseSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -163,6 +187,8 @@ const ChatSessionBaseSchema = z.object({
   runContext: AiRunContextSchema.optional(),
   /** Persisted sub-agent tool call trees, keyed by parent toolCallId */
   agentProgress: z.record(z.string(), z.array(z.unknown())).optional(),
+  /** Optional persisted agent devtools snapshots, keyed by parent toolCallId */
+  agentSnapshots: z.record(z.string(), AgentSnapshotSchema).optional(),
 });
 
 /**

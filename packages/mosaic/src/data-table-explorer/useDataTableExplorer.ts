@@ -1,4 +1,5 @@
 import {useDebounce} from '@sqlrooms/ui';
+import {useMemo} from 'react';
 import {useStoreWithMosaic} from '../MosaicSlice';
 import type {
   DataTableExplorerOptions,
@@ -11,12 +12,11 @@ import {useDataTableExplorerLifecycles} from './hooks/useDataTableExplorerLifecy
 import {useDataTableExplorerColumns} from './hooks/useDataTableExplorerColumns';
 import {useDataTableExplorerStatus} from './hooks/useDataTableExplorerStatus';
 import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisiblePage';
-
-function getTableReference(
-  tableName: DataTableExplorerOptions['tableName'],
-): string {
-  return typeof tableName === 'string' ? tableName : tableName.toString();
-}
+import {
+  getMosaicSqlTableReference,
+  getMosaicTableIdentity,
+  getMosaicTableReferenceString,
+} from '../mosaicTableReference';
 
 /**
  * Aggregates Mosaic-backed schema, rows, counts, and summaries into the stable
@@ -36,7 +36,15 @@ export function useDataTableExplorer(
     tableName: table,
   } = options;
 
-  const tableName = getTableReference(table);
+  const tableIdentity = useMemo(() => getMosaicTableIdentity(table), [table]);
+  const tableName = useMemo(
+    () => getMosaicTableReferenceString(table),
+    [table],
+  );
+  const tableReference = useMemo(
+    () => getMosaicSqlTableReference(tableName),
+    [tableName],
+  );
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
   const {selection, selectionVersion} = useDataTableExplorerSelection({
@@ -62,7 +70,7 @@ export function useDataTableExplorer(
     pageSize,
   });
   const schema =
-    rawSchema.tableName === tableName
+    rawSchema.tableName === tableIdentity
       ? rawSchema
       : {...rawSchema, fields: [], isLoading: true};
   const {
@@ -80,7 +88,8 @@ export function useDataTableExplorer(
     selection,
     selectionVersion,
     sorting,
-    tableName,
+    tableIdentity,
+    tableReference,
   });
   useDataTableExplorerLifecycles({
     categoryLimit,
@@ -96,7 +105,9 @@ export function useDataTableExplorer(
     selectionVersion,
     sorting,
     summaryBins,
+    tableIdentity,
     tableName,
+    tableReference,
   });
   const dataTableExplorerColumns = useDataTableExplorerColumns({
     fields,

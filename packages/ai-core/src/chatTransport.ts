@@ -28,6 +28,7 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
   MessageTokenUsage,
+  AgentToolCall,
 } from './types';
 import {
   fixIncompleteToolCalls,
@@ -107,6 +108,89 @@ function enrichMessagesWithAbortSnapshots(
       part.errorText = `${existingError}\nProgress before cancellation:\n${formatted}`;
     }
   }
+}
+
+function writeAgentDebugStateToSession(
+  session: ChatSessionSchema,
+  state: AiSliceStateForTransport,
+): void {
+  const sessionToolCallIds = getSessionToolCallIds(session);
+  addReachableAgentToolCallIds(sessionToolCallIds, state.ai.agentProgress);
+
+  session.agentProgress = structuredClone(
+    filterRecordByKeys(state.ai.agentProgress, sessionToolCallIds),
+  ) as ChatSessionSchema['agentProgress'];
+
+  if (state.ai.devtools.shouldPersistAgentSnapshots()) {
+    session.agentSnapshots = structuredClone(
+      filterRecordByKeys(state.ai.devtools.agentSnapshots, sessionToolCallIds),
+    ) as ChatSessionSchema['agentSnapshots'];
+  } else {
+    delete session.agentSnapshots;
+  }
+}
+
+function getSessionToolCallIds(session: ChatSessionSchema): Set<string> {
+  const toolCallIds = new Set<string>();
+
+  for (const message of (session.uiMessages ?? []) as UIMessage[]) {
+    for (const part of message.parts ?? []) {
+      const toolCallId = (part as {toolCallId?: unknown}).toolCallId;
+      if (typeof toolCallId === 'string') {
+        toolCallIds.add(toolCallId);
+      }
+    }
+  }
+
+  return toolCallIds;
+}
+
+function addReachableAgentToolCallIds(
+  toolCallIds: Set<string>,
+  agentProgress: Record<string, AgentToolCall[]>,
+): void {
+  let foundNewToolCall = true;
+
+  while (foundNewToolCall) {
+    foundNewToolCall = false;
+
+    for (const [parentToolCallId, toolCalls] of Object.entries(agentProgress)) {
+      if (!toolCallIds.has(parentToolCallId)) continue;
+
+      for (const toolCall of toolCalls) {
+        foundNewToolCall =
+          addAgentToolCallIds(toolCallIds, toolCall) || foundNewToolCall;
+      }
+    }
+  }
+}
+
+function addAgentToolCallIds(
+  toolCallIds: Set<string>,
+  toolCall: AgentToolCall,
+): boolean {
+  let foundNewToolCall = false;
+
+  if (!toolCallIds.has(toolCall.toolCallId)) {
+    toolCallIds.add(toolCall.toolCallId);
+    foundNewToolCall = true;
+  }
+
+  for (const nestedCall of toolCall.agentToolCalls ?? []) {
+    foundNewToolCall =
+      addAgentToolCallIds(toolCallIds, nestedCall) || foundNewToolCall;
+  }
+
+  return foundNewToolCall;
+}
+
+function filterRecordByKeys<T>(
+  record: Record<string, T>,
+  keys: Set<string>,
+): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => keys.has(key)),
+  );
 }
 
 export type ChatTransportConfig = {
@@ -529,9 +613,7 @@ export function createChatHandlers({
               );
               if (sess) {
                 sess.messagesRevision = (sess.messagesRevision || 0) + 1;
-                sess.agentProgress = structuredClone(
-                  state.ai.agentProgress,
-                ) as ChatSessionSchema['agentProgress'];
+                writeAgentDebugStateToSession(sess, state);
               }
             }),
           );
@@ -558,9 +640,7 @@ export function createChatHandlers({
             );
             if (!targetSession) return;
 
-            targetSession.agentProgress = structuredClone(
-              state.ai.agentProgress,
-            ) as ChatSessionSchema['agentProgress'];
+            writeAgentDebugStateToSession(targetSession, state);
           }),
         );
 
@@ -589,8 +669,8 @@ export function createChatHandlers({
           store.getState().ai.setApiKeyError(provider, true);
         }
 
-        const toolTimings = store.getState().ai.getToolTimings();
-        const currentAgentProgress = store.getState().ai.agentProgress;
+        const currentState = store.getState();
+        const toolTimings = currentState.ai.getToolTimings();
 
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
@@ -606,9 +686,7 @@ export function createChatHandlers({
               writeToolTimingsToMetadata(completedMessages, toolTimings);
               targetSession.uiMessages =
                 completedMessages as ChatSessionSchema['uiMessages'];
-              targetSession.agentProgress = structuredClone(
-                currentAgentProgress,
-              ) as ChatSessionSchema['agentProgress'];
+              writeAgentDebugStateToSession(targetSession, currentState);
 
               const uiMessages = targetSession.uiMessages as UIMessage[];
               const lastUserMessage = uiMessages

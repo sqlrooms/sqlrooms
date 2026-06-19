@@ -4,6 +4,7 @@ import {TOOL_CALL_CANCELLED} from '../constants';
 import type {
   AgentProgressSnapshot,
   AgentStreamOutput,
+  AgentSnapshot,
   AgentToolCall,
   PendingSubAgentApproval,
 } from '../types';
@@ -20,6 +21,13 @@ interface AgentStreamStore {
         toolCalls: AgentToolCall[],
       ) => void;
       clearAgentProgress: (parentToolCallId: string) => void;
+      devtools?: {
+        shouldCaptureAgentSnapshots?: () => boolean;
+        writeAgentSnapshot?: (
+          parentToolCallId: string,
+          snapshot: AgentSnapshot,
+        ) => void;
+      };
       requestSubAgentApproval?: (approval: PendingSubAgentApproval) => void;
       resolveSubAgentApproval?: (approvalId: string, approved: boolean) => void;
       clearSubAgentApproval?: (approvalId: string) => void;
@@ -32,6 +40,34 @@ interface AgentStreamStore {
       ) => AgentProgressSnapshot | undefined;
     };
   };
+}
+
+function getAgentAvailableTools(
+  agent: unknown,
+): AgentSnapshot['availableTools'] {
+  const tools = (agent as {tools?: unknown}).tools;
+  if (!tools || typeof tools !== 'object') return [];
+
+  return Object.entries(tools as Record<string, unknown>).map(
+    ([name, tool]) => {
+      const record =
+        tool && typeof tool === 'object'
+          ? (tool as Record<string, unknown>)
+          : {};
+      return {
+        name,
+        description:
+          typeof record.description === 'string'
+            ? record.description
+            : undefined,
+        hasExecute: typeof record.execute === 'function',
+        hasRenderer:
+          typeof record.renderer === 'function' ||
+          typeof record.render === 'function',
+        needsApproval: Boolean(record.needsApproval),
+      };
+    },
+  );
 }
 
 /**
@@ -273,6 +309,16 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
 
   let finalText = '';
   const toolCallMap = new Map<string, AgentToolCall>();
+
+  const devtools = store.getState().ai.devtools;
+  if (devtools?.shouldCaptureAgentSnapshots?.()) {
+    devtools.writeAgentSnapshot?.(parentToolCallId, {
+      agentName: parentToolCallId,
+      parentToolCallId,
+      availableTools: getAgentAvailableTools(agent),
+      startedAt: Date.now(),
+    });
+  }
 
   const pushProgress = () => {
     store.getState().ai.updateAgentProgress(
