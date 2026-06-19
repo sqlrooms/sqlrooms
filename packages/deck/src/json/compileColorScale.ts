@@ -31,23 +31,6 @@ function resolveFieldName(
   return undefined;
 }
 
-function getColumn(table: arrow.Table, field: string) {
-  const resolvedFieldName = resolveFieldName(table, field);
-  if (!resolvedFieldName) {
-    throw new Error(`Unknown colorScale field "${field}".`);
-  }
-
-  const vector = table.getChild(resolvedFieldName);
-  if (!vector) {
-    throw new Error(`Unable to read colorScale field "${resolvedFieldName}".`);
-  }
-
-  return {
-    fieldName: resolvedFieldName,
-    vector,
-  };
-}
-
 function getRowValue(row: unknown, fieldName: string) {
   if (!row || typeof row !== 'object') {
     return undefined;
@@ -112,16 +95,51 @@ function getColumnValues(vector: arrow.Vector) {
   return Array.from({length: vector.length}, (_, index) => vector.get(index));
 }
 
+function getColumn(table: arrow.Table, field: string) {
+  const resolvedFieldName = resolveFieldName(table, field);
+  if (!resolvedFieldName) {
+    throw new Error(`Unknown colorScale field "${field}".`);
+  }
+
+  const vector = table.getChild(resolvedFieldName);
+  if (!vector) {
+    throw new Error(`Unable to read colorScale field "${resolvedFieldName}".`);
+  }
+
+  return {
+    fieldName: resolvedFieldName,
+    vector,
+  };
+}
+
 export function compileColorScale(options: {
   table: arrow.Table;
   colorScale: ColorScaleConfig;
 }) {
   const {table, colorScale} = options;
-  const {fieldName, vector} = getColumn(table, colorScale.field);
-  const mapper = createColorScaleMapper({
-    colorScale,
-    values: getColumnValues(vector),
-  });
+  let column;
+  try {
+    column = getColumn(table, colorScale.field);
+  } catch {
+    console.warn(
+      `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use default colors.`,
+    );
+    return () => null;
+  }
+  const {fieldName, vector} = column;
+  let mapper: ReturnType<typeof createColorScaleMapper>;
+  try {
+    mapper = createColorScaleMapper({
+      colorScale,
+      values: getColumnValues(vector),
+    });
+  } catch (err) {
+    console.warn(
+      `[compileColorScale] Failed to create color scale for field "${colorScale.field}":`,
+      err,
+    );
+    return () => null;
+  }
 
   return (value: unknown) =>
     mapper(getGeoArrowOrRowValue({value, fieldName, vector}));
@@ -133,7 +151,13 @@ export function buildColorScaleLegend(options: {
   title?: string;
 }): ResolvedColorLegend | null {
   const {table, colorScale} = options;
-  const {vector} = getColumn(table, colorScale.field);
+  let column;
+  try {
+    column = getColumn(table, colorScale.field);
+  } catch {
+    return null;
+  }
+  const {vector} = column;
   const values = getColumnValues(vector);
 
   if (

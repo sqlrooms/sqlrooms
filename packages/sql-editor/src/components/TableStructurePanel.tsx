@@ -34,10 +34,7 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
 
   return (
     <ScrollArea
-      className={cn(
-        'relative flex h-full flex-col gap-2 p-2',
-        className,
-      )}
+      className={cn('relative flex h-full flex-col gap-2 p-2', className)}
     >
       <div className="flex items-center justify-between pb-2">
         <h2 className="text-muted-foreground text-xs font-medium uppercase">

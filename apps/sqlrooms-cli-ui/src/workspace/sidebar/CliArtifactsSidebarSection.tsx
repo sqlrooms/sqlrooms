@@ -49,12 +49,12 @@ export function CliArtifactsSidebarSection() {
           </Button>
         </div>
         <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
-          <div className="w-full min-w-0 max-w-full overflow-hidden pr-2">
-            <SidebarMenu className="min-w-0 max-w-full overflow-hidden gap-0.5">
+          <div className="w-full max-w-full min-w-0 overflow-hidden pr-2">
+            <SidebarMenu className="max-w-full min-w-0 gap-0.5 overflow-hidden">
               {artifactTabs.tabs.length === 0 ? (
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 min-w-0 max-w-full gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
+                    className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 max-w-full min-w-0 gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
                     disabled
                     type="button"
                   >
@@ -70,7 +70,7 @@ export function CliArtifactsSidebarSection() {
                 return (
                   <SidebarMenuItem key={artifact.id} className="min-w-0">
                     <SidebarMenuButton
-                      className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 min-w-0 max-w-full gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
+                      className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 max-w-full min-w-0 gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
                       isActive={artifact.id === artifactTabs.selectedTabId}
                       onClick={() => artifactTabs.selectArtifact(artifact.id)}
                       type="button"

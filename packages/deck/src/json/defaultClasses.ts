@@ -8,19 +8,21 @@ import {
 import {GeoJsonLayer} from '@deck.gl/layers';
 import {
   GeoArrowArcLayer,
-  GeoArrowColumnLayer,
-  _GeoArrowH3HexagonLayer as GeoArrowH3HexagonLayer,
   GeoArrowHeatmapLayer,
   GeoArrowPathLayer,
   GeoArrowPolygonLayer,
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
-  GeoArrowTripsLayer,
 } from '@geoarrow/deck.gl-layers';
+import {DeckColumnLayer, DeckH3HexagonLayer, DeckTripsLayer} from './layers';
 
 // TODO(geoarrow-upgrade): Revisit this import surface on the next GeoArrow bump.
 // Published 0.3.x uses `@geoarrow/deck.gl-layers`; newer lines may rename the package
 // and/or move the exported layer classes.
+//
+// NOTE: Some @geoarrow/deck.gl-layers@0.3.2 layers are incompatible with
+// @deck.gl@9.3.x. We use our own wrappers in ./layers/ that properly interface
+// Arrow data with the native deck.gl layers.
 export const DEFAULT_DECK_JSON_CLASSES = {
   MapView,
   FirstPersonView,
@@ -29,13 +31,13 @@ export const DEFAULT_DECK_JSON_CLASSES = {
   GeoJsonLayer,
   GeoArrowScatterplotLayer,
   GeoArrowHeatmapLayer,
-  GeoArrowColumnLayer,
+  GeoArrowColumnLayer: DeckColumnLayer,
   GeoArrowPathLayer,
   GeoArrowPolygonLayer,
   GeoArrowSolidPolygonLayer,
   GeoArrowArcLayer,
-  GeoArrowTripsLayer,
-  GeoArrowH3HexagonLayer,
+  GeoArrowTripsLayer: DeckTripsLayer,
+  GeoArrowH3HexagonLayer: DeckH3HexagonLayer,
 };
 
 export const DEFAULT_DECK_JSON_ENUMERATIONS = {

@@ -60,7 +60,7 @@ describe('deck dashboard integration', () => {
     });
   });
 
-  it('resolves dataset source before dashboard fallback source', () => {
+  it('rewrites dataset sqlQuery FROM clause with dashboard.selectedTable', () => {
     const dashboard = createDashboard('dashboard_table');
     const panel = createDeckMapDashboardPanelConfig({
       spec: {layers: []},
@@ -71,7 +71,7 @@ describe('deck dashboard integration', () => {
       },
     });
 
-    // Dataset source has priority
+    // Dashboard table rewrites the FROM clause in dataset sqlQuery
     expect(
       resolveDeckMapDashboardDatasetSource({
         dashboard,
@@ -80,7 +80,7 @@ describe('deck dashboard integration', () => {
           source: {sqlQuery: 'SELECT * FROM dataset_table'},
         },
       }),
-    ).toEqual({sqlQuery: 'SELECT * FROM dataset_table'});
+    ).toEqual({sqlQuery: 'SELECT * FROM "dashboard_table"'});
 
     // Falls back to dashboard source when no dataset source
     expect(

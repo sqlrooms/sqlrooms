@@ -942,14 +942,19 @@ export function createDuckDbSlice({
               }),
             );
 
-            queryHandle.result.finally(() => {
-              // remove from cache after completion
-              set((state) =>
-                produce(state, (draft) => {
-                  delete draft.db.queryCache[queryKey];
-                }),
-              );
-            });
+            queryHandle.result
+              .catch(() => {
+                // Prevent unhandled promise rejection warnings.
+                // Callers handle errors via await/try-catch.
+              })
+              .finally(() => {
+                // remove from cache after completion
+                set((state) =>
+                  produce(state, (draft) => {
+                    delete draft.db.queryCache[queryKey];
+                  }),
+                );
+              });
 
             return queryHandle;
           },

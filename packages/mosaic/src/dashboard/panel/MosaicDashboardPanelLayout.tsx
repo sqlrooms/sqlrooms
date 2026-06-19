@@ -66,9 +66,7 @@ export const MosaicDashboardPanelLayout: FC<
   if (containerWidth < MIN_WIDTH_FOR_SPLIT_VIEW && isOpen) {
     return (
       <div ref={containerRef} className="h-full overflow-hidden">
-        <ScrollArea className="h-full">
-          {settings}
-        </ScrollArea>
+        <ScrollArea className="h-full">{settings}</ScrollArea>
       </div>
     );
   }
@@ -86,9 +84,7 @@ export const MosaicDashboardPanelLayout: FC<
           className="overflow-hidden"
           onResize={onResize}
         >
-          <ScrollArea className="h-full">
-            {settings}
-          </ScrollArea>
+          <ScrollArea className="h-full">{settings}</ScrollArea>
         </ResizablePanel>
         <ResizableHandle className="w-px" />
         <ResizablePanel>{content}</ResizablePanel>

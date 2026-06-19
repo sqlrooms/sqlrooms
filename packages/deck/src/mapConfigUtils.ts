@@ -335,7 +335,7 @@ export function regenerateMapConfigForTable(
     return panel.config;
   }
 
-  const existingConfig = panel.config as any;
+  const existingConfig = panel.config as DeckMapDashboardPanelConfig;
   const nextConfig = createDeckMapDashboardConfigForTable({
     tableName: table.tableName,
     columns: table.columns,
@@ -344,8 +344,12 @@ export function regenerateMapConfigForTable(
     latitudeColumn,
   });
 
+  // Preserve existing layer spec (layer types, styling, bindings) — only
+  // update the dataset source and fitToData so the data re-fetches with the
+  // new coordinate columns.
   return {
     ...existingConfig,
-    ...nextConfig,
+    datasets: nextConfig.datasets,
+    fitToData: nextConfig.fitToData ?? existingConfig.fitToData,
   };
 }

@@ -33,11 +33,17 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
     : columns;
 
   const selectedColumn = filteredColumns.find((col) => col.name === value);
+  const isMissing = Boolean(value && !selectedColumn);
 
   return (
     <div className={cn('@container flex flex-col gap-1', className)}>
       <Combobox value={value ?? ''} onChange={onChange}>
-        <Combobox.Trigger className="w-full">
+        <Combobox.Trigger
+          className={cn(
+            'w-full',
+            isMissing && 'border-destructive/60 bg-destructive/5',
+          )}
+        >
           {selectedColumn ? (
             <span className="flex min-w-0 items-baseline gap-1">
               <span className="truncate text-xs">{selectedColumn.name}</span>
@@ -47,7 +53,10 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
             </span>
           ) : value ? (
             <span className="flex min-w-0 items-baseline gap-1">
-              <span className="truncate text-xs">{value}</span>
+              <span className="text-destructive truncate text-xs">{value}</span>
+              <span className="text-destructive/60 hidden text-[8px] @[180px]:inline">
+                missing
+              </span>
             </span>
           ) : (
             <span className="text-muted-foreground truncate text-xs">

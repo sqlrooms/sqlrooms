@@ -84,6 +84,7 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       },
     ],
     vectorAccessorProps: ['getPath', 'getColor', 'getWidth'],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowTripsLayer: {
     representation: 'geoarrow',
@@ -101,6 +102,7 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       },
     ],
     vectorAccessorProps: ['getPath', 'getTimestamps', 'getColor', 'getWidth'],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowPolygonLayer: {
     representation: 'geoarrow',
@@ -162,6 +164,7 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
       'getHeight',
       'getTilt',
     ],
+    allowGeoArrowPromotion: true,
   },
   GeoArrowH3HexagonLayer: {
     representation: 'geoarrow',
@@ -176,8 +179,9 @@ const LAYER_COMPATIBILITY: Record<string, LayerCompatibility> = {
     vectorAccessorProps: [
       'getHexagon',
       'getFillColor',
-      'getLineColor',
       'getElevation',
+      'getLineColor',
+      'getLineWidth',
     ],
   },
 };

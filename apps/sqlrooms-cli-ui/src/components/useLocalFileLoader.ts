@@ -8,6 +8,7 @@ export const LOCAL_DATA_ACCEPTED_FORMATS = {
   'text/tsv': ['.tsv'],
   'application/vnd.apache.parquet': ['.parquet'],
   'application/json': ['.json'],
+  'application/geo+json': ['.geojson'],
 };
 
 export function useLocalFileLoader() {

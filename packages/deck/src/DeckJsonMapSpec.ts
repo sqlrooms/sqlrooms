@@ -34,6 +34,7 @@ const JsonAccessor = z.union([
   RGBAColor,
   z.array(z.number()),
   ColorScaleFunction,
+  z.record(z.string(), z.unknown()),
 ]);
 
 // Keep the layer spec loose for now because `DeckJsonMap` accepts deck.gl JSON as an

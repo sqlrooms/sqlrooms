@@ -11,10 +11,7 @@ export interface SchemaExplorerRootProps {
 function SchemaExplorerRoot({className, children}: SchemaExplorerRootProps) {
   return (
     <ScrollArea
-      className={cn(
-        'relative flex h-full flex-col gap-2 p-2',
-        className,
-      )}
+      className={cn('relative flex h-full flex-col gap-2 p-2', className)}
     >
       {children}
       <ScrollBar orientation="vertical" />

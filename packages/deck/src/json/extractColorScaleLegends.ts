@@ -40,6 +40,11 @@ export function extractColorScaleLegends(options: {
     }
 
     const layerProps = layer as Record<string, unknown>;
+
+    if (layerProps.visible === false) {
+      continue;
+    }
+
     const resolvedColorScale = getColorScale(layerProps);
     if (!resolvedColorScale) {
       continue;
@@ -56,11 +61,17 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    const resolvedLegend = buildColorScaleLegend({
-      table: datasetState.prepared.table,
-      colorScale,
-      title: resolveLegendTitle(layerProps, colorScale.field),
-    });
+    let resolvedLegend: ResolvedColorLegend | null = null;
+    try {
+      resolvedLegend = buildColorScaleLegend({
+        table: datasetState.prepared.table,
+        colorScale,
+        title: resolveLegendTitle(layerProps, colorScale.field),
+      });
+    } catch {
+      // Skip legends for fields that don't exist in the dataset
+      continue;
+    }
 
     if (resolvedLegend) {
       legends.push(resolvedLegend);

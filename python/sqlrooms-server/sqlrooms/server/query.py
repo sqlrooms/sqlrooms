@@ -57,16 +57,35 @@ def retrieve(cache, query, get):
 
 
 def get_arrow(con, sql):
-    result = con.query(sql)
-    if result is None:
-        return None
-    else:
-        try:
-            arrow_result = result.to_arrow_table()
-            return arrow_result
-        except Exception as e:
-            logger.error(f"Failed to convert result to Arrow: {str(e)}")
-            raise
+    # Use explicit transaction to keep it active during .to_arrow_table().
+    # Without this, DuckDB's auto-commit closes the transaction after con.query(),
+    # causing "ActiveTransaction called without active transaction" when Arrow export
+    # needs to look up CRS metadata for geometry columns.
+    started_transaction = False
+    try:
+        con.execute("BEGIN TRANSACTION")
+        started_transaction = True
+    except Exception:
+        # Already inside a transaction — proceed without starting a new one
+        pass
+    try:
+        result = con.query(sql)
+        if result is None:
+            if started_transaction:
+                con.execute("COMMIT")
+            return None
+        arrow_result = result.to_arrow_table()
+        if started_transaction:
+            con.execute("COMMIT")
+        return arrow_result
+    except Exception as e:
+        if started_transaction:
+            try:
+                con.execute("ROLLBACK")
+            except Exception:
+                pass
+        logger.error(f"Failed to convert result to Arrow: {str(e)}")
+        raise
 
 
 def arrow_to_bytes(table):

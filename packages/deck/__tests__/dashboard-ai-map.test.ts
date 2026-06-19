@@ -1,5 +1,4 @@
 import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {
   createDashboardWithDeckMapAiTools,
   createDeckMapConfigTool,
@@ -43,6 +42,21 @@ const scatterConfig = {
     longitudeColumn: 'longitude',
     latitudeColumn: 'latitude',
   },
+};
+
+const normalizedScatterConfig = {
+  spec: scatterConfig.spec,
+  datasets: {
+    earthquakes: {
+      source: {
+        sqlQuery:
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM "earthquakes" WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    },
+  },
+  fitToData: scatterConfig.fitToData,
 };
 
 const multiLayerConfig = {
@@ -123,15 +137,10 @@ function createDeps(): DashboardToolDeps & {
 }
 
 describe('createDeckMapBoundsQuery', () => {
-  it('builds fit-to-data bounds queries from structured table ids', () => {
+  it('builds fit-to-data bounds queries from table names', () => {
     const query = createDeckMapBoundsQuery({
       source: {
-        table: makeQualifiedTableName({
-          database: 'local',
-          schema: 'main',
-          table: 'events',
-          defaultDatabase: 'local',
-        }),
+        tableName: 'events',
       },
       fitToData: {
         dataset: 'events',
@@ -140,8 +149,9 @@ describe('createDeckMapBoundsQuery', () => {
       },
     });
 
-    expect(query).toContain('SELECT * FROM "main"."events"');
-    expect(query).not.toContain('SELECT * FROM "local"."main"."events"');
+    expect(query).toContain('SELECT * FROM "events"');
+    expect(query).toContain('"longitude"');
+    expect(query).toContain('"latitude"');
   });
 });
 
@@ -160,7 +170,7 @@ describe('createDeckMapConfigTool', () => {
       kind: 'deck-map-config',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Standalone earthquake map',
-      config: scatterConfig,
+      config: normalizedScatterConfig,
     });
   });
 
@@ -240,7 +250,7 @@ describe('createDeckMapDashboardTool', () => {
     expect(deps.panels[0]).toMatchObject({
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Earthquake map',
-      config: scatterConfig,
+      config: normalizedScatterConfig,
     });
     expect(deps.currentArtifacts).toEqual(['dashboard-1']);
   });

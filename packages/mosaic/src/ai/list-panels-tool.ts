@@ -55,6 +55,7 @@ Returns array of: {id, type, title, config, issue?} for each panel.`,
             details: `Found ${panels.length} panel(s) in dashboard.`,
             data: {
               artifactId,
+              selectedTable: dashboard.selectedTable ?? null,
               panels,
             },
           },

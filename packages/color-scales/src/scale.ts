@@ -175,6 +175,9 @@ function extent(values: number[]): [number, number] {
 
 export function getSequentialDomain(values: number[]) {
   const [min, max] = extent(values);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return [0, 1] as [number, number];
+  }
   if (min === max) {
     return [min - 1, max + 1] as [number, number];
   }
@@ -184,6 +187,9 @@ export function getSequentialDomain(values: number[]) {
 
 export function getDivergingDomain(values: number[]) {
   const [min, max] = extent(values);
+  if (!Number.isFinite(min) || !Number.isFinite(max)) {
+    return [-1, 0, 1] as [number, number, number];
+  }
   if (min === max) {
     return [min - 1, min, max + 1] as [number, number, number];
   }
@@ -291,8 +297,13 @@ function getNumericScale(
 ) {
   if (colorScale.type === 'sequential') {
     const interpolator = continuousSequentialInterpolators[colorScale.scheme];
+    if (!interpolator) {
+      throw new Error(
+        `Unsupported sequential color scale scheme "${colorScale.scheme}".`,
+      );
+    }
     const domain =
-      colorScale.domain === 'auto'
+      colorScale.domain === 'auto' || !colorScale.domain
         ? getSequentialDomain(numericValues)
         : colorScale.domain;
     const colorInterpolator = colorScale.reverse
@@ -312,8 +323,13 @@ function getNumericScale(
 
   if (colorScale.type === 'diverging') {
     const interpolator = continuousDivergingInterpolators[colorScale.scheme];
+    if (!interpolator) {
+      throw new Error(
+        `Unsupported diverging color scale scheme "${colorScale.scheme}".`,
+      );
+    }
     const domain =
-      colorScale.domain === 'auto'
+      colorScale.domain === 'auto' || !colorScale.domain
         ? getDivergingDomain(numericValues)
         : colorScale.domain;
     const colorInterpolator = colorScale.reverse
@@ -338,7 +354,7 @@ function getNumericScale(
       reverse: colorScale.reverse,
     });
     const domain =
-      colorScale.domain === 'auto'
+      colorScale.domain === 'auto' || !colorScale.domain
         ? getSequentialDomain(numericValues)
         : colorScale.domain;
     const scale = scaleQuantize<number, string>()
