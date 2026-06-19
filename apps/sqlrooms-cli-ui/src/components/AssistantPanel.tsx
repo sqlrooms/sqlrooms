@@ -34,7 +34,7 @@ export const AssistantPanel: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
   );
-  const toggleCollapsed = useRoomStore((s) => s.layout.toggleCollapsed);
+  const setCollapsed = useRoomStore((s) => s.layout.setCollapsed);
   const settingsPanelOpen = useDisclosure();
   const contextDropTarget = useAssistantContextDropTarget();
   const [debugOpen, setDebugOpen] = useState(false);
@@ -73,7 +73,7 @@ export const AssistantPanel: React.FC = () => {
             className="text-muted-foreground hover:text-foreground hover:bg-foreground/10 h-6 w-6 shrink-0 focus-visible:ring-offset-0 focus-visible:ring-inset"
             title="Close panel"
             aria-label="Close panel"
-            onClick={() => toggleCollapsed('assistant-sidebar')}
+            onClick={() => setCollapsed('assistant-sidebar', true)}
           >
             <XIcon className="h-3.5 w-3.5" />
           </Button>

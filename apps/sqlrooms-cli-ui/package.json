@@ -17,6 +17,7 @@
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/db": "workspace:*",
     "@sqlrooms/db-settings": "workspace:*",
     "@sqlrooms/deck": "workspace:*",

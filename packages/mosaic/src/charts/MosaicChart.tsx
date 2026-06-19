@@ -44,7 +44,7 @@ export const MosaicChart: FC<MosaicChartProps> = ({
   );
 
   const chartContent = (
-    <div className="h-full overflow-auto p-2">
+    <div className="h-full min-h-0 min-w-0 overflow-hidden p-2">
       <MosaicChartView
         dataTable={dataTable}
         config={config}

@@ -1,19 +1,27 @@
+import {DataTableModal} from '@sqlrooms/data-table';
 import {type DataTable} from '@sqlrooms/duckdb';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  ScrollArea,
+  ScrollBar,
   useSidebar,
+  useDisclosure,
 } from '@sqlrooms/ui';
 import {ArrowUpFromLine, Database, Table2} from 'lucide-react';
-import {useCallback, useRef, type ChangeEvent} from 'react';
+import {useCallback, useRef, useState, type ChangeEvent} from 'react';
 import {useRoomStore} from '../../store';
 import {
   LOCAL_DATA_ACCEPTED_FORMATS,
@@ -30,6 +38,10 @@ export function CliDataSidebarSection() {
   const selectTable = useRoomStore((state) => state.sqlEditor.selectTable);
   const tables = useRoomStore((state) => state.db.tables);
   const {state} = useSidebar();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [previewTable, setPreviewTable] = useState<DataTable | undefined>();
+  const tableModal = useDisclosure();
+  const {onOpen: openTableModal} = tableModal;
 
   const addData = useCallback(() => {
     fileInputRef.current?.click();
@@ -53,10 +65,20 @@ export function CliDataSidebarSection() {
     [selectTable],
   );
 
+  const handlePreviewTable = useCallback(
+    (table: DataTable) => {
+      handleSelectTable(table);
+      setPreviewTable(table);
+      setPopoverOpen(false);
+      openTableModal();
+    },
+    [handleSelectTable, openTableModal],
+  );
+
   return (
     <>
       {state === 'expanded' ? (
-        <div className="grid min-h-0 gap-3">
+        <div className="flex h-full min-h-0 flex-col gap-3">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -69,16 +91,20 @@ export function CliDataSidebarSection() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SchemaExplorer className="h-auto max-h-[min(48vh,440px)] py-1 pr-0 pl-0 [&_h2]:pl-1">
+          <div className="flex min-h-0 flex-1 flex-col py-1 pr-0 pl-0">
             <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
-            <SchemaExplorer.Tree />
-          </SchemaExplorer>
+            <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
+              <SchemaExplorer.Tree />
+              <ScrollBar orientation="vertical" />
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
         </div>
       ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
             <SidebarMenuButton
               className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
               type="button"
@@ -87,39 +113,63 @@ export function CliDataSidebarSection() {
             >
               <Database className="h-4 w-4" aria-hidden />
             </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="bg-popover border-border [&_[role=menuitem]]:focus:bg-accent w-72"
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-80 p-0"
             align="start"
             side="right"
             sideOffset={8}
           >
-            <DropdownMenuLabel>Tables</DropdownMenuLabel>
-            {tables.map((table) => (
-              <DropdownMenuItem
-                key={`${table.table.database ?? ''}.${table.table.schema}.${table.table.table}`}
-                onClick={() => handleSelectTable(table)}
-              >
-                <Table2 className="h-4 w-4" aria-hidden />
-                <div className="grid min-w-0 gap-px">
-                  <span className="truncate">{table.table.table}</span>
-                  <small className="text-muted-foreground truncate text-xs">
-                    {formatTableMeta(table)}
-                  </small>
-                </div>
-              </DropdownMenuItem>
-            ))}
-            {tables.length === 0 ? (
-              <DropdownMenuItem disabled>No tables</DropdownMenuItem>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={addData}>
-              <ArrowUpFromLine className="h-4 w-4" aria-hidden />
-              Add data
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <Command>
+              <CommandInput placeholder="Search tables..." />
+              <CommandList className="max-h-none overflow-hidden">
+                <CommandEmpty>No tables found.</CommandEmpty>
+                <ScrollArea className="h-[min(70vh,360px)] overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block">
+                  <CommandGroup heading="Tables">
+                    {tables.map((table) => (
+                      <CommandItem
+                        key={table.table.toString()}
+                        value={`${table.table.toString()} ${formatTableMeta(table)}`}
+                        onSelect={() => {
+                          handlePreviewTable(table);
+                        }}
+                      >
+                        <Table2 className="h-4 w-4" aria-hidden />
+                        <div className="grid min-w-0 gap-px">
+                          <span className="truncate">{table.table.table}</span>
+                          <small className="text-muted-foreground truncate text-xs">
+                            {formatTableMeta(table)}
+                          </small>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </ScrollArea>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem
+                    value="add data import file"
+                    onSelect={() => {
+                      addData();
+                      setPopoverOpen(false);
+                    }}
+                  >
+                    <ArrowUpFromLine className="h-4 w-4" aria-hidden />
+                    Add data
+                  </CommandItem>
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       )}
+      <DataTableModal
+        title={previewTable?.table.table}
+        query={
+          previewTable ? `SELECT * FROM ${previewTable.table.toString()}` : ''
+        }
+        tableModal={tableModal}
+      />
       <input
         ref={fileInputRef}
         className="sr-only"
