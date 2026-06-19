@@ -125,11 +125,20 @@ function makeQualifiedTableNameForAi({
   database,
   schema,
   table,
+  defaultDatabase,
 }: Pick<
   QualifiedTableName,
-  'database' | 'schema' | 'table'
+  'database' | 'schema' | 'table' | 'defaultDatabase'
 >): QualifiedTableName {
-  const tableId = [database, schema, table]
+  const fullTableId = [database, schema, table]
+    .filter((id) => id !== undefined && id !== null)
+    .map((id) => escapeTableIdPart(id))
+    .join('.');
+  const tableId = [
+    database && database !== defaultDatabase ? database : undefined,
+    schema,
+    table,
+  ]
     .filter((id) => id !== undefined && id !== null)
     .map((id) => escapeTableIdPart(id))
     .join('.');
@@ -137,6 +146,7 @@ function makeQualifiedTableNameForAi({
     database,
     schema,
     table,
+    defaultDatabase,
     toArray: ({
       includeDatabase = true,
       includeSchema = true,
@@ -149,6 +159,7 @@ function makeQualifiedTableNameForAi({
         includeSchema ? schema : undefined,
         table,
       ].filter((id): id is string => id !== undefined && id !== null),
+    toFullString: () => fullTableId,
     toString: () => tableId,
   };
 }
@@ -157,8 +168,8 @@ function makeQualifiedTableNameForAi({
  * Builds the canonical qualified identity for an AI-visible table.
  *
  * @param table - Data table metadata from the DuckDB catalog.
- * @returns A `QualifiedTableName` whose `toString()` is the fully quoted table
- *   identifier expected at string-only tool boundaries.
+ * @returns A `QualifiedTableName` whose `toString()` is the canonical quoted
+ *   table reference expected at string-only tool boundaries.
  */
 export function getQualifiedTableNameForAi(
   table: DataTable,
@@ -168,14 +179,15 @@ export function getQualifiedTableNameForAi(
     database: table.table?.database || table.database,
     schema: table.table?.schema || table.schema,
     table: tableName,
+    defaultDatabase: table.table?.defaultDatabase,
   });
 }
 
 /**
- * Gets the fully quoted canonical table identifier for AI tools.
+ * Gets the canonical quoted table identifier for AI tools.
  *
  * @param table - Data table metadata from the DuckDB catalog.
- * @returns Fully quoted table ID derived from the table's qualified identity.
+ * @returns Canonical table ID derived from the table's qualified identity.
  */
 export function getTableIdForAi(table: DataTable): string {
   return getQualifiedTableNameForAi(table).toString();
@@ -356,7 +368,7 @@ export function formatOtherTableScopesForAi(
 
   return [
     `${summary.outsideCurrentDatabaseMainSchemaCount.toLocaleString()} additional visible tables/views exist outside the current local main schema.`,
-    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved fully quoted tableId rather than only a bare table name.`,
+    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved canonical tableId rather than only a bare table name.`,
     locationSummary
       ? `Outside-main locations: ${locationSummary}${hiddenLocationCount}.`
       : '',
@@ -440,7 +452,7 @@ function formatBudgetedTableContextForAi(
   maxChars: number,
 ): string {
   const sections = [
-    'Schema context trimmed. Users may say bare names; after resolving, forward tableId, the fully quoted QualifiedTableName.toString() string. Use list_tables and read_table_schema with tableId before SQL.',
+    'Schema context trimmed. Users may say bare names; after resolving, forward tableId, the canonical QualifiedTableName.toString() string. It may omit the default database. Use list_tables and read_table_schema with tableId before SQL.',
   ];
 
   addSectionWithinBudget(
@@ -548,7 +560,7 @@ export function formatTablesForLLM(
     summaryTables.length;
 
   const hybridContext = joinSections([
-    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here, which is the fully quoted SQL identifier string from QualifiedTableName.toString(), rather than only the bare/display name.',
+    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here, which is the quoted SQLRooms table reference from QualifiedTableName.toString(), rather than only the bare/display name.',
     `Full schemas shown for the first ${fullSchemaTables.length} of ${currentMainSchemaTables.length} available tables:`,
     fullSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
     summaryTables.length > 0

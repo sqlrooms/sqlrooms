@@ -147,6 +147,16 @@ export type DuckDbSliceState = {
     currentDatabase: string | undefined;
 
     /**
+     * Create a context-aware qualified table name.
+     *
+     * String inputs are treated as table identifier names, not SQL references;
+     * use findTable() when resolving an existing table reference.
+     */
+    qualifyTableName(
+      tableName: string | QualifiedTableNameInput,
+    ): QualifiedTableName;
+
+    /**
      * Cache of refreshed table schemas
      */
     tables: DataTable[];
@@ -353,6 +363,11 @@ export type DuckDbSliceState = {
   };
 };
 
+type QualifiedTableNameInput = Pick<
+  QualifiedTableName,
+  'database' | 'schema' | 'table' | 'defaultDatabase'
+>;
+
 export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
   /**
@@ -392,6 +407,19 @@ export function createDuckDbSlice({
         }) satisfies LoadSchemaCatalogFilterFunction));
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get, store) => {
+      const parseTableReferenceParts = (
+        tableName: string,
+      ): QualifiedTableNameInput => {
+        const parsed = parseQualifiedSqlIdentifier(tableName);
+        return parsed?.table
+          ? {
+              database: parsed.database,
+              schema: parsed.schema,
+              table: parsed.table,
+            }
+          : {table: tableName};
+      };
+
       /**
        * Internal helper to load a table schema by exact name, bypassing the visibility filter.
        * Used when performing exact lookups (e.g., checking if a specific table exists).
@@ -399,11 +427,18 @@ export function createDuckDbSlice({
       const loadTableSchemaByName = async (
         tableName: string | QualifiedTableName,
       ): Promise<DataTable | undefined> => {
-        const qualifiedName = isQualifiedTableName(tableName)
-          ? tableName
-          : makeQualifiedTableName({table: tableName});
+        const tableNameParts =
+          typeof tableName === 'string'
+            ? parseTableReferenceParts(tableName)
+            : tableName;
+        const qualifiedName = get().db.qualifyTableName(tableNameParts);
         const connector = await get().db.getConnector();
-        const [table] = await loadTableSchemas(connector, qualifiedName);
+        const [table] = await loadTableSchemas(connector, {
+          database: qualifiedName.database,
+          schema: qualifiedName.schema,
+          table: qualifiedName.table,
+          defaultDatabase: get().db.currentDatabase,
+        });
         return table;
       };
 
@@ -418,6 +453,18 @@ export function createDuckDbSlice({
           tableRowCounts: {},
           schemaTrees: undefined,
           queryCache: {},
+
+          qualifyTableName(tableName) {
+            const {currentDatabase, currentSchema} = get().db;
+            const parts =
+              typeof tableName === 'string' ? {table: tableName} : tableName;
+            return makeQualifiedTableName({
+              database: parts.database ?? currentDatabase,
+              schema: parts.schema ?? currentSchema,
+              table: parts.table,
+              defaultDatabase: parts.defaultDatabase ?? currentDatabase,
+            });
+          },
 
           setConnector: (connector: DuckDbConnector) => {
             set(
@@ -498,15 +545,14 @@ export function createDuckDbSlice({
             } = options || {};
 
             // For temp tables/views, DuckDB requires the "temp" database
-            const baseQualifiedName = isQualifiedTableName(tableName)
-              ? tableName
-              : makeQualifiedTableName({table: tableName});
+            const baseQualifiedName = get().db.qualifyTableName(tableName);
 
             const qualifiedName = temp
               ? makeQualifiedTableName({
                   table: baseQualifiedName.table,
                   schema: baseQualifiedName.schema,
                   database: 'temp',
+                  defaultDatabase: get().db.currentDatabase,
                 })
               : baseQualifiedName;
 
@@ -579,18 +625,18 @@ export function createDuckDbSlice({
            */
           async getTableRowCount(table, schema = 'main') {
             return get().db.loadTableRowCount(
-              makeQualifiedTableName({table, schema}),
+              get().db.qualifyTableName({table, schema}),
             );
           },
 
           async loadTableRowCount(tableName: string | QualifiedTableName) {
             const {schema, database, table} =
               typeof tableName === 'string'
-                ? {table: tableName}
-                : tableName || {};
+                ? get().db.qualifyTableName(parseTableReferenceParts(tableName))
+                : get().db.qualifyTableName(tableName);
             const connector = await get().db.getConnector();
             const result = await connector.query(
-              `SELECT COUNT(*) FROM ${makeQualifiedTableName({
+              `SELECT COUNT(*) FROM ${get().db.qualifyTableName({
                 schema,
                 database,
                 table,
@@ -613,22 +659,29 @@ export function createDuckDbSlice({
             return loadTableSchemas(connector, {
               ...filter,
               filterFunction: loadTableSchemasFilter,
+              defaultDatabase: get().db.currentDatabase,
             });
           },
 
           async checkTableExists(tableName: string | QualifiedTableName) {
-            const table = await loadTableSchemaByName(tableName);
+            const table =
+              get().db.findTable(tableName) ??
+              (await loadTableSchemaByName(tableName));
             return Boolean(table);
           },
 
           async dropRelation(tableName): Promise<void> {
             const connector = await get().db.getConnector();
-            const qualifiedTable = isQualifiedTableName(tableName)
-              ? tableName
-              : makeQualifiedTableName({table: tableName});
             const table =
-              get().db.findTable(qualifiedTable) ??
-              (await loadTableSchemaByName(qualifiedTable));
+              get().db.findTable(tableName) ??
+              (await loadTableSchemaByName(tableName));
+            const qualifiedTable =
+              table?.table ??
+              (isQualifiedTableName(tableName)
+                ? get().db.qualifyTableName(tableName)
+                : get().db.qualifyTableName(
+                    parseTableReferenceParts(tableName),
+                  ));
             const isView = table?.isView;
             if (isView) {
               await connector.query(`DROP VIEW IF EXISTS ${qualifiedTable};`);
@@ -640,12 +693,16 @@ export function createDuckDbSlice({
 
           async dropTable(tableName): Promise<void> {
             const connector = await get().db.getConnector();
-            const qualifiedTable = isQualifiedTableName(tableName)
-              ? tableName
-              : makeQualifiedTableName({table: tableName});
             const table =
-              get().db.findTable(qualifiedTable) ??
-              (await loadTableSchemaByName(qualifiedTable));
+              get().db.findTable(tableName) ??
+              (await loadTableSchemaByName(tableName));
+            const qualifiedTable =
+              table?.table ??
+              (isQualifiedTableName(tableName)
+                ? get().db.qualifyTableName(tableName)
+                : get().db.qualifyTableName(
+                    parseTableReferenceParts(tableName),
+                  ));
 
             if (table?.isView) {
               throw new Error(
@@ -658,9 +715,7 @@ export function createDuckDbSlice({
           },
 
           async addTable(tableName, data) {
-            const qualifiedName = isQualifiedTableName(tableName)
-              ? tableName
-              : makeQualifiedTableName({table: tableName});
+            const qualifiedName = get().db.qualifyTableName(tableName);
 
             const {db} = get();
             if (data instanceof arrow.Table) {
@@ -685,9 +740,7 @@ export function createDuckDbSlice({
           },
 
           async setTableRowCount(tableName, rowCount) {
-            const qualifiedName = isQualifiedTableName(tableName)
-              ? tableName
-              : makeQualifiedTableName({table: tableName});
+            const qualifiedName = get().db.qualifyTableName(tableName);
             set((state) =>
               produce(state, (draft) => {
                 draft.db.tableRowCounts[qualifiedName.toString()] = rowCount;
@@ -714,6 +767,18 @@ export function createDuckDbSlice({
                       (!database || t.table.database === database),
                   )
                 : undefined;
+            const findUniqueMatchingTable = ({
+              table,
+              schema,
+            }: Partial<QualifiedTableName>) => {
+              if (!table) return undefined;
+              const matches = tables.filter(
+                (t) =>
+                  t.table.table === table &&
+                  (!schema || t.table.schema === schema),
+              );
+              return matches.length === 1 ? matches[0] : undefined;
+            };
 
             const {table, schema, database} = {
               schema: currentSchema,
@@ -722,7 +787,12 @@ export function createDuckDbSlice({
                 ? (parseQualifiedSqlIdentifier(tableName) ?? {})
                 : tableName),
             };
-            return findMatchingTable({table, schema, database});
+            const exactMatch = findMatchingTable({table, schema, database});
+            if (exactMatch) return exactMatch;
+            if (database && database !== currentDatabase) {
+              return findUniqueMatchingTable({table, schema});
+            }
+            return undefined;
           },
 
           findTableByName(tableName: string | QualifiedTableName) {
@@ -748,18 +818,27 @@ export function createDuckDbSlice({
                   const result = await connector.query(
                     `SELECT current_schema() AS schema, current_database() AS database`,
                   );
+                  const currentSchemaValue = result.getChild('schema')?.get(0);
+                  const currentDatabaseValue = result
+                    .getChild('database')
+                    ?.get(0);
+                  const currentSchema =
+                    currentSchemaValue == null
+                      ? undefined
+                      : String(currentSchemaValue);
+                  const currentDatabase =
+                    currentDatabaseValue == null
+                      ? undefined
+                      : String(currentDatabaseValue);
                   set((state) =>
                     produce(state, (draft) => {
-                      draft.db.currentSchema = result
-                        .getChild('schema')
-                        ?.get(0);
-                      draft.db.currentDatabase = result
-                        .getChild('database')
-                        ?.get(0);
+                      draft.db.currentSchema = currentSchema;
+                      draft.db.currentDatabase = currentDatabase;
                     }),
                   );
                   schemasWithTables = await loadSchemaCatalog(connector, {
                     filterFunction: effectiveSchemaCatalogFilter,
+                    defaultDatabase: currentDatabase,
                   });
                 } while (pendingSchemaRefresh);
 

@@ -79,6 +79,30 @@ describe('makeQualifiedTableName', () => {
     expect(table.toArray()).toEqual(['local.db', 'ma"in', 'events.2026']);
     expect(table.toString()).toBe('"local.db"."ma""in"."events.2026"');
   });
+
+  it('omits the default database from the canonical string', () => {
+    const table = makeQualifiedTableName({
+      database: 'local',
+      defaultDatabase: 'local',
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(table.toString()).toBe('"main"."earthquakes"');
+    expect(table.toFullString()).toBe('"local"."main"."earthquakes"');
+  });
+
+  it('keeps non-default databases in the canonical string', () => {
+    const table = makeQualifiedTableName({
+      database: 'remote',
+      defaultDatabase: 'local',
+      schema: 'main',
+      table: 'earthquakes',
+    });
+
+    expect(table.toString()).toBe('"remote"."main"."earthquakes"');
+    expect(table.toFullString()).toBe('"remote"."main"."earthquakes"');
+  });
 });
 
 describe('parseQualifiedSqlIdentifier', () => {

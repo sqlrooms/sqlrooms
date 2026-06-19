@@ -21,6 +21,7 @@ const tableSchemas: DataTable[] = [
   {
     table: {
       table: 'users',
+      toFullString: () => 'users',
       toString: () => 'users',
     },
     isView: false,
@@ -38,6 +39,7 @@ const tableSchemas: DataTable[] = [
   {
     table: {
       table: 'orders',
+      toFullString: () => 'orders',
       toString: () => 'orders',
     },
     isView: false,

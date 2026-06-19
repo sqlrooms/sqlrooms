@@ -191,12 +191,34 @@ describe('DuckDbSlice', () => {
       );
 
       expect(table).toBeDefined();
+      expect(table!.table.toString()).toBe('"analytics.2026"."daily events"');
+      expect(table!.table.toFullString()).toBe(
+        `"${store.getState().db.currentDatabase}"."analytics.2026"."daily events"`,
+      );
       expect(
         store.getState().db.findTable('"analytics.2026"."daily events"'),
       ).toBe(table);
       expect(store.getState().db.findTable(table!.table.toString())).toBe(
         table,
       );
+    });
+
+    it('resolves stale fully-qualified default database ids by unique schema/table', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE stale_default_db_lookup (id INT)');
+      const tables = await store.getState().db.refreshTableSchemas();
+      const table = tables.find(
+        (candidate) =>
+          candidate.table.table === 'stale_default_db_lookup' &&
+          candidate.table.schema === 'main',
+      );
+
+      expect(table).toBeDefined();
+      expect(
+        store
+          .getState()
+          .db.findTable('"renamed-file"."main"."stale_default_db_lookup"'),
+      ).toBe(table);
     });
 
     it('parses dotted strings as qualified references and quoted dots as literal names', async () => {

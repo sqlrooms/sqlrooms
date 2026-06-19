@@ -53,7 +53,7 @@ export interface ChartBuilderField {
 
 /**
  * Result of table resolution.
- * tableName is the fully quoted string boundary form
+ * tableName is the canonical quoted string boundary form
  * (QualifiedTableName.toString()); qualifiedName is the canonical structured
  * identity when available.
  */
