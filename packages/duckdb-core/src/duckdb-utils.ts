@@ -52,11 +52,17 @@ function qualifiedTableNameToFullString(tableName: QualifiedTableName): string {
 }
 
 /**
- * Get a qualified table name from a table name, schema, and database.
+ * Builds a pure QualifiedTableName value from explicit identifier parts.
  * @param table - The name of the table.
  * @param schema - The schema of the table.
  * @param database - The database of the table.
  * @returns The qualified table name.
+ *
+ * @remarks
+ * Prefer `state.db.qualifyTableName()` when a table reference should use the
+ * current/default database context, and prefer `state.db.findTable()` when resolving
+ * an existing table reference from user input or persisted table IDs.
+ * Use this helper only when all qualification context is already known.
  */
 export function makeQualifiedTableName({
   database,
