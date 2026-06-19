@@ -1,8 +1,4 @@
-import type {
-  DataTable,
-  QualifiedTableName,
-  TableColumn,
-} from '@sqlrooms/duckdb';
+import type {DataTable, TableColumn} from '@sqlrooms/duckdb';
 
 /**
  * Prompt-size limits used when formatting table schema context for an AI model.
@@ -113,84 +109,6 @@ export function getAiTableSchemaContextLimits(
  */
 export function getTableNameForAi(table: DataTable): string {
   return table.table?.table || table.tableName;
-}
-
-function escapeTableIdPart(id: string): string {
-  const str = String(id);
-  if (str.startsWith('"') && str.endsWith('"')) return str;
-  return `"${str.replace(/"/g, '""')}"`;
-}
-
-function makeQualifiedTableNameForAi({
-  database,
-  schema,
-  table,
-  defaultDatabase,
-}: Pick<
-  QualifiedTableName,
-  'database' | 'schema' | 'table' | 'defaultDatabase'
->): QualifiedTableName {
-  const fullTableId = [database, schema, table]
-    .filter((id) => id !== undefined && id !== null)
-    .map((id) => escapeTableIdPart(id))
-    .join('.');
-  const tableId = [
-    database && database !== defaultDatabase ? database : undefined,
-    schema,
-    table,
-  ]
-    .filter((id) => id !== undefined && id !== null)
-    .map((id) => escapeTableIdPart(id))
-    .join('.');
-  return {
-    database,
-    schema,
-    table,
-    defaultDatabase,
-    toArray: ({
-      includeDatabase = true,
-      includeSchema = true,
-    }: {
-      includeDatabase?: boolean;
-      includeSchema?: boolean;
-    } = {}) =>
-      [
-        includeDatabase ? database : undefined,
-        includeSchema ? schema : undefined,
-        table,
-      ].filter((id): id is string => id !== undefined && id !== null),
-    toFullString: () => fullTableId,
-    toString: () => tableId,
-  };
-}
-
-/**
- * Builds the canonical qualified identity for an AI-visible table.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns A `QualifiedTableName` whose `toString()` is the canonical quoted
- *   table reference expected at string-only tool boundaries.
- */
-export function getQualifiedTableNameForAi(
-  table: DataTable,
-): QualifiedTableName {
-  const tableName = table.table?.table || table.tableName;
-  return makeQualifiedTableNameForAi({
-    database: table.table?.database || table.database,
-    schema: table.table?.schema || table.schema,
-    table: tableName,
-    defaultDatabase: table.table?.defaultDatabase,
-  });
-}
-
-/**
- * Gets the canonical quoted table identifier for AI tools.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns Canonical table ID derived from the table's qualified identity.
- */
-export function getTableIdForAi(table: DataTable): string {
-  return getQualifiedTableNameForAi(table).toString();
 }
 
 /**
@@ -396,7 +314,7 @@ function formatColumnForAi(column: TableColumn): string {
  */
 export function formatTableSchemaForAi(table: DataTable): string {
   const header = [
-    `${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(table)})`,
+    `${getFullTableNameForAi(table)} (tableId: ${table.table.toString()})`,
   ];
   const rowCount = formatRowCount(table.rowCount);
   if (rowCount) header.push(`[${rowCount}]`);
@@ -420,9 +338,9 @@ export function formatTableSchemaForAi(table: DataTable): string {
  */
 export function formatTableSummaryForAi(table: DataTable): string {
   const rowCount = formatRowCount(table.rowCount);
-  return `- ${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(
+  return `- ${getFullTableNameForAi(
     table,
-  )})${rowCount ? ` [${rowCount}]` : ''}`;
+  )} (tableId: ${table.table.toString()})${rowCount ? ` [${rowCount}]` : ''}`;
 }
 
 function fitTextToMaxChars(text: string, maxChars?: number): string {

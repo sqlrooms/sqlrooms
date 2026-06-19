@@ -1,4 +1,5 @@
 import type {DataTable} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName} from '../../duckdb-core/src/duckdb-utils';
 import {
   formatTablesForLLM,
   getTablesForAiScope,
@@ -16,11 +17,12 @@ function makeTable(
 ): DataTable {
   return {
     tableName,
-    table: {
+    table: makeQualifiedTableName({
       database: options.database,
       schema: options.schema ?? 'main',
       table: tableName,
-    },
+    }),
+    isView: false,
     database: options.database,
     schema: options.schema ?? 'main',
     columns: options.columns ?? [{name: 'id', type: 'INTEGER'}],

@@ -50,7 +50,6 @@ export {
   getDatabaseNameForAi,
   getFullTableNameForAi,
   getSchemaNameForAi,
-  getTableIdForAi,
   getTablesForAiScope,
   getTableNameForAi,
 } from './tools/tableSchemaContext';
