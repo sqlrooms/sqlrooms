@@ -1,6 +1,6 @@
 import type {DataTable} from '@sqlrooms/db';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
-import {SpinnerPane} from '@sqlrooms/ui';
+import {ScrollArea, ScrollBar, SpinnerPane} from '@sqlrooms/ui';
 import {FC, useCallback} from 'react';
 import {useStoreWithMosaic} from '../../MosaicSlice';
 import {DataTableSelectorEmptyState} from '../../components/DataTableSelector';
@@ -91,12 +91,13 @@ export const DataTableBlockRenderer: FC<
           tables={tables}
           onTableChange={handleTableChange}
         />
-        <div className="min-h-0 flex-1 overflow-auto">
+        <ScrollArea className="min-h-0 flex-1">
           <DataTableExplorer.Table>
             <DataTableExplorer.Header />
             <DataTableExplorer.Rows />
           </DataTableExplorer.Table>
-        </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
         <DataTableExplorer.StatusBar />
       </div>
     </DataTableExplorer>
