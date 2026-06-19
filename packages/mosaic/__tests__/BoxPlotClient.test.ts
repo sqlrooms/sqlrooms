@@ -1,13 +1,22 @@
 import {Selection, clausePoint} from '@uwdata/mosaic-core';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {
   BoxPlotClient,
   buildBoxPlotQuery,
 } from '../src/charts/chart-types/box-plot/renderer/BoxPlotClient';
 
+const table = (name: string, database = 'local') =>
+  makeQualifiedTableName({
+    database,
+    schema: 'main',
+    table: name,
+    defaultDatabase: database,
+  });
+
 describe('BoxPlotClient', () => {
   it('builds grouped box plot SQL with quantiles, whiskers, and outliers', () => {
     const sql = buildBoxPlotQuery({
-      tableName: 'earthquakes',
+      table: table('earthquakes'),
       x: 'region',
       y: 'magnitude',
     });
@@ -24,20 +33,20 @@ describe('BoxPlotClient', () => {
     expect(sql).toContain('UNION ALL');
   });
 
-  it('uses pre-quoted qualified table references without double quoting', () => {
+  it('omits the database from Mosaic SQL table references', () => {
     const sql = buildBoxPlotQuery({
-      tableName: '"local"."main"."earthquakes"',
+      table: table('earthquakes'),
       x: 'region',
       y: 'magnitude',
     });
 
-    expect(sql).toContain('FROM "local"."main"."earthquakes"');
-    expect(sql).not.toContain('"""local"""');
+    expect(sql).toContain('FROM "main"."earthquakes"');
+    expect(sql).not.toContain('FROM "local"."main"."earthquakes"');
   });
 
-  it('preserves dotted table-name parts in quoted table references', () => {
+  it('preserves dotted table-name parts in canonical table references', () => {
     const sql = buildBoxPlotQuery({
-      tableName: '"main"."events.2026"',
+      table: table('events.2026'),
       x: 'region',
       y: 'magnitude',
     });
@@ -52,7 +61,7 @@ describe('BoxPlotClient', () => {
     const client = new BoxPlotClient({
       onStateChange: () => {},
       selection,
-      tableName: 'events',
+      table: table('events'),
       x: 'kind',
       y: 'score',
     });
@@ -72,7 +81,7 @@ describe('BoxPlotClient', () => {
         latestState = state;
       },
       selection,
-      tableName: 'events',
+      table: table('events'),
       x: 'kind',
       y: 'score',
     });
@@ -97,7 +106,7 @@ describe('BoxPlotClient', () => {
         latestState = state;
       },
       selection: Selection.crossfilter(),
-      tableName: 'events',
+      table: table('events'),
       x: 'kind',
       y: 'score',
     });

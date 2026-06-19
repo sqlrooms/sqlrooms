@@ -229,15 +229,12 @@ function DatabaseManager() {
 ### Working with Qualified Table Names
 
 ```tsx
-import {
-  makeQualifiedTableName,
-  quoteTableReference,
-  resolveTableReference,
-} from '@sqlrooms/duckdb';
+import {quoteTableReference, resolveTableReference} from '@sqlrooms/duckdb';
 import {useRoomStore} from './store';
 import {Button} from '@sqlrooms/ui';
 
 function QualifiedTableOps() {
+  const qualifyTableName = useRoomStore((state) => state.db.qualifyTableName);
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
   );
@@ -245,17 +242,20 @@ function QualifiedTableOps() {
   const checkTableExists = useRoomStore((state) => state.db.checkTableExists);
 
   const run = async () => {
-    // Support for database.schema.table naming
-    const qualifiedTable = makeQualifiedTableName({
+    // Store-aware qualification knows which database is the default.
+    const qualifiedTable = qualifyTableName({
       database: 'mydb',
       schema: 'public',
       table: 'users',
     });
+    // toString() is the canonical portable table ID; toFullString() includes
+    // the database when explicit catalog qualification is needed.
     const tableSql = quoteTableReference(qualifiedTable.toString());
     const resolved = resolveTableReference([{table: qualifiedTable}], 'users');
 
     await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
     console.log('Quoted table reference:', tableSql);
+    console.log('Fully qualified reference:', qualifiedTable.toFullString());
     console.log('Resolved table:', resolved.table?.table.toString());
     const tableExists = await checkTableExists(qualifiedTable);
     console.log('Table exists after create:', tableExists);

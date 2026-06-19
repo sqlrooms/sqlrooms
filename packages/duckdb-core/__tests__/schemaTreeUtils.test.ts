@@ -103,7 +103,6 @@ describe('schema tree table lookup utilities', () => {
     const result = findTableInSchemaTrees(
       schemaTrees,
       '"local"."main"."earthquakes"',
-      makeQualifiedTableName,
     );
 
     expect(result?.table.table).toBe('earthquakes');
@@ -117,11 +116,7 @@ describe('schema tree table lookup utilities', () => {
       {database: 'remote', schema: 'main', tables: [remote]},
     ]);
 
-    const result = findTableInSchemaTrees(
-      schemaTrees,
-      'earthquakes',
-      makeQualifiedTableName,
-    );
+    const result = findTableInSchemaTrees(schemaTrees, 'earthquakes');
 
     expect(result).toBeUndefined();
   });

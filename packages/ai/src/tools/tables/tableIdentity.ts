@@ -9,8 +9,8 @@ import {resolveTableReference, type DataTable} from '@sqlrooms/duckdb-core';
  */
 export type TableIdentitySummary = {
   /**
-   * Fully quoted SQL identifier from QualifiedTableName.toString(), used at
-   * string-only tool boundaries.
+   * Canonical quoted SQLRooms table reference from
+   * QualifiedTableName.toString(), used at string-only tool boundaries.
    */
   tableId: string;
   database?: string;
@@ -25,7 +25,7 @@ export type TableIdentitySummary = {
  * Returns the canonical string identity for a visible table.
  *
  * @param table - DataTable to identify.
- * @returns Fully quoted table id from the table's QualifiedTableName.
+ * @returns Canonical quoted table id from the table's QualifiedTableName.
  */
 export function getCanonicalTableId(table: DataTable): string {
   return table.table.toString();

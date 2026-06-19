@@ -1,4 +1,3 @@
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {InputCellContent} from './components/InputCellContent';
@@ -137,11 +136,13 @@ export function createDefaultCellRegistry(): CellRegistry {
           cell.data as SqlCellData,
           convertToValidColumnOrTableName,
         );
-        const newTableName = makeQualifiedTableName({
-          table: effectiveResultName,
-          schema: schemaName,
-          database: state.db.currentDatabase,
-        }).toString();
+        const newTableName = state.db
+          .qualifyTableName({
+            table: effectiveResultName,
+            schema: schemaName,
+            database: state.db.currentDatabase,
+          })
+          .toString();
 
         if (newTableName === oldResultView) {
           return;

@@ -1,8 +1,4 @@
-import type {
-  DataTable,
-  QualifiedTableName,
-  TableColumn,
-} from '@sqlrooms/duckdb';
+import type {DataTable, TableColumn} from '@sqlrooms/duckdb';
 
 /**
  * Prompt-size limits used when formatting table schema context for an AI model.
@@ -105,124 +101,14 @@ export function getAiTableSchemaContextLimits(
   };
 }
 
-/**
- * Gets the display table name for AI-facing context.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns The bare table name when available, falling back to `tableName`.
- */
-export function getTableNameForAi(table: DataTable): string {
-  return table.table?.table || table.tableName;
-}
-
-function escapeTableIdPart(id: string): string {
-  const str = String(id);
-  if (str.startsWith('"') && str.endsWith('"')) return str;
-  return `"${str.replace(/"/g, '""')}"`;
-}
-
-function makeQualifiedTableNameForAi({
-  database,
-  schema,
-  table,
-}: Pick<
-  QualifiedTableName,
-  'database' | 'schema' | 'table'
->): QualifiedTableName {
-  const tableId = [database, schema, table]
-    .filter((id) => id !== undefined && id !== null)
-    .map((id) => escapeTableIdPart(id))
-    .join('.');
-  return {
-    database,
-    schema,
-    table,
-    toArray: ({
-      includeDatabase = true,
-      includeSchema = true,
-    }: {
-      includeDatabase?: boolean;
-      includeSchema?: boolean;
-    } = {}) =>
-      [
-        includeDatabase ? database : undefined,
-        includeSchema ? schema : undefined,
-        table,
-      ].filter((id): id is string => id !== undefined && id !== null),
-    toString: () => tableId,
-  };
-}
-
-/**
- * Builds the canonical qualified identity for an AI-visible table.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns A `QualifiedTableName` whose `toString()` is the fully quoted table
- *   identifier expected at string-only tool boundaries.
- */
-export function getQualifiedTableNameForAi(
-  table: DataTable,
-): QualifiedTableName {
-  const tableName = table.table?.table || table.tableName;
-  return makeQualifiedTableNameForAi({
-    database: table.table?.database || table.database,
-    schema: table.table?.schema || table.schema,
-    table: tableName,
-  });
-}
-
-/**
- * Gets the fully quoted canonical table identifier for AI tools.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns Fully quoted table ID derived from the table's qualified identity.
- */
-export function getTableIdForAi(table: DataTable): string {
-  return getQualifiedTableNameForAi(table).toString();
-}
-
-/**
- * Gets the schema name for an AI-visible table.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns Schema name when known.
- */
-export function getSchemaNameForAi(table: DataTable): string | undefined {
-  return table.table?.schema || table.schema;
-}
-
-/**
- * Gets the database name for an AI-visible table.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns Database name when known.
- */
-export function getDatabaseNameForAi(table: DataTable): string | undefined {
-  return table.table?.database || table.database;
-}
-
-/**
- * Gets a compact display name for a table in AI-facing summaries.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns `schema.table` for non-main schemas, otherwise the bare table name.
- */
-export function getFullTableNameForAi(table: DataTable): string {
-  const tableName = getTableNameForAi(table);
-  const schemaName = getSchemaNameForAi(table);
-  return schemaName && schemaName !== 'main'
-    ? `${schemaName}.${tableName}`
-    : tableName;
-}
-
 function isTableInAiScope(
   table: DataTable,
   currentDatabase?: string,
   options: AiTableScopeOptions = {},
 ): boolean {
   const {scope = 'main', schema, database} = options;
-  const tableSchema = getSchemaNameForAi(table);
-  const tableDatabase = getDatabaseNameForAi(table);
+  const tableSchema = table.table.schema;
+  const tableDatabase = table.table.database;
 
   if (database && tableDatabase !== database) return false;
   if (schema && tableSchema !== schema) return false;
@@ -280,8 +166,8 @@ export function getAiTableScopeSummary(
   >();
 
   for (const table of outsideCurrentDatabaseMainSchemaTables) {
-    const database = getDatabaseNameForAi(table);
-    const schema = getSchemaNameForAi(table);
+    const database = table.table.database;
+    const schema = table.table.schema;
     const key = `${database ?? ''}\x00${schema ?? ''}`;
     const existing = byLocation.get(key);
     if (existing) {
@@ -297,12 +183,12 @@ export function getAiTableScopeSummary(
       outsideCurrentDatabaseMainSchemaTables.length,
     otherCurrentDatabaseSchemaCount:
       outsideCurrentDatabaseMainSchemaTables.filter((table) => {
-        const database = getDatabaseNameForAi(table);
+        const database = table.table.database;
         return !database || database === currentDatabase;
       }).length,
     otherDatabaseCount: outsideCurrentDatabaseMainSchemaTables.filter(
       (table) => {
-        const database = getDatabaseNameForAi(table);
+        const database = table.table.database;
         return database && database !== currentDatabase;
       },
     ).length,
@@ -356,7 +242,7 @@ export function formatOtherTableScopesForAi(
 
   return [
     `${summary.outsideCurrentDatabaseMainSchemaCount.toLocaleString()} additional visible tables/views exist outside the current local main schema.`,
-    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved fully quoted tableId rather than only a bare table name.`,
+    `Use list_tables with database, schema, or pattern filters to inspect them, then forward the resolved canonical tableId rather than only a bare table name.`,
     locationSummary
       ? `Outside-main locations: ${locationSummary}${hiddenLocationCount}.`
       : '',
@@ -379,13 +265,11 @@ function formatColumnForAi(column: TableColumn): string {
  * Formats a table with full column schema for AI context.
  *
  * @param table - Data table metadata to format.
- * @returns Multi-line schema text including display name, canonical table ID,
- *   optional row count, columns, and optional comment.
+ * @returns Multi-line schema text including canonical table ID, optional row
+ *   count, columns, and optional comment.
  */
 export function formatTableSchemaForAi(table: DataTable): string {
-  const header = [
-    `${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(table)})`,
-  ];
+  const header = [`tableId: ${table.table.toString()}`];
   const rowCount = formatRowCount(table.rowCount);
   if (rowCount) header.push(`[${rowCount}]`);
 
@@ -403,14 +287,13 @@ export function formatTableSchemaForAi(table: DataTable): string {
  * Formats a one-line table summary for AI context.
  *
  * @param table - Data table metadata to summarize.
- * @returns Summary line containing display name, canonical table ID, and
- *   optional row count.
+ * @returns Summary line containing canonical table ID and optional row count.
  */
 export function formatTableSummaryForAi(table: DataTable): string {
   const rowCount = formatRowCount(table.rowCount);
-  return `- ${getFullTableNameForAi(table)} (tableId: ${getTableIdForAi(
-    table,
-  )})${rowCount ? ` [${rowCount}]` : ''}`;
+  return `- tableId: ${table.table.toString()}${
+    rowCount ? ` [${rowCount}]` : ''
+  }`;
 }
 
 function fitTextToMaxChars(text: string, maxChars?: number): string {
@@ -440,7 +323,7 @@ function formatBudgetedTableContextForAi(
   maxChars: number,
 ): string {
   const sections = [
-    'Schema context trimmed. Users may say bare names; after resolving, forward tableId, the fully quoted QualifiedTableName.toString() string. Use list_tables and read_table_schema with tableId before SQL.',
+    'Schema context trimmed. Users may say bare names; after resolving, forward tableId, the canonical QualifiedTableName.toString() string. It may omit the default database. Use list_tables and read_table_schema with tableId before SQL.',
   ];
 
   addSectionWithinBudget(
@@ -548,7 +431,7 @@ export function formatTablesForLLM(
     summaryTables.length;
 
   const hybridContext = joinSections([
-    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here, which is the fully quoted SQL identifier string from QualifiedTableName.toString(), rather than only the bare/display name.',
+    'Users may say bare table names. After choosing a concrete table, forward the canonical tableId shown here, which is the quoted SQLRooms table reference from QualifiedTableName.toString(), rather than only the bare/display name.',
     `Full schemas shown for the first ${fullSchemaTables.length} of ${currentMainSchemaTables.length} available tables:`,
     fullSchemaTables.map(formatTableSchemaForAi).join('\n\n'),
     summaryTables.length > 0
