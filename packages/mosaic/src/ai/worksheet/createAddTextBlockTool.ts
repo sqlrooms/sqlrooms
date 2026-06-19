@@ -8,6 +8,7 @@ import {
   BlockDocumentHeadingBlock,
 } from '@sqlrooms/documents';
 import type {WorksheetAiAdapter} from './worksheet-types';
+import {ToolOutput} from '../tool-types';
 
 const AddTextBlockParameters = z.object({
   type: z
@@ -35,19 +36,22 @@ const AddTextBlockParameters = z.object({
 
 type AddTextBlockParameters = z.infer<typeof AddTextBlockParameters>;
 
-const AddTextBlockToolParameters = z.object({
+const AddTextBlockToolInput = z.object({
   reasoning: z.string().describe('Brief rationale for text block choice.'),
   ...AddTextBlockParameters.shape,
 });
 
-type AddTextBlockToolParameters = z.infer<typeof AddTextBlockToolParameters>;
+type AddTextBlockToolInput = z.infer<typeof AddTextBlockToolInput>;
+
+type AddTextBlockToolOutput = ToolOutput<{
+  blockId?: string;
+  message?: string;
+}>;
 
 /**
  * Creates a text block (heading, paragraph, or list) with a unique ID.
  */
-function createTextBlock(
-  params: AddTextBlockToolParameters,
-): BlockDocumentBlock {
+function createTextBlock(params: AddTextBlockToolInput): BlockDocumentBlock {
   const blockId = createDefaultBlockDocumentBlockId();
 
   switch (params.type) {
@@ -77,7 +81,7 @@ function createTextBlock(
 }
 
 export type CreateAddTextBlockToolOptions = {
-  adapter: WorksheetAiAdapter;
+  worksheetAdapter: WorksheetAiAdapter;
   worksheetId: string;
 };
 
@@ -85,10 +89,10 @@ export type CreateAddTextBlockToolOptions = {
  * Creates a tool for adding text blocks to a worksheet.
  */
 export function createAddTextBlockTool({
-  adapter,
+  worksheetAdapter,
   worksheetId,
 }: CreateAddTextBlockToolOptions) {
-  return tool({
+  return tool<AddTextBlockToolInput, AddTextBlockToolOutput>({
     description: `Add a text block to the worksheet.
 Use this to add context, summaries, or explanations alongside charts.
 
@@ -96,27 +100,22 @@ Block types:
 - heading: Section title (level 1-3)
 - paragraph: Regular text content
 - list: Bullet or numbered list of items`,
-    inputSchema: AddTextBlockToolParameters,
+    inputSchema: AddTextBlockToolInput,
     execute: async (params) => {
       try {
         const block = createTextBlock(params);
 
-        adapter.addBlock(worksheetId, block);
+        worksheetAdapter.addBlock(worksheetId, block);
 
         return {
-          llmResult: {
-            success: true,
-            blockId: block.id,
-            message: `Added ${params.type} block to worksheet`,
-          },
+          success: true,
+          blockId: block.id,
+          message: `Added ${params.type} block to worksheet`,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },

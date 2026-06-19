@@ -25,3 +25,5 @@ Dashboard authoring:
 - Ensure specs are valid JSON objects compatible with https://idl.uw.edu/mosaic/schema/latest.json.
 - \`list_dashboard_panels\` includes runtime issues when a chart failed. Use those issues to repair panels in place: convert too-large scatter charts to heatmaps, add \`xInterval\` to too-large line charts, and inspect columns/settings for SQL errors.
 `;
+
+export const DEFAULT_CHART_MAX_DATA_POINTS = 10000;

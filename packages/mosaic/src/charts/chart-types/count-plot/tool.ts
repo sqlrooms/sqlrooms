@@ -1,20 +1,23 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {CountPlotChartConfig, CountPlotChartSettings} from './schema';
-import {BaseChartToolParameters} from '../../../ai/tool-schemas';
+import {BaseChartToolInput} from '../../../ai/tool-schemas';
 import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
-import {ChartToolDeps, ChartToolOutput} from '../tool-types';
+import {ChartToolParams, ChartToolOutput} from '../tool-types';
 import {validateCountPlotSettings} from './validation';
 import {ensureTable} from '../../../ai/tool-helpers';
 
-export const CountPlotToolParameters = BaseChartToolParameters.extend({
+export const CountPlotToolInput = BaseChartToolInput.extend({
   settings: CountPlotChartSettings.required(),
 });
 
-export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;
+export type CountPlotToolInput = z.infer<typeof CountPlotToolInput>;
 
-export function createCountPlotAiTool(deps: ChartToolDeps) {
-  return tool<CountPlotToolParams, ChartToolOutput<CountPlotChartConfig>>({
+export function createCountPlotAiTool({
+  databaseAdapter,
+  addChart,
+}: ChartToolParams) {
+  return tool<CountPlotToolInput, ChartToolOutput<CountPlotChartConfig>>({
     description: `Count plot: horizontal bar chart showing frequency of categorical/text values. Counts how many times each unique value appears.
 
 Use when: user asks to "count", "frequency of", "how many", "breakdown by category", "distribution of [text/category column]".
@@ -26,10 +29,10 @@ NOTE: Count plots aggregate by counting unique values, so they handle large data
 
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use scatter-plot), time series (use line-chart).`,
-    inputSchema: CountPlotToolParameters,
+    inputSchema: CountPlotToolInput,
     execute: async ({tableName, title, settings}) => {
       try {
-        const dataTable = ensureTable(deps.adapter, tableName);
+        const dataTable = ensureTable(databaseAdapter, tableName);
 
         validateCountPlotSettings({
           dataTable,
@@ -41,26 +44,21 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
           settings,
         };
 
-        deps.addChart({
+        addChart({
           tableName,
           title,
           config: chartConfig,
         });
 
         return {
-          llmResult: {
-            success: true,
-            details: `Generated count plot configuration for "${settings.field}".`,
-            data: chartConfig,
-          },
+          success: true,
+          details: `Generated count plot configuration for "${settings.field}".`,
+          data: chartConfig,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },

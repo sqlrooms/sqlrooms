@@ -1,6 +1,7 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HistogramChartSettings} from './schema';
-import {CreateSpecOptions, getChartTableReference} from '../base-types';
+import {CreateSpecOptions} from '../base-types';
+import {getChartTableReference} from '../utils';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 import {validateHistogramSettings} from './validation';
 

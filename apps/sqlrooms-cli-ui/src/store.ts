@@ -39,7 +39,6 @@ import {
   createMosaicSlice,
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
-  WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS,
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
@@ -73,14 +72,11 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
-  createBlockDocumentAiInstructions,
   BlockDocumentsSliceConfig,
   createBlockDocumentCommands,
-  createBlockDocumentAuthoringInstructions,
   createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
-  DOCUMENT_AI_INSTRUCTIONS,
   DocumentsSliceConfig,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
@@ -112,6 +108,7 @@ import {
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
+import {dashboardAgentTool} from './createDashboardAgent';
 
 export type {RoomState} from './store-types';
 
@@ -697,24 +694,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              [
-                WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS,
-                createDefaultAiInstructions(store),
-                DOCUMENT_AI_INSTRUCTIONS,
-                createBlockDocumentAiInstructions(
-                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
-                ),
-                createBlockDocumentAuthoringInstructions(
-                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
-                ),
-              ].join('\n\n'),
+              [createDefaultAiInstructions(store)].join('\n\n'),
             getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
-              // dashboard_agent: dashboardAgentTool(store),
+              dashboard_agent: dashboardAgentTool(store),
               worksheet_agent: worksheetAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),

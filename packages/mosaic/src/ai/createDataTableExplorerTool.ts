@@ -2,7 +2,7 @@ import {tool} from 'ai';
 import {z} from 'zod';
 import {ensureTable} from './tool-helpers';
 import {DataTableExplorerPanelConfig} from '../dashboard/core-types';
-import {DashboardAiAdapter} from './dashboard/dashboard-types';
+import {DatabaseAiAdapter} from './database-types';
 
 export const DataTableExplorerParameters = z.object({
   tableName: z
@@ -21,24 +21,24 @@ export type DataTableExplorerParameters = z.infer<
   typeof DataTableExplorerParameters
 >;
 
-export const DataTableExplorerToolParameters = z.object({
+export const DataTableExplorerToolInput = z.object({
   reasoning: z
     .string()
     .describe('Brief rationale for creating the Data Table Explorer.'),
   ...DataTableExplorerParameters.shape,
 });
 
-export type DataTableExplorerToolParameters = z.infer<
-  typeof DataTableExplorerToolParameters
+export type DataTableExplorerToolInput = z.infer<
+  typeof DataTableExplorerToolInput
 >;
 
 export type CreateDataTableExplorerToolOptions = {
-  adapter: DashboardAiAdapter;
+  databaseAdapter: DatabaseAiAdapter;
   addDataTable(params: DataTableExplorerParameters): void;
 };
 
 export function createDataTableExplorerTool({
-  adapter,
+  databaseAdapter,
   addDataTable,
 }: CreateDataTableExplorerToolOptions) {
   return tool({
@@ -47,11 +47,11 @@ export function createDataTableExplorerTool({
 Use when: user asks to "profile the data", "show table statistics", "what's in this table", "summarize columns", "give me an overview of the data".
 
 Useful for: quick data exploration, understanding data quality, finding missing values, identifying column types.`,
-    inputSchema: DataTableExplorerToolParameters,
+    inputSchema: DataTableExplorerToolInput,
     execute: async (params) => {
       try {
         if (params.tableName) {
-          ensureTable(adapter, params.tableName);
+          ensureTable(databaseAdapter, params.tableName);
         }
 
         addDataTable(params);

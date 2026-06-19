@@ -1,25 +1,33 @@
 import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
-import {createAddTextBlockTool} from './createAddTextBlockTool';
-import {createWorksheetChartTools} from './createWorksheetChartTools';
-import type {AgentToolCall} from '../types';
 import type {
-  WorksheetAiAdapter,
   CreateWorksheetAgentToolOptions,
   WorksheetAgentResult,
 } from './worksheet-types';
 import {AiAgentError} from '../errors';
-import {createWorksheetDashboardBlockAgentTool} from './createWorksheetDashboardBlockAgentTool';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
+import {calculateWorksheetAgentResultMetadata} from './utils';
+import {ensureNoOverride} from '../../charts/chart-types';
+import {createWorksheetAiTools} from './createWorksheetAiTools';
+import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
+import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
+import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 
-export const WORKSHEET_AGENT_GLOBAL_INSTRUCTIONS = `
-IF primary artefact in run context is a worksheet, prioritize using worksheet_agent tool for any queries or data analysis tasks.`;
+function getWorksheetAgentInstructions<TState>(
+  options: CreateWorksheetAgentToolOptions<TState>,
+): string {
+  const chartTools = resolveChartTypes(options.chartToolsOptions?.chartTypes);
 
-const WORKSHEET_AGENT_INSTRUCTIONS = `You are a worksheet builder agent that creates and modifies interactive data worksheets.
+  const chartToolsInstructions = createChartToolsInstructions(
+    chartTools,
+    WORKSHEET_CHART_TOOL_PREFIX,
+  );
+
+  return `You are a worksheet builder AI agent that creates interactive data worksheets.
 
 ## Your Role
 
-You create DATA VISUALIZATION WORKSHEETS with CHART BLOCKS, TEXT BLOCKS, and DASHBOARD BLOCKS.
+You create DATA VISUALIZATION WORKSHEETS with CHART BLOCKS, TEXT BLOCKS, DATA TABLE EXPLORER BLOCKS, and DASHBOARD BLOCKS.
 You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
 
 CRITICAL RULES:
@@ -27,35 +35,48 @@ CRITICAL RULES:
 2. A "comprehensive worksheet" means MULTIPLE CHARTS showing different aspects of the data
 3. You MUST create at least 3-5 chart blocks for exploratory requests
 4. Prefer CHARTS with TEXT BLOCKS for context. Text blocks alone are insufficient.
-5. Use DASHBOARD BLOCKS when cross-filtering or interactive exploration would enhance the analysis.
+5. Use DASHBOARD BLOCKS when interactive exploration of multiple related dimensions would enhance the analysis.
+6. Use DATA TABLE EXPLORER BLOCK when users need to explore raw data in a tabular format. Only add one block per worksheet, and only if the user explicitly requests it or if it is necessary for exploration.
 
 ## Creating Blocks
 
 ### Chart Blocks
 To create a chart block in a worksheet, call one of the chart generation tools:
-- create_worksheet_block_histogram - distribution of numeric values (always safe, aggregates automatically)
-- create_worksheet_block_line_chart - trends over time or ordered variable (use with aggregations for >10k rows)
-- create_worksheet_block_box_plot - compare distributions across categories
-- create_worksheet_block_scatter_plot - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
-- create_worksheet_block_count_plot - frequency of categorical values (always safe, aggregates automatically)
-- create_worksheet_block_heatmap - density/patterns across two dimensions (preferred for large datasets)
+${chartToolsInstructions}
 
 ### Text Blocks
-To add text context or summaries, use the add_text_block tool:
+To add text context or summaries, use the ${KnownWorksheetTools.add_text_block} tool:
 - Type "heading" (level 1-3) - for section titles
 - Type "paragraph" - for explanatory text
 - Type "list" (ordered/unordered) - for key points or findings
 
+### Data Table Explorer Blocks
+To add a data table explorer block, use the ${KnownWorksheetTools.add_data_table_explorer} tool:
+- Provide a title for the block
+- Provide the dataset (table name) to explore
+- Only add one data table explorer block per worksheet
+- Only add if user explicitly requests it or if it is necessary for exploration
+
 ### Dashboard Blocks
-To create an interactive dashboard block with cross-filtering capabilities, use the dashboard_agent tool:
-- Creates a stateful dashboard block embedded in the worksheet
-- Contains multiple panels (charts, Data Table Explorers) with cross-filtering
-- Use when:
-  - User explicitly requests a dashboard: "add dashboard analyzing sales data"
-  - Interactive exploration would be valuable: multiple related dimensions that benefit from cross-filtering
-  - Dataset has categorical dimensions suitable for drill-down analysis
-- REQUIRED: Provide tableName parameter for the dataset to analyze
-- The dashboard block will contain 3-5 panels showing different aspects of the data
+To create an interactive dashboard block for data exploration, use a TWO-STEP workflow:
+
+STEP 1: Create the empty dashboard block container
+- Call ${KnownWorksheetTools.add_dashboard_block} with:
+  - dashboardTitle: title for the dashboard
+  - tableName: the dataset to analyze
+- This returns a dashboardId
+
+STEP 2: Populate the dashboard with charts and panels
+- Call ${KnownWorksheetTools.embedded_dashboard_agent} with:
+  - dashboardId: the ID from step 1
+  - tableName: the dataset to analyze
+  - prompt: what insights or charts to create
+
+Use dashboard blocks when:
+- User explicitly requests a dashboard: "add dashboard analyzing sales data"
+- Interactive exploration would be valuable: multiple related dimensions benefit from coordinated views
+- Dataset has multiple dimensions suitable for multi-faceted analysis
+- The dashboard will contain 3-5 panels showing different aspects of the data
 
 ## Workflows
 
@@ -66,7 +87,9 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 3. Add text blocks only for brief context or summaries, if needed
 4. Done after ALL requested charts are created
 
-**Exception:** If user explicitly requests a dashboard ("add dashboard for X dataset"), use dashboard_agent instead.
+**Exception:** If user explicitly requests a dashboard ("add dashboard for X dataset"), use the TWO-STEP workflow:
+1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container
+2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with the returned dashboardId to populate it
 
 ### Exploratory Requests
 When user asks for "comprehensive analysis" or "high-level insights":
@@ -82,9 +105,13 @@ When user asks for "comprehensive analysis" or "high-level insights":
 5. SUCCESS CRITERIA: Worksheet contains 3+ interactive visualizations with summaries and context
 
 **Consider dashboard blocks when:**
-- Dataset has multiple categorical dimensions that would benefit from cross-filtering (e.g., geography + product category + time)
-- User wants to "explore" or "drill down" into the data interactively
-- Analysis would benefit from linked brushing across multiple visualizations
+- Dataset has multiple dimensions that benefit from coordinated visualization (e.g., geography + product category + time)
+- User wants to "explore" or analyze the data from multiple perspectives
+- Analysis benefits from seeing multiple related views together in one interactive dashboard
+
+**To create dashboard blocks:**
+1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container (get dashboardId)
+2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with dashboardId to populate it with charts
 
 ## Query Guidelines
 
@@ -107,7 +134,7 @@ When user asks for "comprehensive analysis" or "high-level insights":
 - **SUMMARIZE THE INSIGHTS:** If you create a text block, make it a 1-2 sentence summary of the key insight from the charts, not a long narrative.
 - **Multiple charts for exploratory tasks:** "Comprehensive worksheet" = 3-5+ charts showing different aspects
 - **Diverse visualizations:** Mix histogram, count plot, scatter, heatmap - don't create 5 of the same type
-- **Dashboard blocks for interactive exploration:** When the dataset has multiple related dimensions (e.g., region, category, time period), consider using dashboard_agent to create an interactive dashboard block with cross-filtering capabilities
+- **Dashboard blocks for multi-faceted exploration:** When the dataset has multiple related dimensions (e.g., region, category, time period), use the two-step workflow: call ${KnownWorksheetTools.add_dashboard_block} to create the container, then call ${KnownWorksheetTools.embedded_dashboard_agent} to populate it with interactive panels
 - **Avoid unaggregated charts for large datasets:** For datasets >10k rows, DO NOT use scatter charts or line charts without aggregations:
   - For scatter plots: use heatmap or binned aggregations
   - For line charts: use GROUP BY with time buckets or aggregations
@@ -126,8 +153,9 @@ When user asks for "comprehensive analysis" or "high-level insights":
 ✅ Create 3-5+ diverse chart blocks for exploratory requests
 ✅ Call create_worksheet_block_* tools to automatically create charts
 ✅ Mix different chart types to show different patterns
-✅ Use dashboard_agent when user explicitly asks for dashboard or when cross-filtering would enhance analysis
+✅ Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
 ✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
+}
 
 const WorksheetAgentInputSchema = z.object({
   reasoning: z
@@ -154,89 +182,96 @@ const WorksheetAgentInputSchema = z.object({
       'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
     ),
 });
-type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
-function calculateAgentMetadata(
-  adapter: WorksheetAiAdapter,
-  worksheetId: string,
-  agentToolCalls: AgentToolCall[],
-): WorksheetAgentResult['metadata'] {
-  const blocks = adapter.getWorksheetBlocks(worksheetId);
-  return {
-    blocksCreated: blocks?.length || 0,
-    stepsExecuted: agentToolCalls.length,
-    queriesRun: agentToolCalls.filter((call) => call.toolName === 'query')
-      .length,
-  };
-}
+type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
 export function createWorksheetAgentTool<
   TState extends MosaicDashboardStoreState,
 >(options: CreateWorksheetAgentToolOptions<TState>): Tool {
-  const {store, adapter} = options;
+  const {
+    store,
+    worksheetAdapter,
+    databaseAdapter,
+    chartToolsOptions,
+    dashboardAgentTool,
+    extraTools,
+  } = options;
 
   return tool({
     description: `An AI agent that creates DATA ANALYSIS WORKSHEETS with:
 - CHART BLOCKS (histograms, scatter plots, heatmaps, etc.)
 - TEXT BLOCKS (headings, paragraphs, lists)
-- DASHBOARD BLOCKS (interactive dashboards with cross-filtering) 
+- DASHBOARD BLOCKS (interactive dashboards for multi-faceted exploration)
 
-IF user requests DASHBOARD, use the dashboard_agent tool. Otherwise, create chart and text blocks directly.
+IF user requests DASHBOARD:
+1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container (get dashboardId)
+2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with dashboardId to populate it with charts
+
+Otherwise, create chart and text blocks directly using create_worksheet_block_* tools.
 
 Use this for:
 - Exploratory requests: "analyze the earthquakes dataset", "create comprehensive insights", "high-level overview"
 - Multi-chart requests: "create worksheet with depth and magnitude histograms"
+- Dashboard requests: "add dashboard analyzing sales data" (use two-step workflow)
 
 OPTIONAL:
-- tableName: provide if user mentions a specific primary dataset for context`,
+- tableName: provide if user mentions a specific primary dataset for context
+
+IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: WorksheetAgentInputSchema,
     execute: async (params, toolOptions): Promise<WorksheetAgentResult> => {
       const {prompt, worksheetId, maxSteps, temperature} = params;
 
       try {
-        adapter.ensureWorksheet(worksheetId);
-        adapter.setCurrentArtifact(worksheetId);
+        worksheetAdapter.ensureWorksheet(worksheetId);
+        worksheetAdapter.setCurrentWorksheet(worksheetId);
 
-        const queryTools = options.createQueryTools?.({store});
+        const dataTools = options.createDataTools?.({store}) ?? {};
 
-        const chartTools = createWorksheetChartTools(options, worksheetId);
+        const builtInTools: Record<string, Tool> = {
+          ...dataTools,
+          ...createWorksheetAiTools({
+            databaseAdapter,
+            worksheetAdapter,
+            worksheetId,
+            chartToolsOptions,
+            dashboardAgentTool,
+            extraTools,
+          }),
+        };
 
-        // Create text block tool
-        const addTextBlockTool = createAddTextBlockTool({
-          adapter,
-          worksheetId,
-        });
+        const additionalTools =
+          extraTools?.({
+            worksheetAdapter,
+            databaseAdapter,
+          }) ?? {};
 
-        const dashboardAgent = createWorksheetDashboardBlockAgentTool<TState>({
-          ...options,
-          worksheetId,
-        });
+        ensureNoOverride(builtInTools, additionalTools);
 
-        const worksheetAgent = new ToolLoopAgent({
+        const agent = new ToolLoopAgent({
           model: options.getModel({state: store.getState()}),
           tools: {
-            ...(queryTools ? {query: queryTools.query} : {}),
-            ...chartTools,
-            add_text_block: addTextBlockTool,
-            dashboard_agent: dashboardAgent,
+            ...builtInTools,
+            ...additionalTools,
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
-          instructions: options.instructions ?? WORKSHEET_AGENT_INSTRUCTIONS,
+          instructions:
+            options.instructions ?? getWorksheetAgentInstructions(options),
         });
 
         const result = await options.runSubAgent({
-          agent: worksheetAgent,
+          agent,
           prompt,
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const metadata = calculateAgentMetadata(
-          adapter,
+        const metadata = calculateWorksheetAgentResultMetadata(
+          worksheetAdapter,
           worksheetId,
-          result.agentToolCalls || [],
+          result.agentToolCalls,
         );
 
         return {

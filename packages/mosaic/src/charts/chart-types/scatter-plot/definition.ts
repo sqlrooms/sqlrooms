@@ -14,6 +14,7 @@ export const scatterPlotChartType: SpecChartTypeDefinition<ScatterPlotChartConfi
     id: 'scatter-plot',
     label: 'Scatter Plot',
     description: DESCRIPTION,
+    aiDescription: `${DESCRIPTION} - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)`,
     icon: Workflow,
     schema: ScatterPlotChartSettings,
     settingsComponent: ScatterPlotSettingsComponent,

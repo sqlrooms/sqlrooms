@@ -1,42 +1,18 @@
-import {createMosaicDashboardDataTableExplorerPanelConfig} from '../dashboard/MosaicDashboardSlice';
 import {
-  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,
 } from '../dashboard/dashboard-types';
-import type {DataTableExplorerPanelConfig} from '../dashboard/core-types';
-import type {ChartConfig} from '../charts/chart-types/chart-config';
 import {AiAgentError} from './errors';
-import {BaseMosaicAiAdapter} from './types';
 import {DashboardAiAdapter} from './dashboard/dashboard-types';
 import {DataTable} from '@sqlrooms/duckdb';
 import {Tool} from 'ai';
-
-export interface PanelResult {
-  panelId: string;
-  title: string;
-  config: ChartConfig | DataTableExplorerPanelConfig;
-}
-
-export interface CreateOrUpdateChartPanelParams {
-  panelId?: string;
-  tableName: string;
-  title: string;
-  config: ChartConfig;
-}
-
-export interface CreateOrUpdateDataTableExplorerPanelParams {
-  panelId?: string;
-  tableName: string;
-  title: string;
-  config: DataTableExplorerPanelConfig;
-}
+import {DatabaseAiAdapter} from './database-types';
 
 /**
  * Validates that a table exists. Throws if not found.
  */
 export function ensureTable(
-  adapter: BaseMosaicAiAdapter,
+  adapter: DatabaseAiAdapter,
   tableName: string,
 ): DataTable {
   const table = adapter.findTable(tableName);
@@ -55,11 +31,9 @@ export function ensureDashboard(
   adapter: DashboardAiAdapter,
   dashboardId: string,
 ): MosaicDashboardEntry {
-  const dashboard = adapter.getDashboard(dashboardId);
+  const dashboard = adapter.getDashboard();
   if (!dashboard) {
-    throw new AiAgentError(
-      `Dashboard "${dashboardId}" not found. Cannot update panel.`,
-    );
+    throw new AiAgentError(`Dashboard "${dashboardId}" not found.`);
   }
   return dashboard;
 }
@@ -85,53 +59,6 @@ export function ensurePanel(
   }
 
   return panel;
-}
-
-/**
- * Universal helper to create or update a dataTableExplorer panel.
- */
-export function createOrUpdateDataTableExplorerPanel(
-  {
-    panelId,
-    config,
-    title,
-    tableName,
-  }: CreateOrUpdateDataTableExplorerPanelParams,
-  adapter: DashboardAiAdapter,
-): PanelResult {
-  if (panelId) {
-    ensurePanel(
-      adapter,
-      panelId,
-      MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
-    );
-
-    adapter.updatePanel(panelId, {
-      config,
-      title,
-      source: {tableName},
-    });
-
-    return {
-      panelId,
-      title,
-      config,
-    };
-  }
-
-  // Create new panel - create full panel config
-  const panel = createMosaicDashboardDataTableExplorerPanelConfig({
-    title,
-    config,
-  });
-
-  const newPanelId = adapter.addPanel(panel);
-
-  return {
-    panelId: newPanelId,
-    title: panel.title,
-    config: panel.config,
-  };
 }
 
 export function ensureNoOverride(

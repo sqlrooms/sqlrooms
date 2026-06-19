@@ -10,6 +10,10 @@ import {
   type CreateDashboardAiToolsOptions,
   ensureTable,
   ensurePanel,
+  DatabaseAiAdapter,
+  ExtraDashboardAiToolsFactory,
+  ExtraDashboardAiToolsParams,
+  MosaicDashboardStoreState,
 } from '@sqlrooms/mosaic';
 import {
   createDeckMapDashboardPanelConfig,
@@ -30,11 +34,11 @@ Deck map tools:
 `;
 
 function createDeckMapDashboardExtraTools(
-  extraTools?: (adapter: DashboardAiAdapter) => Record<string, Tool>,
+  extraTools?: ExtraDashboardAiToolsFactory,
 ) {
-  return (adapter: DashboardAiAdapter) => ({
-    ...createDeckMapDashboardAiTools(adapter),
-    ...(extraTools?.(adapter) ?? {}),
+  return (params: ExtraDashboardAiToolsParams) => ({
+    ...createDeckMapDashboardAiTools(params),
+    ...(extraTools?.(params) ?? {}),
   });
 }
 
@@ -51,13 +55,13 @@ export function createDashboardWithDeckMapAiTools(
   });
 }
 
-export function createDashboardAgentToolWithDeckMaps<TState>(
-  options: CreateDashboardAgentToolOptions<TState>,
-): Tool {
+export function createDashboardAgentToolWithDeckMaps<
+  TState extends MosaicDashboardStoreState,
+>(options: CreateDashboardAgentToolOptions<TState>): Tool {
   return createDashboardAgentTool({
     ...options,
     extraTools: createDeckMapDashboardExtraTools(options.extraTools),
-  }) as Tool;
+  });
 }
 
 const DeckMapLayerBindingConfig = z.looseObject({
@@ -216,7 +220,15 @@ export function createDeckMapAiTools(): Record<string, Tool> {
   };
 }
 
-export function createDeckMapDashboardTool(adapter: DashboardAiAdapter): Tool {
+export type CreateDeckMapDashboardToolParams = {
+  dashboardAdapter: DashboardAiAdapter;
+  databaseAdapter: DatabaseAiAdapter;
+};
+
+export function createDeckMapDashboardTool({
+  dashboardAdapter,
+  databaseAdapter,
+}: CreateDeckMapDashboardToolParams): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
@@ -225,15 +237,19 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
     execute: async (params) => {
       try {
         if (params.tableName) {
-          ensureTable(adapter, params.tableName);
+          ensureTable(databaseAdapter, params.tableName);
         }
 
         const panel = createDeckMapPanelFromNativeConfig(params);
 
         if (params.panelId) {
-          ensurePanel(adapter, params.panelId, DECK_MAP_DASHBOARD_PANEL_TYPE);
+          ensurePanel(
+            dashboardAdapter,
+            params.panelId,
+            DECK_MAP_DASHBOARD_PANEL_TYPE,
+          );
 
-          adapter.updatePanel(params.panelId, {
+          dashboardAdapter.updatePanel(params.panelId, {
             title: panel.title,
             config: panel.config,
           });
@@ -252,7 +268,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           };
         }
 
-        const panelId = adapter.addPanel(panel);
+        const panelId = dashboardAdapter.addPanel(panel);
 
         return {
           llmResult: {
@@ -280,9 +296,9 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
 }
 
 export function createDeckMapDashboardAiTools(
-  adapter: DashboardAiAdapter,
+  params: CreateDeckMapDashboardToolParams,
 ): Record<string, Tool> {
   return {
-    [MAP_TOOL_KEY]: createDeckMapDashboardTool(adapter),
+    [MAP_TOOL_KEY]: createDeckMapDashboardTool(params),
   };
 }

@@ -14,6 +14,7 @@ export const boxPlotChartType: ComponentChartTypeDefinition<BoxPlotChartConfig> 
     id: 'box-plot',
     label: 'Box Plot',
     description: DESCRIPTION,
+    aiDescription: `${DESCRIPTION} - compare distributions across categories`,
     icon: AlignHorizontalDistributeCenter,
     schema: BoxPlotChartSettings,
     settingsComponent: BoxPlotSettingsComponent,

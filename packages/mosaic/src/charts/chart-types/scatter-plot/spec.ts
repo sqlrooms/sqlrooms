@@ -3,7 +3,8 @@ import {ScatterPlotChartSettings} from './schema';
 
 import {validateScatterPlotSettings} from './validation';
 
-import {CreateSpecOptions, getChartTableReference} from '../base-types';
+import {CreateSpecOptions} from '../base-types';
+import {getChartTableReference} from '../utils';
 
 const FG_COLOR = 'var(--color-chart-1)';
 const DEFAULT_POINT_SIZE = 3;

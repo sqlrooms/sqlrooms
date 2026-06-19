@@ -20,7 +20,7 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
-import {ChartToolDeps} from './tool-types';
+import {ChartToolParams} from './tool-types';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
 
 export type {ChartType};
@@ -158,6 +158,8 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   label?: string;
   /** Short description of what this builder creates */
   description: string;
+  /** Concise description for AI agents explaining when and how to use this chart type */
+  aiDescription: string;
   /** Zod schema for runtime validation of settings */
   schema: z.ZodType<TConfig['settings']>;
   /** Generate a chart title from selected field values */
@@ -169,7 +171,7 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   /** Optional icon component for chart-type grids */
   icon: ComponentType<{className?: string}>;
   /** Optional function to create a chart configuration AI tool */
-  createTool?: (deps: ChartToolDeps) => Tool;
+  createTool?: (deps: ChartToolParams) => Tool;
   /** Optional runtime data policy for renderer-specific query validation. */
   getDataPolicy?: (
     context: ChartDataPolicyContext<TConfig>,
@@ -186,10 +188,6 @@ export type ValidateSpecOptions<TSettings = ChartSettings> = Pick<
   CreateSpecOptions<TSettings>,
   'dataTable' | 'settings'
 >;
-
-export function getChartTableReference(dataTable: DataTable): string {
-  return dataTable.table.toString();
-}
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {

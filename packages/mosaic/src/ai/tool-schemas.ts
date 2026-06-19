@@ -1,6 +1,6 @@
 import {z} from 'zod';
 
-export const BaseChartToolParameters = z.object({
+export const BaseChartToolInput = z.object({
   tableName: z
     .string()
     .describe('REQUIRED table name to create the chart from.'),

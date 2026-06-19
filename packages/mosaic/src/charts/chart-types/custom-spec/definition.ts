@@ -13,6 +13,7 @@ export const customSpecChartType: SpecChartTypeDefinition<CustomSpecChartConfig>
     id: 'custom-spec',
     label: 'Custom Spec',
     description: DESCRIPTION,
+    aiDescription: `${DESCRIPTION} - custom visualization using Mosaic vgplot spec`,
     icon: Code,
     schema: CustomSpecChartSettings,
     settingsComponent: CustomSpecSettingsComponent,

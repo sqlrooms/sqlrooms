@@ -1,53 +1,66 @@
 import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
-import {createDashboardAiTools} from './createDashboardAiTools';
 import {MAP_TOOL_KEY} from '../constants';
-import type {AgentToolCall} from '../types';
 import type {
-  DashboardAiAdapter,
   CreateDashboardAgentToolOptions,
   DashboardAgentResult,
 } from './dashboard-types';
 import {AiAgentError} from '../errors';
 import {ensureTable} from '../tool-helpers';
+import {createDashboardAiTools} from './createDashboardAiTools';
+import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
+import {createDashboardAiAdapter} from './createDashboardAiAdapter';
+import {calculateDashboardAgentResultMetadata} from './utils';
+import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
+import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
+import {DASHBOARD_CHART_TOOL_PREFIX, KnownDashboardTools} from './constants';
 
-const DASHBOARD_AGENT_INSTRUCTIONS = `You are a dashboard builder agent that creates and modifies interactive data dashboards.
+function getDashboardAgentInstructions<TState>(
+  options: CreateDashboardAgentToolOptions<TState>,
+): string {
+  const chartTools = resolveChartTypes(options.chartToolsOptions?.chartTypes);
+
+  const chartToolsInstructions = createChartToolsInstructions(
+    chartTools,
+    DASHBOARD_CHART_TOOL_PREFIX,
+  );
+
+  return `
+You are a dashboard builder AI agent that creates dashboard.
 
 ## Your Role
 
-You analyze data and create insightful dashboards with multiple visualizations (charts, Data Table Explorers). You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
+You create DASHBOARD contains multiple panel including:
+- Chart panel
+- Data Table Explorer panel
+- Map panel (if provided by the host app)
+
+You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
+
+## Dataset
+
+Dashboard always requires a **tableName** parameter to specify the dataset to analyze. 
+You can use the query tool to explore the data and discover patterns, then create panels based on your findings.
 
 ## Available Tools
 
 **Chart Tools:**
-- create_dashboard_histogram - distribution of numeric values (always safe, aggregates automatically)
-- create_dashboard_line_chart - trends over time or ordered variable (use with aggregations for >10k rows)
-- create_dashboard_box_plot - compare distributions across categories
-- create_dashboard_scatter_plot - relationship between two numeric columns (avoid for >10k rows, use heatmap instead)
-- create_dashboard_count_plot - frequency of categorical values (always safe, aggregates automatically)
-- create_dashboard_heatmap - density/patterns across two dimensions (preferred for large datasets)
+${chartToolsInstructions}
 
 **Panel Tools:**
-- create_dashboard_data_table_explorer - table statistics and column summaries
+- ${KnownDashboardTools.create_dashboard_panel_data_table_explorer} - table statistics and column summaries
 - ${MAP_TOOL_KEY} - native Deck JSON geospatial map panel (if provided by the host app)
 
 **Data Tools:**
 - query - execute SQL queries for data exploration
 
-**Management Tools:**
-- list_dashboard_panels - discover panel IDs and what's on the dashboard
-- remove_dashboard_panel - delete a panel by ID
-
 ## Workflows
 
 ### Direct Requests
 When user provides specific instructions:
-1. Parse intent -> identify chart type
+1. Parse intent -> identify panel type
 2. Call appropriate tool with settings
 3. Done
-
-Example: "create histogram of magnitude with 20 bins"
--> create_dashboard_histogram(settings: {field: "magnitude", bins: 20})
 
 ### Exploratory Requests
 When user asks to discover insights:
@@ -56,16 +69,11 @@ When user asks to discover insights:
    - Check distributions: GROUP BY with COUNT
    - Find correlations: CORR(col1, col2)
    - Identify outliers and patterns
-2. Create targeted charts based on discoveries:
+2. Create targeted panels based on discoveries:
+   - Create 3-5 panels showing different aspects of the data
    - If dataset has >10k rows: avoid scatter charts and unaggregated line charts
    - Use histogram, count plot, heatmap, or aggregated visualizations instead
 3. Stop when dashboard tells coherent story
-
-### Update Requests
-To update existing panels:
-1. Call list_dashboard_panels() to discover panel IDs
-2. Call appropriate create tool with panelId parameter
-3. Panel is updated in-place
 
 ## Query Guidelines
 
@@ -86,10 +94,9 @@ To update existing panels:
   - For scatter plots: use heatmap or binned aggregations
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
-- **Check before update:** Always call list_dashboard_panels before updating/removing panels
-- **Repair broken charts:** list_dashboard_panels may return an \`issue\` per panel. For \`too-much-data\`, switch to an aggregated chart or add aggregation. For \`sql-error\`, inspect available columns/types and update the broken panel in place.
 - **Validate columns:** Query tools will validate column existence and types
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach`;
+}
 
 const DashboardAgentInputSchema = z.object({
   reasoning: z
@@ -98,13 +105,11 @@ const DashboardAgentInputSchema = z.object({
   prompt: z
     .string()
     .describe('The exploratory data analysis prompt for the agent'),
-  tableName: z
+  tableName: z.string().describe('The name of the table/dataset to analyze.'),
+  dashboardId: z
     .string()
-    .describe('REQUIRED: The name of the table/dataset to analyze.'),
-  dashboardTitle: z
-    .string()
-    .optional()
-    .describe('Optional title for the dashboard artifact'),
+    .describe('The ID of an existing dashboard to update.'),
+  dashboardTitle: z.string().describe('The title of the dashboard'),
   maxSteps: z
     .number()
     .optional()
@@ -118,126 +123,75 @@ const DashboardAgentInputSchema = z.object({
       'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
     ),
 });
+
 type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
 
-function buildAgentPrompt(
-  userPrompt: string,
-  tableName: string,
-  adapter: DashboardAiAdapter,
-): string {
-  const table = adapter
-    .getTables()
-    .find((candidate) => candidate.tableName === tableName);
-  const columnNames =
-    table?.columns?.map((column) => column.name).join(', ') || 'unknown';
-  const rowInfo =
-    table?.rowCount !== undefined ? `Approximate rows: ${table.rowCount}` : '';
-
-  return `Analyze the "${tableName}" table.
-
-Table info:
-- Columns: ${columnNames}${rowInfo ? `\n- ${rowInfo}` : ''}
-
-User request: ${userPrompt}
-
-Focus on discovering meaningful patterns and creating visualizations that tell a clear story.`;
-}
-
-function getOrCreateDashboard(
-  adapter: DashboardAiAdapter,
-  tableName: string,
-  dashboardTitle?: string,
-): string {
-  const dashboardId = adapter.getCurrentDashboardArtifactId();
-  if (dashboardId) {
-    adapter.ensureDashboard(dashboardId);
-    return dashboardId;
-  }
-
-  const suggestedTitle =
-    dashboardTitle ||
-    `${tableName.charAt(0).toUpperCase() + tableName.slice(1)} Insights`;
-  const newDashboardId = adapter.createDashboardArtifact(
-    suggestedTitle,
-    'grid',
-  );
-  adapter.setCurrentArtifact(newDashboardId);
-  return newDashboardId;
-}
-
-function calculateAgentMetadata(
-  adapter: DashboardAiAdapter,
-  dashboardId: string,
-  tableName: string,
-  agentToolCalls: AgentToolCall[],
-): DashboardAgentResult['metadata'] {
-  const dashboard = adapter.getDashboard(dashboardId);
-  return {
-    tableName,
-    panelsCreated: dashboard?.panels?.length || 0,
-    stepsExecuted: agentToolCalls.length,
-    queriesRun: agentToolCalls.filter((call) => call.toolName === 'query')
-      .length,
-  };
-}
-
-export function createDashboardAgentTool<TState>(
-  options: CreateDashboardAgentToolOptions<TState>,
-): Tool {
-  const {store, adapter} = options;
+export function createDashboardAgentTool<
+  TState extends MosaicDashboardStoreState,
+>(options: CreateDashboardAgentToolOptions<TState>): Tool {
+  const {store, databaseAdapter, chartToolsOptions, extraTools} = options;
 
   return tool({
-    description: `An AI agent that explores datasets and creates comprehensive dashboards with multiple visualizations.
+    description: `An AI agent that populates a dashboard with charts and interactive panels.
 
-Use this for exploratory data analysis tasks like "analyze the earthquakes dataset" or "create insights dashboard for sales data".
+This agent:
+- Queries the data to discover patterns and insights
+- Creates charts (histograms, scatter plots, heatmaps, box plots, etc.)
+- Adds Data Table Explorer panels for tabular analysis
+- Builds interactive dashboards for data exploration
 
-The agent will query the data, discover patterns, and create charts and Data Table Explorers with findings.
+REQUIRED PARAMETERS:
+- dashboardId: The ID of the dashboard to populate
+- tableName: The dataset to analyze
+- prompt: What insights, patterns, or specific charts to create
 
-IMPORTANT: Always provide tableName parameter when the user mentions a specific dataset.`,
+The agent will explore the data and create 3-5 panels showing different aspects based on the prompt.
+
+IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: DashboardAgentInputSchema,
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
-      const {prompt, tableName, dashboardTitle, maxSteps, temperature} = params;
+      const {prompt, tableName, dashboardId, maxSteps, temperature} = params;
 
-      let dashboardId = '';
+      const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
 
       try {
         const state = store.getState();
 
-        ensureTable(adapter, tableName);
+        ensureTable(databaseAdapter, tableName);
 
-        dashboardId = getOrCreateDashboard(adapter, tableName, dashboardTitle);
-        adapter.setSelectedTable(dashboardId, tableName);
-        const queryTools = options.createQueryTools?.({store});
+        dashboardAdapter.setSelectedTable(tableName);
 
-        const dashboardAgent = new ToolLoopAgent({
+        const dataTools = options.createDataTools?.({store}) ?? {};
+
+        const agent = new ToolLoopAgent({
           model: options.getModel({state}),
           tools: {
-            ...(queryTools ? {query: queryTools.query} : {}),
+            ...dataTools,
             ...createDashboardAiTools({
-              adapter,
-              dashboardId,
-              chartTypes: options.chartTypes,
-              extraTools: options.extraTools,
+              dashboardAdapter,
+              databaseAdapter,
+              chartToolsOptions,
+              extraTools,
             }),
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
-          instructions: options.instructions ?? DASHBOARD_AGENT_INSTRUCTIONS,
+          instructions:
+            options.instructions ?? getDashboardAgentInstructions(options),
         });
 
         const result = await options.runSubAgent({
-          agent: dashboardAgent,
-          prompt: buildAgentPrompt(prompt, tableName, adapter),
+          agent,
+          prompt,
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const metadata = calculateAgentMetadata(
-          adapter,
-          dashboardId,
+        const metadata = calculateDashboardAgentResultMetadata(
+          dashboardAdapter,
           tableName,
-          result.agentToolCalls || [],
+          result.agentToolCalls,
         );
 
         return {

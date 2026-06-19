@@ -1,39 +1,56 @@
 import type {Tool} from 'ai';
-import {ChartTypeDefinition, ensureNoOverride} from '../../charts/chart-types';
+import {ensureNoOverride} from '../../charts/chart-types';
 
-import {DashboardAiAdapter} from './dashboard-types';
+import {
+  DashboardAiAdapter,
+  ExtraDashboardAiToolsFactory,
+} from './dashboard-types';
 import {createDashboardChartTools} from './createDashboardChartTools';
 import {createDashboardDataTableExplorerTool} from './createDashboardDataTableExplorerTool';
+import {DatabaseAiAdapter} from '../database-types';
+import {ChartToolsOptions} from '../types';
+import {KnownDashboardTools} from './constants';
 
 export type CreateDashboardAiToolsOptions = {
-  adapter: DashboardAiAdapter;
-  dashboardId?: string;
-  chartTypes?: ChartTypeDefinition<any>[];
-  extraTools?: (adapter: DashboardAiAdapter) => Record<string, Tool>;
+  databaseAdapter: DatabaseAiAdapter;
+  dashboardAdapter: DashboardAiAdapter;
+  chartToolsOptions?: ChartToolsOptions;
+  extraTools?: ExtraDashboardAiToolsFactory;
 };
 
 export function createDashboardAiTools({
-  adapter,
-  chartTypes,
+  dashboardAdapter,
+  databaseAdapter,
+  chartToolsOptions,
   extraTools,
 }: CreateDashboardAiToolsOptions): Record<string, Tool> {
-  const chartTools = createDashboardChartTools(adapter, chartTypes);
-  const dataTableExplorerTool = createDashboardDataTableExplorerTool(adapter);
+  const chartTools = createDashboardChartTools({
+    databaseAdapter,
+    dashboardAdapter,
+    chartToolsOptions,
+  });
 
-  const hostTools = extraTools?.(adapter) ?? {};
+  const dataTableExplorerTool = createDashboardDataTableExplorerTool({
+    databaseAdapter,
+    dashboardAdapter,
+  });
 
   const builtInTools: Record<string, Tool> = {
     ...chartTools,
-    create_dashboard_data_table_explorer: dataTableExplorerTool,
-    // create_dashboard_artifact: createDashboardArtifactTool(adapter),
-    // list_dashboard_panels: createListPanelsTool(dashboardToolDeps),
-    // remove_dashboard_panel: createRemovePanelTool(dashboardToolDeps),
+    [KnownDashboardTools.create_dashboard_panel_data_table_explorer]:
+      dataTableExplorerTool,
   };
 
-  ensureNoOverride(builtInTools, hostTools);
+  const additionalTools =
+    extraTools?.({
+      databaseAdapter,
+      dashboardAdapter,
+    }) ?? {};
+
+  ensureNoOverride(builtInTools, additionalTools);
 
   return {
     ...builtInTools,
-    ...hostTools,
+    ...additionalTools,
   };
 }

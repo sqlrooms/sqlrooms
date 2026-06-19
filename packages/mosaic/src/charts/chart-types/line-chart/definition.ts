@@ -13,6 +13,7 @@ export const lineChartChartType: SpecChartTypeDefinition<LineChartConfig> = {
   id: 'line-chart',
   label: 'Line Chart',
   description: DESCRIPTION,
+  aiDescription: `${DESCRIPTION} - trends over time or ordered variable (use with aggregations for >10k rows)`,
   icon: LineChart,
   schema: LineChartSettings,
   settingsComponent: LineChartSettingsComponent,

@@ -15,7 +15,16 @@ import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisib
 function getTableReference(
   tableName: DataTableExplorerOptions['tableName'],
 ): string {
-  return typeof tableName === 'string' ? tableName : tableName.toString();
+  if (typeof tableName === 'string') {
+    return tableName;
+  }
+
+  // Build unquoted table reference for vgPlot compatibility
+  if (tableName.database && tableName.schema) {
+    return `${tableName.database}.${tableName.schema}.${tableName.table}`;
+  }
+
+  return tableName.table;
 }
 
 /**

@@ -2,7 +2,8 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {LineChartSettings} from './schema';
 import {isTemporalType} from '../../../column-types-utils';
 import {AggregateFunction} from '../../../schemas';
-import {CreateSpecOptions, getChartTableReference} from '../base-types';
+import {CreateSpecOptions} from '../base-types';
+import {getChartTableReference} from '../utils';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
 import {validateLineChartSettings} from './validation';
 

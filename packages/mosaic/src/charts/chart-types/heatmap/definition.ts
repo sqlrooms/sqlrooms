@@ -12,6 +12,7 @@ export const heatmapChartType: SpecChartTypeDefinition<HeatmapChartConfig> = {
   id: 'heatmap',
   label: 'Heatmap',
   description: DESCRIPTION,
+  aiDescription: `${DESCRIPTION} - density/patterns across two dimensions (preferred for large datasets)`,
   icon: Grid3X3,
   schema: HeatmapChartSettings,
   settingsComponent: HeatmapSettingsComponent,

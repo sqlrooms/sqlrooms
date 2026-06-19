@@ -14,7 +14,7 @@ import {useChartRetainerByKey} from './useChartRetainer';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
 import {useRuntimeIssueReporter} from './useRuntimeIssueReporter';
 import {DataTable} from '@sqlrooms/db';
-import {getChartTableReference} from './chart-types/base-types';
+import {getChartTableReference} from './chart-types/utils';
 
 export type MosaicChartViewProps = {
   dataTable?: DataTable;

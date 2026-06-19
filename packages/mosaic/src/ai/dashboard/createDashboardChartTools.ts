@@ -1,31 +1,40 @@
 import type {Tool} from 'ai';
-import {
-  createChartTools,
-  createDefaultChartTypes,
-  ChartTypeDefinition,
-  ChartToolDeps,
-} from '../../charts/chart-types';
+import {createChartTools, ChartToolParams} from '../../charts/chart-types';
 
 import {createMosaicDashboardChartPanelConfig} from '../../dashboard/MosaicDashboardSlice';
+import {DatabaseAiAdapter} from '../database-types';
 import {DashboardAiAdapter} from './dashboard-types';
+import {ChartToolsOptions} from '../types';
+import {DEFAULT_CHART_MAX_DATA_POINTS} from '../..';
+import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
+import {DASHBOARD_CHART_TOOL_PREFIX} from './constants';
 
-export function createDashboardChartTools(
-  adapter: DashboardAiAdapter,
-  chartTypes?: ChartTypeDefinition<any>[],
-): Record<string, Tool> {
-  const resolvedChartTypes =
-    chartTypes ?? createDefaultChartTypes({includeCustomSpec: false});
+export type CreateDashboardChartToolsParams = {
+  databaseAdapter: DatabaseAiAdapter;
+  dashboardAdapter: DashboardAiAdapter;
+  chartToolsOptions?: ChartToolsOptions;
+};
 
-  const chartToolDeps: ChartToolDeps = {
-    maxDataPoints: 10_000, // TODO: ???
-    adapter,
+export function createDashboardChartTools({
+  databaseAdapter,
+  dashboardAdapter,
+  chartToolsOptions,
+}: CreateDashboardChartToolsParams): Record<string, Tool> {
+  const resolvedChartTypes = resolveChartTypes(chartToolsOptions?.chartTypes);
+
+  const chartToolParams: ChartToolParams = {
+    maxDataPoints:
+      chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
+    databaseAdapter,
     addChart: ({config, title}) =>
-      adapter.addPanel(createMosaicDashboardChartPanelConfig(title, config)),
+      dashboardAdapter.addPanel(
+        createMosaicDashboardChartPanelConfig(title, config),
+      ),
   };
 
   return createChartTools(
     resolvedChartTypes,
-    chartToolDeps,
-    'create_dashboard_panel_',
+    chartToolParams,
+    DASHBOARD_CHART_TOOL_PREFIX,
   );
 }

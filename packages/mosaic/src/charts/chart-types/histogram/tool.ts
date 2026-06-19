@@ -7,20 +7,23 @@ import {
   MAX_BINS_COUNT,
   DEFAULT_BINS_COUNT,
 } from './schema';
-import {BaseChartToolParameters} from '../../../ai/tool-schemas';
+import {BaseChartToolInput} from '../../../ai/tool-schemas';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
-import {ChartToolDeps, ChartToolOutput} from '../tool-types';
+import {ChartToolParams, ChartToolOutput} from '../tool-types';
 import {validateHistogramSettings} from './validation';
 import {ensureTable} from '../../../ai/tool-helpers';
 
-export const HistogramToolParameters = BaseChartToolParameters.extend({
+export const HistogramToolInput = BaseChartToolInput.extend({
   settings: HistogramChartSettings.required(),
 });
 
-export type HistogramToolParams = z.infer<typeof HistogramToolParameters>;
+export type HistogramToolInput = z.infer<typeof HistogramToolInput>;
 
-export function createHistogramAiTool(deps: ChartToolDeps) {
-  return tool<HistogramToolParams, ChartToolOutput<HistogramChartConfig>>({
+export function createHistogramAiTool({
+  databaseAdapter,
+  addChart,
+}: ChartToolParams) {
+  return tool<HistogramToolInput, ChartToolOutput<HistogramChartConfig>>({
     description: `Histogram: shows distribution of numeric values by automatically grouping data into bins/ranges.
 
 Use when: user asks about "distribution of [numeric column]", "spread of", "range of", "how values are distributed", "show histogram".
@@ -34,10 +37,10 @@ Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_C
 
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,
-    inputSchema: HistogramToolParameters,
+    inputSchema: HistogramToolInput,
     execute: async ({tableName, settings, title}) => {
       try {
-        const dataTable = ensureTable(deps.adapter, tableName);
+        const dataTable = ensureTable(databaseAdapter, tableName);
 
         validateHistogramSettings({
           dataTable,
@@ -49,26 +52,21 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
           settings,
         };
 
-        deps.addChart({
+        addChart({
           tableName,
           config: chartConfig,
           title,
         });
 
         return {
-          llmResult: {
-            success: true,
-            details: `Generated histogram configuration for "${settings.field}".`,
-            data: chartConfig,
-          },
+          success: true,
+          details: `Generated histogram configuration for "${settings.field}".`,
+          data: chartConfig,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },

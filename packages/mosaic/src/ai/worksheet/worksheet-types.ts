@@ -1,6 +1,7 @@
-import type {BlockDocumentBlock} from '@sqlrooms/documents';
-import type {DataTable} from '@sqlrooms/db';
-import type {BaseMosaicAiAdapter, BaseAgentToolOptions} from '../types';
+import type {Tool} from 'ai';
+import type {BlockDocumentBlock, BlockDocumentNode} from '@sqlrooms/documents';
+import type {BaseAgentToolOptions} from '../types';
+import {DatabaseAiAdapter} from '../database-types';
 
 /**
  * Worksheet-specific AI types
@@ -16,27 +17,15 @@ type AddDashboardBlockResult = {
  * Worksheets are collections of blocks, not panels.
  * Worksheet adapter manages its own state internally via the store.
  */
-export type WorksheetAiAdapter = BaseMosaicAiAdapter & {
-  /** Get all available tables */
-  getTables(): DataTable[];
-
-  /** Set the current active artifact */
-  setCurrentArtifact(artifactId: string): void;
-
-  /** Get current worksheet artifact ID, if any */
-  getCurrentWorksheetId(): string | undefined;
-
-  /** Create a new worksheet artifact and return its ID */
-  createWorksheet(title?: string): string;
-
-  /** Check if artifact is a worksheet */
-  isWorksheet(artifactId: string): boolean;
+export type WorksheetAiAdapter = {
+  /** Set the current active worksheet */
+  setCurrentWorksheet(worksheetId: string): void;
 
   /** Ensure worksheet's block document exists */
   ensureWorksheet(worksheetId: string): void;
 
   /** Get worksheet's blocks */
-  getWorksheetBlocks(worksheetId: string): any[] | undefined;
+  getBlocks(worksheetId: string): BlockDocumentNode[] | undefined;
 
   /** Add a block to the worksheet */
   addBlock(worksheetId: string, block: BlockDocumentBlock): string;
@@ -47,6 +36,12 @@ export type WorksheetAiAdapter = BaseMosaicAiAdapter & {
     title: string,
     tableName: string,
   ): AddDashboardBlockResult;
+
+  addDataTableExplorerBlock: (
+    worksheetId: string,
+    title: string,
+    tableName: string,
+  ) => string;
 };
 
 export type WorksheetAgentResult = {
@@ -54,15 +49,34 @@ export type WorksheetAgentResult = {
   finalOutput: string;
   worksheetId: string;
   error?: string;
-  metadata?: {
-    tableName?: string;
-    blocksCreated: number;
-    stepsExecuted: number;
-    queriesRun: number;
-  };
+  metadata?: WorksheetAgentResultMetadata;
 };
+
+export type WorksheetAgentResultMetadata = {
+  tableName?: string;
+  blocksCreated: number;
+  stepsExecuted: number;
+  queriesRun: number;
+};
+
+export type ExtraWorksheetAiToolsParams = {
+  worksheetAdapter: WorksheetAiAdapter;
+  databaseAdapter: DatabaseAiAdapter;
+};
+
+export type ExtraWorksheetAiToolsFactory = (
+  params: ExtraWorksheetAiToolsParams,
+) => Record<string, Tool>;
 
 export type CreateWorksheetAgentToolOptions<TState> =
   BaseAgentToolOptions<TState> & {
-    adapter: WorksheetAiAdapter;
+    worksheetAdapter: WorksheetAiAdapter;
+    databaseAdapter: DatabaseAiAdapter;
+    dashboardAgentTool: Tool;
+    /**
+     * Host-provided worksheet tools keyed by their registered tool name.
+     * Register custom tools (e.g., maps, charts, data loaders) to extend
+     * the worksheet agent's capabilities.
+     */
+    extraTools?: ExtraWorksheetAiToolsFactory;
   };

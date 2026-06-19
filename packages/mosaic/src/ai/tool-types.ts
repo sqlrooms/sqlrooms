@@ -27,3 +27,16 @@ export interface CreateChartResult {
   title: string;
   config: ChartConfig;
 }
+
+type ToolOutputDefaultError = {errorMessage?: string};
+
+export type ToolOutput<
+  TSuccess,
+  TError extends ToolOutputDefaultError = ToolOutputDefaultError,
+> =
+  | ({
+      success: true;
+    } & TSuccess)
+  | ({
+      success: false;
+    } & TError);

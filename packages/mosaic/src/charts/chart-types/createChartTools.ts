@@ -1,6 +1,7 @@
 import type {Tool} from 'ai';
 import type {ChartTypeDefinition} from './base-types';
-import type {ChartToolDeps} from './tool-types';
+import type {ChartToolParams} from './tool-types';
+import {getChartToolName} from './utils';
 
 /**
  * Dynamically generate chart configuration tools from chart type definitions.
@@ -8,7 +9,7 @@ import type {ChartToolDeps} from './tool-types';
  * Chart tools generate ChartConfig objects using findTableByName for validation.
  *
  * @param chartTypes Array of chart type definitions
- * @param deps Chart tool dependencies (findTableByName + maxDataPoints)
+ * @param params Chart tool dependencies (findTableByName + maxDataPoints)
  * @param toolNamePrefix Prefix for generated tool names (default: 'create_dashboard_')
  * @returns Record mapping tool names to tool instances
  *
@@ -23,15 +24,15 @@ import type {ChartToolDeps} from './tool-types';
  */
 export function createChartTools(
   chartTypes: ChartTypeDefinition<any>[],
-  deps: ChartToolDeps,
+  params: ChartToolParams,
   toolNamePrefix: string,
 ): Record<string, Tool> {
   const tools: Record<string, Tool> = {};
 
   for (const chartType of chartTypes) {
     if (chartType.createTool) {
-      const toolName = `${toolNamePrefix}${chartType.id.replace(/-/g, '_')}`;
-      tools[toolName] = chartType.createTool(deps);
+      const toolName = getChartToolName(chartType, toolNamePrefix);
+      tools[toolName] = chartType.createTool(params);
     }
   }
 

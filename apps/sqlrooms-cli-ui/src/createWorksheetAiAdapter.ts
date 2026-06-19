@@ -14,45 +14,20 @@ export function createWorksheetAiAdapter(
   store: StoreApi<RoomState>,
 ): WorksheetAiAdapter {
   return {
-    getTables: () => store.getState().db.tables,
-
-    findTable: (tableName) => store.getState().db.findTable(tableName),
-
-    setCurrentArtifact: (artifactId) =>
+    setCurrentWorksheet: (artifactId) =>
       store.getState().artifacts.setCurrentArtifact(artifactId),
 
-    getCurrentWorksheetId: () => {
-      const state = store.getState();
-      const currentId = state.artifacts.config.currentArtifactId;
-      if (!currentId) return undefined;
-
-      const artifact = state.artifacts.config.artifactsById[currentId];
-      // Return current artifact only if it's a worksheet
-      return artifact?.type === 'worksheet' ? currentId : undefined;
-    },
-
-    createWorksheet: (title) => {
-      const state = store.getState();
-      // Create a worksheet artifact
-      const worksheetId = state.artifacts.createArtifact({
-        type: 'worksheet',
-        title: title || 'Worksheet',
-      });
-
-      // Initialize empty block document for this worksheet
-      state.blockDocuments.ensureBlockDocument(worksheetId);
-
-      return worksheetId;
-    },
-
-    isWorksheet: (artifactId) =>
-      store.getState().artifacts.getArtifact(artifactId)?.type === 'worksheet',
-
     ensureWorksheet: (worksheetId) => {
-      store.getState().blockDocuments.ensureBlockDocument(worksheetId);
+      const state = store.getState();
+
+      if (state.artifacts.getArtifact(worksheetId)?.type !== 'worksheet') {
+        throw new Error(`Artifact ${worksheetId} is not a worksheet`);
+      }
+
+      state.blockDocuments.ensureBlockDocument(worksheetId);
     },
 
-    getWorksheetBlocks: (worksheetId) => {
+    getBlocks: (worksheetId) => {
       const state = store.getState();
       const artifact = state.artifacts.getArtifact(worksheetId);
       if (!artifact || artifact.type !== 'worksheet') {
@@ -65,7 +40,7 @@ export function createWorksheetAiAdapter(
       }
 
       // Return blocks from the block document
-      return blockDocument.content.content.map((node: any) => node.attrs);
+      return blockDocument.content.content;
     },
 
     addBlock: (worksheetId, block) => {
@@ -105,6 +80,27 @@ export function createWorksheetAiAdapter(
         blockId: block.id,
         dashboardId,
       };
+    },
+
+    addDataTableExplorerBlock: (worksheetId, title, tableName) => {
+      const state = store.getState();
+      // Ensure the worksheet and its block document exist
+      state.blockDocuments.ensureBlockDocument(worksheetId);
+
+      const block: BlockDocumentStatefulBlockBlock = {
+        type: 'statefulBlock',
+        id: createDefaultBlockDocumentBlockId(),
+        blockInstanceId: createDefaultBlockDocumentBlockId(),
+        blockType: 'data-table',
+        title: tableName,
+        caption: title,
+      };
+
+      // Append the block to the worksheet
+      state.blockDocuments.appendBlocks(worksheetId, [block]);
+
+      // Return the block ID
+      return block.id;
     },
   };
 }

@@ -1,5 +1,5 @@
 import type {LanguageModel, Tool, ToolLoopAgent} from 'ai';
-import type {DataTable, QualifiedTableName} from '@sqlrooms/db';
+import type {DataTable} from '@sqlrooms/db';
 import type {ChartTypeDefinition} from '../charts/chart-types';
 
 /**
@@ -33,21 +33,9 @@ export type ChartAiAdapter = {
   findTableByName: (tableName: string) => DataTable;
 };
 
-/**
- * Base adapter interface with common functionality needed by both
- * dashboard and worksheet agents.
- *
- * Note: This has state-full methods while ChartAiAdapter is state-less.
- */
-export type BaseMosaicAiAdapter = {
-  /** Get all available tables */
-  getTables: () => DataTable[];
-
-  /** Find table by name, returns undefined if not found */
-  findTable(tableName: string | QualifiedTableName): DataTable | undefined;
-
-  /** Set the current active artifact */
-  setCurrentArtifact: (artifactId: string) => void;
+export type ChartToolsOptions = {
+  chartTypes?: ChartTypeDefinition<any>[];
+  chartMaxDataPoints?: number;
 };
 
 /**
@@ -56,8 +44,10 @@ export type BaseMosaicAiAdapter = {
 export type BaseAgentToolOptions<TState> = {
   store: AiStore<TState>;
   getModel: (args: {state: TState}) => LanguageModel;
-  createQueryTools?: (args: {store: AiStore<TState>}) => {
+  createDataTools?: (args: {store: AiStore<TState>}) => {
     query: Tool;
+    list_tables: Tool;
+    read_table_schema: Tool;
   };
   runSubAgent: (args: {
     agent: ToolLoopAgent<any, any, any>;
@@ -67,5 +57,5 @@ export type BaseAgentToolOptions<TState> = {
     abortSignal?: AbortSignal;
   }) => Promise<AgentRunResult>;
   instructions?: string;
-  chartTypes?: ChartTypeDefinition<any>[];
+  chartToolsOptions?: ChartToolsOptions;
 };

@@ -1,21 +1,35 @@
 import type {Tool} from 'ai';
 import {createChartTools} from '../../charts/chart-types/createChartTools';
-import {createDefaultChartTypes} from '../../charts/chart-types/createDefaultChartTypes';
-import {createChartToolDeps} from '../createChartToolDeps';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
-import type {CreateWorksheetAgentToolOptions} from './worksheet-types';
+import type {WorksheetAiAdapter} from './worksheet-types';
+import {ChartToolParams} from '../../charts/chart-types/tool-types';
+import {DatabaseAiAdapter} from '../database-types';
+import {ChartToolsOptions} from '../types';
+import {DEFAULT_CHART_MAX_DATA_POINTS} from '../constants';
+import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
+import {WORKSHEET_CHART_TOOL_PREFIX} from './constants';
 
-export function createWorksheetChartTools<TState>(
-  options: CreateWorksheetAgentToolOptions<TState>,
-  worksheetId: string,
-): Record<string, Tool> {
-  const resolvedChartTypes =
-    options.chartTypes ?? createDefaultChartTypes({includeCustomSpec: false});
+export type CreateWorksheetChartToolsParams = {
+  databaseAdapter: DatabaseAiAdapter;
+  worksheetAdapter: WorksheetAiAdapter;
+  worksheetId: string;
+  chartToolsOptions?: ChartToolsOptions;
+};
 
-  const chartToolDeps = createChartToolDeps({
-    adapter: options.adapter,
+export function createWorksheetChartTools({
+  databaseAdapter,
+  worksheetAdapter,
+  worksheetId,
+  chartToolsOptions,
+}: CreateWorksheetChartToolsParams): Record<string, Tool> {
+  const resolvedChartTypes = resolveChartTypes(chartToolsOptions?.chartTypes);
+
+  const chartToolParams: ChartToolParams = {
+    maxDataPoints:
+      chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
+    databaseAdapter: databaseAdapter,
     addChart: ({config, tableName, title}) => {
-      return options.adapter.addBlock(worksheetId, {
+      return worksheetAdapter.addBlock(worksheetId, {
         type: 'chart',
         id: createDefaultBlockDocumentBlockId(),
         config,
@@ -23,11 +37,11 @@ export function createWorksheetChartTools<TState>(
         caption: title,
       });
     },
-  });
+  };
 
   return createChartTools(
     resolvedChartTypes,
-    chartToolDeps,
-    'create_worksheet_block_', // Worksheet-specific prefix
+    chartToolParams,
+    WORKSHEET_CHART_TOOL_PREFIX,
   );
 }

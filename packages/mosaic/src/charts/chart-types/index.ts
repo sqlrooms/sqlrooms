@@ -50,8 +50,6 @@ export * from './heatmap/tool';
 export * from './scatter-plot/tool';
 export * from './box-plot/tool';
 export * from '../../ai/createDataTableExplorerTool';
-export * from '../../ai/list-panels-tool';
-export * from '../../ai/remove-panel-tool';
 
 // Re-export chart type utilities
 export {mosaicChartTypes} from './mosaicChartTypes';
