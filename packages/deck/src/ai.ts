@@ -1,7 +1,6 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import {
-  DASHBOARD_AI_INSTRUCTIONS,
   DashboardAiAdapter,
   MAP_TOOL_KEY,
   createDashboardAgentTool,
@@ -43,7 +42,7 @@ function createDeckMapDashboardExtraTools(
 }
 
 export function getDashboardWithDeckMapAiInstructions() {
-  return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
+  return `${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
 }
 
 export function createDashboardWithDeckMapAiTools(

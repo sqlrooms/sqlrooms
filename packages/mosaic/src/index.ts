@@ -363,7 +363,7 @@ export {
 } from './ai/createDataTableExplorerTool';
 
 // Dashboard and worksheet AI tools
-export {DASHBOARD_AI_INSTRUCTIONS, MAP_TOOL_KEY} from './ai/constants';
+export {MAP_TOOL_KEY} from './ai/constants';
 export {createWorksheetAgentTool} from './ai/worksheet/createWorksheetAgentTool';
 export {
   createDashboardAiTools,

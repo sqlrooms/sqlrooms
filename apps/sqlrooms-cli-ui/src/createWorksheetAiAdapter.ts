@@ -13,19 +13,21 @@ import {
 export function createWorksheetAiAdapter(
   store: StoreApi<RoomState>,
 ): WorksheetAiAdapter {
+  const ensureWorksheet = (worksheetId: string) => {
+    const state = store.getState();
+
+    if (state.artifacts.getArtifact(worksheetId)?.type !== 'worksheet') {
+      throw new Error(`Artifact ${worksheetId} is not a worksheet`);
+    }
+
+    state.blockDocuments.ensureBlockDocument(worksheetId);
+  };
+
   return {
     setCurrentWorksheet: (artifactId) =>
       store.getState().artifacts.setCurrentArtifact(artifactId),
 
-    ensureWorksheet: (worksheetId) => {
-      const state = store.getState();
-
-      if (state.artifacts.getArtifact(worksheetId)?.type !== 'worksheet') {
-        throw new Error(`Artifact ${worksheetId} is not a worksheet`);
-      }
-
-      state.blockDocuments.ensureBlockDocument(worksheetId);
-    },
+    ensureWorksheet,
 
     getBlocks: (worksheetId) => {
       const state = store.getState();
@@ -44,10 +46,9 @@ export function createWorksheetAiAdapter(
     },
 
     addBlock: (worksheetId, block) => {
-      const state = store.getState();
-      // Ensure the worksheet and its block document exist
-      state.blockDocuments.ensureBlockDocument(worksheetId);
+      ensureWorksheet(worksheetId);
 
+      const state = store.getState();
       // Append the block to the worksheet
       state.blockDocuments.appendBlocks(worksheetId, [block]);
 
@@ -56,10 +57,9 @@ export function createWorksheetAiAdapter(
     },
 
     addDashboardBlock: (worksheetId, title, tableName) => {
-      const state = store.getState();
-      // Ensure the worksheet and its block document exist
-      state.blockDocuments.ensureBlockDocument(worksheetId);
+      ensureWorksheet(worksheetId);
 
+      const state = store.getState();
       const dashboardId = state.mosaicDashboard.createDashboard(title);
 
       state.mosaicDashboard.setSelectedTable(dashboardId, tableName);
@@ -83,10 +83,9 @@ export function createWorksheetAiAdapter(
     },
 
     addDataTableExplorerBlock: (worksheetId, title, tableName) => {
-      const state = store.getState();
-      // Ensure the worksheet and its block document exist
-      state.blockDocuments.ensureBlockDocument(worksheetId);
+      ensureWorksheet(worksheetId);
 
+      const state = store.getState();
       const block: BlockDocumentStatefulBlockBlock = {
         type: 'statefulBlock',
         id: createDefaultBlockDocumentBlockId(),

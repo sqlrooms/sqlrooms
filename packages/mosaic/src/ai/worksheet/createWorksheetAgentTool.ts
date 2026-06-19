@@ -7,7 +7,6 @@ import type {
 import {AiAgentError} from '../errors';
 import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
 import {calculateWorksheetAgentResultMetadata} from './utils';
-import {ensureNoOverride} from '../tool-helpers';
 import {createWorksheetAiTools} from './createWorksheetAiTools';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
@@ -228,31 +227,18 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         const dataTools = options.createDataTools?.({store}) ?? {};
 
-        const builtInTools: Record<string, Tool> = {
-          ...dataTools,
-          ...createWorksheetAiTools({
-            databaseAdapter,
-            worksheetAdapter,
-            worksheetId,
-            chartToolsOptions,
-            dashboardAgentTool,
-            extraTools,
-          }),
-        };
-
-        const additionalTools =
-          extraTools?.({
-            worksheetAdapter,
-            databaseAdapter,
-          }) ?? {};
-
-        ensureNoOverride(builtInTools, additionalTools);
-
         const agent = new ToolLoopAgent({
           model: options.getModel({state: store.getState()}),
           tools: {
-            ...builtInTools,
-            ...additionalTools,
+            ...dataTools,
+            ...createWorksheetAiTools({
+              databaseAdapter,
+              worksheetAdapter,
+              worksheetId,
+              chartToolsOptions,
+              dashboardAgentTool,
+              extraTools,
+            }),
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],

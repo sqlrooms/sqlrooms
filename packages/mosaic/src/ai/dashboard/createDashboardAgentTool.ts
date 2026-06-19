@@ -109,7 +109,6 @@ const DashboardAgentInputSchema = z.object({
   dashboardId: z
     .string()
     .describe('The ID of an existing dashboard to update.'),
-  dashboardTitle: z.string().describe('The title of the dashboard'),
   maxSteps: z
     .number()
     .optional()
