@@ -167,6 +167,51 @@ such as `getChatTurnsFromUiMessages`.
 Old persisted sessions that contain `analysisResults` still load, but parsed and
 new `ChatSessionSchema` state no longer includes that field.
 
+## Devtools
+
+`@sqlrooms/ai/devtools` exposes development-oriented inspection components and
+helpers without adding CodeMirror-heavy debug UI to the main `@sqlrooms/ai`
+barrel.
+
+```tsx
+import {ChatSessionDebugView} from '@sqlrooms/ai/devtools';
+
+function DebugPanel({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose?: () => void;
+}) {
+  return <ChatSessionDebugView sessionId={sessionId} onClose={onClose} />;
+}
+```
+
+`ChatSessionDebugView` reads the existing AI store context and shows session
+metadata, model selection, registered tools, run context, raw `uiMessages`, and
+a tabbed chronological timeline that keeps message parts, tool calls, nested
+`agentProgress`, optional agent snapshots, and copyable JSON blocks together.
+
+Agent snapshot capture is opt-in on the AI slice:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureAgentSnapshots: true,
+    persistAgentSnapshots: true,
+    maxAgentSnapshotBytes: 64_000,
+  },
+});
+```
+
+Enable persistence when you need post-mortem or cross-tab debugging in saved
+workspace state. Snapshots are serializable metadata only; tool names,
+descriptions, capability flags, and approval hints may be stored, but
+implementations, closures, secrets, and unbounded prompt/output content should
+not be stored.
+
 ## Add custom tools
 
 ```tsx

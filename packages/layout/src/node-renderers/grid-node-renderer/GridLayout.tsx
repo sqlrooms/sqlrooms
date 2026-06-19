@@ -4,6 +4,7 @@ import {
   LayoutNode,
   isLayoutGridNode,
 } from '@sqlrooms/layout-config';
+import {ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {CSSProperties, FC, Ref, useCallback, useMemo, useState} from 'react';
 import {Responsive, WidthProvider} from 'react-grid-layout';
 import {
@@ -592,81 +593,86 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
           <span className="text-sm font-medium">{panelInfo.title}</span>
         </div>
       )}
-      <div
-        ref={scrollContainerElementRef}
-        className="min-h-0 flex-1 overflow-auto px-5 py-2"
+      <ScrollArea
+        viewportRef={scrollContainerElementRef}
+        className="min-h-0 flex-1"
       >
-        <ResponsiveGridLayout
-          className={[
-            'layout sqlrooms-grid-layout',
-            isInteracting ? 'sqlrooms-grid-layout-interacting' : '',
-            activeResizeHandle
-              ? `sqlrooms-grid-layout-resizing-${activeResizeHandle}`
-              : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          layouts={layouts}
-          cols={cols}
-          breakpoints={breakpoints}
-          rowHeight={rowHeight}
-          margin={margin}
-          containerPadding={containerPadding}
-          compactType={node.compactType === undefined ? null : node.compactType}
-          preventCollision={node.preventCollision}
-          isBounded={node.isBounded}
-          autoSize={node.autoSize ?? true}
-          draggableHandle='[data-layout-drag-handle="true"]'
-          draggableCancel={
-            'button, input, textarea, select, a, [data-layout-drag-cancel="true"]'
-          }
-          resizeHandles={resizeHandles}
-          resizeHandle={renderResizeHandle}
-          onDragStart={handleDragStart}
-          onDragStop={handleDragStop}
-          onWidthChange={handleWidthChange}
-          onResizeStart={handleResizeStart}
-          onResize={handleResize}
-          onResizeStop={handleResizeStop}
-          onLayoutChange={(_, allLayouts) =>
-            handleLayoutChange(allLayouts as GridLayouts)
-          }
-        >
-          {node.children.map((child) => {
-            const childId = getGridChildId(child);
-            const isResizePreviewChild =
-              resizePreviewItem?.i === childId && resizePreviewStyle != null;
-            return (
-              <div
-                key={childId}
-                className={
-                  isResizePreviewChild
-                    ? 'sqlrooms-grid-resize-follow-preview h-full'
-                    : 'h-full'
-                }
-                data-layout-grid-item-id={childId}
-                style={getResizeFollowStyle(
-                  isResizePreviewChild ? resizePreviewStyle : undefined,
-                )}
-              >
-                <div className="bg-background h-full overflow-hidden rounded border">
-                  {renderNode({
-                    node: child,
-                    path: [...path, node.id, childId],
-                    containerType: 'grid',
-                    containerId: node.id,
-                  })}
-                </div>
-                {isResizePreviewChild ? (
-                  <div className="sqlrooms-grid-resize-size">
-                    {resizePreviewItem.w} cols x {resizePreviewItem.h} rows
+        <div className="min-h-full px-5 py-2">
+          <ResponsiveGridLayout
+            className={[
+              'layout sqlrooms-grid-layout',
+              isInteracting ? 'sqlrooms-grid-layout-interacting' : '',
+              activeResizeHandle
+                ? `sqlrooms-grid-layout-resizing-${activeResizeHandle}`
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            layouts={layouts}
+            cols={cols}
+            breakpoints={breakpoints}
+            rowHeight={rowHeight}
+            margin={margin}
+            containerPadding={containerPadding}
+            compactType={
+              node.compactType === undefined ? null : node.compactType
+            }
+            preventCollision={node.preventCollision}
+            isBounded={node.isBounded}
+            autoSize={node.autoSize ?? true}
+            draggableHandle='[data-layout-drag-handle="true"]'
+            draggableCancel={
+              'button, input, textarea, select, a, [data-layout-drag-cancel="true"]'
+            }
+            resizeHandles={resizeHandles}
+            resizeHandle={renderResizeHandle}
+            onDragStart={handleDragStart}
+            onDragStop={handleDragStop}
+            onWidthChange={handleWidthChange}
+            onResizeStart={handleResizeStart}
+            onResize={handleResize}
+            onResizeStop={handleResizeStop}
+            onLayoutChange={(_, allLayouts) =>
+              handleLayoutChange(allLayouts as GridLayouts)
+            }
+          >
+            {node.children.map((child) => {
+              const childId = getGridChildId(child);
+              const isResizePreviewChild =
+                resizePreviewItem?.i === childId && resizePreviewStyle != null;
+              return (
+                <div
+                  key={childId}
+                  className={
+                    isResizePreviewChild
+                      ? 'sqlrooms-grid-resize-follow-preview h-full'
+                      : 'h-full'
+                  }
+                  data-layout-grid-item-id={childId}
+                  style={getResizeFollowStyle(
+                    isResizePreviewChild ? resizePreviewStyle : undefined,
+                  )}
+                >
+                  <div className="bg-background h-full overflow-hidden rounded border">
+                    {renderNode({
+                      node: child,
+                      path: [...path, node.id, childId],
+                      containerType: 'grid',
+                      containerId: node.id,
+                    })}
                   </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </ResponsiveGridLayout>
-      </div>
+                  {isResizePreviewChild ? (
+                    <div className="sqlrooms-grid-resize-size">
+                      {resizePreviewItem.w} cols x {resizePreviewItem.h} rows
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </ResponsiveGridLayout>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
   );
 

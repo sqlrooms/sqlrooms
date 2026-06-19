@@ -317,6 +317,7 @@ Specialized components allow explicit theme override:
 import {
   JsonCodeMirrorEditor,
   JavascriptCodeMirrorEditor,
+  foldAllExceptFirstFoldableRange,
 } from '@sqlrooms/codemirror';
 import {FC} from 'react';
 
@@ -341,6 +342,12 @@ const MyEditors: FC<MyEditorsProps> = ({json, code}) => {
   );
 };
 ```
+
+### Folding Helpers
+
+`foldAllExceptFirstFoldableRange(view)` folds every foldable range except the
+first/root range. It is useful for read-only JSON inspectors that should show
+top-level fields while keeping nested objects and arrays collapsed by default.
 
 ### Theme Colors
 

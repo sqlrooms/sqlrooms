@@ -14,7 +14,6 @@ import {useChartRetainerByKey} from './useChartRetainer';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
 import {useRuntimeIssueReporter} from './useRuntimeIssueReporter';
 import {DataTable} from '@sqlrooms/db';
-import {getChartTableReference} from './chart-types/base-types';
 
 export type MosaicChartViewProps = {
   dataTable?: DataTable;
@@ -131,7 +130,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     return (
       <div className={cn('h-full w-full', className)}>
         {createElement(renderContext.renderer, {
-          tableName: getChartTableReference(renderContext.dataTable),
+          table: renderContext.dataTable.table,
           config,
           coordinator: connection.coordinator,
           params,

@@ -4,6 +4,7 @@ import type {MosaicSliceState} from '../../MosaicSlice';
 import type {DataTableExplorerStore} from '../createDataTableExplorerStore';
 import type {
   DataTableExplorerPaginationState,
+  DataTableExplorerSqlTableReference,
   DataTableExplorerSorting,
 } from '../types';
 import type {DataTableExplorerStoreState} from '../createDataTableExplorerStore';
@@ -14,6 +15,10 @@ import {
   loadDataTableExplorerSchema,
 } from '../dataTableExplorerController';
 
+/**
+ * Inputs required to synchronize a dataTableExplorer instance with Mosaic
+ * connection, selection, schema, row, count, and summary lifecycles.
+ */
 export type UseDataTableExplorerLifecyclesOptions = {
   categoryLimit: number;
   columns?: string[];
@@ -28,7 +33,21 @@ export type UseDataTableExplorerLifecyclesOptions = {
   selectionVersion: number;
   sorting: DataTableExplorerSorting;
   summaryBins: number;
+  /**
+   * Stable SQLRooms table identity used for store keys, selection resets, and
+   * dataset IDs. This should keep catalog/database identity when available.
+   */
+  tableIdentity: string;
+  /**
+   * String table reference used for readiness checks and legacy client inputs.
+   */
   tableName: string;
+  /**
+   * Mosaic SQL table reference used by generated queries. Use a TableRefNode for
+   * qualified names to preserve identifier boundaries such as dots inside table
+   * names.
+   */
+  tableReference: DataTableExplorerSqlTableReference;
 };
 
 export type UseDataTableExplorerLifecyclesReturn = {
@@ -38,6 +57,10 @@ export type UseDataTableExplorerLifecyclesReturn = {
 /**
  * Owns the coordinator-backed schema, row, count, and summary client
  * lifecycles for a dataTableExplorer instance.
+ *
+ * The hook keeps SQLRooms identity state separate from Mosaic SQL references:
+ * tableIdentity drives local store keys, while tableReference is used at query
+ * boundaries.
  */
 export function useDataTableExplorerLifecycles(
   options: UseDataTableExplorerLifecyclesOptions,
@@ -56,23 +79,25 @@ export function useDataTableExplorerLifecycles(
     selectionVersion,
     sorting,
     summaryBins,
+    tableIdentity,
     tableName,
+    tableReference,
   } = options;
-  const previousTableNameRef = useRef(tableName);
+  const previousTableNameRef = useRef(tableIdentity);
 
   useEffect(() => {
     dataTableExplorerStore.getState().syncPageSize(pageSize);
   }, [pageSize, dataTableExplorerStore]);
 
   useEffect(() => {
-    if (previousTableNameRef.current === tableName) return;
+    if (previousTableNameRef.current === tableIdentity) return;
     selection.reset();
-    previousTableNameRef.current = tableName;
-  }, [selection, tableName]);
+    previousTableNameRef.current = tableIdentity;
+  }, [selection, tableIdentity]);
 
   useEffect(() => {
     dataTableExplorerStore.getState().resetPageIndex();
-  }, [dataTableExplorerStore, selectionVersion, tableName]);
+  }, [dataTableExplorerStore, selectionVersion, tableIdentity]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
@@ -88,9 +113,17 @@ export function useDataTableExplorerLifecycles(
       columns,
       coordinator: connection.coordinator,
       store: dataTableExplorerStore,
-      tableName,
+      tableIdentity,
+      tableReference,
     });
-  }, [columns, connection, dataTableExplorerStore, tableName]);
+  }, [
+    columns,
+    connection,
+    dataTableExplorerStore,
+    tableIdentity,
+    tableName,
+    tableReference,
+  ]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName || !fieldNames.length) {
@@ -105,7 +138,8 @@ export function useDataTableExplorerLifecycles(
       pagination,
       sorting,
       store: dataTableExplorerStore,
-      tableName,
+      tableName: tableIdentity,
+      tableReference,
     });
   }, [
     connection,
@@ -114,7 +148,9 @@ export function useDataTableExplorerLifecycles(
     dataTableExplorerStore,
     rowFilter,
     sorting,
+    tableIdentity,
     tableName,
+    tableReference,
   ]);
 
   useEffect(() => {
@@ -129,7 +165,8 @@ export function useDataTableExplorerLifecycles(
       filterStable: true,
       selection,
       store: dataTableExplorerStore,
-      tableName,
+      tableName: tableIdentity,
+      tableReference,
       target: 'filtered',
     });
     dataTableExplorerStore.getState().setClient(newClient);
@@ -138,7 +175,14 @@ export function useDataTableExplorerLifecycles(
       cleanup();
       dataTableExplorerStore.getState().setClient(null);
     };
-  }, [connection, dataTableExplorerStore, selection, tableName]);
+  }, [
+    connection,
+    dataTableExplorerStore,
+    selection,
+    tableIdentity,
+    tableName,
+    tableReference,
+  ]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !tableName) {
@@ -149,12 +193,19 @@ export function useDataTableExplorerLifecycles(
     const {cleanup} = connectDataTableExplorerCountClient({
       connection,
       store: dataTableExplorerStore,
-      tableName,
+      tableName: tableIdentity,
+      tableReference,
       target: 'total',
     });
 
     return cleanup;
-  }, [connection, dataTableExplorerStore, tableName]);
+  }, [
+    connection,
+    dataTableExplorerStore,
+    tableIdentity,
+    tableName,
+    tableReference,
+  ]);
 
   useEffect(() => {
     if (connection.status !== 'ready' || !fields.length) {
@@ -170,6 +221,7 @@ export function useDataTableExplorerLifecycles(
       store: dataTableExplorerStore,
       summaryBins,
       tableName,
+      tableReference,
     });
   }, [
     categoryLimit,
@@ -178,7 +230,9 @@ export function useDataTableExplorerLifecycles(
     dataTableExplorerStore,
     selection,
     summaryBins,
+    tableIdentity,
     tableName,
+    tableReference,
   ]);
 
   // Client is not returned - it's stored in the dataTableExplorerStore

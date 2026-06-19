@@ -21,6 +21,7 @@ import type {
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
+import {getMosaicTableReferenceString} from '../../mosaicTableReference';
 
 export type {ChartType};
 
@@ -52,7 +53,7 @@ export interface ChartBuilderField {
 
 /**
  * Result of table resolution.
- * tableName is the fully quoted string boundary form
+ * tableName is the canonical quoted string boundary form
  * (QualifiedTableName.toString()); qualifiedName is the canonical structured
  * identity when available.
  */
@@ -147,14 +148,26 @@ export type ChartRetainer = {
 export type BrushSelectionParams = Map<string, Selection>;
 
 /**
- * Props passed to chart renderer components.
+ * Props passed to component-based chart renderers.
+ *
+ * Renderers receive the resolved chart configuration, Mosaic coordinator, and
+ * optional runtime services needed to participate in dashboard filtering and
+ * error reporting. The `table` property is the canonical structured SQLRooms
+ * table identity; renderers must convert it through the appropriate SQL dialect
+ * helper instead of reconstructing table references from display names.
  */
 export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
-  tableName: string;
+  /** Canonical qualified table identity for the chart's data source. */
+  table: QualifiedTableName;
+  /** Validated chart configuration for this renderer. */
   config: TConfig;
+  /** Mosaic coordinator used to connect query clients and selections. */
   coordinator: Coordinator;
+  /** Optional row-limit policy applied to renderer-managed queries. */
   dataPolicy?: ChartDataPolicy | null;
+  /** Context attached to runtime issues reported by the renderer. */
   runtimeIssueContext?: ChartRuntimeIssueContext;
+  /** Reporter used to surface renderer query or policy failures. */
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
   /**
    * Pre-defined params/selections to inject when rendering vgplot specs.
@@ -200,8 +213,10 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
 };
 
 export function getChartTableReference(dataTable: DataTable): string {
-  return dataTable.table.toString();
+  return getMosaicTableReferenceString(dataTable.table);
 }
+
+export const getChartTableReferenceString = getChartTableReference;
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {

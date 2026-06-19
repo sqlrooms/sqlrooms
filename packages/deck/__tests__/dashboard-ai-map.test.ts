@@ -1,4 +1,5 @@
 import {MAP_TOOL_KEY, type DashboardToolDeps} from '@sqlrooms/mosaic';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {
   createDashboardWithDeckMapAiTools,
   createDeckMapConfigTool,
@@ -137,9 +138,16 @@ function createDeps(): DashboardToolDeps & {
 }
 
 describe('createDeckMapBoundsQuery', () => {
-  it('builds fit-to-data bounds queries without double-quoting table ids', () => {
+  it('builds fit-to-data bounds queries from structured table ids', () => {
     const query = createDeckMapBoundsQuery({
-      source: {tableName: '"local"."main"."events"'},
+      source: {
+        table: makeQualifiedTableName({
+          database: 'local',
+          schema: 'main',
+          table: 'events',
+          defaultDatabase: 'local',
+        }),
+      },
       fitToData: {
         dataset: 'events',
         longitudeColumn: 'longitude',
@@ -147,8 +155,8 @@ describe('createDeckMapBoundsQuery', () => {
       },
     });
 
-    expect(query).toContain('SELECT * FROM "local"."main"."events"');
-    expect(query).not.toContain('"""local"""');
+    expect(query).toContain('SELECT * FROM "main"."events"');
+    expect(query).not.toContain('SELECT * FROM "local"."main"."events"');
   });
 });
 

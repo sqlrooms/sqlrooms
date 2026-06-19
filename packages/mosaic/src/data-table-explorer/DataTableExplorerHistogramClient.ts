@@ -7,7 +7,10 @@ import {
 import {Interval1D, bin} from '@uwdata/mosaic-plot';
 import {count, type ExprNode, Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import type {DataTableExplorerHistogramSummary} from './types';
+import type {
+  DataTableExplorerHistogramSummary,
+  DataTableExplorerSqlTableReference,
+} from './types';
 import {rowsFromQueryResult, splitHistogramBins} from './utils';
 
 type HistogramStateChange = (
@@ -20,6 +23,7 @@ type HistogramClientOptions = {
   selection: Selection;
   steps: number;
   tableName: string;
+  tableReference?: DataTableExplorerSqlTableReference;
   valueType: 'date' | 'number';
 };
 
@@ -45,7 +49,7 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     x2: ExprNode;
     y: ExprNode;
   };
-  private readonly tableName: string;
+  private readonly tableReference: DataTableExplorerSqlTableReference;
   private totalBins?: HistogramRow[];
   private totalError?: Error;
   private totalLoading = true;
@@ -56,7 +60,7 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     super(options.selection);
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableName = options.tableName;
+    this.tableReference = options.tableReference ?? options.tableName;
     this.valueType = options.valueType;
 
     const binned = bin(options.field.name, {steps: options.steps})(
@@ -113,7 +117,7 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     if (!this.fieldInfoPromise) {
       this.fieldInfoPromise = queryFieldInfo(this.coordinator!, [
         {
-          table: this.tableName,
+          table: this.tableReference as unknown as string,
           column: this.field.name,
           stats: ['min', 'max'],
         },
@@ -166,7 +170,7 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
   }
 
   override query(filter: Array<ExprNode> = []): Query {
-    return Query.from({source: this.tableName})
+    return Query.from({source: this.tableReference})
       .select(this.select)
       .groupby([this.select.x1, this.select.x2])
       .where(filter);

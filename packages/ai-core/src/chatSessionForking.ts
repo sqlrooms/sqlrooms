@@ -58,6 +58,59 @@ function getToolCallIdsFromMessages(
   return toolCallIds;
 }
 
+function addReachableAgentToolCallIds(
+  toolCallIds: Set<string>,
+  agentProgress: ChatSessionSchema['agentProgress'],
+): void {
+  if (!agentProgress) return;
+
+  let foundNewToolCall = true;
+  while (foundNewToolCall) {
+    foundNewToolCall = false;
+
+    for (const [parentToolCallId, toolCalls] of Object.entries(agentProgress)) {
+      if (!toolCallIds.has(parentToolCallId) || !Array.isArray(toolCalls)) {
+        continue;
+      }
+
+      for (const toolCall of toolCalls) {
+        foundNewToolCall =
+          addAgentToolCallIds(toolCallIds, toolCall) || foundNewToolCall;
+      }
+    }
+  }
+}
+
+function addAgentToolCallIds(
+  toolCallIds: Set<string>,
+  toolCall: unknown,
+): boolean {
+  if (!toolCall || typeof toolCall !== 'object') return false;
+
+  let foundNewToolCall = false;
+  const record = toolCall as {
+    toolCallId?: unknown;
+    agentToolCalls?: unknown;
+  };
+
+  if (
+    typeof record.toolCallId === 'string' &&
+    !toolCallIds.has(record.toolCallId)
+  ) {
+    toolCallIds.add(record.toolCallId);
+    foundNewToolCall = true;
+  }
+
+  if (Array.isArray(record.agentToolCalls)) {
+    for (const nestedCall of record.agentToolCalls) {
+      foundNewToolCall =
+        addAgentToolCallIds(toolCallIds, nestedCall) || foundNewToolCall;
+    }
+  }
+
+  return foundNewToolCall;
+}
+
 export function getForkedAgentProgress({
   sourceSession,
   targetMessages,
@@ -68,6 +121,7 @@ export function getForkedAgentProgress({
   if (!sourceSession.agentProgress) return undefined;
 
   const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
+  addReachableAgentToolCallIds(copiedToolCallIds, sourceSession.agentProgress);
   const agentProgress = Object.fromEntries(
     Object.entries(sourceSession.agentProgress).filter(([toolCallId]) =>
       copiedToolCallIds.has(toolCallId),
@@ -76,6 +130,35 @@ export function getForkedAgentProgress({
 
   return Object.keys(agentProgress).length > 0
     ? (structuredClone(agentProgress) as ChatSessionSchema['agentProgress'])
+    : undefined;
+}
+
+/**
+ * Copies agent snapshots relevant to the forked message subset.
+ *
+ * @param sourceSession - Session being forked from.
+ * @param targetMessages - Messages retained in the forked session.
+ * @returns The matching cloned snapshots, or `undefined` when none match.
+ */
+export function getForkedAgentSnapshots({
+  sourceSession,
+  targetMessages,
+}: {
+  sourceSession: ChatSessionSchema;
+  targetMessages: ChatSessionSchema['uiMessages'];
+}): ChatSessionSchema['agentSnapshots'] | undefined {
+  if (!sourceSession.agentSnapshots) return undefined;
+
+  const copiedToolCallIds = getToolCallIdsFromMessages(targetMessages);
+  addReachableAgentToolCallIds(copiedToolCallIds, sourceSession.agentProgress);
+  const agentSnapshots = Object.fromEntries(
+    Object.entries(sourceSession.agentSnapshots).filter(([toolCallId]) =>
+      copiedToolCallIds.has(toolCallId),
+    ),
+  );
+
+  return Object.keys(agentSnapshots).length > 0
+    ? (structuredClone(agentSnapshots) as ChatSessionSchema['agentSnapshots'])
     : undefined;
 }
 
@@ -163,6 +246,10 @@ export function createForkedChatSessionFromMessage({
     sourceSession,
     targetMessages,
   });
+  const agentSnapshots = getForkedAgentSnapshots({
+    sourceSession,
+    targetMessages,
+  });
   const forkedSession: ChatSessionSchema = {
     id: targetSessionId,
     name: args.name ?? `Fork of ${sourceSession.name || 'Untitled'}`,
@@ -183,6 +270,7 @@ export function createForkedChatSessionFromMessage({
         }
       : {}),
     ...(agentProgress ? {agentProgress} : {}),
+    ...(agentSnapshots ? {agentSnapshots} : {}),
     isRunning: false,
     lastOpenedAt: now,
   };

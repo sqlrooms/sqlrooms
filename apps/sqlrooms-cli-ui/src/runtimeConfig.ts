@@ -6,6 +6,7 @@ export type RuntimeConfig = {
   llmModel?: string;
   apiKey?: string;
   configWritable?: boolean;
+  aiDevtools?: boolean;
   syncEnabled?: boolean;
   crdtWsUrl?: string;
   crdtRoomId?: string;

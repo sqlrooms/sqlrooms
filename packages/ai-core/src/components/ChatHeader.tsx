@@ -18,6 +18,7 @@ interface ChatHeaderProps {
   onCreateSession?: () => void;
   createSessionDisabled?: boolean;
   historyIsRunning?: boolean;
+  beforeCreateSessionAction?: React.ReactNode;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onCreateSession,
   createSessionDisabled = false,
   historyIsRunning = false,
+  beforeCreateSessionAction,
   className,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -116,6 +118,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           className="text-foreground hover:bg-accent h-8 max-w-full min-w-0 border-transparent text-sm leading-none font-semibold shadow-none ring-0 focus-visible:ring-1"
         />
         {currentSession && <SessionActionsMenu onDelete={handleDelete} />}
+        {beforeCreateSessionAction}
       </div>
 
       <div className="flex items-center gap-2">

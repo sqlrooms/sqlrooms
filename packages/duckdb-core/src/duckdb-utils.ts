@@ -4,8 +4,30 @@ export type QualifiedTableName = {
   database?: string;
   schema?: string;
   table: string;
+  /**
+   * Database/catalog that can be omitted from the canonical table reference.
+   */
+  defaultDatabase?: string;
+  /**
+   * Returns raw, unescaped identifier parts in `[database, schema, table]`
+   * order after applying any requested omissions.
+   */
+  toArray: (options?: {
+    includeDatabase?: boolean;
+    includeSchema?: boolean;
+  }) => string[];
+  /**
+   * Returns a fully-qualified SQL table reference, including the database when
+   * this object carries one.
+   */
+  toFullString: () => string;
   toString: () => string;
 };
+
+type QualifiedTableNameParts = Pick<
+  QualifiedTableName,
+  'database' | 'schema' | 'table' | 'defaultDatabase'
+>;
 
 export type ResolveTableReferenceResult<T> = {
   table?: T;
@@ -22,19 +44,47 @@ export function isQualifiedTableName(
   return typeof tableName === 'object' && 'toString' in tableName;
 }
 
+function qualifiedTableNameToFullString(tableName: QualifiedTableName): string {
+  return (
+    (tableName as {toFullString?: () => string}).toFullString?.() ??
+    tableName.toString()
+  );
+}
+
 /**
- * Get a qualified table name from a table name, schema, and database.
+ * Builds a pure QualifiedTableName value from explicit identifier parts.
  * @param table - The name of the table.
  * @param schema - The schema of the table.
  * @param database - The database of the table.
  * @returns The qualified table name.
+ *
+ * @remarks
+ * Prefer `state.db.qualifyTableName()` when a table reference should use the
+ * current/default database context, and prefer `state.db.findTable()` when resolving
+ * an existing table reference from user input or persisted table IDs.
+ * Use this helper only when all qualification context is already known.
  */
 export function makeQualifiedTableName({
   database,
   schema,
   table,
-}: QualifiedTableName) {
-  const qualifiedTableName = [database, schema, table]
+  defaultDatabase,
+}: QualifiedTableNameParts): QualifiedTableName {
+  const fullyQualifiedTableName = [database, schema, table]
+    .filter((id) => id !== undefined && id !== null)
+    .map((id) => escapeId(id))
+    .join('.');
+  const isDefaultDatabase =
+    database !== undefined &&
+    database !== null &&
+    defaultDatabase !== undefined &&
+    defaultDatabase !== null &&
+    String(database) === String(defaultDatabase);
+  const canonicalTableName = [
+    database && !isDefaultDatabase ? database : undefined,
+    schema,
+    table,
+  ]
     .filter((id) => id !== undefined && id !== null)
     .map((id) => escapeId(id))
     .join('.');
@@ -42,7 +92,21 @@ export function makeQualifiedTableName({
     database,
     schema,
     table,
-    toString: () => qualifiedTableName,
+    defaultDatabase,
+    toArray: ({
+      includeDatabase = true,
+      includeSchema = true,
+    }: {
+      includeDatabase?: boolean;
+      includeSchema?: boolean;
+    } = {}) =>
+      [
+        includeDatabase ? database : undefined,
+        includeSchema ? schema : undefined,
+        table,
+      ].filter((id): id is string => id !== undefined && id !== null),
+    toFullString: () => fullyQualifiedTableName,
+    toString: () => canonicalTableName,
   };
 }
 
@@ -159,8 +223,8 @@ export function getUnqualifiedSqlIdentifier(
  * Quotes a table reference for SQL.
  *
  * Accepts bare names, unquoted qualified names, or already-quoted qualified
- * identifiers. The result is always the fully quoted form produced by
- * QualifiedTableName.toString() when the input parses as a table reference.
+ * identifiers. Without a default database context, the result keeps all parsed
+ * table reference parts and quotes each identifier segment.
  *
  * @example
  * quoteTableReference('events') // '"events"'
@@ -209,14 +273,19 @@ export function resolveTableReference<T extends TableReferenceCandidate>(
   if (typeof tableReference !== 'string') {
     return {
       table: tables.find(
-        (candidate) => candidate.table.toString() === tableReference.toString(),
+        (candidate) =>
+          candidate.table.toString() === tableReference.toString() ||
+          qualifiedTableNameToFullString(candidate.table) ===
+            qualifiedTableNameToFullString(tableReference),
       ),
     };
   }
 
   const trimmedTableReference = tableReference.trim();
   const canonicalMatches = tables.filter(
-    (candidate) => candidate.table.toString() === trimmedTableReference,
+    (candidate) =>
+      candidate.table.toString() === trimmedTableReference ||
+      qualifiedTableNameToFullString(candidate.table) === trimmedTableReference,
   );
   if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};
   if (canonicalMatches.length > 1) {

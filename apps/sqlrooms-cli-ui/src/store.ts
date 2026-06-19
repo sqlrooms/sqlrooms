@@ -131,6 +131,8 @@ const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
+export const aiDevtoolsEnabled =
+  import.meta.env.DEV || Boolean(runtimeConfig.aiDevtools);
 const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
@@ -717,6 +719,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ...createDefaultAiToolRenderers(),
               ...webContainerToolkit.toolRenderers,
               chart: VegaChartToolResult,
+            },
+            devtools: {
+              captureAgentSnapshots: aiDevtoolsEnabled,
+              persistAgentSnapshots: aiDevtoolsEnabled,
             },
           })(set, get, store);
         })(),
