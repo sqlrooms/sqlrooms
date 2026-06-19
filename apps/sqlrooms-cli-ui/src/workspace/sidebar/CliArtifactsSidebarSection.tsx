@@ -1,11 +1,15 @@
 import {
   Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -14,6 +18,7 @@ import {
   useSidebar,
 } from '@sqlrooms/ui';
 import {FileStackIcon, LoaderCircleIcon, Plus} from 'lucide-react';
+import {useState} from 'react';
 import {useRoomStore} from '../../store';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
 
@@ -23,6 +28,7 @@ export function CliArtifactsSidebarSection() {
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
   const {state} = useSidebar();
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   if (state === 'expanded') {
     return (
@@ -90,8 +96,8 @@ export function CliArtifactsSidebarSection() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <PopoverTrigger asChild>
         <SidebarMenuButton
           className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
           type="button"
@@ -100,39 +106,59 @@ export function CliArtifactsSidebarSection() {
         >
           <FileStackIcon className="h-4 w-4" aria-hidden />
         </SidebarMenuButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        className="bg-popover border-border [&_[role=menuitem]]:focus:bg-accent w-72"
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-80 p-0"
         align="start"
         side="right"
         sideOffset={8}
       >
-        <DropdownMenuLabel>Artifacts</DropdownMenuLabel>
-        {artifactTabs.tabs.map((artifact) => {
-          const type = artifactTabs.artifactTypes[artifact.type];
-          const Icon = type?.icon ?? FileStackIcon;
-          return (
-            <DropdownMenuItem
-              key={artifact.id}
-              onClick={() => artifactTabs.selectArtifact(artifact.id)}
-            >
-              <Icon className="h-4 w-4" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">{artifact.name}</span>
-              {artifact.runningSessionCount > 0 ? (
-                <LoaderCircleIcon className="text-primary ml-auto h-3.5 w-3.5 shrink-0 animate-spin" />
-              ) : null}
-            </DropdownMenuItem>
-          );
-        })}
-        {artifactTabs.tabs.length === 0 ? (
-          <DropdownMenuItem disabled>No artifacts</DropdownMenuItem>
-        ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => openArtifactChooser(true)}>
-          <Plus className="h-4 w-4" aria-hidden />
-          New Artifact
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <Command>
+          <CommandInput placeholder="Search artifacts..." />
+          <CommandList className="max-h-none overflow-hidden">
+            <CommandEmpty>No artifacts found.</CommandEmpty>
+            <ScrollArea className="h-[min(70vh,360px)] overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block">
+              <CommandGroup heading="Artifacts">
+                {artifactTabs.tabs.map((artifact) => {
+                  const type = artifactTabs.artifactTypes[artifact.type];
+                  const Icon = type?.icon ?? FileStackIcon;
+                  return (
+                    <CommandItem
+                      key={artifact.id}
+                      value={`${artifact.name} ${artifact.id}`}
+                      onSelect={() => {
+                        artifactTabs.selectArtifact(artifact.id);
+                        setPopoverOpen(false);
+                      }}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden />
+                      <span className="min-w-0 flex-1 truncate">
+                        {artifact.name}
+                      </span>
+                      {artifact.runningSessionCount > 0 ? (
+                        <LoaderCircleIcon className="text-primary ml-auto h-3.5 w-3.5 shrink-0 animate-spin" />
+                      ) : null}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </ScrollArea>
+            <CommandSeparator />
+            <CommandGroup>
+              <CommandItem
+                value="new artifact"
+                onSelect={() => {
+                  openArtifactChooser(true);
+                  setPopoverOpen(false);
+                }}
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                New Artifact
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
