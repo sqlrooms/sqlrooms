@@ -1,4 +1,5 @@
 import {sql} from '@uwdata/mosaic-sql';
+import {getMosaicSqlTableReference} from '../src/mosaicTableReference';
 import {
   buildCategoryBuckets,
   buildCategorySummaryQuery,
@@ -31,6 +32,18 @@ describe('dataTableExplorer utils', () => {
     });
     expect(page.toString()).toContain('LIMIT 25');
     expect(page.toString()).toContain('OFFSET 50');
+  });
+
+  it('builds SQL from parsed Mosaic table references without the catalog', () => {
+    const query = buildDataTableExplorerBaseQuery({
+      columns: ['Magnitude'],
+      tableName: getMosaicSqlTableReference(
+        '"sqlrooms-cli"."main"."earthquakes"',
+      ),
+    });
+
+    expect(query.toString()).toContain('FROM "main"."earthquakes"');
+    expect(query.toString()).not.toContain('sqlrooms-cli');
   });
 
   it('sanitizes invalid pagination values before generating LIMIT/OFFSET', () => {

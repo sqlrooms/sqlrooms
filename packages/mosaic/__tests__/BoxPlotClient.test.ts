@@ -35,6 +35,17 @@ describe('BoxPlotClient', () => {
     expect(sql).not.toContain('"""local"""');
   });
 
+  it('preserves dotted table-name parts in quoted table references', () => {
+    const sql = buildBoxPlotQuery({
+      tableName: '"main"."events.2026"',
+      x: 'region',
+      y: 'magnitude',
+    });
+
+    expect(sql).toContain('FROM "main"."events.2026"');
+    expect(sql).not.toContain('FROM "main"."events"."2026"');
+  });
+
   it('applies external selection predicates to the box plot query', () => {
     const selection = Selection.crossfilter();
     selection.update(clausePoint('status', 'active', {source: {}}));
