@@ -9,6 +9,14 @@ import {DEFAULT_CHART_MAX_DATA_POINTS} from '../constants';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {WORKSHEET_CHART_TOOL_PREFIX} from './constants';
 
+/**
+ * Parameters for creating worksheet chart tools.
+ *
+ * @property databaseAdapter - Adapter for database operations and table queries
+ * @property worksheetAdapter - Adapter for worksheet-specific operations like adding blocks
+ * @property worksheetId - ID of the target worksheet to add chart blocks to
+ * @property chartToolsOptions - Optional configuration for chart types and data point limits
+ */
 export type CreateWorksheetChartToolsParams = {
   databaseAdapter: DatabaseAiAdapter;
   worksheetAdapter: WorksheetAiAdapter;
@@ -16,6 +24,16 @@ export type CreateWorksheetChartToolsParams = {
   chartToolsOptions?: ChartToolsOptions;
 };
 
+/**
+ * Creates AI tools for generating chart blocks in worksheets.
+ *
+ * @param params - Configuration parameters for chart tool creation
+ * @param params.databaseAdapter - Adapter for database operations
+ * @param params.worksheetAdapter - Adapter for worksheet block management
+ * @param params.worksheetId - Target worksheet ID
+ * @param params.chartToolsOptions - Optional chart configuration options
+ * @returns Record of chart tool names to Tool instances, prefixed with worksheet-specific identifiers
+ */
 export function createWorksheetChartTools({
   databaseAdapter,
   worksheetAdapter,

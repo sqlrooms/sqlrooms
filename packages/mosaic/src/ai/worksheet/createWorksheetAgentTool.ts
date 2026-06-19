@@ -184,6 +184,19 @@ const WorksheetAgentInputSchema = z.object({
 
 type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
+/**
+ * Creates an AI agent tool for building interactive data analysis worksheets with charts, text, and dashboard blocks.
+ *
+ * @template TState - Store state type extending MosaicDashboardStoreState
+ * @param options - Configuration options for the worksheet agent
+ * @param options.store - Zustand store instance for state management
+ * @param options.worksheetAdapter - Adapter for worksheet-specific operations
+ * @param options.databaseAdapter - Adapter for database operations and queries
+ * @param options.chartToolsOptions - Optional chart configuration and type restrictions
+ * @param options.dashboardAgentTool - Tool for creating embedded dashboard blocks
+ * @param options.extraTools - Optional factory for additional custom tools
+ * @returns Tool instance that orchestrates multi-turn worksheet creation via a ToolLoopAgent
+ */
 export function createWorksheetAgentTool<
   TState extends MosaicDashboardStoreState,
 >(options: CreateWorksheetAgentToolOptions<TState>): Tool {

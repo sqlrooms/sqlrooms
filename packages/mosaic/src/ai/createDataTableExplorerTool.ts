@@ -4,6 +4,9 @@ import {ensureTable} from './tool-helpers';
 import {DataTableExplorerPanelConfig} from '../dashboard/core-types';
 import {DatabaseAiAdapter} from './database-types';
 
+/**
+ * Parameters for creating a Data Table Explorer panel.
+ */
 export const DataTableExplorerParameters = z.object({
   tableName: z
     .string()
@@ -17,10 +20,16 @@ export const DataTableExplorerParameters = z.object({
   config: DataTableExplorerPanelConfig,
 });
 
+/**
+ * Inferred type for Data Table Explorer parameters.
+ */
 export type DataTableExplorerParameters = z.infer<
   typeof DataTableExplorerParameters
 >;
 
+/**
+ * Tool input schema including reasoning and explorer parameters.
+ */
 export const DataTableExplorerToolInput = z.object({
   reasoning: z
     .string()
@@ -28,15 +37,24 @@ export const DataTableExplorerToolInput = z.object({
   ...DataTableExplorerParameters.shape,
 });
 
+/**
+ * Inferred type for Data Table Explorer tool input.
+ */
 export type DataTableExplorerToolInput = z.infer<
   typeof DataTableExplorerToolInput
 >;
 
+/**
+ * Options for creating the Data Table Explorer tool.
+ */
 export type CreateDataTableExplorerToolOptions = {
   databaseAdapter: DatabaseAiAdapter;
   addDataTable(params: DataTableExplorerParameters): void;
 };
 
+/**
+ * Creates an AI tool for generating Data Table Explorer panels with schema and column statistics.
+ */
 export function createDataTableExplorerTool({
   databaseAdapter,
   addDataTable,
