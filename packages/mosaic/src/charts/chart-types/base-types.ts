@@ -151,7 +151,7 @@ export type BrushSelectionParams = Map<string, Selection>;
  * Props passed to chart renderer components.
  */
 export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
-  tableName: string;
+  table: QualifiedTableName;
   config: TConfig;
   coordinator: Coordinator;
   dataPolicy?: ChartDataPolicy | null;

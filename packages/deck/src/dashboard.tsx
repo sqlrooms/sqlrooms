@@ -6,7 +6,7 @@ type DeckProps = ComponentProps<typeof DeckGLReact>;
 import {
   escapeId,
   getColValAsNumber,
-  quoteTableReference,
+  type QualifiedTableName,
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import {
@@ -185,14 +185,19 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
   return Boolean(info.picked || info.object || (info.index ?? -1) >= 0);
 }
 
+type DeckMapBoundsQuerySource =
+  | {table: QualifiedTableName; sqlQuery?: never}
+  | {sqlQuery: string; table?: never};
+
 export function createDeckMapBoundsQuery(options: {
-  source: {tableName?: string; sqlQuery?: string};
+  source: DeckMapBoundsQuerySource;
   fitToData: DeckMapDashboardFitToDataConfig;
 }) {
   const {source, fitToData} = options;
-  const baseSourceSql = source.sqlQuery
-    ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : `SELECT * FROM ${quoteTableReference(source.tableName ?? '')}`;
+  const baseSourceSql =
+    'sqlQuery' in source
+      ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
+      : `SELECT * FROM ${source.table.toString()}`;
   const longitudeColumn = escapeId(fitToData.longitudeColumn);
   const latitudeColumn = escapeId(fitToData.latitudeColumn);
 
@@ -397,6 +402,7 @@ function DeckMapDashboardRenderer({
     (state) => state.mosaicDashboard.clearPanelIssue,
   );
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
+  const findTable = useStoreWithDuckDb((state) => state.db.findTable);
 
   const isSettingsOpen = Boolean(
     (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
@@ -493,15 +499,30 @@ function DeckMapDashboardRenderer({
         : undefined,
     [dashboard, fitToData, mapConfig?.datasets, panel],
   );
+  const fitToDataBoundsSource = useMemo<
+    DeckMapBoundsQuerySource | undefined
+  >(() => {
+    if (!fitToDataSource) {
+      return undefined;
+    }
+    if (fitToDataSource.sqlQuery) {
+      return {sqlQuery: fitToDataSource.sqlQuery};
+    }
+    if (!fitToDataSource.tableName) {
+      return undefined;
+    }
+    const table = findTable(fitToDataSource.tableName);
+    return table ? {table: table.table} : undefined;
+  }, [findTable, fitToDataSource]);
   const fitToDataKey = useMemo(
     () =>
-      fitToData && fitToDataSource
+      fitToData && fitToDataBoundsSource
         ? JSON.stringify({
-            source: fitToDataSource,
+            source: fitToDataBoundsSource,
             fitToData,
           })
         : null,
-    [fitToData, fitToDataSource],
+    [fitToData, fitToDataBoundsSource],
   );
   const fitStateKey = useMemo(
     () => JSON.stringify({panelId: panel.id, fitToDataKey}),
@@ -550,7 +571,7 @@ function DeckMapDashboardRenderer({
     const hasManualFitRequest = fitRequestVersion > handledFitRequestVersion;
     if (
       !fitToData ||
-      !fitToDataSource ||
+      !fitToDataBoundsSource ||
       containerSize.width <= 0 ||
       containerSize.height <= 0 ||
       (!hasManualFitRequest && didAutoFit)
@@ -564,7 +585,7 @@ function DeckMapDashboardRenderer({
       try {
         const handle = await executeSql(
           createDeckMapBoundsQuery({
-            source: fitToDataSource,
+            source: fitToDataBoundsSource,
             fitToData,
           }),
         );
@@ -638,7 +659,7 @@ function DeckMapDashboardRenderer({
     fitRequestVersion,
     fitStateKey,
     fitToData,
-    fitToDataSource,
+    fitToDataBoundsSource,
     handledFitRequestVersion,
   ]);
 

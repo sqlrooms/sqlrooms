@@ -2,6 +2,7 @@ import {Coordinator, Selection} from '@uwdata/mosaic-core';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {BoxPlotClient, type BoxPlotState} from './BoxPlotClient';
 import type {BrushSelectionParams} from '../../base-types';
+import type {QualifiedTableName} from '@sqlrooms/duckdb';
 import type {
   ChartDataPolicy,
   ChartRuntimeIssueContext,
@@ -16,7 +17,7 @@ export function useBoxPlotClient(args: {
   params?: BrushSelectionParams;
   runtimeIssueContext?: ChartRuntimeIssueContext;
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
-  tableName: string;
+  table: QualifiedTableName;
 }) {
   const {
     config,
@@ -25,7 +26,7 @@ export function useBoxPlotClient(args: {
     params,
     runtimeIssueContext,
     runtimeIssueReporter,
-    tableName,
+    table,
   } = args;
   const [state, setState] = useState<BoxPlotState>({
     isLoading: true,
@@ -57,7 +58,7 @@ export function useBoxPlotClient(args: {
       runtimeIssueContext,
       runtimeIssueReporter,
       selection,
-      tableName,
+      table,
       x: config.x,
       y: config.y,
     });
@@ -77,7 +78,7 @@ export function useBoxPlotClient(args: {
     runtimeIssueContext,
     runtimeIssueReporter,
     selection,
-    tableName,
+    table,
   ]);
 
   const effectiveState =

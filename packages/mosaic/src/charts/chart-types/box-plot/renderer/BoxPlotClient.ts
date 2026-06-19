@@ -3,7 +3,7 @@ import {
   clauseInterval,
   type Selection,
 } from '@uwdata/mosaic-core';
-import {escapeId, quoteTableReference} from '@sqlrooms/duckdb';
+import {escapeId, type QualifiedTableName} from '@sqlrooms/duckdb';
 import type {ExprNode, FilterExpr} from '@uwdata/mosaic-sql';
 import {
   assertChartDataPolicy,
@@ -12,6 +12,7 @@ import {
   type ChartRuntimeIssueContext,
   type ChartRuntimeIssueReporter,
 } from '../../../../chart-runtime';
+import {getMosaicSqlTableReference} from '../../../../mosaicTableReference';
 
 export type BoxPlotSummaryRow = {
   category: unknown;
@@ -44,7 +45,7 @@ export type BoxPlotClientOptions = {
   runtimeIssueContext?: ChartRuntimeIssueContext;
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selection: Selection;
-  tableName: string;
+  table: QualifiedTableName;
   x: string;
   y: string;
 };
@@ -123,13 +124,13 @@ function numericValue(value: unknown): number | undefined {
 
 type BuildBoxPlotQueryArgs = {
   filter?: FilterExpr | null;
-  tableName: string;
+  table: QualifiedTableName;
   x: string;
   y: string;
 };
 
 export function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
-  const table = quoteTableReference(args.tableName);
+  const tableReference = getMosaicSqlTableReference(args.table);
   const x = escapeId(args.x);
   const y = escapeId(args.y);
   const filters = normalizeFilter(args.filter).join(' AND ');
@@ -140,7 +141,7 @@ WITH base AS (
   SELECT
     ${x} AS "category",
     TRY_CAST(${y} AS DOUBLE) AS "value"
-  FROM ${table}
+  FROM ${tableReference}
   WHERE ${where}
 ),
 stats AS (
@@ -213,7 +214,7 @@ ORDER BY "category", "rowKind", "value"
 
 export class BoxPlotClient extends MosaicClient {
   private readonly onStateChange: (state: BoxPlotState) => void;
-  private readonly tableName: string;
+  private readonly table: QualifiedTableName;
   private readonly x: string;
   private readonly y: string;
   private readonly selection: Selection;
@@ -233,7 +234,7 @@ export class BoxPlotClient extends MosaicClient {
     this.onStateChange = options.onStateChange;
     this.runtimeIssueContext = options.runtimeIssueContext;
     this.runtimeIssueReporter = options.runtimeIssueReporter;
-    this.tableName = options.tableName;
+    this.table = options.table;
     this.x = options.x;
     this.y = options.y;
     this.selection = options.selection;
@@ -263,7 +264,7 @@ export class BoxPlotClient extends MosaicClient {
   override query(filter?: FilterExpr | null): string {
     return buildBoxPlotQuery({
       filter,
-      tableName: this.tableName,
+      table: this.table,
       x: this.x,
       y: this.y,
     });
