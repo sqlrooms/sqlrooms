@@ -2,9 +2,9 @@ import {useMemo} from 'react';
 import type {ChartDataPolicy} from '../chart-runtime';
 import {resolveChartDataPolicy} from '../chart-runtime';
 import type {ChartConfig} from './chart-types/chart-config';
+import {getChartTableReferenceString} from './chart-types/base-types';
 import {useChartTypeDefinition} from './useChartTypeDefinition';
 import {DataTable} from '@sqlrooms/db';
-import {getChartTableReference} from './chart-types/utils';
 
 export function useChartDataPolicy(
   dataTable: DataTable | undefined,
@@ -19,7 +19,7 @@ export function useChartDataPolicy(
 
     const defaultPolicy =
       chartTypeDefinition.getDataPolicy({
-        tableName: getChartTableReference(dataTable),
+        tableName: getChartTableReferenceString(dataTable),
         config,
       }) ?? null;
 

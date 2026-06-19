@@ -1,7 +1,10 @@
 import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import type * as arrow from 'apache-arrow';
-import type {DataTableExplorerUnsupportedSummary} from './types';
+import type {
+  DataTableExplorerSqlTableReference,
+  DataTableExplorerUnsupportedSummary,
+} from './types';
 import {buildDistinctCountQuery, readCountData} from './utils';
 
 type UnsupportedSummaryClientOptions = {
@@ -9,6 +12,7 @@ type UnsupportedSummaryClientOptions = {
   onStateChange: (summary: DataTableExplorerUnsupportedSummary) => void;
   selection: Selection;
   tableName: string;
+  tableReference?: DataTableExplorerSqlTableReference;
 };
 
 export class DataTableExplorerUnsupportedSummaryClient extends MosaicClient {
@@ -17,13 +21,13 @@ export class DataTableExplorerUnsupportedSummaryClient extends MosaicClient {
   private readonly onStateChange: (
     summary: DataTableExplorerUnsupportedSummary,
   ) => void;
-  private readonly tableName: string;
+  private readonly tableReference: DataTableExplorerSqlTableReference;
 
   constructor(options: UnsupportedSummaryClientOptions) {
     super(options.selection);
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableName = options.tableName;
+    this.tableReference = options.tableReference ?? options.tableName;
   }
 
   override get filterStable(): boolean {
@@ -43,7 +47,7 @@ export class DataTableExplorerUnsupportedSummaryClient extends MosaicClient {
     return buildDistinctCountQuery({
       fieldName: this.field.name,
       filter,
-      tableName: this.tableName,
+      tableName: this.tableReference,
     });
   }
 

@@ -4,6 +4,7 @@ import {
   cleanupSessionForks,
   createForkedChatSessionFromMessage,
   getForkedAgentProgress,
+  getForkedAgentSnapshots,
 } from '../src/chatSessionForking';
 
 function createSession(
@@ -308,6 +309,103 @@ describe('chatSessionForking', () => {
     expect(agentProgress?.['copied-tool']).not.toBe(
       sourceSession.agentProgress?.['copied-tool'],
     );
+  });
+
+  it('keeps nested reachable agent progress and snapshots when forking', () => {
+    const sourceSession = createSession({
+      agentProgress: {
+        'copied-tool': [
+          {
+            toolCallId: 'nested-tool',
+            toolName: 'agent',
+            state: 'success',
+            agentToolCalls: [
+              {
+                toolCallId: 'embedded-nested-tool',
+                toolName: 'query',
+                state: 'success',
+              },
+            ],
+          },
+        ],
+        'nested-tool': [
+          {
+            toolCallId: 'deep-tool',
+            toolName: 'query',
+            state: 'success',
+          },
+        ],
+        'omitted-tool': [
+          {
+            toolCallId: 'other-nested-tool',
+            toolName: 'query',
+            state: 'success',
+          },
+        ],
+      },
+      agentSnapshots: {
+        'copied-tool': {
+          parentToolCallId: 'copied-tool',
+          availableTools: [{name: 'agent'}],
+          startedAt: 1,
+        },
+        'nested-tool': {
+          parentToolCallId: 'nested-tool',
+          availableTools: [{name: 'query'}],
+          startedAt: 2,
+        },
+        'embedded-nested-tool': {
+          parentToolCallId: 'embedded-nested-tool',
+          availableTools: [{name: 'inspect'}],
+          startedAt: 3,
+        },
+        'deep-tool': {
+          parentToolCallId: 'deep-tool',
+          availableTools: [{name: 'sql'}],
+          startedAt: 4,
+        },
+        'omitted-tool': {
+          parentToolCallId: 'omitted-tool',
+          availableTools: [{name: 'other'}],
+          startedAt: 5,
+        },
+      },
+    });
+    const targetMessages: ChatSessionSchema['uiMessages'] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-query',
+            toolCallId: 'copied-tool',
+            state: 'output-available',
+            input: {},
+            output: {},
+          } as UIMessage['parts'][number],
+        ],
+      },
+    ];
+
+    const agentProgress = getForkedAgentProgress({
+      sourceSession,
+      targetMessages,
+    });
+    const agentSnapshots = getForkedAgentSnapshots({
+      sourceSession,
+      targetMessages,
+    });
+
+    expect(Object.keys(agentProgress ?? {}).sort()).toEqual([
+      'copied-tool',
+      'nested-tool',
+    ]);
+    expect(Object.keys(agentSnapshots ?? {}).sort()).toEqual([
+      'copied-tool',
+      'deep-tool',
+      'embedded-nested-tool',
+      'nested-tool',
+    ]);
   });
 
   it('removes fork origins whose target sessions no longer exist', () => {

@@ -4,8 +4,21 @@ export type QualifiedTableName = {
   database?: string;
   schema?: string;
   table: string;
+  /**
+   * Returns raw, unescaped identifier parts in `[database, schema, table]`
+   * order after applying any requested omissions.
+   */
+  toArray: (options?: {
+    includeDatabase?: boolean;
+    includeSchema?: boolean;
+  }) => string[];
   toString: () => string;
 };
+
+type QualifiedTableNameParts = Pick<
+  QualifiedTableName,
+  'database' | 'schema' | 'table'
+>;
 
 export type ResolveTableReferenceResult<T> = {
   table?: T;
@@ -33,7 +46,7 @@ export function makeQualifiedTableName({
   database,
   schema,
   table,
-}: QualifiedTableName) {
+}: QualifiedTableNameParts): QualifiedTableName {
   const qualifiedTableName = [database, schema, table]
     .filter((id) => id !== undefined && id !== null)
     .map((id) => escapeId(id))
@@ -42,6 +55,18 @@ export function makeQualifiedTableName({
     database,
     schema,
     table,
+    toArray: ({
+      includeDatabase = true,
+      includeSchema = true,
+    }: {
+      includeDatabase?: boolean;
+      includeSchema?: boolean;
+    } = {}) =>
+      [
+        includeDatabase ? database : undefined,
+        includeSchema ? schema : undefined,
+        table,
+      ].filter((id): id is string => id !== undefined && id !== null),
     toString: () => qualifiedTableName,
   };
 }

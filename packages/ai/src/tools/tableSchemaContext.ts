@@ -125,7 +125,10 @@ function makeQualifiedTableNameForAi({
   database,
   schema,
   table,
-}: QualifiedTableName): QualifiedTableName {
+}: Pick<
+  QualifiedTableName,
+  'database' | 'schema' | 'table'
+>): QualifiedTableName {
   const tableId = [database, schema, table]
     .filter((id) => id !== undefined && id !== null)
     .map((id) => escapeTableIdPart(id))
@@ -134,6 +137,18 @@ function makeQualifiedTableNameForAi({
     database,
     schema,
     table,
+    toArray: ({
+      includeDatabase = true,
+      includeSchema = true,
+    }: {
+      includeDatabase?: boolean;
+      includeSchema?: boolean;
+    } = {}) =>
+      [
+        includeDatabase ? database : undefined,
+        includeSchema ? schema : undefined,
+        table,
+      ].filter((id): id is string => id !== undefined && id !== null),
     toString: () => tableId,
   };
 }

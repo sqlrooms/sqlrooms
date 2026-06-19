@@ -428,6 +428,12 @@ def main(
         "--sync",
         help="Enable optional sync (CRDT) over WebSocket (Loro).",
     ),
+    ai_devtools: bool = typer.Option(
+        False,
+        "--ai-devtools",
+        envvar="SQLROOMS_AI_DEVTOOLS",
+        help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
+    ),
     meta_db: str | None = typer.Option(
         None,
         "--meta-db",
@@ -489,6 +495,7 @@ def main(
         ui_dir=ui,
         serve_ui=not no_ui,
         config_path=save_config_path,
+        ai_devtools=ai_devtools,
     )
     try:
         asyncio.run(server.start())

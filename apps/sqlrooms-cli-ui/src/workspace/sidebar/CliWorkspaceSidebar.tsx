@@ -22,15 +22,15 @@ export function CliWorkspaceSidebar({
       <SidebarHeader className="border-sidebar-border gap-3 border-b group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1.5">
         <CliSidebarBrand />
       </SidebarHeader>
-      <SidebarContent className="group-data-[collapsible=icon]:gap-0">
-        <SidebarGroup className="border-sidebar-border border-b py-4 group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
-          <SidebarGroupContent>
+      <SidebarContent className="overflow-hidden group-data-[collapsible=icon]:gap-0">
+        <SidebarGroup className="border-sidebar-border min-h-0 flex-[0_1_46%] border-b py-4 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:border-b-0 group-data-[collapsible=icon]:py-1">
+          <SidebarGroupContent className="h-full min-h-0">
             <CliDataSidebarSection />
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup className="group-data-[collapsible=icon]:py-1">
-          <SidebarGroupContent>
+        <SidebarGroup className="min-h-0 flex-1 group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:py-1">
+          <SidebarGroupContent className="h-full min-h-0">
             <CliArtifactsSidebarSection />
           </SidebarGroupContent>
         </SidebarGroup>

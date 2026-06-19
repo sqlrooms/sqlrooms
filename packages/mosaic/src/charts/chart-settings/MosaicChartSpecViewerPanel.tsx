@@ -1,4 +1,5 @@
 import {type FC, useMemo} from 'react';
+import {ScrollArea} from '@sqlrooms/ui';
 import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {MosaicChartSettings} from './MosaicChartSettings';
 import {Spec} from '@uwdata/mosaic-spec';
@@ -29,16 +30,18 @@ export const MosaicChartSpecViewerPanel: FC<
           <MosaicChartSettings.CloseButton onClick={onBack} />
         </div>
       </MosaicChartSettings.Header>
-      <div className="flex-1 overflow-auto p-2">
-        <div className="border-input h-full overflow-hidden rounded-md border">
-          <MosaicCodeMirrorEditor
-            value={serializedValue}
-            className="h-full"
-            enableSchemaValidation
-            readOnly
-          />
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="h-full p-2">
+          <div className="border-input h-full overflow-hidden rounded-md border">
+            <MosaicCodeMirrorEditor
+              value={serializedValue}
+              className="h-full"
+              enableSchemaValidation
+              readOnly
+            />
+          </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 };

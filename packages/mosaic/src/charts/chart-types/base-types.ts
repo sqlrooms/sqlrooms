@@ -22,6 +22,7 @@ import type {
 } from '../../chart-runtime';
 import {ChartToolParams} from './tool-types';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
+import {getMosaicTableReferenceString} from '../../mosaicTableReference';
 
 export type {ChartType};
 
@@ -188,6 +189,12 @@ export type ValidateSpecOptions<TSettings = ChartSettings> = Pick<
   CreateSpecOptions<TSettings>,
   'dataTable' | 'settings'
 >;
+
+export function getChartTableReference(dataTable: DataTable): string {
+  return getMosaicTableReferenceString(dataTable.table);
+}
+
+export const getChartTableReferenceString = getChartTableReference;
 
 export type SpecChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> =
   BaseChartTypeDefinition<TConfig> & {
