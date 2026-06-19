@@ -4,6 +4,7 @@ import {
   InvalidColumnTypeError,
   MissingColumnsError,
   RequiredFieldsError,
+  TooMuchDataError,
 } from '../errors';
 import {isNumericType} from '../../../column-types-utils';
 import {TableColumn} from '@sqlrooms/duckdb';
@@ -14,16 +15,33 @@ export type ValidatedScatterPlotSettings = {
   sizeColumn?: TableColumn;
 };
 
+export type ValidateScatterPlotOptions =
+  ValidateSpecOptions<ScatterPlotChartSettings> & {
+    maxDataPoints?: number;
+  };
+
 export function validateScatterPlotSettings({
   dataTable,
   settings: {x, y, size},
-}: ValidateSpecOptions<ScatterPlotChartSettings>): ValidatedScatterPlotSettings {
+  maxDataPoints,
+}: ValidateScatterPlotOptions): ValidatedScatterPlotSettings {
   // Basic validation for required fields
   if (!x || !y) {
     throw new RequiredFieldsError([
       ...(x ? [] : ['X field']),
       ...(y ? [] : ['Y field']),
     ]);
+  }
+
+  // Validate row count to prevent browser crashes
+  if (maxDataPoints !== undefined && dataTable.rowCount !== undefined) {
+    if (dataTable.rowCount > maxDataPoints) {
+      throw new TooMuchDataError(
+        'scatter plot',
+        dataTable.rowCount,
+        maxDataPoints,
+      );
+    }
   }
 
   // Validate X and Y field existence

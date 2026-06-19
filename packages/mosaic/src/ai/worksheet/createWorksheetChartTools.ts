@@ -29,6 +29,12 @@ export function createWorksheetChartTools({
       chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
     databaseAdapter: databaseAdapter,
     addChart: ({config, tableName, title}) => {
+      if (!tableName) {
+        throw new Error(
+          'tableName is required for worksheet chart blocks but was empty or undefined',
+        );
+      }
+
       return worksheetAdapter.addBlock(worksheetId, {
         type: 'chart',
         id: createDefaultBlockDocumentBlockId(),

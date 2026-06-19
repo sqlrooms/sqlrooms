@@ -55,3 +55,26 @@ export class InvalidColumnTypeError extends ChartSpecError {
     this.name = 'InvalidColumnTypeError';
   }
 }
+
+/**
+ * Error thrown when attempting to create a chart that would render too many data points.
+ * Used to prevent browser crashes from non-aggregated charts on large datasets.
+ */
+export class TooMuchDataError extends ChartSpecError {
+  readonly chartType: string;
+  readonly rowCount: number;
+  readonly maxDataPoints: number;
+
+  constructor(chartType: string, rowCount: number, maxDataPoints: number) {
+    super(
+      `Cannot create ${chartType} with ${rowCount.toLocaleString()} rows. ` +
+        `This chart type renders individual data points and is limited to ${maxDataPoints.toLocaleString()} rows. ` +
+        `Use an aggregated visualization instead (histogram, heatmap, or line chart with time intervals).`,
+    );
+
+    this.chartType = chartType;
+    this.rowCount = rowCount;
+    this.maxDataPoints = maxDataPoints;
+    this.name = 'TooMuchDataError';
+  }
+}

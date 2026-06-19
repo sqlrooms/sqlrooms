@@ -38,6 +38,7 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
         validateScatterPlotSettings({
           dataTable,
           settings,
+          maxDataPoints,
         });
 
         const chartConfig: ScatterPlotChartConfig = {

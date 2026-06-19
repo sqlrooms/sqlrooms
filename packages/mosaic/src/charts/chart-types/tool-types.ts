@@ -8,7 +8,7 @@ export type ChartToolOutput<T> = ToolOutput<{
 }>;
 
 type AddChartFunctionArgs = {
-  tableName: string;
+  tableName?: string; // Optional: worksheet charts need it, dashboard charts inherit from dashboard.selectedTable
   title: string;
   config: any;
 };
