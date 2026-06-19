@@ -86,9 +86,8 @@ describe('table schema context formatting', () => {
       {fullSchemaThreshold: 1, namesOnlyThreshold: 2},
     );
 
-    expect(output).toContain('events (tableId: "local"."main"."events")');
+    expect(output).toContain('tableId: "local"."main"."events"');
     expect(output).toContain('magnitude DOUBLE');
-    expect(output).toContain('- stations');
     expect(output).toContain('tableId: "local"."main"."stations"');
     expect(output).toContain('forward the canonical tableId');
     expect(output).toContain(

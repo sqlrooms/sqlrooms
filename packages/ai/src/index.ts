@@ -47,11 +47,7 @@ export {
   formatTableSummaryForAi,
   getAiTableScopeSummary,
   getAiTableSchemaContextLimits,
-  getDatabaseNameForAi,
-  getFullTableNameForAi,
-  getSchemaNameForAi,
   getTablesForAiScope,
-  getTableNameForAi,
 } from './tools/tableSchemaContext';
 export type {
   AiTableScope,

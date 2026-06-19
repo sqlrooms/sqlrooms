@@ -50,7 +50,7 @@ export const defaultLoadTableSchemasFilter: LoadTableSchemasFilterFunction = (
   table: QualifiedTableName,
 ): boolean => {
   if (
-    table.table?.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
+    table.table.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
     table.database?.startsWith(INTERNAL_SQLROOMS_PREFIX) ||
     table.schema?.startsWith(INTERNAL_SQLROOMS_PREFIX)
   ) {

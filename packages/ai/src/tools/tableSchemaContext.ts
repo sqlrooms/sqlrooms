@@ -101,58 +101,14 @@ export function getAiTableSchemaContextLimits(
   };
 }
 
-/**
- * Gets the display table name for AI-facing context.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns The bare table name when available, falling back to `tableName`.
- */
-export function getTableNameForAi(table: DataTable): string {
-  return table.table?.table || table.tableName;
-}
-
-/**
- * Gets the schema name for an AI-visible table.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns Schema name when known.
- */
-export function getSchemaNameForAi(table: DataTable): string | undefined {
-  return table.table?.schema || table.schema;
-}
-
-/**
- * Gets the database name for an AI-visible table.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns Database name when known.
- */
-export function getDatabaseNameForAi(table: DataTable): string | undefined {
-  return table.table?.database || table.database;
-}
-
-/**
- * Gets a compact display name for a table in AI-facing summaries.
- *
- * @param table - Data table metadata from the DuckDB catalog.
- * @returns `schema.table` for non-main schemas, otherwise the bare table name.
- */
-export function getFullTableNameForAi(table: DataTable): string {
-  const tableName = getTableNameForAi(table);
-  const schemaName = getSchemaNameForAi(table);
-  return schemaName && schemaName !== 'main'
-    ? `${schemaName}.${tableName}`
-    : tableName;
-}
-
 function isTableInAiScope(
   table: DataTable,
   currentDatabase?: string,
   options: AiTableScopeOptions = {},
 ): boolean {
   const {scope = 'main', schema, database} = options;
-  const tableSchema = getSchemaNameForAi(table);
-  const tableDatabase = getDatabaseNameForAi(table);
+  const tableSchema = table.table.schema;
+  const tableDatabase = table.table.database;
 
   if (database && tableDatabase !== database) return false;
   if (schema && tableSchema !== schema) return false;
@@ -210,8 +166,8 @@ export function getAiTableScopeSummary(
   >();
 
   for (const table of outsideCurrentDatabaseMainSchemaTables) {
-    const database = getDatabaseNameForAi(table);
-    const schema = getSchemaNameForAi(table);
+    const database = table.table.database;
+    const schema = table.table.schema;
     const key = `${database ?? ''}\x00${schema ?? ''}`;
     const existing = byLocation.get(key);
     if (existing) {
@@ -227,12 +183,12 @@ export function getAiTableScopeSummary(
       outsideCurrentDatabaseMainSchemaTables.length,
     otherCurrentDatabaseSchemaCount:
       outsideCurrentDatabaseMainSchemaTables.filter((table) => {
-        const database = getDatabaseNameForAi(table);
+        const database = table.table.database;
         return !database || database === currentDatabase;
       }).length,
     otherDatabaseCount: outsideCurrentDatabaseMainSchemaTables.filter(
       (table) => {
-        const database = getDatabaseNameForAi(table);
+        const database = table.table.database;
         return database && database !== currentDatabase;
       },
     ).length,
@@ -309,13 +265,11 @@ function formatColumnForAi(column: TableColumn): string {
  * Formats a table with full column schema for AI context.
  *
  * @param table - Data table metadata to format.
- * @returns Multi-line schema text including display name, canonical table ID,
- *   optional row count, columns, and optional comment.
+ * @returns Multi-line schema text including canonical table ID, optional row
+ *   count, columns, and optional comment.
  */
 export function formatTableSchemaForAi(table: DataTable): string {
-  const header = [
-    `${getFullTableNameForAi(table)} (tableId: ${table.table.toString()})`,
-  ];
+  const header = [`tableId: ${table.table.toString()}`];
   const rowCount = formatRowCount(table.rowCount);
   if (rowCount) header.push(`[${rowCount}]`);
 
@@ -333,14 +287,13 @@ export function formatTableSchemaForAi(table: DataTable): string {
  * Formats a one-line table summary for AI context.
  *
  * @param table - Data table metadata to summarize.
- * @returns Summary line containing display name, canonical table ID, and
- *   optional row count.
+ * @returns Summary line containing canonical table ID and optional row count.
  */
 export function formatTableSummaryForAi(table: DataTable): string {
   const rowCount = formatRowCount(table.rowCount);
-  return `- ${getFullTableNameForAi(
-    table,
-  )} (tableId: ${table.table.toString()})${rowCount ? ` [${rowCount}]` : ''}`;
+  return `- tableId: ${table.table.toString()}${
+    rowCount ? ` [${rowCount}]` : ''
+  }`;
 }
 
 function fitTextToMaxChars(text: string, maxChars?: number): string {
