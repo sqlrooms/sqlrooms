@@ -1,5 +1,5 @@
 import {createDuckDbSlice, CreateDuckDbSliceProps} from '@sqlrooms/duckdb';
-import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
+import {escapeId} from '@sqlrooms/duckdb-core';
 import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
@@ -112,11 +112,13 @@ export function createDbSlice(props?: CreateDbSliceProps) {
         const schemaName =
           schema ?? get().db.config.coreMaterialization.schemaName;
         await ensureSchemaExists({core, schema: schemaName, database});
-        return makeQualifiedTableName({
-          database,
-          schema: schemaName,
-          table: relationName,
-        }).toString();
+        return get()
+          .db.qualifyTableName({
+            database,
+            schema: schemaName,
+            table: relationName,
+          })
+          .toString();
       }
 
       const attachedName =
@@ -130,11 +132,13 @@ export function createDbSlice(props?: CreateDbSliceProps) {
         schema: schemaName,
         database: attachedName,
       });
-      return makeQualifiedTableName({
-        database: attachedName,
-        schema: schemaName,
-        table: relationName,
-      }).toString();
+      return get()
+        .db.qualifyTableName({
+          database: attachedName,
+          schema: schemaName,
+          table: relationName,
+        })
+        .toString();
     };
     const materializeArrowResult = async (args: {
       table: arrow.Table;

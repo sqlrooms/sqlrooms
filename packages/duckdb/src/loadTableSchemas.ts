@@ -20,6 +20,7 @@ export type LoadTableSchemasFilter = {
 
 export type LoadTableSchemasOptions = LoadTableSchemasFilter & {
   filterFunction?: LoadTableSchemasFilterFunction | null;
+  defaultDatabase?: string;
 };
 
 export type SchemaCatalogFilterEntry =
@@ -33,6 +34,7 @@ export type LoadSchemaCatalogFilterFunction = (
 
 export type LoadSchemaCatalogOptions = LoadTableSchemasFilter & {
   filterFunction?: LoadSchemaCatalogFilterFunction | null;
+  defaultDatabase?: string;
 };
 
 /**
@@ -44,14 +46,16 @@ export async function loadTableSchemas(
   connector: DuckDbConnector,
   options: LoadTableSchemasOptions = {},
 ): Promise<DataTable[]> {
-  const {filterFunction, ...filter} = options;
+  const {filterFunction, defaultDatabase, ...filter} = options;
 
   const sql = buildTableSchemasQuery(filter);
   const describeResults = await connector.query(sql);
   const tables: DataTable[] = [];
 
   for (let i = 0; i < describeResults.numRows; i++) {
-    const dataTable = parseTableSchemaRow(describeResults, i);
+    const dataTable = parseTableSchemaRow(describeResults, i, {
+      defaultDatabase,
+    });
 
     // Apply filter (if not provided or null, include all tables)
     if (!filterFunction || filterFunction(dataTable.table)) {
@@ -71,7 +75,7 @@ export async function loadSchemaCatalog(
   connector: DuckDbConnector,
   options: LoadSchemaCatalogOptions = {},
 ): Promise<SchemaWithTables[]> {
-  const {filterFunction, ...filter} = options;
+  const {filterFunction, defaultDatabase, ...filter} = options;
   const result = await connector.query(buildSchemaCatalogQuery(filter));
   const groups = new Map<string, SchemaWithTables>();
   const includedDatabases = new Set<string>();
@@ -103,7 +107,7 @@ export async function loadSchemaCatalog(
       groups.set(key, group);
     }
 
-    const table = parseSchemaCatalogTableRow(result, i);
+    const table = parseSchemaCatalogTableRow(result, i, {defaultDatabase});
     if (
       table &&
       (!filterFunction || filterFunction({type: 'table', table: table.table}))
@@ -122,14 +126,27 @@ function isDuckDbPlaceholderViewColumn(
   return columnName === '__' && columnType.toUpperCase() === 'UNKNOWN';
 }
 
+function getMetadataString(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return String(value);
+}
+
 /**
  * Parses a single row from the table schema query results into a DataTable object.
  */
-function parseTableSchemaRow(describeResults: any, index: number): DataTable {
+function parseTableSchemaRow(
+  describeResults: any,
+  index: number,
+  options: {defaultDatabase?: string} = {},
+): DataTable {
   const isView = describeResults.getChild('isView')?.get(index);
-  const rowDatabase = describeResults.getChild('database')?.get(index);
-  const rowSchema = describeResults.getChild('schema')?.get(index);
-  const rowTable = describeResults.getChild('name')?.get(index);
+  const rowDatabase = getMetadataString(
+    describeResults.getChild('database')?.get(index),
+  );
+  const rowSchema =
+    getMetadataString(describeResults.getChild('schema')?.get(index)) ?? '';
+  const rowTable =
+    getMetadataString(describeResults.getChild('name')?.get(index)) ?? '';
   const sql = describeResults.getChild('sql')?.get(index);
   const comment = describeResults.getChild('comment')?.get(index);
   const estimatedSize = describeResults.getChild('estimated_size')?.get(index);
@@ -140,6 +157,7 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
     database: rowDatabase,
     schema: rowSchema,
     table: rowTable,
+    defaultDatabase: options.defaultDatabase,
   });
 
   const columns: TableColumn[] = [];
@@ -176,10 +194,11 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
 function parseSchemaCatalogTableRow(
   result: any,
   index: number,
+  options: {defaultDatabase?: string} = {},
 ): DataTable | null {
   const rowTable = result.getChild('name')?.get(index);
   if (rowTable == null) return null;
-  return parseTableSchemaRow(result, index);
+  return parseTableSchemaRow(result, index, options);
 }
 
 function buildMetadataWhereClause(

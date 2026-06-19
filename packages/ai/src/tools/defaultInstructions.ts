@@ -36,7 +36,7 @@ Instructions for analysis:
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
 - Before writing SQL against a table whose columns are not shown, call read_table_schema.
-- Users may refer to tables by bare names such as "events"; after selecting or resolving a concrete table from the candidates, forward its canonical identity. When a tool accepts only a string, pass the exact tableId shown in table context or list_tables. tableId is the fully quoted SQL identifier string from QualifiedTableName.toString(), for example "db"."schema"."events"; do not forward only the bare/display table name once a table is known.
+- Users may refer to tables by bare names such as "events"; after selecting or resolving a concrete table from the candidates, forward its canonical identity. When a tool accepts only a string, pass the exact tableId shown in table context or list_tables. tableId is the quoted SQLRooms table reference from QualifiedTableName.toString(); it may omit the default database, for example "schema"."events", and includes a database for non-default attached databases. Do not forward only the bare/display table name once a table is known.
 - Use list_tables to search or page through available tables when the prompt mentions a table that is not shown below, including other visible schemas or databases when relevant. Use its database, schema, and pattern filters when needed.
 - Please don't modify data
 - IMPORTANT: When you receive an error response from a tool call (where success: false):

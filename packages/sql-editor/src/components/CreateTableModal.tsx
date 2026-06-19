@@ -1,5 +1,4 @@
 import {zodResolver} from '@hookform/resolvers/zod';
-import {makeQualifiedTableName} from '@sqlrooms/db';
 import {SqlQueryDataSource} from '@sqlrooms/room-shell';
 import {
   Alert,
@@ -262,6 +261,9 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
   const createTableFromQuery = useStoreWithSqlEditor(
     (state) => state.db.createTableFromQuery,
   );
+  const qualifyTableName = useStoreWithSqlEditor(
+    (state) => state.db.qualifyTableName,
+  );
   const refreshTableSchemas = useStoreWithSqlEditor(
     (state) => state.db.refreshTableSchemas,
   );
@@ -345,7 +347,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           // New path: call createTableFromQuery directly
           const qualifiedName =
             schema || database
-              ? makeQualifiedTableName({table: tableName, schema, database})
+              ? qualifyTableName({table: tableName, schema, database})
               : tableName;
 
           await createTableFromQuery(qualifiedName, query, {
@@ -376,6 +378,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
       onAddOrUpdateSqlQuery,
       editDataSource?.tableName,
       createTableFromQuery,
+      qualifyTableName,
       allowMultipleStatements,
       refreshTableSchemas,
       onClose,

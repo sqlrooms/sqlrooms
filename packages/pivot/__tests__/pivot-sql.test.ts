@@ -7,6 +7,7 @@ const table: DataTable = {
   table: {
     table: 'tips',
     schema: 'main',
+    toFullString: () => '"main"."tips"',
     toString: () => '"main"."tips"',
   },
   tableName: 'tips',

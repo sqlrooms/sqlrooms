@@ -15,6 +15,7 @@ import {createDeckMapDashboardSliceOptions} from '../src/dashboardIntegration';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
 import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
 import type {MosaicDashboardEntry} from '@sqlrooms/mosaic';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 
 const scatterConfig = {
   spec: {
@@ -129,7 +130,6 @@ function createTestAdapters() {
   };
 
   const dashboardAdapter: DashboardAiAdapter = {
-    getDashboard: () => dashboards['dashboard-1'],
     setSelectedTable: (tableName) => {
       dashboards['dashboard-1']!.selectedTable = tableName;
     },
@@ -158,9 +158,16 @@ function createTestAdapters() {
 }
 
 describe('createDeckMapBoundsQuery', () => {
-  it('builds fit-to-data bounds queries without double-quoting table ids', () => {
+  it('builds fit-to-data bounds queries from structured table ids', () => {
     const query = createDeckMapBoundsQuery({
-      source: {tableName: '"local"."main"."events"'},
+      source: {
+        table: makeQualifiedTableName({
+          database: 'local',
+          schema: 'main',
+          table: 'events',
+          defaultDatabase: 'local',
+        }),
+      },
       fitToData: {
         dataset: 'events',
         longitudeColumn: 'longitude',
@@ -168,8 +175,8 @@ describe('createDeckMapBoundsQuery', () => {
       },
     });
 
-    expect(query).toContain('SELECT * FROM "local"."main"."events"');
-    expect(query).not.toContain('"""local"""');
+    expect(query).toContain('SELECT * FROM "main"."events"');
+    expect(query).not.toContain('SELECT * FROM "local"."main"."events"');
   });
 });
 
@@ -226,7 +233,6 @@ describe('createDeckMapDashboardTool', () => {
         findTable: () => undefined,
       },
       dashboardAdapter: {
-        getDashboard: () => undefined,
         setSelectedTable: () => {},
         addPanel: () => 'panel-1',
         updatePanel: () => {},

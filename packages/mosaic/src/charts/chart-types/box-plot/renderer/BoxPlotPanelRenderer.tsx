@@ -22,7 +22,7 @@ import {BoxPlotErrorBoundary} from './BoxPlotErrorBoundary';
 export const BoxPlotPanelRenderer: FC<
   ChartRendererProps<BoxPlotChartConfig>
 > = ({
-  tableName,
+  table,
   config,
   coordinator,
   params,
@@ -53,7 +53,7 @@ export const BoxPlotPanelRenderer: FC<
     params,
     runtimeIssueContext,
     runtimeIssueReporter,
-    tableName,
+    table,
   });
 
   const summaries = useMemo<PlotSummaryDatum[]>(

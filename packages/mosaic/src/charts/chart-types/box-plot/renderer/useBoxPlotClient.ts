@@ -2,6 +2,7 @@ import {Coordinator, Selection} from '@uwdata/mosaic-core';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {BoxPlotClient, type BoxPlotState} from './BoxPlotClient';
 import type {BrushSelectionParams} from '../../base-types';
+import type {QualifiedTableName} from '@sqlrooms/duckdb';
 import type {
   ChartDataPolicy,
   ChartRuntimeIssueContext,
@@ -9,6 +10,16 @@ import type {
 } from '../../../../chart-runtime';
 import {BoxPlotChartSettings} from '../schema';
 
+/**
+ * Creates and connects the Mosaic client used by the box plot renderer.
+ *
+ * @param args - Hook inputs including chart settings, Mosaic coordinator,
+ *   optional dashboard services, and the resolved source table.
+ * @param args.table - Canonical `QualifiedTableName` for the source table. The
+ *   hook passes this structured identity through to {@link BoxPlotClient}, where
+ *   it is converted to a Mosaic SQL table reference at query-build time.
+ * @returns The active client ref and normalized renderer state.
+ */
 export function useBoxPlotClient(args: {
   config: BoxPlotChartSettings | null;
   coordinator: Coordinator;
@@ -16,7 +27,7 @@ export function useBoxPlotClient(args: {
   params?: BrushSelectionParams;
   runtimeIssueContext?: ChartRuntimeIssueContext;
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
-  tableName: string;
+  table: QualifiedTableName;
 }) {
   const {
     config,
@@ -25,7 +36,7 @@ export function useBoxPlotClient(args: {
     params,
     runtimeIssueContext,
     runtimeIssueReporter,
-    tableName,
+    table,
   } = args;
   const [state, setState] = useState<BoxPlotState>({
     isLoading: true,
@@ -57,7 +68,7 @@ export function useBoxPlotClient(args: {
       runtimeIssueContext,
       runtimeIssueReporter,
       selection,
-      tableName,
+      table,
       x: config.x,
       y: config.y,
     });
@@ -77,7 +88,7 @@ export function useBoxPlotClient(args: {
     runtimeIssueContext,
     runtimeIssueReporter,
     selection,
-    tableName,
+    table,
   ]);
 
   const effectiveState =
