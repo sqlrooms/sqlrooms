@@ -35,7 +35,7 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   return (
     <ScrollArea
       className={cn(
-        'relative flex h-full flex-col gap-2 overflow-auto p-2',
+        'relative flex h-full flex-col gap-2 p-2',
         className,
       )}
     >
@@ -46,7 +46,10 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
         <TableSchemaTree.RefreshButton />
       </div>
 
-      <TableSchemaTree schemaTrees={filteredSchemaTrees} className="h-full" />
+      <TableSchemaTree
+        schemaTrees={filteredSchemaTrees}
+        className="h-full overflow-visible"
+      />
       <ScrollBar orientation="vertical" />
       <ScrollBar orientation="horizontal" />
     </ScrollArea>

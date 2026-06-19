@@ -91,7 +91,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
 
   const messagesPane = (
-    <div className="print-container h-full min-h-0 grow overflow-auto">
+    <div className="print-container h-full min-h-0 grow overflow-hidden">
       {isDataAvailable ? (
         <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
       ) : (

@@ -12,7 +12,7 @@ function SchemaExplorerRoot({className, children}: SchemaExplorerRootProps) {
   return (
     <ScrollArea
       className={cn(
-        'relative flex h-full flex-col gap-2 overflow-auto p-2',
+        'relative flex h-full flex-col gap-2 p-2',
         className,
       )}
     >
@@ -48,7 +48,12 @@ export interface SchemaExplorerTreeProps {
 
 function SchemaExplorerTree({className}: SchemaExplorerTreeProps) {
   const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
-  return <TableSchemaTree schemaTrees={schemaTrees} className={className} />;
+  return (
+    <TableSchemaTree
+      schemaTrees={schemaTrees}
+      className={cn('overflow-visible', className)}
+    />
+  );
 }
 
 export const SchemaExplorer = Object.assign(SchemaExplorerRoot, {

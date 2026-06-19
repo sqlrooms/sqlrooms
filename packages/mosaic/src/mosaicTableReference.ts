@@ -27,7 +27,9 @@ export function getMosaicSqlTableReference(
 export function getMosaicTableIdentity(
   tableName: MosaicTableReferenceInput,
 ): string {
-  return typeof tableName === 'string' ? tableName.trim() : tableName.toString();
+  return typeof tableName === 'string'
+    ? tableName.trim()
+    : tableName.toString();
 }
 
 /**
@@ -52,8 +54,8 @@ function getMosaicTableReferenceParts(
   const parsed = parseQualifiedSqlIdentifier(tableName);
 
   if (parsed?.table) {
-    return [parsed.schema, parsed.table].filter(
-      (part): part is string => Boolean(part),
+    return [parsed.schema, parsed.table].filter((part): part is string =>
+      Boolean(part),
     );
   }
 
