@@ -124,11 +124,11 @@ const SQLROOMS_CLI_AI_INSTRUCTIONS = `
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, app, map, chart, or other visual surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 
 - Use worksheet_agent when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
-- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call worksheet_agent. The worksheet agent can use embedded_html_app_agent to create or update an html-app block, then write the app by appId.
+- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call worksheet_agent. The worksheet agent should create/reuse the worksheet html-app block, then call embedded_html_app_agent with the block's appId.
 - Do not use top-level html_app_agent to populate worksheet stateful blocks inside worksheets.
 - For worksheet map requests, call worksheet_agent. It should add or reuse a dashboard block and delegate to embedded_dashboard_agent.
 - For dashboard artifacts, call dashboard_agent.
-- For generated HTML, D3, Chart.js, or browser app visualizations only when the primary artifact is an html-app artifact or no worksheet/dashboard artifact is the requested target, write through html_app_agent. html_app_agent requires appId and never creates artifacts.
+- For generated HTML, D3, Chart.js, or browser app visualizations only when the primary artifact is an html-app artifact or no worksheet/dashboard artifact is the requested target, write through html_app_agent. html_app_agent requires appId and never creates artifacts or worksheet blocks.
 - If the primary artifact is an html-app artifact, call html_app_agent with appId set to the current artifact id and update it instead of creating a new html-app artifact.
 - If a new top-level html-app artifact is needed, first execute the html-app.create-artifact command, then call html_app_agent with appId set to the returned artifactId.
 - Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
