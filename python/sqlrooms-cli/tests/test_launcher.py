@@ -81,6 +81,19 @@ def test_pick_free_port_fails_fast_for_invalid_host():
         _pick_free_port("not-a-bindable-host.invalid", 4173)
 
 
+def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
+    def fail_init_global_connection(*_args, **_kwargs):
+        raise RuntimeError("duckdb lock held")
+
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.db_async.init_global_connection",
+        fail_init_global_connection,
+    )
+
+    with pytest.raises(RuntimeError, match="Failed to start DuckDB websocket backend"):
+        server._start_duckdb_backend()
+
+
 def test_api_config_with_ai_provider_metadata(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(

@@ -106,9 +106,15 @@ function hostForUrl(host) {
 }
 
 async function isPortAvailable(host, port) {
-  return await new Promise((resolve) => {
+  return await new Promise((resolve, reject) => {
     const server = net.createServer();
-    server.once('error', () => resolve(false));
+    server.once('error', (error) => {
+      if (error.code === 'EADDRINUSE' || error.code === 'EACCES') {
+        resolve(false);
+        return;
+      }
+      reject(error);
+    });
     server.once('listening', () => {
       server.close(() => resolve(true));
     });
@@ -133,6 +139,42 @@ function parsePortOption(args, name) {
   if (value === null) return null;
   const port = Number.parseInt(value, 10);
   return Number.isFinite(port) ? port : null;
+}
+
+function hasDbPathArg(args) {
+  if (
+    readOptionValue(args, '--db-path') !== null ||
+    readOptionValue(args, '-d') !== null
+  ) {
+    return true;
+  }
+
+  const optionsWithValue = new Set([
+    '--config',
+    '--db-path',
+    '--host',
+    '--meta-db',
+    '--meta-namespace',
+    '--port',
+    '--ui',
+    '--ws-port',
+    '-d',
+  ]);
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--') {
+      return args.slice(index + 1).some((value) => !value.startsWith('-'));
+    }
+    if (arg.startsWith('--') && arg.includes('=')) continue;
+    if (optionsWithValue.has(arg)) {
+      index += 1;
+      continue;
+    }
+    if (!arg.startsWith('-')) return true;
+  }
+
+  return false;
 }
 
 async function getCliDevPorts(args) {
@@ -335,6 +377,9 @@ if (target === 'cli') {
   const apiPortArgs = hasOption(cliArgs, '--port')
     ? cliArgs
     : ['--port', String(apiPort), ...cliArgs];
+  const pythonCliArgs = hasDbPathArg(apiPortArgs)
+    ? apiPortArgs
+    : ['--db-path', `/tmp/sqlrooms-cli-${apiPort}.db`, ...apiPortArgs];
   startProcess('sqlrooms CLI UI dev server', ['--host', '--port', String(uiPort)], {
     command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
     cwd: path.resolve('apps/sqlrooms-cli-ui'),
@@ -346,7 +391,7 @@ if (target === 'cli') {
     command: process.execPath,
     cwd: path.resolve('python/sqlrooms-cli'),
     env: {
-      SQLROOMS_CLI_DEV_ARGS: JSON.stringify(apiPortArgs),
+      SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
     },
   });
 } else {

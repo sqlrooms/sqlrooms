@@ -5,8 +5,6 @@ const defaultArgs = [
   'sqlrooms',
   '--no-open-browser',
   '--no-ui',
-  '--db-path',
-  '/tmp/sqlrooms-cli.db',
 ];
 
 function getForwardedArgs() {
@@ -42,11 +40,20 @@ const forwardedArgs = getForwardedArgs();
 // `sqlrooms` still auto-selects a free port when --port is omitted.
 const portArgs =
   readOptionValue(forwardedArgs, '--port') === null ? ['--port', '4173'] : [];
+const dbPathArgs =
+  readOptionValue(forwardedArgs, '--db-path') === null &&
+  readOptionValue(forwardedArgs, '-d') === null
+    ? ['--db-path', '/tmp/sqlrooms-cli.db']
+    : [];
 
-const result = spawnSync('uv', [...defaultArgs, ...portArgs, ...forwardedArgs], {
-  stdio: 'inherit',
-  shell: process.platform === 'win32',
-});
+const result = spawnSync(
+  'uv',
+  [...defaultArgs, ...portArgs, ...dbPathArgs, ...forwardedArgs],
+  {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  },
+);
 
 if (typeof result.status === 'number') {
   process.exit(result.status);

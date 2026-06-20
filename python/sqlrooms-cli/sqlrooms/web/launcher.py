@@ -457,6 +457,8 @@ class SqlroomsHttpServer:
         self.upload_dir = base_dir / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self._duckdb_thread: threading.Thread | None = None
+        self._duckdb_ready = threading.Event()
+        self._duckdb_start_error: BaseException | None = None
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
@@ -498,6 +500,8 @@ class SqlroomsHttpServer:
         return "localhost" if self.host in ("0.0.0.0", "::") else self.host
 
     def _start_duckdb_backend(self) -> None:
+        self._duckdb_ready.clear()
+        self._duckdb_start_error = None
         thread = threading.Thread(
             target=self._run_duckdb_server,
             daemon=True,
@@ -505,6 +509,13 @@ class SqlroomsHttpServer:
         )
         thread.start()
         self._duckdb_thread = thread
+        self._duckdb_ready.wait(timeout=10)
+        if self._duckdb_start_error is not None:
+            raise RuntimeError(
+                "Failed to start DuckDB websocket backend"
+            ) from self._duckdb_start_error
+        if not self._duckdb_ready.is_set():
+            raise RuntimeError("Timed out starting DuckDB websocket backend")
         logger.info(
             "Started DuckDB websocket backend at ws://%s:%s",
             self._public_host(),
@@ -933,6 +944,7 @@ class SqlroomsHttpServer:
         signal.signal = _noop_signal  # type: ignore
         try:
             db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
+            self._duckdb_ready.set()
             cache = QueryCache()
             duckdb_ws_server(
                 cache,
@@ -946,5 +958,9 @@ class SqlroomsHttpServer:
                 ),
                 local_only=True,
             )
+        except Exception as exc:
+            self._duckdb_start_error = exc
+            self._duckdb_ready.set()
+            logger.exception("DuckDB websocket backend failed to start")
         finally:
             signal.signal = original_signal  # type: ignore
