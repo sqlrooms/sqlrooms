@@ -6,6 +6,7 @@ jest.mock('@sqlrooms/room-store', () => ({
         ? (creator as (...innerArgs: unknown[]) => unknown)(...args)
         : creator,
   useBaseRoomStore: jest.fn(),
+  useRoomStoreApi: jest.fn(),
 }));
 
 jest.mock('lucide-react', () => ({
@@ -66,6 +67,33 @@ describe('html-app helpers', () => {
     );
   });
 
+  it('inlines local script and stylesheet files from the source map', () => {
+    const srcDoc = createHtmlAppSrcDoc(
+      createAppState({
+        files: {
+          '/index.html': `<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/src/app.css">
+  </head>
+  <body>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>`,
+          '/src/app.css': 'body { color: red; }',
+          '/src/app.js': 'document.body.dataset.ready = "true";',
+        },
+      }),
+    );
+
+    expect(srcDoc).toContain('<style>body { color: red; }</style>');
+    expect(srcDoc).toContain(
+      '<script type="module" >document.body.dataset.ready = "true";</script>',
+    );
+    expect(srcDoc).not.toContain('src="/src/app.js"');
+    expect(srcDoc).not.toContain('href="/src/app.css"');
+  });
+
   it('rejects multiple SQL statements before execution', async () => {
     await expect(
       executeReadonlyQuery({
@@ -78,11 +106,12 @@ describe('html-app helpers', () => {
   });
 
   it('returns bounded object rows and truncation metadata', async () => {
+    const getState = createQueryState({
+      rows: [{value: 1}, {value: 2}, {value: 3}],
+    });
     const result = await executeReadonlyQuery({
       request: {sql: 'select value from numbers'},
-      getState: createQueryState({
-        rows: [{value: 1}, {value: 2}, {value: 3}],
-      }),
+      getState,
       timeoutMs: 100,
       maxRows: 2,
     });
@@ -93,6 +122,12 @@ describe('html-app helpers', () => {
       rowCount: 2,
       truncated: true,
     });
+    expect(getState().db.connectors.runQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryType: 'json',
+        sql: expect.stringContaining('limit 3'),
+      }),
+    );
   });
 });
 
@@ -117,7 +152,7 @@ function createQueryState({
 }: {
   rows?: Record<string, unknown>[];
 } = {}) {
-  return () => ({
+  const state = {
     htmlApps: {
       config: {appsById: {}},
       ensureApp: jest.fn(),
@@ -131,7 +166,10 @@ function createQueryState({
     },
     db: {
       sqlSelectToJson: jest.fn(async () => ({error: false})),
-      runQuery: jest.fn(async () => ({jsonData: rows})),
+      connectors: {
+        runQuery: jest.fn(async () => ({jsonData: rows})),
+      },
     },
-  });
+  };
+  return () => state;
 }

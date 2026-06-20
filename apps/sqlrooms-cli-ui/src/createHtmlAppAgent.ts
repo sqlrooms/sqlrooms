@@ -66,6 +66,7 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
         files,
         entryHtmlPath: '/index.html',
         dependencies,
+        diagnostics: [],
         requestedCapabilities: ['query'],
         grantedCapabilities: ['query'],
       });

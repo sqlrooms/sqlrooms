@@ -69,11 +69,13 @@ export type HtmlAppRuntimeSliceState = {
 export type HtmlAppRuntimeQueryState = {
   db?: {
     sqlSelectToJson?: (sql: string) => Promise<{error: boolean}>;
-    runQuery?: (request: {
-      sql: string;
-      queryType: 'json';
-      signal?: AbortSignal;
-    }) => Promise<{jsonData?: Iterable<Record<string, unknown>>}>;
+    connectors?: {
+      runQuery?: (request: {
+        sql: string;
+        queryType: 'json';
+        signal?: AbortSignal;
+      }) => Promise<{jsonData?: Iterable<Record<string, unknown>>}>;
+    };
   };
 };
 
@@ -193,8 +195,36 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
 }) => {
   const resolvedAppId = appId ?? blockId;
   const roomStore = useRoomStoreApi();
-  const app = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId ? state.htmlApps.config.appsById[resolvedAppId] : undefined,
+  const appTitle = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId
+      ? state.htmlApps.config.appsById[resolvedAppId]?.title
+      : undefined,
+  );
+  const files = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId
+      ? state.htmlApps.config.appsById[resolvedAppId]?.files
+      : undefined,
+  );
+  const entryHtmlPath = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId
+      ? state.htmlApps.config.appsById[resolvedAppId]?.entryHtmlPath
+      : undefined,
+  );
+  const dependencies = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId
+      ? state.htmlApps.config.appsById[resolvedAppId]?.dependencies
+      : undefined,
+  );
+  const grantedCapabilities = useBaseRoomStore(
+    (state: HtmlAppRuntimeSliceState) =>
+      resolvedAppId
+        ? state.htmlApps.config.appsById[resolvedAppId]?.grantedCapabilities
+        : undefined,
+  );
+  const hasApp = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId
+      ? Boolean(state.htmlApps.config.appsById[resolvedAppId])
+      : false,
   );
   const ensureApp = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.ensureApp,
@@ -216,22 +246,28 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   }, [ensureApp, resolvedAppId, title]);
 
   const srcDoc = useMemo(() => {
-    if (!app) return '';
-    return createHtmlAppSrcDoc(app);
-  }, [app]);
+    if (!files) return '';
+    return createHtmlAppSrcDoc({
+      title: appTitle ?? title ?? 'HTML App',
+      files,
+      entryHtmlPath: entryHtmlPath ?? '/index.html',
+      dependencies: dependencies ?? [],
+    });
+  }, [appTitle, dependencies, entryHtmlPath, files, title]);
 
   useEffect(() => {
-    if (!resolvedAppId || !app || !iframeRef.current) return;
+    if (!resolvedAppId || !hasApp || !iframeRef.current) return;
     const iframe = iframeRef.current;
     const targetWindow = iframe.contentWindow;
     if (!targetWindow) return;
+    const capabilities = new Set(grantedCapabilities ?? []);
 
     const host = createBridgeHost({
       targetWindow,
       capabilities: {
-        query: app.grantedCapabilities.includes('query'),
-        schema: app.grantedCapabilities.includes('schema'),
-        initialData: app.grantedCapabilities.includes('initialData'),
+        query: capabilities.has('query'),
+        schema: capabilities.has('schema'),
+        initialData: capabilities.has('initialData'),
       },
       handlers: {
         query: (request) =>
@@ -254,7 +290,8 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     };
   }, [
     addDiagnostic,
-    app,
+    grantedCapabilities,
+    hasApp,
     getState,
     maxRows,
     queryTimeoutMs,
@@ -276,7 +313,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
         ref={iframeRef}
         className="h-full min-h-[320px] w-full bg-white"
         sandbox="allow-scripts"
-        title={app?.title ?? title ?? 'HTML App'}
+        title={appTitle ?? title ?? 'HTML App'}
       />
     </div>
   );
@@ -364,23 +401,30 @@ export function resolveHtmlAppDependencyUrl(dependency: HtmlAppDependency) {
   return `https://cdn.jsdelivr.net/npm/${dependency.package}@${dependency.version}${entry}`;
 }
 
-export function createHtmlAppSrcDoc(app: HtmlAppState): string {
+export type CreateHtmlAppSrcDocOptions = Pick<
+  HtmlAppState,
+  'title' | 'files' | 'entryHtmlPath' | 'dependencies'
+>;
+
+export function createHtmlAppSrcDoc(app: CreateHtmlAppSrcDocOptions): string {
+  const files = normalizeFileMap(app.files);
   const entryPath = normalizePath(app.entryHtmlPath);
   const html =
-    app.files[entryPath] ??
-    app.files[app.entryHtmlPath] ??
+    files[entryPath] ??
+    files[app.entryHtmlPath] ??
     createDefaultHtmlAppFiles(app.title)['/index.html'] ??
     '';
+  const bundledHtml = inlineLocalFileReferences(html, files);
   const prelude = [
     "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; img-src data: blob:; font-src data:; connect-src 'none';\">",
     ...app.dependencies.map(renderDependencyTag),
     `<script>${createDiagnosticPreludeScript()}</script>`,
   ].join('\n');
 
-  if (/<head[\s>]/i.test(html)) {
-    return html.replace(/<head([^>]*)>/i, `<head$1>\n${prelude}`);
+  if (/<head[\s>]/i.test(bundledHtml)) {
+    return bundledHtml.replace(/<head([^>]*)>/i, `<head$1>\n${prelude}`);
   }
-  return `${prelude}\n${html}`;
+  return `${prelude}\n${bundledHtml}`;
 }
 
 export async function executeReadonlyQuery({
@@ -395,7 +439,8 @@ export async function executeReadonlyQuery({
   maxRows: number;
 }): Promise<QueryResult> {
   const state = getState();
-  if (!state.db?.sqlSelectToJson || !state.db.runQuery) {
+  const runQuery = state.db?.connectors?.runQuery;
+  if (!state.db?.sqlSelectToJson || !runQuery) {
     throw new Error('The host does not provide a query runtime.');
   }
   if (hasMultipleStatements(request.sql)) {
@@ -411,7 +456,7 @@ export async function executeReadonlyQuery({
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   const start = performance.now();
   try {
-    const result = await state.db.runQuery({
+    const result = await runQuery({
       sql: `select * from (${request.sql}) as sqlrooms_app_query limit ${limit + 1}`,
       queryType: 'json',
       signal: controller.signal,
@@ -443,6 +488,52 @@ function renderDependencyTag(dependency: HtmlAppDependency) {
 
 function normalizePath(path: string) {
   return path.startsWith('/') ? path : `/${path}`;
+}
+
+function normalizeFileMap(files: HtmlAppSourceFileMap): HtmlAppSourceFileMap {
+  return Object.fromEntries(
+    Object.entries(files).map(([path, content]) => [
+      normalizePath(path),
+      content,
+    ]),
+  );
+}
+
+function inlineLocalFileReferences(
+  html: string,
+  files: HtmlAppSourceFileMap,
+): string {
+  return html
+    .replace(
+      /<script\b([^>]*?)\bsrc=(["'])([^"']+)\2([^>]*)><\/script>/gi,
+      (match, before: string, quote: string, src: string, after: string) => {
+        const content = files[normalizePath(src)];
+        if (content == null || isExternalUrl(src)) return match;
+        return `<script${before}${after}>${escapeScriptContent(content)}</script>`;
+      },
+    )
+    .replace(
+      /<link\b([^>]*?)\bhref=(["'])([^"']+)\2([^>]*?)>/gi,
+      (match, before: string, quote: string, href: string, after: string) => {
+        const content = files[normalizePath(href)];
+        if (content == null || isExternalUrl(href)) return match;
+        const attrs = `${before} ${after}`;
+        if (!/\brel=(["'])stylesheet\1/i.test(attrs)) return match;
+        return `<style>${escapeStyleContent(content)}</style>`;
+      },
+    );
+}
+
+function isExternalUrl(value: string) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith('//');
+}
+
+function escapeScriptContent(value: string) {
+  return value.replace(/<\/script/gi, '<\\/script');
+}
+
+function escapeStyleContent(value: string) {
+  return value.replace(/<\/style/gi, '<\\/style');
 }
 
 function hasMultipleStatements(sql: string) {

@@ -1,5 +1,6 @@
 import {
   createBridgeHost,
+  createDiagnosticPreludeScript,
   executeReadonlyQuery,
   type AppRuntimeHost,
 } from '@sqlrooms/app-runtime';
@@ -264,6 +265,14 @@ function ensureRunnableViteScaffold(
       patched.push({path, content});
     }
   };
+  const patch = (path: string, updater: (content: string) => string) => {
+    const current = byPath.get(path);
+    if (current == null) return;
+    const next = updater(current);
+    if (next === current) return;
+    byPath.set(path, next);
+    patched.push({path, content: next});
+  };
 
   upsert(
     '/index.html',
@@ -317,6 +326,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 }
 `,
   );
+  patch('/index.html', ensureRuntimePreludeInHtml);
 
   return {
     files: Array.from(byPath.entries()).map(([path, content]) => ({
@@ -325,6 +335,15 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     })),
     patched,
   };
+}
+
+function ensureRuntimePreludeInHtml(html: string): string {
+  if (html.includes('data-sqlrooms-app-runtime-prelude')) return html;
+  const prelude = `<script data-sqlrooms-app-runtime-prelude>${createDiagnosticPreludeScript()}</script>`;
+  if (/<head[\s>]/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>\n    ${prelude}`);
+  }
+  return `${prelude}\n${html}`;
 }
 
 function generateAppFromPromptLocal(input: {
