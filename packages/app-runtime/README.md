@@ -66,3 +66,60 @@ WebContainer previews can attach the same host bridge to their preview iframe,
 and generated Vite apps can import the client entrypoint or use an injected
 `window.sqlrooms` global. WebContainer should not grow its own separate data
 bridge.
+
+## HTML App Blocks
+
+The `html-app` block stores a small source file map instead of one opaque HTML
+string:
+
+```ts
+{
+  "/index.html": "<!doctype html>...",
+  "/src/app.js": "..."
+}
+```
+
+`entryHtmlPath` points at the HTML file rendered through `iframe.srcdoc`; the
+default is `/index.html`. The host injects the app-runtime prelude before user
+scripts run, so generated apps can call:
+
+```js
+const {rows, columns, truncated} = await window.sqlrooms.query(
+  'select category, count(*) as n from events group by category',
+);
+```
+
+`queryRows(sql)` is available when an app only needs the plain object rows.
+
+Dependencies are persisted as structured package/version entries:
+
+```ts
+[
+  {
+    package: 'd3',
+    version: '7.9.0',
+    entry: 'dist/d3.min.js',
+    kind: 'script',
+    global: 'd3',
+  },
+];
+```
+
+The v1 resolver turns these into jsDelivr URLs at render time. Persisted state
+keeps the structured entries so a future resolver can use import maps, bundling,
+local caching, or another dependency policy without rewriting app state.
+
+Query results are JSON-serializable:
+
+```ts
+type QueryResult = {
+  rows: Record<string, unknown>[];
+  columns: {name: string; type?: string}[];
+  rowCount: number;
+  truncated: boolean;
+  executionMs?: number;
+};
+```
+
+The host enforces read-only `SELECT` parsing, a single statement, row limits,
+and request timeouts before returning data to the iframe.
