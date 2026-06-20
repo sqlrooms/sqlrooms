@@ -97,6 +97,12 @@ function extractComposerChildren(children: ReactNode): {
   return {inlineApiKeyInput, contextSelectors, otherChildren};
 }
 
+/**
+ * Renders the shared AI query composer controls.
+ *
+ * Accepts composer `children`, optional `topActions`, prompt placeholder text,
+ * run/cancel handlers, and a context drop target for attached inputs.
+ */
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',

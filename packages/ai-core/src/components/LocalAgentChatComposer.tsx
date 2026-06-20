@@ -3,6 +3,9 @@ import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {useCallback, type FC, type KeyboardEvent, type ReactNode} from 'react';
 import {useChatRuntime} from './ChatRuntimeContext';
 
+/**
+ * Props for the local-agent chat composer surface.
+ */
 export type LocalAgentChatComposerProps = {
   className?: string;
   placeholder?: string;
@@ -13,6 +16,12 @@ export type LocalAgentChatComposerProps = {
   children?: ReactNode;
 };
 
+/**
+ * Renders the prompt input and run/stop control for local-agent chat sessions.
+ *
+ * The `topActions` slot renders compact actions in the composer's top row,
+ * right-aligned above the prompt.
+ */
 export const LocalAgentChatComposer: FC<LocalAgentChatComposerProps> = ({
   className,
   placeholder = 'Message...',
