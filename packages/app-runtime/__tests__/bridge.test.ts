@@ -1,5 +1,9 @@
 import {createAppClient} from '../src/client';
-import {createBridgeHost, createDiagnosticPreludeScript} from '../src/host';
+import {
+  createBridgeHost,
+  createDiagnosticPreludeScript,
+  sanitizeDiagnosticDetail,
+} from '../src/host';
 import {APP_RUNTIME_MESSAGE_TYPE, RuntimeMessage} from '../src/protocol';
 
 type MessageListener = (event: MessageEvent) => void;
@@ -184,6 +188,48 @@ describe('app runtime bridge', () => {
     expect(windows.host.listenerCount).toBe(0);
   });
 
+  it('sanitizes diagnostics before exposing them to the host', () => {
+    const windows = createWindowPair();
+    const diagnostics: unknown[] = [];
+    const host = createBridgeHost({
+      currentWindow: windows.host,
+      targetWindow: windows.appProxy,
+      onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+    });
+
+    windows.host.dispatch(
+      {
+        type: APP_RUNTIME_MESSAGE_TYPE,
+        version: 1,
+        direction: 'diagnostic',
+        diagnostic: {
+          level: 'error',
+          source: 'console',
+          message: 'Query error: TypeError: boom',
+          detail: ['Query error:', new TypeError('boom'), 12n],
+        },
+      },
+      windows.appProxy,
+    );
+
+    expect(diagnostics).toMatchObject([
+      {
+        detail: ['Query error:', {name: 'TypeError', message: 'boom'}, '12n'],
+      },
+    ]);
+    host.dispose();
+  });
+
+  it('sanitizes circular diagnostic details', () => {
+    const detail: Record<string, unknown> = {count: 1n};
+    detail.self = detail;
+
+    expect(sanitizeDiagnosticDetail(detail)).toEqual({
+      count: '1n',
+      self: '[Circular]',
+    });
+  });
+
   it('creates a diagnostic prelude with the global client and listeners', () => {
     const script = createDiagnosticPreludeScript({
       globalName: 'sqlrooms',
@@ -192,6 +238,7 @@ describe('app runtime bridge', () => {
 
     expect(script).toContain('window[GLOBAL_NAME]');
     expect(script).toContain('unhandledrejection');
+    expect(script).toContain('securitypolicyviolation');
     expect(script).toContain('https://host.example');
   });
 });

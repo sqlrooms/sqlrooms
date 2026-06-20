@@ -129,6 +129,33 @@ describe('html-app helpers', () => {
       }),
     );
   });
+
+  it('normalizes query rows for browser app consumers', async () => {
+    const getState = createQueryState({
+      rows: [
+        {
+          safeCount: 12n,
+          unsafeInteger: BigInt(Number.MAX_SAFE_INTEGER) + 2n,
+          nested: {createdAt: new Date('2026-06-20T12:00:00.000Z')},
+        },
+      ],
+    });
+
+    const result = await executeReadonlyQuery({
+      request: {sql: 'select count(*) as safeCount'},
+      getState,
+      timeoutMs: 100,
+      maxRows: 10,
+    });
+
+    expect(result.rows).toEqual([
+      {
+        safeCount: 12,
+        unsafeInteger: '9007199254740993',
+        nested: {createdAt: '2026-06-20T12:00:00.000Z'},
+      },
+    ]);
+  });
 });
 
 function createAppState(patch: Partial<HtmlAppState> = {}): HtmlAppState {

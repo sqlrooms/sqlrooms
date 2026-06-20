@@ -129,10 +129,12 @@ export function createBridgeHost({
       return;
     }
     if (message.direction === 'diagnostic') {
-      onDiagnostic?.({
-        ...message.diagnostic,
-        timestamp: message.diagnostic.timestamp ?? Date.now(),
-      });
+      onDiagnostic?.(
+        sanitizeDiagnostic({
+          ...message.diagnostic,
+          timestamp: message.diagnostic.timestamp ?? Date.now(),
+        }),
+      );
     }
   };
 
@@ -173,6 +175,7 @@ export function createDiagnosticPreludeScript({
   }
 
   function diagnostic(level, source, message, detail) {
+    const sanitizedDetail = serializeDiagnosticDetail(detail);
     post({
       type: MESSAGE_TYPE,
       version: PROTOCOL_VERSION,
@@ -181,10 +184,60 @@ export function createDiagnosticPreludeScript({
         level,
         source,
         message: String(message || ''),
-        detail,
+        detail: sanitizedDetail,
         timestamp: Date.now(),
       },
     });
+  }
+
+  function formatConsoleArgument(value) {
+    if (value instanceof Error) {
+      return value.name + ': ' + value.message;
+    }
+    if (typeof value === 'string') return value;
+    if (typeof value === 'bigint') return value.toString() + 'n';
+    try {
+      const serialized = JSON.stringify(serializeDiagnosticDetail(value));
+      return serialized === undefined ? String(value) : serialized;
+    } catch {
+      return String(value);
+    }
+  }
+
+  function serializeDiagnosticDetail(value, depth = 0, seen = new WeakSet()) {
+    if (value == null) return value;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'bigint') return value.toString() + 'n';
+    if (typeof value === 'symbol') return value.toString();
+    if (typeof value === 'function') return '[Function ' + (value.name || 'anonymous') + ']';
+    if (value instanceof Error) {
+      return {
+        name: value.name,
+        message: value.message,
+        stack: value.stack,
+      };
+    }
+    if (typeof Element !== 'undefined' && value instanceof Element) {
+      return {
+        tagName: value.tagName,
+        id: value.id || undefined,
+        className: typeof value.className === 'string' ? value.className : undefined,
+      };
+    }
+    if (typeof value !== 'object') return String(value);
+    if (seen.has(value)) return '[Circular]';
+    if (depth >= 4) return '[Object]';
+    seen.add(value);
+    if (Array.isArray(value)) {
+      return value.map((entry) => serializeDiagnosticDetail(entry, depth + 1, seen));
+    }
+    const result = {};
+    for (const key of Object.keys(value)) {
+      result[key] = serializeDiagnosticDetail(value[key], depth + 1, seen);
+    }
+    return result;
   }
 
   function request(method, payload) {
@@ -245,18 +298,21 @@ export function createDiagnosticPreludeScript({
 
   const originalWarn = console.warn.bind(console);
   console.warn = (...args) => {
-    diagnostic('warn', 'console', args.map(String).join(' '), args);
+    diagnostic('warn', 'console', args.map(formatConsoleArgument).join(' '), args);
     originalWarn(...args);
   };
   const originalError = console.error.bind(console);
   console.error = (...args) => {
-    diagnostic('error', 'console', args.map(String).join(' '), args);
+    diagnostic('error', 'console', args.map(formatConsoleArgument).join(' '), args);
     originalError(...args);
   };
   window.addEventListener('error', (event) => {
     const target = event.target;
-    if (target && target !== window && 'src' in target) {
-      diagnostic('error', 'resource', target.src || target.href || 'Resource failed to load');
+    const resourceUrl = target && target !== window
+      ? target.src || target.href || ''
+      : '';
+    if (resourceUrl) {
+      diagnostic('error', 'resource', resourceUrl || 'Resource failed to load');
       return;
     }
     diagnostic('error', 'runtime', event.message, {
@@ -271,8 +327,78 @@ export function createDiagnosticPreludeScript({
       stack: event.reason?.stack,
     });
   });
+  window.addEventListener('securitypolicyviolation', (event) => {
+    const blockedUri = event.blockedURI || 'inline';
+    const directive = event.violatedDirective || event.effectiveDirective || 'unknown directive';
+    diagnostic(
+      'warn',
+      'resource',
+      'Content Security Policy blocked ' + blockedUri + ' for ' + directive + '.',
+      {
+        blockedURI: blockedUri,
+        violatedDirective: event.violatedDirective,
+        effectiveDirective: event.effectiveDirective,
+        originalPolicy: event.originalPolicy,
+        sourceFile: event.sourceFile,
+        lineNumber: event.lineNumber,
+        columnNumber: event.columnNumber,
+      },
+    );
+  });
 })();
 `;
+}
+
+function sanitizeDiagnostic(diagnostic: AppDiagnostic): AppDiagnostic {
+  return {
+    ...diagnostic,
+    detail: sanitizeDiagnosticDetail(diagnostic.detail),
+  };
+}
+
+export function sanitizeDiagnosticDetail(detail: unknown): unknown {
+  return sanitizeDiagnosticValue(detail);
+}
+
+function sanitizeDiagnosticValue(
+  value: unknown,
+  depth = 0,
+  seen = new WeakSet<object>(),
+): unknown {
+  if (
+    value == null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (typeof value === 'bigint') return `${value.toString()}n`;
+  if (typeof value === 'symbol') return value.toString();
+  if (typeof value === 'function') {
+    return `[Function ${value.name || 'anonymous'}]`;
+  }
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+    };
+  }
+  if (typeof value !== 'object') return String(value);
+  if (seen.has(value)) return '[Circular]';
+  if (depth >= 4) return '[Object]';
+  seen.add(value);
+  if (Array.isArray(value)) {
+    return value.map((entry) =>
+      sanitizeDiagnosticValue(entry, depth + 1, seen),
+    );
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    result[key] = sanitizeDiagnosticValue(entry, depth + 1, seen);
+  }
+  return result;
 }
 
 function toRuntimeError(

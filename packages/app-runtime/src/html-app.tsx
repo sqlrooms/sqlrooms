@@ -461,7 +461,7 @@ export async function executeReadonlyQuery({
       queryType: 'json',
       signal: controller.signal,
     });
-    const allRows = Array.from(result.jsonData ?? []);
+    const allRows = Array.from(result.jsonData ?? []).map(normalizeQueryRow);
     const rows = allRows.slice(0, limit);
     return QueryResult.parse({
       rows,
@@ -476,6 +476,39 @@ export async function executeReadonlyQuery({
   } finally {
     window.clearTimeout(timeoutId);
   }
+}
+
+function normalizeQueryRow(
+  row: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [
+      key,
+      normalizeQueryValue(value),
+    ]),
+  );
+}
+
+function normalizeQueryValue(value: unknown): unknown {
+  if (typeof value === 'bigint') {
+    const numberValue = Number(value);
+    return Number.isSafeInteger(numberValue) ? numberValue : value.toString();
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  if (Array.isArray(value)) {
+    return value.map(normalizeQueryValue);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        normalizeQueryValue(nestedValue),
+      ]),
+    );
+  }
+  return value;
 }
 
 function renderDependencyTag(dependency: HtmlAppDependency) {

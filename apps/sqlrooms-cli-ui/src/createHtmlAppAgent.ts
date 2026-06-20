@@ -48,6 +48,9 @@ const HtmlAppAgentInputSchema = z.object({
 
 type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
 
+const DEFAULT_DIAGNOSTIC_OBSERVATION_MS = 2_000;
+const DIAGNOSTIC_OBSERVATION_POLL_MS = 100;
+
 export function htmlAppAgentTool(store: StoreApi<RoomState>) {
   return tool({
     description: `Create or update a sandboxed html-app block/artifact.
@@ -71,9 +74,10 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
         grantedCapabilities: ['query'],
       });
 
+      const diagnostics = await observeRuntimeDiagnostics(store, appId);
       const app = store.getState().htmlApps.getApp(appId);
-      const diagnostics = app?.diagnostics ?? [];
-      const errorCount = diagnostics.filter(
+      const latestDiagnostics = app?.diagnostics ?? diagnostics;
+      const errorCount = latestDiagnostics.filter(
         (diagnostic) => diagnostic.level === 'error',
       ).length;
 
@@ -87,15 +91,16 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
           requested: ['query'],
           granted: ['query'],
         },
-        diagnostics,
+        diagnostics: latestDiagnostics,
         diagnosticsSummary:
-          diagnostics.length === 0
+          latestDiagnostics.length === 0
             ? 'No runtime diagnostics have been observed yet.'
-            : `${diagnostics.length} diagnostic(s), ${errorCount} error(s).`,
+            : `${latestDiagnostics.length} diagnostic(s), ${errorCount} error(s).`,
         repairAttempts: 0,
         maxRepairAttempts: input.maxRepairAttempts,
+        diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
         status:
-          diagnostics.length === 0
+          latestDiagnostics.length === 0
             ? 'written_pending_iframe_observation'
             : errorCount === 0
               ? 'written_no_errors_observed'
@@ -103,6 +108,26 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
       };
     },
   });
+}
+
+async function observeRuntimeDiagnostics(
+  store: StoreApi<RoomState>,
+  appId: string,
+): Promise<
+  NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>['diagnostics']
+> {
+  const start = Date.now();
+  let diagnostics = store.getState().htmlApps.getApp(appId)?.diagnostics ?? [];
+  while (Date.now() - start < DEFAULT_DIAGNOSTIC_OBSERVATION_MS) {
+    if (diagnostics.some((diagnostic) => diagnostic.level === 'error')) {
+      return diagnostics;
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, DIAGNOSTIC_OBSERVATION_POLL_MS),
+    );
+    diagnostics = store.getState().htmlApps.getApp(appId)?.diagnostics ?? [];
+  }
+  return diagnostics;
 }
 
 function resolveTargetHtmlAppId(
