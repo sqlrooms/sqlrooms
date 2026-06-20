@@ -189,6 +189,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
             <Chat.Composer
               placeholder="What would you like to learn about the data?"
               contextDropTarget={contextDropTarget}
+              topActions={<Chat.PromptSuggestions.VisibilityToggle />}
             >
               <Chat.InlineApiKeyInput
                 onSaveApiKey={(provider, apiKey) => {
@@ -196,8 +197,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 }}
               />
               <AssistantContextSelector />
-              <div className="flex items-center justify-end gap-2">
-                <Chat.PromptSuggestions.VisibilityToggle />
+              <div className="flex min-w-0 items-center justify-end">
                 <Chat.ModelSelector />
               </div>
             </Chat.Composer>

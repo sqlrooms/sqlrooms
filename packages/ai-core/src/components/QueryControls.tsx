@@ -24,6 +24,8 @@ import {extractModelsFromSettings} from '../utils';
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
+  /** Actions rendered in the composer's top row, right-aligned next to context controls. */
+  topActions?: ReactNode;
   onRun?: () => void;
   onCancel?: () => void;
   contextDropTarget?: {
@@ -99,6 +101,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
   children,
+  topActions,
   onRun,
   onCancel,
   contextDropTarget,
@@ -251,9 +254,16 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             )}
           >
             <div className="flex w-full flex-col gap-1 overflow-hidden">
-              {contextSelectors.length > 0 ? (
-                <div className="flex w-full flex-wrap items-center gap-1 px-2 pt-2">
-                  {contextSelectors}
+              {contextSelectors.length > 0 || topActions ? (
+                <div className="flex w-full items-start gap-2 px-2 pt-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                    {contextSelectors}
+                  </div>
+                  {topActions ? (
+                    <div className="ml-auto flex shrink-0 items-center gap-1">
+                      {topActions}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <Textarea
@@ -276,7 +286,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
               <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
                 <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
                   <div className="min-w-0 flex-1 overflow-hidden">
-                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
+                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {otherChildren}
                     </div>
                   </div>
@@ -447,7 +457,7 @@ const InlineApiKeyInputRenderer: React.FC<{
       <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
         <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
+            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {children}
             </div>
           </div>
