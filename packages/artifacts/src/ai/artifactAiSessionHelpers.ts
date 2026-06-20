@@ -137,6 +137,16 @@ export function getLatestAiSessionIdForArtifact({
 /**
  * Returns the most recently opened empty AI session explicitly owned by
  * `artifactId`.
+ *
+ * An empty session is not running, has no UI messages, and has no prompt text
+ * after trimming whitespace.
+ *
+ * @param options - Session selection options.
+ * @param options.sessions - Available sessions to search.
+ * @param options.aiSessionArtifacts - Session-to-artifact ownership mapping.
+ * @param options.artifactId - Artifact whose sessions should be searched.
+ * @param options.excludeSessionIds - Session IDs to skip during selection.
+ * @returns The most recently opened empty session ID, or `undefined` if none match.
  */
 export function getEmptyAiSessionIdForArtifact({
   sessions,
