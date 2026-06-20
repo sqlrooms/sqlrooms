@@ -131,6 +131,17 @@ async function waitForWebSocketConnection(
   );
 }
 
+/**
+ * Wraps a connector's `initialize` method with CLI database startup diagnostics.
+ *
+ * This mutates `connector.initialize` so startup failures can surface backend
+ * status details and websocket timeout diagnostics to the room shell.
+ *
+ * @param connector - Database connector whose initializer should be wrapped.
+ * @param options - Runtime configuration and websocket URL used for diagnostics.
+ * @param options.runtimeConfig - CLI runtime configuration, including startup status.
+ * @param options.wsUrl - DuckDB websocket URL to probe before initialization.
+ */
 export function addCliDatabaseInitializationDiagnostics(
   connector: DuckDbConnector,
   {

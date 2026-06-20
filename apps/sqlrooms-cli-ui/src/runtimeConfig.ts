@@ -1,13 +1,26 @@
+/**
+ * Startup state for one runtime component reported by the CLI backend.
+ */
 export type RuntimeComponentStatus = {
+  /** Current startup state for the component. */
   status: 'starting' | 'ready' | 'error';
+  /** Optional human-readable status message. */
   message?: string;
+  /** Optional concise error message when startup failed. */
   error?: string;
+  /** Optional diagnostic detail for startup failures. */
   details?: string;
 };
 
+/**
+ * Aggregate startup status returned by the CLI backend.
+ */
 export type RuntimeStartupStatus = {
+  /** Overall runtime readiness. `degraded` means one or more components are not ready. */
   status: 'ready' | 'degraded';
+  /** Per-component startup status details. */
   components?: {
+    /** DuckDB websocket backend startup status. */
     duckdbWebSocket?: RuntimeComponentStatus;
   };
 };
@@ -104,10 +117,16 @@ async function fetchJson<T>(url: string): Promise<T | undefined> {
   }
 }
 
+/**
+ * Fetches `/api/config`, returning an empty runtime config if the request fails.
+ */
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
   return (await fetchJson<RuntimeConfig>('/api/config')) ?? {};
 }
 
+/**
+ * Fetches `/api/status`, returning `undefined` when the status endpoint fails.
+ */
 export async function fetchRuntimeStartupStatus(): Promise<
   RuntimeStartupStatus | undefined
 > {

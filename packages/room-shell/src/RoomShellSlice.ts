@@ -57,10 +57,17 @@ export type RoomShellSliceConfig = BaseRoomConfig;
 
 export type RoomShellStore = StoreApi<RoomShellSliceState>;
 
+/**
+ * Progress, status, and optional failure details for a room-level task.
+ */
 export type TaskProgress = {
+  /** Optional task completion percentage. */
   progress?: number | undefined;
+  /** Required status message shown while the task is active. */
   message: string;
+  /** Optional concise error message when the task fails. */
   error?: string | undefined;
+  /** Optional detailed diagnostic text for task failures. */
   errorDetails?: string | undefined;
 };
 
