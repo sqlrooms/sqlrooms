@@ -113,6 +113,7 @@ import {
   isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
 import {dashboardAgentTool} from './createDashboardAgent';
+import {htmlAppAgentTool} from './createHtmlAppAgent';
 
 export type {RoomState} from './store-types';
 
@@ -124,6 +125,7 @@ When the user's primary context artifact is a worksheet or dashboard and they as
 
 - For worksheet artifacts, call worksheet_agent. If the user asks for a map in a worksheet or an embedded worksheet dashboard, worksheet_agent should add or reuse a dashboard block and delegate to embedded_dashboard_agent.
 - For dashboard artifacts, call dashboard_agent.
+- For generated HTML, D3, or browser app visualizations, call html_app_agent so the code is written into an inspectable html-app block/artifact and uses window.sqlrooms.query(...) for data access.
 - Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
 `;
 const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
@@ -721,6 +723,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
               dashboard_agent: dashboardAgentTool(store),
+              html_app_agent: htmlAppAgentTool(store),
               worksheet_agent: worksheetAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
