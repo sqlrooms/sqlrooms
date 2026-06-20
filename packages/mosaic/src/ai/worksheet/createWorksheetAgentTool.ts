@@ -110,6 +110,7 @@ Use html-app blocks when:
 - The app should call SQLRooms through window.sqlrooms.query(...) or window.sqlrooms.queryRows(...)
 
 If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its htmlAppId as appId to ${KnownWorksheetTools.embedded_html_app_agent}.
+For incremental edits to an existing worksheet app, such as changing title, labels, colors, styles, layout, controls, or interactions, do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
 
 ## Workflows
 

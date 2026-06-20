@@ -83,11 +83,24 @@ Use this after the caller has created or identified the right container:
 - top-level html-app artifact id
 - embedded worksheet html-app blockInstanceId
 
-This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested prompt, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly.`,
+This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested prompt, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit prompt; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
       if (input.html || input.files) {
         return writeHtmlAppRuntimeState(store, input);
+      }
+
+      const existingApp = store.getState().htmlApps.getApp(input.appId);
+
+      if (existingApp && isTitleOnlyRequest(input)) {
+        return renameHtmlAppTitle(store, input);
+      }
+
+      if (existingApp && isIncrementalAppEditRequest(input)) {
+        return runHtmlAppSourceEditAgent(store, input, {
+          parentToolCallId: toolOptions?.toolCallId || '',
+          abortSignal: toolOptions?.abortSignal,
+        });
       }
 
       return runHtmlAppGenerationAgent(store, input, {
@@ -96,6 +109,168 @@ This tool does not create artifacts, select artifacts, or create worksheet block
       });
     },
   });
+}
+
+function isTitleOnlyRequest(input: HtmlAppAgentInput) {
+  if (!input.title?.trim()) return false;
+  if (input.html || input.files || input.querySql || input.dependencies) {
+    return false;
+  }
+
+  const prompt = input.prompt.toLowerCase();
+  return (
+    /\b(rename|change|set|update)\b[\s\S]{0,80}\b(title|name)\b/.test(prompt) ||
+    /\b(title|name)\b[\s\S]{0,80}\b(to|as)\b/.test(prompt)
+  );
+}
+
+function renameHtmlAppTitle(
+  store: StoreApi<RoomState>,
+  input: HtmlAppAgentInput,
+): Record<string, unknown> {
+  const title = input.title?.trim();
+  const app = store.getState().htmlApps.getApp(input.appId);
+  if (!title || !app) {
+    return {
+      ok: false,
+      appId: input.appId,
+      title: title || input.title || 'HTML App',
+      status: 'rename_title_failed',
+      errorMessage: 'Cannot rename HTML app title without an existing app.',
+    };
+  }
+
+  const renamedFiles = renameHtmlDocumentTitle({
+    files: app.files,
+    entryHtmlPath: app.entryHtmlPath,
+    previousTitle: app.title,
+    nextTitle: title,
+  });
+
+  store.getState().htmlApps.updateApp(input.appId, {
+    title,
+    ...(renamedFiles ? {files: renamedFiles} : {}),
+  });
+
+  return {
+    ok: true,
+    appId: input.appId,
+    title,
+    filePaths: renamedFiles
+      ? Object.keys(renamedFiles)
+      : Object.keys(app.files),
+    diagnostics: app.diagnostics,
+    diagnosticsSummary:
+      'Title updated without regenerating app source or running diagnostics.',
+    status: 'renamed_title_only',
+    sourceTitleUpdated: Boolean(renamedFiles),
+  };
+}
+
+function isIncrementalAppEditRequest(input: HtmlAppAgentInput) {
+  if (input.html || input.files || input.querySql || input.dependencies) {
+    return false;
+  }
+
+  const prompt = input.prompt.toLowerCase();
+  if (
+    /\b(new|another|fresh|separate)\b[\s\S]{0,40}\b(app|artifact)\b/.test(
+      prompt,
+    )
+  ) {
+    return false;
+  }
+
+  return /\b(change|update|edit|modify|rename|set|tweak|adjust|fix|improve|make|remove|replace|add)\b/.test(
+    prompt,
+  );
+}
+
+async function runHtmlAppSourceEditAgent(
+  store: StoreApi<RoomState>,
+  input: HtmlAppAgentInput,
+  {
+    parentToolCallId,
+    abortSignal,
+  }: {
+    parentToolCallId: string;
+    abortSignal?: AbortSignal;
+  },
+): Promise<Record<string, unknown>> {
+  const state = store.getState();
+  const app = state.htmlApps.getApp(input.appId);
+  if (!app) {
+    return {
+      ok: false,
+      appId: input.appId,
+      title: input.title?.trim() || 'HTML App',
+      status: 'missing_app',
+      errorMessage:
+        'Cannot edit an HTML app source without an existing app runtime.',
+    };
+  }
+
+  let latestWriteResult: Record<string, unknown> | undefined;
+
+  const writeHtmlAppSourceTool = tool({
+    description: `Write the complete updated HTML app source to the existing appId and return runtime diagnostics.
+
+Use this after making the requested scoped edit to the existing files. Preserve unrelated source, SQL, styles, and interactions.`,
+    inputSchema: WriteHtmlAppFilesInputSchema,
+    execute: async (writeInput): Promise<Record<string, unknown>> => {
+      latestWriteResult = await writeHtmlAppRuntimeState(store, {
+        ...writeInput,
+        appId: input.appId,
+        prompt: input.prompt,
+        title: writeInput.title ?? input.title ?? app.title,
+        dependencies: writeInput.dependencies ?? app.dependencies,
+        maxRepairAttempts: input.maxRepairAttempts,
+      });
+      return latestWriteResult;
+    },
+  });
+
+  const agent = new ToolLoopAgent({
+    model: createHtmlAppModel(state),
+    tools: {
+      write_html_app_source: writeHtmlAppSourceTool,
+    },
+    temperature: 0.1,
+    stopWhen: [
+      stepCountIs(
+        Math.max(3, Math.min(10, (input.maxRepairAttempts ?? 1) + 4)),
+      ),
+    ],
+    instructions: getHtmlAppEditAgentInstructions(),
+  });
+
+  const result = await streamSubAgent(
+    agent,
+    formatHtmlAppEditPrompt(input, app),
+    store,
+    parentToolCallId,
+    abortSignal,
+  );
+
+  if (!latestWriteResult) {
+    return {
+      ok: false,
+      appId: input.appId,
+      title: input.title?.trim() || app.title,
+      status: 'edit_not_written',
+      errorMessage:
+        'html_app_agent did not call write_html_app_source, so no app source was updated.',
+      finalOutput: result.finalOutput,
+      agentSteps: result.agentToolCalls?.length ?? 0,
+    };
+  }
+
+  return {
+    ...latestWriteResult,
+    finalOutput: result.finalOutput,
+    agentSteps: result.agentToolCalls?.length ?? 0,
+    editMode: 'existing_source',
+  };
 }
 
 async function runHtmlAppGenerationAgent(
@@ -134,17 +309,8 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
     commands: false,
   });
 
-  const currentSession = state.ai.getCurrentSession();
-  const provider = currentSession?.modelProvider || 'openai';
-  const modelId = currentSession?.model || 'gpt-4.1';
-  const model = createOpenAICompatible({
-    apiKey: state.ai.getApiKeyFromSettings(),
-    name: provider || '',
-    baseURL: state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
-  }).chatModel(modelId);
-
   const agent = new ToolLoopAgent({
-    model,
+    model: createHtmlAppModel(state),
     tools: {
       ...dataTools,
       write_html_app_source: writeHtmlAppSourceTool,
@@ -320,6 +486,17 @@ function normalizeHtmlAppFiles(
   return input.files;
 }
 
+function createHtmlAppModel(state: RoomState) {
+  const currentSession = state.ai.getCurrentSession();
+  const provider = currentSession?.modelProvider || 'openai';
+  const modelId = currentSession?.model || 'gpt-4.1';
+  return createOpenAICompatible({
+    apiKey: state.ai.getApiKeyFromSettings(),
+    name: provider || '',
+    baseURL: state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+  }).chatModel(modelId);
+}
+
 function getHtmlAppAgentInstructions() {
   return `You are an HTML app builder agent for SQLRooms.
 
@@ -344,6 +521,26 @@ Important constraints:
 - Report visible errors inside the app and also call window.sqlrooms.reportDiagnostic for caught query/render failures.`;
 }
 
+function getHtmlAppEditAgentInstructions() {
+  return `You are an HTML app source editor for SQLRooms.
+
+Your job is to make a scoped edit to an existing html-app runtime. You receive the current files and must write the complete updated source.
+
+Required workflow:
+1. Read the current source and the user's requested change.
+2. Modify only what is needed for the request. Preserve unrelated SQL, data access, layout, styles, interactions, and dependencies.
+3. Call write_html_app_source with either html or files.
+4. If diagnostics include errors caused by the edit, fix the source and call write_html_app_source again.
+5. Do not finish without calling write_html_app_source at least once.
+
+Important constraints:
+- This is an incremental edit path, not a rebuild path.
+- Do not re-discover data or change SQL unless the user explicitly asks for a data/schema/query change.
+- Do not replace the app with a placeholder, scaffold, generic chart, or prompt summary.
+- Query results may contain BigInt values. Preserve or add Number(value) conversions before passing values to D3, Chart.js, scales, Math functions, or SVG attributes.
+- Prefer preserving the existing file structure. Use the html field only when the app is currently a single /index.html file.`;
+}
+
 function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
   const parts = [
     `App runtime id: ${input.appId}`,
@@ -366,4 +563,118 @@ function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
   );
 
   return parts.join('\n\n');
+}
+
+function formatHtmlAppEditPrompt(
+  input: HtmlAppAgentInput,
+  app: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
+) {
+  const parts = [
+    `App runtime id: ${input.appId}`,
+    `Current title: ${app.title}`,
+    `Requested title: ${input.title?.trim() || app.title}`,
+    `User request: ${input.prompt}`,
+    `Entry HTML path: ${app.entryHtmlPath || '/index.html'}`,
+  ];
+
+  if (app.dependencies.length) {
+    parts.push(
+      `Current dependencies: ${JSON.stringify(app.dependencies, null, 2)}`,
+    );
+  }
+
+  if (app.diagnostics.length) {
+    parts.push(
+      `Current diagnostics: ${JSON.stringify(app.diagnostics, null, 2)}`,
+    );
+  }
+
+  parts.push(
+    [
+      'Current files:',
+      ...Object.entries(app.files).map(
+        ([path, source]) =>
+          `\n${path}\n\`\`\`${fileFenceLanguage(path)}\n${source}\n\`\`\``,
+      ),
+    ].join('\n'),
+  );
+
+  parts.push(
+    'Write the complete updated app source now. Preserve unrelated behavior and avoid data discovery unless the request explicitly changes data/query behavior.',
+  );
+
+  return parts.join('\n\n');
+}
+
+function fileFenceLanguage(path: string) {
+  if (path.endsWith('.html')) return 'html';
+  if (path.endsWith('.css')) return 'css';
+  if (path.endsWith('.js') || path.endsWith('.mjs')) return 'js';
+  if (path.endsWith('.ts')) return 'ts';
+  if (path.endsWith('.tsx')) return 'tsx';
+  return '';
+}
+
+function renameHtmlDocumentTitle({
+  files,
+  entryHtmlPath,
+  previousTitle,
+  nextTitle,
+}: {
+  files: Record<string, string>;
+  entryHtmlPath?: string;
+  previousTitle: string;
+  nextTitle: string;
+}) {
+  const entryPath = entryHtmlPath || '/index.html';
+  const sourcePath = files[entryPath] !== undefined ? entryPath : '/index.html';
+  const html = files[sourcePath];
+  if (typeof html !== 'string') return undefined;
+
+  const nextHtml = replaceHtmlTitleText(html, previousTitle, nextTitle);
+  if (nextHtml === html) return undefined;
+  return {...files, [sourcePath]: nextHtml};
+}
+
+function replaceHtmlTitleText(
+  html: string,
+  previousTitle: string,
+  nextTitle: string,
+) {
+  const escapedTitle = escapeHtml(nextTitle);
+  let nextHtml = html.replace(
+    /<title\b([^>]*)>[\s\S]*?<\/title>/i,
+    `<title$1>${escapedTitle}</title>`,
+  );
+
+  const h1Matches = Array.from(
+    nextHtml.matchAll(/<h1\b([^>]*)>([\s\S]*?)<\/h1>/gi),
+  );
+  const previousTitleText = previousTitle.trim();
+  const shouldReplaceH1 =
+    h1Matches.length === 1 ||
+    h1Matches.some(
+      (match) => stripHtmlTags(match[2]).trim() === previousTitleText,
+    );
+
+  if (shouldReplaceH1) {
+    nextHtml = nextHtml.replace(
+      /<h1\b([^>]*)>[\s\S]*?<\/h1>/i,
+      `<h1$1>${escapedTitle}</h1>`,
+    );
+  }
+
+  return nextHtml;
+}
+
+function stripHtmlTags(value: string) {
+  return value.replace(/<[^>]*>/g, '');
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
