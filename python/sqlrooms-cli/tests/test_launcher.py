@@ -6,6 +6,7 @@ from fastapi import UploadFile
 from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _can_bind_port
 from sqlrooms.web.launcher import _pick_free_port
 from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
@@ -77,6 +78,18 @@ def test_pick_free_port_skips_reserved_port():
     )
 
     assert selected_port > reserved_port
+
+
+def test_localhost_port_probe_checks_ipv4_loopback():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen()
+        occupied_port = int(sock.getsockname()[1])
+
+        assert _can_bind_port("localhost", occupied_port) is False
+    finally:
+        sock.close()
 
 
 def test_pick_free_port_fails_fast_for_invalid_host():

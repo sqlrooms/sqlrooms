@@ -279,7 +279,16 @@ def _sanitize_filename(name: str) -> str:
     return safe or "upload.dat"
 
 
-def _can_bind_port(host: str, port: int) -> bool:
+def _localhost_probe_hosts(host: str) -> tuple[str, ...]:
+    return ("127.0.0.1", "::1") if host == "localhost" else (host,)
+
+
+def _can_bind_single_host_port(
+    host: str,
+    port: int,
+    *,
+    ignore_unavailable: bool = False,
+) -> bool:
     is_ipv6 = ":" in host and host != "0.0.0.0"
     family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
     sock = socket.socket(family, socket.SOCK_STREAM)
@@ -293,9 +302,25 @@ def _can_bind_port(host: str, port: int) -> bool:
     except OSError as exc:
         if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
             return False
+        if ignore_unavailable and exc.errno in {
+            errno.EADDRNOTAVAIL,
+            errno.EAFNOSUPPORT,
+        }:
+            return True
         raise
     finally:
         sock.close()
+
+
+def _can_bind_port(host: str, port: int) -> bool:
+    return all(
+        _can_bind_single_host_port(
+            probe_host,
+            port,
+            ignore_unavailable=host == "localhost",
+        )
+        for probe_host in _localhost_probe_hosts(host)
+    )
 
 
 def _pick_free_port(

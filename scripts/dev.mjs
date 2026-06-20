@@ -1,5 +1,6 @@
 import {spawn, spawnSync} from 'node:child_process';
 import net from 'node:net';
+import {tmpdir} from 'node:os';
 import path from 'node:path';
 
 /**
@@ -105,12 +106,27 @@ function hostForUrl(host) {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
-async function isPortAvailable(host, port) {
+function portProbeHosts(host) {
+  return host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
+}
+
+async function isPortAvailableOnHost(
+  host,
+  port,
+  {ignoreUnavailable = false} = {},
+) {
   return await new Promise((resolve, reject) => {
     const server = net.createServer();
     server.once('error', (error) => {
       if (error.code === 'EADDRINUSE' || error.code === 'EACCES') {
         resolve(false);
+        return;
+      }
+      if (
+        ignoreUnavailable &&
+        (error.code === 'EADDRNOTAVAIL' || error.code === 'EAFNOSUPPORT')
+      ) {
+        resolve(true);
         return;
       }
       reject(error);
@@ -120,6 +136,18 @@ async function isPortAvailable(host, port) {
     });
     server.listen(port, host);
   });
+}
+
+async function isPortAvailable(host, port) {
+  const probeHosts = portProbeHosts(host);
+  const results = await Promise.all(
+    probeHosts.map((probeHost) =>
+      isPortAvailableOnHost(probeHost, port, {
+        ignoreUnavailable: host === 'localhost',
+      }),
+    ),
+  );
+  return results.every(Boolean);
 }
 
 async function findAvailablePort(startPort, host, reservedPorts = new Set()) {
@@ -186,8 +214,7 @@ async function getCliDevPorts(args) {
     [4174, explicitWsPort].filter((port) => typeof port === 'number'),
   );
   const apiPort =
-    explicitApiPort ??
-    (await findAvailablePort(4173, host, reservedPorts));
+    explicitApiPort ?? (await findAvailablePort(4173, host, reservedPorts));
   const uiReservedPorts = new Set(
     [apiPort, explicitWsPort].filter((port) => typeof port === 'number'),
   );
@@ -379,14 +406,22 @@ if (target === 'cli') {
     : ['--port', String(apiPort), ...cliArgs];
   const pythonCliArgs = hasDbPathArg(apiPortArgs)
     ? apiPortArgs
-    : ['--db-path', `/tmp/sqlrooms-cli-${apiPort}.db`, ...apiPortArgs];
-  startProcess('sqlrooms CLI UI dev server', ['--host', '--port', String(uiPort)], {
-    command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
-    cwd: path.resolve('apps/sqlrooms-cli-ui'),
-    env: {
-      SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+    : [
+        '--db-path',
+        path.join(tmpdir(), `sqlrooms-cli-${apiPort}.db`),
+        ...apiPortArgs,
+      ];
+  startProcess(
+    'sqlrooms CLI UI dev server',
+    ['--host', '--port', String(uiPort)],
+    {
+      command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
+      cwd: path.resolve('apps/sqlrooms-cli-ui'),
+      env: {
+        SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+      },
     },
-  });
+  );
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,
     cwd: path.resolve('python/sqlrooms-cli'),

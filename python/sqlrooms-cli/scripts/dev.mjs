@@ -1,11 +1,9 @@
 import {spawnSync} from 'node:child_process';
+import {mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
 
-const defaultArgs = [
-  'run',
-  'sqlrooms',
-  '--no-open-browser',
-  '--no-ui',
-];
+const defaultArgs = ['run', 'sqlrooms', '--no-open-browser', '--no-ui'];
 
 function getForwardedArgs() {
   const raw = process.env.SQLROOMS_CLI_DEV_ARGS;
@@ -36,6 +34,12 @@ function readOptionValue(args, name) {
 }
 
 const forwardedArgs = getForwardedArgs();
+
+function createDefaultDbPath() {
+  const defaultDbDir = mkdtempSync(path.join(tmpdir(), 'sqlrooms-cli-'));
+  return path.join(defaultDbDir, 'sqlrooms.db');
+}
+
 // Keep the standalone dev API aligned with the Vite proxy default. Production
 // `sqlrooms` still auto-selects a free port when --port is omitted.
 const portArgs =
@@ -43,7 +47,7 @@ const portArgs =
 const dbPathArgs =
   readOptionValue(forwardedArgs, '--db-path') === null &&
   readOptionValue(forwardedArgs, '-d') === null
-    ? ['--db-path', '/tmp/sqlrooms-cli.db']
+    ? ['--db-path', createDefaultDbPath()]
     : [];
 
 const result = spawnSync(
