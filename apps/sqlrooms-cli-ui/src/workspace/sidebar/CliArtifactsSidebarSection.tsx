@@ -247,6 +247,7 @@ function ArtifactSidebarItemMenu({
         <SidebarMenuAction
           type="button"
           showOnHover
+          className="top-1/2 right-1 size-6 w-6 -translate-y-1/2"
           aria-label={`More actions for ${artifactName}`}
           onClick={(event) => event.stopPropagation()}
         >
