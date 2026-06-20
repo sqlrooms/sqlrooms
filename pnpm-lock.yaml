@@ -2601,6 +2601,22 @@ importers:
         specifier: ^2.12.7
         version: 2.15.4(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
 
+  packages/app-runtime:
+    dependencies:
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      jest:
+        specifier: ^30.3.0
+        version: 30.4.2(@types/node@24.12.4)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
+
   packages/artifacts:
     dependencies:
       '@paralleldrive/cuid2':
