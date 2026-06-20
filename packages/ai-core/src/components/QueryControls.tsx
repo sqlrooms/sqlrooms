@@ -217,6 +217,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       >
         <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
           <div className="flex w-full flex-col gap-1 overflow-hidden">
+            <ComposerTopRow
+              contextSelectors={contextSelectors}
+              topActions={topActions}
+            />
             {/* Render the InlineApiKeyInput which provides Input + Button */}
             <InlineApiKeyInputRenderer inlineApiKeyInput={inlineApiKeyInput}>
               {otherChildren}
@@ -254,18 +258,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             )}
           >
             <div className="flex w-full flex-col gap-1 overflow-hidden">
-              {contextSelectors.length > 0 || topActions ? (
-                <div className="flex w-full items-start gap-2 px-2 pt-2">
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                    {contextSelectors}
-                  </div>
-                  {topActions ? (
-                    <div className="ml-auto flex shrink-0 items-center gap-1">
-                      {topActions}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
+              <ComposerTopRow
+                contextSelectors={contextSelectors}
+                topActions={topActions}
+              />
               <Textarea
                 ref={textareaRef}
                 className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
@@ -367,6 +363,31 @@ function ContextDropTarget({
   });
 
   return children({setNodeRef, isAcceptedOver});
+}
+
+function ComposerTopRow({
+  contextSelectors,
+  topActions,
+}: {
+  contextSelectors: ReactNode[];
+  topActions?: ReactNode;
+}) {
+  if (contextSelectors.length === 0 && !topActions) {
+    return null;
+  }
+
+  return (
+    <div className="flex w-full items-start gap-2 px-2 pt-2">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+        {contextSelectors}
+      </div>
+      {topActions ? (
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {topActions}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 /**
