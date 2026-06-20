@@ -25,10 +25,18 @@ export const HtmlAppRuntimeInputSchema = z.object({
     .string()
     .optional()
     .describe('Optional read-only SQL query the app should run.'),
+  html: z
+    .string()
+    .optional()
+    .describe(
+      'Single-file HTML source for the html-app runtime. Prefer this for self-contained iframe apps.',
+    ),
   files: z
     .record(z.string(), z.string())
     .optional()
-    .describe('Complete source file map for the html-app block.'),
+    .describe(
+      'Complete source file map for advanced multi-file html-app blocks.',
+    ),
   dependencies: z
     .array(HtmlAppDependencySchema)
     .optional()
@@ -54,21 +62,14 @@ const HtmlAppAgentInputSchema = HtmlAppRuntimeInputSchema.extend({
 type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
 export type HtmlAppRuntimeWriteInput = Omit<
   HtmlAppAgentInput,
-  'files' | 'maxRepairAttempts'
+  'maxRepairAttempts'
 > & {
-  files: Record<string, string>;
   maxRepairAttempts?: number;
 };
 
 const WriteHtmlAppFilesInputSchema = HtmlAppRuntimeInputSchema.omit({
   maxRepairAttempts: true,
   prompt: true,
-}).extend({
-  files: z
-    .record(z.string(), z.string())
-    .describe(
-      'Complete source file map for the html-app runtime. Must include /index.html.',
-    ),
 });
 
 const DEFAULT_DIAGNOSTIC_OBSERVATION_MS = 2_000;
@@ -82,14 +83,11 @@ Use this after the caller has created or identified the right container:
 - top-level html-app artifact id
 - embedded worksheet html-app blockInstanceId
 
-This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates a complete app file map for the requested prompt, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit files are provided, it writes those files directly.`,
+This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested prompt, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly.`,
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
-      if (input.files) {
-        return writeHtmlAppRuntimeState(store, {
-          ...input,
-          files: input.files,
-        });
+      if (input.html || input.files) {
+        return writeHtmlAppRuntimeState(store, input);
       }
 
       return runHtmlAppGenerationAgent(store, input, {
@@ -114,10 +112,10 @@ async function runHtmlAppGenerationAgent(
   const state = store.getState();
   let latestWriteResult: Record<string, unknown> | undefined;
 
-  const writeHtmlAppFilesTool = tool({
-    description: `Write a complete HTML app file map to the existing appId and return runtime diagnostics.
+  const writeHtmlAppSourceTool = tool({
+    description: `Write complete HTML app source to the existing appId and return runtime diagnostics.
 
-Call this only after you have generated the actual requested app files. Do not call it with placeholder or scaffold files.`,
+For a self-contained iframe app, prefer the html field. Use files only when multiple local files materially improve clarity. Call this only after you have generated the actual requested app source. Do not call it with placeholder or scaffold source.`,
     inputSchema: WriteHtmlAppFilesInputSchema,
     execute: async (writeInput): Promise<Record<string, unknown>> => {
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
@@ -149,7 +147,7 @@ Call this only after you have generated the actual requested app files. Do not c
     model,
     tools: {
       ...dataTools,
-      write_html_app_files: writeHtmlAppFilesTool,
+      write_html_app_source: writeHtmlAppSourceTool,
     },
     temperature: 0.2,
     stopWhen: [
@@ -175,7 +173,7 @@ Call this only after you have generated the actual requested app files. Do not c
       title: input.title?.trim() || 'HTML App',
       status: 'not_written',
       errorMessage:
-        'html_app_agent did not call write_html_app_files, so no app files were written.',
+        'html_app_agent did not call write_html_app_source, so no app source was written.',
       finalOutput: result.finalOutput,
       agentSteps: result.agentToolCalls?.length ?? 0,
     };
@@ -195,7 +193,7 @@ export async function writeHtmlAppRuntimeState(
   const appId = input.appId;
   const title = input.title?.trim() || 'HTML App';
   const dependencies = resolveDependencies(input);
-  const files = input.files;
+  const files = normalizeHtmlAppFiles(input);
 
   if (!files || Object.keys(files).length === 0) {
     return {
@@ -211,7 +209,7 @@ export async function writeHtmlAppRuntimeState(
       diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
       status: 'missing_files',
       errorMessage:
-        'html_app_agent requires a complete files map. It no longer writes the generic fallback scaffold when files are missing.',
+        'html_app_agent requires html source or a complete files map. It no longer writes the generic fallback scaffold when source is missing.',
     };
   }
 
@@ -223,12 +221,14 @@ export async function writeHtmlAppRuntimeState(
       filePaths: Object.keys(files),
       dependencies,
       diagnostics: [],
-      diagnosticsSummary: 'The files map does not include /index.html.',
+      diagnosticsSummary:
+        'The normalized files map does not include /index.html.',
       repairAttempts: 0,
       maxRepairAttempts: input.maxRepairAttempts ?? 1,
       diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
       status: 'missing_entry_html',
-      errorMessage: 'html_app_agent requires files["/index.html"].',
+      errorMessage:
+        'html_app_agent requires html source or files["/index.html"].',
     };
   }
 
@@ -311,6 +311,15 @@ function resolveDependencies(
   ];
 }
 
+function normalizeHtmlAppFiles(
+  input: HtmlAppRuntimeWriteInput,
+): Record<string, string> | undefined {
+  if (input.html) {
+    return {'/index.html': input.html};
+  }
+  return input.files;
+}
+
 function getHtmlAppAgentInstructions() {
   return `You are an HTML app builder agent for SQLRooms.
 
@@ -319,16 +328,16 @@ Your job is to generate the actual requested browser app files for an existing h
 Required workflow:
 1. Understand the requested app.
 2. Use list_tables, read_table_schema, and query when needed to verify table and column names.
-3. Generate a complete files map. It must include /index.html.
-4. Call write_html_app_files with the complete files map.
-5. If diagnostics include errors, fix the files and call write_html_app_files again.
-6. Do not finish without calling write_html_app_files at least once.
+3. Generate complete app source. Prefer a single self-contained html string for iframe apps; use files only for advanced multi-file cases.
+4. Call write_html_app_source with either html or files.
+5. If diagnostics include errors, fix the source and call write_html_app_source again.
+6. Do not finish without calling write_html_app_source at least once.
 
 Important constraints:
 - Do not write a placeholder, scaffold, generic bar chart, or prompt summary. The rendered app must implement the requested app.
 - Use window.sqlrooms.queryRows(sql) or window.sqlrooms.query(sql) for data access.
 - Query results may contain BigInt values. Convert all plotted numeric values with Number(value) before passing them to D3, Chart.js, scales, Math functions, or SVG attributes.
-- Prefer a self-contained /index.html unless multiple files materially improve clarity.
+- Prefer the html field with a complete self-contained document unless multiple files materially improve clarity.
 - If you use D3, rely on the default d3 dependency unless the user asks for another library.
 - If you need another browser dependency, include it in the dependencies array with package, version, entry, kind, and global when appropriate.
 - Keep CSS and layout responsive inside an iframe.
@@ -353,7 +362,7 @@ function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
   }
 
   parts.push(
-    'Generate and write the complete app files now. Do not use a placeholder scaffold.',
+    'Generate and write the complete app source now. Prefer the html field for a self-contained app. Do not use a placeholder scaffold.',
   );
 
   return parts.join('\n\n');
