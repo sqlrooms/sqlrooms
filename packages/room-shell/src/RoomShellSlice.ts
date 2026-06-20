@@ -60,6 +60,7 @@ export type RoomShellStore = StoreApi<RoomShellSliceState>;
 export type TaskProgress = {
   progress?: number | undefined;
   message: string;
+  error?: string | undefined;
 };
 
 export type RoomShellSliceState = {
@@ -183,6 +184,12 @@ const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 const ROOM_SHELL_COMMAND_OWNER = '@sqlrooms/room-shell';
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'An unknown error occurred.';
+}
+
 const RoomSetTitleCommandInput = z.object({
   title: z.string().min(1).describe('Room title.'),
 });
@@ -291,7 +298,16 @@ export function createRoomShellSlice(
               message: 'Establishing database connection…',
               progress: undefined,
             });
-            await get().db.initialize();
+            try {
+              await get().db.initialize();
+            } catch (error) {
+              setTaskProgress(INIT_DB_TASK, {
+                message: 'Database connection failed',
+                error: getErrorMessage(error),
+                progress: undefined,
+              });
+              throw error;
+            }
             setTaskProgress(INIT_DB_TASK, undefined);
 
             setTaskProgress(INIT_ROOM_TASK, {
