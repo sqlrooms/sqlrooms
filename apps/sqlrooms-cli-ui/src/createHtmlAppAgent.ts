@@ -4,7 +4,11 @@ import {tool} from 'ai';
 import {ToolLoopAgent, stepCountIs} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
-import type {HtmlAppDependency} from '@sqlrooms/app-runtime';
+import {
+  createDefaultHtmlAppFiles,
+  type HtmlAppDependency,
+  type HtmlAppState,
+} from '@sqlrooms/app-runtime';
 import type {RoomState} from './store-types';
 
 const HtmlAppDependencySchema = z.object({
@@ -96,7 +100,11 @@ This tool does not create artifacts, select artifacts, or create worksheet block
         return renameHtmlAppTitle(store, input);
       }
 
-      if (existingApp && isIncrementalAppEditRequest(input)) {
+      if (
+        existingApp &&
+        !isDefaultHtmlAppScaffold(existingApp) &&
+        isIncrementalAppEditRequest(input)
+      ) {
         return runHtmlAppSourceEditAgent(store, input, {
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
@@ -183,6 +191,18 @@ function isIncrementalAppEditRequest(input: HtmlAppAgentInput) {
 
   return /\b(change|update|edit|modify|rename|set|tweak|adjust|fix|improve|make|remove|replace|add)\b/.test(
     prompt,
+  );
+}
+
+function isDefaultHtmlAppScaffold(app: HtmlAppState) {
+  const filePaths = Object.keys(app.files);
+  if (filePaths.length !== 1 || !app.files['/index.html']) {
+    return false;
+  }
+
+  return (
+    app.files['/index.html'] ===
+    createDefaultHtmlAppFiles(app.title)['/index.html']
   );
 }
 
@@ -357,8 +377,17 @@ export async function writeHtmlAppRuntimeState(
   input: HtmlAppRuntimeWriteInput,
 ): Promise<Record<string, unknown>> {
   const appId = input.appId;
-  const title = input.title?.trim() || 'HTML App';
-  const dependencies = resolveDependencies(input);
+  const existingApp = store.getState().htmlApps.getApp(appId);
+  const title = input.title?.trim() || existingApp?.title || 'HTML App';
+  const dependencies = resolveDependencies(input, existingApp);
+  const requestedCapabilities: HtmlAppState['requestedCapabilities'] = existingApp
+    ?.requestedCapabilities?.length
+    ? existingApp.requestedCapabilities
+    : ['query'];
+  const grantedCapabilities: HtmlAppState['grantedCapabilities'] = existingApp
+    ?.grantedCapabilities?.length
+    ? existingApp.grantedCapabilities
+    : ['query'];
   const files = normalizeHtmlAppFiles(input);
 
   if (!files || Object.keys(files).length === 0) {
@@ -404,8 +433,8 @@ export async function writeHtmlAppRuntimeState(
     entryHtmlPath: '/index.html',
     dependencies,
     diagnostics: [],
-    requestedCapabilities: ['query'],
-    grantedCapabilities: ['query'],
+    requestedCapabilities,
+    grantedCapabilities,
   });
 
   const diagnostics = await observeHtmlAppRuntimeDiagnostics(store, appId);
@@ -422,8 +451,8 @@ export async function writeHtmlAppRuntimeState(
     filePaths: Object.keys(files),
     dependencies,
     capabilities: {
-      requested: ['query'],
-      granted: ['query'],
+      requested: requestedCapabilities,
+      granted: grantedCapabilities,
     },
     diagnostics: latestDiagnostics,
     diagnosticsSummary:
@@ -464,8 +493,12 @@ export async function observeHtmlAppRuntimeDiagnostics(
 
 function resolveDependencies(
   input: HtmlAppRuntimeWriteInput,
+  existingApp?: HtmlAppState,
 ): HtmlAppDependency[] {
   if (input.dependencies) return input.dependencies;
+  if (existingApp && !isDefaultHtmlAppScaffold(existingApp)) {
+    return existingApp.dependencies;
+  }
   return [
     {
       package: 'd3',

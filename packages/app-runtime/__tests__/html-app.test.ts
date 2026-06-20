@@ -105,6 +105,21 @@ describe('html-app helpers', () => {
     ).rejects.toThrow('Only a single read-only SELECT statement is allowed.');
   });
 
+  it('rejects query params until the host can bind them end to end', async () => {
+    const getState = createQueryState();
+
+    await expect(
+      executeReadonlyQuery({
+        request: {sql: 'select ? as value', params: [1]},
+        getState,
+        timeoutMs: 100,
+        maxRows: 10,
+      }),
+    ).rejects.toThrow('Query parameters are not supported');
+
+    expect(getState().db.connectors.runQuery).not.toHaveBeenCalled();
+  });
+
   it('returns bounded object rows and truncation metadata', async () => {
     const getState = createQueryState({
       rows: [{value: 1}, {value: 2}, {value: 3}],

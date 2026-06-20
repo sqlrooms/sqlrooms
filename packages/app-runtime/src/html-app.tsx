@@ -446,6 +446,9 @@ export async function executeReadonlyQuery({
   if (hasMultipleStatements(request.sql)) {
     throw new Error('Only a single read-only SELECT statement is allowed.');
   }
+  if (request.params?.length) {
+    throw new Error('Query parameters are not supported by this runtime yet.');
+  }
   const parsed = await state.db.sqlSelectToJson(request.sql);
   if (parsed.error) {
     throw new Error('Only read-only SELECT statements are allowed.');
