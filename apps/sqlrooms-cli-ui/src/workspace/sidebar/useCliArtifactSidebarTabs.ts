@@ -81,10 +81,14 @@ export function useCliArtifactSidebarTabs() {
 
   const deleteArtifact = useCallback(
     (artifactId: string) => {
+      const activeArtifactId = selectedTabId;
       deleteArtifactFromStore(artifactId);
       deleteTab('workspace', artifactId);
+      if (activeArtifactId && activeArtifactId !== artifactId) {
+        setActiveTab('workspace', activeArtifactId);
+      }
     },
-    [deleteArtifactFromStore, deleteTab],
+    [deleteArtifactFromStore, deleteTab, selectedTabId, setActiveTab],
   );
 
   return {
