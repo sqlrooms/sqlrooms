@@ -28,6 +28,7 @@
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

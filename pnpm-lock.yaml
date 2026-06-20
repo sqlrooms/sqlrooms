@@ -211,6 +211,9 @@ importers:
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
+      '@sqlrooms/schema-tree':
+        specifier: workspace:*
+        version: link:../../packages/schema-tree
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
