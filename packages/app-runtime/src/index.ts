@@ -65,6 +65,7 @@ export {
   createHtmlAppBlockDefinition,
   createHtmlAppRuntimeSlice,
   createHtmlAppSrcDoc,
+  executeReadonlyQuery,
   resolveHtmlAppDependencyUrl,
   type CreateHtmlAppBlockDefinitionOptions,
   type CreateHtmlAppRuntimeSliceOptions,

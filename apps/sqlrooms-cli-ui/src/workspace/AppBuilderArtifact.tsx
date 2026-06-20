@@ -1,3 +1,8 @@
+import {
+  createBridgeHost,
+  executeReadonlyQuery,
+  type AppRuntimeHost,
+} from '@sqlrooms/app-runtime';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {Button} from '@sqlrooms/ui';
 import {WebContainer} from '@sqlrooms/webcontainer';
@@ -35,6 +40,39 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const [name, setName] = React.useState('');
   const [status, setStatus] = React.useState<string>('');
   const [busy, setBusy] = React.useState(false);
+  const previewIframeRef = React.useRef<HTMLIFrameElement | null>(null);
+  const previewBridgeRef = React.useRef<AppRuntimeHost | null>(null);
+
+  const attachPreviewBridge = React.useCallback(() => {
+    previewBridgeRef.current?.dispose();
+    previewBridgeRef.current = null;
+    const targetWindow = previewIframeRef.current?.contentWindow;
+    if (!targetWindow) return;
+    previewBridgeRef.current = createBridgeHost({
+      targetWindow,
+      capabilities: {query: true},
+      handlers: {
+        query: (request) =>
+          executeReadonlyQuery({
+            request,
+            getState: useRoomStore.getState,
+            timeoutMs: 15_000,
+            maxRows: 10_000,
+          }),
+      },
+      onDiagnostic: (diagnostic) => {
+        if (diagnostic.level === 'error') {
+          setStatus(`Preview diagnostic: ${diagnostic.message}`);
+        }
+      },
+    });
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      previewBridgeRef.current?.dispose();
+    };
+  }, []);
 
   const loadArtifactRuntime = React.useCallback(
     async (artifactId: string, filesByPath: Record<string, string>) => {
@@ -124,7 +162,12 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
           )}
         </div>
         <div className="min-h-0 flex-1">
-          <WebContainer.Workbench />
+          <WebContainer.Workbench
+            browserViewProps={{
+              iframeRef: previewIframeRef,
+              onIframeLoad: attachPreviewBridge,
+            }}
+          />
         </div>
         {webContainerStatus.type !== 'ready' ? (
           <p className="text-muted-foreground text-xs">
@@ -302,11 +345,24 @@ function generateAppFromPromptLocal(input: {
   const appFile = `import React from 'react';
 
 export default function App() {
+  const [rows, setRows] = React.useState([]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    window.sqlrooms?.queryRows?.('select 1 as value').then((result) => {
+      if (!cancelled) setRows(result);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <main style={{padding: 16}}>
       <h1>${appTitle}</h1>
       <p>Prompt: {${JSON.stringify(input.prompt)}}</p>
       <p>Template: {${JSON.stringify(input.template)}}</p>
+      <pre>{JSON.stringify(rows, null, 2)}</pre>
     </main>
   );
 }

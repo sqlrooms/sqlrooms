@@ -376,7 +376,7 @@ export function createHtmlAppSrcDoc(app: HtmlAppState): string {
   return `${prelude}\n${html}`;
 }
 
-async function executeReadonlyQuery({
+export async function executeReadonlyQuery({
   request,
   getState,
   timeoutMs,
