@@ -58,6 +58,29 @@ def test_pick_free_port_scans_up_from_occupied_port():
         sock.close()
 
 
+def test_pick_free_port_skips_reserved_port():
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host, 0))
+        reserved_port = int(sock.getsockname()[1])
+    finally:
+        sock.close()
+
+    selected_port = _pick_free_port(
+        host,
+        reserved_port,
+        reserved_ports={reserved_port},
+    )
+
+    assert selected_port > reserved_port
+
+
+def test_pick_free_port_fails_fast_for_invalid_host():
+    with pytest.raises(OSError):
+        _pick_free_port("not-a-bindable-host.invalid", 4173)
+
+
 def test_api_config_with_ai_provider_metadata(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(

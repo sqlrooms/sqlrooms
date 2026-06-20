@@ -37,14 +37,27 @@ def test_resolve_http_port_honors_explicit_port(monkeypatch):
 def test_resolve_http_port_scans_from_default(monkeypatch):
     calls = []
 
-    def fake_pick_free_port(host, start_port=None):
-        calls.append((host, start_port))
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
         return 4176
 
     monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
 
     assert _resolve_http_port("127.0.0.1", None) == 4176
-    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT)]
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, None)]
+
+
+def test_resolve_http_port_reserves_explicit_ws_port(monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 4175
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
+
+    assert _resolve_http_port("127.0.0.1", None, ws_port=4174) == 4175
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {4174})]
 
 
 def test_cli_export_help():

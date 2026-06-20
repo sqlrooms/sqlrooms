@@ -139,9 +139,13 @@ async function getCliDevPorts(args) {
   const host = readOptionValue(args, '--host') ?? '127.0.0.1';
   const proxyHost = hostForUrl(publicHost(host));
   const explicitApiPort = parsePortOption(args, '--port');
+  const explicitWsPort = parsePortOption(args, '--ws-port');
+  const reservedPorts = new Set(
+    [4174, explicitWsPort].filter((port) => typeof port === 'number'),
+  );
   const apiPort =
     explicitApiPort ??
-    (await findAvailablePort(4173, host, new Set([4174])));
+    (await findAvailablePort(4173, host, reservedPorts));
   const uiPort = await findAvailablePort(4174, '0.0.0.0', new Set([apiPort]));
   return {apiPort, proxyHost, uiPort};
 }

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import errno
+import json
 import logging
 import os
 import re
+import secrets
 import socket
 import tempfile
 import threading
 import webbrowser
-import json
-import secrets
 from pathlib import Path
 from typing import Any, Dict
 
@@ -289,13 +290,20 @@ def _can_bind_port(host: str, port: int) -> bool:
         else:
             sock.bind((host, port))
         return True
-    except OSError:
-        return False
+    except OSError as exc:
+        if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
+            return False
+        raise
     finally:
         sock.close()
 
 
-def _pick_free_port(host: str, start_port: int | None = None) -> int:
+def _pick_free_port(
+    host: str,
+    start_port: int | None = None,
+    *,
+    reserved_ports: set[int] | None = None,
+) -> int:
     """
     Pick an available TCP port for a local background server.
 
@@ -304,8 +312,11 @@ def _pick_free_port(host: str, start_port: int | None = None) -> int:
     """
     is_ipv6 = ":" in host and host != "0.0.0.0"
     family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    reserved = reserved_ports or set()
     if start_port is not None:
         for port in range(start_port, 65536):
+            if port in reserved:
+                continue
             if _can_bind_port(host, port):
                 return port
         raise RuntimeError(f"No available port found starting from {start_port}.")

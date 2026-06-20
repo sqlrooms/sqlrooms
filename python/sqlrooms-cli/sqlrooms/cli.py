@@ -40,10 +40,15 @@ DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 4173
 
 
-def _resolve_http_port(host: str, port: int | None) -> int:
+def _resolve_http_port(host: str, port: int | None, ws_port: int | None = None) -> int:
     if port is not None:
         return port
-    selected_port = _pick_free_port(host, DEFAULT_HTTP_PORT)
+    reserved_ports = {ws_port} if ws_port is not None else None
+    selected_port = _pick_free_port(
+        host,
+        DEFAULT_HTTP_PORT,
+        reserved_ports=reserved_ports,
+    )
     if selected_port != DEFAULT_HTTP_PORT:
         logger.info(
             "Port %s is in use, using HTTP port %s instead",
@@ -489,7 +494,7 @@ def main(
     )
 
     resolved_db_path = db_path if db_path is not None else db_path_option
-    selected_port = _resolve_http_port(host, port)
+    selected_port = _resolve_http_port(host, port, ws_port)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
         if llm_provider

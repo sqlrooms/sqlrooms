@@ -38,6 +38,8 @@ function readOptionValue(args, name) {
 }
 
 const forwardedArgs = getForwardedArgs();
+// Keep the standalone dev API aligned with the Vite proxy default. Production
+// `sqlrooms` still auto-selects a free port when --port is omitted.
 const portArgs =
   readOptionValue(forwardedArgs, '--port') === null ? ['--port', '4173'] : [];
 
