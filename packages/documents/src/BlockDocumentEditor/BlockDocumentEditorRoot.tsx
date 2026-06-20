@@ -244,7 +244,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   }, [normalizedValue, normalizedValueKey, valueKey]);
 
   useEffect(() => {
-    if (!editor) {
+    if (!editor || editor.isDestroyed) {
       return;
     }
     const editorContent = editor.getJSON() as BlockDocumentContent;
@@ -264,8 +264,11 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     }
     const selection = editor.state.selection;
     const restoreSelection = editor.isFocused;
+    if (editor.isDestroyed) {
+      return;
+    }
     editor.commands.setContent(editorValue, {emitUpdate: false});
-    if (restoreSelection) {
+    if (restoreSelection && !editor.isDestroyed) {
       editor.commands.setTextSelection({
         from: selection.from,
         to: selection.to,
@@ -282,7 +285,10 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   ]);
 
   useEffect(() => {
-    editor?.setEditable(!readOnly);
+    if (!editor || editor.isDestroyed) {
+      return;
+    }
+    editor.setEditable(!readOnly);
   }, [editor, readOnly]);
 
   const contextValue: BlockDocumentEditorContextValue = useMemo(

@@ -166,6 +166,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/app-runtime':
+        specifier: workspace:*
+        version: link:../../packages/app-runtime
       '@sqlrooms/artifacts':
         specifier: workspace:*
         version: link:../../packages/artifacts
@@ -229,6 +232,9 @@ importers:
       '@webcontainer/api':
         specifier: ^1.6.1
         version: 1.6.4
+      ai:
+        specifier: ^6.0.159
+        version: 6.0.177(zod@4.1.13)
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -2600,6 +2606,40 @@ importers:
       recharts:
         specifier: ^2.12.7
         version: 2.15.4(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+
+  packages/app-runtime:
+    dependencies:
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      jest:
+        specifier: ^30.3.0
+        version: 30.4.2(@types/node@24.12.4)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.0)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.0))(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
 
   packages/artifacts:
     dependencies:

@@ -13,6 +13,7 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.22",
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/app-runtime": "workspace:*",
     "@sqlrooms/artifacts": "workspace:*",
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
@@ -34,6 +35,7 @@
     "@sqlrooms/vega": "workspace:*",
     "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
+    "ai": "^6.0.159",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

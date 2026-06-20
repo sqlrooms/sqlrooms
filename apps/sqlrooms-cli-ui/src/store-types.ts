@@ -1,4 +1,5 @@
 import {AiSettingsSliceState, AiSliceState} from '@sqlrooms/ai';
+import {HtmlAppRuntimeSliceState} from '@sqlrooms/app-runtime';
 import {ArtifactsSliceState} from '@sqlrooms/artifacts';
 import {type ArtifactAiSliceState} from '@sqlrooms/artifacts/ai';
 import {CanvasSliceState} from '@sqlrooms/canvas';
@@ -47,6 +48,7 @@ export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState &
+  HtmlAppRuntimeSliceState &
   CellsSliceState &
   NotebookSliceState &
   PivotSliceState &

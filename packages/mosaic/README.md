@@ -407,6 +407,11 @@ dashboard prompts and tool registration stay aligned. When host tools need
 specialized agent guidance, pass `additionalInstructions` to append that
 guidance after the built-in agent workflow without replacing it.
 
+Worksheet agents also accept host tools through `extraTools`. Worksheet extra
+tool factories receive the active `worksheetId` alongside the worksheet and
+database adapters, so host apps can add worksheet-scoped tools such as embedded
+stateful blocks without guessing which worksheet the sub-agent is editing.
+
 ### Box Plot Chart Type
 
 The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses

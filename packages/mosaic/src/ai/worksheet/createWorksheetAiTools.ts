@@ -10,6 +10,7 @@ import {
 import {createWorksheetChartTools} from './createWorksheetChartTools';
 import {createAddTextBlockTool} from './createAddTextBlockTool';
 import {createAddDashboardBlockTool} from './createAddDashboardBlockTool';
+import {createAddHtmlAppBlockTool} from './createAddHtmlAppBlockTool';
 import {KnownWorksheetTools} from './constants';
 import {createWorksheetDataTableExplorerTool} from './createWorksheetDataTableExplorerTool';
 import {createListWorksheetBlocksTool} from './createListWorksheetBlocksTool';
@@ -65,6 +66,11 @@ export function createWorksheetAiTools({
     worksheetId,
   });
 
+  const addHtmlAppBlockTool = createAddHtmlAppBlockTool({
+    worksheetAdapter,
+    worksheetId,
+  });
+
   const addDataTableExplorerTool = createWorksheetDataTableExplorerTool({
     databaseAdapter,
     worksheetAdapter,
@@ -81,12 +87,14 @@ export function createWorksheetAiTools({
     [KnownWorksheetTools.list_blocks]: listWorksheetBlocksTool,
     [KnownWorksheetTools.add_text_block]: addTextBlockTool,
     [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
+    [KnownWorksheetTools.add_html_app_block]: addHtmlAppBlockTool,
     [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,
     [KnownWorksheetTools.embedded_dashboard_agent]: dashboardAgentTool,
   };
 
   const additionalTools =
     extraTools?.({
+      worksheetId,
       worksheetAdapter,
       databaseAdapter,
     }) ?? {};
