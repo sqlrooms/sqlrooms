@@ -88,7 +88,7 @@ export function createListWorksheetBlocksTool({
   return tool<ListWorksheetBlocksToolInput, ListWorksheetBlocksToolOutput>({
     description: `List existing blocks in the worksheet.
 
-Use this before updating an existing worksheet dashboard, adding a map to a worksheet, or modifying an existing worksheet HTML app. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels. HTML app blocks include htmlAppId; pass that htmlAppId to embedded_html_app_agent as targetHtmlAppId.`,
+Use this before updating an existing worksheet dashboard, adding a map to a worksheet, or modifying an existing worksheet HTML app. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels. HTML app blocks include htmlAppId; pass that htmlAppId to embedded_html_app_agent as appId.`,
     inputSchema: ListWorksheetBlocksToolInput,
     execute: async () => {
       try {

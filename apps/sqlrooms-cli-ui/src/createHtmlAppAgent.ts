@@ -9,11 +9,10 @@ const HtmlAppAgentInputSchema = z.object({
     .string()
     .describe('Reasoning for why the HTML app agent is being called.'),
   prompt: z.string().describe('The app or visualization the user wants.'),
-  targetHtmlAppId: z
+  appId: z
     .string()
-    .optional()
     .describe(
-      'Existing html-app block/artifact id to update. If omitted, a new html-app artifact is created.',
+      'HTML app runtime id to write. The caller must create or identify the top-level html-app artifact or embedded html-app block before calling this tool.',
     ),
   title: z.string().optional().describe('Optional app title.'),
   querySql: z
@@ -47,84 +46,85 @@ const HtmlAppAgentInputSchema = z.object({
 });
 
 type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
+export type HtmlAppRuntimeWriteInput = Omit<
+  HtmlAppAgentInput,
+  'maxRepairAttempts'
+> & {
+  maxRepairAttempts?: number;
+};
 
 const DEFAULT_DIAGNOSTIC_OBSERVATION_MS = 2_000;
 const DIAGNOSTIC_OBSERVATION_POLL_MS = 100;
 
 export function htmlAppAgentTool(store: StoreApi<RoomState>) {
   return tool({
-    description: `Create or update a sandboxed html-app block/artifact.
+    description: `Write or update a sandboxed HTML app runtime by appId.
 
-Use this for generated HTML, JavaScript, D3, or small browser apps that should call SQLRooms through window.sqlrooms.query(...) or window.sqlrooms.queryRows(...). The tool writes the app file map to durable html-app state and returns runtime diagnostics from the latest iframe observation so the caller can repair the files in a bounded follow-up call.`,
+Use this after the caller has created or identified the right container:
+- top-level html-app artifact id
+- embedded worksheet html-app blockInstanceId
+
+This tool does not create artifacts, select artifacts, or create worksheet blocks. It only writes the app file map to durable html-app runtime state and returns runtime diagnostics from the latest iframe observation so the caller can repair the files in a bounded follow-up call.`,
     inputSchema: HtmlAppAgentInputSchema,
-    execute: async (input): Promise<Record<string, unknown>> => {
-      const state = store.getState();
-      const currentArtifactId = state.artifacts.config.currentArtifactId;
-      const currentArtifact = currentArtifactId
-        ? state.artifacts.getArtifact(currentArtifactId)
-        : undefined;
-      if (!input.targetHtmlAppId && currentArtifact?.type === 'worksheet') {
-        return {
-          ok: false,
-          status: 'worksheet_target_requires_worksheet_agent',
-          artifactId: currentArtifact.id,
-          artifactType: currentArtifact.type,
-          message:
-            'The current artifact is a worksheet. Use worksheet_agent so it can call embedded_html_app_agent and create or update an html-app block inside the worksheet.',
-        };
-      }
-      const appId = resolveTargetHtmlAppId(state, input);
-      const title = input.title?.trim() || 'HTML App';
-      const dependencies = resolveDependencies(input);
-      const files = input.files ?? createScaffoldFiles({title, input});
-
-      state.htmlApps.ensureApp(appId, {
-        title,
-        files,
-        entryHtmlPath: '/index.html',
-        dependencies,
-        diagnostics: [],
-        requestedCapabilities: ['query'],
-        grantedCapabilities: ['query'],
-      });
-
-      const diagnostics = await observeRuntimeDiagnostics(store, appId);
-      const app = store.getState().htmlApps.getApp(appId);
-      const latestDiagnostics = app?.diagnostics ?? diagnostics;
-      const errorCount = latestDiagnostics.filter(
-        (diagnostic) => diagnostic.level === 'error',
-      ).length;
-
-      return {
-        ok: errorCount === 0,
-        appId,
-        title,
-        filePaths: Object.keys(files),
-        dependencies,
-        capabilities: {
-          requested: ['query'],
-          granted: ['query'],
-        },
-        diagnostics: latestDiagnostics,
-        diagnosticsSummary:
-          latestDiagnostics.length === 0
-            ? 'No runtime diagnostics have been observed yet.'
-            : `${latestDiagnostics.length} diagnostic(s), ${errorCount} error(s).`,
-        repairAttempts: 0,
-        maxRepairAttempts: input.maxRepairAttempts,
-        diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
-        status:
-          latestDiagnostics.length === 0
-            ? 'written_pending_iframe_observation'
-            : errorCount === 0
-              ? 'written_no_errors_observed'
-              : 'written_errors_observed',
-      };
-    },
+    execute: async (input): Promise<Record<string, unknown>> =>
+      writeHtmlAppRuntimeState(store, input),
   });
 }
 
-async function observeRuntimeDiagnostics(
+export async function writeHtmlAppRuntimeState(
+  store: StoreApi<RoomState>,
+  input: HtmlAppRuntimeWriteInput,
+): Promise<Record<string, unknown>> {
+  const appId = input.appId;
+  const title = input.title?.trim() || 'HTML App';
+  const dependencies = resolveDependencies(input);
+  const files = input.files ?? createScaffoldFiles({title, input});
+
+  store.getState().htmlApps.ensureApp(appId, {
+    title,
+    files,
+    entryHtmlPath: '/index.html',
+    dependencies,
+    diagnostics: [],
+    requestedCapabilities: ['query'],
+    grantedCapabilities: ['query'],
+  });
+
+  const diagnostics = await observeHtmlAppRuntimeDiagnostics(store, appId);
+  const app = store.getState().htmlApps.getApp(appId);
+  const latestDiagnostics = app?.diagnostics ?? diagnostics;
+  const errorCount = latestDiagnostics.filter(
+    (diagnostic) => diagnostic.level === 'error',
+  ).length;
+
+  return {
+    ok: errorCount === 0,
+    appId,
+    title,
+    filePaths: Object.keys(files),
+    dependencies,
+    capabilities: {
+      requested: ['query'],
+      granted: ['query'],
+    },
+    diagnostics: latestDiagnostics,
+    diagnosticsSummary:
+      latestDiagnostics.length === 0
+        ? 'No runtime diagnostics have been observed yet.'
+        : `${latestDiagnostics.length} diagnostic(s), ${errorCount} error(s).`,
+    repairAttempts: 0,
+    maxRepairAttempts: input.maxRepairAttempts ?? 1,
+    diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
+    status:
+      latestDiagnostics.length === 0
+        ? 'written_pending_iframe_observation'
+        : errorCount === 0
+          ? 'written_no_errors_observed'
+          : 'written_errors_observed',
+  };
+}
+
+export async function observeHtmlAppRuntimeDiagnostics(
   store: StoreApi<RoomState>,
   appId: string,
 ): Promise<
@@ -144,25 +144,9 @@ async function observeRuntimeDiagnostics(
   return diagnostics;
 }
 
-function resolveTargetHtmlAppId(
-  state: RoomState,
-  input: HtmlAppAgentInput,
-): string {
-  if (input.targetHtmlAppId) return input.targetHtmlAppId;
-
-  const currentArtifactId = state.artifacts.config.currentArtifactId;
-  const currentArtifact = currentArtifactId
-    ? state.artifacts.getArtifact(currentArtifactId)
-    : undefined;
-  if (currentArtifact?.type === 'html-app') return currentArtifact.id;
-
-  return state.artifacts.createArtifact({
-    type: 'html-app',
-    title: input.title || 'HTML App',
-  });
-}
-
-function resolveDependencies(input: HtmlAppAgentInput): HtmlAppDependency[] {
+function resolveDependencies(
+  input: HtmlAppRuntimeWriteInput,
+): HtmlAppDependency[] {
   if (input.dependencies) return input.dependencies;
   return [
     {
@@ -180,7 +164,7 @@ function createScaffoldFiles({
   input,
 }: {
   title: string;
-  input: HtmlAppAgentInput;
+  input: HtmlAppRuntimeWriteInput;
 }): Record<string, string> {
   const sql = input.querySql || 'select 1 as value';
   return {

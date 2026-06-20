@@ -95,7 +95,7 @@ Use html-app blocks when:
 - The requested interaction is not well represented by built-in worksheet chart blocks or dashboard panels
 - The app should call SQLRooms through window.sqlrooms.query(...) or window.sqlrooms.queryRows(...)
 
-If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its blockInstanceId as targetHtmlAppId to ${KnownWorksheetTools.embedded_html_app_agent}.
+If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its htmlAppId as appId to ${KnownWorksheetTools.embedded_html_app_agent}.
 
 ## Workflows
 
@@ -112,7 +112,7 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 
 **Map requests:** If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and a prompt to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.
 
-**HTML app requests:** If user asks to create or update an app inside the worksheet, call ${KnownWorksheetTools.embedded_html_app_agent}. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target html-app blockInstanceId.
+**HTML app requests:** If user asks to create or update an app inside the worksheet, call ${KnownWorksheetTools.embedded_html_app_agent}. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target htmlAppId as appId.
 
 ### Exploratory Requests
 When user asks for "comprehensive analysis" or "high-level insights":
@@ -256,7 +256,7 @@ IF user requests a MAP in a worksheet:
 
 IF user requests an HTML/D3/Chart.js/browser app in a worksheet:
 1. For a new app, call ${KnownWorksheetTools.embedded_html_app_agent}
-2. For an existing app, call ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the html-app blockInstanceId as targetHtmlAppId
+2. For an existing app, call ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the htmlAppId as appId
 
 Otherwise, create chart and text blocks directly using create_worksheet_block_* tools.
 
