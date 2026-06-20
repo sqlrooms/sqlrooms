@@ -83,7 +83,7 @@ export const RuntimeRequestMessage = z.object({
   version: z.literal(APP_RUNTIME_PROTOCOL_VERSION),
   direction: z.literal('request'),
   id: z.string(),
-  method: RuntimeRequestMethod,
+  method: z.string(),
   payload: z.unknown().optional(),
 });
 export type RuntimeRequestMessage = z.infer<typeof RuntimeRequestMessage>;

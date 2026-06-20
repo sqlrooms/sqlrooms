@@ -11,9 +11,11 @@ export {
   type CreateAppClientOptions,
 } from './client';
 export {
+  createDiagnosticPreludeScript,
   createBridgeHost,
   type AppRuntimeHost,
   type AppRuntimeHostHandlers,
+  type CreateDiagnosticPreludeScriptOptions,
   type CreateBridgeHostOptions,
 } from './host';
 export {
