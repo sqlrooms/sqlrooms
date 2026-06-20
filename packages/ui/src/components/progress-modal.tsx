@@ -69,7 +69,7 @@ const ProgressModal: FC<{
             />
             <DialogDescription className="text-muted-foreground flex justify-between text-sm">
               <span className="text-sm">{loadingStage ?? ''}</span>
-              {progress ? <span>{progress}%</span> : null}
+              {progress !== undefined ? <span>{progress}%</span> : null}
             </DialogDescription>
           </div>
         )}

@@ -1018,6 +1018,7 @@ class SqlroomsHttpServer:
         signal.signal = _noop_signal  # type: ignore
         try:
             db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
+            self._duckdb_start_error = None
             self._duckdb_ready.set()
             cache = QueryCache()
             duckdb_ws_server(

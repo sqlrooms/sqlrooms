@@ -122,6 +122,23 @@ def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
     assert "RuntimeError: duckdb lock held" in duckdb_status["details"]
 
 
+def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.db_async.init_global_connection",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.duckdb_ws_server",
+        lambda *_args, **_kwargs: None,
+    )
+    server._duckdb_start_error = TimeoutError("Timed out starting")
+
+    server._run_duckdb_server()
+
+    assert server._duckdb_start_error is None
+    assert server._runtime_status()["status"] == "ready"
+
+
 def test_api_config_with_ai_provider_metadata(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(

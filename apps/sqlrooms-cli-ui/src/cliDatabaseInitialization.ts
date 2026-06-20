@@ -5,27 +5,11 @@ import {
   type RuntimeStartupStatus,
 } from './runtimeConfig';
 
-const DB_INITIALIZATION_TIMEOUT_MS = 12_000;
+const DB_CONNECTION_TIMEOUT_MS = 12_000;
 
 type ErrorWithDetails = Error & {
   details?: string;
 };
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  createError: () => Error,
-): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(createError()), timeoutMs);
-  });
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-  });
-}
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -42,16 +26,16 @@ function getDuckDbStartupError(status?: RuntimeStartupStatus) {
 function createDatabaseStartupError({
   wsUrl,
   clientError,
+  fallbackMessage = 'Could not connect to the SQLRooms DuckDB websocket backend.',
   startupStatus,
 }: {
   wsUrl: string;
   clientError?: unknown;
+  fallbackMessage?: string;
   startupStatus?: RuntimeStartupStatus;
 }): ErrorWithDetails {
   const duckdbError = getDuckDbStartupError(startupStatus);
-  const message =
-    duckdbError?.message ??
-    'Could not connect to the SQLRooms DuckDB websocket backend.';
+  const message = duckdbError?.message ?? fallbackMessage;
   const details = [
     duckdbError?.error ? `Server error: ${duckdbError.error}` : undefined,
     duckdbError?.details
@@ -65,6 +49,46 @@ function createDatabaseStartupError({
   const error = new Error(message) as ErrorWithDetails;
   error.details = details.join('\n\n');
   return error;
+}
+
+function waitForWebSocketConnection(
+  wsUrl: string,
+  timeoutMs: number,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(wsUrl);
+    let settled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      socket.onopen = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      try {
+        socket.close();
+      } catch {
+        // Ignore cleanup errors after the connection result is known.
+      }
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    };
+
+    timeoutId = setTimeout(() => {
+      finish(new Error('Timed out connecting to DuckDB websocket backend.'));
+    }, timeoutMs);
+
+    socket.onopen = () => finish();
+    socket.onerror = () =>
+      finish(new Error('DuckDB websocket connection error.'));
+    socket.onclose = () =>
+      finish(new Error('DuckDB websocket closed before opening.'));
+  });
 }
 
 export function addCliDatabaseInitializationDiagnostics(
@@ -90,14 +114,24 @@ export function addCliDatabaseInitializationDiagnostics(
     }
 
     try {
-      await withTimeout(baseInitialize(), DB_INITIALIZATION_TIMEOUT_MS, () =>
-        createDatabaseStartupError({wsUrl}),
-      );
+      await waitForWebSocketConnection(wsUrl, DB_CONNECTION_TIMEOUT_MS);
     } catch (error) {
       const startupStatus = await fetchRuntimeStartupStatus();
       throw createDatabaseStartupError({
         wsUrl,
         clientError: error,
+        startupStatus,
+      });
+    }
+
+    try {
+      await baseInitialize();
+    } catch (error) {
+      const startupStatus = await fetchRuntimeStartupStatus();
+      throw createDatabaseStartupError({
+        wsUrl,
+        clientError: error,
+        fallbackMessage: 'SQLRooms DuckDB initialization failed.',
         startupStatus,
       });
     }
