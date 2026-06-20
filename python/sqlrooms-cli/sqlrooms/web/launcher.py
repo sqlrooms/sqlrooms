@@ -278,15 +278,38 @@ def _sanitize_filename(name: str) -> str:
     return safe or "upload.dat"
 
 
-def _pick_free_port(host: str) -> int:
+def _can_bind_port(host: str, port: int) -> bool:
+    is_ipv6 = ":" in host and host != "0.0.0.0"
+    family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    sock = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if family == socket.AF_INET6:
+            sock.bind((host, port, 0, 0))
+        else:
+            sock.bind((host, port))
+        return True
+    except OSError:
+        return False
+    finally:
+        sock.close()
+
+
+def _pick_free_port(host: str, start_port: int | None = None) -> int:
     """
     Pick an available TCP port for a local background server.
 
-    This is best-effort: we bind to port 0 to have the OS select a free port,
-    read it back, then close the socket.
+    If ``start_port`` is provided, scan upward from that port. Otherwise bind to
+    port 0 and let the OS select a free port.
     """
     is_ipv6 = ":" in host and host != "0.0.0.0"
     family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    if start_port is not None:
+        for port in range(start_port, 65536):
+            if _can_bind_port(host, port):
+                return port
+        raise RuntimeError(f"No available port found starting from {start_port}.")
+
     sock = socket.socket(family, socket.SOCK_STREAM)
     try:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

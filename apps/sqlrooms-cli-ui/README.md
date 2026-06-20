@@ -42,6 +42,10 @@ Terminal B (UI):
 pnpm --filter sqlrooms-cli-app dev -- --host --port 4174
 ```
 
+The Python package dev helper uses API port `4173` by default to match the
+Vite proxy. If you pass a different Python API port, also set
+`SQLROOMS_CLI_API_PROXY_TARGET` when starting Vite.
+
 ## Build the bundled UI (for the Python wheel)
 
 From the repo root:

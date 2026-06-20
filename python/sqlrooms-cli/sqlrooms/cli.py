@@ -18,7 +18,7 @@ from .web.db_bridge import (
     PostgresConnectorSettings,
     SnowflakeConnectorSettings,
 )
-from .web.launcher import SqlroomsHttpServer
+from .web.launcher import SqlroomsHttpServer, _pick_free_port
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +37,20 @@ if sys.platform.startswith("win"):
 else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
+DEFAULT_HTTP_PORT = 4173
+
+
+def _resolve_http_port(host: str, port: int | None) -> int:
+    if port is not None:
+        return port
+    selected_port = _pick_free_port(host, DEFAULT_HTTP_PORT)
+    if selected_port != DEFAULT_HTTP_PORT:
+        logger.info(
+            "Port %s is in use, using HTTP port %s instead",
+            DEFAULT_HTTP_PORT,
+            selected_port,
+        )
+    return selected_port
 
 
 def _normalize_config_string(value: Any) -> str | None:
@@ -393,7 +407,11 @@ def main(
         show_default=True,
     ),
     host: str = typer.Option("127.0.0.1", "--host", help="HTTP host for the UI."),
-    port: int = typer.Option(4173, "--port", help="HTTP port for the UI."),
+    port: int | None = typer.Option(
+        None,
+        "--port",
+        help="HTTP port for the UI. If omitted, 4173 or the next free port is chosen automatically.",
+    ),
     ws_port: int | None = typer.Option(
         None,
         "--ws-port",
@@ -471,6 +489,7 @@ def main(
     )
 
     resolved_db_path = db_path if db_path is not None else db_path_option
+    selected_port = _resolve_http_port(host, port)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
         if llm_provider
@@ -479,7 +498,7 @@ def main(
     server = SqlroomsHttpServer(
         db_path=resolved_db_path,
         host=host,
-        port=port,
+        port=selected_port,
         ws_port=ws_port,
         sync_enabled=sync,
         meta_db=meta_db,

@@ -1,5 +1,4 @@
 import {spawnSync} from 'node:child_process';
-import net from 'node:net';
 
 const defaultArgs = [
   'run',
@@ -38,33 +37,9 @@ function readOptionValue(args, name) {
   return null;
 }
 
-async function isPortAvailable(host, port) {
-  return await new Promise((resolve) => {
-    const server = net.createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => {
-      server.close(() => resolve(true));
-    });
-    server.listen(port, host);
-  });
-}
-
-async function findAvailablePort(startPort, host) {
-  let port = startPort;
-  while (port <= 65535) {
-    if (await isPortAvailable(host, port)) return port;
-    console.log(`Port ${port} is in use, trying another one...`);
-    port += 1;
-  }
-  throw new Error(`No available port found starting from ${startPort}.`);
-}
-
 const forwardedArgs = getForwardedArgs();
-const host = readOptionValue(forwardedArgs, '--host') ?? '127.0.0.1';
 const portArgs =
-  readOptionValue(forwardedArgs, '--port') === null
-    ? ['--port', String(await findAvailablePort(4173, host))]
-    : [];
+  readOptionValue(forwardedArgs, '--port') === null ? ['--port', '4173'] : [];
 
 const result = spawnSync('uv', [...defaultArgs, ...portArgs, ...forwardedArgs], {
   stdio: 'inherit',

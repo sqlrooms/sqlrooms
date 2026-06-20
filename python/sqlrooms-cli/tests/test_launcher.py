@@ -1,9 +1,12 @@
+import socket
+
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
 from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _pick_free_port
 from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
@@ -38,6 +41,21 @@ def test_api_config(server):
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
     assert "wsAuthToken" in data
+
+
+def test_pick_free_port_scans_up_from_occupied_port():
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host, 0))
+        sock.listen()
+        occupied_port = int(sock.getsockname()[1])
+
+        selected_port = _pick_free_port(host, occupied_port)
+
+        assert selected_port > occupied_port
+    finally:
+        sock.close()
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):

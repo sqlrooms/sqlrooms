@@ -101,6 +101,10 @@ function publicHost(host) {
   return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
 }
 
+function hostForUrl(host) {
+  return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+}
+
 async function isPortAvailable(host, port) {
   return await new Promise((resolve) => {
     const server = net.createServer();
@@ -133,7 +137,7 @@ function parsePortOption(args, name) {
 
 async function getCliDevPorts(args) {
   const host = readOptionValue(args, '--host') ?? '127.0.0.1';
-  const proxyHost = publicHost(host);
+  const proxyHost = hostForUrl(publicHost(host));
   const explicitApiPort = parsePortOption(args, '--port');
   const apiPort =
     explicitApiPort ??
