@@ -62,6 +62,8 @@ export type WorksheetAgentResult = {
  * Provides adapters for worksheet and database operations.
  */
 export type ExtraWorksheetAiToolsParams = {
+  /** ID of the worksheet being edited by this worksheet agent run. */
+  worksheetId: string;
   worksheetAdapter: WorksheetAiAdapter;
   databaseAdapter: DatabaseAiAdapter;
 };

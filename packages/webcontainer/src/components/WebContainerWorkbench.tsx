@@ -8,8 +8,14 @@ import {BrowserView} from './BrowserView';
 import {CodeView} from './CodeView';
 import {FileTreeView} from './filetree/FileTreeView';
 import {TerminalView} from './TerminalView';
+import type {BrowserViewProps} from './BrowserView';
 
-export function WebContainerWorkbench(props: {className?: string}) {
+export type WebContainerWorkbenchProps = {
+  className?: string;
+  browserViewProps?: BrowserViewProps;
+};
+
+export function WebContainerWorkbench(props: WebContainerWorkbenchProps) {
   return (
     <div className={cn('flex h-full w-full', props.className)}>
       <ResizablePanelGroup orientation="horizontal">
@@ -34,7 +40,7 @@ export function WebContainerWorkbench(props: {className?: string}) {
         </ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel>
-          <BrowserView />
+          <BrowserView {...props.browserViewProps} />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

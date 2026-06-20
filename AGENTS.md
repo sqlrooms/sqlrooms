@@ -26,6 +26,10 @@ SQLRooms is a local-first, modular analytics workspace built around DuckDB, Reac
 - Make the smallest change that solves the problem well while preserving the surrounding architecture and design intent.
 - Add or update tests when changing behavior or public API, when practical.
 
+## GitHub Pull Requests
+
+- PR titles should respect conventional-commits spec or the [CI check](.github/workflows/pr-title.yml) will fail
+
 ## Repository Structure
 
 - `packages/` contains reusable `@sqlrooms/*` packages. Treat public exports here as library APIs: keep them generic, composable, documented, and free of app/example-specific assumptions.

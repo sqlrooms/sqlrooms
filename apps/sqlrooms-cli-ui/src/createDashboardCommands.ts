@@ -2,17 +2,8 @@ import type {RoomCommand} from '@sqlrooms/room-shell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {z} from 'zod';
 
+import type {CliArtifactType} from './artifactTypeIds';
 import {RoomState} from './store-types';
-
-type CliArtifactType =
-  | 'worksheet'
-  | 'dashboard'
-  | 'pivot'
-  | 'notebook'
-  | 'document'
-  | 'sql-query'
-  | 'canvas'
-  | 'app';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
 
@@ -225,6 +216,7 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
     createArtifactCommand('notebook', 'Notebook'),
     createArtifactCommand('document', 'Document'),
     createArtifactCommand('sql-query', 'SQL Query'),
+    createArtifactCommand('html-app', 'HTML App'),
     createArtifactCommand('canvas', 'Canvas'),
     createArtifactCommand('app', 'App'),
     createDashboardCreateArtifactCommand(),
