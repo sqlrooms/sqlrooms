@@ -1,4 +1,7 @@
-import type {RoomCommand} from '@sqlrooms/room-shell';
+import type {
+  RoomCommand,
+  RoomCommandExecutionContext,
+} from '@sqlrooms/room-shell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {z} from 'zod';
 
@@ -62,6 +65,12 @@ function getUniqueArtifactTitle(state: RoomState, baseTitle: string) {
   );
 }
 
+function shouldCreateInitialArtifactChat(
+  context: RoomCommandExecutionContext<RoomState>,
+) {
+  return !['ai', 'mcp'].includes(context.invocation.surface);
+}
+
 function createArtifactCommand(
   artifactType: CliArtifactType,
   group: string,
@@ -80,7 +89,8 @@ function createArtifactCommand(
       idempotent: false,
       riskLevel: 'low',
     },
-    execute: ({getState}, input) => {
+    execute: (context, input) => {
+      const {getState} = context;
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
       const uniqueTitle = getUniqueArtifactTitle(state, title ?? group);
@@ -102,6 +112,9 @@ function createArtifactCommand(
         state.pivot.ensurePivot(artifactId, {title: uniqueTitle});
       }
       state.artifacts.setCurrentArtifact(artifactId);
+      if (shouldCreateInitialArtifactChat(context)) {
+        state.artifactAi.createArtifactScopedSession();
+      }
       return {
         success: true,
         commandId: id,
@@ -131,14 +144,19 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
       idempotent: false,
       riskLevel: 'low',
     },
-    execute: ({getState}, input) => {
-      const {title, layoutType} = input as DashboardCreateArtifactCommandInput;
+    execute: (context, input) => {
+      const {getState} = context;
+      const {title, layoutType} =
+        (input as DashboardCreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
       const artifactId = state.dashboard.createDashboardArtifact(
         getUniqueArtifactTitle(state, title ?? 'Dashboard'),
         layoutType,
       );
       state.artifacts.setCurrentArtifact(artifactId);
+      if (shouldCreateInitialArtifactChat(context)) {
+        state.artifactAi.createArtifactScopedSession();
+      }
       return {
         success: true,
         commandId: 'dashboard.create-artifact',
