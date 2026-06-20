@@ -6,6 +6,8 @@ import {
 } from './runtimeConfig';
 
 const DB_CONNECTION_TIMEOUT_MS = 12_000;
+const DB_CONNECTION_ATTEMPT_TIMEOUT_MS = 1_000;
+const DB_CONNECTION_RETRY_DELAY_MS = 250;
 
 type ErrorWithDetails = Error & {
   details?: string;
@@ -51,7 +53,11 @@ function createDatabaseStartupError({
   return error;
 }
 
-function waitForWebSocketConnection(
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function openWebSocketConnection(
   wsUrl: string,
   timeoutMs: number,
 ): Promise<void> {
@@ -89,6 +95,40 @@ function waitForWebSocketConnection(
     socket.onclose = () =>
       finish(new Error('DuckDB websocket closed before opening.'));
   });
+}
+
+async function waitForWebSocketConnection(
+  wsUrl: string,
+  timeoutMs: number,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+
+  while (Date.now() < deadline) {
+    const attemptRemainingMs = deadline - Date.now();
+    try {
+      await openWebSocketConnection(
+        wsUrl,
+        Math.min(DB_CONNECTION_ATTEMPT_TIMEOUT_MS, attemptRemainingMs),
+      );
+      return;
+    } catch (error) {
+      lastError = error;
+      const startupStatus = await fetchRuntimeStartupStatus();
+      if (getDuckDbStartupError(startupStatus)) {
+        throw error;
+      }
+    }
+
+    const retryRemainingMs = deadline - Date.now();
+    if (retryRemainingMs > 0) {
+      await delay(Math.min(DB_CONNECTION_RETRY_DELAY_MS, retryRemainingMs));
+    }
+  }
+
+  throw (
+    lastError ?? new Error('Timed out connecting to DuckDB websocket backend.')
+  );
 }
 
 export function addCliDatabaseInitializationDiagnostics(
