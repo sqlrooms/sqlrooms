@@ -25,6 +25,11 @@
       "import": "./dist/host.js",
       "default": "./dist/host.js"
     },
+    "./html-app": {
+      "types": "./dist/html-app.d.ts",
+      "import": "./dist/html-app.js",
+      "default": "./dist/html-app.js"
+    },
     "./protocol": {
       "types": "./dist/protocol.d.ts",
       "import": "./dist/protocol.js",
@@ -47,12 +52,20 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/blocks": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.556.0",
     "zod": "^4.1.8"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
+    "@types/react": "^19.1.13",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.4"
+  },
+  "peerDependencies": {
+    "react": ">=18"
   },
   "publishConfig": {
     "access": "public"

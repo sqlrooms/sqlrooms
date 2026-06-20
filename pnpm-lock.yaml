@@ -2603,6 +2603,21 @@ importers:
 
   packages/app-runtime:
     dependencies:
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
       zod:
         specifier: 4.1.13
         version: 4.1.13
@@ -2610,6 +2625,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
       jest:
         specifier: ^30.3.0
         version: 30.4.2(@types/node@24.12.4)
