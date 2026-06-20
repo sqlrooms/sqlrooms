@@ -8,6 +8,7 @@ import {ChartToolsOptions} from '../types';
 import {DEFAULT_CHART_MAX_DATA_POINTS} from '../../chart-runtime';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {DASHBOARD_CHART_TOOL_PREFIX} from './constants';
+import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from '../../dashboard/dashboard-types';
 
 /**
  * Parameters for creating dashboard chart tools.
@@ -42,10 +43,26 @@ export function createDashboardChartTools({
     maxDataPoints:
       chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
     databaseAdapter,
-    addChart: ({config, title}) =>
-      dashboardAdapter.addPanel(
+    addChart: ({config, title, panelId}) => {
+      if (panelId) {
+        const panel = dashboardAdapter.getPanel(panelId);
+        if (!panel) {
+          throw new Error(`Panel "${panelId}" not found.`);
+        }
+        if (panel.type !== MOSAIC_DASHBOARD_CHART_PANEL_TYPE) {
+          throw new Error(
+            `Panel "${panelId}" is not a chart panel. Cannot update it with a chart tool.`,
+          );
+        }
+
+        dashboardAdapter.updatePanel(panelId, {title, config});
+        return panelId;
+      }
+
+      return dashboardAdapter.addPanel(
         createMosaicDashboardChartPanelConfig(title, config),
-      ),
+      );
+    },
   };
 
   return createChartTools(

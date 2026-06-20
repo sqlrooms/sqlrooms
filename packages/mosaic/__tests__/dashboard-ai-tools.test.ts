@@ -72,6 +72,60 @@ describe('createDashboardAiTools', () => {
       ],
     });
   });
+
+  it('updates an existing chart panel when chart tools receive panelId', async () => {
+    const addPanel = jest.fn(() => 'new-panel');
+    const updatePanel = jest.fn();
+    const dashboardAdapter: DashboardAiAdapter = {
+      getPanel: () => ({
+        id: 'panel-1',
+        type: MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
+        title: 'Magnitude histogram',
+        config: {
+          chartType: 'histogram',
+          settings: {field: 'magnitude'},
+        },
+      }),
+      setSelectedTable: () => {},
+      addPanel,
+      updatePanel,
+      removePanel: () => {},
+    };
+
+    const databaseAdapter: DatabaseAiAdapter = {
+      getTables: () => [],
+      findTable: () =>
+        ({
+          tableName: 'earthquakes',
+          columns: [{name: 'depth', type: 'DOUBLE'}],
+        }) as any,
+    };
+
+    const tools = createDashboardAiTools({
+      databaseAdapter,
+      dashboardAdapter,
+    });
+
+    const result = await (
+      tools.create_dashboard_panel_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'panel-1',
+      title: 'Depth histogram',
+      settings: {field: 'depth'},
+      reasoning: 'update the existing histogram',
+    });
+
+    expect(result.success).toBe(true);
+    expect(addPanel).not.toHaveBeenCalled();
+    expect(updatePanel).toHaveBeenCalledWith('panel-1', {
+      title: 'Depth histogram',
+      config: {
+        chartType: 'histogram',
+        settings: {field: 'depth'},
+      },
+    });
+  });
 });
 
 describe('createDashboardAgentTool', () => {

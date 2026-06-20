@@ -9,5 +9,11 @@ export const BaseChartToolInput = z.object({
     .optional()
     .default('Chart')
     .describe('Optional title for the chart artifact'),
+  panelId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional existing dashboard panel ID to update instead of creating a new panel.',
+    ),
   reasoning: z.string().describe('Brief rationale for the chart choice.'),
 });
