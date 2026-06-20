@@ -1,4 +1,3 @@
-import {createArtifactLayoutNode} from '@sqlrooms/artifacts';
 import {getRunningAiSessionCountsByArtifact} from '@sqlrooms/artifacts/ai';
 import {useCallback, useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
@@ -11,11 +10,9 @@ export function useCliArtifactSidebarTabs() {
   const aiSessionArtifacts = useRoomStore(
     (state) => state.artifactAi.config.aiSessionArtifacts,
   );
-  const selectedTabId = useRoomStore((state) =>
-    state.layout.getActiveTab('workspace'),
+  const selectedTabId = useRoomStore(
+    (state) => state.artifacts.config.currentArtifactId,
   );
-  const addTab = useRoomStore((state) => state.layout.addTab);
-  const setActiveTab = useRoomStore((state) => state.layout.setActiveTab);
   const setCurrentArtifact = useRoomStore(
     (state) => state.artifacts.setCurrentArtifact,
   );
@@ -57,12 +54,10 @@ export function useCliArtifactSidebarTabs() {
 
   const selectArtifact = useCallback(
     (artifactId: string) => {
-      addTab('workspace', createArtifactLayoutNode(artifactId, 'artifact'));
-      setActiveTab('workspace', artifactId);
       setCurrentArtifact(artifactId);
       setShowArtifactChooser(false);
     },
-    [addTab, setActiveTab, setCurrentArtifact, setShowArtifactChooser],
+    [setCurrentArtifact, setShowArtifactChooser],
   );
 
   return {artifactTypes, selectedTabId, selectArtifact, tabs};
