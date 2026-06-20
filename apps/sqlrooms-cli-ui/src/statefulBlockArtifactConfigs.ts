@@ -114,6 +114,30 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.sqlEditor.renameQuery(artifactId, title);
     },
   },
+  'html-app': {
+    artifactType: 'html-app',
+    label: 'HTML App',
+    defaultTitle: 'HTML App',
+    embeddedTitle: 'Embedded HTML App',
+    embeddedDescription: 'Sandboxed HTML app with read-only SQL access',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 320,
+    maxHeight: 1600,
+    ensureState: (state, artifactId, title) => {
+      state.htmlApps.ensureApp(artifactId, {
+        title,
+        requestedCapabilities: ['query'],
+        grantedCapabilities: ['query'],
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.htmlApps.removeApp(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.htmlApps.renameApp(artifactId, title);
+    },
+  },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
 
 export type StatefulBlockArtifactType =

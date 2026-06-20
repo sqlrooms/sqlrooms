@@ -13,6 +13,10 @@ import {
   createDefaultAiToolRenderers,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
+import {
+  createHtmlAppRuntimeSlice,
+  HtmlAppRuntimeConfig,
+} from '@sqlrooms/app-runtime';
 import {CanvasSliceConfig, createCanvasSlice} from '@sqlrooms/canvas';
 import {
   CellsSliceConfig,
@@ -257,6 +261,7 @@ const sliceConfigSchemas = {
   documents: DocumentsSliceConfig,
   blockDocuments: BlockDocumentsSliceConfig,
   webContainer: WebContainerPersistConfig,
+  htmlApps: HtmlAppRuntimeConfig,
   appProject: AppBuilderProjectConfigSchema,
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
@@ -565,6 +570,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createArtifactAiSlice()(set, get, store),
+
+        ...createHtmlAppRuntimeSlice()(set, get, store),
 
         ...createMosaicSlice({
           preagg: {

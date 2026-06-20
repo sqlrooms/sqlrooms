@@ -166,6 +166,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@sqlrooms/app-runtime':
+        specifier: workspace:*
+        version: link:../../packages/app-runtime
       '@sqlrooms/artifacts':
         specifier: workspace:*
         version: link:../../packages/artifacts
