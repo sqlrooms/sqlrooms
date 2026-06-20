@@ -21,6 +21,7 @@ type WorksheetBlockSummary = {
   title?: string;
   caption?: string;
   dashboardId?: string;
+  htmlAppId?: string;
   blockType?: string;
   tableName?: string;
 };
@@ -48,6 +49,9 @@ function summarizeBlock(
       blockType: block.blockType,
       ...(block.blockType === 'dashboard'
         ? {dashboardId: block.blockInstanceId}
+        : {}),
+      ...(block.blockType === 'html-app'
+        ? {htmlAppId: block.blockInstanceId}
         : {}),
       ...(block.title !== undefined ? {title: block.title} : {}),
       ...(block.caption !== undefined ? {caption: block.caption} : {}),
@@ -84,7 +88,7 @@ export function createListWorksheetBlocksTool({
   return tool<ListWorksheetBlocksToolInput, ListWorksheetBlocksToolOutput>({
     description: `List existing blocks in the worksheet.
 
-Use this before updating an existing worksheet dashboard or adding a map to a worksheet. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels.`,
+Use this before updating an existing worksheet dashboard, adding a map to a worksheet, or modifying an existing worksheet HTML app. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels. HTML app blocks include htmlAppId; pass that htmlAppId to embedded_html_app_agent as targetHtmlAppId.`,
     inputSchema: ListWorksheetBlocksToolInput,
     execute: async () => {
       try {

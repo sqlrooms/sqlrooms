@@ -10,4 +10,5 @@ export const KnownWorksheetTools = {
   add_dashboard_block: 'add_dashboard_block',
   add_data_table_explorer: 'add_data_table_explorer',
   embedded_dashboard_agent: 'embedded_dashboard_agent',
+  embedded_html_app_agent: 'embedded_html_app_agent',
 } as const;

@@ -87,6 +87,7 @@ export function createWorksheetAiTools({
 
   const additionalTools =
     extraTools?.({
+      worksheetId,
       worksheetAdapter,
       databaseAdapter,
     }) ?? {};

@@ -10,6 +10,7 @@ import type {RoomState} from './store-types';
 import {createWorksheetAiAdapter} from './createWorksheetAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
+import {createEmbeddedHtmlAppAgentTool} from './createEmbeddedHtmlAppAgent';
 
 export function worksheetAgentTool(store: StoreApi<RoomState>) {
   const worksheetAdapter = createWorksheetAiAdapter(store);
@@ -45,6 +46,9 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
     databaseAdapter,
     worksheetAdapter,
     dashboardAgentTool,
+    extraTools: (params) => ({
+      embedded_html_app_agent: createEmbeddedHtmlAppAgentTool(store, params),
+    }),
   };
 
   return createWorksheetAgentTool(worksheetAgentOptions);

@@ -37,6 +37,7 @@ CRITICAL RULES:
 5. Use DASHBOARD BLOCKS when interactive exploration of multiple related dimensions would enhance the analysis.
 6. Use DATA TABLE EXPLORER BLOCK when users need to explore raw data in a tabular format. Only add one block per worksheet, and only if the user explicitly requests it or if it is necessary for exploration.
 7. If the user asks to add a map or geospatial visualization to a worksheet dashboard, use a dashboard block and ${KnownWorksheetTools.embedded_dashboard_agent}; worksheet chart tools cannot create map panels.
+8. If the user asks for an HTML app, D3 app, Chart.js app, browser app, custom interactive visualization, or generated app inside a worksheet, use ${KnownWorksheetTools.embedded_html_app_agent}. Do not create a top-level html-app artifact from inside worksheet_agent.
 
 ## Creating Blocks
 
@@ -86,6 +87,16 @@ Use dashboard blocks when:
 - Dataset has multiple dimensions suitable for multi-faceted analysis
 - The dashboard will contain 3-5 panels showing different aspects of the data
 
+### HTML App Blocks
+To create or update a custom embedded browser app inside the worksheet, use ${KnownWorksheetTools.embedded_html_app_agent}.
+
+Use html-app blocks when:
+- User explicitly asks for an app, HTML app, D3 app, Chart.js app, browser app, or custom interactive visualization
+- The requested interaction is not well represented by built-in worksheet chart blocks or dashboard panels
+- The app should call SQLRooms through window.sqlrooms.query(...) or window.sqlrooms.queryRows(...)
+
+If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its blockInstanceId as targetHtmlAppId to ${KnownWorksheetTools.embedded_html_app_agent}.
+
 ## Workflows
 
 ### Direct Requests
@@ -100,6 +111,8 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with the returned dashboardId to populate it
 
 **Map requests:** If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and a prompt to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.
+
+**HTML app requests:** If user asks to create or update an app inside the worksheet, call ${KnownWorksheetTools.embedded_html_app_agent}. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target html-app blockInstanceId.
 
 ### Exploratory Requests
 When user asks for "comprehensive analysis" or "high-level insights":
@@ -161,12 +174,14 @@ When user asks for "comprehensive analysis" or "high-level insights":
 ❌ Writing long narratives instead of showing data visually
 ❌ Missing opportunities for interactive exploration with dashboard blocks
 ❌ Creating a chat-only or markdown map when the user asked to add a map to a worksheet or dashboard
+❌ Creating a top-level html-app artifact when the user asked for an app in the current worksheet
 
 ✅ Create 3-5+ diverse chart blocks for exploratory requests
 ✅ Call create_worksheet_block_* tools to automatically create charts
 ✅ Mix different chart types to show different patterns
 ✅ Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
 ✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel
+✅ For worksheet app requests, use ${KnownWorksheetTools.embedded_html_app_agent} so the app is embedded in the worksheet
 ✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
 }
 
@@ -228,6 +243,7 @@ export function createWorksheetAgentTool<
 - CHART BLOCKS (histograms, scatter plots, heatmaps, etc.)
 - TEXT BLOCKS (headings, paragraphs, lists)
 - DASHBOARD BLOCKS (interactive dashboards for multi-faceted exploration)
+- HTML APP BLOCKS (custom browser apps powered by window.sqlrooms.query/queryRows)
 
 IF user requests DASHBOARD:
 1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container (get dashboardId)
@@ -238,12 +254,17 @@ IF user requests a MAP in a worksheet:
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
 3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with a prompt to add a map panel
 
+IF user requests an HTML/D3/Chart.js/browser app in a worksheet:
+1. For a new app, call ${KnownWorksheetTools.embedded_html_app_agent}
+2. For an existing app, call ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the html-app blockInstanceId as targetHtmlAppId
+
 Otherwise, create chart and text blocks directly using create_worksheet_block_* tools.
 
 Use this for:
 - Exploratory requests: "analyze the earthquakes dataset", "create comprehensive insights", "high-level overview"
 - Multi-chart requests: "create worksheet with depth and magnitude histograms"
 - Dashboard requests: "add dashboard analyzing sales data" (use two-step workflow)
+- App requests in worksheets: "create an app", "make a D3 visualization", "build a browser widget"
 
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: WorksheetAgentInputSchema,

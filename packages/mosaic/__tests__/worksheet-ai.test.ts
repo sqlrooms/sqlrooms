@@ -19,6 +19,13 @@ describe('createWorksheetAiTools', () => {
           blockInstanceId: 'dashboard-1',
           caption: 'Earthquake dashboard',
         }),
+        blockDocumentBlockToNode({
+          type: 'statefulBlock',
+          id: 'block-2',
+          blockType: 'html-app',
+          blockInstanceId: 'html-app-1',
+          title: 'Country Explorer',
+        }),
       ],
       addBlock: () => 'block-id',
       addDashboardBlock: () => ({
@@ -57,6 +64,13 @@ describe('createWorksheetAiTools', () => {
           blockType: 'dashboard',
           dashboardId: 'dashboard-1',
           caption: 'Earthquake dashboard',
+        },
+        {
+          blockId: 'block-2',
+          type: 'statefulBlock',
+          blockType: 'html-app',
+          htmlAppId: 'html-app-1',
+          title: 'Country Explorer',
         },
       ],
     });

@@ -1,19 +1,26 @@
+import type {HtmlAppDependency} from '@sqlrooms/app-runtime';
+import {
+  blockDocumentNodeToBlock,
+  createDefaultBlockDocumentBlockId,
+  type BlockDocumentStatefulBlockBlock,
+  type BlockDocumentNode,
+} from '@sqlrooms/documents';
+import type {ExtraWorksheetAiToolsParams} from '@sqlrooms/mosaic/ai';
 import {tool} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
-import type {HtmlAppDependency} from '@sqlrooms/app-runtime';
 import type {RoomState} from './store-types';
 
-const HtmlAppAgentInputSchema = z.object({
+const EmbeddedHtmlAppAgentInputSchema = z.object({
   reasoning: z
     .string()
-    .describe('Reasoning for why the HTML app agent is being called.'),
+    .describe('Reasoning for why the embedded HTML app agent is being called.'),
   prompt: z.string().describe('The app or visualization the user wants.'),
   targetHtmlAppId: z
     .string()
     .optional()
     .describe(
-      'Existing html-app block/artifact id to update. If omitted, a new html-app artifact is created.',
+      'Existing embedded html-app blockInstanceId to update. Use list_worksheet_blocks first when modifying an existing worksheet app.',
     ),
   title: z.string().optional().describe('Optional app title.'),
   querySql: z
@@ -23,7 +30,7 @@ const HtmlAppAgentInputSchema = z.object({
   files: z
     .record(z.string(), z.string())
     .optional()
-    .describe('Complete source file map for the html-app block.'),
+    .describe('Complete source file map for the embedded html-app block.'),
   dependencies: z
     .array(
       z.object({
@@ -36,49 +43,39 @@ const HtmlAppAgentInputSchema = z.object({
     )
     .optional()
     .describe('Versioned browser dependencies resolved by SQLRooms.'),
-  maxRepairAttempts: z
-    .number()
-    .int()
-    .min(0)
-    .max(3)
-    .optional()
-    .default(1)
-    .describe('Maximum expected observe/repair attempts for the caller.'),
 });
 
-type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
+type EmbeddedHtmlAppAgentInput = z.infer<
+  typeof EmbeddedHtmlAppAgentInputSchema
+>;
 
 const DEFAULT_DIAGNOSTIC_OBSERVATION_MS = 2_000;
 const DIAGNOSTIC_OBSERVATION_POLL_MS = 100;
 
-export function htmlAppAgentTool(store: StoreApi<RoomState>) {
+export function createEmbeddedHtmlAppAgentTool(
+  store: StoreApi<RoomState>,
+  {worksheetId, worksheetAdapter}: ExtraWorksheetAiToolsParams,
+) {
   return tool({
-    description: `Create or update a sandboxed html-app block/artifact.
+    description: `Create or update an embedded html-app block inside the current worksheet.
 
-Use this for generated HTML, JavaScript, D3, or small browser apps that should call SQLRooms through window.sqlrooms.query(...) or window.sqlrooms.queryRows(...). The tool writes the app file map to durable html-app state and returns runtime diagnostics from the latest iframe observation so the caller can repair the files in a bounded follow-up call.`,
-    inputSchema: HtmlAppAgentInputSchema,
+Use this from worksheet_agent when the user asks for an HTML, D3, Chart.js, or browser app visualization inside a worksheet. This tool writes durable html-app runtime state and ensures the worksheet contains an owned html-app stateful block. Do not use the top-level html_app_agent for worksheet-embedded apps.`,
+    inputSchema: EmbeddedHtmlAppAgentInputSchema,
     execute: async (input): Promise<Record<string, unknown>> => {
-      const state = store.getState();
-      const currentArtifactId = state.artifacts.config.currentArtifactId;
-      const currentArtifact = currentArtifactId
-        ? state.artifacts.getArtifact(currentArtifactId)
-        : undefined;
-      if (!input.targetHtmlAppId && currentArtifact?.type === 'worksheet') {
-        return {
-          ok: false,
-          status: 'worksheet_target_requires_worksheet_agent',
-          artifactId: currentArtifact.id,
-          artifactType: currentArtifact.type,
-          message:
-            'The current artifact is a worksheet. Use worksheet_agent so it can call embedded_html_app_agent and create or update an html-app block inside the worksheet.',
-        };
-      }
-      const appId = resolveTargetHtmlAppId(state, input);
+      worksheetAdapter.ensureWorksheet(worksheetId);
+      worksheetAdapter.setCurrentWorksheet(worksheetId);
+
       const title = input.title?.trim() || 'HTML App';
+      const target = resolveEmbeddedHtmlAppTarget({
+        blocks: worksheetAdapter.getBlocks(worksheetId) ?? [],
+        input,
+      });
+      const appId = target.appId ?? createDefaultBlockDocumentBlockId();
+      const blockId = target.blockId ?? createDefaultBlockDocumentBlockId();
       const dependencies = resolveDependencies(input);
       const files = input.files ?? createScaffoldFiles({title, input});
 
-      state.htmlApps.ensureApp(appId, {
+      store.getState().htmlApps.ensureApp(appId, {
         title,
         files,
         entryHtmlPath: '/index.html',
@@ -87,6 +84,20 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
         requestedCapabilities: ['query'],
         grantedCapabilities: ['query'],
       });
+
+      if (!target.blockId) {
+        const block: BlockDocumentStatefulBlockBlock = {
+          type: 'statefulBlock',
+          id: blockId,
+          blockType: 'html-app',
+          blockInstanceId: appId,
+          ownership: 'owned',
+          title,
+          caption: title,
+          height: 560,
+        };
+        worksheetAdapter.addBlock(worksheetId, block);
+      }
 
       const diagnostics = await observeRuntimeDiagnostics(store, appId);
       const app = store.getState().htmlApps.getApp(appId);
@@ -97,28 +108,19 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
 
       return {
         ok: errorCount === 0,
+        worksheetId,
         appId,
+        blockId,
         title,
+        createdBlock: !target.blockId,
         filePaths: Object.keys(files),
         dependencies,
-        capabilities: {
-          requested: ['query'],
-          granted: ['query'],
-        },
         diagnostics: latestDiagnostics,
         diagnosticsSummary:
           latestDiagnostics.length === 0
             ? 'No runtime diagnostics have been observed yet.'
             : `${latestDiagnostics.length} diagnostic(s), ${errorCount} error(s).`,
-        repairAttempts: 0,
-        maxRepairAttempts: input.maxRepairAttempts,
         diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
-        status:
-          latestDiagnostics.length === 0
-            ? 'written_pending_iframe_observation'
-            : errorCount === 0
-              ? 'written_no_errors_observed'
-              : 'written_errors_observed',
       };
     },
   });
@@ -127,9 +129,7 @@ Use this for generated HTML, JavaScript, D3, or small browser apps that should c
 async function observeRuntimeDiagnostics(
   store: StoreApi<RoomState>,
   appId: string,
-): Promise<
-  NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>['diagnostics']
-> {
+) {
   const start = Date.now();
   let diagnostics = store.getState().htmlApps.getApp(appId)?.diagnostics ?? [];
   while (Date.now() - start < DEFAULT_DIAGNOSTIC_OBSERVATION_MS) {
@@ -144,25 +144,36 @@ async function observeRuntimeDiagnostics(
   return diagnostics;
 }
 
-function resolveTargetHtmlAppId(
-  state: RoomState,
-  input: HtmlAppAgentInput,
-): string {
-  if (input.targetHtmlAppId) return input.targetHtmlAppId;
+function resolveEmbeddedHtmlAppTarget({
+  blocks,
+  input,
+}: {
+  blocks: BlockDocumentNode[];
+  input: EmbeddedHtmlAppAgentInput;
+}) {
+  const htmlAppBlocks = blocks
+    .map((node) => blockDocumentNodeToBlock(node))
+    .filter(
+      (block): block is BlockDocumentStatefulBlockBlock =>
+        block?.type === 'statefulBlock' && block.blockType === 'html-app',
+    );
 
-  const currentArtifactId = state.artifacts.config.currentArtifactId;
-  const currentArtifact = currentArtifactId
-    ? state.artifacts.getArtifact(currentArtifactId)
-    : undefined;
-  if (currentArtifact?.type === 'html-app') return currentArtifact.id;
+  if (input.targetHtmlAppId) {
+    const target = htmlAppBlocks.find(
+      (block) => block.blockInstanceId === input.targetHtmlAppId,
+    );
+    return {
+      appId: input.targetHtmlAppId,
+      blockId: target?.id,
+    };
+  }
 
-  return state.artifacts.createArtifact({
-    type: 'html-app',
-    title: input.title || 'HTML App',
-  });
+  return {};
 }
 
-function resolveDependencies(input: HtmlAppAgentInput): HtmlAppDependency[] {
+function resolveDependencies(
+  input: EmbeddedHtmlAppAgentInput,
+): HtmlAppDependency[] {
   if (input.dependencies) return input.dependencies;
   return [
     {
@@ -180,7 +191,7 @@ function createScaffoldFiles({
   input,
 }: {
   title: string;
-  input: HtmlAppAgentInput;
+  input: EmbeddedHtmlAppAgentInput;
 }): Record<string, string> {
   const sql = input.querySql || 'select 1 as value';
   return {
