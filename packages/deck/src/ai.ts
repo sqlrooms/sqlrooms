@@ -121,6 +121,12 @@ export function createDashboardAgentToolWithDeckMaps<
 >(options: CreateDashboardAgentToolOptions<TState>): Tool {
   return createDashboardAgentTool({
     ...options,
+    additionalInstructions: [
+      options.additionalInstructions,
+      DECK_MAP_AI_INSTRUCTIONS.trim(),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     extraTools: createDeckMapDashboardExtraTools(options.extraTools),
   });
 }

@@ -186,8 +186,12 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
-          instructions:
+          instructions: [
             options.instructions ?? getDashboardAgentInstructions(options),
+            options.additionalInstructions,
+          ]
+            .filter(Boolean)
+            .join('\n\n'),
         });
 
         const result = await options.runSubAgent({

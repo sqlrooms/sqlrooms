@@ -12,6 +12,7 @@ import {createAddTextBlockTool} from './createAddTextBlockTool';
 import {createAddDashboardBlockTool} from './createAddDashboardBlockTool';
 import {KnownWorksheetTools} from './constants';
 import {createWorksheetDataTableExplorerTool} from './createWorksheetDataTableExplorerTool';
+import {createListWorksheetBlocksTool} from './createListWorksheetBlocksTool';
 
 /**
  * Options for creating worksheet AI tools.
@@ -70,8 +71,14 @@ export function createWorksheetAiTools({
     worksheetId,
   });
 
+  const listWorksheetBlocksTool = createListWorksheetBlocksTool({
+    worksheetAdapter,
+    worksheetId,
+  });
+
   const builtInTools: Record<string, Tool> = {
     ...chartTools,
+    [KnownWorksheetTools.list_blocks]: listWorksheetBlocksTool,
     [KnownWorksheetTools.add_text_block]: addTextBlockTool,
     [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
     [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,

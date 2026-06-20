@@ -36,8 +36,12 @@ CRITICAL RULES:
 4. Prefer CHARTS with TEXT BLOCKS for context. Text blocks alone are insufficient.
 5. Use DASHBOARD BLOCKS when interactive exploration of multiple related dimensions would enhance the analysis.
 6. Use DATA TABLE EXPLORER BLOCK when users need to explore raw data in a tabular format. Only add one block per worksheet, and only if the user explicitly requests it or if it is necessary for exploration.
+7. If the user asks to add a map or geospatial visualization to a worksheet dashboard, use a dashboard block and ${KnownWorksheetTools.embedded_dashboard_agent}; worksheet chart tools cannot create map panels.
 
 ## Creating Blocks
+
+### Existing Blocks
+Before updating a worksheet dashboard or adding a map to an existing worksheet, call ${KnownWorksheetTools.list_blocks} to find existing dashboard blocks and their dashboardId values.
 
 ### Chart Blocks
 To create a chart block in a worksheet, call one of the chart generation tools:
@@ -59,6 +63,10 @@ To add a data table explorer block, use the ${KnownWorksheetTools.add_data_table
 ### Dashboard Blocks
 To create an interactive dashboard block for data exploration, use a TWO-STEP workflow:
 
+If the worksheet already has a dashboard block that matches the request, reuse it:
+- Call ${KnownWorksheetTools.list_blocks}
+- Use the dashboard block's dashboardId when calling ${KnownWorksheetTools.embedded_dashboard_agent}
+
 STEP 1: Create the empty dashboard block container
 - Call ${KnownWorksheetTools.add_dashboard_block} with:
   - dashboardTitle: title for the dashboard
@@ -73,6 +81,7 @@ STEP 2: Populate the dashboard with charts and panels
 
 Use dashboard blocks when:
 - User explicitly requests a dashboard: "add dashboard analyzing sales data"
+- User asks for a map, geospatial visualization, locations, longitude/latitude, geometry, H3, routes, or spatial analysis
 - Interactive exploration would be valuable: multiple related dimensions benefit from coordinated views
 - Dataset has multiple dimensions suitable for multi-faceted analysis
 - The dashboard will contain 3-5 panels showing different aspects of the data
@@ -90,6 +99,8 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with the returned dashboardId to populate it
 
+**Map requests:** If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and a prompt to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.
+
 ### Exploratory Requests
 When user asks for "comprehensive analysis" or "high-level insights":
 1. REQUIRED: Create at least 3-5 CHART BLOCKS minimum
@@ -105,6 +116,7 @@ When user asks for "comprehensive analysis" or "high-level insights":
 
 **Consider dashboard blocks when:**
 - Dataset has multiple dimensions that benefit from coordinated visualization (e.g., geography + product category + time)
+- A map panel is requested; map panels are dashboard panels, not worksheet chart blocks
 - User wants to "explore" or analyze the data from multiple perspectives
 - Analysis benefits from seeing multiple related views together in one interactive dashboard
 
@@ -148,11 +160,13 @@ When user asks for "comprehensive analysis" or "high-level insights":
 ❌ Creating just 1-2 charts for "comprehensive analysis" requests
 ❌ Writing long narratives instead of showing data visually
 ❌ Missing opportunities for interactive exploration with dashboard blocks
+❌ Creating a chat-only or markdown map when the user asked to add a map to a worksheet or dashboard
 
 ✅ Create 3-5+ diverse chart blocks for exploratory requests
 ✅ Call create_worksheet_block_* tools to automatically create charts
 ✅ Mix different chart types to show different patterns
 ✅ Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
+✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel
 ✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
 }
 
@@ -219,6 +233,11 @@ IF user requests DASHBOARD:
 1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container (get dashboardId)
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with dashboardId to populate it with charts
 
+IF user requests a MAP in a worksheet:
+1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
+2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
+3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with a prompt to add a map panel
+
 Otherwise, create chart and text blocks directly using create_worksheet_block_* tools.
 
 Use this for:
@@ -252,8 +271,12 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           },
           temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
-          instructions:
+          instructions: [
             options.instructions ?? getWorksheetAgentInstructions(options),
+            options.additionalInstructions,
+          ]
+            .filter(Boolean)
+            .join('\n\n'),
         });
 
         const result = await options.runSubAgent({

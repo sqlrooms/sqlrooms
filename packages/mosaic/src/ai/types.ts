@@ -57,5 +57,11 @@ export type BaseAgentToolOptions<TState> = {
     abortSignal?: AbortSignal;
   }) => Promise<AgentRunResult>;
   instructions?: string;
+  /**
+   * Optional host/plugin instructions appended after the built-in agent prompt.
+   * Use this when extending an agent with extra tools that need specialized
+   * usage guidance while preserving the base workflow.
+   */
+  additionalInstructions?: string;
   chartToolsOptions?: ChartToolsOptions;
 };

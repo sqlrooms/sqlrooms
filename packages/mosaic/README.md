@@ -401,7 +401,9 @@ const dashboardTools = createDashboardAiTools({store, adapter});
 
 Host tools can be added with `extraTools`; they must not reuse built-in
 dashboard tool keys. Register geospatial map tools under `MAP_TOOL_KEY` so the
-dashboard prompts and tool registration stay aligned.
+dashboard prompts and tool registration stay aligned. When host tools need
+specialized agent guidance, pass `additionalInstructions` to append that
+guidance after the built-in agent workflow without replacing it.
 
 ### Box Plot Chart Type
 

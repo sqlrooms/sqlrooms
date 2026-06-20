@@ -5,6 +5,7 @@ export const WORKSHEET_CHART_TOOL_PREFIX = 'create_worksheet_block_';
  * These are the core tools available to worksheet agents.
  */
 export const KnownWorksheetTools = {
+  list_blocks: 'list_worksheet_blocks',
   add_text_block: 'add_text_block',
   add_dashboard_block: 'add_dashboard_block',
   add_data_table_explorer: 'add_data_table_explorer',
