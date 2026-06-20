@@ -374,6 +374,10 @@ const databaseAdapter: DatabaseAiAdapter = {
 };
 
 const dashboardAdapter: DashboardAiAdapter = {
+  getSelectedTable: () =>
+    store.getState().mosaicDashboard.getDashboard(dashboardId)?.selectedTable,
+  getPanels: () =>
+    store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels ?? [],
   setSelectedTable: (tableName) =>
     store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
   addPanel: (panel) =>

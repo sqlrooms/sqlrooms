@@ -10,6 +10,7 @@ import {createDashboardDataTableExplorerTool} from './createDashboardDataTableEx
 import {DatabaseAiAdapter} from '../database-types';
 import {ChartToolsOptions} from '../types';
 import {KnownDashboardTools} from './constants';
+import {createListDashboardPanelsTool} from './createListDashboardPanelsTool';
 
 /**
  * Options for creating dashboard AI tools.
@@ -49,7 +50,12 @@ export function createDashboardAiTools({
     dashboardAdapter,
   });
 
+  const listDashboardPanelsTool = createListDashboardPanelsTool({
+    dashboardAdapter,
+  });
+
   const builtInTools: Record<string, Tool> = {
+    [KnownDashboardTools.list_dashboard_panels]: listDashboardPanelsTool,
     ...chartTools,
     [KnownDashboardTools.create_dashboard_panel_data_table_explorer]:
       dataTableExplorerTool,

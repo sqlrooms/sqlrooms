@@ -38,7 +38,7 @@ You can handle both direct requests ("create histogram of magnitude") and explor
 
 ## Dataset
 
-Dashboard always requires a **tableName** parameter to specify the dataset to analyze. 
+Dashboard uses the **tableName** parameter to specify the dataset to analyze. If tableName is omitted for an existing dashboard, the agent uses the dashboard's selected table.
 You can use the query tool to explore the data and discover patterns, then create panels based on your findings.
 
 ## Available Tools
@@ -47,6 +47,7 @@ You can use the query tool to explore the data and discover patterns, then creat
 ${chartToolsInstructions}
 
 **Panel Tools:**
+- ${KnownDashboardTools.list_dashboard_panels} - inspect existing panel IDs, the selected table, and runtime issues
 - ${KnownDashboardTools.create_dashboard_panel_data_table_explorer} - table statistics and column summaries
 - ${MAP_TOOL_KEY} - native Deck JSON geospatial map panel (if provided by the host app)
 
@@ -104,7 +105,12 @@ const DashboardAgentInputSchema = z.object({
   prompt: z
     .string()
     .describe('The exploratory data analysis prompt for the agent'),
-  tableName: z.string().describe('The name of the table/dataset to analyze.'),
+  tableName: z
+    .string()
+    .optional()
+    .describe(
+      'The name of the table/dataset to analyze. Optional when the target dashboard already has a selected table.',
+    ),
   dashboardId: z
     .string()
     .describe('The ID of an existing dashboard to update.'),
@@ -152,20 +158,30 @@ This agent:
 
 REQUIRED PARAMETERS:
 - dashboardId: The ID of the dashboard to populate
-- tableName: The dataset to analyze
 - prompt: What insights, patterns, or specific charts to create
+
+OPTIONAL PARAMETERS:
+- tableName: The dataset to analyze. If omitted, the dashboard's selected table is used.
 
 The agent will explore the data and create 3-5 panels showing different aspects based on the prompt.
 
 IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: DashboardAgentInputSchema,
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
-      const {prompt, tableName, dashboardId, maxSteps, temperature} = params;
+      const {prompt, dashboardId, maxSteps, temperature} = params;
 
       const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
 
       try {
         const state = store.getState();
+        const tableName =
+          params.tableName ?? dashboardAdapter.getSelectedTable?.();
+
+        if (!tableName) {
+          throw new AiAgentError(
+            'Dashboard tableName was not provided and the dashboard has no selected table.',
+          );
+        }
 
         ensureTable(databaseAdapter, tableName);
 

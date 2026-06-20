@@ -18,7 +18,7 @@ export function CliSidebarBrand() {
       <div className="min-w-0 group-data-[collapsible=icon]:hidden">
         <div className="truncate text-xl leading-none font-bold">SQLRooms</div>
         <div className="text-muted-foreground truncate text-sm leading-tight">
-          Analytics workspaces
+          Analytics workspace
         </div>
       </div>
     </button>

@@ -15,6 +15,10 @@ export function createDashboardAiAdapter<
   TState extends MosaicDashboardStoreState,
 >(store: AiStore<TState>, dashboardId: string): DashboardAiAdapter {
   return {
+    getSelectedTable: () =>
+      store.getState().mosaicDashboard.getDashboard(dashboardId)?.selectedTable,
+    getPanels: () =>
+      store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels ?? [],
     setSelectedTable: (tableName) =>
       store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
     addPanel: (panel) =>

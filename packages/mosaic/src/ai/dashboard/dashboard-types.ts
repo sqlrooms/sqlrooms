@@ -12,6 +12,8 @@ import {AgentResultMetadata} from '../tool-types';
  */
 export type DashboardAiAdapter = {
   getPanelIssue?: (panelId: string) => ChartRuntimeIssue | undefined;
+  getSelectedTable?: () => string | undefined;
+  getPanels?: () => MosaicDashboardPanelConfig[];
   setSelectedTable: (tableName: string) => void;
   getPanel(panelId: string): MosaicDashboardPanelConfig | undefined;
   updatePanel(panelId: string, patch: Partial<PanelPatch>): void;

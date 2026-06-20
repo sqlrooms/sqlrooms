@@ -35,7 +35,7 @@ export function CliArtifactsSidebarSection() {
       <div className="flex h-full min-h-0 min-w-0 flex-col">
         <div className="mb-1 flex h-7 shrink-0 items-center justify-between px-2">
           <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            Artifacts
+            Workspace
           </div>
           <Button
             type="button"
