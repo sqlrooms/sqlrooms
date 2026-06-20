@@ -328,6 +328,23 @@ function createDeckMapPanelFromNativeConfig(
   });
 }
 
+function getFirstDatasetSourceTableName(
+  config: DeckMapDashboardConfigToolConfig,
+): string | undefined {
+  if (!config.datasets || typeof config.datasets !== 'object') {
+    return undefined;
+  }
+
+  return Object.values(config.datasets)
+    .map(
+      (dataset) =>
+        (dataset as Record<string, unknown>).source as
+          | {tableName?: string}
+          | undefined,
+    )
+    .find((source) => source?.tableName)?.tableName;
+}
+
 export function createDeckMapConfigTool(): Tool {
   return tool({
     description: `Deck map config: validates and returns a reusable native Deck JSON map configuration without requiring a dashboard artifact.
@@ -403,9 +420,12 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
     inputSchema: DeckMapDashboardToolParameters,
     execute: async (params) => {
       try {
-        if (params.tableName) {
-          ensureTable(databaseAdapter, params.tableName);
-          dashboardAdapter.setSelectedTable(params.tableName);
+        const tableName =
+          params.tableName ?? getFirstDatasetSourceTableName(params.config);
+
+        if (tableName) {
+          ensureTable(databaseAdapter, tableName);
+          dashboardAdapter.setSelectedTable(tableName);
         }
 
         const panel = createDeckMapPanelFromNativeConfig(params);

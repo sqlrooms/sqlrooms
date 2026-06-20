@@ -353,50 +353,48 @@ dashboard slice.
 ### Dashboard AI Tools
 
 `@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,
-including chart tools, Data Table Explorer/text panel tools, panel management tools, and an
-optional exploratory `dashboard_agent`. Client apps supply a small adapter that
-maps Mosaic's generic dashboard operations to their store, artifact model, table
-metadata, and AI run context. When an AI run context is present, implicit
-dashboard targeting should resolve only a primary dashboard context item;
-reference-only dashboard artifacts should require an explicit `artifactId`.
+including chart tools, a Data Table Explorer panel tool, and an optional
+exploratory `dashboard_agent`. Client apps supply small adapters that map
+Mosaic's generic dashboard operations to their store and table metadata.
 
 ```ts
 import {
   createDashboardAiTools,
   MAP_TOOL_KEY,
   type DashboardAiAdapter,
+  type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic';
 
-const adapter: DashboardAiAdapter<AppState> = {
-  getTables: (state) => state.db.tables,
-  hasRunContext: (state, context) => hasAiRunContext(context),
-  resolveContextDashboardArtifactId: (state, context) =>
-    getPrimaryDashboardArtifactIdFromRunContext(context, state),
-  makeDashboardPrimaryForRun: (state, artifactId, context) =>
-    makeArtifactPrimaryForAiRun(artifactId, context),
-  getCurrentDashboardArtifactId: (state) =>
-    state.dashboard.getCurrentDashboardArtifactId(),
-  createDashboardArtifact: (state, title, layoutType) =>
-    state.dashboard.createDashboardArtifact(title, layoutType),
-  isDashboardArtifact: (state, artifactId) =>
-    state.artifacts.getArtifact(artifactId)?.type === 'dashboard',
-  setCurrentArtifact: (state, artifactId) =>
-    state.artifacts.setCurrentArtifact(artifactId),
-  ensureDashboard: (state, dashboardId) =>
-    state.dashboard.ensureDashboardArtifact(dashboardId),
-  getDashboard: (state, dashboardId) =>
-    state.mosaicDashboard.getDashboard(dashboardId),
-  setSelectedTable: (state, dashboardId, tableName) =>
-    state.mosaicDashboard.setSelectedTable(dashboardId, tableName),
-  addPanel: (state, dashboardId, panel) =>
-    state.mosaicDashboard.addPanel(dashboardId, panel),
-  updatePanel: (state, dashboardId, panelId, patch) =>
-    state.mosaicDashboard.updatePanel(dashboardId, panelId, patch),
-  removePanel: (state, dashboardId, panelId) =>
-    state.mosaicDashboard.removePanel(dashboardId, panelId),
+const dashboardId = 'dashboard-1';
+
+const databaseAdapter: DatabaseAiAdapter = {
+  getTables: () => store.getState().db.tables,
+  findTable: (tableName) =>
+    store.getState().db.tables.find((table) => table.tableName === tableName),
 };
 
-const dashboardTools = createDashboardAiTools({store, adapter});
+const dashboardAdapter: DashboardAiAdapter = {
+  setSelectedTable: (tableName) =>
+    store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
+  addPanel: (panel) =>
+    store.getState().mosaicDashboard.addPanel(dashboardId, panel),
+  updatePanel: (panelId, patch) =>
+    store.getState().mosaicDashboard.updatePanel(dashboardId, panelId, patch),
+  removePanel: (panelId) =>
+    store.getState().mosaicDashboard.removePanel(dashboardId, panelId),
+  getPanel: (panelId) =>
+    store
+      .getState()
+      .mosaicDashboard.getDashboard(dashboardId)
+      ?.panels.find((panel) => panel.id === panelId),
+  getPanelIssue: (panelId) =>
+    store.getState().mosaicDashboard.getPanelIssue(dashboardId, panelId),
+};
+
+const dashboardTools = createDashboardAiTools({
+  databaseAdapter,
+  dashboardAdapter,
+});
 ```
 
 Host tools can be added with `extraTools`; they must not reuse built-in

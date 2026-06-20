@@ -292,6 +292,7 @@ describe('createDeckMapDashboardTool', () => {
     });
 
     expect(result.llmResult.success).toBe(true);
+    expect(dashboards['dashboard-1']!.selectedTable).toBe('earthquakes');
     expect(dashboards['dashboard-1']!.panels).toHaveLength(1);
     expect(dashboards['dashboard-1']!.panels[0]).toMatchObject({
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
