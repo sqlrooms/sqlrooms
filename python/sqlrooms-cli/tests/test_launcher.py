@@ -122,6 +122,24 @@ def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
     assert "RuntimeError: duckdb lock held" in duckdb_status["details"]
 
 
+def test_duckdb_backend_slow_start_remains_starting(server, monkeypatch):
+    class FakeThread:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def start(self):
+            pass
+
+    monkeypatch.setattr("sqlrooms.web.launcher.threading.Thread", FakeThread)
+    monkeypatch.setattr(server._duckdb_ready, "wait", lambda timeout=None: False)
+
+    server._start_duckdb_backend()
+
+    duckdb_status = server._runtime_status()["components"]["duckdbWebSocket"]
+    assert server._duckdb_start_error is None
+    assert duckdb_status["status"] == "starting"
+
+
 def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
     monkeypatch.setattr(
         "sqlrooms.web.launcher.db_async.init_global_connection",

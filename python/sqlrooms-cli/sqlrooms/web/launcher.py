@@ -539,10 +539,9 @@ class SqlroomsHttpServer:
             logger.error("Failed to start DuckDB websocket backend")
             return
         if not self._duckdb_ready.is_set():
-            self._duckdb_start_error = TimeoutError(
-                "Timed out starting DuckDB websocket backend"
+            logger.warning(
+                "DuckDB websocket backend is still starting after 10 seconds"
             )
-            logger.error("Timed out starting DuckDB websocket backend")
             return
         logger.info(
             "Started DuckDB websocket backend at ws://%s:%s",
