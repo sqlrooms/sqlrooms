@@ -280,6 +280,7 @@ export type CreateHtmlAppBlockDefinitionOptions<
 > = {
   label?: string;
   defaultTitle?: string;
+  defaultApp?: Partial<HtmlAppState>;
   render?: ComponentType<StatefulBlockRenderProps<TRoomState>>;
 };
 
@@ -292,6 +293,7 @@ export function createHtmlAppBlockDefinition<
 >({
   label = 'HTML App',
   defaultTitle = 'HTML App',
+  defaultApp,
   render = HtmlAppBlock as ComponentType<StatefulBlockRenderProps<TRoomState>>,
 }: CreateHtmlAppBlockDefinitionOptions<TRoomState> = {}): StatefulBlockDefinition<TRoomState> {
   return {
@@ -306,6 +308,7 @@ export function createHtmlAppBlockDefinition<
     },
     ensureState: ({blockId, title, getState}) => {
       getState().htmlApps.ensureApp(blockId, {
+        ...defaultApp,
         title: title ?? defaultTitle,
       });
     },
