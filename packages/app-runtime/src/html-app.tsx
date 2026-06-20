@@ -2,7 +2,11 @@ import type {
   StatefulBlockDefinition,
   StatefulBlockRenderProps,
 } from '@sqlrooms/blocks';
-import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
+import {
+  createSlice,
+  useBaseRoomStore,
+  useRoomStoreApi,
+} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {AppWindowIcon} from 'lucide-react';
 import {useEffect, useMemo, useRef, type ComponentType, type FC} from 'react';
@@ -188,6 +192,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   maxRows = DEFAULT_MAX_ROWS,
 }) => {
   const resolvedAppId = appId ?? blockId;
+  const roomStore = useRoomStoreApi();
   const app = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
     resolvedAppId ? state.htmlApps.config.appsById[resolvedAppId] : undefined,
   );
@@ -197,9 +202,11 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   const addDiagnostic = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.addDiagnostic,
   );
-  const getState = useBaseRoomStore(
-    (state) => () =>
-      state as unknown as HtmlAppRuntimeSliceState & HtmlAppRuntimeQueryState,
+  const getState = useMemo(
+    () => () =>
+      roomStore.getState() as unknown as HtmlAppRuntimeSliceState &
+        HtmlAppRuntimeQueryState,
+    [roomStore],
   );
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
