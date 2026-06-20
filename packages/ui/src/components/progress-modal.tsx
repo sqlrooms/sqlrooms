@@ -19,6 +19,7 @@ const ProgressModal: FC<{
   progress?: number;
   indeterminate?: boolean;
   error?: string;
+  errorDetails?: string;
 }> = (props) => {
   const {
     className,
@@ -28,6 +29,7 @@ const ProgressModal: FC<{
     progress,
     indeterminate,
     error,
+    errorDetails,
   } = props;
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -46,9 +48,17 @@ const ProgressModal: FC<{
             <DialogDescription className="text-destructive text-sm font-medium">
               {loadingStage ?? 'Initialization failed'}
             </DialogDescription>
-            <pre className="bg-muted text-muted-foreground max-h-40 overflow-auto rounded-md p-3 text-xs whitespace-pre-wrap">
-              {error}
-            </pre>
+            <p className="text-muted-foreground text-sm">{error}</p>
+            {errorDetails ? (
+              <details className="text-muted-foreground text-sm">
+                <summary className="hover:text-foreground cursor-pointer font-medium">
+                  Details
+                </summary>
+                <pre className="bg-muted text-muted-foreground mt-2 max-h-40 overflow-auto rounded-md p-3 text-xs whitespace-pre-wrap">
+                  {errorDetails}
+                </pre>
+              </details>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-col gap-2">

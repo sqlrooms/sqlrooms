@@ -24,7 +24,6 @@ import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
-  type DuckDbConnector,
   QualifiedTableName,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
@@ -83,6 +82,7 @@ import {
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
+import {addCliDatabaseInitializationDiagnostics} from './cliDatabaseInitialization';
 import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
@@ -131,41 +131,6 @@ const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
   defaultTitle: 'Worksheet',
   blockDocumentAgentToolName: 'worksheet_agent',
 } as const;
-const DB_INITIALIZATION_TIMEOUT_MS = 12_000;
-
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  createError: () => Error,
-): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(createError()), timeoutMs);
-  });
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-  });
-}
-
-function addCliDatabaseInitializationTimeout(
-  connector: DuckDbConnector,
-  wsUrl: string,
-) {
-  const baseInitialize = connector.initialize.bind(connector);
-  connector.initialize = async () => {
-    await withTimeout(baseInitialize(), DB_INITIALIZATION_TIMEOUT_MS, () => {
-      return new Error(
-        [
-          'Could not connect to the SQLRooms DuckDB websocket backend.',
-          `WebSocket URL: ${wsUrl}`,
-          'Check the terminal running `sqlrooms` for startup errors, then reload this page.',
-        ].join('\n'),
-      );
-    });
-  };
-}
 
 export const runtimeConfig = await fetchRuntimeConfig();
 export const aiDevtoolsEnabled =
@@ -263,7 +228,10 @@ const connector = createWebSocketDuckDbConnector({
     `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
   ].join('; '),
 });
-addCliDatabaseInitializationTimeout(connector, runtimeWsUrl);
+addCliDatabaseInitializationDiagnostics(connector, {
+  runtimeConfig,
+  wsUrl: runtimeWsUrl,
+});
 
 const baseLoadFile = connector.loadFile.bind(connector);
 connector.loadFile = async (file, desiredTableName, options) => {

@@ -511,16 +511,56 @@ class SqlroomsHttpServer:
         self._duckdb_thread = thread
         self._duckdb_ready.wait(timeout=10)
         if self._duckdb_start_error is not None:
-            raise RuntimeError(
-                "Failed to start DuckDB websocket backend"
-            ) from self._duckdb_start_error
+            logger.error("Failed to start DuckDB websocket backend")
+            return
         if not self._duckdb_ready.is_set():
-            raise RuntimeError("Timed out starting DuckDB websocket backend")
+            self._duckdb_start_error = TimeoutError(
+                "Timed out starting DuckDB websocket backend"
+            )
+            logger.error("Timed out starting DuckDB websocket backend")
+            return
         logger.info(
             "Started DuckDB websocket backend at ws://%s:%s",
             self._public_host(),
             self.ws_port,
         )
+
+    def _format_startup_error(self, exc: BaseException) -> Dict[str, str]:
+        details: list[str] = []
+        current: BaseException | None = exc
+        while current is not None:
+            error_type = type(current).__name__
+            message = str(current) or error_type
+            details.append(f"{error_type}: {message}")
+            current = current.__cause__ or current.__context__
+
+        return {
+            "message": str(exc) or type(exc).__name__,
+            "details": "\nCaused by: ".join(details),
+        }
+
+    def _runtime_status(self) -> Dict[str, Any]:
+        duckdb_status: Dict[str, Any]
+        if self._duckdb_start_error is not None:
+            error = self._format_startup_error(self._duckdb_start_error)
+            duckdb_status = {
+                "status": "error",
+                "message": "DuckDB websocket backend failed to start",
+                "error": error["message"],
+                "details": error["details"],
+            }
+        elif self._duckdb_ready.is_set():
+            duckdb_status = {"status": "ready"}
+        else:
+            duckdb_status = {"status": "starting"}
+
+        status = "ready" if duckdb_status["status"] == "ready" else "degraded"
+        return {
+            "status": status,
+            "components": {
+                "duckdbWebSocket": duckdb_status,
+            },
+        }
 
     def _runtime_config(self) -> Dict[str, Any]:
         return {
@@ -545,6 +585,7 @@ class SqlroomsHttpServer:
             },
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
+            "startupStatus": self._runtime_status(),
             "dbBridge": {
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
@@ -601,6 +642,14 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
+
+        @app.get("/api/status")
+        async def get_status():
+            return self._runtime_status()
+
+        @app.get("/status.json")
+        async def get_status_json():
+            return self._runtime_status()
 
         @app.get("/api/db/settings")
         async def get_db_settings():

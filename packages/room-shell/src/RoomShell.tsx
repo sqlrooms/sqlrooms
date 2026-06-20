@@ -170,6 +170,7 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
       title={loadingProgress?.error ? 'Unable to start SQLRooms' : 'Loading'}
       loadingStage={loadingProgress?.message}
       error={loadingProgress?.error}
+      errorDetails={loadingProgress?.errorDetails}
       indeterminate={true}
     />
   );

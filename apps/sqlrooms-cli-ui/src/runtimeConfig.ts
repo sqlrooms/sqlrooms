@@ -1,3 +1,17 @@
+export type RuntimeComponentStatus = {
+  status: 'starting' | 'ready' | 'error';
+  message?: string;
+  error?: string;
+  details?: string;
+};
+
+export type RuntimeStartupStatus = {
+  status: 'ready' | 'degraded';
+  components?: {
+    duckdbWebSocket?: RuntimeComponentStatus;
+  };
+};
+
 export type RuntimeConfig = {
   wsUrl?: string;
   wsAuthToken?: string;
@@ -39,6 +53,7 @@ export type RuntimeConfig = {
   };
   dbPath?: string;
   metaNamespace?: string;
+  startupStatus?: RuntimeStartupStatus;
   dbBridge?: {
     id: string;
     connections: Array<{
@@ -79,12 +94,22 @@ export type RuntimeConfig = {
   };
 };
 
-export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
+async function fetchJson<T>(url: string): Promise<T | undefined> {
   try {
-    const res = await fetch('/api/config');
-    if (!res.ok) return {};
-    return (await res.json()) as RuntimeConfig;
+    const res = await fetch(url);
+    if (!res.ok) return undefined;
+    return (await res.json()) as T;
   } catch {
-    return {};
+    return undefined;
   }
+}
+
+export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
+  return (await fetchJson<RuntimeConfig>('/api/config')) ?? {};
+}
+
+export async function fetchRuntimeStartupStatus(): Promise<
+  RuntimeStartupStatus | undefined
+> {
+  return fetchJson<RuntimeStartupStatus>('/api/status');
 }

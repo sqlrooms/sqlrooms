@@ -41,6 +41,9 @@ def test_api_config(server):
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
     assert "wsAuthToken" in data
+    assert (
+        data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
+    )
 
 
 def test_pick_free_port_scans_up_from_occupied_port():
@@ -90,8 +93,20 @@ def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
         fail_init_global_connection,
     )
 
-    with pytest.raises(RuntimeError, match="Failed to start DuckDB websocket backend"):
-        server._start_duckdb_backend()
+    server._start_duckdb_backend()
+
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/status")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "degraded"
+    duckdb_status = data["components"]["duckdbWebSocket"]
+    assert duckdb_status["status"] == "error"
+    assert duckdb_status["message"] == "DuckDB websocket backend failed to start"
+    assert duckdb_status["error"] == "duckdb lock held"
+    assert "RuntimeError: duckdb lock held" in duckdb_status["details"]
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):

@@ -61,6 +61,7 @@ export type TaskProgress = {
   progress?: number | undefined;
   message: string;
   error?: string | undefined;
+  errorDetails?: string | undefined;
 };
 
 export type RoomShellSliceState = {
@@ -190,6 +191,18 @@ function getErrorMessage(error: unknown): string {
   return 'An unknown error occurred.';
 }
 
+function getErrorDetails(error: unknown): string | undefined {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'details' in error &&
+    typeof error.details === 'string'
+  ) {
+    return error.details;
+  }
+  return undefined;
+}
+
 const RoomSetTitleCommandInput = z.object({
   title: z.string().min(1).describe('Room title.'),
 });
@@ -304,6 +317,7 @@ export function createRoomShellSlice(
               setTaskProgress(INIT_DB_TASK, {
                 message: 'Database connection failed',
                 error: getErrorMessage(error),
+                errorDetails: getErrorDetails(error),
                 progress: undefined,
               });
               throw error;
