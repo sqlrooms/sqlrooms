@@ -1,3 +1,4 @@
+import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
   BlockDocumentArtifact,
@@ -67,12 +68,23 @@ const WorksheetDataTableBlockRenderer: FC<
   );
 };
 
+const WorksheetHtmlAppBlockRenderer: FC<
+  BlockDocumentStatefulBlockRendererProps
+> = (props) => (
+  <HtmlAppBlock
+    blockId={props.blockInstanceId}
+    title={props.title}
+    className="bg-background h-full min-h-[320px]"
+  />
+);
+
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
   pivot: WorksheetPivotBlockRenderer,
   'data-table': WorksheetDataTableBlockRenderer,
   document: WorksheetMarkdownDocumentBlockRenderer,
   'sql-query': WorksheetSqlQueryBlockRenderer,
+  'html-app': WorksheetHtmlAppBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer

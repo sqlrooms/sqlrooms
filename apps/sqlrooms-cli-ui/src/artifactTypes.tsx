@@ -1,4 +1,8 @@
 import {
+  createHtmlAppBlockDefinition,
+  HTML_APP_BLOCK_TYPE,
+} from '@sqlrooms/app-runtime';
+import {
   createArtifactTypeFromStatefulBlock,
   defineArtifactTypes,
   type ArtifactTypeDefinition,
@@ -45,6 +49,16 @@ const sqlQueryBlockDefinition = createSqlQueryBlockDefinition<RoomState>({
   defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS['sql-query'].defaultTitle,
 });
 
+const htmlAppBlockDefinition = createHtmlAppBlockDefinition<RoomState>({
+  label: STATEFUL_BLOCK_ARTIFACT_CONFIGS[HTML_APP_BLOCK_TYPE].label,
+  defaultTitle:
+    STATEFUL_BLOCK_ARTIFACT_CONFIGS[HTML_APP_BLOCK_TYPE].defaultTitle,
+  defaultApp: {
+    requestedCapabilities: ['query'],
+    grantedCapabilities: ['query'],
+  },
+});
+
 export const ARTIFACT_TYPES = defineArtifactTypes({
   worksheet: {
     label: 'Worksheet',
@@ -82,6 +96,7 @@ export const ARTIFACT_TYPES = defineArtifactTypes({
     markdownDocumentBlockDefinition,
   ),
   'sql-query': createArtifactTypeFromStatefulBlock(sqlQueryBlockDefinition),
+  'html-app': createArtifactTypeFromStatefulBlock(htmlAppBlockDefinition),
   canvas: {
     label: 'Canvas',
     defaultTitle: 'Canvas',
