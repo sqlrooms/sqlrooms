@@ -20,18 +20,13 @@ import type {
   ChartRuntimeIssueContext,
   ChartRuntimeIssueReporter,
 } from '../../chart-runtime';
+import {ChartToolParams} from './tool-types';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
 import {getMosaicTableReferenceString} from '../../mosaicTableReference';
+import type {ChartBuilderColumn} from './column-types';
 
 export type {ChartType};
-
-/**
- * Column info passed to chart builder UI
- */
-export interface ChartBuilderColumn {
-  name: string;
-  type: string;
-}
+export type {ChartBuilderColumn};
 
 /**
  * Describes a field selector in a chart builder UI
@@ -77,26 +72,10 @@ export interface PanelPatch {
  * Dependencies injected into dashboard tool creation functions.
  * Provides the resources and operations needed to create dashboard panels.
  */
+/**
+ * Dependencies for dashboard-specific tools that manage panels.
+ */
 export interface DashboardToolDeps {
-  /**
-   * Resolves the dashboard artifact ID.
-   * Use this when you only need the artifact and not table information.
-   */
-  resolveArtifact: (
-    artifactId?: string,
-    createIfMissing?: boolean,
-    context?: ChartToolExecutionContext,
-  ) => string;
-
-  /**
-   * Resolves user/display table input to canonical table identity and columns.
-   * Bare names are accepted only when unambiguous.
-   */
-  resolveTable: (
-    artifactId: string,
-    tableName?: string | QualifiedTableName,
-  ) => ResolvedTable;
-
   addPanel: (dashboardId: string, panel: any) => string;
   updatePanel: (
     dashboardId: string,
@@ -110,8 +89,6 @@ export interface DashboardToolDeps {
   ) => ChartRuntimeIssue | undefined;
   removePanel: (dashboardId: string, panelId: string) => void;
   setCurrentArtifact: (artifactId: string) => void;
-
-  maxDataPoints: number;
 }
 
 export type ChartToolExecutionContext = object & {
@@ -188,6 +165,8 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   label?: string;
   /** Short description of what this builder creates */
   description: string;
+  /** Concise description for AI agents explaining when and how to use this chart type */
+  aiDescription: string;
   /** Zod schema for runtime validation of settings */
   schema: z.ZodType<TConfig['settings']>;
   /** Generate a chart title from selected field values */
@@ -198,8 +177,8 @@ type BaseChartTypeDefinition<TConfig extends ChartConfig = ChartConfig> = {
   settingsComponent: ComponentType;
   /** Optional icon component for chart-type grids */
   icon: ComponentType<{className?: string}>;
-  /** Optional function to create an AI tool for this chart type */
-  createTool?: (deps: DashboardToolDeps) => Tool;
+  /** Optional function to create a chart configuration AI tool */
+  createTool?: (deps: ChartToolParams) => Tool;
   /** Optional runtime data policy for renderer-specific query validation. */
   getDataPolicy?: (
     context: ChartDataPolicyContext<TConfig>,
@@ -211,6 +190,11 @@ export type CreateSpecOptions<TSettings = ChartSettings> = {
   settings: TSettings;
   selectionName?: string;
 };
+
+export type ValidateSpecOptions<TSettings = ChartSettings> = Pick<
+  CreateSpecOptions<TSettings>,
+  'dataTable' | 'settings'
+>;
 
 export function getChartTableReference(dataTable: DataTable): string {
   return getMosaicTableReferenceString(dataTable.table);

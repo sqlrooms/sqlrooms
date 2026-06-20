@@ -81,11 +81,25 @@ export const BlockDocumentHeadingBlock = z.object({
   text: z.string(),
 });
 
+/**
+ * A heading block in a block document with level 1, 2, or 3.
+ */
+export type BlockDocumentHeadingBlock = z.infer<
+  typeof BlockDocumentHeadingBlock
+>;
+
 export const BlockDocumentParagraphBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('paragraph'),
   text: z.string(),
 });
+
+/**
+ * A paragraph block in a block document containing plain text.
+ */
+export type BlockDocumentParagraphBlock = z.infer<
+  typeof BlockDocumentParagraphBlock
+>;
 
 export const BlockDocumentListBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -94,12 +108,22 @@ export const BlockDocumentListBlock = z.object({
   items: z.array(z.string()),
 });
 
+/**
+ * A bullet or ordered list block containing an array of text items.
+ */
+export type BlockDocumentListBlock = z.infer<typeof BlockDocumentListBlock>;
+
 export const BlockDocumentTodoBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('todo'),
   checked: z.boolean(),
   text: z.string(),
 });
+
+/**
+ * A todo/task item block with a checked state and text description.
+ */
+export type BlockDocumentTodoBlock = z.infer<typeof BlockDocumentTodoBlock>;
 
 export const BlockDocumentImageBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -108,12 +132,24 @@ export const BlockDocumentImageBlock = z.object({
   caption: z.string().optional(),
 });
 
+/**
+ * An image block referencing a document asset by ID with optional caption.
+ */
+export type BlockDocumentImageBlock = z.infer<typeof BlockDocumentImageBlock>;
+
 export const BlockDocumentChartImageBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('chartImage'),
   assetId: z.string(),
   caption: z.string().optional(),
 });
+
+/**
+ * A chart image block referencing a rendered chart asset by ID with optional caption.
+ */
+export type BlockDocumentChartImageBlock = z.infer<
+  typeof BlockDocumentChartImageBlock
+>;
 
 export const BlockDocumentChartBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -123,6 +159,11 @@ export const BlockDocumentChartBlock = z.object({
   selectionGroupId: z.string().optional(),
   caption: z.string().optional(),
 });
+
+/**
+ * A live chart block with table binding, chart configuration, and optional selection group for interactivity.
+ */
+export type BlockDocumentChartBlock = z.infer<typeof BlockDocumentChartBlock>;
 
 export const BlockDocumentStatefulBlockBlock = z.object({
   ...BlockDocumentTextBlockBase,
@@ -135,6 +176,13 @@ export const BlockDocumentStatefulBlockBlock = z.object({
   height: z.number().optional(),
 });
 
+/**
+ * A stateful block embedding another block type (e.g., dashboard, data-table) by instance ID with ownership semantics.
+ */
+export type BlockDocumentStatefulBlockBlock = z.infer<
+  typeof BlockDocumentStatefulBlockBlock
+>;
+
 export const BlockDocumentBlock = z.discriminatedUnion('type', [
   BlockDocumentHeadingBlock,
   BlockDocumentParagraphBlock,
@@ -145,6 +193,10 @@ export const BlockDocumentBlock = z.discriminatedUnion('type', [
   BlockDocumentChartBlock,
   BlockDocumentStatefulBlockBlock,
 ]);
+
+/**
+ * Union of all block types that can appear in a block document.
+ */
 export type BlockDocumentBlock = z.infer<typeof BlockDocumentBlock>;
 
 function textContent(text: string): TextContent | undefined {

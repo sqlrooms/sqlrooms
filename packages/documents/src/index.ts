@@ -76,10 +76,7 @@ export {
   type DocumentAssetInput,
   type DocumentsSliceState,
 } from './DocumentsSlice';
-export {
-  createDocumentCommands,
-  DOCUMENT_AI_INSTRUCTIONS,
-} from './documentCommands';
+export {createDocumentCommands} from './documentCommands';
 export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,
@@ -91,11 +88,8 @@ export {
 } from './BlockDocumentCommands';
 export {
   BLOCK_DOCUMENT_AGENT_TOOL_NAME,
-  createBlockDocumentAiInstructions,
-  createBlockDocumentAuthoringInstructions,
   type BlockDocumentAgentPlanStep,
   type BlockDocumentAgentResult,
-  type CreateBlockDocumentAuthoringInstructionsOptions,
 } from './BlockDocumentAi';
 export {BlockDocumentEditor} from './BlockDocumentEditor';
 export {

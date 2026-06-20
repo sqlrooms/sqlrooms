@@ -1,25 +1,45 @@
 import {tool} from 'ai';
 import {z} from 'zod';
 import {
+  HistogramChartConfig,
   HistogramChartSettings,
   MIN_BINS_COUNT,
   MAX_BINS_COUNT,
   DEFAULT_BINS_COUNT,
 } from './schema';
-import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import type {DashboardToolDeps} from '../base-types';
-import {validateColumnExists} from '../../../ai/tool-validation';
+import {BaseChartToolInput} from '../../../ai/tool-schemas';
 import {QUANTITATIVE_COLUMN_TYPES} from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolParams, ChartToolOutput} from '../tool-types';
+import {validateHistogramSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
-export const HistogramToolParameters = BaseChartToolParameters.extend({
+/**
+ * Input schema for the histogram chart tool.
+ * Extends base chart input with histogram-specific settings including field and bin configuration.
+ */
+export const HistogramToolInput = BaseChartToolInput.extend({
   settings: HistogramChartSettings.required(),
 });
 
-export type HistogramToolParams = z.infer<typeof HistogramToolParameters>;
+/**
+ * Type representing validated input for histogram chart creation.
+ */
+export type HistogramToolInput = z.infer<typeof HistogramToolInput>;
 
-export function createHistogramAiTool(deps: DashboardToolDeps) {
-  return tool({
+/**
+ * Creates an AI tool for generating histogram charts.
+ * Histograms show distribution of numeric values by grouping data into bins/ranges.
+ *
+ * @param params - Chart tool parameters
+ * @param params.databaseAdapter - Database adapter for table and column validation
+ * @param params.addChart - Function to add the generated chart to the target artifact
+ * @returns AI tool instance for histogram chart creation
+ */
+export function createHistogramAiTool({
+  databaseAdapter,
+  addChart,
+}: ChartToolParams) {
+  return tool<HistogramToolInput, ChartToolOutput<HistogramChartConfig>>({
     description: `Histogram: shows distribution of numeric values by automatically grouping data into bins/ranges.
 
 Use when: user asks about "distribution of [numeric column]", "spread of", "range of", "how values are distributed", "show histogram".
@@ -29,60 +49,40 @@ Required: field must be quantitative not text/categorical: (${QUANTITATIVE_COLUM
 
 NOTE: Histograms automatically bin data into ranges and aggregate counts, so they handle large datasets efficiently (no data point limit).
 
-To UPDATE an existing histogram: provide the panelId parameter. Otherwise creates new panel.
-
 Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_COUNT}) controls the number of bins/bars in the histogram. Use fewer bins for coarse overview, more bins for detailed distribution.
 
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,
-    inputSchema: HistogramToolParameters,
-    execute: async (params, context) => {
+    inputSchema: HistogramToolInput,
+    execute: async ({tableName, settings, title}) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = ensureTable(databaseAdapter, tableName);
 
-        // Validate settings
-        validateColumnExists(
-          params.settings.field,
-          QUANTITATIVE_COLUMN_TYPES,
-          columns,
-          'field',
-        );
+        validateHistogramSettings({
+          dataTable,
+          settings,
+        });
 
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
+        const chartConfig: HistogramChartConfig = {
+          chartType: 'histogram' as const,
+          settings,
+        };
+
+        addChart({
           tableName,
-          title: `Histogram of ${params.settings.field}`,
-          config: {
-            chartType: 'histogram',
-            settings: params.settings,
-          },
+          config: chartConfig,
+          title,
         });
 
         return {
-          llmResult: {
-            success: true,
-            details: params.panelId
-              ? `Updated histogram "${result.title}".`
-              : `Created histogram "${result.title}".`,
-            data: result,
-          },
+          success: true,
+          details: `Generated histogram configuration for "${settings.field}".`,
+          data: chartConfig,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },

@@ -1,152 +1,87 @@
-import type {DashboardToolDeps} from '../charts/chart-types/base-types';
-import {
-  createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardDataTableExplorerPanelConfig,
-} from '../dashboard/MosaicDashboardSlice';
-import {MosaicDashboardEntry} from '../dashboard/dashboard-types';
-import type {DataTableExplorerPanelConfig} from '../dashboard/core-types';
-import type {ChartConfig} from '../charts/chart-types/chart-config';
-
-export interface PanelResult {
-  panelId: string;
-  artifactId: string;
-  title: string;
-  config: ChartConfig | DataTableExplorerPanelConfig;
-}
-
-export interface CreateOrUpdateChartPanelParams {
-  panelId?: string;
-  dashboardId: string;
-  tableName: string;
-  title: string;
-  config: ChartConfig;
-}
-
-export interface CreateOrUpdateDataTableExplorerPanelParams {
-  panelId?: string;
-  dashboardId: string;
-  tableName: string;
-  title: string;
-  config: DataTableExplorerPanelConfig;
-}
+import {MosaicDashboardPanelConfig} from '../dashboard/dashboard-types';
+import {AiAgentError} from './errors';
+import {DashboardAiAdapter} from './dashboard/dashboard-types';
+import {DataTable} from '@sqlrooms/duckdb';
+import {Tool} from 'ai';
+import {DatabaseAiAdapter} from './database-types';
+import {AgentResultMetadata} from './tool-types';
+import {AgentToolCall} from './types';
 
 /**
- * Validates that a dashboard exists. Throws if not found.
+ * Validates that a table exists. Throws if not found.
  */
-function ensureDashboard(
-  deps: DashboardToolDeps,
-  dashboardId: string,
-): NonNullable<ReturnType<DashboardToolDeps['getDashboard']>> {
-  const dashboard = deps.getDashboard(dashboardId);
-  if (!dashboard) {
-    throw new Error(
-      `Dashboard "${dashboardId}" not found. Cannot update panel.`,
-    );
+export function ensureTable(
+  adapter: DatabaseAiAdapter,
+  tableName: string,
+): DataTable {
+  const table = adapter.findTable(tableName);
+
+  if (!table) {
+    throw new AiAgentError(`Table "${tableName}" not found.`);
   }
-  return dashboard;
+
+  return table;
 }
 
 /**
  * Validates that a panel exists in a dashboard. Throws if not found.
  */
-function ensurePanel(
-  dashboard: MosaicDashboardEntry,
-  dashboardId: string,
+export function ensurePanel(
+  adapter: DashboardAiAdapter,
   panelId: string,
-): void {
-  const panelExists = dashboard.panels.some((p) => p.id === panelId);
-  if (!panelExists) {
-    throw new Error(
-      `Panel "${panelId}" not found in dashboard "${dashboardId}". Cannot update.`,
+  type?: string,
+): MosaicDashboardPanelConfig {
+  const panel = adapter.getPanel(panelId);
+
+  if (!panel) {
+    throw new AiAgentError(`Panel not found.`);
+  }
+
+  if (type !== undefined && panel.type !== type) {
+    throw new AiAgentError(
+      `Panel is of type "${panel.type}", expected type "${type}".`,
     );
+  }
+
+  return panel;
+}
+
+/**
+ * Validates that extra tools do not override built-in tools.
+ * Prevents accidental shadowing of core functionality by custom tools.
+ *
+ * @param builtInTools - Record of built-in tool names to tools
+ * @param extraTools - Record of extra tool names to tools being registered
+ * @throws {AiAgentError} When a key from extraTools exists in builtInTools
+ */
+export function ensureNoOverride(
+  builtInTools: Record<string, Tool>,
+  extraTools: Record<string, Tool>,
+) {
+  for (const key of Object.keys(extraTools)) {
+    if (key in builtInTools) {
+      throw new AiAgentError(
+        `Dashboard extraTools cannot override built-in tool "${key}". Register the host tool under a unique key.`,
+      );
+    }
   }
 }
 
 /**
- * Universal helper to create or update a chart panel.
- * Handles everything: panel config creation, add/update logic, artifact switching.
- * When updating, both source and config are updated to allow changing the data source.
+ * Calculate metadata about agent execution results.
+ *
+ * @param tableName - Optional table name associated with the agent execution
+ * @param agentToolCalls - Array of tool calls made during agent execution
+ * @returns Metadata including steps executed and queries run
  */
-export function createOrUpdateChartPanel(
-  deps: DashboardToolDeps,
-  params: CreateOrUpdateChartPanelParams,
-): PanelResult {
-  if (params.panelId) {
-    // Validate panel exists before attempting update
-    const dashboard = ensureDashboard(deps, params.dashboardId);
-    ensurePanel(dashboard, params.dashboardId, params.panelId);
-
-    // Update existing panel - update both source and config
-    deps.updatePanel(params.dashboardId, params.panelId, {
-      title: params.title,
-      source: {tableName: params.tableName},
-      config: params.config,
-    });
-
-    return {
-      panelId: params.panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  } else {
-    // Create new panel - create config and add to dashboard
-    const panel = createMosaicDashboardChartPanelConfig(
-      params.title,
-      params.config,
-    );
-
-    const panelId = deps.addPanel(params.dashboardId, panel);
-    deps.setCurrentArtifact(params.dashboardId);
-
-    return {
-      panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  }
-}
-
-/**
- * Universal helper to create or update a dataTableExplorer panel.
- */
-export function createOrUpdateDataTableExplorerPanel(
-  deps: DashboardToolDeps,
-  params: CreateOrUpdateDataTableExplorerPanelParams,
-): PanelResult {
-  if (params.panelId) {
-    // Validate panel exists before attempting update
-    const dashboard = ensureDashboard(deps, params.dashboardId);
-    ensurePanel(dashboard, params.dashboardId, params.panelId);
-
-    deps.updatePanel(params.dashboardId, params.panelId, {
-      config: params.config,
-      source: {tableName: params.tableName},
-      title: params.title,
-    });
-
-    return {
-      panelId: params.panelId,
-      artifactId: params.dashboardId,
-      title: params.title,
-      config: params.config,
-    };
-  } else {
-    // Create new panel - create full panel config
-    const panel = createMosaicDashboardDataTableExplorerPanelConfig({
-      title: params.title,
-      config: params.config,
-    });
-
-    const panelId = deps.addPanel(params.dashboardId, panel);
-    deps.setCurrentArtifact(params.dashboardId);
-
-    return {
-      panelId,
-      artifactId: params.dashboardId,
-      title: panel.title,
-      config: panel.config,
-    };
-  }
+export function calculateAgentResultMetadata(
+  tableName: string | undefined,
+  agentToolCalls: AgentToolCall[] = [],
+): AgentResultMetadata {
+  return {
+    tableName,
+    stepsExecuted: agentToolCalls.length,
+    queriesRun: agentToolCalls.filter((call) => call.toolName === 'query')
+      .length,
+  };
 }

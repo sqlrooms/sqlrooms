@@ -72,24 +72,17 @@ import {
   syncConnectionsToDb,
 } from '@sqlrooms/db-settings';
 import {
-  createBlockDocumentAiInstructions,
   BlockDocumentsSliceConfig,
   createBlockDocumentCommands,
-  createBlockDocumentAuthoringInstructions,
   createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
-  DOCUMENT_AI_INSTRUCTIONS,
   DocumentsSliceConfig,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
-import {
-  createDashboardAiTools,
-  getDashboardAiInstructions,
-} from './createDashboardAiTools';
-import {dashboardAgentTool} from './createDashboardAgent';
+import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
 import {getRunContext} from './context/getRunContext';
@@ -115,12 +108,20 @@ import {
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from './statefulBlockArtifactConfigs';
+import {dashboardAgentTool} from './createDashboardAgent';
 
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
+const SQLROOMS_CLI_AI_INSTRUCTIONS = `
+When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, mutate that artifact through the appropriate agent tool instead of creating a chat-only chart or markdown image.
+
+- For worksheet artifacts, call worksheet_agent. If the user asks for a map in a worksheet or an embedded worksheet dashboard, worksheet_agent should add or reuse a dashboard block and delegate to embedded_dashboard_agent.
+- For dashboard artifacts, call dashboard_agent.
+- Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
+`;
 const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
   artifactType: 'worksheet',
   artifactLabel: 'Worksheet',
@@ -702,15 +703,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
-              `${createDefaultAiInstructions(store)}\n\n${getDashboardAiInstructions(store)}\n\n${DOCUMENT_AI_INSTRUCTIONS}\n\n${createBlockDocumentAiInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}\n\n${createBlockDocumentAuthoringInstructions(WORKSHEET_BLOCK_DOCUMENT_OPTIONS)}`,
+              [
+                createDefaultAiInstructions(store),
+                SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
+              ].join('\n\n'),
             getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
-              ...createDashboardAiTools(store),
               dashboard_agent: dashboardAgentTool(store),
+              worksheet_agent: worksheetAgentTool(store),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
               chart_image_for_markdown: createChartImageForMarkdownTool(store),

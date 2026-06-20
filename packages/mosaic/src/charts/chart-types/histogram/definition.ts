@@ -13,6 +13,7 @@ export const histogramChartType: SpecChartTypeDefinition<HistogramChartConfig> =
     id: 'histogram',
     label: 'Histogram',
     description: DESCRIPTION,
+    aiDescription: `${DESCRIPTION} - distribution of numeric values (always safe, aggregates automatically)`,
     icon: BarChart3,
     schema: HistogramChartSettings,
     settingsComponent: HistogramSettingsComponent,

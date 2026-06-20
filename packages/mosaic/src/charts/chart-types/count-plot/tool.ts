@@ -1,20 +1,23 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {CountPlotChartSettings} from './schema';
-import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
-import {validateColumnExists} from '../../../ai/tool-validation';
+import {CountPlotChartConfig, CountPlotChartSettings} from './schema';
+import {BaseChartToolInput} from '../../../ai/tool-schemas';
 import {CATEGORICAL_COLUMN_TYPES} from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolParams, ChartToolOutput} from '../tool-types';
+import {validateCountPlotSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
-export const CountPlotToolParameters = BaseChartToolParameters.extend({
+export const CountPlotToolInput = BaseChartToolInput.extend({
   settings: CountPlotChartSettings.required(),
 });
 
-export type CountPlotToolParams = z.infer<typeof CountPlotToolParameters>;
+export type CountPlotToolInput = z.infer<typeof CountPlotToolInput>;
 
-export function createCountPlotAiTool(deps: DashboardToolDeps) {
-  return tool({
+export function createCountPlotAiTool({
+  databaseAdapter,
+  addChart,
+}: ChartToolParams) {
+  return tool<CountPlotToolInput, ChartToolOutput<CountPlotChartConfig>>({
     description: `Count plot: horizontal bar chart showing frequency of categorical/text values. Counts how many times each unique value appears.
 
 Use when: user asks to "count", "frequency of", "how many", "breakdown by category", "distribution of [text/category column]".
@@ -24,58 +27,38 @@ Required: field must be categorical/text (${CATEGORICAL_COLUMN_TYPES.join(', ')}
 
 NOTE: Count plots aggregate by counting unique values, so they handle large datasets efficiently (no data point limit).
 
-To UPDATE an existing count plot: provide the panelId parameter. Otherwise creates new panel.
-
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use scatter-plot), time series (use line-chart).`,
-    inputSchema: CountPlotToolParameters,
-    execute: async (params, context) => {
+    inputSchema: CountPlotToolInput,
+    execute: async ({tableName, title, settings}) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = ensureTable(databaseAdapter, tableName);
 
-        // Validate settings - expect categorical columns
-        validateColumnExists(
-          params.settings.field,
-          CATEGORICAL_COLUMN_TYPES,
-          columns,
-          'field',
-        );
+        validateCountPlotSettings({
+          dataTable,
+          settings,
+        });
 
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
+        const chartConfig: CountPlotChartConfig = {
+          chartType: 'count-plot' as const,
+          settings,
+        };
+
+        addChart({
           tableName,
-          title: `Count plot of ${params.settings.field}`,
-          config: {
-            chartType: 'count-plot',
-            settings: params.settings,
-          },
+          title,
+          config: chartConfig,
         });
 
         return {
-          llmResult: {
-            success: true,
-            details: params.panelId
-              ? `Updated count plot "${result.title}".`
-              : `Created count plot "${result.title}".`,
-            data: result,
-          },
+          success: true,
+          details: `Generated count plot configuration for "${settings.field}".`,
+          data: chartConfig,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },

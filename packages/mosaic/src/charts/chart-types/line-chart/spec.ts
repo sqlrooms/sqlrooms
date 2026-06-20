@@ -1,19 +1,10 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {LineChartSettings} from './schema';
-import {
-  InvalidColumnTypeError,
-  MissingColumnsError,
-  RequiredFieldsError,
-} from '../errors';
+import {isTemporalType} from '../../../column-types-utils';
+import {AggregateFunction} from '../../../schemas';
 import {CreateSpecOptions, getChartTableReference} from '../base-types';
-import {
-  isNumericType,
-  isQuantitativeType,
-  isTemporalType,
-} from '../../../column-types-utils';
-import {TableColumn} from '@sqlrooms/db';
-import {AggregateFunction, TemporalInterval} from '../../../schemas';
 import {DEFAULT_CHART_FALLBACK_COLOR} from '../../../constants/chart-colors';
+import {validateLineChartSettings} from './validation';
 
 function getLegendLabel(
   yColumn: {field: string; aggregate?: AggregateFunction},
@@ -43,10 +34,7 @@ export function createLineChartSpec(
   };
 
   // Generate lineY marks for each Y field
-  yColumns.forEach((yColumn) => {
-    const color = yColumn.color ?? DEFAULT_CHART_FALLBACK_COLOR;
-    const aggregate = yColumn.aggregate ?? 'sum';
-
+  yColumns.forEach(({color, column, aggregate}) => {
     // When temporal aggregation is active, use bin for X and aggregation for Y
     if (isXTemporal && xInterval) {
       // Use bin syntax for temporal aggregation
@@ -54,7 +42,7 @@ export function createLineChartSpec(
         mark: 'lineY',
         data: dataSource,
         x: {bin: xColumn.name, interval: xInterval},
-        y: {[aggregate]: yColumn.column.name},
+        y: {[aggregate]: column.name},
         stroke: color,
       });
     } else {
@@ -63,7 +51,7 @@ export function createLineChartSpec(
         mark: 'lineY',
         data: dataSource,
         x: xColumn.name,
-        y: yColumn.column.name,
+        y: column.name,
         stroke: color,
       });
     }
@@ -116,68 +104,4 @@ export function createLineChartSpec(
     ],
     params: {brush: {select: 'crossfilter'}},
   } as Spec;
-}
-
-type ValidatedLineChartSettings = {
-  xColumn: TableColumn;
-  yColumns: {
-    field: string;
-    column: TableColumn;
-    aggregate?: AggregateFunction;
-    color?: string;
-  }[];
-  xInterval?: TemporalInterval;
-};
-
-function validateLineChartSettings({
-  dataTable,
-  settings: {x, yFields = [], xInterval},
-}: CreateSpecOptions<LineChartSettings>): ValidatedLineChartSettings {
-  // Basic validation for required fields
-  if (!x || yFields.length === 0) {
-    throw new RequiredFieldsError([
-      ...(x ? [] : ['X-axis']),
-      ...(yFields.length > 0 ? [] : ['Y-axis']),
-    ]);
-  }
-
-  // Validate X and Y field existence
-  const xColumn = dataTable.columns.find((col) => col.name === x);
-  const yColumns = yFields.map((y) => ({
-    field: y.field,
-    column: dataTable.columns.find((col) => col.name === y.field),
-    aggregate: y.aggregate,
-    color: y.color,
-  }));
-
-  const missingYColumns = yColumns.filter((y) => !y.column);
-
-  if (!xColumn || missingYColumns.length > 0) {
-    throw new MissingColumnsError([
-      ...(xColumn ? [] : ['X-axis']),
-      ...missingYColumns.map((y) => y.field),
-    ]);
-  }
-
-  // Validate X and Y field types
-  if (!isQuantitativeType(xColumn.type)) {
-    throw new InvalidColumnTypeError(xColumn.name, 'quantitative');
-  }
-
-  const invalidYFields = yColumns.filter((y) => {
-    return y.column && !isNumericType(y.column.type);
-  });
-
-  if (invalidYFields.length > 0) {
-    throw new InvalidColumnTypeError(
-      invalidYFields.map(({field}) => field),
-      'numeric',
-    );
-  }
-
-  return {
-    xColumn,
-    yColumns,
-    xInterval,
-  } as ValidatedLineChartSettings;
 }

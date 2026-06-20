@@ -3,16 +3,6 @@ import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import type {DocumentsSliceState} from './DocumentsSlice';
 
-export const DOCUMENT_AI_INSTRUCTIONS = `
-Document artifacts:
-- Use list_commands to discover document commands, then execute_command to run them.
-- Use document.list and document.get to inspect Markdown document artifacts.
-- Use document.create to create a new Markdown document artifact.
-- Use document.set-markdown only when replacing the full document body is intended.
-- Use document.append-markdown for additive edits that should keep existing content.
-- Before embedding chart images in Markdown, use the chart_image_for_markdown tool and insert its returned Markdown image link.
-`.trim();
-
 type DocumentCommandState = BaseRoomStoreState & {
   artifacts: {
     createArtifact: (artifact: {

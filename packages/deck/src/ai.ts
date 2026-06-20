@@ -1,13 +1,18 @@
 import {tool, type Tool} from 'ai';
 import {z} from 'zod';
 import {
-  DASHBOARD_AI_INSTRUCTIONS,
+  DashboardAiAdapter,
   MAP_TOOL_KEY,
   createDashboardAgentTool,
   createDashboardAiTools as createMosaicDashboardAiTools,
   type CreateDashboardAgentToolOptions,
   type CreateDashboardAiToolsOptions,
-  type DashboardToolDeps,
+  ensureTable,
+  ensurePanel,
+  DatabaseAiAdapter,
+  ExtraDashboardAiToolsFactory,
+  ExtraDashboardAiToolsParams,
+  MosaicDashboardStoreState,
 } from '@sqlrooms/mosaic';
 import {
   createDeckMapDashboardPanelConfig,
@@ -69,20 +74,33 @@ Deck map tools:
 `;
 
 function createDeckMapDashboardExtraTools(
-  extraTools?: (deps: DashboardToolDeps) => Record<string, Tool>,
+  extraTools?: ExtraDashboardAiToolsFactory,
 ) {
-  return (deps: DashboardToolDeps) => ({
-    ...createDeckMapDashboardAiTools(deps),
-    ...(extraTools?.(deps) ?? {}),
+  return (params: ExtraDashboardAiToolsParams) => ({
+    ...createDeckMapDashboardAiTools(params),
+    ...(extraTools?.(params) ?? {}),
   });
 }
 
+/**
+ * Returns AI instructions for dashboards with Deck.gl map support.
+ * Provides guidance on when and how to use map visualizations.
+ *
+ * @returns Instructions string for AI agents
+ */
 export function getDashboardWithDeckMapAiInstructions() {
-  return `${DASHBOARD_AI_INSTRUCTIONS.trim()}\n\n${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
+  return `${DECK_MAP_AI_INSTRUCTIONS.trim()}`;
 }
 
-export function createDashboardWithDeckMapAiTools<TState>(
-  options: CreateDashboardAiToolsOptions<TState>,
+/**
+ * Creates dashboard AI tools with built-in Deck.gl map support.
+ * Extends standard dashboard tools with map visualization capabilities.
+ *
+ * @param options - Dashboard AI tools configuration options
+ * @returns Record mapping tool names to tool instances, including map tools
+ */
+export function createDashboardWithDeckMapAiTools(
+  options: CreateDashboardAiToolsOptions,
 ): Record<string, Tool> {
   return createMosaicDashboardAiTools({
     ...options,
@@ -90,13 +108,27 @@ export function createDashboardWithDeckMapAiTools<TState>(
   });
 }
 
-export function createDashboardAgentToolWithDeckMaps<TState>(
-  options: CreateDashboardAgentToolOptions<TState>,
-): Tool {
+/**
+ * Creates a dashboard agent tool with built-in Deck.gl map support.
+ * Extends the standard dashboard agent with map creation capabilities.
+ *
+ * @template TState - Store state type extending MosaicDashboardStoreState
+ * @param options - Dashboard agent configuration options
+ * @returns Dashboard agent tool with map support
+ */
+export function createDashboardAgentToolWithDeckMaps<
+  TState extends MosaicDashboardStoreState,
+>(options: CreateDashboardAgentToolOptions<TState>): Tool {
   return createDashboardAgentTool({
     ...options,
+    additionalInstructions: [
+      options.additionalInstructions,
+      DECK_MAP_AI_INSTRUCTIONS.trim(),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     extraTools: createDeckMapDashboardExtraTools(options.extraTools),
-  }) as Tool;
+  });
 }
 
 const DeckMapLayerBindingConfig = z.looseObject({
@@ -179,23 +211,12 @@ export type DeckMapConfigToolParams = z.infer<
 
 export const DeckMapDashboardToolParameters =
   DeckMapConfigToolParameters.extend({
-    artifactId: z
-      .string()
-      .optional()
-      .describe(
-        'Optional dashboard artifact ID. Defaults to current dashboard.',
-      ),
     tableName: z
       .string()
       .optional()
       .describe(
         'Optional table name used only to select/resolve the target dashboard table. Data sources still come from config.datasets.',
       ),
-    createArtifactIfMissing: z
-      .boolean()
-      .optional()
-      .default(true)
-      .describe('If true, create dashboard artifact if missing.'),
     panelId: z
       .string()
       .optional()
@@ -307,6 +328,23 @@ function createDeckMapPanelFromNativeConfig(
   });
 }
 
+function getFirstDatasetSourceTableName(
+  config: DeckMapDashboardConfigToolConfig,
+): string | undefined {
+  if (!config.datasets || typeof config.datasets !== 'object') {
+    return undefined;
+  }
+
+  return Object.values(config.datasets)
+    .map(
+      (dataset) =>
+        (dataset as Record<string, unknown>).source as
+          | {tableName?: string}
+          | undefined,
+    )
+    .find((source) => source?.tableName)?.tableName;
+}
+
 export function createDeckMapConfigTool(): Tool {
   return tool({
     description: `Deck map config: validates and returns a reusable native Deck JSON map configuration without requiring a dashboard artifact.
@@ -341,66 +379,68 @@ Use when: a chat, agent, or artifact outside a dashboard needs a geospatial map 
   });
 }
 
+/**
+ * Creates AI tools for Deck.gl map configuration.
+ * Returns tools for creating and configuring Deck.gl map panels.
+ *
+ * @returns Record mapping tool names to map configuration tools
+ */
 export function createDeckMapAiTools(): Record<string, Tool> {
   return {
     create_deck_map_config: createDeckMapConfigTool(),
   };
 }
 
-export function createDeckMapDashboardTool(deps: DashboardToolDeps): Tool {
+/**
+ * Parameters for creating a Deck.gl map dashboard tool.
+ * Provides adapters for dashboard and database operations.
+ */
+export type CreateDeckMapDashboardToolParams = {
+  /** Dashboard adapter for adding and updating map panels */
+  dashboardAdapter: DashboardAiAdapter;
+  /** Database adapter for table validation */
+  databaseAdapter: DatabaseAiAdapter;
+};
+
+/**
+ * Creates a tool for adding Deck.gl map panels to dashboards.
+ * Supports creating new map panels or updating existing ones with native Deck JSON configs.
+ *
+ * @param params - Parameters containing dashboard and database adapters
+ * @returns Tool instance for creating/updating Deck.gl map panels
+ */
+export function createDeckMapDashboardTool({
+  dashboardAdapter,
+  databaseAdapter,
+}: CreateDeckMapDashboardToolParams): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
 
 Use when: the user asks for a map in a dashboard. Author the map using native Deck JSON: choose layer classes with spec.layers[].@@type, bind layers to datasets through _sqlroomsBinding.dataset, and put tableName or sqlQuery sources in config.datasets. For data-driven colors, use color accessors such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor with {"@@function":"colorScale", "field":"...", "type":"...", "scheme":"...", "domain":"auto"}. For categorical fields use scheme from: Tableau10, Set2, Category10, etc. For numeric fields use sequential schemes like Viridis.`,
     inputSchema: DeckMapDashboardToolParameters,
-    execute: async (params, context) => {
+    execute: async (params) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const dashboard = deps.getDashboard(artifactId);
-        if (params.tableName) {
-          deps.resolveTable(artifactId, params.tableName);
-        } else {
-          // Ensure selectedTable is set even when tableName is not provided,
-          // by extracting a table name from the first dataset source.
-          if (!dashboard?.selectedTable && params.config.datasets) {
-            const firstDatasetSource = Object.values(params.config.datasets)
-              .map(
-                (d) =>
-                  (d as Record<string, unknown>)?.source as
-                    | {tableName?: string}
-                    | undefined,
-              )
-              .find((s) => s?.tableName);
-            if (firstDatasetSource?.tableName) {
-              deps.resolveTable(artifactId, firstDatasetSource.tableName);
-            }
-          }
+        const tableName =
+          params.tableName ?? getFirstDatasetSourceTableName(params.config);
+
+        if (tableName) {
+          ensureTable(databaseAdapter, tableName);
+          dashboardAdapter.setSelectedTable(tableName);
         }
+
         const panel = createDeckMapPanelFromNativeConfig(params);
 
         if (params.panelId) {
-          const dashboard = deps.getDashboard(artifactId);
-          const existingPanel = dashboard?.panels.find(
-            (candidate) => candidate.id === params.panelId,
+          ensurePanel(
+            dashboardAdapter,
+            params.panelId,
+            DECK_MAP_DASHBOARD_PANEL_TYPE,
           );
-          if (!existingPanel) {
-            throw new Error(
-              `Panel "${params.panelId}" not found in dashboard "${artifactId}". Cannot update.`,
-            );
-          }
-          if (existingPanel.type !== DECK_MAP_DASHBOARD_PANEL_TYPE) {
-            throw new Error(
-              `Panel "${params.panelId}" is not a map panel. Cannot update it with ${MAP_TOOL_KEY}.`,
-            );
-          }
-          deps.updatePanel(artifactId, params.panelId, {
+
+          dashboardAdapter.updatePanel(params.panelId, {
             title: panel.title,
             config: panel.config,
-          } as never);
+          });
 
           return {
             llmResult: {
@@ -408,7 +448,6 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
               details: `Updated map panel "${panel.title}".`,
               data: {
                 panelId: params.panelId,
-                artifactId,
                 title: panel.title,
                 type: DECK_MAP_DASHBOARD_PANEL_TYPE,
                 config: panel.config,
@@ -417,8 +456,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           };
         }
 
-        const panelId = deps.addPanel(artifactId, panel);
-        deps.setCurrentArtifact(artifactId);
+        const panelId = dashboardAdapter.addPanel(panel);
 
         return {
           llmResult: {
@@ -426,7 +464,6 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
             details: `Created map panel "${panel.title}".`,
             data: {
               panelId,
-              artifactId,
               title: panel.title,
               type: DECK_MAP_DASHBOARD_PANEL_TYPE,
               config: panel.config,
@@ -447,9 +484,9 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
 }
 
 export function createDeckMapDashboardAiTools(
-  deps: DashboardToolDeps,
+  params: CreateDeckMapDashboardToolParams,
 ): Record<string, Tool> {
   return {
-    [MAP_TOOL_KEY]: createDeckMapDashboardTool(deps),
+    [MAP_TOOL_KEY]: createDeckMapDashboardTool(params),
   };
 }

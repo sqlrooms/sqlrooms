@@ -5,7 +5,6 @@ knowledge-index utilities for SQLRooms.
 
 ```tsx
 import {
-  DOCUMENT_AI_INSTRUCTIONS,
   BlockDocumentArtifact,
   BlockDocumentsSliceConfig,
   BlockDocumentChartRendererProvider,
@@ -13,8 +12,6 @@ import {
   DocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlockDocumentCommands,
-  createBlockDocumentAiInstructions,
-  createBlockDocumentAuthoringInstructions,
   createBlockDocumentsSlice,
   createDocumentCommands,
   createDocumentsSlice,
@@ -329,10 +326,6 @@ document artifacts:
 - `document.set-markdown`
 - `document.append-markdown`
 
-Register the commands with your room command slice and include
-`DOCUMENT_AI_INSTRUCTIONS` in your AI system prompt when exposing
-`list_commands` and `execute_command` tools.
-
 `createBlockDocumentCommands()` registers commands for structured blocks
 document artifacts. By default the command IDs are:
 
@@ -349,17 +342,10 @@ document artifacts. By default the command IDs are:
 
 Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` options
 to expose the same command surface under product-specific names while keeping
-the package API generic. Register these commands alongside
-`createBlockDocumentAiInstructions()` when exposing block document artifacts
-to an assistant.
+the package API generic.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
-
-`createBlockDocumentAuthoringInstructions()` adds a higher-level authoring
-contract for assistants or host-provided sub-agents. It names the configured
-command set, explains when to use standalone chart blocks versus host-provided
-stateful blocks, and keeps selection-group behavior explicit.
 
 ## CRDT
 

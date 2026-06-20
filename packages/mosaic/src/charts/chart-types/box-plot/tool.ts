@@ -1,23 +1,26 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {BoxPlotChartSettings} from './schema';
-import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
-import {validateColumnExists} from '../../../ai/tool-validation';
+import {BoxPlotChartConfig, BoxPlotChartSettings} from './schema';
+import {BaseChartToolInput} from '../../../ai/tool-schemas';
 import {
   NUMERIC_COLUMN_TYPES,
   CATEGORICAL_COLUMN_TYPES,
 } from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolParams, ChartToolOutput} from '../tool-types';
+import {validateBoxPlotSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
-export const BoxPlotToolParameters = BaseChartToolParameters.extend({
+export const BoxPlotToolInput = BaseChartToolInput.extend({
   settings: BoxPlotChartSettings.required(),
 });
 
-export type BoxPlotToolParams = z.infer<typeof BoxPlotToolParameters>;
+export type BoxPlotToolInput = z.infer<typeof BoxPlotToolInput>;
 
-export function createBoxPlotAiTool(deps: DashboardToolDeps) {
-  return tool({
+export function createBoxPlotAiTool({
+  databaseAdapter,
+  addChart,
+}: ChartToolParams) {
+  return tool<BoxPlotToolInput, ChartToolOutput<BoxPlotChartConfig>>({
     description: `Box plot: compares distributions of numeric values across categories. Shows median, quartiles (25th, 75th percentiles), and outliers per group.
 
 Use when: user asks to "compare [numeric] across/by [category]", "distribution by group", "show outliers by", "compare ranges".
@@ -29,65 +32,39 @@ Required:
 
 NOTE: Box plots aggregate data by computing quartiles and outliers per group, so they handle large datasets efficiently (no data point limit).
 
-To UPDATE an existing box plot: provide the panelId parameter. Otherwise creates new panel.
-
 Best for: comparing distributions between groups, finding outliers per category, seeing spread and variance differences.
 
 Do NOT use for: single distribution (use histogram), time trends (use line-chart), simple counts (use count-plot).`,
-    inputSchema: BoxPlotToolParameters,
-    execute: async (params, context) => {
+    inputSchema: BoxPlotToolInput,
+    execute: async ({tableName, title, settings}) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = ensureTable(databaseAdapter, tableName);
 
-        // Validate settings
-        validateColumnExists(
-          params.settings.x,
-          CATEGORICAL_COLUMN_TYPES,
-          columns,
-          'x',
-        );
-        validateColumnExists(
-          params.settings.y,
-          NUMERIC_COLUMN_TYPES,
-          columns,
-          'y',
-        );
+        validateBoxPlotSettings({
+          dataTable,
+          settings,
+        });
 
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
+        const config: BoxPlotChartConfig = {
+          chartType: 'box-plot' as const,
+          settings,
+        };
+
+        addChart({
           tableName,
-          title: `Box plot - ${params.settings.y} by ${params.settings.x}`,
-          config: {
-            chartType: 'box-plot',
-            settings: params.settings,
-          },
+          title,
+          config,
         });
 
         return {
-          llmResult: {
-            success: true,
-            details: params.panelId
-              ? `Updated box plot "${result.title}".`
-              : `Created box plot "${result.title}".`,
-            data: result,
-          },
+          success: true,
+          details: `Generated box plot configuration.`,
+          data: config,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },

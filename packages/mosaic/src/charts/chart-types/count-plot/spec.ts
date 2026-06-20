@@ -1,12 +1,7 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {CountPlotChartSettings} from './schema';
-import {
-  InvalidColumnTypeError,
-  MissingColumnsError,
-  RequiredFieldsError,
-} from '../errors';
 import {CreateSpecOptions, getChartTableReference} from '../base-types';
-import {isCategoricalType} from '../../../column-types-utils';
+import {validateCountPlotSettings} from './validation';
 
 const BG_COLOR = 'var(--color-chart-overlay)';
 const FG_COLOR = 'var(--color-chart-1)';
@@ -73,29 +68,4 @@ export function createCountPlotSpec(
     margins: {left: 50, right: 50, top: 20, bottom: 50},
     params: {brush: {select: 'crossfilter'}},
   } as Spec;
-}
-
-function validateCountPlotSettings({
-  dataTable,
-  settings: {field},
-}: CreateSpecOptions<CountPlotChartSettings>) {
-  // Basic validation for required fields
-  if (!field) {
-    throw new RequiredFieldsError('Field');
-  }
-
-  // Validate field existence and type
-  const fieldColumn = dataTable.columns.find((col) => col.name === field);
-
-  if (!fieldColumn) {
-    throw new MissingColumnsError(field);
-  }
-
-  if (!isCategoricalType(fieldColumn.type)) {
-    throw new InvalidColumnTypeError(fieldColumn.name, 'categorical');
-  }
-
-  return {
-    fieldColumn,
-  };
 }

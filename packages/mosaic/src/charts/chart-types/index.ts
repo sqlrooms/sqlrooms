@@ -38,20 +38,14 @@ export * from './box-plot/definition';
 export * from './scatter-plot/definition';
 export * from './custom-spec/definition';
 
-// Re-export tool types, schemas, validation, helpers, and AI tool creators
-export * from '../../ai/tool-types';
-export * from '../../ai/tool-schemas';
-export * from '../../ai/tool-validation';
-export * from '../../ai/tool-helpers';
+// Re-export tool types and schemas
+export * from './tool-types';
 export * from './histogram/tool';
 export * from './line-chart/tool';
 export * from './count-plot/tool';
 export * from './heatmap/tool';
 export * from './scatter-plot/tool';
 export * from './box-plot/tool';
-export * from '../../ai/data-table-explorer-tool';
-export * from '../../ai/list-panels-tool';
-export * from '../../ai/remove-panel-tool';
 
 // Re-export chart type utilities
 export {mosaicChartTypes} from './mosaicChartTypes';

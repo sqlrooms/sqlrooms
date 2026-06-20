@@ -1,12 +1,7 @@
 import type {Spec} from '@uwdata/mosaic-spec';
 import {HeatmapChartSettings} from './schema';
-import {
-  InvalidColumnTypeError,
-  MissingColumnsError,
-  RequiredFieldsError,
-} from '../errors';
 import {CreateSpecOptions, getChartTableReference} from '../base-types';
-import {isNumericType} from '../../../column-types-utils';
+import {validateHeatmapSettings} from './validation';
 
 export function createHeatmapSpec(
   options: CreateSpecOptions<HeatmapChartSettings>,
@@ -42,46 +37,4 @@ export function createHeatmapSpec(
     margins: {left: 50, right: 20, top: 20, bottom: 50},
     params: {brush: {select: 'crossfilter'}},
   } as Spec;
-}
-
-function validateHeatmapSettings({
-  dataTable,
-  settings: {x, y},
-}: CreateSpecOptions<HeatmapChartSettings>) {
-  // Basic validation for required fields
-  if (!x || !y) {
-    throw new RequiredFieldsError([
-      ...(x ? [] : ['X field']),
-      ...(y ? [] : ['Y field']),
-    ]);
-  }
-
-  // Validate X and Y field existence
-  const xColumn = dataTable.columns.find((col) => col.name === x);
-  const yColumn = dataTable.columns.find((col) => col.name === y);
-
-  if (!xColumn || !yColumn) {
-    throw new MissingColumnsError([
-      ...(xColumn ? [] : [x]),
-      ...(yColumn ? [] : [y]),
-    ]);
-  }
-
-  // Validate X and Y field are numeric
-  const xIsNumeric = isNumericType(xColumn.type);
-  const yIsNumeric = isNumericType(yColumn.type);
-  if (!xIsNumeric || !yIsNumeric) {
-    throw new InvalidColumnTypeError(
-      [
-        ...(!xIsNumeric ? [xColumn.name] : []),
-        ...(!yIsNumeric ? [yColumn.name] : []),
-      ],
-      'numeric',
-    );
-  }
-
-  return {
-    xColumn,
-    yColumn,
-  };
 }

@@ -1,20 +1,24 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import {HeatmapChartSettings} from './schema';
-import {BaseChartToolParameters} from '../../../ai/tool-schemas';
-import {type DashboardToolDeps} from '../base-types';
-import {validateColumnExists} from '../../../ai/tool-validation';
+import {HeatmapChartConfig, HeatmapChartSettings} from './schema';
+import {BaseChartToolInput} from '../../../ai/tool-schemas';
 import {NUMERIC_COLUMN_TYPES} from '../../../column-types-utils';
-import {createOrUpdateChartPanel} from '../../../ai/tool-helpers';
+import {ChartToolParams, ChartToolOutput} from '../tool-types';
+import {validateHeatmapSettings} from './validation';
+import {ensureTable} from '../../../ai/tool-helpers';
 
-export const HeatmapToolParameters = BaseChartToolParameters.extend({
+export const HeatmapToolInput = BaseChartToolInput.extend({
   settings: HeatmapChartSettings.required(),
 });
 
-export type HeatmapToolParams = z.infer<typeof HeatmapToolParameters>;
+export type HeatmapToolInput = z.infer<typeof HeatmapToolInput>;
 
-export function createHeatmapAiTool(deps: DashboardToolDeps) {
-  return tool({
+export function createHeatmapAiTool({
+  databaseAdapter,
+  addChart,
+  maxDataPoints,
+}: ChartToolParams) {
+  return tool<HeatmapToolInput, ChartToolOutput<HeatmapChartConfig>>({
     description: `Heatmap: visualizes density or aggregated values across two dimensions using color intensity in a grid. Each cell color shows count/sum at that x,y position.
 
 Use when: user asks about "heatmap", "density by X and Y", "activity by [category] and [category]", "intensity", "patterns across two dimensions".
@@ -22,72 +26,41 @@ Example queries: "heatmap of population density by latitude and longitude", "tem
 
 Required: x and y should be numeric (${NUMERIC_COLUMN_TYPES.join(', ')}) for creating the grid.
 
-NOTE: Heatmaps aggregate data into grid cells and compute density/counts, so they handle large datasets efficiently (no data point limit). Heatmaps are a good alternative when scatter charts would exceed ${deps.maxDataPoints.toLocaleString()} rows.
-
-To UPDATE an existing heatmap: provide the panelId parameter. Otherwise creates new panel.
+NOTE: Heatmaps aggregate data into grid cells and compute density/counts, so they handle large datasets efficiently (no data point limit). Heatmaps are a good alternative when scatter charts would exceed ${maxDataPoints.toLocaleString()} rows.
 
 Best for: large datasets with overlapping points, finding patterns/hotspots in 2D space, temporal patterns (hour×day), spatial density visualization.
 
 Do NOT use for: individual point plots (use scatter-plot), single variable distribution (use histogram), time trends (use line-chart).`,
-    inputSchema: HeatmapToolParameters,
-    execute: async (params, context) => {
+    inputSchema: HeatmapToolInput,
+    execute: async ({tableName, title, settings}) => {
       try {
-        const artifactId = deps.resolveArtifact(
-          params.artifactId,
-          params.createArtifactIfMissing,
-          context,
-        );
-        const {tableName, columns} = deps.resolveTable(
-          artifactId,
-          params.tableName,
-        );
+        const dataTable = ensureTable(databaseAdapter, tableName);
 
-        // Validate settings
+        validateHeatmapSettings({
+          dataTable,
+          settings,
+        });
 
-        validateColumnExists(
-          params.settings.x,
-          NUMERIC_COLUMN_TYPES,
-          columns,
-          'x',
-        );
+        const chartConfig: HeatmapChartConfig = {
+          chartType: 'heatmap' as const,
+          settings,
+        };
 
-        validateColumnExists(
-          params.settings.y,
-          NUMERIC_COLUMN_TYPES,
-          columns,
-          'y',
-        );
-
-        const result = createOrUpdateChartPanel(deps, {
-          panelId: params.panelId,
-          dashboardId: artifactId,
+        addChart({
           tableName,
-          title:
-            params.settings.x && params.settings.y
-              ? `Heatmap - ${params.settings.x} vs ${params.settings.y}`
-              : 'Heatmap',
-          config: {
-            chartType: 'heatmap',
-            settings: params.settings,
-          },
+          title,
+          config: chartConfig,
         });
 
         return {
-          llmResult: {
-            success: true,
-            details: params.panelId
-              ? `Updated heatmap "${result.title}".`
-              : `Created heatmap "${result.title}".`,
-            data: result,
-          },
+          success: true,
+          details: `Generated heatmap configuration.`,
+          data: chartConfig,
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            errorMessage:
-              error instanceof Error ? error.message : String(error),
-          },
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
         };
       }
     },
