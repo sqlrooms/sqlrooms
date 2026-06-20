@@ -8,41 +8,19 @@ import type {ExtraWorksheetAiToolsParams} from '@sqlrooms/mosaic/ai';
 import {tool} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
-import {writeHtmlAppRuntimeState} from './createHtmlAppAgent';
+import {
+  HtmlAppRuntimeInputSchema,
+  writeHtmlAppRuntimeState,
+} from './createHtmlAppAgent';
 import type {RoomState} from './store-types';
 
-const EmbeddedHtmlAppAgentInputSchema = z.object({
-  reasoning: z
-    .string()
-    .describe('Reasoning for why the embedded HTML app agent is being called.'),
-  prompt: z.string().describe('The app or visualization the user wants.'),
+const EmbeddedHtmlAppAgentInputSchema = HtmlAppRuntimeInputSchema.extend({
   appId: z
     .string()
     .optional()
     .describe(
       'Existing embedded html-app blockInstanceId to update. Use list_worksheet_blocks first when modifying an existing worksheet app.',
     ),
-  title: z.string().optional().describe('Optional app title.'),
-  querySql: z
-    .string()
-    .optional()
-    .describe('Optional read-only SQL query the app should run.'),
-  files: z
-    .record(z.string(), z.string())
-    .optional()
-    .describe('Complete source file map for the embedded html-app block.'),
-  dependencies: z
-    .array(
-      z.object({
-        package: z.string(),
-        version: z.string(),
-        entry: z.string().optional(),
-        kind: z.enum(['script', 'stylesheet']).optional(),
-        global: z.string().optional(),
-      }),
-    )
-    .optional()
-    .describe('Versioned browser dependencies resolved by SQLRooms.'),
 });
 
 type EmbeddedHtmlAppAgentInput = z.infer<

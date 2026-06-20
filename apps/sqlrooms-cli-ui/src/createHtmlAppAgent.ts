@@ -4,16 +4,19 @@ import {z} from 'zod';
 import type {HtmlAppDependency} from '@sqlrooms/app-runtime';
 import type {RoomState} from './store-types';
 
-const HtmlAppAgentInputSchema = z.object({
+const HtmlAppDependencySchema = z.object({
+  package: z.string(),
+  version: z.string(),
+  entry: z.string().optional(),
+  kind: z.enum(['script', 'stylesheet']).optional(),
+  global: z.string().optional(),
+});
+
+export const HtmlAppRuntimeInputSchema = z.object({
   reasoning: z
     .string()
     .describe('Reasoning for why the HTML app agent is being called.'),
   prompt: z.string().describe('The app or visualization the user wants.'),
-  appId: z
-    .string()
-    .describe(
-      'HTML app runtime id to write. The caller must create or identify the top-level html-app artifact or embedded html-app block before calling this tool.',
-    ),
   title: z.string().optional().describe('Optional app title.'),
   querySql: z
     .string()
@@ -24,15 +27,7 @@ const HtmlAppAgentInputSchema = z.object({
     .optional()
     .describe('Complete source file map for the html-app block.'),
   dependencies: z
-    .array(
-      z.object({
-        package: z.string(),
-        version: z.string(),
-        entry: z.string().optional(),
-        kind: z.enum(['script', 'stylesheet']).optional(),
-        global: z.string().optional(),
-      }),
-    )
+    .array(HtmlAppDependencySchema)
     .optional()
     .describe('Versioned browser dependencies resolved by SQLRooms.'),
   maxRepairAttempts: z
@@ -43,6 +38,14 @@ const HtmlAppAgentInputSchema = z.object({
     .optional()
     .default(1)
     .describe('Maximum expected observe/repair attempts for the caller.'),
+});
+
+const HtmlAppAgentInputSchema = HtmlAppRuntimeInputSchema.extend({
+  appId: z
+    .string()
+    .describe(
+      'HTML app runtime id to write. The caller must create or identify the top-level html-app artifact or embedded html-app block before calling this tool.',
+    ),
 });
 
 type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
