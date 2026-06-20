@@ -1,7 +1,19 @@
 import {DataTableModal} from '@sqlrooms/data-table';
-import {type DataTable} from '@sqlrooms/duckdb';
+import {
+  type DataTable,
+  type DbSchemaNode,
+  type TableNodeObject,
+} from '@sqlrooms/duckdb';
+import {
+  defaultRenderTableNodeMenuItems,
+  defaultRenderTableSchemaNode,
+  TableSchemaTree,
+  TableTreeNode,
+  TreeNodeActionsMenuItem,
+} from '@sqlrooms/schema-tree';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {
+  Button,
   Command,
   CommandEmpty,
   CommandGroup,
@@ -9,6 +21,13 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenuSeparator,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -17,10 +36,11 @@ import {
   SidebarMenuItem,
   ScrollArea,
   ScrollBar,
-  useSidebar,
+  toast,
   useDisclosure,
+  useSidebar,
 } from '@sqlrooms/ui';
-import {ArrowUpFromLine, Database, Table2} from 'lucide-react';
+import {ArrowUpFromLine, Database, Table2, Trash2Icon} from 'lucide-react';
 import {useCallback, useRef, useState, type ChangeEvent} from 'react';
 import {useRoomStore} from '../../store';
 import {
@@ -37,9 +57,13 @@ export function CliDataSidebarSection() {
   const loadLocalFiles = useLocalFileLoader();
   const selectTable = useRoomStore((state) => state.sqlEditor.selectTable);
   const tables = useRoomStore((state) => state.db.tables);
+  const schemaTrees = useRoomStore((state) => state.db.schemaTrees);
+  const dropTable = useRoomStore((state) => state.db.dropTable);
   const {state} = useSidebar();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [previewTable, setPreviewTable] = useState<DataTable | undefined>();
+  const [deleteTable, setDeleteTable] = useState<TableNodeObject | null>(null);
+  const [isDeletingTable, setIsDeletingTable] = useState(false);
   const tableModal = useDisclosure();
   const {onOpen: openTableModal} = tableModal;
 
@@ -75,6 +99,66 @@ export function CliDataSidebarSection() {
     [handleSelectTable, openTableModal],
   );
 
+  const renderSchemaNode = useCallback(
+    (node: DbSchemaNode) => {
+      if (node.object.type !== 'table') {
+        return defaultRenderTableSchemaNode(node);
+      }
+
+      return (
+        <TableTreeNode
+          nodeObject={node.object}
+          renderMenuItems={(nodeObject, viewTableModal) => (
+            <>
+              {defaultRenderTableNodeMenuItems(nodeObject, viewTableModal)}
+              {!nodeObject.isView && (
+                <>
+                  <DropdownMenuSeparator />
+                  <TreeNodeActionsMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => {
+                      setDeleteTable(nodeObject);
+                    }}
+                  >
+                    <Trash2Icon width="15px" />
+                    Delete table
+                  </TreeNodeActionsMenuItem>
+                </>
+              )}
+            </>
+          )}
+        />
+      );
+    },
+    [],
+  );
+
+  const handleConfirmDeleteTable = useCallback(async () => {
+    if (!deleteTable) return;
+
+    const tableToDelete = deleteTable;
+    const loadingToastId = toast.loading('Deleting table...', {
+      description: tableToDelete.table.toString(),
+    });
+    setIsDeletingTable(true);
+    try {
+      await dropTable(tableToDelete.table);
+      setDeleteTable(null);
+      toast.success('Table deleted', {
+        description: tableToDelete.table.table,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unknown error occurred';
+      toast.error('Failed to delete table', {
+        description: errorMessage,
+      });
+    } finally {
+      setIsDeletingTable(false);
+      toast.dismiss(loadingToastId);
+    }
+  }, [deleteTable, dropTable]);
+
   return (
     <>
       {state === 'expanded' ? (
@@ -96,7 +180,11 @@ export function CliDataSidebarSection() {
               <SchemaExplorer.RefreshButton />
             </SchemaExplorer.Header>
             <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
-              <SchemaExplorer.Tree />
+              <TableSchemaTree
+                schemaTrees={schemaTrees}
+                className="overflow-visible"
+                renderNode={renderSchemaNode}
+              />
               <ScrollBar orientation="vertical" />
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
@@ -179,7 +267,60 @@ export function CliDataSidebarSection() {
         onChange={handleFileInputChange}
         tabIndex={-1}
       />
+      <DeleteTableDialog
+        table={deleteTable}
+        isDeleting={isDeletingTable}
+        onOpenChange={(open) => {
+          if (!open && !isDeletingTable) {
+            setDeleteTable(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteTable}
+      />
     </>
+  );
+}
+
+function DeleteTableDialog({
+  table,
+  isDeleting,
+  onOpenChange,
+  onConfirm,
+}: {
+  table: TableNodeObject | null;
+  isDeleting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={table !== null} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>Delete table</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete &ldquo;
+            {table?.table.table ?? 'this table'}&rdquo;? This action cannot be
+            undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            disabled={isDeleting}
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={isDeleting}
+            onClick={onConfirm}
+          >
+            {isDeleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
