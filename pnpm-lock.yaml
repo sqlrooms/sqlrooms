@@ -3113,9 +3113,9 @@ importers:
       '@deck.gl/react':
         specifier: ^9.3.1
         version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@geoarrow/deck.gl-layers':
-        specifier: 0.3.2
-        version: 0.3.2(b21922810d26188ec38bfc72e76101f6)
+      '@geoarrow/deck.gl-geoarrow':
+        specifier: ^0.4.1
+        version: 0.4.1(b21922810d26188ec38bfc72e76101f6)
       '@loaders.gl/geoarrow':
         specifier: ^4.4.1
         version: 4.4.1(@loaders.gl/core@4.4.1)
@@ -6364,15 +6364,14 @@ packages:
     resolution: {integrity: sha512-GmzA9ckNokPypTg10pgpeHNQe7ph+iIKKmhKu3Ob9ANkswreCx7R3cKmY781K8QK3AqVL3xVh9A42JvIAbkkSA==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  '@geoarrow/deck.gl-layers@0.3.2':
-    resolution: {integrity: sha512-GWepG0iNSU1X1rdkcuYIR6ZQaUJ67XesLjzk2gUxvbxuQgKZBFra7goOh53ziyMercy0hVRrXEqE0M+DJmYDDA==}
-    deprecated: This package has been renamed to @geoarrow/deck.gl-geoarrow
+  '@geoarrow/deck.gl-geoarrow@0.4.1':
+    resolution: {integrity: sha512-WYRuN1UnDkudOivyXwa6vPRCfiZmfax2NvQf99vbGyrN1EiY+UzuB2XHdZvEGUScUg2xo30iei91CvwTetH6AA==}
     peerDependencies:
-      '@deck.gl/aggregation-layers': ^9.0.12
-      '@deck.gl/core': ^9.0.12
-      '@deck.gl/geo-layers': ^9.0.12
-      '@deck.gl/layers': ^9.0.12
-      '@math.gl/polygon': ^3.6.2
+      '@deck.gl/aggregation-layers': ^9.0.0
+      '@deck.gl/core': ^9.0.0
+      '@deck.gl/geo-layers': ^9.0.0
+      '@deck.gl/layers': ^9.0.0
+      '@math.gl/polygon': ^4.1.0
       apache-arrow: 17.0.0
 
   '@geoarrow/geoarrow-js@0.3.3':
@@ -19410,7 +19409,7 @@ snapshots:
 
   '@gar/promise-retry@1.0.3': {}
 
-  '@geoarrow/deck.gl-layers@0.3.2(b21922810d26188ec38bfc72e76101f6)':
+  '@geoarrow/deck.gl-geoarrow@0.4.1(b21922810d26188ec38bfc72e76101f6)':
     dependencies:
       '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
       '@deck.gl/core': 9.3.2

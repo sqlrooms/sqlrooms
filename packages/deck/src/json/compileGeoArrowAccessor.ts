@@ -118,10 +118,9 @@ function copyArrayLikeIntoTarget(result: unknown) {
     return result;
   }
 
-  // TODO(geoarrow-upgrade): Keep returning plain JS arrays for 0.3.x. Reusing deck's
-  // typed `target` buffer here caused `ScatterplotLayer` binary attribute errors
-  // (`Float64Array`) when GeoArrow delegated to deck sublayers. If the next GeoArrow
-  // runtime changes the callback contract, re-evaluate whether target reuse is safe.
+  // Keep returning plain JS arrays. Reusing deck's typed `target` buffer
+  // causes `ScatterplotLayer` binary attribute errors (`Float64Array`) when
+  // GeoArrow delegates to deck sublayers.
   return Array.from(result as ArrayLike<number>);
 }
 
@@ -153,10 +152,8 @@ export function compileGeoArrowAccessor(
     `return (${trimmedExpression});`,
   ) as (...args: unknown[]) => unknown;
 
-  // TODO(geoarrow-upgrade): This custom evaluator exists because published 0.3.x
-  // GeoArrow callbacks are batch-oriented rather than deck.gl/json row-oriented. If
-  // the next version aligns with deck.gl/json accessors, remove this compiler and
-  // let the standard JSON conversion pipeline handle expressions.
+  // GeoArrow 0.4.x callbacks are batch-oriented: they receive
+  // {index, data: {data: batch}, target} from the upstream layer wrapper.
   const accessor = ({
     index,
     data,

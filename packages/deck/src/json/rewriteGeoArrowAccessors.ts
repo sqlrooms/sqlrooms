@@ -7,12 +7,10 @@ function isSimpleColumnReference(expression: string) {
 }
 
 function canUseDirectVectorAccessor(propName: string, vector: arrow.Vector) {
-  // TODO(geoarrow-upgrade): This is intentionally conservative for published 0.3.x.
   // Direct numeric vectors (for example `getRadius`) currently end up in deck's
   // binary attribute path and trigger `Float64Array` initialization failures in the
   // GeoArrow scatterplot wrapper. Re-test which direct vector accessors are safe
-  // after the next GeoArrow release and widen this gate if the runtime contract
-  // improves.
+  // after verifying the 0.4.x runtime contract handles them correctly.
   if (!propName.endsWith('Color')) {
     return false;
   }
@@ -66,10 +64,9 @@ export function rewriteGeoArrowAccessors(options: {
       }
     }
 
-    // TODO(geoarrow-upgrade): This fallback exists because 0.3.x GeoArrow layers do
-    // not share `@deck.gl/json`'s normal row accessor contract. If the next version
-    // supports standard deck/json accessors, or offers native expression handling,
-    // prefer that over our custom compiler.
+    // This custom compiler handles GeoArrow batch-oriented callbacks. The 0.4.x
+    // layers call function accessors with {index, data: {data: batch}, target},
+    // which this compiler produces.
     nextProps[propName] = compileGeoArrowAccessor(expression, table);
   }
 

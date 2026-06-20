@@ -5,7 +5,7 @@ import * as arrow from 'apache-arrow';
 /**
  * Custom GeoArrow-compatible H3HexagonLayer wrapper.
  *
- * GeoArrowH3HexagonLayer from @geoarrow/deck.gl-layers@0.3.2 is incompatible
+ * GeoArrowH3HexagonLayer from @geoarrow/deck.gl-layers@0.3.2 was incompatible
  * with @deck.gl/geo-layers@9.3.x: the wrapper passes H3 indices via binary
  * attributes, but H3HexagonLayer internally iterates rows using createIterable
  * and calls getHexagon(object) expecting string H3 indices. This causes

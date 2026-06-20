@@ -41,7 +41,7 @@ function expandToCoords<T extends TypedArray>(
 /**
  * Custom GeoArrow-compatible TripsLayer wrapper.
  *
- * GeoArrowTripsLayer from @geoarrow/deck.gl-layers@0.3.2 is incompatible with
+ * GeoArrowTripsLayer from @geoarrow/deck.gl-layers@0.3.2 was incompatible with
  * deck.gl 9.3.x: it passes the raw timestamps typed array via binary attributes,
  * but deck.gl 9.3's PathLayer/TripsLayer attribute manager fails to initialize
  * them correctly, producing "Float64Array Error: Float64Array".

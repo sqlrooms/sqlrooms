@@ -17,7 +17,7 @@ npm install @sqlrooms/deck @sqlrooms/duckdb @sqlrooms/ui
 - generate starter JSON specs from datasets with `createDeckJsonSpecFromDatasets`
 - validate SQLRooms-specific layer bindings under `_sqlroomsBinding`
 - prepare geometry for GeoArrow-native layers from
-  [`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers)
+  [`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-layers)
   and GeoJSON fallback layers
 - support shared declarative color scales through `@sqlrooms/color-scales`
 
@@ -439,7 +439,7 @@ for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
 `GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`.
 
 The GeoArrow layer implementations themselves come from
-[`@geoarrow/deck.gl-layers`](https://github.com/geoarrow/deck.gl-layers).
+[`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-layers).
 
 When querying DuckDB spatial `GEOMETRY` columns directly, convert them first
 with `ST_AsWKB(...)` or `ST_AsText(...)`. DuckDB's internal geometry payload is
