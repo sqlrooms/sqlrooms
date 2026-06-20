@@ -123,3 +123,19 @@ type QueryResult = {
 
 The host enforces read-only `SELECT` parsing, a single statement, row limits,
 and request timeouts before returning data to the iframe.
+
+## Later Capability Boundaries
+
+The v1 bridge intentionally stops at bounded JSON query results. The following
+capabilities should remain out of the runtime until the read-only query path has
+proven useful and each addition has an explicit capability contract:
+
+- `queryArrow()` or streaming query results
+- selected artifact or block context reads
+- command invocation through SQLRooms command registries
+- generated asset save/export
+- mutation or write queries with user confirmation
+- dependency bundling, import maps, or local dependency caching
+
+Those features should reuse the same request/response and diagnostic protocol
+rather than adding a second app-to-host channel.
