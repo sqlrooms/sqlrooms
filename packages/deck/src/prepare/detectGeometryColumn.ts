@@ -2,7 +2,7 @@ import {
   getGeoMetadata,
   getGeometryColumnsFromSchema,
 } from '@loaders.gl/geoarrow';
-import type * as arrow from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {isDirectGeoArrowEncoding} from './geoarrow';
 import type {
   GeometryEncodingHint,
@@ -16,18 +16,64 @@ type DetectGeometryColumnOptions = {
   geometryEncodingHint?: GeometryEncodingHint;
 };
 
+const LON_NAMES = new Set([
+  'longitude',
+  'lon',
+  'lng',
+  'long',
+  'source_lon',
+  'target_lon',
+]);
+const LAT_NAMES = new Set(['latitude', 'lat', 'source_lat', 'target_lat']);
+
 function getFieldNames(table: arrow.Table) {
   return table.schema.fields.map((field) => field.name);
 }
 
+/**
+ * Detects longitude/latitude columns in an Arrow table by matching
+ * field names against known patterns (case-insensitive).
+ * Returns the original field names if found, or null.
+ */
+export function findCoordinateColumns(
+  table: arrow.Table,
+): {lonField: string; latField: string} | null {
+  const fields = table.schema.fields;
+  let lonField: string | undefined;
+  let latField: string | undefined;
+  for (const field of fields) {
+    const lower = field.name.toLowerCase();
+    if (!lonField && LON_NAMES.has(lower)) lonField = field.name;
+    if (!latField && LAT_NAMES.has(lower)) latField = field.name;
+  }
+  return lonField && latField ? {lonField, latField} : null;
+}
+
+const KNOWN_GEOM_NAMES = ['geometry', 'geom', 'wkb_geometry', 'the_geom'];
+
 function getFieldVector(table: arrow.Table, fieldName: string) {
   const vector = table.getChild(fieldName);
-  if (!vector) {
-    throw new Error(
-      `Geometry column "${fieldName}" was not found in the Arrow table.`,
-    );
+  if (vector) {
+    return {vector};
   }
-  return vector;
+
+  // Fallback: if the requested geometry column doesn't exist, try other common names
+  if (KNOWN_GEOM_NAMES.includes(fieldName.toLowerCase())) {
+    for (const altName of KNOWN_GEOM_NAMES) {
+      if (altName.toLowerCase() === fieldName.toLowerCase()) continue;
+      const altVector = table.getChild(altName);
+      if (altVector) {
+        return {vector: altVector};
+      }
+    }
+  }
+
+  const available = table.schema.fields.map((f) => f.name).join(', ');
+  throw new Error(
+    `Geometry column "${fieldName}" was not found in the Arrow table. Available columns: ${available}. ` +
+      `If the data has longitude/latitude columns, the dataset source SQL should create the geometry column ` +
+      `(e.g. ST_AsWKB(ST_Point(longitude, latitude)) AS "${fieldName}").`,
+  );
 }
 
 function normalizeEncoding(
@@ -109,7 +155,8 @@ export function detectGeometryColumn(
     );
   }
 
-  const vector = getFieldVector(table, detectedGeometryColumn);
+  const fieldResult = getFieldVector(table, detectedGeometryColumn);
+
   const metadataEncoding =
     normalizeEncoding(fieldMetadata[detectedGeometryColumn]?.encoding) ??
     normalizeEncoding(geoMetadata?.columns?.[detectedGeometryColumn]?.encoding);
@@ -117,11 +164,11 @@ export function detectGeometryColumn(
   const encoding =
     inferEncodingFromHint(geometryEncodingHint) ??
     metadataEncoding ??
-    inferEncodingFromVector(vector);
+    inferEncodingFromVector(fieldResult.vector);
 
   return {
     columnName: detectedGeometryColumn,
-    vector,
+    vector: fieldResult.vector,
     encoding,
     nativeGeoArrow: isDirectGeoArrowEncoding(encoding),
   };

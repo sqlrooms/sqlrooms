@@ -88,6 +88,7 @@ export type {
   DeckArrowTableDatasetInput,
   DeckAutoLayerType,
   DeckDatasetInput,
+  DeckJsonMapHandle,
   DeckJsonMapProps,
   DeckJsonSpecDatasetHint,
   DeckSqlDatasetInput,

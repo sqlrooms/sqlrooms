@@ -204,7 +204,7 @@ payload in React.
 
 - `spec`: a JSON-like deck.gl spec object or JSON string
 - `datasets`: a dataset registry keyed by dataset id
-- `interleaved`: when true, deck layers insert into MapLibre's layer stack (requires WebGL2). Default: `false`
+- `interleaved`: when true, deck layers render in MapLibre's own WebGL context instead of a separate overlay canvas. This halves the number of WebGL contexts per map panel (from 2 to 1), which matters because browsers limit active contexts to ~8–16 per page. Default: `true`
 - `deckProps`: runtime-only deck props such as `getTooltip`, `onHover`, `onClick`
 - `mapProps`: runtime-only MapLibre props
 - `showLegends`: whether SQLRooms-generated color legends should render
@@ -212,13 +212,22 @@ payload in React.
 `spec` stays serializable; callbacks and runtime behavior belong in `deckProps`
 or `mapProps`.
 
-By default, MapLibre is the root and deck.gl renders in a separate overlay
-canvas via `MapboxOverlay`. MapLibre controls and attribution remain accessible.
-Set `interleaved` to `true` to insert deck layers into MapLibre's layer stack
-(e.g. render points under map labels). This requires WebGL2 (MapLibre GL v3+).
+By default, deck.gl renders interleaved into MapLibre's layer stack, sharing a
+single WebGL context. This allows deck layers to be inserted between basemap
+layers (e.g. render points under map labels) and reduces WebGL context usage.
+Set `interleaved` to `false` to render deck layers in a separate overlay canvas
+on top of all basemap layers (uses an additional WebGL context per map).
 
 ```tsx
-<DeckJsonMap spec={spec} datasets={datasets} interleaved />
+{
+  /* Default (interleaved): */
+}
+<DeckJsonMap spec={spec} datasets={datasets} />;
+
+{
+  /* Opt out to separate overlay canvas: */
+}
+<DeckJsonMap spec={spec} datasets={datasets} interleaved={false} />;
 ```
 
 ### Dataset Registry

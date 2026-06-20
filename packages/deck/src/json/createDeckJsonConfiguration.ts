@@ -1,6 +1,8 @@
 import {JSONConfiguration} from '@deck.gl/json';
+import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
+import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
 import {compileColorScale} from './compileColorScale';
@@ -87,7 +89,49 @@ function resolveGeoArrowBindings(options: {
         );
       }
 
-      const resolvedGeometry = prepared.resolveGeometry(columnName);
+      let resolvedGeometry;
+      try {
+        resolvedGeometry = prepared.resolveGeometry(columnName);
+      } catch {
+        throw new Error(
+          `Geometry column "${columnName}" was not found in dataset "${prepared.datasetId}".`,
+        );
+      }
+
+      // Detect mismatch: synthesized points can't satisfy a LineString binding.
+      // For PathLayer, try auto-aggregating waypoint rows into linestrings.
+      if (
+        resolvedGeometry.encoding === 'geoarrow.point' &&
+        binding.prop === 'getPath'
+      ) {
+        const aggregated = tryAggregateWaypointsToLineStrings(prepared.table);
+        if (aggregated) {
+          table = aggregated.table;
+          boundProps[binding.prop] = aggregated.geometryVector;
+          continue;
+        }
+        const available = prepared.table.schema.fields
+          .map((f) => f.name)
+          .join(', ');
+        throw new Error(
+          `Layer "${layerName}" requires LineString geometry for getPath, ` +
+            `but only point coordinates were found and auto-aggregation failed. ` +
+            `The dataset sqlQuery must aggregate rows into linestrings using ST_MakeLine. ` +
+            `Available columns: ${available}.`,
+        );
+      }
+      if (
+        resolvedGeometry.encoding === 'geoarrow.point' &&
+        binding.prop === 'getPolygon'
+      ) {
+        const available = prepared.table.schema.fields
+          .map((f) => f.name)
+          .join(', ');
+        throw new Error(
+          `Layer "${layerName}" requires Polygon geometry for ${binding.prop}, ` +
+            `but only point coordinates were found. Available columns: ${available}.`,
+        );
+      }
       if (!resolvedGeometry.nativeGeoArrow) {
         if (
           !compatibility.allowGeoArrowPromotion ||
@@ -105,14 +149,20 @@ function resolveGeoArrowBindings(options: {
       }
 
       const layerData = prepared.getGeoArrowLayerData(columnName);
-      if (table !== prepared.table && table !== layerData.table) {
-        throw new Error(
-          `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
-        );
+      if (layerData.source === 'promoted') {
+        boundProps[binding.prop] = layerData.geometryColumn;
+        if (table === prepared.table) {
+          table = layerData.table;
+        }
+      } else {
+        if (table !== prepared.table && table !== layerData.table) {
+          throw new Error(
+            `Layer "${layerName}" cannot combine promoted geometry columns from different prepared tables.`,
+          );
+        }
+        table = layerData.table;
+        boundProps[binding.prop] = layerData.geometryColumn;
       }
-
-      table = layerData.table;
-      boundProps[binding.prop] = layerData.geometryColumn;
       continue;
     }
 
@@ -151,6 +201,11 @@ export function createDeckJsonConfiguration(
     constants: DEFAULT_DECK_JSON_CONSTANTS,
     functions: {
       colorScale: (props: ColorScaleConfig) => createColorScaleMarker(props),
+      scale: (props: Record<string, unknown>) => {
+        const field = typeof props.field === 'string' ? props.field : undefined;
+        if (!field) return undefined;
+        return `@@=${field}`;
+      },
     },
     // TODO(geoarrow-upgrade): In 0.3.x we preserve raw `@@=` strings here because
     // `@deck.gl/json` would otherwise eagerly compile them into row-based accessors
@@ -192,7 +247,7 @@ export function createDeckJsonConfiguration(
       }
 
       if (datasetState.status !== 'ready') {
-        return stripLayerExtensionProps(layerProps);
+        return {...stripLayerExtensionProps(layerProps), data: []};
       }
 
       const prepared = datasetState.prepared;
@@ -212,7 +267,9 @@ export function createDeckJsonConfiguration(
 
       const {table, boundProps} = resolveGeoArrowBindings({
         layerName,
-        compatibility,
+        compatibility: compatibility as NonNullable<
+          ReturnType<typeof getLayerCompatibility>
+        > & {representation: 'geoarrow'},
         layerProps: extensionProps,
         prepared,
         props: strippedProps,
@@ -227,11 +284,50 @@ export function createDeckJsonConfiguration(
         ...boundProps,
       };
 
-      return rewriteGeoArrowAccessors({
+      const rewritten = rewriteGeoArrowAccessors({
         props: nextProps,
         table,
         layerName,
       });
+
+      // For TripsLayer: compute max timestamp for animation and set defaults
+      if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
+        const tsVector = boundProps.getTimestamps as arrow.Vector | undefined;
+        if (tsVector) {
+          let maxTs = 0;
+          for (let i = 0; i < tsVector.length; i++) {
+            const listItem = tsVector.get(i);
+            if (
+              listItem &&
+              typeof listItem === 'object' &&
+              'length' in listItem
+            ) {
+              const list = listItem as {
+                length: number;
+                get: (i: number) => unknown;
+              };
+              for (let j = 0; j < list.length; j++) {
+                const v = Number(list.get(j)) || 0;
+                if (v > maxTs) maxTs = v;
+              }
+            }
+          }
+          if (maxTs > 0) {
+            rewritten._tripsMaxTimestamp = maxTs;
+            if (!rewritten.trailLength) {
+              rewritten.trailLength = maxTs;
+            }
+            if (
+              rewritten.currentTime === undefined ||
+              rewritten.currentTime === 0
+            ) {
+              rewritten.currentTime = maxTs;
+            }
+          }
+        }
+      }
+
+      return rewritten;
     },
     postProcessConvertedJson: (json: unknown) => {
       if (

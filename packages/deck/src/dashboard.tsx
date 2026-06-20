@@ -1,14 +1,3 @@
-import {WebMercatorViewport} from '@deck.gl/core';
-import type {ComponentProps} from 'react';
-import type DeckGLReact from '@deck.gl/react';
-
-type DeckProps = ComponentProps<typeof DeckGLReact>;
-import {
-  escapeId,
-  getColValAsNumber,
-  type QualifiedTableName,
-  useStoreWithDuckDb,
-} from '@sqlrooms/duckdb';
 import {
   column,
   type MosaicDashboardEntryType,
@@ -16,25 +5,26 @@ import {
   type MosaicDashboardPanelRenderer,
   type MosaicDashboardPanelRendererProps,
   sql,
-  type ChartDataPolicy,
   type ChartRuntimeIssue,
   type ChartRuntimeIssueContext,
   type ChartRuntimeIssueReporter,
   useMosaicClient,
   useStoreWithMosaicDashboard,
   usePanelClientRegistration,
-  usePanelClients,
-  usePanelResetFilters,
-  ResetFiltersButton,
 } from '@sqlrooms/mosaic';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
-import type {Table as ArrowTable} from 'apache-arrow';
-import {FocusIcon, MapIcon, SettingsIcon} from 'lucide-react';
+import {
+  AlertTriangleIcon,
+  FocusIcon,
+  MapIcon,
+  SettingsIcon,
+} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
+import type {DeckJsonMapHandle} from './types';
 import {MapSettingsPanel} from './MapSettings';
 import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
@@ -42,6 +32,7 @@ import {
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
+  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
@@ -49,14 +40,156 @@ import {
   type DeckMapDashboardInteractionConfig,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
-import {getDeckMapDataPolicy} from './mapDataPolicy';
+import {
+  useDeckMapFitToBounds,
+  emitDeckMapDashboardFitRequest,
+  createDeckMapBoundsQuery,
+} from './useDeckMapFitToBounds';
+export {createDeckMapBoundsQuery};
+import {useDeckMapDatasets} from './useDeckMapDatasets';
 import {
   createDeckMapDashboardPanelConfigForTable,
   findGeometryColumn,
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
 
+/**
+ * Extracts column names from common DuckDB "column not found" error messages
+ * and layer geometry incompatibility errors.
+ * Returns the column names if detected, or null for unrecognized errors.
+ */
+function parseMissingColumnsFromError(message: string): string[] | null {
+  // "Referenced column "X" not found in FROM clause!" — may appear multiple times
+  const refMatches = [
+    ...message.matchAll(/Referenced column "([^"]+)" not found/gi),
+  ];
+  if (refMatches.length > 0) return refMatches.map((m) => m[1]!);
+
+  // "Binder Error: Column "X" does not exist" or "column X not found"
+  const colMatch = message.match(
+    /(?:Column|column)\s+"([^"]+)"\s+(?:does not exist|not found)/i,
+  );
+  if (colMatch) return [colMatch[1]!];
+
+  // "Geometry column "X" was not found"
+  const geomNotFound = message.match(
+    /Geometry column "([^"]+)" was not found/i,
+  );
+  if (geomNotFound) return [geomNotFound[1]!];
+
+  return null;
+}
+
+/**
+ * Detects geometry type mismatch errors (e.g. polygon layer on point data).
+ */
+function parseGeometryMismatchError(
+  message: string,
+): {required: string; found: string} | null {
+  const match = message.match(
+    /requires (\w+) geometry .+ but only (\w+) coordinates were found/i,
+  );
+  if (match) return {required: match[1]!, found: match[2]!};
+  return null;
+}
+
+/**
+ * Detects columns referenced in layer config that are missing from the loaded dataset.
+ */
+function detectMissingColumns(
+  mapConfig: DeckMapDashboardPanelConfig | undefined,
+  datasetStates: Record<string, DeckMapDashboardDatasetClientState>,
+): string[] {
+  if (!mapConfig?.spec) return [];
+  const missing: string[] = [];
+  const spec = mapConfig.spec as Record<string, unknown>;
+  const layers = Array.isArray(spec.layers) ? spec.layers : [];
+
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerObj = layer as Record<string, unknown>;
+    const binding = layerObj._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    const datasetId = binding?.dataset as string | undefined;
+    const arrowTable = datasetId
+      ? datasetStates[datasetId]?.arrowTable
+      : undefined;
+    if (!arrowTable) continue;
+
+    const fieldNames = new Set(
+      arrowTable.schema.fields.map((f) => f.name.toLowerCase()),
+    );
+    const check = (col: string | undefined) => {
+      if (col && !fieldNames.has(col.toLowerCase())) {
+        missing.push(col);
+      }
+    };
+
+    // Check @@= accessors
+    for (const [propName, propValue] of Object.entries(layerObj)) {
+      // Skip elevation references when extrusion is disabled
+      if (propName === 'getElevation' && !layerObj.extruded) continue;
+
+      if (typeof propValue === 'string' && propValue.startsWith('@@=')) {
+        check(propValue.slice(3).trim());
+      }
+      // Check @@function colorScale/scale field references
+      if (
+        propValue &&
+        typeof propValue === 'object' &&
+        '@@function' in (propValue as object)
+      ) {
+        const fn = propValue as Record<string, unknown>;
+        if (typeof fn.field === 'string') {
+          check(fn.field);
+        }
+      }
+    }
+  }
+
+  return [...new Set(missing)];
+}
+
 function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
+  if (issue.kind === 'sql-error' || issue.kind === 'render-error') {
+    const missingColumns = parseMissingColumnsFromError(issue.message);
+    if (missingColumns) {
+      return (
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+          <div className="mb-2 text-center font-semibold">
+            The visualization can&apos;t be displayed
+          </div>
+          <div className="text-center text-sm">
+            <span>Selected columns are missing in the dataset: </span>
+            {missingColumns.map((col, idx) => (
+              <span key={idx}>
+                <span className="inline-flex items-center rounded-md border border-gray-600 bg-gray-800 px-1 py-0.5 text-xs font-medium text-gray-300">
+                  {col}
+                </span>{' '}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    const geomMismatch = parseGeometryMismatchError(issue.message);
+    if (geomMismatch) {
+      return (
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+          <div className="mb-2 text-center font-semibold">
+            The visualization can&apos;t be displayed
+          </div>
+          <div className="text-center text-sm">
+            This layer requires {geomMismatch.required} geometry, but the
+            current dataset only has {geomMismatch.found} coordinates.
+          </div>
+        </div>
+      );
+    }
+  }
+
   const title =
     issue.kind === 'too-much-data'
       ? 'Too much data'
@@ -78,17 +211,18 @@ function DeckMapDashboardDatasetClient({
   dashboard,
   dataset,
   datasetId,
-  dataPolicy,
+  fitToData,
   panel,
   onDatasetState,
   runtimeIssueContext,
   runtimeIssueReporter,
   selectionName,
+  maxRows,
 }: {
   dashboard: MosaicDashboardEntryType;
   dataset: DeckMapDashboardDatasetConfig;
   datasetId: string;
-  dataPolicy?: ChartDataPolicy | null;
+  fitToData?: DeckMapDashboardFitToDataConfig;
   panel: MosaicDashboardPanelConfigType;
   onDatasetState: (
     datasetId: string,
@@ -97,31 +231,54 @@ function DeckMapDashboardDatasetClient({
   runtimeIssueContext?: ChartRuntimeIssueContext;
   runtimeIssueReporter?: ChartRuntimeIssueReporter;
   selectionName: string;
+  maxRows: number;
 }) {
+  const datasetFitToData = useMemo(
+    () => (fitToData?.dataset === datasetId ? fitToData : undefined),
+    [datasetId, fitToData],
+  );
   const source = useMemo(
     () =>
       resolveDeckMapDashboardDatasetSource({
         dashboard,
         panel,
         dataset,
+        fitToData: datasetFitToData,
       }),
-    [dashboard, dataset, panel],
+    [dashboard, dataset, datasetFitToData, panel],
   );
   const query = useCallback(
     (filter: unknown) =>
       source
-        ? createDeckMapDashboardDatasetQuery(source, filter)
+        ? createDeckMapDashboardDatasetQuery(source, filter, {
+            sampleRows: maxRows,
+          })
         : createDeckMapDashboardDatasetQuery(
             {tableName: '__missing_dashboard_map_dataset__'},
             filter,
+            {sampleRows: maxRows},
           ),
-    [source],
+    [maxRows, source],
   );
+  const queryError = useCallback(
+    (err: Error) => {
+      onDatasetState(datasetId, {
+        arrowTable: undefined,
+        error: err,
+        isLoading: false,
+        client: null,
+        isSampled: false,
+      });
+    },
+    [datasetId, onDatasetState],
+  );
+  const sourceKey = source?.tableName ?? dashboard.selectedTable ?? '';
+  const sourceQueryKey = source?.sqlQuery ?? '';
   const {data, error, isLoading, client} = useMosaicClient({
-    id: `${panel.id}:${datasetId}`,
+    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}`,
     selectionName,
     query,
-    dataPolicy,
+    queryError,
     enabled: Boolean(source),
     runtimeIssueContext,
     runtimeIssueReporter,
@@ -130,18 +287,21 @@ function DeckMapDashboardDatasetClient({
   // Register client for panel reset button
   usePanelClientRegistration(dashboard.id, panel.id, client ? [client] : []);
 
+  const isSampled = Boolean(data && data.numRows >= maxRows);
+
   useEffect(() => {
     onDatasetState(datasetId, {
       arrowTable: data ?? undefined,
       error,
       isLoading,
       client,
+      isSampled,
     });
 
     return () => {
       onDatasetState(datasetId, undefined);
     };
-  }, [client, data, datasetId, error, isLoading, onDatasetState]);
+  }, [client, data, datasetId, error, isLoading, isSampled, onDatasetState]);
 
   return null;
 }
@@ -185,145 +345,13 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
   return Boolean(info.picked || info.object || (info.index ?? -1) >= 0);
 }
 
-type DeckMapBoundsQuerySource =
-  | {table: QualifiedTableName; sqlQuery?: never}
-  | {sqlQuery: string; table?: never};
-
-/**
- * Builds the SQL query used to compute map bounds for fit-to-data.
- *
- * @param options - Bounds query options.
- * @param options.source - Dataset source to inspect, either a structured table
- *   identity or a SQL query that will be wrapped as a subquery.
- * @param options.fitToData - Fit-to-data configuration containing the longitude
- *   and latitude columns to aggregate.
- * @returns SQL that returns one row with min/max longitude and latitude bounds.
- */
-export function createDeckMapBoundsQuery(options: {
-  source: DeckMapBoundsQuerySource;
-  fitToData: DeckMapDashboardFitToDataConfig;
-}) {
-  const {source, fitToData} = options;
-  const baseSourceSql =
-    'sqlQuery' in source
-      ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-      : `SELECT * FROM ${source.table.toString()}`;
-  const longitudeColumn = escapeId(fitToData.longitudeColumn);
-  const latitudeColumn = escapeId(fitToData.latitudeColumn);
-
-  return `
-    SELECT
-      ST_XMin(extent) AS min_longitude,
-      ST_YMin(extent) AS min_latitude,
-      ST_XMax(extent) AS max_longitude,
-      ST_YMax(extent) AS max_latitude
-    FROM (
-      SELECT ST_Extent_Agg(ST_Point(${longitudeColumn}, ${latitudeColumn})) AS extent
-      FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_points"
-      WHERE ${longitudeColumn} IS NOT NULL AND ${latitudeColumn} IS NOT NULL
-    ) AS "__sqlrooms_dashboard_map_extent"
-    WHERE extent IS NOT NULL
-  `;
-}
-
-function readBoundsFromExtentResult(result: ArrowTable) {
-  const minLongitude = getColValAsNumber(result, 'min_longitude');
-  const minLatitude = getColValAsNumber(result, 'min_latitude');
-  const maxLongitude = getColValAsNumber(result, 'max_longitude');
-  const maxLatitude = getColValAsNumber(result, 'max_latitude');
-  if (
-    !Number.isFinite(minLongitude) ||
-    !Number.isFinite(minLatitude) ||
-    !Number.isFinite(maxLongitude) ||
-    !Number.isFinite(maxLatitude)
-  ) {
-    return null;
-  }
-
-  return [
-    [
-      minLongitude === maxLongitude ? minLongitude - 0.01 : minLongitude,
-      minLatitude === maxLatitude ? minLatitude - 0.01 : minLatitude,
-    ],
-    [
-      minLongitude === maxLongitude ? maxLongitude + 0.01 : maxLongitude,
-      minLatitude === maxLatitude ? maxLatitude + 0.01 : maxLatitude,
-    ],
-  ] as const;
-}
-
-function fitViewStateToBounds(options: {
-  bounds: readonly [readonly [number, number], readonly [number, number]];
-  width: number;
-  height: number;
-  padding?: number;
-  maxZoom?: number;
-}) {
-  const {bounds, width, height, padding = 40, maxZoom = 12} = options;
-  const viewport = new WebMercatorViewport({
-    width: Math.max(width, 1),
-    height: Math.max(height, 1),
-  });
-  const fitted = viewport.fitBounds(
-    [
-      [bounds[0][0], bounds[0][1]],
-      [bounds[1][0], bounds[1][1]],
-    ],
-    {padding},
-  ) as WebMercatorViewport & {
-    longitude: number;
-    latitude: number;
-    zoom: number;
-  };
-
-  return {
-    longitude: fitted.longitude,
-    latitude: fitted.latitude,
-    zoom: Math.min(fitted.zoom, maxZoom),
-  };
-}
-
-const deckMapDashboardFitRequestTarget = new EventTarget();
-
-function emitDeckMapDashboardFitRequest(panelId: string) {
-  deckMapDashboardFitRequestTarget.dispatchEvent(
-    new CustomEvent('fit-view', {detail: {panelId}}),
-  );
-}
-
-type DeckMapDashboardFitState = {
-  key: string;
-  viewState: DeckProps['viewState'];
-  didAutoFit: boolean;
-  fitRequestVersion: number;
-  handledFitRequestVersion: number;
-};
-
-function createInitialDeckMapDashboardFitState(
-  key: string,
-): DeckMapDashboardFitState {
-  return {
-    key,
-    viewState: undefined,
-    didAutoFit: false,
-    fitRequestVersion: 0,
-    handledFitRequestVersion: 0,
-  };
-}
-
 function DeckMapDashboardHeaderActions({
   dashboardId,
   panel,
-  selectionName,
 }: MosaicDashboardPanelRendererProps) {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
-  const panelClients = usePanelClients(dashboardId, panel.id);
-  const {hasActiveFilters, reset} = usePanelResetFilters({
-    panelClients,
-    selectionName,
-  });
 
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
@@ -347,11 +375,6 @@ function DeckMapDashboardHeaderActions({
 
   return (
     <div className="flex items-center gap-0.5">
-      <ResetFiltersButton
-        disabled={!hasActiveFilters}
-        onClick={reset}
-        tooltip="Reset panel filters"
-      />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -405,17 +428,21 @@ function DeckMapDashboardRenderer({
   const issue = useStoreWithMosaicDashboard((state) =>
     state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),
   );
-  const reportPanelIssue = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.reportPanelIssue,
-  );
   const clearPanelIssue = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.clearPanelIssue,
   );
-  const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
-  const findTable = useStoreWithDuckDb((state) => state.db.findTable);
-  const qualifyTableName = useStoreWithDuckDb(
-    (state) => state.db.qualifyTableName,
-  );
+
+  // Clear runtime issues when the active table or panel config changes so
+  // the map can recover (e.g., after switching tables or AI updating the map).
+  useEffect(() => {
+    clearPanelIssue(dashboardId, panel.id);
+  }, [
+    clearPanelIssue,
+    dashboard.selectedTable,
+    dashboardId,
+    panel.config,
+    panel.id,
+  ]);
 
   const isSettingsOpen = Boolean(
     (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
@@ -434,51 +461,17 @@ function DeckMapDashboardRenderer({
     [getSelection, selectionName],
   );
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [datasetStates, setDatasetStates] = useState<
-    Record<string, DeckMapDashboardDatasetClientState>
-  >({});
+  const deckMapRef = useRef<DeckJsonMapHandle>(null);
   const [containerSize, setContainerSize] = useState({width: 0, height: 0});
+  const [sampledDismissed, setSampledDismissed] = useState(false);
 
-  const handleDatasetState = useCallback(
-    (
-      datasetId: string,
-      state: DeckMapDashboardDatasetClientState | undefined,
-    ) => {
-      setDatasetStates((current) => {
-        const next = {...current};
-        if (state) {
-          next[datasetId] = state;
-        } else {
-          delete next[datasetId];
-        }
-        return next;
-      });
-    },
-    [],
-  );
-
-  const dataPolicy = useMemo<ChartDataPolicy>(
-    () => getDeckMapDataPolicy(mapConfig),
-    [mapConfig],
-  );
-  const runtimeIssueContext = useMemo(
-    () => ({
-      panelId: panel.id,
-      chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
-    }),
-    [panel.id],
-  );
-  const runtimeIssueReporter = useMemo<ChartRuntimeIssueReporter>(
-    () => ({
-      reportIssue: (issueToReport) => {
-        reportPanelIssue(dashboardId, panel.id, issueToReport);
-      },
-      clearIssue: () => {
-        clearPanelIssue(dashboardId, panel.id);
-      },
-    }),
-    [clearPanelIssue, dashboardId, panel.id, reportPanelIssue],
-  );
+  const {
+    datasetStates,
+    handleDatasetState,
+    runtimeIssueContext,
+    runtimeIssueReporter,
+    handleRenderingError,
+  } = useDeckMapDatasets({dashboardId, panel});
 
   useEffect(() => {
     const container = containerRef.current;
@@ -498,185 +491,15 @@ function DeckMapDashboardRenderer({
     return () => {
       observer.disconnect();
     };
-  }, []);
+  }, [issue]);
 
-  const fitToData = mapConfig?.fitToData ?? null;
-  const fitToDataSource = useMemo(
-    () =>
-      fitToData
-        ? resolveDeckMapDashboardDatasetSource({
-            dashboard,
-            panel,
-            dataset: mapConfig?.datasets[fitToData.dataset],
-          })
-        : undefined,
-    [dashboard, fitToData, mapConfig?.datasets, panel],
-  );
-  const fitToDataBoundsSource = useMemo<
-    DeckMapBoundsQuerySource | undefined
-  >(() => {
-    if (!fitToDataSource) {
-      return undefined;
-    }
-    if (fitToDataSource.sqlQuery) {
-      return {sqlQuery: fitToDataSource.sqlQuery};
-    }
-    if (!fitToDataSource.tableName) {
-      return undefined;
-    }
-    const table = findTable(fitToDataSource.tableName);
-    return {
-      table: table?.table ?? qualifyTableName(fitToDataSource.tableName),
-    };
-  }, [findTable, fitToDataSource, qualifyTableName]);
-  const fitToDataKey = useMemo(
-    () =>
-      fitToData && fitToDataBoundsSource
-        ? JSON.stringify({
-            source: fitToDataBoundsSource,
-            fitToData,
-          })
-        : null,
-    [fitToData, fitToDataBoundsSource],
-  );
-  const fitStateKey = useMemo(
-    () => JSON.stringify({panelId: panel.id, fitToDataKey}),
-    [fitToDataKey, panel.id],
-  );
-  const [fitState, setFitState] = useState<DeckMapDashboardFitState>(() =>
-    createInitialDeckMapDashboardFitState(fitStateKey),
-  );
-  const activeFitState =
-    fitState.key === fitStateKey
-      ? fitState
-      : createInitialDeckMapDashboardFitState(fitStateKey);
-  const {didAutoFit, fitRequestVersion, handledFitRequestVersion, viewState} =
-    activeFitState;
-
-  useEffect(() => {
-    const handleFitRequest = (event: Event) => {
-      const detail = (event as CustomEvent<{panelId?: string}>).detail;
-      if (detail?.panelId === panel.id) {
-        setFitState((current) => {
-          const scoped =
-            current.key === fitStateKey
-              ? current
-              : createInitialDeckMapDashboardFitState(fitStateKey);
-          return {
-            ...scoped,
-            fitRequestVersion: scoped.fitRequestVersion + 1,
-          };
-        });
-      }
-    };
-
-    deckMapDashboardFitRequestTarget.addEventListener(
-      'fit-view',
-      handleFitRequest,
-    );
-    return () => {
-      deckMapDashboardFitRequestTarget.removeEventListener(
-        'fit-view',
-        handleFitRequest,
-      );
-    };
-  }, [fitStateKey, panel.id]);
-
-  useEffect(() => {
-    const hasManualFitRequest = fitRequestVersion > handledFitRequestVersion;
-    if (
-      !fitToData ||
-      !fitToDataBoundsSource ||
-      containerSize.width <= 0 ||
-      containerSize.height <= 0 ||
-      (!hasManualFitRequest && didAutoFit)
-    ) {
-      return;
-    }
-
-    let isCancelled = false;
-
-    const fitToDataBounds = async () => {
-      try {
-        const handle = await executeSql(
-          createDeckMapBoundsQuery({
-            source: fitToDataBoundsSource,
-            fitToData,
-          }),
-        );
-        const result = handle ? await handle : null;
-        if (isCancelled || !result) {
-          return;
-        }
-
-        const bounds = readBoundsFromExtentResult(result);
-        if (!bounds) {
-          setFitState((current) => {
-            const scoped =
-              current.key === fitStateKey
-                ? current
-                : createInitialDeckMapDashboardFitState(fitStateKey);
-            return {
-              ...scoped,
-              didAutoFit: true,
-              handledFitRequestVersion: fitRequestVersion,
-            };
-          });
-          return;
-        }
-
-        const nextViewState = fitViewStateToBounds({
-          bounds,
-          width: containerSize.width,
-          height: containerSize.height,
-          padding: fitToData.padding,
-          maxZoom: fitToData.maxZoom,
-        });
-        setFitState((current) => {
-          const scoped =
-            current.key === fitStateKey
-              ? current
-              : createInitialDeckMapDashboardFitState(fitStateKey);
-          return {
-            ...scoped,
-            viewState: nextViewState,
-            didAutoFit: true,
-            handledFitRequestVersion: fitRequestVersion,
-          };
-        });
-      } catch {
-        if (!isCancelled) {
-          setFitState((current) => {
-            const scoped =
-              current.key === fitStateKey
-                ? current
-                : createInitialDeckMapDashboardFitState(fitStateKey);
-            return {
-              ...scoped,
-              didAutoFit: true,
-              handledFitRequestVersion: fitRequestVersion,
-            };
-          });
-        }
-      }
-    };
-
-    void fitToDataBounds();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    containerSize.height,
-    containerSize.width,
-    didAutoFit,
-    executeSql,
-    fitRequestVersion,
-    fitStateKey,
-    fitToData,
-    fitToDataBoundsSource,
-    handledFitRequestVersion,
-  ]);
+  const {fitToData} = useDeckMapFitToBounds({
+    panelId: panel.id,
+    dashboard,
+    panel,
+    containerSize,
+    deckMapRef,
+  });
 
   const handleBrushEvent = useCallback(
     (info: DeckMapInteractionEvent) => {
@@ -714,44 +537,6 @@ function DeckMapDashboardRenderer({
     [datasetStates, mapConfig?.interaction, selection],
   );
 
-  const handleViewStateChange = useCallback(
-    ({
-      viewState: nextViewState,
-      interactionState,
-    }: {
-      viewState: any;
-      interactionState?: any;
-    }) => {
-      const hasUserInteraction = Boolean(
-        interactionState &&
-        ['isDragging', 'isPanning', 'isRotating', 'isZooming'].some((key) =>
-          Boolean(interactionState[key]),
-        ),
-      );
-      if (
-        fitToData &&
-        !didAutoFit &&
-        viewState === null &&
-        !hasUserInteraction
-      ) {
-        return;
-      }
-
-      setFitState((current) => {
-        const scoped =
-          current.key === fitStateKey
-            ? current
-            : createInitialDeckMapDashboardFitState(fitStateKey);
-        return {
-          ...scoped,
-          viewState: nextViewState,
-          didAutoFit: hasUserInteraction || scoped.didAutoFit || !fitToData,
-        };
-      });
-    },
-    [didAutoFit, fitStateKey, fitToData, viewState],
-  );
-
   const settingsContent = (
     <MapSettingsPanel
       dashboardId={dashboardId}
@@ -760,66 +545,118 @@ function DeckMapDashboardRenderer({
     />
   );
 
+  const datasetError = useMemo(() => {
+    for (const state of Object.values(datasetStates)) {
+      if (state.error) return state.error;
+    }
+    return undefined;
+  }, [datasetStates]);
+
+  const missingColumns = useMemo(
+    () => detectMissingColumns(mapConfig ?? undefined, datasetStates),
+    [mapConfig, datasetStates],
+  );
+
   const mapContent = !mapConfig ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Invalid map panel config.
     </div>
-  ) : issue ? (
-    <DeckMapRuntimeIssuePanel issue={issue} />
   ) : Object.entries(mapConfig.datasets).length === 0 ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Map panels require at least one dataset.
     </div>
   ) : (
-    <div ref={containerRef} className="relative h-full w-full">
+    <>
       {Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => (
         <DeckMapDashboardDatasetClient
           key={datasetId}
           dashboard={dashboard}
           dataset={dataset}
           datasetId={datasetId}
-          dataPolicy={dataPolicy}
+          fitToData={fitToData ?? undefined}
           panel={panel}
           onDatasetState={handleDatasetState}
           runtimeIssueContext={runtimeIssueContext}
           runtimeIssueReporter={runtimeIssueReporter}
           selectionName={selectionName}
+          maxRows={DEFAULT_DECK_MAP_MAX_DATA_POINTS}
         />
       ))}
-      {Object.entries(datasetStates)
-        .filter(([, state]) => state.error)
-        .map(([datasetId, state]) => (
-          <div
-            key={datasetId}
-            className="bg-background/90 text-destructive absolute inset-x-4 top-4 z-10 rounded-md border p-3 text-sm shadow"
-          >
-            Failed to load dataset &quot;{datasetId}&quot;:{' '}
-            {state.error?.message}
-          </div>
-        ))}
-      <DeckJsonMap
-        className="h-full w-full"
-        spec={mapConfig.spec}
-        datasets={
-          mapConfig
-            ? createDeckMapDashboardDatasets(mapConfig, datasetStates)
-            : {}
-        }
-        mapStyle={mapConfig.mapStyle}
-        mapProps={mapConfig.mapProps}
-        showLegends={mapConfig.showLegends}
-        deckProps={{
-          controller: true,
-          ...(viewState ? {viewState} : {}),
-          onViewStateChange: handleViewStateChange,
-          ...(mapConfig.interaction
-            ? (mapConfig.interaction.event ?? 'hover') === 'click'
-              ? {onClick: handleBrushEvent}
-              : {onHover: handleBrushEvent}
-            : {}),
-        }}
-      />
-    </div>
+      {issue ? (
+        <DeckMapRuntimeIssuePanel issue={issue} />
+      ) : datasetError ? (
+        <DeckMapRuntimeIssuePanel
+          issue={{
+            kind: 'sql-error',
+            panelId: panel.id,
+            chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+            message: datasetError.message,
+            recoverable: true,
+          }}
+        />
+      ) : (
+        <div ref={containerRef} className="relative h-full w-full">
+          {Object.values(datasetStates).some((s) => s.isSampled) &&
+            !sampledDismissed && (
+              <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
+                <span>
+                  Data sampled to{' '}
+                  {DEFAULT_DECK_MAP_MAX_DATA_POINTS.toLocaleString()} rows
+                </span>
+                <button
+                  className="text-muted-foreground/60 hover:text-foreground -mr-0.5 ml-0.5"
+                  onClick={() => setSampledDismissed(true)}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          {missingColumns.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={`absolute left-2 z-10 flex h-5 w-5 items-center justify-center ${
+                    Object.values(datasetStates).some((s) => s.isSampled) &&
+                    !sampledDismissed
+                      ? 'top-9'
+                      : 'top-2'
+                  }`}
+                  onClick={() => handleSettingsOpenChange(true)}
+                >
+                  <AlertTriangleIcon className="h-4 w-4 text-amber-500 drop-shadow-sm" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p className="text-xs font-medium">Missing columns:</p>
+                <p className="text-xs">{missingColumns.join(', ')}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <DeckJsonMap
+            ref={deckMapRef}
+            className="h-full w-full"
+            spec={mapConfig.spec}
+            datasets={
+              mapConfig
+                ? createDeckMapDashboardDatasets(mapConfig, datasetStates)
+                : {}
+            }
+            mapStyle={mapConfig.mapStyle}
+            mapProps={mapConfig.mapProps}
+            showLegends={mapConfig.showLegends}
+            onRenderingError={handleRenderingError}
+            deckProps={{
+              controller: true,
+              ...(mapConfig.interaction
+                ? (mapConfig.interaction.event ?? 'hover') === 'click'
+                  ? {onClick: handleBrushEvent}
+                  : {onHover: handleBrushEvent}
+                : {}),
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 
   return (

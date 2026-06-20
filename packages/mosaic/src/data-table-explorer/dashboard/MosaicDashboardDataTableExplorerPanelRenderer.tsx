@@ -1,4 +1,4 @@
-import {SpinnerPane} from '@sqlrooms/ui';
+import {ScrollArea, ScrollBar, SpinnerPane} from '@sqlrooms/ui';
 import {TablePropertiesIcon} from 'lucide-react';
 import {DataTableExplorer} from '../DataTableExplorer';
 import type {DataTableExplorerPanel} from '../../dashboard/dashboard-types';
@@ -61,12 +61,13 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
   return (
     <DataTableExplorer.Root explorer={explorer}>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-auto">
+        <ScrollArea className="min-h-0 flex-1">
           <DataTableExplorer.Table>
             <DataTableExplorer.Header />
             <DataTableExplorer.Rows />
           </DataTableExplorer.Table>
-        </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
         <DataTableExplorer.StatusBar />
       </div>
     </DataTableExplorer.Root>

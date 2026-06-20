@@ -12,23 +12,24 @@ import {
   categoricalSchemes,
   continuousDivergingSchemes,
   continuousSequentialSchemes,
+  continuousSequentialInterpolators,
+  parseColorString,
 } from '@sqlrooms/color-scales';
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
 import {
   Button,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Slider,
   Switch,
 } from '@sqlrooms/ui';
 import {XIcon} from 'lucide-react';
 import {LatitudeSelector} from './LatitudeSelector';
 import {LongitudeSelector} from './LongitudeSelector';
 import type {DeckMapDashboardPanelConfig} from './dashboardConfig';
-import {DEFAULT_DECK_MAP_MAX_DATA_POINTS} from './dashboardConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -40,10 +41,77 @@ import {
   getDeckMapLayerRecords,
   setDeckMapLayerColorScale,
   setDeckMapLayerGeometryColumn,
+  setDeckMapLayerHexagonColumn,
+  setDeckMapLayerArcColumns,
   setDeckMapLayerType,
+  updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
   usesGeometryColumnSetting,
+  usesH3ColumnSetting,
+  usesArcColumnSetting,
+  usesRadiusSetting,
+  usesColumnRadiusSetting,
+  usesTripsSettings,
+  usesExtrusionSettings,
 } from './mapLayerConfigUtils';
+
+/**
+ * Extracts the primary table name from a simple SQL query.
+ * Handles patterns like: `SELECT ... FROM tableName ...`
+ * and `SELECT ... FROM "tableName" ...`
+ */
+function extractTableFromSqlQuery(
+  sqlQuery: string | undefined,
+): string | undefined {
+  if (!sqlQuery) return undefined;
+  const match = sqlQuery.match(/\bFROM\s+(?:"([^"]+)"|(\w[\w.]*))/i);
+  return match?.[1] ?? match?.[2];
+}
+
+const HEATMAP_COLOR_STEPS = 6;
+
+function schemeToColorRange(
+  scheme: string,
+): Array<[number, number, number, number]> {
+  const interpolator =
+    continuousSequentialInterpolators[
+      scheme as keyof typeof continuousSequentialInterpolators
+    ];
+  if (!interpolator) {
+    return continuousSequentialInterpolators.Viridis
+      ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
+          parseColorString(
+            continuousSequentialInterpolators.Viridis(
+              i / (HEATMAP_COLOR_STEPS - 1),
+            ),
+          ),
+        )
+      : [];
+  }
+  return Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
+    parseColorString(interpolator(i / (HEATMAP_COLOR_STEPS - 1))),
+  );
+}
+
+function detectHeatmapScheme(colorRange: unknown): string {
+  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'Viridis';
+  for (const scheme of continuousSequentialSchemes) {
+    const sampled = schemeToColorRange(scheme);
+    if (sampled.length === colorRange.length) {
+      const matches = sampled.every((color, idx) => {
+        const actual = colorRange[idx];
+        if (!Array.isArray(actual)) return false;
+        return (
+          Math.abs(color[0] - actual[0]) < 2 &&
+          Math.abs(color[1] - actual[1]) < 2 &&
+          Math.abs(color[2] - actual[2]) < 2
+        );
+      });
+      if (matches) return scheme;
+    }
+  }
+  return 'Viridis';
+}
 
 interface MapSettingsPanelProps {
   dashboardId: string;
@@ -73,12 +141,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const [colorAccessor, setColorAccessor] =
     useState<DeckMapLayerColorAccessor>('getFillColor');
 
-  const tableName = useStoreWithMosaicDashboard(
+  const dashboardSelectedTable = useStoreWithMosaicDashboard(
     (state) =>
       state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
   );
-
-  const dataTable = useDataTable(tableName);
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -92,9 +158,28 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const activeLayerDataset = activeLayerDatasetId
     ? mapConfig.datasets?.[activeLayerDatasetId]
     : undefined;
+
+  // Resolve the table for column listing: prefer the dashboard's selected
+  // table (which represents the user's active choice), falling back to the
+  // dataset's explicit source table when no dashboard table is selected.
+  const fallbackTableName =
+    activeLayerDataset?.source?.tableName ||
+    extractTableFromSqlQuery(activeLayerDataset?.source?.sqlQuery);
+  const primaryTable = useDataTable(dashboardSelectedTable);
+  const fallbackTable = useDataTable(fallbackTableName);
+  const dataTable = primaryTable ?? fallbackTable;
+
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
   );
+  const showH3ColumnSetting = usesH3ColumnSetting(activeLayer?.['@@type']);
+  const showArcColumnSetting = usesArcColumnSetting(activeLayer?.['@@type']);
+  const showRadiusSetting = usesRadiusSetting(activeLayer?.['@@type']);
+  const showColumnRadiusSetting = usesColumnRadiusSetting(
+    activeLayer?.['@@type'],
+  );
+  const showTripsSettings = usesTripsSettings(activeLayer?.['@@type']);
+  const showExtrusionSettings = usesExtrusionSettings(activeLayer?.['@@type']);
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -106,9 +191,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     : undefined;
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
+  const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const firstColumnName = dataTable?.columns[0]?.name;
-  const maxRows =
-    mapConfig.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
@@ -188,6 +272,25 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Field>
             )}
 
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium">Visible</span>
+              <Switch
+                checked={activeLayer?.visible !== false}
+                onCheckedChange={(checked) =>
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        visible: checked,
+                      }),
+                    ),
+                  )
+                }
+              />
+            </div>
+
             <Field label="Layer type">
               <Select
                 value={
@@ -214,85 +317,136 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Select>
             </Field>
 
-            <div className="flex flex-col gap-2 rounded-md border p-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-medium">Color scale</span>
-                <Switch
-                  checked={Boolean(colorScale)}
-                  onCheckedChange={(checked) => {
-                    if (!effectiveColorAccessor) return;
-                    if (checked) {
-                      updateColorScale({});
-                      return;
-                    }
-                    applyConfig(
-                      clearDeckMapLayerColorScale(
-                        mapConfig,
-                        activeLayerIndex,
-                        effectiveColorAccessor,
+            {showTripsSettings && (
+              <>
+                <Field
+                  label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 3}px`}
+                >
+                  <Slider
+                    min={1}
+                    max={20}
+                    step={1}
+                    value={[
+                      (activeLayer?.widthMinPixels as number | undefined) ?? 3,
+                    ]}
+                    onValueChange={(values) => {
+                      const value = values[0] ?? 3;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            widthMinPixels: value,
+                          }),
+                        ),
+                      );
+                    }}
+                  />
+                </Field>
+                <Field
+                  label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
+                >
+                  <Slider
+                    min={5}
+                    max={100}
+                    step={5}
+                    value={[
+                      Math.round(
+                        ((activeLayer?._trailLengthFactor as
+                          | number
+                          | undefined) ?? 0.4) * 100,
                       ),
-                    );
-                  }}
-                  disabled={!firstColumnName || !effectiveColorAccessor}
-                />
-              </div>
+                    ]}
+                    onValueChange={(values) => {
+                      const value = (values[0] ?? 40) / 100;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            _trailLengthFactor: value,
+                          }),
+                        ),
+                      );
+                    }}
+                  />
+                </Field>
+              </>
+            )}
 
-              {effectiveColorAccessor && (
-                <Field label="Color property">
+            {isHeatmapLayer ? (
+              <div className="flex flex-col gap-2 rounded-md border p-2">
+                <span className="text-xs font-medium">
+                  Color scheme (density)
+                </span>
+                <Field label="Scheme">
                   <Select
-                    value={effectiveColorAccessor}
+                    value={detectHeatmapScheme(activeLayer?.colorRange)}
                     onValueChange={(value) =>
-                      setColorAccessor(value as DeckMapLayerColorAccessor)
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            colorRange: schemeToColorRange(value),
+                          }),
+                        ),
+                      )
                     }
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {colorAccessorOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
+                      {continuousSequentialSchemes.map((scheme) => (
+                        <SelectItem key={scheme} value={scheme}>
+                          {scheme}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </Field>
-              )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-md border p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium">Color scale</span>
+                  <Switch
+                    checked={Boolean(colorScale)}
+                    onCheckedChange={(checked) => {
+                      if (!effectiveColorAccessor) return;
+                      if (checked) {
+                        updateColorScale({});
+                        return;
+                      }
+                      applyConfig(
+                        clearDeckMapLayerColorScale(
+                          mapConfig,
+                          activeLayerIndex,
+                          effectiveColorAccessor,
+                        ),
+                      );
+                    }}
+                    disabled={!firstColumnName || !effectiveColorAccessor}
+                  />
+                </div>
 
-              {colorScale && dataTable && (
-                <ColumnsProvider columns={dataTable.columns}>
-                  <Field label="Color field" required>
-                    {colorScaleType === 'categorical' ? (
-                      <ColumnSelector.Categorical
-                        value={colorScale.field}
-                        onChange={(field) => updateColorScale({field})}
-                      />
-                    ) : (
-                      <ColumnSelector.Quantitative
-                        value={colorScale.field}
-                        onChange={(field) => updateColorScale({field})}
-                      />
-                    )}
-                  </Field>
-                </ColumnsProvider>
-              )}
-
-              {colorScale && (
-                <>
-                  <Field label="Scale type">
+                {effectiveColorAccessor && (
+                  <Field label="Color property">
                     <Select
-                      value={colorScaleType}
+                      value={effectiveColorAccessor}
                       onValueChange={(value) =>
-                        updateColorScale({
-                          type: value as ColorScaleConfig['type'],
-                        })
+                        setColorAccessor(value as DeckMapLayerColorAccessor)
                       }
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {DECK_MAP_COLOR_SCALE_TYPE_OPTIONS.map((option) => (
+                        {colorAccessorOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -300,30 +454,167 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       </SelectContent>
                     </Select>
                   </Field>
+                )}
 
-                  <Field label="Scheme">
-                    <Select
-                      value={colorScale.scheme}
-                      onValueChange={(value) =>
-                        updateColorScale({scheme: value as ColorScaleScheme})
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {schemeOptions.map((scheme) => (
-                          <SelectItem key={scheme} value={scheme}>
-                            {scheme}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                </>
-              )}
-            </div>
+                {colorScale && dataTable && (
+                  <ColumnsProvider columns={dataTable.columns}>
+                    <Field label="Color field" required>
+                      {colorScaleType === 'categorical' ? (
+                        <ColumnSelector.Categorical
+                          value={colorScale.field}
+                          onChange={(field) => updateColorScale({field})}
+                        />
+                      ) : (
+                        <ColumnSelector.Quantitative
+                          value={colorScale.field}
+                          onChange={(field) => updateColorScale({field})}
+                        />
+                      )}
+                    </Field>
+                  </ColumnsProvider>
+                )}
+
+                {colorScale && (
+                  <>
+                    <Field label="Scale type">
+                      <Select
+                        value={colorScaleType}
+                        onValueChange={(value) =>
+                          updateColorScale({
+                            type: value as ColorScaleConfig['type'],
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DECK_MAP_COLOR_SCALE_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field label="Scheme">
+                      <Select
+                        value={colorScale.scheme}
+                        onValueChange={(value) =>
+                          updateColorScale({scheme: value as ColorScaleScheme})
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {schemeOptions.map((scheme) => (
+                            <SelectItem key={scheme} value={scheme}>
+                              {scheme}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </>
+                )}
+              </div>
+            )}
           </div>
+        )}
+
+        {isHeatmapLayer && (
+          <Field
+            label={`Radius: ${(activeLayer?.radiusPixels as number | undefined) ?? 30}px`}
+          >
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={100}
+                step={1}
+                value={[
+                  (activeLayer?.radiusPixels as number | undefined) ?? 30,
+                ]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 30;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        radiusPixels: value,
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </Field>
+        )}
+
+        {showRadiusSetting && (
+          <Field
+            label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
+          >
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={50}
+                step={1}
+                value={[
+                  (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
+                ]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 2;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        radiusMinPixels: value,
+                        radiusMaxPixels: Math.max(
+                          value,
+                          (layer.radiusMaxPixels as number | undefined) ??
+                            value,
+                        ),
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </Field>
+        )}
+
+        {showColumnRadiusSetting && (
+          <Field
+            label={`Column radius: ${(activeLayer?.radius as number | undefined) ?? 50}m`}
+          >
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={10000}
+                step={1}
+                value={[(activeLayer?.radius as number | undefined) ?? 50]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 50;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        radius: value,
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
+          </Field>
         )}
 
         {dataTable && showGeometryColumnSetting && (
@@ -346,45 +637,228 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
-        {dataTable && !showGeometryColumnSetting && (
+        {dataTable && showH3ColumnSetting && (
           <ColumnsProvider columns={dataTable.columns}>
-            <Field label="Latitude column" required>
-              <LatitudeSelector
-                dashboardId={dashboardId}
-                panel={panel}
-                currentTable={dataTable}
-              />
-            </Field>
-            <Field label="Longitude column" required>
-              <LongitudeSelector
-                dashboardId={dashboardId}
-                panel={panel}
-                currentTable={dataTable}
+            <Field label="H3 column" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.hexagonColumn as string | undefined
+                }
+                onChange={(hexagonColumn) =>
+                  applyConfig(
+                    setDeckMapLayerHexagonColumn(
+                      mapConfig,
+                      activeLayerIndex,
+                      hexagonColumn,
+                    ),
+                  )
+                }
+                placeholder="Select H3 index column..."
               />
             </Field>
           </ColumnsProvider>
         )}
 
-        <Field label="Max rows">
-          <Input
-            type="number"
-            min={1}
-            value={maxRows}
-            className="no-spinner"
-            onChange={(event) => {
-              const parsed = Number.parseInt(event.target.value, 10);
-              if (!Number.isFinite(parsed) || parsed < 1) return;
-              applyConfig({
-                ...mapConfig,
-                dataPolicy: {
-                  ...mapConfig.dataPolicy,
-                  maxRows: parsed,
-                },
-              });
-            }}
-            placeholder={String(DEFAULT_DECK_MAP_MAX_DATA_POINTS)}
-          />
-        </Field>
+        {dataTable && showArcColumnSetting && (
+          <ColumnsProvider columns={dataTable.columns}>
+            <Field label="Source latitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.sourceLatitudeColumn as string | undefined
+                }
+                onChange={(sourceLatitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      sourceLatitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select source latitude..."
+              />
+            </Field>
+            <Field label="Source longitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.sourceLongitudeColumn as string | undefined
+                }
+                onChange={(sourceLongitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      sourceLongitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select source longitude..."
+              />
+            </Field>
+            <Field label="Target latitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.targetLatitudeColumn as string | undefined
+                }
+                onChange={(targetLatitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      targetLatitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select target latitude..."
+              />
+            </Field>
+            <Field label="Target longitude" required>
+              <ColumnSelector
+                value={
+                  (activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.targetLongitudeColumn as string | undefined
+                }
+                onChange={(targetLongitudeColumn) =>
+                  applyConfig(
+                    setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
+                      targetLongitudeColumn,
+                    }),
+                  )
+                }
+                placeholder="Select target longitude..."
+              />
+            </Field>
+          </ColumnsProvider>
+        )}
+
+        {showArcColumnSetting && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">Flat lines</span>
+            <Switch
+              checked={activeLayer?.getHeight === 0}
+              onCheckedChange={(checked) =>
+                applyConfig(
+                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
+                    ...layer,
+                    getHeight: checked ? 0 : undefined,
+                  })),
+                )
+              }
+            />
+          </div>
+        )}
+
+        {showArcColumnSetting && (
+          <Field
+            label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 1}px`}
+          >
+            <Slider
+              min={1}
+              max={20}
+              step={1}
+              value={[(activeLayer?.widthMinPixels as number | undefined) ?? 1]}
+              onValueChange={(values) => {
+                const value = values[0] ?? 1;
+                applyConfig(
+                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
+                    ...layer,
+                    widthMinPixels: value,
+                  })),
+                );
+              }}
+            />
+          </Field>
+        )}
+
+        {showExtrusionSettings && (
+          <div className="flex flex-col gap-2 rounded-md border p-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium">Extrusion</span>
+              <Switch
+                checked={Boolean(activeLayer?.extruded)}
+                onCheckedChange={(checked) =>
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        extruded: checked,
+                      }),
+                    ),
+                  )
+                }
+              />
+            </div>
+
+            {Boolean(activeLayer?.extruded) && dataTable && (
+              <ColumnsProvider columns={dataTable.columns}>
+                <Field label="Elevation column">
+                  <ColumnSelector.Numeric
+                    value={(() => {
+                      const elev = activeLayer?.getElevation;
+                      if (
+                        elev &&
+                        typeof elev === 'object' &&
+                        '@@function' in (elev as object)
+                      ) {
+                        return (elev as Record<string, unknown>).field as
+                          | string
+                          | undefined;
+                      }
+                      if (typeof elev === 'string' && elev.startsWith('@@=')) {
+                        return elev.slice(3);
+                      }
+                      return undefined;
+                    })()}
+                    onChange={(elevationColumn) =>
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            getElevation: elevationColumn
+                              ? {
+                                  '@@function': 'scale',
+                                  field: elevationColumn,
+                                  type: 'linear',
+                                  domain: 'auto',
+                                  range: [0, 200],
+                                }
+                              : undefined,
+                            elevationScale: layer.elevationScale ?? 1,
+                          }),
+                        ),
+                      )
+                    }
+                    placeholder="Select elevation column..."
+                  />
+                </Field>
+              </ColumnsProvider>
+            )}
+          </div>
+        )}
+
+        {dataTable &&
+          !showGeometryColumnSetting &&
+          !showH3ColumnSetting &&
+          !showArcColumnSetting && (
+            <ColumnsProvider columns={dataTable.columns}>
+              <Field label="Latitude column" required>
+                <LatitudeSelector
+                  dashboardId={dashboardId}
+                  panel={panel}
+                  currentTable={dataTable}
+                />
+              </Field>
+              <Field label="Longitude column" required>
+                <LongitudeSelector
+                  dashboardId={dashboardId}
+                  panel={panel}
+                  currentTable={dataTable}
+                />
+              </Field>
+            </ColumnsProvider>
+          )}
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
   value: DeckAutoLayerType | 'GeoArrowSolidPolygonLayer';
   label: string;
 }> = [
-  {value: 'GeoArrowScatterplotLayer', label: 'Scatterplot'},
+  {value: 'GeoArrowScatterplotLayer', label: 'Point'},
   {value: 'GeoArrowHeatmapLayer', label: 'Heatmap'},
   {value: 'GeoArrowColumnLayer', label: 'Column'},
   {value: 'GeoArrowPathLayer', label: 'Path'},
@@ -58,12 +58,45 @@ export const DECK_MAP_COLOR_SCALE_TYPE_OPTIONS: ReadonlyArray<{
 const GEOMETRY_COLUMN_LAYER_TYPES = new Set([
   'geoarrowpolygonlayer',
   'geoarrowsolidpolygonlayer',
+  'geoarrowpathlayer',
+  'geoarrowtripslayer',
   'geojsonlayer',
   'polygonlayer',
   'solidpolygonlayer',
   'geojson',
   'polygon',
   'solid polygon',
+]);
+
+const H3_LAYER_TYPES = new Set(['geoarrowh3hexagonlayer', 'h3hexagonlayer']);
+
+const ARC_LAYER_TYPES = new Set(['geoarrowarclayer', 'arclayer']);
+
+const TRIPS_LAYER_TYPES = new Set([
+  'geoarrowtripslayer',
+  'decktripslayer',
+  'tripslayer',
+]);
+
+const RADIUS_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'scatterplotlayer',
+]);
+
+const COLUMN_RADIUS_LAYER_TYPES = new Set([
+  'geoarrowcolumnlayer',
+  'columnlayer',
+]);
+
+const EXTRUDABLE_LAYER_TYPES = new Set([
+  'geoarrowh3hexagonlayer',
+  'h3hexagonlayer',
+  'geoarrowcolumnlayer',
+  'columnlayer',
+  'geoarrowpolygonlayer',
+  'polygonlayer',
+  'geoarrowsolidpolygonlayer',
+  'solidpolygonlayer',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -95,6 +128,47 @@ export function usesGeometryColumnSetting(layerType: unknown) {
   return (
     typeof layerType === 'string' &&
     GEOMETRY_COLUMN_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesH3ColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' && H3_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesArcColumnSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    ARC_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesRadiusSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesColumnRadiusSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    COLUMN_RADIUS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesTripsSettings(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    TRIPS_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+export function usesExtrusionSettings(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    EXTRUDABLE_LAYER_TYPES.has(layerType.toLowerCase())
   );
 }
 
@@ -155,10 +229,22 @@ export function setDeckMapLayerType(
   layerIndex: number,
   layerType: string,
 ): DeckMapDashboardPanelConfig {
-  return updateDeckMapLayer(config, layerIndex, (layer) => ({
-    ...layer,
-    '@@type': layerType,
-  }));
+  return updateDeckMapLayer(config, layerIndex, (layer) => {
+    const nextLayer: DeckMapLayerRecord = {
+      ...layer,
+      '@@type': layerType,
+    };
+    const lt = layerType.toLowerCase();
+    if (
+      lt === 'geoarrowcolumnlayer' ||
+      lt === 'columnlayer' ||
+      lt === 'deckcolumnlayer'
+    ) {
+      nextLayer.radius ??= 3;
+      nextLayer.elevationScale ??= 1;
+    }
+    return nextLayer;
+  });
 }
 
 export function setDeckMapLayerGeometryColumn(
@@ -182,6 +268,42 @@ export function setDeckMapLayerGeometryColumn(
       },
     },
   };
+}
+
+export function setDeckMapLayerHexagonColumn(
+  config: DeckMapDashboardPanelConfig,
+  layerIndex: number,
+  hexagonColumn: string,
+): DeckMapDashboardPanelConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    getHexagon: `@@=${hexagonColumn}`,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      hexagonColumn,
+    },
+  }));
+}
+
+export function setDeckMapLayerArcColumns(
+  config: DeckMapDashboardPanelConfig,
+  layerIndex: number,
+  columns: {
+    sourceGeometryColumn?: string;
+    targetGeometryColumn?: string;
+    sourceLatitudeColumn?: string;
+    sourceLongitudeColumn?: string;
+    targetLatitudeColumn?: string;
+    targetLongitudeColumn?: string;
+  },
+): DeckMapDashboardPanelConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      ...columns,
+    },
+  }));
 }
 
 export function getDeckMapLayerColorScale(

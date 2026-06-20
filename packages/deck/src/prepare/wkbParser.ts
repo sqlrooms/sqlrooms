@@ -1,4 +1,5 @@
 export const WKB_POINT = 1;
+export const WKB_LINESTRING = 2;
 export const WKB_POLYGON = 3;
 export const WKB_MULTIPOLYGON = 6;
 
@@ -84,6 +85,32 @@ export function readWKBPointXY(header: WKBHeader): [number, number] | null {
       header.isLE,
     ),
   ];
+}
+
+/**
+ * Reads a WKB LineString and returns an array of [x, y] coordinate pairs.
+ */
+export function readWKBLineStringXY(
+  buf: ArrayBuffer,
+  header: WKBHeader,
+): Array<[number, number]> | null {
+  if (header.geomType !== WKB_LINESTRING) return null;
+
+  const {view, isLE, offset: headerOffset, coordBytes} = header;
+  let offset = headerOffset;
+  if (!hasBytes(buf, offset, WKB_UINT32_BYTES)) return null;
+  const numPoints = view.getUint32(offset, isLE);
+  offset += WKB_UINT32_BYTES;
+
+  const coords: Array<[number, number]> = [];
+  for (let i = 0; i < numPoints; i++) {
+    if (!hasBytes(buf, offset, coordBytes)) return null;
+    const x = view.getFloat64(offset, isLE);
+    const y = view.getFloat64(offset + Y_COORDINATE_OFFSET_BYTES, isLE);
+    coords.push([x, y]);
+    offset += coordBytes;
+  }
+  return coords;
 }
 
 export function visitWKBPolygonCoordinates(

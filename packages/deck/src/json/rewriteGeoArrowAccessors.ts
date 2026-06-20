@@ -57,6 +57,13 @@ export function rewriteGeoArrowAccessors(options: {
         nextProps[propName] = vector;
         continue;
       }
+      if (!vector) {
+        console.warn(
+          `Column "${expression.trim()}" not found in dataset for accessor "${propName}". Skipping accessor.`,
+        );
+        delete nextProps[propName];
+        continue;
+      }
     }
 
     // TODO(geoarrow-upgrade): This fallback exists because 0.3.x GeoArrow layers do
