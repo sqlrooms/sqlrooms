@@ -1,4 +1,5 @@
 import {spawn, spawnSync} from 'node:child_process';
+import net from 'node:net';
 import path from 'node:path';
 
 /**
@@ -81,6 +82,65 @@ const childEnv = {
   [pathKey]: childPath,
   SQLROOMS_CLI_DEV_ARGS: JSON.stringify(cliArgs),
 };
+
+function readOptionValue(args, name) {
+  const prefix = `${name}=`;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === name) return args[index + 1] ?? null;
+    if (arg.startsWith(prefix)) return arg.slice(prefix.length);
+  }
+  return null;
+}
+
+function hasOption(args, name) {
+  return readOptionValue(args, name) !== null;
+}
+
+function publicHost(host) {
+  return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
+}
+
+async function isPortAvailable(host, port) {
+  return await new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, host);
+  });
+}
+
+async function findAvailablePort(startPort, host, reservedPorts = new Set()) {
+  let port = startPort;
+  while (port <= 65535) {
+    if (!reservedPorts.has(port) && (await isPortAvailable(host, port))) {
+      return port;
+    }
+    console.log(`Port ${port} is in use, trying another one...`);
+    port += 1;
+  }
+  throw new Error(`No available port found starting from ${startPort}.`);
+}
+
+function parsePortOption(args, name) {
+  const value = readOptionValue(args, name);
+  if (value === null) return null;
+  const port = Number.parseInt(value, 10);
+  return Number.isFinite(port) ? port : null;
+}
+
+async function getCliDevPorts(args) {
+  const host = readOptionValue(args, '--host') ?? '127.0.0.1';
+  const proxyHost = publicHost(host);
+  const explicitApiPort = parsePortOption(args, '--port');
+  const apiPort =
+    explicitApiPort ??
+    (await findAvailablePort(4173, host, new Set([4174])));
+  const uiPort = await findAvailablePort(4174, '0.0.0.0', new Set([apiPort]));
+  return {apiPort, proxyHost, uiPort};
+}
 
 function turboRunArgs(task, filters, extraArgs = []) {
   return [
@@ -168,7 +228,7 @@ if (target !== 'cli') {
   }
 } else if (isDryRun) {
   console.log(
-    '(cd apps/sqlrooms-cli-ui && ./node_modules/.bin/vite --host --port 4174)',
+    '(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://localhost:4173 ./node_modules/.bin/vite --host --port 4174)',
   );
   console.log(
     `(cd python/sqlrooms-cli && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
@@ -200,12 +260,17 @@ function stopChildren(signal = 'SIGTERM') {
 function startProcess(
   label,
   args,
-  {allowCleanExit = false, command = pnpmCommand, cwd = process.cwd()} = {},
+  {
+    allowCleanExit = false,
+    command = pnpmCommand,
+    cwd = process.cwd(),
+    env = {},
+  } = {},
 ) {
   const child = spawn(command, args, {
     cwd,
     stdio: 'inherit',
-    env: childEnv,
+    env: {...childEnv, ...env},
     detached: process.platform !== 'win32',
     shell: process.platform === 'win32',
   });
@@ -255,13 +320,23 @@ process.on('SIGTERM', () => {
 });
 
 if (target === 'cli') {
-  startProcess('sqlrooms CLI UI dev server', ['--host', '--port', '4174'], {
+  const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
+  const apiPortArgs = hasOption(cliArgs, '--port')
+    ? cliArgs
+    : ['--port', String(apiPort), ...cliArgs];
+  startProcess('sqlrooms CLI UI dev server', ['--host', '--port', String(uiPort)], {
     command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
     cwd: path.resolve('apps/sqlrooms-cli-ui'),
+    env: {
+      SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+    },
   });
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,
     cwd: path.resolve('python/sqlrooms-cli'),
+    env: {
+      SQLROOMS_CLI_DEV_ARGS: JSON.stringify(apiPortArgs),
+    },
   });
 } else {
   startProcess(

@@ -189,7 +189,9 @@ pnpm dev cli
 ```
 
 This starts the Python API server on `http://127.0.0.1:4173` with `--no-ui`
-and the Vite UI on `http://localhost:4174`.
+and the Vite UI on `http://localhost:4174`. If those ports are busy, the dev
+script selects the next free API and UI ports and points the Vite proxy at the
+selected API port.
 
 3. Run the Python API server on its own (optional):
 

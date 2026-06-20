@@ -18,16 +18,14 @@ pnpm dev cli
 
 This starts:
 
-- the Python API server on `http://127.0.0.1:4173` without serving static UI
-- the Vite UI on `http://localhost:4174` (proxying `/api` and `/config.json` to 4173)
+- the Python API server on `http://127.0.0.1:4173` without serving static UI, or the next free port
+- the Vite UI on `http://localhost:4174`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
 
-If you hit `address already in use`, pass different ports to the Python server:
+If you want fixed ports, pass them to the Python server:
 
 ```bash
 pnpm dev cli -- --port 4176 --ws-port 4002
 ```
-
-Then also update the Vite proxy target in `vite.config.ts` (or run Vite with a different proxy setup).
 
 ## Dev mode (separate terminals)
 
