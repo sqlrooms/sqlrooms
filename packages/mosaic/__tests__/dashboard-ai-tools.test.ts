@@ -126,6 +126,91 @@ describe('createDashboardAiTools', () => {
       },
     });
   });
+
+  it('returns an error when panelId references a missing panel', async () => {
+    const updatePanel = jest.fn();
+    const dashboardAdapter: DashboardAiAdapter = {
+      getPanel: () => undefined,
+      setSelectedTable: () => {},
+      addPanel: () => 'new-panel',
+      updatePanel,
+      removePanel: () => {},
+    };
+
+    const databaseAdapter: DatabaseAiAdapter = {
+      getTables: () => [],
+      findTable: () =>
+        ({
+          tableName: 'earthquakes',
+          columns: [{name: 'depth', type: 'DOUBLE'}],
+        }) as any,
+    };
+
+    const tools = createDashboardAiTools({
+      databaseAdapter,
+      dashboardAdapter,
+    });
+
+    const result = await (
+      tools.create_dashboard_panel_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'missing-panel',
+      title: 'Depth histogram',
+      settings: {field: 'depth'},
+      reasoning: 'update a missing panel',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errorMessage).toContain('Panel "missing-panel" not found');
+    expect(updatePanel).not.toHaveBeenCalled();
+  });
+
+  it('returns an error when panelId references a non-chart panel', async () => {
+    const updatePanel = jest.fn();
+    const dashboardAdapter: DashboardAiAdapter = {
+      getPanel: () => ({
+        id: 'panel-1',
+        type: 'data-table-explorer',
+        title: 'Data Explorer',
+        config: {},
+      }),
+      setSelectedTable: () => {},
+      addPanel: () => 'new-panel',
+      updatePanel,
+      removePanel: () => {},
+    };
+
+    const databaseAdapter: DatabaseAiAdapter = {
+      getTables: () => [],
+      findTable: () =>
+        ({
+          tableName: 'earthquakes',
+          columns: [{name: 'depth', type: 'DOUBLE'}],
+        }) as any,
+    };
+
+    const tools = createDashboardAiTools({
+      databaseAdapter,
+      dashboardAdapter,
+    });
+
+    const result = await (
+      tools.create_dashboard_panel_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'panel-1',
+      title: 'Depth histogram',
+      settings: {field: 'depth'},
+      reasoning: 'update a non-chart panel',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errorMessage).toContain(
+      'Panel "panel-1" is not a chart panel',
+    );
+    expect(updatePanel).not.toHaveBeenCalled();
+  });
 });
 
 describe('createDashboardAgentTool', () => {

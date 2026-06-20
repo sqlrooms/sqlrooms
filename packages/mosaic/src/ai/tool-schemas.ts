@@ -1,5 +1,11 @@
 import {z} from 'zod';
 
+/**
+ * Base input schema shared by chart AI tools.
+ *
+ * Includes the source table, optional chart title, optional dashboard panel to
+ * update, and the model's rationale for the chart choice.
+ */
 export const BaseChartToolInput = z.object({
   tableName: z
     .string()
