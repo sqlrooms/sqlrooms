@@ -9,6 +9,10 @@ import type {UIMessage} from 'ai';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
 import {withRunContextTools} from '../src/chatTransport';
+import {
+  CHAT_REQUEST_ERROR_PART_TYPE,
+  getChatRequestErrorMessage,
+} from '../src/chatTurns';
 
 type TestStoreState = AiSliceState & {
   aiSettings: {
@@ -77,6 +81,44 @@ function createTestStore(options?: {
 }
 
 describe('AiSlice model selection', () => {
+  it('persists chat request errors when the failed prompt has not synced to the store yet', () => {
+    const store = createTestStore();
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    };
+
+    store
+      .getState()
+      .ai.onChatError('session-1', new TypeError('Failed to fetch'), [
+        userMessage,
+      ]);
+
+    const session = store.getState().ai.config.sessions[0];
+    const messages = session?.uiMessages as UIMessage[];
+    expect(messages).toHaveLength(2);
+    expect(messages[0]).toMatchObject({
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    });
+    expect(getChatRequestErrorMessage(messages[0])).toEqual({
+      error: 'Failed to fetch',
+    });
+    expect(messages[1]).toMatchObject({
+      role: 'assistant',
+      parts: [
+        {
+          type: CHAT_REQUEST_ERROR_PART_TYPE,
+          data: {error: 'Failed to fetch'},
+        },
+      ],
+    });
+    expect(session?.isRunning).toBe(false);
+    expect(session?.messagesRevision).toBe(1);
+  });
+
   it('does not keep a phantom current session when initialized with no sessions', () => {
     const store = createStore<AiSliceState>((set, get, store) =>
       createAiSlice({

@@ -1,4 +1,5 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import {createId} from '@paralleldrive/cuid2';
 import {
   setAiRunContextPrimaryItem,
   type AiRunContext,
@@ -21,7 +22,11 @@ import {
 } from 'ai';
 import {produce} from 'immer';
 import {TOOL_CALL_CANCELLED} from './constants';
-import {setChatRequestErrorMessage} from './chatTurns';
+import {
+  CHAT_REQUEST_ERROR_PART_TYPE,
+  createChatRequestErrorPart,
+  setChatRequestErrorMessage,
+} from './chatTurns';
 import type {
   AiSliceStateForTransport,
   AiToolExecutionContext,
@@ -554,6 +559,34 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
+function selectErrorSourceMessages({
+  sessionMessages,
+  fallbackMessages,
+}: {
+  sessionMessages: UIMessage[];
+  fallbackMessages?: UIMessage[];
+}): UIMessage[] {
+  if (!fallbackMessages || fallbackMessages.length <= sessionMessages.length) {
+    return sessionMessages;
+  }
+  return fallbackMessages;
+}
+
+function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {
+  return Boolean(
+    message?.role === 'assistant' &&
+    message.parts?.some((part) => part.type === CHAT_REQUEST_ERROR_PART_TYPE),
+  );
+}
+
+function createChatRequestErrorMessage(error: string): UIMessage {
+  return {
+    id: createId(),
+    role: 'assistant',
+    parts: [createChatRequestErrorPart({error})],
+  };
+}
+
 export function createChatHandlers({
   store,
 }: {
@@ -653,7 +686,11 @@ export function createChatHandlers({
         throw err;
       }
     },
-    onChatError: (sessionId: string, error: unknown) => {
+    onChatError: (
+      sessionId: string,
+      error: unknown,
+      fallbackMessages?: UIMessage[],
+    ) => {
       try {
         consumeSessionTokenUsage(sessionId);
         let errMsg = getErrorMessageForDisplay(error);
@@ -681,21 +718,28 @@ export function createChatHandlers({
             if (targetSession) {
               const existingMessages = (targetSession.uiMessages ||
                 []) as UIMessage[];
-              const completedMessages =
-                fixIncompleteToolCalls(existingMessages);
+              const sourceMessages = selectErrorSourceMessages({
+                sessionMessages: existingMessages,
+                fallbackMessages,
+              });
+              const completedMessages = fixIncompleteToolCalls(sourceMessages);
               writeToolTimingsToMetadata(completedMessages, toolTimings);
-              targetSession.uiMessages =
-                completedMessages as ChatSessionSchema['uiMessages'];
-              writeAgentDebugStateToSession(targetSession, currentState);
 
-              const uiMessages = targetSession.uiMessages as UIMessage[];
-              const lastUserMessage = uiMessages
+              const lastUserMessage = completedMessages
                 .filter((msg) => msg.role === 'user')
                 .slice(-1)[0];
 
               if (lastUserMessage) {
                 setChatRequestErrorMessage(lastUserMessage, {error: errMsg});
               }
+
+              if (!hasChatRequestErrorPart(completedMessages.at(-1))) {
+                completedMessages.push(createChatRequestErrorMessage(errMsg));
+              }
+
+              targetSession.uiMessages =
+                completedMessages as ChatSessionSchema['uiMessages'];
+              writeAgentDebugStateToSession(targetSession, currentState);
             }
           }),
         );

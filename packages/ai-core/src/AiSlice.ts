@@ -219,7 +219,11 @@ export type AiSliceState = {
       messages: UIMessage[];
       isError?: boolean;
     }) => void;
-    onChatError: (sessionId: string, error: unknown) => void;
+    onChatError: (
+      sessionId: string,
+      error: unknown,
+      messages?: UIMessage[],
+    ) => void;
   };
 };
 

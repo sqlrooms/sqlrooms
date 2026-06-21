@@ -5,6 +5,13 @@ export type ChatRequestErrorMessage = {
   error: string;
 };
 
+export const CHAT_REQUEST_ERROR_PART_TYPE = 'data-sqlrooms-chat-error';
+
+export type ChatRequestErrorPart = {
+  type: typeof CHAT_REQUEST_ERROR_PART_TYPE;
+  data: ChatRequestErrorMessage;
+};
+
 export type ChatMessageMetadata = {
   sqlrooms?: {
     errorMessage?: ChatRequestErrorMessage;
@@ -58,6 +65,27 @@ export function setChatRequestErrorMessage(
       errorMessage,
     },
   };
+}
+
+export function createChatRequestErrorPart(
+  errorMessage: ChatRequestErrorMessage,
+): ChatRequestErrorPart {
+  return {
+    type: CHAT_REQUEST_ERROR_PART_TYPE,
+    data: errorMessage,
+  };
+}
+
+export function getChatRequestErrorPartMessage(
+  part: unknown,
+): ChatRequestErrorMessage | undefined {
+  if (!part || typeof part !== 'object') return undefined;
+  const record = part as {type?: unknown; data?: unknown};
+  if (record.type !== CHAT_REQUEST_ERROR_PART_TYPE) return undefined;
+  const data = record.data;
+  if (!data || typeof data !== 'object') return undefined;
+  const error = (data as {error?: unknown}).error;
+  return typeof error === 'string' ? {error} : undefined;
 }
 
 function isPartComplete(part: UIMessagePart): boolean {

@@ -110,6 +110,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);
+  const latestMessagesRef = useRef<UIMessage[]>(initialMessages);
 
   const {
     messages,
@@ -138,8 +139,10 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
       );
     },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
-    onError: (error) => onChatError?.(sessionId, error),
+    onError: (error) =>
+      onChatError?.(sessionId, error, latestMessagesRef.current),
   });
+  latestMessagesRef.current = messages as UIMessage[];
 
   // If user aborts mid-stream, stop the local chat stream immediately
   useEffect(() => {
