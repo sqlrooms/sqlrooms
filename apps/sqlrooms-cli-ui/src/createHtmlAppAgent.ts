@@ -164,19 +164,26 @@ function renameHtmlAppTitle(
     nextTitle: title,
   });
 
-  const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
-  const revision = store.getState().htmlApps.commitAppRevision(
-    input.appId,
-    {
-      title,
-      ...(renamedFiles ? {files: renamedFiles, diagnostics: []} : {}),
-    },
-    createHtmlAppRevisionMetadata(store, input, {
-      title,
-      isTitleOnly: true,
-      isInitialRevision: app.revisions.length === 0 && !seededBaselineRevision,
-    }),
-  );
+  const renamePatch = {
+    title,
+    ...(renamedFiles ? {files: renamedFiles, diagnostics: []} : {}),
+  };
+  let revision: HtmlAppRevision | undefined;
+  if (app.revisions.length === 0 && isDefaultHtmlAppScaffold(app)) {
+    store.getState().htmlApps.updateApp(input.appId, renamePatch);
+  } else {
+    const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
+    revision = store.getState().htmlApps.commitAppRevision(
+      input.appId,
+      renamePatch,
+      createHtmlAppRevisionMetadata(store, input, {
+        title,
+        isTitleOnly: true,
+        isInitialRevision:
+          app.revisions.length === 0 && !seededBaselineRevision,
+      }),
+    );
+  }
   const latestApp = store.getState().htmlApps.getApp(input.appId);
 
   return {
@@ -185,7 +192,7 @@ function renameHtmlAppTitle(
     title,
     filePaths: renamedFiles
       ? Object.keys(renamedFiles)
-      : Object.keys(app.files),
+      : Object.keys(latestApp?.files ?? app.files),
     diagnostics: latestApp?.diagnostics ?? app.diagnostics,
     diagnosticsSummary:
       'Title updated without regenerating app source or running diagnostics.',
