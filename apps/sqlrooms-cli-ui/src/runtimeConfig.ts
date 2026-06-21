@@ -117,11 +117,40 @@ async function fetchJson<T>(url: string): Promise<T | undefined> {
   }
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchJsonWithRetries<T>({
+  url,
+  attempts,
+  delayMs,
+}: {
+  url: string;
+  attempts: number;
+  delayMs: number;
+}): Promise<T | undefined> {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const result = await fetchJson<T>(url);
+    if (result) return result;
+    if (attempt < attempts) {
+      await delay(delayMs);
+    }
+  }
+  return undefined;
+}
+
 /**
  * Fetches `/api/config`, returning an empty runtime config if the request fails.
  */
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
-  return (await fetchJson<RuntimeConfig>('/api/config')) ?? {};
+  return (
+    (await fetchJsonWithRetries<RuntimeConfig>({
+      url: '/api/config',
+      attempts: 20,
+      delayMs: 250,
+    })) ?? {}
+  );
 }
 
 /**
