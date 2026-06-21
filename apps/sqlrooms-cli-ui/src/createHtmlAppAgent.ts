@@ -253,7 +253,6 @@ Use this after making the requested scoped edit to the existing files. Preserve 
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
-        ...resolvedHtmlAppIntentPatch(input),
         title: writeInput.title ?? input.title ?? app.title,
         dependencies: writeInput.dependencies ?? app.dependencies,
         maxRepairAttempts: input.maxRepairAttempts,
