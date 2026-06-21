@@ -135,8 +135,11 @@ type HtmlAppRevision = {
   parentRevisionId?: string;
   createdAt: number;
   title: string;
+  intent?: string;
   files: Record<string, string>;
   entryHtmlPath: string;
+  requestedCapabilities?: AppCapability[];
+  grantedCapabilities?: AppCapability[];
   dependencies: HtmlAppDependency[];
 };
 ```
