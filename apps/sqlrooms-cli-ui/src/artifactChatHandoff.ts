@@ -64,7 +64,7 @@ function getLastAssistantMessage(messages: UIMessage[]) {
 export function createArtifactChatHandoffController(
   store: StoreApi<RoomState>,
 ) {
-  let pendingHandoff: PendingArtifactChatHandoff | undefined;
+  const pendingHandoffs = new Map<string, PendingArtifactChatHandoff>();
 
   const commandMiddleware: RoomCommandMiddleware<RoomState> = async (
     command,
@@ -105,7 +105,7 @@ export function createArtifactChatHandoffController(
       return result;
     }
 
-    pendingHandoff = {
+    pendingHandoffs.set(sourceSessionId, {
       sourceSessionId,
       sourceArtifactId,
       target: {
@@ -114,7 +114,7 @@ export function createArtifactChatHandoffController(
         artifactType: targetArtifact.type,
       },
       commandId: command.id,
-    };
+    });
 
     return result;
   };
@@ -126,9 +126,9 @@ export function createArtifactChatHandoffController(
     sessionId: string;
     messages: UIMessage[];
   }) => {
-    const handoff = pendingHandoff;
-    if (!handoff || handoff.sourceSessionId !== sessionId) return;
-    pendingHandoff = undefined;
+    const handoff = pendingHandoffs.get(sessionId);
+    if (!handoff) return;
+    pendingHandoffs.delete(sessionId);
 
     const state = store.getState();
     const targetArtifact = state.artifacts.getArtifact(

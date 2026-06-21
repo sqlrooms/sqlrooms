@@ -55,6 +55,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
     "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
