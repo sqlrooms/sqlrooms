@@ -352,13 +352,36 @@ function boundOutput(output: PythonExecutionOutput): PythonExecutionOutput {
       text: 'Vega-Lite output exceeded the persisted output size limit.',
     };
   }
+  if (output.type === 'json') {
+    if (isJsonWithinLimit(output.value, DEFAULT_MAX_RICH_OUTPUT_BYTES)) {
+      return output;
+    }
+    return {
+      type: 'text',
+      name: output.name,
+      text: 'JSON output exceeded the persisted output size limit.',
+    };
+  }
   return output;
 }
 
 function truncate(value: string | undefined, maxBytes: number) {
   if (!value) return '';
-  if (new Blob([value]).size <= maxBytes) return value;
-  return value.slice(0, maxBytes) + '\n... truncated ...';
+  const encoder = new TextEncoder();
+  if (encoder.encode(value).byteLength <= maxBytes) return value;
+
+  const suffix = '\n... truncated ...';
+  const suffixBytes = encoder.encode(suffix).byteLength;
+  const maxContentBytes = Math.max(0, maxBytes - suffixBytes);
+  let result = '';
+  let resultBytes = 0;
+  for (const character of value) {
+    const characterBytes = encoder.encode(character).byteLength;
+    if (resultBytes + characterBytes > maxContentBytes) break;
+    result += character;
+    resultBytes += characterBytes;
+  }
+  return result + suffix;
 }
 
 function boundJson<T extends Record<string, unknown>>(
@@ -366,6 +389,10 @@ function boundJson<T extends Record<string, unknown>>(
   maxBytes: number,
 ) {
   const json = JSON.stringify(value);
-  if (new Blob([json]).size > maxBytes) return undefined;
+  if (new TextEncoder().encode(json).byteLength > maxBytes) return undefined;
   return value;
+}
+
+function isJsonWithinLimit(value: unknown, maxBytes: number) {
+  return new TextEncoder().encode(JSON.stringify(value)).byteLength <= maxBytes;
 }

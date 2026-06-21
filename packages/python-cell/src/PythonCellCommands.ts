@@ -54,6 +54,7 @@ const AddPythonCellBlockInput = z.object({
   index: z
     .number()
     .int()
+    .min(0)
     .optional()
     .describe('Optional top-level insertion index. Defaults to append.'),
 });

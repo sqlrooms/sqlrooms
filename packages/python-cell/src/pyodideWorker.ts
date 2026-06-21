@@ -2,9 +2,12 @@
 
 import {loadPyodide, type PyodideAPI} from 'pyodide';
 import type {
+  PythonCellInput,
   PythonExecutionOutput,
   PythonExecutionRequest,
   PythonExecutionResult,
+  PythonRequirementSpec,
+  PythonSchemaSummary,
   PythonTabularInput,
 } from './types';
 
@@ -38,16 +41,25 @@ type PyodideWorkerResponseMessage =
       response: SharedArrayBuffer;
     };
 
-type PyodideHostRequest = {
-  type: 'query';
-  query: string;
-  maxRows?: number;
-};
+type PyodideHostRequest =
+  | {
+      type: 'query';
+      query: string;
+      maxRows?: number;
+    }
+  | {
+      type: 'schema';
+      tableName?: string;
+    };
 
 type PyodideHostResponse =
   | {
       ok: true;
       result: PythonTabularInput;
+    }
+  | {
+      ok: true;
+      result: PythonSchemaSummary;
     }
   | {
       ok: false;
@@ -141,16 +153,23 @@ async function executePython(
   pyodide.setStderr({batched: (output) => stderr.push(output)});
 
   try {
-    const packageNames = new Set(
+    const pyodidePackageNames = new Set(
       (request.requirements ?? [])
         .filter((requirement) => requirement.source !== 'host')
+        .filter((requirement) => requirement.source !== 'micropip')
         .map((requirement) => requirement.name),
     );
+    const micropipRequirements = (request.requirements ?? []).filter(
+      (requirement) => requirement.source === 'micropip',
+    );
     if (usesSqlroomsBridge(request.code)) {
-      packageNames.add('pandas');
+      pyodidePackageNames.add('pandas');
     }
-    if (packageNames.size) {
-      await pyodide.loadPackage([...packageNames]);
+    if (pyodidePackageNames.size) {
+      await pyodide.loadPackage([...pyodidePackageNames]);
+    }
+    if (micropipRequirements.length) {
+      await installMicropipRequirements(pyodide, micropipRequirements);
     }
     if (usesAltair(request.code)) {
       await ensureAltair(pyodide);
@@ -162,6 +181,7 @@ async function executePython(
     );
     activeExecutionId = request.executionId;
     try {
+      bindInputs(pyodide, request.inputs);
       const lastExpressionResult = await pyodide.runPythonAsync(request.code, {
         filename: `<sqlrooms-python-cell:${request.blockId}>`,
       });
@@ -236,6 +256,33 @@ function requestHostQuery(query: unknown, maxRows?: unknown) {
   return readHostResponse(response);
 }
 
+function requestHostSchema(tableName?: string) {
+  if (!activeExecutionId) {
+    throw new Error(
+      'SQLRooms host bridge is only available while a cell runs.',
+    );
+  }
+
+  const signal = new SharedArrayBuffer(4);
+  const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
+  const request: PyodideHostRequest = {
+    type: 'schema',
+    ...(tableName ? {tableName} : {}),
+  };
+
+  postMessage({
+    type: 'hostRequest',
+    executionId: activeExecutionId,
+    requestId: createRequestId(),
+    request,
+    signal,
+    response,
+  } satisfies PyodideWorkerResponseMessage);
+
+  Atomics.wait(new Int32Array(signal), 0, 0);
+  return readHostResponse(response);
+}
+
 function readHostResponse(buffer: SharedArrayBuffer) {
   const length = new Int32Array(buffer, 0, 1)[0] ?? 0;
   const bytes = new Uint8Array(length);
@@ -261,6 +308,30 @@ function usesAltair(code: string) {
   return /\b(import\s+altair|from\s+altair\s+import)\b/.test(code);
 }
 
+async function installMicropipRequirements(
+  pyodide: PyodideAPI,
+  requirements: PythonRequirementSpec[],
+) {
+  await pyodide.loadPackage('micropip');
+  pyodide.globals.set(
+    '__sqlrooms_micropip_requirements',
+    requirements.map(formatMicropipRequirement),
+  );
+  await pyodide.runPythonAsync(`
+import micropip as __sqlrooms_micropip
+await __sqlrooms_micropip.install(__sqlrooms_micropip_requirements)
+`);
+  pyodide.runPython('globals().pop("__sqlrooms_micropip_requirements", None)');
+}
+
+function formatMicropipRequirement(requirement: PythonRequirementSpec) {
+  if (!requirement.version) return requirement.name;
+  if (/^[<>=!~]/.test(requirement.version)) {
+    return `${requirement.name}${requirement.version}`;
+  }
+  return `${requirement.name}==${requirement.version}`;
+}
+
 async function ensureAltair(pyodide: PyodideAPI) {
   const hasAltair = pyodide.runPython(`
 import importlib.util as __sqlrooms_importlib_util
@@ -273,6 +344,40 @@ __sqlrooms_importlib_util.find_spec("altair") is not None
 import micropip as __sqlrooms_micropip
 await __sqlrooms_micropip.install("altair")
 `);
+}
+
+function bindInputs(pyodide: PyodideAPI, inputs: PythonCellInput[]) {
+  for (const input of inputs) {
+    if (input.kind === 'literal') {
+      pyodide.globals.set(input.name, input.value);
+      continue;
+    }
+
+    if (input.kind === 'sql') {
+      pyodide.globals.set(
+        input.name,
+        requestHostQuery(input.query, input.maxRows),
+      );
+      continue;
+    }
+
+    if (input.kind === 'tableRef') {
+      pyodide.globals.set(
+        input.name,
+        requestHostQuery(
+          `SELECT * FROM ${quoteSqlIdentifier(input.tableName)}`,
+          input.maxRows,
+        ),
+      );
+      continue;
+    }
+
+    pyodide.globals.set(input.name, requestHostSchema(input.tableName));
+  }
+}
+
+function quoteSqlIdentifier(identifier: string) {
+  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 function normalizeMaxRows(value: unknown) {

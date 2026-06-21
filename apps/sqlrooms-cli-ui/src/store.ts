@@ -268,7 +268,10 @@ connector.loadFile = async (file, desiredTableName, options) => {
 function createCliPythonRuntimeHost(): PythonRuntimeHost {
   return {
     readTable: ({tableName, maxRows}) =>
-      runReadonlyPythonSql(`SELECT * FROM ${tableName}`, maxRows),
+      runReadonlyPythonSql(
+        `SELECT * FROM ${quoteSqlIdentifier(tableName)}`,
+        maxRows,
+      ),
     runReadonlySql: ({query, maxRows}) => runReadonlyPythonSql(query, maxRows),
   };
 }
@@ -290,6 +293,10 @@ function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
   const limit =
     maxRows === undefined ? '' : ` LIMIT ${Math.max(0, Math.floor(maxRows))}`;
   return `SELECT * FROM (${trimmedQuery}) AS sqlrooms_python_query${limit}`;
+}
+
+function quoteSqlIdentifier(identifier: string) {
+  return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 function getRuntimeBridgeConfig() {

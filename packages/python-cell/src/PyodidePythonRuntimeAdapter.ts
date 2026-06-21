@@ -1,6 +1,7 @@
 import type {
   PythonExecutionRequest,
   PythonExecutionResult,
+  PythonSchemaSummary,
   PythonRuntimeAdapter,
   PythonRuntimeHost,
   PythonTabularInput,
@@ -12,16 +13,25 @@ type PyodideWorkerRequestMessage = {
   indexURL?: string;
 };
 
-type PyodideHostRequest = {
-  type: 'query';
-  query: string;
-  maxRows?: number;
-};
+type PyodideHostRequest =
+  | {
+      type: 'query';
+      query: string;
+      maxRows?: number;
+    }
+  | {
+      type: 'schema';
+      tableName?: string;
+    };
 
 type PyodideHostResponse =
   | {
       ok: true;
       result: PythonTabularInput;
+    }
+  | {
+      ok: true;
+      result: PythonSchemaSummary;
     }
   | {
       ok: false;
@@ -122,6 +132,9 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
   async dispose() {
     this.worker?.terminate();
     this.worker = undefined;
+    for (const pending of this.pending.values()) {
+      pending.reject(new Error('Python runtime adapter disposed.'));
+    }
     this.pending.clear();
     this.state = 'idle';
     this.message = undefined;
@@ -130,7 +143,7 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
   private ensureWorker() {
     if (this.worker) return this.worker;
 
-    const worker = new Worker(new URL('./pyodideWorker.ts', import.meta.url), {
+    const worker = new Worker(new URL('./pyodideWorker.js', import.meta.url), {
       type: 'module',
     });
     worker.onmessage = (event: MessageEvent<PyodideWorkerResponseMessage>) => {
@@ -206,6 +219,16 @@ async function resolveHostRequest(
         query: request.query,
         maxRows: request.maxRows,
       }),
+    };
+  }
+
+  if (request.type === 'schema') {
+    if (!host.readSchema) {
+      throw new Error('SQLRooms Python schema bridge is not configured.');
+    }
+    return {
+      ok: true,
+      result: await host.readSchema({tableName: request.tableName}),
     };
   }
 

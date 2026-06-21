@@ -84,9 +84,9 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
   );
 
   const handleRun = useCallback(() => {
-    if (!blockId || runtime?.status === 'running') return;
+    if (!blockId || readOnly || runtime?.status === 'running') return;
     void runCell(blockId, {artifactId});
-  }, [artifactId, blockId, runCell, runtime?.status]);
+  }, [artifactId, blockId, readOnly, runCell, runtime?.status]);
 
   const editorExtensions = useMemo(
     () => [
@@ -159,7 +159,7 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
                 size="icon"
                 variant="secondary"
                 className="h-7 w-7 shrink-0"
-                disabled={isRunning || !cell?.code.trim()}
+                disabled={readOnly || isRunning || !cell?.code.trim()}
                 onClick={handleRun}
                 aria-label="Run Python cell"
               >
