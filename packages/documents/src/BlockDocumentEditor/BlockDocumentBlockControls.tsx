@@ -574,6 +574,10 @@ function buildMediaBlockMenuItems(
   ];
 }
 
+/**
+ * Block-level editor controls for insertion, drag handles, block menus, and the
+ * focused-empty-block type palette.
+ */
 export const BlockDocumentBlockControls: FC<
   BlockDocumentBlockControlsProps
 > = ({scrollElement}) => {
@@ -591,6 +595,10 @@ export const BlockDocumentBlockControls: FC<
   const [blockTypeMenuOpen, setBlockTypeMenuOpen] = useState(false);
   const [suppressFocusedBlockMenu, setSuppressFocusedBlockMenu] =
     useState(false);
+  const [
+    suppressFocusedBlockMenuResetToken,
+    setSuppressFocusedBlockMenuResetToken,
+  ] = useState(0);
   const [dropIndicator, setDropIndicator] = useState<BlockDropIndicator | null>(
     null,
   );
@@ -671,13 +679,20 @@ export const BlockDocumentBlockControls: FC<
     },
     [editor, readOnly, scrollElement, suppressFocusedBlockMenu],
   );
+  const updateFocusedEmptyBlockRef = useRef(updateFocusedEmptyBlock);
+
+  useEffect(() => {
+    updateFocusedEmptyBlockRef.current = updateFocusedEmptyBlock;
+  }, [updateFocusedEmptyBlock]);
 
   useEffect(() => {
     if (!editor || !scrollElement || readOnly) return;
 
-    const handleFocusOrSelectionUpdate = () => updateFocusedEmptyBlock(true);
-    const handleUpdate = () => updateFocusedEmptyBlock(false);
-    const handleScrollOrResize = () => updateFocusedEmptyBlock(false);
+    const handleFocusOrSelectionUpdate = () =>
+      updateFocusedEmptyBlockRef.current(true);
+    const handleUpdate = () => updateFocusedEmptyBlockRef.current(false);
+    const handleScrollOrResize = () =>
+      updateFocusedEmptyBlockRef.current(false);
 
     editor.on('focus', handleFocusOrSelectionUpdate);
     editor.on('selectionUpdate', handleFocusOrSelectionUpdate);
@@ -696,7 +711,15 @@ export const BlockDocumentBlockControls: FC<
       scrollElement.removeEventListener('scroll', handleScrollOrResize);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [editor, readOnly, scrollElement, updateFocusedEmptyBlock]);
+  }, [editor, readOnly, scrollElement]);
+
+  useEffect(() => {
+    if (suppressFocusedBlockMenuResetToken === 0) return;
+    const timeoutId = window.setTimeout(() => {
+      setSuppressFocusedBlockMenu(false);
+    }, 200);
+    return () => window.clearTimeout(timeoutId);
+  }, [suppressFocusedBlockMenuResetToken]);
 
   useEffect(() => {
     if (!editor || !scrollElement || readOnly) return;
@@ -802,9 +825,7 @@ export const BlockDocumentBlockControls: FC<
         .run();
 
       setSuppressFocusedBlockMenu(true);
-      window.setTimeout(() => {
-        setSuppressFocusedBlockMenu(false);
-      }, 200);
+      setSuppressFocusedBlockMenuResetToken((token) => token + 1);
       setHandleMenuOpen(false);
       setBlockTypeMenuOpen(false);
       setActiveBlock(null);
