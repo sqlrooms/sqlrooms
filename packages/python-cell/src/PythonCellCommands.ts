@@ -66,6 +66,11 @@ const PythonCellBlockInput = z.object({
 
 const UpdatePythonCellCodeInput = PythonCellBlockInput.extend({
   code: z.string().describe('Replacement Python code.'),
+  run: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe('Whether to run the cell after updating the code.'),
 });
 
 /** Creates command-backed Python cell operations for worksheet/block documents. */
@@ -143,9 +148,10 @@ export function createPythonCellCommands<
       group: commandGroup,
       keywords: ['python', 'cell', 'code', 'update'],
       inputSchema: UpdatePythonCellCodeInput,
-      inputDescription: 'Worksheet artifact ID, Python block ID, and code.',
-      metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
-      execute: ({getState}, input) => {
+      inputDescription:
+        'Worksheet artifact ID, Python block ID, replacement code, and optional run flag.',
+      metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
+      execute: async ({getState}, input) => {
         const state = getState();
         const parsed = UpdatePythonCellCodeInput.parse(input);
         const block = resolvePythonCellBlock(
@@ -161,15 +167,28 @@ export function createPythonCellCommands<
           block.block.blockInstanceId,
           parsed.code,
         );
+        const result = parsed.run
+          ? await state.pythonCells.runCell(block.block.blockInstanceId, {
+              artifactId: parsed.artifactId,
+            })
+          : undefined;
         return {
-          success: true,
+          success: result ? result.status === 'success' : true,
           commandId: commandId('update-python-cell-code'),
-          message: `Updated Python cell block "${parsed.blockId}".`,
+          message: result
+            ? result.status === 'success'
+              ? `Updated and ran Python cell block "${parsed.blockId}".`
+              : `Updated Python cell block "${parsed.blockId}", then run finished with ${result.status}.`
+            : `Updated Python cell block "${parsed.blockId}".`,
           data: {
             artifactId: parsed.artifactId,
             block: block.block,
             cell: state.pythonCells.getCell(block.block.blockInstanceId),
+            ...(result ? {executionId: result.executionId, result} : undefined),
           },
+          ...(result && result.status !== 'success'
+            ? {error: result.error?.message ?? 'Python execution failed.'}
+            : {}),
         };
       },
     },

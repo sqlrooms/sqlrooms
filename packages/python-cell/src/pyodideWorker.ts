@@ -3,6 +3,7 @@
 import {loadPyodide, type PyodideAPI} from 'pyodide';
 import type {
   PythonCellInput,
+  PythonCellOutputDeclaration,
   PythonExecutionOutput,
   PythonExecutionRequest,
   PythonExecutionResult,
@@ -71,6 +72,7 @@ type PyodideHostResponse =
     };
 
 const HOST_RESPONSE_BUFFER_BYTES = 16 * 1024 * 1024;
+const DEFAULT_MAX_STDIO_BYTES = 32_000;
 const VEGA_LITE_MIME_TYPES = [
   'application/vnd.vegalite.v5+json',
   'application/vnd.vegalite.v4+json',
@@ -156,11 +158,15 @@ async function executePython(
 ): Promise<PythonExecutionResult> {
   const startedAt = Date.now();
   const pyodide = await getPyodide(indexURL);
-  const stdout: string[] = [];
-  const stderr: string[] = [];
+  const stdout = createBoundedTextBuffer(
+    request.limits?.maxStdoutBytes ?? DEFAULT_MAX_STDIO_BYTES,
+  );
+  const stderr = createBoundedTextBuffer(
+    request.limits?.maxStdoutBytes ?? DEFAULT_MAX_STDIO_BYTES,
+  );
 
-  pyodide.setStdout({batched: (output) => stdout.push(output)});
-  pyodide.setStderr({batched: (output) => stderr.push(output)});
+  pyodide.setStdout({batched: (output) => appendBoundedText(stdout, output)});
+  pyodide.setStderr({batched: (output) => appendBoundedText(stderr, output)});
 
   try {
     const pyodidePackageNames = new Set(
@@ -203,12 +209,12 @@ async function executePython(
       activeExecutionId = undefined;
     }
 
-    const outputs = readResultOutput(pyodide);
+    const outputs = readResultOutput(pyodide, request.outputDeclarations);
     return {
       executionId: request.executionId,
       status: 'success',
-      stdout: stdout.join('\n'),
-      stderr: stderr.join('\n'),
+      stdout: readBoundedText(stdout),
+      stderr: readBoundedText(stderr),
       outputs,
       durationMs: Date.now() - startedAt,
     };
@@ -216,8 +222,8 @@ async function executePython(
     return {
       executionId: request.executionId,
       status: 'error',
-      stdout: stdout.join('\n'),
-      stderr: stderr.join('\n'),
+      stdout: readBoundedText(stdout),
+      stderr: readBoundedText(stderr),
       error: errorSummary(error),
       outputs: [],
       durationMs: Date.now() - startedAt,
@@ -364,7 +370,8 @@ function bindInputs(pyodide: PyodideAPI, inputs: PythonCellInput[]) {
     }
 
     if (input.kind === 'sql') {
-      pyodide.globals.set(
+      bindPythonGlobal(
+        pyodide,
         input.name,
         requestHostQuery(input.query, input.maxRows),
       );
@@ -372,22 +379,91 @@ function bindInputs(pyodide: PyodideAPI, inputs: PythonCellInput[]) {
     }
 
     if (input.kind === 'tableRef') {
-      pyodide.globals.set(
+      bindPythonGlobal(
+        pyodide,
         input.name,
         requestHostQuery(
-          `SELECT * FROM ${quoteSqlIdentifier(input.tableName)}`,
+          `SELECT * FROM ${quoteSqlTableReference(input.tableName)}`,
           input.maxRows,
         ),
       );
       continue;
     }
 
-    pyodide.globals.set(input.name, requestHostSchema(input.tableName));
+    bindPythonGlobal(pyodide, input.name, requestHostSchema(input.tableName));
   }
+}
+
+function bindPythonGlobal(pyodide: PyodideAPI, name: string, value: unknown) {
+  pyodide.globals.set('__sqlrooms_bound_input_name', name);
+  pyodide.globals.set('__sqlrooms_bound_input_value', value);
+  pyodide.runPython(`
+__sqlrooms_value = __sqlrooms_bound_input_value
+if hasattr(__sqlrooms_value, "to_py"):
+    __sqlrooms_value = __sqlrooms_value.to_py()
+globals()[str(__sqlrooms_bound_input_name)] = __sqlrooms_value
+globals().pop("__sqlrooms_value", None)
+globals().pop("__sqlrooms_bound_input_name", None)
+globals().pop("__sqlrooms_bound_input_value", None)
+`);
 }
 
 function quoteSqlIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+function quoteSqlTableReference(tableName: string) {
+  const parts = splitSqlIdentifierSegments(tableName);
+  if (!parts?.length) return quoteSqlIdentifier(tableName);
+  return parts.map(quoteSqlIdentifier).join('.');
+}
+
+function splitSqlIdentifierSegments(qualifiedName: string) {
+  const parts: string[] = [];
+  let current = '';
+  let inQuotedIdentifier = false;
+  let sawQuotedIdentifier = false;
+
+  for (let index = 0; index < qualifiedName.length; index += 1) {
+    const character = qualifiedName[index];
+    if (inQuotedIdentifier) {
+      if (character === '"') {
+        if (qualifiedName[index + 1] === '"') {
+          current += '"';
+          index += 1;
+        } else {
+          inQuotedIdentifier = false;
+        }
+        continue;
+      }
+      current += character;
+      continue;
+    }
+
+    if (character === '"') {
+      if (current.trim().length > 0) return undefined;
+      inQuotedIdentifier = true;
+      sawQuotedIdentifier = true;
+      continue;
+    }
+
+    if (character === '.') {
+      const part = sawQuotedIdentifier ? current : current.trim();
+      if (!part) return undefined;
+      parts.push(part);
+      current = '';
+      sawQuotedIdentifier = false;
+      continue;
+    }
+
+    current += character;
+  }
+
+  if (inQuotedIdentifier) return undefined;
+  const part = sawQuotedIdentifier ? current : current.trim();
+  if (!part) return undefined;
+  parts.push(part);
+  return parts.length > 3 ? undefined : parts;
 }
 
 function normalizeMaxRows(value: unknown) {
@@ -401,12 +477,25 @@ function createRequestId() {
   return crypto.randomUUID();
 }
 
-function readResultOutput(pyodide: PyodideAPI): PythonExecutionOutput[] {
+function readResultOutput(
+  pyodide: PyodideAPI,
+  outputDeclarations: PythonCellOutputDeclaration[],
+): PythonExecutionOutput[] {
   const hasResult = pyodide.runPython('"result" in globals()');
-  if (!hasResult) return [];
+  const declaredOutputs = outputDeclarations.map((output) => ({
+    type: output.type,
+    name: output.name,
+  }));
+  if (!hasResult && declaredOutputs.length === 0) return [];
+
+  pyodide.globals.set('__sqlrooms_output_declarations', declaredOutputs);
 
   const outputsJson = pyodide.runPython(`
 import json as __sqlrooms_json
+import math as __sqlrooms_math
+
+if hasattr(__sqlrooms_output_declarations, "to_py"):
+    __sqlrooms_output_declarations = __sqlrooms_output_declarations.to_py()
 
 def __sqlrooms_is_mapping(value):
     return hasattr(value, "keys") and hasattr(value, "__getitem__")
@@ -433,6 +522,15 @@ def __sqlrooms_safe_call(callable_value):
     except Exception:
         return None
 
+def __sqlrooms_json_safe(value):
+    if isinstance(value, float):
+        return value if __sqlrooms_math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {str(key): __sqlrooms_json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [__sqlrooms_json_safe(item) for item in value]
+    return value
+
 def __sqlrooms_mimebundle_for(value):
     repr_mimebundle = getattr(value, "_repr_mimebundle_", None)
     if repr_mimebundle is None:
@@ -442,14 +540,36 @@ def __sqlrooms_mimebundle_for(value):
         bundle = bundle[0]
     return bundle if isinstance(bundle, dict) else None
 
-def __sqlrooms_output_for(name, value):
+def __sqlrooms_output_for(name, value, declared_type=None):
+    if declared_type == "text":
+        return {"type": "text", "name": name, "text": str(value)}
+    if declared_type == "markdown":
+        return {"type": "markdown", "name": name, "markdown": str(value)}
+    if declared_type == "html":
+        if isinstance(value, str):
+            return {"type": "html", "name": name, "html": value}
+        repr_html = getattr(value, "_repr_html_", None)
+        if repr_html is not None:
+            html = __sqlrooms_safe_call(repr_html)
+            if html:
+                return {"type": "html", "name": name, "html": str(html)}
+        return {"type": "html", "name": name, "html": str(value)}
+    if declared_type == "json":
+        return {"type": "json", "name": name, "value": __sqlrooms_json_safe(value)}
+    if declared_type in ("table", "image"):
+        return {
+            "type": "text",
+            "name": name,
+            "text": f'Declared {declared_type} output "{name}" is not supported by the Pyodide adapter yet.',
+        }
+
     bundle = __sqlrooms_mimebundle_for(value)
     if bundle:
         for mime_type in ${JSON.stringify([...VEGA_LITE_MIME_TYPES])}:
             if mime_type in bundle:
                 spec = bundle[mime_type]
                 if __sqlrooms_is_mapping(spec):
-                    return {"type": "vega-lite", "name": name, "spec": dict(spec)}
+                    return {"type": "vega-lite", "name": name, "spec": __sqlrooms_json_safe(dict(spec))}
 
     to_dict = getattr(value, "to_dict", None)
     if to_dict is not None:
@@ -457,7 +577,10 @@ def __sqlrooms_output_for(name, value):
         if __sqlrooms_is_mapping(spec):
             spec = dict(spec)
             if __sqlrooms_is_vegalite_spec(spec):
-                return {"type": "vega-lite", "name": name, "spec": spec}
+                return {"type": "vega-lite", "name": name, "spec": __sqlrooms_json_safe(spec)}
+
+    if declared_type == "vega-lite" and __sqlrooms_is_mapping(value):
+        return {"type": "vega-lite", "name": name, "spec": __sqlrooms_json_safe(dict(value))}
 
     if bundle:
         html = bundle.get("text/html")
@@ -473,11 +596,90 @@ def __sqlrooms_output_for(name, value):
         if html:
             return {"type": "html", "name": name, "html": str(html)}
 
-    return {"type": "json", "name": name, "value": value}
+    return {"type": "json", "name": name, "value": __sqlrooms_json_safe(value)}
 
-__sqlrooms_json.dumps([__sqlrooms_output_for("result", result)], default=str)
+__sqlrooms_outputs = []
+__sqlrooms_seen_output_names = set()
+for __sqlrooms_declaration in __sqlrooms_output_declarations:
+    __sqlrooms_name = __sqlrooms_declaration.get("name")
+    if __sqlrooms_name in globals():
+        __sqlrooms_seen_output_names.add(__sqlrooms_name)
+        __sqlrooms_outputs.append(
+            __sqlrooms_output_for(
+                __sqlrooms_name,
+                globals()[__sqlrooms_name],
+                __sqlrooms_declaration.get("type"),
+            )
+        )
+
+if "result" in globals() and "result" not in __sqlrooms_seen_output_names:
+    __sqlrooms_outputs.append(__sqlrooms_output_for("result", result))
+
+__sqlrooms_json.dumps(__sqlrooms_json_safe(__sqlrooms_outputs), default=str, allow_nan=False)
 `);
+  pyodide.runPython('globals().pop("__sqlrooms_output_declarations", None)');
   return JSON.parse(String(outputsJson)) as PythonExecutionOutput[];
+}
+
+type BoundedTextBuffer = {
+  chunks: string[];
+  maxBytes: number;
+  byteLength: number;
+  truncated: boolean;
+};
+
+function createBoundedTextBuffer(maxBytes: number): BoundedTextBuffer {
+  return {
+    chunks: [],
+    maxBytes: Math.max(0, Math.floor(maxBytes)),
+    byteLength: 0,
+    truncated: false,
+  };
+}
+
+function appendBoundedText(buffer: BoundedTextBuffer, output: string) {
+  if (buffer.truncated) return;
+  const separatorBytes = buffer.chunks.length ? 1 : 0;
+  const outputBytes = new TextEncoder().encode(output).byteLength;
+  const remainingBytes = buffer.maxBytes - buffer.byteLength - separatorBytes;
+
+  if (remainingBytes <= 0) {
+    buffer.truncated = true;
+    return;
+  }
+
+  if (outputBytes <= remainingBytes) {
+    buffer.chunks.push(output);
+    buffer.byteLength += outputBytes + separatorBytes;
+    return;
+  }
+
+  const suffix = '\n... truncated ...';
+  const suffixBytes = new TextEncoder().encode(suffix).byteLength;
+  const truncatedOutput = truncateToBytes(
+    output,
+    Math.max(0, remainingBytes - suffixBytes),
+  );
+  buffer.chunks.push(`${truncatedOutput}${suffix}`);
+  buffer.byteLength = buffer.maxBytes;
+  buffer.truncated = true;
+}
+
+function readBoundedText(buffer: BoundedTextBuffer) {
+  return buffer.chunks.join('\n');
+}
+
+function truncateToBytes(value: string, maxBytes: number) {
+  const encoder = new TextEncoder();
+  let result = '';
+  let byteLength = 0;
+  for (const character of value) {
+    const characterBytes = encoder.encode(character).byteLength;
+    if (byteLength + characterBytes > maxBytes) break;
+    result += character;
+    byteLength += characterBytes;
+  }
+  return result;
 }
 
 function errorSummary(error: unknown) {

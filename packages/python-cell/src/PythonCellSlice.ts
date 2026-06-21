@@ -203,6 +203,8 @@ export function createPythonCellSlice({
 
         set((state) =>
           produce(state, (draft) => {
+            const currentRuntime = draft.pythonCells.runtimeByCellId[cellId];
+            if (currentRuntime?.executionId !== executionId) return;
             const nextCell = draft.pythonCells.config.cells[cellId];
             if (nextCell) {
               nextCell.lastResult = result;

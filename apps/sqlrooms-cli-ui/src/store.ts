@@ -30,6 +30,7 @@ import {
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
   QualifiedTableName,
+  quoteTableReference,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
@@ -269,10 +270,11 @@ function createCliPythonRuntimeHost(): PythonRuntimeHost {
   return {
     readTable: ({tableName, maxRows}) =>
       runReadonlyPythonSql(
-        `SELECT * FROM ${quoteSqlIdentifier(tableName)}`,
+        `SELECT * FROM ${quoteTableReference(tableName)}`,
         maxRows,
       ),
     runReadonlySql: ({query, maxRows}) => runReadonlyPythonSql(query, maxRows),
+    readSchema: ({tableName}) => readPythonSchema(tableName),
   };
 }
 
@@ -295,8 +297,55 @@ function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
   return `SELECT * FROM (${trimmedQuery}) AS sqlrooms_python_query${limit}`;
 }
 
-function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.split('"').join('""')}"`;
+async function readPythonSchema(tableName?: string) {
+  if (tableName) {
+    const arrowTable = await connector.query(
+      `SELECT * FROM ${quoteTableReference(tableName)} LIMIT 0`,
+    );
+    return {
+      tables: [
+        {
+          tableName,
+          columns: arrowTable.schema.fields.map((field) => ({
+            name: field.name,
+            type: String(field.type),
+          })),
+        },
+      ],
+    };
+  }
+
+  const arrowTable = await connector.query(`
+    SELECT table_schema, table_name, column_name, data_type
+    FROM information_schema.columns
+    WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+    ORDER BY table_schema, table_name, ordinal_position
+  `);
+  const rows = arrowTableToJson(arrowTable);
+  const tables = new Map<string, Array<{name: string; type?: string}>>();
+  for (const row of rows) {
+    const schemaName = String(row.table_schema ?? 'main');
+    const currentTableName = String(row.table_name ?? '');
+    const columnName = String(row.column_name ?? '');
+    if (!currentTableName || !columnName) continue;
+    const qualifiedTableName =
+      schemaName === 'main'
+        ? currentTableName
+        : `${schemaName}.${currentTableName}`;
+    const columns = tables.get(qualifiedTableName) ?? [];
+    columns.push({
+      name: columnName,
+      type: row.data_type === undefined ? undefined : String(row.data_type),
+    });
+    tables.set(qualifiedTableName, columns);
+  }
+
+  return {
+    tables: [...tables.entries()].map(([qualifiedTableName, columns]) => ({
+      tableName: qualifiedTableName,
+      columns,
+    })),
+  };
 }
 
 function getRuntimeBridgeConfig() {
