@@ -538,7 +538,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
           createCommandProps: {
-            middleware: [artifactChatHandoff.commandMiddleware],
+            // createRoomShellSlice is typed to the base room state, but this
+            // app middleware needs the composed CLI RoomState at runtime.
+            middleware: [artifactChatHandoff.commandMiddleware as any],
           },
           createDbProps: {
             duckDb: {

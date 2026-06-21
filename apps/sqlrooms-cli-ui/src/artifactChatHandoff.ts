@@ -9,7 +9,7 @@ import type {RoomState} from './store-types';
 type PendingArtifactChatHandoff = {
   sourceSessionId: string;
   sourceArtifactId: string;
-  sourceUserMessageId?: string;
+  sourceUserMessageId: string;
   target: ArtifactTargetChange;
   commandId: string;
 };
@@ -62,16 +62,25 @@ function getLastAssistantMessage(messages: UIMessage[]) {
   return undefined;
 }
 
-function getLastUserMessage(messages: UIMessage[]) {
+function getLastUserMessageId(
+  messages: ReadonlyArray<{id?: string; role?: string}>,
+) {
   for (let index = messages.length - 1; index >= 0; index--) {
     const message = messages[index];
-    if (message?.role === 'user') {
-      return message;
+    if (message?.role === 'user' && typeof message.id === 'string') {
+      return message.id;
     }
   }
   return undefined;
 }
 
+/**
+ * Creates the command and chat-finish hooks that continue an artifact-scoped
+ * AI chat when an AI-invoked command switches to another artifact.
+ *
+ * @param store - The CLI room store used to inspect artifact and AI session state.
+ * @returns Hooks for command middleware and completed chat turns.
+ */
 export function createArtifactChatHandoffController(
   store: StoreApi<RoomState>,
 ) {
@@ -115,13 +124,18 @@ export function createArtifactChatHandoffController(
     if (nextState.artifacts.config.currentArtifactId !== target.artifactId) {
       return result;
     }
+    const sourceSession = nextState.ai.config.sessions.find(
+      (session) => session.id === sourceSessionId,
+    );
+    const sourceUserMessageId = getLastUserMessageId(
+      sourceSession?.uiMessages ?? [],
+    );
+    if (!sourceUserMessageId) return result;
 
     pendingHandoffs.set(sourceSessionId, {
       sourceSessionId,
       sourceArtifactId,
-      sourceUserMessageId: getLastUserMessage(
-        nextState.ai.getSession(sourceSessionId)?.uiMessages ?? [],
-      )?.id,
+      sourceUserMessageId,
       target: {
         ...target,
         title: targetArtifact.title,
@@ -163,7 +177,7 @@ export function createArtifactChatHandoffController(
 
     const assistantMessage = getLastAssistantMessage(messages);
     if (!assistantMessage) return;
-    if (getLastUserMessage(messages)?.id !== handoff.sourceUserMessageId) {
+    if (getLastUserMessageId(messages) !== handoff.sourceUserMessageId) {
       return;
     }
 

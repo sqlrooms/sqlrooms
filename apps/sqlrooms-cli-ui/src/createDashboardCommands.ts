@@ -149,7 +149,7 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
             artifactId,
             artifactType: 'dashboard',
             title:
-              getState().artifacts.getArtifact(artifactId)?.title ??
+              state.artifacts.getArtifact(artifactId)?.title ??
               title ??
               'Dashboard',
             change: 'created',
