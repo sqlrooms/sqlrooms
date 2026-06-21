@@ -211,6 +211,9 @@ importers:
       '@sqlrooms/pivot':
         specifier: workspace:*
         version: link:../../packages/pivot
+      '@sqlrooms/python-cell':
+        specifier: workspace:*
+        version: link:../../packages/python-cell
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -3917,6 +3920,61 @@ importers:
         version: 1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.15(typescript@5.9.3)))
 
   packages/preset-typescript: {}
+
+  packages/python-cell:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^3.0.0
+        version: 3.3.0
+      '@sqlrooms/blocks':
+        specifier: workspace:*
+        version: link:../blocks
+      '@sqlrooms/codemirror':
+        specifier: workspace:*
+        version: link:../codemirror
+      '@sqlrooms/documents':
+        specifier: workspace:*
+        version: link:../documents
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@sqlrooms/preset-eslint':
+        specifier: workspace:*
+        version: link:../preset-eslint
+      '@sqlrooms/preset-typedoc':
+        specifier: workspace:*
+        version: link:../preset-typedoc
+      '@sqlrooms/preset-typescript':
+        specifier: workspace:*
+        version: link:../preset-typescript
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   packages/recharts:
     dependencies:

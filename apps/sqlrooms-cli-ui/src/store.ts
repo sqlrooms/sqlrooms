@@ -47,6 +47,11 @@ import {
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
+  createPythonCellCommands,
+  createPythonCellSlice,
+  PythonCellSliceConfig,
+} from '@sqlrooms/python-cell';
+import {
   BaseRoomConfig,
   createPersistHelpers,
   createRoomShellSlice,
@@ -121,6 +126,7 @@ export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
+const WORKSHEET_PYTHON_CELL_COMMAND_OWNER = '@sqlrooms/python-cell/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const SQLROOMS_CLI_AI_INSTRUCTIONS = `
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, app, map, chart, or other visual surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
@@ -281,6 +287,7 @@ const sliceConfigSchemas = {
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
   pivot: PivotSliceConfig,
+  pythonCells: PythonCellSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
@@ -384,11 +391,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               statefulBlockTypes: createStatefulBlockCommandTypes(),
             }),
           );
+          registerCommandsForOwner(
+            store,
+            WORKSHEET_PYTHON_CELL_COMMAND_OWNER,
+            createPythonCellCommands<RoomState>({
+              artifactType: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactType,
+              artifactLabel: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactLabel,
+              commandNamespace:
+                WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandNamespace,
+              commandGroup: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandGroup,
+            }),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
+          unregisterCommandsForOwner(
+            store,
+            WORKSHEET_PYTHON_CELL_COMMAND_OWNER,
+          );
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
@@ -615,6 +637,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createNotebookSlice()(set, get, store),
 
         ...createPivotSlice()(set, get, store),
+
+        ...createPythonCellSlice()(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
 

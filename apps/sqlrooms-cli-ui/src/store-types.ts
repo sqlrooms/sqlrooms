@@ -16,6 +16,7 @@ import type {
 } from '@sqlrooms/mosaic';
 import {NotebookSliceState} from '@sqlrooms/notebook';
 import {PivotSliceState} from '@sqlrooms/pivot';
+import {PythonCellSliceState} from '@sqlrooms/python-cell';
 import {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {WebContainerSliceState} from '@sqlrooms/webcontainer';
@@ -52,6 +53,7 @@ export type RoomState = RoomShellSliceState &
   CellsSliceState &
   NotebookSliceState &
   PivotSliceState &
+  PythonCellSliceState &
   CanvasSliceState &
   DocumentsSliceState &
   BlockDocumentsSliceState &

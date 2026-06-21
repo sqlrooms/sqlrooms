@@ -138,6 +138,25 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.htmlApps.renameApp(artifactId, title);
     },
   },
+  'python-cell': {
+    artifactType: 'python-cell',
+    label: 'Python Cell',
+    defaultTitle: 'Python Cell',
+    embeddedTitle: 'Python Cell',
+    embeddedDescription: 'Python analysis cell with visible code and outputs',
+    ensureState: (state, artifactId, title, options) => {
+      state.pythonCells.ensureCell(artifactId, {
+        title,
+        code: options?.initialText,
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.pythonCells.removeCell(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.pythonCells.renameCell(artifactId, title);
+    },
+  },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
 
 export type StatefulBlockArtifactType =
