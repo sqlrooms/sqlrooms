@@ -10,14 +10,11 @@ export function useCliArtifactSidebarTabs() {
   const aiSessionArtifacts = useRoomStore(
     (state) => state.artifactAi.config.aiSessionArtifacts,
   );
-  const selectedTabId = useRoomStore(
+  const currentArtifactId = useRoomStore(
     (state) => state.artifacts.config.currentArtifactId,
   );
   const setCurrentArtifact = useRoomStore(
     (state) => state.artifacts.setCurrentArtifact,
-  );
-  const artifactsById = useRoomStore(
-    (state) => state.artifacts.config.artifactsById,
   );
   const deleteArtifactFromStore = useRoomStore(
     (state) => state.artifacts.deleteArtifact,
@@ -63,11 +60,19 @@ export function useCliArtifactSidebarTabs() {
 
   const selectArtifact = useCallback(
     (artifactId: string) => {
-      if (!artifactsById[artifactId]) return;
+      if (!tabs.some((artifact) => artifact.id === artifactId)) return;
       setCurrentArtifact(artifactId);
       setShowArtifactChooser(false);
     },
-    [artifactsById, setCurrentArtifact, setShowArtifactChooser],
+    [setCurrentArtifact, setShowArtifactChooser, tabs],
+  );
+  const selectedTabId = useMemo(
+    () =>
+      currentArtifactId &&
+      tabs.some((artifact) => artifact.id === currentArtifactId)
+        ? currentArtifactId
+        : tabs[0]?.id,
+    [currentArtifactId, tabs],
   );
 
   const renameArtifact = useCallback(

@@ -111,20 +111,22 @@ function useCliArtifactWorkspaceActionState(): CliArtifactWorkspaceActions {
       }),
     [artifactOrder, artifactsById],
   );
+  const selectedArtifactId = useMemo(
+    () =>
+      currentArtifactId && artifactIds.includes(currentArtifactId)
+        ? currentArtifactId
+        : artifactIds[0],
+    [artifactIds, currentArtifactId],
+  );
 
   const selectArtifact = useCallback(
     (artifactId: string) => {
-      if (artifactsById[artifactId]) {
+      if (artifactIds.includes(artifactId)) {
         setCurrentArtifact(artifactId);
       }
     },
-    [artifactsById, setCurrentArtifact],
+    [artifactIds, setCurrentArtifact],
   );
-
-  const selectedArtifactId =
-    currentArtifactId && artifactsById[currentArtifactId]
-      ? currentArtifactId
-      : artifactIds[0];
 
   useEffect(() => {
     if (!selectedArtifactId || selectedArtifactId === currentArtifactId) return;
