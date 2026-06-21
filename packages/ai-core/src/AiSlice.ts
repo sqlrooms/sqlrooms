@@ -54,7 +54,10 @@ import type {
   AssistantMessageMetadata,
 } from './types';
 import {normalizeAiConfig, ToolAbortError} from './utils';
-import {getAnalysisResultsFromUiMessages} from './chatTurns';
+import {
+  getAnalysisResultsFromUiMessages,
+  uiMessagesHaveChatRequestError,
+} from './chatTurns';
 import {
   cleanupSessionForks,
   createForkedChatSessionFromMessage,
@@ -219,7 +222,11 @@ export type AiSliceState = {
       messages: UIMessage[];
       isError?: boolean;
     }) => void;
-    onChatError: (sessionId: string, error: unknown) => void;
+    onChatError: (
+      sessionId: string,
+      error: unknown,
+      messages?: UIMessage[],
+    ) => void;
   };
 };
 
@@ -1063,6 +1070,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   (s: ChatSessionSchema) => s.id === sessionId,
                 );
                 if (session) {
+                  const existingMessages = (session.uiMessages ??
+                    []) as UIMessage[];
+                  const incomingHasError =
+                    uiMessagesHaveChatRequestError(uiMessages);
+                  const existingHasError =
+                    uiMessagesHaveChatRequestError(existingMessages);
+                  const staleSyncWouldEraseError =
+                    existingHasError &&
+                    !incomingHasError &&
+                    uiMessages.length <= existingMessages.length;
+
+                  if (staleSyncWouldEraseError) {
+                    return;
+                  }
+
                   session.uiMessages = structuredClone(
                     uiMessages,
                   ) as typeof session.uiMessages;

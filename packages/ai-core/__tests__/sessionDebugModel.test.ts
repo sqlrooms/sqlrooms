@@ -8,6 +8,7 @@ import {
   getSessionDebugTimeline,
   getSessionDebugToolCalls,
 } from '../src/devtools/sessionDebugModel';
+import {CHAT_REQUEST_ERROR_PART_TYPE} from '../src/chatTurns';
 
 function createSession(): ChatSessionSchema {
   return {
@@ -140,6 +141,34 @@ describe('sessionDebugModel', () => {
         },
       },
     });
+  });
+
+  it('renders stored chat request errors as visible timeline text', () => {
+    const session = createSession();
+    session.uiMessages.push({
+      id: 'assistant-error',
+      role: 'assistant',
+      parts: [
+        {
+          type: CHAT_REQUEST_ERROR_PART_TYPE,
+          data: {error: 'Failed to fetch'},
+        },
+      ],
+    });
+
+    const timeline = getSessionDebugTimeline({session});
+
+    expect(timeline[2]?.parts).toEqual([
+      {
+        kind: 'text',
+        index: 0,
+        text: 'Failed to fetch',
+        raw: {
+          type: CHAT_REQUEST_ERROR_PART_TYPE,
+          data: {error: 'Failed to fetch'},
+        },
+      },
+    ]);
   });
 
   it('prefers live agent progress over persisted progress', () => {

@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
@@ -110,6 +110,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);
+  const latestMessagesRef = useRef<UIMessage[]>(initialMessages);
 
   const {
     messages,
@@ -138,7 +139,8 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
       );
     },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
-    onError: (error) => onChatError?.(sessionId, error),
+    onError: (error) =>
+      onChatError?.(sessionId, error, latestMessagesRef.current),
   });
 
   // If user aborts mid-stream, stop the local chat stream immediately
@@ -171,6 +173,12 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     setAddToolApprovalResponse?.(sessionId, addToolApprovalResponse);
     return () => setAddToolApprovalResponse?.(sessionId, undefined);
   }, [setAddToolApprovalResponse, addToolApprovalResponse, sessionId]);
+
+  // Keep the error fallback current before the passive store sync can race with
+  // an immediately rejected transport request.
+  useLayoutEffect(() => {
+    latestMessagesRef.current = messages as UIMessage[];
+  }, [messages]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
