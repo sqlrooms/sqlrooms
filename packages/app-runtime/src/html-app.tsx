@@ -8,8 +8,24 @@ import {
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import {AppWindowIcon} from 'lucide-react';
-import {useEffect, useMemo, useRef, type ComponentType, type FC} from 'react';
+import {
+  AppWindowIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  HistoryIcon,
+  Redo2Icon,
+  RotateCcwIcon,
+  Undo2Icon,
+} from 'lucide-react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type FC,
+  type ReactNode,
+} from 'react';
 import {z} from 'zod';
 import {createBridgeHost, createDiagnosticPreludeScript} from './host';
 import {
@@ -544,42 +560,23 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
 }) => {
   const resolvedAppId = appId ?? blockId;
   const roomStore = useRoomStoreApi();
-  const appTitle = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.title
-      : undefined,
-  );
-  const files = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.files
-      : undefined,
-  );
-  const entryHtmlPath = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.entryHtmlPath
-      : undefined,
-  );
-  const dependencies = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.dependencies
-      : undefined,
-  );
-  const grantedCapabilities = useBaseRoomStore(
-    (state: HtmlAppRuntimeSliceState) =>
-      resolvedAppId
-        ? state.htmlApps.config.appsById[resolvedAppId]?.grantedCapabilities
-        : undefined,
-  );
-  const hasApp = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? Boolean(state.htmlApps.config.appsById[resolvedAppId])
-      : false,
+  const app = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId ? state.htmlApps.config.appsById[resolvedAppId] : undefined,
   );
   const ensureApp = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.ensureApp,
   );
   const addDiagnostic = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.addDiagnostic,
+  );
+  const restoreAppRevision = useBaseRoomStore(
+    (state: HtmlAppRuntimeSliceState) => state.htmlApps.restoreAppRevision,
+  );
+  const undoAppRevision = useBaseRoomStore(
+    (state: HtmlAppRuntimeSliceState) => state.htmlApps.undoAppRevision,
+  );
+  const redoAppRevision = useBaseRoomStore(
+    (state: HtmlAppRuntimeSliceState) => state.htmlApps.redoAppRevision,
   );
   const getState = useMemo(
     () => () =>
@@ -588,11 +585,44 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     [roomStore],
   );
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [previewRevisionId, setPreviewRevisionId] = useState<string>();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!resolvedAppId) return;
     ensureApp(resolvedAppId, {title: title ?? 'HTML App'});
   }, [ensureApp, resolvedAppId, title]);
+
+  useEffect(() => {
+    setPreviewRevisionId(undefined);
+  }, [app?.activeRevisionId]);
+
+  const revisions = app?.revisions ?? [];
+  const activeRevision = getCurrentHtmlAppRevision(app);
+  const activeRevisionId = activeRevision?.id ?? app?.activeRevisionId;
+  const activeRevisionIndex = activeRevisionId
+    ? revisions.findIndex((revision) => revision.id === activeRevisionId)
+    : -1;
+  const previewRevision = previewRevisionId
+    ? revisions.find((revision) => revision.id === previewRevisionId)
+    : undefined;
+  const displayedRevision = previewRevision ?? activeRevision;
+  const displayedRevisionIndex = displayedRevision
+    ? revisions.findIndex((revision) => revision.id === displayedRevision.id)
+    : -1;
+  const appTitle = displayedRevision?.title ?? app?.title ?? title;
+  const files = displayedRevision?.files ?? app?.files;
+  const entryHtmlPath =
+    displayedRevision?.entryHtmlPath ?? app?.entryHtmlPath ?? '/index.html';
+  const dependencies = displayedRevision?.dependencies ?? app?.dependencies;
+  const isPreviewing =
+    Boolean(previewRevision) && previewRevision?.id !== activeRevisionId;
+  const canPreviewPrevious = displayedRevisionIndex > 0;
+  const canPreviewNext =
+    displayedRevisionIndex >= 0 &&
+    displayedRevisionIndex < revisions.length - 1;
+  const grantedCapabilities = app?.grantedCapabilities;
+  const hasApp = Boolean(app);
 
   const srcDoc = useMemo(() => {
     if (!files) return '';
@@ -657,16 +687,132 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   }
 
   return (
-    <div className={className ?? 'bg-background h-full min-h-[320px]'}>
+    <div
+      className={[
+        'bg-background flex h-full min-h-[320px] flex-col overflow-hidden',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="border-border bg-background flex shrink-0 items-center gap-1 border-b px-2 py-1.5 text-sm">
+        <div className="min-w-0 flex-1 truncate font-medium">
+          {appTitle ?? 'HTML App'}
+        </div>
+        <IconButton
+          disabled={!canPreviewPrevious}
+          label="Previous revision"
+          onClick={() => {
+            const revision = revisions[displayedRevisionIndex - 1];
+            if (revision) setPreviewRevisionId(revision.id);
+          }}
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+        </IconButton>
+        <div className="text-muted-foreground w-14 text-center text-xs tabular-nums">
+          {revisions.length > 0
+            ? `v${displayedRevisionIndex + 1} of ${revisions.length}`
+            : 'v0 of 0'}
+        </div>
+        <IconButton
+          disabled={!canPreviewNext}
+          label="Next revision"
+          onClick={() => {
+            const revision = revisions[displayedRevisionIndex + 1];
+            if (revision) setPreviewRevisionId(revision.id);
+          }}
+        >
+          <ChevronRightIcon className="h-4 w-4" />
+        </IconButton>
+        <IconButton
+          disabled={!resolvedAppId || activeRevisionIndex <= 0}
+          label="Undo revision"
+          onClick={() => {
+            if (!resolvedAppId) return;
+            undoAppRevision(resolvedAppId);
+          }}
+        >
+          <Undo2Icon className="h-4 w-4" />
+        </IconButton>
+        <IconButton
+          disabled={!resolvedAppId || !app?.redoRevisionIds.length}
+          label="Redo revision"
+          onClick={() => {
+            if (!resolvedAppId) return;
+            redoAppRevision(resolvedAppId);
+          }}
+        >
+          <Redo2Icon className="h-4 w-4" />
+        </IconButton>
+        <IconButton
+          disabled={revisions.length <= 1}
+          label="Revision history"
+          onClick={() => setHistoryOpen((open) => !open)}
+        >
+          <HistoryIcon className="h-4 w-4" />
+        </IconButton>
+        <IconButton
+          disabled={!resolvedAppId || !previewRevision || !isPreviewing}
+          label="Restore revision"
+          onClick={() => {
+            if (!resolvedAppId || !previewRevision) return;
+            restoreAppRevision(resolvedAppId, previewRevision.id, {
+              name: `Restore ${previewRevision.name}`,
+            });
+          }}
+        >
+          <RotateCcwIcon className="h-4 w-4" />
+        </IconButton>
+      </div>
+      {historyOpen && revisions.length > 0 ? (
+        <div className="border-border bg-muted/30 max-h-44 shrink-0 overflow-auto border-b text-xs">
+          {revisions.map((revision, index) => (
+            <button
+              className={`hover:bg-muted flex w-full items-center gap-2 px-3 py-1.5 text-left ${
+                revision.id === displayedRevision?.id ? 'bg-muted' : ''
+              }`}
+              key={revision.id}
+              onClick={() => setPreviewRevisionId(revision.id)}
+              type="button"
+            >
+              <span className="text-muted-foreground w-10 shrink-0 tabular-nums">
+                v{index + 1}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{revision.name}</span>
+              <span className="text-muted-foreground shrink-0">
+                {revision.source}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
       <iframe
         ref={iframeRef}
-        className="h-full min-h-[320px] w-full bg-white"
+        className="min-h-0 flex-1 bg-white"
         sandbox="allow-scripts"
         title={appTitle ?? title ?? 'HTML App'}
       />
     </div>
   );
 };
+
+const IconButton: FC<{
+  children: ReactNode;
+  disabled?: boolean;
+  label: string;
+  onClick: () => void;
+}> = ({children, disabled, label, onClick}) => (
+  <button
+    aria-label={label}
+    className="hover:bg-muted disabled:text-muted-foreground/50 flex h-7 w-7 shrink-0 items-center justify-center rounded disabled:pointer-events-none"
+    disabled={disabled}
+    onClick={onClick}
+    title={label}
+    type="button"
+  >
+    {children}
+  </button>
+);
 
 export type CreateHtmlAppBlockDefinitionOptions<
   TRoomState extends HtmlAppRuntimeSliceState = HtmlAppRuntimeSliceState,
