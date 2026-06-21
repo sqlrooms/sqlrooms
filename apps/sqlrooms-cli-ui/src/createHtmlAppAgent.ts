@@ -4,7 +4,7 @@ import {tool} from 'ai';
 import {ToolLoopAgent, stepCountIs} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
-import type {HtmlAppDependency} from '@sqlrooms/app-runtime';
+import type {HtmlAppDependency, HtmlAppRevision} from '@sqlrooms/app-runtime';
 import type {RoomState} from './store-types';
 
 const HtmlAppDependencySchema = z.object({
@@ -147,10 +147,17 @@ function renameHtmlAppTitle(
     nextTitle: title,
   });
 
-  store.getState().htmlApps.updateApp(input.appId, {
-    title,
-    ...(renamedFiles ? {files: renamedFiles} : {}),
-  });
+  const revision = store.getState().htmlApps.commitAppRevision(
+    input.appId,
+    {
+      title,
+      ...(renamedFiles ? {files: renamedFiles} : {}),
+      diagnostics: [],
+    },
+    createHtmlAppRevisionMetadata(store, input, {
+      name: title ? `Rename to ${title}` : 'Title rename',
+    }),
+  );
 
   return {
     ok: true,
@@ -164,6 +171,7 @@ function renameHtmlAppTitle(
       'Title updated without regenerating app source or running diagnostics.',
     status: 'renamed_title_only',
     sourceTitleUpdated: Boolean(renamedFiles),
+    revision: formatHtmlAppRevisionResult(revision),
   };
 }
 
@@ -400,13 +408,22 @@ export async function writeHtmlAppRuntimeState(
 
   store.getState().htmlApps.ensureApp(appId, {
     title,
-    files,
-    entryHtmlPath: '/index.html',
-    dependencies,
-    diagnostics: [],
-    requestedCapabilities: ['query'],
-    grantedCapabilities: ['query'],
   });
+  const revision = store.getState().htmlApps.commitAppRevision(
+    appId,
+    {
+      title,
+      files,
+      entryHtmlPath: '/index.html',
+      dependencies,
+      diagnostics: [],
+      requestedCapabilities: ['query'],
+      grantedCapabilities: ['query'],
+    },
+    createHtmlAppRevisionMetadata(store, input, {
+      name: 'App update',
+    }),
+  );
 
   const diagnostics = await observeHtmlAppRuntimeDiagnostics(store, appId);
   const app = store.getState().htmlApps.getApp(appId);
@@ -433,12 +450,38 @@ export async function writeHtmlAppRuntimeState(
     repairAttempts: 0,
     maxRepairAttempts: input.maxRepairAttempts ?? 1,
     diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
+    revision: formatHtmlAppRevisionResult(revision),
     status:
       latestDiagnostics.length === 0
         ? 'written_pending_iframe_observation'
         : errorCount === 0
           ? 'written_no_errors_observed'
           : 'written_errors_observed',
+  };
+}
+
+function createHtmlAppRevisionMetadata(
+  store: StoreApi<RoomState>,
+  input: Pick<HtmlAppAgentInput, 'prompt'>,
+  {name}: {name: string},
+) {
+  const currentSession = store.getState().ai.getCurrentSession();
+  return {
+    name,
+    source: 'assistant' as const,
+    sourcePrompt: input.prompt,
+    sessionId: currentSession?.id,
+  };
+}
+
+function formatHtmlAppRevisionResult(revision?: HtmlAppRevision) {
+  if (!revision) return undefined;
+  return {
+    id: revision.id,
+    name: revision.name,
+    source: revision.source,
+    createdAt: revision.createdAt,
+    parentRevisionId: revision.parentRevisionId,
   };
 }
 
