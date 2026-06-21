@@ -9,6 +9,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  ScrollArea,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -87,13 +88,46 @@ type BlockMenuItem = {
   ) => Record<string, unknown>;
 };
 
-type InsertPlacement = 'before' | 'after';
+type FocusedBlockState = BlockControlState & {
+  left: number;
+  menuTop: number;
+  placeholderStyle: BlockTypeSearchPlaceholderStyle;
+};
 
-const BLOCK_CONTROLS_STACK_HEIGHT = 80;
+type BlockTypeSearchPlaceholderStyle = {
+  fontFamily: string;
+  fontSize: string;
+  fontStyle: string;
+  fontWeight: string;
+  letterSpacing: string;
+  lineHeight: string;
+};
+
+type BlockTypeSearchState = FocusedBlockState & {
+  mode: 'slash' | 'filter';
+  placeholderLeft: number;
+  placeholderStyle: BlockTypeSearchPlaceholderStyle;
+  placeholderTop: number;
+  query: string;
+};
+
+type BlockTypeSearchSelection = {
+  index: number;
+  key: string;
+};
+
+const BLOCK_CONTROLS_STACK_HEIGHT = 32;
 const BLOCK_CONTROLS_TOP_INSET = 4;
-const BLOCK_CONTROLS_GUTTER_HOVER_WIDTH = 72;
+const BLOCK_CONTROLS_GUTTER_HOVER_WIDTH = 96;
 const DRAG_SCROLL_EDGE_THRESHOLD = 80;
 const DRAG_SCROLL_MAX_STEP = 28;
+const BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT = 300;
+const BLOCK_TYPE_SEARCH_MENU_LIST_MAX_HEIGHT = 240;
+const BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN = 16;
+const BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER = 96;
+const EMPTY_BLOCK_PLACEHOLDER = "Press '/' to change block type";
+const SLASH_SEARCH_PLACEHOLDER = 'Type to search';
+const FILTER_SEARCH_PLACEHOLDER = 'Type to filter';
 
 function labelFromArtifactType(artifactType: string) {
   return artifactType
@@ -131,14 +165,20 @@ function isEmptyTextBlock(node: ReturnType<typeof getNodeAt>) {
   return node?.type.name === 'paragraph' && node.textContent.length === 0;
 }
 
-function getFocusedEmptyBlock(editor: Editor): BlockControlState | null {
+function getFocusedParagraphBlock(editor: Editor): {
+  element: HTMLElement;
+  pos: number;
+  node: DraggableNode;
+} | null {
   if (!editor.isFocused) return null;
   const {$from} = editor.state.selection;
   if ($from.depth < 1) return null;
 
   const pos = $from.before(1);
   const node = getNodeAt(editor, pos);
-  if (!node || isTitleNode(node) || !isEmptyTextBlock(node)) return null;
+  if (!node || isTitleNode(node) || node.type.name !== 'paragraph') {
+    return null;
+  }
 
   const dom = editor.view.nodeDOM(pos);
   if (!(dom instanceof HTMLElement)) return null;
@@ -146,7 +186,7 @@ function getFocusedEmptyBlock(editor: Editor): BlockControlState | null {
   return {
     element: dom,
     pos,
-    top: 0,
+    node,
   };
 }
 
@@ -297,8 +337,15 @@ function getDropIndicator(
 
   return {
     top: topInViewport - scrollRect.top + scrollElement.scrollTop,
-    left: editorRect.left - scrollRect.left + scrollElement.scrollLeft + 64,
-    width: Math.max(0, editorRect.width - 88),
+    left:
+      editorRect.left -
+      scrollRect.left +
+      scrollElement.scrollLeft +
+      BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER,
+    width: Math.max(
+      0,
+      editorRect.width - BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER - 24,
+    ),
   };
 }
 
@@ -343,6 +390,68 @@ function getBlockControlsTop(elementRect: DOMRect, scrollElement: HTMLElement) {
     BLOCK_CONTROLS_STACK_HEIGHT / 2 + BLOCK_CONTROLS_TOP_INSET;
 
   return blockTop + Math.min(centeredOffset, topAlignedOffset);
+}
+
+function getFocusedBlockState(
+  block: {element: HTMLElement; pos: number},
+  scrollElement: HTMLElement,
+): FocusedBlockState {
+  const elementRect = block.element.getBoundingClientRect();
+  const scrollRect = scrollElement.getBoundingClientRect();
+
+  return {
+    element: block.element,
+    pos: block.pos,
+    top: elementRect.top - scrollRect.top + scrollElement.scrollTop,
+    left: elementRect.left - scrollRect.left + scrollElement.scrollLeft,
+    menuTop: elementRect.bottom - scrollRect.top + scrollElement.scrollTop + 4,
+    placeholderStyle: getPlaceholderStyle(block.element),
+  };
+}
+
+function getPlaceholderStyle(
+  element: HTMLElement,
+): BlockTypeSearchPlaceholderStyle {
+  const style = window.getComputedStyle(element);
+  return {
+    fontFamily: style.fontFamily,
+    fontSize: style.fontSize,
+    fontStyle: style.fontStyle,
+    fontWeight: style.fontWeight,
+    letterSpacing: style.letterSpacing,
+    lineHeight: style.lineHeight,
+  };
+}
+
+function getSlashPlaceholderPosition(
+  editor: Editor,
+  block: {element: HTMLElement; pos: number},
+  scrollElement: HTMLElement,
+): Pick<
+  BlockTypeSearchState,
+  'placeholderLeft' | 'placeholderStyle' | 'placeholderTop'
+> {
+  const scrollRect = scrollElement.getBoundingClientRect();
+  const elementRect = block.element.getBoundingClientRect();
+  const placeholderTop =
+    elementRect.top - scrollRect.top + scrollElement.scrollTop;
+  const placeholderStyle = getPlaceholderStyle(block.element);
+  try {
+    const slashEndCoords = editor.view.coordsAtPos(block.pos + 2);
+    return {
+      placeholderLeft:
+        slashEndCoords.left - scrollRect.left + scrollElement.scrollLeft,
+      placeholderStyle,
+      placeholderTop,
+    };
+  } catch {
+    return {
+      placeholderLeft:
+        elementRect.left - scrollRect.left + scrollElement.scrollLeft + 10,
+      placeholderStyle,
+      placeholderTop,
+    };
+  }
 }
 
 function getNodeId(node: DraggableNode, generateBlockId: () => string) {
@@ -396,6 +505,52 @@ function preserveTextInNode(
     default:
       return node;
   }
+}
+
+function clearTextInNode(
+  node: Record<string, unknown>,
+): Record<string, unknown> {
+  switch (node.type) {
+    case 'paragraph':
+    case 'heading':
+    case 'codeBlock':
+      return {...node, content: undefined};
+    case 'bulletList':
+    case 'orderedList':
+      return {
+        ...node,
+        content: [
+          {
+            type: 'listItem',
+            content: [{type: 'paragraph'}],
+          },
+        ],
+      };
+    case 'taskList':
+      return {
+        ...node,
+        content: [
+          {
+            type: 'taskItem',
+            attrs: {checked: false},
+            content: [{type: 'paragraph'}],
+          },
+        ],
+      };
+    case 'blockquote':
+      return {...node, content: [{type: 'paragraph'}]};
+    default:
+      return node;
+  }
+}
+
+function blockMenuItemMatchesQuery(item: BlockMenuItem, query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  return `${item.label} ${item.description}`
+    .toLowerCase()
+    .includes(normalizedQuery);
 }
 
 function buildStatefulBlockMenuItems(
@@ -579,19 +734,20 @@ export const BlockDocumentBlockControls: FC<
   const [activeBlock, setActiveBlock] = useState<BlockControlState | null>(
     null,
   );
-  const [insertMenuOpen, setInsertMenuOpen] = useState<InsertPlacement | null>(
-    null,
-  );
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
   const [focusedEmptyBlock, setFocusedEmptyBlock] =
-    useState<BlockControlState | null>(null);
-  const [blockTypeMenuOpen, setBlockTypeMenuOpen] = useState(false);
+    useState<FocusedBlockState | null>(null);
+  const [blockTypeSearch, setBlockTypeSearch] =
+    useState<BlockTypeSearchState | null>(null);
+  const [blockTypeSearchMenuOpen, setBlockTypeSearchMenuOpen] = useState(false);
+  const [blockTypeSearchSelection, setBlockTypeSearchSelection] =
+    useState<BlockTypeSearchSelection>({index: 0, key: ''});
   const [dropIndicator, setDropIndicator] = useState<BlockDropIndicator | null>(
     null,
   );
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
+  const filterBlockIdRef = useRef<string | null>(null);
   const suppressHandleClickRef = useRef(false);
-  const suppressFocusedBlockMenuRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
@@ -599,8 +755,68 @@ export const BlockDocumentBlockControls: FC<
     () => buildMediaBlockMenuItems(statefulBlockTypes),
     [statefulBlockTypes],
   );
-  const menuOpen =
-    insertMenuOpen != null || handleMenuOpen || blockTypeMenuOpen;
+  const filteredTextMenuItems = useMemo(
+    () =>
+      textMenuItems.filter((item) =>
+        blockMenuItemMatchesQuery(item, blockTypeSearch?.query ?? ''),
+      ),
+    [blockTypeSearch?.query, textMenuItems],
+  );
+  const filteredMediaMenuItems = useMemo(
+    () =>
+      mediaMenuItems.filter((item) =>
+        blockMenuItemMatchesQuery(item, blockTypeSearch?.query ?? ''),
+      ),
+    [blockTypeSearch?.query, mediaMenuItems],
+  );
+  const blockTypeSearchMenuItems = useMemo(
+    () =>
+      [...filteredTextMenuItems, ...filteredMediaMenuItems],
+    [filteredMediaMenuItems, filteredTextMenuItems],
+  );
+  const blockTypeSearchListHeight = useMemo(() => {
+    const emptyStateHeight = 36;
+    const estimatedItemHeight = 36;
+    return Math.min(
+      BLOCK_TYPE_SEARCH_MENU_LIST_MAX_HEIGHT,
+      blockTypeSearchMenuItems.length
+        ? blockTypeSearchMenuItems.length * estimatedItemHeight
+        : emptyStateHeight,
+    );
+  }, [blockTypeSearchMenuItems.length]);
+  const blockTypeSearchSelectionKey = `${blockTypeSearch?.mode ?? ''}:${
+    blockTypeSearch?.query ?? ''
+  }:${blockTypeSearchMenuItems.length}`;
+  const blockTypeSearchSelectedIndex =
+    blockTypeSearchSelection.key === blockTypeSearchSelectionKey
+      ? Math.min(
+          blockTypeSearchSelection.index,
+          Math.max(0, blockTypeSearchMenuItems.length - 1),
+        )
+      : 0;
+  const menuOpen = handleMenuOpen || blockTypeSearchMenuOpen;
+  const addAboveModifierLabel = useMemo(() => {
+    if (typeof navigator === 'undefined') return 'Alt';
+    return /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? 'Option' : 'Alt';
+  }, []);
+
+  useEffect(() => {
+    if (!blockTypeSearch && !blockTypeSearchMenuOpen) {
+      filterBlockIdRef.current = null;
+    }
+  }, [blockTypeSearch, blockTypeSearchMenuOpen]);
+
+  useEffect(() => {
+    if (!blockTypeSearchMenuOpen) return;
+    const selectedItem = document.querySelector<HTMLElement>(
+      `[data-block-type-search-item="${blockTypeSearchSelectedIndex}"]`,
+    );
+    selectedItem?.scrollIntoView({block: 'nearest'});
+  }, [
+    blockTypeSearchMenuItems.length,
+    blockTypeSearchMenuOpen,
+    blockTypeSearchSelectedIndex,
+  ]);
 
   const cancelHide = useCallback(() => {
     if (hideTimerRef.current == null) return;
@@ -640,30 +856,72 @@ export const BlockDocumentBlockControls: FC<
     [cancelHide, editor, menuOpen, scheduleHide, scrollElement],
   );
 
-  const updateFocusedEmptyBlock = useCallback(
-    (openOnMatch: boolean) => {
+  const updateFocusedTextBlock = useCallback(
+    (openSlashMenu: boolean) => {
       if (!editor || !scrollElement || readOnly) {
         setFocusedEmptyBlock(null);
-        setBlockTypeMenuOpen(false);
+        setBlockTypeSearch(null);
+        setBlockTypeSearchMenuOpen(false);
+        filterBlockIdRef.current = null;
         return;
       }
 
-      const focusedBlock = getFocusedEmptyBlock(editor);
+      const focusedBlock = getFocusedParagraphBlock(editor);
       if (!focusedBlock) {
         setFocusedEmptyBlock(null);
-        setBlockTypeMenuOpen(false);
+        setBlockTypeSearch(null);
+        setBlockTypeSearchMenuOpen(false);
+        filterBlockIdRef.current = null;
         return;
       }
 
-      const elementRect = focusedBlock.element.getBoundingClientRect();
-      setFocusedEmptyBlock({
-        ...focusedBlock,
-        top: getBlockControlsTop(elementRect, scrollElement),
-      });
+      const blockState = getFocusedBlockState(focusedBlock, scrollElement);
+      const text = focusedBlock.node.textContent;
+      const focusedBlockId = focusedBlock.node.attrs.id;
+      const filterBlockId = filterBlockIdRef.current;
 
-      if (openOnMatch && !suppressFocusedBlockMenuRef.current) {
-        setBlockTypeMenuOpen(true);
+      if (text.startsWith('/')) {
+        setFocusedEmptyBlock(null);
+        setBlockTypeSearch({
+          ...blockState,
+          mode: 'slash',
+          ...getSlashPlaceholderPosition(
+            editor,
+            focusedBlock,
+            scrollElement,
+          ),
+          query: text.slice(1),
+        });
+        if (openSlashMenu) {
+          setBlockTypeSearchMenuOpen(true);
+        }
+        return;
       }
+
+      if (filterBlockId && focusedBlockId === filterBlockId) {
+        setFocusedEmptyBlock(null);
+        setBlockTypeSearch({
+          ...blockState,
+          mode: 'filter',
+          placeholderLeft: blockState.left,
+          placeholderStyle: blockState.placeholderStyle,
+          placeholderTop: blockState.top,
+          query: text,
+        });
+        if (openSlashMenu) {
+          setBlockTypeSearchMenuOpen(true);
+        }
+        return;
+      }
+
+      setBlockTypeSearch(null);
+      setBlockTypeSearchMenuOpen(false);
+      if (filterBlockId) {
+        filterBlockIdRef.current = null;
+      }
+      setFocusedEmptyBlock(
+        isEmptyTextBlock(focusedBlock.node) ? blockState : null,
+      );
     },
     [editor, readOnly, scrollElement],
   );
@@ -671,13 +929,18 @@ export const BlockDocumentBlockControls: FC<
   useEffect(() => {
     if (!editor || !scrollElement || readOnly) return;
 
-    const handleFocusOrSelectionUpdate = () => updateFocusedEmptyBlock(true);
-    const handleUpdate = () => updateFocusedEmptyBlock(false);
-    const handleScrollOrResize = () => updateFocusedEmptyBlock(false);
+    const handleFocusOrSelectionUpdate = () => updateFocusedTextBlock(true);
+    const handleUpdate = () => updateFocusedTextBlock(true);
+    const handleScrollOrResize = () => updateFocusedTextBlock(false);
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(handleScrollOrResize);
 
     editor.on('focus', handleFocusOrSelectionUpdate);
     editor.on('selectionUpdate', handleFocusOrSelectionUpdate);
     editor.on('update', handleUpdate);
+    resizeObserver?.observe(editor.view.dom);
     scrollElement.addEventListener('scroll', handleScrollOrResize, {
       passive: true,
     });
@@ -689,10 +952,11 @@ export const BlockDocumentBlockControls: FC<
       editor.off('focus', handleFocusOrSelectionUpdate);
       editor.off('selectionUpdate', handleFocusOrSelectionUpdate);
       editor.off('update', handleUpdate);
+      resizeObserver?.disconnect();
       scrollElement.removeEventListener('scroll', handleScrollOrResize);
       window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [editor, readOnly, scrollElement, updateFocusedEmptyBlock]);
+  }, [editor, readOnly, scrollElement, updateFocusedTextBlock]);
 
   useEffect(() => {
     if (!editor || !scrollElement || readOnly) return;
@@ -751,25 +1015,6 @@ export const BlockDocumentBlockControls: FC<
     updateActiveBlock,
   ]);
 
-  const insertBlockRelativeToActive = useCallback(
-    (createNode: BlockMenuItem['createNode'], placement: InsertPlacement) => {
-      if (!editor || !activeBlock) return;
-      const node = getNodeAt(editor, activeBlock.pos);
-      if (!node) return;
-      const insertPos =
-        placement === 'before'
-          ? activeBlock.pos
-          : activeBlock.pos + node.nodeSize;
-      editor
-        .chain()
-        .focus()
-        .insertContentAt(insertPos, createNode(generateBlockId()))
-        .run();
-      setInsertMenuOpen(null);
-    },
-    [activeBlock, editor, generateBlockId],
-  );
-
   const turnBlockInto = useCallback(
     (
       block: BlockControlState | null,
@@ -785,6 +1030,19 @@ export const BlockDocumentBlockControls: FC<
         }),
         node.textContent,
       );
+
+      if (
+        replacement.type === 'paragraph' &&
+        node.type.name === 'paragraph' &&
+        isEmptyTextBlock(node)
+      ) {
+        setHandleMenuOpen(false);
+        setBlockTypeSearchMenuOpen(false);
+        setActiveBlock(null);
+        setBlockTypeSearch(null);
+        return;
+      }
+
       editor
         .chain()
         .focus()
@@ -797,14 +1055,10 @@ export const BlockDocumentBlockControls: FC<
         )
         .run();
 
-      suppressFocusedBlockMenuRef.current = true;
-      window.setTimeout(() => {
-        suppressFocusedBlockMenuRef.current = false;
-      }, 200);
       setHandleMenuOpen(false);
-      setBlockTypeMenuOpen(false);
+      setBlockTypeSearchMenuOpen(false);
       setActiveBlock(null);
-      setFocusedEmptyBlock(null);
+      setBlockTypeSearch(null);
     },
     [editor, generateBlockId],
   );
@@ -816,12 +1070,125 @@ export const BlockDocumentBlockControls: FC<
     [activeBlock, turnBlockInto],
   );
 
-  const turnFocusedEmptyBlockInto = useCallback(
+  const turnBlockTypeSearchInto = useCallback(
     (createNode: BlockMenuItem['createNode']) => {
-      turnBlockInto(focusedEmptyBlock, createNode);
+      if (!editor || !blockTypeSearch) return;
+      const node = getNodeAt(editor, blockTypeSearch.pos);
+      if (!node || isTitleNode(node)) return;
+
+      const replacement = clearTextInNode(
+        createNode(getNodeId(node, generateBlockId), {initialText: ''}),
+      );
+
+      if (
+        replacement.type === 'paragraph' &&
+        node.type.name === 'paragraph' &&
+        isEmptyTextBlock(node)
+      ) {
+        setBlockTypeSearchMenuOpen(false);
+        setBlockTypeSearch(null);
+        setFocusedEmptyBlock(null);
+        return;
+      }
+
+      editor
+        .chain()
+        .focus()
+        .insertContentAt(
+          {
+            from: blockTypeSearch.pos,
+            to: blockTypeSearch.pos + node.nodeSize,
+          },
+          replacement,
+        )
+        .run();
+
+      setBlockTypeSearchMenuOpen(false);
+      setBlockTypeSearch(null);
+      setFocusedEmptyBlock(null);
     },
-    [focusedEmptyBlock, turnBlockInto],
+    [blockTypeSearch, editor, generateBlockId],
   );
+
+  const handleActiveBlockTypeSelect = useCallback(
+    (item: BlockMenuItem) => {
+      turnActiveBlockInto(item.createNode);
+    },
+    [turnActiveBlockInto],
+  );
+
+  const handleBlockTypeSearchSelect = useCallback(
+    (item: BlockMenuItem) => {
+      turnBlockTypeSearchInto(item.createNode);
+    },
+    [turnBlockTypeSearchInto],
+  );
+
+  useEffect(() => {
+    if (
+      !editor ||
+      !blockTypeSearch ||
+      !blockTypeSearchMenuOpen ||
+      handleMenuOpen
+    ) {
+      return;
+    }
+
+    const editorElement = editor.view.dom as HTMLElement;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        if (!blockTypeSearchMenuItems.length) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setBlockTypeSearchSelection((currentSelection) => {
+          const currentIndex =
+            currentSelection.key === blockTypeSearchSelectionKey
+              ? currentSelection.index
+              : 0;
+          const direction = event.key === 'ArrowDown' ? 1 : -1;
+          return {
+            index:
+              (currentIndex + direction + blockTypeSearchMenuItems.length) %
+              blockTypeSearchMenuItems.length,
+            key: blockTypeSearchSelectionKey,
+          };
+        });
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        const selectedItem =
+          blockTypeSearchMenuItems[blockTypeSearchSelectedIndex];
+        if (!selectedItem) return;
+        event.preventDefault();
+        event.stopPropagation();
+        handleBlockTypeSearchSelect(selectedItem);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        setBlockTypeSearchMenuOpen(false);
+      }
+    };
+
+    editorElement.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      editorElement.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [
+    blockTypeSearch,
+    blockTypeSearchMenuItems,
+    blockTypeSearchMenuOpen,
+    blockTypeSearchSelectionKey,
+    blockTypeSearchSelectedIndex,
+    editor,
+    handleBlockTypeSearchSelect,
+    handleMenuOpen,
+  ]);
 
   const deleteActiveBlock = useCallback(() => {
     if (!editor || !activeBlock) return;
@@ -845,6 +1212,31 @@ export const BlockDocumentBlockControls: FC<
     event.preventDefault();
   };
 
+  const handleAddBlockClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (!editor || !activeBlock) return;
+    const node = getNodeAt(editor, activeBlock.pos);
+    if (!node || isTitleNode(node)) return;
+
+    const blockId = generateBlockId();
+    const insertPos = event.altKey
+      ? activeBlock.pos
+      : activeBlock.pos + node.nodeSize;
+    filterBlockIdRef.current = blockId;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(insertPos, {
+        type: 'paragraph',
+        attrs: {id: blockId},
+      })
+      .setTextSelection(insertPos + 1)
+      .run();
+
+    setBlockTypeSearchMenuOpen(true);
+    setHandleMenuOpen(false);
+    setActiveBlock(null);
+  };
+
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
     if (!editor || !activeBlock || !event.dataTransfer) return;
     const node = getNodeAt(editor, activeBlock.pos);
@@ -865,24 +1257,43 @@ export const BlockDocumentBlockControls: FC<
       event.preventDefault();
       return;
     }
-    setBlockTypeMenuOpen(false);
+    setBlockTypeSearchMenuOpen(false);
     setHandleMenuOpen((open) => !open);
   };
 
-  const renderMenuItem = (item: BlockMenuItem, onSelect: () => void) => (
-    <DropdownMenuItem
-      key={item.label}
-      className="items-start gap-2"
-      onSelect={onSelect}
-    >
-      <item.icon className="mt-0.5 h-4 w-4" />
-      <span className="grid gap-0.5">
-        <span>{item.label}</span>
-        <span className="text-muted-foreground text-xs">
-          {item.description}
-        </span>
-      </span>
-    </DropdownMenuItem>
+  const renderMenuItem = (
+    item: BlockMenuItem,
+    onSelect: () => void,
+    options?: {
+      onPointerMove?: () => void;
+      searchIndex?: number;
+      selected?: boolean;
+    },
+  ) => (
+    <Tooltip key={item.label}>
+      <TooltipTrigger asChild>
+        <DropdownMenuItem
+          className={cn(
+            'h-9 gap-2 px-2 py-1.5',
+            options?.selected && 'bg-accent text-accent-foreground',
+          )}
+          data-block-type-search-item={options?.searchIndex}
+          onPointerMove={options?.onPointerMove}
+          onSelect={onSelect}
+        >
+          <item.icon className="h-4 w-4" />
+          <span className="truncate">{item.label}</span>
+        </DropdownMenuItem>
+      </TooltipTrigger>
+      <TooltipContent
+        align="center"
+        side="right"
+        sideOffset={8}
+        className="bg-popover text-popover-foreground border-border max-w-56 border px-2.5 py-1.5 text-xs shadow-md"
+      >
+        {item.description}
+      </TooltipContent>
+    </Tooltip>
   );
 
   const renderBlockTypeMenuItems = (
@@ -905,59 +1316,78 @@ export const BlockDocumentBlockControls: FC<
     </>
   );
 
-  const renderInsertMenuContent = (placement: InsertPlacement) => (
-    <DropdownMenuContent
-      align="center"
-      side="right"
-      className="w-60"
-      onCloseAutoFocus={(event) => event.preventDefault()}
-    >
-      <DropdownMenuLabel>
-        Insert {placement === 'before' ? 'above' : 'below'}
-      </DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      {renderBlockTypeMenuItems((item) =>
-        insertBlockRelativeToActive(item.createNode, placement),
-      )}
-    </DropdownMenuContent>
-  );
+  const renderBlockTypeSearchMenuGroup = (
+    label: string,
+    items: BlockMenuItem[],
+    startIndex: number,
+  ) =>
+    items.length ? (
+      <>
+        <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-medium">
+          {label}
+        </DropdownMenuLabel>
+        {items.map((item, itemIndex) => {
+          const index = startIndex + itemIndex;
+          return renderMenuItem(item, () => handleBlockTypeSearchSelect(item), {
+            onPointerMove: () =>
+              setBlockTypeSearchSelection({
+                index,
+                key: blockTypeSearchSelectionKey,
+              }),
+            searchIndex: index,
+            selected: index === blockTypeSearchSelectedIndex,
+          });
+        })}
+      </>
+    ) : null;
 
-  const renderAddButton = (placement: InsertPlacement) => (
-    <DropdownMenu
-      modal={false}
-      open={insertMenuOpen === placement}
-      onOpenChange={(open) => {
-        setInsertMenuOpen(open ? placement : null);
-        if (open) setBlockTypeMenuOpen(false);
-      }}
-    >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="pointer-events-auto h-6 w-6 shrink-0 rounded-md opacity-70 hover:opacity-100"
-              aria-label={
-                placement === 'before' ? 'Add block above' : 'Add block below'
-              }
-              onMouseDown={handlePlusMouseDown}
-            >
-              <PlusIcon className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent
-          align="center"
-          side="right"
-          className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-xs shadow-md"
+  const renderSlashMenuItems = () =>
+    blockTypeSearchMenuItems.length ? (
+      <>
+        {renderBlockTypeSearchMenuGroup('Basic blocks', filteredTextMenuItems, 0)}
+        {filteredTextMenuItems.length && filteredMediaMenuItems.length ? (
+          <DropdownMenuSeparator className="my-1.5" />
+        ) : null}
+        {renderBlockTypeSearchMenuGroup(
+          'Embeds',
+          filteredMediaMenuItems,
+          filteredTextMenuItems.length,
+        )}
+      </>
+    ) : (
+      <DropdownMenuItem disabled>No matching block types</DropdownMenuItem>
+    );
+
+  const renderAddButton = () => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="pointer-events-auto h-7 w-7 shrink-0 rounded-md opacity-70 hover:opacity-100"
+          aria-label="Add block"
+          onClick={handleAddBlockClick}
+          onMouseDown={handlePlusMouseDown}
         >
-          {placement === 'before' ? 'Add above' : 'Add below'}
-        </TooltipContent>
-      </Tooltip>
-      {renderInsertMenuContent(placement)}
-    </DropdownMenu>
+          <PlusIcon className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent
+        align="center"
+        side="bottom"
+        className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-center text-xs shadow-md"
+      >
+        <div>
+          <span className="font-medium">Click</span>{' '}
+          <span className="text-muted-foreground">to add below</span>
+        </div>
+        <div>
+          <span className="font-medium">{addAboveModifierLabel}+Click</span>{' '}
+          <span className="text-muted-foreground">to add above</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 
   useEffect(() => {
@@ -1071,52 +1501,95 @@ export const BlockDocumentBlockControls: FC<
       ) : null}
       {focusedEmptyBlock ? (
         <div
-          className="pointer-events-none absolute left-3 z-30 h-7 w-7 -translate-y-1/2"
-          style={{top: focusedEmptyBlock.top}}
+          className="text-muted-foreground pointer-events-none absolute z-10"
+          style={{
+            ...focusedEmptyBlock.placeholderStyle,
+            left: focusedEmptyBlock.left,
+            top: focusedEmptyBlock.top,
+          }}
         >
-          <DropdownMenu
-            modal={false}
-            open={
-              blockTypeMenuOpen && !handleMenuOpen && insertMenuOpen == null
-            }
-            onOpenChange={setBlockTypeMenuOpen}
-          >
-            <DropdownMenuTrigger asChild>
-              <span
-                aria-hidden="true"
-                className="pointer-events-none block h-full w-full"
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              side="right"
-              className="w-60"
-              onOpenAutoFocus={(event) => event.preventDefault()}
-              onCloseAutoFocus={(event) => event.preventDefault()}
-            >
-              <DropdownMenuLabel>Select block type</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {renderBlockTypeMenuItems((item) =>
-                turnFocusedEmptyBlockInto(item.createNode),
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {EMPTY_BLOCK_PLACEHOLDER}
         </div>
+      ) : null}
+      {blockTypeSearch ? (
+        <>
+          {!blockTypeSearch.query ? (
+            <div
+              className="text-muted-foreground pointer-events-none absolute z-10"
+              style={{
+                ...blockTypeSearch.placeholderStyle,
+                left: blockTypeSearch.placeholderLeft,
+                top: blockTypeSearch.placeholderTop,
+              }}
+            >
+              {blockTypeSearch.mode === 'slash'
+                ? SLASH_SEARCH_PLACEHOLDER
+                : FILTER_SEARCH_PLACEHOLDER}
+            </div>
+          ) : null}
+          <div
+            className="pointer-events-none absolute z-30 h-px w-px"
+            style={{top: blockTypeSearch.menuTop, left: blockTypeSearch.left}}
+          >
+            <DropdownMenu
+              modal={false}
+              open={blockTypeSearchMenuOpen && !handleMenuOpen}
+              onOpenChange={setBlockTypeSearchMenuOpen}
+            >
+              <DropdownMenuTrigger asChild>
+                <span className="pointer-events-none block h-px w-px" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                side="bottom"
+                sideOffset={4}
+                avoidCollisions={false}
+                collisionPadding={{
+                  bottom: BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN,
+                  left: 8,
+                  right: 8,
+                  top: 8,
+                }}
+                className="flex w-72 flex-col overflow-hidden"
+                style={{
+                  maxHeight: `min(${BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT}px, calc(var(--radix-dropdown-menu-content-available-height) - ${BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN}px))`,
+                }}
+                onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
+              >
+                <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
+                  Block
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <TooltipProvider delayDuration={300}>
+                  <ScrollArea
+                    className="min-h-0"
+                    style={{
+                      height: `min(${blockTypeSearchListHeight}px, max(72px, calc(var(--radix-dropdown-menu-content-available-height) - 72px)))`,
+                    }}
+                  >
+                    {renderSlashMenuItems()}
+                  </ScrollArea>
+                </TooltipProvider>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </>
       ) : null}
       {activeBlock ? (
         <div
           ref={controlsRef}
-          className="pointer-events-none absolute left-3 z-20 flex w-7 -translate-y-1/2 flex-col items-center gap-0.5"
+          className="pointer-events-none absolute left-2 z-20 flex -translate-y-1/2 flex-row items-center gap-0.5"
           style={{top: activeBlock.top}}
         >
           <TooltipProvider>
-            {renderAddButton('before')}
+            {renderAddButton()}
             <DropdownMenu
               modal={false}
               open={handleMenuOpen}
               onOpenChange={(open) => {
                 setHandleMenuOpen(open);
-                if (open) setBlockTypeMenuOpen(false);
+                if (open) setBlockTypeSearchMenuOpen(false);
               }}
             >
               <Tooltip>
@@ -1145,7 +1618,7 @@ export const BlockDocumentBlockControls: FC<
                 </TooltipTrigger>
                 <TooltipContent
                   align="center"
-                  side="right"
+                  side="bottom"
                   className="bg-popover text-popover-foreground border-border border px-2.5 py-1.5 text-center text-xs shadow-md"
                 >
                   <div>
@@ -1172,9 +1645,7 @@ export const BlockDocumentBlockControls: FC<
                   <DropdownMenuSubContent className="w-60">
                     <DropdownMenuLabel>Turn into</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {renderBlockTypeMenuItems((item) =>
-                      turnActiveBlockInto(item.createNode),
-                    )}
+                    {renderBlockTypeMenuItems(handleActiveBlockTypeSelect)}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
@@ -1187,7 +1658,6 @@ export const BlockDocumentBlockControls: FC<
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {renderAddButton('after')}
           </TooltipProvider>
         </div>
       ) : null}
