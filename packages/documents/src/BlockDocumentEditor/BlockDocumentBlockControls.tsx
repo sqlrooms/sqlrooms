@@ -803,6 +803,11 @@ export const BlockDocumentBlockControls: FC<
     return isMacOS() ? 'Option' : 'Alt';
   }, []);
 
+  const closeBlockTypeSearchMenu = useCallback(() => {
+    setBlockTypeSearchMenuOpen(false);
+    setBlockTypeSearchSelection({index: 0, key: ''});
+  }, []);
+
   useEffect(() => {
     if (!blockTypeSearch && !blockTypeSearchMenuOpen) {
       filterBlockIdRef.current = null;
@@ -864,7 +869,7 @@ export const BlockDocumentBlockControls: FC<
       if (!editor || !scrollElement || readOnly) {
         setFocusedEmptyBlock(null);
         setBlockTypeSearch(null);
-        setBlockTypeSearchMenuOpen(false);
+        closeBlockTypeSearchMenu();
         filterBlockIdRef.current = null;
         return;
       }
@@ -873,7 +878,7 @@ export const BlockDocumentBlockControls: FC<
       if (!focusedBlock) {
         setFocusedEmptyBlock(null);
         setBlockTypeSearch(null);
-        setBlockTypeSearchMenuOpen(false);
+        closeBlockTypeSearchMenu();
         filterBlockIdRef.current = null;
         return;
       }
@@ -887,7 +892,7 @@ export const BlockDocumentBlockControls: FC<
         setFocusedEmptyBlock(null);
         if (focusedBlockId === dismissedSlashBlockIdRef.current) {
           setBlockTypeSearch(null);
-          setBlockTypeSearchMenuOpen(false);
+          closeBlockTypeSearchMenu();
           return;
         }
         setBlockTypeSearch({
@@ -919,7 +924,7 @@ export const BlockDocumentBlockControls: FC<
       }
 
       setBlockTypeSearch(null);
-      setBlockTypeSearchMenuOpen(false);
+      closeBlockTypeSearchMenu();
       if (filterBlockId) {
         filterBlockIdRef.current = null;
       }
@@ -930,7 +935,7 @@ export const BlockDocumentBlockControls: FC<
         isEmptyTextBlock(focusedBlock.node) ? blockState : null,
       );
     },
-    [editor, readOnly, scrollElement],
+    [closeBlockTypeSearchMenu, editor, readOnly, scrollElement],
   );
 
   useEffect(() => {
@@ -1044,7 +1049,7 @@ export const BlockDocumentBlockControls: FC<
         isEmptyTextBlock(node)
       ) {
         setHandleMenuOpen(false);
-        setBlockTypeSearchMenuOpen(false);
+        closeBlockTypeSearchMenu();
         setActiveBlock(null);
         setBlockTypeSearch(null);
         return;
@@ -1063,11 +1068,11 @@ export const BlockDocumentBlockControls: FC<
         .run();
 
       setHandleMenuOpen(false);
-      setBlockTypeSearchMenuOpen(false);
+      closeBlockTypeSearchMenu();
       setActiveBlock(null);
       setBlockTypeSearch(null);
     },
-    [editor, generateBlockId],
+    [closeBlockTypeSearchMenu, editor, generateBlockId],
   );
 
   const turnActiveBlockInto = useCallback(
@@ -1092,7 +1097,7 @@ export const BlockDocumentBlockControls: FC<
         node.type.name === 'paragraph' &&
         isEmptyTextBlock(node)
       ) {
-        setBlockTypeSearchMenuOpen(false);
+        closeBlockTypeSearchMenu();
         setBlockTypeSearch(null);
         setFocusedEmptyBlock(null);
         return;
@@ -1110,11 +1115,11 @@ export const BlockDocumentBlockControls: FC<
         )
         .run();
 
-      setBlockTypeSearchMenuOpen(false);
+      closeBlockTypeSearchMenu();
       setBlockTypeSearch(null);
       setFocusedEmptyBlock(null);
     },
-    [blockTypeSearch, editor, generateBlockId],
+    [blockTypeSearch, closeBlockTypeSearchMenu, editor, generateBlockId],
   );
 
   const handleActiveBlockTypeSelect = useCallback(
@@ -1184,7 +1189,7 @@ export const BlockDocumentBlockControls: FC<
           dismissedSlashBlockIdRef.current =
             typeof nodeId === 'string' ? nodeId : null;
         }
-        setBlockTypeSearchMenuOpen(false);
+        closeBlockTypeSearchMenu();
         setBlockTypeSearch(null);
         setFocusedEmptyBlock(null);
         filterBlockIdRef.current = null;
@@ -1201,6 +1206,7 @@ export const BlockDocumentBlockControls: FC<
     blockTypeSearchMenuOpen,
     blockTypeSearchSelectionKey,
     blockTypeSearchSelectedIndex,
+    closeBlockTypeSearchMenu,
     editor,
     handleBlockTypeSearchSelect,
     handleMenuOpen,
@@ -1273,14 +1279,11 @@ export const BlockDocumentBlockControls: FC<
       event.preventDefault();
       return;
     }
-    setBlockTypeSearchMenuOpen(false);
+    closeBlockTypeSearchMenu();
     setHandleMenuOpen((open) => !open);
   };
 
-  const renderMenuItem = (
-    item: BlockMenuItem,
-    onSelect: () => void,
-  ) => (
+  const renderMenuItem = (item: BlockMenuItem, onSelect: () => void) => (
     <DropdownMenuItem
       key={item.label}
       className="h-9 gap-2 px-2 py-1.5"
@@ -1576,7 +1579,13 @@ export const BlockDocumentBlockControls: FC<
           >
             <Popover
               open={blockTypeSearchMenuOpen && !handleMenuOpen}
-              onOpenChange={setBlockTypeSearchMenuOpen}
+              onOpenChange={(open) => {
+                if (open) {
+                  setBlockTypeSearchMenuOpen(true);
+                } else {
+                  closeBlockTypeSearchMenu();
+                }
+              }}
             >
               <PopoverAnchor asChild>
                 <span className="pointer-events-none block h-px w-px" />
@@ -1631,7 +1640,7 @@ export const BlockDocumentBlockControls: FC<
               open={handleMenuOpen}
               onOpenChange={(open) => {
                 setHandleMenuOpen(open);
-                if (open) setBlockTypeSearchMenuOpen(false);
+                if (open) closeBlockTypeSearchMenu();
               }}
             >
               <Tooltip>
