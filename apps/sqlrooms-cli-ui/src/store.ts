@@ -29,6 +29,7 @@ import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
+  makeQualifiedTableName,
   QualifiedTableName,
   quoteTableReference,
   type SchemaCatalogFilterEntry,
@@ -370,22 +371,24 @@ async function readPythonSchema(tableName?: string) {
   }
 
   const arrowTable = await connector.query(`
-    SELECT table_schema, table_name, column_name, data_type
+    SELECT table_catalog, table_schema, table_name, column_name, data_type
     FROM information_schema.columns
     WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-    ORDER BY table_schema, table_name, ordinal_position
+    ORDER BY table_catalog, table_schema, table_name, ordinal_position
   `);
   const rows = arrowTableToJson(arrowTable);
   const tables = new Map<string, Array<{name: string; type?: string}>>();
   for (const row of rows) {
+    const catalogName = String(row.table_catalog ?? '');
     const schemaName = String(row.table_schema ?? 'main');
     const currentTableName = String(row.table_name ?? '');
     const columnName = String(row.column_name ?? '');
     if (!currentTableName || !columnName) continue;
-    const qualifiedTableName =
-      schemaName === 'main'
-        ? currentTableName
-        : `${schemaName}.${currentTableName}`;
+    const qualifiedTableName = makeQualifiedTableName({
+      database: catalogName || undefined,
+      schema: schemaName || undefined,
+      table: currentTableName,
+    }).toFullString();
     const columns = tables.get(qualifiedTableName) ?? [];
     columns.push({
       name: columnName,

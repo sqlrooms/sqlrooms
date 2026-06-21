@@ -20,6 +20,10 @@ type PyodideWorkerRequestMessage = {
 
 type PyodideWorkerResponseMessage =
   | {
+      type: 'started';
+      executionId: string;
+    }
+  | {
       type: 'result';
       executionId: string;
       result: PythonExecutionResult;
@@ -120,9 +124,13 @@ self.onmessage = (event: MessageEvent<PyodideWorkerRequestMessage>) => {
   const message = event.data;
   if (message.type !== 'execute') return;
 
-  const execution = executionQueue.then(() =>
-    executePython(message.request, message.indexURL),
-  );
+  const execution = executionQueue.then(() => {
+    postMessage({
+      type: 'started',
+      executionId: message.request.executionId,
+    } satisfies PyodideWorkerResponseMessage);
+    return executePython(message.request, message.indexURL);
+  });
   executionQueue = execution.then(
     () => undefined,
     () => undefined,
