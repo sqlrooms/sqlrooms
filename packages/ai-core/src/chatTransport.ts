@@ -1,5 +1,10 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {createId} from '@paralleldrive/cuid2';
+import {
+  setAiRunContextPrimaryItem,
+  type AiRunContext,
+  type ChatSessionSchema,
+} from '@sqlrooms/ai-config';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {
@@ -16,16 +21,19 @@ import {
   UIMessage,
 } from 'ai';
 import {produce} from 'immer';
+import {TOOL_CALL_CANCELLED} from './constants';
 import {
-  AI_DEFAULT_TEMPERATURE,
-  ANALYSIS_PENDING_ID,
-  TOOL_CALL_CANCELLED,
-} from './constants';
+  CHAT_REQUEST_ERROR_PART_TYPE,
+  createChatRequestErrorPart,
+  setChatRequestErrorMessage,
+} from './chatTurns';
 import type {
   AiSliceStateForTransport,
+  AiToolExecutionContext,
   ToolTimingEntry,
   AssistantMessageMetadata,
   MessageTokenUsage,
+  AgentToolCall,
 } from './types';
 import {
   fixIncompleteToolCalls,
@@ -107,6 +115,89 @@ function enrichMessagesWithAbortSnapshots(
   }
 }
 
+function writeAgentDebugStateToSession(
+  session: ChatSessionSchema,
+  state: AiSliceStateForTransport,
+): void {
+  const sessionToolCallIds = getSessionToolCallIds(session);
+  addReachableAgentToolCallIds(sessionToolCallIds, state.ai.agentProgress);
+
+  session.agentProgress = structuredClone(
+    filterRecordByKeys(state.ai.agentProgress, sessionToolCallIds),
+  ) as ChatSessionSchema['agentProgress'];
+
+  if (state.ai.devtools.shouldPersistAgentSnapshots()) {
+    session.agentSnapshots = structuredClone(
+      filterRecordByKeys(state.ai.devtools.agentSnapshots, sessionToolCallIds),
+    ) as ChatSessionSchema['agentSnapshots'];
+  } else {
+    delete session.agentSnapshots;
+  }
+}
+
+function getSessionToolCallIds(session: ChatSessionSchema): Set<string> {
+  const toolCallIds = new Set<string>();
+
+  for (const message of (session.uiMessages ?? []) as UIMessage[]) {
+    for (const part of message.parts ?? []) {
+      const toolCallId = (part as {toolCallId?: unknown}).toolCallId;
+      if (typeof toolCallId === 'string') {
+        toolCallIds.add(toolCallId);
+      }
+    }
+  }
+
+  return toolCallIds;
+}
+
+function addReachableAgentToolCallIds(
+  toolCallIds: Set<string>,
+  agentProgress: Record<string, AgentToolCall[]>,
+): void {
+  let foundNewToolCall = true;
+
+  while (foundNewToolCall) {
+    foundNewToolCall = false;
+
+    for (const [parentToolCallId, toolCalls] of Object.entries(agentProgress)) {
+      if (!toolCallIds.has(parentToolCallId)) continue;
+
+      for (const toolCall of toolCalls) {
+        foundNewToolCall =
+          addAgentToolCallIds(toolCallIds, toolCall) || foundNewToolCall;
+      }
+    }
+  }
+}
+
+function addAgentToolCallIds(
+  toolCallIds: Set<string>,
+  toolCall: AgentToolCall,
+): boolean {
+  let foundNewToolCall = false;
+
+  if (!toolCallIds.has(toolCall.toolCallId)) {
+    toolCallIds.add(toolCall.toolCallId);
+    foundNewToolCall = true;
+  }
+
+  for (const nestedCall of toolCall.agentToolCalls ?? []) {
+    foundNewToolCall =
+      addAgentToolCallIds(toolCallIds, nestedCall) || foundNewToolCall;
+  }
+
+  return foundNewToolCall;
+}
+
+function filterRecordByKeys<T>(
+  record: Record<string, T>,
+  keys: Set<string>,
+): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => keys.has(key)),
+  );
+}
+
 export type ChatTransportConfig = {
   sessionId: string;
   store: StoreApi<AiSliceStateForTransport>;
@@ -126,11 +217,61 @@ export type ChatTransportConfig = {
 function getSessionById(
   store: StoreApi<AiSliceStateForTransport>,
   sessionId: string | undefined,
-): AnalysisSessionSchema | undefined {
+): ChatSessionSchema | undefined {
   if (!sessionId) return undefined;
   return store
     .getState()
-    .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
+    .ai.config.sessions.find((s: ChatSessionSchema) => s.id === sessionId);
+}
+
+export function withRunContextTools(
+  tools: ToolSet,
+  args: AiToolExecutionContext & {
+    state: AiSliceStateForTransport;
+    getAiRunContext?: () => AiRunContext | undefined;
+    setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+  },
+): ToolSet {
+  return Object.fromEntries(
+    Object.entries(tools).map(([name, tool]) => {
+      if (!tool || typeof tool.execute !== 'function') {
+        return [name, tool];
+      }
+
+      const originalExecute = tool.execute;
+      return [
+        name,
+        {
+          ...tool,
+          execute: async (
+            input: unknown,
+            options?: Record<string, unknown>,
+          ) => {
+            const toolCallId =
+              typeof options?.toolCallId === 'string'
+                ? options.toolCallId
+                : undefined;
+            if (toolCallId && args.sessionId) {
+              args.state.ai.setToolCallSession(toolCallId, args.sessionId);
+            }
+            return originalExecute(
+              input as never,
+              {
+                ...options,
+                sessionId: args.sessionId,
+                aiRunContext: args.getAiRunContext
+                  ? args.getAiRunContext()
+                  : args.aiRunContext,
+                getAiRunContext: args.getAiRunContext,
+                setAiRunContext: args.setAiRunContext,
+                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+              } as never,
+            );
+          },
+        },
+      ];
+    }),
+  ) as ToolSet;
 }
 
 /**
@@ -221,6 +362,11 @@ export function createLocalChatTransportFactory({
       const sessionFromBody = getSessionById(store, sessionId);
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
+      let aiRunContext = sessionFromBody?.runContext;
+      const setAiRunContext = (nextContext: AiRunContext | undefined) => {
+        aiRunContext = nextContext;
+        state.ai.setSessionRunContext(sessionId, nextContext);
+      };
 
       // Fetch API key and base URL dynamically to pick up settings changes
       const apiKey = state.ai.getApiKeyFromSettings();
@@ -248,7 +394,16 @@ export function createLocalChatTransportFactory({
       // full tool loop server-side. UI-approval tools (no execute) are paused
       // by the agent and resumed via addToolOutput from the client.
       // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
-      const tools = (state.ai.tools || {}) as ToolSet;
+      const tools = withRunContextTools((state.ai.tools || {}) as ToolSet, {
+        state,
+        sessionId,
+        aiRunContext,
+        getAiRunContext: () => aiRunContext,
+        setAiRunContext,
+        setPrimaryRunContextItem: (item) => {
+          setAiRunContext(setAiRunContextPrimaryItem(aiRunContext, item));
+        },
+      });
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
@@ -273,7 +428,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        temperature: AI_DEFAULT_TEMPERATURE,
         onFinish: ({totalUsage, usage}) => {
           const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
           rememberSessionTokenUsage(sessionId, finalUsage);
@@ -292,6 +446,7 @@ export function createLocalChatTransportFactory({
         agent,
         uiMessages: sanitizeMessagesForLLM(
           fixIncompleteToolCalls(messagesCopy),
+          Object.keys(tools),
         ),
         abortSignal,
         messageMetadata: ({part}: {part: TextStreamPart<ToolSet>}) => {
@@ -371,13 +526,19 @@ export function createRemoteChatTransportFactory(params: {
         typeof parsed === 'object' && parsed !== null
           ? (parsed as Record<string, unknown>)
           : {};
+      const messages = Array.isArray(parsedObj.messages)
+        ? sanitizeMessagesForLLM(
+            fixIncompleteToolCalls(parsedObj.messages as UIMessage[]),
+          )
+        : [];
       const enhancedBody = {
         ...parsedObj,
+        messages,
         modelProvider,
         model,
         instructions: getInstructions(),
+        runContext: sessionFromBody?.runContext,
         maxSteps: state.ai.getMaxStepsFromSettings(),
-        temperature: AI_DEFAULT_TEMPERATURE,
       };
 
       // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)
@@ -404,10 +565,40 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
+function selectErrorSourceMessages({
+  sessionMessages,
+  fallbackMessages,
+}: {
+  sessionMessages: UIMessage[];
+  fallbackMessages?: UIMessage[];
+}): UIMessage[] {
+  if (fallbackMessages && fallbackMessages.length > 0) {
+    return fallbackMessages;
+  }
+  return sessionMessages;
+}
+
+function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {
+  return Boolean(
+    message?.role === 'assistant' &&
+    message.parts?.some((part) => part.type === CHAT_REQUEST_ERROR_PART_TYPE),
+  );
+}
+
+function createChatRequestErrorMessage(error: string): UIMessage {
+  return {
+    id: createId(),
+    role: 'assistant',
+    parts: [createChatRequestErrorPart({error})],
+  };
+}
+
 export function createChatHandlers({
   store,
+  onChatFinish,
 }: {
   store: StoreApi<AiSliceStateForTransport>;
+  onChatFinish?: (args: {sessionId: string; messages: UIMessage[]}) => void;
 }) {
   return {
     onChatFinish: ({
@@ -440,6 +631,14 @@ export function createChatHandlers({
             completedMessages,
             state.ai.getToolTimings(),
           );
+          const cancelledUserMessage = completedMessages
+            .filter((msg) => msg.role === 'user')
+            .slice(-1)[0];
+          if (cancelledUserMessage) {
+            setChatRequestErrorMessage(cancelledUserMessage, {
+              error: TOOL_CALL_CANCELLED,
+            });
+          }
           state.ai.setSessionUiMessages(sessionId, completedMessages);
 
           state.ai.setIsRunning(sessionId, false);
@@ -451,61 +650,15 @@ export function createChatHandlers({
           store.setState((s: AiSliceStateForTransport) =>
             produce(s, (draft: AiSliceStateForTransport) => {
               const sess = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s: ChatSessionSchema) => s.id === sessionId,
               );
               if (sess) {
                 sess.messagesRevision = (sess.messagesRevision || 0) + 1;
-                sess.agentProgress = structuredClone(
-                  state.ai.agentProgress,
-                ) as AnalysisSessionSchema['agentProgress'];
+                writeAgentDebugStateToSession(sess, state);
               }
             }),
           );
 
-          // Ensure an analysis result exists and is marked as cancelled
-          store.setState((stateToUpdate: AiSliceStateForTransport) =>
-            produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
-              const targetSession = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
-              );
-              if (!targetSession) return;
-
-              const lastUserMessage = completedMessages
-                .filter((msg) => msg.role === 'user')
-                .slice(-1)[0];
-              if (!lastUserMessage) return;
-
-              const promptText = lastUserMessage.parts
-                .filter((part) => part.type === 'text')
-                .map((part) => (part as {text: string}).text)
-                .join('');
-
-              const pendingIndex = targetSession.analysisResults.findIndex(
-                (result) => result.id === ANALYSIS_PENDING_ID,
-              );
-
-              if (pendingIndex !== -1) {
-                targetSession.analysisResults[pendingIndex] = {
-                  id: lastUserMessage.id,
-                  prompt: promptText,
-                  errorMessage: {error: TOOL_CALL_CANCELLED},
-                  isCompleted: true,
-                };
-              } else {
-                const existing = targetSession.analysisResults.find(
-                  (r) => r.id === lastUserMessage.id,
-                );
-                if (!existing) {
-                  targetSession.analysisResults.push({
-                    id: lastUserMessage.id,
-                    prompt: promptText,
-                    errorMessage: {error: TOOL_CALL_CANCELLED},
-                    isCompleted: true,
-                  });
-                }
-              }
-            }),
-          );
           return;
         }
 
@@ -524,60 +677,29 @@ export function createChatHandlers({
         store.setState((stateToUpdate: AiSliceStateForTransport) =>
           produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
             const targetSession = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === sessionId,
+              (s: ChatSessionSchema) => s.id === sessionId,
             );
             if (!targetSession) return;
 
-            targetSession.agentProgress = structuredClone(
-              state.ai.agentProgress,
-            ) as AnalysisSessionSchema['agentProgress'];
-
-            const lastUserMessage = completedMessages
-              .filter((msg) => msg.role === 'user')
-              .slice(-1)[0];
-
-            if (lastUserMessage) {
-              const promptText = lastUserMessage.parts
-                .filter((part) => part.type === 'text')
-                .map((part) => (part as {text: string}).text)
-                .join('');
-
-              const pendingIndex = targetSession.analysisResults.findIndex(
-                (result) => result.id === ANALYSIS_PENDING_ID,
-              );
-
-              if (pendingIndex !== -1) {
-                targetSession.analysisResults[pendingIndex] = {
-                  id: lastUserMessage.id,
-                  prompt: promptText,
-                  isCompleted: true,
-                };
-              } else {
-                const existingResult = targetSession.analysisResults.find(
-                  (result) => result.id === lastUserMessage.id,
-                );
-                if (!existingResult) {
-                  targetSession.analysisResults.push({
-                    id: lastUserMessage.id,
-                    prompt: promptText,
-                    isCompleted: true,
-                  });
-                }
-              }
-            }
+            writeAgentDebugStateToSession(targetSession, state);
           }),
         );
 
         if (shouldEndAnalysis(completedMessages)) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
+          onChatFinish?.({sessionId, messages: completedMessages});
         }
       } catch (err) {
         console.error('onChatFinish error:', err);
         throw err;
       }
     },
-    onChatError: (sessionId: string, error: unknown) => {
+    onChatError: (
+      sessionId: string,
+      error: unknown,
+      fallbackMessages?: UIMessage[],
+    ) => {
       try {
         consumeSessionTokenUsage(sessionId);
         let errMsg = getErrorMessageForDisplay(error);
@@ -593,66 +715,40 @@ export function createChatHandlers({
           store.getState().ai.setApiKeyError(provider, true);
         }
 
-        const toolTimings = store.getState().ai.getToolTimings();
-        const currentAgentProgress = store.getState().ai.agentProgress;
+        const currentState = store.getState();
+        const toolTimings = currentState.ai.getToolTimings();
 
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!sessionId) return;
             const targetSession = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === sessionId,
+              (s: ChatSessionSchema) => s.id === sessionId,
             );
             if (targetSession) {
               const existingMessages = (targetSession.uiMessages ||
                 []) as UIMessage[];
-              const completedMessages =
-                fixIncompleteToolCalls(existingMessages);
+              const sourceMessages = selectErrorSourceMessages({
+                sessionMessages: existingMessages,
+                fallbackMessages,
+              });
+              const completedMessages = fixIncompleteToolCalls(sourceMessages);
               writeToolTimingsToMetadata(completedMessages, toolTimings);
-              targetSession.uiMessages =
-                completedMessages as AnalysisSessionSchema['uiMessages'];
-              targetSession.agentProgress = structuredClone(
-                currentAgentProgress,
-              ) as AnalysisSessionSchema['agentProgress'];
 
-              const uiMessages = targetSession.uiMessages as UIMessage[];
-              const lastUserMessage = uiMessages
+              const lastUserMessage = completedMessages
                 .filter((msg) => msg.role === 'user')
                 .slice(-1)[0];
 
               if (lastUserMessage) {
-                const promptText = lastUserMessage.parts
-                  .filter((part) => part.type === 'text')
-                  .map((part) => (part as {text: string}).text)
-                  .join('');
-
-                const pendingIndex = targetSession.analysisResults.findIndex(
-                  (result) => result.id === ANALYSIS_PENDING_ID,
-                );
-
-                if (pendingIndex !== -1) {
-                  targetSession.analysisResults[pendingIndex] = {
-                    id: lastUserMessage.id,
-                    prompt: promptText,
-                    errorMessage: {error: errMsg},
-                    isCompleted: true,
-                  };
-                } else {
-                  const existingResult = targetSession.analysisResults.find(
-                    (result) => result.id === lastUserMessage.id,
-                  );
-
-                  if (!existingResult) {
-                    targetSession.analysisResults.push({
-                      id: lastUserMessage.id,
-                      prompt: promptText,
-                      errorMessage: {error: errMsg},
-                      isCompleted: true,
-                    });
-                  } else {
-                    existingResult.errorMessage = {error: errMsg};
-                  }
-                }
+                setChatRequestErrorMessage(lastUserMessage, {error: errMsg});
               }
+
+              if (!hasChatRequestErrorPart(completedMessages.at(-1))) {
+                completedMessages.push(createChatRequestErrorMessage(errMsg));
+              }
+
+              targetSession.uiMessages =
+                completedMessages as ChatSessionSchema['uiMessages'];
+              writeAgentDebugStateToSession(targetSession, currentState);
             }
           }),
         );
@@ -661,7 +757,7 @@ export function createChatHandlers({
         store.setState((s: AiSliceStateForTransport) =>
           produce(s, (draft: AiSliceStateForTransport) => {
             const sess = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === sessionId,
+              (s: ChatSessionSchema) => s.id === sessionId,
             );
             if (sess) {
               sess.messagesRevision = (sess.messagesRevision || 0) + 1;

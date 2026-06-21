@@ -3,17 +3,18 @@ import {useSql} from '@sqlrooms/duckdb';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {PlaneIcon} from 'lucide-react';
+import type {FC} from 'react';
 import {useMemo} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 
 /**
  * The DiscussionPanel component displays a list of discussions
  * with highlighting functionality.
  */
-const DiscussionPanel = () => {
+export const DiscussionPanel: FC = () => {
   const discussions = useRoomStore((state) => state.discuss.config.discussions);
 
-  const table = useRoomStore((s) => s.db.findTableByName('airports'));
+  const table = useRoomStore((s) => s.db.findTable('airports'));
   const {data} = useSql<{name: string; abbrev: string}>({
     query: `SELECT name, abbrev FROM airports`,
     enabled: Boolean(table),
@@ -27,7 +28,7 @@ const DiscussionPanel = () => {
   );
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['discuss']}>
+    <RoomPanel>
       {discussions.length === 0 ? (
         <div className="py-10 text-center text-gray-400">
           <p>No comments yet. Click on an airport to add one.</p>
@@ -69,5 +70,3 @@ const DiscussionPanel = () => {
     </RoomPanel>
   );
 };
-
-export default DiscussionPanel;

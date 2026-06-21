@@ -16,6 +16,7 @@ import {getEffectiveResultName} from '../utils';
 import {toDataSourceCell, toDataSourceTable} from '../helpers';
 
 export type CellSourceSelectorProps = {
+  artifactId: string;
   /** Current value in `cell:<id>` or `table:<schema.table>` format. */
   value?: string;
   /** Callback when the user selects a data source. Value is prefixed. */
@@ -28,6 +29,7 @@ const GREEN_ITEM =
   '[&_svg]:text-accent-foreground font-mono text-xs text-green-500 data-[highlighted]:text-green-500';
 
 export const CellSourceSelector: React.FC<CellSourceSelectorProps> = ({
+  artifactId,
   value,
   onValueChange,
   className,
@@ -35,18 +37,19 @@ export const CellSourceSelector: React.FC<CellSourceSelectorProps> = ({
   const cellsData = useCellsStore((s) => s.cells.config.data);
   const dbTables = useCellsStore((s) => s.db.tables);
   const tableDepSchemas = useCellsStore((s) => s.cells.config.tableDepSchemas);
-  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
-  const sheetCellIds = useCellsStore((s) =>
-    currentSheetId ? s.cells.config.sheets[currentSheetId]?.cellIds : undefined,
+  const artifactCellIds = useCellsStore((s) =>
+    artifactId ? s.cells.config.artifacts[artifactId]?.cellIds : undefined,
   );
 
   const availableSqlCells = useMemo(() => {
-    if (!sheetCellIds) return [];
+    if (!artifactCellIds) return [];
 
-    return sheetCellIds
-      .map((cid) => cellsData[cid])
-      .filter((c): c is SqlCell => Boolean(c && isSqlCell(c)));
-  }, [sheetCellIds, cellsData]);
+    return artifactCellIds
+      .map((cellId) => cellsData[cellId])
+      .filter((candidate): candidate is SqlCell =>
+        Boolean(candidate && isSqlCell(candidate)),
+      );
+  }, [artifactCellIds, cellsData]);
 
   const availableTables = useMemo(() => {
     const schemas = new Set(tableDepSchemas ?? ['main']);
@@ -72,14 +75,14 @@ export const CellSourceSelector: React.FC<CellSourceSelectorProps> = ({
             <SelectLabel className="text-muted-foreground text-[10px]">
               Cells
             </SelectLabel>
-            {availableSqlCells.map((sql) => (
+            {availableSqlCells.map((sqlCell) => (
               <SelectItem
                 className={GREEN_ITEM}
-                key={sql.id}
-                value={toDataSourceCell(sql)}
+                key={sqlCell.id}
+                value={toDataSourceCell(sqlCell)}
               >
                 {getEffectiveResultName(
-                  sql.data as SqlCellData,
+                  sqlCell.data as SqlCellData,
                   convertToValidColumnOrTableName,
                 )}
               </SelectItem>

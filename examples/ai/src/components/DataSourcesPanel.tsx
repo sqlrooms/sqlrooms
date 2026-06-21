@@ -1,17 +1,18 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SchemaExplorer} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
-import {useRoomStore, RoomPanelTypes} from '../store';
+import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {toast} from '@sqlrooms/ui';
+import type {FC} from 'react';
 
-export const DataSourcesPanel = () => {
+export const DataSourcesPanel: FC = () => {
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
   );
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel>
       <FileDropzone
         className="h-50 p-5"
         acceptedFormats={{

@@ -72,61 +72,71 @@ function makeSqlCell(id: string, title: string, sql: string): Cell {
   return {id, type: 'sql', data: {title, sql}};
 }
 
-describe('cells slice sheet ownership semantics', () => {
+describe('cells slice artifact ownership semantics', () => {
+  const artifactA = 'artifact-a';
+  const artifactB = 'artifact-b';
   let store: TestStore;
 
   beforeEach(() => {
     store = createTestStore();
   });
 
-  it('keeps default sheet id consistent with the map key', () => {
-    const state = store.getState();
-    const currentSheetId = state.cells.config.currentSheetId as string;
-    const sheet = state.cells.config.sheets[currentSheetId];
+  it('keeps ensured artifact id consistent with the map key', () => {
+    store.getState().cells.ensureArtifact(artifactA);
+    const artifact = store.getState().cells.config.artifacts[artifactA];
 
-    expect(sheet).toBeDefined();
-    expect(sheet?.id).toBe(currentSheetId);
-    expect(state.cells.config.sheetOrder).toContain(currentSheetId);
+    expect(artifact).toBeDefined();
+    expect(artifact?.id).toBe(artifactA);
+    expect(artifact?.schemaName).toBeDefined();
   });
 
-  it('enforces single-owner membership when same cell id is added to another sheet', async () => {
+  it('enforces single-owner membership when same cell id is added to another artifact', async () => {
     const state = store.getState();
-    const sheetA = state.cells.config.currentSheetId as string;
-    const sheetB = state.cells.addSheet('Sheet B', 'notebook');
+    state.cells.ensureArtifact(artifactA);
+    state.cells.ensureArtifact(artifactB);
     const sharedId = 'shared-cell';
 
-    await state.cells.addCell(sheetA, makeSqlCell(sharedId, 'A', 'select 1'));
-    expect(store.getState().cells.config.sheets[sheetA]?.cellIds).toContain(
-      sharedId,
+    await state.cells.addCell(
+      artifactA,
+      makeSqlCell(sharedId, 'A', 'select 1'),
     );
+    expect(
+      store.getState().cells.config.artifacts[artifactA]?.cellIds,
+    ).toContain(sharedId);
 
     await store
       .getState()
-      .cells.addCell(sheetB, makeSqlCell(sharedId, 'A', 'select 1'));
+      .cells.addCell(artifactB, makeSqlCell(sharedId, 'A', 'select 1'));
 
-    expect(store.getState().cells.config.sheets[sheetA]?.cellIds).not.toContain(
-      sharedId,
-    );
-    expect(store.getState().cells.config.sheets[sheetB]?.cellIds).toContain(
-      sharedId,
-    );
+    expect(
+      store.getState().cells.config.artifacts[artifactA]?.cellIds,
+    ).not.toContain(sharedId);
+    expect(
+      store.getState().cells.config.artifacts[artifactB]?.cellIds,
+    ).toContain(sharedId);
   });
 
-  it('hard-deletes owned cells when removing a sheet', async () => {
+  it('hard-deletes owned cells when removing an artifact runtime', async () => {
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
-    await state.cells.addCell(sheetId, makeSqlCell('c1', 'Cell 1', 'select 1'));
-    await state.cells.addCell(sheetId, makeSqlCell('c2', 'Cell 2', 'select 2'));
-    state.cells.addEdge(sheetId, {source: 'c1', target: 'c2'});
+    await state.cells.addCell(
+      artifactA,
+      makeSqlCell('c1', 'Cell 1', 'select 1'),
+    );
+    await state.cells.addCell(
+      artifactA,
+      makeSqlCell('c2', 'Cell 2', 'select 2'),
+    );
+    state.cells.addEdge(artifactA, {source: 'c1', target: 'c2'});
 
     expect(store.getState().cells.config.data.c1).toBeDefined();
     expect(store.getState().cells.config.data.c2).toBeDefined();
 
-    state.cells.removeSheet(sheetId);
+    state.cells.removeArtifact(artifactA);
 
     const after = store.getState();
-    expect(after.cells.config.sheets[sheetId]).toBeUndefined();
+    expect(after.cells.config.artifacts[artifactA]).toBeUndefined();
     expect(after.cells.config.data.c1).toBeUndefined();
     expect(after.cells.config.data.c2).toBeUndefined();
     expect(after.cells.status.c1).toBeUndefined();
@@ -135,21 +145,25 @@ describe('cells slice sheet ownership semantics', () => {
 
   it('removes cell from graph cache on removeCell', async () => {
     const state = store.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
-    await state.cells.addCell(sheetId, makeSqlCell('c1', 'Cell 1', 'select 1'));
+    state.cells.ensureArtifact(artifactA);
     await state.cells.addCell(
-      sheetId,
+      artifactA,
+      makeSqlCell('c1', 'Cell 1', 'select 1'),
+    );
+    await state.cells.addCell(
+      artifactA,
       makeSqlCell('c2', 'Cell 2', 'select * from cell_1'),
     );
 
     expect(
-      store.getState().cells.config.sheets[sheetId]?.graphCache?.dependencies
-        .c2,
+      store.getState().cells.config.artifacts[artifactA]?.graphCache
+        ?.dependencies.c2,
     ).toEqual(['c1']);
 
     state.cells.removeCell('c2');
 
-    const cache = store.getState().cells.config.sheets[sheetId]?.graphCache;
+    const cache =
+      store.getState().cells.config.artifacts[artifactA]?.graphCache;
     expect(cache?.dependencies.c2).toBeUndefined();
     expect(cache?.dependents.c1 || []).not.toContain('c2');
   });
@@ -169,10 +183,10 @@ describe('cells slice sheet ownership semantics', () => {
       ...createCellsSlice({cellRegistry: createTestCellRegistry()})(...args),
     }));
     const state = storeWithoutParser.getState();
-    const sheetId = state.cells.config.currentSheetId as string;
+    state.cells.ensureArtifact(artifactA);
 
     await expect(
-      state.cells.addCell(sheetId, makeSqlCell('x', 'X', 'select 1')),
+      state.cells.addCell(artifactA, makeSqlCell('x', 'X', 'select 1')),
     ).rejects.toThrow(/requires db\.sqlSelectToJson/);
   });
 });

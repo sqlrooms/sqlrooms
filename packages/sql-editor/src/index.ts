@@ -11,7 +11,12 @@ export {default as SqlEditor} from './SqlEditor';
 export type {SqlEditorProps} from './SqlEditor';
 export {default as SqlEditorModal} from './SqlEditorModal';
 export {createSqlEditorSlice} from './SqlEditorSlice';
-export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
+export type {
+  EnsureSqlQueryOptions,
+  QueryResult,
+  SqlEditorQuery,
+  SqlEditorSliceState,
+} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
 /**
  * @deprecated Use SqlCodeMirrorEditor instead.
@@ -28,6 +33,24 @@ export type {
 } from './SqlMonacoEditor';
 export {SqlCodeMirrorEditor} from './SqlCodeMirrorEditor';
 export type {SqlCodeMirrorEditorProps} from './SqlCodeMirrorEditor';
+export {SqlQuery} from './SqlQuery';
+export type {
+  SqlQueryRootProps,
+  SqlQueryHeaderProps,
+  SqlQueryToolbarProps,
+  SqlQueryActionsProps,
+  SqlQueryEditorProps,
+  SqlQueryResultsProps,
+} from './SqlQuery';
+export {
+  SQL_QUERY_BLOCK_TYPE,
+  SqlQueryBlock,
+  createSqlQueryBlockDefinition,
+} from './SqlQueryBlock';
+export type {
+  SqlQueryBlockProps,
+  CreateSqlQueryBlockDefinitionOptions,
+} from './SqlQueryBlock';
 export {SqlDialects} from './codemirror/extensions/create-sql-extension';
 export type {SqlDialect} from './codemirror/extensions/create-sql-extension';
 export {SchemaExplorer} from './components/SchemaExplorer';

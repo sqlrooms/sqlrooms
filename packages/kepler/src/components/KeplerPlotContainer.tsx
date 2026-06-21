@@ -1,4 +1,5 @@
-import {FC, ReactNode, useMemo} from 'react';
+import {useMemo} from 'react';
+import type {ComponentType, FC, ReactNode} from 'react';
 
 import {
   PlotContainerFactory,
@@ -9,6 +10,9 @@ import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 
 const PlotContainer = getKeplerFactory(PlotContainerFactory);
+type PlotContainerProps =
+  typeof PlotContainer extends ComponentType<infer Props> ? Props : never;
+type PlotContainerLogoComponent = PlotContainerProps['logoComponent'];
 
 const KEPLER_PROPS = {
   mapboxApiUrl: 'https://api.mapbox.com',
@@ -46,12 +50,14 @@ export const KeplerPlotContainer: FC<{
     // mergedKeplerProps already changes when filters change via keplerState
     [mergedKeplerProps],
   );
+  const logo = logoComponent ?? null;
+  const keplerLogoComponent = logo as unknown as PlotContainerLogoComponent;
 
   return isExportingImage && plotContainerFields ? (
     <KeplerProvider mapId={mapId}>
       <PlotContainer
         {...plotContainerFields}
-        logoComponent={logoComponent ?? null}
+        logoComponent={keplerLogoComponent}
       />
     </KeplerProvider>
   ) : null;

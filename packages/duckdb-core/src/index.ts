@@ -29,6 +29,10 @@ export {arrowTableToJson} from './arrow-utils';
 export {
   isQualifiedTableName,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  quoteTableReference,
+  resolveTableReference,
+  getUnqualifiedSqlIdentifier,
   escapeVal,
   escapeId,
   isNumericDuckType,
@@ -40,6 +44,7 @@ export {
   separateLastStatement,
   joinStatements,
   type QualifiedTableName,
+  type ResolveTableReferenceResult,
   type SeparatedStatements,
 } from './duckdb-utils';
 
@@ -50,6 +55,10 @@ export {
 } from './schema-tree/typeCategories';
 
 export {createDbSchemaTrees} from './schema-tree/schemaTree';
+export {
+  getAllTablesFromSchemaTrees,
+  findTableInSchemaTrees,
+} from './schema-tree/schemaTreeUtils';
 
 export {
   type DbSchemaNode,
@@ -58,6 +67,7 @@ export {
   type TableNodeObject,
   type SchemaNodeObject,
   type DatabaseNodeObject,
+  type SchemaWithTables,
 } from './schema-tree/types';
 
 export {type TableColumn, type DataTable} from './types';

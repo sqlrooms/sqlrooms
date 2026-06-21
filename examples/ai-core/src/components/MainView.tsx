@@ -15,8 +15,9 @@ export const MainView: React.FC = () => {
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
       <Chat>
-        <div className="relative mb-4">
-          <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
+        <div className="relative mb-4 flex flex-col gap-2 pr-10">
+          <Chat.Sessions className="overflow-hidden" />
+          <Chat.Search />
           <Button
             variant="outline"
             className="hover:bg-accent absolute top-0 right-0 flex h-8 w-8 items-center justify-center transition-colors"

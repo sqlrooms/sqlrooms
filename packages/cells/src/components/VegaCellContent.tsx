@@ -1,12 +1,11 @@
 import {useDebouncedValue} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
 import {produce} from 'immer';
-import {useCallback, useState} from 'react';
+import {useState} from 'react';
 import {useCellsStore} from '../hooks';
 import {useVegaCellQuery} from '../hooks/useVegaCellQuery';
 import {useVegaCellDataSource} from '../hooks/useVegaCellDataSource';
 import type {CellContainerProps, VegaCell} from '../types';
-import {SelectionListener} from './SelectionListener';
 import {VegaConfigPanel} from './VegaConfigPanel';
 import {VegaCellHeader} from './VegaCellHeader';
 import {toDataSourceCell, toDataSourceTable} from '../helpers';
@@ -30,10 +29,6 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
   renderContainer,
 }) => {
   const updateCell = useCellsStore((s) => s.cells.updateCell);
-
-  const crossFilterEnabled = cell.data.crossFilter?.enabled !== false;
-  const brushField = cell.data.crossFilter?.brushField;
-  const brushFieldType = cell.data.crossFilter?.brushFieldType;
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -59,11 +54,8 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
     hasDataSource,
   } = useVegaCellDataSource(cell);
 
-  const {selectedSqlQuery, crossFilterPredicate} = useVegaCellQuery({
-    cellId: id,
+  const {selectedSqlQuery} = useVegaCellQuery({
     baseSqlQuery,
-    selectedSqlId,
-    crossFilterEnabled,
   });
 
   // Encode selection value: "cell:<id>" or "table:<schema.table>"
@@ -73,62 +65,14 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
       ? toDataSourceTable(selectedTableRef)
       : undefined;
 
-  const handleCrossFilterToggle = useCallback(
-    (enabled: boolean) => {
-      updateCell(id, (c) =>
-        produce(c, (draft) => {
-          if (draft.type === 'vega') {
-            if (!draft.data.crossFilter) draft.data.crossFilter = {};
-            draft.data.crossFilter.enabled = enabled;
-          }
-        }),
-      );
-    },
-    [id, updateCell],
-  );
-
-  const handleBrushFieldChange = useCallback(
-    (field: string | undefined) => {
-      updateCell(id, (c) =>
-        produce(c, (draft) => {
-          if (draft.type === 'vega') {
-            if (!draft.data.crossFilter) draft.data.crossFilter = {};
-            draft.data.crossFilter.brushField = field;
-          }
-        }),
-      );
-    },
-    [id, updateCell],
-  );
-
-  const handleBrushFieldTypeChange = useCallback(
-    (fieldType: string | undefined) => {
-      updateCell(id, (c) =>
-        produce(c, (draft) => {
-          if (draft.type === 'vega') {
-            if (!draft.data.crossFilter) draft.data.crossFilter = {};
-            draft.data.crossFilter.brushFieldType = fieldType;
-          }
-        }),
-      );
-    },
-    [id, updateCell],
-  );
-
   const header = (
     <VegaCellHeader
       cellId={id}
       selectValue={selectValue}
       onEditToggle={() => setIsEditing((prev) => !prev)}
       hasDataSource={hasDataSource}
-      crossFilterEnabled={crossFilterEnabled}
-      brushField={brushField}
-      crossFilterPredicate={crossFilterPredicate}
     />
   );
-
-  const showSelectionListener =
-    crossFilterEnabled && brushField && selectedSqlId && selectedSqlStatus;
 
   const content = (
     <div className="flex h-[400px]">
@@ -137,11 +81,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
           sqlQuery={baseSqlQuery}
           lastRunTime={lastRunTime}
           spec={localSpec}
-          crossFilterEnabled={crossFilterEnabled}
           onSpecChange={handleSpecChange}
-          onCrossFilterToggle={handleCrossFilterToggle}
-          onBrushFieldChange={handleBrushFieldChange}
-          onBrushFieldTypeChange={handleBrushFieldTypeChange}
         />
       )}
       <div
@@ -162,16 +102,7 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
             spec={localSpec}
             className="h-full w-full"
             aspectRatio={isEditing ? undefined : DEFAULT_ASPECT_RATIO}
-          >
-            {showSelectionListener && (
-              <SelectionListener
-                cellId={id}
-                sqlId={selectedSqlId}
-                brushField={brushField}
-                brushFieldType={brushFieldType}
-              />
-            )}
-          </VegaLiteChart>
+          />
         )}
       </div>
     </div>

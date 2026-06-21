@@ -37,7 +37,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             title: 'Main view',
             icon: MapIcon,
             component: MainView,
-            placement: 'main',
           },
         },
       },

@@ -1,7 +1,9 @@
-import type {DeckProps} from '@deck.gl/core';
 import type * as arrow from 'apache-arrow';
-import type {ReactNode} from 'react';
+import type {ComponentProps, ReactNode} from 'react';
+import type DeckGLReact from '@deck.gl/react';
 import type {MapProps} from 'react-map-gl/maplibre';
+
+type DeckProps = ComponentProps<typeof DeckGLReact>;
 import type {GeometryEncodingHint, PreparedDeckDataset} from './prepare/types';
 
 export type {
@@ -58,15 +60,36 @@ export type PreparedDeckDatasetState =
   | {status: 'ready'; prepared: PreparedDeckDataset}
   | {status: 'error'; error: Error};
 
+export type DeckJsonMapHandle = {
+  jumpTo: (opts: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  }) => void;
+};
+
 export type DeckJsonMapProps = {
   spec: string | Record<string, unknown>;
   datasets: Record<string, DeckDatasetInput>;
   mapStyle?: string;
+  /**
+   * When true, deck.gl renders into the map's own WebGL context rather than
+   * creating a separate overlay canvas. This halves the number of WebGL
+   * contexts per map panel (from 2 to 1), which matters because browsers
+   * limit active contexts to ~8–16 per page. Defaults to true.
+   */
+  interleaved?: boolean;
   deckProps?: Partial<DeckProps>;
   mapProps?: Partial<MapProps>;
   showLegends?: boolean;
   className?: string;
   children?: ReactNode;
+  onDatasetStatesChange?: (
+    states: Record<string, PreparedDeckDatasetState>,
+  ) => void;
+  onRenderingError?: (error: Error) => void;
 };
 
 export function isSqlDatasetInput(

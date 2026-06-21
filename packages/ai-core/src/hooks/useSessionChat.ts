@@ -1,8 +1,9 @@
-import {useEffect, useMemo, useRef} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
+  lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
@@ -109,6 +110,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);
+  const latestMessagesRef = useRef<UIMessage[]>(initialMessages);
 
   const {
     messages,
@@ -123,7 +125,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     id: `${sessionId}::${messagesRevision}`,
     transport,
     messages: initialMessages,
-    // Auto-resend after all approval responses are provided (approve/deny),
+    // Auto-resend after all client-side tool outputs or approval responses are provided,
     // but skip if the session was aborted.
     sendAutomaticallyWhen: (
       options: Parameters<
@@ -131,10 +133,14 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
       >[0],
     ) => {
       if (isAbortedRef.current) return false;
-      return lastAssistantMessageIsCompleteWithApprovalResponses(options);
+      return (
+        lastAssistantMessageIsCompleteWithToolCalls(options) ||
+        lastAssistantMessageIsCompleteWithApprovalResponses(options)
+      );
     },
     onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
-    onError: (error) => onChatError?.(sessionId, error),
+    onError: (error) =>
+      onChatError?.(sessionId, error, latestMessagesRef.current),
   });
 
   // If user aborts mid-stream, stop the local chat stream immediately
@@ -167,6 +173,12 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     setAddToolApprovalResponse?.(sessionId, addToolApprovalResponse);
     return () => setAddToolApprovalResponse?.(sessionId, undefined);
   }, [setAddToolApprovalResponse, addToolApprovalResponse, sessionId]);
+
+  // Keep the error fallback current before the passive store sync can race with
+  // an immediately rejected transport request.
+  useLayoutEffect(() => {
+    latestMessagesRef.current = messages as UIMessage[];
+  }, [messages]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {

@@ -5,7 +5,11 @@
 
 export {createHttpDbBridge} from './bridge';
 export {createCoreDuckDbConnection} from './connectors/duckdb';
-export {createDbSlice, useStoreWithDb} from './DbSlice';
+export {
+  createDbSlice,
+  useStoreWithDb,
+  type CreateDbSliceProps,
+} from './DbSlice';
 export {getCoreDuckDbConnectionId, isCoreDuckDbConnection} from './helpers';
 export {DbConnection, RuntimeSupport, DbEngineId} from './types';
 export type {
@@ -32,5 +36,5 @@ export type {
   GroupedFunctionSuggestion,
 } from '@sqlrooms/duckdb-core';
 
-export {useSql} from '@sqlrooms/duckdb';
+export {useDataTable, useSql} from '@sqlrooms/duckdb';
 export * from '@sqlrooms/duckdb-core';

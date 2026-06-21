@@ -37,11 +37,11 @@ export function getEffectiveResultName(
 }
 
 /**
- * Generates a stable SQL schema name for a sheet id.
+ * Generates a stable SQL schema name for an artifact id.
  */
-export function getSheetSchemaName(sheetId: string): string {
-  const normalized = sheetId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-  return `sheet_${normalized}`;
+export function getArtifactSchemaName(artifactId: string): string {
+  const normalized = artifactId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+  return `artifact_${normalized}`;
 }
 
 /**

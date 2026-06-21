@@ -106,7 +106,7 @@ export function findTableAndColumn(
     }
     if (
       tableName &&
-      table.table.table?.localeCompare(tableName, undefined, {
+      table.table.table.localeCompare(tableName, undefined, {
         sensitivity: 'accent',
       }) !== 0
     ) {
@@ -140,7 +140,7 @@ export function findTable(
   return tables.find((table) => {
     // Match table name (case-insensitive)
     if (
-      table.table.table?.localeCompare(tableName, undefined, {
+      table.table.table.localeCompare(tableName, undefined, {
         sensitivity: 'accent',
       }) !== 0
     ) {

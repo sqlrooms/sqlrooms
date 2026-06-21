@@ -8,6 +8,6 @@ export type {CanvasSliceState} from './CanvasSlice';
 export {
   CanvasSliceConfig,
   CanvasNodeMeta,
-  CanvasSheetMeta,
+  CanvasArtifactMeta,
 } from './CanvasSlice';
 export {Canvas} from './Canvas';

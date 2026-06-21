@@ -9,7 +9,7 @@ import {
   useMosaicClient,
 } from '@sqlrooms/mosaic';
 import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
-import {useMemo, useRef, useState} from 'react';
+import {FC, useMemo, useRef, useState} from 'react';
 import type {ViewState} from 'react-map-gl/maplibre';
 import {useRoomStore} from '../../store';
 import {MapControls} from './MapControls';
@@ -28,7 +28,7 @@ const INITIAL_VIEW_STATE = {
   bearing: 0,
 };
 
-export default function MapView({className}: {className?: string}) {
+export const MapView: FC<{className?: string}> = ({className}) => {
   const brush = useRoomStore((state) => state.mosaic.selections.brush);
 
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
@@ -55,11 +55,7 @@ export default function MapView({className}: {className?: string}) {
 
   const lastUpdateRef = useRef<number>(0);
 
-  const {
-    data: rawData,
-    isLoading,
-    client,
-  } = useMosaicClient({
+  const {data: rawData, client} = useMosaicClient({
     selectionName: 'brush',
     query: (filter: any) =>
       Query.from('earthquakes')
@@ -81,7 +77,7 @@ export default function MapView({className}: {className?: string}) {
     }),
     [rawData],
   );
-  const dbReady = !isLoading && rawData !== null;
+  const dbReady = rawData !== null;
   const {resolvedTheme} = useTheme();
   const colorScale = useMemo(() => {
     return {
@@ -133,10 +129,20 @@ export default function MapView({className}: {className?: string}) {
   );
 
   const onHover = (info: {coordinate?: [number, number]}) => {
-    if (!info.coordinate || !enableBrushing || !client) {
+    if (!enableBrushing || !client) {
       return;
     }
     if (!syncCharts) {
+      return;
+    }
+
+    if (!info.coordinate) {
+      brush?.update({
+        source: client,
+        value: null,
+        predicate: null as any,
+      });
+      lastUpdateRef.current = 0;
       return;
     }
 
@@ -239,4 +245,4 @@ export default function MapView({className}: {className?: string}) {
       </div>
     </div>
   );
-}
+};

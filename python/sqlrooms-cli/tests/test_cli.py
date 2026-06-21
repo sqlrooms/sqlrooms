@@ -1,12 +1,15 @@
 from pathlib import Path
 
+import click
 from typer.testing import CliRunner
 from sqlrooms.cli import (
     DEFAULT_CONFIG_PATH,
+    DEFAULT_HTTP_PORT,
     _load_ai_runtime_config,
     _load_connector_config,
     _normalize_config_string,
     _resolve_config_path,
+    _resolve_http_port,
     app,
 )
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
@@ -16,15 +19,53 @@ runner = CliRunner()
 
 def test_cli_help():
     result = runner.invoke(app, ["--help"])
+    stdout = click.unstyle(result.stdout)
     assert result.exit_code == 0
-    assert "Start the SQLRooms local experience" in result.stdout
+    assert "Start the SQLRooms local experience" in stdout
+    assert "--ai-devtools" in stdout
+    assert "next free port" in stdout
+
+
+def test_resolve_http_port_honors_explicit_port(monkeypatch):
+    def fail_pick_free_port(host, start_port=None):
+        raise AssertionError("explicit --port should not scan for a free port")
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fail_pick_free_port)
+    assert _resolve_http_port("127.0.0.1", 5000) == 5000
+
+
+def test_resolve_http_port_scans_from_default(monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 4176
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
+
+    assert _resolve_http_port("127.0.0.1", None) == 4176
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, None)]
+
+
+def test_resolve_http_port_reserves_explicit_ws_port(monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 4175
+
+    monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
+
+    assert _resolve_http_port("127.0.0.1", None, ws_port=4174) == 4175
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {4174})]
 
 
 def test_cli_export_help():
     result = runner.invoke(app, ["export", "--help"])
+    stdout = click.unstyle(result.stdout)
     assert result.exit_code == 0
-    assert "Usage" in result.stdout
-    assert "export" in result.stdout
+    assert "Usage" in stdout
+    assert "export" in stdout
 
 
 def test_load_connector_config_toml(tmp_path):
@@ -89,16 +130,35 @@ id = "anthropic"
 base_url = "https://api.anthropic.com"
 api_key = "anthropic-key"
 models = ["claude-4-sonnet"]
+
+[[ai.custom_models]]
+model_name = "local-qwen"
+base_url = "http://localhost:11434/v1"
+api_key = "local-key"
+
+[ai.model_parameters]
+max_steps = 9
+additional_instruction = "Prefer short answers."
 """.strip(),
         encoding="utf-8",
     )
 
-    default_provider, default_model, providers = _load_ai_runtime_config(config_path)
+    (
+        default_provider,
+        default_model,
+        providers,
+        custom_models,
+        model_parameters,
+    ) = _load_ai_runtime_config(config_path)
     assert default_provider == "openai"
     assert default_model == "gpt-5"
     assert providers["openai"]["apiKey"] == "env-openai-key"
     assert providers["openai"]["models"][0]["modelName"] == "gpt-5"
     assert providers["anthropic"]["apiKey"] == "anthropic-key"
+    assert custom_models[0]["modelName"] == "local-qwen"
+    assert custom_models[0]["apiKey"] == "local-key"
+    assert model_parameters["maxSteps"] == 9
+    assert model_parameters["additionalInstruction"] == "Prefer short answers."
 
 
 def test_load_connector_config_rejects_duplicate_ids(tmp_path):

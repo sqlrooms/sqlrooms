@@ -1,0 +1,309 @@
+import {produce} from 'immer';
+import {
+  isLayoutTabsNode,
+  LayoutConfig,
+  LayoutNode,
+  LayoutTabsNode,
+  getLayoutNodeId,
+  getChildrenIds,
+  getVisibleTabChildren,
+  getHiddenTabChildren,
+  isLayoutNodeKey,
+} from '@sqlrooms/layout-config';
+import {findNodeById} from './layout-tree';
+
+export type LayoutSliceConfig = LayoutConfig;
+
+interface LayoutStateShape {
+  layout: {
+    config: LayoutSliceConfig;
+    isCollapsed: (id: string) => boolean;
+    setCollapsed: (id: string, collapsed: boolean) => void;
+  };
+}
+
+function findTabsNode(
+  config: LayoutSliceConfig,
+  tabsId: string,
+): {node: LayoutTabsNode; path: LayoutNode[]} | undefined {
+  const found = findNodeById(config, tabsId);
+  if (found && isLayoutTabsNode(found.node)) {
+    return {node: found.node, path: found.ancestors};
+  }
+  return undefined;
+}
+
+/**
+ * Get the index of a child in the visible children array.
+ */
+function getVisibleChildIndex(node: LayoutTabsNode, childId: string): number {
+  const visibleChildren = getVisibleTabChildren(node);
+  return visibleChildren.findIndex((c) => getLayoutNodeId(c) === childId);
+}
+
+/**
+ * Remove a child ID from hiddenChildren array.
+ */
+function removeFromHidden(node: LayoutTabsNode, childId: string): void {
+  if (node.hiddenChildren) {
+    const idx = node.hiddenChildren.indexOf(childId);
+    if (idx >= 0) {
+      node.hiddenChildren.splice(idx, 1);
+    }
+  }
+}
+
+/**
+ * Add a child ID to hiddenChildren array.
+ */
+function addToHidden(node: LayoutTabsNode, childId: string): void {
+  if (!node.hiddenChildren) {
+    node.hiddenChildren = [];
+  }
+  if (!node.hiddenChildren.includes(childId)) {
+    node.hiddenChildren.push(childId);
+  }
+}
+
+export function createTabActions<S extends LayoutStateShape>(
+  set: (updater: (state: S) => S) => void,
+  get: () => S,
+) {
+  const setActiveTab = (tabsId: string, tabId: string) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        // Check if child exists in children array
+        const childExists = found.node.children.some(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+        if (!childExists) return;
+
+        // Remove from hidden if present
+        removeFromHidden(found.node, tabId);
+
+        // Set activeTabIndex to the index in visible children
+        const visibleIdx = getVisibleChildIndex(found.node, tabId);
+        if (visibleIdx >= 0) {
+          found.node.activeTabIndex = visibleIdx;
+        }
+      }),
+    );
+    if (get().layout.isCollapsed(tabsId)) {
+      get().layout.setCollapsed(tabsId, false);
+    }
+  };
+
+  const addTab = (tabsId: string, tabIdOrNode: string | LayoutNode) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        // Get the ID from either string or node
+        const tabId =
+          typeof tabIdOrNode === 'string'
+            ? tabIdOrNode
+            : getLayoutNodeId(tabIdOrNode);
+
+        // Check if child already exists
+        const existingIdx = found.node.children.findIndex(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+
+        if (existingIdx < 0) {
+          // Child doesn't exist, add it (preserve original type)
+          found.node.children.push(tabIdOrNode);
+        }
+
+        // Remove from hidden if present
+        removeFromHidden(found.node, tabId);
+
+        // Set activeTabIndex to the index in visible children
+        const visibleIdx = getVisibleChildIndex(found.node, tabId);
+        if (visibleIdx >= 0) {
+          found.node.activeTabIndex = visibleIdx;
+        }
+      }),
+    );
+  };
+
+  const removeTab = (tabsId: string, tabId: string) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        // Check if child exists
+        const childExists = found.node.children.some(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+        if (!childExists) return;
+
+        // Get the index of the tab being hidden in visible children BEFORE hiding it
+        const visibleChildren = getVisibleTabChildren(found.node);
+        const hidingIndex = visibleChildren.findIndex(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+
+        // If hiding a tab before the active one, decrement activeTabIndex
+        if (hidingIndex >= 0 && hidingIndex < found.node.activeTabIndex) {
+          found.node.activeTabIndex -= 1;
+        }
+
+        // Add to hidden (don't remove from children)
+        addToHidden(found.node, tabId);
+
+        // Recompute visible children and clamp activeTabIndex as final guard
+        const newVisibleChildren = getVisibleTabChildren(found.node);
+        found.node.activeTabIndex = Math.max(
+          0,
+          Math.min(found.node.activeTabIndex, newVisibleChildren.length - 1),
+        );
+      }),
+    );
+  };
+
+  const deleteTab = (tabsId: string, tabId: string) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        const childIdx = found.node.children.findIndex(
+          (c) => getLayoutNodeId(c) === tabId,
+        );
+        if (childIdx < 0) return;
+
+        found.node.children.splice(childIdx, 1);
+        removeFromHidden(found.node, tabId);
+
+        const visibleChildren = getVisibleTabChildren(found.node);
+        if (found.node.activeTabIndex >= visibleChildren.length) {
+          found.node.activeTabIndex = Math.max(0, visibleChildren.length - 1);
+        }
+      }),
+    );
+  };
+
+  const setCollapsed = (id: string, collapsed: boolean) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findNodeById(draft.layout.config, id); // Ensure size is set before collapsing
+
+        if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+          return;
+        }
+
+        found.node.collapsed = collapsed;
+      }),
+    );
+  };
+
+  const toggleCollapsed = (id: string) => {
+    const found = findNodeById(get().layout.config, id);
+    if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+      return;
+    }
+
+    setCollapsed(id, !found.node.collapsed);
+  };
+
+  const getTabs = (tabsId: string): string[] => {
+    const found = findTabsNode(get().layout.config, tabsId);
+    if (!found) return [];
+    // Return all children IDs (both visible and hidden)
+    return getChildrenIds(found.node.children);
+  };
+
+  const getVisibleTabs = (tabsId: string): string[] => {
+    const found = findTabsNode(get().layout.config, tabsId);
+    if (!found) return [];
+    return getChildrenIds(getVisibleTabChildren(found.node));
+  };
+
+  const getHiddenTabs = (tabsId: string): string[] => {
+    const found = findTabsNode(get().layout.config, tabsId);
+    if (!found) return [];
+    return getChildrenIds(getHiddenTabChildren(found.node));
+  };
+
+  const getActiveTab = (tabsId: string): string | undefined => {
+    const found = findTabsNode(get().layout.config, tabsId);
+    if (!found) return undefined;
+    // Get the active child from visible children
+    const visibleChildren = getVisibleTabChildren(found.node);
+    const child = visibleChildren[found.node.activeTabIndex];
+    return child != null ? getLayoutNodeId(child) : undefined;
+  };
+
+  const reorderTabs = (tabsId: string, tabIds: string[]) => {
+    set((state) =>
+      produce(state, (draft) => {
+        const found = findTabsNode(draft.layout.config, tabsId);
+        if (!found) return;
+
+        const byId = new Map(
+          found.node.children.map((c) => [getLayoutNodeId(c), c]),
+        );
+        const hiddenSet = new Set(found.node.hiddenChildren ?? []);
+
+        const reordered: LayoutNode[] = [];
+        for (const id of tabIds) {
+          const node = byId.get(id);
+          if (node) {
+            reordered.push(node);
+            byId.delete(id);
+          }
+        }
+        // Append any hidden children that weren't in the new order
+        for (const [id, node] of byId) {
+          if (hiddenSet.has(id)) {
+            reordered.push(node);
+          }
+        }
+
+        found.node.children = reordered;
+
+        // Keep activeTabIndex pointing at the same tab
+        const activeId = getActiveTab(tabsId);
+        if (activeId) {
+          const visibleChildren = getVisibleTabChildren(found.node);
+          const idx = visibleChildren.findIndex(
+            (c) => getLayoutNodeId(c) === activeId,
+          );
+          if (idx >= 0) {
+            found.node.activeTabIndex = idx;
+          }
+        }
+      }),
+    );
+  };
+
+  const isCollapsed = (id: string): boolean => {
+    const found = findNodeById(get().layout.config, id);
+
+    if (!found || isLayoutNodeKey(found.node) || !found.node.collapsible) {
+      return false;
+    }
+
+    return found.node.collapsed === true;
+  };
+
+  return {
+    setActiveTab,
+    addTab,
+    removeTab,
+    deleteTab,
+    reorderTabs,
+    setCollapsed,
+    toggleCollapsed,
+    getTabs,
+    getVisibleTabs,
+    getHiddenTabs,
+    getActiveTab,
+    isCollapsed,
+  };
+}

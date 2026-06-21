@@ -1,7 +1,7 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
 import {DataTableModal} from '@sqlrooms/data-table';
-import {makeQualifiedTableName, TableNodeObject} from '@sqlrooms/duckdb';
+import {TableNodeObject} from '@sqlrooms/duckdb';
 import {cn, useDisclosure} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {CopyIcon, EyeIcon, TableIcon, ViewIcon} from 'lucide-react';
@@ -16,12 +16,7 @@ export const defaultRenderTableNodeMenuItems = (
   nodeObject: TableNodeObject,
   viewTableModal?: ReturnType<typeof useDisclosure>,
 ) => {
-  const {database, schema, name, sql, isView} = nodeObject;
-  const qualifiedTableName = makeQualifiedTableName({
-    database,
-    schema,
-    table: name,
-  });
+  const {table: qualifiedTableName, sql, isView} = nodeObject;
   return (
     <>
       {viewTableModal && (
@@ -91,18 +86,13 @@ export const TableTreeNode: FC<{
   } = props;
 
   const tableModal = useDisclosure();
-  const {database, schema, name, rowCount, isView} = nodeObject;
-  const qualifiedTableName = makeQualifiedTableName({
-    database,
-    schema,
-    table: name,
-  });
+  const {name, rowCount, isView, table: qualifiedTableName} = nodeObject;
   const sqlQuery = `SELECT * FROM ${qualifiedTableName}`;
 
   return (
     <>
       <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-        <div className="relative flex w-full items-center space-x-2">
+        <div className="relative flex w-full items-center space-x-1.5">
           {isView ? (
             <ViewIcon size="16px" className="shrink-0 text-blue-500" />
           ) : (

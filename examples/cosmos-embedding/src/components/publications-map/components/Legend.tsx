@@ -1,4 +1,4 @@
-import {FC} from 'react';
+import type {FC} from 'react';
 import {ScaleOrdinal, ScalePower} from 'd3-scale';
 
 interface LegendProps {

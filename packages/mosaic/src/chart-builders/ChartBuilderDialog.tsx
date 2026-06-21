@@ -1,14 +1,73 @@
 import {
-  Dialog,
+  Button,
+  type ButtonProps,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@sqlrooms/ui';
-import type {Spec} from '@uwdata/mosaic-spec';
-import React from 'react';
+import {Plus} from 'lucide-react';
+import React, {PropsWithChildren} from 'react';
+import type {ChartConfig} from '../charts/chart-types';
 import {ChartBuilderContent} from './ChartBuilderContent';
-import {ChartBuilderColumn, ChartBuilderTemplate} from './types';
+import {ChartBuilderRoot} from './ChartBuilderRoot';
+import type {
+  ChartBuilderColumn,
+  ChartTypeDefinition,
+} from '../charts/chart-types/base-types';
+
+export type ChartBuilderTriggerProps = ButtonProps;
+
+export const ChartBuilderTrigger = React.forwardRef<
+  HTMLButtonElement,
+  ChartBuilderTriggerProps
+>(({children, ...props}, ref) => {
+  return (
+    <DialogTrigger asChild>
+      <Button ref={ref} variant="outline" size="sm" {...props}>
+        {children ?? (
+          <>
+            <Plus className="mr-1 h-4 w-4" />
+            Add Chart
+          </>
+        )}
+      </Button>
+    </DialogTrigger>
+  );
+});
+ChartBuilderTrigger.displayName = 'ChartBuilderTrigger';
+
+export type ChartBuilderDialogContentProps = PropsWithChildren<{
+  /** Override dialog title (default "Add Chart") */
+  title?: string;
+  /** Override dialog description */
+  description?: string;
+  className?: string;
+}>;
+
+/**
+ * The dialog content pane that renders the chart-builder steps.
+ * Must be rendered inside `<MosaicChartBuilder>`.
+ */
+export const ChartBuilderDialogContent: React.FC<
+  ChartBuilderDialogContentProps
+> = ({
+  title = 'Add Chart',
+  description = 'Select a chart type to create.',
+  className,
+  children,
+}) => {
+  return (
+    <DialogContent className={className ?? 'sm:max-w-lg'}>
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+      </DialogHeader>
+      {children ?? <ChartBuilderContent />}
+    </DialogContent>
+  );
+};
 
 export interface ChartBuilderDialogProps {
   /** Whether the dialog is open */
@@ -20,14 +79,21 @@ export interface ChartBuilderDialogProps {
   /** Available columns for field selectors */
   columns: ChartBuilderColumn[];
   /** Callback when a chart spec is created */
-  onCreateChart: (spec: Spec, title: string) => void;
-  /** Custom builders (defaults to all built-in builders) */
-  builders?: ChartBuilderTemplate[];
+  onCreateChart: (title: string, config: ChartConfig) => void;
+  /** Optional chart types to show (defaults to all registered types) */
+  chartTypes?: ChartTypeDefinition[];
 }
 
 /**
- * Dialog wrapper for the chart builder.
- * For a non-dialog version, use MosaicChartBuilder.Content directly.
+ * Dialog wrapper for the chart builder (legacy API).
+ *
+ * @deprecated Prefer the compound form:
+ * ```tsx
+ * <MosaicChartBuilder tableName={…} columns={…} onCreateChart={…}>
+ *   <MosaicChartBuilder.Trigger />
+ *   <MosaicChartBuilder.Dialog />
+ * </MosaicChartBuilder>
+ * ```
  */
 export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   open,
@@ -35,27 +101,16 @@ export const ChartBuilderDialog: React.FC<ChartBuilderDialogProps> = ({
   tableName,
   columns,
   onCreateChart,
-  builders,
-}) => {
-  const handleCreateChart = (spec: Spec, title: string) => {
-    onCreateChart(spec, title);
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add Chart</DialogTitle>
-          <DialogDescription>Select a chart type to create.</DialogDescription>
-        </DialogHeader>
-        <ChartBuilderContent
-          tableName={tableName}
-          columns={columns}
-          onCreateChart={handleCreateChart}
-          builders={builders}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-};
+  chartTypes,
+}) => (
+  <ChartBuilderRoot
+    open={open}
+    onOpenChange={onOpenChange}
+    tableName={tableName}
+    columns={columns}
+    onCreateChart={onCreateChart}
+    chartTypes={chartTypes}
+  >
+    <ChartBuilderDialogContent />
+  </ChartBuilderRoot>
+);

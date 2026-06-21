@@ -69,6 +69,10 @@ export type ExecuteCommandToolLlmResult = {
   };
 };
 
+type CommandToolExecutionContext = {
+  sessionId?: string;
+};
+
 export type CommandToolsOptions = {
   listToolName?: string;
   executeToolName?: string;
@@ -137,7 +141,13 @@ Use this before executing commands so you can pick a valid command ID and unders
       description: `Execute a room command by ID.
 Call ${listToolName} first to discover valid command IDs and input requirements.`,
       inputSchema: ExecuteCommandToolParameters,
-      execute: async ({commandId, input}: ExecuteCommandToolParameters) => {
+      execute: async (
+        {commandId, input}: ExecuteCommandToolParameters,
+        executionOptions,
+      ) => {
+        const context = executionOptions as
+          | CommandToolExecutionContext
+          | undefined;
         const state = store.getState();
         if (!hasCommandSliceState(state)) {
           return {
@@ -157,6 +167,10 @@ Call ${listToolName} first to discover valid command IDs and input requirements.
 
         const result = await state.commands.invokeCommand(commandId, input, {
           surface: 'ai',
+          metadata:
+            typeof context?.sessionId === 'string'
+              ? {aiSessionId: context.sessionId}
+              : undefined,
         });
         if (result.success) {
           return {

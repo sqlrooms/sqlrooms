@@ -2,7 +2,7 @@
 
 This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms-cli`).
 
-In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server (default `http://localhost:4173`).
+In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
@@ -10,24 +10,23 @@ In production (published `sqlrooms` wheel), the UI is served as **static assets*
 
 ## Dev mode (UI + Python server together)
 
-From `python/sqlrooms-cli`:
+From the repo root:
 
 ```bash
-pnpm dev
+pnpm dev cli
 ```
 
 This starts:
 
-- the Python server on `http://127.0.0.1:4173`
-- the Vite UI on `http://localhost:4174` (proxying `/api` and `/config.json` to 4173)
+- the Python API server on `http://127.0.0.1:4273` without serving static UI, or the next free port
+- the Vite UI on `http://localhost:4174`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
+- a per-session dev database named after the selected UI port, for example `sqlrooms-cli-4174.db`
 
-If you hit `address already in use`, pass different ports to the Python server:
+If you want fixed ports, pass them to the Python server:
 
 ```bash
-pnpm dev:server -- --port 4176 --ws-port 4002
+pnpm dev cli -- --port 4176 --ws-port 4002
 ```
-
-Then also update the Vite proxy target in `vite.config.ts` (or run Vite with a different proxy setup).
 
 ## Dev mode (separate terminals)
 
@@ -35,7 +34,7 @@ Terminal A (Python server):
 
 ```bash
 cd python/sqlrooms-cli
-pnpm dev:server
+pnpm dev -- --no-ui
 ```
 
 Terminal B (UI):
@@ -43,6 +42,10 @@ Terminal B (UI):
 ```bash
 pnpm --filter sqlrooms-cli-app dev -- --host --port 4174
 ```
+
+The Python package dev helper uses API port `4173` by default to match the
+Vite proxy. If you pass a different Python API port, also set
+`SQLROOMS_CLI_API_PROXY_TARGET` when starting Vite.
 
 ## Build the bundled UI (for the Python wheel)
 
@@ -60,3 +63,61 @@ To copy it into the Python package bundle directory (so the published `sqlrooms`
 cd python/sqlrooms-cli
 pnpm build:ui
 ```
+
+## Dashboard Layouts
+
+Dashboard artifacts are created with either a `dock` or `grid` Mosaic dashboard
+layout. Explicit dashboard creation commands and AI tools require `layoutType`
+so the choice is made once at creation time; auto-created dashboards from chart
+or Data Table Explorer flows use `grid`.
+
+## Worksheet Artifacts
+
+Worksheet artifacts are block-composed documents for active analytical work.
+They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
+direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
+SQL queries, and Markdown documents.
+
+Standalone chart blocks reuse the same Mosaic chart view and settings panel as
+dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
+a crossfilter selection; charts without a group are independent.
+Agent-created blocks can persist an `intent` string describing the purpose they
+were created to serve, which helps later edits distinguish durable intent from
+raw model input.
+
+Hosted dashboards are stored as direct stateful blocks keyed by their block
+instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
+selection scope, so multiple dashboards in one Worksheet crossfilter
+independently.
+
+Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
+The same query block can also be opened as a top-level SQL Query artifact tab.
+
+## HTML App Revision History
+
+Generated `html-app` artifacts and worksheet HTML app blocks store source
+revisions in `@sqlrooms/app-runtime` state. The CLI registers these room
+commands for palette and AI surfaces:
+
+- `html-app.restore-revision`
+- `html-app.undo-revision`
+- `html-app.redo-revision`
+
+Commands accept an optional `appId`. If omitted, the CLI resolves only a clearly
+selected top-level `html-app` artifact or a single known HTML app runtime.
+Ambiguous worksheet cases fail with a clear message so the caller can ask the
+user to select the target block. Chat undo/redo should execute these commands
+instead of mutating app state through hidden paths or rewriting chat messages.
+
+## AI Artifact Context
+
+The assistant captures selected artifact context at run start. The first
+selected item is the primary context artifact unless the run context carries an
+explicit `primaryItemId`.
+
+Direct AI tools can list and read context artifacts with
+`list_context_artifacts` and `read_context_artifact`. Mutating tools should pass
+an explicit `artifactId`; if omitted, dashboard chart tools only use an
+unambiguous primary dashboard. Reference artifacts are not implicit mutation
+targets. `set_primary_context_artifact` updates the current run and session
+context when the assistant creates or switches to a new primary artifact.

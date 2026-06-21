@@ -8,7 +8,9 @@ export const Room = () => {
   const sqlEditorDisclosure = useDisclosure();
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
-      <RoomShell.Sidebar>
+      <RoomShell.SidebarContainer>
+        <RoomShell.TabButtons />
+        <div className="flex-1" />
         <RoomShell.SidebarButton
           title="SQL Editor"
           onClick={sqlEditorDisclosure.onToggle}
@@ -17,7 +19,7 @@ export const Room = () => {
         />
         <RoomShell.CommandPalette.Button />
         <ThemeSwitch />
-      </RoomShell.Sidebar>
+      </RoomShell.SidebarContainer>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
       <RoomShell.CommandPalette />

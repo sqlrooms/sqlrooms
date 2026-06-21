@@ -1,6 +1,6 @@
-Layout slice and mosaic utilities for SQLRooms panel-based UIs.
+Layout slice and renderer for SQLRooms panel-based UIs.
 
-This package uses `react-mosaic` to compose resizable panel layouts.
+This package renders layout trees using `react-resizable-panels` for split layouts, `dnd-kit` for dockable panel rearrangement, and `react-grid-layout` for scrollable grid dashboard layouts.
 
 ## Installation
 
@@ -11,24 +11,21 @@ npm install @sqlrooms/layout
 ## Main exports
 
 - `createLayoutSlice()`, `useStoreWithLayout()`
-- `MosaicLayout` component
-- mosaic helpers:
-  - `makeMosaicStack`
-  - `visitMosaicLeafNodes`
-  - `getVisibleMosaicLayoutPanels`
-  - `findMosaicNodePathByKey`
-  - `removeMosaicNodeByKey`
-- layout config schemas/types re-exported from `@sqlrooms/layout-config`
+- `LayoutRenderer` component — renders a `LayoutNode` tree using resizable panels, tabs, and generic docking
+- `useExpandGridPanel()` — expands a grid child panel horizontally to available row space
+- Grid layout defaults/helpers: `DEFAULT_GRID_COLS`, `DEFAULT_GRID_BREAKPOINTS`, `getResponsiveGridCols()`, `getGridColsForBreakpoint()`
+- Layout helpers:
+  - `visitLayoutLeafNodes`
+  - `getVisibleLayoutPanels`
+  - `removeLayoutNodeByKey`
+  - `findNodeById`, `findTabsNodeForPanel`
+  - `movePanel`
+- Layout config schemas/types re-exported from `@sqlrooms/layout-config`
 
 ## Store usage
 
 ```tsx
-import {
-  LayoutSliceState,
-  LayoutTypes,
-  MAIN_VIEW,
-  createLayoutSlice,
-} from '@sqlrooms/layout';
+import {LayoutSliceState, createLayoutSlice} from '@sqlrooms/layout';
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
@@ -50,24 +47,21 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
     ...createBaseRoomSlice()(set, get, store),
     ...createLayoutSlice({
       config: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          direction: 'row',
-          first: 'data',
-          second: MAIN_VIEW,
-          splitPercentage: 30,
-        },
+        type: 'split',
+        direction: 'row',
+        children: [
+          {type: 'panel', id: 'data', defaultSize: '30%'},
+          {type: 'panel', id: 'main', defaultSize: '70%'},
+        ],
       },
       panels: {
         data: {
           title: 'Data',
           component: DataPanel,
-          placement: 'sidebar',
         },
         main: {
           title: 'Main',
           component: MainPanel,
-          placement: 'main',
         },
       },
     })(set, get, store),
@@ -75,20 +69,58 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
 );
 ```
 
-## Programmatic panel visibility
+## Render callbacks
+
+`createLayoutSlice` accepts optional render callbacks for custom panel and tab strip rendering:
+
+```ts
+createLayoutSlice({
+  config: {
+    /* ... */
+  },
+  panels: {
+    /* ... */
+  },
+  renderPanel: (context) => {
+    // Return custom JSX or undefined to fall back to the default renderer
+  },
+});
+```
+
+## Tabs layout composition
+
+`TabsLayout.TabContent` accepts `forceMount` to keep all visible tab contents
+mounted while hiding inactive tabs. This is useful for expensive panels that
+should preserve local state or setup work during tab changes:
+
+```tsx
+<TabsLayout.TabContentContainer>
+  <TabsLayout.TabContent forceMount />
+</TabsLayout.TabContentContainer>
+```
+
+## Area-based panel management
+
+Named `tabs` nodes (with an `id`) act as **areas** that can be managed programmatically:
 
 ```tsx
 import {Button} from '@sqlrooms/ui';
 
 function PanelButtons() {
-  const togglePanel = useRoomStore((state) => state.layout.togglePanel);
-  const togglePanelPin = useRoomStore((state) => state.layout.togglePanelPin);
+  const setActiveTab = useRoomStore((state) => state.layout.setActiveTab);
+  const addTab = useRoomStore((state) => state.layout.addTab);
+  const setCollapsed = useRoomStore((state) => state.layout.setCollapsed);
 
   return (
     <div className="flex gap-2">
-      <Button onClick={() => togglePanel('data')}>Toggle Data Panel</Button>
-      <Button onClick={() => togglePanelPin('data')}>
-        Pin/Unpin Data Panel
+      <Button onClick={() => setActiveTab('sidebar', 'data')}>
+        Show Data Panel
+      </Button>
+      <Button onClick={() => addTab('sidebar', 'schema')}>
+        Add Schema Tab
+      </Button>
+      <Button onClick={() => setCollapsed('sidebar', true)}>
+        Collapse Sidebar
       </Button>
     </div>
   );
@@ -97,4 +129,4 @@ function PanelButtons() {
 
 ## Note
 
-`@sqlrooms/layout` (react-mosaic layout) is different from `@sqlrooms/mosaic` (UW IDL data visualization package).
+`@sqlrooms/layout` (panel layout system) is different from `@sqlrooms/mosaic` (UW IDL data visualization package).

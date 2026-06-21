@@ -1,4 +1,8 @@
-import {DeckJsonMapSpec, LayerBindingConfig} from '../src/DeckJsonMapSpec';
+import {
+  ColorScaleFunction,
+  DeckJsonMapSpec,
+  LayerBindingConfig,
+} from '../src/DeckJsonMapSpec';
 
 describe('DeckJsonMapSpec', () => {
   it('accepts loose deck.gl layer objects while validating _sqlroomsBinding', () => {
@@ -32,21 +36,14 @@ describe('DeckJsonMapSpec', () => {
     expect(parsed.layers?.[0]?._sqlroomsBinding?.dataset).toBe('earthquakes');
   });
 
-  it('rejects invalid colorScale functions', () => {
+  it('rejects invalid colorScale functions via ColorScaleFunction schema', () => {
     expect(() =>
-      DeckJsonMapSpec.parse({
-        layers: [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            getFillColor: {
-              '@@function': 'colorScale',
-              field: 'Magnitude',
-              type: 'sequential',
-              scheme: 'NotAScheme',
-              domain: [0, 8],
-            },
-          },
-        ],
+      ColorScaleFunction.parse({
+        '@@function': 'colorScale',
+        field: 'Magnitude',
+        type: 'sequential',
+        scheme: 'NotAScheme',
+        domain: [0, 8],
       }),
     ).toThrow(/scheme/i);
   });

@@ -58,13 +58,21 @@ export function CustomFilterPanelHeaderFactory(): React.ComponentType<FilterPane
       (state) => state.kepler.dispatchAction,
     );
     const mapId = useStoreWithKepler(
-      // TODO: pass the mapId via the props, currentMapId is not necessarily the map where filter is originated from
-      (state) => state.kepler.config.currentMapId,
+      (state) =>
+        Object.entries(state.kepler.map).find(([, mapState]) =>
+          Boolean(
+            mapState?.visState?.filters?.some(
+              (f: Filter) => f.id === filter.id,
+            ),
+          ),
+        )?.[0],
     );
     const filterIdx = useStoreWithKepler((state) =>
-      state.kepler.map[mapId]?.visState.filters.findIndex(
-        (f) => f.id === filter.id,
-      ),
+      mapId
+        ? state.kepler.map[mapId]?.visState?.filters?.findIndex(
+            (f: Filter) => f.id === filter.id,
+          )
+        : undefined,
     );
     return (
       <StyledFilterHeader
@@ -81,7 +89,7 @@ export function CustomFilterPanelHeaderFactory(): React.ComponentType<FilterPane
               size="icon"
               className="hover:bg-foreground/10 h-8 w-8"
               onClick={() => {
-                if (filterIdx === undefined) {
+                if (!mapId || filterIdx === undefined) {
                   throw new Error('Filter index not found by id ${filter.id}');
                 }
                 return dispatchAction(mapId, removeFilter(filterIdx));

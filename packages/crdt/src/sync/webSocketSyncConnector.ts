@@ -64,6 +64,11 @@ const fromBase64 = (value: string) => {
   return out;
 };
 
+function importAndCheckoutLatest(doc: LoroDoc, bytes: Uint8Array) {
+  doc.import(bytes);
+  doc.checkoutToLatest();
+}
+
 export type WebSocketSyncOptions = {
   url: string;
   roomId: string;
@@ -286,7 +291,7 @@ export function createWebSocketSyncConnector(
                   event.data.byteOffset,
                   event.data.byteLength,
                 );
-          activeDoc.import(bytes);
+          importAndCheckoutLatest(activeDoc, bytes);
           return;
         }
         if (typeof Blob !== 'undefined' && event.data instanceof Blob) {
@@ -294,7 +299,7 @@ export function createWebSocketSyncConnector(
             .arrayBuffer()
             .then((buf: ArrayBuffer) => {
               const bytes = new Uint8Array(buf);
-              activeDoc.import(bytes);
+              importAndCheckoutLatest(activeDoc, bytes);
             })
             .catch((error: unknown) =>
               console.warn('Failed to decode CRDT binary message', error),
@@ -358,7 +363,7 @@ export function createWebSocketSyncConnector(
                 // ignore
               }
 
-              activeDoc.import(bytes);
+              importAndCheckoutLatest(activeDoc, bytes);
               snapshotApplied = true;
               if (snapshotWaitTimer) {
                 clearTimeout(snapshotWaitTimer);

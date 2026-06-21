@@ -1,0 +1,73 @@
+{
+  "name": "@sqlrooms/app-runtime",
+  "version": "0.29.0-rc.8",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js",
+      "default": "./dist/client.js"
+    },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.js",
+      "default": "./dist/host.js"
+    },
+    "./html-app": {
+      "types": "./dist/html-app.d.ts",
+      "import": "./dist/html-app.js",
+      "default": "./dist/html-app.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js",
+      "default": "./dist/protocol.js"
+    }
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "dependencies": {
+    "@sqlrooms/blocks": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.556.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.1.13",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.4"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

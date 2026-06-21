@@ -455,7 +455,7 @@ function TableBrowser({
           value={selectedTable ?? undefined}
           onValueChange={onSelectTable}
         >
-          <SelectTrigger className="h-8 w-[260px]">
+          <SelectTrigger className="h-8 w-65">
             <SelectValue placeholder="Select table" />
           </SelectTrigger>
           <SelectContent>

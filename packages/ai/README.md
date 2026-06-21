@@ -5,9 +5,20 @@ This package combines:
 - AI slice state/logic (`@sqlrooms/ai-core`)
 - AI settings UI/state (`@sqlrooms/ai-settings`)
 - AI config schemas (`@sqlrooms/ai-config`)
-- SQL query tool helpers (`createDefaultAiTools`, `createQueryTool`)
+- SQL query and schema discovery tool helpers (`createDefaultAiTools`, `createQueryTool`)
 
 Use this package when you want AI chat + tool execution in a SQLRooms app without wiring low-level pieces manually.
+
+`createDefaultAiInstructions` includes a hybrid DuckDB table context: small
+current-database `main` catalogs include full schemas for every table, while
+larger catalogs include a few full schemas, additional table names with row
+counts, and instructions to call
+`read_table_schema` before querying tables whose columns are not shown.
+`createDefaultAiTools` registers `list_tables` and `read_table_schema` by
+default so apps can expose the same table discovery workflow. These tools
+search the current database `main` schema by default, and accept broader
+`schema`, `database`, and pattern filters for other visible schemas or attached
+databases.
 
 ## Installation
 
@@ -55,6 +66,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDefaultAiTools(store),
       },
       getInstructions: () => createDefaultAiInstructions(store),
+      // Optional: observe completed, non-aborted turns for app-owned follow-up
+      // behavior such as handoff into a newly selected workspace artifact.
+      onChatFinish: ({sessionId, messages}) => {
+        void sessionId;
+        void messages;
+      },
     })(set, get, store),
   }),
 );
@@ -91,6 +108,116 @@ function AiPanel() {
 }
 ```
 
+## Generate Chat Titles
+
+`generateSessionTitle` turns a session's early user messages into a concise title
+via `ai.sendPrompt`, cleans the model output, and renames the session.
+`useGenerateSessionTitle` wraps that helper for React surfaces that should watch
+the current session and trigger title generation after new user messages. Apps
+can keep product-specific policy outside the shared package by passing options
+such as `enabled`, `isDefaultSessionName`, and `getPromptOptions`.
+
+```tsx
+import {Chat, useGenerateSessionTitle} from '@sqlrooms/ai';
+
+function AiPanel() {
+  useGenerateSessionTitle({
+    enabled: true,
+    getPromptOptions: () => ({useTools: false}),
+  });
+
+  return (
+    <Chat>
+      <Chat.Messages />
+      <Chat.Composer />
+    </Chat>
+  );
+}
+```
+
+## Chat search
+
+`Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
+find bar that highlights matches in the current session's messages.
+
+For building search UIs outside the chat (e.g. a session list that searches across
+all sessions), the underlying matching primitives are re-exported and can be used
+without the provider:
+
+- `normalizeChatSearchQuery(query)` — trims + lower-cases a query (the casing rule
+  the search uses).
+- `findChatSearchMatches(blocks, query)` — returns positional matches
+  (`ChatSearchMatch[]`) for a list of `ChatSearchBlock`s. Useful for highlighting
+  matched substrings consistently with `Chat.Search`.
+- `markdownToPlainText(markdown)` — extracts plain text from markdown so message
+  content can be made searchable.
+
+```tsx
+import {findChatSearchMatches, type ChatSearchBlock} from '@sqlrooms/ai';
+
+const blocks: ChatSearchBlock[] = [
+  {id: 'title', resultId: 'title', text: title},
+];
+const matches = findChatSearchMatches(blocks, query);
+```
+
+## Chat Session Types
+
+Use `ChatSessionSchema` for persisted chat session validation and
+`isChatSessionEmpty` for session emptiness checks. `AnalysisSessionSchema`,
+`AnalysisResultSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
+and `AnalysisResult` remain compatibility exports for existing apps, but new
+code should prefer `Chat.Messages`, `uiMessages`, and derived `ChatTurn` helpers
+such as `getChatTurnsFromUiMessages`.
+
+Old persisted sessions that contain `analysisResults` still load, but parsed and
+new `ChatSessionSchema` state no longer includes that field.
+
+## Devtools
+
+`@sqlrooms/ai/devtools` exposes development-oriented inspection components and
+helpers without adding CodeMirror-heavy debug UI to the main `@sqlrooms/ai`
+barrel.
+
+```tsx
+import {ChatSessionDebugView} from '@sqlrooms/ai/devtools';
+
+function DebugPanel({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose?: () => void;
+}) {
+  return <ChatSessionDebugView sessionId={sessionId} onClose={onClose} />;
+}
+```
+
+`ChatSessionDebugView` reads the existing AI store context and shows session
+metadata, model selection, registered tools, run context, raw `uiMessages`, and
+a tabbed chronological timeline that keeps message parts, tool calls, nested
+`agentProgress`, optional agent snapshots, and copyable JSON blocks together.
+
+Agent snapshot capture is opt-in on the AI slice:
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureAgentSnapshots: true,
+    persistAgentSnapshots: true,
+    maxAgentSnapshotBytes: 64_000,
+  },
+});
+```
+
+Enable persistence when you need post-mortem or cross-tab debugging in saved
+workspace state. Snapshots are serializable metadata only; tool names,
+descriptions, capability flags, and approval hints may be stored, but
+implementations, closures, secrets, and unbounded prompt/output content should
+not be stored.
+
 ## Add custom tools
 
 ```tsx
@@ -123,6 +250,13 @@ createAiSlice({
 })(set, get, store);
 ```
 
+Tool `execute` callbacks receive hidden run-context helpers in their second
+argument. Apps can use `getRunContext` to capture selected artifacts at the
+start of a run, expose them in `formatRunContextInstructions`, and then let
+tools update the effective primary context with `setPrimaryRunContextItem`.
+Old contexts without `primaryItemId` remain valid; the first item is treated as
+primary. Artifact-specific context tools live in `@sqlrooms/artifacts/ai`.
+
 ## Use remote endpoint mode
 
 If you want server-side model calls, set `chatEndPoint` and optional `chatHeaders`:
@@ -139,6 +273,102 @@ If you want server-side model calls, set `chatEndPoint` and optional `chatHeader
     'x-app-name': 'my-sqlrooms-app',
   },
 })(set, get, store),
+```
+
+## Skills
+
+The skills subsystem lets you define, store, and author reusable AI "skills" — named instruction sets that can be loaded into an agent at runtime.
+
+### Storage and types
+
+`SkillStorage` is the interface that abstracts where skills live (filesystem, database, cloud, etc.). Implement it to plug in your own backend:
+
+- `listRoots()` — enumerate available skill root locations
+- `listSkills(rootId)` — list all skills under a root
+- `readSkill(ref)` / `writeSkill(ref, content)` / `deleteSkill(ref)` — CRUD on individual skills
+- `resolveSkillId(id)` — resolve a bare id to its highest-priority `SkillRef`
+- `subscribe?(listener)` — _optional_; subscribe to change notifications. Returns an unsubscribe function. Implementations that don't mutate (read-only/static) may omit this method.
+
+Supporting types: `SkillRoot`, `SkillManifest`, `SkillRef`, `SkillRecord`, `SkillListing`, `SkillWriteContent`, `SkillFile`.
+
+### Composite storage
+
+`CompositeSkillStorage` priority-merges multiple `SkillStorage` instances behind a single `SkillStorage` interface. Children are passed in priority order (highest first); they win conflicts in `resolveSkillId` and appear first in `listRoots`. Each child must own a unique set of `rootId`s.
+
+`subscribe` fans out to every child that exposes the optional `subscribe?` method and aggregates the unsubscribes. If no child supports subscribe, `composite.subscribe(...)` is a noop returning a noop unsubscribe — consumers can call it unconditionally.
+
+```tsx
+import {CompositeSkillStorage} from '@sqlrooms/ai';
+
+// Higher-priority `userStorage` wins on id collisions; both contribute roots
+// and listings to the merged view.
+const storage = new CompositeSkillStorage([userStorage, builtInStorage]);
+
+const roots = await storage.listRoots(); // [user roots..., built-in roots...]
+const all = await storage.listSkills(); // union, with duplicates
+
+// Optional change notification: composite forwards from any subscribe-capable
+// child.
+const unsubscribe = storage.subscribe(() => {
+  void refreshUi();
+});
+// later: unsubscribe();
+```
+
+### Manifest utilities
+
+- `parseSkillManifest(raw)` — parse and validate a skill manifest (Zod-backed, throws `SkillManifestError` on failure)
+- `serializeSkillManifest(manifest)` — serialize a manifest back to its raw form
+- `loadSkillFromFiles(files)` — assemble a `SkillRecord` from a set of `SkillFile` objects (manifest + instruction body)
+
+### Error types
+
+All skill errors extend `SkillError` and carry a typed `SkillErrorCode`:
+
+| Class                    | When thrown                         |
+| ------------------------ | ----------------------------------- |
+| `SkillManifestError`     | Manifest parse/validation failure   |
+| `SkillNotFoundError`     | Skill ref does not exist in storage |
+| `SkillRootReadOnlyError` | Write attempted on a read-only root |
+| `SkillConflictError`     | Skill ID collision on write         |
+
+### Skill authoring
+
+A built-in agent-driven authoring flow that generates skill content through a conversational UI:
+
+- `createSkillAuthoringAgent(options)` — construct a `ToolLoopAgent` scoped to skill creation; accepts `CreateSkillAuthoringAgentOptions`
+- `createSkillDraftStore()` — Zustand store for tracking the in-progress draft (`SkillDraftStore`, `SkillDraftState`)
+- `SkillAuthoringPanel` — drop-in panel component that wires `Chat.LocalAgentRoot` to the authoring agent; accepts `SkillAuthoringPanelProps`
+- `SkillDraftPreview` — read-only preview of the current draft manifest and instructions; accepts `SkillDraftPreviewProps`
+- `DefaultSkillAuthoringPanelHeader` — default header for `SkillAuthoringPanel`
+
+Types: `SkillAuthoringContext`, `SkillDraft`, `SkillDraftStatus`, `SaveSkillCallback`, `CreateSkillAuthoringAgentOptions`.
+
+Lower-level authoring tools (exported for advanced use): `createWriteManifestTool`, `createWriteInstructionsTool`, `createSaveSkillTool`, `buildSkillAuthoringSystemPrompt`, `containsForbidden`, `DEFAULT_SKILL_AUTHORING_STOP_STEPS`.
+
+```tsx
+import {
+  createSkillAuthoringAgent,
+  createSkillDraftStore,
+  SkillAuthoringPanel,
+} from '@sqlrooms/ai';
+
+const draftStore = createSkillDraftStore();
+
+const agent = createSkillAuthoringAgent({
+  model: myLanguageModel,
+  draftStore,
+  onSave: async (skill) => {
+    await mySkillStorage.writeSkill(
+      {rootId: 'default', skillId: skill.id},
+      skill,
+    );
+  },
+});
+
+function SkillCreator() {
+  return <SkillAuthoringPanel agent={agent} draftStore={draftStore} />;
+}
 ```
 
 ## Related packages

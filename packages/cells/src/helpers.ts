@@ -5,12 +5,11 @@ import {
   CellRegistry,
   CellsRootState,
   CellsSliceConfig,
-  Sheet,
-  SheetType,
   SqlCell,
   SqlSelectToJsonFn,
+  CellArtifactRuntime,
 } from './types';
-import {getSheetSchemaName} from './utils';
+import {getArtifactSchemaName} from './utils';
 
 /**
  * Normalizes the result of `findDependencies` to a `CellDependencies` object.
@@ -31,7 +30,7 @@ export function normalizeCellDependencies(
 export async function resolveDependencies(
   cell: Cell,
   cells: Record<string, Cell>,
-  sheetId: string,
+  artifactId: string,
   registry: CellRegistry,
   sqlSelectToJson: SqlSelectToJsonFn,
 ): Promise<CellDependencies> {
@@ -40,41 +39,27 @@ export async function resolveDependencies(
   const raw = await item.findDependencies({
     cell,
     cells,
-    sheetId,
+    artifactId,
     sqlSelectToJson,
   });
   return normalizeCellDependencies(raw);
 }
 
 /**
- * Finds the sheet ID that contains the given cell ID.
+ * Finds the artifact ID that contains the given cell ID.
  */
-export function findSheetIdForCell(
-  state: CellsRootState,
+export function findArtifactIdForCell(
+  state: Pick<CellsRootState, 'cells'>,
   cellId: string,
 ): string | undefined {
-  for (const [id, sheet] of Object.entries(state.cells.config.sheets)) {
-    if (sheet.cellIds.includes(cellId)) {
-      return id;
+  for (const [artifactId, artifact] of Object.entries(
+    state.cells.config.artifacts,
+  )) {
+    if (artifact.cellIds.includes(cellId)) {
+      return artifactId;
     }
   }
   return undefined;
-}
-
-/**
- * Gets all sheets of a specific type.
- */
-export function getSheetsByType(
-  state: CellsRootState,
-  type: SheetType,
-): Record<string, Sheet> {
-  const sheets: Record<string, Sheet> = {};
-  for (const [id, sheet] of Object.entries(state.cells.config.sheets)) {
-    if (sheet.type === type) {
-      sheets[id] = sheet;
-    }
-  }
-  return sheets;
 }
 
 /**
@@ -93,102 +78,38 @@ export function getRequiredSqlSelectToJson(
 }
 
 /**
- * Normalizes structural sheet fields in a partial cells config.
+ * Normalizes artifact runtime entries in a partial cells config.
  *
  * This enforces internal invariants before the config is applied:
- * - `sheets` always contains at least one entry (falls back to defaults).
- * - `sheetOrder` only contains existing sheet ids and includes every sheet.
- * - `currentSheetId` always points to an existing sheet.
- *
- * Non-structural fields are preserved by the caller when merging.
+ * - `artifacts` always has stable ids that match the record keys.
  */
 export function normalizeCellsConfigStructure(
   config: Partial<CellsSliceConfig>,
-  defaultConfig: CellsSliceConfig,
-): Pick<CellsSliceConfig, 'sheets' | 'sheetOrder' | 'currentSheetId'> {
-  const sheets =
-    config.sheets && Object.keys(config.sheets).length > 0
-      ? config.sheets
-      : defaultConfig.sheets;
-  const sheetIds = Object.keys(sheets);
-  const normalizedSheetOrder =
-    config.sheetOrder?.filter((id) => id in sheets) ?? [];
-  const missingSheetIds = sheetIds.filter(
-    (id) => !normalizedSheetOrder.includes(id),
-  );
-  const sheetOrder =
-    normalizedSheetOrder.length > 0
-      ? [...normalizedSheetOrder, ...missingSheetIds]
-      : sheetIds;
-  const currentSheetId =
-    (config.currentSheetId && config.currentSheetId in sheets
-      ? config.currentSheetId
-      : sheetOrder[0]) ?? sheetIds[0];
+): Pick<CellsSliceConfig, 'artifacts'> {
+  const artifacts = Object.fromEntries(
+    Object.entries(config.artifacts ?? {}).map(([artifactId, artifact]) => [
+      artifactId,
+      {
+        ...artifact,
+        id: artifactId,
+        cellIds: artifact.cellIds ?? [],
+        edges: artifact.edges ?? [],
+      },
+    ]),
+  ) as Record<string, CellArtifactRuntime>;
 
-  return {sheets, sheetOrder, currentSheetId};
+  return {artifacts};
 }
 
-/**
- * Returns the final identifier segment from a possibly-qualified SQL name.
- *
- * The parser is quote-aware: dots inside double-quoted identifiers are treated
- * as part of the identifier rather than as qualification separators.
- *
- * Examples:
- * - `schema.table` -> `table`
- * - `db.schema.table` -> `table`
- * - `schema."my.funny.table"` -> `my.funny.table`
- */
-export function getUnqualifiedSqlIdentifier(
-  qualifiedName: string | undefined,
-): string | undefined {
-  if (!qualifiedName) return undefined;
-  const input = qualifiedName.trim();
-  if (!input) return undefined;
-
-  const parts: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < input.length; i += 1) {
-    const ch = input[i];
-    if (ch === '"') {
-      // In SQL identifiers, escaped quotes inside quoted identifiers are doubled.
-      if (inQuotes && input[i + 1] === '"') {
-        current += '"';
-        i += 1;
-        continue;
-      }
-      inQuotes = !inQuotes;
-      current += ch;
-      continue;
-    }
-
-    if (ch === '.' && !inQuotes) {
-      parts.push(current);
-      current = '';
-      continue;
-    }
-
-    current += ch;
-  }
-  parts.push(current);
-
-  const last = parts[parts.length - 1]?.trim();
-  if (!last) return undefined;
-  if (last.startsWith('"') && last.endsWith('"') && last.length >= 2) {
-    return last.slice(1, -1).replaceAll('""', '"');
-  }
-  return last;
-}
+export {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb';
 
 /**
- * Resolves the schema name for a sheet, falling back to a stable id-based name.
+ * Resolves the schema name for an artifact runtime, falling back to a stable id-based name.
  */
-export function resolveSheetSchemaName(
-  sheet: Pick<Sheet, 'id' | 'schemaName'>,
+export function resolveArtifactSchemaName(
+  artifact: Pick<CellArtifactRuntime, 'id' | 'schemaName'>,
 ) {
-  return sheet.schemaName || getSheetSchemaName(sheet.id);
+  return artifact.schemaName || getArtifactSchemaName(artifact.id);
 }
 
 const DATA_SOURCE_CELL_PREFIX = 'cell:';

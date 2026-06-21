@@ -1,5 +1,10 @@
 import type {ComponentType} from 'react';
-import type {AiSliceConfig, AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import type {
+  AiRunContext,
+  AiRunContextItem,
+  AiSliceConfig,
+  ChatSessionSchema,
+} from '@sqlrooms/ai-config';
 import type {
   UIMessage,
   ToolSet,
@@ -82,6 +87,50 @@ export type AgentProgressSnapshot = {
     childSnapshot?: AgentProgressSnapshot;
   }>;
   partialText: string;
+};
+
+/**
+ * Serializable agent metadata captured for AI devtools.
+ *
+ * Snapshot capture is optional and intentionally stores descriptions, names,
+ * capability flags, and bounded settings only. It must not contain executable
+ * tool objects, closures, API keys, or unbounded prompt/output content.
+ */
+export type AgentSnapshot = {
+  agentName?: string;
+  parentToolCallId: string;
+  availableTools: Array<{
+    name: string;
+    description?: string;
+    /** Whether the captured tool exposed an execute function. */
+    hasExecute?: boolean;
+    /** Whether the captured tool exposed a renderer-like function. */
+    hasRenderer?: boolean;
+    needsApproval?: boolean;
+  }>;
+  settings?: {
+    maxSteps?: number;
+    model?: string;
+    provider?: string;
+  };
+  startedAt: number;
+};
+
+/** Devtools-only state and controls nested under the AI slice. */
+export type AiDevtoolsState = {
+  /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId. */
+  agentSnapshots: Record<string, AgentSnapshot>;
+  /** Whether agent metadata snapshots should be captured in memory. */
+  shouldCaptureAgentSnapshots: () => boolean;
+  /** Whether captured agent metadata snapshots should be persisted to sessions. */
+  shouldPersistAgentSnapshots: () => boolean;
+  /** Writes a bounded serializable snapshot for a parent agent tool call. */
+  writeAgentSnapshot: (
+    parentToolCallId: string,
+    snapshot: AgentSnapshot,
+  ) => void;
+  /** Clears all captured agent metadata snapshots. */
+  clearAgentSnapshots: () => void;
 };
 
 /**
@@ -171,6 +220,14 @@ export type AddToolApprovalResponse = (options: {
 
 export type AiChatSendMessage = (message: {text: string}) => void;
 
+export type AiToolExecutionContext = {
+  sessionId?: string;
+  aiRunContext?: AiRunContext;
+  getAiRunContext?: () => AiRunContext | undefined;
+  setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+  setPrimaryRunContextItem?: (item: AiRunContextItem) => void;
+};
+
 /**
  * Minimal interface for the AI state accessed by chat transport functions.
  * This allows chatTransport.ts to avoid importing from AiSlice.ts directly.
@@ -179,7 +236,12 @@ export interface AiStateForTransport {
   config: AiSliceConfig;
   tools: StoredToolSet;
   getProviderOptions?: GetProviderOptions;
-  getCurrentSession: () => AnalysisSessionSchema | undefined;
+  getCurrentSession: () => ChatSessionSchema | undefined;
+  getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
+  setSessionRunContext: (
+    sessionId: string,
+    runContext: AiRunContext | undefined,
+  ) => void;
   getAbortController: (sessionId: string) => AbortController | undefined;
   setAbortController: (
     sessionId: string,
@@ -203,6 +265,8 @@ export interface AiStateForTransport {
     toolCalls: AgentToolCall[],
   ) => void;
   clearAgentProgress: (parentToolCallId: string) => void;
+  /** Devtools-only agent snapshot state and controls. */
+  devtools: AiDevtoolsState;
   /** Pending approval requests from sub-agent tools with needsApproval */
   pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
   requestSubAgentApproval: (approval: PendingSubAgentApproval) => void;
@@ -215,7 +279,7 @@ export interface AiStateForTransport {
   ) => void;
   readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
   clearAbortSnapshots?: () => void;
-  getFullInstructions: () => string;
+  getFullInstructions: (sessionId?: string) => string;
   /** Get API key from settings for the current session's provider */
   getApiKeyFromSettings: () => string;
   /** Get base URL from settings for the current session's provider */

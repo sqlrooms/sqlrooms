@@ -6,16 +6,9 @@ import {
   TabsTrigger,
   Label,
   Separator,
-  Switch,
 } from '@sqlrooms/ui';
 import {useSql} from '@sqlrooms/duckdb';
-import {getArrowColumnTypeCategory} from '@sqlrooms/duckdb';
-import type {BrushFieldType} from '../types';
-import {
-  readSpecValues,
-  buildCrossFilterSpec,
-  buildFlatSpec,
-} from '../vegaSpecBuilder';
+import {readSpecValues, buildFlatSpec} from '../vegaSpecBuilder';
 import {FieldSelector} from './FieldSelector';
 import {ColorSelector, colorOptions} from './ColorSelector';
 import {ChartTypeSelector} from './ChartTypeSelector';
@@ -25,68 +18,25 @@ export const VegaConfigPanel: React.FC<{
   spec: any;
   sqlQuery: string;
   lastRunTime?: number;
-  crossFilterEnabled: boolean;
   onSpecChange: (spec: any) => void;
-  onCrossFilterToggle: (enabled: boolean) => void;
-  onBrushFieldChange: (field: string | undefined) => void;
-  onBrushFieldTypeChange: (fieldType: BrushFieldType | undefined) => void;
-}> = ({
-  sqlQuery,
-  lastRunTime,
-  spec,
-  crossFilterEnabled,
-  onSpecChange,
-  onCrossFilterToggle,
-  onBrushFieldChange,
-  onBrushFieldTypeChange,
-}) => {
+}> = ({sqlQuery, lastRunTime, spec, onSpecChange}) => {
   const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
   const fields = arrowTable?.schema?.fields || [];
 
-  const detectBrushFieldType = (fieldName: string): BrushFieldType => {
-    const arrowField = arrowTable?.schema?.fields?.find(
-      (field) => field.name === fieldName,
-    );
-
-    if (!arrowField) {
-      return 'numeric';
-    }
-
-    const category = getArrowColumnTypeCategory(arrowField.type);
-    if (category === 'datetime') return 'temporal';
-    if (category === 'string') return 'string';
-    return 'numeric';
-  };
-
   const current = readSpecValues(spec);
 
-  const rebuild = (
-    overrides: Partial<ReturnType<typeof readSpecValues>>,
-    cfEnabled = crossFilterEnabled,
-  ) => {
+  const rebuild = (overrides: Partial<ReturnType<typeof readSpecValues>>) => {
     const merged = {...current, ...overrides};
-    const builder = cfEnabled ? buildCrossFilterSpec : buildFlatSpec;
     onSpecChange(
-      builder({
+      buildFlatSpec({
         mark: merged.mark ?? 'bar',
         xField: merged.xField,
-        xFieldType: merged.xField
-          ? detectBrushFieldType(merged.xField)
-          : undefined,
         yField: merged.yField,
         yAggregate: merged.yAggregate,
         color: merged.color ?? colorOptions[0]?.value,
       }),
     );
-    if ('xField' in overrides) {
-      onBrushFieldChange(cfEnabled ? overrides.xField : undefined);
-      onBrushFieldTypeChange(
-        cfEnabled && overrides.xField
-          ? detectBrushFieldType(overrides.xField)
-          : undefined,
-      );
-    }
   };
 
   const handleMarkChange = (mark: string) => rebuild({mark});
@@ -96,17 +46,6 @@ export const VegaConfigPanel: React.FC<{
   const handleYAggregationChange = (aggregate: string) =>
     rebuild({yAggregate: aggregate});
   const handleColorChange = (color: string) => rebuild({color});
-
-  const handleCrossFilterToggle = (enabled: boolean) => {
-    onCrossFilterToggle(enabled);
-    rebuild({}, enabled);
-    onBrushFieldChange(enabled ? current.xField : undefined);
-    onBrushFieldTypeChange(
-      enabled && current.xField
-        ? detectBrushFieldType(current.xField)
-        : undefined,
-    );
-  };
 
   return (
     <div className="w-80 border-r p-4 text-xs">
@@ -155,18 +94,6 @@ export const VegaConfigPanel: React.FC<{
                   onValueChange={handleYAggregationChange}
                 />
               </div>
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-gray-400">
-                Cross-filter
-              </Label>
-              <Switch
-                checked={crossFilterEnabled}
-                onCheckedChange={handleCrossFilterToggle}
-              />
             </div>
           </TabsContent>
 

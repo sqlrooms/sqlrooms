@@ -15,8 +15,9 @@ import {
 } from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
+import type {FC} from 'react';
 
-export const MainView: React.FC = () => {
+export const MainView: FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
@@ -28,8 +29,9 @@ export const MainView: React.FC = () => {
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
       <Chat>
-        <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Chat.Sessions className="w-full" />
+          <Chat.Search className="min-w-64 flex-1" />
           {currentSessionId && (
             <Dialog
               open={settingsPanelOpen.isOpen}
@@ -92,6 +94,7 @@ export const MainView: React.FC = () => {
           {isDataAvailable ? (
             <Chat.Messages
               key={currentSessionId} // will prevent scrolling to bottom after changing current session
+              hoistedRenderers={['chart']}
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center">

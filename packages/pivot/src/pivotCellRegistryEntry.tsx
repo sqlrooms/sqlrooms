@@ -5,7 +5,10 @@ import type {
   CellStatus,
   SqlCellStatus,
 } from '@sqlrooms/cells';
-import {findSheetIdForCell, resolveSheetSchemaName} from '@sqlrooms/cells';
+import {
+  findArtifactIdForCell,
+  resolveArtifactSchemaName,
+} from '@sqlrooms/cells';
 import {produce} from 'immer';
 import {PivotCellContent} from './PivotCellContent';
 import {isPivotCell, type PivotCell} from './pivotCellTypes';
@@ -131,10 +134,12 @@ export const pivotCellRegistryEntry: CellRegistryItem<PivotCell> = {
     const pivot = state.pivot.config.pivots[pivotId];
     if (!pivot) return;
 
-    const sheetId = findSheetIdForCell(state, id);
-    const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
-    const schemaName = sheet
-      ? resolveSheetSchemaName(sheet)
+    const artifactId = findArtifactIdForCell(state, id);
+    const artifact = artifactId
+      ? state.cells.config.artifacts[artifactId]
+      : undefined;
+    const schemaName = artifact
+      ? resolveArtifactSchemaName(artifact)
       : opts?.schemaName || '__sqlrooms_pivot';
 
     let querySource: PivotQuerySource | undefined;

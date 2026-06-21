@@ -4,6 +4,7 @@ import {
   escapeVal,
   makeQualifiedTableName,
   QualifiedTableName,
+  SchemaWithTables,
   TableColumn,
 } from '@sqlrooms/duckdb-core';
 
@@ -19,6 +20,21 @@ export type LoadTableSchemasFilter = {
 
 export type LoadTableSchemasOptions = LoadTableSchemasFilter & {
   filterFunction?: LoadTableSchemasFilterFunction | null;
+  defaultDatabase?: string;
+};
+
+export type SchemaCatalogFilterEntry =
+  | {type: 'database'; database: string}
+  | {type: 'schema'; database: string; schema: string}
+  | {type: 'table'; table: QualifiedTableName};
+
+export type LoadSchemaCatalogFilterFunction = (
+  entry: SchemaCatalogFilterEntry,
+) => boolean;
+
+export type LoadSchemaCatalogOptions = LoadTableSchemasFilter & {
+  filterFunction?: LoadSchemaCatalogFilterFunction | null;
+  defaultDatabase?: string;
 };
 
 /**
@@ -30,14 +46,16 @@ export async function loadTableSchemas(
   connector: DuckDbConnector,
   options: LoadTableSchemasOptions = {},
 ): Promise<DataTable[]> {
-  const {filterFunction, ...filter} = options;
+  const {filterFunction, defaultDatabase, ...filter} = options;
 
   const sql = buildTableSchemasQuery(filter);
   const describeResults = await connector.query(sql);
   const tables: DataTable[] = [];
 
   for (let i = 0; i < describeResults.numRows; i++) {
-    const dataTable = parseTableSchemaRow(describeResults, i);
+    const dataTable = parseTableSchemaRow(describeResults, i, {
+      defaultDatabase,
+    });
 
     // Apply filter (if not provided or null, include all tables)
     if (!filterFunction || filterFunction(dataTable.table)) {
@@ -48,6 +66,59 @@ export async function loadTableSchemas(
   return tables;
 }
 
+/**
+ * Load the visible DuckDB schema catalog in one metadata query.
+ * Starts from schemas, then left-joins tables, views, and columns so empty
+ * schemas and empty attached database `main` schemas are preserved.
+ */
+export async function loadSchemaCatalog(
+  connector: DuckDbConnector,
+  options: LoadSchemaCatalogOptions = {},
+): Promise<SchemaWithTables[]> {
+  const {filterFunction, defaultDatabase, ...filter} = options;
+  const result = await connector.query(buildSchemaCatalogQuery(filter));
+  const groups = new Map<string, SchemaWithTables>();
+  const includedDatabases = new Set<string>();
+  const keyOf = (database: string, schema: string) =>
+    `${database}\x00${schema}`;
+
+  for (let i = 0; i < result.numRows; i++) {
+    const database = String(result.getChild('database')?.get(i) ?? '').trim();
+    const schema = String(result.getChild('schema')?.get(i) ?? '').trim();
+    if (!database || !schema) continue;
+
+    if (!includedDatabases.has(database)) {
+      if (filterFunction?.({type: 'database', database}) === false) {
+        continue;
+      } else {
+        includedDatabases.add(database);
+      }
+    }
+
+    if (filterFunction?.({type: 'schema', database, schema}) === false) {
+      continue;
+    }
+
+    const key = keyOf(database, schema);
+    let group = groups.get(key);
+
+    if (!group) {
+      group = {database, schema, tables: []};
+      groups.set(key, group);
+    }
+
+    const table = parseSchemaCatalogTableRow(result, i, {defaultDatabase});
+    if (
+      table &&
+      (!filterFunction || filterFunction({type: 'table', table: table.table}))
+    ) {
+      group.tables.push(table);
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
 function isDuckDbPlaceholderViewColumn(
   columnName: string,
   columnType: string,
@@ -55,14 +126,27 @@ function isDuckDbPlaceholderViewColumn(
   return columnName === '__' && columnType.toUpperCase() === 'UNKNOWN';
 }
 
+function getMetadataString(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return String(value);
+}
+
 /**
  * Parses a single row from the table schema query results into a DataTable object.
  */
-function parseTableSchemaRow(describeResults: any, index: number): DataTable {
+function parseTableSchemaRow(
+  describeResults: any,
+  index: number,
+  options: {defaultDatabase?: string} = {},
+): DataTable {
   const isView = describeResults.getChild('isView')?.get(index);
-  const rowDatabase = describeResults.getChild('database')?.get(index);
-  const rowSchema = describeResults.getChild('schema')?.get(index);
-  const rowTable = describeResults.getChild('name')?.get(index);
+  const rowDatabase = getMetadataString(
+    describeResults.getChild('database')?.get(index),
+  );
+  const rowSchema =
+    getMetadataString(describeResults.getChild('schema')?.get(index)) ?? '';
+  const rowTable =
+    getMetadataString(describeResults.getChild('name')?.get(index)) ?? '';
   const sql = describeResults.getChild('sql')?.get(index);
   const comment = describeResults.getChild('comment')?.get(index);
   const estimatedSize = describeResults.getChild('estimated_size')?.get(index);
@@ -73,6 +157,7 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
     database: rowDatabase,
     schema: rowSchema,
     table: rowTable,
+    defaultDatabase: options.defaultDatabase,
   });
 
   const columns: TableColumn[] = [];
@@ -106,6 +191,16 @@ function parseTableSchemaRow(describeResults: any, index: number): DataTable {
   };
 }
 
+function parseSchemaCatalogTableRow(
+  result: any,
+  index: number,
+  options: {defaultDatabase?: string} = {},
+): DataTable | null {
+  const rowTable = result.getChild('name')?.get(index);
+  if (rowTable == null) return null;
+  return parseTableSchemaRow(result, index, options);
+}
+
 function buildMetadataWhereClause(
   nameColumn: string,
   filter: LoadTableSchemasFilter,
@@ -120,6 +215,80 @@ function buildMetadataWhereClause(
   ]
     .filter(Boolean)
     .join(' AND ');
+}
+
+function buildSchemaWhereClause(filter: LoadTableSchemasFilter): string {
+  const {schema, database} = filter;
+  return [
+    database
+      ? `database_name = ${escapeVal(database)}`
+      : `database_name != 'system'`,
+    schema ? `schema_name = ${escapeVal(schema)}` : 'schema_name IS NOT NULL',
+    `(internal = false OR schema_name = 'main')`,
+  ]
+    .filter(Boolean)
+    .join(' AND ');
+}
+
+function buildSchemaCatalogQuery(filter: LoadTableSchemasFilter): string {
+  const schemaWhereClause = buildSchemaWhereClause(filter);
+  const tableWhereClause = buildMetadataWhereClause('table_name', filter);
+  const viewWhereClause = buildMetadataWhereClause('view_name', filter);
+
+  return `WITH schemas AS (
+    FROM duckdb_schemas() SELECT DISTINCT
+      COALESCE(
+        NULLIF(CAST(database_name AS VARCHAR), ''),
+        current_database()
+      ) AS database,
+      CAST(schema_name AS VARCHAR) AS schema
+    WHERE ${schemaWhereClause}
+  ),
+  tables_and_views AS (
+    FROM duckdb_tables() SELECT
+      database_name AS database,
+      schema_name AS schema,
+      table_name AS name,
+      sql,
+      comment,
+      estimated_size,
+      FALSE AS isView
+    WHERE ${tableWhereClause}
+    UNION ALL
+    FROM duckdb_views() SELECT
+      database_name AS database,
+      schema_name AS schema,
+      view_name AS name,
+      sql,
+      comment,
+      NULL AS estimated_size,
+      TRUE AS isView
+    WHERE ${viewWhereClause}
+  ),
+  columns AS (
+    FROM duckdb_columns() SELECT
+      database_name AS database,
+      schema_name AS schema,
+      table_name AS name,
+      list(column_name ORDER BY column_index) AS column_names,
+      list(data_type ORDER BY column_index) AS column_types
+    WHERE ${tableWhereClause}
+    GROUP BY database_name, schema_name, table_name
+  )
+  SELECT
+    tables_and_views.isView AS isView,
+    schemas.database AS database,
+    schemas.schema AS schema,
+    tables_and_views.name AS name,
+    columns.column_names AS column_names,
+    columns.column_types AS column_types,
+    tables_and_views.sql AS sql,
+    tables_and_views.comment AS comment,
+    tables_and_views.estimated_size AS estimated_size
+  FROM schemas
+  LEFT JOIN tables_and_views USING (database, schema)
+  LEFT JOIN columns USING (database, schema, name)
+  ORDER BY schemas.database, schemas.schema, tables_and_views.isView, tables_and_views.name`;
 }
 
 /**

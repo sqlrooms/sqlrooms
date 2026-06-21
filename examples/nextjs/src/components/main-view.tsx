@@ -22,11 +22,10 @@ import {
   CardTitle,
   SpinnerPane,
 } from '@sqlrooms/ui';
+import type {FC} from 'react';
 
-export function MainView() {
-  const table = useRoomStore((state) =>
-    state.db.findTableByName('earthquakes'),
-  );
+export const MainView: FC = () => {
+  const table = useRoomStore((state) => state.db.findTable('earthquakes'));
   const result = useSql<{year: string; magnitude: number; depth: number}>({
     query: `
       SELECT 
@@ -112,4 +111,4 @@ export function MainView() {
       </div>
     </div>
   );
-}
+};

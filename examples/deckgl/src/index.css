@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-
 @import '@sqlrooms/ui/tailwind-preset.css';
 
 @source '../index.html';

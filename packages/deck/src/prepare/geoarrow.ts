@@ -1,6 +1,6 @@
 import type * as arrow from 'apache-arrow';
-import type {ResolvedGeometryColumn, ResolvedGeometryEncoding} from './types';
 import {buildBinaryGeoJsonData} from './toGeoJsonBinary';
+import type {ResolvedGeometryColumn, ResolvedGeometryEncoding} from './types';
 
 function itemLength(value: unknown) {
   if (Array.isArray(value)) {
@@ -23,7 +23,9 @@ function itemAt(value: unknown, index: number): unknown {
 }
 
 function toCoordinates(value: unknown): number[] {
-  return Array.from(value as Iterable<number>, (coordinate) => Number(coordinate));
+  return Array.from(value as Iterable<number>, (coordinate) =>
+    Number(coordinate),
+  );
 }
 
 function pointToGeometry(value: unknown) {

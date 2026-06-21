@@ -13,7 +13,7 @@ A lightweight alternative to `@sqlrooms/monaco-editor`. Perfect for data-focused
 - 🔒 **Read-only Mode** - Support for non-editable views
 - 🎯 **Similar API** - Familiar interface for Monaco users with component parity
 
-> **Note**: For DuckDB SQL editing with CodeMirror, see the `SqlCodeMirrorEditor` component in the [`@sqlrooms/sql-editor`](../sql-editor) package.
+> **Note**: For DuckDB SQL editing with CodeMirror, see the `SqlCodeMirrorEditor` component in the [`@sqlrooms/sql-editor`](https://github.com/sqlrooms/sqlrooms/tree/main/packages/sql-editor) package.
 
 ## Installation
 
@@ -317,6 +317,7 @@ Specialized components allow explicit theme override:
 import {
   JsonCodeMirrorEditor,
   JavascriptCodeMirrorEditor,
+  foldAllExceptFirstFoldableRange,
 } from '@sqlrooms/codemirror';
 import {FC} from 'react';
 
@@ -341,6 +342,12 @@ const MyEditors: FC<MyEditorsProps> = ({json, code}) => {
   );
 };
 ```
+
+### Folding Helpers
+
+`foldAllExceptFirstFoldableRange(view)` folds every foldable range except the
+first/root range. It is useful for read-only JSON inspectors that should show
+top-level fields while keeping nested objects and arrays collapsed by default.
 
 ### Theme Colors
 

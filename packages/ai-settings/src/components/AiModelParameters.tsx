@@ -16,10 +16,12 @@ import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
 export interface AiModelParametersProps {
   showViewInstructions?: boolean;
+  showTitle?: boolean;
 }
 
 export const AiModelParameters: FC<AiModelParametersProps> = ({
   showViewInstructions = false,
+  showTitle = true,
 }) => {
   const maxSteps = useStoreWithAiSettings(
     (s) => s.aiSettings.config.modelParameters.maxSteps,
@@ -112,10 +114,12 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-md flex items-center gap-2 pb-6 font-medium">
-        <Sliders className="h-4 w-4" />
-        Model Parameters
-      </label>
+      {showTitle && (
+        <label className="text-md flex items-center gap-2 pb-6 font-medium">
+          <Sliders className="h-4 w-4" />
+          Model Parameters
+        </label>
+      )}
       <div className="grid grid-cols-1 gap-4">
         {/* Max Steps */}
         <div className="space-y-2">

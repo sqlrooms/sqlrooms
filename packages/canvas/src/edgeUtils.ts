@@ -1,10 +1,12 @@
 import {
   getRenderableDependencyEdges,
   type Edge,
-  type Sheet,
+  type CellArtifactRuntime,
 } from '@sqlrooms/cells';
 
-export function getRenderableEdges(sheet: Sheet | undefined): Edge[] {
-  if (!sheet) return [];
-  return getRenderableDependencyEdges(sheet);
+export function getRenderableEdges(
+  artifact: CellArtifactRuntime | undefined,
+): Edge[] {
+  if (!artifact) return [];
+  return getRenderableDependencyEdges(artifact);
 }

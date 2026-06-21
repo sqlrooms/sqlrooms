@@ -1,10 +1,11 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
 import {EarthquakeProfiler} from './filters/EarthquakeProfiler';
-import FiltersPanel from './filters/FiltersPanel';
-import MapView from './map/MapView';
+import {FiltersPanel} from './filters/FiltersPanel';
+import {MapView} from './map/MapView';
+import {FC} from 'react';
 
-export const MainView = () => {
+export const MainView: FC = () => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
   const isTableReady = useRoomStore((state) =>
     state.db.tables.find(({table: {table}}) => table === 'earthquakes'),

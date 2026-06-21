@@ -16,12 +16,11 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-  "diskcache",
-  "duckdb>=1.4.0,<1.5.0",
+  "duckdb>=1.5.3,<1.6.0",
   "pandas",
   "pyarrow",
   "socketify",
-  "ujson",
+  "ujson>=5.12.1",
   "loro>=1.10.0"
 ]
 
@@ -41,12 +40,12 @@ build-backend = "hatchling.build"
 dev = [
   "mypy",
   "pytest-cov",
-  "pytest",
+  "pytest>=9.0.3",
   "pytest-asyncio",
   "ruff",
   "types-ujson",
   "watchdog",
-  "aiohttp",
+  "aiohttp>=3.13.4",
 ]
 
 [tool.hatch.build.targets.wheel]

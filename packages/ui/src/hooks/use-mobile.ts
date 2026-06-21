@@ -16,6 +16,7 @@ export function useIsMobile() {
     };
 
     mediaQueryList.addEventListener('change', onChange);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     return () => mediaQueryList.removeEventListener('change', onChange);
   }, []);

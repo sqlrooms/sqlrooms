@@ -1,5 +1,5 @@
 import type {ToolRendererProps} from '@sqlrooms/ai-core';
-import {FC} from 'react';
+import type {FC} from 'react';
 
 interface WebSearchResult {
   title: string;

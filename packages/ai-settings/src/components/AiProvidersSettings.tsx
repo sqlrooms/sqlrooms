@@ -24,7 +24,13 @@ import {
 } from 'lucide-react';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
-export const AiProvidersSettings: FC = () => {
+export interface AiProvidersSettingsProps {
+  showTitle?: boolean;
+}
+
+export const AiProvidersSettings: FC<AiProvidersSettingsProps> = ({
+  showTitle = true,
+}) => {
   const updateProvider = useStoreWithAiSettings(
     (state) => state.aiSettings.updateProvider,
   );
@@ -129,10 +135,12 @@ export const AiProvidersSettings: FC = () => {
 
   return (
     <div className="space-y-2">
-      <label className="text-md flex items-center gap-2 pb-6 font-medium">
-        <Cone className="h-4 w-4" />
-        Providers
-      </label>
+      {showTitle && (
+        <label className="text-md flex items-center gap-2 pb-6 font-medium">
+          <Cone className="h-4 w-4" />
+          Providers
+        </label>
+      )}
 
       {/* Existing Providers */}
       <div className="space-y-1">
@@ -141,26 +149,37 @@ export const AiProvidersSettings: FC = () => {
 
           return (
             <div key={providerKey} className="space-y-0 rounded-lg p-0">
-              {/* First row: Provider name, API key input, delete button, and cogwheel button */}
-              <div className="flex items-center gap-3">
-                <Label className="w-20 shrink-0 text-sm">
+              <div className="grid items-end gap-3 sm:grid-cols-[minmax(8rem,9rem)_minmax(18rem,1fr)_2rem_2rem]">
+                <Label className="pb-2 text-sm font-medium whitespace-nowrap">
                   {providerKey.charAt(0).toUpperCase() + providerKey.slice(1)}
                 </Label>
-                <Input
-                  id={`${providerKey}-apiKey`}
-                  type="password"
-                  value={provider.apiKey}
-                  onChange={(e) =>
-                    handleUpdateProvider(providerKey, 'apiKey', e.target.value)
-                  }
-                  placeholder="Enter API key"
-                  className="flex-1"
-                />
+                <div className="min-w-0 space-y-1">
+                  <Label
+                    htmlFor={`${providerKey}-apiKey`}
+                    className="text-muted-foreground text-xs"
+                  >
+                    API key
+                  </Label>
+                  <Input
+                    id={`${providerKey}-apiKey`}
+                    type="password"
+                    value={provider.apiKey}
+                    onChange={(e) =>
+                      handleUpdateProvider(
+                        providerKey,
+                        'apiKey',
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Enter API key"
+                    className="w-full"
+                  />
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => handleDeleteProvider(providerKey)}
-                  className="h-6 h-8 w-6 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -176,15 +195,14 @@ export const AiProvidersSettings: FC = () => {
 
               {/* Second row: baseUrl input (toggleable) */}
               {isExpanded && (
-                <div className="flex items-center gap-3 pt-1">
-                  <div className="w-20 shrink-0" />{' '}
-                  {/* Spacer to align with provider name above */}
-                  <div className="flex flex-1 items-center gap-3">
+                <div className="grid items-end gap-3 pt-2 sm:grid-cols-[minmax(8rem,9rem)_minmax(18rem,1fr)_2rem_2rem]">
+                  <div />
+                  <div className="min-w-0 space-y-1">
                     <Label
                       htmlFor={`${providerKey}-baseUrl`}
-                      className="text-muted-foreground shrink-0 text-xs"
+                      className="text-muted-foreground text-xs"
                     >
-                      baseUrl:
+                      Base URL
                     </Label>
                     <Input
                       id={`${providerKey}-baseUrl`}
@@ -198,11 +216,11 @@ export const AiProvidersSettings: FC = () => {
                         )
                       }
                       placeholder="Enter base URL"
-                      className="flex-1"
+                      className="w-full"
                     />
                   </div>
-                  <div className="w-16 shrink-0" />{' '}
-                  {/* Spacer to align with delete and cogwheel buttons above */}
+                  <div />
+                  <div />
                 </div>
               )}
             </div>

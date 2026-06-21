@@ -1,11 +1,11 @@
 {
   "name": "get-started-example",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -30,6 +30,6 @@
     "tailwindcss": "^4.1.18",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.44.1",
-    "vite": "^7.1.9"
+    "vite": "^8.0.5"
   }
 }

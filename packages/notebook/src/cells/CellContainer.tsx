@@ -3,7 +3,6 @@ import React from 'react';
 
 import {DeleteCellDialog} from '../cellOperations/DeleteCellDialog';
 import {MoveCellButtons} from '../cellOperations/MoveCellButtons';
-import {findCellInNotebook} from '../NotebookUtils';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 export type CellContainerProps = {
@@ -23,9 +22,17 @@ export const CellContainer: React.FC<CellContainerProps> = ({
   className,
   showHeader = true,
 }) => {
-  const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s as any, id)?.cell,
-  );
+  const cell = useStoreWithNotebook((s) => s.cells.config.data[id]);
+  const artifactId = useStoreWithNotebook((s) => {
+    for (const [candidateArtifactId, artifact] of Object.entries(
+      s.notebook.config.artifacts,
+    )) {
+      if (artifact.meta.cellOrder.includes(id)) {
+        return candidateArtifactId;
+      }
+    }
+    return undefined;
+  });
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
   const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
   const currentCellId = useStoreWithNotebook(
@@ -60,7 +67,7 @@ export const CellContainer: React.FC<CellContainerProps> = ({
           onMouseDown={(e) => e.preventDefault()}
         >
           <DeleteCellDialog cell={cell as any} />
-          <MoveCellButtons id={id} />
+          <MoveCellButtons artifactId={artifactId ?? ''} id={id} />
         </div>
       ) : (
         <div className="flex min-h-[36px] items-center justify-between gap-2 border-b px-2">
@@ -80,7 +87,7 @@ export const CellContainer: React.FC<CellContainerProps> = ({
               })}
             >
               <DeleteCellDialog cell={cell as any} />
-              <MoveCellButtons id={id} />
+              <MoveCellButtons artifactId={artifactId ?? ''} id={id} />
             </div>
             <div>{header}</div>
           </div>

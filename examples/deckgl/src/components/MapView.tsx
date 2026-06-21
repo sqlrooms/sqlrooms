@@ -1,9 +1,21 @@
 import {DeckJsonMap} from '@sqlrooms/deck';
-import type {DeckDatasetInput} from '@sqlrooms/deck';
-import {useMemo, useState} from 'react';
-import {NavigationControl, Popup} from 'react-map-gl/maplibre';
+import type {
+  DeckDatasetInput,
+  DeckJsonMapProps,
+  PreparedDeckDatasetState,
+} from '@sqlrooms/deck';
+import {useCallback, useMemo, useState} from 'react';
+import {AIRPORTS_TABLE_NAME, BUILDINGS_TABLE_NAME} from '../dataSources';
 
-const INITIAL_VIEW_STATE = {
+const ZURICH_VIEW_STATE = {
+  latitude: 47.376,
+  longitude: 8.535,
+  zoom: 13,
+  bearing: -20,
+  pitch: 60,
+};
+
+const AIRPORTS_VIEW_STATE = {
   latitude: 18,
   longitude: 5,
   zoom: 1.35,
@@ -12,137 +24,352 @@ const INITIAL_VIEW_STATE = {
 };
 
 const MAP_STYLE =
-  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+  'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const DEFAULT_BUILDING_HEIGHT_DOMAIN: [number, number] = [0, 200];
+
+const BUILDINGS_QUERY = `
+  SELECT
+    name,
+    class,
+    height,
+    geometry
+  FROM ${BUILDINGS_TABLE_NAME}
+`;
+
+const AIRPORTS_QUERY = `
+  SELECT
+    name,
+    abbrev,
+    scalerank,
+    ST_X(geom) AS longitude,
+    ST_Y(geom) AS latitude,
+    ST_AsWKB(geom) AS geom
+  FROM ${AIRPORTS_TABLE_NAME}
+`;
+
+const MAJOR_AIRPORTS_QUERY = `
+  SELECT
+    name,
+    abbrev,
+    scalerank,
+    ST_X(geom) AS longitude,
+    ST_Y(geom) AS latitude,
+    ST_AsWKB(geom) AS geom
+  FROM ${AIRPORTS_TABLE_NAME}
+  WHERE scalerank <= 3
+`;
+
+const createBuildingsLayers = (heightDomain: [number, number]) => [
+  {
+    '@@type': 'GeoArrowPolygonLayer',
+    id: 'buildings',
+    _sqlroomsBinding: {dataset: BUILDINGS_TABLE_NAME},
+    pickable: true,
+    filled: true,
+    stroked: false,
+    extruded: true,
+    getElevation: '@@=height',
+    getFillColor: {
+      '@@function': 'colorScale',
+      type: 'sequential',
+      field: 'height',
+      legend: {
+        title: 'Height (m)',
+      },
+      scheme: 'Blues',
+      domain: heightDomain,
+      clamp: true,
+      reverse: true,
+    },
+  },
+];
+
+const AIRPORT_LAYERS = [
+  {
+    '@@type': 'GeoArrowScatterplotLayer',
+    id: 'airports',
+    _sqlroomsBinding: {dataset: AIRPORTS_TABLE_NAME},
+    opacity: 0.7,
+    filled: true,
+    stroked: true,
+    pickable: true,
+    radiusUnits: 'pixels',
+    radiusMinPixels: 2,
+    radiusMaxPixels: 6,
+    getRadius: 2,
+    getFillColor: [73, 111, 138, 140],
+    getLineColor: [30, 41, 59, 80],
+    lineWidthMinPixels: 1,
+  },
+  {
+    '@@type': 'GeoArrowScatterplotLayer',
+    id: 'major-airports',
+    _sqlroomsBinding: {dataset: 'majorAirports'},
+    opacity: 0.95,
+    filled: true,
+    stroked: true,
+    pickable: true,
+    radiusUnits: 'pixels',
+    radiusMinPixels: 4,
+    radiusMaxPixels: 10,
+    getRadius: 6,
+    getFillColor: [210, 89, 62, 220],
+    getLineColor: [110, 29, 24, 180],
+    lineWidthMinPixels: 1,
+  },
+];
+
+type ActiveLayer = 'buildings' | 'airports';
+
+type BuildingRow = {
+  name: string | null;
+  class: string | null;
+  height: number | null;
+};
 
 type AirportRow = {
-  name: string;
-  abbrev: string;
-  scalerank: number;
-  longitude: number;
-  latitude: number;
+  name: string | null;
+  abbrev: string | null;
 };
 
-type MapPickingInfo = {
-  object?: unknown;
+type ReadyDatasetState = Extract<PreparedDeckDatasetState, {status: 'ready'}>;
+type PreparedTable = ReadyDatasetState['prepared']['table'];
+
+const STATUS_PRIORITY: Record<PreparedDeckDatasetState['status'], number> = {
+  ready: 0,
+  loading: 1,
+  error: 2,
 };
 
-const AIRPORT_MAP_SPEC = {
-  initialViewState: INITIAL_VIEW_STATE,
-  controller: true,
-  layers: [
-    {
-      '@@type': 'GeoArrowScatterplotLayer',
-      id: 'airports',
-      _sqlroomsBinding: {
-        dataset: 'airports',
-      },
-      opacity: 0.7,
-      filled: true,
-      stroked: true,
-      pickable: true,
-      radiusUnits: 'pixels',
-      radiusMinPixels: 2,
-      radiusMaxPixels: 6,
-      getRadius: 2,
-      getFillColor: [73, 111, 138, 140],
-      getLineColor: [30, 41, 59, 80],
-      lineWidthMinPixels: 1,
-    },
-    {
-      '@@type': 'GeoArrowScatterplotLayer',
-      id: 'major-airports',
-      _sqlroomsBinding: {
-        dataset: 'majorAirports',
-      },
-      opacity: 0.95,
-      filled: true,
-      stroked: true,
-      pickable: true,
-      radiusUnits: 'pixels',
-      radiusMinPixels: 4,
-      radiusMaxPixels: 10,
-      getRadius: 6,
-      getFillColor: [210, 89, 62, 220],
-      getLineColor: [110, 29, 24, 180],
-      lineWidthMinPixels: 1,
-    },
-  ],
-} as const;
+function getWorstDatasetState(
+  ...states: Array<PreparedDeckDatasetState | undefined>
+) {
+  return states.reduce<PreparedDeckDatasetState | undefined>(
+    (worst, state) =>
+      !state ||
+      (worst && STATUS_PRIORITY[worst.status] >= STATUS_PRIORITY[state.status])
+        ? worst
+        : state,
+    undefined,
+  );
+}
+
+function getNumericColumnDomain(
+  table: PreparedTable,
+  columnName: string,
+): [number, number] | null {
+  const column = table.getChild(columnName);
+  if (!column) return null;
+
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+
+  for (let i = 0; i < table.numRows; i++) {
+    const value = column.get(i);
+    if (typeof value !== 'number' || !Number.isFinite(value)) continue;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+
+  return min === Number.POSITIVE_INFINITY ? null : [min, max];
+}
+
+function StatusIndicator({
+  status,
+}: {
+  status: PreparedDeckDatasetState['status'];
+}) {
+  if (status === 'loading') {
+    return (
+      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/20 border-t-white/70" />
+    );
+  }
+  if (status === 'error') {
+    return (
+      <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400" />
+    );
+  }
+  return null;
+}
 
 export const MapView = () => {
-  const [selected, setSelected] = useState<AirportRow | null>(null);
+  const [activeLayer, setActiveLayer] = useState<ActiveLayer>('buildings');
+  const [datasetStates, setDatasetStates] = useState<
+    Record<string, PreparedDeckDatasetState>
+  >({});
+  const buildingState = datasetStates[BUILDINGS_TABLE_NAME];
+  const airportsState = datasetStates[AIRPORTS_TABLE_NAME];
+  const majorAirportsState = datasetStates['majorAirports'];
+  const airportsStatus = getWorstDatasetState(
+    airportsState,
+    majorAirportsState,
+  );
 
-  const datasets = useMemo<Record<string, DeckDatasetInput>>(
-    () => ({
-      airports: {
-        sqlQuery: `
-          SELECT
-            name,
-            abbrev,
-            scalerank,
-            ST_X(geom) AS longitude,
-            ST_Y(geom) AS latitude,
-            ST_AsWKB(geom) AS geom
-          FROM airports
-        `,
+  const buildingHeightDomain = useMemo(() => {
+    if (buildingState?.status !== 'ready') {
+      return DEFAULT_BUILDING_HEIGHT_DOMAIN;
+    }
+    return (
+      getNumericColumnDomain(buildingState.prepared.table, 'height') ??
+      DEFAULT_BUILDING_HEIGHT_DOMAIN
+    );
+  }, [buildingState]);
+
+  const datasets = useMemo<Record<string, DeckDatasetInput>>(() => {
+    if (activeLayer === 'airports') {
+      const airportDatasets: Record<string, DeckDatasetInput> = {
+        [AIRPORTS_TABLE_NAME]: {
+          sqlQuery: AIRPORTS_QUERY,
+          geometryEncodingHint: 'wkb',
+        },
+        majorAirports: {
+          sqlQuery: MAJOR_AIRPORTS_QUERY,
+          geometryEncodingHint: 'wkb',
+        },
+      };
+      return airportDatasets;
+    }
+
+    const buildingDatasets: Record<string, DeckDatasetInput> = {
+      [BUILDINGS_TABLE_NAME]: {
+        sqlQuery: BUILDINGS_QUERY,
         geometryEncodingHint: 'wkb',
       },
-      majorAirports: {
-        sqlQuery: `
-          SELECT
-            name,
-            abbrev,
-            scalerank,
-            ST_X(geom) AS longitude,
-            ST_Y(geom) AS latitude,
-            ST_AsWKB(geom) AS geom
-          FROM airports
-          WHERE scalerank <= 3
-        `,
-        geometryEncodingHint: 'wkb',
+    };
+    return buildingDatasets;
+  }, [activeLayer]);
+
+  const spec = useMemo(
+    () => ({
+      initialViewState:
+        activeLayer === 'airports' ? AIRPORTS_VIEW_STATE : ZURICH_VIEW_STATE,
+      controller: true,
+      layers:
+        activeLayer === 'airports'
+          ? AIRPORT_LAYERS
+          : createBuildingsLayers(buildingHeightDomain),
+    }),
+    [activeLayer, buildingHeightDomain],
+  );
+
+  const handleDatasetStatesChange = useCallback(
+    (states: Record<string, PreparedDeckDatasetState>) => {
+      setDatasetStates(states);
+    },
+    [],
+  );
+
+  const deckProps = useMemo<DeckJsonMapProps['deckProps']>(
+    () => ({
+      getTooltip: ({object}: {object?: unknown}) => {
+        if (!object) return null;
+
+        if (activeLayer === 'airports') {
+          const row = object as AirportRow;
+          if (!row.name && !row.abbrev) return null;
+          if (row.name && row.abbrev) {
+            return {text: `${row.name} (${row.abbrev})`};
+          }
+          return {text: row.name ?? row.abbrev ?? ''};
+        }
+
+        const row = object as BuildingRow;
+        const lines: string[] = [];
+        if (row.name) lines.push(row.name);
+        if (row.class) lines.push(row.class);
+        if (row.height != null) lines.push(`${row.height.toFixed(1)} m`);
+        return lines.length ? {text: lines.join('\n')} : null;
       },
     }),
-    [],
+    [activeLayer],
   );
-  const deckProps = useMemo(
-    () => ({
-      onClick: (info: MapPickingInfo) =>
-        setSelected((info.object as AirportRow | null | undefined) ?? null),
-      getTooltip: ({object}: MapPickingInfo) =>
-        object
-          ? {
-              text: `${String((object as AirportRow).name)} (${String(
-                (object as AirportRow).abbrev,
-              )})`,
-            }
-          : null,
-    }),
-    [],
-  );
+
+  const buildingCount =
+    buildingState?.status === 'ready'
+      ? buildingState.prepared.table.numRows
+      : null;
+  const airportCount =
+    airportsState?.status === 'ready'
+      ? airportsState.prepared.table.numRows
+      : null;
 
   return (
-    <DeckJsonMap
-      className="h-full w-full"
-      spec={AIRPORT_MAP_SPEC}
-      datasets={datasets}
-      mapStyle={MAP_STYLE}
-      deckProps={deckProps}
-    >
-      <NavigationControl position="top-left" />
-      {selected ? (
-        <Popup
-          anchor="bottom"
-          closeOnClick={false}
-          latitude={selected.latitude}
-          longitude={selected.longitude}
-          onClose={() => setSelected(null)}
-        >
-          <div className="min-w-32 text-slate-900">
-            <div className="font-semibold">{selected.name}</div>
-            <div className="text-sm text-slate-600">{selected.abbrev}</div>
+    <div className="relative h-full w-full">
+      <DeckJsonMap
+        className="absolute inset-0"
+        spec={spec}
+        datasets={datasets}
+        mapStyle={MAP_STYLE}
+        onDatasetStatesChange={handleDatasetStatesChange}
+        deckProps={deckProps}
+      />
+
+      <div className="pointer-events-none absolute inset-0 z-20">
+        <div className="pointer-events-auto absolute top-3 right-3 w-72 overflow-hidden border border-white/10 bg-black/70 shadow-2xl backdrop-blur-md">
+          <div className="border-b border-white/8 px-4 py-3">
+            <p className="mt-0.5 text-[11px] text-white/40">Dataset Mode</p>
           </div>
-        </Popup>
-      ) : null}
-    </DeckJsonMap>
+
+          <div className="space-y-1.5 px-4 py-3">
+            <label className="flex cursor-pointer items-start gap-3 select-none">
+              <div className="mt-0.5 flex-shrink-0">
+                <input
+                  type="radio"
+                  name="map-layer"
+                  checked={activeLayer === 'buildings'}
+                  onChange={() => setActiveLayer('buildings')}
+                  className="accent-blue-400"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-white/85">
+                    Zurich Buildings
+                    {buildingCount != null
+                      ? ` (${buildingCount.toLocaleString()})`
+                      : ''}
+                  </span>
+                  {activeLayer === 'buildings' && buildingState && (
+                    <StatusIndicator status={buildingState.status} />
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] leading-tight text-white/40">
+                  Hugging Face-hosted Overture subset of Zurich urban core
+                  footprints
+                </p>
+              </div>
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-3 select-none">
+              <div className="mt-0.5 flex-shrink-0">
+                <input
+                  type="radio"
+                  name="map-layer"
+                  checked={activeLayer === 'airports'}
+                  onChange={() => setActiveLayer('airports')}
+                  className="accent-orange-400"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-white/85">
+                    Airports
+                    {airportCount != null
+                      ? ` (${airportCount.toLocaleString()})`
+                      : ''}
+                  </span>
+                  {activeLayer === 'airports' && airportsStatus && (
+                    <StatusIndicator status={airportsStatus.status} />
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] leading-tight text-white/40">
+                  Natural Earth airports, plus highlighted major airports
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };

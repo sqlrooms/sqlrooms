@@ -34,6 +34,24 @@ export {
   createPersistHelpers,
   persistSliceConfigs,
 } from './createPersistHelpers';
+export {createRoomStorePersistence} from './createRoomStorePersistence';
+export type {
+  CreateRoomStorePersistenceOptions,
+  RoomStorePersistence,
+  RoomStorePersistenceChangePredicate,
+  RoomStorePersistenceSnapshotEquivalence,
+  RoomStorePersistenceSnapshotCodec,
+} from './createRoomStorePersistence';
+export {createPersistenceController} from './PersistenceController';
+export type {
+  CreatePersistenceControllerOptions,
+  PersistenceAdapter,
+  PersistenceController,
+  PersistenceControllerListener,
+  PersistenceControllerState,
+  PersistenceSaveMetadata,
+  PersistenceSaveReason,
+} from './PersistenceController';
 
 export {
   createCommandSlice,
@@ -97,31 +115,33 @@ export {
   BaseDataSource,
   BaseRoomConfig,
   createDefaultBaseRoomConfig,
-  createDefaultMosaicLayout,
   DataSource,
   DataSourceTypes,
-  DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_ROOM_TITLE,
   FileDataSource,
   isFileDataSource,
-  isMosaicLayoutParent,
   isSpatialLoadFileOptions,
   isSqlQueryDataSource,
   isUrlDataSource,
-  LayoutConfig,
-  LayoutTypes,
   LoadFile,
   LoadFileOptions,
   MAIN_VIEW,
-  MosaicLayoutConfig,
-  MosaicLayoutDirection,
-  MosaicLayoutNode,
-  MosaicLayoutNodeKey,
-  MosaicLayoutParent,
   SpatialLoadFileOptions,
   SpatialLoadOptions,
   SqlQueryDataSource,
   StandardLoadFileOptions,
   StandardLoadOptions,
   UrlDataSource,
+  LayoutNodeKey,
+  LayoutPanelNode,
+  LayoutSplitNode,
+  LayoutTabsNode,
+  LayoutNode,
+  LayoutConfig,
+  isLayoutPanelNode,
+  isLayoutSplitNode,
+  isLayoutTabsNode,
+  createDefaultLayout,
 } from '@sqlrooms/room-config';
+
+export type {LayoutDirection} from '@sqlrooms/room-config';

@@ -1,18 +1,22 @@
 import {useEffect, useMemo, useState} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
-import {NotebookSliceConfig, NotebookTab, NotebookSheet} from './cellSchemas';
+import {
+  NotebookSliceConfig,
+  NotebookArtifactView,
+  NotebookArtifact,
+} from './cellSchemas';
 import type {CellsRootState, CellRegistry} from '@sqlrooms/cells';
 
-export const findTab = (
+export const findNotebookArtifactView = (
   state: CellsRootState & {notebook: {config: NotebookSliceConfig}},
-  tabId: string,
-): NotebookTab => {
-  const sheet = state.notebook.config.sheets[tabId];
-  const cellsSheet = state.cells.config.sheets[tabId];
-  if (!sheet || !cellsSheet) {
-    throw new Error(`Tab with id ${tabId} not found`);
+  artifactId: string,
+): NotebookArtifactView => {
+  const artifact = state.notebook.config.artifacts[artifactId];
+  const cellsArtifact = state.cells.config.artifacts[artifactId];
+  if (!artifact || !cellsArtifact) {
+    throw new Error(`Artifact with id ${artifactId} not found`);
   }
-  return {id: sheet.id, ...sheet.meta, name: cellsSheet.title};
+  return {id: artifact.id, ...artifact.meta, name: artifactId};
 };
 
 export const findCellInNotebook = (
@@ -22,12 +26,14 @@ export const findCellInNotebook = (
   const cell = state.cells.config.data[cellId];
   if (!cell) return undefined;
 
-  for (const [sheetId, sheet] of Object.entries(state.notebook.config.sheets)) {
-    if ((sheet as NotebookSheet).meta.cellOrder.includes(cellId)) {
-      return {cell, sheetId};
+  for (const [artifactId, artifact] of Object.entries(
+    state.notebook.config.artifacts,
+  )) {
+    if ((artifact as NotebookArtifact).meta.cellOrder.includes(cellId)) {
+      return {cell, artifactId};
     }
   }
-  return {cell, sheetId: undefined};
+  return {cell, artifactId: undefined};
 };
 
 export const getCellTypeLabel = (type: string, registry?: CellRegistry) => {

@@ -4,7 +4,7 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 
 ### React Integration & Type Safety
 
-- **React Hooks**: Seamless integration with React applications via `useSql`
+- **React Hooks**: Seamless integration with React applications via `useSql` and `useDataTable`
 - **Runtime Validation**: Optional Zod schema validation for query results with type transformations
 - **Typed Row Accessors**: Type-safe row access with validation and multiple iteration methods
 
@@ -56,6 +56,28 @@ function UserList() {
 ```
 
 For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
+
+### Looking up Table Metadata
+
+Use `useDataTable()` in React components or `db.findTable()` from the room
+store. String references are parsed like SQL identifiers, so use quotes for
+literal dots in table names.
+
+```tsx
+import {useDataTable} from '@sqlrooms/duckdb';
+
+function TableColumns() {
+  const table = useDataTable('"memory"."main"."earthquakes"');
+
+  return (
+    <ul>
+      {table?.columns.map((column) => (
+        <li key={column.name}>{column.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
 
 ### Using Zod for Runtime Validation
 
@@ -207,11 +229,12 @@ function DatabaseManager() {
 ### Working with Qualified Table Names
 
 ```tsx
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {quoteTableReference, resolveTableReference} from '@sqlrooms/duckdb';
 import {useRoomStore} from './store';
 import {Button} from '@sqlrooms/ui';
 
 function QualifiedTableOps() {
+  const qualifyTableName = useRoomStore((state) => state.db.qualifyTableName);
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
   );
@@ -219,14 +242,21 @@ function QualifiedTableOps() {
   const checkTableExists = useRoomStore((state) => state.db.checkTableExists);
 
   const run = async () => {
-    // Support for database.schema.table naming
-    const qualifiedTable = makeQualifiedTableName({
+    // Store-aware qualification knows which database is the default.
+    const qualifiedTable = qualifyTableName({
       database: 'mydb',
       schema: 'public',
       table: 'users',
     });
+    // toString() is the canonical portable table ID; toFullString() includes
+    // the database when explicit catalog qualification is needed.
+    const tableSql = quoteTableReference(qualifiedTable.toString());
+    const resolved = resolveTableReference([{table: qualifiedTable}], 'users');
 
     await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');
+    console.log('Quoted table reference:', tableSql);
+    console.log('Fully qualified reference:', qualifiedTable.toFullString());
+    console.log('Resolved table:', resolved.table?.table.toString());
     const tableExists = await checkTableExists(qualifiedTable);
     console.log('Table exists after create:', tableExists);
     await dropTable(qualifiedTable);
@@ -234,6 +264,29 @@ function QualifiedTableOps() {
 
   return <Button onClick={() => void run()}>Run qualified table ops</Button>;
 }
+```
+
+### Loading the Schema Catalog
+
+Use `loadSchemaCatalog()` when you need the database/schema/table hierarchy,
+including empty schemas and attached databases whose `main` schema has no
+tables yet. The catalog filter receives typed entries for databases, schemas,
+and tables, so schema visibility does not depend on fake table names.
+Related option and filter types are exported for callers that wrap these
+helpers in their own APIs.
+
+```ts
+import {
+  defaultLoadSchemaCatalogFilter,
+  loadSchemaCatalog,
+} from '@sqlrooms/duckdb';
+
+const catalog = await loadSchemaCatalog(connector, {
+  filterFunction: (entry) =>
+    entry.type === 'schema' && entry.schema === 'scratch'
+      ? false
+      : defaultLoadSchemaCatalogFilter(entry),
+});
 ```
 
 ## Loading Data from Files

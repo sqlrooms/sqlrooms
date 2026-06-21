@@ -1,24 +1,8 @@
 import {StoreApi} from '@sqlrooms/room-store';
-import {LanguageModel, ToolLoopAgent, stepCountIs, tool} from 'ai';
+import {ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
 import {AiSliceState, streamSubAgent} from '@sqlrooms/ai-core';
-import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-
-/**
- * Helper to resolve the current model from the store.
- */
-function getModel(store: StoreApi<AiSliceState>): LanguageModel {
-  const state = store.getState();
-  const currentSession = state.ai.getCurrentSession();
-  const provider = currentSession?.modelProvider || 'openai';
-  const modelId = currentSession?.model || 'gpt-4.1';
-
-  return createOpenAICompatible({
-    apiKey: state.ai.getApiKeyFromSettings(),
-    name: provider || '',
-    baseURL: state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
-  }).chatModel(modelId);
-}
+import {getModel} from '../skills/getModel';
 
 // ---------------------------------------------------------------------------
 // Simple agent: weather lookup + unit conversion

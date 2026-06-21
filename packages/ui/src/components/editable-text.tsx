@@ -1,6 +1,14 @@
 'use client';
 
-import {ChangeEvent, FC, useCallback, useEffect, useRef, useState} from 'react';
+import {
+  ChangeEvent,
+  CSSProperties,
+  FC,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {cn} from '../lib/utils';
 import {Input} from './input';
@@ -38,6 +46,7 @@ import {Input} from './input';
 
 export const EditableText: FC<{
   className?: string;
+  style?: CSSProperties;
   isReadOnly?: boolean;
   editTrigger?: 'click' | 'doubleClick';
   value: string;
@@ -63,6 +72,7 @@ export const EditableText: FC<{
   onEditingChange?: (isEditing: boolean) => void;
 }> = ({
   className,
+  style,
   isReadOnly = false,
   defaultEditing = false,
   editTrigger = 'click',
@@ -242,7 +252,8 @@ export const EditableText: FC<{
         className,
       )}
       style={{
-        caretColor: isInternalEditing ? undefined : 'transparent',
+        ...(style ?? {}),
+        caretColor: isInternalEditing ? style?.caretColor : 'transparent',
       }}
       value={internalValue}
       tabIndex={isInternalEditing || allowTabFocusWhenNotEditing ? 0 : -1}

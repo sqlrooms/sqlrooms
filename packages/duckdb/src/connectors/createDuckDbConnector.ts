@@ -38,7 +38,7 @@ export function createDuckDbConnector(
 }
 
 export {createWasmDuckDbConnector};
-export type {WasmDuckDbConnector};
+export type {WasmDuckDbConnector, WasmDuckDbConnectorOptions};
 
 export function isWasmDuckDbConnector(
   connector: DuckDbConnector,

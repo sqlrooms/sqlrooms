@@ -378,5 +378,5 @@ python -m sqlrooms_rag.cli prepare-embeddings \
 
 - [RAG Package README](../README.md)
 - [RAG Tool Guide](./RAG_TOOL.md)
-- [Python Package Docs](../../../python/rag/README.md)
+- [Python Package Docs](../../../python/sqlrooms-rag/README.md)
 - [Vercel AI SDK Docs](https://sdk.vercel.ai/docs)

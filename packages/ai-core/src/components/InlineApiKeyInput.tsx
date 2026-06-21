@@ -4,6 +4,7 @@ import {useCallback, useRef, useEffect, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 
 function formatProviderLabel(provider: string): string {
+  if (provider.toLowerCase() === 'openai') return 'OpenAI';
   return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
@@ -36,7 +37,7 @@ export const InlineApiKeyInput: React.FC<InlineApiKeyInputProps> = ({
   const [apiKeyInput, setApiKeyInput] = useState('');
 
   const modelProvider = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.modelProvider || 'openai',
+    (s) => s.ai.getCurrentSession()?.modelProvider,
   );
 
   useEffect(() => {
@@ -83,7 +84,11 @@ export const InlineApiKeyInput: React.FC<InlineApiKeyInputProps> = ({
         value={apiKeyInput}
         onChange={(e) => setApiKeyInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={`Enter your ${formatProviderLabel(modelProvider)} API key...`}
+        placeholder={
+          modelProvider
+            ? `Enter your ${formatProviderLabel(modelProvider)} API key...`
+            : 'No model selected'
+        }
         autoFocus
         autoComplete="off"
       />

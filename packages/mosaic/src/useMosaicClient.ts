@@ -1,24 +1,21 @@
-import {Selection} from '@uwdata/mosaic-core';
-import {Query} from '@uwdata/mosaic-sql';
-import type {Table as ArrowTable} from 'apache-arrow';
-import {useEffect, useMemo, useRef} from 'react';
 import {createId} from '@paralleldrive/cuid2';
-import {useStoreWithMosaic} from './MosaicSlice';
+import {useEffect, useMemo, useRef} from 'react';
+import {type MosaicClientOptions, useStoreWithMosaic} from './MosaicSlice';
 import {toArrowClientResult} from './tableInterop';
+import {
+  assertChartDataPolicy,
+  createChartRuntimeIssueFromError,
+  type ChartDataPolicy,
+  type ChartRuntimeIssueContext,
+  type ChartRuntimeIssueReporter,
+} from './chart-runtime';
 
-export type UseMosaicClientOptions = {
-  /** Unique id for this client (auto-generated if not provided) */
-  id?: string;
-  /** Selection name for cross-filtering (will create if doesn't exist) */
-  selectionName?: string;
-  /** Or pass a Selection directly */
-  selection?: Selection;
-  /** Query builder - receives current filter predicate */
-  query: (filter: unknown) => ReturnType<typeof Query.from>;
-  /** Callback when query results are received */
-  queryResult?: (result: ArrowTable) => void;
+export type UseMosaicClientOptions = MosaicClientOptions & {
   /** Whether to automatically connect when mosaic is ready */
   enabled?: boolean;
+  dataPolicy?: ChartDataPolicy | null;
+  runtimeIssueContext?: ChartRuntimeIssueContext;
+  runtimeIssueReporter?: ChartRuntimeIssueReporter;
 };
 
 export function useMosaicClient(options: UseMosaicClientOptions) {
@@ -28,7 +25,11 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
     selection: directSelection,
     query,
     queryResult,
+    queryError,
     enabled = true,
+    dataPolicy,
+    runtimeIssueContext,
+    runtimeIssueReporter,
   } = options;
 
   // Use stable id - generate once if not provided
@@ -46,11 +47,26 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
   // Keep query and queryResult in refs so they can be accessed in effect
   const queryRef = useRef(query);
   const queryResultRef = useRef(queryResult);
+  const queryErrorRef = useRef(queryError);
+  const dataPolicyRef = useRef(dataPolicy);
+  const runtimeIssueContextRef = useRef(runtimeIssueContext);
+  const runtimeIssueReporterRef = useRef(runtimeIssueReporter);
 
   useEffect(() => {
     queryRef.current = query;
     queryResultRef.current = queryResult;
-  }, [query, queryResult]);
+    queryErrorRef.current = queryError;
+    dataPolicyRef.current = dataPolicy;
+    runtimeIssueContextRef.current = runtimeIssueContext;
+    runtimeIssueReporterRef.current = runtimeIssueReporter;
+  }, [
+    dataPolicy,
+    query,
+    queryError,
+    queryResult,
+    runtimeIssueContext,
+    runtimeIssueReporter,
+  ]);
 
   const clientData = clientState?.data;
   const arrowData = useMemo(() => {
@@ -71,7 +87,39 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
       selection: directSelection,
       query: queryRef.current,
       onQueryResult: (result) => {
-        queryResultRef.current?.(result);
+        try {
+          assertChartDataPolicy(dataPolicyRef.current, result);
+          runtimeIssueReporterRef.current?.clearIssue();
+        } catch (error) {
+          const normalizedError =
+            error instanceof Error ? error : new Error(String(error));
+          if (runtimeIssueContextRef.current) {
+            runtimeIssueReporterRef.current?.reportIssue(
+              createChartRuntimeIssueFromError(
+                normalizedError,
+                runtimeIssueContextRef.current,
+                dataPolicyRef.current,
+              ),
+            );
+          }
+          queryErrorRef.current?.(normalizedError);
+          return;
+        }
+        queryResultRef.current?.(toArrowClientResult(result));
+      },
+      onQueryError: (error) => {
+        const normalizedError =
+          error instanceof Error ? error : new Error(String(error));
+        if (runtimeIssueContextRef.current) {
+          runtimeIssueReporterRef.current?.reportIssue(
+            createChartRuntimeIssueFromError(
+              normalizedError,
+              runtimeIssueContextRef.current,
+              dataPolicyRef.current,
+            ),
+          );
+        }
+        queryErrorRef.current?.(normalizedError);
       },
     });
 
@@ -91,6 +139,7 @@ export function useMosaicClient(options: UseMosaicClientOptions) {
   return {
     data: arrowData,
     isLoading: clientState?.isLoading ?? connectionStatus !== 'ready',
+    error: clientState?.error,
     client: clientState?.client ?? null,
   };
 }

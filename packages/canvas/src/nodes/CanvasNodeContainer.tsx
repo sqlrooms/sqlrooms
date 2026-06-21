@@ -26,6 +26,9 @@ export const CanvasNodeContainer: FC<
 > = ({id, className, headerRight, children}) => {
   const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
   const cell = useStoreWithCanvas((s) => s.cells.config.data[id]);
+  const artifactId = useStoreWithCanvas((s) =>
+    s.cells.getArtifactIdForCell(id),
+  );
 
   const title = (cell?.data as any)?.title;
   const onTitleChange = useCallback(
@@ -77,7 +80,11 @@ export const CanvasNodeContainer: FC<
         </Popover> */}
         <div className="w-full flex-1 overflow-auto">{children}</div>
       </div>
-      <AddNodePopover className="absolute top-1/2 -right-10" parentId={id}>
+      <AddNodePopover
+        artifactId={artifactId ?? ''}
+        className="absolute top-1/2 -right-10"
+        parentId={id}
+      >
         <Button
           variant="default"
           className="h-8 w-8 -translate-y-1/2 rounded-full"

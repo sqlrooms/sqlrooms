@@ -21,7 +21,7 @@ type DndEffectsHook = {
 };
 
 const useDndLayers: (
-  mapId: string,
+  mapId: string | undefined,
   layers: Layer[],
   layerOrder: string[],
 ) => DndEffectsHook = (mapId, layers, layerOrder) => {
@@ -35,6 +35,7 @@ const useDndLayers: (
   const onDragStart = useCallback(
     (event: any) => {
       const {active} = event;
+      if (!mapId) return;
       const newActiveLayer = layers.find((layer) => layer.id === active.id);
       if (newActiveLayer) {
         setActiveLayer(newActiveLayer);
@@ -52,6 +53,7 @@ const useDndLayers: (
   const onDragEnd = useCallback(
     (event: any) => {
       const {active, over} = event;
+      if (!mapId) return;
 
       const {id: activeLayerId} = active;
       const overType = over?.data?.current?.type;

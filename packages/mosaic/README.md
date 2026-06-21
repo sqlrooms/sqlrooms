@@ -41,6 +41,36 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
+Mosaic's pre-aggregation optimization creates `preagg_*` cache tables lazily
+when users interact with cross-filtered selections. By default Mosaic writes
+those tables to the persistent `mosaic` schema. If the DuckDB database is a user
+project file, point pre-aggregates at an attached cache database or disable them:
+
+```tsx
+const mosaicCacheDatabase = '__sqlrooms_mosaic_cache';
+
+const connector = createWebSocketDuckDbConnector({
+  initializationQuery: [
+    `ATTACH IF NOT EXISTS ':memory:' AS ${mosaicCacheDatabase}`,
+    `CREATE SCHEMA IF NOT EXISTS ${mosaicCacheDatabase}.mosaic`,
+  ].join('; '),
+});
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    // ... db slice using connector
+    ...createMosaicSlice({
+      preagg: {
+        schema: `${mosaicCacheDatabase}.mosaic`,
+      },
+    })(set, get, store),
+  }),
+);
+```
+
+Set `preagg.enabled` to `false` when you prefer to avoid pre-aggregate tables
+entirely.
+
 The Mosaic connection is automatically initialized when the DuckDB connector is ready. You can check the connection status:
 
 ```tsx
@@ -102,40 +132,404 @@ The hook accepts the following options:
 - `queryResult` - Optional callback when query results are received
 - `enabled` - Whether to automatically connect when mosaic is ready (default: `true`)
 
-### Mosaic Profiler Primitives
+### Data Table Explorer Primitives
 
-The profiler primitives let you build a Quake-style cross-filtered table with
-per-column summaries on top of `MosaicSlice`.
+The Data Table Explorer primitives let you build a Quake-style cross-filtered
+table with per-column summaries on top of `MosaicSlice`.
 
 ```tsx
-import {MosaicProfiler} from '@sqlrooms/mosaic';
+import {DataTableExplorer} from '@sqlrooms/mosaic';
 import {ScrollArea} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from './store';
 
-function EarthquakeProfiler() {
+function EarthquakeExplorer() {
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
 
   return (
-    <MosaicProfiler tableName="earthquakes" selection={brush} pageSize={25}>
+    <DataTableExplorer tableName="earthquakes" selection={brush} pageSize={25}>
       <div className="flex min-h-0 flex-col border">
         <ScrollArea className="min-h-0 flex-1">
-          <MosaicProfiler.Table>
-            <MosaicProfiler.Header />
-            <MosaicProfiler.Rows />
-          </MosaicProfiler.Table>
+          <DataTableExplorer.Table>
+            <DataTableExplorer.Header />
+            <DataTableExplorer.Rows />
+          </DataTableExplorer.Table>
         </ScrollArea>
-        <MosaicProfiler.StatusBar />
+        <DataTableExplorer.StatusBar />
       </div>
-    </MosaicProfiler>
+    </DataTableExplorer>
   );
 }
 ```
 
-For the common case, prefer the compound `MosaicProfiler` API. `useMosaicProfiler`
-is still available when you need direct access to the profiler state for custom
-layout, sizing, or advanced composition.
+For the common case, prefer the compound `DataTableExplorer` API.
+`useDataTableExplorer` is still available when you need direct access to the
+explorer state for custom layout, sizing, or advanced composition.
+
+`DataTableBlockRenderer` wraps the same explorer UI as a stateful block
+renderer for `@sqlrooms/documents` block documents. Register it with a
+host-provided stateful block type such as `data-table` when a document or
+worksheet surface should embed an interactive Data Table Explorer directly.
+
+### Mosaic Dashboard Panels
+
+`MosaicDashboard` is a compound dashboard surface backed by generic dashboard
+panels instead of a chart-only list. Configure supported panel renderers and
+runtime add-panel actions when creating the dashboard slice.
+
+```tsx
+import {
+  createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardDataTableExplorerPanelConfig,
+  createMosaicDashboardChartPanelConfig,
+  createMosaicDashboardSlice,
+  MosaicDashboard,
+} from '@sqlrooms/mosaic';
+
+const dashboardSlice = createMosaicDashboardSlice({
+  panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
+  // Optional: pass chartTypes/chartBuilders to customize Add Chart.
+  // Optional: pass addPanelActions to add app-specific menu entries.
+});
+
+function Dashboard() {
+  return <MosaicDashboard dashboardId="main" />;
+}
+
+function addDataTableExplorer(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardDataTableExplorerPanelConfig({
+      source: {tableName: 'earthquakes'},
+    }),
+  );
+}
+
+function addBoxPlotChart(store: RoomStore) {
+  store.getState().mosaicDashboard.addPanel(
+    'main',
+    createMosaicDashboardChartPanelConfig('Magnitude by Region', {
+      chartType: 'box-plot',
+      settings: {
+        x: 'region',
+        y: 'magnitude',
+      },
+    }),
+  );
+}
+```
+
+Dashboards have a creation-time `layoutType` of either `dock` or `grid`.
+Existing persisted dashboards default to `dock`; pass `'grid'` to
+`createDashboard(title, 'grid')` or `ensureDashboard(id, title, 'grid')` when
+creating a dashboard that should use the scrollable grid renderer. Re-ensuring
+an existing dashboard does not convert between layout types.
+
+Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
+panel omits a source it falls back to the dashboard selected table. Panel renderer
+definitions and chart builder definitions are runtime-only and intentionally
+live outside persisted dashboard config.
+
+### Reset Filters
+
+The package provides hooks and components for resetting cross-filter selections at both dashboard and panel levels:
+
+#### Dashboard-Level Reset
+
+Use `useDashboardResetFilters` to track and reset all filters for a dashboard:
+
+```tsx
+import {useDashboardResetFilters} from '@sqlrooms/mosaic';
+
+function DashboardToolbar({dashboardId}: {dashboardId: string}) {
+  const {hasActiveFilters, reset} = useDashboardResetFilters({dashboardId});
+
+  return (
+    <button onClick={reset} disabled={!hasActiveFilters}>
+      Reset All Filters
+    </button>
+  );
+}
+```
+
+The hook returns:
+
+- `hasActiveFilters` - Boolean indicating whether any filters are active
+- `reset` - Function to clear all filters for the dashboard
+
+#### Panel-Level Reset
+
+Use `usePanelResetFilters` to track and reset only the filters originating from a specific panel:
+
+```tsx
+import {
+  usePanelResetFilters,
+  usePanelClients,
+  ResetFiltersButton,
+} from '@sqlrooms/mosaic';
+
+function ChartPanelHeader({
+  dashboardId,
+  panelId,
+  selectionName,
+}: {
+  dashboardId: string;
+  panelId: string;
+  selectionName: string;
+}) {
+  const panelClients = usePanelClients(dashboardId, panelId);
+  const {hasActiveFilters, reset} = usePanelResetFilters({
+    panelClients,
+    selectionName,
+  });
+
+  return (
+    <div className="panel-header">
+      <h3>My Chart</h3>
+      <ResetFiltersButton disabled={!hasActiveFilters} onClick={reset} />
+    </div>
+  );
+}
+```
+
+Panel-level reset requires registering the panel's Mosaic clients. Use `usePanelClientRegistration` in your panel renderer:
+
+```tsx
+import {usePanelClientRegistration} from '@sqlrooms/mosaic';
+
+function ChartPanelRenderer({dashboardId, panelId}: PanelProps) {
+  const {client} = useMosaicClient({
+    selectionName: 'brush',
+    query: /* ... */,
+  });
+
+  // Register this client so the panel reset button can track its filters
+  usePanelClientRegistration(dashboardId, panelId, [client]);
+
+  return <VgPlotChart /* ... */ />;
+}
+```
+
+#### Reset Filters Button Component
+
+The `ResetFiltersButton` is a pre-styled UI component:
+
+```tsx
+import {ResetFiltersButton} from '@sqlrooms/mosaic';
+
+<ResetFiltersButton
+  disabled={!hasActiveFilters}
+  onClick={reset}
+  tooltip="Reset filters" // optional
+  className="custom-class" // optional
+/>;
+```
+
+### Dashboard Stateful Block Adapter
+
+`createMosaicDashboardBlockDefinition` exposes Mosaic dashboards as stateful
+block implementations. This lets host packages render the same dashboard
+implementation either inside a block host or through an artifact shell created
+with `@sqlrooms/artifacts`.
+
+```tsx
+import {createArtifactTypeFromStatefulBlock} from '@sqlrooms/artifacts';
+import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
+
+const dashboardBlockDefinition = createMosaicDashboardBlockDefinition({
+  render: DashboardArtifact,
+});
+
+export const dashboardArtifactType = createArtifactTypeFromStatefulBlock(
+  dashboardBlockDefinition,
+);
+```
+
+The adapter preserves existing dashboard state in
+`mosaicDashboard.config.dashboardsById` and delegates lifecycle work to the
+dashboard slice.
+
+### Dashboard AI Tools
+
+`@sqlrooms/mosaic` provides reusable assistant tools for dashboard authoring,
+including chart tools, a Data Table Explorer panel tool, and an optional
+exploratory `dashboard_agent`. Client apps supply small adapters that map
+Mosaic's generic dashboard operations to their store and table metadata.
+Agent tools use `intent` for the natural-language objective they should satisfy.
+
+```ts
+import {
+  createDashboardAiTools,
+  MAP_TOOL_KEY,
+  type DashboardAiAdapter,
+  type DatabaseAiAdapter,
+} from '@sqlrooms/mosaic';
+
+const dashboardId = 'dashboard-1';
+
+const databaseAdapter: DatabaseAiAdapter = {
+  getTables: () => store.getState().db.tables,
+  findTable: (tableName) =>
+    store.getState().db.tables.find((table) => table.tableName === tableName),
+};
+
+const dashboardAdapter: DashboardAiAdapter = {
+  getSelectedTable: () =>
+    store.getState().mosaicDashboard.getDashboard(dashboardId)?.selectedTable,
+  getPanels: () =>
+    store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels ?? [],
+  setSelectedTable: (tableName) =>
+    store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
+  addPanel: (panel) =>
+    store.getState().mosaicDashboard.addPanel(dashboardId, panel),
+  updatePanel: (panelId, patch) =>
+    store.getState().mosaicDashboard.updatePanel(dashboardId, panelId, patch),
+  removePanel: (panelId) =>
+    store.getState().mosaicDashboard.removePanel(dashboardId, panelId),
+  getPanel: (panelId) =>
+    store
+      .getState()
+      .mosaicDashboard.getDashboard(dashboardId)
+      ?.panels.find((panel) => panel.id === panelId),
+  getPanelIssue: (panelId) =>
+    store.getState().mosaicDashboard.getPanelIssue(dashboardId, panelId),
+};
+
+const dashboardTools = createDashboardAiTools({
+  databaseAdapter,
+  dashboardAdapter,
+});
+```
+
+Dashboard chart tools create new chart panels by default. When the user asks to
+edit an existing chart, pass that panel's `panelId` to the same chart tool; the
+tool validates that the target is a chart panel and updates its config in place.
+If the tool call omits `title`, updates preserve the panel's existing title
+instead of renaming it to the default chart title.
+
+Host tools can be added with `extraTools`; they must not reuse built-in
+dashboard tool keys. Register geospatial map tools under `MAP_TOOL_KEY` so the
+dashboard prompts and tool registration stay aligned. When host tools need
+specialized agent guidance, pass `additionalInstructions` to append that
+guidance after the built-in agent workflow without replacing it.
+
+Worksheet agents also accept host tools through `extraTools`. Worksheet extra
+tool factories receive the active `worksheetId` alongside the worksheet and
+database adapters, so host apps can add worksheet-scoped tools such as embedded
+stateful blocks without guessing which worksheet the sub-agent is editing.
+Worksheet block-container tools propagate optional `intent` onto the created
+block when the host adapter persists block document state.
+
+### Box Plot Chart Type
+
+The built-in Box Plot chart type (`'box-plot'`) is a specialized chart that uses
+a custom renderer instead of Vega-Lite. It calculates quartiles, whiskers, and
+outliers directly in DuckDB using SQL queries, then renders them with Observable
+Plot primitives. This approach provides better performance and more accurate
+statistical calculations than Observable Plot's built-in `boxY` mark.
+
+Box plots support:
+
+- Grouped box plots by categorical variable (x-axis)
+- Y-axis brushing for interactive filtering
+- Cross-filtering integration with other dashboard charts
+- Custom quartile calculation using DuckDB's `quantile_cont` function
+
+The renderer is modular and organized in the `chart-types/box-plot/renderer/`
+directory with separate concerns:
+
+- **BoxPlotPanelRenderer.tsx** - Main React component with drag interactions
+- **BoxPlotClient.ts** - Mosaic client for SQL-based data queries
+- **plot.ts** - Observable Plot rendering logic
+- **utils.ts** - Statistical calculations and coordinate transformations
+- **constants.ts** - Theme colors and layout constants
+
+### Chart Builder Compound Components
+
+The chart builder UI can be used as a compound component API for flexible composition:
+
+```tsx
+import {
+  ChartBuilderRoot,
+  ChartBuilderTrigger,
+  ChartBuilderDialogContent,
+  ChartBuilderContent,
+} from '@sqlrooms/mosaic';
+
+function MyDashboard() {
+  const columns = [...]; // Your table columns
+
+  return (
+    <ChartBuilderRoot
+      tableName="earthquakes"
+      columns={columns}
+      onCreateChart={(spec, title) => {
+        // Handle chart creation
+      }}
+      onCreateChartOutput={(output, title) => {
+        // Optional: handle non-spec outputs such as dashboard panel chart types.
+      }}
+    >
+      <ChartBuilderTrigger />
+      <ChartBuilderDialogContent>
+        <ChartBuilderContent />
+      </ChartBuilderDialogContent>
+    </ChartBuilderRoot>
+  );
+}
+```
+
+Available compound components:
+
+- `ChartBuilderRoot` - Context provider and dialog wrapper
+- `ChartBuilderTrigger` - Button to open the dialog
+- `ChartBuilderDialogContent` - Dialog content wrapper
+- `ChartBuilderContent` - Main chart builder UI (type grid + fields + actions)
+- `ChartBuilderTypeGrid` - Chart type selector grid
+- `ChartBuilderFields` - Field selector inputs
+- `ChartBuilderActions` - Back/Create buttons
+
+For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
+
+### Combobox Component
+
+The package provides a reusable compound `Combobox` component for building searchable select dropdowns. This component is used internally by chart settings fields like `AggregationSelector`, `FieldSelectorInput`, and `TemporalGranularitySelector`.
+
+```tsx
+import {Combobox} from '@sqlrooms/mosaic';
+
+function MySelector() {
+  const [value, setValue] = useState('');
+
+  return (
+    <Combobox value={value} onChange={setValue}>
+      <Combobox.Trigger placeholder="Select option..." />
+      <Combobox.Content>
+        <Combobox.Search placeholder="Search..." />
+        <Combobox.Empty>No results found.</Combobox.Empty>
+        <Combobox.List>
+          <Combobox.Item value="option1">Option 1</Combobox.Item>
+          <Combobox.Item value="option2">Option 2</Combobox.Item>
+          <Combobox.Item value="option3">Option 3</Combobox.Item>
+        </Combobox.List>
+      </Combobox.Content>
+    </Combobox>
+  );
+}
+```
+
+Available compound components:
+
+- `Combobox` (root) - Manages state and provides context
+- `Combobox.Trigger` - Button to open the dropdown
+- `Combobox.Content` - Popover content wrapper
+- `Combobox.Search` - Search input field
+- `Combobox.Empty` - Empty state message
+- `Combobox.List` - Items container
+- `Combobox.Item` - Individual selectable item
+
+For advanced use cases, the underlying `useCombobox` hook is also exported.
 
 ### Working with Selections
 

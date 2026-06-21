@@ -19,6 +19,7 @@ export {
   type DuckDbConnectorOptions,
   type DuckDbConnectorType,
   type WasmDuckDbConnector,
+  type WasmDuckDbConnectorOptions,
 } from './connectors/createDuckDbConnector';
 
 export {
@@ -31,11 +32,21 @@ export {
   createDuckDbSlice,
   useStoreWithDuckDb,
   createDefaultLoadTableSchemasFilter,
+  defaultLoadSchemaCatalogFilter,
+  defaultLoadTableSchemasFilter,
   type CreateDuckDbSliceProps,
   type DuckDbSliceState,
 } from './DuckDbSlice';
 
-export {type LoadTableSchemasFilter} from './loadTableSchemas';
+export {
+  loadSchemaCatalog,
+  type LoadSchemaCatalogFilterFunction,
+  type LoadSchemaCatalogOptions,
+  type LoadTableSchemasFilterFunction,
+  type SchemaCatalogFilterEntry,
+  type LoadTableSchemasFilter,
+  type LoadTableSchemasOptions,
+} from './loadTableSchemas';
 
 export {useExportToCsv, type UseExportToCsvReturn} from './use-export-to-csv';
 
@@ -47,6 +58,7 @@ export {
 } from './use-copy-as-tsv';
 
 export {useDuckDb} from './useDuckDb';
+export {useDataTable} from './useDataTable';
 
 export {
   useDuckDbQuery,
@@ -63,10 +75,13 @@ export {
   createTypedRowAccessor,
   escapeId,
   escapeVal,
+  findTableInSchemaTrees,
+  getAllTablesFromSchemaTrees,
   getArrowColumnTypeCategory,
   getColValAsNumber,
   getDuckDbTypeCategory,
   getSqlErrorWithPointer,
+  getUnqualifiedSqlIdentifier,
   isNumericDuckType,
   isQualifiedTableName,
   joinStatements,
@@ -79,6 +94,9 @@ export {
   loadSpatial,
   makeLimitQuery,
   makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  quoteTableReference,
+  resolveTableReference,
   sanitizeQuery,
   separateLastStatement,
   splitSqlStatements,
@@ -99,7 +117,9 @@ export {
   type QualifiedTableName,
   type QueryHandle,
   type QueryOptions,
+  type ResolveTableReferenceResult,
   type SchemaNodeObject,
+  type SchemaWithTables,
   type SeparatedStatements,
   type TableColumn,
   type TableNodeObject,
