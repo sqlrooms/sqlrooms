@@ -119,6 +119,7 @@ let pyodidePromise: Promise<PyodideAPI> | undefined;
 let executionQueue = Promise.resolve();
 let bridgeInstalled = false;
 let activeExecutionId: string | undefined;
+let activeMaxRowsPreview: number | undefined;
 
 self.onmessage = (event: MessageEvent<PyodideWorkerRequestMessage>) => {
   const message = event.data;
@@ -210,6 +211,7 @@ async function executePython(
     );
     clearDeclaredOutputs(pyodide, request.outputDeclarations);
     activeExecutionId = request.executionId;
+    activeMaxRowsPreview = normalizeMaxRows(request.limits?.maxRowsPreview);
     try {
       bindInputs(pyodide, request.inputs);
       const lastExpressionResult = await pyodide.runPythonAsync(request.code, {
@@ -221,6 +223,7 @@ async function executePython(
       }
     } finally {
       activeExecutionId = undefined;
+      activeMaxRowsPreview = undefined;
     }
 
     const outputs = readResultOutput(pyodide, request.outputDeclarations);
@@ -266,7 +269,7 @@ function requestHostQuery(query: unknown, maxRows?: unknown) {
 
   const signal = new SharedArrayBuffer(4);
   const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
-  const normalizedMaxRows = normalizeMaxRows(maxRows);
+  const normalizedMaxRows = normalizeMaxRows(maxRows) ?? activeMaxRowsPreview;
   const request: PyodideHostRequest = {
     type: 'query',
     query: String(query),
@@ -295,7 +298,7 @@ function requestHostTable(tableName: string, maxRows?: unknown) {
 
   const signal = new SharedArrayBuffer(4);
   const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
-  const normalizedMaxRows = normalizeMaxRows(maxRows);
+  const normalizedMaxRows = normalizeMaxRows(maxRows) ?? activeMaxRowsPreview;
   const request: PyodideHostRequest = {
     type: 'table',
     tableName,
