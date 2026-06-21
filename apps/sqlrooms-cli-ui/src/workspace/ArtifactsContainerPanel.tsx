@@ -190,7 +190,7 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
           actor: 'artifact-content-host',
         });
       } catch (error) {
-        toast.error('Failed to create artifact', {
+        toast.error('Failed to create item', {
           description:
             error instanceof Error
               ? error.message
@@ -239,7 +239,7 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
         size="icon"
         className="text-muted-foreground hover:text-foreground absolute top-4 right-4 size-9"
         disabled={!returnArtifactId}
-        aria-label="Close new artifact panel"
+        aria-label="Close new item panel"
         onClick={handleClose}
       >
         <XIcon className="h-4 w-4" aria-hidden />

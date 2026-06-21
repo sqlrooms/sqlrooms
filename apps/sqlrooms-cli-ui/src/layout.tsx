@@ -52,7 +52,7 @@ export const createLayout = ({
     },
     workspace: {
       component: ArtifactsContainerPanel,
-      title: 'Artifacts',
+      title: 'Workspace',
       icon: FolderIcon,
     },
     artifact: createArtifactPanelDefinition(ARTIFACT_TYPES, store),
