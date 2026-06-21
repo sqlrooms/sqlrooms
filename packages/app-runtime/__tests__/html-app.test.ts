@@ -1,24 +1,33 @@
-jest.mock('@sqlrooms/room-store', () => ({
-  createSlice:
-    (creator: unknown) =>
-    (...args: unknown[]) =>
-      typeof creator === 'function'
-        ? (creator as (...innerArgs: unknown[]) => unknown)(...args)
-        : creator,
-  useBaseRoomStore: jest.fn(),
-  useRoomStoreApi: jest.fn(),
-}));
+jest.mock(
+  '@sqlrooms/room-store',
+  () => ({
+    createSlice:
+      (creator: unknown) =>
+      (...args: unknown[]) =>
+        typeof creator === 'function'
+          ? (creator as (...innerArgs: unknown[]) => unknown)(...args)
+          : creator,
+    useBaseRoomStore: jest.fn(),
+    useRoomStoreApi: jest.fn(),
+  }),
+  {virtual: true},
+);
 
 jest.mock('lucide-react', () => ({
   AppWindowIcon: () => null,
 }));
 
 import {
+  commitHtmlAppRevisionState,
   createDefaultHtmlAppFiles,
   createHtmlAppSrcDoc,
   executeReadonlyQuery,
+  redoHtmlAppRevisionState,
+  restoreHtmlAppRevisionState,
   resolveHtmlAppDependencyUrl,
-  type HtmlAppState,
+  undoHtmlAppRevisionState,
+  HtmlAppState,
+  type HtmlAppState as HtmlAppStateType,
 } from '../src/html-app';
 
 describe('html-app helpers', () => {
@@ -156,9 +165,111 @@ describe('html-app helpers', () => {
       },
     ]);
   });
+
+  it('parses legacy app state with empty revision defaults', () => {
+    const app = HtmlAppState.parse({
+      id: 'app-1',
+      title: 'Legacy App',
+      files: createDefaultHtmlAppFiles('Legacy App'),
+      entryHtmlPath: '/index.html',
+      requestedCapabilities: [],
+      grantedCapabilities: [],
+      dependencies: [],
+      diagnostics: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    expect(app.revisions).toEqual([]);
+    expect(app.activeRevisionId).toBeUndefined();
+    expect(app.redoRevisionIds).toEqual([]);
+  });
+
+  it('commits source snapshots and clears redo state for new revisions', () => {
+    const first = commitHtmlAppRevisionState(
+      createAppState({redoRevisionIds: ['rev-redo']}),
+      {
+        title: 'Revenue Explorer',
+        files: {'/index.html': '<h1>Revenue</h1>'},
+      },
+      {
+        revisionId: 'rev-1',
+        name: 'Initial revenue explorer',
+        source: 'assistant',
+        sourcePrompt: 'Create a revenue explorer',
+        createdAt: 10,
+      },
+    );
+
+    expect(first.revision).toMatchObject({
+      id: 'rev-1',
+      name: 'Initial revenue explorer',
+      source: 'assistant',
+      sourcePrompt: 'Create a revenue explorer',
+      title: 'Revenue Explorer',
+    });
+    expect(first.app.activeRevisionId).toBe('rev-1');
+    expect(first.app.redoRevisionIds).toEqual([]);
+    expect(first.app.revisions).toHaveLength(1);
+  });
+
+  it('restores by creating an auditable restore revision', () => {
+    const first = commitHtmlAppRevisionState(
+      createAppState(),
+      {files: {'/index.html': '<h1>First</h1>'}},
+      {revisionId: 'rev-1', name: 'First version', createdAt: 10},
+    );
+    const second = commitHtmlAppRevisionState(
+      first.app,
+      {files: {'/index.html': '<h1>Second</h1>'}},
+      {revisionId: 'rev-2', name: 'Second version', createdAt: 20},
+    );
+
+    const restored = restoreHtmlAppRevisionState(second.app, 'rev-1', {
+      revisionId: 'rev-restore',
+      createdAt: 30,
+    });
+
+    expect(restored?.revision).toMatchObject({
+      id: 'rev-restore',
+      name: 'Restore First version',
+      source: 'restore',
+      parentRevisionId: 'rev-2',
+      files: {'/index.html': '<h1>First</h1>'},
+    });
+    expect(restored?.app.activeRevisionId).toBe('rev-restore');
+    expect(restored?.app.files).toEqual({'/index.html': '<h1>First</h1>'});
+  });
+
+  it('moves backward and forward through undo and redo revisions', () => {
+    const first = commitHtmlAppRevisionState(
+      createAppState(),
+      {files: {'/index.html': '<h1>First</h1>'}},
+      {revisionId: 'rev-1', name: 'First version', createdAt: 10},
+    );
+    const second = commitHtmlAppRevisionState(
+      first.app,
+      {files: {'/index.html': '<h1>Second</h1>'}},
+      {revisionId: 'rev-2', name: 'Second version', createdAt: 20},
+    );
+
+    const undone = undoHtmlAppRevisionState(second.app);
+    expect(undone?.revision.id).toBe('rev-1');
+    expect(undone?.app.activeRevisionId).toBe('rev-1');
+    expect(undone?.app.redoRevisionIds).toEqual(['rev-2']);
+    expect(undone?.app.files).toEqual({'/index.html': '<h1>First</h1>'});
+
+    const redone = redoHtmlAppRevisionState(undone!.app);
+    expect(redone?.revision.id).toBe('rev-2');
+    expect(redone?.app.activeRevisionId).toBe('rev-2');
+    expect(redone?.app.redoRevisionIds).toEqual([]);
+    expect(redone?.app.files).toEqual({'/index.html': '<h1>Second</h1>'});
+  });
 });
 
-function createAppState(patch: Partial<HtmlAppState> = {}): HtmlAppState {
+function createAppState(
+  patch: Partial<HtmlAppStateType> = {},
+): HtmlAppStateType {
   return {
     id: 'app-1',
     title: 'HTML App',
@@ -168,6 +279,8 @@ function createAppState(patch: Partial<HtmlAppState> = {}): HtmlAppState {
     grantedCapabilities: [],
     dependencies: [],
     diagnostics: [],
+    revisions: [],
+    redoRevisionIds: [],
     createdAt: 1,
     updatedAt: 1,
     ...patch,
