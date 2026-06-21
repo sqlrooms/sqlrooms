@@ -12,6 +12,8 @@ HTTP_PORT="${HTTP_PORT:-8080}"
 WS_PORT="${WS_PORT:-4000}"
 LOCAL_HTTP_PORT="${LOCAL_HTTP_PORT:-4173}"
 LOCAL_WS_PORT="${LOCAL_WS_PORT:-4000}"
+HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
+HEALTH_CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-2}"
 SQLROOMS_EXTRAS="${SQLROOMS_EXTRAS:-}"
 SQLROOMS_SYNC="${SQLROOMS_SYNC:-0}"
 PUBLIC_URL="${PUBLIC_URL:-1}"
@@ -47,7 +49,8 @@ Environment variables with matching uppercase names are also supported.
 
 Notes:
   The script publishes the UI at the Sprite URL and tells the browser to use the
-  Sprite websocket port URL for DuckDB, e.g. wss://<sprite>.sprites.dev:4000.
+  Sprite websocket proxy URL for DuckDB, e.g. wss://<sprite>.sprites.dev/ws/duckdb.
+  HEALTH_CHECK_TIMEOUT and HEALTH_CHECK_INTERVAL can tune service readiness polling.
 USAGE
 }
 
@@ -216,6 +219,8 @@ set -euo pipefail
 : "${WS_PORT:?}"
 : "${SQLROOMS_EXTERNAL_URL:?}"
 : "${SQLROOMS_EXTERNAL_WS_URL:?}"
+HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
+HEALTH_CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-2}"
 
 mkdir -p "$APP_DIR/wheels" "$(dirname "$DB_PATH")"
 tar -C "$APP_DIR/wheels" -xzf "$APP_DIR/sqlrooms-cli-wheels.tgz"
@@ -261,19 +266,32 @@ if [[ "${#sync_args[@]}" -gt 0 ]]; then
 fi
 
 sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms-cli.sh"
-sleep 2
 "$APP_DIR/venv/bin/python" - <<PY
 import sys
+import time
 import urllib.request
 
 url = "http://127.0.0.1:$HTTP_PORT/api/config"
-try:
-    with urllib.request.urlopen(url, timeout=10) as response:
-        if response.status != 200:
-            raise RuntimeError(f"unexpected HTTP status {response.status}")
-except Exception as exc:
-    print(f"SQLRooms service did not become healthy at {url}: {exc}", file=sys.stderr)
-    sys.exit(1)
+timeout = float("$HEALTH_CHECK_TIMEOUT")
+interval = float("$HEALTH_CHECK_INTERVAL")
+deadline = time.monotonic() + timeout
+last_error = None
+
+while time.monotonic() < deadline:
+    try:
+        with urllib.request.urlopen(url, timeout=10) as response:
+            if response.status == 200:
+                sys.exit(0)
+            last_error = RuntimeError(f"unexpected HTTP status {response.status}")
+    except Exception as exc:
+        last_error = exc
+
+    remaining = deadline - time.monotonic()
+    if remaining > 0:
+        time.sleep(min(interval, remaining))
+
+print(f"SQLRooms service did not become healthy at {url}: {last_error}", file=sys.stderr)
+sys.exit(1)
 PY
 REMOTE
 chmod +x "$REMOTE_INSTALL"
@@ -289,13 +307,20 @@ fi
 SPRITE_URL="${SPRITE_URL%/}"
 SPRITE_HOST="${SPRITE_URL#https://}"
 SPRITE_WS_URL="wss://$SPRITE_HOST/ws/duckdb"
+if [[ "$RUN_PROXY" == "1" ]]; then
+  DEPLOY_EXTERNAL_URL="http://localhost:$LOCAL_HTTP_PORT"
+  DEPLOY_EXTERNAL_WS_URL="ws://localhost:$LOCAL_WS_PORT"
+else
+  DEPLOY_EXTERNAL_URL="$SPRITE_URL"
+  DEPLOY_EXTERNAL_WS_URL="$SPRITE_WS_URL"
+fi
 
 echo "Uploading wheels and starting sqlrooms-cli service..."
 sprite_exec mkdir -p "$APP_DIR"
 sprite_exec \
   --file "$BUNDLE:$APP_DIR/sqlrooms-cli-wheels.tgz" \
   --file "$REMOTE_INSTALL:$APP_DIR/install-sqlrooms-cli-on-sprite.sh" \
-  --env "APP_DIR=$APP_DIR,SERVICE_NAME=$SERVICE_NAME,DB_PATH=$DB_PATH,HTTP_PORT=$HTTP_PORT,WS_PORT=$WS_PORT,SQLROOMS_EXTRAS=$SQLROOMS_EXTRAS,SQLROOMS_SYNC=$SQLROOMS_SYNC,SQLROOMS_EXTERNAL_URL=$SPRITE_URL,SQLROOMS_EXTERNAL_WS_URL=$SPRITE_WS_URL" \
+  --env "APP_DIR=$APP_DIR,SERVICE_NAME=$SERVICE_NAME,DB_PATH=$DB_PATH,HTTP_PORT=$HTTP_PORT,WS_PORT=$WS_PORT,SQLROOMS_EXTRAS=$SQLROOMS_EXTRAS,SQLROOMS_SYNC=$SQLROOMS_SYNC,SQLROOMS_EXTERNAL_URL=$DEPLOY_EXTERNAL_URL,SQLROOMS_EXTERNAL_WS_URL=$DEPLOY_EXTERNAL_WS_URL,HEALTH_CHECK_TIMEOUT=$HEALTH_CHECK_TIMEOUT,HEALTH_CHECK_INTERVAL=$HEALTH_CHECK_INTERVAL" \
   bash "$APP_DIR/install-sqlrooms-cli-on-sprite.sh"
 
 if [[ "$PUBLIC_URL" == "1" ]]; then
@@ -307,6 +332,8 @@ echo "Sprite deployed: $SPRITE_NAME"
 echo "Remote service: $SERVICE_NAME"
 echo "Online UI: $SPRITE_URL"
 echo "Online DuckDB websocket: $SPRITE_WS_URL"
+echo "Runtime UI config: $DEPLOY_EXTERNAL_URL"
+echo "Runtime DuckDB websocket config: $DEPLOY_EXTERNAL_WS_URL"
 echo "Internal DuckDB websocket port: $WS_PORT"
 echo
 echo "Sprite URL settings:"

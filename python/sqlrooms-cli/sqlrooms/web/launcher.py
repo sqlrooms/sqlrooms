@@ -11,6 +11,7 @@ import webbrowser
 import json
 from pathlib import Path
 from typing import Any, Dict
+from urllib.parse import urlsplit, urlunsplit
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
@@ -213,6 +214,13 @@ def _encode_stream_frame(
     return len(header_bytes).to_bytes(4, byteorder="big") + header_bytes + payload
 
 
+def _derive_ws_proxy_url(external_url: str) -> str:
+    parsed = urlsplit(external_url.rstrip("/"))
+    scheme = {"http": "ws", "https": "wss"}.get(parsed.scheme, parsed.scheme)
+    base_path = parsed.path.rstrip("/")
+    return urlunsplit((scheme, parsed.netloc, f"{base_path}/ws/duckdb", "", ""))
+
+
 class SqlroomsHttpServer:
     def __init__(
         self,
@@ -335,8 +343,14 @@ class SqlroomsHttpServer:
         )
 
     def _runtime_config(self) -> Dict[str, Any]:
+        derived_ws_url = (
+            _derive_ws_proxy_url(self.external_url)
+            if self.external_url and not self.external_ws_url
+            else None
+        )
         return {
             "wsUrl": self.external_ws_url
+            or derived_ws_url
             or f"ws://{self._public_host()}:{self.ws_port}",
             "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,
