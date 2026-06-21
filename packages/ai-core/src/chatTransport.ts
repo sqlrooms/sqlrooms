@@ -566,10 +566,10 @@ function selectErrorSourceMessages({
   sessionMessages: UIMessage[];
   fallbackMessages?: UIMessage[];
 }): UIMessage[] {
-  if (!fallbackMessages || fallbackMessages.length <= sessionMessages.length) {
-    return sessionMessages;
+  if (fallbackMessages && fallbackMessages.length > 0) {
+    return fallbackMessages;
   }
-  return fallbackMessages;
+  return sessionMessages;
 }
 
 function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {

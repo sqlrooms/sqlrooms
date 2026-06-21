@@ -13,6 +13,7 @@ import {
   CHAT_REQUEST_ERROR_PART_TYPE,
   getChatRequestErrorMessage,
 } from '../src/chatTurns';
+import {sanitizeMessagesForLLM} from '../src/utils';
 
 type TestStoreState = AiSliceState & {
   aiSettings: {
@@ -117,6 +118,77 @@ describe('AiSlice model selection', () => {
     });
     expect(session?.isRunning).toBe(false);
     expect(session?.messagesRevision).toBe(1);
+  });
+
+  it('uses fallback chat messages when the store has an older same-length snapshot', () => {
+    const store = createTestStore();
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    };
+    const staleAssistantMessage: UIMessage = {
+      id: 'assistant-1',
+      role: 'assistant',
+      parts: [{type: 'text', text: 'old'}],
+    };
+    const freshAssistantMessage: UIMessage = {
+      id: 'assistant-1',
+      role: 'assistant',
+      parts: [{type: 'text', text: 'new'}],
+    };
+
+    store.getState().ai.setSessionUiMessages('session-1', [
+      userMessage,
+      staleAssistantMessage,
+    ]);
+
+    store
+      .getState()
+      .ai.onChatError('session-1', new TypeError('Failed to fetch'), [
+        userMessage,
+        freshAssistantMessage,
+      ]);
+
+    const session = store.getState().ai.config.sessions[0];
+    const messages = session?.uiMessages as UIMessage[];
+    expect(messages).toHaveLength(3);
+    expect(messages[1]).toMatchObject({
+      id: 'assistant-1',
+      role: 'assistant',
+      parts: [{type: 'text', text: 'new'}],
+    });
+    expect(getChatRequestErrorMessage(messages[0])).toEqual({
+      error: 'Failed to fetch',
+    });
+  });
+
+  it('does not replay chat error marker messages to the model', () => {
+    const messages = sanitizeMessagesForLLM([
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+      {
+        id: 'assistant-error',
+        role: 'assistant',
+        parts: [
+          {
+            type: CHAT_REQUEST_ERROR_PART_TYPE,
+            data: {error: 'Failed to fetch'},
+          },
+        ],
+      },
+    ]);
+
+    expect(messages).toEqual([
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ]);
   });
 
   it('does not keep a phantom current session when initialized with no sessions', () => {

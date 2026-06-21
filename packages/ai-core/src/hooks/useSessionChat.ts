@@ -142,7 +142,6 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     onError: (error) =>
       onChatError?.(sessionId, error, latestMessagesRef.current),
   });
-  latestMessagesRef.current = messages as UIMessage[];
 
   // If user aborts mid-stream, stop the local chat stream immediately
   useEffect(() => {
@@ -177,6 +176,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
+    latestMessagesRef.current = messages as UIMessage[];
     if (!sessionId) return;
     setSessionUiMessages(sessionId, messages as UIMessage[]);
   }, [messages, sessionId, setSessionUiMessages]);
