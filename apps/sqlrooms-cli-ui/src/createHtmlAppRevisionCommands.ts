@@ -15,8 +15,14 @@ const HtmlAppRevisionCommandInput = z
       .describe('Target revision id for restore.'),
   })
   .default({});
-type HtmlAppRevisionCommandInput = z.infer<
-  typeof HtmlAppRevisionCommandInput
+type HtmlAppRevisionCommandInput = z.infer<typeof HtmlAppRevisionCommandInput>;
+
+const HtmlAppRestoreRevisionCommandInput =
+  HtmlAppRevisionCommandInput.removeDefault().extend({
+    revisionId: z.string().describe('Target revision id for restore.'),
+  });
+type HtmlAppRestoreRevisionCommandInput = z.infer<
+  typeof HtmlAppRestoreRevisionCommandInput
 >;
 
 export function createHtmlAppRevisionCommands(): RoomCommand<RoomState>[] {
@@ -27,7 +33,7 @@ export function createHtmlAppRevisionCommands(): RoomCommand<RoomState>[] {
       description: 'Restore an HTML app to a persisted source revision',
       group: 'HTML App',
       keywords: ['html-app', 'revision', 'restore', 'history'],
-      inputSchema: HtmlAppRevisionCommandInput,
+      inputSchema: HtmlAppRestoreRevisionCommandInput,
       inputDescription: 'Provide revisionId and optionally appId.',
       metadata: {
         readOnly: false,
@@ -37,10 +43,7 @@ export function createHtmlAppRevisionCommands(): RoomCommand<RoomState>[] {
       execute: ({getState}, input) => {
         const state = getState();
         const {appId: inputAppId, revisionId} =
-          ((input as HtmlAppRevisionCommandInput | undefined) ?? {}) || {};
-        if (!revisionId) {
-          throw new Error('revisionId is required to restore a revision.');
-        }
+          input as HtmlAppRestoreRevisionCommandInput;
         const appId = resolveHtmlAppCommandAppId(state, inputAppId);
         const revision = state.htmlApps.restoreAppRevision(appId, revisionId);
         if (!revision) {

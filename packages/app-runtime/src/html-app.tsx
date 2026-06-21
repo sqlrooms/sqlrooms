@@ -416,6 +416,8 @@ export function restoreHtmlAppRevisionState(
   revisionId: string,
   metadata: RestoreHtmlAppRevisionMetadata = {},
 ): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const currentRevisionId =
+    getCurrentHtmlAppRevision(app)?.id ?? app.activeRevisionId;
   const targetRevision = app.revisions.find(
     (revision) => revision.id === revisionId,
   );
@@ -435,7 +437,7 @@ export function restoreHtmlAppRevisionState(
         normalizeRevisionName(metadata.name) ??
         `Restore ${targetRevision.name}`,
       source: 'restore',
-      parentRevisionId: app.activeRevisionId,
+      parentRevisionId: currentRevisionId,
       clearRedo: true,
     },
   );
