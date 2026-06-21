@@ -185,29 +185,13 @@ function CliArtifactContentHost({
     );
   }
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {artifactActions.artifactIds.map((artifactId) => {
-        const artifact = artifactsById[artifactId];
-        if (!artifact) return null;
-        return (
-          <SelectedCliArtifactContent
-            key={artifact.id}
-            artifact={artifact}
-            selected={artifact.id === selectedArtifact.id}
-          />
-        );
-      })}
-    </div>
-  );
+  return <SelectedCliArtifactContent artifact={selectedArtifact} />;
 }
 
 function SelectedCliArtifactContent({
   artifact,
-  selected,
 }: {
   artifact: ArtifactMetadataType;
-  selected: boolean;
 }) {
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
   const typeDefinition = artifactTypes[artifact.type];
@@ -237,11 +221,9 @@ function SelectedCliArtifactContent({
   }
 
   return (
-    <div
-      className="min-h-0 flex-1 flex-col overflow-hidden"
-      style={{display: selected ? 'flex' : 'none'}}
-    >
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Component
+        key={artifact.id}
         panelInfo={panelInfo}
         panelId="artifact"
         meta={{artifactId: artifact.id}}
