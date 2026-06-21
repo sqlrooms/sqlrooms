@@ -305,6 +305,40 @@ describe('html-app helpers', () => {
     expect(restored?.app.grantedCapabilities).toEqual([]);
   });
 
+  it('snapshots intent when navigating revisions', () => {
+    const sales = commitHtmlAppRevisionState(
+      createAppState({intent: 'Build a sales chart'}),
+      {
+        intent: 'Build a sales chart',
+        files: {'/index.html': '<h1>Sales</h1>'},
+      },
+      {revisionId: 'rev-sales', name: 'Sales chart', createdAt: 10},
+    );
+    const inventory = commitHtmlAppRevisionState(
+      sales.app,
+      {
+        intent: 'Build an inventory chart',
+        files: {'/index.html': '<h1>Inventory</h1>'},
+      },
+      {revisionId: 'rev-inventory', name: 'Inventory chart', createdAt: 20},
+    );
+
+    const undone = undoHtmlAppRevisionState(inventory.app);
+    expect(undone?.app.intent).toBe('Build a sales chart');
+    expect(undone?.app.files).toEqual({'/index.html': '<h1>Sales</h1>'});
+
+    const redone = redoHtmlAppRevisionState(undone!.app);
+    expect(redone?.app.intent).toBe('Build an inventory chart');
+    expect(redone?.app.files).toEqual({'/index.html': '<h1>Inventory</h1>'});
+
+    const restored = restoreHtmlAppRevisionState(redone!.app, 'rev-sales', {
+      revisionId: 'rev-restore',
+      createdAt: 30,
+    });
+    expect(restored?.app.intent).toBe('Build a sales chart');
+    expect(restored?.revision.intent).toBe('Build a sales chart');
+  });
+
   it('prunes discarded redo revisions when committing from an undone revision', () => {
     const first = commitHtmlAppRevisionState(
       createAppState(),

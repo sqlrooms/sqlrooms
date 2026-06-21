@@ -61,6 +61,7 @@ export const HtmlAppRevision = z.object({
   parentRevisionId: z.string().optional(),
   createdAt: z.number(),
   title: z.string(),
+  intent: z.string().optional(),
   files: HtmlAppSourceFileMap,
   entryHtmlPath: z.string().default('/index.html'),
   requestedCapabilities: z.array(AppCapability).optional(),
@@ -97,6 +98,7 @@ export type HtmlAppRevisionPatch = Partial<
   Pick<
     HtmlAppState,
     | 'title'
+    | 'intent'
     | 'files'
     | 'entryHtmlPath'
     | 'dependencies'
@@ -367,6 +369,7 @@ export function commitHtmlAppRevisionState(
     ...patch,
     id: app.id,
     title: patch.title ?? app.title,
+    intent: patch.intent ?? app.intent,
     files: patch.files ?? app.files,
     entryHtmlPath: patch.entryHtmlPath ?? app.entryHtmlPath,
     dependencies: patch.dependencies ?? app.dependencies,
@@ -384,6 +387,7 @@ export function commitHtmlAppRevisionState(
     parentRevisionId: metadata.parentRevisionId ?? activeRevisionId,
     createdAt,
     title: nextBaseApp.title,
+    intent: nextBaseApp.intent,
     files: nextBaseApp.files,
     entryHtmlPath: nextBaseApp.entryHtmlPath,
     requestedCapabilities: nextBaseApp.requestedCapabilities,
@@ -423,6 +427,7 @@ export function restoreHtmlAppRevisionState(
     app,
     {
       title: targetRevision.title,
+      intent: targetRevision.intent,
       files: targetRevision.files,
       entryHtmlPath: targetRevision.entryHtmlPath,
       requestedCapabilities:
@@ -531,6 +536,7 @@ function applyExistingHtmlAppRevision(
   return HtmlAppState.parse({
     ...app,
     title: revision.title,
+    intent: revision.intent,
     files: revision.files,
     entryHtmlPath: revision.entryHtmlPath,
     requestedCapabilities:
