@@ -59,6 +59,12 @@ type PyodideHostResponse =
     };
 
 const HOST_RESPONSE_BUFFER_BYTES = 16 * 1024 * 1024;
+const VEGA_LITE_MIME_TYPES = [
+  'application/vnd.vegalite.v5+json',
+  'application/vnd.vegalite.v4+json',
+  'application/vnd.vegalite.v3+json',
+  'application/vnd.vegalite.v2+json',
+] as const;
 const SQLROOMS_MODULE_SOURCE = `
 from _sqlrooms_bridge import query as _query
 
@@ -146,13 +152,23 @@ async function executePython(
     if (packageNames.size) {
       await pyodide.loadPackage([...packageNames]);
     }
+    if (usesAltair(request.code)) {
+      await ensureAltair(pyodide);
+    }
 
     pyodide.runPython('globals().pop("result", None)');
+    pyodide.runPython(
+      'globals().pop("__sqlrooms_last_expression_result", None)',
+    );
     activeExecutionId = request.executionId;
     try {
-      await pyodide.runPythonAsync(request.code, {
+      const lastExpressionResult = await pyodide.runPythonAsync(request.code, {
         filename: `<sqlrooms-python-cell:${request.blockId}>`,
       });
+      const hasResult = pyodide.runPython('"result" in globals()');
+      if (!hasResult && lastExpressionResult !== undefined) {
+        pyodide.globals.set('result', lastExpressionResult);
+      }
     } finally {
       activeExecutionId = undefined;
     }
@@ -241,6 +257,24 @@ function usesSqlroomsBridge(code: string) {
   return /\b(import\s+sqlrooms|from\s+sqlrooms\s+import)\b/.test(code);
 }
 
+function usesAltair(code: string) {
+  return /\b(import\s+altair|from\s+altair\s+import)\b/.test(code);
+}
+
+async function ensureAltair(pyodide: PyodideAPI) {
+  const hasAltair = pyodide.runPython(`
+import importlib.util as __sqlrooms_importlib_util
+__sqlrooms_importlib_util.find_spec("altair") is not None
+`);
+  if (hasAltair) return;
+
+  await pyodide.loadPackage('micropip');
+  await pyodide.runPythonAsync(`
+import micropip as __sqlrooms_micropip
+await __sqlrooms_micropip.install("altair")
+`);
+}
+
 function normalizeMaxRows(value: unknown) {
   if (value == null) return undefined;
   const numericValue = Number(value);
@@ -256,17 +290,79 @@ function readResultOutput(pyodide: PyodideAPI): PythonExecutionOutput[] {
   const hasResult = pyodide.runPython('"result" in globals()');
   if (!hasResult) return [];
 
-  const resultJson = pyodide.runPython(`
+  const outputsJson = pyodide.runPython(`
 import json as __sqlrooms_json
-__sqlrooms_json.dumps(result, default=str)
+
+def __sqlrooms_is_mapping(value):
+    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+
+def __sqlrooms_is_vegalite_spec(value):
+    if not isinstance(value, dict):
+        return False
+    schema = str(value.get("$schema", "")).lower()
+    return (
+        "vega-lite" in schema
+        or "mark" in value
+        or "encoding" in value
+        or "layer" in value
+        or "hconcat" in value
+        or "vconcat" in value
+        or "facet" in value
+    )
+
+def __sqlrooms_safe_call(callable_value):
+    try:
+        return callable_value()
+    except TypeError:
+        return None
+    except Exception:
+        return None
+
+def __sqlrooms_mimebundle_for(value):
+    repr_mimebundle = getattr(value, "_repr_mimebundle_", None)
+    if repr_mimebundle is None:
+        return None
+    bundle = __sqlrooms_safe_call(repr_mimebundle)
+    if isinstance(bundle, tuple) and bundle:
+        bundle = bundle[0]
+    return bundle if isinstance(bundle, dict) else None
+
+def __sqlrooms_output_for(name, value):
+    bundle = __sqlrooms_mimebundle_for(value)
+    if bundle:
+        for mime_type in ${JSON.stringify([...VEGA_LITE_MIME_TYPES])}:
+            if mime_type in bundle:
+                spec = bundle[mime_type]
+                if __sqlrooms_is_mapping(spec):
+                    return {"type": "vega-lite", "name": name, "spec": dict(spec)}
+
+    to_dict = getattr(value, "to_dict", None)
+    if to_dict is not None:
+        spec = __sqlrooms_safe_call(to_dict)
+        if __sqlrooms_is_mapping(spec):
+            spec = dict(spec)
+            if __sqlrooms_is_vegalite_spec(spec):
+                return {"type": "vega-lite", "name": name, "spec": spec}
+
+    if bundle:
+        html = bundle.get("text/html")
+        if html:
+            return {"type": "html", "name": name, "html": str(html)}
+        text = bundle.get("text/plain")
+        if text:
+            return {"type": "text", "name": name, "text": str(text)}
+
+    repr_html = getattr(value, "_repr_html_", None)
+    if repr_html is not None:
+        html = __sqlrooms_safe_call(repr_html)
+        if html:
+            return {"type": "html", "name": name, "html": str(html)}
+
+    return {"type": "json", "name": name, "value": value}
+
+__sqlrooms_json.dumps([__sqlrooms_output_for("result", result)], default=str)
 `);
-  return [
-    {
-      type: 'json',
-      name: 'result',
-      value: JSON.parse(String(resultJson)),
-    },
-  ];
+  return JSON.parse(String(outputsJson)) as PythonExecutionOutput[];
 }
 
 function errorSummary(error: unknown) {

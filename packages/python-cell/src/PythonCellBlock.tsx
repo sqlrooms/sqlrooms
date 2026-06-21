@@ -383,8 +383,86 @@ const ExecutionOutputView: FC<{output: PythonExecutionOutput}> = ({output}) => {
           value={JSON.stringify(output.preview ?? output.value, null, 2)}
         />
       );
+    case 'html':
+      return <HtmlOutputFrame label={output.name} html={output.html} />;
+    case 'vega-lite':
+      return <VegaLiteOutputFrame label={output.name} spec={output.spec} />;
   }
 };
+
+const HtmlOutputFrame: FC<{label: string; html: string}> = ({label, html}) => (
+  <div>
+    <div className="text-muted-foreground mb-1 text-xs font-medium">
+      {label}
+    </div>
+    <iframe
+      title={`Python HTML output: ${label}`}
+      sandbox="allow-scripts"
+      referrerPolicy="no-referrer"
+      className="bg-background h-96 w-full rounded-sm border"
+      srcDoc={html}
+    />
+  </div>
+);
+
+const VegaLiteOutputFrame: FC<{
+  label: string;
+  spec: Record<string, unknown>;
+}> = ({label, spec}) => (
+  <HtmlOutputFrame label={label} html={createVegaLiteOutputHtml(spec)} />
+);
+
+function createVegaLiteOutputHtml(spec: Record<string, unknown>) {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob: https:; font-src data: https:; connect-src https: data: blob:;"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: transparent;
+        color: CanvasText;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      #vis {
+        box-sizing: border-box;
+        min-height: 360px;
+        padding: 12px;
+      }
+      #error {
+        color: #b91c1c;
+        font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="vis"></div>
+    <pre id="error" hidden></pre>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script>
+      const spec = ${JSON.stringify(spec).replace(/</g, '\\u003c')};
+      vegaEmbed("#vis", spec, {
+        actions: false,
+        renderer: "svg",
+        tooltip: true
+      }).catch((error) => {
+        const errorElement = document.getElementById("error");
+        errorElement.hidden = false;
+        errorElement.textContent = error && error.stack ? error.stack : String(error);
+      });
+    </script>
+  </body>
+</html>`;
+}
 
 function runtimeLabel(isRunning: boolean, result?: PythonCellResultSummary) {
   if (isRunning) return 'Execution in progress';

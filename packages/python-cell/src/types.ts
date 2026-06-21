@@ -69,6 +69,14 @@ export const PythonCellOutputDeclaration = z.discriminatedUnion('type', [
     type: z.literal('markdown'),
     name: z.string(),
   }),
+  z.object({
+    type: z.literal('html'),
+    name: z.string(),
+  }),
+  z.object({
+    type: z.literal('vega-lite'),
+    name: z.string(),
+  }),
 ]);
 export type PythonCellOutputDeclaration = z.infer<
   typeof PythonCellOutputDeclaration
@@ -129,6 +137,16 @@ export const PythonExecutionOutput = z.discriminatedUnion('type', [
     type: z.literal('markdown'),
     name: z.string(),
     markdown: z.string(),
+  }),
+  z.object({
+    type: z.literal('html'),
+    name: z.string(),
+    html: z.string(),
+  }),
+  z.object({
+    type: z.literal('vega-lite'),
+    name: z.string(),
+    spec: z.record(z.string(), z.unknown()),
   }),
 ]);
 export type PythonExecutionOutput = z.infer<typeof PythonExecutionOutput>;

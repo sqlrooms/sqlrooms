@@ -18,6 +18,7 @@ import {
 } from './types';
 
 const DEFAULT_MAX_STDIO_BYTES = 32_000;
+const DEFAULT_MAX_RICH_OUTPUT_BYTES = 512_000;
 
 export type EnsurePythonCellOptions = Partial<
   Omit<PythonCellStateType, 'id' | 'updatedAt'>
@@ -331,6 +332,26 @@ function boundOutput(output: PythonExecutionOutput): PythonExecutionOutput {
       markdown: truncate(output.markdown, DEFAULT_MAX_STDIO_BYTES),
     };
   }
+  if (output.type === 'html') {
+    return {
+      ...output,
+      html: truncate(output.html, DEFAULT_MAX_RICH_OUTPUT_BYTES),
+    };
+  }
+  if (output.type === 'vega-lite') {
+    const boundedSpec = boundJson(output.spec, DEFAULT_MAX_RICH_OUTPUT_BYTES);
+    if (boundedSpec !== undefined) {
+      return {
+        ...output,
+        spec: boundedSpec,
+      };
+    }
+    return {
+      type: 'text',
+      name: output.name,
+      text: 'Vega-Lite output exceeded the persisted output size limit.',
+    };
+  }
   return output;
 }
 
@@ -338,4 +359,13 @@ function truncate(value: string | undefined, maxBytes: number) {
   if (!value) return '';
   if (new Blob([value]).size <= maxBytes) return value;
   return value.slice(0, maxBytes) + '\n... truncated ...';
+}
+
+function boundJson<T extends Record<string, unknown>>(
+  value: T,
+  maxBytes: number,
+) {
+  const json = JSON.stringify(value);
+  if (new Blob([json]).size > maxBytes) return undefined;
+  return value;
 }
