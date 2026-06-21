@@ -43,6 +43,7 @@
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "@tiptap/core": "^3.25.0",
     "@tiptap/extension-link": "^3.25.0",
     "@tiptap/extension-table": "^3.25.0",

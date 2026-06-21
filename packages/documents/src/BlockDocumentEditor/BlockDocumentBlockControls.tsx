@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
   cn,
 } from '@sqlrooms/ui';
+import {isMacOS} from '@sqlrooms/utils';
 import type {Editor} from '@tiptap/react';
 import {
   BarChart3Icon,
@@ -795,8 +796,7 @@ export const BlockDocumentBlockControls: FC<
       : 0;
   const menuOpen = handleMenuOpen || blockTypeSearchMenuOpen;
   const addAboveModifierLabel = useMemo(() => {
-    if (typeof navigator === 'undefined') return 'Alt';
-    return /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? 'Option' : 'Alt';
+    return isMacOS() ? 'Option' : 'Alt';
   }, []);
 
   useEffect(() => {
@@ -1167,6 +1167,9 @@ export const BlockDocumentBlockControls: FC<
         event.preventDefault();
         event.stopPropagation();
         setBlockTypeSearchMenuOpen(false);
+        setBlockTypeSearch(null);
+        setFocusedEmptyBlock(null);
+        filterBlockIdRef.current = null;
       }
     };
 

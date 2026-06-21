@@ -3246,6 +3246,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@tiptap/core':
         specifier: ^3.25.0
         version: 3.25.0(@tiptap/pm@3.25.0)
