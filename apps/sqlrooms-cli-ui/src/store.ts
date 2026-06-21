@@ -94,6 +94,10 @@ import {
   createDashboardCommands,
   DASHBOARD_COMMAND_OWNER,
 } from './createDashboardCommands';
+import {
+  createHtmlAppRevisionCommands,
+  HTML_APP_REVISION_COMMAND_OWNER,
+} from './createHtmlAppRevisionCommands';
 import {getDefaultScaffoldTree} from './helpers';
 import {createLayout, migrateCliLayoutConfig} from './layout';
 import {fetchRuntimeConfig, type RuntimeConfig} from './runtimeConfig';
@@ -376,11 +380,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               statefulBlockTypes: createStatefulBlockCommandTypes(),
             }),
           );
+          registerCommandsForOwner(
+            store,
+            HTML_APP_REVISION_COMMAND_OWNER,
+            createHtmlAppRevisionCommands(),
+          );
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, HTML_APP_REVISION_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
           const artifact = get().artifacts.getArtifact(artifactId);
