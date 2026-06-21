@@ -76,6 +76,7 @@ describe('createDashboardAiTools', () => {
   it('updates an existing chart panel when chart tools receive panelId', async () => {
     const addPanel = jest.fn(() => 'new-panel');
     const updatePanel = jest.fn();
+    const setSelectedTable = jest.fn();
     const dashboardAdapter: DashboardAiAdapter = {
       getPanel: () => ({
         id: 'panel-1',
@@ -86,7 +87,7 @@ describe('createDashboardAiTools', () => {
           settings: {field: 'magnitude'},
         },
       }),
-      setSelectedTable: () => {},
+      setSelectedTable,
       addPanel,
       updatePanel,
       removePanel: () => {},
@@ -118,6 +119,7 @@ describe('createDashboardAiTools', () => {
 
     expect(result.success).toBe(true);
     expect(addPanel).not.toHaveBeenCalled();
+    expect(setSelectedTable).toHaveBeenCalledWith('earthquakes');
     expect(updatePanel).toHaveBeenCalledWith('panel-1', {
       title: 'Depth histogram',
       config: {
