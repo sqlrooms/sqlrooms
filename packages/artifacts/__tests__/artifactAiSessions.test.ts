@@ -15,6 +15,7 @@ import {
   createArtifactAiSlice,
   getAiSessionGroupsByArtifact,
   getAiSessionIdsForArtifact,
+  getEmptyAiSessionIdForArtifact,
   getLatestAiSessionIdForArtifact,
   getOwningArtifactRunContextItems,
   getRunningAiSessionCountsByArtifact,
@@ -173,6 +174,59 @@ describe('artifact AI session helpers', () => {
     ).toBe('session-a-new');
   });
 
+  it('selects the latest empty owned session for an artifact', () => {
+    expect(
+      getEmptyAiSessionIdForArtifact({
+        sessions: [
+          createSession('empty-older', 1),
+          {...createSession('non-empty-newer', 3), prompt: 'hello'},
+          createSession('empty-newer', 2),
+          createSession('running-empty', 4, true),
+        ],
+        aiSessionArtifacts: {
+          'empty-older': 'artifact-a',
+          'non-empty-newer': 'artifact-a',
+          'empty-newer': 'artifact-a',
+          'running-empty': 'artifact-a',
+        },
+        artifactId: 'artifact-a',
+      }),
+    ).toBe('empty-newer');
+  });
+
+  it('can exclude empty owned sessions when selecting an artifact draft', () => {
+    expect(
+      getEmptyAiSessionIdForArtifact({
+        sessions: [
+          createSession('empty-older', 1),
+          createSession('empty-newer', 2),
+        ],
+        aiSessionArtifacts: {
+          'empty-older': 'artifact-a',
+          'empty-newer': 'artifact-a',
+        },
+        artifactId: 'artifact-a',
+        excludeSessionIds: ['empty-newer'],
+      }),
+    ).toBe('empty-older');
+  });
+
+  it('does not select session summaries that lack message fields as empty', () => {
+    expect(
+      getEmptyAiSessionIdForArtifact({
+        sessions: [
+          {
+            id: 'summary-only',
+            isRunning: false,
+            lastOpenedAt: 1,
+          } as any,
+        ],
+        aiSessionArtifacts: {'summary-only': 'artifact-a'},
+        artifactId: 'artifact-a',
+      }),
+    ).toBeUndefined();
+  });
+
   it('groups and counts running sessions by artifact', () => {
     expect(
       getAiSessionGroupsByArtifact({sessions, aiSessionArtifacts}),
@@ -253,6 +307,93 @@ describe('createArtifactAiSlice', () => {
       'artifact-a',
     );
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+  });
+
+  it('reuses an empty artifact-scoped session instead of creating another one', () => {
+    const store = createTestStore();
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('empty-session', 1),
+          {...createSession('used-session', 2), prompt: 'hello'},
+        ];
+        draft.ai.config.currentSessionId = 'used-session';
+        draft.artifactAi.config.aiSessionArtifacts = {
+          'empty-session': 'artifact-a',
+          'used-session': 'artifact-a',
+        };
+      }),
+    );
+
+    const sessionId = store.getState().artifactAi.createArtifactScopedSession();
+
+    expect(sessionId).toBe('empty-session');
+    expect(store.getState().ai.config.currentSessionId).toBe('empty-session');
+    expect(store.getState().ai.config.sessions).toHaveLength(2);
+    expect(
+      store
+        .getState()
+        .ai.config.sessions.find((session) => session.id === 'empty-session')
+        ?.lastOpenedAt,
+    ).toBe(100);
+  });
+
+  it('creates a new artifact-scoped session instead of reusing the current empty session', () => {
+    const store = createTestStore();
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [createSession('current-empty', 1)];
+        draft.ai.config.currentSessionId = 'current-empty';
+        draft.artifactAi.config.aiSessionArtifacts = {
+          'current-empty': 'artifact-a',
+        };
+      }),
+    );
+
+    const sessionId = store.getState().artifactAi.createArtifactScopedSession();
+
+    expect(sessionId).toBe('session-2');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-2');
+    expect(store.getState().ai.config.sessions).toHaveLength(2);
+    expect(store.getState().artifactAi.getSessionArtifactId('session-2')).toBe(
+      'artifact-a',
+    );
+  });
+
+  it('creates a new artifact-scoped session when explicit session options are provided', () => {
+    const store = createTestStore();
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [createSession('empty-session', 1)];
+        draft.artifactAi.config.aiSessionArtifacts = {
+          'empty-session': 'artifact-a',
+        };
+      }),
+    );
+
+    const sessionId = store
+      .getState()
+      .artifactAi.createArtifactScopedSession(
+        'Named draft',
+        'anthropic',
+        'claude-sonnet-4',
+      );
+
+    expect(sessionId).toBe('session-2');
+    const session = store
+      .getState()
+      .ai.config.sessions.find((candidate) => candidate.id === sessionId);
+    expect(session).toMatchObject({
+      name: 'Named draft',
+      modelProvider: 'anthropic',
+      model: 'claude-sonnet-4',
+    });
+    expect(store.getState().artifactAi.getSessionArtifactId('session-2')).toBe(
+      'artifact-a',
+    );
   });
 
   it('inherits artifact ownership for forked sessions', () => {

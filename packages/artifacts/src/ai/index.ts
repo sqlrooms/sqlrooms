@@ -36,6 +36,7 @@ export {
   cleanupAiSessionArtifacts,
   getAiSessionGroupsByArtifact,
   getAiSessionIdsForArtifact,
+  getEmptyAiSessionIdForArtifact,
   getLatestAiSessionIdForArtifact,
   getOwningArtifactRunContextItems,
   getRunningAiSessionCountsByArtifact,
@@ -46,7 +47,9 @@ export type {
   ArtifactAiSessionFilterOptions,
   ArtifactAiSessionGroupsOptions,
   ArtifactAiSessionOwnership,
+  ArtifactAiSessionWithContent,
   ArtifactAiSessionsForArtifactOptions,
   CleanupAiSessionArtifactsOptions,
+  EmptyArtifactAiSessionsForArtifactOptions,
   GetOwningArtifactRunContextItemsOptions,
 } from './artifactAiSessionHelpers';

@@ -181,7 +181,13 @@ aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
 ```
 
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
-artifact-scoped assistant. `artifactAi.selectLatestSessionForArtifact()` and
+artifact-scoped assistant. For default session creation, it reuses the most
+recently opened other empty, non-running session for the current artifact before
+creating a new one. This avoids duplicate blank drafts in history while still
+letting the selected empty draft start a separate chat when the host UI exposes
+a New session action. Calls that provide an explicit `name`, `modelProvider`, or
+`model` always create a fresh session so those options are preserved.
+`artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
 with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
 ownership are ignored by artifact-scoped history.
@@ -190,10 +196,15 @@ Reusable helpers include:
 
 - `isAiSessionVisibleForArtifact`
 - `getLatestAiSessionIdForArtifact`
+- `getEmptyAiSessionIdForArtifact`
 - `getAiSessionIdsForArtifact`
 - `getAiSessionGroupsByArtifact`
 - `getRunningAiSessionCountsByArtifact`
 - `getOwningArtifactRunContextItems`
+
+`getEmptyAiSessionIdForArtifact()` requires session objects that include
+`prompt` and `uiMessages`; summary-only session rows cannot prove that a chat is
+empty.
 
 `Chat.History` should remain generic: pass a `filterSession` callback built
 with `isAiSessionVisibleForArtifact()` and keep artifact-specific labels in the
