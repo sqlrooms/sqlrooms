@@ -160,6 +160,7 @@ function renameHtmlAppTitle(
     nextTitle: title,
   });
 
+  const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
   const revision = store.getState().htmlApps.commitAppRevision(
     input.appId,
     {
@@ -170,7 +171,8 @@ function renameHtmlAppTitle(
     createHtmlAppRevisionMetadata(store, input, {
       title,
       isTitleOnly: true,
-      isInitialRevision: app.revisions.length === 0,
+      isInitialRevision:
+        app.revisions.length === 0 && !seededBaselineRevision,
     }),
   );
 

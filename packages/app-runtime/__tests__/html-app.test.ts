@@ -339,6 +339,35 @@ describe('html-app helpers', () => {
     expect(restored?.revision.intent).toBe('Build a sales chart');
   });
 
+  it('clears intent when restoring an intentless revision', () => {
+    const legacy = commitHtmlAppRevisionState(
+      createAppState(),
+      {files: {'/index.html': '<h1>Legacy</h1>'}},
+      {revisionId: 'rev-legacy', name: 'Legacy app', createdAt: 10},
+    );
+    const inventory = commitHtmlAppRevisionState(
+      legacy.app,
+      {
+        intent: 'Build an inventory chart',
+        files: {'/index.html': '<h1>Inventory</h1>'},
+      },
+      {revisionId: 'rev-inventory', name: 'Inventory chart', createdAt: 20},
+    );
+
+    const restored = restoreHtmlAppRevisionState(
+      inventory.app,
+      'rev-legacy',
+      {
+        revisionId: 'rev-restore',
+        createdAt: 30,
+      },
+    );
+
+    expect(restored?.app.intent).toBeUndefined();
+    expect(restored?.revision.intent).toBeUndefined();
+    expect(restored?.app.files).toEqual({'/index.html': '<h1>Legacy</h1>'});
+  });
+
   it('prunes discarded redo revisions when committing from an undone revision', () => {
     const first = commitHtmlAppRevisionState(
       createAppState(),

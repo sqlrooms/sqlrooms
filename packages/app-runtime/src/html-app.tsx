@@ -359,6 +359,7 @@ export function commitHtmlAppRevisionState(
   metadata: CommitHtmlAppRevisionMetadata = {},
 ): {app: HtmlAppState; revision: HtmlAppRevision} {
   const createdAt = metadata.createdAt ?? Date.now();
+  const hasIntentPatch = Object.prototype.hasOwnProperty.call(patch, 'intent');
   const previousRevision = getCurrentHtmlAppRevision(app);
   const activeRevisionId = previousRevision?.id ?? app.activeRevisionId;
   const activeRevisionIndex = activeRevisionId
@@ -369,7 +370,7 @@ export function commitHtmlAppRevisionState(
     ...patch,
     id: app.id,
     title: patch.title ?? app.title,
-    intent: patch.intent ?? app.intent,
+    intent: hasIntentPatch ? patch.intent : app.intent,
     files: patch.files ?? app.files,
     entryHtmlPath: patch.entryHtmlPath ?? app.entryHtmlPath,
     dependencies: patch.dependencies ?? app.dependencies,
