@@ -121,16 +121,23 @@ function useCliArtifactWorkspaceActionState(): CliArtifactWorkspaceActions {
     [artifactsById, setCurrentArtifact],
   );
 
+  const selectedArtifactId =
+    currentArtifactId && artifactsById[currentArtifactId]
+      ? currentArtifactId
+      : artifactIds[0];
+
+  useEffect(() => {
+    if (!selectedArtifactId || selectedArtifactId === currentArtifactId) return;
+    setCurrentArtifact(selectedArtifactId);
+  }, [currentArtifactId, selectedArtifactId, setCurrentArtifact]);
+
   return useMemo(
     () => ({
-      selectedArtifactId:
-        currentArtifactId && artifactsById[currentArtifactId]
-          ? currentArtifactId
-          : artifactIds[0],
+      selectedArtifactId,
       artifactIds,
       selectArtifact,
     }),
-    [artifactIds, artifactsById, currentArtifactId, selectArtifact],
+    [artifactIds, selectArtifact, selectedArtifactId],
   );
 }
 
@@ -176,13 +183,29 @@ function CliArtifactContentHost({
     );
   }
 
-  return <SelectedCliArtifactContent artifact={selectedArtifact} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {artifactActions.artifactIds.map((artifactId) => {
+        const artifact = artifactsById[artifactId];
+        if (!artifact) return null;
+        return (
+          <SelectedCliArtifactContent
+            key={artifact.id}
+            artifact={artifact}
+            selected={artifact.id === selectedArtifact.id}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 function SelectedCliArtifactContent({
   artifact,
+  selected,
 }: {
   artifact: ArtifactMetadataType;
+  selected: boolean;
 }) {
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
   const typeDefinition = artifactTypes[artifact.type];
@@ -212,9 +235,11 @@ function SelectedCliArtifactContent({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div
+      className="min-h-0 flex-1 flex-col overflow-hidden"
+      style={{display: selected ? 'flex' : 'none'}}
+    >
       <Component
-        key={artifact.id}
         panelInfo={panelInfo}
         panelId="artifact"
         meta={{artifactId: artifact.id}}
