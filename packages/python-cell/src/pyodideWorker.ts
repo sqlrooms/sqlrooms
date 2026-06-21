@@ -49,6 +49,11 @@ type PyodideHostRequest =
       maxRows?: number;
     }
   | {
+      type: 'table';
+      tableName: string;
+      maxRows?: number;
+    }
+  | {
       type: 'schema';
       tableName?: string;
     };
@@ -195,6 +200,7 @@ async function executePython(
     pyodide.runPython(
       'globals().pop("__sqlrooms_last_expression_result", None)',
     );
+    clearDeclaredOutputs(pyodide, request.outputDeclarations);
     activeExecutionId = request.executionId;
     try {
       bindInputs(pyodide, request.inputs);
@@ -256,6 +262,35 @@ function requestHostQuery(query: unknown, maxRows?: unknown) {
   const request: PyodideHostRequest = {
     type: 'query',
     query: String(query),
+    ...(normalizedMaxRows === undefined ? {} : {maxRows: normalizedMaxRows}),
+  };
+
+  postMessage({
+    type: 'hostRequest',
+    executionId: activeExecutionId,
+    requestId: createRequestId(),
+    request,
+    signal,
+    response,
+  } satisfies PyodideWorkerResponseMessage);
+
+  Atomics.wait(new Int32Array(signal), 0, 0);
+  return readHostResponse(response);
+}
+
+function requestHostTable(tableName: string, maxRows?: unknown) {
+  if (!activeExecutionId) {
+    throw new Error(
+      'SQLRooms host bridge is only available while a cell runs.',
+    );
+  }
+
+  const signal = new SharedArrayBuffer(4);
+  const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
+  const normalizedMaxRows = normalizeMaxRows(maxRows);
+  const request: PyodideHostRequest = {
+    type: 'table',
+    tableName,
     ...(normalizedMaxRows === undefined ? {} : {maxRows: normalizedMaxRows}),
   };
 
@@ -382,10 +417,7 @@ function bindInputs(pyodide: PyodideAPI, inputs: PythonCellInput[]) {
       bindPythonGlobal(
         pyodide,
         input.name,
-        requestHostQuery(
-          `SELECT * FROM ${quoteSqlTableReference(input.tableName)}`,
-          input.maxRows,
-        ),
+        requestHostTable(input.tableName, input.maxRows),
       );
       continue;
     }
@@ -408,64 +440,6 @@ globals().pop("__sqlrooms_bound_input_value", None)
 `);
 }
 
-function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
-}
-
-function quoteSqlTableReference(tableName: string) {
-  const parts = splitSqlIdentifierSegments(tableName);
-  if (!parts?.length) return quoteSqlIdentifier(tableName);
-  return parts.map(quoteSqlIdentifier).join('.');
-}
-
-function splitSqlIdentifierSegments(qualifiedName: string) {
-  const parts: string[] = [];
-  let current = '';
-  let inQuotedIdentifier = false;
-  let sawQuotedIdentifier = false;
-
-  for (let index = 0; index < qualifiedName.length; index += 1) {
-    const character = qualifiedName[index];
-    if (inQuotedIdentifier) {
-      if (character === '"') {
-        if (qualifiedName[index + 1] === '"') {
-          current += '"';
-          index += 1;
-        } else {
-          inQuotedIdentifier = false;
-        }
-        continue;
-      }
-      current += character;
-      continue;
-    }
-
-    if (character === '"') {
-      if (current.trim().length > 0) return undefined;
-      inQuotedIdentifier = true;
-      sawQuotedIdentifier = true;
-      continue;
-    }
-
-    if (character === '.') {
-      const part = sawQuotedIdentifier ? current : current.trim();
-      if (!part) return undefined;
-      parts.push(part);
-      current = '';
-      sawQuotedIdentifier = false;
-      continue;
-    }
-
-    current += character;
-  }
-
-  if (inQuotedIdentifier) return undefined;
-  const part = sawQuotedIdentifier ? current : current.trim();
-  if (!part) return undefined;
-  parts.push(part);
-  return parts.length > 3 ? undefined : parts;
-}
-
 function normalizeMaxRows(value: unknown) {
   if (value == null) return undefined;
   const numericValue = Number(value);
@@ -475,6 +449,15 @@ function normalizeMaxRows(value: unknown) {
 
 function createRequestId() {
   return crypto.randomUUID();
+}
+
+function clearDeclaredOutputs(
+  pyodide: PyodideAPI,
+  declarations: PythonCellOutputDeclaration[],
+) {
+  for (const declaration of declarations) {
+    pyodide.globals.delete(declaration.name);
+  }
 }
 
 function readResultOutput(

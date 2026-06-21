@@ -20,6 +20,11 @@ type PyodideHostRequest =
       maxRows?: number;
     }
   | {
+      type: 'table';
+      tableName: string;
+      maxRows?: number;
+    }
+  | {
       type: 'schema';
       tableName?: string;
     };
@@ -89,6 +94,7 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
       resolve: (result: PythonExecutionResult) => void;
       reject: (error: Error) => void;
       host: PythonRuntimeHost;
+      timeoutId?: ReturnType<typeof setTimeout>;
     }
   >();
   private state: 'idle' | 'loading' | 'ready' | 'error' = 'idle';
@@ -120,7 +126,28 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
     this.state = this.state === 'idle' ? 'loading' : this.state;
 
     return new Promise((resolve, reject) => {
-      this.pending.set(request.executionId, {resolve, reject, host});
+      const timeoutId = request.limits?.timeoutMs
+        ? setTimeout(() => {
+            const pending = this.pending.get(request.executionId);
+            if (!pending) return;
+            this.pending.delete(request.executionId);
+            this.worker?.terminate();
+            this.worker = undefined;
+            this.state = 'error';
+            this.message = `Python execution exceeded ${request.limits?.timeoutMs}ms.`;
+            pending.reject(
+              Object.assign(new Error(this.message), {
+                name: 'PythonExecutionTimeout',
+              }),
+            );
+          }, request.limits.timeoutMs)
+        : undefined;
+      this.pending.set(request.executionId, {
+        resolve,
+        reject,
+        host,
+        timeoutId,
+      });
       worker.postMessage({
         type: 'execute',
         request,
@@ -133,6 +160,7 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
     this.worker?.terminate();
     this.worker = undefined;
     for (const pending of this.pending.values()) {
+      if (pending.timeoutId) clearTimeout(pending.timeoutId);
       pending.reject(new Error('Python runtime adapter disposed.'));
     }
     this.pending.clear();
@@ -153,6 +181,7 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
 
       if (message.type === 'result') {
         this.pending.delete(message.executionId);
+        if (pending.timeoutId) clearTimeout(pending.timeoutId);
         this.state = 'ready';
         this.message = undefined;
         pending.resolve(message.result);
@@ -161,6 +190,7 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
 
       if (message.type === 'error') {
         this.pending.delete(message.executionId);
+        if (pending.timeoutId) clearTimeout(pending.timeoutId);
         this.state = 'error';
         this.message = message.error.message;
         pending.reject(
@@ -177,6 +207,7 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
       this.state = 'error';
       this.message = event.message;
       for (const pending of this.pending.values()) {
+        if (pending.timeoutId) clearTimeout(pending.timeoutId);
         pending.reject(new Error(event.message));
       }
       this.pending.clear();
@@ -217,6 +248,18 @@ async function resolveHostRequest(
       ok: true,
       result: await host.runReadonlySql({
         query: request.query,
+        maxRows: request.maxRows,
+      }),
+    };
+  }
+
+  if (request.type === 'table') {
+    return {
+      ok: true,
+      result: await host.readTable({
+        kind: 'tableRef',
+        name: request.tableName,
+        tableName: request.tableName,
         maxRows: request.maxRows,
       }),
     };
