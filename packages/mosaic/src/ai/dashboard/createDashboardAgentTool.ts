@@ -13,6 +13,11 @@ import {createDashboardAiAdapter} from './createDashboardAiAdapter';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {DASHBOARD_CHART_TOOL_PREFIX, KnownDashboardTools} from './constants';
+import {
+  AgentIntentSchemaFields,
+  requireAgentIntent,
+  resolveAgentIntent,
+} from '../agentIntent';
 
 function getDashboardAgentInstructions<TState>(
   options: CreateDashboardAgentToolOptions<TState>,
@@ -98,35 +103,35 @@ When user asks to discover insights:
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach`;
 }
 
-const DashboardAgentInputSchema = z.object({
-  reasoning: z
-    .string()
-    .describe('Reasoning for why the dashboard agent is being called'),
-  prompt: z
-    .string()
-    .describe('The exploratory data analysis prompt for the agent'),
-  tableName: z
-    .string()
-    .optional()
-    .describe(
-      'The name of the table/dataset to analyze. Optional when the target dashboard already has a selected table.',
-    ),
-  dashboardId: z
-    .string()
-    .describe('The ID of an existing dashboard to update.'),
-  maxSteps: z
-    .number()
-    .optional()
-    .default(20)
-    .describe('Maximum exploration steps (default: 20, range: 5-50)'),
-  temperature: z
-    .number()
-    .optional()
-    .default(0.7)
-    .describe(
-      'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
-    ),
-});
+const DashboardAgentInputSchema = z
+  .object({
+    reasoning: z
+      .string()
+      .describe('Reasoning for why the dashboard agent is being called'),
+    ...AgentIntentSchemaFields,
+    tableName: z
+      .string()
+      .optional()
+      .describe(
+        'The name of the table/dataset to analyze. Optional when the target dashboard already has a selected table.',
+      ),
+    dashboardId: z
+      .string()
+      .describe('The ID of an existing dashboard to update.'),
+    maxSteps: z
+      .number()
+      .optional()
+      .default(20)
+      .describe('Maximum exploration steps (default: 20, range: 5-50)'),
+    temperature: z
+      .number()
+      .optional()
+      .default(0.7)
+      .describe(
+        'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
+      ),
+  })
+  .superRefine(requireAgentIntent);
 
 type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
 
@@ -158,17 +163,19 @@ This agent:
 
 REQUIRED PARAMETERS:
 - dashboardId: The ID of the dashboard to populate
-- prompt: What insights, patterns, or specific charts to create
+- intent: What insights, patterns, or specific charts to create
 
 OPTIONAL PARAMETERS:
 - tableName: The dataset to analyze. If omitted, the dashboard's selected table is used.
+- prompt: Deprecated alias for intent.
 
-The agent will explore the data and create 3-5 panels showing different aspects based on the prompt.
+The agent will explore the data and create 3-5 panels showing different aspects based on the intent.
 
 IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: DashboardAgentInputSchema,
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
-      const {prompt, dashboardId, maxSteps, temperature} = params;
+      const {dashboardId, maxSteps, temperature} = params;
+      const intent = resolveAgentIntent(params) ?? '';
 
       const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
 
@@ -212,7 +219,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt,
+          prompt: intent,
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,

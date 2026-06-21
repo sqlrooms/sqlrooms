@@ -78,6 +78,9 @@ SQL queries, and Markdown documents.
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
 a crossfilter selection; charts without a group are independent.
+Agent-created blocks can persist an `intent` string describing the purpose they
+were created to serve, which helps later edits distinguish durable intent from
+raw model prompts.
 
 Hosted dashboards are stored as direct stateful blocks keyed by their block
 instance id. Each hosted dashboard keeps its own Mosaic dashboard state and

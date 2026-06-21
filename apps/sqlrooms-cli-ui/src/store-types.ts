@@ -25,13 +25,19 @@ import {DbSettingsSliceState} from '@sqlrooms/db-settings';
 
 const AppBuilderProjectEntries = z.record(
   z.string(),
-  z.object({
-    name: z.string().default('Untitled App'),
-    prompt: z.string().default(''),
-    template: z.string().default('mosaic-dashboard'),
-    files: z.record(z.string(), z.string()).default({}),
-    updatedAt: z.number().default(0),
-  }),
+  z
+    .object({
+      name: z.string().default('Untitled App'),
+      intent: z.string().default(''),
+      prompt: z.string().optional(),
+      template: z.string().default('mosaic-dashboard'),
+      files: z.record(z.string(), z.string()).default({}),
+      updatedAt: z.number().default(0),
+    })
+    .transform(({prompt, intent, ...entry}) => ({
+      ...entry,
+      intent: intent || prompt || '',
+    })),
 );
 
 export const AppBuilderProjectConfig = z.object({

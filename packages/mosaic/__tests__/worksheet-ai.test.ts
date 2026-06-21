@@ -113,6 +113,7 @@ describe('createWorksheetAiTools', () => {
       tools[KnownWorksheetTools.add_html_app_block] as any
     ).execute({
       reasoning: 'The user asked for a custom D3 app.',
+      intent: 'Build a country explorer app.',
       appTitle: 'Country Explorer',
     });
 
@@ -134,6 +135,7 @@ describe('createWorksheetAiTools', () => {
         blockType: 'html-app',
         blockInstanceId: result.appId,
         ownership: 'owned',
+        intent: 'Build a country explorer app.',
         title: 'Country Explorer',
         caption: 'Country Explorer',
         height: 560,

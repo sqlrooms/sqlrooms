@@ -356,6 +356,8 @@ dashboard slice.
 including chart tools, a Data Table Explorer panel tool, and an optional
 exploratory `dashboard_agent`. Client apps supply small adapters that map
 Mosaic's generic dashboard operations to their store and table metadata.
+Agent tools use `intent` for the natural-language objective they should satisfy;
+`prompt` is accepted only as a deprecated alias for older callers.
 
 ```ts
 import {
@@ -411,6 +413,8 @@ Worksheet agents also accept host tools through `extraTools`. Worksheet extra
 tool factories receive the active `worksheetId` alongside the worksheet and
 database adapters, so host apps can add worksheet-scoped tools such as embedded
 stateful blocks without guessing which worksheet the sub-agent is editing.
+Worksheet block-container tools propagate optional `intent` onto the created
+block when the host adapter persists block document state.
 
 ### Box Plot Chart Type
 

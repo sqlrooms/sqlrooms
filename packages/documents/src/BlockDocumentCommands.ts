@@ -127,6 +127,12 @@ const BlockDocumentMoveBlockInput = BlockDocumentBlockIdInput.extend({
 const BlockDocumentCreateChartBlockInput = z.object({
   artifactId: z.string().describe('Target block document artifact ID.'),
   blockId: z.string().optional().describe('Optional explicit chart block ID.'),
+  intent: z
+    .string()
+    .optional()
+    .describe(
+      'Optional natural-language objective this chart block should satisfy.',
+    ),
   tableName: z.string().describe('Mosaic table name to render.'),
   config: z
     .unknown()
@@ -162,6 +168,12 @@ const BlockDocumentCreateStatefulBlockInput = z.object({
   blockType: z
     .string()
     .describe('Stateful block type to create, for example dashboard or pivot.'),
+  intent: z
+    .string()
+    .optional()
+    .describe(
+      'Optional natural-language objective this stateful block should satisfy.',
+    ),
   blockId: z
     .string()
     .optional()
@@ -515,6 +527,7 @@ export function createBlockDocumentCommands<
         const {
           artifactId,
           blockId = createBlockDocumentBlockId(),
+          intent,
           tableName,
           config,
           selectionGroupId,
@@ -533,6 +546,7 @@ export function createBlockDocumentCommands<
         const block = BlockDocumentChartBlock.parse({
           id: blockId,
           type: 'chart',
+          intent,
           tableName,
           config,
           selectionGroupId,
@@ -563,6 +577,7 @@ export function createBlockDocumentCommands<
         const {
           artifactId,
           blockType,
+          intent,
           blockId = createBlockDocumentBlockId(),
           ownership = 'owned',
           title,
@@ -614,6 +629,7 @@ export function createBlockDocumentCommands<
         const block = BlockDocumentStatefulBlockBlock.parse({
           id: blockId,
           type: 'statefulBlock',
+          intent,
           blockType,
           blockInstanceId,
           ownership,

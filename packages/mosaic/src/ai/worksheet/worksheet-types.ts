@@ -36,12 +36,14 @@ export type WorksheetAiAdapter = {
     worksheetId: string,
     title: string,
     tableName: string,
+    intent?: string,
   ): AddDashboardBlockResult;
 
   addDataTableExplorerBlock: (
     worksheetId: string,
     title: string,
     tableName: string,
+    intent?: string,
   ) => string;
 };
 

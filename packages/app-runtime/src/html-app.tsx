@@ -36,6 +36,7 @@ export type HtmlAppSourceFileMap = z.infer<typeof HtmlAppSourceFileMap>;
 export const HtmlAppState = z.object({
   id: z.string(),
   title: z.string(),
+  intent: z.string().optional(),
   files: HtmlAppSourceFileMap,
   entryHtmlPath: z.string().default('/index.html'),
   requestedCapabilities: z.array(AppCapability).default([]),

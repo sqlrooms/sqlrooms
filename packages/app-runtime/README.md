@@ -83,6 +83,10 @@ string:
 default is `/index.html`. The host injects the app-runtime prelude before user
 scripts run, so generated apps can call:
 
+`HtmlAppState.intent` can store the durable natural-language objective for a
+generated or edited app. Prefer this over storing raw model prompts in app
+state.
+
 ```js
 const {rows, columns, truncated} = await window.sqlrooms.query(
   'select category, count(*) as n from events group by category',

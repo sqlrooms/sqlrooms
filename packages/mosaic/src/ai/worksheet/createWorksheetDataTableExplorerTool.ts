@@ -31,14 +31,19 @@ export function createWorksheetDataTableExplorerTool({
 }: CreateWorksheetDataTableExplorerToolParams): Tool {
   return createDataTableExplorerTool({
     databaseAdapter,
-    addDataTable: ({title, tableName}) => {
+    addDataTable: ({title, tableName, intent}) => {
       if (!tableName) {
         throw new Error(
           'Table name is required to add a data table explorer block',
         );
       }
 
-      worksheetAdapter.addDataTableExplorerBlock(worksheetId, title, tableName);
+      worksheetAdapter.addDataTableExplorerBlock(
+        worksheetId,
+        title,
+        tableName,
+        intent,
+      );
     },
   });
 }

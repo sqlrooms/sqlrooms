@@ -17,6 +17,12 @@ export const DataTableExplorerParameters = z.object({
     .optional()
     .default('Data Table Explorer')
     .describe('Title for the Data Table Explorer panel.'),
+  intent: z
+    .string()
+    .optional()
+    .describe(
+      'Optional natural-language objective this Data Table Explorer should satisfy.',
+    ),
 });
 
 /**

@@ -15,11 +15,18 @@ const HtmlAppDependencySchema = z.object({
   global: z.string().optional(),
 });
 
-export const HtmlAppRuntimeInputSchema = z.object({
+const HtmlAppRuntimeInputFields = z.object({
   reasoning: z
     .string()
     .describe('Reasoning for why the HTML app agent is being called.'),
-  prompt: z.string().describe('The app or visualization the user wants.'),
+  intent: z
+    .string()
+    .optional()
+    .describe('The app or visualization objective to satisfy.'),
+  prompt: z
+    .string()
+    .optional()
+    .describe('Deprecated alias for intent. Use intent for new callers.'),
   title: z.string().optional().describe('Optional app title.'),
   querySql: z
     .string()
@@ -51,13 +58,37 @@ export const HtmlAppRuntimeInputSchema = z.object({
     .describe('Maximum expected observe/repair attempts for the caller.'),
 });
 
-const HtmlAppAgentInputSchema = HtmlAppRuntimeInputSchema.extend({
+function requireHtmlAppIntent(
+  value: {intent?: string; prompt?: string},
+  ctx: z.RefinementCtx,
+) {
+  if (resolveHtmlAppIntent(value)) return;
+  ctx.addIssue({
+    code: 'custom',
+    path: ['intent'],
+    message: 'intent is required. prompt is accepted as a deprecated alias.',
+  });
+}
+
+function resolveHtmlAppIntent(value: {intent?: string; prompt?: string}) {
+  return value.intent?.trim() || value.prompt?.trim();
+}
+
+function resolvedHtmlAppIntentPatch(value: {intent?: string; prompt?: string}) {
+  const intent = resolveHtmlAppIntent(value);
+  return intent ? {intent} : {};
+}
+
+export const HtmlAppRuntimeInputSchema =
+  HtmlAppRuntimeInputFields.superRefine(requireHtmlAppIntent);
+
+const HtmlAppAgentInputSchema = HtmlAppRuntimeInputFields.extend({
   appId: z
     .string()
     .describe(
       'HTML app runtime id to write. The caller must create or identify the top-level html-app artifact or embedded html-app block before calling this tool.',
     ),
-});
+}).superRefine(requireHtmlAppIntent);
 
 type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
 export type HtmlAppRuntimeWriteInput = Omit<
@@ -67,9 +98,10 @@ export type HtmlAppRuntimeWriteInput = Omit<
   maxRepairAttempts?: number;
 };
 
-const WriteHtmlAppFilesInputSchema = HtmlAppRuntimeInputSchema.omit({
+const WriteHtmlAppFilesInputSchema = HtmlAppRuntimeInputFields.omit({
   maxRepairAttempts: true,
   prompt: true,
+  intent: true,
 });
 
 const DEFAULT_DIAGNOSTIC_OBSERVATION_MS = 2_000;
@@ -83,7 +115,7 @@ Use this after the caller has created or identified the right container:
 - top-level html-app artifact id
 - embedded worksheet html-app blockInstanceId
 
-This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested prompt, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit prompt; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
+This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested intent, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit intent; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app. prompt is accepted only as a deprecated alias for intent.`,
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
       if (input.html || input.files) {
@@ -117,10 +149,10 @@ function isTitleOnlyRequest(input: HtmlAppAgentInput) {
     return false;
   }
 
-  const prompt = input.prompt.toLowerCase();
+  const intent = resolveHtmlAppIntent(input)?.toLowerCase() ?? '';
   return (
-    /\b(rename|change|set|update)\b[\s\S]{0,80}\b(title|name)\b/.test(prompt) ||
-    /\b(title|name)\b[\s\S]{0,80}\b(to|as)\b/.test(prompt)
+    /\b(rename|change|set|update)\b[\s\S]{0,80}\b(title|name)\b/.test(intent) ||
+    /\b(title|name)\b[\s\S]{0,80}\b(to|as)\b/.test(intent)
   );
 }
 
@@ -172,17 +204,17 @@ function isIncrementalAppEditRequest(input: HtmlAppAgentInput) {
     return false;
   }
 
-  const prompt = input.prompt.toLowerCase();
+  const intent = resolveHtmlAppIntent(input)?.toLowerCase() ?? '';
   if (
     /\b(new|another|fresh|separate)\b[\s\S]{0,40}\b(app|artifact)\b/.test(
-      prompt,
+      intent,
     )
   ) {
     return false;
   }
 
   return /\b(change|update|edit|modify|rename|set|tweak|adjust|fix|improve|make|remove|replace|add)\b/.test(
-    prompt,
+    intent,
   );
 }
 
@@ -221,7 +253,7 @@ Use this after making the requested scoped edit to the existing files. Preserve 
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
-        prompt: input.prompt,
+        ...resolvedHtmlAppIntentPatch(input),
         title: writeInput.title ?? input.title ?? app.title,
         dependencies: writeInput.dependencies ?? app.dependencies,
         maxRepairAttempts: input.maxRepairAttempts,
@@ -296,7 +328,7 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
-        prompt: input.prompt,
+        ...resolvedHtmlAppIntentPatch(input),
         maxRepairAttempts: input.maxRepairAttempts,
       });
       return latestWriteResult;
@@ -358,6 +390,7 @@ export async function writeHtmlAppRuntimeState(
 ): Promise<Record<string, unknown>> {
   const appId = input.appId;
   const title = input.title?.trim() || 'HTML App';
+  const intent = resolveHtmlAppIntent(input);
   const dependencies = resolveDependencies(input);
   const files = normalizeHtmlAppFiles(input);
 
@@ -400,6 +433,7 @@ export async function writeHtmlAppRuntimeState(
 
   store.getState().htmlApps.ensureApp(appId, {
     title,
+    ...(intent ? {intent} : {}),
     files,
     entryHtmlPath: '/index.html',
     dependencies,
@@ -542,10 +576,11 @@ Important constraints:
 }
 
 function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
+  const intent = resolveHtmlAppIntent(input) ?? '';
   const parts = [
     `App runtime id: ${input.appId}`,
     `Title: ${input.title?.trim() || 'HTML App'}`,
-    `User request: ${input.prompt}`,
+    `Intent: ${intent}`,
   ];
 
   if (input.querySql) {
@@ -569,11 +604,13 @@ function formatHtmlAppEditPrompt(
   input: HtmlAppAgentInput,
   app: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
 ) {
+  const intent = resolveHtmlAppIntent(input) ?? '';
   const parts = [
     `App runtime id: ${input.appId}`,
     `Current title: ${app.title}`,
     `Requested title: ${input.title?.trim() || app.title}`,
-    `User request: ${input.prompt}`,
+    ...(app.intent ? [`Current intent: ${app.intent}`] : []),
+    `Edit intent: ${intent}`,
     `Entry HTML path: ${app.entryHtmlPath || '/index.html'}`,
   ];
 
