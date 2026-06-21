@@ -127,6 +127,29 @@ function isTitleNode(node: ReturnType<typeof getNodeAt>) {
   return node?.type.name === BLOCK_DOCUMENT_TITLE_NODE_NAME;
 }
 
+function isEmptyTextBlock(node: ReturnType<typeof getNodeAt>) {
+  return node?.type.name === 'paragraph' && node.textContent.length === 0;
+}
+
+function getFocusedEmptyBlock(editor: Editor): BlockControlState | null {
+  if (!editor.isFocused) return null;
+  const {$from} = editor.state.selection;
+  if ($from.depth < 1) return null;
+
+  const pos = $from.before(1);
+  const node = getNodeAt(editor, pos);
+  if (!node || isTitleNode(node) || !isEmptyTextBlock(node)) return null;
+
+  const dom = editor.view.nodeDOM(pos);
+  if (!(dom instanceof HTMLElement)) return null;
+
+  return {
+    element: dom,
+    pos,
+    top: 0,
+  };
+}
+
 function getBlockPos(editor: Editor, element: HTMLElement) {
   try {
     const pos = editor.view.posAtDOM(element, 0);
@@ -560,11 +583,15 @@ export const BlockDocumentBlockControls: FC<
     null,
   );
   const [handleMenuOpen, setHandleMenuOpen] = useState(false);
+  const [focusedEmptyBlock, setFocusedEmptyBlock] =
+    useState<BlockControlState | null>(null);
+  const [blockTypeMenuOpen, setBlockTypeMenuOpen] = useState(false);
   const [dropIndicator, setDropIndicator] = useState<BlockDropIndicator | null>(
     null,
   );
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const suppressHandleClickRef = useRef(false);
+  const suppressFocusedBlockMenuRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
@@ -572,7 +599,8 @@ export const BlockDocumentBlockControls: FC<
     () => buildMediaBlockMenuItems(statefulBlockTypes),
     [statefulBlockTypes],
   );
-  const menuOpen = insertMenuOpen != null || handleMenuOpen;
+  const menuOpen =
+    insertMenuOpen != null || handleMenuOpen || blockTypeMenuOpen;
 
   const cancelHide = useCallback(() => {
     if (hideTimerRef.current == null) return;
@@ -611,6 +639,60 @@ export const BlockDocumentBlockControls: FC<
     },
     [cancelHide, editor, menuOpen, scheduleHide, scrollElement],
   );
+
+  const updateFocusedEmptyBlock = useCallback(
+    (openOnMatch: boolean) => {
+      if (!editor || !scrollElement || readOnly) {
+        setFocusedEmptyBlock(null);
+        setBlockTypeMenuOpen(false);
+        return;
+      }
+
+      const focusedBlock = getFocusedEmptyBlock(editor);
+      if (!focusedBlock) {
+        setFocusedEmptyBlock(null);
+        setBlockTypeMenuOpen(false);
+        return;
+      }
+
+      const elementRect = focusedBlock.element.getBoundingClientRect();
+      setFocusedEmptyBlock({
+        ...focusedBlock,
+        top: getBlockControlsTop(elementRect, scrollElement),
+      });
+
+      if (openOnMatch && !suppressFocusedBlockMenuRef.current) {
+        setBlockTypeMenuOpen(true);
+      }
+    },
+    [editor, readOnly, scrollElement],
+  );
+
+  useEffect(() => {
+    if (!editor || !scrollElement || readOnly) return;
+
+    const handleFocusOrSelectionUpdate = () => updateFocusedEmptyBlock(true);
+    const handleUpdate = () => updateFocusedEmptyBlock(false);
+    const handleScrollOrResize = () => updateFocusedEmptyBlock(false);
+
+    editor.on('focus', handleFocusOrSelectionUpdate);
+    editor.on('selectionUpdate', handleFocusOrSelectionUpdate);
+    editor.on('update', handleUpdate);
+    scrollElement.addEventListener('scroll', handleScrollOrResize, {
+      passive: true,
+    });
+    window.addEventListener('resize', handleScrollOrResize);
+
+    handleFocusOrSelectionUpdate();
+
+    return () => {
+      editor.off('focus', handleFocusOrSelectionUpdate);
+      editor.off('selectionUpdate', handleFocusOrSelectionUpdate);
+      editor.off('update', handleUpdate);
+      scrollElement.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [editor, readOnly, scrollElement, updateFocusedEmptyBlock]);
 
   useEffect(() => {
     if (!editor || !scrollElement || readOnly) return;
@@ -688,10 +770,13 @@ export const BlockDocumentBlockControls: FC<
     [activeBlock, editor, generateBlockId],
   );
 
-  const turnActiveBlockInto = useCallback(
-    (createNode: BlockMenuItem['createNode']) => {
-      if (!editor || !activeBlock) return;
-      const node = getNodeAt(editor, activeBlock.pos);
+  const turnBlockInto = useCallback(
+    (
+      block: BlockControlState | null,
+      createNode: BlockMenuItem['createNode'],
+    ) => {
+      if (!editor || !block) return;
+      const node = getNodeAt(editor, block.pos);
       if (!node || isTitleNode(node)) return;
 
       const replacement = preserveTextInNode(
@@ -705,16 +790,37 @@ export const BlockDocumentBlockControls: FC<
         .focus()
         .insertContentAt(
           {
-            from: activeBlock.pos,
-            to: activeBlock.pos + node.nodeSize,
+            from: block.pos,
+            to: block.pos + node.nodeSize,
           },
           replacement,
         )
         .run();
+
+      suppressFocusedBlockMenuRef.current = true;
+      window.setTimeout(() => {
+        suppressFocusedBlockMenuRef.current = false;
+      }, 200);
       setHandleMenuOpen(false);
+      setBlockTypeMenuOpen(false);
       setActiveBlock(null);
+      setFocusedEmptyBlock(null);
     },
-    [activeBlock, editor, generateBlockId],
+    [editor, generateBlockId],
+  );
+
+  const turnActiveBlockInto = useCallback(
+    (createNode: BlockMenuItem['createNode']) => {
+      turnBlockInto(activeBlock, createNode);
+    },
+    [activeBlock, turnBlockInto],
+  );
+
+  const turnFocusedEmptyBlockInto = useCallback(
+    (createNode: BlockMenuItem['createNode']) => {
+      turnBlockInto(focusedEmptyBlock, createNode);
+    },
+    [focusedEmptyBlock, turnBlockInto],
   );
 
   const deleteActiveBlock = useCallback(() => {
@@ -759,6 +865,7 @@ export const BlockDocumentBlockControls: FC<
       event.preventDefault();
       return;
     }
+    setBlockTypeMenuOpen(false);
     setHandleMenuOpen((open) => !open);
   };
 
@@ -819,7 +926,10 @@ export const BlockDocumentBlockControls: FC<
     <DropdownMenu
       modal={false}
       open={insertMenuOpen === placement}
-      onOpenChange={(open) => setInsertMenuOpen(open ? placement : null)}
+      onOpenChange={(open) => {
+        setInsertMenuOpen(open ? placement : null);
+        if (open) setBlockTypeMenuOpen(false);
+      }}
     >
       <Tooltip>
         <TooltipTrigger asChild>
@@ -959,6 +1069,40 @@ export const BlockDocumentBlockControls: FC<
           }}
         />
       ) : null}
+      {focusedEmptyBlock ? (
+        <div
+          className="pointer-events-none absolute left-3 z-30 h-7 w-7 -translate-y-1/2"
+          style={{top: focusedEmptyBlock.top}}
+        >
+          <DropdownMenu
+            modal={false}
+            open={
+              blockTypeMenuOpen && !handleMenuOpen && insertMenuOpen == null
+            }
+            onOpenChange={setBlockTypeMenuOpen}
+          >
+            <DropdownMenuTrigger asChild>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none block h-full w-full"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="right"
+              className="w-60"
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onCloseAutoFocus={(event) => event.preventDefault()}
+            >
+              <DropdownMenuLabel>Select block type</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {renderBlockTypeMenuItems((item) =>
+                turnFocusedEmptyBlockInto(item.createNode),
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ) : null}
       {activeBlock ? (
         <div
           ref={controlsRef}
@@ -970,7 +1114,10 @@ export const BlockDocumentBlockControls: FC<
             <DropdownMenu
               modal={false}
               open={handleMenuOpen}
-              onOpenChange={setHandleMenuOpen}
+              onOpenChange={(open) => {
+                setHandleMenuOpen(open);
+                if (open) setBlockTypeMenuOpen(false);
+              }}
             >
               <Tooltip>
                 <TooltipTrigger asChild>
