@@ -305,7 +305,7 @@ function usesSqlroomsBridge(code: string) {
 }
 
 function usesAltair(code: string) {
-  return /\b(import\s+altair|from\s+altair\s+import)\b/.test(code);
+  return /\b(import\s+altair|from\s+altair(?:\.[\w_]+)*\s+import)\b/.test(code);
 }
 
 async function installMicropipRequirements(
@@ -333,16 +333,46 @@ function formatMicropipRequirement(requirement: PythonRequirementSpec) {
 }
 
 async function ensureAltair(pyodide: PyodideAPI) {
-  const hasAltair = pyodide.runPython(`
+  const packageStateJson = pyodide.runPython(`
+import json as __sqlrooms_json
 import importlib.util as __sqlrooms_importlib_util
-__sqlrooms_importlib_util.find_spec("altair") is not None
+__sqlrooms_json.dumps({
+    "altair": __sqlrooms_importlib_util.find_spec("altair") is not None,
+    "vega_datasets": __sqlrooms_importlib_util.find_spec("vega_datasets") is not None,
+})
 `);
-  if (hasAltair) return;
+  const packageState = JSON.parse(String(packageStateJson)) as Record<
+    string,
+    boolean
+  >;
+  const missingPackages = Object.entries(
+    packageState as Record<string, boolean>,
+  )
+    .filter(([, installed]) => !installed)
+    .map(([packageName]) => packageName);
 
-  await pyodide.loadPackage('micropip');
-  await pyodide.runPythonAsync(`
+  if (missingPackages.length) {
+    await pyodide.loadPackage('micropip');
+    pyodide.globals.set('__sqlrooms_altair_packages', missingPackages);
+    await pyodide.runPythonAsync(`
 import micropip as __sqlrooms_micropip
-await __sqlrooms_micropip.install("altair")
+await __sqlrooms_micropip.install(__sqlrooms_altair_packages.to_py())
+`);
+    pyodide.globals.delete('__sqlrooms_altair_packages');
+  }
+
+  pyodide.runPython(`
+import sys as __sqlrooms_sys
+import types as __sqlrooms_types
+
+if "altair.datasets" not in __sqlrooms_sys.modules:
+    import altair as __sqlrooms_altair
+    from vega_datasets import data as __sqlrooms_vega_data
+
+    __sqlrooms_altair_datasets = __sqlrooms_types.ModuleType("altair.datasets")
+    __sqlrooms_altair_datasets.data = __sqlrooms_vega_data
+    __sqlrooms_altair.datasets = __sqlrooms_altair_datasets
+    __sqlrooms_sys.modules["altair.datasets"] = __sqlrooms_altair_datasets
 `);
 }
 
