@@ -365,7 +365,7 @@ await __sqlrooms_micropip.install("altair")
 function bindInputs(pyodide: PyodideAPI, inputs: PythonCellInput[]) {
   for (const input of inputs) {
     if (input.kind === 'literal') {
-      pyodide.globals.set(input.name, input.value);
+      bindPythonGlobal(pyodide, input.name, input.value);
       continue;
     }
 

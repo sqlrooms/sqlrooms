@@ -282,7 +282,7 @@ async function runReadonlyPythonSql(query: string, maxRows?: number) {
   const arrowTable = await connector.query(
     wrapPythonReadonlyQuery(query, maxRows),
   );
-  const rows = arrowTableToJson(arrowTable);
+  const rows = arrowTableToPythonRows(arrowTable);
   return {
     columns: arrowTable.schema.fields.map((field) => field.name),
     rows,
@@ -295,6 +295,54 @@ function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
   const limit =
     maxRows === undefined ? '' : ` LIMIT ${Math.max(0, Math.floor(maxRows))}`;
   return `SELECT * FROM (${trimmedQuery}) AS sqlrooms_python_query${limit}`;
+}
+
+function arrowTableToPythonRows(table: {
+  toArray(): Array<Record<string, unknown>>;
+}): Record<string, unknown>[] {
+  return table
+    .toArray()
+    .map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+          key,
+          convertPythonBridgeValue(value),
+        ]),
+      ),
+    );
+}
+
+function convertPythonBridgeValue(value: unknown): unknown {
+  if (value == null) return null;
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (typeof value === 'bigint') {
+    if (value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER) {
+      return Number(value);
+    }
+    return String(value);
+  }
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+  if (Array.isArray(value)) {
+    return value.map(convertPythonBridgeValue);
+  }
+  if (typeof value === 'object') {
+    const jsonValue =
+      'toJSON' in value && typeof value.toJSON === 'function'
+        ? value.toJSON()
+        : undefined;
+    if (jsonValue !== undefined && jsonValue !== value) {
+      return convertPythonBridgeValue(jsonValue);
+    }
+  }
+  return String(value);
 }
 
 async function readPythonSchema(tableName?: string) {
