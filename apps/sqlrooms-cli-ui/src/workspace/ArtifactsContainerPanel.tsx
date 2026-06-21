@@ -129,7 +129,7 @@ function useCliArtifactWorkspaceActionState(): CliArtifactWorkspaceActions {
   );
 
   useEffect(() => {
-    if (!selectedArtifactId || selectedArtifactId === currentArtifactId) return;
+    if (selectedArtifactId === currentArtifactId) return;
     setCurrentArtifact(selectedArtifactId);
   }, [currentArtifactId, selectedArtifactId, setCurrentArtifact]);
 
