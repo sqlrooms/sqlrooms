@@ -9,6 +9,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
   ScrollArea,
   Tooltip,
   TooltipContent,
@@ -748,6 +751,7 @@ export const BlockDocumentBlockControls: FC<
   );
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const filterBlockIdRef = useRef<string | null>(null);
+  const dismissedSlashBlockIdRef = useRef<string | null>(null);
   const suppressHandleClickRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
@@ -881,6 +885,11 @@ export const BlockDocumentBlockControls: FC<
 
       if (text.startsWith('/')) {
         setFocusedEmptyBlock(null);
+        if (focusedBlockId === dismissedSlashBlockIdRef.current) {
+          setBlockTypeSearch(null);
+          setBlockTypeSearchMenuOpen(false);
+          return;
+        }
         setBlockTypeSearch({
           ...blockState,
           mode: 'slash',
@@ -913,6 +922,9 @@ export const BlockDocumentBlockControls: FC<
       setBlockTypeSearchMenuOpen(false);
       if (filterBlockId) {
         filterBlockIdRef.current = null;
+      }
+      if (focusedBlockId === dismissedSlashBlockIdRef.current) {
+        dismissedSlashBlockIdRef.current = null;
       }
       setFocusedEmptyBlock(
         isEmptyTextBlock(focusedBlock.node) ? blockState : null,
@@ -1166,6 +1178,12 @@ export const BlockDocumentBlockControls: FC<
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
+        if (blockTypeSearch.mode === 'slash') {
+          const node = getNodeAt(editor, blockTypeSearch.pos);
+          const nodeId = node?.attrs.id;
+          dismissedSlashBlockIdRef.current =
+            typeof nodeId === 'string' ? nodeId : null;
+        }
         setBlockTypeSearchMenuOpen(false);
         setBlockTypeSearch(null);
         setFocusedEmptyBlock(null);
@@ -1262,6 +1280,20 @@ export const BlockDocumentBlockControls: FC<
   const renderMenuItem = (
     item: BlockMenuItem,
     onSelect: () => void,
+  ) => (
+    <DropdownMenuItem
+      key={item.label}
+      className="h-9 gap-2 px-2 py-1.5"
+      onSelect={onSelect}
+    >
+      <item.icon className="h-4 w-4" />
+      <span className="truncate">{item.label}</span>
+    </DropdownMenuItem>
+  );
+
+  const renderBlockTypeSearchItem = (
+    item: BlockMenuItem,
+    onSelect: () => void,
     options?: {
       onPointerMove?: () => void;
       searchIndex?: number;
@@ -1270,18 +1302,21 @@ export const BlockDocumentBlockControls: FC<
   ) => (
     <Tooltip key={item.label}>
       <TooltipTrigger asChild>
-        <DropdownMenuItem
+        <button
+          type="button"
           className={cn(
-            'h-9 gap-2 px-2 py-1.5',
+            'hover:bg-accent hover:text-accent-foreground flex h-9 w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden',
+            'focus-visible:bg-accent focus-visible:text-accent-foreground',
             options?.selected && 'bg-accent text-accent-foreground',
           )}
           data-block-type-search-item={options?.searchIndex}
+          onClick={onSelect}
+          onMouseDown={(event) => event.preventDefault()}
           onPointerMove={options?.onPointerMove}
-          onSelect={onSelect}
         >
           <item.icon className="h-4 w-4" />
           <span className="truncate">{item.label}</span>
-        </DropdownMenuItem>
+        </button>
       </TooltipTrigger>
       <TooltipContent
         align="center"
@@ -1321,20 +1356,24 @@ export const BlockDocumentBlockControls: FC<
   ) =>
     items.length ? (
       <>
-        <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-medium">
+        <div className="text-muted-foreground px-2 py-1 text-xs font-medium">
           {label}
-        </DropdownMenuLabel>
+        </div>
         {items.map((item, itemIndex) => {
           const index = startIndex + itemIndex;
-          return renderMenuItem(item, () => handleBlockTypeSearchSelect(item), {
-            onPointerMove: () =>
-              setBlockTypeSearchSelection({
-                index,
-                key: blockTypeSearchSelectionKey,
-              }),
-            searchIndex: index,
-            selected: index === blockTypeSearchSelectedIndex,
-          });
+          return renderBlockTypeSearchItem(
+            item,
+            () => handleBlockTypeSearchSelect(item),
+            {
+              onPointerMove: () =>
+                setBlockTypeSearchSelection({
+                  index,
+                  key: blockTypeSearchSelectionKey,
+                }),
+              searchIndex: index,
+              selected: index === blockTypeSearchSelectedIndex,
+            },
+          );
         })}
       </>
     ) : null;
@@ -1348,7 +1387,7 @@ export const BlockDocumentBlockControls: FC<
           0,
         )}
         {filteredTextMenuItems.length && filteredMediaMenuItems.length ? (
-          <DropdownMenuSeparator className="my-1.5" />
+          <div className="bg-border my-1.5 h-px" />
         ) : null}
         {renderBlockTypeSearchMenuGroup(
           'Embeds',
@@ -1357,7 +1396,9 @@ export const BlockDocumentBlockControls: FC<
         )}
       </>
     ) : (
-      <DropdownMenuItem disabled>No matching block types</DropdownMenuItem>
+      <div className="text-muted-foreground px-2 py-1.5 text-sm">
+        No matching block types
+      </div>
     );
 
   const renderAddButton = () => (
@@ -1533,15 +1574,14 @@ export const BlockDocumentBlockControls: FC<
             className="pointer-events-none absolute z-30 h-px w-px"
             style={{top: blockTypeSearch.menuTop, left: blockTypeSearch.left}}
           >
-            <DropdownMenu
-              modal={false}
+            <Popover
               open={blockTypeSearchMenuOpen && !handleMenuOpen}
               onOpenChange={setBlockTypeSearchMenuOpen}
             >
-              <DropdownMenuTrigger asChild>
+              <PopoverAnchor asChild>
                 <span className="pointer-events-none block h-px w-px" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
+              </PopoverAnchor>
+              <PopoverContent
                 align="start"
                 side="bottom"
                 sideOffset={4}
@@ -1552,28 +1592,29 @@ export const BlockDocumentBlockControls: FC<
                   right: 8,
                   top: 8,
                 }}
-                className="flex w-72 flex-col overflow-hidden"
+                className="flex w-72 flex-col overflow-hidden p-1"
                 style={{
-                  maxHeight: `min(${BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT}px, calc(var(--radix-dropdown-menu-content-available-height) - ${BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN}px))`,
+                  maxHeight: `min(${BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT}px, calc(var(--radix-popover-content-available-height) - ${BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN}px))`,
                 }}
+                onOpenAutoFocus={(event) => event.preventDefault()}
                 onCloseAutoFocus={(event) => event.preventDefault()}
               >
-                <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
+                <div className="text-muted-foreground px-2 py-1 text-xs font-normal">
                   Block
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                </div>
+                <div className="bg-border -mx-1 my-1 h-px" />
                 <TooltipProvider delayDuration={300}>
                   <ScrollArea
                     className="min-h-0"
                     style={{
-                      height: `min(${blockTypeSearchListHeight}px, max(72px, calc(var(--radix-dropdown-menu-content-available-height) - 72px)))`,
+                      height: `min(${blockTypeSearchListHeight}px, max(72px, calc(var(--radix-popover-content-available-height) - 72px)))`,
                     }}
                   >
                     {renderSlashMenuItems()}
                   </ScrollArea>
                 </TooltipProvider>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </PopoverContent>
+            </Popover>
           </div>
         </>
       ) : null}
