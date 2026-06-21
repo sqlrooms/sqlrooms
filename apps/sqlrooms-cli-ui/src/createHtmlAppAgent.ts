@@ -174,8 +174,7 @@ function renameHtmlAppTitle(
     createHtmlAppRevisionMetadata(store, input, {
       title,
       isTitleOnly: true,
-      isInitialRevision:
-        app.revisions.length === 0 && !seededBaselineRevision,
+      isInitialRevision: app.revisions.length === 0 && !seededBaselineRevision,
     }),
   );
   const latestApp = store.getState().htmlApps.getApp(input.appId);
@@ -535,7 +534,10 @@ function isDefaultHtmlAppScaffold(
 ) {
   if (app.intent || app.entryHtmlPath !== '/index.html') return false;
   if (app.dependencies.length > 0) return false;
-  return areHtmlAppFilesEqual(app.files, createDefaultHtmlAppFiles(app.title));
+  if (areHtmlAppFilesEqual(app.files, createDefaultHtmlAppFiles(app.title))) {
+    return true;
+  }
+  return areDefaultHtmlAppScaffoldFiles(app.files);
 }
 
 function areHtmlAppFilesEqual(
@@ -546,6 +548,22 @@ function areHtmlAppFilesEqual(
   const rightPaths = Object.keys(right);
   if (leftPaths.length !== rightPaths.length) return false;
   return leftPaths.every((path) => left[path] === right[path]);
+}
+
+function areDefaultHtmlAppScaffoldFiles(files: Record<string, string>) {
+  const paths = Object.keys(files);
+  if (paths.length !== 1 || paths[0] !== '/index.html') return false;
+  const defaultFiles = createDefaultHtmlAppFiles();
+  return (
+    normalizeDefaultHtmlAppScaffold(files['/index.html'] ?? '') ===
+    normalizeDefaultHtmlAppScaffold(defaultFiles['/index.html'] ?? '')
+  );
+}
+
+function normalizeDefaultHtmlAppScaffold(html: string) {
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/, '<title></title>')
+    .replace(/<h1>[\s\S]*?<\/h1>/, '<h1></h1>');
 }
 
 function createHtmlAppRevisionMetadata(
