@@ -9,6 +9,7 @@ import type {RoomState} from './store-types';
 type PendingArtifactChatHandoff = {
   sourceSessionId: string;
   sourceArtifactId: string;
+  sourceUserMessageId?: string;
   target: ArtifactTargetChange;
   commandId: string;
 };
@@ -61,6 +62,16 @@ function getLastAssistantMessage(messages: UIMessage[]) {
   return undefined;
 }
 
+function getLastUserMessage(messages: UIMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (message?.role === 'user') {
+      return message;
+    }
+  }
+  return undefined;
+}
+
 export function createArtifactChatHandoffController(
   store: StoreApi<RoomState>,
 ) {
@@ -108,6 +119,9 @@ export function createArtifactChatHandoffController(
     pendingHandoffs.set(sourceSessionId, {
       sourceSessionId,
       sourceArtifactId,
+      sourceUserMessageId: getLastUserMessage(
+        nextState.ai.getSession(sourceSessionId)?.uiMessages ?? [],
+      )?.id,
       target: {
         ...target,
         title: targetArtifact.title,
@@ -149,6 +163,9 @@ export function createArtifactChatHandoffController(
 
     const assistantMessage = getLastAssistantMessage(messages);
     if (!assistantMessage) return;
+    if (getLastUserMessage(messages)?.id !== handoff.sourceUserMessageId) {
+      return;
+    }
 
     const targetSessionId = state.ai.forkSessionFromMessage({
       sourceSessionId: handoff.sourceSessionId,

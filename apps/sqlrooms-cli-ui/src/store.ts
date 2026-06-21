@@ -343,8 +343,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     },
     (set, get, store) => {
-      const artifactChatHandoff =
-        createArtifactChatHandoffController(store);
+      const artifactChatHandoff = createArtifactChatHandoffController(store);
       const getFirstDashboardArtifactId = () =>
         Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
@@ -539,7 +538,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
           createCommandProps: {
-            middleware: [artifactChatHandoff.commandMiddleware as any],
+            middleware: [artifactChatHandoff.commandMiddleware],
           },
           createDbProps: {
             duckDb: {
