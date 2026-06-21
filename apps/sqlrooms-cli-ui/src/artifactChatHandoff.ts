@@ -101,6 +101,9 @@ export function createArtifactChatHandoffController(
     const nextState = store.getState();
     const targetArtifact = nextState.artifacts.getArtifact(target.artifactId);
     if (!targetArtifact) return result;
+    if (nextState.artifacts.config.currentArtifactId !== target.artifactId) {
+      return result;
+    }
 
     pendingHandoff = {
       sourceSessionId,
@@ -132,6 +135,12 @@ export function createArtifactChatHandoffController(
       handoff.target.artifactId,
     );
     if (!targetArtifact) return;
+    if (
+      state.artifactAi.getSessionArtifactId(handoff.sourceSessionId) !==
+      handoff.sourceArtifactId
+    ) {
+      return;
+    }
     if (
       state.artifacts.config.currentArtifactId !== handoff.target.artifactId
     ) {
