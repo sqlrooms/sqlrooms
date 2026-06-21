@@ -4,7 +4,11 @@ import {tool} from 'ai';
 import {ToolLoopAgent, stepCountIs} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
-import type {HtmlAppDependency, HtmlAppRevision} from '@sqlrooms/app-runtime';
+import {
+  createDefaultHtmlAppFiles,
+  type HtmlAppDependency,
+  type HtmlAppRevision,
+} from '@sqlrooms/app-runtime';
 import type {RoomState} from './store-types';
 
 const HtmlAppDependencySchema = z.object({
@@ -165,8 +169,7 @@ function renameHtmlAppTitle(
     input.appId,
     {
       title,
-      ...(renamedFiles ? {files: renamedFiles} : {}),
-      diagnostics: [],
+      ...(renamedFiles ? {files: renamedFiles, diagnostics: []} : {}),
     },
     createHtmlAppRevisionMetadata(store, input, {
       title,
@@ -175,6 +178,7 @@ function renameHtmlAppTitle(
         app.revisions.length === 0 && !seededBaselineRevision,
     }),
   );
+  const latestApp = store.getState().htmlApps.getApp(input.appId);
 
   return {
     ok: true,
@@ -183,7 +187,7 @@ function renameHtmlAppTitle(
     filePaths: renamedFiles
       ? Object.keys(renamedFiles)
       : Object.keys(app.files),
-    diagnostics: app.diagnostics,
+    diagnostics: latestApp?.diagnostics ?? app.diagnostics,
     diagnosticsSummary:
       'Title updated without regenerating app source or running diagnostics.',
     status: 'renamed_title_only',
@@ -501,7 +505,13 @@ function seedHtmlAppBaselineRevision(
   store: StoreApi<RoomState>,
   existingApp: ReturnType<RoomState['htmlApps']['getApp']>,
 ) {
-  if (!existingApp || existingApp.revisions.length > 0) return undefined;
+  if (
+    !existingApp ||
+    existingApp.revisions.length > 0 ||
+    isDefaultHtmlAppScaffold(existingApp)
+  ) {
+    return undefined;
+  }
   return store.getState().htmlApps.commitAppRevision(
     existingApp.id,
     {},
@@ -514,6 +524,24 @@ function seedHtmlAppBaselineRevision(
       sourcePrompt: existingApp.intent,
     },
   );
+}
+
+function isDefaultHtmlAppScaffold(
+  app: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
+) {
+  if (app.intent || app.entryHtmlPath !== '/index.html') return false;
+  if (app.dependencies.length > 0) return false;
+  return areHtmlAppFilesEqual(app.files, createDefaultHtmlAppFiles(app.title));
+}
+
+function areHtmlAppFilesEqual(
+  left: Record<string, string>,
+  right: Record<string, string>,
+) {
+  const leftPaths = Object.keys(left);
+  const rightPaths = Object.keys(right);
+  if (leftPaths.length !== rightPaths.length) return false;
+  return leftPaths.every((path) => left[path] === right[path]);
 }
 
 function createHtmlAppRevisionMetadata(
