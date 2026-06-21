@@ -89,7 +89,7 @@ export function CliWorkspaceTopbar() {
             <EditableText
               value={currentArtifact.title}
               onChange={handleArtifactTitleChange}
-              placeholder="Untitled artifact"
+              placeholder="Untitled item"
               selectOnFocus
               className="text-foreground hover:bg-accent h-10 max-w-[20rem] min-w-0 border-transparent text-left text-2xl leading-none font-bold shadow-none ring-0 focus-visible:ring-1"
             />
@@ -106,7 +106,7 @@ export function CliWorkspaceTopbar() {
                 size="icon"
                 className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-8"
                 disabled={!currentArtifact}
-                aria-label="Delete artifact"
+                aria-label="Delete item"
                 onClick={() => setDeleteConfirmOpen(true)}
               >
                 <Trash2Icon className="h-4 w-4" aria-hidden />
@@ -114,18 +114,18 @@ export function CliWorkspaceTopbar() {
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            {currentArtifact ? 'Delete artifact' : 'No artifact selected'}
+            {currentArtifact ? 'Delete item' : 'No item selected'}
           </TooltipContent>
         </Tooltip>
         <Button
           type="button"
           size="sm"
           className="h-8 gap-1.5 px-2 sm:px-3"
-          aria-label="New artifact"
+          aria-label="New"
           onClick={() => setShowArtifactChooser(true)}
         >
           <Plus className="h-4 w-4" aria-hidden />
-          <span className="hidden sm:inline">New artifact</span>
+          <span className="hidden sm:inline">New</span>
         </Button>
       </div>
       <DeleteCurrentArtifactDialog
@@ -153,11 +153,10 @@ function DeleteCurrentArtifactDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Delete artifact</DialogTitle>
+          <DialogTitle>Delete item</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete &ldquo;
-            {artifactTitle ?? 'this artifact'}&rdquo;? This action cannot be
-            undone.
+            {artifactTitle ?? 'this item'}&rdquo;? This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

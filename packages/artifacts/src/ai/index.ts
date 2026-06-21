@@ -3,6 +3,10 @@ export {
   createArtifactContextAiTools,
 } from './artifactContextTools';
 export type {
+  ArtifactTargetChange,
+  ArtifactTargetChangeData,
+} from './artifactTargetChange';
+export type {
   ArtifactContextAiTools,
   ArtifactContextArtifactSummary,
   ArtifactContextReadResult,
@@ -36,6 +40,7 @@ export {
   cleanupAiSessionArtifacts,
   getAiSessionGroupsByArtifact,
   getAiSessionIdsForArtifact,
+  getEmptyAiSessionIdForArtifact,
   getLatestAiSessionIdForArtifact,
   getOwningArtifactRunContextItems,
   getRunningAiSessionCountsByArtifact,
@@ -46,7 +51,9 @@ export type {
   ArtifactAiSessionFilterOptions,
   ArtifactAiSessionGroupsOptions,
   ArtifactAiSessionOwnership,
+  ArtifactAiSessionWithContent,
   ArtifactAiSessionsForArtifactOptions,
   CleanupAiSessionArtifactsOptions,
+  EmptyArtifactAiSessionsForArtifactOptions,
   GetOwningArtifactRunContextItemsOptions,
 } from './artifactAiSessionHelpers';

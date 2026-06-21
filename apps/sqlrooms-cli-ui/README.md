@@ -2,7 +2,7 @@
 
 This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms-cli`).
 
-In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server (default `http://localhost:4173`).
+In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
@@ -18,16 +18,15 @@ pnpm dev cli
 
 This starts:
 
-- the Python API server on `http://127.0.0.1:4173` without serving static UI
-- the Vite UI on `http://localhost:4174` (proxying `/api` and `/config.json` to 4173)
+- the Python API server on `http://127.0.0.1:4273` without serving static UI, or the next free port
+- the Vite UI on `http://localhost:4174`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
+- a per-session dev database named after the selected UI port, for example `sqlrooms-cli-4174.db`
 
-If you hit `address already in use`, pass different ports to the Python server:
+If you want fixed ports, pass them to the Python server:
 
 ```bash
 pnpm dev cli -- --port 4176 --ws-port 4002
 ```
-
-Then also update the Vite proxy target in `vite.config.ts` (or run Vite with a different proxy setup).
 
 ## Dev mode (separate terminals)
 
@@ -43,6 +42,10 @@ Terminal B (UI):
 ```bash
 pnpm --filter sqlrooms-cli-app dev -- --host --port 4174
 ```
+
+The Python package dev helper uses API port `4173` by default to match the
+Vite proxy. If you pass a different Python API port, also set
+`SQLROOMS_CLI_API_PROXY_TARGET` when starting Vite.
 
 ## Build the bundled UI (for the Python wheel)
 
@@ -78,6 +81,9 @@ SQL queries, and Markdown documents.
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
 dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
 a crossfilter selection; charts without a group are independent.
+Agent-created blocks can persist an `intent` string describing the purpose they
+were created to serve, which helps later edits distinguish durable intent from
+raw model input.
 
 Hosted dashboards are stored as direct stateful blocks keyed by their block
 instance id. Each hosted dashboard keeps its own Mosaic dashboard state and

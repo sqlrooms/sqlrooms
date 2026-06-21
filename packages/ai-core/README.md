@@ -78,16 +78,28 @@ export function AiPanel() {
       <Chat.PromptSuggestions>
         <Chat.PromptSuggestions.Item text="What trends should I investigate first?" />
       </Chat.PromptSuggestions>
-      <Chat.Composer placeholder="Ask a question" />
+      <Chat.Composer
+        placeholder="Ask a question"
+        topActions={<Chat.PromptSuggestions.VisibilityToggle />}
+      />
     </Chat>
   );
 }
 ```
 
+Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
+the prompt's top row, right-aligned beside context selectors.
+
 `Chat.Header` and `Chat.History` can delegate session creation to the host app
 with `onCreateSession`. `Chat.History` also accepts `filterSession` and
 `emptyLabel` so apps can present scoped histories without changing the generic
 AI session schema.
+
+`createAiSlice({onChatFinish})` lets host apps observe a non-aborted turn after
+the completed messages have been persisted and the analysis has ended. Use this
+for app-owned follow-up behavior, such as forking a completed chat into a new
+workspace target, while keeping the generic AI slice unaware of app-specific
+state.
 
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's

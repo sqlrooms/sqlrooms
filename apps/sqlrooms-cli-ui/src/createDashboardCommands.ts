@@ -1,4 +1,7 @@
-import type {RoomCommand} from '@sqlrooms/room-shell';
+import type {
+  RoomCommand,
+  RoomCommandExecutionContext,
+} from '@sqlrooms/room-shell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {z} from 'zod';
 
@@ -53,6 +56,12 @@ function getUniqueArtifactTitle(state: RoomState, baseTitle: string) {
   );
 }
 
+function shouldCreateInitialArtifactChat(
+  context: RoomCommandExecutionContext<RoomState>,
+) {
+  return !['ai', 'mcp'].includes(context.invocation.surface);
+}
+
 function createArtifactCommand(
   artifactType: CliArtifactType,
   group: string,
@@ -71,7 +80,8 @@ function createArtifactCommand(
       idempotent: false,
       riskLevel: 'low',
     },
-    execute: ({getState}, input) => {
+    execute: (context, input) => {
+      const {getState} = context;
       const {title} = (input as CreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
       const uniqueTitle = getUniqueArtifactTitle(state, title ?? group);
@@ -93,11 +103,23 @@ function createArtifactCommand(
         state.pivot.ensurePivot(artifactId, {title: uniqueTitle});
       }
       state.artifacts.setCurrentArtifact(artifactId);
+      if (shouldCreateInitialArtifactChat(context)) {
+        state.artifactAi.createArtifactScopedSession();
+      }
       return {
         success: true,
         commandId: id,
         message: `Created ${group.toLowerCase()} artifact "${artifactId}".`,
-        data: {artifactId},
+        data: {
+          artifactId,
+          artifactTargetChange: {
+            artifactId,
+            artifactType,
+            title: uniqueTitle,
+            change: 'created',
+            shouldContinueChat: true,
+          },
+        },
       };
     },
   };
@@ -122,19 +144,36 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
       idempotent: false,
       riskLevel: 'low',
     },
-    execute: ({getState}, input) => {
-      const {title, layoutType} = input as DashboardCreateArtifactCommandInput;
+    execute: (context, input) => {
+      const {getState} = context;
+      const {title, layoutType} =
+        (input as DashboardCreateArtifactCommandInput | undefined) ?? {};
       const state = getState();
       const artifactId = state.dashboard.createDashboardArtifact(
         getUniqueArtifactTitle(state, title ?? 'Dashboard'),
         layoutType,
       );
       state.artifacts.setCurrentArtifact(artifactId);
+      if (shouldCreateInitialArtifactChat(context)) {
+        state.artifactAi.createArtifactScopedSession();
+      }
       return {
         success: true,
         commandId: 'dashboard.create-artifact',
         message: `Created dashboard artifact "${artifactId}".`,
-        data: {artifactId},
+        data: {
+          artifactId,
+          artifactTargetChange: {
+            artifactId,
+            artifactType: 'dashboard',
+            title:
+              state.artifacts.getArtifact(artifactId)?.title ??
+              title ??
+              'Dashboard',
+            change: 'created',
+            shouldContinueChat: true,
+          },
+        },
       };
     },
   };
@@ -146,15 +185,15 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
 
 export function createDashboardCommands(): RoomCommand<RoomState>[] {
   return [
-    // Universal select (works for any artifact type)
+    // Universal select (works for any workspace item type)
     {
       id: 'artifact.select',
-      name: 'Select artifact',
-      description: 'Switch to an existing artifact by ID',
-      group: 'Artifacts',
-      keywords: ['artifact', 'select', 'switch'],
+      name: 'Select item',
+      description: 'Switch to an existing workspace item by ID',
+      group: 'Workspace',
+      keywords: ['item', 'workspace', 'select', 'switch'],
       inputSchema: SelectArtifactCommandInput,
-      inputDescription: 'Provide the artifact ID.',
+      inputDescription: 'Provide the item ID.',
       metadata: {
         readOnly: false,
         idempotent: true,
@@ -206,6 +245,16 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
           success: true,
           commandId: 'artifact.select',
           message: `Selected artifact "${artifactId}".`,
+          data: {
+            artifactId,
+            artifactTargetChange: {
+              artifactId,
+              artifactType: artifact.type,
+              title: artifact.title,
+              change: 'selected',
+              shouldContinueChat: true,
+            },
+          },
         };
       },
     },

@@ -356,6 +356,7 @@ dashboard slice.
 including chart tools, a Data Table Explorer panel tool, and an optional
 exploratory `dashboard_agent`. Client apps supply small adapters that map
 Mosaic's generic dashboard operations to their store and table metadata.
+Agent tools use `intent` for the natural-language objective they should satisfy.
 
 ```ts
 import {
@@ -401,6 +402,12 @@ const dashboardTools = createDashboardAiTools({
 });
 ```
 
+Dashboard chart tools create new chart panels by default. When the user asks to
+edit an existing chart, pass that panel's `panelId` to the same chart tool; the
+tool validates that the target is a chart panel and updates its config in place.
+If the tool call omits `title`, updates preserve the panel's existing title
+instead of renaming it to the default chart title.
+
 Host tools can be added with `extraTools`; they must not reuse built-in
 dashboard tool keys. Register geospatial map tools under `MAP_TOOL_KEY` so the
 dashboard prompts and tool registration stay aligned. When host tools need
@@ -411,6 +418,8 @@ Worksheet agents also accept host tools through `extraTools`. Worksheet extra
 tool factories receive the active `worksheetId` alongside the worksheet and
 database adapters, so host apps can add worksheet-scoped tools such as embedded
 stateful blocks without guessing which worksheet the sub-agent is editing.
+Worksheet block-container tools propagate optional `intent` onto the created
+block when the host adapter persists block document state.
 
 ### Box Plot Chart Type
 

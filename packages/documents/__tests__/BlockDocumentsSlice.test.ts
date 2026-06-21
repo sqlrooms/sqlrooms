@@ -108,6 +108,32 @@ describe('BlockDocumentsSlice', () => {
     ).toEqual([{id: 'block-1', type: 'heading', level: 2, text: 'Original'}]);
   });
 
+  it('round-trips block intent through document nodes', () => {
+    const block: BlockDocumentBlockType = {
+      id: 'chart',
+      type: 'chart',
+      intent: 'Compare regional revenue in the executive summary.',
+      tableName: 'sales',
+      config: {chartType: 'histogram', settings: {field: 'revenue'}},
+      caption: 'Revenue',
+    };
+
+    expect(blockDocumentBlockToNode(block)).toMatchObject({
+      type: 'blockDocumentChart',
+      attrs: {
+        id: 'chart',
+        intent: 'Compare regional revenue in the executive summary.',
+      },
+    });
+
+    expect(
+      blockDocumentContentToBlocks({
+        type: 'doc',
+        content: [blockDocumentBlockToNode(block)],
+      }),
+    ).toEqual([block]);
+  });
+
   it('appends, inserts, updates, removes, and moves top-level blocks', () => {
     const store = createTestStore();
 

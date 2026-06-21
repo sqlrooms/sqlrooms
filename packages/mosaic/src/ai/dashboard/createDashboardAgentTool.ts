@@ -13,6 +13,7 @@ import {createDashboardAiAdapter} from './createDashboardAiAdapter';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {DASHBOARD_CHART_TOOL_PREFIX, KnownDashboardTools} from './constants';
+import {AgentIntentSchemaFields} from '../agentIntent';
 
 function getDashboardAgentInstructions<TState>(
   options: CreateDashboardAgentToolOptions<TState>,
@@ -59,8 +60,9 @@ ${chartToolsInstructions}
 ### Direct Requests
 When user provides specific instructions:
 1. Parse intent -> identify panel type
-2. Call appropriate tool with settings
-3. Done
+2. If the user asks to change, update, edit, replace, or fix an existing panel, call ${KnownDashboardTools.list_dashboard_panels} first and pass the target panelId to the appropriate chart or map tool.
+3. Call appropriate tool with settings
+4. Done
 
 ### Exploratory Requests
 When user asks to discover insights:
@@ -95,6 +97,7 @@ When user asks to discover insights:
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Validate columns:** Query tools will validate column existence and types
+- **Update existing panels:** Chart tools accept panelId. Pass panelId when the user wants to modify an existing chart; omit it only when creating a new panel.
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach`;
 }
 
@@ -102,9 +105,7 @@ const DashboardAgentInputSchema = z.object({
   reasoning: z
     .string()
     .describe('Reasoning for why the dashboard agent is being called'),
-  prompt: z
-    .string()
-    .describe('The exploratory data analysis prompt for the agent'),
+  ...AgentIntentSchemaFields,
   tableName: z
     .string()
     .optional()
@@ -158,17 +159,18 @@ This agent:
 
 REQUIRED PARAMETERS:
 - dashboardId: The ID of the dashboard to populate
-- prompt: What insights, patterns, or specific charts to create
+- intent: What insights, patterns, or specific charts to create
 
 OPTIONAL PARAMETERS:
 - tableName: The dataset to analyze. If omitted, the dashboard's selected table is used.
 
-The agent will explore the data and create 3-5 panels showing different aspects based on the prompt.
+The agent will explore the data and create 3-5 panels showing different aspects based on the intent.
 
 IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: DashboardAgentInputSchema,
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
-      const {prompt, dashboardId, maxSteps, temperature} = params;
+      const {dashboardId, maxSteps, temperature} = params;
+      const {intent} = params;
 
       const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
 
@@ -212,7 +214,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt,
+          prompt: intent,
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,

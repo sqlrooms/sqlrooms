@@ -7,15 +7,13 @@ Launch the SQLRooms AI example locally with a DuckDB websocket backend and persi
 ```bash
 # From the repo root
 uvx sqlrooms \
-  ./sqlrooms.db \
-  --ws-port 4000 \
-  --port 4173
+  ./sqlrooms.db
 ```
 
 What happens:
 
-- Starts the DuckDB websocket backend (from `sqlrooms-server`) on `ws://localhost:4000`.
-- Serves the AI example UI on `http://localhost:4173` and opens your browser (disable with `--no-open-browser`).
+- Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.
+- Serves the AI example UI on `http://localhost:4173`, or the next free port, and opens your browser (disable with `--no-open-browser`).
 - Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
@@ -23,7 +21,7 @@ What happens:
 
 - `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
 - `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
-- `--host` / `--port`: HTTP host/port for the UI (default `127.0.0.1:4173`).
+- `--host` / `--port`: HTTP host/port for the UI. If `--port` is omitted, `4173` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
@@ -188,8 +186,11 @@ pnpm --filter sqlrooms-cli-app build
 pnpm dev cli
 ```
 
-This starts the Python API server on `http://127.0.0.1:4173` with `--no-ui`
-and the Vite UI on `http://localhost:4174`.
+This starts the Python API server on `http://127.0.0.1:4273` with `--no-ui`
+and the Vite UI on `http://localhost:4174`. If those ports are busy, the dev
+script selects the next free API and UI ports from separate ranges and points
+the Vite proxy at the selected API port. The auto-created dev database is named
+after the selected UI port, for example `sqlrooms-cli-4174.db`.
 
 3. Run the Python API server on its own (optional):
 

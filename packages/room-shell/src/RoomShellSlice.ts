@@ -57,9 +57,18 @@ export type RoomShellSliceConfig = BaseRoomConfig;
 
 export type RoomShellStore = StoreApi<RoomShellSliceState>;
 
+/**
+ * Progress, status, and optional failure details for a room-level task.
+ */
 export type TaskProgress = {
+  /** Optional task completion percentage. */
   progress?: number | undefined;
+  /** Required status message shown while the task is active. */
   message: string;
+  /** Optional concise error message when the task fails. */
+  error?: string | undefined;
+  /** Optional detailed diagnostic text for task failures. */
+  errorDetails?: string | undefined;
 };
 
 export type RoomShellSliceState = {
@@ -183,6 +192,24 @@ const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 const ROOM_SHELL_COMMAND_OWNER = '@sqlrooms/room-shell';
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return 'An unknown error occurred.';
+}
+
+function getErrorDetails(error: unknown): string | undefined {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'details' in error &&
+    typeof error.details === 'string'
+  ) {
+    return error.details;
+  }
+  return undefined;
+}
+
 const RoomSetTitleCommandInput = z.object({
   title: z.string().min(1).describe('Room title.'),
 });
@@ -291,7 +318,17 @@ export function createRoomShellSlice(
               message: 'Establishing database connection…',
               progress: undefined,
             });
-            await get().db.initialize();
+            try {
+              await get().db.initialize();
+            } catch (error) {
+              setTaskProgress(INIT_DB_TASK, {
+                message: 'Database connection failed',
+                error: getErrorMessage(error),
+                errorDetails: getErrorDetails(error),
+                progress: undefined,
+              });
+              throw error;
+            }
             setTaskProgress(INIT_DB_TASK, undefined);
 
             setTaskProgress(INIT_ROOM_TASK, {

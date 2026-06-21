@@ -8,7 +8,15 @@ import {jest} from '@jest/globals';
 import type {UIMessage} from 'ai';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
-import {withRunContextTools} from '../src/chatTransport';
+import {
+  createRemoteChatTransportFactory,
+  withRunContextTools,
+} from '../src/chatTransport';
+import {
+  CHAT_REQUEST_ERROR_PART_TYPE,
+  getChatRequestErrorMessage,
+} from '../src/chatTurns';
+import {sanitizeMessagesForLLM} from '../src/utils';
 
 type TestStoreState = AiSliceState & {
   aiSettings: {
@@ -77,6 +85,192 @@ function createTestStore(options?: {
 }
 
 describe('AiSlice model selection', () => {
+  it('persists chat request errors when the failed prompt has not synced to the store yet', () => {
+    const store = createTestStore();
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    };
+
+    store
+      .getState()
+      .ai.onChatError('session-1', new TypeError('Failed to fetch'), [
+        userMessage,
+      ]);
+
+    const session = store.getState().ai.config.sessions[0];
+    const messages = session?.uiMessages as UIMessage[];
+    expect(messages).toHaveLength(2);
+    expect(messages[0]).toMatchObject({
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    });
+    expect(getChatRequestErrorMessage(messages[0])).toEqual({
+      error: 'Failed to fetch',
+    });
+    expect(messages[1]).toMatchObject({
+      role: 'assistant',
+      parts: [
+        {
+          type: CHAT_REQUEST_ERROR_PART_TYPE,
+          data: {error: 'Failed to fetch'},
+        },
+      ],
+    });
+    expect(session?.isRunning).toBe(false);
+    expect(session?.messagesRevision).toBe(1);
+
+    store.getState().ai.setSessionUiMessages('session-1', [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ]);
+
+    const messagesAfterStaleSync = store.getState().ai.config.sessions[0]
+      ?.uiMessages as UIMessage[];
+    expect(messagesAfterStaleSync).toHaveLength(2);
+    expect(getChatRequestErrorMessage(messagesAfterStaleSync[0])).toEqual({
+      error: 'Failed to fetch',
+    });
+    expect(messagesAfterStaleSync[1]?.parts[0]).toMatchObject({
+      type: CHAT_REQUEST_ERROR_PART_TYPE,
+      data: {error: 'Failed to fetch'},
+    });
+  });
+
+  it('uses fallback chat messages when the store has an older same-length snapshot', () => {
+    const store = createTestStore();
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    };
+    const staleAssistantMessage: UIMessage = {
+      id: 'assistant-1',
+      role: 'assistant',
+      parts: [{type: 'text', text: 'old'}],
+    };
+    const freshAssistantMessage: UIMessage = {
+      id: 'assistant-1',
+      role: 'assistant',
+      parts: [{type: 'text', text: 'new'}],
+    };
+
+    store
+      .getState()
+      .ai.setSessionUiMessages('session-1', [
+        userMessage,
+        staleAssistantMessage,
+      ]);
+
+    store
+      .getState()
+      .ai.onChatError('session-1', new TypeError('Failed to fetch'), [
+        userMessage,
+        freshAssistantMessage,
+      ]);
+
+    const session = store.getState().ai.config.sessions[0];
+    const messages = session?.uiMessages as UIMessage[];
+    expect(messages).toHaveLength(3);
+    expect(messages[1]).toMatchObject({
+      id: 'assistant-1',
+      role: 'assistant',
+      parts: [{type: 'text', text: 'new'}],
+    });
+    expect(getChatRequestErrorMessage(messages[0])).toEqual({
+      error: 'Failed to fetch',
+    });
+  });
+
+  it('does not replay chat error marker messages to the model', () => {
+    const messages = sanitizeMessagesForLLM([
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+      {
+        id: 'assistant-error',
+        role: 'assistant',
+        parts: [
+          {
+            type: CHAT_REQUEST_ERROR_PART_TYPE,
+            data: {error: 'Failed to fetch'},
+          },
+        ],
+      },
+    ]);
+
+    expect(messages).toEqual([
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ]);
+  });
+
+  it('strips chat error marker messages from remote request bodies', async () => {
+    const store = createTestStore();
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    };
+    const errorMessage: UIMessage = {
+      id: 'assistant-error',
+      role: 'assistant',
+      parts: [
+        {
+          type: CHAT_REQUEST_ERROR_PART_TYPE,
+          data: {error: 'Failed to fetch'},
+        },
+      ],
+    };
+    const previousFetch = globalThis.fetch;
+    const fetchMock = jest.fn<typeof fetch>(async () => {
+      return new Response(new ReadableStream(), {status: 200});
+    });
+    globalThis.fetch = fetchMock;
+
+    try {
+      const transport = createRemoteChatTransportFactory({
+        store,
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        sessionId: 'session-1',
+        getInstructions: () => 'remote instructions',
+      })('https://example.test/api/chat');
+
+      await transport.sendMessages({
+        trigger: 'submit-message',
+        chatId: 'session-1',
+        messageId: undefined,
+        messages: [userMessage, errorMessage],
+        abortSignal: undefined,
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      const body = JSON.parse(init.body as string) as Record<string, unknown>;
+
+      expect(body.messages).toEqual([userMessage]);
+      expect(body).toMatchObject({
+        modelProvider: 'openai',
+        model: 'shared-model',
+        instructions: 'remote instructions',
+        maxSteps: 50,
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
   it('does not keep a phantom current session when initialized with no sessions', () => {
     const store = createStore<AiSliceState>((set, get, store) =>
       createAiSlice({

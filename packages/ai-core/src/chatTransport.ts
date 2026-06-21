@@ -1,4 +1,5 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import {createId} from '@paralleldrive/cuid2';
 import {
   setAiRunContextPrimaryItem,
   type AiRunContext,
@@ -21,7 +22,11 @@ import {
 } from 'ai';
 import {produce} from 'immer';
 import {TOOL_CALL_CANCELLED} from './constants';
-import {setChatRequestErrorMessage} from './chatTurns';
+import {
+  CHAT_REQUEST_ERROR_PART_TYPE,
+  createChatRequestErrorPart,
+  setChatRequestErrorMessage,
+} from './chatTurns';
 import type {
   AiSliceStateForTransport,
   AiToolExecutionContext,
@@ -521,8 +526,14 @@ export function createRemoteChatTransportFactory(params: {
         typeof parsed === 'object' && parsed !== null
           ? (parsed as Record<string, unknown>)
           : {};
+      const messages = Array.isArray(parsedObj.messages)
+        ? sanitizeMessagesForLLM(
+            fixIncompleteToolCalls(parsedObj.messages as UIMessage[]),
+          )
+        : [];
       const enhancedBody = {
         ...parsedObj,
+        messages,
         modelProvider,
         model,
         instructions: getInstructions(),
@@ -554,10 +565,40 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
+function selectErrorSourceMessages({
+  sessionMessages,
+  fallbackMessages,
+}: {
+  sessionMessages: UIMessage[];
+  fallbackMessages?: UIMessage[];
+}): UIMessage[] {
+  if (fallbackMessages && fallbackMessages.length > 0) {
+    return fallbackMessages;
+  }
+  return sessionMessages;
+}
+
+function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {
+  return Boolean(
+    message?.role === 'assistant' &&
+    message.parts?.some((part) => part.type === CHAT_REQUEST_ERROR_PART_TYPE),
+  );
+}
+
+function createChatRequestErrorMessage(error: string): UIMessage {
+  return {
+    id: createId(),
+    role: 'assistant',
+    parts: [createChatRequestErrorPart({error})],
+  };
+}
+
 export function createChatHandlers({
   store,
+  onChatFinish,
 }: {
   store: StoreApi<AiSliceStateForTransport>;
+  onChatFinish?: (args: {sessionId: string; messages: UIMessage[]}) => void;
 }) {
   return {
     onChatFinish: ({
@@ -647,13 +688,18 @@ export function createChatHandlers({
         if (shouldEndAnalysis(completedMessages)) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
+          onChatFinish?.({sessionId, messages: completedMessages});
         }
       } catch (err) {
         console.error('onChatFinish error:', err);
         throw err;
       }
     },
-    onChatError: (sessionId: string, error: unknown) => {
+    onChatError: (
+      sessionId: string,
+      error: unknown,
+      fallbackMessages?: UIMessage[],
+    ) => {
       try {
         consumeSessionTokenUsage(sessionId);
         let errMsg = getErrorMessageForDisplay(error);
@@ -681,21 +727,28 @@ export function createChatHandlers({
             if (targetSession) {
               const existingMessages = (targetSession.uiMessages ||
                 []) as UIMessage[];
-              const completedMessages =
-                fixIncompleteToolCalls(existingMessages);
+              const sourceMessages = selectErrorSourceMessages({
+                sessionMessages: existingMessages,
+                fallbackMessages,
+              });
+              const completedMessages = fixIncompleteToolCalls(sourceMessages);
               writeToolTimingsToMetadata(completedMessages, toolTimings);
-              targetSession.uiMessages =
-                completedMessages as ChatSessionSchema['uiMessages'];
-              writeAgentDebugStateToSession(targetSession, currentState);
 
-              const uiMessages = targetSession.uiMessages as UIMessage[];
-              const lastUserMessage = uiMessages
+              const lastUserMessage = completedMessages
                 .filter((msg) => msg.role === 'user')
                 .slice(-1)[0];
 
               if (lastUserMessage) {
                 setChatRequestErrorMessage(lastUserMessage, {error: errMsg});
               }
+
+              if (!hasChatRequestErrorPart(completedMessages.at(-1))) {
+                completedMessages.push(createChatRequestErrorMessage(errMsg));
+              }
+
+              targetSession.uiMessages =
+                completedMessages as ChatSessionSchema['uiMessages'];
+              writeAgentDebugStateToSession(targetSession, currentState);
             }
           }),
         );

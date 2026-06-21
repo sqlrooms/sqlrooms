@@ -266,6 +266,45 @@ describe('html-app helpers', () => {
     expect(redone?.app.files).toEqual({'/index.html': '<h1>Second</h1>'});
   });
 
+  it('snapshots capabilities when navigating revisions', () => {
+    const restricted = commitHtmlAppRevisionState(
+      createAppState({
+        requestedCapabilities: ['query'],
+        grantedCapabilities: ['query'],
+      }),
+      {
+        files: {'/index.html': '<h1>Restricted</h1>'},
+        requestedCapabilities: [],
+        grantedCapabilities: [],
+      },
+      {revisionId: 'rev-1', name: 'Restricted version', createdAt: 10},
+    );
+    const queryEnabled = commitHtmlAppRevisionState(
+      restricted.app,
+      {
+        files: {'/index.html': '<h1>Query</h1>'},
+        requestedCapabilities: ['query'],
+        grantedCapabilities: ['query'],
+      },
+      {revisionId: 'rev-2', name: 'Query version', createdAt: 20},
+    );
+
+    const undone = undoHtmlAppRevisionState(queryEnabled.app);
+    expect(undone?.app.requestedCapabilities).toEqual([]);
+    expect(undone?.app.grantedCapabilities).toEqual([]);
+
+    const redone = redoHtmlAppRevisionState(undone!.app);
+    expect(redone?.app.requestedCapabilities).toEqual(['query']);
+    expect(redone?.app.grantedCapabilities).toEqual(['query']);
+
+    const restored = restoreHtmlAppRevisionState(redone!.app, 'rev-1', {
+      revisionId: 'rev-restore',
+      createdAt: 30,
+    });
+    expect(restored?.app.requestedCapabilities).toEqual([]);
+    expect(restored?.app.grantedCapabilities).toEqual([]);
+  });
+
   it('prunes discarded redo revisions when committing from an undone revision', () => {
     const first = commitHtmlAppRevisionState(
       createAppState(),

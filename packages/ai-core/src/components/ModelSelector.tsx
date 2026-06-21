@@ -1,5 +1,6 @@
 import React, {useMemo} from 'react';
 import {
+  cn,
   Select,
   SelectContent,
   SelectGroup,
@@ -126,26 +127,27 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   );
 
   return (
-    <div className={className}>
+    <div className={cn('min-w-0', className)}>
       <Select
         value={currentModelDetails ? currentSelectValue : ''}
         onValueChange={handleModelChange}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="h-8 w-auto max-w-[220px] min-w-0 px-2.5 py-1 text-xs font-medium shadow-none [&>span]:truncate">
           <SelectValue placeholder="Select model" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-72">
           {Object.entries(modelsByProvider).map(
             ([provider, providerModels]) => (
               <React.Fragment key={provider}>
                 <SelectGroup>
-                  <SelectLabel className="text-muted-foreground/50 text-center text-sm font-bold">
+                  <SelectLabel className="text-muted-foreground/50 py-1 text-center text-xs font-bold">
                     {capitalize(provider)}
                   </SelectLabel>
                   {providerModels.map((model) => (
                     <SelectItem
                       key={getModelSelectKey(model.provider, model.value)}
                       value={getModelSelectKey(model.provider, model.value)}
+                      className="py-1 pr-7 text-xs"
                     >
                       {model.label}
                     </SelectItem>

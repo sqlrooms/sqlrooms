@@ -3,17 +3,29 @@ import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {useCallback, type FC, type KeyboardEvent, type ReactNode} from 'react';
 import {useChatRuntime} from './ChatRuntimeContext';
 
+/**
+ * Props for the local-agent chat composer surface.
+ */
 export type LocalAgentChatComposerProps = {
   className?: string;
   placeholder?: string;
+  /** Actions rendered in the composer's top row, right-aligned above the prompt. */
+  topActions?: ReactNode;
   onRun?: () => void;
   onCancel?: () => void;
   children?: ReactNode;
 };
 
+/**
+ * Renders the prompt input and run/stop control for local-agent chat sessions.
+ *
+ * The `topActions` slot renders compact actions in the composer's top row,
+ * right-aligned above the prompt.
+ */
 export const LocalAgentChatComposer: FC<LocalAgentChatComposerProps> = ({
   className,
   placeholder = 'Message...',
+  topActions,
   onRun,
   onCancel,
   children,
@@ -68,6 +80,13 @@ export const LocalAgentChatComposer: FC<LocalAgentChatComposerProps> = ({
     >
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border transition-all">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
+          {topActions ? (
+            <div className="flex w-full justify-end px-2 pt-2">
+              <div className="flex shrink-0 items-center gap-1">
+                {topActions}
+              </div>
+            </div>
+          ) : null}
           <Textarea
             className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
             autoResize
@@ -81,7 +100,7 @@ export const LocalAgentChatComposer: FC<LocalAgentChatComposerProps> = ({
           <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
             <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
               <div className="min-w-0 flex-1 overflow-hidden">
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {children}
                 </div>
               </div>

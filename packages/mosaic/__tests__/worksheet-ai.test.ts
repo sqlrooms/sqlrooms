@@ -113,6 +113,7 @@ describe('createWorksheetAiTools', () => {
       tools[KnownWorksheetTools.add_html_app_block] as any
     ).execute({
       reasoning: 'The user asked for a custom D3 app.',
+      intent: 'Build a country explorer app.',
       appTitle: 'Country Explorer',
     });
 
@@ -134,6 +135,7 @@ describe('createWorksheetAiTools', () => {
         blockType: 'html-app',
         blockInstanceId: result.appId,
         ownership: 'owned',
+        intent: 'Build a country explorer app.',
         title: 'Country Explorer',
         caption: 'Country Explorer',
         height: 560,
@@ -147,7 +149,7 @@ describe('createWorksheetAiTools', () => {
     );
     const embeddedHtmlAppAgent = tool({
       description: 'mock embedded html app agent',
-      inputSchema: z.object({appId: z.string(), prompt: z.string()}),
+      inputSchema: z.object({appId: z.string(), intent: z.string()}),
       execute: async ({appId}) => ({success: true, appId}),
     });
     const worksheetAdapter: WorksheetAiAdapter = {
@@ -194,7 +196,7 @@ describe('createWorksheetAiTools', () => {
       tools[KnownWorksheetTools.embedded_html_app_agent] as any
     ).execute({
       appId: htmlAppBlock.htmlAppId,
-      prompt: 'Update the existing app.',
+      intent: 'Update the existing app.',
     });
 
     expect(updateResult).toEqual({success: true, appId: 'html-app-1'});

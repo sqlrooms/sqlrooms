@@ -1,9 +1,13 @@
+import socket
+
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
 from starlette.requests import Request
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _can_bind_port
+from sqlrooms.web.launcher import _pick_free_port
 from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
@@ -38,6 +42,119 @@ def test_api_config(server):
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
     assert "wsAuthToken" in data
+    assert (
+        data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
+    )
+
+
+def test_pick_free_port_scans_up_from_occupied_port():
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host, 0))
+        sock.listen()
+        occupied_port = int(sock.getsockname()[1])
+
+        selected_port = _pick_free_port(host, occupied_port)
+
+        assert selected_port > occupied_port
+    finally:
+        sock.close()
+
+
+def test_pick_free_port_skips_reserved_port():
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host, 0))
+        reserved_port = int(sock.getsockname()[1])
+    finally:
+        sock.close()
+
+    selected_port = _pick_free_port(
+        host,
+        reserved_port,
+        reserved_ports={reserved_port},
+    )
+
+    assert selected_port > reserved_port
+
+
+def test_localhost_port_probe_checks_ipv4_loopback():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen()
+        occupied_port = int(sock.getsockname()[1])
+
+        assert _can_bind_port("localhost", occupied_port) is False
+    finally:
+        sock.close()
+
+
+def test_pick_free_port_fails_fast_for_invalid_host():
+    with pytest.raises(OSError):
+        _pick_free_port("not-a-bindable-host.invalid", 4173)
+
+
+def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
+    def fail_init_global_connection(*_args, **_kwargs):
+        raise RuntimeError("duckdb lock held")
+
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.db_async.init_global_connection",
+        fail_init_global_connection,
+    )
+
+    server._start_duckdb_backend()
+
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/status")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "degraded"
+    duckdb_status = data["components"]["duckdbWebSocket"]
+    assert duckdb_status["status"] == "error"
+    assert duckdb_status["message"] == "DuckDB websocket backend failed to start"
+    assert duckdb_status["error"] == "duckdb lock held"
+    assert "RuntimeError: duckdb lock held" in duckdb_status["details"]
+
+
+def test_duckdb_backend_slow_start_remains_starting(server, monkeypatch):
+    class FakeThread:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def start(self):
+            pass
+
+    monkeypatch.setattr("sqlrooms.web.launcher.threading.Thread", FakeThread)
+    monkeypatch.setattr(server._duckdb_ready, "wait", lambda timeout=None: False)
+
+    server._start_duckdb_backend()
+
+    duckdb_status = server._runtime_status()["components"]["duckdbWebSocket"]
+    assert server._duckdb_start_error is None
+    assert duckdb_status["status"] == "starting"
+
+
+def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.db_async.init_global_connection",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.duckdb_ws_server",
+        lambda *_args, **_kwargs: None,
+    )
+    server._duckdb_start_error = TimeoutError("Timed out starting")
+
+    server._run_duckdb_server()
+
+    assert server._duckdb_start_error is None
+    assert server._runtime_status()["status"] == "ready"
 
 
 def test_api_config_with_ai_provider_metadata(tmp_path):

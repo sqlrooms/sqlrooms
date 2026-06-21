@@ -63,6 +63,8 @@ export const HtmlAppRevision = z.object({
   title: z.string(),
   files: HtmlAppSourceFileMap,
   entryHtmlPath: z.string().default('/index.html'),
+  requestedCapabilities: z.array(AppCapability).optional(),
+  grantedCapabilities: z.array(AppCapability).optional(),
   dependencies: z.array(HtmlAppDependency).default([]),
 });
 /**
@@ -76,6 +78,7 @@ export type HtmlAppRevision = z.infer<typeof HtmlAppRevision>;
 export const HtmlAppState = z.object({
   id: z.string(),
   title: z.string(),
+  intent: z.string().optional(),
   files: HtmlAppSourceFileMap,
   entryHtmlPath: z.string().default('/index.html'),
   requestedCapabilities: z.array(AppCapability).default([]),
@@ -383,6 +386,8 @@ export function commitHtmlAppRevisionState(
     title: nextBaseApp.title,
     files: nextBaseApp.files,
     entryHtmlPath: nextBaseApp.entryHtmlPath,
+    requestedCapabilities: nextBaseApp.requestedCapabilities,
+    grantedCapabilities: nextBaseApp.grantedCapabilities,
     dependencies: nextBaseApp.dependencies,
   });
   const revisions =
@@ -420,6 +425,10 @@ export function restoreHtmlAppRevisionState(
       title: targetRevision.title,
       files: targetRevision.files,
       entryHtmlPath: targetRevision.entryHtmlPath,
+      requestedCapabilities:
+        targetRevision.requestedCapabilities ?? app.requestedCapabilities,
+      grantedCapabilities:
+        targetRevision.grantedCapabilities ?? app.grantedCapabilities,
       dependencies: targetRevision.dependencies,
       diagnostics: [],
     },
@@ -524,6 +533,9 @@ function applyExistingHtmlAppRevision(
     title: revision.title,
     files: revision.files,
     entryHtmlPath: revision.entryHtmlPath,
+    requestedCapabilities:
+      revision.requestedCapabilities ?? app.requestedCapabilities,
+    grantedCapabilities: revision.grantedCapabilities ?? app.grantedCapabilities,
     dependencies: revision.dependencies,
     diagnostics: [],
     activeRevisionId: revision.id,
@@ -613,11 +625,18 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   const appTitle = isPreviewing
     ? (displayedRevision?.title ?? app?.title ?? title)
     : (app?.title ?? displayedRevision?.title ?? title);
-  const files = displayedRevision?.files ?? app?.files;
-  const entryHtmlPath =
-    displayedRevision?.entryHtmlPath ?? app?.entryHtmlPath ?? '/index.html';
-  const dependencies = displayedRevision?.dependencies ?? app?.dependencies;
-  const grantedCapabilities = app?.grantedCapabilities;
+  const files = isPreviewing
+    ? (displayedRevision?.files ?? app?.files)
+    : (app?.files ?? displayedRevision?.files);
+  const entryHtmlPath = isPreviewing
+    ? (displayedRevision?.entryHtmlPath ?? app?.entryHtmlPath ?? '/index.html')
+    : (app?.entryHtmlPath ?? displayedRevision?.entryHtmlPath ?? '/index.html');
+  const dependencies = isPreviewing
+    ? (displayedRevision?.dependencies ?? app?.dependencies)
+    : (app?.dependencies ?? displayedRevision?.dependencies);
+  const grantedCapabilities = isPreviewing
+    ? (displayedRevision?.grantedCapabilities ?? app?.grantedCapabilities)
+    : app?.grantedCapabilities;
   const hasApp = Boolean(app);
 
   const srcDoc = useMemo(() => {
@@ -654,6 +673,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
           }),
       },
       onDiagnostic: (diagnostic) => {
+        if (isPreviewing) return;
         addDiagnostic(resolvedAppId, diagnostic);
       },
     });
@@ -667,6 +687,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     addDiagnostic,
     grantedCapabilities,
     hasApp,
+    isPreviewing,
     getState,
     maxRows,
     queryTimeoutMs,

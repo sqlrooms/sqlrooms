@@ -7,7 +7,15 @@ import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
 export type ArtifactAiSession = Pick<
   ChatSessionSchema,
   'id' | 'isRunning' | 'lastOpenedAt'
->;
+> &
+  Partial<Pick<ChatSessionSchema, 'prompt' | 'uiMessages'>>;
+
+/**
+ * AI session fields required to prove that a session has no draft text or
+ * messages.
+ */
+export type ArtifactAiSessionWithContent = ArtifactAiSession &
+  Pick<ChatSessionSchema, 'prompt' | 'uiMessages'>;
 
 /**
  * Mapping from AI session id to owning artifact id.
@@ -65,6 +73,20 @@ export type ArtifactAiSessionsForArtifactOptions = {
   sessions: ArtifactAiSession[];
   aiSessionArtifacts: ArtifactAiSessionOwnership;
   artifactId: string | undefined;
+  /** Session ids to ignore when selecting a session. */
+  excludeSessionIds?: Iterable<string>;
+};
+
+/**
+ * Input for selecting reusable empty sessions. Callers must provide message
+ * fields; summaries without `prompt` and `uiMessages` are not enough to prove a
+ * session is empty.
+ */
+export type EmptyArtifactAiSessionsForArtifactOptions = Omit<
+  ArtifactAiSessionsForArtifactOptions,
+  'sessions'
+> & {
+  sessions: ArtifactAiSessionWithContent[];
 };
 
 /**
@@ -105,6 +127,55 @@ export function getLatestAiSessionIdForArtifact({
         artifactId,
       }),
     )
+    .sort((a, b) => {
+      const aTime = a.lastOpenedAt ?? 0;
+      const bTime = b.lastOpenedAt ?? 0;
+      return bTime - aTime;
+    })[0]?.id;
+}
+
+/**
+ * Returns the most recently opened empty AI session explicitly owned by
+ * `artifactId`.
+ *
+ * An empty session is not running, has no UI messages, and has no prompt text
+ * after trimming whitespace.
+ *
+ * @param options - Session selection options.
+ * @param options.sessions - Available sessions to search.
+ * @param options.aiSessionArtifacts - Session-to-artifact ownership mapping.
+ * @param options.artifactId - Artifact whose sessions should be searched.
+ * @param options.excludeSessionIds - Session IDs to skip during selection.
+ * @returns The most recently opened empty session ID, or `undefined` if none match.
+ */
+export function getEmptyAiSessionIdForArtifact({
+  sessions,
+  aiSessionArtifacts,
+  artifactId,
+  excludeSessionIds,
+}: EmptyArtifactAiSessionsForArtifactOptions): string | undefined {
+  if (!artifactId) return undefined;
+  const excludedSessionIds = new Set(excludeSessionIds);
+  return sessions
+    .filter((session) => {
+      if (excludedSessionIds.has(session.id)) return false;
+      if (
+        !isAiSessionVisibleForArtifact({
+          aiSessionArtifacts,
+          sessionId: session.id,
+          artifactId,
+        })
+      ) {
+        return false;
+      }
+      return (
+        !session.isRunning &&
+        Array.isArray(session.uiMessages) &&
+        typeof session.prompt === 'string' &&
+        session.uiMessages.length === 0 &&
+        session.prompt.trim().length === 0
+      );
+    })
     .sort((a, b) => {
       const aTime = a.lastOpenedAt ?? 0;
       const bTime = b.lastOpenedAt ?? 0;

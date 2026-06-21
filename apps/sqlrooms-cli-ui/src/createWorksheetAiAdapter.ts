@@ -56,7 +56,7 @@ export function createWorksheetAiAdapter(
       return block.id;
     },
 
-    addDashboardBlock: (worksheetId, title, tableName) => {
+    addDashboardBlock: (worksheetId, title, tableName, intent) => {
       ensureWorksheet(worksheetId);
 
       const state = store.getState();
@@ -69,6 +69,7 @@ export function createWorksheetAiAdapter(
         id: createDefaultBlockDocumentBlockId(),
         blockInstanceId: dashboardId,
         blockType: 'dashboard',
+        intent,
         caption: title,
       };
 
@@ -82,7 +83,7 @@ export function createWorksheetAiAdapter(
       };
     },
 
-    addDataTableExplorerBlock: (worksheetId, title, tableName) => {
+    addDataTableExplorerBlock: (worksheetId, title, tableName, intent) => {
       ensureWorksheet(worksheetId);
 
       const state = store.getState();
@@ -91,6 +92,7 @@ export function createWorksheetAiAdapter(
         id: createDefaultBlockDocumentBlockId(),
         blockInstanceId: createDefaultBlockDocumentBlockId(),
         blockType: 'data-table',
+        intent,
         title: tableName,
         caption: title,
       };

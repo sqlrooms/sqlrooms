@@ -10,6 +10,10 @@ import type {WorksheetAiAdapter} from './worksheet-types';
 
 const AddHtmlAppBlockToolInput = z.object({
   reasoning: z.string().describe('Brief rationale for HTML app block choice.'),
+  intent: z
+    .string()
+    .optional()
+    .describe('Optional natural-language objective for this HTML app block.'),
   appTitle: z.string().describe('The title of the HTML app block.'),
 });
 
@@ -46,7 +50,7 @@ This tool ONLY creates the container structure. To write app files and observe r
 
 Use this when you need to create a custom HTML, D3, Chart.js, or browser app block inside a worksheet.`,
     inputSchema: AddHtmlAppBlockToolInput,
-    execute: async ({appTitle}) => {
+    execute: async ({appTitle, intent}) => {
       try {
         worksheetAdapter.ensureWorksheet(worksheetId);
         worksheetAdapter.setCurrentWorksheet(worksheetId);
@@ -58,6 +62,7 @@ Use this when you need to create a custom HTML, D3, Chart.js, or browser app blo
           blockType: 'html-app',
           blockInstanceId: appId,
           ownership: 'owned',
+          intent,
           title: appTitle,
           caption: appTitle,
           height: 560,

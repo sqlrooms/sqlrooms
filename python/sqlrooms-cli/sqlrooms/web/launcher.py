@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import errno
+import json
 import logging
 import os
 import re
+import secrets
 import socket
 import tempfile
 import threading
 import webbrowser
-import json
-import secrets
 from pathlib import Path
 from typing import Any, Dict
 
@@ -278,15 +279,73 @@ def _sanitize_filename(name: str) -> str:
     return safe or "upload.dat"
 
 
-def _pick_free_port(host: str) -> int:
+def _localhost_probe_hosts(host: str) -> tuple[str, ...]:
+    return ("127.0.0.1", "::1") if host == "localhost" else (host,)
+
+
+def _can_bind_single_host_port(
+    host: str,
+    port: int,
+    *,
+    ignore_unavailable: bool = False,
+) -> bool:
+    is_ipv6 = ":" in host and host != "0.0.0.0"
+    family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    sock = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if family == socket.AF_INET6:
+            sock.bind((host, port, 0, 0))
+        else:
+            sock.bind((host, port))
+        return True
+    except OSError as exc:
+        if exc.errno in {errno.EADDRINUSE, errno.EACCES}:
+            return False
+        if ignore_unavailable and exc.errno in {
+            errno.EADDRNOTAVAIL,
+            errno.EAFNOSUPPORT,
+        }:
+            return True
+        raise
+    finally:
+        sock.close()
+
+
+def _can_bind_port(host: str, port: int) -> bool:
+    return all(
+        _can_bind_single_host_port(
+            probe_host,
+            port,
+            ignore_unavailable=host == "localhost",
+        )
+        for probe_host in _localhost_probe_hosts(host)
+    )
+
+
+def _pick_free_port(
+    host: str,
+    start_port: int | None = None,
+    *,
+    reserved_ports: set[int] | None = None,
+) -> int:
     """
     Pick an available TCP port for a local background server.
 
-    This is best-effort: we bind to port 0 to have the OS select a free port,
-    read it back, then close the socket.
+    If ``start_port`` is provided, scan upward from that port. Otherwise bind to
+    port 0 and let the OS select a free port.
     """
     is_ipv6 = ":" in host and host != "0.0.0.0"
     family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    reserved = reserved_ports or set()
+    if start_port is not None:
+        for port in range(start_port, 65536):
+            if port in reserved:
+                continue
+            if _can_bind_port(host, port):
+                return port
+        raise RuntimeError(f"No available port found starting from {start_port}.")
+
     sock = socket.socket(family, socket.SOCK_STREAM)
     try:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -423,6 +482,8 @@ class SqlroomsHttpServer:
         self.upload_dir = base_dir / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
         self._duckdb_thread: threading.Thread | None = None
+        self._duckdb_ready = threading.Event()
+        self._duckdb_start_error: BaseException | None = None
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
@@ -464,6 +525,8 @@ class SqlroomsHttpServer:
         return "localhost" if self.host in ("0.0.0.0", "::") else self.host
 
     def _start_duckdb_backend(self) -> None:
+        self._duckdb_ready.clear()
+        self._duckdb_start_error = None
         thread = threading.Thread(
             target=self._run_duckdb_server,
             daemon=True,
@@ -471,11 +534,57 @@ class SqlroomsHttpServer:
         )
         thread.start()
         self._duckdb_thread = thread
+        self._duckdb_ready.wait(timeout=10)
+        if self._duckdb_start_error is not None:
+            logger.error("Failed to start DuckDB websocket backend")
+            return
+        if not self._duckdb_ready.is_set():
+            logger.warning(
+                "DuckDB websocket backend is still starting after 10 seconds"
+            )
+            return
         logger.info(
             "Started DuckDB websocket backend at ws://%s:%s",
             self._public_host(),
             self.ws_port,
         )
+
+    def _format_startup_error(self, exc: BaseException) -> Dict[str, str]:
+        details: list[str] = []
+        current: BaseException | None = exc
+        while current is not None:
+            error_type = type(current).__name__
+            message = str(current) or error_type
+            details.append(f"{error_type}: {message}")
+            current = current.__cause__ or current.__context__
+
+        return {
+            "message": str(exc) or type(exc).__name__,
+            "details": "\nCaused by: ".join(details),
+        }
+
+    def _runtime_status(self) -> Dict[str, Any]:
+        duckdb_status: Dict[str, Any]
+        if self._duckdb_start_error is not None:
+            error = self._format_startup_error(self._duckdb_start_error)
+            duckdb_status = {
+                "status": "error",
+                "message": "DuckDB websocket backend failed to start",
+                "error": error["message"],
+                "details": error["details"],
+            }
+        elif self._duckdb_ready.is_set():
+            duckdb_status = {"status": "ready"}
+        else:
+            duckdb_status = {"status": "starting"}
+
+        status = "ready" if duckdb_status["status"] == "ready" else "degraded"
+        return {
+            "status": status,
+            "components": {
+                "duckdbWebSocket": duckdb_status,
+            },
+        }
 
     def _runtime_config(self) -> Dict[str, Any]:
         return {
@@ -500,6 +609,7 @@ class SqlroomsHttpServer:
             },
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
+            "startupStatus": self._runtime_status(),
             "dbBridge": {
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
@@ -556,6 +666,14 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
+
+        @app.get("/api/status")
+        async def get_status():
+            return self._runtime_status()
+
+        @app.get("/status.json")
+        async def get_status_json():
+            return self._runtime_status()
 
         @app.get("/api/db/settings")
         async def get_db_settings():
@@ -899,6 +1017,8 @@ class SqlroomsHttpServer:
         signal.signal = _noop_signal  # type: ignore
         try:
             db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
+            self._duckdb_start_error = None
+            self._duckdb_ready.set()
             cache = QueryCache()
             duckdb_ws_server(
                 cache,
@@ -912,5 +1032,9 @@ class SqlroomsHttpServer:
                 ),
                 local_only=True,
             )
+        except Exception as exc:
+            self._duckdb_start_error = exc
+            self._duckdb_ready.set()
+            logger.exception("DuckDB websocket backend failed to start")
         finally:
             signal.signal = original_signal  # type: ignore

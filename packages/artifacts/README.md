@@ -20,6 +20,7 @@ import {
   createArtifactPanelDefinition,
   createArtifactsSlice,
   defineArtifactTypes,
+  useArtifactWorkspace,
 } from '@sqlrooms/artifacts';
 
 const artifactTypes = defineArtifactTypes({
@@ -72,6 +73,20 @@ Use `ArtifactTabs.useActions()` from custom subcomponents when you need access
 to the tab adapter actions, and use `overlay` for dialogs or other elements that
 need that context without being rendered inside the tab strip.
 
+For non-tab artifact surfaces, use `useArtifactWorkspace()` directly:
+
+```tsx
+const artifacts = useArtifactWorkspace({
+  types: ['notebook', 'dashboard'],
+});
+
+return artifacts.selectedArtifact ? (
+  <ArtifactPanel artifact={artifacts.selectedArtifact} />
+) : (
+  <NewArtifactScreen onCreate={() => artifacts.createArtifact('notebook')} />
+);
+```
+
 ## Slice API
 
 Config uses artifact terminology throughout:
@@ -97,8 +112,13 @@ removes the artifact registry entry.
 
 ## Artifact Tabs
 
+- `useArtifactWorkspace({types?, selectFallback?})` returns tab-free artifact
+  ids, descriptors, current selection, type definitions, and create/delete/
+  rename/select actions. It is useful for single-content hosts, sidebars, and
+  search/create surfaces that should not adopt layout-tab behavior.
 - `useArtifactTabs({tabsId?, types?, panelKey?})` returns TabStrip-compatible
-  descriptors, open tab ids, selected id, and handlers.
+  descriptors, open tab ids, selected id, and handlers. It builds on
+  `useArtifactWorkspace()` and adds the layout-tabs adapter.
 - `ArtifactTabs` is a compound component over `TabStrip` and
   `TabsLayout.TabContent`.
 - Pass `forceMountContent` to `ArtifactTabs` to keep visible artifact tab
@@ -141,6 +161,13 @@ Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 selection and run-context updates; the app supplies artifact payload readers for
 domain-specific types such as documents or dashboards.
 
+Commands and tools that create or select the user's primary working artifact
+can include `artifactTargetChange` in their result data. The exported
+`ArtifactTargetChange` type is a small metadata shape for host apps that want
+to compose command results with artifact-scoped AI behavior. It does not trigger
+chat changes by itself; apps still own the policy for when an AI chat should
+continue in a new artifact.
+
 ## Artifact-Owned AI Sessions
 
 `@sqlrooms/artifacts/ai` also provides `createArtifactAiSlice()` for apps that
@@ -181,7 +208,13 @@ aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
 ```
 
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
-artifact-scoped assistant. `artifactAi.selectLatestSessionForArtifact()` and
+artifact-scoped assistant. For default session creation, it reuses the most
+recently opened other empty, non-running session for the current artifact before
+creating a new one. This avoids duplicate blank drafts in history while still
+letting the selected empty draft start a separate chat when the host UI exposes
+a New session action. Calls that provide an explicit `name`, `modelProvider`, or
+`model` always create a fresh session so those options are preserved.
+`artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
 with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
 ownership are ignored by artifact-scoped history.
@@ -190,10 +223,15 @@ Reusable helpers include:
 
 - `isAiSessionVisibleForArtifact`
 - `getLatestAiSessionIdForArtifact`
+- `getEmptyAiSessionIdForArtifact`
 - `getAiSessionIdsForArtifact`
 - `getAiSessionGroupsByArtifact`
 - `getRunningAiSessionCountsByArtifact`
 - `getOwningArtifactRunContextItems`
+
+`getEmptyAiSessionIdForArtifact()` requires session objects that include
+`prompt` and `uiMessages`; summary-only session rows cannot prove that a chat is
+empty.
 
 `Chat.History` should remain generic: pass a `filterSession` callback built
 with `isAiSessionVisibleForArtifact()` and keep artifact-specific labels in the
