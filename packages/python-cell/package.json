@@ -23,6 +23,8 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.2",
+    "@codemirror/commands": "^6.10.3",
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.42.1",

@@ -3923,6 +3923,12 @@ importers:
 
   packages/python-cell:
     dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.2
+        version: 6.20.2
+      '@codemirror/commands':
+        specifier: ^6.10.3
+        version: 6.10.3
       '@codemirror/lang-python':
         specifier: ^6.2.1
         version: 6.2.1

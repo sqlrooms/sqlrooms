@@ -3,6 +3,8 @@ import type {
   StatefulBlockRenderProps,
 } from '@sqlrooms/blocks';
 import {CodeMirrorEditor, createSqlroomsTheme} from '@sqlrooms/codemirror';
+import {acceptCompletion} from '@codemirror/autocomplete';
+import {indentLess, indentMore} from '@codemirror/commands';
 import {python} from '@codemirror/lang-python';
 import {Prec} from '@codemirror/state';
 import {keymap} from '@codemirror/view';
@@ -92,6 +94,17 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
       createSqlroomsTheme(),
       Prec.high(
         keymap.of([
+          {
+            key: 'Tab',
+            run: (view) => {
+              if (acceptCompletion(view)) return true;
+              return indentMore(view);
+            },
+          },
+          {
+            key: 'Shift-Tab',
+            run: indentLess,
+          },
           {
             key: 'Mod-Enter',
             run: () => {
