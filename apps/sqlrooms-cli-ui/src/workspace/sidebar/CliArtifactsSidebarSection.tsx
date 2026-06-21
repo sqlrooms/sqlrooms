@@ -113,6 +113,7 @@ export function CliArtifactsSidebarSection() {
                       className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 max-w-full min-w-0 gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
                       isActive={artifact.id === artifactTabs.selectedTabId}
                       onClick={() => artifactTabs.selectArtifact(artifact.id)}
+                      size="sm"
                       type="button"
                       title={artifact.name}
                     >
@@ -247,7 +248,7 @@ function ArtifactSidebarItemMenu({
         <SidebarMenuAction
           type="button"
           showOnHover
-          className="top-1/2 right-1 size-6 w-6 -translate-y-1/2"
+          className="right-1.5"
           aria-label={`More actions for ${artifactName}`}
           onClick={(event) => event.stopPropagation()}
         >
