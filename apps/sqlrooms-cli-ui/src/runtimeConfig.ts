@@ -107,6 +107,13 @@ export type RuntimeConfig = {
   };
 };
 
+const RUNTIME_CONFIG_TIMEOUT_MS = 20_000;
+const RUNTIME_CONFIG_RETRY_DELAY_MS = 250;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchJson<T>(url: string): Promise<T | undefined> {
   try {
     const res = await fetch(url);
@@ -117,26 +124,27 @@ async function fetchJson<T>(url: string): Promise<T | undefined> {
   }
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+async function fetchJsonWithRetry<T>(
+  url: string,
+  {
+    timeoutMs = RUNTIME_CONFIG_TIMEOUT_MS,
+    retryDelayMs = RUNTIME_CONFIG_RETRY_DELAY_MS,
+  }: {
+    timeoutMs?: number;
+    retryDelayMs?: number;
+  } = {},
+): Promise<T | undefined> {
+  const deadline = Date.now() + timeoutMs;
 
-async function fetchJsonWithRetries<T>({
-  url,
-  attempts,
-  delayMs,
-}: {
-  url: string;
-  attempts: number;
-  delayMs: number;
-}): Promise<T | undefined> {
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+  while (Date.now() <= deadline) {
     const result = await fetchJson<T>(url);
-    if (result) return result;
-    if (attempt < attempts) {
-      await delay(delayMs);
-    }
+    if (result !== undefined) return result;
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    await delay(Math.min(retryDelayMs, remainingMs));
   }
+
   return undefined;
 }
 
@@ -144,13 +152,7 @@ async function fetchJsonWithRetries<T>({
  * Fetches `/api/config`, returning an empty runtime config if the request fails.
  */
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {
-  return (
-    (await fetchJsonWithRetries<RuntimeConfig>({
-      url: '/api/config',
-      attempts: 20,
-      delayMs: 250,
-    })) ?? {}
-  );
+  return (await fetchJsonWithRetry<RuntimeConfig>('/api/config')) ?? {};
 }
 
 /**
