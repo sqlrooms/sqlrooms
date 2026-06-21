@@ -479,7 +479,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   artifactId
                 ] ?? {
                   name: app.name,
-                  prompt: '',
+                  intent: '',
                   template: 'mosaic-dashboard',
                   files: {},
                   updatedAt: 0,

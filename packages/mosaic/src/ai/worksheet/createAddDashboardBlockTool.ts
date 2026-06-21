@@ -7,6 +7,10 @@ import {ToolOutput} from '../tool-types';
 const AddDashboardBlockParameters = z.object({
   dashboardTitle: z.string().describe('The title of the dashboard'),
   tableName: z.string().describe('The name of the table/dataset to analyze.'),
+  intent: z
+    .string()
+    .optional()
+    .describe('Optional natural-language objective for this dashboard block.'),
 });
 
 type AddDashboardBlockParameters = z.infer<typeof AddDashboardBlockParameters>;
@@ -48,12 +52,13 @@ This tool ONLY creates the container structure. To populate it with charts and p
 
 Use this when you need to create a dashboard block in a worksheet.`,
     inputSchema: AddDashboardBlockToolInput,
-    execute: async ({dashboardTitle, tableName}) => {
+    execute: async ({dashboardTitle, tableName, intent}) => {
       try {
         const {dashboardId} = worksheetAdapter.addDashboardBlock(
           worksheetId,
           dashboardTitle,
           tableName,
+          intent,
         );
 
         return {

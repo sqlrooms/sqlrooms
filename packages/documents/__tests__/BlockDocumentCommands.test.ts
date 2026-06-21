@@ -162,6 +162,7 @@ describe('block document commands', () => {
       .commands.invokeCommand('block-document.create-chart-block', {
         artifactId,
         blockId: 'chart-1',
+        intent: 'Show the revenue distribution for the sales review.',
         tableName: 'sales',
         config: {chartType: 'histogram', settings: {field: 'revenue'}},
         selectionGroupId: 'overview',
@@ -171,6 +172,7 @@ describe('block document commands', () => {
       {
         id: 'chart-1',
         type: 'chart',
+        intent: 'Show the revenue distribution for the sales review.',
         tableName: 'sales',
         config: {chartType: 'histogram', settings: {field: 'revenue'}},
         selectionGroupId: 'overview',
@@ -192,6 +194,7 @@ describe('block document commands', () => {
         artifactId,
         blockId: 'dashboard-block',
         blockType: 'dashboard',
+        intent: 'Explore regional sales interactively.',
         title: 'Regional Dashboard',
         caption: 'Regions',
       });
@@ -201,6 +204,7 @@ describe('block document commands', () => {
       {
         id: 'dashboard-block',
         type: 'statefulBlock',
+        intent: 'Explore regional sales interactively.',
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-block',
         ownership: 'owned',

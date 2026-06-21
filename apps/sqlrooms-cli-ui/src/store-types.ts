@@ -27,7 +27,7 @@ const AppBuilderProjectEntries = z.record(
   z.string(),
   z.object({
     name: z.string().default('Untitled App'),
-    prompt: z.string().default(''),
+    intent: z.string().default(''),
     template: z.string().default('mosaic-dashboard'),
     files: z.record(z.string(), z.string()).default({}),
     updatedAt: z.number().default(0),

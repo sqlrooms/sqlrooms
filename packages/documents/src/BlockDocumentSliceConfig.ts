@@ -72,6 +72,7 @@ type TextContent = Array<{
 
 const BlockDocumentTextBlockBase = {
   id: z.string(),
+  intent: z.string().optional(),
 };
 
 export const BlockDocumentHeadingBlock = z.object({
@@ -230,23 +231,28 @@ export function createEmptyBlockDocumentContent(): BlockDocumentContent {
 export function blockDocumentBlockToNode(
   block: BlockDocumentBlock,
 ): BlockDocumentNode {
+  const baseAttrs = {
+    id: block.id,
+    ...(block.intent !== undefined ? {intent: block.intent} : {}),
+  };
+
   switch (block.type) {
     case 'heading':
       return {
         type: 'heading',
-        attrs: {id: block.id, level: block.level},
+        attrs: {...baseAttrs, level: block.level},
         content: textContent(block.text),
       };
     case 'paragraph':
       return {
         type: 'paragraph',
-        attrs: {id: block.id},
+        attrs: baseAttrs,
         content: textContent(block.text),
       };
     case 'list':
       return {
         type: block.ordered ? 'orderedList' : 'bulletList',
-        attrs: {id: block.id},
+        attrs: baseAttrs,
         content: block.items.map((item) => ({
           type: 'listItem',
           content: [
@@ -260,7 +266,7 @@ export function blockDocumentBlockToNode(
     case 'todo':
       return {
         type: 'taskList',
-        attrs: {id: block.id},
+        attrs: baseAttrs,
         content: [
           {
             type: 'taskItem',
@@ -278,7 +284,7 @@ export function blockDocumentBlockToNode(
       return {
         type: 'blockDocumentImage',
         attrs: {
-          id: block.id,
+          ...baseAttrs,
           assetId: block.assetId,
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
@@ -287,7 +293,7 @@ export function blockDocumentBlockToNode(
       return {
         type: 'blockDocumentChartImage',
         attrs: {
-          id: block.id,
+          ...baseAttrs,
           assetId: block.assetId,
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
         },
@@ -296,7 +302,7 @@ export function blockDocumentBlockToNode(
       return {
         type: 'blockDocumentChart',
         attrs: {
-          id: block.id,
+          ...baseAttrs,
           tableName: block.tableName,
           config: block.config,
           ...(block.selectionGroupId !== undefined
@@ -309,7 +315,7 @@ export function blockDocumentBlockToNode(
       return {
         type: 'blockDocumentStatefulBlock',
         attrs: {
-          id: block.id,
+          ...baseAttrs,
           blockType: block.blockType,
           blockInstanceId: block.blockInstanceId,
           ...(block.ownership !== undefined
@@ -328,23 +334,26 @@ export function blockDocumentNodeToBlock(
 ): BlockDocumentBlock | undefined {
   const id = nodeId(node);
   if (!id) return undefined;
+  const intent = optionalString(node.attrs?.intent);
 
   switch (node.type) {
     case 'heading': {
       const level = node.attrs?.level;
       return BlockDocumentHeadingBlock.parse({
         id,
+        intent,
         type: 'heading',
         level: level === 1 || level === 2 || level === 3 ? level : 1,
         text: textFromNode(node),
       });
     }
     case 'paragraph':
-      return {id, type: 'paragraph', text: textFromNode(node)};
+      return {id, intent, type: 'paragraph', text: textFromNode(node)};
     case 'bulletList':
     case 'orderedList':
       return {
         id,
+        intent,
         type: 'list',
         ordered: node.type === 'orderedList' ? true : undefined,
         items:
@@ -354,6 +363,7 @@ export function blockDocumentNodeToBlock(
       const item = node.content?.[0];
       return {
         id,
+        intent,
         type: 'todo',
         checked: Boolean(item?.attrs?.checked),
         text: textFromNode(item?.content?.[0]),
@@ -362,6 +372,7 @@ export function blockDocumentNodeToBlock(
     case 'blockDocumentImage': {
       const result = BlockDocumentImageBlock.safeParse({
         id,
+        intent,
         type: 'image',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
@@ -371,6 +382,7 @@ export function blockDocumentNodeToBlock(
     case 'blockDocumentChartImage': {
       const result = BlockDocumentChartImageBlock.safeParse({
         id,
+        intent,
         type: 'chartImage',
         assetId: node.attrs?.assetId,
         caption: optionalString(node.attrs?.caption),
@@ -380,6 +392,7 @@ export function blockDocumentNodeToBlock(
     case 'blockDocumentChart': {
       const result = BlockDocumentChartBlock.safeParse({
         id,
+        intent,
         type: 'chart',
         tableName: node.attrs?.tableName,
         config: node.attrs?.config,
@@ -391,6 +404,7 @@ export function blockDocumentNodeToBlock(
     case 'blockDocumentStatefulBlock': {
       const result = BlockDocumentStatefulBlockBlock.safeParse({
         id,
+        intent,
         type: 'statefulBlock',
         blockType: node.attrs?.blockType,
         blockInstanceId: node.attrs?.blockInstanceId,

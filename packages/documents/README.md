@@ -347,6 +347,12 @@ the package API generic.
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
 
+Structured block payloads may include an optional `intent` string. Use it for
+the durable natural-language purpose of an agent- or command-created block,
+such as the question a chart should answer or the job an embedded dashboard
+should serve. It is persisted with the block, unlike transient mutation
+metadata.
+
 ## CRDT
 
 `@sqlrooms/documents/crdt` exposes Loro Mirror bindings for document state:

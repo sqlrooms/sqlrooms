@@ -16,8 +16,8 @@ const TEMPLATE_OPTIONS = [
   {id: 'basic-dashboard', label: 'Basic dashboard (table + chart)'},
 ];
 
-function deriveAppName(prompt: string): string {
-  const trimmed = prompt.trim();
+function deriveAppName(intent: string): string {
+  const trimmed = intent.trim();
   if (!trimmed) return `App ${new Date().toLocaleTimeString()}`;
   return trimmed.split(/\s+/).slice(0, 6).join(' ');
 }
@@ -36,7 +36,7 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const initializeWebContainer = useRoomStore((s) => s.webContainer.initialize);
   const webContainerStatus = useRoomStore((s) => s.webContainer.serverStatus);
 
-  const [prompt, setPrompt] = React.useState('');
+  const [intent, setIntent] = React.useState('');
   const [template, setTemplate] = React.useState('mosaic-dashboard');
   const [name, setName] = React.useState('');
   const [status, setStatus] = React.useState<string>('');
@@ -102,17 +102,17 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
   if (!artifactId) return null;
 
   const onCreate = async () => {
-    const finalName = (name || deriveAppName(prompt)).trim();
+    const finalName = (name || deriveAppName(intent)).trim();
     setBusy(true);
     setStatus('Generating app...');
     try {
-      const result = generateAppFromPromptLocal({prompt, template});
+      const result = generateAppFromIntentLocal({intent, template});
       const filesRecord = Object.fromEntries(
         result.files.map((f) => [f.path, f.content]),
       );
       upsertArtifactApp(artifactId, {
         name: finalName,
-        prompt,
+        intent,
         template,
         files: filesRecord,
       });
@@ -182,11 +182,11 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
   return (
     <div className="mx-auto flex h-full w-full max-w-2xl flex-col gap-3 p-4">
       <h3 className="text-base font-medium">Create New App</h3>
-      <label className="text-muted-foreground text-xs">Prompt</label>
+      <label className="text-muted-foreground text-xs">Intent</label>
       <textarea
         className="bg-background min-h-28 rounded-md border p-2 text-sm"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
+        value={intent}
+        onChange={(e) => setIntent(e.target.value)}
         placeholder="Build an interactive dashboard for sales by region..."
       />
       <label className="text-muted-foreground text-xs">Template</label>
@@ -208,10 +208,10 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
         className="bg-background rounded-md border p-2 text-sm"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder={deriveAppName(prompt)}
+        placeholder={deriveAppName(intent)}
       />
       <div>
-        <Button disabled={busy || !prompt.trim()} onClick={onCreate}>
+        <Button disabled={busy || !intent.trim()} onClick={onCreate}>
           {busy ? 'Creating...' : 'Create App'}
         </Button>
       </div>
@@ -346,8 +346,8 @@ function ensureRuntimePreludeInHtml(html: string): string {
   return `${prelude}\n${html}`;
 }
 
-function generateAppFromPromptLocal(input: {
-  prompt: string;
+function generateAppFromIntentLocal(input: {
+  intent: string;
   template: string;
 }): {
   status: 'ok' | 'error';
@@ -379,7 +379,7 @@ export default function App() {
   return (
     <main style={{padding: 16}}>
       <h1>${appTitle}</h1>
-      <p>Prompt: {${JSON.stringify(input.prompt)}}</p>
+      <p>Intent: {${JSON.stringify(input.intent)}}</p>
       <p>Template: {${JSON.stringify(input.template)}}</p>
       <pre>{JSON.stringify(rows, null, 2)}</pre>
     </main>

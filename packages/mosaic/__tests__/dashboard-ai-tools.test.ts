@@ -121,7 +121,7 @@ describe('createDashboardAgentTool', () => {
 
     const result = await (tool as any).execute({
       dashboardId: 'dashboard-1',
-      prompt: 'add a histogram of magnitude',
+      intent: 'add a histogram of magnitude',
       reasoning: 'user asked to update the dashboard',
     });
 

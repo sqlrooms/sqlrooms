@@ -11,6 +11,7 @@ import {createWorksheetAiTools} from './createWorksheetAiTools';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
+import {AgentIntentSchemaFields} from '../agentIntent';
 
 function getWorksheetAgentInstructions<TState>(
   options: CreateWorksheetAgentToolOptions<TState>,
@@ -58,6 +59,7 @@ To add text context or summaries, use the ${KnownWorksheetTools.add_text_block} 
 To add a data table explorer block, use the ${KnownWorksheetTools.add_data_table_explorer} tool:
 - Provide a title for the block
 - Provide the dataset (table name) to explore
+- Provide intent when the request includes a durable purpose for the block
 - Only add one data table explorer block per worksheet
 - Only add if user explicitly requests it or if it is necessary for exploration
 
@@ -72,13 +74,14 @@ STEP 1: Create the empty dashboard block container
 - Call ${KnownWorksheetTools.add_dashboard_block} with:
   - dashboardTitle: title for the dashboard
   - tableName: the dataset to analyze
+  - intent: durable purpose for this dashboard block
 - This returns a dashboardId
 
 STEP 2: Populate the dashboard with charts and panels
 - Call ${KnownWorksheetTools.embedded_dashboard_agent} with:
   - dashboardId: the ID from step 1
   - tableName: the dataset to analyze
-  - prompt: what insights or charts to create
+  - intent: what insights or charts to create
 
 Use dashboard blocks when:
 - User explicitly requests a dashboard: "add dashboard analyzing sales data"
@@ -97,12 +100,13 @@ If the worksheet already has an html-app block that matches the request, reuse i
 STEP 1: Create the empty html-app block container
 - Call ${KnownWorksheetTools.add_html_app_block} with:
   - appTitle: title for the app
+  - intent: durable purpose for this app block
 - This returns an appId
 
 STEP 2: Write the app files and observe runtime diagnostics
 - Call ${KnownWorksheetTools.embedded_html_app_agent} with:
   - appId: the ID from step 1
-  - prompt: what app or visualization to create
+  - intent: what app or visualization to create
 
 Use html-app blocks when:
 - User explicitly asks for an app, HTML app, D3 app, Chart.js app, browser app, or custom interactive visualization
@@ -125,7 +129,7 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with the returned dashboardId to populate it
 
-**Map requests:** If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and a prompt to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.
+**Map requests:** If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and an intent to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.
 
 **HTML app requests:** If user asks to create a new app inside the worksheet, call ${KnownWorksheetTools.add_html_app_block}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target htmlAppId as appId.
 
@@ -204,9 +208,7 @@ const WorksheetAgentInputSchema = z.object({
   reasoning: z
     .string()
     .describe('Reasoning for why the worksheet agent is being called'),
-  prompt: z
-    .string()
-    .describe('The exploratory data analysis prompt for the agent'),
+  ...AgentIntentSchemaFields,
   worksheetId: z
     .string()
     .describe(
@@ -267,7 +269,7 @@ IF user requests DASHBOARD:
 IF user requests a MAP in a worksheet:
 1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
-3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with a prompt to add a map panel
+3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel
 
 IF user requests an HTML/D3/Chart.js/browser app in a worksheet:
 1. For a new app, call ${KnownWorksheetTools.add_html_app_block} to create the container, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId
@@ -284,7 +286,8 @@ Use this for:
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: WorksheetAgentInputSchema,
     execute: async (params, toolOptions): Promise<WorksheetAgentResult> => {
-      const {prompt, worksheetId, maxSteps, temperature} = params;
+      const {worksheetId, maxSteps, temperature} = params;
+      const {intent} = params;
 
       try {
         worksheetAdapter.ensureWorksheet(worksheetId);
@@ -317,7 +320,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt,
+          prompt: intent,
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
