@@ -1,4 +1,5 @@
 import {cn, ModifierScrollOverlay} from '@sqlrooms/ui';
+import {isMacOS} from '@sqlrooms/utils';
 import {NodeViewWrapper} from '@tiptap/react';
 import {
   createElement,
@@ -31,10 +32,6 @@ type ScrollAxis = 'x' | 'y';
 function clampHeight(value: number, min: number, max?: number) {
   const minBounded = Math.max(min, value);
   return max == null ? minBounded : Math.min(max, minBounded);
-}
-
-function isMacOS() {
-  return navigator.platform.toLowerCase().includes('mac');
 }
 
 function getScrollAxis(event: WheelEvent): ScrollAxis {

@@ -67,6 +67,12 @@ and generated Vite apps can import the client entrypoint or use an injected
 `window.sqlrooms` global. WebContainer should not grow its own separate data
 bridge.
 
+Revision history follows the same boundary. The v1 revision model belongs to
+persisted `html-app` runtime state and does not migrate or version legacy
+WebContainer app project records such as `appProject.config.appsByArtifactId`.
+Those projects can be migrated to `html-app` state later, but they should not
+drive the shared runtime history API.
+
 ## HTML App Blocks
 
 The `html-app` block stores a small source file map instead of one opaque HTML
@@ -111,6 +117,38 @@ Dependencies are persisted as structured package/version entries:
 The v1 resolver turns these into jsDelivr URLs at render time. Persisted state
 keeps the structured entries so a future resolver can use import maps, bundling,
 local caching, or another dependency policy without rewriting app state.
+
+## Revision History
+
+`html-app` state persists source revisions alongside the current source:
+
+```ts
+type HtmlAppRevision = {
+  id: string;
+  name: string;
+  description?: string;
+  sourcePrompt?: string;
+  source: 'assistant' | 'user' | 'restore' | 'system';
+  sessionId?: string;
+  toolCallId?: string;
+  commitGroupId?: string;
+  parentRevisionId?: string;
+  createdAt: number;
+  title: string;
+  intent?: string;
+  files: Record<string, string>;
+  entryHtmlPath: string;
+  requestedCapabilities?: AppCapability[];
+  grantedCapabilities?: AppCapability[];
+  dependencies: HtmlAppDependency[];
+};
+```
+
+Persisted `HtmlAppState` includes `revisions`, `activeRevisionId`, and
+`redoRevisionIds`. Older app states parse with empty history by default, so
+hosts can adopt revision-aware writes without a separate storage migration.
+Diagnostics are not stored in revisions because they describe current runtime
+observations and can be regenerated after restore or preview.
 
 Query results are JSON-serializable:
 
