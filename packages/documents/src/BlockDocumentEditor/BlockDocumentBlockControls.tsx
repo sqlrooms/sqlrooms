@@ -770,8 +770,7 @@ export const BlockDocumentBlockControls: FC<
     [blockTypeSearch?.query, mediaMenuItems],
   );
   const blockTypeSearchMenuItems = useMemo(
-    () =>
-      [...filteredTextMenuItems, ...filteredMediaMenuItems],
+    () => [...filteredTextMenuItems, ...filteredMediaMenuItems],
     [filteredMediaMenuItems, filteredTextMenuItems],
   );
   const blockTypeSearchListHeight = useMemo(() => {
@@ -885,11 +884,7 @@ export const BlockDocumentBlockControls: FC<
         setBlockTypeSearch({
           ...blockState,
           mode: 'slash',
-          ...getSlashPlaceholderPosition(
-            editor,
-            focusedBlock,
-            scrollElement,
-          ),
+          ...getSlashPlaceholderPosition(editor, focusedBlock, scrollElement),
           query: text.slice(1),
         });
         if (openSlashMenu) {
@@ -1344,7 +1339,11 @@ export const BlockDocumentBlockControls: FC<
   const renderSlashMenuItems = () =>
     blockTypeSearchMenuItems.length ? (
       <>
-        {renderBlockTypeSearchMenuGroup('Basic blocks', filteredTextMenuItems, 0)}
+        {renderBlockTypeSearchMenuGroup(
+          'Basic blocks',
+          filteredTextMenuItems,
+          0,
+        )}
         {filteredTextMenuItems.length && filteredMediaMenuItems.length ? (
           <DropdownMenuSeparator className="my-1.5" />
         ) : null}
@@ -1554,7 +1553,6 @@ export const BlockDocumentBlockControls: FC<
                 style={{
                   maxHeight: `min(${BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT}px, calc(var(--radix-dropdown-menu-content-available-height) - ${BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN}px))`,
                 }}
-                onOpenAutoFocus={(event) => event.preventDefault()}
                 onCloseAutoFocus={(event) => event.preventDefault()}
               >
                 <DropdownMenuLabel className="text-muted-foreground px-2 py-1 text-xs font-normal">
