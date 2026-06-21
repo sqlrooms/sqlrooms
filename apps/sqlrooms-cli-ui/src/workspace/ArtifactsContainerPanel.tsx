@@ -42,6 +42,8 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const setShowArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
+  const isArtifactStartScreenVisible =
+    showArtifactChooser || !artifactActions.selectedArtifact;
   const isAssistantCollapsed = useRoomStore((state) =>
     state.layout.isCollapsed('assistant-sidebar'),
   );
@@ -49,7 +51,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   const previousAssistantCollapsedRef = useRef<boolean | null>(null);
 
   useEffect(() => {
-    if (showArtifactChooser) {
+    if (isArtifactStartScreenVisible) {
       previousAssistantCollapsedRef.current ??= isAssistantCollapsed;
       if (!isAssistantCollapsed) {
         setCollapsed('assistant-sidebar', true);
@@ -62,7 +64,7 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
       setCollapsed('assistant-sidebar', previousAssistantCollapsed);
       previousAssistantCollapsedRef.current = null;
     }
-  }, [isAssistantCollapsed, setCollapsed, showArtifactChooser]);
+  }, [isArtifactStartScreenVisible, isAssistantCollapsed, setCollapsed]);
 
   return (
     <CliArtifactWorkspaceActionsContext.Provider value={artifactActions}>
