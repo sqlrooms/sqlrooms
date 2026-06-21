@@ -174,6 +174,16 @@ export function createDocumentCommands<
             assets: Object.values(
               state.documents.getDocument(artifactId)?.assets ?? {},
             ).map(documentAssetMetadata),
+            artifactTargetChange: {
+              artifactId,
+              artifactType: 'document',
+              title:
+                state.artifacts.getArtifact(artifactId)?.title ??
+                title ??
+                'Document',
+              change: 'created',
+              shouldContinueChat: select,
+            },
           },
         };
       },
