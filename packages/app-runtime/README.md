@@ -67,6 +67,12 @@ and generated Vite apps can import the client entrypoint or use an injected
 `window.sqlrooms` global. WebContainer should not grow its own separate data
 bridge.
 
+Revision history follows the same boundary. The v1 revision model belongs to
+persisted `html-app` runtime state and does not migrate or version legacy
+WebContainer app project records such as `appProject.config.appsByArtifactId`.
+Those projects can be migrated to `html-app` state later, but they should not
+drive the shared runtime history API.
+
 ## HTML App Blocks
 
 The `html-app` block stores a small source file map instead of one opaque HTML
