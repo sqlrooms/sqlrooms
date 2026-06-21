@@ -89,6 +89,12 @@ with `onCreateSession`. `Chat.History` also accepts `filterSession` and
 `emptyLabel` so apps can present scoped histories without changing the generic
 AI session schema.
 
+`createAiSlice({onChatFinish})` lets host apps observe a non-aborted turn after
+the completed messages have been persisted and the analysis has ended. Use this
+for app-owned follow-up behavior, such as forking a completed chat into a new
+workspace target, while keeping the generic AI slice unaware of app-specific
+state.
+
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's
 `uiMessages` through the selected message or chat turn, inherits the source

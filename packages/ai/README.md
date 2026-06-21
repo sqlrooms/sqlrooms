@@ -66,6 +66,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDefaultAiTools(store),
       },
       getInstructions: () => createDefaultAiInstructions(store),
+      // Optional: observe completed, non-aborted turns for app-owned follow-up
+      // behavior such as handoff into a newly selected workspace artifact.
+      onChatFinish: ({sessionId, messages}) => {
+        void sessionId;
+        void messages;
+      },
     })(set, get, store),
   }),
 );

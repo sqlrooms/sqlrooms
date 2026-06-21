@@ -269,6 +269,13 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   chatEndPoint?: string;
   /** Optional headers to send with remote endpoint */
   chatHeaders?: Record<string, string>;
+  /**
+   * Called after a non-aborted chat turn has been persisted and fully ended.
+   *
+   * Host apps can use this to compose AI turns with app-level behavior such as
+   * creating a follow-up session from a completed assistant message.
+   */
+  onChatFinish?: (args: {sessionId: string; messages: UIMessage[]}) => void;
   /** Optional devtools-only capture controls. Defaults are all disabled. */
   devtools?: {
     captureAgentSnapshots?: boolean;
@@ -1530,7 +1537,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               store.getState().ai.getFullInstructions(sessionId),
           })(endpoint, headers),
 
-        ...createChatHandlers({store}),
+        ...createChatHandlers({store, onChatFinish: params.onChatFinish}),
       },
     };
   });

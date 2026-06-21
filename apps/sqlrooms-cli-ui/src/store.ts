@@ -85,6 +85,7 @@ import {
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
+import {createArtifactChatHandoffController} from './artifactChatHandoff';
 import {ARTIFACT_TYPES} from './artifactTypes';
 import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
@@ -342,6 +343,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     },
     (set, get, store) => {
+      const artifactChatHandoff =
+        createArtifactChatHandoffController(store);
       const getFirstDashboardArtifactId = () =>
         Object.values(get().artifacts.config.artifactsById).find(
           (artifact) => artifact.type === 'dashboard',
@@ -535,6 +538,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           connector,
           config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
+          createCommandProps: {
+            middleware: [artifactChatHandoff.commandMiddleware],
+          },
           createDbProps: {
             duckDb: {
               loadTableSchemasFilter: (() => {
@@ -725,6 +731,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
+            onChatFinish: artifactChatHandoff.onChatFinish,
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
