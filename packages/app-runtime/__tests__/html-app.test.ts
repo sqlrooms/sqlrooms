@@ -265,6 +265,36 @@ describe('html-app helpers', () => {
     expect(redone?.app.redoRevisionIds).toEqual([]);
     expect(redone?.app.files).toEqual({'/index.html': '<h1>Second</h1>'});
   });
+
+  it('prunes discarded redo revisions when committing from an undone revision', () => {
+    const first = commitHtmlAppRevisionState(
+      createAppState(),
+      {files: {'/index.html': '<h1>First</h1>'}},
+      {revisionId: 'rev-1', name: 'First version', createdAt: 10},
+    );
+    const second = commitHtmlAppRevisionState(
+      first.app,
+      {files: {'/index.html': '<h1>Second</h1>'}},
+      {revisionId: 'rev-2', name: 'Second version', createdAt: 20},
+    );
+    const undone = undoHtmlAppRevisionState(second.app);
+
+    const third = commitHtmlAppRevisionState(
+      undone!.app,
+      {files: {'/index.html': '<h1>Third</h1>'}},
+      {revisionId: 'rev-3', name: 'Third version', createdAt: 30},
+    );
+
+    expect(third.app.revisions.map((revision) => revision.id)).toEqual([
+      'rev-1',
+      'rev-3',
+    ]);
+    expect(third.app.redoRevisionIds).toEqual([]);
+
+    const nextUndo = undoHtmlAppRevisionState(third.app);
+    expect(nextUndo?.revision.id).toBe('rev-1');
+    expect(nextUndo?.app.files).toEqual({'/index.html': '<h1>First</h1>'});
+  });
 });
 
 function createAppState(

@@ -364,6 +364,9 @@ export function commitHtmlAppRevisionState(
   const createdAt = metadata.createdAt ?? Date.now();
   const previousRevision = getCurrentHtmlAppRevision(app);
   const activeRevisionId = previousRevision?.id ?? app.activeRevisionId;
+  const activeRevisionIndex = activeRevisionId
+    ? app.revisions.findIndex((revision) => revision.id === activeRevisionId)
+    : -1;
   const nextBaseApp = HtmlAppState.parse({
     ...app,
     ...patch,
@@ -390,11 +393,15 @@ export function commitHtmlAppRevisionState(
     entryHtmlPath: nextBaseApp.entryHtmlPath,
     dependencies: nextBaseApp.dependencies,
   });
+  const revisions =
+    metadata.clearRedo === false || activeRevisionIndex < 0
+      ? nextBaseApp.revisions
+      : nextBaseApp.revisions.slice(0, activeRevisionIndex + 1);
 
   return {
     app: HtmlAppState.parse({
       ...nextBaseApp,
-      revisions: [...nextBaseApp.revisions, revision],
+      revisions: [...revisions, revision],
       activeRevisionId: revision.id,
       redoRevisionIds:
         metadata.clearRedo === false ? nextBaseApp.redoRevisionIds : [],
@@ -610,13 +617,15 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   const displayedRevisionIndex = displayedRevision
     ? revisions.findIndex((revision) => revision.id === displayedRevision.id)
     : -1;
-  const appTitle = displayedRevision?.title ?? app?.title ?? title;
+  const isPreviewing =
+    Boolean(previewRevision) && previewRevision?.id !== activeRevisionId;
+  const appTitle = isPreviewing
+    ? (displayedRevision?.title ?? app?.title ?? title)
+    : (app?.title ?? displayedRevision?.title ?? title);
   const files = displayedRevision?.files ?? app?.files;
   const entryHtmlPath =
     displayedRevision?.entryHtmlPath ?? app?.entryHtmlPath ?? '/index.html';
   const dependencies = displayedRevision?.dependencies ?? app?.dependencies;
-  const isPreviewing =
-    Boolean(previewRevision) && previewRevision?.id !== activeRevisionId;
   const canPreviewPrevious = displayedRevisionIndex > 0;
   const canPreviewNext =
     displayedRevisionIndex >= 0 &&
