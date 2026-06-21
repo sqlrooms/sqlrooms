@@ -219,7 +219,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
       editorProps: {
         attributes: {
           class:
-            'prose prose-sm dark:prose-invert prose-a:text-primary prose-a:underline-offset-2 prose-headings:tracking-normal prose-h1:my-3 prose-h1:text-2xl prose-h1:leading-tight prose-h2:my-2 prose-h2:text-xl prose-h2:leading-snug prose-h3:my-2 prose-h3:text-lg prose-h3:leading-snug prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:leading-6 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground prose-pre:my-3 prose-pre:rounded-md prose-pre:px-3 prose-pre:py-2 [&_li>p]:my-0 [&>p]:min-h-6 [&>h1[data-type=block-document-title]]:!my-0 [&>h1[data-type=block-document-title]]:!text-4xl [&>h1[data-type=block-document-title]]:!leading-tight max-w-none min-h-full pt-10 pr-6 pb-5 pl-16 focus:outline-none',
+            'prose prose-sm dark:prose-invert prose-a:text-primary prose-a:underline-offset-2 prose-headings:tracking-normal prose-h1:my-3 prose-h1:text-2xl prose-h1:leading-tight prose-h2:my-2 prose-h2:text-xl prose-h2:leading-snug prose-h3:my-2 prose-h3:text-lg prose-h3:leading-snug prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-li:leading-6 prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground prose-pre:my-3 prose-pre:rounded-md prose-pre:px-3 prose-pre:py-2 [&_li>p]:my-0 [&>p]:min-h-6 [&>h1[data-type=block-document-title]]:!my-0 [&>h1[data-type=block-document-title]]:!text-4xl [&>h1[data-type=block-document-title]]:!leading-tight max-w-none min-h-full pt-10 pr-6 pb-5 pl-24 focus:outline-none',
         },
         handleDOMEvents: {
           blur: (view) => {
