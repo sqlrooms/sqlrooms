@@ -141,6 +141,13 @@ Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 selection and run-context updates; the app supplies artifact payload readers for
 domain-specific types such as documents or dashboards.
 
+Commands and tools that create or select the user's primary working artifact
+can include `artifactTargetChange` in their result data. The exported
+`ArtifactTargetChange` type is a small metadata shape for host apps that want
+to compose command results with artifact-scoped AI behavior. It does not trigger
+chat changes by itself; apps still own the policy for when an AI chat should
+continue in a new artifact.
+
 ## Artifact-Owned AI Sessions
 
 `@sqlrooms/artifacts/ai` also provides `createArtifactAiSlice()` for apps that

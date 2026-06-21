@@ -556,8 +556,10 @@ export function createRemoteChatTransportFactory(params: {
 
 export function createChatHandlers({
   store,
+  onChatFinish,
 }: {
   store: StoreApi<AiSliceStateForTransport>;
+  onChatFinish?: (args: {sessionId: string; messages: UIMessage[]}) => void;
 }) {
   return {
     onChatFinish: ({
@@ -647,6 +649,7 @@ export function createChatHandlers({
         if (shouldEndAnalysis(completedMessages)) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
+          onChatFinish?.({sessionId, messages: completedMessages});
         }
       } catch (err) {
         console.error('onChatFinish error:', err);

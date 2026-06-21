@@ -31,7 +31,7 @@
     "build": "tsc",
     "dev": "tsc -w",
     "lint": "eslint .",
-    "test": "jest",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "test:watch": "jest --watch",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
@@ -55,6 +55,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
     "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
