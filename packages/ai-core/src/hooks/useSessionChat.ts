@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useRef} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
@@ -174,9 +174,14 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     return () => setAddToolApprovalResponse?.(sessionId, undefined);
   }, [setAddToolApprovalResponse, addToolApprovalResponse, sessionId]);
 
+  // Keep the error fallback current before the passive store sync can race with
+  // an immediately rejected transport request.
+  useLayoutEffect(() => {
+    latestMessagesRef.current = messages as UIMessage[];
+  }, [messages]);
+
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
-    latestMessagesRef.current = messages as UIMessage[];
     if (!sessionId) return;
     setSessionUiMessages(sessionId, messages as UIMessage[]);
   }, [messages, sessionId, setSessionUiMessages]);
