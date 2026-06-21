@@ -157,6 +157,67 @@ def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
     assert server._runtime_status()["status"] == "ready"
 
 
+def test_api_config_with_external_urls(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+        external_ws_url="wss://demo.sprites.dev/ws/duckdb",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
+def test_api_config_derives_ws_url_from_external_url(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
+def test_api_config_derives_proxy_ws_url_from_local_external_url(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="http://localhost:4173",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "http://localhost:4173"
+    assert data["wsUrl"] == "ws://localhost:4173/ws/duckdb"
+
+
 def test_api_config_with_ai_provider_metadata(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
