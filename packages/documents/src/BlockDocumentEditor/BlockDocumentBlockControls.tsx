@@ -789,8 +789,8 @@ export const BlockDocumentBlockControls: FC<
     );
   }, [blockTypeSearchMenuItems.length]);
   const blockTypeSearchSelectionKey = `${blockTypeSearch?.mode ?? ''}:${
-    blockTypeSearch?.query ?? ''
-  }:${blockTypeSearchMenuItems.length}`;
+    blockTypeSearch?.pos ?? ''
+  }:${blockTypeSearch?.query ?? ''}:${blockTypeSearchMenuItems.length}`;
   const blockTypeSearchSelectedIndex =
     blockTypeSearchSelection.key === blockTypeSearchSelectionKey
       ? Math.min(
@@ -807,6 +807,26 @@ export const BlockDocumentBlockControls: FC<
     setBlockTypeSearchMenuOpen(false);
     setBlockTypeSearchSelection({index: 0, key: ''});
   }, []);
+
+  const clearBlockTypeSearchView = useCallback(() => {
+    closeBlockTypeSearchMenu();
+    setBlockTypeSearch(null);
+    setFocusedEmptyBlock(null);
+  }, [closeBlockTypeSearchMenu]);
+
+  const dismissBlockTypeSearch = useCallback(
+    ({rememberSlash = false}: {rememberSlash?: boolean} = {}) => {
+      if (rememberSlash && editor && blockTypeSearch?.mode === 'slash') {
+        const node = getNodeAt(editor, blockTypeSearch.pos);
+        const nodeId = node?.attrs.id;
+        dismissedSlashBlockIdRef.current =
+          typeof nodeId === 'string' ? nodeId : null;
+      }
+      clearBlockTypeSearchView();
+      filterBlockIdRef.current = null;
+    },
+    [blockTypeSearch, clearBlockTypeSearchView, editor],
+  );
 
   useEffect(() => {
     if (!blockTypeSearch && !blockTypeSearchMenuOpen) {
@@ -1049,9 +1069,8 @@ export const BlockDocumentBlockControls: FC<
         isEmptyTextBlock(node)
       ) {
         setHandleMenuOpen(false);
-        closeBlockTypeSearchMenu();
+        clearBlockTypeSearchView();
         setActiveBlock(null);
-        setBlockTypeSearch(null);
         return;
       }
 
@@ -1068,11 +1087,10 @@ export const BlockDocumentBlockControls: FC<
         .run();
 
       setHandleMenuOpen(false);
-      closeBlockTypeSearchMenu();
+      clearBlockTypeSearchView();
       setActiveBlock(null);
-      setBlockTypeSearch(null);
     },
-    [closeBlockTypeSearchMenu, editor, generateBlockId],
+    [clearBlockTypeSearchView, editor, generateBlockId],
   );
 
   const turnActiveBlockInto = useCallback(
@@ -1097,9 +1115,7 @@ export const BlockDocumentBlockControls: FC<
         node.type.name === 'paragraph' &&
         isEmptyTextBlock(node)
       ) {
-        closeBlockTypeSearchMenu();
-        setBlockTypeSearch(null);
-        setFocusedEmptyBlock(null);
+        clearBlockTypeSearchView();
         return;
       }
 
@@ -1115,11 +1131,9 @@ export const BlockDocumentBlockControls: FC<
         )
         .run();
 
-      closeBlockTypeSearchMenu();
-      setBlockTypeSearch(null);
-      setFocusedEmptyBlock(null);
+      clearBlockTypeSearchView();
     },
-    [blockTypeSearch, closeBlockTypeSearchMenu, editor, generateBlockId],
+    [blockTypeSearch, clearBlockTypeSearchView, editor, generateBlockId],
   );
 
   const handleActiveBlockTypeSelect = useCallback(
@@ -1183,16 +1197,7 @@ export const BlockDocumentBlockControls: FC<
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        if (blockTypeSearch.mode === 'slash') {
-          const node = getNodeAt(editor, blockTypeSearch.pos);
-          const nodeId = node?.attrs.id;
-          dismissedSlashBlockIdRef.current =
-            typeof nodeId === 'string' ? nodeId : null;
-        }
-        closeBlockTypeSearchMenu();
-        setBlockTypeSearch(null);
-        setFocusedEmptyBlock(null);
-        filterBlockIdRef.current = null;
+        dismissBlockTypeSearch({rememberSlash: true});
       }
     };
 
@@ -1206,7 +1211,7 @@ export const BlockDocumentBlockControls: FC<
     blockTypeSearchMenuOpen,
     blockTypeSearchSelectionKey,
     blockTypeSearchSelectedIndex,
-    closeBlockTypeSearchMenu,
+    dismissBlockTypeSearch,
     editor,
     handleBlockTypeSearchSelect,
     handleMenuOpen,
@@ -1279,7 +1284,7 @@ export const BlockDocumentBlockControls: FC<
       event.preventDefault();
       return;
     }
-    closeBlockTypeSearchMenu();
+    dismissBlockTypeSearch({rememberSlash: true});
     setHandleMenuOpen((open) => !open);
   };
 
@@ -1583,7 +1588,7 @@ export const BlockDocumentBlockControls: FC<
                 if (open) {
                   setBlockTypeSearchMenuOpen(true);
                 } else {
-                  closeBlockTypeSearchMenu();
+                  dismissBlockTypeSearch({rememberSlash: true});
                 }
               }}
             >
@@ -1640,7 +1645,7 @@ export const BlockDocumentBlockControls: FC<
               open={handleMenuOpen}
               onOpenChange={(open) => {
                 setHandleMenuOpen(open);
-                if (open) closeBlockTypeSearchMenu();
+                if (open) dismissBlockTypeSearch({rememberSlash: true});
               }}
             >
               <Tooltip>
