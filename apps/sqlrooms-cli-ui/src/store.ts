@@ -86,6 +86,7 @@ import {
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {ARTIFACT_TYPES} from './artifactTypes';
+import {addCliDatabaseInitializationDiagnostics} from './cliDatabaseInitialization';
 import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
@@ -229,14 +230,19 @@ function createDisabledCrdtState(): CrdtSliceState {
   };
 }
 
+const runtimeWsUrl = runtimeConfig.wsUrl || 'ws://localhost:4000';
 const connector = createWebSocketDuckDbConnector({
-  wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
+  wsUrl: runtimeWsUrl,
   initializationQuery: [
     'INSTALL spatial',
     'LOAD spatial',
     `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
     `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
   ].join('; '),
+});
+addCliDatabaseInitializationDiagnostics(connector, {
+  runtimeConfig,
+  wsUrl: runtimeWsUrl,
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);

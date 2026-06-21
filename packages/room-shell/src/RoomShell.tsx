@@ -167,8 +167,10 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
     <ProgressModal
       className={className}
       isOpen={loadingProgress !== undefined}
-      title="Loading"
+      title={loadingProgress?.error ? 'Unable to start SQLRooms' : 'Loading'}
       loadingStage={loadingProgress?.message}
+      error={loadingProgress?.error}
+      errorDetails={loadingProgress?.errorDetails}
       indeterminate={true}
     />
   );
