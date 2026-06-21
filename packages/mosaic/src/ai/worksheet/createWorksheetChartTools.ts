@@ -58,7 +58,7 @@ export function createWorksheetChartTools({
         id: createDefaultBlockDocumentBlockId(),
         config,
         tableName,
-        caption: title,
+        caption: title ?? 'Chart',
       });
     },
   };

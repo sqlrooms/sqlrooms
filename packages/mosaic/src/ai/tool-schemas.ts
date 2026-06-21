@@ -13,7 +13,6 @@ export const BaseChartToolInput = z.object({
   title: z
     .string()
     .optional()
-    .default('Chart')
     .describe('Optional title for the chart artifact'),
   panelId: z
     .string()

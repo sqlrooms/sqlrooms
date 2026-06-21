@@ -55,12 +55,15 @@ export function createDashboardChartTools({
           );
         }
 
-        dashboardAdapter.updatePanel(panelId, {title, config});
+        dashboardAdapter.updatePanel(panelId, {
+          title: title ?? panel.title,
+          config,
+        });
         return panelId;
       }
 
       return dashboardAdapter.addPanel(
-        createMosaicDashboardChartPanelConfig(title, config),
+        createMosaicDashboardChartPanelConfig(title ?? 'Chart', config),
       );
     },
   };
