@@ -1,9 +1,12 @@
 import {jest} from '@jest/globals';
-import {createCommandTools} from '../src/tools/commandTools';
 
-function createCommandState(
-  invokeCommand: any,
-): ReturnType<typeof createCommandTools> {
+jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
+  hasCommandSliceState: () => true,
+}));
+
+const {createCommandTools} = await import('../src/tools/commandTools');
+
+function createCommandState(invokeCommand: any) {
   return createCommandTools({
     getState: () => ({
       commands: {
@@ -15,7 +18,7 @@ function createCommandState(
         invokeCommand,
       },
     }),
-  } as any) as ReturnType<typeof createCommandTools>;
+  } as any);
 }
 
 describe('command tools', () => {

@@ -539,7 +539,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({store}),
           createCommandProps: {
-            middleware: [artifactChatHandoff.commandMiddleware],
+            middleware: [artifactChatHandoff.commandMiddleware as any],
           },
           createDbProps: {
             duckDb: {
