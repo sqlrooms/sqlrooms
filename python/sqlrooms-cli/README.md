@@ -186,10 +186,11 @@ pnpm --filter sqlrooms-cli-app build
 pnpm dev cli
 ```
 
-This starts the Python API server on `http://127.0.0.1:4173` with `--no-ui`
+This starts the Python API server on `http://127.0.0.1:4273` with `--no-ui`
 and the Vite UI on `http://localhost:4174`. If those ports are busy, the dev
-script selects the next free API and UI ports and points the Vite proxy at the
-selected API port.
+script selects the next free API and UI ports from separate ranges and points
+the Vite proxy at the selected API port. The auto-created dev database is named
+after the selected UI port, for example `sqlrooms-cli-4174.db`.
 
 3. Run the Python API server on its own (optional):
 

@@ -2,7 +2,7 @@
 
 This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms-cli`).
 
-In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server (default `http://localhost:4173`).
+In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
@@ -18,8 +18,9 @@ pnpm dev cli
 
 This starts:
 
-- the Python API server on `http://127.0.0.1:4173` without serving static UI, or the next free port
+- the Python API server on `http://127.0.0.1:4273` without serving static UI, or the next free port
 - the Vite UI on `http://localhost:4174`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
+- a per-session dev database named after the selected UI port, for example `sqlrooms-cli-4174.db`
 
 If you want fixed ports, pass them to the Python server:
 

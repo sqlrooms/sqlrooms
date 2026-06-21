@@ -83,6 +83,8 @@ const childEnv = {
   [pathKey]: childPath,
   SQLROOMS_CLI_DEV_ARGS: JSON.stringify(cliArgs),
 };
+const CLI_DEV_API_DEFAULT_PORT = 4273;
+const CLI_DEV_UI_DEFAULT_PORT = 4174;
 
 function readOptionValue(args, name) {
   const prefix = `${name}=`;
@@ -211,15 +213,35 @@ async function getCliDevPorts(args) {
   const explicitApiPort = parsePortOption(args, '--port');
   const explicitWsPort = parsePortOption(args, '--ws-port');
   const reservedPorts = new Set(
-    [4174, explicitWsPort].filter((port) => typeof port === 'number'),
+    [CLI_DEV_UI_DEFAULT_PORT, explicitWsPort].filter(
+      (port) => typeof port === 'number',
+    ),
   );
   const apiPort =
-    explicitApiPort ?? (await findAvailablePort(4173, host, reservedPorts));
+    explicitApiPort ??
+    (await findAvailablePort(CLI_DEV_API_DEFAULT_PORT, host, reservedPorts));
   const uiReservedPorts = new Set(
     [apiPort, explicitWsPort].filter((port) => typeof port === 'number'),
   );
-  const uiPort = await findAvailablePort(4174, '0.0.0.0', uiReservedPorts);
+  const uiPort = await findAvailablePort(
+    CLI_DEV_UI_DEFAULT_PORT,
+    '0.0.0.0',
+    uiReservedPorts,
+  );
   return {apiPort, proxyHost, uiPort};
+}
+
+function getPythonCliDevArgs(args, apiPort, uiPort) {
+  const apiPortArgs = hasOption(args, '--port')
+    ? args
+    : ['--port', String(apiPort), ...args];
+  return hasDbPathArg(apiPortArgs)
+    ? apiPortArgs
+    : [
+        '--db-path',
+        path.join(tmpdir(), `sqlrooms-cli-${uiPort}.db`),
+        ...apiPortArgs,
+      ];
 }
 
 function turboRunArgs(task, filters, extraArgs = []) {
@@ -307,12 +329,14 @@ if (target !== 'cli') {
     process.exit(1);
   }
 } else if (isDryRun) {
+  const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
+  const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
   console.log(
-    '(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://localhost:4173 ./node_modules/.bin/vite --host --port 4174)',
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   console.log(
     `(cd python/sqlrooms-cli && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
-      cliArgs,
+      pythonCliArgs,
     )} node scripts/dev.mjs)`,
   );
   process.exit(0);
@@ -401,16 +425,7 @@ process.on('SIGTERM', () => {
 
 if (target === 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
-  const apiPortArgs = hasOption(cliArgs, '--port')
-    ? cliArgs
-    : ['--port', String(apiPort), ...cliArgs];
-  const pythonCliArgs = hasDbPathArg(apiPortArgs)
-    ? apiPortArgs
-    : [
-        '--db-path',
-        path.join(tmpdir(), `sqlrooms-cli-${apiPort}.db`),
-        ...apiPortArgs,
-      ];
+  const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
   startProcess(
     'sqlrooms CLI UI dev server',
     ['--host', '--port', String(uiPort)],
