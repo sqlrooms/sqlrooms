@@ -185,15 +185,15 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
 
 export function createDashboardCommands(): RoomCommand<RoomState>[] {
   return [
-    // Universal select (works for any artifact type)
+    // Universal select (works for any workspace item type)
     {
       id: 'artifact.select',
-      name: 'Select artifact',
-      description: 'Switch to an existing artifact by ID',
-      group: 'Artifacts',
-      keywords: ['artifact', 'select', 'switch'],
+      name: 'Select item',
+      description: 'Switch to an existing workspace item by ID',
+      group: 'Workspace',
+      keywords: ['item', 'workspace', 'select', 'switch'],
       inputSchema: SelectArtifactCommandInput,
-      inputDescription: 'Provide the artifact ID.',
+      inputDescription: 'Provide the item ID.',
       metadata: {
         readOnly: false,
         idempotent: true,

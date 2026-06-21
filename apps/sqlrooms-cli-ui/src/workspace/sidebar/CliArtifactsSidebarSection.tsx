@@ -91,19 +91,6 @@ export function CliArtifactsSidebarSection() {
         <ScrollArea className="min-h-0 min-w-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0">
           <div className="w-full max-w-full min-w-0 overflow-hidden pr-2">
             <SidebarMenu className="max-w-full min-w-0 gap-0.5 overflow-hidden">
-              {artifactTabs.tabs.length === 0 ? (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="data-[active=true]:bg-primary/15 data-[active=true]:text-primary hover:bg-sidebar-accent h-7 max-w-full min-w-0 gap-2 px-2 text-sm font-normal [&>svg]:size-3.5"
-                    disabled
-                    type="button"
-                  >
-                    <span className="block min-w-0 flex-1 truncate">
-                      No artifacts
-                    </span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ) : null}
               {artifactTabs.tabs.map((artifact) => {
                 const type = artifactTabs.artifactTypes[artifact.type];
                 const Icon = type?.icon ?? FileStackIcon;
@@ -172,7 +159,7 @@ export function CliArtifactsSidebarSection() {
           className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
           type="button"
           size="lg"
-          aria-label="Artifacts"
+          aria-label="Workspace items"
         >
           <FileStackIcon className="h-4 w-4" aria-hidden />
         </SidebarMenuButton>
@@ -184,11 +171,11 @@ export function CliArtifactsSidebarSection() {
         sideOffset={8}
       >
         <Command>
-          <CommandInput placeholder="Search artifacts..." />
+          <CommandInput placeholder="Search workspace items..." />
           <CommandList className="max-h-none overflow-hidden">
-            <CommandEmpty>No artifacts found.</CommandEmpty>
+            <CommandEmpty>No matching items.</CommandEmpty>
             <ScrollArea className="h-[min(70vh,360px)] overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block">
-              <CommandGroup heading="Artifacts">
+              <CommandGroup heading="Workspace items">
                 {artifactTabs.tabs.map((artifact) => {
                   const type = artifactTabs.artifactTypes[artifact.type];
                   const Icon = type?.icon ?? FileStackIcon;
@@ -216,14 +203,14 @@ export function CliArtifactsSidebarSection() {
             <CommandSeparator />
             <CommandGroup>
               <CommandItem
-                value="new artifact"
+                value="new"
                 onSelect={() => {
                   openArtifactChooser(true);
                   setPopoverOpen(false);
                 }}
               >
                 <Plus className="h-4 w-4" aria-hidden />
-                New Artifact
+                New
               </CommandItem>
             </CommandGroup>
           </CommandList>
@@ -308,9 +295,9 @@ function RenameArtifactDialog({
       <DialogContent showCloseButton={false}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Rename artifact</DialogTitle>
+            <DialogTitle>Rename item</DialogTitle>
             <DialogDescription>
-              Choose a new name for this workspace artifact.
+              Choose a new name for this item.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -318,7 +305,7 @@ function RenameArtifactDialog({
             value={name}
             onChange={(event) => setName(event.target.value)}
             className="my-4"
-            aria-label="Artifact name"
+            aria-label="Item name"
           />
           <DialogFooter>
             <Button
@@ -351,10 +338,10 @@ function DeleteArtifactDialog({
     <Dialog open={artifact !== null} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Delete artifact</DialogTitle>
+          <DialogTitle>Delete item</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete &ldquo;
-            {artifact?.name ?? 'this artifact'}&rdquo;? This action cannot be
+            {artifact?.name ?? 'this item'}&rdquo;? This action cannot be
             undone.
           </DialogDescription>
         </DialogHeader>
