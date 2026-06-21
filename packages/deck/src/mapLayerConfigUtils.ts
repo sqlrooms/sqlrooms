@@ -258,7 +258,7 @@ export function setDeckMapLayerGeometryColumn(
     return config;
   }
 
-  return {
+  const updatedConfig = {
     ...config,
     datasets: {
       ...config.datasets,
@@ -268,6 +268,14 @@ export function setDeckMapLayerGeometryColumn(
       },
     },
   };
+
+  return updateDeckMapLayer(updatedConfig, layerIndex, (l) => ({
+    ...l,
+    _sqlroomsBinding: {
+      ...(l._sqlroomsBinding as Record<string, unknown>),
+      geometryColumn,
+    },
+  }));
 }
 
 export function setDeckMapLayerHexagonColumn(

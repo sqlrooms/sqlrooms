@@ -1,11 +1,11 @@
-import {FC, useCallback, useState} from 'react';
+import {FC, useCallback, useMemo, useState} from 'react';
 import {
   Field,
   ColumnSelector,
   ColumnsProvider,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
-import {useDataTable} from '@sqlrooms/duckdb';
+import {useDataTable, type TableColumn} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   binnedNumericSchemes,
@@ -66,6 +66,46 @@ function extractTableFromSqlQuery(
   if (!sqlQuery) return undefined;
   const match = sqlQuery.match(/\bFROM\s+(?:"([^"]+)"|(\w[\w.]*))/i);
   return match?.[1] ?? match?.[2];
+}
+
+/**
+ * Extracts column aliases from a SQL SELECT clause (e.g. `... AS geom`).
+ * Returns names of columns that are produced by the query but may not
+ * exist in the raw source table.
+ */
+function extractSelectAliases(sqlQuery: string | undefined): string[] {
+  if (!sqlQuery) return [];
+  const selectMatch = sqlQuery.match(/\bSELECT\b(.+?)\bFROM\b/is);
+  if (!selectMatch?.[1]) return [];
+  const aliases: string[] = [];
+  const aliasPattern = /\bAS\s+(?:"([^"]+)"|(\w+))/gi;
+  let match;
+  while ((match = aliasPattern.exec(selectMatch[1])) !== null) {
+    const name = match[1] ?? match[2];
+    if (name) aliases.push(name);
+  }
+  return aliases;
+}
+
+/**
+ * Augments raw table columns with virtual columns derived from the dataset's
+ * sqlQuery. These are columns generated at query time (e.g. geometry columns
+ * created via ST_AsWKB) that don't exist in the raw source table.
+ */
+function getColumnsWithVirtual(
+  tableColumns: TableColumn[],
+  sqlQuery: string | undefined,
+): TableColumn[] {
+  const aliases = extractSelectAliases(sqlQuery);
+  if (!aliases.length) return tableColumns;
+
+  const existingNames = new Set(tableColumns.map((c) => c.name.toLowerCase()));
+  const virtualColumns: TableColumn[] = aliases
+    .filter((name) => !existingNames.has(name.toLowerCase()))
+    .map((name) => ({name, type: 'GEOMETRY (computed)'}));
+
+  if (!virtualColumns.length) return tableColumns;
+  return [...tableColumns, ...virtualColumns];
 }
 
 const HEATMAP_COLOR_STEPS = 6;
@@ -168,6 +208,17 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const primaryTable = useDataTable(dashboardSelectedTable);
   const fallbackTable = useDataTable(fallbackTableName);
   const dataTable = primaryTable ?? fallbackTable;
+
+  const columnsWithVirtual = useMemo(
+    () =>
+      dataTable
+        ? getColumnsWithVirtual(
+            dataTable.columns,
+            activeLayerDataset?.source?.sqlQuery,
+          )
+        : [],
+    [dataTable, activeLayerDataset?.source?.sqlQuery],
+  );
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
@@ -618,10 +669,14 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
         )}
 
         {dataTable && showGeometryColumnSetting && (
-          <ColumnsProvider columns={dataTable.columns}>
+          <ColumnsProvider columns={columnsWithVirtual}>
             <Field label="Geometry column" required>
               <ColumnSelector
-                value={activeLayerDataset?.geometryColumn}
+                value={
+                  ((activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.geometryColumn as string | undefined) ??
+                  activeLayerDataset?.geometryColumn
+                }
                 onChange={(geometryColumn) =>
                   applyConfig(
                     setDeckMapLayerGeometryColumn(
