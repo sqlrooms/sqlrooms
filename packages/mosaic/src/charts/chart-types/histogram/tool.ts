@@ -54,7 +54,7 @@ Optional: maxBins (${MIN_BINS_COUNT}-${MAX_BINS_COUNT}, default ${DEFAULT_BINS_C
 CRITICAL: Only for quantitative continuous data to see distribution shape, outliers, skewness.
 Do NOT use for: categorical data (use count-plot), relationships between columns (use scatter-plot), time series trends (use line-chart).`,
     inputSchema: HistogramToolInput,
-    execute: async ({tableName, settings, title}) => {
+    execute: async ({tableName, settings, title, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
 
@@ -70,6 +70,7 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
 
         addChart({
           tableName,
+          panelId,
           config: chartConfig,
           title,
         });

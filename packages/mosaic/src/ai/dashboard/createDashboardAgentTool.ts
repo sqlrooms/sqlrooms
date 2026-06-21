@@ -60,8 +60,9 @@ ${chartToolsInstructions}
 ### Direct Requests
 When user provides specific instructions:
 1. Parse intent -> identify panel type
-2. Call appropriate tool with settings
-3. Done
+2. If the user asks to change, update, edit, replace, or fix an existing panel, call ${KnownDashboardTools.list_dashboard_panels} first and pass the target panelId to the appropriate chart or map tool.
+3. Call appropriate tool with settings
+4. Done
 
 ### Exploratory Requests
 When user asks to discover insights:
@@ -96,6 +97,7 @@ When user asks to discover insights:
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Validate columns:** Query tools will validate column existence and types
+- **Update existing panels:** Chart tools accept panelId. Pass panelId when the user wants to modify an existing chart; omit it only when creating a new panel.
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach`;
 }
 

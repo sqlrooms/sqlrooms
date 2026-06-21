@@ -402,6 +402,12 @@ const dashboardTools = createDashboardAiTools({
 });
 ```
 
+Dashboard chart tools create new chart panels by default. When the user asks to
+edit an existing chart, pass that panel's `panelId` to the same chart tool; the
+tool validates that the target is a chart panel and updates its config in place.
+If the tool call omits `title`, updates preserve the panel's existing title
+instead of renaming it to the default chart title.
+
 Host tools can be added with `extraTools`; they must not reuse built-in
 dashboard tool keys. Register geospatial map tools under `MAP_TOOL_KEY` so the
 dashboard prompts and tool registration stay aligned. When host tools need

@@ -31,7 +31,7 @@ IMPORTANT: Scatter charts render ALL rows as individual points. Do NOT create sc
 
 Do NOT use for: distributions (use histogram), categorical counts (use count-plot), trends over time (use line-chart), or large datasets (>${maxDataPoints.toLocaleString()} rows).`,
     inputSchema: ScatterPlotToolInput,
-    execute: async ({tableName, title, settings}) => {
+    execute: async ({tableName, title, settings, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
 
@@ -48,6 +48,7 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
 
         addChart({
           tableName,
+          panelId,
           config: chartConfig,
           title,
         });

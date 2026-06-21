@@ -32,7 +32,7 @@ Best for: large datasets with overlapping points, finding patterns/hotspots in 2
 
 Do NOT use for: individual point plots (use scatter-plot), single variable distribution (use histogram), time trends (use line-chart).`,
     inputSchema: HeatmapToolInput,
-    execute: async ({tableName, title, settings}) => {
+    execute: async ({tableName, title, settings, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
 
@@ -48,6 +48,7 @@ Do NOT use for: individual point plots (use scatter-plot), single variable distr
 
         addChart({
           tableName,
+          panelId,
           title,
           config: chartConfig,
         });
