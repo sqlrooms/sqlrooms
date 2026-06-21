@@ -62,10 +62,12 @@ methods such as `_repr_mimebundle_()`, `_repr_html_()`, or Altair `to_dict()`.
 HTML and Vega-Lite previews are rendered in sandboxed iframes by
 `PythonCellBlock`.
 
-When user code imports `altair`, the Pyodide worker installs Altair and
-`vega_datasets` on demand through `micropip`. It also provides an
-`altair.datasets` compatibility module backed by `vega_datasets.data` for
-sample-code snippets that use `from altair.datasets import data`.
+When user code imports `altair`, the Pyodide worker installs Altair on demand
+through `micropip`. The SQLRooms bridge exposes `sqlrooms.query()` and
+`sqlrooms.query_df()` as pandas DataFrames, so query results can be passed
+directly to libraries such as Altair. Use `sqlrooms.query_records()` for plain
+row records and `sqlrooms.query_raw()` when column metadata or `rowCount` is
+needed.
 
 ## Worksheet commands
 

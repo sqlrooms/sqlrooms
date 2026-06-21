@@ -81,17 +81,27 @@ const SQLROOMS_MODULE_SOURCE = `
 from _sqlrooms_bridge import query as _query
 
 
-def query(sql, max_rows=None):
+def query_raw(sql, max_rows=None):
     """Run a SQLRooms host query and return {'columns', 'rows', 'rowCount'}."""
     return _query(str(sql), max_rows).to_py()
+
+
+def query_records(sql, max_rows=None):
+    """Run a SQLRooms host query and return row records."""
+    return query_raw(sql, max_rows=max_rows)["rows"]
 
 
 def query_df(sql, max_rows=None):
     """Run a SQLRooms host query and return a pandas DataFrame."""
     import pandas as pd
 
-    result = query(sql, max_rows=max_rows)
+    result = query_raw(sql, max_rows=max_rows)
     return pd.DataFrame(result["rows"], columns=result["columns"])
+
+
+def query(sql, max_rows=None):
+    """Run a SQLRooms host query and return a pandas DataFrame."""
+    return query_df(sql, max_rows=max_rows)
 `;
 
 let pyodidePromise: Promise<PyodideAPI> | undefined;
@@ -333,46 +343,16 @@ function formatMicropipRequirement(requirement: PythonRequirementSpec) {
 }
 
 async function ensureAltair(pyodide: PyodideAPI) {
-  const packageStateJson = pyodide.runPython(`
-import json as __sqlrooms_json
+  const hasAltair = pyodide.runPython(`
 import importlib.util as __sqlrooms_importlib_util
-__sqlrooms_json.dumps({
-    "altair": __sqlrooms_importlib_util.find_spec("altair") is not None,
-    "vega_datasets": __sqlrooms_importlib_util.find_spec("vega_datasets") is not None,
-})
+__sqlrooms_importlib_util.find_spec("altair") is not None
 `);
-  const packageState = JSON.parse(String(packageStateJson)) as Record<
-    string,
-    boolean
-  >;
-  const missingPackages = Object.entries(
-    packageState as Record<string, boolean>,
-  )
-    .filter(([, installed]) => !installed)
-    .map(([packageName]) => packageName);
+  if (hasAltair) return;
 
-  if (missingPackages.length) {
-    await pyodide.loadPackage('micropip');
-    pyodide.globals.set('__sqlrooms_altair_packages', missingPackages);
-    await pyodide.runPythonAsync(`
+  await pyodide.loadPackage('micropip');
+  await pyodide.runPythonAsync(`
 import micropip as __sqlrooms_micropip
-await __sqlrooms_micropip.install(__sqlrooms_altair_packages.to_py())
-`);
-    pyodide.globals.delete('__sqlrooms_altair_packages');
-  }
-
-  pyodide.runPython(`
-import sys as __sqlrooms_sys
-import types as __sqlrooms_types
-
-if "altair.datasets" not in __sqlrooms_sys.modules:
-    import altair as __sqlrooms_altair
-    from vega_datasets import data as __sqlrooms_vega_data
-
-    __sqlrooms_altair_datasets = __sqlrooms_types.ModuleType("altair.datasets")
-    __sqlrooms_altair_datasets.data = __sqlrooms_vega_data
-    __sqlrooms_altair.datasets = __sqlrooms_altair_datasets
-    __sqlrooms_sys.modules["altair.datasets"] = __sqlrooms_altair_datasets
+await __sqlrooms_micropip.install("altair")
 `);
 }
 

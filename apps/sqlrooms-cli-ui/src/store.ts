@@ -296,7 +296,7 @@ function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
 }
 
 function quoteSqlIdentifier(identifier: string) {
-  return `"${identifier.replaceAll('"', '""')}"`;
+  return `"${identifier.split('"').join('""')}"`;
 }
 
 function getRuntimeBridgeConfig() {
