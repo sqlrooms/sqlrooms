@@ -41,6 +41,14 @@ export const HtmlAppRuntimeInputSchema = z.object({
     .array(HtmlAppDependencySchema)
     .optional()
     .describe('Versioned browser dependencies resolved by SQLRooms.'),
+  revisionName: z
+    .string()
+    .optional()
+    .describe('Concise persisted revision name for this app change.'),
+  revisionDescription: z
+    .string()
+    .optional()
+    .describe('Optional short description of what changed in this revision.'),
   maxRepairAttempts: z
     .number()
     .int()
@@ -155,7 +163,9 @@ function renameHtmlAppTitle(
       diagnostics: [],
     },
     createHtmlAppRevisionMetadata(store, input, {
-      name: title ? `Rename to ${title}` : 'Title rename',
+      title,
+      isTitleOnly: true,
+      isInitialRevision: app.revisions.length === 0,
     }),
   );
 
@@ -368,6 +378,7 @@ export async function writeHtmlAppRuntimeState(
   const title = input.title?.trim() || 'HTML App';
   const dependencies = resolveDependencies(input);
   const files = normalizeHtmlAppFiles(input);
+  const existingApp = store.getState().htmlApps.getApp(appId);
 
   if (!files || Object.keys(files).length === 0) {
     return {
@@ -421,7 +432,9 @@ export async function writeHtmlAppRuntimeState(
       grantedCapabilities: ['query'],
     },
     createHtmlAppRevisionMetadata(store, input, {
-      name: 'App update',
+      title,
+      isTitleOnly: false,
+      isInitialRevision: !existingApp || existingApp.revisions.length === 0,
     }),
   );
 
@@ -462,16 +475,78 @@ export async function writeHtmlAppRuntimeState(
 
 function createHtmlAppRevisionMetadata(
   store: StoreApi<RoomState>,
-  input: Pick<HtmlAppAgentInput, 'prompt'>,
-  {name}: {name: string},
+  input: Pick<
+    HtmlAppAgentInput,
+    'prompt' | 'revisionName' | 'revisionDescription'
+  >,
+  {
+    title,
+    isTitleOnly,
+    isInitialRevision,
+  }: {title?: string; isTitleOnly: boolean; isInitialRevision: boolean},
 ) {
   const currentSession = store.getState().ai.getCurrentSession();
   return {
-    name,
+    name: deriveHtmlAppRevisionName({
+      revisionName: input.revisionName,
+      prompt: input.prompt,
+      title,
+      isInitialRevision,
+      isTitleOnly,
+    }),
+    description: input.revisionDescription,
     source: 'assistant' as const,
     sourcePrompt: input.prompt,
     sessionId: currentSession?.id,
   };
+}
+
+function deriveHtmlAppRevisionName({
+  revisionName,
+  prompt,
+  title,
+  isInitialRevision,
+  isTitleOnly,
+}: {
+  revisionName?: string;
+  prompt: string;
+  title?: string;
+  isInitialRevision: boolean;
+  isTitleOnly: boolean;
+}) {
+  const explicitName = normalizeRevisionName(revisionName);
+  if (explicitName) return explicitName;
+  if (isInitialRevision) return title ? `Initial ${title}` : 'Initial version';
+  if (isTitleOnly && title) return `Rename to ${title}`;
+  return summarizePromptAsRevisionName(prompt) ?? 'App update';
+}
+
+function summarizePromptAsRevisionName(prompt: string) {
+  const normalized = prompt
+    .replace(/\s+/g, ' ')
+    .replace(
+      /^(please|can you|could you|would you|i want you to|make it|make the app|update the app to)\s+/i,
+      '',
+    )
+    .trim();
+  if (!normalized) return undefined;
+  const sentence = normalized.split(/[.!?]/)[0]?.trim() || normalized;
+  const withoutFiller = sentence.replace(
+    /^(change|update|edit|modify|fix|improve|add|remove|replace|rename|set)\s+/i,
+    (match) => `${capitalize(match.trim())} `,
+  );
+  return normalizeRevisionName(capitalize(withoutFiller));
+}
+
+function normalizeRevisionName(name?: string) {
+  const normalized = name?.replace(/\s+/g, ' ').trim();
+  if (!normalized) return undefined;
+  return normalized.length > 60 ? `${normalized.slice(0, 57)}...` : normalized;
+}
+
+function capitalize(value: string) {
+  if (!value) return value;
+  return `${value[0].toUpperCase()}${value.slice(1)}`;
 }
 
 function formatHtmlAppRevisionResult(revision?: HtmlAppRevision) {
@@ -479,6 +554,7 @@ function formatHtmlAppRevisionResult(revision?: HtmlAppRevision) {
   return {
     id: revision.id,
     name: revision.name,
+    description: revision.description,
     source: revision.source,
     createdAt: revision.createdAt,
     parentRevisionId: revision.parentRevisionId,
@@ -549,7 +625,7 @@ Required workflow:
 1. Understand the requested app.
 2. Use list_tables, read_table_schema, and query when needed to verify table and column names.
 3. Generate complete app source. Prefer a single self-contained html string for iframe apps; use files only for advanced multi-file cases.
-4. Call write_html_app_source with either html or files.
+4. Call write_html_app_source with either html or files, plus a concise revisionName such as "Initial sales dashboard", "Add region filter", or "Fix D3 scale error".
 5. If diagnostics include errors, fix the source and call write_html_app_source again.
 6. Do not finish without calling write_html_app_source at least once.
 
@@ -572,7 +648,7 @@ Your job is to make a scoped edit to an existing html-app runtime. You receive t
 Required workflow:
 1. Read the current source and the user's requested change.
 2. Modify only what is needed for the request. Preserve unrelated SQL, data access, layout, styles, interactions, and dependencies.
-3. Call write_html_app_source with either html or files.
+3. Call write_html_app_source with either html or files, plus a concise revisionName that names the requested change.
 4. If diagnostics include errors caused by the edit, fix the source and call write_html_app_source again.
 5. Do not finish without calling write_html_app_source at least once.
 
@@ -602,7 +678,7 @@ function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
   }
 
   parts.push(
-    'Generate and write the complete app source now. Prefer the html field for a self-contained app. Do not use a placeholder scaffold.',
+    'Generate and write the complete app source now. Prefer the html field for a self-contained app. Include a concise revisionName. Do not use a placeholder scaffold.',
   );
 
   return parts.join('\n\n');
@@ -643,7 +719,7 @@ function formatHtmlAppEditPrompt(
   );
 
   parts.push(
-    'Write the complete updated app source now. Preserve unrelated behavior and avoid data discovery unless the request explicitly changes data/query behavior.',
+    'Write the complete updated app source now. Include a concise revisionName. Preserve unrelated behavior and avoid data discovery unless the request explicitly changes data/query behavior.',
   );
 
   return parts.join('\n\n');
