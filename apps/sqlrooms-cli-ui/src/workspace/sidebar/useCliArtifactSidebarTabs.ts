@@ -16,6 +16,9 @@ export function useCliArtifactSidebarTabs() {
   const setCurrentArtifact = useRoomStore(
     (state) => state.artifacts.setCurrentArtifact,
   );
+  const artifactsById = useRoomStore(
+    (state) => state.artifacts.config.artifactsById,
+  );
   const deleteArtifactFromStore = useRoomStore(
     (state) => state.artifacts.deleteArtifact,
   );
@@ -60,10 +63,11 @@ export function useCliArtifactSidebarTabs() {
 
   const selectArtifact = useCallback(
     (artifactId: string) => {
+      if (!artifactsById[artifactId]) return;
       setCurrentArtifact(artifactId);
       setShowArtifactChooser(false);
     },
-    [setCurrentArtifact, setShowArtifactChooser],
+    [artifactsById, setCurrentArtifact, setShowArtifactChooser],
   );
 
   const renameArtifact = useCallback(

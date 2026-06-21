@@ -123,11 +123,14 @@ function useCliArtifactWorkspaceActionState(): CliArtifactWorkspaceActions {
 
   return useMemo(
     () => ({
-      selectedArtifactId: currentArtifactId,
+      selectedArtifactId:
+        currentArtifactId && artifactsById[currentArtifactId]
+          ? currentArtifactId
+          : artifactIds[0],
       artifactIds,
       selectArtifact,
     }),
-    [artifactIds, currentArtifactId, selectArtifact],
+    [artifactIds, artifactsById, currentArtifactId, selectArtifact],
   );
 }
 
