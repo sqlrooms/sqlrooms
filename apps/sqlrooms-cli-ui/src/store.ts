@@ -25,6 +25,7 @@ import {
 } from '@sqlrooms/cells';
 import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
 import {
+  arrowTableToJson,
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
@@ -51,6 +52,7 @@ import {
   createPythonCellSlice,
   createPyodidePythonRuntimeAdapter,
   PythonCellSliceConfig,
+  type PythonRuntimeHost,
 } from '@sqlrooms/python-cell';
 import {
   BaseRoomConfig,
@@ -262,6 +264,33 @@ connector.loadFile = async (file, desiredTableName, options) => {
   }
   return baseLoadFile(file, desiredTableName, options);
 };
+
+function createCliPythonRuntimeHost(): PythonRuntimeHost {
+  return {
+    readTable: ({tableName, maxRows}) =>
+      runReadonlyPythonSql(`SELECT * FROM ${tableName}`, maxRows),
+    runReadonlySql: ({query, maxRows}) => runReadonlyPythonSql(query, maxRows),
+  };
+}
+
+async function runReadonlyPythonSql(query: string, maxRows?: number) {
+  const arrowTable = await connector.query(
+    wrapPythonReadonlyQuery(query, maxRows),
+  );
+  const rows = arrowTableToJson(arrowTable);
+  return {
+    columns: arrowTable.schema.fields.map((field) => field.name),
+    rows,
+    rowCount: rows.length,
+  };
+}
+
+function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
+  const trimmedQuery = query.trim().replace(/;+$/, '');
+  const limit =
+    maxRows === undefined ? '' : ` LIMIT ${Math.max(0, Math.floor(maxRows))}`;
+  return `SELECT * FROM (${trimmedQuery}) AS sqlrooms_python_query${limit}`;
+}
 
 function getRuntimeBridgeConfig() {
   if (runtimeConfig.dbBridge?.connections?.length) {
@@ -641,6 +670,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createPythonCellSlice({
           runtimeAdapter: createPyodidePythonRuntimeAdapter(),
+          host: createCliPythonRuntimeHost(),
         })(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
