@@ -541,6 +541,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandNamespace,
               commandGroup: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandGroup,
             }),
+          );
+          registerCommandsForOwner(
+            store,
             HTML_APP_REVISION_COMMAND_OWNER,
             createHtmlAppRevisionCommands(),
           );
