@@ -41,6 +41,9 @@ export type HtmlAppDependency = z.infer<typeof HtmlAppDependency>;
 export const HtmlAppSourceFileMap = z.record(z.string(), z.string());
 export type HtmlAppSourceFileMap = z.infer<typeof HtmlAppSourceFileMap>;
 
+/**
+ * Origin category recorded for a persisted HTML app revision.
+ */
 export const HtmlAppRevisionSource = z.enum([
   'assistant',
   'user',
@@ -49,6 +52,14 @@ export const HtmlAppRevisionSource = z.enum([
 ]);
 export type HtmlAppRevisionSource = z.infer<typeof HtmlAppRevisionSource>;
 
+/**
+ * Persisted source-bearing snapshot for an HTML app.
+ *
+ * Revisions store the source, title, intent, dependencies, and capability
+ * grants needed to replay undo, redo, and restore operations without depending
+ * on the live app state. Diagnostics are intentionally excluded because they
+ * describe runtime observations that can be regenerated for the active source.
+ */
 export const HtmlAppRevision = z.object({
   id: z.string(),
   name: z.string(),
@@ -68,12 +79,6 @@ export const HtmlAppRevision = z.object({
   grantedCapabilities: z.array(AppCapability).optional(),
   dependencies: z.array(HtmlAppDependency).default([]),
 });
-/**
- * Persisted source-bearing snapshot for an HTML app.
- *
- * Diagnostics are intentionally excluded because they describe runtime
- * observations that can be regenerated for the active source.
- */
 export type HtmlAppRevision = z.infer<typeof HtmlAppRevision>;
 
 export const HtmlAppState = z.object({
@@ -644,6 +649,13 @@ function normalizeRevisionName(name?: string) {
   return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized;
 }
 
+/**
+ * Stateful block renderer for sandboxed HTML apps.
+ *
+ * The block renders the current app source by default and can temporarily
+ * preview a historical revision without writing preview diagnostics back to the
+ * active app.
+ */
 export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   blockId,
   appId,

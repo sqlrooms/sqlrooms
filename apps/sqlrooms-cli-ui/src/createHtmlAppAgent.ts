@@ -381,6 +381,10 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
   };
 }
 
+/**
+ * Persist generated HTML app source, commit a revision, and return runtime
+ * diagnostics observed after the write.
+ */
 export async function writeHtmlAppRuntimeState(
   store: StoreApi<RoomState>,
   input: HtmlAppRuntimeWriteInput,

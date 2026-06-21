@@ -25,6 +25,9 @@ type HtmlAppRestoreRevisionCommandInput = z.infer<
   typeof HtmlAppRestoreRevisionCommandInput
 >;
 
+/**
+ * Create room commands for restoring, undoing, and redoing HTML app revisions.
+ */
 export function createHtmlAppRevisionCommands(): RoomCommand<RoomState>[] {
   return [
     {
