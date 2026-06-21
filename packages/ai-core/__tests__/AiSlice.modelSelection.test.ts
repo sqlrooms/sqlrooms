@@ -118,6 +118,25 @@ describe('AiSlice model selection', () => {
     });
     expect(session?.isRunning).toBe(false);
     expect(session?.messagesRevision).toBe(1);
+
+    store.getState().ai.setSessionUiMessages('session-1', [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hi'}],
+      },
+    ]);
+
+    const messagesAfterStaleSync = store.getState().ai.config.sessions[0]
+      ?.uiMessages as UIMessage[];
+    expect(messagesAfterStaleSync).toHaveLength(2);
+    expect(getChatRequestErrorMessage(messagesAfterStaleSync[0])).toEqual({
+      error: 'Failed to fetch',
+    });
+    expect(messagesAfterStaleSync[1]?.parts[0]).toMatchObject({
+      type: CHAT_REQUEST_ERROR_PART_TYPE,
+      data: {error: 'Failed to fetch'},
+    });
   });
 
   it('uses fallback chat messages when the store has an older same-length snapshot', () => {

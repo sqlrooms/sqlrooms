@@ -88,6 +88,14 @@ export function getChatRequestErrorPartMessage(
   return typeof error === 'string' ? {error} : undefined;
 }
 
+export function uiMessagesHaveChatRequestError(messages: UIMessage[]): boolean {
+  return messages.some(
+    (message) =>
+      !!getChatRequestErrorMessage(message) ||
+      message.parts.some((part) => !!getChatRequestErrorPartMessage(part)),
+  );
+}
+
 function isPartComplete(part: UIMessagePart): boolean {
   if (
     (part.type === 'text' || part.type === 'reasoning') &&
