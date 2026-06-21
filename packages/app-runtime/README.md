@@ -109,6 +109,35 @@ The v1 resolver turns these into jsDelivr URLs at render time. Persisted state
 keeps the structured entries so a future resolver can use import maps, bundling,
 local caching, or another dependency policy without rewriting app state.
 
+## Revision History
+
+`html-app` state persists source revisions alongside the current source:
+
+```ts
+type HtmlAppRevision = {
+  id: string;
+  name: string;
+  description?: string;
+  sourcePrompt?: string;
+  source: 'assistant' | 'user' | 'restore' | 'system';
+  sessionId?: string;
+  toolCallId?: string;
+  commitGroupId?: string;
+  parentRevisionId?: string;
+  createdAt: number;
+  title: string;
+  files: Record<string, string>;
+  entryHtmlPath: string;
+  dependencies: HtmlAppDependency[];
+};
+```
+
+Persisted `HtmlAppState` includes `revisions`, `activeRevisionId`, and
+`redoRevisionIds`. Older app states parse with empty history by default, so
+hosts can adopt revision-aware writes without a separate storage migration.
+Diagnostics are not stored in revisions because they describe current runtime
+observations and can be regenerated after restore or preview.
+
 Query results are JSON-serializable:
 
 ```ts

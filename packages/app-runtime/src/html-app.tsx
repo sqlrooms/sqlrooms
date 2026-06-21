@@ -33,6 +33,38 @@ export type HtmlAppDependency = z.infer<typeof HtmlAppDependency>;
 export const HtmlAppSourceFileMap = z.record(z.string(), z.string());
 export type HtmlAppSourceFileMap = z.infer<typeof HtmlAppSourceFileMap>;
 
+export const HtmlAppRevisionSource = z.enum([
+  'assistant',
+  'user',
+  'restore',
+  'system',
+]);
+export type HtmlAppRevisionSource = z.infer<typeof HtmlAppRevisionSource>;
+
+export const HtmlAppRevision = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  sourcePrompt: z.string().optional(),
+  source: HtmlAppRevisionSource,
+  sessionId: z.string().optional(),
+  toolCallId: z.string().optional(),
+  commitGroupId: z.string().optional(),
+  parentRevisionId: z.string().optional(),
+  createdAt: z.number(),
+  title: z.string(),
+  files: HtmlAppSourceFileMap,
+  entryHtmlPath: z.string().default('/index.html'),
+  dependencies: z.array(HtmlAppDependency).default([]),
+});
+/**
+ * Persisted source-bearing snapshot for an HTML app.
+ *
+ * Diagnostics are intentionally excluded because they describe runtime
+ * observations that can be regenerated for the active source.
+ */
+export type HtmlAppRevision = z.infer<typeof HtmlAppRevision>;
+
 export const HtmlAppState = z.object({
   id: z.string(),
   title: z.string(),
@@ -42,6 +74,9 @@ export const HtmlAppState = z.object({
   grantedCapabilities: z.array(AppCapability).default([]),
   dependencies: z.array(HtmlAppDependency).default([]),
   diagnostics: z.array(AppDiagnostic).default([]),
+  revisions: z.array(HtmlAppRevision).default([]),
+  activeRevisionId: z.string().optional(),
+  redoRevisionIds: z.array(z.string()).default([]),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
