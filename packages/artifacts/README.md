@@ -20,6 +20,7 @@ import {
   createArtifactPanelDefinition,
   createArtifactsSlice,
   defineArtifactTypes,
+  useArtifactWorkspace,
 } from '@sqlrooms/artifacts';
 
 const artifactTypes = defineArtifactTypes({
@@ -72,6 +73,20 @@ Use `ArtifactTabs.useActions()` from custom subcomponents when you need access
 to the tab adapter actions, and use `overlay` for dialogs or other elements that
 need that context without being rendered inside the tab strip.
 
+For non-tab artifact surfaces, use `useArtifactWorkspace()` directly:
+
+```tsx
+const artifacts = useArtifactWorkspace({
+  types: ['notebook', 'dashboard'],
+});
+
+return artifacts.selectedArtifact ? (
+  <ArtifactPanel artifact={artifacts.selectedArtifact} />
+) : (
+  <NewArtifactScreen onCreate={() => artifacts.createArtifact('notebook')} />
+);
+```
+
 ## Slice API
 
 Config uses artifact terminology throughout:
@@ -97,8 +112,13 @@ removes the artifact registry entry.
 
 ## Artifact Tabs
 
+- `useArtifactWorkspace({types?, selectFallback?})` returns tab-free artifact
+  ids, descriptors, current selection, type definitions, and create/delete/
+  rename/select actions. It is useful for single-content hosts, sidebars, and
+  search/create surfaces that should not adopt layout-tab behavior.
 - `useArtifactTabs({tabsId?, types?, panelKey?})` returns TabStrip-compatible
-  descriptors, open tab ids, selected id, and handlers.
+  descriptors, open tab ids, selected id, and handlers. It builds on
+  `useArtifactWorkspace()` and adds the layout-tabs adapter.
 - `ArtifactTabs` is a compound component over `TabStrip` and
   `TabsLayout.TabContent`.
 - Pass `forceMountContent` to `ArtifactTabs` to keep visible artifact tab

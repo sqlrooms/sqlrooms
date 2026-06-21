@@ -1,4 +1,8 @@
-import {type ArtifactMetadataType} from '@sqlrooms/artifacts';
+import {
+  useArtifactWorkspace,
+  type ArtifactMetadataType,
+  type UseArtifactWorkspaceResult,
+} from '@sqlrooms/artifacts';
 import {RoomPanelComponent, type RoomPanelInfo} from '@sqlrooms/layout';
 import {Button, toast} from '@sqlrooms/ui';
 import {BarChart3Icon, XIcon} from 'lucide-react';
@@ -11,15 +15,11 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../artifactTypeIds';
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 import {ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
-type CliArtifactWorkspaceActions = {
-  selectedArtifactId?: string;
-  artifactIds: string[];
-  selectArtifact: (artifactId: string) => void;
-};
+type CliArtifactWorkspaceActions = UseArtifactWorkspaceResult;
 
 const CliArtifactWorkspaceActionsContext =
   createContext<CliArtifactWorkspaceActions | null>(null);
@@ -35,7 +35,7 @@ function useCliArtifactWorkspaceActions() {
 }
 
 export const ArtifactsContainerPanel: RoomPanelComponent = () => {
-  const artifactActions = useCliArtifactWorkspaceActionState();
+  const artifactActions = useArtifactWorkspace({types: CLI_ARTIFACT_TYPES});
   const showArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.showArtifactChooser,
   );
@@ -86,63 +86,6 @@ export const ArtifactsContainerPanel: RoomPanelComponent = () => {
   );
 };
 
-function useCliArtifactWorkspaceActionState(): CliArtifactWorkspaceActions {
-  const currentArtifactId = useRoomStore(
-    (state) => state.artifacts.config.currentArtifactId,
-  );
-  const artifactOrder = useRoomStore(
-    (state) => state.artifacts.config.artifactOrder,
-  );
-  const artifactsById = useRoomStore(
-    (state) => state.artifacts.config.artifactsById,
-  );
-  const setCurrentArtifact = useRoomStore(
-    (state) => state.artifacts.setCurrentArtifact,
-  );
-
-  const artifactIds = useMemo(
-    () =>
-      artifactOrder.filter((artifactId) => {
-        const artifact = artifactsById[artifactId];
-        return (
-          artifact &&
-          CLI_ARTIFACT_TYPES.includes(artifact.type as CliArtifactType)
-        );
-      }),
-    [artifactOrder, artifactsById],
-  );
-  const selectedArtifactId = useMemo(
-    () =>
-      currentArtifactId && artifactIds.includes(currentArtifactId)
-        ? currentArtifactId
-        : artifactIds[0],
-    [artifactIds, currentArtifactId],
-  );
-
-  const selectArtifact = useCallback(
-    (artifactId: string) => {
-      if (artifactIds.includes(artifactId)) {
-        setCurrentArtifact(artifactId);
-      }
-    },
-    [artifactIds, setCurrentArtifact],
-  );
-
-  useEffect(() => {
-    if (selectedArtifactId === currentArtifactId) return;
-    setCurrentArtifact(selectedArtifactId);
-  }, [currentArtifactId, selectedArtifactId, setCurrentArtifact]);
-
-  return useMemo(
-    () => ({
-      selectedArtifactId,
-      artifactIds,
-      selectArtifact,
-    }),
-    [artifactIds, selectArtifact, selectedArtifactId],
-  );
-}
-
 function CliArtifactContentHost({
   content,
   emptyContent,
@@ -151,15 +94,10 @@ function CliArtifactContentHost({
   emptyContent: ReactNode;
 }) {
   const artifactActions = useCliArtifactWorkspaceActions();
-  const artifactsById = useRoomStore(
-    (state) => state.artifacts.config.artifactsById,
-  );
   const ensureArtifact = useRoomStore(
     (state) => state.artifacts.ensureArtifact,
   );
-  const selectedArtifact =
-    artifactActions.selectedArtifactId &&
-    artifactsById[artifactActions.selectedArtifactId];
+  const selectedArtifact = artifactActions.selectedArtifact;
 
   useEffect(() => {
     if (!selectedArtifact) return;

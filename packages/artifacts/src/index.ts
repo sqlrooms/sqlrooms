@@ -37,6 +37,14 @@ export type {
   RoomStateWithArtifactsAndLayout,
 } from './ArtifactsSlice';
 
+export {useArtifactWorkspace} from './artifactWorkspace';
+export type {
+  ArtifactWorkspaceDescriptor,
+  ArtifactWorkspaceSelectFallback,
+  UseArtifactWorkspaceOptions,
+  UseArtifactWorkspaceResult,
+} from './artifactWorkspace';
+
 export {
   ArtifactTabs,
   createArtifactLayoutNode,

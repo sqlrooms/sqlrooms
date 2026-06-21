@@ -29,18 +29,18 @@ import React, {
 } from 'react';
 import type {StoreApi} from 'zustand';
 import type {ArtifactTypeDefinitions} from './ArtifactTypes';
-import type {ArtifactMetadata as ArtifactMetadataType} from './ArtifactsSliceConfig';
 import {
   useStoreWithArtifactsAndLayout,
   type ArtifactsSliceState,
 } from './ArtifactsSlice';
+import {
+  useArtifactWorkspace,
+  type ArtifactWorkspaceDescriptor,
+} from './artifactWorkspace';
 
 const DEFAULT_ARTIFACT_PANEL_KEY = 'artifact';
 
-export type ArtifactTabDescriptor = TabDescriptor & {
-  artifact: ArtifactMetadataType;
-  type: string;
-};
+export type ArtifactTabDescriptor = TabDescriptor & ArtifactWorkspaceDescriptor;
 
 export type UseArtifactTabsOptions = {
   tabsId?: string;
@@ -68,10 +68,6 @@ export type UseArtifactTabsResult = {
   selectArtifact: (artifactId: string) => void;
   handleOpenTabsChange: (openArtifactIds: string[]) => void;
 };
-
-function isManagedType(types: readonly string[] | undefined, type: string) {
-  return !types || types.includes(type);
-}
 
 function getArtifactIdsFromTabsNode(
   layoutConfig: unknown,
@@ -183,18 +179,13 @@ export function useArtifactTabs(
       ? layoutContext.node.id
       : undefined);
   const panelKey = options.panelKey ?? DEFAULT_ARTIFACT_PANEL_KEY;
-  const typesKey = options.types?.join('\u0000') ?? '';
-  const managedTypes = useMemo(
-    () => (options.types ? [...options.types] : undefined),
-    // Keep inline arrays like types={['notebook']} stable by value.
-    [typesKey],
-  );
+  const artifactWorkspace = useArtifactWorkspace({
+    types: options.types,
+    selectFallback: 'none',
+  });
 
   const artifactsConfig = useStoreWithArtifactsAndLayout(
     (state) => state.artifacts.config,
-  );
-  const artifactTypes = useStoreWithArtifactsAndLayout(
-    (state) => state.artifacts.artifactTypes,
   );
   const layoutConfig = useStoreWithArtifactsAndLayout(
     (state) => state.layout.config,
@@ -218,20 +209,12 @@ export function useArtifactTabs(
   const reorderTabs = useStoreWithArtifactsAndLayout(
     (state) => state.layout.reorderTabs,
   );
-  const createArtifactInStore = useStoreWithArtifactsAndLayout(
-    (state) => state.artifacts.createArtifact,
-  );
+  const artifactTypes = artifactWorkspace.artifactTypes;
   const ensureArtifact = useStoreWithArtifactsAndLayout(
     (state) => state.artifacts.ensureArtifact,
   );
   const closeArtifactInStore = useStoreWithArtifactsAndLayout(
     (state) => state.artifacts.closeArtifact,
-  );
-  const deleteArtifactFromStore = useStoreWithArtifactsAndLayout(
-    (state) => state.artifacts.deleteArtifact,
-  );
-  const renameArtifactInStore = useStoreWithArtifactsAndLayout(
-    (state) => state.artifacts.renameArtifact,
   );
   const setCurrentArtifact = useStoreWithArtifactsAndLayout(
     (state) => state.artifacts.setCurrentArtifact,
@@ -241,33 +224,13 @@ export function useArtifactTabs(
   );
 
   const artifactOrder = useMemo(
-    () =>
-      artifactsConfig.artifactOrder.filter((artifactId) => {
-        const artifact = artifactsConfig.artifactsById[artifactId];
-        return artifact && isManagedType(managedTypes, artifact.type);
-      }),
-    [
-      artifactsConfig.artifactsById,
-      artifactsConfig.artifactOrder,
-      managedTypes,
-    ],
+    () => artifactWorkspace.artifactIds,
+    [artifactWorkspace.artifactIds],
   );
 
   const tabs = useMemo<ArtifactTabDescriptor[]>(
-    () =>
-      artifactOrder
-        .map((artifactId) => artifactsConfig.artifactsById[artifactId])
-        .filter((artifact): artifact is ArtifactMetadataType =>
-          Boolean(artifact),
-        )
-        .map((artifact) => ({
-          id: artifact.id,
-          name: artifact.title,
-          type: artifact.type,
-          icon: artifactTypes[artifact.type]?.icon,
-          artifact,
-        })),
-    [artifactOrder, artifactsConfig.artifactsById, artifactTypes],
+    () => artifactWorkspace.artifacts,
+    [artifactWorkspace.artifacts],
   );
 
   const layoutArtifactTabIds = useMemo(
@@ -330,18 +293,12 @@ export function useArtifactTabs(
       return;
     }
     const activeTabId = getActiveTab(tabsId);
-    if (activeTabId && artifactsConfig.artifactsById[activeTabId]) {
+    if (activeTabId && artifactOrder.includes(activeTabId)) {
       setCurrentArtifact(activeTabId);
     } else {
       setCurrentArtifact(undefined);
     }
-  }, [
-    artifactsConfig.artifactsById,
-    getActiveTab,
-    layoutConfig,
-    setCurrentArtifact,
-    tabsId,
-  ]);
+  }, [artifactOrder, getActiveTab, layoutConfig, setCurrentArtifact, tabsId]);
 
   const createArtifact = useCallback(
     (
@@ -350,42 +307,31 @@ export function useArtifactTabs(
         title?: string;
       },
     ) => {
-      const artifactType =
-        type ?? managedTypes?.[0] ?? Object.keys(artifactTypes)[0];
-      if (!artifactType) return undefined;
-      const artifactId = createArtifactInStore({
-        type: artifactType,
-        title: createOptions?.title,
-      });
+      const artifactId = artifactWorkspace.createArtifact(type, createOptions);
+      if (!artifactId) return undefined;
       if (tabsId) {
         addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
       }
       return artifactId;
     },
-    [
-      addTab,
-      artifactTypes,
-      createArtifactInStore,
-      managedTypes,
-      panelKey,
-      tabsId,
-    ],
+    [addTab, artifactWorkspace.createArtifact, panelKey, tabsId],
   );
 
   const openArtifact = useCallback(
     (artifactId: string) => {
       const artifact = artifactsConfig.artifactsById[artifactId];
-      if (!tabsId || !artifact) {
+      if (!tabsId || !artifact || !artifactOrder.includes(artifactId)) {
         return;
       }
       addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
-      setCurrentArtifact(artifactId);
+      artifactWorkspace.selectArtifact(artifactId);
     },
     [
       addTab,
+      artifactOrder,
+      artifactWorkspace.selectArtifact,
       artifactsConfig.artifactsById,
       panelKey,
-      setCurrentArtifact,
       tabsId,
     ],
   );
@@ -402,19 +348,19 @@ export function useArtifactTabs(
 
   const deleteArtifact = useCallback(
     (artifactId: string) => {
-      deleteArtifactFromStore(artifactId);
+      artifactWorkspace.deleteArtifact(artifactId);
       if (tabsId) {
         deleteTab(tabsId, artifactId);
       }
     },
-    [deleteArtifactFromStore, deleteTab, tabsId],
+    [artifactWorkspace.deleteArtifact, deleteTab, tabsId],
   );
 
   const renameArtifact = useCallback(
     (artifactId: string, title: string) => {
-      renameArtifactInStore(artifactId, title);
+      artifactWorkspace.renameArtifact(artifactId, title);
     },
-    [renameArtifactInStore],
+    [artifactWorkspace.renameArtifact],
   );
 
   const reorderArtifacts = useCallback(
@@ -441,13 +387,21 @@ export function useArtifactTabs(
 
   const selectArtifact = useCallback(
     (artifactId: string) => {
+      if (!artifactOrder.includes(artifactId)) return;
       if (tabsId) {
         addTab(tabsId, createArtifactLayoutNode(artifactId, panelKey));
         setActiveTab(tabsId, artifactId);
       }
-      setCurrentArtifact(artifactId);
+      artifactWorkspace.selectArtifact(artifactId);
     },
-    [addTab, panelKey, setActiveTab, setCurrentArtifact, tabsId],
+    [
+      addTab,
+      artifactOrder,
+      artifactWorkspace.selectArtifact,
+      panelKey,
+      setActiveTab,
+      tabsId,
+    ],
   );
 
   const handleOpenTabsChange = useCallback(
