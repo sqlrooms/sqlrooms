@@ -78,11 +78,17 @@ export function AiPanel() {
       <Chat.PromptSuggestions>
         <Chat.PromptSuggestions.Item text="What trends should I investigate first?" />
       </Chat.PromptSuggestions>
-      <Chat.Composer placeholder="Ask a question" />
+      <Chat.Composer
+        placeholder="Ask a question"
+        topActions={<Chat.PromptSuggestions.VisibilityToggle />}
+      />
     </Chat>
   );
 }
 ```
+
+Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
+the prompt's top row, right-aligned beside context selectors.
 
 `Chat.Header` and `Chat.History` can delegate session creation to the host app
 with `onCreateSession`. `Chat.History` also accepts `filterSession` and
