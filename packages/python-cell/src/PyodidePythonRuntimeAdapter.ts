@@ -130,12 +130,9 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
         ? setTimeout(() => {
             const pending = this.pending.get(request.executionId);
             if (!pending) return;
-            this.pending.delete(request.executionId);
-            this.worker?.terminate();
-            this.worker = undefined;
             this.state = 'error';
             this.message = `Python execution exceeded ${request.limits?.timeoutMs}ms.`;
-            pending.reject(
+            this.terminateWorkerAndRejectPending(
               Object.assign(new Error(this.message), {
                 name: 'PythonExecutionTimeout',
               }),
@@ -157,13 +154,9 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
   }
 
   async dispose() {
-    this.worker?.terminate();
-    this.worker = undefined;
-    for (const pending of this.pending.values()) {
-      if (pending.timeoutId) clearTimeout(pending.timeoutId);
-      pending.reject(new Error('Python runtime adapter disposed.'));
-    }
-    this.pending.clear();
+    this.terminateWorkerAndRejectPending(
+      new Error('Python runtime adapter disposed.'),
+    );
     this.state = 'idle';
     this.message = undefined;
   }
@@ -206,14 +199,20 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
     worker.onerror = (event) => {
       this.state = 'error';
       this.message = event.message;
-      for (const pending of this.pending.values()) {
-        if (pending.timeoutId) clearTimeout(pending.timeoutId);
-        pending.reject(new Error(event.message));
-      }
-      this.pending.clear();
+      this.terminateWorkerAndRejectPending(new Error(event.message));
     };
     this.worker = worker;
     return worker;
+  }
+
+  private terminateWorkerAndRejectPending(error: Error) {
+    this.worker?.terminate();
+    this.worker = undefined;
+    for (const pending of this.pending.values()) {
+      if (pending.timeoutId) clearTimeout(pending.timeoutId);
+      pending.reject(error);
+    }
+    this.pending.clear();
   }
 
   private async handleHostRequest(
