@@ -8,15 +8,7 @@ import {
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import {
-  AppWindowIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  HistoryIcon,
-  Redo2Icon,
-  RotateCcwIcon,
-  Undo2Icon,
-} from 'lucide-react';
+import {AppWindowIcon, HistoryIcon, RotateCcwIcon} from 'lucide-react';
 import {
   useEffect,
   useMemo,
@@ -581,12 +573,6 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   const restoreAppRevision = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.restoreAppRevision,
   );
-  const undoAppRevision = useBaseRoomStore(
-    (state: HtmlAppRuntimeSliceState) => state.htmlApps.undoAppRevision,
-  );
-  const redoAppRevision = useBaseRoomStore(
-    (state: HtmlAppRuntimeSliceState) => state.htmlApps.redoAppRevision,
-  );
   const getState = useMemo(
     () => () =>
       roomStore.getState() as unknown as HtmlAppRuntimeSliceState &
@@ -606,12 +592,15 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     setPreviewRevisionId(undefined);
   }, [app?.activeRevisionId]);
 
+  useEffect(() => {
+    if (!historyOpen) {
+      setPreviewRevisionId(undefined);
+    }
+  }, [historyOpen]);
+
   const revisions = app?.revisions ?? [];
   const activeRevision = getCurrentHtmlAppRevision(app);
   const activeRevisionId = activeRevision?.id ?? app?.activeRevisionId;
-  const activeRevisionIndex = activeRevisionId
-    ? revisions.findIndex((revision) => revision.id === activeRevisionId)
-    : -1;
   const previewRevision = previewRevisionId
     ? revisions.find((revision) => revision.id === previewRevisionId)
     : undefined;
@@ -628,10 +617,6 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   const entryHtmlPath =
     displayedRevision?.entryHtmlPath ?? app?.entryHtmlPath ?? '/index.html';
   const dependencies = displayedRevision?.dependencies ?? app?.dependencies;
-  const canPreviewPrevious = displayedRevisionIndex > 0;
-  const canPreviewNext =
-    displayedRevisionIndex >= 0 &&
-    displayedRevisionIndex < revisions.length - 1;
   const grantedCapabilities = app?.grantedCapabilities;
   const hasApp = Boolean(app);
 
@@ -711,98 +696,73 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
           {appTitle ?? 'HTML App'}
         </div>
         <IconButton
-          disabled={!canPreviewPrevious}
-          label="Previous revision"
-          onClick={() => {
-            const revision = revisions[displayedRevisionIndex - 1];
-            if (revision) setPreviewRevisionId(revision.id);
-          }}
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </IconButton>
-        <div className="text-muted-foreground w-14 text-center text-xs tabular-nums">
-          {revisions.length > 0
-            ? `v${displayedRevisionIndex + 1} of ${revisions.length}`
-            : 'v0 of 0'}
-        </div>
-        <IconButton
-          disabled={!canPreviewNext}
-          label="Next revision"
-          onClick={() => {
-            const revision = revisions[displayedRevisionIndex + 1];
-            if (revision) setPreviewRevisionId(revision.id);
-          }}
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </IconButton>
-        <IconButton
-          disabled={!resolvedAppId || activeRevisionIndex <= 0}
-          label="Undo revision"
-          onClick={() => {
-            if (!resolvedAppId) return;
-            undoAppRevision(resolvedAppId);
-          }}
-        >
-          <Undo2Icon className="h-4 w-4" />
-        </IconButton>
-        <IconButton
-          disabled={!resolvedAppId || !app?.redoRevisionIds.length}
-          label="Redo revision"
-          onClick={() => {
-            if (!resolvedAppId) return;
-            redoAppRevision(resolvedAppId);
-          }}
-        >
-          <Redo2Icon className="h-4 w-4" />
-        </IconButton>
-        <IconButton
-          disabled={revisions.length <= 1}
+          disabled={revisions.length === 0}
           label="Revision history"
           onClick={() => setHistoryOpen((open) => !open)}
         >
           <HistoryIcon className="h-4 w-4" />
         </IconButton>
-        <IconButton
-          disabled={!resolvedAppId || !previewRevision || !isPreviewing}
-          label="Restore revision"
-          onClick={() => {
-            if (!resolvedAppId || !previewRevision) return;
-            restoreAppRevision(resolvedAppId, previewRevision.id, {
-              name: `Restore ${previewRevision.name}`,
-            });
-          }}
-        >
-          <RotateCcwIcon className="h-4 w-4" />
-        </IconButton>
       </div>
-      {historyOpen && revisions.length > 0 ? (
-        <div className="border-border bg-muted/30 max-h-44 shrink-0 overflow-auto border-b text-xs">
-          {revisions.map((revision, index) => (
-            <button
-              className={`hover:bg-muted flex w-full items-center gap-2 px-3 py-1.5 text-left ${
-                revision.id === displayedRevision?.id ? 'bg-muted' : ''
-              }`}
-              key={revision.id}
-              onClick={() => setPreviewRevisionId(revision.id)}
-              type="button"
-            >
-              <span className="text-muted-foreground w-10 shrink-0 tabular-nums">
-                v{index + 1}
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-w-0 flex-1">
+          {isPreviewing && previewRevision ? (
+            <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-24px)] items-center gap-2 rounded border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-950 shadow-sm">
+              <span className="shrink-0 font-medium">
+                Preview v{displayedRevisionIndex + 1} of {revisions.length}
               </span>
-              <span className="min-w-0 flex-1 truncate">{revision.name}</span>
-              <span className="text-muted-foreground shrink-0">
-                {revision.source}
-              </span>
-            </button>
-          ))}
+              <span className="min-w-0 truncate">{previewRevision.name}</span>
+              <button
+                className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-300 bg-white px-2 py-1 font-medium hover:bg-amber-100"
+                onClick={() => {
+                  if (!resolvedAppId) return;
+                  restoreAppRevision(resolvedAppId, previewRevision.id, {
+                    name: `Restore ${previewRevision.name}`,
+                  });
+                }}
+                type="button"
+              >
+                <RotateCcwIcon className="h-3.5 w-3.5" />
+                Restore this version
+              </button>
+            </div>
+          ) : null}
+          <iframe
+            ref={iframeRef}
+            className="h-full min-h-0 w-full bg-white"
+            sandbox="allow-scripts"
+            title={appTitle ?? title ?? 'HTML App'}
+          />
         </div>
-      ) : null}
-      <iframe
-        ref={iframeRef}
-        className="min-h-0 flex-1 bg-white"
-        sandbox="allow-scripts"
-        title={appTitle ?? title ?? 'HTML App'}
-      />
+        {historyOpen && revisions.length > 0 ? (
+          <aside className="border-border bg-muted/30 w-56 shrink-0 overflow-auto border-l text-xs sm:w-64">
+            <div className="text-muted-foreground border-border border-b px-3 py-2 font-medium">
+              History
+            </div>
+            {revisions.map((revision, index) => (
+              <button
+                className={`hover:bg-muted flex w-full items-start gap-2 px-3 py-2 text-left ${
+                  revision.id === displayedRevision?.id ? 'bg-muted' : ''
+                }`}
+                key={revision.id}
+                onClick={() => setPreviewRevisionId(revision.id)}
+                type="button"
+              >
+                <span className="text-muted-foreground w-8 shrink-0 tabular-nums">
+                  v{index + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">
+                    {revision.name}
+                  </span>
+                  <span className="text-muted-foreground block truncate">
+                    {revision.source}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 };
