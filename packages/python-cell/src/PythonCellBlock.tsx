@@ -3,6 +3,9 @@ import type {
   StatefulBlockRenderProps,
 } from '@sqlrooms/blocks';
 import {CodeMirrorEditor, createSqlroomsTheme} from '@sqlrooms/codemirror';
+import {python} from '@codemirror/lang-python';
+import {Prec} from '@codemirror/state';
+import {keymap} from '@codemirror/view';
 import {
   Badge,
   Button,
@@ -64,7 +67,6 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
   const clearCellResult = useStoreWithPythonCells(
     (state) => state.pythonCells.clearCellResult,
   );
-  const editorExtensions = useMemo(() => [createSqlroomsTheme()], []);
 
   useEffect(() => {
     if (!blockId) return;
@@ -83,6 +85,25 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
     if (!blockId || runtime?.status === 'running') return;
     void runCell(blockId, {artifactId});
   }, [artifactId, blockId, runCell, runtime?.status]);
+
+  const editorExtensions = useMemo(
+    () => [
+      python(),
+      createSqlroomsTheme(),
+      Prec.high(
+        keymap.of([
+          {
+            key: 'Mod-Enter',
+            run: () => {
+              handleRun();
+              return true;
+            },
+          },
+        ]),
+      ),
+    ],
+    [handleRun],
+  );
 
   const handleClear = useCallback(() => {
     if (!blockId || readOnly) return;
@@ -164,7 +185,7 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
           lineNumbers: true,
           lineWrapping: true,
           foldGutter: false,
-          autocompletion: false,
+          autocompletion: true,
         }}
       />
       <CellDeclarations

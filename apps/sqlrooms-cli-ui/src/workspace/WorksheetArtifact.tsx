@@ -85,6 +85,7 @@ const WorksheetPythonCellBlockRenderer: FC<
   <PythonCellBlock
     artifactId={props.documentId}
     blockId={props.blockInstanceId}
+    blockType={props.blockType}
     title={props.title}
     readOnly={props.readOnly}
     compact

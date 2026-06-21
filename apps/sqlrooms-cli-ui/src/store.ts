@@ -49,6 +49,7 @@ import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
   createPythonCellCommands,
   createPythonCellSlice,
+  createPyodidePythonRuntimeAdapter,
   PythonCellSliceConfig,
 } from '@sqlrooms/python-cell';
 import {
@@ -638,7 +639,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createPivotSlice()(set, get, store),
 
-        ...createPythonCellSlice()(set, get, store),
+        ...createPythonCellSlice({
+          runtimeAdapter: createPyodidePythonRuntimeAdapter(),
+        })(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
 

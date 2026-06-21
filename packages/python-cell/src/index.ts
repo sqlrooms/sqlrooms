@@ -18,6 +18,10 @@ export {
   type PythonCellSliceState,
 } from './PythonCellSlice';
 export {
+  createPyodidePythonRuntimeAdapter,
+  type CreatePyodidePythonRuntimeAdapterOptions,
+} from './PyodidePythonRuntimeAdapter';
+export {
   PythonCellBlock,
   createPythonCellBlockDefinition,
   type CreatePythonCellBlockDefinitionOptions,
