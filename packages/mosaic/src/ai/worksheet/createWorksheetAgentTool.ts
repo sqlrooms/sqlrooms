@@ -11,11 +11,7 @@ import {createWorksheetAiTools} from './createWorksheetAiTools';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
-import {
-  AgentIntentSchemaFields,
-  requireAgentIntent,
-  resolveAgentIntent,
-} from '../agentIntent';
+import {AgentIntentSchemaFields} from '../agentIntent';
 
 function getWorksheetAgentInstructions<TState>(
   options: CreateWorksheetAgentToolOptions<TState>,
@@ -208,31 +204,29 @@ When user asks for "comprehensive analysis" or "high-level insights":
 ✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
 }
 
-const WorksheetAgentInputSchema = z
-  .object({
-    reasoning: z
-      .string()
-      .describe('Reasoning for why the worksheet agent is being called'),
-    ...AgentIntentSchemaFields,
-    worksheetId: z
-      .string()
-      .describe(
-        'Target worksheet ID. If provided, charts will be added to this worksheet.',
-      ),
-    maxSteps: z
-      .number()
-      .optional()
-      .default(20)
-      .describe('Maximum exploration steps (default: 20, range: 5-50)'),
-    temperature: z
-      .number()
-      .optional()
-      .default(0.7)
-      .describe(
-        'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
-      ),
-  })
-  .superRefine(requireAgentIntent);
+const WorksheetAgentInputSchema = z.object({
+  reasoning: z
+    .string()
+    .describe('Reasoning for why the worksheet agent is being called'),
+  ...AgentIntentSchemaFields,
+  worksheetId: z
+    .string()
+    .describe(
+      'Target worksheet ID. If provided, charts will be added to this worksheet.',
+    ),
+  maxSteps: z
+    .number()
+    .optional()
+    .default(20)
+    .describe('Maximum exploration steps (default: 20, range: 5-50)'),
+  temperature: z
+    .number()
+    .optional()
+    .default(0.7)
+    .describe(
+      'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
+    ),
+});
 
 type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
@@ -293,7 +287,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
     inputSchema: WorksheetAgentInputSchema,
     execute: async (params, toolOptions): Promise<WorksheetAgentResult> => {
       const {worksheetId, maxSteps, temperature} = params;
-      const intent = resolveAgentIntent(params) ?? '';
+      const {intent} = params;
 
       try {
         worksheetAdapter.ensureWorksheet(worksheetId);

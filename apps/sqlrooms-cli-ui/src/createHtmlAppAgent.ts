@@ -21,12 +21,8 @@ const HtmlAppRuntimeInputFields = z.object({
     .describe('Reasoning for why the HTML app agent is being called.'),
   intent: z
     .string()
-    .optional()
+    .min(1, 'intent cannot be empty')
     .describe('The app or visualization objective to satisfy.'),
-  prompt: z
-    .string()
-    .optional()
-    .describe('Deprecated alias for intent. Use intent for new callers.'),
   title: z.string().optional().describe('Optional app title.'),
   querySql: z
     .string()
@@ -58,29 +54,7 @@ const HtmlAppRuntimeInputFields = z.object({
     .describe('Maximum expected observe/repair attempts for the caller.'),
 });
 
-function requireHtmlAppIntent(
-  value: {intent?: string; prompt?: string},
-  ctx: z.RefinementCtx,
-) {
-  if (resolveHtmlAppIntent(value)) return;
-  ctx.addIssue({
-    code: 'custom',
-    path: ['intent'],
-    message: 'intent is required. prompt is accepted as a deprecated alias.',
-  });
-}
-
-function resolveHtmlAppIntent(value: {intent?: string; prompt?: string}) {
-  return value.intent?.trim() || value.prompt?.trim();
-}
-
-function resolvedHtmlAppIntentPatch(value: {intent?: string; prompt?: string}) {
-  const intent = resolveHtmlAppIntent(value);
-  return intent ? {intent} : {};
-}
-
-export const HtmlAppRuntimeInputSchema =
-  HtmlAppRuntimeInputFields.superRefine(requireHtmlAppIntent);
+export const HtmlAppRuntimeInputSchema = HtmlAppRuntimeInputFields;
 
 const HtmlAppAgentInputSchema = HtmlAppRuntimeInputFields.extend({
   appId: z
@@ -88,7 +62,7 @@ const HtmlAppAgentInputSchema = HtmlAppRuntimeInputFields.extend({
     .describe(
       'HTML app runtime id to write. The caller must create or identify the top-level html-app artifact or embedded html-app block before calling this tool.',
     ),
-}).superRefine(requireHtmlAppIntent);
+});
 
 type HtmlAppAgentInput = z.infer<typeof HtmlAppAgentInputSchema>;
 export type HtmlAppRuntimeWriteInput = Omit<
@@ -100,7 +74,6 @@ export type HtmlAppRuntimeWriteInput = Omit<
 
 const WriteHtmlAppFilesInputSchema = HtmlAppRuntimeInputFields.omit({
   maxRepairAttempts: true,
-  prompt: true,
   intent: true,
 });
 
@@ -115,7 +88,7 @@ Use this after the caller has created or identified the right container:
 - top-level html-app artifact id
 - embedded worksheet html-app blockInstanceId
 
-This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested intent, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit intent; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app. prompt is accepted only as a deprecated alias for intent.`,
+This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested intent, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit intent; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
       if (input.html || input.files) {
@@ -149,7 +122,7 @@ function isTitleOnlyRequest(input: HtmlAppAgentInput) {
     return false;
   }
 
-  const intent = resolveHtmlAppIntent(input)?.toLowerCase() ?? '';
+  const intent = input.intent.toLowerCase();
   return (
     /\b(rename|change|set|update)\b[\s\S]{0,80}\b(title|name)\b/.test(intent) ||
     /\b(title|name)\b[\s\S]{0,80}\b(to|as)\b/.test(intent)
@@ -204,7 +177,7 @@ function isIncrementalAppEditRequest(input: HtmlAppAgentInput) {
     return false;
   }
 
-  const intent = resolveHtmlAppIntent(input)?.toLowerCase() ?? '';
+  const intent = input.intent.toLowerCase();
   if (
     /\b(new|another|fresh|separate)\b[\s\S]{0,40}\b(app|artifact)\b/.test(
       intent,
@@ -253,6 +226,7 @@ Use this after making the requested scoped edit to the existing files. Preserve 
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
+        intent: input.intent,
         title: writeInput.title ?? input.title ?? app.title,
         dependencies: writeInput.dependencies ?? app.dependencies,
         maxRepairAttempts: input.maxRepairAttempts,
@@ -277,7 +251,7 @@ Use this after making the requested scoped edit to the existing files. Preserve 
 
   const result = await streamSubAgent(
     agent,
-    formatHtmlAppEditPrompt(input, app),
+    formatHtmlAppEditMessage(input, app),
     store,
     parentToolCallId,
     abortSignal,
@@ -327,7 +301,7 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
-        ...resolvedHtmlAppIntentPatch(input),
+        intent: input.intent,
         maxRepairAttempts: input.maxRepairAttempts,
       });
       return latestWriteResult;
@@ -357,7 +331,7 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
 
   const result = await streamSubAgent(
     agent,
-    formatHtmlAppGenerationPrompt(input),
+    formatHtmlAppGenerationMessage(input),
     store,
     parentToolCallId,
     abortSignal,
@@ -389,7 +363,7 @@ export async function writeHtmlAppRuntimeState(
 ): Promise<Record<string, unknown>> {
   const appId = input.appId;
   const title = input.title?.trim() || 'HTML App';
-  const intent = resolveHtmlAppIntent(input);
+  const {intent} = input;
   const dependencies = resolveDependencies(input);
   const files = normalizeHtmlAppFiles(input);
 
@@ -544,7 +518,7 @@ Required workflow:
 6. Do not finish without calling write_html_app_source at least once.
 
 Important constraints:
-- Do not write a placeholder, scaffold, generic bar chart, or prompt summary. The rendered app must implement the requested app.
+- Do not write a placeholder, scaffold, generic bar chart, or request summary. The rendered app must implement the requested app.
 - Use window.sqlrooms.queryRows(sql) or window.sqlrooms.query(sql) for data access.
 - Query results may contain BigInt values. Convert all plotted numeric values with Number(value) before passing them to D3, Chart.js, scales, Math functions, or SVG attributes.
 - Prefer the html field with a complete self-contained document unless multiple files materially improve clarity.
@@ -569,17 +543,16 @@ Required workflow:
 Important constraints:
 - This is an incremental edit path, not a rebuild path.
 - Do not re-discover data or change SQL unless the user explicitly asks for a data/schema/query change.
-- Do not replace the app with a placeholder, scaffold, generic chart, or prompt summary.
+- Do not replace the app with a placeholder, scaffold, generic chart, or request summary.
 - Query results may contain BigInt values. Preserve or add Number(value) conversions before passing values to D3, Chart.js, scales, Math functions, or SVG attributes.
 - Prefer preserving the existing file structure. Use the html field only when the app is currently a single /index.html file.`;
 }
 
-function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
-  const intent = resolveHtmlAppIntent(input) ?? '';
+function formatHtmlAppGenerationMessage(input: HtmlAppAgentInput) {
   const parts = [
     `App runtime id: ${input.appId}`,
     `Title: ${input.title?.trim() || 'HTML App'}`,
-    `Intent: ${intent}`,
+    `Intent: ${input.intent}`,
   ];
 
   if (input.querySql) {
@@ -599,17 +572,16 @@ function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
   return parts.join('\n\n');
 }
 
-function formatHtmlAppEditPrompt(
+function formatHtmlAppEditMessage(
   input: HtmlAppAgentInput,
   app: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
 ) {
-  const intent = resolveHtmlAppIntent(input) ?? '';
   const parts = [
     `App runtime id: ${input.appId}`,
     `Current title: ${app.title}`,
     `Requested title: ${input.title?.trim() || app.title}`,
     ...(app.intent ? [`Current intent: ${app.intent}`] : []),
-    `Edit intent: ${intent}`,
+    `Edit intent: ${input.intent}`,
     `Entry HTML path: ${app.entryHtmlPath || '/index.html'}`,
   ];
 

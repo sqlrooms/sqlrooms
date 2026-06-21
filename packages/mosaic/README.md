@@ -356,8 +356,7 @@ dashboard slice.
 including chart tools, a Data Table Explorer panel tool, and an optional
 exploratory `dashboard_agent`. Client apps supply small adapters that map
 Mosaic's generic dashboard operations to their store and table metadata.
-Agent tools use `intent` for the natural-language objective they should satisfy;
-`prompt` is accepted only as a deprecated alias for older callers.
+Agent tools use `intent` for the natural-language objective they should satisfy.
 
 ```ts
 import {

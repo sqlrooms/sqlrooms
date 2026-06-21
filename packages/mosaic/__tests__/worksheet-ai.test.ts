@@ -149,7 +149,7 @@ describe('createWorksheetAiTools', () => {
     );
     const embeddedHtmlAppAgent = tool({
       description: 'mock embedded html app agent',
-      inputSchema: z.object({appId: z.string(), prompt: z.string()}),
+      inputSchema: z.object({appId: z.string(), intent: z.string()}),
       execute: async ({appId}) => ({success: true, appId}),
     });
     const worksheetAdapter: WorksheetAiAdapter = {
@@ -196,7 +196,7 @@ describe('createWorksheetAiTools', () => {
       tools[KnownWorksheetTools.embedded_html_app_agent] as any
     ).execute({
       appId: htmlAppBlock.htmlAppId,
-      prompt: 'Update the existing app.',
+      intent: 'Update the existing app.',
     });
 
     expect(updateResult).toEqual({success: true, appId: 'html-app-1'});
