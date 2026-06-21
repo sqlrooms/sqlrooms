@@ -94,6 +94,12 @@ export const HtmlAppState = z.object({
 });
 export type HtmlAppState = z.infer<typeof HtmlAppState>;
 
+/**
+ * Partial state update used to create an HTML app revision.
+ *
+ * Omitted fields keep their current app value. Fields present with an explicit
+ * `undefined` value can clear optional revision fields such as `intent`.
+ */
 export type HtmlAppRevisionPatch = Partial<
   Pick<
     HtmlAppState,
@@ -108,6 +114,13 @@ export type HtmlAppRevisionPatch = Partial<
   >
 >;
 
+/**
+ * Metadata recorded alongside a committed HTML app revision.
+ *
+ * By default commits are treated as user-authored, parented to the currently
+ * active revision, and prune any redo branch. Use `clearRedo: false` only when
+ * preserving redo history is part of a navigation operation.
+ */
 export type CommitHtmlAppRevisionMetadata = {
   name?: string;
   description?: string;
@@ -122,11 +135,25 @@ export type CommitHtmlAppRevisionMetadata = {
   clearRedo?: boolean;
 };
 
+/**
+ * Metadata accepted when restoring an existing revision.
+ *
+ * Restore operations always create a new revision with `source: "restore"`,
+ * parent it to the revision that was active at restore time, and clear redo
+ * history.
+ */
 export type RestoreHtmlAppRevisionMetadata = Omit<
   CommitHtmlAppRevisionMetadata,
   'source' | 'parentRevisionId' | 'clearRedo'
 >;
 
+/**
+ * Derived revision navigation state for history controls.
+ *
+ * `nextRevision` reflects the next linear revision in the retained revision
+ * list, while redo availability is tracked separately through
+ * `redoRevisionIds`.
+ */
 export type HtmlAppRevisionNavigationState = {
   activeRevision?: HtmlAppRevision;
   activeIndex: number;
@@ -353,6 +380,15 @@ export function createHtmlAppRuntimeSlice({
   }));
 }
 
+/**
+ * Apply a patch to an HTML app and append the result as a new revision.
+ *
+ * The returned app has the new revision active. When committing while an older
+ * revision is active, newer linear revisions are discarded by default so the new
+ * commit becomes the branch tip and redo history is cleared. Pass
+ * `clearRedo: false` for internal navigation flows that need to preserve the
+ * redo queue.
+ */
 export function commitHtmlAppRevisionState(
   app: HtmlAppState,
   patch: HtmlAppRevisionPatch,
@@ -413,6 +449,13 @@ export function commitHtmlAppRevisionState(
   };
 }
 
+/**
+ * Restore a historical revision by committing its snapshot as a new revision.
+ *
+ * Restores do not move the active pointer back to the original revision.
+ * Instead, they append a restore revision whose parent is the revision that was
+ * active when restore was requested, then clear redo history.
+ */
 export function restoreHtmlAppRevisionState(
   app: HtmlAppState,
   revisionId: string,
@@ -450,6 +493,13 @@ export function restoreHtmlAppRevisionState(
   );
 }
 
+/**
+ * Move the active HTML app state to the previous retained revision.
+ *
+ * Undo replays the previous revision snapshot directly and pushes the formerly
+ * active revision id onto `redoRevisionIds`. It returns `undefined` when there
+ * is no earlier revision to activate.
+ */
 export function undoHtmlAppRevisionState(
   app: HtmlAppState,
 ): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
@@ -466,6 +516,13 @@ export function undoHtmlAppRevisionState(
   };
 }
 
+/**
+ * Move the active HTML app state to the next revision from the redo queue.
+ *
+ * Redo replays the first revision id from `redoRevisionIds` and removes it from
+ * the queue. It returns `undefined` when no redo target is available or the
+ * stored redo revision id no longer exists.
+ */
 export function redoHtmlAppRevisionState(
   app: HtmlAppState,
 ): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
@@ -483,6 +540,13 @@ export function redoHtmlAppRevisionState(
   };
 }
 
+/**
+ * Return the active HTML app revision.
+ *
+ * If `activeRevisionId` is missing or stale, this falls back to the latest
+ * retained revision so legacy states without an explicit active pointer still
+ * have a current snapshot.
+ */
 export function getCurrentHtmlAppRevision(
   app?: HtmlAppState,
 ): HtmlAppRevision | undefined {
@@ -496,10 +560,20 @@ export function getCurrentHtmlAppRevision(
   return app.revisions.at(-1);
 }
 
+/**
+ * Return the retained revisions for an HTML app, or an empty list when no app is
+ * available.
+ */
 export function getHtmlAppRevisionList(app?: HtmlAppState): HtmlAppRevision[] {
   return app?.revisions ?? [];
 }
 
+/**
+ * Compute revision navigation affordances for an HTML app.
+ *
+ * The result is safe to use for history panels and toolbar buttons: missing apps
+ * report no active revision and disabled undo/redo actions.
+ */
 export function getHtmlAppRevisionNavigationState(
   app?: HtmlAppState,
 ): HtmlAppRevisionNavigationState {
