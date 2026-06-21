@@ -82,6 +82,48 @@ export const HtmlAppState = z.object({
 });
 export type HtmlAppState = z.infer<typeof HtmlAppState>;
 
+export type HtmlAppRevisionPatch = Partial<
+  Pick<
+    HtmlAppState,
+    | 'title'
+    | 'files'
+    | 'entryHtmlPath'
+    | 'dependencies'
+    | 'requestedCapabilities'
+    | 'grantedCapabilities'
+    | 'diagnostics'
+  >
+>;
+
+export type CommitHtmlAppRevisionMetadata = {
+  name?: string;
+  description?: string;
+  source?: HtmlAppRevisionSource;
+  sourcePrompt?: string;
+  sessionId?: string;
+  toolCallId?: string;
+  commitGroupId?: string;
+  parentRevisionId?: string;
+  createdAt?: number;
+  revisionId?: string;
+  clearRedo?: boolean;
+};
+
+export type RestoreHtmlAppRevisionMetadata = Omit<
+  CommitHtmlAppRevisionMetadata,
+  'source' | 'parentRevisionId' | 'clearRedo'
+>;
+
+export type HtmlAppRevisionNavigationState = {
+  activeRevision?: HtmlAppRevision;
+  activeIndex: number;
+  totalRevisions: number;
+  canUndo: boolean;
+  canRedo: boolean;
+  previousRevision?: HtmlAppRevision;
+  nextRevision?: HtmlAppRevision;
+};
+
 export const HtmlAppRuntimeConfig = z.object({
   appsById: z.record(z.string(), HtmlAppState).default({}),
 });
@@ -94,6 +136,23 @@ export type HtmlAppRuntimeSliceState = {
     updateApp: (appId: string, patch: Partial<HtmlAppState>) => void;
     updateAppFiles: (appId: string, files: HtmlAppSourceFileMap) => void;
     renameApp: (appId: string, title: string) => void;
+    commitAppRevision: (
+      appId: string,
+      patch: HtmlAppRevisionPatch,
+      metadata?: CommitHtmlAppRevisionMetadata,
+    ) => HtmlAppRevision | undefined;
+    restoreAppRevision: (
+      appId: string,
+      revisionId: string,
+      metadata?: RestoreHtmlAppRevisionMetadata,
+    ) => HtmlAppRevision | undefined;
+    undoAppRevision: (appId: string) => HtmlAppRevision | undefined;
+    redoAppRevision: (appId: string) => HtmlAppRevision | undefined;
+    getCurrentRevision: (appId: string) => HtmlAppRevision | undefined;
+    getRevisionList: (appId: string) => HtmlAppRevision[];
+    getRevisionNavigationState: (
+      appId: string,
+    ) => HtmlAppRevisionNavigationState;
     removeApp: (appId: string) => void;
     addDiagnostic: (appId: string, diagnostic: AppDiagnostic) => void;
     setDiagnostics: (appId: string, diagnostics: AppDiagnostic[]) => void;
@@ -191,6 +250,67 @@ export function createHtmlAppRuntimeSlice({
       renameApp: (appId, title) => {
         get().htmlApps.updateApp(appId, {title});
       },
+      commitAppRevision: (appId, patch, metadata) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const {app: nextApp, revision} = commitHtmlAppRevisionState(
+          existing,
+          patch,
+          metadata,
+        );
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = nextApp;
+          }),
+        );
+        return revision;
+      },
+      restoreAppRevision: (appId, revisionId, metadata) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const result = restoreHtmlAppRevisionState(
+          existing,
+          revisionId,
+          metadata,
+        );
+        if (!result) return undefined;
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = result.app;
+          }),
+        );
+        return result.revision;
+      },
+      undoAppRevision: (appId) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const result = undoHtmlAppRevisionState(existing);
+        if (!result) return undefined;
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = result.app;
+          }),
+        );
+        return result.revision;
+      },
+      redoAppRevision: (appId) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const result = redoHtmlAppRevisionState(existing);
+        if (!result) return undefined;
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = result.app;
+          }),
+        );
+        return result.revision;
+      },
+      getCurrentRevision: (appId) =>
+        getCurrentHtmlAppRevision(get().htmlApps.getApp(appId)),
+      getRevisionList: (appId) =>
+        getHtmlAppRevisionList(get().htmlApps.getApp(appId)),
+      getRevisionNavigationState: (appId) =>
+        getHtmlAppRevisionNavigationState(get().htmlApps.getApp(appId)),
       removeApp: (appId) => {
         set((state) =>
           produce(state, (draft: HtmlAppRuntimeSliceState) => {
@@ -218,6 +338,200 @@ export function createHtmlAppRuntimeSlice({
       getApp: (appId) => get().htmlApps.config.appsById[appId],
     },
   }));
+}
+
+export function commitHtmlAppRevisionState(
+  app: HtmlAppState,
+  patch: HtmlAppRevisionPatch,
+  metadata: CommitHtmlAppRevisionMetadata = {},
+): {app: HtmlAppState; revision: HtmlAppRevision} {
+  const createdAt = metadata.createdAt ?? Date.now();
+  const previousRevision = getCurrentHtmlAppRevision(app);
+  const activeRevisionId = previousRevision?.id ?? app.activeRevisionId;
+  const nextBaseApp = HtmlAppState.parse({
+    ...app,
+    ...patch,
+    id: app.id,
+    title: patch.title ?? app.title,
+    files: patch.files ?? app.files,
+    entryHtmlPath: patch.entryHtmlPath ?? app.entryHtmlPath,
+    dependencies: patch.dependencies ?? app.dependencies,
+    updatedAt: createdAt,
+  });
+  const revision = HtmlAppRevision.parse({
+    id: metadata.revisionId ?? createHtmlAppRevisionId(),
+    name: normalizeRevisionName(metadata.name) ?? 'App update',
+    description: metadata.description,
+    sourcePrompt: metadata.sourcePrompt,
+    source: metadata.source ?? 'user',
+    sessionId: metadata.sessionId,
+    toolCallId: metadata.toolCallId,
+    commitGroupId: metadata.commitGroupId,
+    parentRevisionId: metadata.parentRevisionId ?? activeRevisionId,
+    createdAt,
+    title: nextBaseApp.title,
+    files: nextBaseApp.files,
+    entryHtmlPath: nextBaseApp.entryHtmlPath,
+    dependencies: nextBaseApp.dependencies,
+  });
+
+  return {
+    app: HtmlAppState.parse({
+      ...nextBaseApp,
+      revisions: [...nextBaseApp.revisions, revision],
+      activeRevisionId: revision.id,
+      redoRevisionIds:
+        metadata.clearRedo === false ? nextBaseApp.redoRevisionIds : [],
+      updatedAt: createdAt,
+    }),
+    revision,
+  };
+}
+
+export function restoreHtmlAppRevisionState(
+  app: HtmlAppState,
+  revisionId: string,
+  metadata: RestoreHtmlAppRevisionMetadata = {},
+): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const targetRevision = app.revisions.find(
+    (revision) => revision.id === revisionId,
+  );
+  if (!targetRevision) return undefined;
+  return commitHtmlAppRevisionState(
+    app,
+    {
+      title: targetRevision.title,
+      files: targetRevision.files,
+      entryHtmlPath: targetRevision.entryHtmlPath,
+      dependencies: targetRevision.dependencies,
+      diagnostics: [],
+    },
+    {
+      ...metadata,
+      name:
+        normalizeRevisionName(metadata.name) ??
+        `Restore ${targetRevision.name}`,
+      source: 'restore',
+      parentRevisionId: app.activeRevisionId,
+      clearRedo: true,
+    },
+  );
+}
+
+export function undoHtmlAppRevisionState(
+  app: HtmlAppState,
+): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const activeIndex = getActiveRevisionIndex(app);
+  if (activeIndex <= 0) return undefined;
+  const currentRevision = app.revisions[activeIndex];
+  const previousRevision = app.revisions[activeIndex - 1];
+  if (!currentRevision || !previousRevision) return undefined;
+  return {
+    app: applyExistingHtmlAppRevision(app, previousRevision, {
+      redoRevisionIds: [currentRevision.id, ...app.redoRevisionIds],
+    }),
+    revision: previousRevision,
+  };
+}
+
+export function redoHtmlAppRevisionState(
+  app: HtmlAppState,
+): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const [redoRevisionId, ...remainingRedoRevisionIds] = app.redoRevisionIds;
+  if (!redoRevisionId) return undefined;
+  const revision = app.revisions.find(
+    (candidate) => candidate.id === redoRevisionId,
+  );
+  if (!revision) return undefined;
+  return {
+    app: applyExistingHtmlAppRevision(app, revision, {
+      redoRevisionIds: remainingRedoRevisionIds,
+    }),
+    revision,
+  };
+}
+
+export function getCurrentHtmlAppRevision(
+  app?: HtmlAppState,
+): HtmlAppRevision | undefined {
+  if (!app) return undefined;
+  if (app.activeRevisionId) {
+    const activeRevision = app.revisions.find(
+      (revision) => revision.id === app.activeRevisionId,
+    );
+    if (activeRevision) return activeRevision;
+  }
+  return app.revisions.at(-1);
+}
+
+export function getHtmlAppRevisionList(app?: HtmlAppState): HtmlAppRevision[] {
+  return app?.revisions ?? [];
+}
+
+export function getHtmlAppRevisionNavigationState(
+  app?: HtmlAppState,
+): HtmlAppRevisionNavigationState {
+  if (!app) {
+    return {
+      activeIndex: -1,
+      totalRevisions: 0,
+      canUndo: false,
+      canRedo: false,
+    };
+  }
+  const activeIndex = getActiveRevisionIndex(app);
+  const activeRevision =
+    activeIndex >= 0 ? app.revisions[activeIndex] : undefined;
+  return {
+    activeRevision,
+    activeIndex,
+    totalRevisions: app.revisions.length,
+    canUndo: activeIndex > 0,
+    canRedo: app.redoRevisionIds.length > 0,
+    previousRevision:
+      activeIndex > 0 ? app.revisions[activeIndex - 1] : undefined,
+    nextRevision:
+      activeIndex >= 0 && activeIndex < app.revisions.length - 1
+        ? app.revisions[activeIndex + 1]
+        : undefined,
+  };
+}
+
+function applyExistingHtmlAppRevision(
+  app: HtmlAppState,
+  revision: HtmlAppRevision,
+  patch: Pick<HtmlAppState, 'redoRevisionIds'>,
+) {
+  return HtmlAppState.parse({
+    ...app,
+    title: revision.title,
+    files: revision.files,
+    entryHtmlPath: revision.entryHtmlPath,
+    dependencies: revision.dependencies,
+    diagnostics: [],
+    activeRevisionId: revision.id,
+    redoRevisionIds: patch.redoRevisionIds,
+    updatedAt: Date.now(),
+  });
+}
+
+function getActiveRevisionIndex(app: HtmlAppState) {
+  const activeRevisionId = app.activeRevisionId ?? app.revisions.at(-1)?.id;
+  return app.revisions.findIndex(
+    (revision) => revision.id === activeRevisionId,
+  );
+}
+
+function createHtmlAppRevisionId() {
+  return `rev-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+}
+
+function normalizeRevisionName(name?: string) {
+  const normalized = name?.replace(/\s+/g, ' ').trim();
+  if (!normalized) return undefined;
+  return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized;
 }
 
 export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
