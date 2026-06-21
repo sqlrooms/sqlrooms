@@ -526,8 +526,14 @@ export function createRemoteChatTransportFactory(params: {
         typeof parsed === 'object' && parsed !== null
           ? (parsed as Record<string, unknown>)
           : {};
+      const messages = Array.isArray(parsedObj.messages)
+        ? sanitizeMessagesForLLM(
+            fixIncompleteToolCalls(parsedObj.messages as UIMessage[]),
+          )
+        : [];
       const enhancedBody = {
         ...parsedObj,
+        messages,
         modelProvider,
         model,
         instructions: getInstructions(),

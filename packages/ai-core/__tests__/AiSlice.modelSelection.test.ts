@@ -8,7 +8,10 @@ import {jest} from '@jest/globals';
 import type {UIMessage} from 'ai';
 import {createStore} from 'zustand';
 import {AiSliceState, createAiSlice} from '../src/AiSlice';
-import {withRunContextTools} from '../src/chatTransport';
+import {
+  createRemoteChatTransportFactory,
+  withRunContextTools,
+} from '../src/chatTransport';
 import {
   CHAT_REQUEST_ERROR_PART_TYPE,
   getChatRequestErrorMessage,
@@ -157,10 +160,12 @@ describe('AiSlice model selection', () => {
       parts: [{type: 'text', text: 'new'}],
     };
 
-    store.getState().ai.setSessionUiMessages('session-1', [
-      userMessage,
-      staleAssistantMessage,
-    ]);
+    store
+      .getState()
+      .ai.setSessionUiMessages('session-1', [
+        userMessage,
+        staleAssistantMessage,
+      ]);
 
     store
       .getState()
@@ -208,6 +213,62 @@ describe('AiSlice model selection', () => {
         parts: [{type: 'text', text: 'hi'}],
       },
     ]);
+  });
+
+  it('strips chat error marker messages from remote request bodies', async () => {
+    const store = createTestStore();
+    const userMessage: UIMessage = {
+      id: 'user-1',
+      role: 'user',
+      parts: [{type: 'text', text: 'hi'}],
+    };
+    const errorMessage: UIMessage = {
+      id: 'assistant-error',
+      role: 'assistant',
+      parts: [
+        {
+          type: CHAT_REQUEST_ERROR_PART_TYPE,
+          data: {error: 'Failed to fetch'},
+        },
+      ],
+    };
+    const previousFetch = globalThis.fetch;
+    const fetchMock = jest.fn<typeof fetch>(async () => {
+      return new Response(new ReadableStream(), {status: 200});
+    });
+    globalThis.fetch = fetchMock;
+
+    try {
+      const transport = createRemoteChatTransportFactory({
+        store,
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        sessionId: 'session-1',
+        getInstructions: () => 'remote instructions',
+      })('https://example.test/api/chat');
+
+      await transport.sendMessages({
+        trigger: 'submit-message',
+        chatId: 'session-1',
+        messageId: undefined,
+        messages: [userMessage, errorMessage],
+        abortSignal: undefined,
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      const body = JSON.parse(init.body as string) as Record<string, unknown>;
+
+      expect(body.messages).toEqual([userMessage]);
+      expect(body).toMatchObject({
+        modelProvider: 'openai',
+        model: 'shared-model',
+        instructions: 'remote instructions',
+        maxSteps: 50,
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
   });
 
   it('does not keep a phantom current session when initialized with no sessions', () => {
