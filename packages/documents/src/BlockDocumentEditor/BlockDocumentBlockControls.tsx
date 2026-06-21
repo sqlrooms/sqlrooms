@@ -9,6 +9,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -586,12 +589,13 @@ export const BlockDocumentBlockControls: FC<
   const [focusedEmptyBlock, setFocusedEmptyBlock] =
     useState<BlockControlState | null>(null);
   const [blockTypeMenuOpen, setBlockTypeMenuOpen] = useState(false);
+  const [suppressFocusedBlockMenu, setSuppressFocusedBlockMenu] =
+    useState(false);
   const [dropIndicator, setDropIndicator] = useState<BlockDropIndicator | null>(
     null,
   );
   const dragSourceRef = useRef<{pos: number; node: DraggableNode} | null>(null);
   const suppressHandleClickRef = useRef(false);
-  const suppressFocusedBlockMenuRef = useRef(false);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | null>(null);
   const textMenuItems = useMemo(() => buildTextBlockMenuItems(), []);
@@ -661,11 +665,11 @@ export const BlockDocumentBlockControls: FC<
         top: getBlockControlsTop(elementRect, scrollElement),
       });
 
-      if (openOnMatch && !suppressFocusedBlockMenuRef.current) {
+      if (openOnMatch && !suppressFocusedBlockMenu) {
         setBlockTypeMenuOpen(true);
       }
     },
-    [editor, readOnly, scrollElement],
+    [editor, readOnly, scrollElement, suppressFocusedBlockMenu],
   );
 
   useEffect(() => {
@@ -797,9 +801,9 @@ export const BlockDocumentBlockControls: FC<
         )
         .run();
 
-      suppressFocusedBlockMenuRef.current = true;
+      setSuppressFocusedBlockMenu(true);
       window.setTimeout(() => {
-        suppressFocusedBlockMenuRef.current = false;
+        setSuppressFocusedBlockMenu(false);
       }, 200);
       setHandleMenuOpen(false);
       setBlockTypeMenuOpen(false);
@@ -807,20 +811,6 @@ export const BlockDocumentBlockControls: FC<
       setFocusedEmptyBlock(null);
     },
     [editor, generateBlockId],
-  );
-
-  const turnActiveBlockInto = useCallback(
-    (createNode: BlockMenuItem['createNode']) => {
-      turnBlockInto(activeBlock, createNode);
-    },
-    [activeBlock, turnBlockInto],
-  );
-
-  const turnFocusedEmptyBlockInto = useCallback(
-    (createNode: BlockMenuItem['createNode']) => {
-      turnBlockInto(focusedEmptyBlock, createNode);
-    },
-    [focusedEmptyBlock, turnBlockInto],
   );
 
   const deleteActiveBlock = useCallback(() => {
@@ -885,6 +875,27 @@ export const BlockDocumentBlockControls: FC<
     </DropdownMenuItem>
   );
 
+  const renderPaletteButton = (item: BlockMenuItem, onSelect: () => void) => (
+    <button
+      key={item.label}
+      type="button"
+      className={cn(
+        'hover:bg-accent hover:text-accent-foreground flex w-full items-start gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
+        'focus-visible:bg-accent focus-visible:text-accent-foreground outline-hidden',
+      )}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onSelect}
+    >
+      <item.icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <span className="grid gap-0.5">
+        <span>{item.label}</span>
+        <span className="text-muted-foreground text-xs">
+          {item.description}
+        </span>
+      </span>
+    </button>
+  );
+
   const renderBlockTypeMenuItems = (
     onSelect: (item: BlockMenuItem) => void,
   ) => (
@@ -902,6 +913,47 @@ export const BlockDocumentBlockControls: FC<
       </DropdownMenuSub>
       <DropdownMenuSeparator />
       {mediaMenuItems.map((item) => renderMenuItem(item, () => onSelect(item)))}
+    </>
+  );
+
+  const renderConvertBlockMenuItems = (
+    block: BlockControlState | null,
+  ) => (
+    <>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger className="gap-2">
+          <PilcrowIcon className="h-4 w-4" />
+          Text
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-60">
+          {textMenuItems.map((item) =>
+            renderMenuItem(item, () => turnBlockInto(block, item.createNode)),
+          )}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      {mediaMenuItems.map((item) =>
+        renderMenuItem(item, () => turnBlockInto(block, item.createNode)),
+      )}
+    </>
+  );
+
+  const renderBlockTypePaletteItems = (
+    block: BlockControlState | null,
+  ) => (
+    <>
+      <div className="px-2 py-1.5 text-sm font-semibold">Text</div>
+      <div className="grid gap-1">
+        {textMenuItems.map((item) =>
+          renderPaletteButton(item, () => turnBlockInto(block, item.createNode)),
+        )}
+      </div>
+      <div className="bg-border -mx-1 my-1 h-px" />
+      <div className="grid gap-1">
+        {mediaMenuItems.map((item) =>
+          renderPaletteButton(item, () => turnBlockInto(block, item.createNode)),
+        )}
+      </div>
     </>
   );
 
@@ -1074,33 +1126,32 @@ export const BlockDocumentBlockControls: FC<
           className="pointer-events-none absolute left-3 z-30 h-7 w-7 -translate-y-1/2"
           style={{top: focusedEmptyBlock.top}}
         >
-          <DropdownMenu
-            modal={false}
+          <Popover
             open={
               blockTypeMenuOpen && !handleMenuOpen && insertMenuOpen == null
             }
             onOpenChange={setBlockTypeMenuOpen}
           >
-            <DropdownMenuTrigger asChild>
+            <PopoverAnchor asChild>
               <span
                 aria-hidden="true"
                 className="pointer-events-none block h-full w-full"
               />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
+            </PopoverAnchor>
+            <PopoverContent
               align="start"
               side="right"
-              className="w-60"
+              className="w-60 p-1"
               onOpenAutoFocus={(event) => event.preventDefault()}
               onCloseAutoFocus={(event) => event.preventDefault()}
             >
-              <DropdownMenuLabel>Select block type</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {renderBlockTypeMenuItems((item) =>
-                turnFocusedEmptyBlockInto(item.createNode),
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <div className="px-2 py-1.5 text-sm font-semibold">
+                Select block type
+              </div>
+              <div className="bg-border -mx-1 my-1 h-px" />
+              {renderBlockTypePaletteItems(focusedEmptyBlock)}
+            </PopoverContent>
+          </Popover>
         </div>
       ) : null}
       {activeBlock ? (
@@ -1172,9 +1223,7 @@ export const BlockDocumentBlockControls: FC<
                   <DropdownMenuSubContent className="w-60">
                     <DropdownMenuLabel>Turn into</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {renderBlockTypeMenuItems((item) =>
-                      turnActiveBlockInto(item.createNode),
-                    )}
+                    {renderConvertBlockMenuItems(activeBlock)}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
