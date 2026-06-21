@@ -423,6 +423,11 @@ export async function writeHtmlAppRuntimeState(
     };
   }
 
+  const seededBaselineRevision = seedHtmlAppBaselineRevision(
+    store,
+    existingApp,
+  );
+
   store.getState().htmlApps.ensureApp(appId, {
     title,
     ...(intent ? {intent} : {}),
@@ -441,7 +446,9 @@ export async function writeHtmlAppRuntimeState(
     createHtmlAppRevisionMetadata(store, input, {
       title,
       isTitleOnly: false,
-      isInitialRevision: !existingApp || existingApp.revisions.length === 0,
+      isInitialRevision:
+        !existingApp ||
+        (existingApp.revisions.length === 0 && !seededBaselineRevision),
     }),
   );
 
@@ -478,6 +485,33 @@ export async function writeHtmlAppRuntimeState(
           ? 'written_no_errors_observed'
           : 'written_errors_observed',
   };
+}
+
+function seedHtmlAppBaselineRevision(
+  store: StoreApi<RoomState>,
+  existingApp: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
+): HtmlAppRevision | undefined;
+function seedHtmlAppBaselineRevision(
+  store: StoreApi<RoomState>,
+  existingApp: ReturnType<RoomState['htmlApps']['getApp']>,
+): HtmlAppRevision | undefined;
+function seedHtmlAppBaselineRevision(
+  store: StoreApi<RoomState>,
+  existingApp: ReturnType<RoomState['htmlApps']['getApp']>,
+) {
+  if (!existingApp || existingApp.revisions.length > 0) return undefined;
+  return store.getState().htmlApps.commitAppRevision(
+    existingApp.id,
+    {},
+    {
+      name: existingApp.title
+        ? `Initial ${existingApp.title}`
+        : 'Initial version',
+      description: 'Baseline revision captured before the first saved edit.',
+      source: 'system',
+      sourcePrompt: existingApp.intent,
+    },
+  );
 }
 
 function createHtmlAppRevisionMetadata(
