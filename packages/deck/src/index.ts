@@ -28,6 +28,11 @@ export {
   deckMapDashboardAddPanelAction,
   deckMapDashboardPanelRenderer,
 } from './dashboard';
+export {
+  DeckMapBlockRenderer,
+  ensureDeckMapBlockState,
+  type DeckMapBlockRendererProps,
+} from './block';
 export {createDeckMapDashboardSliceOptions} from './dashboardIntegration';
 export {
   asDeckJsonMapConfig,
