@@ -441,6 +441,7 @@ class SqlroomsHttpServer:
         open_browser: bool = True,
         ui_dir: str | None = None,
         serve_ui: bool = True,
+        experimental_enabled: bool = False,
         config_path: Path | None = None,
         external_url: str | None = None,
         external_ws_url: str | None = None,
@@ -451,7 +452,7 @@ class SqlroomsHttpServer:
         if self.is_in_memory:
             self.db_path: Path | None = None
             self.duckdb_database = ":memory:"
-            base_dir = Path(tempfile.gettempdir()) / "sqlrooms-cli"
+            base_dir = Path(tempfile.gettempdir()) / "sqlrooms"
         else:
             self.db_path = Path(db_path).expanduser().resolve()
             self.duckdb_database = str(self.db_path)
@@ -473,6 +474,7 @@ class SqlroomsHttpServer:
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
+        self.experimental_enabled = bool(experimental_enabled)
         self.ai_devtools = bool(ai_devtools)
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -500,6 +502,7 @@ class SqlroomsHttpServer:
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
+        self._assert_ui_available()
         if self.meta_db:
             logger.info(
                 "Meta DB is ENABLED (db=%s, namespace=%s)",
@@ -519,6 +522,9 @@ class SqlroomsHttpServer:
         if self.open_browser and self.serve_ui:
             threading.Timer(1.0, self._open_browser).start()
 
+        logger.info("SQLRooms UI URL: %s", self._ui_url())
+        logger.info("DuckDB websocket URL: %s", self._ws_url())
+
         config = uvicorn.Config(
             app, host=self.host, port=self.port, log_level="info", loop="asyncio"
         )
@@ -526,7 +532,7 @@ class SqlroomsHttpServer:
         await server.serve()
 
     def _open_browser(self) -> None:
-        url = f"http://{self._public_host()}:{self.port}"
+        url = self._ui_url()
         try:
             webbrowser.open_new_tab(url)
         except Exception as exc:
@@ -535,7 +541,45 @@ class SqlroomsHttpServer:
             logger.info("Opened browser at %s", url)
 
     def _public_host(self) -> str:
+        return (
+            "localhost"
+            if self.host in ("0.0.0.0", "::", "127.0.0.1", "::1")
+            else self.host
+        )
+
+    def _ui_host(self) -> str:
         return "localhost" if self.host in ("0.0.0.0", "::") else self.host
+
+    @staticmethod
+    def _host_for_url(host: str) -> str:
+        if ":" in host and not host.startswith("["):
+            return f"[{host}]"
+        return host
+
+    def _ui_url(self) -> str:
+        return f"http://{self._host_for_url(self._ui_host())}:{self.port}"
+
+    def _ws_url(self) -> str:
+        return (
+            self.external_ws_url
+            or f"ws://{self._host_for_url(self._public_host())}:{self.ws_port}"
+        )
+
+    def _assert_ui_available(self) -> None:
+        if not self.serve_ui:
+            return
+        if self.index_html.exists():
+            return
+        if isinstance(self.ui_provider, DirectoryUiProvider):
+            raise RuntimeError(
+                f"SQLRooms UI bundle is missing: {self.index_html}. "
+                "Build the UI bundle or pass --no-ui to start only the API server."
+            )
+        raise RuntimeError(
+            f"Bundled SQLRooms UI is missing from this installation: {self.index_html}. "
+            "Reinstall sqlrooms or report a packaging issue. "
+            "Developers can rebuild it with `pnpm --filter sqlrooms-python build:ui`."
+        )
 
     def _start_duckdb_backend(self) -> None:
         self._duckdb_ready.clear()
@@ -605,24 +649,20 @@ class SqlroomsHttpServer:
             if self.external_url and not self.external_ws_url
             else None
         )
-        ws_url = (
-            self.external_ws_url
-            or derived_ws_url
-            or f"ws://{self._public_host()}:{self.ws_port}"
-        )
+        ws_url = self.external_ws_url or derived_ws_url or self._ws_url()
         return {
             "wsUrl": ws_url,
             "wsAuthToken": self.session_token,
             "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
-            "apiKey": self.api_key or "",
             "configWritable": self.config_path is not None,
+            "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": ws_url,
             "crdtRoomId": (
-                f"sqlrooms-cli:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
+                f"sqlrooms:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
             ),
             "aiProviders": self.ai_providers,
             "aiSettings": {

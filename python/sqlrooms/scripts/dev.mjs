@@ -36,7 +36,7 @@ function readOptionValue(args, name) {
 const forwardedArgs = getForwardedArgs();
 
 function createDefaultDbPath() {
-  const defaultDbDir = mkdtempSync(path.join(tmpdir(), 'sqlrooms-cli-'));
+  const defaultDbDir = mkdtempSync(path.join(tmpdir(), 'sqlrooms-'));
   return path.join(defaultDbDir, 'sqlrooms.db');
 }
 

@@ -9,7 +9,7 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "sqlrooms-cli",
+    "sqlrooms",
     "sqlrooms-rag",
     "sqlrooms-server",
 ]
@@ -3852,8 +3852,8 @@ asyncio = [
 ]
 
 [[package]]
-name = "sqlrooms-cli"
-source = { editable = "sqlrooms-cli" }
+name = "sqlrooms"
+source = { editable = "sqlrooms" }
 dependencies = [
     { name = "duckdb" },
     { name = "fastapi" },

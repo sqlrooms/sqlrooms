@@ -1,7 +1,7 @@
 [project]
-name = "sqlrooms-cli"
+name = "sqlrooms"
 dynamic = ["version"]
-description = "CLI to launch the SQLRooms AI app with a DuckDB websocket server."
+description = "Local-first SQLRooms project launcher for DuckDB worksheets and Mosaic dashboards."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -21,7 +21,7 @@ dependencies = [
   "jinja2>=3.1.0",
   "pyarrow>=17.0.0",
   "python-multipart>=0.0.27",
-  "sqlrooms-server>=0.1.0",
+  "sqlrooms-server>=0.1.1",
   "tomli>=2.0.0; python_version < '3.11'",
   "tomlkit>=0.13.0",
   "typer>=0.12.5",

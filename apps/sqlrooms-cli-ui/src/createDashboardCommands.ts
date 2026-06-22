@@ -1,3 +1,4 @@
+import type {ArtifactTypeDefinition} from '@sqlrooms/artifacts';
 import type {
   RoomCommand,
   RoomCommandExecutionContext,
@@ -9,6 +10,15 @@ import type {CliArtifactType} from './artifactTypeIds';
 import {RoomState} from './store-types';
 
 export const DASHBOARD_COMMAND_OWNER = '@sqlrooms-cli-ui/dashboard';
+
+type CreateDashboardCommandsOptions = {
+  artifactTypes?: Partial<
+    Record<
+      CliArtifactType,
+      Pick<ArtifactTypeDefinition<RoomState>, 'canCreate'>
+    >
+  >;
+};
 
 // ---------------------------------------------------------------------------
 // Shared input schemas for generic artifact commands
@@ -183,7 +193,62 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
 // Public factory
 // ---------------------------------------------------------------------------
 
-export function createDashboardCommands(): RoomCommand<RoomState>[] {
+const ARTIFACT_CREATE_COMMANDS: {
+  artifactType: CliArtifactType;
+  command: () => RoomCommand<RoomState>;
+}[] = [
+  {
+    artifactType: 'worksheet',
+    command: () => createArtifactCommand('worksheet', 'Worksheet'),
+  },
+  {
+    artifactType: 'pivot',
+    command: () => createArtifactCommand('pivot', 'Pivot Table'),
+  },
+  {
+    artifactType: 'notebook',
+    command: () => createArtifactCommand('notebook', 'Notebook'),
+  },
+  {
+    artifactType: 'document',
+    command: () => createArtifactCommand('document', 'Document'),
+  },
+  {
+    artifactType: 'sql-query',
+    command: () => createArtifactCommand('sql-query', 'SQL Query'),
+  },
+  {
+    artifactType: 'html-app',
+    command: () => createArtifactCommand('html-app', 'HTML App'),
+  },
+  {
+    artifactType: 'canvas',
+    command: () => createArtifactCommand('canvas', 'Canvas'),
+  },
+  {artifactType: 'app', command: () => createArtifactCommand('app', 'App')},
+  {artifactType: 'dashboard', command: createDashboardCreateArtifactCommand},
+];
+
+function canCreateArtifactType(
+  artifactTypes: CreateDashboardCommandsOptions['artifactTypes'],
+  artifactType: CliArtifactType,
+) {
+  return artifactTypes?.[artifactType]?.canCreate !== false;
+}
+
+/**
+ * Builds workspace-level dashboard commands, including per-artifact creation
+ * commands filtered by artifact capability flags.
+ *
+ * @param options Optional command factory options.
+ * @param options.artifactTypes Artifact capability definitions keyed by artifact
+ * type. A type is creatable unless `canCreate` is explicitly `false`.
+ * @returns Commands for selecting workspace artifacts and creating the artifact
+ * types allowed by the provided capability map.
+ */
+export function createDashboardCommands({
+  artifactTypes,
+}: CreateDashboardCommandsOptions = {}): RoomCommand<RoomState>[] {
   return [
     // Universal select (works for any workspace item type)
     {
@@ -260,14 +325,8 @@ export function createDashboardCommands(): RoomCommand<RoomState>[] {
     },
 
     // Per-type create commands
-    createArtifactCommand('worksheet', 'Worksheet'),
-    createArtifactCommand('pivot', 'Pivot Table'),
-    createArtifactCommand('notebook', 'Notebook'),
-    createArtifactCommand('document', 'Document'),
-    createArtifactCommand('sql-query', 'SQL Query'),
-    createArtifactCommand('html-app', 'HTML App'),
-    createArtifactCommand('canvas', 'Canvas'),
-    createArtifactCommand('app', 'App'),
-    createDashboardCreateArtifactCommand(),
+    ...ARTIFACT_CREATE_COMMANDS.filter(({artifactType}) =>
+      canCreateArtifactType(artifactTypes, artifactType),
+    ).map(({command}) => command()),
   ];
 }

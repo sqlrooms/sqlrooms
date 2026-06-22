@@ -1,9 +1,13 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
-import {createWorksheetAgentTool} from '@sqlrooms/mosaic/ai';
 import type {
   BaseAgentToolOptions,
   CreateWorksheetAgentToolOptions,
+} from '@sqlrooms/mosaic/ai';
+import type {Tool} from 'ai';
+import {
+  createDashboardAgentTool,
+  createWorksheetAgentTool,
 } from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
@@ -12,7 +16,14 @@ import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 
-export function worksheetAgentTool(store: StoreApi<RoomState>) {
+export function worksheetAgentTool(
+  store: StoreApi<RoomState>,
+  {
+    experimentalEnabled = false,
+  }: {
+    experimentalEnabled?: boolean;
+  } = {},
+) {
   const worksheetAdapter = createWorksheetAiAdapter(store);
   const databaseAdapter = createDatabaseAiAdapter(store);
 
@@ -36,7 +47,11 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
   };
 
-  const dashboardAgentTool = createDashboardAgentToolWithDeckMaps({
+  const dashboardAgentTool = (
+    experimentalEnabled
+      ? createDashboardAgentToolWithDeckMaps
+      : createDashboardAgentTool
+  )({
     ...baseOptions,
     databaseAdapter,
   });
@@ -46,9 +61,16 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
     databaseAdapter,
     worksheetAdapter,
     dashboardAgentTool,
-    extraTools: () => ({
-      embedded_html_app_agent: htmlAppAgentTool(store),
-    }),
+    htmlAppBlocksEnabled: experimentalEnabled,
+    extraTools: () => {
+      const extraTools: Record<string, Tool> = {};
+
+      if (experimentalEnabled) {
+        extraTools.embedded_html_app_agent = htmlAppAgentTool(store);
+      }
+
+      return extraTools;
+    },
   };
 
   return createWorksheetAgentTool(worksheetAgentOptions);

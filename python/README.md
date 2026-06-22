@@ -7,7 +7,7 @@ This repo’s Python packages live under `python/` and are managed as a **uv wor
 The workspace is defined in `python/pyproject.toml`:
 
 - Workspace members:
-  - `python/sqlrooms-cli` (dist: `sqlrooms`)
+  - `python/sqlrooms` (dist: `sqlrooms`)
   - `python/sqlrooms-server` (dist: `sqlrooms-server`)
 
 Because `sqlrooms` and `sqlrooms-server` share the `sqlrooms.*` namespace (PEP 420), **you should use uv from within the workspace** so it resolves local members correctly.
@@ -24,14 +24,14 @@ uv sync
 Or from a member directory:
 
 ```bash
-cd python/sqlrooms-cli
+cd python/sqlrooms
 uv sync
 ```
 
 ## Running the CLI (default UI)
 
 ```bash
-cd python/sqlrooms-cli
+cd python/sqlrooms
 uv run sqlrooms :memory:
 ```
 
@@ -57,11 +57,11 @@ If you see an error like:
 
 add the mapping above to the package that declares the dependency.
 
-## UI bundle in `sqlrooms-cli`
+## UI bundle in `sqlrooms`
 
 The Python server serves a bundled static UI from:
 
-- `python/sqlrooms-cli/sqlrooms/web/static/`
+- `python/sqlrooms/sqlrooms/web/static/`
 
 Build it from the repo root:
 

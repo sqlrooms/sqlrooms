@@ -20,9 +20,9 @@ const target = hasTarget ? rawArgs[0] : null;
 const restArgs = hasTarget ? rawArgs.slice(1) : rawArgs;
 const targetAliases = {
   cli: {
-    packageName: 'sqlrooms-cli-python',
-    targetDevFilters: ['sqlrooms-cli-python...', '!@sqlrooms/*'],
-    dependencyFilters: ['sqlrooms-cli-python^...', '!sqlrooms-cli-app'],
+    packageName: 'sqlrooms-python',
+    targetDevFilters: ['sqlrooms-python...', '!@sqlrooms/*'],
+    dependencyFilters: ['sqlrooms-python^...', '!sqlrooms-cli-app'],
   },
 };
 const targetConfig =
@@ -239,7 +239,7 @@ function getPythonCliDevArgs(args, apiPort, uiPort) {
     ? apiPortArgs
     : [
         '--db-path',
-        path.join(tmpdir(), `sqlrooms-cli-${uiPort}.db`),
+        path.join(tmpdir(), `sqlrooms-${uiPort}.db`),
         ...apiPortArgs,
       ];
 }
@@ -335,7 +335,7 @@ if (target !== 'cli') {
     `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   console.log(
-    `(cd python/sqlrooms-cli && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
+    `(cd python/sqlrooms && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
       pythonCliArgs,
     )} node scripts/dev.mjs)`,
   );
@@ -439,7 +439,7 @@ if (target === 'cli') {
   );
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,
-    cwd: path.resolve('python/sqlrooms-cli'),
+    cwd: path.resolve('python/sqlrooms'),
     env: {
       SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
     },

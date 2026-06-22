@@ -131,6 +131,9 @@ removes the artifact registry entry.
   titles, icons, and components from the runtime type registry.
 
 Type definitions are runtime configuration and are not persisted.
+Set `canCreate: false` on a type definition when an app needs to render an
+existing artifact as a read-only compatibility surface without showing it in
+creation menus or allowing `createArtifact()` calls for that type.
 
 ## Stateful Block Bridge
 
