@@ -6,11 +6,13 @@ on:
     branches: [main]
     paths:
       - 'python/**'
+      - 'apps/sqlrooms-cli-ui/**'
       - '.github/workflows/pr-checks-python.yml'
   pull_request:
     types: [opened, edited, synchronize, reopened]
     paths:
       - 'python/**'
+      - 'apps/sqlrooms-cli-ui/**'
       - '.github/workflows/pr-checks-python.yml'
 
 jobs:
@@ -26,6 +28,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: .
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -43,8 +60,15 @@ jobs:
       - name: Lint with ruff
         run: uv run ruff check .
 
+      - name: Build CLI UI bundle
+        run: pnpm --filter sqlrooms-python build:ui
+        working-directory: .
+
       - name: Build packages
         run: uv build --all
+
+      - name: Verify sqlrooms wheel
+        run: python sqlrooms/scripts/verify_wheel.py dist/sqlrooms-*.whl
 
       - name: Run tests
         run: uv run pytest

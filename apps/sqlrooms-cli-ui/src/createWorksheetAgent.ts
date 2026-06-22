@@ -4,6 +4,7 @@ import type {
   BaseAgentToolOptions,
   CreateWorksheetAgentToolOptions,
 } from '@sqlrooms/mosaic/ai';
+import type {Tool} from 'ai';
 import {
   createDashboardAgentTool,
   createWorksheetAgentTool,
@@ -60,12 +61,15 @@ export function worksheetAgentTool(
     databaseAdapter,
     worksheetAdapter,
     dashboardAgentTool,
-    extraTools: () =>
-      experimentalEnabled
-        ? {
-            embedded_html_app_agent: htmlAppAgentTool(store),
-          }
-        : {},
+    extraTools: () => {
+      const extraTools: Record<string, Tool> = {};
+
+      if (experimentalEnabled) {
+        extraTools.embedded_html_app_agent = htmlAppAgentTool(store);
+      }
+
+      return extraTools;
+    },
   };
 
   return createWorksheetAgentTool(worksheetAgentOptions);
