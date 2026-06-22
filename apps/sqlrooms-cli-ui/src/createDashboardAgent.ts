@@ -1,12 +1,22 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
-import type {CreateDashboardAgentToolOptions} from '@sqlrooms/mosaic/ai';
+import {
+  createDashboardAgentTool,
+  type CreateDashboardAgentToolOptions,
+} from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 
-export function dashboardAgentTool(store: StoreApi<RoomState>) {
+export function dashboardAgentTool(
+  store: StoreApi<RoomState>,
+  {
+    deckMapsEnabled = false,
+  }: {
+    deckMapsEnabled?: boolean;
+  } = {},
+) {
   const options: CreateDashboardAgentToolOptions<RoomState> = {
     store,
     databaseAdapter: createDatabaseAiAdapter(store),
@@ -28,5 +38,7 @@ export function dashboardAgentTool(store: StoreApi<RoomState>) {
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
   };
 
-  return createDashboardAgentToolWithDeckMaps(options);
+  return deckMapsEnabled
+    ? createDashboardAgentToolWithDeckMaps(options)
+    : createDashboardAgentTool(options);
 }

@@ -441,6 +441,7 @@ class SqlroomsHttpServer:
         open_browser: bool = True,
         ui_dir: str | None = None,
         serve_ui: bool = True,
+        experimental_enabled: bool = False,
         config_path: Path | None = None,
         external_url: str | None = None,
         external_ws_url: str | None = None,
@@ -473,6 +474,7 @@ class SqlroomsHttpServer:
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
+        self.experimental_enabled = bool(experimental_enabled)
         self.ai_devtools = bool(ai_devtools)
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -618,6 +620,7 @@ class SqlroomsHttpServer:
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
             "configWritable": self.config_path is not None,
+            "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": ws_url,

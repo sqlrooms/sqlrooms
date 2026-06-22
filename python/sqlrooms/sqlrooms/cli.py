@@ -446,10 +446,20 @@ def main(
         "--no-ui",
         help="Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.",
     ),
-    sync: bool = typer.Option(
+    experimental: bool = typer.Option(
+        False,
+        "--experimental",
+        help="Enable experimental artifacts, blocks, commands, and agent tools.",
+    ),
+    experimental_sync: bool = typer.Option(
+        False,
+        "--experimental-sync",
+        help="Enable experimental sync (CRDT) over WebSocket (Loro). Requires --experimental.",
+    ),
+    legacy_sync: bool = typer.Option(
         False,
         "--sync",
-        help="Enable optional sync (CRDT) over WebSocket (Loro).",
+        hidden=True,
     ),
     ai_devtools: bool = typer.Option(
         False,
@@ -485,6 +495,16 @@ def main(
     - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the worksheet UI with persisted state stored in DuckDB.
     """
+    if legacy_sync:
+        typer.echo(
+            "--sync has been renamed to --experimental-sync and is not part of the public launch surface.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    if experimental_sync and not experimental:
+        typer.echo("--experimental-sync requires --experimental.", err=True)
+        raise typer.Exit(code=1)
+
     try:
         config_path = _resolve_config_path(config, no_config=no_config)
         connector_settings = _load_connector_config(config_path)
@@ -517,7 +537,8 @@ def main(
         host=host,
         port=selected_port,
         ws_port=ws_port,
-        sync_enabled=sync,
+        sync_enabled=experimental_sync,
+        experimental_enabled=experimental,
         meta_db=meta_db,
         meta_namespace=meta_namespace,
         llm_provider=llm_provider,

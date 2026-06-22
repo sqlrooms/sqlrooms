@@ -33,6 +33,7 @@ export type RuntimeConfig = {
   llmModel?: string;
   apiKey?: string;
   configWritable?: boolean;
+  experimentalEnabled?: boolean;
   aiDevtools?: boolean;
   syncEnabled?: boolean;
   crdtWsUrl?: string;

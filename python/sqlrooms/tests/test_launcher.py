@@ -38,6 +38,7 @@ def test_api_config(server):
     assert "dbBridge" in data
     assert "aiProviders" in data
     assert data["aiDevtools"] is False
+    assert data["experimentalEnabled"] is False
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
@@ -45,6 +46,23 @@ def test_api_config(server):
     assert (
         data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
     )
+
+
+def test_api_config_with_experimental_enabled(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        experimental_enabled=True,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["experimentalEnabled"] is True
 
 
 def test_pick_free_port_scans_up_from_occupied_port():

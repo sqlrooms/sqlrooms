@@ -60,14 +60,41 @@ function isManagedType(types: readonly string[] | undefined, type: string) {
   return !types || types.includes(type);
 }
 
+function canCreateArtifactType(
+  artifactTypes: ArtifactTypeDefinitions<any>,
+  type: string,
+) {
+  return artifactTypes[type]?.canCreate !== false;
+}
+
+function getCreatableArtifactTypes(
+  artifactTypes: ArtifactTypeDefinitions<any>,
+  managedTypes: readonly string[] | undefined,
+) {
+  return Object.fromEntries(
+    Object.entries(artifactTypes).filter(
+      ([type, definition]) =>
+        isManagedType(managedTypes, type) && definition.canCreate !== false,
+    ),
+  );
+}
+
 function getDefaultArtifactType(
   artifactTypes: ArtifactTypeDefinitions<any>,
   managedTypes: readonly string[] | undefined,
 ) {
-  if (!managedTypes) return Object.keys(artifactTypes)[0];
-  const registeredType = managedTypes.find((type) => artifactTypes[type]);
+  const creatableArtifactTypes = getCreatableArtifactTypes(
+    artifactTypes,
+    managedTypes,
+  );
+  if (!managedTypes) return Object.keys(creatableArtifactTypes)[0];
+  const registeredType = managedTypes.find(
+    (type) => creatableArtifactTypes[type],
+  );
   if (registeredType) return registeredType;
-  return Object.keys(artifactTypes).length === 0 ? managedTypes[0] : undefined;
+  return Object.keys(creatableArtifactTypes).length === 0
+    ? undefined
+    : Object.keys(creatableArtifactTypes)[0];
 }
 
 /**
@@ -137,14 +164,10 @@ export function useArtifactWorkspace(
     [artifactIds, artifactsConfig.artifactsById, artifactTypes],
   );
 
-  const managedArtifactTypes = useMemo<ArtifactTypeDefinitions<any>>(() => {
-    if (!managedTypes) return artifactTypes;
-    return Object.fromEntries(
-      Object.entries(artifactTypes).filter(([type]) =>
-        managedTypes.includes(type),
-      ),
-    );
-  }, [artifactTypes, managedTypes]);
+  const creatableArtifactTypes = useMemo<ArtifactTypeDefinitions<any>>(
+    () => getCreatableArtifactTypes(artifactTypes, managedTypes),
+    [artifactTypes, managedTypes],
+  );
 
   const selectedArtifactId = useMemo(() => {
     if (
@@ -178,7 +201,11 @@ export function useArtifactWorkspace(
     ) => {
       const artifactType =
         type ?? getDefaultArtifactType(artifactTypes, managedTypes);
-      if (!artifactType || !isManagedType(managedTypes, artifactType)) {
+      if (
+        !artifactType ||
+        !isManagedType(managedTypes, artifactType) ||
+        !canCreateArtifactType(artifactTypes, artifactType)
+      ) {
         return undefined;
       }
       return createArtifactInStore({
@@ -218,7 +245,7 @@ export function useArtifactWorkspace(
       artifacts,
       selectedArtifactId,
       selectedArtifact,
-      artifactTypes: managedArtifactTypes,
+      artifactTypes: creatableArtifactTypes,
       createArtifact,
       deleteArtifact,
       renameArtifact,
@@ -228,8 +255,8 @@ export function useArtifactWorkspace(
       artifactIds,
       artifacts,
       createArtifact,
+      creatableArtifactTypes,
       deleteArtifact,
-      managedArtifactTypes,
       renameArtifact,
       selectArtifact,
       selectedArtifact,

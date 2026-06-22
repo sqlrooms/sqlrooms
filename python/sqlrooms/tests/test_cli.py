@@ -23,7 +23,24 @@ def test_cli_help():
     assert result.exit_code == 0
     assert "Start the SQLRooms local experience" in stdout
     assert "--ai-devtools" in stdout
+    assert "--experimental" in stdout
+    assert "--experimental-sync" in stdout
+    assert "--sync" not in stdout
     assert "next free port" in stdout
+
+
+def test_experimental_sync_requires_experimental():
+    result = runner.invoke(app, ["--experimental-sync"])
+
+    assert result.exit_code == 1
+    assert "--experimental-sync requires --experimental" in result.stderr
+
+
+def test_legacy_sync_flag_is_hidden_and_rejected():
+    result = runner.invoke(app, ["--sync"])
+
+    assert result.exit_code == 1
+    assert "--sync has been renamed to --experimental-sync" in result.stderr
 
 
 def test_resolve_http_port_honors_explicit_port(monkeypatch):

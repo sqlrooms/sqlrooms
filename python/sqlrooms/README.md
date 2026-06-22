@@ -23,7 +23,8 @@ What happens:
 - `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
 - `--host` / `--port`: HTTP host/port for the UI. If `--port` is omitted, `4173` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
-- `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
+- `--experimental`: Enable experimental artifacts, blocks, commands, and agent tools.
+- `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires `--experimental`.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
@@ -38,7 +39,7 @@ What happens:
 Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` is provided):
 
 - `__sqlrooms.ui_state` (one row: `key='default'`)
-- `__sqlrooms.sync_rooms` (only used when `--sync` is enabled)
+- `__sqlrooms.sync_rooms` (only used when `--experimental --experimental-sync` is enabled)
 
 Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
 

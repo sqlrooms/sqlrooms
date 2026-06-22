@@ -38,7 +38,7 @@ Options:
   --local-http PORT   Local proxied UI port. Default: 4173
   --local-ws PORT     Local proxied websocket port. Default: 4000
   --extras EXTRAS     sqlrooms extras to install, e.g. connectors.
-  --sync              Enable SQLRooms CRDT sync websocket support.
+  --experimental-sync Enable experimental SQLRooms CRDT sync websocket support.
   --private           Keep the Sprite URL authenticated. Default is public.
   --proxy             Run sprite proxy after deployment for local debugging.
   --skip-build        Skip pnpm builds; still packages Python wheels for upload.
@@ -92,7 +92,7 @@ while [[ $# -gt 0 ]]; do
       SQLROOMS_EXTRAS="$2"
       shift 2
       ;;
-    --sync)
+    --experimental-sync)
       SQLROOMS_SYNC=1
       shift
       ;;
@@ -243,7 +243,7 @@ fi
 
 sync_args=()
 if [[ "${SQLROOMS_SYNC:-0}" == "1" ]]; then
-  sync_args=(--sync)
+  sync_args=(--experimental --experimental-sync)
 fi
 
 cat >"$APP_DIR/run-sqlrooms.sh" <<RUNNER
@@ -262,7 +262,7 @@ RUNNER
 chmod +x "$APP_DIR/run-sqlrooms.sh"
 
 if [[ "${#sync_args[@]}" -gt 0 ]]; then
-  sed -i 's/--no-open-browser \\/--no-open-browser \\\n  --sync \\/' "$APP_DIR/run-sqlrooms.sh"
+  sed -i 's/--no-open-browser \\/--no-open-browser \\\n  --experimental \\\n  --experimental-sync \\/' "$APP_DIR/run-sqlrooms.sh"
 fi
 
 sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms.sh"

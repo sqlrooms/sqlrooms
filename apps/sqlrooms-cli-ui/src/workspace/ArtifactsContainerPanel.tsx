@@ -16,7 +16,6 @@ import {
   type ReactNode,
 } from 'react';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
-import {ARTIFACT_TYPES} from '../artifactTypes';
 import {useRoomStore} from '../store';
 
 type CliArtifactWorkspaceActions = UseArtifactWorkspaceResult;
@@ -218,11 +217,13 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
 function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const artifactActions = useCliArtifactWorkspaceActions();
   const invokeCreateArtifactCommand = useCreateCliArtifactCommand();
-  const WorksheetIcon = ARTIFACT_TYPES.worksheet.icon;
+  const WorksheetIcon = artifactActions.artifactTypes.worksheet?.icon;
   const returnArtifactId =
     artifactActions.selectedArtifactId ?? artifactActions.artifactIds[0];
   const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
-    (artifactType) => artifactType !== 'worksheet',
+    (artifactType) =>
+      artifactType !== 'worksheet' &&
+      Boolean(artifactActions.artifactTypes[artifactType]),
   );
 
   const handleClose = useCallback(() => {
@@ -262,7 +263,8 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
 
         <section className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {secondaryArtifactTypes.map((artifactType) => {
-            const type = ARTIFACT_TYPES[artifactType];
+            const type = artifactActions.artifactTypes[artifactType];
+            if (!type) return null;
             const Icon = type.icon;
             if (artifactType === 'dashboard') {
               return (

@@ -47,6 +47,14 @@ export type ArtifactTypeDefinition<
   component?: RoomPanelComponent;
 
   /**
+   * Whether users and commands may create new artifacts of this type.
+   *
+   * Defaults to `true`. Set to `false` for read-only renderers such as
+   * compatibility placeholders for disabled or unavailable feature modules.
+   */
+  canCreate?: boolean;
+
+  /**
    * Runs after `createArtifact` creates a brand-new artifact registry entry.
    *
    * Use this for first-time setup, such as creating the matching dashboard,
@@ -148,6 +156,7 @@ export function createArtifactTypeFromStatefulBlock<
     defaultTitle: definition.defaultTitle ?? definition.label,
     icon: definition.icon,
     component,
+    canCreate: true,
     onCreate: (context) =>
       definition.ensureState?.(
         createStatefulBlockContext(context, definition.type),

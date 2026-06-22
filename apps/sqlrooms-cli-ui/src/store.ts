@@ -38,9 +38,12 @@ import {
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {
+  createDefaultChartTypes,
+  createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
+  defaultAddPanelActions,
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
   MosaicDashboardSliceConfig,
 } from '@sqlrooms/mosaic';
@@ -86,7 +89,7 @@ import {
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {createArtifactChatHandoffController} from './artifactChatHandoff';
-import {ARTIFACT_TYPES} from './artifactTypes';
+import {createCliArtifactTypes} from './artifactTypes';
 import {addCliDatabaseInitializationDiagnostics} from './cliDatabaseInitialization';
 import {worksheetAgentTool} from './createWorksheetAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
@@ -127,19 +130,10 @@ const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const SQLROOMS_CLI_AI_INSTRUCTIONS = `
-When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, app, map, chart, or other visual surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
+When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 
 - Use worksheet_agent when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
-- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call worksheet_agent. The worksheet agent should create/reuse the worksheet html-app block, then call embedded_html_app_agent with the block's appId.
-- Do not use top-level html_app_agent to populate worksheet stateful blocks inside worksheets.
-- For worksheet map requests, call worksheet_agent. It should add or reuse a dashboard block and delegate to embedded_dashboard_agent.
 - For dashboard artifacts, call dashboard_agent.
-- For generated HTML, D3, Chart.js, or browser app visualizations only when the primary artifact is an html-app artifact or no worksheet/dashboard artifact is the requested target, write through html_app_agent. html_app_agent requires appId and never creates artifacts or worksheet blocks.
-- If the primary artifact is an html-app artifact, call html_app_agent with appId set to the current artifact id and update it instead of creating a new html-app artifact.
-- For incremental edits to an existing html-app artifact, such as changing title, labels, colors, styles, layout, controls, or interactions, call html_app_agent directly with the current appId and the user's edit request. Do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
-- If a new top-level html-app artifact is needed, first execute the html-app.create-artifact command, then call html_app_agent with appId set to the returned artifactId.
-- For HTML app undo, redo, or restoring an earlier version, use list_commands and execute_command with html-app.undo-revision, html-app.redo-revision, or html-app.restore-revision. Do not rewrite, delete, or edit chat messages to perform app undo/redo.
-- If an embedded worksheet HTML app target is ambiguous, ask the user to select the app/block or provide appId instead of mutating a guessed app.
 - Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
 `;
 const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
@@ -154,6 +148,8 @@ const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
 export const runtimeConfig = await fetchRuntimeConfig();
 export const aiDevtoolsEnabled =
   import.meta.env.DEV || Boolean(runtimeConfig.aiDevtools);
+export const experimentalEnabled = Boolean(runtimeConfig.experimentalEnabled);
+const cliArtifactTypes = createCliArtifactTypes({experimentalEnabled});
 const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
@@ -377,24 +373,30 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands(),
           );
-          registerCommandsForOwner(
-            store,
-            DOCUMENT_COMMAND_OWNER,
-            createDocumentCommands<RoomState>(),
-          );
+          if (experimentalEnabled) {
+            registerCommandsForOwner(
+              store,
+              DOCUMENT_COMMAND_OWNER,
+              createDocumentCommands<RoomState>(),
+            );
+          }
           registerCommandsForOwner(
             store,
             WORKSHEET_COMMAND_OWNER,
             createBlockDocumentCommands<RoomState>({
               ...WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
-              statefulBlockTypes: createStatefulBlockCommandTypes(),
+              statefulBlockTypes: createStatefulBlockCommandTypes({
+                experimentalEnabled,
+              }),
             }),
           );
-          registerCommandsForOwner(
-            store,
-            HTML_APP_REVISION_COMMAND_OWNER,
-            createHtmlAppRevisionCommands(),
-          );
+          if (experimentalEnabled) {
+            registerCommandsForOwner(
+              store,
+              HTML_APP_REVISION_COMMAND_OWNER,
+              createHtmlAppRevisionCommands(),
+            );
+          }
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
@@ -554,7 +556,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createRoomShellSlice({
           connector,
           config: {title: defaultWorkspaceTitle, dataSources: []},
-          layout: createLayout({store}),
+          layout: createLayout({artifactTypes: cliArtifactTypes, store}),
           createCommandProps: {
             // createRoomShellSlice is typed to the base room state, but this
             // app middleware needs the composed CLI RoomState at runtime.
@@ -599,7 +601,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         })(set, get, store),
 
         ...createArtifactsSlice({
-          artifactTypes: ARTIFACT_TYPES,
+          artifactTypes: cliArtifactTypes,
         })(set, get, store),
 
         ...createArtifactAiSlice()(set, get, store),
@@ -612,11 +614,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createMosaicDashboardSlice(createDeckMapDashboardSliceOptions())(
-          set,
-          get,
-          store,
-        ),
+        ...createMosaicDashboardSlice(
+          experimentalEnabled
+            ? createDeckMapDashboardSliceOptions()
+            : {
+                addPanelActions: defaultAddPanelActions,
+                chartTypes: createDefaultChartTypes(),
+                panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
+              },
+        )(set, get, store),
 
         ...createSqlEditorSlice()(set, get, store),
 
@@ -754,9 +760,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
-              dashboard_agent: dashboardAgentTool(store),
-              html_app_agent: htmlAppAgentTool(store),
-              worksheet_agent: worksheetAgentTool(store),
+              dashboard_agent: dashboardAgentTool(store, {
+                deckMapsEnabled: experimentalEnabled,
+              }),
+              ...(experimentalEnabled
+                ? {html_app_agent: htmlAppAgentTool(store)}
+                : {}),
+              worksheet_agent: worksheetAgentTool(store, {
+                experimentalEnabled,
+              }),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
               chart_image_for_markdown: createChartImageForMarkdownTool(store),
