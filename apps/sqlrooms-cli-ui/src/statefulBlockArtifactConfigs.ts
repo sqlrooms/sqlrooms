@@ -149,7 +149,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   python: {
     artifactType: 'python',
-    stability: 'stable',
+    stability: 'experimental',
     label: 'Python',
     defaultTitle: 'Python',
     embeddedTitle: 'Python',

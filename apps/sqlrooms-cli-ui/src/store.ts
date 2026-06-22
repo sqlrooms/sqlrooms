@@ -741,18 +741,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             }),
           );
-          registerCommandsForOwner(
-            store,
-            WORKSHEET_PYTHON_COMMAND_OWNER,
-            createPythonBlockCommands<RoomState>({
-              artifactType: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactType,
-              artifactLabel: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactLabel,
-              commandNamespace:
-                WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandNamespace,
-              commandGroup: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandGroup,
-            }),
-          );
           if (experimentalEnabled) {
+            registerCommandsForOwner(
+              store,
+              WORKSHEET_PYTHON_COMMAND_OWNER,
+              createPythonBlockCommands<RoomState>({
+                artifactType: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactType,
+                artifactLabel: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactLabel,
+                commandNamespace:
+                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandNamespace,
+                commandGroup: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandGroup,
+              }),
+            );
             registerCommandsForOwner(
               store,
               HTML_APP_REVISION_COMMAND_OWNER,

@@ -386,14 +386,18 @@ const ExecutionOutputView: FC<{output: PythonExecutionOutput}> = ({output}) => {
   }
 };
 
-const HtmlOutputFrame: FC<{label: string; html: string}> = ({label, html}) => (
+const HtmlOutputFrame: FC<{
+  label: string;
+  html: string;
+  allowScripts?: boolean;
+}> = ({label, html, allowScripts = false}) => (
   <div>
     <div className="text-muted-foreground mb-1 text-xs font-medium">
       {label}
     </div>
     <iframe
       title={`Python HTML output: ${label}`}
-      sandbox="allow-scripts"
+      sandbox={allowScripts ? 'allow-scripts' : ''}
       referrerPolicy="no-referrer"
       className="bg-background h-96 w-full rounded-sm border"
       srcDoc={html}
@@ -405,7 +409,11 @@ const VegaLiteOutputFrame: FC<{
   label: string;
   spec: Record<string, unknown>;
 }> = ({label, spec}) => (
-  <HtmlOutputFrame label={label} html={createVegaLiteOutputHtml(spec)} />
+  <HtmlOutputFrame
+    label={label}
+    html={createVegaLiteOutputHtml(spec)}
+    allowScripts
+  />
 );
 
 function createVegaLiteOutputHtml(spec: Record<string, unknown>) {

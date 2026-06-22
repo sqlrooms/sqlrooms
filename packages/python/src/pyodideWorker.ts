@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
 import {loadPyodide, type PyodideAPI} from 'pyodide';
+import type {PyProxy} from 'pyodide/ffi';
 import type {
   PythonInput,
   PythonOutputDeclaration,
@@ -214,38 +215,39 @@ async function executePython(
       await ensureAltair(pyodide);
     }
 
-    pyodide.runPython('globals().pop("result", None)');
-    pyodide.runPython(
-      'globals().pop("__sqlrooms_last_expression_result", None)',
-    );
-    clearDeclaredOutputs(pyodide, request.outputDeclarations);
+    const globals = createExecutionGlobals(pyodide);
     activeExecutionId = request.executionId;
     activeMaxRowsPreview = normalizeMaxRows(request.limits?.maxRowsPreview);
     try {
-      bindInputs(pyodide, request.inputs);
+      bindInputs(pyodide, globals, request.inputs);
       // The adapter starts timeoutMs when it receives this worker's "started"
       // message and terminates the worker if execution exceeds that budget.
       const lastExpressionResult = await pyodide.runPythonAsync(request.code, {
+        globals,
         filename: `<sqlrooms-python-block:${request.blockId}>`,
       });
-      const hasResult = pyodide.runPython('"result" in globals()');
+      const hasResult = pyodide.runPython('"result" in globals()', {globals});
       if (!hasResult && lastExpressionResult !== undefined) {
-        pyodide.globals.set('result', lastExpressionResult);
+        globals.set('result', lastExpressionResult);
       }
+      const outputs = readResultOutput(
+        pyodide,
+        globals,
+        request.outputDeclarations,
+      );
+      return {
+        executionId: request.executionId,
+        status: 'success',
+        stdout: readBoundedText(stdout),
+        stderr: readBoundedText(stderr),
+        outputs,
+        durationMs: Date.now() - startedAt,
+      };
     } finally {
       activeExecutionId = undefined;
       activeMaxRowsPreview = undefined;
+      globals.destroy();
     }
-
-    const outputs = readResultOutput(pyodide, request.outputDeclarations);
-    return {
-      executionId: request.executionId,
-      status: 'success',
-      stdout: readBoundedText(stdout),
-      stderr: readBoundedText(stderr),
-      outputs,
-      durationMs: Date.now() - startedAt,
-    };
   } catch (error) {
     return {
       executionId: request.executionId,
@@ -419,20 +421,25 @@ await __sqlrooms_micropip.install("altair")
 `);
 }
 
-function bindInputs(pyodide: PyodideAPI, inputs: PythonInput[]) {
-  clearStaleInputGlobals(
-    pyodide,
-    inputs.map((input) => input.name),
-  );
+function createExecutionGlobals(pyodide: PyodideAPI): PyProxy {
+  return pyodide.runPython('dict()') as PyProxy;
+}
+
+function bindInputs(
+  pyodide: PyodideAPI,
+  globals: PyProxy,
+  inputs: PythonInput[],
+) {
   for (const input of inputs) {
     if (input.kind === 'literal') {
-      bindPythonGlobal(pyodide, input.name, input.value);
+      bindPythonGlobal(pyodide, globals, input.name, input.value);
       continue;
     }
 
     if (input.kind === 'sql') {
       bindPythonGlobal(
         pyodide,
+        globals,
         input.name,
         requestHostQuery(input.query, input.maxRows),
       );
@@ -442,44 +449,42 @@ function bindInputs(pyodide: PyodideAPI, inputs: PythonInput[]) {
     if (input.kind === 'tableRef') {
       bindPythonGlobal(
         pyodide,
+        globals,
         input.name,
         requestHostTable(input.tableName, input.maxRows),
       );
       continue;
     }
 
-    bindPythonGlobal(pyodide, input.name, requestHostSchema(input.tableName));
+    bindPythonGlobal(
+      pyodide,
+      globals,
+      input.name,
+      requestHostSchema(input.tableName),
+    );
   }
 }
 
-function clearStaleInputGlobals(pyodide: PyodideAPI, inputNames: string[]) {
-  pyodide.globals.set('__sqlrooms_current_input_names', inputNames);
-  pyodide.runPython(`
-if hasattr(__sqlrooms_current_input_names, "to_py"):
-    __sqlrooms_current_input_names = __sqlrooms_current_input_names.to_py()
-__sqlrooms_current_input_names = set(str(name) for name in __sqlrooms_current_input_names)
-__sqlrooms_previous_input_names = globals().get("__sqlrooms_bound_input_names", set())
-for __sqlrooms_input_name in __sqlrooms_previous_input_names - __sqlrooms_current_input_names:
-    globals().pop(str(__sqlrooms_input_name), None)
-__sqlrooms_bound_input_names = __sqlrooms_current_input_names
-globals().pop("__sqlrooms_current_input_names", None)
-globals().pop("__sqlrooms_previous_input_names", None)
-globals().pop("__sqlrooms_input_name", None)
-`);
+function bindPythonGlobal(
+  pyodide: PyodideAPI,
+  globals: PyProxy,
+  name: string,
+  value: unknown,
+) {
+  const pythonValue = pyodide.toPy(value);
+  globals.set(name, pythonValue);
+  if (isPyProxy(pythonValue)) {
+    pythonValue.destroy();
+  }
 }
 
-function bindPythonGlobal(pyodide: PyodideAPI, name: string, value: unknown) {
-  pyodide.globals.set('__sqlrooms_bound_input_name', name);
-  pyodide.globals.set('__sqlrooms_bound_input_value', value);
-  pyodide.runPython(`
-__sqlrooms_value = __sqlrooms_bound_input_value
-if hasattr(__sqlrooms_value, "to_py"):
-    __sqlrooms_value = __sqlrooms_value.to_py()
-globals()[str(__sqlrooms_bound_input_name)] = __sqlrooms_value
-globals().pop("__sqlrooms_value", None)
-globals().pop("__sqlrooms_bound_input_name", None)
-globals().pop("__sqlrooms_bound_input_value", None)
-`);
+function isPyProxy(value: unknown): value is PyProxy {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'destroy' in value &&
+    typeof (value as {destroy?: unknown}).destroy === 'function'
+  );
 }
 
 function normalizeMaxRows(value: unknown) {
@@ -493,37 +498,32 @@ function createRequestId() {
   return crypto.randomUUID();
 }
 
-function clearDeclaredOutputs(
-  pyodide: PyodideAPI,
-  declarations: PythonOutputDeclaration[],
-) {
-  for (const declaration of declarations) {
-    pyodide.globals.delete(declaration.name);
-  }
-}
-
 function readResultOutput(
   pyodide: PyodideAPI,
+  globals: PyProxy,
   outputDeclarations: PythonOutputDeclaration[],
 ): PythonExecutionOutput[] {
-  const hasResult = pyodide.runPython('"result" in globals()');
+  const hasResult = pyodide.runPython('"result" in globals()', {globals});
   const declaredOutputs = outputDeclarations.map((output) => ({
     type: output.type,
     name: output.name,
   }));
   if (!hasResult && declaredOutputs.length === 0) return [];
 
-  pyodide.globals.set('__sqlrooms_output_declarations', declaredOutputs);
-  pyodide.globals.set(
+  bindPythonGlobal(
+    pyodide,
+    globals,
+    '__sqlrooms_output_declarations',
+    declaredOutputs,
+  );
+  globals.set(
     '__sqlrooms_max_rich_output_bytes',
     DEFAULT_MAX_RICH_OUTPUT_BYTES,
   );
-  pyodide.globals.set(
-    '__sqlrooms_max_text_output_bytes',
-    DEFAULT_MAX_STDIO_BYTES,
-  );
+  globals.set('__sqlrooms_max_text_output_bytes', DEFAULT_MAX_STDIO_BYTES);
 
-  const outputsJson = pyodide.runPython(`
+  const outputsJson = pyodide.runPython(
+    `
 import json as __sqlrooms_json
 import math as __sqlrooms_math
 
@@ -756,10 +756,9 @@ if "result" in globals() and "result" not in __sqlrooms_seen_output_names:
     __sqlrooms_outputs.append(__sqlrooms_output_for("result", result))
 
 __sqlrooms_json.dumps(__sqlrooms_json_safe(__sqlrooms_outputs), default=str, allow_nan=False)
-`);
-  pyodide.runPython('globals().pop("__sqlrooms_output_declarations", None)');
-  pyodide.runPython('globals().pop("__sqlrooms_max_rich_output_bytes", None)');
-  pyodide.runPython('globals().pop("__sqlrooms_max_text_output_bytes", None)');
+`,
+    {globals},
+  );
   return JSON.parse(String(outputsJson)) as PythonExecutionOutput[];
 }
 
