@@ -40,6 +40,13 @@ def test_cli_requires_database_path():
     assert "--db-path :memory:" in result.stderr
 
 
+def test_cli_rejects_blank_database_path():
+    result = runner.invoke(app, ["   "])
+
+    assert result.exit_code == 1
+    assert "Please provide a DuckDB project file" in result.stderr
+
+
 def test_experimental_sync_requires_experimental():
     result = runner.invoke(app, ["--experimental-sync"])
 

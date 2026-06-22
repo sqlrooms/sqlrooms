@@ -520,7 +520,7 @@ def main(
         raise typer.Exit(code=1)
 
     resolved_db_path = db_path if db_path is not None else db_path_option
-    if resolved_db_path is None:
+    if resolved_db_path is None or not resolved_db_path.strip():
         typer.echo(
             "Please provide a DuckDB project file, e.g. `sqlrooms ./my-project.duckdb`, "
             "or pass `--db-path :memory:` for a temporary in-memory session.",
