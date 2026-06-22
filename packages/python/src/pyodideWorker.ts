@@ -226,9 +226,15 @@ async function executePython(
         globals,
         filename: `<sqlrooms-python-block:${request.blockId}>`,
       });
-      const hasResult = pyodide.runPython('"result" in globals()', {globals});
-      if (!hasResult && lastExpressionResult !== undefined) {
-        globals.set('result', lastExpressionResult);
+      try {
+        const hasResult = pyodide.runPython('"result" in globals()', {globals});
+        if (!hasResult && lastExpressionResult !== undefined) {
+          globals.set('result', lastExpressionResult);
+        }
+      } finally {
+        if (isPyProxy(lastExpressionResult)) {
+          lastExpressionResult.destroy();
+        }
       }
       const outputs = readResultOutput(
         pyodide,
