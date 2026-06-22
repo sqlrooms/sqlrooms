@@ -490,6 +490,10 @@ function readResultOutput(
     '__sqlrooms_max_rich_output_bytes',
     DEFAULT_MAX_RICH_OUTPUT_BYTES,
   );
+  pyodide.globals.set(
+    '__sqlrooms_max_text_output_bytes',
+    DEFAULT_MAX_STDIO_BYTES,
+  );
 
   const outputsJson = pyodide.runPython(`
 import json as __sqlrooms_json
@@ -582,6 +586,41 @@ def __sqlrooms_json_exceeds_limit(value):
         return False
     return len(encoded) > int(__sqlrooms_max_rich_output_bytes)
 
+def __sqlrooms_text_output_for(output_type, name, field_name, value, max_bytes):
+    budget = {"remaining": int(max_bytes), "truncated": False}
+    return {
+        "type": output_type,
+        "name": name,
+        field_name: __sqlrooms_bounded_string(value, budget),
+    }
+
+def __sqlrooms_plain_text_output_for(name, value):
+    return __sqlrooms_text_output_for(
+        "text",
+        name,
+        "text",
+        value,
+        __sqlrooms_max_text_output_bytes,
+    )
+
+def __sqlrooms_markdown_output_for(name, value):
+    return __sqlrooms_text_output_for(
+        "markdown",
+        name,
+        "markdown",
+        value,
+        __sqlrooms_max_text_output_bytes,
+    )
+
+def __sqlrooms_html_output_for(name, value):
+    return __sqlrooms_text_output_for(
+        "html",
+        name,
+        "html",
+        value,
+        __sqlrooms_max_rich_output_bytes,
+    )
+
 def __sqlrooms_json_output_for(name, value):
     budget = {"remaining": int(__sqlrooms_max_rich_output_bytes), "truncated": False}
     safe_value = __sqlrooms_json_safe(value, budget)
@@ -615,18 +654,18 @@ def __sqlrooms_mimebundle_for(value):
 
 def __sqlrooms_output_for(name, value, declared_type=None):
     if declared_type == "text":
-        return {"type": "text", "name": name, "text": str(value)}
+        return __sqlrooms_plain_text_output_for(name, value)
     if declared_type == "markdown":
-        return {"type": "markdown", "name": name, "markdown": str(value)}
+        return __sqlrooms_markdown_output_for(name, value)
     if declared_type == "html":
         if isinstance(value, str):
-            return {"type": "html", "name": name, "html": value}
+            return __sqlrooms_html_output_for(name, value)
         repr_html = getattr(value, "_repr_html_", None)
         if repr_html is not None:
             html = __sqlrooms_safe_call(repr_html)
             if html:
-                return {"type": "html", "name": name, "html": str(html)}
-        return {"type": "html", "name": name, "html": str(value)}
+                return __sqlrooms_html_output_for(name, html)
+        return __sqlrooms_html_output_for(name, value)
     if declared_type == "json":
         return __sqlrooms_json_output_for(name, value)
     if declared_type in ("table", "image"):
@@ -658,16 +697,16 @@ def __sqlrooms_output_for(name, value, declared_type=None):
     if bundle:
         html = bundle.get("text/html")
         if html:
-            return {"type": "html", "name": name, "html": str(html)}
+            return __sqlrooms_html_output_for(name, html)
         text = bundle.get("text/plain")
         if text:
-            return {"type": "text", "name": name, "text": str(text)}
+            return __sqlrooms_plain_text_output_for(name, text)
 
     repr_html = getattr(value, "_repr_html_", None)
     if repr_html is not None:
         html = __sqlrooms_safe_call(repr_html)
         if html:
-            return {"type": "html", "name": name, "html": str(html)}
+            return __sqlrooms_html_output_for(name, html)
 
     return __sqlrooms_json_output_for(name, value)
 
@@ -692,6 +731,7 @@ __sqlrooms_json.dumps(__sqlrooms_json_safe(__sqlrooms_outputs), default=str, all
 `);
   pyodide.runPython('globals().pop("__sqlrooms_output_declarations", None)');
   pyodide.runPython('globals().pop("__sqlrooms_max_rich_output_bytes", None)');
+  pyodide.runPython('globals().pop("__sqlrooms_max_text_output_bytes", None)');
   return JSON.parse(String(outputsJson)) as PythonExecutionOutput[];
 }
 
