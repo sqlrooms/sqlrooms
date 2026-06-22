@@ -16,6 +16,8 @@ import {
 import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
+const EMPTY_CHART_CONFIG = {};
+
 type BlockDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
@@ -33,6 +35,10 @@ const ChartRendererBoundary = memo(
 
 ChartRendererBoundary.displayName = 'ChartRendererBoundary';
 
+/**
+ * Renders a Tiptap node view for embedded chart blocks and connects chart
+ * renderer changes back to the document node attributes.
+ */
 export const BlockDocumentChartNodeView: FC<
   BlockDocumentChartNodeViewProps
 > = ({node, selected, updateAttributes}) => {
@@ -45,7 +51,7 @@ export const BlockDocumentChartNodeView: FC<
   const tableName = optionalString(attrs.tableName) ?? '';
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
-  const config = attrs.config ?? {};
+  const config = attrs.config ?? EMPTY_CHART_CONFIG;
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;

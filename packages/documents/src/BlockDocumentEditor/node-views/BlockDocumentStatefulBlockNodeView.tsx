@@ -123,6 +123,10 @@ function scrollElementByWheel(element: HTMLElement, event: WheelEvent) {
   });
 }
 
+/**
+ * Renders a Tiptap node view for embedded stateful document blocks while
+ * isolating the host-provided block renderer from unrelated editor updates.
+ */
 export const BlockDocumentStatefulBlockNodeView: FC<
   BlockDocumentStatefulBlockNodeViewProps
 > = ({node, selected, updateAttributes}) => {
@@ -132,6 +136,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const scrollHintTargetRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const {documentId, readOnly} = useBlockDocumentEditorContext();
+  const readOnlyRef = useRef(readOnly);
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const blockType = optionalString(attrs.blockType) ?? '';
@@ -168,6 +173,10 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
   }, [updateAttributes]);
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
 
   useEffect(() => {
     return () => {
@@ -327,10 +336,12 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   };
 
   const handleTitleChange = useCallback((nextTitle: string | undefined) => {
+    if (readOnlyRef.current) return;
     updateAttributesRef.current({title: nextTitle || undefined});
   }, []);
 
   const handleCaptionChange = useCallback((nextCaption: string | undefined) => {
+    if (readOnlyRef.current) return;
     updateAttributesRef.current({caption: nextCaption});
   }, []);
 
