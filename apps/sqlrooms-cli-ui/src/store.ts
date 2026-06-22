@@ -192,6 +192,7 @@ const defaultModelFromConfig =
 const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
 const MOSAIC_PREAGG_SCHEMA = 'mosaic';
 const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CLI_PYTHON_EXECUTION_TIMEOUT_MS = 120_000;
 const CRDT_STORAGE_KEY = [
   'sqlrooms-cli',
   runtimeConfig.metaNamespace || '__sqlrooms',
@@ -1000,6 +1001,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createPythonSlice({
           runtimeAdapter: createPyodidePythonRuntimeAdapter(),
           host: createCliPythonRuntimeHost(),
+          limits: {
+            timeoutMs: CLI_PYTHON_EXECUTION_TIMEOUT_MS,
+          },
         })(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
