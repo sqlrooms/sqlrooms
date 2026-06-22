@@ -537,7 +537,11 @@ class SqlroomsHttpServer:
             logger.info("Opened browser at %s", url)
 
     def _public_host(self) -> str:
-        return "localhost" if self.host in ("0.0.0.0", "::") else self.host
+        return (
+            "localhost"
+            if self.host in ("0.0.0.0", "::", "127.0.0.1", "::1")
+            else self.host
+        )
 
     def _start_duckdb_backend(self) -> None:
         self._duckdb_ready.clear()

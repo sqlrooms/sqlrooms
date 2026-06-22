@@ -1,5 +1,6 @@
 import socket
 
+import duckdb
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
@@ -12,6 +13,8 @@ from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
 from pathlib import Path
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -46,6 +49,22 @@ def test_api_config(server):
     assert (
         data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
     )
+
+
+def test_api_config_normalizes_loopback_ws_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["wsUrl"] == "ws://localhost:48174"
 
 
 def test_api_config_with_experimental_enabled(tmp_path):
@@ -296,6 +315,34 @@ def test_api_upload(server, tmp_path):
     assert "path" in data
     assert Path(data["path"]).name == "test.txt"
     assert Path(data["path"]).read_bytes() == file_content
+
+
+def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
+    app = server._build_app()
+    fixture = FIXTURES_DIR / "cars.csv"
+
+    client = TestClient(app)
+    with fixture.open("rb") as file:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("cars.csv", file, "text/csv")},
+        )
+
+    assert response.status_code == 200
+    uploaded_path = Path(response.json()["path"])
+    assert uploaded_path == tmp_path / "sqlrooms_uploads" / "cars.csv"
+    assert uploaded_path.read_text() == fixture.read_text()
+
+    with duckdb.connect(str(tmp_path / "fresh.duckdb")) as con:
+        con.execute(
+            "CREATE TABLE cars AS SELECT * FROM read_csv_auto(?)",
+            [str(uploaded_path)],
+        )
+        row_count = con.sql("SELECT count(*) FROM cars").fetchone()[0]
+        columns = [row[1] for row in con.sql("PRAGMA table_info('cars')").fetchall()]
+
+    assert row_count == 4
+    assert columns == ["make", "model", "year", "origin", "horsepower", "mpg"]
 
 
 def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):
