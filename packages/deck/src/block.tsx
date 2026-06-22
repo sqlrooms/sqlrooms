@@ -1,10 +1,13 @@
 import {
+  DataTableSelectorEmptyState,
   getMosaicDashboardSelectionName,
   type MosaicDashboardStoreState,
+  useTablesWithColumns,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
+import type {DataTable} from '@sqlrooms/duckdb';
 import {MapIcon} from 'lucide-react';
-import {useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
@@ -96,6 +99,7 @@ export function DeckMapBlockRenderer({
     (state) => state.mosaicDashboard.config.dashboardsById[mapId],
   );
   const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
+  const tablesWithColumns = useTablesWithColumns();
   const ensureDashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.ensureDashboard,
   );
@@ -104,6 +108,9 @@ export function DeckMapBlockRenderer({
   );
   const addPanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.addPanel,
+  );
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
   );
 
   useEffect(() => {
@@ -159,6 +166,40 @@ export function DeckMapBlockRenderer({
       ),
     [dashboard?.panels],
   );
+  const selectedTable = useMemo(
+    () =>
+      tablesWithColumns.find(
+        (table) => table.table.toString() === dashboard?.selectedTable,
+      ),
+    [dashboard?.selectedTable, tablesWithColumns],
+  );
+
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      if (!mapId || !panel) {
+        return;
+      }
+
+      setSelectedTable(mapId, table.table.toString());
+      const hasGeospatialColumns =
+        Boolean(findLongitudeLatitudeColumns(table)) ||
+        Boolean(findGeometryColumn(table));
+      const nextPanel = hasGeospatialColumns
+        ? createDeckMapDashboardPanelConfigForTable({
+            title: `${table.tableName} map`,
+            tableName: table.tableName,
+            columns: table.columns,
+            tableReference: table.table,
+          })
+        : createEmptyDeckMapDashboardPanelConfig(title ?? 'Embedded Map');
+      updatePanel(mapId, panel.id, {
+        title: nextPanel.title,
+        type: nextPanel.type,
+        config: nextPanel.config,
+      });
+    },
+    [mapId, panel, setSelectedTable, title, updatePanel],
+  );
 
   if (!dashboard || !panel) {
     return (
@@ -182,6 +223,8 @@ export function DeckMapBlockRenderer({
     panel,
     selectionName: getMosaicDashboardSelectionName(mapId),
   };
+  const mapConfig = panel.config as {datasets?: Record<string, unknown>};
+  const hasDatasets = Object.keys(mapConfig.datasets ?? {}).length > 0;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -193,7 +236,15 @@ export function DeckMapBlockRenderer({
         {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
       </div>
       <div className="min-h-0 flex-1">
-        <MapPanel {...rendererProps} />
+        {hasDatasets ? (
+          <MapPanel {...rendererProps} />
+        ) : (
+          <DataTableSelectorEmptyState
+            onChange={handleTableChange}
+            tables={tablesWithColumns}
+            value={selectedTable}
+          />
+        )}
       </div>
     </div>
   );

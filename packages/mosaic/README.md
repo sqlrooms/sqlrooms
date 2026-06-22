@@ -172,6 +172,10 @@ renderer for `@sqlrooms/documents` block documents. Register it with a
 host-provided stateful block type such as `data-table` when a document or
 worksheet surface should embed an interactive Data Table Explorer directly.
 
+Use `DataTableSelector` or `DataTableSelectorEmptyState` when another host
+surface needs the same searchable table picker used by dashboards and data
+table blocks.
+
 ### Worksheet Agent HTML App Tools
 
 `createWorksheetAgentTool` exposes worksheet HTML app block workflows by
