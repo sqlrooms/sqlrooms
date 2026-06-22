@@ -235,12 +235,15 @@ function getPythonCliDevArgs(args, apiPort, uiPort) {
   const apiPortArgs = hasOption(args, '--port')
     ? args
     : ['--port', String(apiPort), ...args];
-  return hasDbPathArg(apiPortArgs)
+  const experimentalArgs = apiPortArgs.includes('--experimental')
     ? apiPortArgs
+    : ['--experimental', ...apiPortArgs];
+  return hasDbPathArg(experimentalArgs)
+    ? experimentalArgs
     : [
         '--db-path',
         path.join(tmpdir(), `sqlrooms-${uiPort}.db`),
-        ...apiPortArgs,
+        ...experimentalArgs,
       ];
 }
 
