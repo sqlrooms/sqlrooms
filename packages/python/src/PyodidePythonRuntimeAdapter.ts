@@ -1,6 +1,7 @@
 import type {
   PythonExecutionRequest,
   PythonExecutionResult,
+  PythonRequirementSpec,
   PythonSchemaSummary,
   PythonRuntimeAdapter,
   PythonRuntimeHost,
@@ -127,19 +128,20 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
       );
     }
 
+    const resolvedRequest = await resolveHostRequirements(request, host);
     const worker = this.ensureWorker();
     this.state = this.state === 'idle' ? 'loading' : this.state;
 
     return new Promise((resolve, reject) => {
-      this.pending.set(request.executionId, {
+      this.pending.set(resolvedRequest.executionId, {
         resolve,
         reject,
         host,
-        timeoutMs: request.limits?.timeoutMs,
+        timeoutMs: resolvedRequest.limits?.timeoutMs,
       });
       worker.postMessage({
         type: 'execute',
-        request,
+        request: resolvedRequest,
         indexURL: this.indexURL,
       } satisfies PyodideWorkerRequestMessage);
     });
@@ -251,6 +253,60 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
       Atomics.notify(signal, 0);
     }
   }
+}
+
+async function resolveHostRequirements(
+  request: PythonExecutionRequest,
+  host: PythonRuntimeHost,
+): Promise<PythonExecutionRequest> {
+  const requirements = request.requirements ?? [];
+  const hostRequirements = requirements.filter(
+    (requirement) => requirement.source === 'host',
+  );
+  if (!hostRequirements.length) return request;
+  if (!host.resolvePackages) {
+    throw Object.assign(
+      new Error(
+        'Python host package requirements are not supported by this runtime host.',
+      ),
+      {name: 'PythonHostRequirementsUnsupported'},
+    );
+  }
+
+  const resolvedRequirements = await host.resolvePackages(hostRequirements);
+  const unresolvedRequirement = resolvedRequirements.find(
+    (requirement) => requirement.source === 'host',
+  );
+  if (unresolvedRequirement) {
+    throw Object.assign(
+      new Error(
+        `Python host package requirement "${unresolvedRequirement.name}" did not resolve to an installable Pyodide or micropip package.`,
+      ),
+      {name: 'PythonHostRequirementUnresolved'},
+    );
+  }
+
+  return {
+    ...request,
+    requirements: [
+      ...requirements.filter((requirement) => requirement.source !== 'host'),
+      ...resolvedRequirements.map(normalizeResolvedRequirement),
+    ],
+  };
+}
+
+function normalizeResolvedRequirement(
+  requirement: PythonRequirementSpec & {url?: string},
+): PythonRequirementSpec {
+  if (requirement.url) {
+    return {
+      ...requirement,
+      name: requirement.url,
+      version: undefined,
+      source: 'micropip',
+    };
+  }
+  return requirement;
 }
 
 async function resolveHostRequest(

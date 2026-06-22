@@ -214,6 +214,8 @@ async function executePython(
     activeMaxRowsPreview = normalizeMaxRows(request.limits?.maxRowsPreview);
     try {
       bindInputs(pyodide, request.inputs);
+      // The adapter starts timeoutMs when it receives this worker's "started"
+      // message and terminates the worker if execution exceeds that budget.
       const lastExpressionResult = await pyodide.runPythonAsync(request.code, {
         filename: `<sqlrooms-python-block:${request.blockId}>`,
       });

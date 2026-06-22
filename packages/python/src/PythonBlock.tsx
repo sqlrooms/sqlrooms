@@ -70,7 +70,7 @@ export const PythonBlock: FC<PythonBlockProps> = ({
 
   useEffect(() => {
     if (!blockId) return;
-    ensureBlock(blockId, {title: title ?? 'Python'});
+    ensureBlock(blockId, title === undefined ? {} : {title});
   }, [blockId, ensureBlock, title]);
 
   const handleCodeChange = useCallback(
