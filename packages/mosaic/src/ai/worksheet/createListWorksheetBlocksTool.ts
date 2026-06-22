@@ -35,6 +35,11 @@ export type CreateListWorksheetBlocksToolOptions = {
   worksheetAdapter: WorksheetAiAdapter;
   /** ID of the worksheet to inspect */
   worksheetId: string;
+  /**
+   * Whether tool descriptions should mention worksheet HTML app workflows.
+   * Defaults to `true` for integrations that expose HTML app block tools.
+   */
+  htmlAppBlocksEnabled?: boolean;
 };
 
 function summarizeBlock(
@@ -84,11 +89,16 @@ function summarizeBlock(
 export function createListWorksheetBlocksTool({
   worksheetAdapter,
   worksheetId,
+  htmlAppBlocksEnabled = true,
 }: CreateListWorksheetBlocksToolOptions) {
   return tool<ListWorksheetBlocksToolInput, ListWorksheetBlocksToolOutput>({
     description: `List existing blocks in the worksheet.
 
-Use this before updating an existing worksheet dashboard, adding a map to a worksheet, or modifying an existing worksheet HTML app. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels. HTML app blocks include htmlAppId; pass that htmlAppId to embedded_html_app_agent as appId. For a new worksheet HTML app, use add_html_app_block first.`,
+Use this before updating an existing worksheet dashboard or adding a map to a worksheet. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels.${
+      htmlAppBlocksEnabled
+        ? ' HTML app blocks include htmlAppId; pass that htmlAppId to embedded_html_app_agent as appId. For a new worksheet HTML app, use add_html_app_block first.'
+        : ''
+    }`,
     inputSchema: ListWorksheetBlocksToolInput,
     execute: async () => {
       try {

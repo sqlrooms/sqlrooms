@@ -61,6 +61,7 @@ export function worksheetAgentTool(
     databaseAdapter,
     worksheetAdapter,
     dashboardAgentTool,
+    htmlAppBlocksEnabled: experimentalEnabled,
     extraTools: () => {
       const extraTools: Record<string, Tool> = {};
 

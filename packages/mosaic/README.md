@@ -172,6 +172,13 @@ renderer for `@sqlrooms/documents` block documents. Register it with a
 host-provided stateful block type such as `data-table` when a document or
 worksheet surface should embed an interactive Data Table Explorer directly.
 
+### Worksheet Agent HTML App Tools
+
+`createWorksheetAgentTool` exposes worksheet HTML app block workflows by
+default. Hosts that gate or do not support HTML app blocks should pass
+`htmlAppBlocksEnabled: false` so the agent omits `add_html_app_block` and does
+not advertise HTML app block workflows in its instructions.
+
 ### Mosaic Dashboard Panels
 
 `MosaicDashboard` is a compound dashboard surface backed by generic dashboard
