@@ -452,6 +452,7 @@ class SqlroomsHttpServer:
         external_url: str | None = None,
         external_ws_url: str | None = None,
         ai_devtools: bool = False,
+        debug: bool = False,
     ):
         db_path_str = str(db_path)
         self.is_in_memory = db_path_str == ":memory:"
@@ -482,6 +483,7 @@ class SqlroomsHttpServer:
         self.serve_ui = serve_ui
         self.experimental_enabled = bool(experimental_enabled)
         self.ai_devtools = bool(ai_devtools)
+        self.debug = bool(debug)
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
         self.meta_namespace = meta_namespace
@@ -510,13 +512,13 @@ class SqlroomsHttpServer:
         logger.info("Starting sqlrooms CLI server")
         self._assert_ui_available()
         if self.meta_db:
-            logger.info(
+            logger.debug(
                 "Meta DB is ENABLED (db=%s, namespace=%s)",
                 self.meta_db,
                 self.meta_namespace,
             )
         else:
-            logger.info(
+            logger.debug(
                 "Meta DB is DISABLED (using schema=%s within main DB)",
                 self.meta_namespace,
             )
@@ -532,7 +534,13 @@ class SqlroomsHttpServer:
         logger.info("DuckDB websocket URL: %s", self._ws_url())
 
         config = uvicorn.Config(
-            app, host=self.host, port=self.port, log_level="info", loop="asyncio"
+            app,
+            host=self.host,
+            port=self.port,
+            log_level="debug" if self.debug else "warning",
+            access_log=self.debug,
+            lifespan="off",
+            loop="asyncio",
         )
         server = uvicorn.Server(config)
         await server.serve()
@@ -1206,6 +1214,7 @@ class SqlroomsHttpServer:
                     self.sync_enabled and self.duckdb_database == ":memory:"
                 ),
                 local_only=True,
+                log_startup_message=self.debug,
             )
         except Exception as exc:
             self._duckdb_start_error = exc

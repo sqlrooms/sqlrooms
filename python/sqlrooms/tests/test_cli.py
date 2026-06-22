@@ -24,6 +24,7 @@ def test_cli_help():
     assert "Launch a local SQLRooms project" in stdout
     assert "my-project.duckdb" in stdout
     assert "--ai-devtools" in stdout
+    assert "--debug" in stdout
     assert "--experimental" in stdout
     assert "--experimental-sync" in stdout
     assert "--sync" not in stdout

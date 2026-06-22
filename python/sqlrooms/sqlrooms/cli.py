@@ -40,6 +40,10 @@ DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 4173
 
 
+def _configure_logging(*, debug: bool) -> None:
+    logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
+
+
 def _resolve_http_port(host: str, port: int | None, ws_port: int | None = None) -> int:
     if port is not None:
         return port
@@ -162,7 +166,7 @@ def _load_connector_config(
                 title=title,
             )
         )
-    logger.info("Loaded SQLRooms connector config from %s", path)
+    logger.debug("Loaded SQLRooms connector config from %s", path)
     return out
 
 
@@ -279,7 +283,7 @@ def _load_ai_runtime_config(
             default_model = models[0].get("modelName")
     if default_provider == "custom" and not default_model and custom_models:
         default_model = custom_models[0].get("modelName")
-    logger.info("Loaded SQLRooms AI config from %s", path)
+    logger.debug("Loaded SQLRooms AI config from %s", path)
     return (default_provider, default_model, providers, custom_models, model_parameters)
 
 
@@ -467,6 +471,11 @@ def main(
         envvar="SQLROOMS_AI_DEVTOOLS",
         help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable verbose debug logging, including HTTP access logs and DuckDB query timing.",
+    ),
     meta_db: str | None = typer.Option(
         None,
         "--meta-db",
@@ -498,6 +507,8 @@ def main(
     - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the worksheet UI with persisted state stored in DuckDB.
     """
+    _configure_logging(debug=debug)
+
     if legacy_sync:
         typer.echo(
             "--sync has been renamed to --experimental-sync and is not part of the public launch surface.",
@@ -566,6 +577,7 @@ def main(
         external_url=external_url,
         external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
+        debug=debug,
     )
     try:
         asyncio.run(server.start())
