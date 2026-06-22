@@ -67,6 +67,20 @@ def test_api_config_normalizes_loopback_ws_host(tmp_path):
     assert response.json()["wsUrl"] == "ws://localhost:48174"
 
 
+def test_startup_fails_when_configured_ui_bundle_is_missing(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(tmp_path / "missing-ui"),
+    )
+
+    with pytest.raises(RuntimeError, match="SQLRooms UI bundle is missing"):
+        server._assert_ui_available()
+
+
 def test_api_config_with_experimental_enabled(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",
@@ -281,7 +295,9 @@ def test_api_config_with_ai_provider_metadata(tmp_path):
     data = response.json()
     assert data["llmProvider"] == "openai"
     assert data["llmModel"] == "gpt-5"
+    assert "apiKey" not in data
     assert "openai" in data["aiProviders"]
+    assert data["aiProviders"]["openai"]["apiKey"] == "demo-key"
 
 
 def test_api_config_with_ai_devtools_flag(tmp_path):
@@ -317,6 +333,21 @@ def test_api_upload(server, tmp_path):
     assert Path(data["path"]).read_bytes() == file_content
 
 
+def test_api_upload_sanitizes_filename_to_upload_dir(server, tmp_path):
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("../../evil.csv", b"id\n1\n", "text/csv")},
+    )
+
+    assert response.status_code == 200
+    uploaded_path = Path(response.json()["path"])
+    assert uploaded_path == tmp_path / "sqlrooms_uploads" / "evil.csv"
+    assert uploaded_path.read_text() == "id\n1\n"
+
+
 def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
     app = server._build_app()
     fixture = FIXTURES_DIR / "cars.csv"
@@ -343,6 +374,19 @@ def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
 
     assert row_count == 4
     assert columns == ["make", "model", "year", "origin", "horsepower", "mpg"]
+
+
+def test_project_query_blocks_internal_metadata_namespace(server):
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/project/query",
+        json={"sql": "SELECT * FROM __sqlrooms.ui_state"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Access to internal schema __sqlrooms is denied"
 
 
 def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):

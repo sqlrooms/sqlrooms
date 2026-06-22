@@ -744,9 +744,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getAvailableModels: () =>
               getAvailableAiModels(get().aiSettings.config),
             getApiKey: (provider) =>
-              get().aiSettings.config.providers[provider]?.apiKey ||
-              runtimeConfig.apiKey ||
-              '',
+              get().aiSettings.config.providers[provider]?.apiKey || '',
             getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
             getInstructions: () =>
               [

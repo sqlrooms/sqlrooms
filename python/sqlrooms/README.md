@@ -21,7 +21,7 @@ What happens:
 
 - `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
 - `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
-- `--host` / `--port`: HTTP host/port for the UI. If `--port` is omitted, `4173` or the next free port is chosen automatically.
+- `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `4173` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--experimental`: Enable experimental artifacts, blocks, commands, and agent tools.
 - `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires `--experimental`.
@@ -33,6 +33,16 @@ What happens:
 - `--no-ui`: Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
+
+`--host 0.0.0.0` is an advanced local-network mode. Only use it on trusted
+networks; it exposes the SQLRooms UI/API bind address beyond your loopback
+interface. The DuckDB websocket backend still enforces local-only connections
+unless you explicitly use external proxy settings.
+
+There is intentionally no `sqlrooms add`, `sqlrooms import`, or
+`sqlrooms doctor` command in the first public CLI. Drag-and-drop import is the
+supported first-launch path, and the release smoke checklist below covers the
+doctor-style checks for now.
 
 ## Data persistence
 

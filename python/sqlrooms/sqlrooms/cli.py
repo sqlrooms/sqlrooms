@@ -491,7 +491,8 @@ def main(
     ),
 ):
     """
-    Start the SQLRooms local experience:
+    Launch a local SQLRooms project for adding data and building worksheets with Mosaic charts and dashboards.
+
     - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the worksheet UI with persisted state stored in DuckDB.
     """
@@ -558,5 +559,8 @@ def main(
     )
     try:
         asyncio.run(server.start())
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
     except KeyboardInterrupt:
         sys.stderr.write("\nShutting down...\n")

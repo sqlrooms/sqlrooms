@@ -502,6 +502,7 @@ class SqlroomsHttpServer:
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
+        self._assert_ui_available()
         if self.meta_db:
             logger.info(
                 "Meta DB is ENABLED (db=%s, namespace=%s)",
@@ -521,6 +522,9 @@ class SqlroomsHttpServer:
         if self.open_browser and self.serve_ui:
             threading.Timer(1.0, self._open_browser).start()
 
+        logger.info("SQLRooms UI URL: %s", self._ui_url())
+        logger.info("DuckDB websocket URL: %s", self._ws_url())
+
         config = uvicorn.Config(
             app, host=self.host, port=self.port, log_level="info", loop="asyncio"
         )
@@ -528,7 +532,7 @@ class SqlroomsHttpServer:
         await server.serve()
 
     def _open_browser(self) -> None:
-        url = f"http://{self._public_host()}:{self.port}"
+        url = self._ui_url()
         try:
             webbrowser.open_new_tab(url)
         except Exception as exc:
@@ -541,6 +545,31 @@ class SqlroomsHttpServer:
             "localhost"
             if self.host in ("0.0.0.0", "::", "127.0.0.1", "::1")
             else self.host
+        )
+
+    def _ui_host(self) -> str:
+        return "localhost" if self.host in ("0.0.0.0", "::") else self.host
+
+    def _ui_url(self) -> str:
+        return f"http://{self._ui_host()}:{self.port}"
+
+    def _ws_url(self) -> str:
+        return self.external_ws_url or f"ws://{self._public_host()}:{self.ws_port}"
+
+    def _assert_ui_available(self) -> None:
+        if not self.serve_ui:
+            return
+        if self.index_html.exists():
+            return
+        if isinstance(self.ui_provider, DirectoryUiProvider):
+            raise RuntimeError(
+                f"SQLRooms UI bundle is missing: {self.index_html}. "
+                "Build the UI bundle or pass --no-ui to start only the API server."
+            )
+        raise RuntimeError(
+            f"Bundled SQLRooms UI is missing from this installation: {self.index_html}. "
+            "Reinstall sqlrooms or report a packaging issue. "
+            "Developers can rebuild it with `pnpm --filter sqlrooms-python build:ui`."
         )
 
     def _start_duckdb_backend(self) -> None:
@@ -611,18 +640,13 @@ class SqlroomsHttpServer:
             if self.external_url and not self.external_ws_url
             else None
         )
-        ws_url = (
-            self.external_ws_url
-            or derived_ws_url
-            or f"ws://{self._public_host()}:{self.ws_port}"
-        )
+        ws_url = self.external_ws_url or derived_ws_url or self._ws_url()
         return {
             "wsUrl": ws_url,
             "wsAuthToken": self.session_token,
             "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
-            "apiKey": self.api_key or "",
             "configWritable": self.config_path is not None,
             "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
