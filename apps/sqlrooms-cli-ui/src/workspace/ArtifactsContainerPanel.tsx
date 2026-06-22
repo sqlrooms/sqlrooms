@@ -224,6 +224,14 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
     (artifactType) => artifactType !== 'worksheet',
   );
+  const secondaryArtifactsLayoutClass =
+    secondaryArtifactTypes.length === 1
+      ? 'flex w-full max-w-2xl justify-center'
+      : 'grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3';
+  const secondaryArtifactButtonClass =
+    secondaryArtifactTypes.length === 1
+      ? 'h-12 w-full max-w-sm justify-start gap-3 px-5 text-base'
+      : 'h-12 justify-start gap-3 px-5 text-base';
 
   const handleClose = useCallback(() => {
     if (!returnArtifactId) return;
@@ -260,7 +268,7 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
           New Worksheet
         </Button>
 
-        <section className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <section className={secondaryArtifactsLayoutClass}>
           {secondaryArtifactTypes.map((artifactType) => {
             const type = ARTIFACT_TYPES[artifactType];
             const Icon = type.icon;
@@ -270,7 +278,7 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
                   key={artifactType}
                   variant="outline"
                   size="lg"
-                  className="h-12 justify-start gap-3 px-5 text-base"
+                  className={secondaryArtifactButtonClass}
                   onClick={() => {
                     void invokeCreateArtifactCommand(
                       'dashboard.create-artifact',
@@ -290,7 +298,7 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
                 key={artifactType}
                 variant="outline"
                 size="lg"
-                className="h-12 justify-start gap-3 px-5 text-base"
+                className={secondaryArtifactButtonClass}
                 onClick={() => {
                   void invokeCreateArtifactCommand(
                     `${artifactType}.create-artifact`,
