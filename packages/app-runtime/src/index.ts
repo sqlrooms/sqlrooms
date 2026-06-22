@@ -92,3 +92,7 @@ export {
   type HtmlAppState as HtmlAppStateType,
   type RestoreHtmlAppRevisionMetadata,
 } from './html-app';
+export {
+  createHtmlAppBlockDocumentBlock,
+  type CreateHtmlAppBlockDocumentBlockOptions,
+} from './html-app-blocks';

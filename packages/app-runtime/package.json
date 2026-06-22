@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "@sqlrooms/blocks": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
