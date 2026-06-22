@@ -153,7 +153,7 @@ async def handle_query_ws(send, cache, query):
         logger.exception("Error executing query")
         send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
     total = round((time.time() - start) * 1_000)
-    logger.info(f"DONE. Query took {total} ms.")
+    logger.debug(f"DONE. Query took {total} ms.")
 
 
 async def handle_upload_arrow_ws(ws, header: dict, payload: bytes):
@@ -223,6 +223,7 @@ def server(
     allow_client_snapshots: bool = False,
     save_debounce_ms: int = 500,
     local_only: bool = False,
+    log_startup_message: bool = True,
 ):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
@@ -530,7 +531,7 @@ def server(
                 pass
 
     def ws_close(ws, code, message):
-        logger.info(f"ws closed code={code} reason={message} id={id(ws)}")
+        logger.debug(f"ws closed code={code} reason={message} id={id(ws)}")
         try:
             user_data = ws.get_user_data()  # type: ignore[attr-defined]
             if user_data is not None:
@@ -574,8 +575,12 @@ def server(
 
     app.listen(
         port,
-        lambda config: sys.stdout.write(
-            f"DuckDB Server listening at ws://localhost:{config.port} (WS only). Health at http://localhost:{config.port}/healthz\n"
+        lambda config: (
+            sys.stdout.write(
+                f"DuckDB Server listening at ws://localhost:{config.port} (WS only). Health at http://localhost:{config.port}/healthz\n"
+            )
+            if log_startup_message
+            else None
         ),
     )
     app.run()

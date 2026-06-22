@@ -10,7 +10,7 @@ SERVICE_NAME="${SERVICE_NAME:-sqlrooms}"
 DB_PATH="${DB_PATH:-/home/sprite/sqlrooms/sqlrooms.db}"
 HTTP_PORT="${HTTP_PORT:-8080}"
 WS_PORT="${WS_PORT:-4000}"
-LOCAL_HTTP_PORT="${LOCAL_HTTP_PORT:-4173}"
+LOCAL_HTTP_PORT="${LOCAL_HTTP_PORT:-3000}"
 LOCAL_WS_PORT="${LOCAL_WS_PORT:-4000}"
 HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
 HEALTH_CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-2}"
@@ -35,7 +35,7 @@ Options:
   --db-path PATH      Remote DuckDB path. Default: /home/sprite/sqlrooms/sqlrooms.db
   --http-port PORT    Remote UI HTTP port. Default: 8080
   --ws-port PORT      Remote DuckDB websocket port. Default: 4000
-  --local-http PORT   Local proxied UI port. Default: 4173
+  --local-http PORT   Local proxied UI port. Default: 3000
   --local-ws PORT     Local proxied websocket port. Default: 4000
   --extras EXTRAS     sqlrooms extras to install, e.g. connectors.
   --experimental-sync Enable experimental SQLRooms CRDT sync websocket support.

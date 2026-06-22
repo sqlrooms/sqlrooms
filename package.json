@@ -39,6 +39,8 @@
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "prepare": "husky",
     "publish-dry-run": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dry-run",
+    "publish-cli": "node scripts/publish-sqlrooms-cli.mjs",
+    "publish-cli:check": "node scripts/publish-sqlrooms-cli.mjs --check-only",
     "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next --throttle --throttle-size=1 --throttle-delay=1",
     "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --throttle --throttle-size=1 --throttle-delay=1",
     "setup-trusted-publishing": "node scripts/setup-trusted-publishing.mjs",

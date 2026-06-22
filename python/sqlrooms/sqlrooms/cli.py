@@ -37,7 +37,11 @@ if sys.platform.startswith("win"):
 else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
-DEFAULT_HTTP_PORT = 4173
+DEFAULT_HTTP_PORT = 3000
+
+
+def _configure_logging(*, debug: bool) -> None:
+    logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
 
 
 def _resolve_http_port(host: str, port: int | None, ws_port: int | None = None) -> int:
@@ -162,7 +166,7 @@ def _load_connector_config(
                 title=title,
             )
         )
-    logger.info("Loaded SQLRooms connector config from %s", path)
+    logger.debug("Loaded SQLRooms connector config from %s", path)
     return out
 
 
@@ -279,7 +283,7 @@ def _load_ai_runtime_config(
             default_model = models[0].get("modelName")
     if default_provider == "custom" and not default_model and custom_models:
         default_model = custom_models[0].get("modelName")
-    logger.info("Loaded SQLRooms AI config from %s", path)
+    logger.debug("Loaded SQLRooms AI config from %s", path)
     return (default_provider, default_model, providers, custom_models, model_parameters)
 
 
@@ -404,18 +408,18 @@ def main(
         None,
         help="DuckDB database to use (positional). Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",
     ),
-    db_path_option: str = typer.Option(
-        ":memory:",
+    db_path_option: str | None = typer.Option(
+        None,
         "--db-path",
         "-d",
-        help="DuckDB database to use (flag). Defaults to ':memory:'.",
-        show_default=True,
+        help="DuckDB database to use (flag). Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",
+        show_default=False,
     ),
     host: str = typer.Option("127.0.0.1", "--host", help="HTTP host for the UI."),
     port: int | None = typer.Option(
         None,
         "--port",
-        help="HTTP port for the UI. If omitted, 4173 or the next free port is chosen automatically.",
+        help="HTTP port for the UI. If omitted, 3000 or the next free port is chosen automatically.",
     ),
     ws_port: int | None = typer.Option(
         None,
@@ -467,6 +471,11 @@ def main(
         envvar="SQLROOMS_AI_DEVTOOLS",
         help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable verbose debug logging, including HTTP access logs and DuckDB query timing.",
+    ),
     meta_db: str | None = typer.Option(
         None,
         "--meta-db",
@@ -493,9 +502,13 @@ def main(
     """
     Launch a local SQLRooms project for adding data and building worksheets with Mosaic charts and dashboards.
 
+    Example: sqlrooms ./my-project.duckdb
+
     - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the worksheet UI with persisted state stored in DuckDB.
     """
+    _configure_logging(debug=debug)
+
     if legacy_sync:
         typer.echo(
             "--sync has been renamed to --experimental-sync and is not part of the public launch surface.",
@@ -504,6 +517,15 @@ def main(
         raise typer.Exit(code=1)
     if experimental_sync and not experimental:
         typer.echo("--experimental-sync requires --experimental.", err=True)
+        raise typer.Exit(code=1)
+
+    resolved_db_path = db_path if db_path is not None else db_path_option
+    if resolved_db_path is None or not resolved_db_path.strip():
+        typer.echo(
+            "Please provide a DuckDB project file, e.g. `sqlrooms ./my-project.duckdb`, "
+            "or pass `--db-path :memory:` for a temporary in-memory session.",
+            err=True,
+        )
         raise typer.Exit(code=1)
 
     try:
@@ -526,7 +548,6 @@ def main(
         config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
     )
 
-    resolved_db_path = db_path if db_path is not None else db_path_option
     selected_port = _resolve_http_port(host, port, ws_port)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
@@ -556,6 +577,7 @@ def main(
         external_url=external_url,
         external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
+        debug=debug,
     )
     try:
         asyncio.run(server.start())

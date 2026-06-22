@@ -22,11 +22,29 @@ def test_cli_help():
     stdout = click.unstyle(result.stdout)
     assert result.exit_code == 0
     assert "Launch a local SQLRooms project" in stdout
+    assert "my-project.duckdb" in stdout
     assert "--ai-devtools" in stdout
+    assert "--debug" in stdout
     assert "--experimental" in stdout
     assert "--experimental-sync" in stdout
     assert "--sync" not in stdout
     assert "next free port" in stdout
+
+
+def test_cli_requires_database_path():
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 1
+    assert "Please provide a DuckDB project file" in result.stderr
+    assert "sqlrooms ./my-project.duckdb" in result.stderr
+    assert "--db-path :memory:" in result.stderr
+
+
+def test_cli_rejects_blank_database_path():
+    result = runner.invoke(app, ["   "])
+
+    assert result.exit_code == 1
+    assert "Please provide a DuckDB project file" in result.stderr
 
 
 def test_experimental_sync_requires_experimental():
@@ -56,11 +74,11 @@ def test_resolve_http_port_scans_from_default(monkeypatch):
 
     def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
         calls.append((host, start_port, reserved_ports))
-        return 4176
+        return 3001
 
     monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
 
-    assert _resolve_http_port("127.0.0.1", None) == 4176
+    assert _resolve_http_port("127.0.0.1", None) == 3001
     assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, None)]
 
 
@@ -69,12 +87,12 @@ def test_resolve_http_port_reserves_explicit_ws_port(monkeypatch):
 
     def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
         calls.append((host, start_port, reserved_ports))
-        return 4175
+        return 3001
 
     monkeypatch.setattr("sqlrooms.cli._pick_free_port", fake_pick_free_port)
 
-    assert _resolve_http_port("127.0.0.1", None, ws_port=4174) == 4175
-    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {4174})]
+    assert _resolve_http_port("127.0.0.1", None, ws_port=3000) == 3001
+    assert calls == [("127.0.0.1", DEFAULT_HTTP_PORT, {3000})]
 
 
 def test_cli_export_help():

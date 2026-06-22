@@ -6,26 +6,26 @@ Launch a local SQLRooms DuckDB project for adding data, authoring worksheets, an
 
 ```bash
 # From the repo root
-uvx sqlrooms \
-  ./sqlrooms.db
+uvx sqlrooms ./sqlrooms.db
 ```
 
 What happens:
 
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.
-- Serves the SQLRooms worksheet UI on `http://localhost:4173`, or the next free port, and opens your browser (disable with `--no-open-browser`).
+- Serves the SQLRooms worksheet UI on `http://localhost:3000`, or the next free port, and opens your browser (disable with `--no-open-browser`).
 - Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
 ## CLI flags
 
-- `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
-- `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
-- `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `4173` or the next free port is chosen automatically.
+- `DB_PATH` (positional): DuckDB project file to load/create (e.g. `sqlrooms ./my.db`). Required unless `--db-path` is provided.
+- `--db-path`: DuckDB database to use as a flag alternative. Pass a filepath to persist, or `:memory:` for an explicit temporary in-memory session.
+- `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `3000` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--experimental`: Enable experimental artifacts, blocks, commands, and agent tools.
 - `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires `--experimental`.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
+- `--debug`: Enable verbose debug logging, including HTTP access logs and DuckDB query timing.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--no-open-browser`: Skip automatically opening the browser tab.
@@ -176,7 +176,7 @@ uv sync --extra snowflake
 uvx sqlrooms \
   ./sqlrooms.db \
   --ws-port 4000 \
-  --port 4173
+  --port 3000
 ```
 
 ### Snowflake
@@ -185,7 +185,7 @@ uvx sqlrooms \
 uvx sqlrooms \
   ./sqlrooms.db \
   --ws-port 4000 \
-  --port 4173
+  --port 3000
 ```
 
 What this enables:
@@ -219,10 +219,10 @@ pnpm dev cli
 ```
 
 This starts the Python API server on `http://127.0.0.1:4273` with `--no-ui`
-and the Vite UI on `http://localhost:4174`. If those ports are busy, the dev
+and the Vite UI on `http://localhost:3100`. If those ports are busy, the dev
 script selects the next free API and UI ports from separate ranges and points
 the Vite proxy at the selected API port. The auto-created dev database is named
-after the selected UI port, for example `sqlrooms-4174.db`.
+after the selected UI port, for example `sqlrooms-3100.db`.
 
 3. Run the Python API server on its own (optional):
 
