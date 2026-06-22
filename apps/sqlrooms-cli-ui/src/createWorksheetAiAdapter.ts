@@ -1,4 +1,4 @@
-import type {WorksheetAiAdapter} from '@sqlrooms/mosaic/ai';
+import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {
@@ -12,96 +12,77 @@ import {
  */
 export function createWorksheetAiAdapter(
   store: StoreApi<RoomState>,
-): WorksheetAiAdapter {
-  const ensureWorksheet = (worksheetId: string) => {
+): BlockDocumentAiAdapter {
+  const ensureBlockDocument = (blockDocumentId: string) => {
     const state = store.getState();
 
-    if (state.artifacts.getArtifact(worksheetId)?.type !== 'worksheet') {
-      throw new Error(`Artifact ${worksheetId} is not a worksheet`);
+    if (state.artifacts.getArtifact(blockDocumentId)?.type !== 'worksheet') {
+      throw new Error(`Artifact ${blockDocumentId} is not a worksheet`);
     }
 
-    state.blockDocuments.ensureBlockDocument(worksheetId);
+    state.blockDocuments.ensureBlockDocument(blockDocumentId);
   };
 
   return {
-    setCurrentWorksheet: (artifactId) =>
+    setCurrentBlockDocument: (artifactId) =>
       store.getState().artifacts.setCurrentArtifact(artifactId),
 
-    ensureWorksheet,
+    ensureBlockDocument,
 
-    getBlocks: (worksheetId) => {
+    getBlocks: (blockDocumentId) => {
       const state = store.getState();
-      const artifact = state.artifacts.getArtifact(worksheetId);
+      const artifact = state.artifacts.getArtifact(blockDocumentId);
       if (!artifact || artifact.type !== 'worksheet') {
         return undefined;
       }
 
-      const blockDocument = state.blockDocuments.config.artifacts[worksheetId];
+      const blockDocument =
+        state.blockDocuments.config.artifacts[blockDocumentId];
       if (!blockDocument) {
         return undefined;
       }
 
-      // Return blocks from the block document
       return blockDocument.content.content;
     },
 
-    addBlock: (worksheetId, block) => {
-      ensureWorksheet(worksheetId);
+    addBlock: (blockDocumentId, block) => {
+      ensureBlockDocument(blockDocumentId);
 
       const state = store.getState();
-      // Append the block to the worksheet
-      state.blockDocuments.appendBlocks(worksheetId, [block]);
+      state.blockDocuments.appendBlocks(blockDocumentId, [block]);
 
-      // Return the block ID
-      return block.id;
-    },
-
-    addDashboardBlock: (worksheetId, title, tableName, intent) => {
-      ensureWorksheet(worksheetId);
-
-      const state = store.getState();
-      const dashboardId = state.mosaicDashboard.createDashboard(title);
-
-      state.mosaicDashboard.setSelectedTable(dashboardId, tableName);
-
-      const block: BlockDocumentStatefulBlockBlock = {
-        type: 'statefulBlock',
-        id: createDefaultBlockDocumentBlockId(),
-        blockInstanceId: dashboardId,
-        blockType: 'dashboard',
-        intent,
-        caption: title,
-      };
-
-      // Append the block to the worksheet
-      state.blockDocuments.appendBlocks(worksheetId, [block]);
-
-      // Return the block ID
-      return {
-        blockId: block.id,
-        dashboardId,
-      };
-    },
-
-    addDataTableExplorerBlock: (worksheetId, title, tableName, intent) => {
-      ensureWorksheet(worksheetId);
-
-      const state = store.getState();
-      const block: BlockDocumentStatefulBlockBlock = {
-        type: 'statefulBlock',
-        id: createDefaultBlockDocumentBlockId(),
-        blockInstanceId: createDefaultBlockDocumentBlockId(),
-        blockType: 'data-table',
-        intent,
-        title: tableName,
-        caption: title,
-      };
-
-      // Append the block to the worksheet
-      state.blockDocuments.appendBlocks(worksheetId, [block]);
-
-      // Return the block ID
       return block.id;
     },
   };
+}
+
+/**
+ * Helper to create Mosaic dashboard blocks for use with createAddMosaicDashboardBlockTool.
+ */
+export function createDashboardBlockForWorksheet(
+  store: StoreApi<RoomState>,
+  params: {
+    title: string;
+    tableName: string;
+    intent?: string;
+  },
+): {dashboardId: string; block: BlockDocumentStatefulBlockBlock} {
+  const state = store.getState();
+  const dashboardId = state.mosaicDashboard.createDashboard(params.title);
+
+  state.mosaicDashboard.setSelectedTable(dashboardId, params.tableName);
+
+  const block: BlockDocumentStatefulBlockBlock = {
+    type: 'statefulBlock',
+    id: createDefaultBlockDocumentBlockId(),
+    blockInstanceId: dashboardId,
+    blockType: 'dashboard',
+    intent: params.intent,
+    caption: params.title,
+  };
+
+  return {
+    blockId: block.id,
+    dashboardId,
+  } as {dashboardId: string; block: BlockDocumentStatefulBlockBlock};
 }

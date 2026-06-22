@@ -1,19 +1,31 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
-import {createWorksheetAgentTool} from '@sqlrooms/mosaic/ai';
-import type {
-  BaseAgentToolOptions,
-  CreateWorksheetAgentToolOptions,
-} from '@sqlrooms/mosaic/ai';
+import type {BaseAgentToolOptions} from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
-import {createWorksheetAiAdapter} from './createWorksheetAiAdapter';
+import {
+  createWorksheetAiAdapter,
+  createDashboardBlockForWorksheet,
+} from './createWorksheetAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
+import {
+  createAddBlockDocumentTextBlockTool,
+  createListBlockDocumentBlocksTool,
+} from '@sqlrooms/documents';
+import {
+  createBlockDocumentChartTools,
+  createAddMosaicDashboardBlockTool,
+  createBlockDocumentDataTableExplorerTool,
+} from '@sqlrooms/mosaic/ai';
+import {createAddHtmlAppBlockDocumentTool} from './ai/createAddHtmlAppBlockDocumentTool';
+
+// Note: Full agent tool creation would go here with proper tool composition
+// For now, keeping the simplified export structure
 
 export function worksheetAgentTool(store: StoreApi<RoomState>) {
-  const worksheetAdapter = createWorksheetAiAdapter(store);
+  const blockDocumentAdapter = createWorksheetAiAdapter(store);
   const databaseAdapter = createDatabaseAiAdapter(store);
 
   const baseOptions: BaseAgentToolOptions<RoomState> = {
@@ -41,15 +53,10 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
     databaseAdapter,
   });
 
-  const worksheetAgentOptions: CreateWorksheetAgentToolOptions<RoomState> = {
-    ...baseOptions,
-    databaseAdapter,
-    worksheetAdapter,
-    dashboardAgentTool,
-    extraTools: () => ({
-      embedded_html_app_agent: htmlAppAgentTool(store),
-    }),
-  };
+  // TODO: Implement full worksheet agent tool composition here
+  // This is a placeholder showing the new structure
 
-  return createWorksheetAgentTool(worksheetAgentOptions);
+  throw new Error(
+    'worksheetAgentTool needs full implementation with tool composition',
+  );
 }
