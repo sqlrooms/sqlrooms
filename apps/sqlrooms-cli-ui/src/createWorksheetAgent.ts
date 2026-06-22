@@ -1,6 +1,8 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
 import type {BaseAgentToolOptions} from '@sqlrooms/mosaic/ai';
+import {tool} from 'ai';
+import {z} from 'zod';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {
@@ -42,31 +44,59 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
     databaseAdapter,
   });
 
-  // Get current worksheet ID from artifacts state
-  const currentWorksheet = store.getState().artifacts.currentArtifact;
-  if (!currentWorksheet || currentWorksheet.type !== 'worksheet') {
-    throw new Error('No current worksheet artifact');
-  }
+  // Return a tool that lazily gets the current worksheet ID when executed
+  return tool({
+    description: `Create or update a worksheet with charts, text blocks, and interactive components.
+Use this to build data visualization worksheets with multiple chart blocks showing different aspects of the data.`,
+    inputSchema: z.object({
+      worksheetTitle: z
+        .string()
+        .optional()
+        .describe('Optional worksheet title if creating new worksheet'),
+      tableName: z
+        .string()
+        .optional()
+        .describe('Optional primary table/dataset name'),
+      intent: z
+        .string()
+        .min(1, 'intent cannot be empty')
+        .describe('The natural-language objective for the agent to satisfy.'),
+    }),
+    execute: async (params) => {
+      // Get current worksheet ID at execution time
+      const currentWorksheet = store.getState().artifacts.currentArtifact;
+      if (!currentWorksheet || currentWorksheet.type !== 'worksheet') {
+        return {
+          success: false,
+          finalOutput: '',
+          worksheetId: '',
+          error: 'No current worksheet artifact',
+        };
+      }
 
-  const blockDocumentId = currentWorksheet.id;
+      const blockDocumentId = currentWorksheet.id;
 
-  const worksheetTools = createWorksheetBlockDocumentTools({
-    blockDocumentAdapter,
-    blockDocumentId,
-    databaseAdapter,
-    dashboardAgentTool,
-    htmlAppAgentTool: htmlAppAgentTool(store),
-    createDashboardBlock: (params) =>
-      createDashboardBlockForWorksheet(store, params),
-    extraTools: () => ({}),
-  });
+      const worksheetTools = createWorksheetBlockDocumentTools({
+        blockDocumentAdapter,
+        blockDocumentId,
+        databaseAdapter,
+        dashboardAgentTool,
+        htmlAppAgentTool: htmlAppAgentTool(store),
+        createDashboardBlock: (p) => createDashboardBlockForWorksheet(store, p),
+        extraTools: () => ({}),
+      });
 
-  return createWorksheetAgentTool({
-    ...baseOptions,
-    blockDocumentAdapter,
-    blockDocumentId,
-    databaseAdapter,
-    dashboardAgentTool,
-    worksheetTools,
+      const agentTool = createWorksheetAgentTool({
+        ...baseOptions,
+        blockDocumentAdapter,
+        blockDocumentId,
+        databaseAdapter,
+        dashboardAgentTool,
+        worksheetTools,
+      });
+
+      // Execute the actual agent tool
+      return await agentTool.execute(params);
+    },
   });
 }
