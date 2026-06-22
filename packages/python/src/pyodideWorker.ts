@@ -82,6 +82,7 @@ type PyodideHostResponse =
 
 const HOST_RESPONSE_BUFFER_BYTES = 16 * 1024 * 1024;
 const DEFAULT_MAX_STDIO_BYTES = 32_000;
+const DEFAULT_MAX_RICH_OUTPUT_BYTES = 512_000;
 const VEGA_LITE_MIME_TYPES = [
   'application/vnd.vegalite.v5+json',
   'application/vnd.vegalite.v4+json',
@@ -485,6 +486,10 @@ function readResultOutput(
   if (!hasResult && declaredOutputs.length === 0) return [];
 
   pyodide.globals.set('__sqlrooms_output_declarations', declaredOutputs);
+  pyodide.globals.set(
+    '__sqlrooms_max_rich_output_bytes',
+    DEFAULT_MAX_RICH_OUTPUT_BYTES,
+  );
 
   const outputsJson = pyodide.runPython(`
 import json as __sqlrooms_json
@@ -518,14 +523,86 @@ def __sqlrooms_safe_call(callable_value):
     except Exception:
         return None
 
-def __sqlrooms_json_safe(value):
+def __sqlrooms_charge_json_bytes(value, budget):
+    if budget["remaining"] <= 0:
+        budget["truncated"] = True
+        return
+    budget["remaining"] -= len(str(value).encode("utf-8", "replace"))
+    if budget["remaining"] < 0:
+        budget["truncated"] = True
+
+def __sqlrooms_bounded_string(value, budget):
+    text = str(value)
+    encoded = text.encode("utf-8", "replace")
+    if len(encoded) <= budget["remaining"]:
+        budget["remaining"] -= len(encoded)
+        return text
+    budget["truncated"] = True
+    allowed = max(0, budget["remaining"])
+    budget["remaining"] = 0
+    return encoded[:allowed].decode("utf-8", "ignore") + "\\n... truncated ..."
+
+def __sqlrooms_json_safe(value, budget=None):
+    if budget is not None and budget["remaining"] <= 0:
+        budget["truncated"] = True
+        return None
     if isinstance(value, float):
+        __sqlrooms_charge_json_bytes(value, budget) if budget is not None else None
         return value if __sqlrooms_math.isfinite(value) else None
+    if value is None or isinstance(value, (bool, int)):
+        __sqlrooms_charge_json_bytes(value, budget) if budget is not None else None
+        return value
+    if isinstance(value, str):
+        return __sqlrooms_bounded_string(value, budget) if budget is not None else value
     if isinstance(value, dict):
-        return {str(key): __sqlrooms_json_safe(item) for key, item in value.items()}
+        result = {}
+        for key, item in value.items():
+            if budget is not None and budget["remaining"] <= 0:
+                budget["truncated"] = True
+                break
+            key_text = str(key)
+            if budget is not None:
+                key_text = __sqlrooms_bounded_string(key_text, budget)
+            result[key_text] = __sqlrooms_json_safe(item, budget)
+        return result
     if isinstance(value, (list, tuple)):
-        return [__sqlrooms_json_safe(item) for item in value]
-    return value
+        result = []
+        for item in value:
+            if budget is not None and budget["remaining"] <= 0:
+                budget["truncated"] = True
+                break
+            result.append(__sqlrooms_json_safe(item, budget))
+        return result
+    return __sqlrooms_bounded_string(value, budget) if budget is not None else value
+
+def __sqlrooms_json_exceeds_limit(value):
+    try:
+        encoded = __sqlrooms_json.dumps(value, default=str, allow_nan=False).encode("utf-8", "replace")
+    except Exception:
+        return False
+    return len(encoded) > int(__sqlrooms_max_rich_output_bytes)
+
+def __sqlrooms_json_output_for(name, value):
+    budget = {"remaining": int(__sqlrooms_max_rich_output_bytes), "truncated": False}
+    safe_value = __sqlrooms_json_safe(value, budget)
+    if budget["truncated"] or __sqlrooms_json_exceeds_limit(safe_value):
+        return {
+            "type": "text",
+            "name": name,
+            "text": "JSON output exceeded the persisted output size limit.",
+        }
+    return {"type": "json", "name": name, "value": safe_value}
+
+def __sqlrooms_vegalite_output_for(name, spec):
+    budget = {"remaining": int(__sqlrooms_max_rich_output_bytes), "truncated": False}
+    safe_spec = __sqlrooms_json_safe(spec, budget)
+    if budget["truncated"] or __sqlrooms_json_exceeds_limit(safe_spec):
+        return {
+            "type": "text",
+            "name": name,
+            "text": "Vega-Lite output exceeded the persisted output size limit.",
+        }
+    return {"type": "vega-lite", "name": name, "spec": safe_spec}
 
 def __sqlrooms_mimebundle_for(value):
     repr_mimebundle = getattr(value, "_repr_mimebundle_", None)
@@ -551,7 +628,7 @@ def __sqlrooms_output_for(name, value, declared_type=None):
                 return {"type": "html", "name": name, "html": str(html)}
         return {"type": "html", "name": name, "html": str(value)}
     if declared_type == "json":
-        return {"type": "json", "name": name, "value": __sqlrooms_json_safe(value)}
+        return __sqlrooms_json_output_for(name, value)
     if declared_type in ("table", "image"):
         return {
             "type": "text",
@@ -565,7 +642,7 @@ def __sqlrooms_output_for(name, value, declared_type=None):
             if mime_type in bundle:
                 spec = bundle[mime_type]
                 if __sqlrooms_is_mapping(spec):
-                    return {"type": "vega-lite", "name": name, "spec": __sqlrooms_json_safe(dict(spec))}
+                    return __sqlrooms_vegalite_output_for(name, dict(spec))
 
     to_dict = getattr(value, "to_dict", None)
     if to_dict is not None:
@@ -573,10 +650,10 @@ def __sqlrooms_output_for(name, value, declared_type=None):
         if __sqlrooms_is_mapping(spec):
             spec = dict(spec)
             if __sqlrooms_is_vegalite_spec(spec):
-                return {"type": "vega-lite", "name": name, "spec": __sqlrooms_json_safe(spec)}
+                return __sqlrooms_vegalite_output_for(name, spec)
 
     if declared_type == "vega-lite" and __sqlrooms_is_mapping(value):
-        return {"type": "vega-lite", "name": name, "spec": __sqlrooms_json_safe(dict(value))}
+        return __sqlrooms_vegalite_output_for(name, dict(value))
 
     if bundle:
         html = bundle.get("text/html")
@@ -592,7 +669,7 @@ def __sqlrooms_output_for(name, value, declared_type=None):
         if html:
             return {"type": "html", "name": name, "html": str(html)}
 
-    return {"type": "json", "name": name, "value": __sqlrooms_json_safe(value)}
+    return __sqlrooms_json_output_for(name, value)
 
 __sqlrooms_outputs = []
 __sqlrooms_seen_output_names = set()
@@ -614,6 +691,7 @@ if "result" in globals() and "result" not in __sqlrooms_seen_output_names:
 __sqlrooms_json.dumps(__sqlrooms_json_safe(__sqlrooms_outputs), default=str, allow_nan=False)
 `);
   pyodide.runPython('globals().pop("__sqlrooms_output_declarations", None)');
+  pyodide.runPython('globals().pop("__sqlrooms_max_rich_output_bytes", None)');
   return JSON.parse(String(outputsJson)) as PythonExecutionOutput[];
 }
 

@@ -289,6 +289,7 @@ async function runWithAdapter(
       error: result.error
         ? {
             ...result.error,
+            message: truncate(result.error.message, DEFAULT_MAX_STDIO_BYTES),
             traceback: truncate(
               result.error.traceback,
               DEFAULT_MAX_STDIO_BYTES,
@@ -309,8 +310,10 @@ async function runWithAdapter(
       stderr: '',
       error: {
         name: error instanceof Error ? error.name : undefined,
-        message:
+        message: truncate(
           error instanceof Error ? error.message : 'Python execution failed.',
+          DEFAULT_MAX_STDIO_BYTES,
+        ),
       },
       outputs: [],
     });
