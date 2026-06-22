@@ -362,9 +362,8 @@ export {
   DataTableExplorerToolInput,
 } from './ai/createDataTableExplorerTool';
 
-// Dashboard and worksheet AI tools
+// Dashboard AI tools
 export {MAP_TOOL_KEY} from './ai/constants';
-export {createWorksheetAgentTool} from './ai/worksheet/createWorksheetAgentTool';
 export {
   createDashboardAiTools,
   type CreateDashboardAiToolsOptions,
@@ -388,13 +387,6 @@ export type {
   DashboardAgentResult,
   DashboardAiAdapter,
 } from './ai/dashboard/dashboard-types';
-export type {
-  CreateWorksheetAgentToolOptions,
-  WorksheetAgentResult,
-  WorksheetAiAdapter,
-  ExtraWorksheetAiToolsFactory,
-  ExtraWorksheetAiToolsParams,
-} from './ai/worksheet/worksheet-types';
 
 // AI helpers and error handling
 export {ensurePanel, ensureTable, ensureNoOverride} from './ai/tool-helpers';
