@@ -19,8 +19,8 @@ cd /Users/ilya/Workspace/sqlrooms
 pnpm --dir python/sqlrooms build
 
 uv run --project python --package sqlrooms sqlrooms \
-  ./smoke.duckdb \
-  --no-open-browser
+  --no-open-browser \
+  ./smoke.duckdb
 ```
 
 Open the UI URL printed in the terminal. It should be
@@ -31,15 +31,15 @@ The bare CLI command works only after installing the CLI somewhere on your
 
 ```bash
 uv tool install /Users/ilya/Workspace/sqlrooms/python/sqlrooms
-sqlrooms ./smoke.duckdb --no-open-browser
+sqlrooms --no-open-browser ./smoke.duckdb
 ```
 
 For release smoke testing, verify both local execution paths:
 
 ```bash
-uv run --project python --package sqlrooms sqlrooms ./smoke.duckdb --no-open-browser
+uv run --project python --package sqlrooms sqlrooms --no-open-browser ./smoke.duckdb
 uv tool install --reinstall /Users/ilya/Workspace/sqlrooms/python/sqlrooms
-sqlrooms ./smoke.duckdb --no-open-browser
+sqlrooms --no-open-browser ./smoke.duckdb
 ```
 
 In the UI, drag in:
