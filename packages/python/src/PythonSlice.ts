@@ -94,7 +94,7 @@ export function createPythonSlice({
         ensureBlock(blockId, options = {}) {
           const now = Date.now();
           const existing = get().python.config.blocks[blockId];
-          const nextBlock = PythonBlockState.parse({
+          const candidateBlock = PythonBlockState.parse({
             ...(existing ?? {}),
             id: blockId,
             title: options.title ?? existing?.title ?? 'Python',
@@ -109,8 +109,15 @@ export function createPythonSlice({
               options.lastResult === undefined
                 ? existing?.lastResult
                 : options.lastResult,
-            updatedAt: now,
+            updatedAt: existing?.updatedAt ?? now,
           });
+          if (existing && arePythonBlocksEqual(existing, candidateBlock)) {
+            return existing;
+          }
+          const nextBlock = {
+            ...candidateBlock,
+            updatedAt: now,
+          };
 
           set((state) =>
             produce(state, (draft) => {
@@ -146,9 +153,9 @@ export function createPythonSlice({
         },
 
         patchBlock(blockId, patch) {
-          const existing = get().python.ensureBlock(blockId);
+          const existing = get().python.config.blocks[blockId];
           get().python.ensureBlock(blockId, {
-            ...existing,
+            ...(existing ?? {}),
             ...patch,
           });
         },
@@ -217,6 +224,27 @@ export function createPythonSlice({
       },
     }),
   );
+}
+
+function arePythonBlocksEqual(
+  left: PythonBlockStateType,
+  right: PythonBlockStateType,
+) {
+  return (
+    left.id === right.id &&
+    left.title === right.title &&
+    left.code === right.code &&
+    jsonEqual(left.runtime, right.runtime) &&
+    jsonEqual(left.inputs, right.inputs) &&
+    jsonEqual(left.outputs, right.outputs) &&
+    jsonEqual(left.requirements, right.requirements) &&
+    jsonEqual(left.executionPolicy, right.executionPolicy) &&
+    jsonEqual(left.lastResult, right.lastResult)
+  );
+}
+
+function jsonEqual(left: unknown, right: unknown) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function inferCapabilities(
