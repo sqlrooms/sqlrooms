@@ -405,7 +405,7 @@ describe('createDeckMapDashboardTool', () => {
         layers: [
           {
             '@@type': 'GeoArrowPolygonLayer',
-            _sqlroomsBinding: {dataset: 'stores'},
+            _sqlroomsBinding: {dataset: 'stores', geometryColumn: 'geometry'},
           },
         ],
       },
@@ -415,7 +415,12 @@ describe('createDeckMapDashboardTool', () => {
           geometryColumn: 'geometry',
         },
       },
+      fitToData: {
+        dataset: 'stores',
+        geometryColumn: 'geometry',
+        padding: 40,
+        maxZoom: 12,
+      },
     });
-    expect(panel.config.fitToData).toBeUndefined();
   });
 });
