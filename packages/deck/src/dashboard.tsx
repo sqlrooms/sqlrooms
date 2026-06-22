@@ -29,6 +29,7 @@ import {MapSettingsPanel} from './MapSettings';
 import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
   asDeckJsonMapConfig,
+  createDeckMapDashboardPanelConfig,
   createDeckMapDashboardDatasetQuery,
   createDeckMapDashboardDatasets,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
@@ -52,6 +53,17 @@ import {
   findGeometryColumn,
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
+
+function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
+  return createDeckMapDashboardPanelConfig({
+    title,
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [],
+    },
+    datasets: {},
+  });
+}
 
 /**
  * Extracts column names from common DuckDB "column not found" error messages
@@ -682,18 +694,22 @@ export const deckMapDashboardAddPanelAction: import('@sqlrooms/mosaic').MosaicDa
     type: DECK_MAP_DASHBOARD_PANEL_TYPE,
     label: 'Map',
     icon: MapIcon,
-    isEnabled: ({selectedTable}) =>
-      Boolean(
-        findLongitudeLatitudeColumns(selectedTable) ??
-        findGeometryColumn(selectedTable),
-      ),
-    createPanel: ({selectedTable}) =>
-      selectedTable
-        ? createDeckMapDashboardPanelConfigForTable({
-            title: `${selectedTable.tableName} map`,
-            tableName: selectedTable.tableName,
-            columns: selectedTable.columns,
-            tableReference: selectedTable.table,
-          })
-        : undefined,
+    createPanel: ({selectedTable}) => {
+      if (
+        selectedTable &&
+        (findLongitudeLatitudeColumns(selectedTable) ??
+          findGeometryColumn(selectedTable))
+      ) {
+        return createDeckMapDashboardPanelConfigForTable({
+          title: `${selectedTable.tableName} map`,
+          tableName: selectedTable.tableName,
+          columns: selectedTable.columns,
+          tableReference: selectedTable.table,
+        });
+      }
+
+      return createEmptyDeckMapDashboardPanelConfig(
+        selectedTable ? `${selectedTable.tableName} map` : 'Map',
+      );
+    },
   };
