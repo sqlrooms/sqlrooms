@@ -130,13 +130,13 @@ function scrollElementByWheel(element: HTMLElement, event: WheelEvent) {
 export const BlockDocumentStatefulBlockNodeView: FC<
   BlockDocumentStatefulBlockNodeViewProps
 > = ({node, selected, updateAttributes}) => {
+  const {documentId, readOnly} = useBlockDocumentEditorContext();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const updateAttributesRef = useRef(updateAttributes);
+  const readOnlyRef = useRef(readOnly);
   const hideScrollHintTimeoutRef = useRef<number | undefined>(undefined);
   const scrollHintTargetRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
-  const {documentId, readOnly} = useBlockDocumentEditorContext();
-  const readOnlyRef = useRef(readOnly);
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const blockType = optionalString(attrs.blockType) ?? '';
@@ -172,11 +172,8 @@ export const BlockDocumentStatefulBlockNodeView: FC<
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
-  }, [updateAttributes]);
-
-  useEffect(() => {
     readOnlyRef.current = readOnly;
-  }, [readOnly]);
+  }, [readOnly, updateAttributes]);
 
   useEffect(() => {
     return () => {

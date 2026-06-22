@@ -16,8 +16,6 @@ import {
 import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
-const EMPTY_CHART_CONFIG = {};
-
 type BlockDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
@@ -27,6 +25,8 @@ type BlockDocumentChartNodeViewProps = {
 type ChartRendererBoundaryProps = BlockDocumentChartRendererProps & {
   Renderer: BlockDocumentChartRenderer;
 };
+
+const EMPTY_CHART_CONFIG: Record<string, never> = {};
 
 const ChartRendererBoundary = memo(
   ({Renderer, ...props}: ChartRendererBoundaryProps) =>
