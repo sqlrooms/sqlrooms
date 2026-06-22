@@ -30,6 +30,10 @@ SQLRooms is a local-first, modular analytics workspace built around DuckDB, Reac
 
 - PR titles should respect conventional-commits spec or the [CI check](.github/workflows/pr-title.yml) will fail
 
+## Review guidelines
+
+For GitHub PR reviews, prefer one consolidated review with all blocking findings.
+
 ## Repository Structure
 
 - `packages/` contains reusable `@sqlrooms/*` packages. Treat public exports here as library APIs: keep them generic, composable, documented, and free of app/example-specific assumptions.
