@@ -526,19 +526,20 @@ function readResultOutput(
 
   const outputsJson = pyodide.runPython(
     `
+import builtins as __sqlrooms_builtins
 import json as __sqlrooms_json
 import math as __sqlrooms_math
 
-if hasattr(__sqlrooms_output_declarations, "to_py"):
+if __sqlrooms_builtins.hasattr(__sqlrooms_output_declarations, "to_py"):
     __sqlrooms_output_declarations = __sqlrooms_output_declarations.to_py()
 
 def __sqlrooms_is_mapping(value):
-    return hasattr(value, "keys") and hasattr(value, "__getitem__")
+    return __sqlrooms_builtins.hasattr(value, "keys") and __sqlrooms_builtins.hasattr(value, "__getitem__")
 
 def __sqlrooms_is_vegalite_spec(value):
-    if not isinstance(value, dict):
+    if not __sqlrooms_builtins.isinstance(value, __sqlrooms_builtins.dict):
         return False
-    schema = str(value.get("$schema", "")).lower()
+    schema = __sqlrooms_builtins.str(value.get("$schema", "")).lower()
     return (
         "vega-lite" in schema
         or "mark" in value
@@ -552,27 +553,29 @@ def __sqlrooms_is_vegalite_spec(value):
 def __sqlrooms_safe_call(callable_value):
     try:
         return callable_value()
-    except TypeError:
+    except __sqlrooms_builtins.TypeError:
         return None
-    except Exception:
+    except __sqlrooms_builtins.Exception:
         return None
 
 def __sqlrooms_charge_json_bytes(value, budget):
     if budget["remaining"] <= 0:
         budget["truncated"] = True
         return
-    budget["remaining"] -= len(str(value).encode("utf-8", "replace"))
+    budget["remaining"] -= __sqlrooms_builtins.len(
+        __sqlrooms_builtins.str(value).encode("utf-8", "replace")
+    )
     if budget["remaining"] < 0:
         budget["truncated"] = True
 
 def __sqlrooms_bounded_string(value, budget):
-    text = str(value)
+    text = __sqlrooms_builtins.str(value)
     encoded = text.encode("utf-8", "replace")
-    if len(encoded) <= budget["remaining"]:
-        budget["remaining"] -= len(encoded)
+    if __sqlrooms_builtins.len(encoded) <= budget["remaining"]:
+        budget["remaining"] -= __sqlrooms_builtins.len(encoded)
         return text
     budget["truncated"] = True
-    allowed = max(0, budget["remaining"])
+    allowed = __sqlrooms_builtins.max(0, budget["remaining"])
     budget["remaining"] = 0
     return encoded[:allowed].decode("utf-8", "ignore") + "\\n... truncated ..."
 
@@ -580,26 +583,32 @@ def __sqlrooms_json_safe(value, budget=None):
     if budget is not None and budget["remaining"] <= 0:
         budget["truncated"] = True
         return None
-    if isinstance(value, float):
+    if __sqlrooms_builtins.isinstance(value, __sqlrooms_builtins.float):
         __sqlrooms_charge_json_bytes(value, budget) if budget is not None else None
         return value if __sqlrooms_math.isfinite(value) else None
-    if value is None or isinstance(value, (bool, int)):
+    if value is None or __sqlrooms_builtins.isinstance(
+        value,
+        (__sqlrooms_builtins.bool, __sqlrooms_builtins.int),
+    ):
         __sqlrooms_charge_json_bytes(value, budget) if budget is not None else None
         return value
-    if isinstance(value, str):
+    if __sqlrooms_builtins.isinstance(value, __sqlrooms_builtins.str):
         return __sqlrooms_bounded_string(value, budget) if budget is not None else value
-    if isinstance(value, dict):
+    if __sqlrooms_builtins.isinstance(value, __sqlrooms_builtins.dict):
         result = {}
         for key, item in value.items():
             if budget is not None and budget["remaining"] <= 0:
                 budget["truncated"] = True
                 break
-            key_text = str(key)
+            key_text = __sqlrooms_builtins.str(key)
             if budget is not None:
                 key_text = __sqlrooms_bounded_string(key_text, budget)
             result[key_text] = __sqlrooms_json_safe(item, budget)
         return result
-    if isinstance(value, (list, tuple)):
+    if __sqlrooms_builtins.isinstance(
+        value,
+        (__sqlrooms_builtins.list, __sqlrooms_builtins.tuple),
+    ):
         result = []
         for item in value:
             if budget is not None and budget["remaining"] <= 0:
@@ -611,13 +620,19 @@ def __sqlrooms_json_safe(value, budget=None):
 
 def __sqlrooms_json_exceeds_limit(value):
     try:
-        encoded = __sqlrooms_json.dumps(value, default=str, allow_nan=False).encode("utf-8", "replace")
-    except Exception:
+        encoded = __sqlrooms_json.dumps(
+            value,
+            default=__sqlrooms_builtins.str,
+            allow_nan=False,
+        ).encode("utf-8", "replace")
+    except __sqlrooms_builtins.Exception:
         return False
-    return len(encoded) > int(__sqlrooms_max_rich_output_bytes)
+    return __sqlrooms_builtins.len(encoded) > __sqlrooms_builtins.int(
+        __sqlrooms_max_rich_output_bytes
+    )
 
 def __sqlrooms_text_output_for(output_type, name, field_name, value, max_bytes):
-    budget = {"remaining": int(max_bytes), "truncated": False}
+    budget = {"remaining": __sqlrooms_builtins.int(max_bytes), "truncated": False}
     return {
         "type": output_type,
         "name": name,
@@ -652,7 +667,10 @@ def __sqlrooms_html_output_for(name, value):
     )
 
 def __sqlrooms_json_output_for(name, value):
-    budget = {"remaining": int(__sqlrooms_max_rich_output_bytes), "truncated": False}
+    budget = {
+        "remaining": __sqlrooms_builtins.int(__sqlrooms_max_rich_output_bytes),
+        "truncated": False,
+    }
     safe_value = __sqlrooms_json_safe(value, budget)
     if budget["truncated"] or __sqlrooms_json_exceeds_limit(safe_value):
         return {
@@ -663,7 +681,10 @@ def __sqlrooms_json_output_for(name, value):
     return {"type": "json", "name": name, "value": safe_value}
 
 def __sqlrooms_vegalite_output_for(name, spec):
-    budget = {"remaining": int(__sqlrooms_max_rich_output_bytes), "truncated": False}
+    budget = {
+        "remaining": __sqlrooms_builtins.int(__sqlrooms_max_rich_output_bytes),
+        "truncated": False,
+    }
     safe_spec = __sqlrooms_json_safe(spec, budget)
     if budget["truncated"] or __sqlrooms_json_exceeds_limit(safe_spec):
         return {
@@ -674,13 +695,17 @@ def __sqlrooms_vegalite_output_for(name, spec):
     return {"type": "vega-lite", "name": name, "spec": safe_spec}
 
 def __sqlrooms_mimebundle_for(value):
-    repr_mimebundle = getattr(value, "_repr_mimebundle_", None)
+    repr_mimebundle = __sqlrooms_builtins.getattr(
+        value,
+        "_repr_mimebundle_",
+        None,
+    )
     if repr_mimebundle is None:
         return None
     bundle = __sqlrooms_safe_call(repr_mimebundle)
-    if isinstance(bundle, tuple) and bundle:
+    if __sqlrooms_builtins.isinstance(bundle, __sqlrooms_builtins.tuple) and bundle:
         bundle = bundle[0]
-    return bundle if isinstance(bundle, dict) else None
+    return bundle if __sqlrooms_builtins.isinstance(bundle, __sqlrooms_builtins.dict) else None
 
 def __sqlrooms_output_for(name, value, declared_type=None):
     if declared_type == "text":
@@ -688,9 +713,9 @@ def __sqlrooms_output_for(name, value, declared_type=None):
     if declared_type == "markdown":
         return __sqlrooms_markdown_output_for(name, value)
     if declared_type == "html":
-        if isinstance(value, str):
+        if __sqlrooms_builtins.isinstance(value, __sqlrooms_builtins.str):
             return __sqlrooms_html_output_for(name, value)
-        repr_html = getattr(value, "_repr_html_", None)
+        repr_html = __sqlrooms_builtins.getattr(value, "_repr_html_", None)
         if repr_html is not None:
             html = __sqlrooms_safe_call(repr_html)
             if html:
@@ -711,18 +736,24 @@ def __sqlrooms_output_for(name, value, declared_type=None):
             if mime_type in bundle:
                 spec = bundle[mime_type]
                 if __sqlrooms_is_mapping(spec):
-                    return __sqlrooms_vegalite_output_for(name, dict(spec))
+                    return __sqlrooms_vegalite_output_for(
+                        name,
+                        __sqlrooms_builtins.dict(spec),
+                    )
 
-    to_dict = getattr(value, "to_dict", None)
+    to_dict = __sqlrooms_builtins.getattr(value, "to_dict", None)
     if to_dict is not None:
         spec = __sqlrooms_safe_call(to_dict)
         if __sqlrooms_is_mapping(spec):
-            spec = dict(spec)
+            spec = __sqlrooms_builtins.dict(spec)
             if __sqlrooms_is_vegalite_spec(spec):
                 return __sqlrooms_vegalite_output_for(name, spec)
 
     if declared_type == "vega-lite" and __sqlrooms_is_mapping(value):
-        return __sqlrooms_vegalite_output_for(name, dict(value))
+        return __sqlrooms_vegalite_output_for(
+            name,
+            __sqlrooms_builtins.dict(value),
+        )
 
     if bundle:
         html = bundle.get("text/html")
@@ -732,7 +763,7 @@ def __sqlrooms_output_for(name, value, declared_type=None):
         if text:
             return __sqlrooms_plain_text_output_for(name, text)
 
-    repr_html = getattr(value, "_repr_html_", None)
+    repr_html = __sqlrooms_builtins.getattr(value, "_repr_html_", None)
     if repr_html is not None:
         html = __sqlrooms_safe_call(repr_html)
         if html:
@@ -741,23 +772,28 @@ def __sqlrooms_output_for(name, value, declared_type=None):
     return __sqlrooms_json_output_for(name, value)
 
 __sqlrooms_outputs = []
-__sqlrooms_seen_output_names = set()
+__sqlrooms_seen_output_names = __sqlrooms_builtins.set()
+__sqlrooms_globals = __sqlrooms_builtins.globals()
 for __sqlrooms_declaration in __sqlrooms_output_declarations:
     __sqlrooms_name = __sqlrooms_declaration.get("name")
-    if __sqlrooms_name in globals():
+    if __sqlrooms_name in __sqlrooms_globals:
         __sqlrooms_seen_output_names.add(__sqlrooms_name)
         __sqlrooms_outputs.append(
             __sqlrooms_output_for(
                 __sqlrooms_name,
-                globals()[__sqlrooms_name],
+                __sqlrooms_globals[__sqlrooms_name],
                 __sqlrooms_declaration.get("type"),
             )
         )
 
-if "result" in globals() and "result" not in __sqlrooms_seen_output_names:
+if "result" in __sqlrooms_globals and "result" not in __sqlrooms_seen_output_names:
     __sqlrooms_outputs.append(__sqlrooms_output_for("result", result))
 
-__sqlrooms_json.dumps(__sqlrooms_json_safe(__sqlrooms_outputs), default=str, allow_nan=False)
+__sqlrooms_json.dumps(
+    __sqlrooms_json_safe(__sqlrooms_outputs),
+    default=__sqlrooms_builtins.str,
+    allow_nan=False,
+)
 `,
     {globals},
   );
