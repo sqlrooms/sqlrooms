@@ -4,8 +4,8 @@ import {
   type UseArtifactWorkspaceResult,
 } from '@sqlrooms/artifacts';
 import {RoomPanelComponent, type RoomPanelInfo} from '@sqlrooms/layout';
-import {Button, toast} from '@sqlrooms/ui';
-import {BarChart3Icon, XIcon} from 'lucide-react';
+import {Button, cn, toast} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 import {
   createContext,
   useCallback,
@@ -261,32 +261,17 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
           New Worksheet
         </Button>
 
-        <section className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <section
+          className={cn('grid w-full grid-cols-1 gap-3', {
+            'max-w-xs': secondaryArtifactTypes.length <= 1,
+            'max-w-lg sm:grid-cols-2': secondaryArtifactTypes.length > 1,
+            'max-w-xl lg:grid-cols-3': secondaryArtifactTypes.length > 2,
+          })}
+        >
           {secondaryArtifactTypes.map((artifactType) => {
             const type = artifactActions.artifactTypes[artifactType];
             if (!type) return null;
             const Icon = type.icon;
-            if (artifactType === 'dashboard') {
-              return (
-                <Button
-                  key={artifactType}
-                  variant="outline"
-                  size="lg"
-                  className="h-12 justify-start gap-3 px-5 text-base"
-                  onClick={() => {
-                    void invokeCreateArtifactCommand(
-                      'dashboard.create-artifact',
-                      {layoutType: 'grid'},
-                    ).then((artifactId) => {
-                      if (artifactId) onDone?.();
-                    });
-                  }}
-                >
-                  <BarChart3Icon className="h-5 w-5" />
-                  Dashboard
-                </Button>
-              );
-            }
             return (
               <Button
                 key={artifactType}
@@ -296,6 +281,9 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
                 onClick={() => {
                   void invokeCreateArtifactCommand(
                     `${artifactType}.create-artifact`,
+                    artifactType === 'dashboard'
+                      ? {layoutType: 'grid'}
+                      : undefined,
                   ).then((artifactId) => {
                     if (artifactId) onDone?.();
                   });
