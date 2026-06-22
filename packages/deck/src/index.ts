@@ -43,6 +43,7 @@ export {
   createDeckMapDashboardConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
   findDeckMapLongitudeLatitudeColumns,
+  findGeometryColumn,
   findLongitudeLatitudeColumns,
   normalizeDeckMapFillColor,
   quoteDeckMapSqlIdentifier,
