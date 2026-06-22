@@ -373,56 +373,61 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 <Field
                   label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 3}px`}
                 >
-                  <Slider
-                    min={1}
-                    max={20}
-                    step={1}
-                    value={[
-                      (activeLayer?.widthMinPixels as number | undefined) ?? 3,
-                    ]}
-                    onValueChange={(values) => {
-                      const value = values[0] ?? 3;
-                      applyConfig(
-                        updateDeckMapLayer(
-                          mapConfig,
-                          activeLayerIndex,
-                          (layer) => ({
-                            ...layer,
-                            widthMinPixels: value,
-                          }),
-                        ),
-                      );
-                    }}
-                  />
+                  <div className="pt-0.5">
+                    <Slider
+                      min={1}
+                      max={20}
+                      step={1}
+                      value={[
+                        (activeLayer?.widthMinPixels as number | undefined) ??
+                          3,
+                      ]}
+                      onValueChange={(values) => {
+                        const value = values[0] ?? 3;
+                        applyConfig(
+                          updateDeckMapLayer(
+                            mapConfig,
+                            activeLayerIndex,
+                            (layer) => ({
+                              ...layer,
+                              widthMinPixels: value,
+                            }),
+                          ),
+                        );
+                      }}
+                    />
+                  </div>
                 </Field>
                 <Field
                   label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
                 >
-                  <Slider
-                    min={5}
-                    max={100}
-                    step={5}
-                    value={[
-                      Math.round(
-                        ((activeLayer?._trailLengthFactor as
-                          | number
-                          | undefined) ?? 0.4) * 100,
-                      ),
-                    ]}
-                    onValueChange={(values) => {
-                      const value = (values[0] ?? 40) / 100;
-                      applyConfig(
-                        updateDeckMapLayer(
-                          mapConfig,
-                          activeLayerIndex,
-                          (layer) => ({
-                            ...layer,
-                            _trailLengthFactor: value,
-                          }),
+                  <div className="pt-0.5">
+                    <Slider
+                      min={5}
+                      max={100}
+                      step={5}
+                      value={[
+                        Math.round(
+                          ((activeLayer?._trailLengthFactor as
+                            | number
+                            | undefined) ?? 0.4) * 100,
                         ),
-                      );
-                    }}
-                  />
+                      ]}
+                      onValueChange={(values) => {
+                        const value = (values[0] ?? 40) / 100;
+                        applyConfig(
+                          updateDeckMapLayer(
+                            mapConfig,
+                            activeLayerIndex,
+                            (layer) => ({
+                              ...layer,
+                              _trailLengthFactor: value,
+                            }),
+                          ),
+                        );
+                      }}
+                    />
+                  </div>
                 </Field>
               </>
             )}
@@ -805,21 +810,29 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           <Field
             label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 1}px`}
           >
-            <Slider
-              min={1}
-              max={20}
-              step={1}
-              value={[(activeLayer?.widthMinPixels as number | undefined) ?? 1]}
-              onValueChange={(values) => {
-                const value = values[0] ?? 1;
-                applyConfig(
-                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
-                    ...layer,
-                    widthMinPixels: value,
-                  })),
-                );
-              }}
-            />
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={20}
+                step={1}
+                value={[
+                  (activeLayer?.widthMinPixels as number | undefined) ?? 1,
+                ]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 1;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        widthMinPixels: value,
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
           </Field>
         )}
 
