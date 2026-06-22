@@ -483,7 +483,7 @@ def main(
     """
     Start the SQLRooms local experience:
     - Boots a DuckDB websocket server (sqlrooms-server).
-    - Serves the AI example UI with persisted state stored in DuckDB.
+    - Serves the worksheet UI with persisted state stored in DuckDB.
     """
     try:
         config_path = _resolve_config_path(config, no_config=no_config)

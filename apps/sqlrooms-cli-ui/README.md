@@ -1,12 +1,12 @@
 # SQLRooms CLI UI
 
-This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms-cli`).
+This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms`).
 
 In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
-- `python/sqlrooms-cli/sqlrooms/web/static/`
+- `python/sqlrooms/sqlrooms/web/static/`
 
 ## Dev mode (UI + Python server together)
 
@@ -20,7 +20,7 @@ This starts:
 
 - the Python API server on `http://127.0.0.1:4273` without serving static UI, or the next free port
 - the Vite UI on `http://localhost:4174`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
-- a per-session dev database named after the selected UI port, for example `sqlrooms-cli-4174.db`
+- a per-session dev database named after the selected UI port, for example `sqlrooms-4174.db`
 
 If you want fixed ports, pass them to the Python server:
 
@@ -33,7 +33,7 @@ pnpm dev cli -- --port 4176 --ws-port 4002
 Terminal A (Python server):
 
 ```bash
-cd python/sqlrooms-cli
+cd python/sqlrooms
 pnpm dev -- --no-ui
 ```
 
@@ -60,7 +60,7 @@ This builds the UI into `apps/sqlrooms-cli-ui/dist`.
 To copy it into the Python package bundle directory (so the published `sqlrooms` wheel can serve it), run:
 
 ```bash
-cd python/sqlrooms-cli
+cd python/sqlrooms
 pnpm build:ui
 ```
 

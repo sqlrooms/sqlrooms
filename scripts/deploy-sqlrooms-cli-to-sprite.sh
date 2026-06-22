@@ -3,11 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-SPRITE_NAME="${SPRITE_NAME:-sqlrooms-cli-$(date +%Y%m%d-%H%M%S)}"
+SPRITE_NAME="${SPRITE_NAME:-sqlrooms-$(date +%Y%m%d-%H%M%S)}"
 SPRITE_ORG="${SPRITE_ORG:-}"
-APP_DIR="${APP_DIR:-/home/sprite/sqlrooms-cli}"
-SERVICE_NAME="${SERVICE_NAME:-sqlrooms-cli}"
-DB_PATH="${DB_PATH:-/home/sprite/sqlrooms-cli/sqlrooms.db}"
+APP_DIR="${APP_DIR:-/home/sprite/sqlrooms}"
+SERVICE_NAME="${SERVICE_NAME:-sqlrooms}"
+DB_PATH="${DB_PATH:-/home/sprite/sqlrooms/sqlrooms.db}"
 HTTP_PORT="${HTTP_PORT:-8080}"
 WS_PORT="${WS_PORT:-4000}"
 LOCAL_HTTP_PORT="${LOCAL_HTTP_PORT:-4173}"
@@ -23,21 +23,21 @@ SKIP_BUILD="${SKIP_BUILD:-0}"
 
 usage() {
   cat <<'USAGE'
-Deploy the local sqlrooms-cli package to a new Sprite.
+Deploy the local sqlrooms package to a new Sprite.
 
 Usage:
   scripts/deploy-sqlrooms-cli-to-sprite.sh [options]
 
 Options:
-  --name NAME          Sprite name. Default: sqlrooms-cli-YYYYmmdd-HHMMSS
+  --name NAME          Sprite name. Default: sqlrooms-YYYYmmdd-HHMMSS
   --org ORG           Sprites/Fly organization.
-  --app-dir PATH      Remote install directory. Default: /home/sprite/sqlrooms-cli
-  --db-path PATH      Remote DuckDB path. Default: /home/sprite/sqlrooms-cli/sqlrooms.db
+  --app-dir PATH      Remote install directory. Default: /home/sprite/sqlrooms
+  --db-path PATH      Remote DuckDB path. Default: /home/sprite/sqlrooms/sqlrooms.db
   --http-port PORT    Remote UI HTTP port. Default: 8080
   --ws-port PORT      Remote DuckDB websocket port. Default: 4000
   --local-http PORT   Local proxied UI port. Default: 4173
   --local-ws PORT     Local proxied websocket port. Default: 4000
-  --extras EXTRAS     sqlrooms-cli extras to install, e.g. connectors.
+  --extras EXTRAS     sqlrooms extras to install, e.g. connectors.
   --sync              Enable SQLRooms CRDT sync websocket support.
   --private           Keep the Sprite URL authenticated. Default is public.
   --proxy             Run sprite proxy after deployment for local debugging.
@@ -186,8 +186,8 @@ require_cmd tar
 
 WORK_DIR="$(mktemp -d)"
 WHEEL_DIR="$WORK_DIR/wheels"
-BUNDLE="$WORK_DIR/sqlrooms-cli-wheels.tgz"
-REMOTE_INSTALL="$WORK_DIR/install-sqlrooms-cli-on-sprite.sh"
+BUNDLE="$WORK_DIR/sqlrooms-wheels.tgz"
+REMOTE_INSTALL="$WORK_DIR/install-sqlrooms-on-sprite.sh"
 mkdir -p "$WHEEL_DIR"
 
 echo "Building local SQLRooms packages..."
@@ -195,17 +195,17 @@ if [[ "$SKIP_BUILD" != "1" ]]; then
   if [[ "$SKIP_ROOT_BUILD" != "1" ]]; then
     (cd "$ROOT_DIR" && pnpm build)
   fi
-  (cd "$ROOT_DIR/python/sqlrooms-cli" && pnpm build:ui)
+  (cd "$ROOT_DIR/python/sqlrooms" && pnpm build:ui)
 else
   echo "Skipping pnpm builds; using the existing bundled CLI UI."
-  if [[ ! -f "$ROOT_DIR/python/sqlrooms-cli/sqlrooms/web/static/index.html" ]]; then
-    echo "Missing bundled CLI UI at python/sqlrooms-cli/sqlrooms/web/static/index.html." >&2
+  if [[ ! -f "$ROOT_DIR/python/sqlrooms/sqlrooms/web/static/index.html" ]]; then
+    echo "Missing bundled CLI UI at python/sqlrooms/sqlrooms/web/static/index.html." >&2
     echo "Run once without --skip-build so the UI is built and copied into the Python package." >&2
     exit 1
   fi
 fi
 uv build --project "$ROOT_DIR/python" --package sqlrooms-server --wheel --out-dir "$WHEEL_DIR"
-uv build --project "$ROOT_DIR/python" --package sqlrooms-cli --wheel --out-dir "$WHEEL_DIR"
+uv build --project "$ROOT_DIR/python" --package sqlrooms --wheel --out-dir "$WHEEL_DIR"
 tar -C "$WHEEL_DIR" -czf "$BUNDLE" .
 
 cat >"$REMOTE_INSTALL" <<'REMOTE'
@@ -223,15 +223,15 @@ HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-60}"
 HEALTH_CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-2}"
 
 mkdir -p "$APP_DIR/wheels" "$(dirname "$DB_PATH")"
-tar -C "$APP_DIR/wheels" -xzf "$APP_DIR/sqlrooms-cli-wheels.tgz"
+tar -C "$APP_DIR/wheels" -xzf "$APP_DIR/sqlrooms-wheels.tgz"
 
 python3 -m venv "$APP_DIR/venv"
 "$APP_DIR/venv/bin/python" -m pip install --upgrade pip wheel
 
 server_wheel="$(find "$APP_DIR/wheels" -maxdepth 1 -name 'sqlrooms_server-*.whl' | head -n 1)"
-cli_wheel="$(find "$APP_DIR/wheels" -maxdepth 1 -name 'sqlrooms_cli-*.whl' | head -n 1)"
+cli_wheel="$(find "$APP_DIR/wheels" -maxdepth 1 -name 'sqlrooms-*.whl' ! -name 'sqlrooms_server-*.whl' | head -n 1)"
 if [[ -z "$server_wheel" || -z "$cli_wheel" ]]; then
-  echo "Could not find sqlrooms-server and sqlrooms-cli wheels in $APP_DIR/wheels" >&2
+  echo "Could not find sqlrooms-server and sqlrooms wheels in $APP_DIR/wheels" >&2
   exit 1
 fi
 
@@ -246,7 +246,7 @@ if [[ "${SQLROOMS_SYNC:-0}" == "1" ]]; then
   sync_args=(--sync)
 fi
 
-cat >"$APP_DIR/run-sqlrooms-cli.sh" <<RUNNER
+cat >"$APP_DIR/run-sqlrooms.sh" <<RUNNER
 #!/usr/bin/env bash
 set -euo pipefail
 exec "$APP_DIR/venv/bin/sqlrooms" \\
@@ -259,13 +259,13 @@ exec "$APP_DIR/venv/bin/sqlrooms" \\
   "$DB_PATH" \\
   "\${@}"
 RUNNER
-chmod +x "$APP_DIR/run-sqlrooms-cli.sh"
+chmod +x "$APP_DIR/run-sqlrooms.sh"
 
 if [[ "${#sync_args[@]}" -gt 0 ]]; then
-  sed -i 's/--no-open-browser \\/--no-open-browser \\\n  --sync \\/' "$APP_DIR/run-sqlrooms-cli.sh"
+  sed -i 's/--no-open-browser \\/--no-open-browser \\\n  --sync \\/' "$APP_DIR/run-sqlrooms.sh"
 fi
 
-sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms-cli.sh"
+sprite-env services create "$SERVICE_NAME" --cmd "$APP_DIR/run-sqlrooms.sh"
 "$APP_DIR/venv/bin/python" - <<PY
 import sys
 import time
@@ -315,13 +315,13 @@ else
   DEPLOY_EXTERNAL_WS_URL="$SPRITE_WS_URL"
 fi
 
-echo "Uploading wheels and starting sqlrooms-cli service..."
+echo "Uploading wheels and starting sqlrooms service..."
 sprite_exec mkdir -p "$APP_DIR"
 sprite_exec \
-  --file "$BUNDLE:$APP_DIR/sqlrooms-cli-wheels.tgz" \
-  --file "$REMOTE_INSTALL:$APP_DIR/install-sqlrooms-cli-on-sprite.sh" \
+  --file "$BUNDLE:$APP_DIR/sqlrooms-wheels.tgz" \
+  --file "$REMOTE_INSTALL:$APP_DIR/install-sqlrooms-on-sprite.sh" \
   --env "APP_DIR=$APP_DIR,SERVICE_NAME=$SERVICE_NAME,DB_PATH=$DB_PATH,HTTP_PORT=$HTTP_PORT,WS_PORT=$WS_PORT,SQLROOMS_EXTRAS=$SQLROOMS_EXTRAS,SQLROOMS_SYNC=$SQLROOMS_SYNC,SQLROOMS_EXTERNAL_URL=$DEPLOY_EXTERNAL_URL,SQLROOMS_EXTERNAL_WS_URL=$DEPLOY_EXTERNAL_WS_URL,HEALTH_CHECK_TIMEOUT=$HEALTH_CHECK_TIMEOUT,HEALTH_CHECK_INTERVAL=$HEALTH_CHECK_INTERVAL" \
-  bash "$APP_DIR/install-sqlrooms-cli-on-sprite.sh"
+  bash "$APP_DIR/install-sqlrooms-on-sprite.sh"
 
 if [[ "$PUBLIC_URL" == "1" ]]; then
   sprite_url_public

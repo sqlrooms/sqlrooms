@@ -451,7 +451,7 @@ class SqlroomsHttpServer:
         if self.is_in_memory:
             self.db_path: Path | None = None
             self.duckdb_database = ":memory:"
-            base_dir = Path(tempfile.gettempdir()) / "sqlrooms-cli"
+            base_dir = Path(tempfile.gettempdir()) / "sqlrooms"
         else:
             self.db_path = Path(db_path).expanduser().resolve()
             self.duckdb_database = str(self.db_path)
@@ -622,7 +622,7 @@ class SqlroomsHttpServer:
             "syncEnabled": self.sync_enabled,
             "crdtWsUrl": ws_url,
             "crdtRoomId": (
-                f"sqlrooms-cli:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
+                f"sqlrooms:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
             ),
             "aiProviders": self.ai_providers,
             "aiSettings": {

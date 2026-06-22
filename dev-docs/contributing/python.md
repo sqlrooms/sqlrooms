@@ -17,7 +17,7 @@ uv sync
 
 | Package           | Purpose                                    |
 | ----------------- | ------------------------------------------ |
-| `sqlrooms-cli`    | Interactive CLI powered by DuckDB          |
+| `sqlrooms`        | Interactive CLI powered by DuckDB          |
 | `sqlrooms-server` | HTTP server exposing DuckDB over WebSocket |
 | `sqlrooms-rag`    | RAG pipeline for document-grounded queries |
 
@@ -25,7 +25,7 @@ uv sync
 
 ```bash
 # CLI
-cd python/sqlrooms-cli
+cd python/sqlrooms
 uv run sqlrooms :memory:
 
 # Server
