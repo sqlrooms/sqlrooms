@@ -319,7 +319,11 @@ function cloneConfig(
   return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
 }
 
-function createDeckMapPanelFromNativeConfig(
+/**
+ * Creates a dashboard-compatible Deck map panel from the native map config
+ * used by AI tools and embeddable map surfaces.
+ */
+export function createDeckMapPanelFromNativeConfig(
   params: Pick<DeckMapConfigToolParams, 'title' | 'config'>,
 ) {
   return createDeckMapDashboardPanelConfig({

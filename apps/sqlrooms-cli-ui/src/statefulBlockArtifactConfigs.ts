@@ -3,6 +3,12 @@ import type {
   BlockDocumentStatefulBlockCommandType,
   BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
+import {
+  createDeckMapDashboardPanelConfigForTable,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  findGeometryColumn,
+  findLongitudeLatitudeColumns,
+} from '@sqlrooms/deck';
 import type {RoomState} from './store-types';
 
 export type FeatureStability = 'stable' | 'experimental';
@@ -30,6 +36,44 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     deleteState: (state: RoomState, artifactId: string) => void;
     renameState?: (state: RoomState, artifactId: string, title: string) => void;
   };
+
+function ensureMapBlockState(
+  state: RoomState,
+  artifactId: string,
+  title: string,
+) {
+  state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
+
+  const dashboard = state.mosaicDashboard.getDashboard(artifactId);
+  if (
+    !dashboard ||
+    dashboard.panels.some(
+      (panel) => panel.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
+    )
+  ) {
+    return;
+  }
+
+  const table = state.db.tables.find(
+    (candidate) =>
+      Boolean(findLongitudeLatitudeColumns(candidate)) ||
+      Boolean(findGeometryColumn(candidate)),
+  );
+  if (!table) {
+    return;
+  }
+
+  state.mosaicDashboard.setSelectedTable(artifactId, table.tableName);
+  state.mosaicDashboard.addPanel(
+    artifactId,
+    createDeckMapDashboardPanelConfigForTable({
+      title: `${table.tableName} map`,
+      tableName: table.tableName,
+      columns: table.columns,
+      tableReference: table.table,
+    }),
+  );
+}
 
 export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   dashboard: {
@@ -87,6 +131,29 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     scrollHintLabel: 'this data table',
     ensureState: () => {},
     deleteState: () => {},
+  },
+  map: {
+    artifactType: 'map',
+    stability: 'experimental',
+    label: 'Map',
+    defaultTitle: 'Map',
+    embeddedTitle: 'Embedded Map',
+    embeddedDescription: 'Embedded Deck.gl map',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 360,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this map',
+    ensureState: (state, artifactId, title) => {
+      ensureMapBlockState(state, artifactId, title);
+    },
+    deleteState: (state, artifactId) => {
+      state.mosaicDashboard.removeDashboard(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
+    },
   },
   document: {
     artifactType: 'document',

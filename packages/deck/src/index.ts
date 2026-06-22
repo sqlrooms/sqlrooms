@@ -13,6 +13,7 @@ export {
   createDeckMapDashboardAiTools,
   createDeckMapDashboardTool,
   createDeckMapConfigTool,
+  createDeckMapPanelFromNativeConfig,
   DeckMapDashboardConfigParameter,
   DeckMapConfigToolParameters,
   DeckMapDashboardToolParameters,

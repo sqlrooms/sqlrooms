@@ -94,6 +94,12 @@ export type CreateWorksheetAgentToolOptions<TState> =
      */
     htmlAppBlocksEnabled?: boolean;
     /**
+     * Whether direct worksheet map block tools are available. When enabled,
+     * map requests should use the host-provided map block tool instead of
+     * creating a dashboard block solely to contain a map.
+     */
+    mapBlocksEnabled?: boolean;
+    /**
      * Host-provided worksheet tools keyed by their registered tool name.
      * Register custom tools (e.g., maps, charts, data loaders) to extend
      * the worksheet agent's capabilities.
