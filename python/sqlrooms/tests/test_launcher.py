@@ -67,6 +67,30 @@ def test_api_config_normalizes_loopback_ws_host(tmp_path):
     assert response.json()["wsUrl"] == "ws://localhost:48174"
 
 
+def test_ui_url_wraps_ipv6_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="::1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+
+    assert server._ui_url() == "http://[::1]:4173"
+
+
+def test_ws_url_wraps_ipv6_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="2001:db8::1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+
+    assert server._ws_url() == "ws://[2001:db8::1]:48174"
+
+
 def test_startup_fails_when_configured_ui_bundle_is_missing(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",

@@ -371,7 +371,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           registerCommandsForOwner(
             store,
             DASHBOARD_COMMAND_OWNER,
-            createDashboardCommands(),
+            createDashboardCommands({artifactTypes: cliArtifactTypes}),
           );
           if (experimentalEnabled) {
             registerCommandsForOwner(

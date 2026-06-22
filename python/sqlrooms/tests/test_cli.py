@@ -21,7 +21,7 @@ def test_cli_help():
     result = runner.invoke(app, ["--help"])
     stdout = click.unstyle(result.stdout)
     assert result.exit_code == 0
-    assert "Start the SQLRooms local experience" in stdout
+    assert "Launch a local SQLRooms project" in stdout
     assert "--ai-devtools" in stdout
     assert "--experimental" in stdout
     assert "--experimental-sync" in stdout

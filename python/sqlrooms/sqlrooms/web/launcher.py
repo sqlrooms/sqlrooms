@@ -550,11 +550,20 @@ class SqlroomsHttpServer:
     def _ui_host(self) -> str:
         return "localhost" if self.host in ("0.0.0.0", "::") else self.host
 
+    @staticmethod
+    def _host_for_url(host: str) -> str:
+        if ":" in host and not host.startswith("["):
+            return f"[{host}]"
+        return host
+
     def _ui_url(self) -> str:
-        return f"http://{self._ui_host()}:{self.port}"
+        return f"http://{self._host_for_url(self._ui_host())}:{self.port}"
 
     def _ws_url(self) -> str:
-        return self.external_ws_url or f"ws://{self._public_host()}:{self.ws_port}"
+        return (
+            self.external_ws_url
+            or f"ws://{self._host_for_url(self._public_host())}:{self.ws_port}"
+        )
 
     def _assert_ui_available(self) -> None:
         if not self.serve_ui:
