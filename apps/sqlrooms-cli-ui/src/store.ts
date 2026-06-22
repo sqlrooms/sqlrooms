@@ -537,6 +537,9 @@ async function readPythonSchema(tableName?: string) {
     const currentTableName = String(row.table_name ?? '');
     const columnName = String(row.column_name ?? '');
     if (!currentTableName || !columnName) continue;
+    if (!isPythonSchemaTableVisible(catalogName, schemaName, currentTableName)) {
+      continue;
+    }
     const qualifiedTableName = makeQualifiedTableName({
       database: catalogName || undefined,
       schema: schemaName || undefined,
@@ -556,6 +559,22 @@ async function readPythonSchema(tableName?: string) {
       columns,
     })),
   };
+}
+
+function isPythonSchemaTableVisible(
+  database: string,
+  schema: string,
+  tableName: string,
+) {
+  if (
+    !defaultLoadSchemaCatalogFilter({
+      type: 'table',
+      table: {database, schema, tableName},
+    })
+  ) {
+    return false;
+  }
+  return !(database === 'memory' && schema === MOSAIC_PREAGG_SCHEMA);
 }
 
 function getRuntimeBridgeConfig() {
