@@ -236,6 +236,16 @@ function canCreateArtifactType(
   return artifactTypes?.[artifactType]?.canCreate !== false;
 }
 
+/**
+ * Builds workspace-level dashboard commands, including per-artifact creation
+ * commands filtered by artifact capability flags.
+ *
+ * @param options Optional command factory options.
+ * @param options.artifactTypes Artifact capability definitions keyed by artifact
+ * type. A type is creatable unless `canCreate` is explicitly `false`.
+ * @returns Commands for selecting workspace artifacts and creating the artifact
+ * types allowed by the provided capability map.
+ */
 export function createDashboardCommands({
   artifactTypes,
 }: CreateDashboardCommandsOptions = {}): RoomCommand<RoomState>[] {

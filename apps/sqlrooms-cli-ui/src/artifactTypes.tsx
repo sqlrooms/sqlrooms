@@ -77,9 +77,6 @@ function withStability<T extends ArtifactTypeDefinition<RoomState>>(
     component: ExperimentalArtifactPlaceholder,
     onCreate: undefined,
     onEnsure: undefined,
-    onRename: undefined,
-    onDelete: undefined,
-    onClose: undefined,
   };
 }
 
