@@ -1,8 +1,31 @@
 import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
+import {
+  continuousSequentialInterpolators,
+  parseColorString,
+} from '@sqlrooms/color-scales';
 import type {PreparedDeckDatasetState} from '../types';
 import {getColorScale} from './colorScaleFunction';
 import {buildColorScaleLegend} from './compileColorScale';
 import {resolveColorLegend, resolveDatasetId} from './layerConfig';
+
+const HEATMAP_COLOR_STEPS = 6;
+const DEFAULT_HEATMAP_COLOR_RANGE: Array<[number, number, number, number]> =
+  continuousSequentialInterpolators.YlOrRd
+    ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
+        parseColorString(
+          continuousSequentialInterpolators.YlOrRd(
+            i / (HEATMAP_COLOR_STEPS - 1),
+          ),
+        ),
+      )
+    : [
+        [255, 255, 178, 255],
+        [254, 178, 76, 255],
+        [253, 141, 60, 255],
+        [240, 59, 32, 255],
+        [189, 0, 38, 255],
+        [128, 0, 38, 255],
+      ];
 
 function resolveLegendTitle(
   layerProps: Record<string, unknown>,
@@ -20,6 +43,33 @@ function resolveLegendTitle(
   }
 
   return fallbackField;
+}
+
+function buildHeatmapLegend(
+  layerProps: Record<string, unknown>,
+): ResolvedColorLegend | null {
+  const rawRange = layerProps.colorRange as
+    | Array<[number, number, number, number]>
+    | undefined;
+  const colorRange =
+    Array.isArray(rawRange) && rawRange.length >= 2
+      ? rawRange
+      : DEFAULT_HEATMAP_COLOR_RANGE;
+
+  const stops = colorRange.map((c, i) => {
+    const pct = (i / (colorRange.length - 1)) * 100;
+    return `rgba(${c[0]},${c[1]},${c[2]},${(c[3] ?? 255) / 255}) ${pct.toFixed(1)}%`;
+  });
+
+  return {
+    type: 'continuous',
+    title: 'Density',
+    gradient: `linear-gradient(to right, ${stops.join(', ')})`,
+    ticks: [
+      {label: 'Low', offset: 0},
+      {label: 'High', offset: 100},
+    ],
+  };
 }
 
 export function extractColorScaleLegends(options: {
@@ -42,6 +92,15 @@ export function extractColorScaleLegends(options: {
     const layerProps = layer as Record<string, unknown>;
 
     if (layerProps.visible === false) {
+      continue;
+    }
+
+    const layerType = String(layerProps['@@type'] ?? '').toLowerCase();
+    if (layerType.includes('heatmap')) {
+      const heatmapLegend = buildHeatmapLegend(layerProps);
+      if (heatmapLegend) {
+        legends.push(heatmapLegend);
+      }
       continue;
     }
 

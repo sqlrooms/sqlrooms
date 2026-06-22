@@ -118,10 +118,10 @@ function schemeToColorRange(
       scheme as keyof typeof continuousSequentialInterpolators
     ];
   if (!interpolator) {
-    return continuousSequentialInterpolators.Viridis
+    return continuousSequentialInterpolators.YlOrRd
       ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
           parseColorString(
-            continuousSequentialInterpolators.Viridis(
+            continuousSequentialInterpolators.YlOrRd(
               i / (HEATMAP_COLOR_STEPS - 1),
             ),
           ),
@@ -134,7 +134,7 @@ function schemeToColorRange(
 }
 
 function detectHeatmapScheme(colorRange: unknown): string {
-  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'Viridis';
+  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'YlOrRd';
   for (const scheme of continuousSequentialSchemes) {
     const sampled = schemeToColorRange(scheme);
     if (sampled.length === colorRange.length) {
@@ -150,7 +150,7 @@ function detectHeatmapScheme(colorRange: unknown): string {
       if (matches) return scheme;
     }
   }
-  return 'Viridis';
+  return 'YlOrRd';
 }
 
 interface MapSettingsPanelProps {
