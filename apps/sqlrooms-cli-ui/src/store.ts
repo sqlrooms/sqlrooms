@@ -129,12 +129,25 @@ export type {RoomState} from './store-types';
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
-const SQLROOMS_CLI_AI_INSTRUCTIONS = `
+const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 
 - Use worksheet_agent when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
 - For dashboard artifacts, call dashboard_agent.
 - Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
+`;
+const EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS = `
+Experimental SQLRooms tools are available in this session. Use them for app, map, and generated interactive visualization requests when they match the user's target artifact.
+
+- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call worksheet_agent. The worksheet agent should create/reuse the worksheet html-app block, then call embedded_html_app_agent with the block's appId.
+- Do not use top-level html_app_agent to populate worksheet stateful blocks inside worksheets.
+- For worksheet map requests, call worksheet_agent. It should add or reuse a dashboard block and delegate to embedded_dashboard_agent.
+- For generated HTML, D3, Chart.js, or browser app visualizations only when the primary artifact is an html-app artifact or no worksheet/dashboard artifact is the requested target, write through html_app_agent. html_app_agent requires appId and never creates artifacts or worksheet blocks.
+- If the primary artifact is an html-app artifact, call html_app_agent with appId set to the current artifact id and update it instead of creating a new html-app artifact.
+- For incremental edits to an existing html-app artifact, such as changing title, labels, colors, styles, layout, controls, or interactions, call html_app_agent directly with the current appId and the user's edit request. Do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
+- If a new top-level html-app artifact is needed, first execute the html-app.create-artifact command, then call html_app_agent with appId set to the returned artifactId.
+- For HTML app undo, redo, or restoring an earlier version, use list_commands and execute_command with html-app.undo-revision, html-app.redo-revision, or html-app.restore-revision. Do not rewrite, delete, or edit chat messages to perform app undo/redo.
+- If an embedded worksheet HTML app target is ambiguous, ask the user to select the app/block or provide appId instead of mutating a guessed app.
 `;
 const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
   artifactType: 'worksheet',
@@ -749,8 +762,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getInstructions: () =>
               [
                 createDefaultAiInstructions(store),
-                SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
-              ].join('\n\n'),
+                STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
+                experimentalEnabled
+                  ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
+                  : '',
+              ]
+                .filter(Boolean)
+                .join('\n\n'),
             getRunContext: (sessionId) => getRunContext(store, sessionId),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
