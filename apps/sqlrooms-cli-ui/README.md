@@ -8,6 +8,49 @@ In production (published `sqlrooms` wheel), the UI is served as **static assets*
 
 - `python/sqlrooms/sqlrooms/web/static/`
 
+## Local CLI smoke test
+
+For local pre-publish testing, run the workspace package directly rather than
+assuming `sqlrooms` is installed globally:
+
+```bash
+cd /Users/ilya/Workspace/sqlrooms
+
+pnpm --dir python/sqlrooms build
+
+uv run --project python --package sqlrooms sqlrooms \
+  ./smoke.duckdb \
+  --no-open-browser
+```
+
+Open the UI URL printed in the terminal. It should be
+`http://127.0.0.1:4173` or the next free port.
+
+The bare CLI command works only after installing the CLI somewhere on your
+`PATH`:
+
+```bash
+uv tool install /Users/ilya/Workspace/sqlrooms/python/sqlrooms
+sqlrooms ./smoke.duckdb --no-open-browser
+```
+
+For release smoke testing, verify both local execution paths:
+
+```bash
+uv run --project python --package sqlrooms sqlrooms ./smoke.duckdb --no-open-browser
+uv tool install --reinstall /Users/ilya/Workspace/sqlrooms/python/sqlrooms
+sqlrooms ./smoke.duckdb --no-open-browser
+```
+
+In the UI, drag in:
+
+```text
+/Users/ilya/Workspace/sqlrooms/python/sqlrooms/tests/fixtures/cars.csv
+```
+
+Verify `cars` appears, create a worksheet/Mosaic chart/dashboard, stop the
+server, restart the same command, and confirm the state comes back.
+
 ## Dev mode (UI + Python server together)
 
 From the repo root:
