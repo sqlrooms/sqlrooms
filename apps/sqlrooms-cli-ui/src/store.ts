@@ -29,6 +29,7 @@ import {
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
+  escapeVal,
   makeQualifiedTableName,
   QualifiedTableName,
   quoteTableReference,
@@ -288,12 +289,14 @@ function createCliPythonRuntimeHost(): PythonRuntimeHost {
 }
 
 async function runReadonlyPythonSql(query: string, maxRows?: number) {
+  await assertSingleReadonlyPythonSql(query);
   const arrowTable = await connector.query(
     wrapPythonReadonlyQuery(query, maxRows),
   );
   const rows = arrowTableToPythonRows(arrowTable);
   return {
     columns: arrowTable.schema.fields.map((field) => field.name),
+    columnTypes: getPythonColumnTypes(arrowTable),
     rows,
     rowCount: rows.length,
   };
@@ -301,27 +304,98 @@ async function runReadonlyPythonSql(query: string, maxRows?: number) {
 
 function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
   const trimmedQuery = query.trim().replace(/;+$/, '');
+  if (hasStackedSqlStatements(query)) {
+    throw new Error('Python SQL bridge only allows a single readonly query.');
+  }
   const limit =
     maxRows === undefined ? '' : ` LIMIT ${Math.max(0, Math.floor(maxRows))}`;
   return `SELECT * FROM (${trimmedQuery}) AS sqlrooms_python_query${limit}`;
 }
 
+async function assertSingleReadonlyPythonSql(query: string) {
+  if (hasStackedSqlStatements(query)) {
+    throw new Error('Python SQL bridge only allows a single readonly query.');
+  }
+
+  let parsedQuery: unknown;
+  try {
+    const result = await connector.query(
+      `SELECT json_serialize_sql(${escapeVal(query)})`,
+    );
+    parsedQuery = JSON.parse(String(result.getChildAt(0)?.get(0)));
+  } catch {
+    throw new Error(
+      'Python SQL bridge only allows a single readonly SELECT query.',
+    );
+  }
+
+  const statements =
+    parsedQuery &&
+    typeof parsedQuery === 'object' &&
+    'statements' in parsedQuery &&
+    Array.isArray(parsedQuery.statements)
+      ? parsedQuery.statements
+      : [];
+  const nodeType = String(
+    (statements[0] as {node?: {type?: unknown}} | undefined)?.node?.type ?? '',
+  ).toLowerCase();
+
+  if (statements.length !== 1 || !nodeType.includes('select')) {
+    throw new Error(
+      'Python SQL bridge only allows a single readonly SELECT query.',
+    );
+  }
+}
+
 function arrowTableToPythonRows(table: {
+  schema: {
+    fields: Array<{
+      name: string;
+      type?: unknown;
+    }>;
+  };
   toArray(): Array<Record<string, unknown>>;
 }): Record<string, unknown>[] {
+  const typeByFieldName = new Map(
+    table.schema.fields.map((field) => [field.name, String(field.type ?? '')]),
+  );
   return table
     .toArray()
     .map((row) =>
       Object.fromEntries(
         Object.entries(row).map(([key, value]) => [
           key,
-          convertPythonBridgeValue(value),
+          convertPythonBridgeValue(value, typeByFieldName.get(key)),
         ]),
       ),
     );
 }
 
-function convertPythonBridgeValue(value: unknown): unknown {
+function getPythonColumnTypes(table: {
+  schema: {
+    fields: Array<{
+      name: string;
+      type?: unknown;
+    }>;
+  };
+}) {
+  return Object.fromEntries(
+    table.schema.fields
+      .map((field) => [field.name, getPythonColumnType(field.type)] as const)
+      .filter((entry): entry is readonly [string, 'date' | 'timestamp'] =>
+        Boolean(entry[1]),
+      ),
+  );
+}
+
+function getPythonColumnType(type: unknown): 'date' | 'timestamp' | undefined {
+  const normalizedType = String(type ?? '').toLowerCase();
+  if (normalizedType.startsWith('date')) return 'date';
+  if (normalizedType.startsWith('timestamp')) return 'timestamp';
+  return undefined;
+}
+
+function convertPythonBridgeValue(value: unknown, arrowType?: string): unknown {
   if (value == null) return null;
   if (
     typeof value === 'string' ||
@@ -337,10 +411,12 @@ function convertPythonBridgeValue(value: unknown): unknown {
     return String(value);
   }
   if (value instanceof Date) {
-    return value.getTime();
+    return arrowType?.toLowerCase().startsWith('date')
+      ? value.toISOString().slice(0, 10)
+      : value.toISOString();
   }
   if (Array.isArray(value)) {
-    return value.map(convertPythonBridgeValue);
+    return value.map((item) => convertPythonBridgeValue(item));
   }
   if (typeof value === 'object') {
     const jsonValue =
@@ -348,10 +424,85 @@ function convertPythonBridgeValue(value: unknown): unknown {
         ? value.toJSON()
         : undefined;
     if (jsonValue !== undefined && jsonValue !== value) {
-      return convertPythonBridgeValue(jsonValue);
+      return convertPythonBridgeValue(jsonValue, arrowType);
     }
   }
   return String(value);
+}
+
+function hasStackedSqlStatements(query: string) {
+  const trailingSemicolonStart = findTrailingSemicolonStart(query);
+  let quote: "'" | '"' | undefined;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < query.length; index += 1) {
+    const char = query[index];
+    const next = query[index + 1];
+
+    if (lineComment) {
+      if (char === '\n' || char === '\r') {
+        lineComment = false;
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (char === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        if (next === quote) {
+          index += 1;
+          continue;
+        }
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+
+    if (char === ';' && index < trailingSemicolonStart) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function findTrailingSemicolonStart(query: string) {
+  let index = query.length - 1;
+  while (index >= 0 && /\s/.test(query[index]!)) {
+    index -= 1;
+  }
+  while (index >= 0 && query[index] === ';') {
+    index -= 1;
+    while (index >= 0 && /\s/.test(query[index]!)) {
+      index -= 1;
+    }
+  }
+  return index + 1;
 }
 
 async function readPythonSchema(tableName?: string) {

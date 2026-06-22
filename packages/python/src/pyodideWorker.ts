@@ -108,7 +108,15 @@ def query_df(sql, max_rows=None):
     import pandas as pd
 
     result = query_raw(sql, max_rows=max_rows)
-    return pd.DataFrame(result["rows"], columns=result["columns"])
+    frame = pd.DataFrame(result["rows"], columns=result["columns"])
+    for column, column_type in result.get("columnTypes", {}).items():
+        if column not in frame.columns:
+            continue
+        if column_type == "timestamp":
+            frame[column] = pd.to_datetime(frame[column], errors="coerce")
+        elif column_type == "date":
+            frame[column] = pd.to_datetime(frame[column], errors="coerce").dt.date
+    return frame
 
 
 def query(sql, max_rows=None):
@@ -412,6 +420,10 @@ await __sqlrooms_micropip.install("altair")
 }
 
 function bindInputs(pyodide: PyodideAPI, inputs: PythonInput[]) {
+  clearStaleInputGlobals(
+    pyodide,
+    inputs.map((input) => input.name),
+  );
   for (const input of inputs) {
     if (input.kind === 'literal') {
       bindPythonGlobal(pyodide, input.name, input.value);
@@ -438,6 +450,22 @@ function bindInputs(pyodide: PyodideAPI, inputs: PythonInput[]) {
 
     bindPythonGlobal(pyodide, input.name, requestHostSchema(input.tableName));
   }
+}
+
+function clearStaleInputGlobals(pyodide: PyodideAPI, inputNames: string[]) {
+  pyodide.globals.set('__sqlrooms_current_input_names', inputNames);
+  pyodide.runPython(`
+if hasattr(__sqlrooms_current_input_names, "to_py"):
+    __sqlrooms_current_input_names = __sqlrooms_current_input_names.to_py()
+__sqlrooms_current_input_names = set(str(name) for name in __sqlrooms_current_input_names)
+__sqlrooms_previous_input_names = globals().get("__sqlrooms_bound_input_names", set())
+for __sqlrooms_input_name in __sqlrooms_previous_input_names - __sqlrooms_current_input_names:
+    globals().pop(str(__sqlrooms_input_name), None)
+__sqlrooms_bound_input_names = __sqlrooms_current_input_names
+globals().pop("__sqlrooms_current_input_names", None)
+globals().pop("__sqlrooms_previous_input_names", None)
+globals().pop("__sqlrooms_input_name", None)
+`);
 }
 
 function bindPythonGlobal(pyodide: PyodideAPI, name: string, value: unknown) {

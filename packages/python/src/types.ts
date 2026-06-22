@@ -229,6 +229,7 @@ export type PythonRuntimeCapability =
 /** Tabular input payload supplied to a runtime adapter. */
 export type PythonTabularInput = {
   columns: string[];
+  columnTypes?: Record<string, 'date' | 'timestamp'>;
   rows: Record<string, unknown>[];
   rowCount?: number;
 };
