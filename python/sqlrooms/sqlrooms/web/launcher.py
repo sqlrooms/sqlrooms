@@ -19,8 +19,13 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi import Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import (
+    FileResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 
 from sqlrooms.server import db_async
 from sqlrooms.server.cache import QueryCache
@@ -40,6 +45,7 @@ from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
+NO_STORE_HEADERS = {"Cache-Control": "no-store"}
 
 
 async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
@@ -581,6 +587,41 @@ class SqlroomsHttpServer:
             "Developers can rebuild it with `pnpm --filter sqlrooms-python build:ui`."
         )
 
+    def _index_response(self) -> FileResponse:
+        return FileResponse(self.index_html, headers=NO_STORE_HEADERS)
+
+    def _resolve_static_file(self, full_path: str) -> Path | None:
+        static_root = self.static_dir.resolve()
+        candidate = (static_root / full_path).resolve()
+        try:
+            candidate.relative_to(static_root)
+        except ValueError:
+            return None
+        if candidate.is_file() and candidate.name != "index.html":
+            return candidate
+        return None
+
+    def _stale_entry_asset_redirect(self, full_path: str) -> RedirectResponse | None:
+        requested = Path(full_path)
+        if (
+            len(requested.parts) != 2
+            or requested.parts[0] != "assets"
+            or not requested.name.startswith("index-")
+            or requested.suffix not in {".css", ".js"}
+        ):
+            return None
+
+        assets_dir = self.static_dir / "assets"
+        matches = sorted(assets_dir.glob(f"index-*{requested.suffix}"))
+        if len(matches) != 1:
+            return None
+
+        return RedirectResponse(
+            url=f"/assets/{matches[0].name}",
+            status_code=302,
+            headers=NO_STORE_HEADERS,
+        )
+
     def _start_duckdb_backend(self) -> None:
         self._duckdb_ready.clear()
         self._duckdb_start_error = None
@@ -1097,16 +1138,28 @@ class SqlroomsHttpServer:
             return data
 
         if self.serve_ui and self.static_dir.exists():
-            app.mount(
-                "/",
-                StaticFiles(directory=self.static_dir, html=True),
-                name="static",
-            )
+
+            @app.get("/")
+            async def spa_index():
+                return self._index_response()
 
             @app.get("/{full_path:path}")
             async def spa_fallback(full_path: str):
+                static_file = self._resolve_static_file(full_path)
+                if static_file is not None:
+                    return FileResponse(static_file)
+
+                stale_entry_redirect = self._stale_entry_asset_redirect(full_path)
+                if stale_entry_redirect is not None:
+                    return stale_entry_redirect
+
+                if full_path.startswith("assets/"):
+                    return JSONResponse(
+                        {"error": "Static asset not found"}, status_code=404
+                    )
+
                 if self.index_html.exists():
-                    return FileResponse(self.index_html)
+                    return self._index_response()
                 return JSONResponse({"error": "UI bundle not found"}, status_code=404)
         elif self.serve_ui:
             logger.warning(
