@@ -18,6 +18,7 @@ import {
   createDeckMapPanelFromNativeConfig,
   DeckMapDashboardToolParameters,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
+  type DeckMapDashboardConfigToolConfig,
 } from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {
@@ -37,6 +38,23 @@ const WorksheetMapBlockToolParameters = DeckMapDashboardToolParameters.extend({
     .describe('Durable purpose for this worksheet map block.'),
 });
 
+function getFirstDatasetSourceTableName(
+  config: DeckMapDashboardConfigToolConfig,
+): string | undefined {
+  if (!config.datasets || typeof config.datasets !== 'object') {
+    return undefined;
+  }
+
+  return Object.values(config.datasets)
+    .map(
+      (dataset) =>
+        (dataset as Record<string, unknown>).source as
+          | {tableName?: string}
+          | undefined,
+    )
+    .find((source) => source?.tableName)?.tableName;
+}
+
 function createWorksheetMapBlockTool(
   store: StoreApi<RoomState>,
   worksheetId: string,
@@ -54,7 +72,8 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           throw new Error(`Artifact ${worksheetId} is not a worksheet`);
         }
 
-        const tableName = params.tableName;
+        const tableName =
+          params.tableName ?? getFirstDatasetSourceTableName(params.config);
         if (tableName && !state.db.findTable(tableName)) {
           throw new Error(`Table ${tableName} was not found`);
         }
