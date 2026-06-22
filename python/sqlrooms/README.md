@@ -5,7 +5,6 @@ Launch a local SQLRooms DuckDB project for adding data, authoring worksheets, an
 ## Quick start
 
 ```bash
-# From the repo root
 uvx sqlrooms ./sqlrooms.db
 ```
 
@@ -55,10 +54,10 @@ Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/confi
 
 ## Manual smoke test
 
-Use this before release candidates to prove the first-launch path:
+Use this to prove the first-launch path:
 
 ```bash
-uv run --project python --package sqlrooms sqlrooms \
+uvx sqlrooms \
   --no-open-browser \
   ./smoke.duckdb
 ```
@@ -66,7 +65,7 @@ uv run --project python --package sqlrooms sqlrooms \
 Then open the printed UI URL and verify:
 
 - The app starts without a database connection error.
-- Dragging `python/sqlrooms/tests/fixtures/cars.csv` into the data panel creates a `cars` table.
+- Dragging a small CSV file into the data panel creates a table.
 - The uploaded CSV lands next to `smoke.duckdb` under `sqlrooms_uploads/`.
 - The data sidebar shows `main.cars` and does not show SQLRooms internal metadata.
 - A worksheet is created or selected automatically and contains a `cars` data-table explorer block.
@@ -163,11 +162,10 @@ results into core DuckDB for downstream notebook cells.
 Install optional connector dependencies first:
 
 ```bash
-# From python/sqlrooms
-uv sync --extra connectors
+uv tool install "sqlrooms[connectors]"
 # or install just one connector:
-uv sync --extra postgres
-uv sync --extra snowflake
+uv tool install "sqlrooms[postgres]"
+uv tool install "sqlrooms[snowflake]"
 ```
 
 ### Postgres
@@ -199,41 +197,3 @@ Notes:
 
 - Configure connectors in `sqlrooms.toml` using `[[db.connectors]]` entries.
 - Connector libraries are optional extras (`postgres`, `snowflake`, or `connectors`).
-
-## Developer setup
-
-Local dev loop for the CLI and UI:
-
-1. Install deps and build the dedicated UI (from repo root):
-
-```bash
-pnpm install
-pnpm --filter sqlrooms-python build:ui
-# build outputs directly to python/sqlrooms/sqlrooms/web/static
-```
-
-2. Dev the Python CLI app from the repo root:
-
-```bash
-pnpm dev cli
-```
-
-This starts the Python API server on `http://127.0.0.1:4273` with `--no-ui`
-and the Vite UI on `http://localhost:3100`. If those ports are busy, the dev
-script selects the next free API and UI ports from separate ranges and points
-the Vite proxy at the selected API port. The auto-created dev database is named
-after the selected UI port, for example `sqlrooms-3100.db`.
-
-3. Run the Python API server on its own (optional):
-
-```bash
-cd python/sqlrooms
-pnpm dev
-```
-
-Tips:
-
-- Use `--no-open-browser` if you don’t want the static bundle auto-opened.
-- Use `--no-ui` when pairing the Python API server with the Vite UI dev server.
-- Rebuild the UI (`pnpm --filter sqlrooms-python build:ui`) when you want the Python server to serve new static assets.
-- `/api/config` reflects runtime config (AI providers/default model, DB bridge metadata, WS URL).
