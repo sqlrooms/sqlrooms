@@ -136,6 +136,7 @@ function createWorksheetStatefulBlockRenderers(
     document: ExperimentalStatefulBlockPlaceholder,
     'sql-query': ExperimentalStatefulBlockPlaceholder,
     'html-app': ExperimentalStatefulBlockPlaceholder,
+    python: ExperimentalStatefulBlockPlaceholder,
   };
 }
 

@@ -825,11 +825,22 @@ function truncateToBytes(value: string, maxBytes: number) {
   return result;
 }
 
+function truncateErrorText(value: string | undefined) {
+  if (value === undefined) return undefined;
+  const encoded = new TextEncoder().encode(value);
+  if (encoded.byteLength <= DEFAULT_MAX_STDIO_BYTES) return value;
+  return `${truncateToBytes(value, DEFAULT_MAX_STDIO_BYTES)}\n... truncated ...`;
+}
+
 function errorSummary(error: unknown) {
   return {
-    name: error instanceof Error ? error.name : undefined,
+    name: truncateErrorText(error instanceof Error ? error.name : undefined),
     message:
-      error instanceof Error ? error.message : 'Python execution failed.',
-    traceback: error instanceof Error ? error.stack : undefined,
+      truncateErrorText(
+        error instanceof Error ? error.message : 'Python execution failed.',
+      ) ?? 'Python execution failed.',
+    traceback: truncateErrorText(
+      error instanceof Error ? error.stack : undefined,
+    ),
   };
 }
