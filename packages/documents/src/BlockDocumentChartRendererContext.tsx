@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useMemo,
   type FC,
   type PropsWithChildren,
 } from 'react';
@@ -34,8 +35,10 @@ export type BlockDocumentChartRendererProviderProps = PropsWithChildren<{
 export const BlockDocumentChartRendererProvider: FC<
   BlockDocumentChartRendererProviderProps
 > = ({renderer, children}) => {
+  const contextValue = useMemo(() => ({renderer}), [renderer]);
+
   return (
-    <BlockDocumentChartRendererContext.Provider value={{renderer}}>
+    <BlockDocumentChartRendererContext.Provider value={contextValue}>
       {children}
     </BlockDocumentChartRendererContext.Provider>
   );
