@@ -10,19 +10,8 @@ import {
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
-import {
-  createAddBlockDocumentTextBlockTool,
-  createListBlockDocumentBlocksTool,
-} from '@sqlrooms/documents';
-import {
-  createBlockDocumentChartTools,
-  createAddMosaicDashboardBlockTool,
-  createBlockDocumentDataTableExplorerTool,
-} from '@sqlrooms/mosaic/ai';
-import {createAddHtmlAppBlockDocumentTool} from './ai/createAddHtmlAppBlockDocumentTool';
-
-// Note: Full agent tool creation would go here with proper tool composition
-// For now, keeping the simplified export structure
+import {createWorksheetBlockDocumentTools} from './ai/createWorksheetBlockDocumentTools';
+import {createWorksheetAgentTool} from './ai/createWorksheetAgentTool';
 
 export function worksheetAgentTool(store: StoreApi<RoomState>) {
   const blockDocumentAdapter = createWorksheetAiAdapter(store);
@@ -53,10 +42,31 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
     databaseAdapter,
   });
 
-  // TODO: Implement full worksheet agent tool composition here
-  // This is a placeholder showing the new structure
+  // Get current worksheet ID from artifacts state
+  const currentWorksheet = store.getState().artifacts.currentArtifact;
+  if (!currentWorksheet || currentWorksheet.type !== 'worksheet') {
+    throw new Error('No current worksheet artifact');
+  }
 
-  throw new Error(
-    'worksheetAgentTool needs full implementation with tool composition',
-  );
+  const blockDocumentId = currentWorksheet.id;
+
+  const worksheetTools = createWorksheetBlockDocumentTools({
+    blockDocumentAdapter,
+    blockDocumentId,
+    databaseAdapter,
+    dashboardAgentTool,
+    htmlAppAgentTool: htmlAppAgentTool(store),
+    createDashboardBlock: (params) =>
+      createDashboardBlockForWorksheet(store, params),
+    extraTools: () => ({}),
+  });
+
+  return createWorksheetAgentTool({
+    ...baseOptions,
+    blockDocumentAdapter,
+    blockDocumentId,
+    databaseAdapter,
+    dashboardAgentTool,
+    worksheetTools,
+  });
 }
