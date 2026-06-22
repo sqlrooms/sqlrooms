@@ -1,7 +1,18 @@
 import {cn} from '@sqlrooms/ui';
 import {NodeViewWrapper} from '@tiptap/react';
-import {createElement, useCallback, type FC} from 'react';
-import {useBlockDocumentChartRenderer} from '../../BlockDocumentChartRendererContext';
+import {
+  createElement,
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  type FC,
+} from 'react';
+import {
+  type BlockDocumentChartRenderer,
+  type BlockDocumentChartRendererProps,
+  useBlockDocumentChartRenderer,
+} from '../../BlockDocumentChartRendererContext';
 import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
 
@@ -11,38 +22,54 @@ type BlockDocumentChartNodeViewProps = {
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
 
+type ChartRendererBoundaryProps = BlockDocumentChartRendererProps & {
+  Renderer: BlockDocumentChartRenderer;
+};
+
+const EMPTY_CHART_CONFIG: Record<string, never> = {};
+
+const ChartRendererBoundary = memo(
+  ({Renderer, ...props}: ChartRendererBoundaryProps) =>
+    createElement(Renderer, props),
+);
+
+ChartRendererBoundary.displayName = 'ChartRendererBoundary';
+
+/** Renders a chart block as a Tiptap node view inside the block document editor. */
 export const BlockDocumentChartNodeView: FC<
   BlockDocumentChartNodeViewProps
 > = ({node, selected, updateAttributes}) => {
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const Renderer = useBlockDocumentChartRenderer();
+  const updateAttributesRef = useRef(updateAttributes);
+  const readOnlyRef = useRef(readOnly);
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const tableName = optionalString(attrs.tableName) ?? '';
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
-  const config = attrs.config ?? {};
-  const handleTableNameChange = useCallback(
-    (nextTableName: string) => {
-      if (readOnly) return;
-      updateAttributes({tableName: nextTableName});
-    },
-    [readOnly, updateAttributes],
-  );
-  const handleConfigChange = useCallback(
-    (nextConfig: unknown) => {
-      if (readOnly) return;
-      updateAttributes({config: nextConfig});
-    },
-    [readOnly, updateAttributes],
-  );
-  const handleCaptionChange = useCallback(
-    (nextCaption: string | undefined) => {
-      if (readOnly) return;
-      updateAttributes({caption: nextCaption});
-    },
-    [readOnly, updateAttributes],
-  );
+  const config = attrs.config ?? EMPTY_CHART_CONFIG;
+
+  useEffect(() => {
+    updateAttributesRef.current = updateAttributes;
+  }, [updateAttributes]);
+
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
+
+  const handleTableNameChange = useCallback((nextTableName: string) => {
+    if (readOnlyRef.current) return;
+    updateAttributesRef.current({tableName: nextTableName});
+  }, []);
+  const handleConfigChange = useCallback((nextConfig: unknown) => {
+    if (readOnlyRef.current) return;
+    updateAttributesRef.current({config: nextConfig});
+  }, []);
+  const handleCaptionChange = useCallback((nextCaption: string | undefined) => {
+    if (readOnlyRef.current) return;
+    updateAttributesRef.current({caption: nextCaption});
+  }, []);
 
   return (
     <NodeViewWrapper
@@ -54,18 +81,19 @@ export const BlockDocumentChartNodeView: FC<
       data-block-document-widget-node-view=""
     >
       {Renderer ? (
-        createElement(Renderer, {
-          documentId,
-          blockId,
-          tableName,
-          config,
-          selectionGroupId,
-          caption,
-          readOnly,
-          onTableNameChange: handleTableNameChange,
-          onConfigChange: handleConfigChange,
-          onCaptionChange: handleCaptionChange,
-        })
+        <ChartRendererBoundary
+          Renderer={Renderer}
+          documentId={documentId}
+          blockId={blockId}
+          tableName={tableName}
+          config={config}
+          selectionGroupId={selectionGroupId}
+          caption={caption}
+          readOnly={readOnly}
+          onTableNameChange={handleTableNameChange}
+          onConfigChange={handleConfigChange}
+          onCaptionChange={handleCaptionChange}
+        />
       ) : (
         <div className="p-4">
           <div className="text-sm font-medium">Chart block</div>

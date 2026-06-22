@@ -3,6 +3,7 @@ import {isMacOS} from '@sqlrooms/utils';
 import {NodeViewWrapper} from '@tiptap/react';
 import {
   createElement,
+  memo,
   useCallback,
   useEffect,
   useMemo,
@@ -12,6 +13,8 @@ import {
   useState,
 } from 'react';
 import {
+  type BlockDocumentStatefulBlockRenderer,
+  type BlockDocumentStatefulBlockRendererProps,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockTypes,
 } from '../../BlockDocumentStatefulBlockRendererContext';
@@ -23,6 +26,18 @@ type BlockDocumentStatefulBlockNodeViewProps = {
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
 };
+
+type StatefulBlockRendererBoundaryProps =
+  BlockDocumentStatefulBlockRendererProps & {
+    Renderer: BlockDocumentStatefulBlockRenderer;
+  };
+
+const StatefulBlockRendererBoundary = memo(
+  ({Renderer, ...props}: StatefulBlockRendererBoundaryProps) =>
+    createElement(Renderer, props),
+);
+
+StatefulBlockRendererBoundary.displayName = 'StatefulBlockRendererBoundary';
 
 const SCROLL_HINT_HIDE_DELAY_MS = 900;
 const SCROLL_EPSILON = 1;
@@ -108,14 +123,17 @@ function scrollElementByWheel(element: HTMLElement, event: WheelEvent) {
   });
 }
 
+/** Renders a stateful block as a Tiptap node view inside the block document editor. */
 export const BlockDocumentStatefulBlockNodeView: FC<
   BlockDocumentStatefulBlockNodeViewProps
 > = ({node, selected, updateAttributes}) => {
+  const {documentId, readOnly} = useBlockDocumentEditorContext();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const updateAttributesRef = useRef(updateAttributes);
+  const readOnlyRef = useRef(readOnly);
   const hideScrollHintTimeoutRef = useRef<number | undefined>(undefined);
   const scrollHintTargetRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
-  const {documentId, readOnly} = useBlockDocumentEditorContext();
   const attrs = unknownRecord(node.attrs);
   const blockId = optionalString(attrs.id) ?? '';
   const blockType = optionalString(attrs.blockType) ?? '';
@@ -144,7 +162,15 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const [showScrollHint, setShowScrollHint] = useState(false);
   const resolvedHeight = resizingHeight ?? persistedHeight;
 
-  const wrapperStyle = resolvedHeight ? {height: resolvedHeight} : undefined;
+  const wrapperStyle = useMemo(
+    () => (resolvedHeight ? {height: resolvedHeight} : undefined),
+    [resolvedHeight],
+  );
+
+  useEffect(() => {
+    updateAttributesRef.current = updateAttributes;
+    readOnlyRef.current = readOnly;
+  }, [readOnly, updateAttributes]);
 
   useEffect(() => {
     return () => {
@@ -303,6 +329,16 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const handleTitleChange = useCallback((nextTitle: string | undefined) => {
+    if (readOnlyRef.current) return;
+    updateAttributesRef.current({title: nextTitle || undefined});
+  }, []);
+
+  const handleCaptionChange = useCallback((nextCaption: string | undefined) => {
+    if (readOnlyRef.current) return;
+    updateAttributesRef.current({caption: nextCaption});
+  }, []);
+
   return (
     <NodeViewWrapper
       className={cn(
@@ -319,21 +355,20 @@ export const BlockDocumentStatefulBlockNodeView: FC<
         data-scroll-modifier-required={requireScrollModifier || undefined}
       >
         {Renderer ? (
-          createElement(Renderer, {
-            documentId,
-            blockId,
-            blockType,
-            blockInstanceId,
-            ownership,
-            title,
-            caption,
-            height: resolvedHeight,
-            readOnly,
-            onTitleChange: (nextTitle: string | undefined) =>
-              updateAttributes({title: nextTitle || undefined}),
-            onCaptionChange: (nextCaption: string | undefined) =>
-              updateAttributes({caption: nextCaption}),
-          })
+          <StatefulBlockRendererBoundary
+            Renderer={Renderer}
+            documentId={documentId}
+            blockId={blockId}
+            blockType={blockType}
+            blockInstanceId={blockInstanceId}
+            ownership={ownership}
+            title={title}
+            caption={caption}
+            height={resolvedHeight}
+            readOnly={readOnly}
+            onTitleChange={handleTitleChange}
+            onCaptionChange={handleCaptionChange}
+          />
         ) : (
           <div className="p-4">
             <div className="text-sm font-medium">Stateful block</div>
