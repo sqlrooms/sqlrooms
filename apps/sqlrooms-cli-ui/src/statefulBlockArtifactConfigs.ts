@@ -147,6 +147,26 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.htmlApps.renameApp(artifactId, title);
     },
   },
+  python: {
+    artifactType: 'python',
+    stability: 'experimental',
+    label: 'Python',
+    defaultTitle: 'Python',
+    embeddedTitle: 'Python',
+    embeddedDescription: 'Python analysis block with visible code and outputs',
+    ensureState: (state, artifactId, title, options) => {
+      state.python.ensureBlock(artifactId, {
+        title,
+        code: options?.initialText,
+      });
+    },
+    deleteState: (state, artifactId) => {
+      state.python.removeBlock(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.python.renameBlock(artifactId, title);
+    },
+  },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
 
 export type StatefulBlockArtifactType =

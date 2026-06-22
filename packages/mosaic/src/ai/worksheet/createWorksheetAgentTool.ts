@@ -95,7 +95,9 @@ Use dashboard blocks when:
 - Dataset has multiple dimensions suitable for multi-faceted analysis
 - The dashboard will contain 3-5 panels showing different aspects of the data
 
-${htmlAppBlocksEnabled ? `
+${
+  htmlAppBlocksEnabled
+    ? `
 ### HTML App Blocks
 To create a custom embedded browser app inside the worksheet, use a TWO-STEP workflow:
 
@@ -121,7 +123,9 @@ Use html-app blocks when:
 
 If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its htmlAppId as appId to ${KnownWorksheetTools.embedded_html_app_agent}.
 For incremental edits to an existing worksheet app, such as changing title, labels, colors, styles, layout, controls, or interactions, do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
-` : ''}
+`
+    : ''
+}
 
 ## Workflows
 
@@ -280,11 +284,15 @@ IF user requests a MAP in a worksheet:
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
 3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel
 
-${htmlAppBlocksEnabled ? `
+${
+  htmlAppBlocksEnabled
+    ? `
 IF user requests an HTML/D3/Chart.js/browser app in a worksheet:
 1. For a new app, call ${KnownWorksheetTools.add_html_app_block} to create the container, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId
 2. For an existing app, call ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the htmlAppId as appId
-` : ''}
+`
+    : ''
+}
 
 Otherwise, create chart and text blocks directly using create_worksheet_block_* tools.
 

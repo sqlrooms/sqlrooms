@@ -25,10 +25,14 @@ import {
 } from '@sqlrooms/cells';
 import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
 import {
+  arrowTableToJson,
   createDefaultLoadTableSchemasFilter,
   createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
+  escapeVal,
+  makeQualifiedTableName,
   QualifiedTableName,
+  quoteTableReference,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
@@ -49,6 +53,15 @@ import {
 } from '@sqlrooms/mosaic';
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
+import {
+  createPythonBlockCommands,
+  createPythonSlice,
+  PythonSliceConfig,
+} from '@sqlrooms/python/block';
+import {
+  createPyodidePythonRuntimeAdapter,
+  type PythonRuntimeHost,
+} from '@sqlrooms/python/runtime';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -128,6 +141,7 @@ export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
+const WORKSHEET_PYTHON_COMMAND_OWNER = '@sqlrooms/python/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
@@ -178,6 +192,7 @@ const defaultModelFromConfig =
 const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
 const MOSAIC_PREAGG_SCHEMA = 'mosaic';
 const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
+const CLI_PYTHON_EXECUTION_TIMEOUT_MS = 120_000;
 const CRDT_STORAGE_KEY = [
   'sqlrooms-cli',
   runtimeConfig.metaNamespace || '__sqlrooms',
@@ -271,6 +286,329 @@ connector.loadFile = async (file, desiredTableName, options) => {
   return baseLoadFile(file, desiredTableName, options);
 };
 
+function createCliPythonRuntimeHost(): PythonRuntimeHost {
+  return {
+    readTable: ({tableName, maxRows}) =>
+      runReadonlyPythonSql(
+        `SELECT * FROM ${quoteTableReference(tableName)}`,
+        maxRows,
+      ),
+    runReadonlySql: ({query, maxRows}) => runReadonlyPythonSql(query, maxRows),
+    readSchema: ({tableName}) => readPythonSchema(tableName),
+  };
+}
+
+async function runReadonlyPythonSql(query: string, maxRows?: number) {
+  await assertSingleReadonlyPythonSql(query);
+  const arrowTable = await connector.query(
+    wrapPythonReadonlyQuery(query, maxRows),
+  );
+  const rows = arrowTableToPythonRows(arrowTable);
+  return {
+    columns: arrowTable.schema.fields.map((field) => field.name),
+    columnTypes: getPythonColumnTypes(arrowTable),
+    rows,
+    rowCount: rows.length,
+  };
+}
+
+function wrapPythonReadonlyQuery(query: string, maxRows?: number) {
+  const trimmedQuery = query.trim().replace(/;+$/, '');
+  if (hasStackedSqlStatements(query)) {
+    throw new Error('Python SQL bridge only allows a single readonly query.');
+  }
+  const limit =
+    maxRows === undefined ? '' : ` LIMIT ${Math.max(0, Math.floor(maxRows))}`;
+  return `SELECT * FROM (\n${trimmedQuery}\n) AS sqlrooms_python_query${limit}`;
+}
+
+async function assertSingleReadonlyPythonSql(query: string) {
+  if (hasStackedSqlStatements(query)) {
+    throw new Error('Python SQL bridge only allows a single readonly query.');
+  }
+
+  let parsedQuery: unknown;
+  try {
+    const result = await connector.query(
+      `SELECT json_serialize_sql(${escapeVal(query)})`,
+    );
+    parsedQuery = JSON.parse(String(result.getChildAt(0)?.get(0)));
+  } catch {
+    throw new Error(
+      'Python SQL bridge only allows a single readonly SELECT query.',
+    );
+  }
+
+  const statements =
+    parsedQuery &&
+    typeof parsedQuery === 'object' &&
+    'statements' in parsedQuery &&
+    Array.isArray(parsedQuery.statements)
+      ? parsedQuery.statements
+      : [];
+  const nodeType = String(
+    (statements[0] as {node?: {type?: unknown}} | undefined)?.node?.type ?? '',
+  ).toLowerCase();
+
+  if (statements.length !== 1 || !nodeType.includes('select')) {
+    throw new Error(
+      'Python SQL bridge only allows a single readonly SELECT query.',
+    );
+  }
+}
+
+function arrowTableToPythonRows(table: {
+  schema: {
+    fields: Array<{
+      name: string;
+      type?: unknown;
+    }>;
+  };
+  toArray(): Array<Record<string, unknown>>;
+}): Record<string, unknown>[] {
+  const typeByFieldName = new Map(
+    table.schema.fields.map((field) => [field.name, String(field.type ?? '')]),
+  );
+  return table
+    .toArray()
+    .map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+          key,
+          convertPythonBridgeValue(value, typeByFieldName.get(key)),
+        ]),
+      ),
+    );
+}
+
+function getPythonColumnTypes(table: {
+  schema: {
+    fields: Array<{
+      name: string;
+      type?: unknown;
+    }>;
+  };
+}) {
+  return Object.fromEntries(
+    table.schema.fields
+      .map((field) => [field.name, getPythonColumnType(field.type)] as const)
+      .filter((entry): entry is readonly [string, 'date' | 'timestamp'] =>
+        Boolean(entry[1]),
+      ),
+  );
+}
+
+function getPythonColumnType(type: unknown): 'date' | 'timestamp' | undefined {
+  const normalizedType = String(type ?? '').toLowerCase();
+  if (normalizedType.startsWith('date')) return 'date';
+  if (normalizedType.startsWith('timestamp')) return 'timestamp';
+  return undefined;
+}
+
+function convertPythonBridgeValue(value: unknown, arrowType?: string): unknown {
+  if (value == null) return null;
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (typeof value === 'bigint') {
+    if (value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER) {
+      return Number(value);
+    }
+    return String(value);
+  }
+  if (value instanceof Date) {
+    return arrowType?.toLowerCase().startsWith('date')
+      ? value.toISOString().slice(0, 10)
+      : value.toISOString();
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => convertPythonBridgeValue(item));
+  }
+  if (typeof value === 'object') {
+    const jsonValue =
+      'toJSON' in value && typeof value.toJSON === 'function'
+        ? value.toJSON()
+        : undefined;
+    if (jsonValue !== undefined && jsonValue !== value) {
+      return convertPythonBridgeValue(jsonValue, arrowType);
+    }
+  }
+  return String(value);
+}
+
+function hasStackedSqlStatements(query: string) {
+  const trailingSemicolonStart = findTrailingSemicolonStart(query);
+  let quote: "'" | '"' | undefined;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < query.length; index += 1) {
+    const char = query[index];
+    const next = query[index + 1];
+
+    if (lineComment) {
+      if (char === '\n' || char === '\r') {
+        lineComment = false;
+      }
+      continue;
+    }
+
+    if (blockComment) {
+      if (char === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        if (next === quote) {
+          index += 1;
+          continue;
+        }
+        quote = undefined;
+      }
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+
+    if (char === ';' && index < trailingSemicolonStart) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function findTrailingSemicolonStart(query: string) {
+  let index = query.length - 1;
+  while (index >= 0 && /\s/.test(query[index]!)) {
+    index -= 1;
+  }
+  while (index >= 0 && query[index] === ';') {
+    index -= 1;
+    while (index >= 0 && /\s/.test(query[index]!)) {
+      index -= 1;
+    }
+  }
+  return index + 1;
+}
+
+async function readPythonSchema(tableName?: string) {
+  if (tableName) {
+    const arrowTable = await connector.query(
+      `SELECT * FROM ${quoteTableReference(tableName)} LIMIT 0`,
+    );
+    return {
+      tables: [
+        {
+          tableName,
+          columns: arrowTable.schema.fields.map((field) => ({
+            name: field.name,
+            type: String(field.type),
+          })),
+        },
+      ],
+    };
+  }
+
+  const arrowTable = await connector.query(`
+    SELECT table_catalog, table_schema, table_name, column_name, data_type
+    FROM information_schema.columns
+    WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
+    ORDER BY table_catalog, table_schema, table_name, ordinal_position
+  `);
+  const rows = arrowTableToJson(arrowTable);
+  const currentDatabase = await readCurrentDatabaseName();
+  const tables = new Map<string, Array<{name: string; type?: string}>>();
+  for (const row of rows) {
+    const catalogName = String(row.table_catalog ?? '');
+    const schemaName = String(row.table_schema ?? 'main');
+    const currentTableName = String(row.table_name ?? '');
+    const columnName = String(row.column_name ?? '');
+    if (!currentTableName || !columnName) continue;
+    const table = makeQualifiedTableName({
+      database: catalogName || undefined,
+      schema: schemaName || undefined,
+      table: currentTableName,
+      defaultDatabase: currentDatabase,
+    });
+    if (!isPythonSchemaTableVisible(table, currentDatabase)) {
+      continue;
+    }
+    const qualifiedTableName = table.toFullString();
+    const columns = tables.get(qualifiedTableName) ?? [];
+    columns.push({
+      name: columnName,
+      type: row.data_type === undefined ? undefined : String(row.data_type),
+    });
+    tables.set(qualifiedTableName, columns);
+  }
+
+  return {
+    tables: [...tables.entries()].map(([qualifiedTableName, columns]) => ({
+      tableName: qualifiedTableName,
+      columns,
+    })),
+  };
+}
+
+async function readCurrentDatabaseName() {
+  const result = await connector.query('SELECT current_database()');
+  const value = result.getChildAt(0)?.get(0);
+  return value == null ? undefined : String(value);
+}
+
+function isPythonSchemaTableVisible(
+  table: QualifiedTableName,
+  currentDatabase: string | undefined,
+) {
+  const database = table.database;
+  const schema = table.schema;
+
+  if (
+    database &&
+    !defaultLoadSchemaCatalogFilter({type: 'database', database})
+  ) {
+    return false;
+  }
+
+  if (
+    database &&
+    schema &&
+    !defaultLoadSchemaCatalogFilter({type: 'schema', database, schema})
+  ) {
+    return false;
+  }
+
+  if (!defaultLoadSchemaCatalogFilter({type: 'table', table})) {
+    return false;
+  }
+
+  return !(table.database === currentDatabase && table.schema === 'mosaic');
+}
+
 function getRuntimeBridgeConfig() {
   if (runtimeConfig.dbBridge?.connections?.length) {
     return runtimeConfig.dbBridge;
@@ -296,6 +634,7 @@ const sliceConfigSchemas = {
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
   pivot: PivotSliceConfig,
+  python: PythonSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
@@ -406,6 +745,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           if (experimentalEnabled) {
             registerCommandsForOwner(
               store,
+              WORKSHEET_PYTHON_COMMAND_OWNER,
+              createPythonBlockCommands<RoomState>({
+                artifactType: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactType,
+                artifactLabel: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactLabel,
+                commandNamespace:
+                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandNamespace,
+                commandGroup: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandGroup,
+              }),
+            );
+            registerCommandsForOwner(
+              store,
               HTML_APP_REVISION_COMMAND_OWNER,
               createHtmlAppRevisionCommands(),
             );
@@ -415,6 +765,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, WORKSHEET_PYTHON_COMMAND_OWNER);
           unregisterCommandsForOwner(store, HTML_APP_REVISION_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
@@ -646,6 +997,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createNotebookSlice()(set, get, store),
 
         ...createPivotSlice()(set, get, store),
+
+        ...createPythonSlice({
+          runtimeAdapter: createPyodidePythonRuntimeAdapter(),
+          host: createCliPythonRuntimeHost(),
+          limits: {
+            timeoutMs: CLI_PYTHON_EXECUTION_TIMEOUT_MS,
+          },
+        })(set, get, store),
 
         ...createCanvasSlice()(set, get, store),
 

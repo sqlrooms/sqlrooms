@@ -8,6 +8,7 @@ import {
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
+import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo} from 'react';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
@@ -78,6 +79,19 @@ const WorksheetHtmlAppBlockRenderer: FC<
   />
 );
 
+const WorksheetPythonBlockRenderer: FC<
+  BlockDocumentStatefulBlockRendererProps
+> = (props) => (
+  <PythonBlock
+    artifactId={props.documentId}
+    blockId={props.blockInstanceId}
+    blockType={props.blockType}
+    title={props.title}
+    readOnly={props.readOnly}
+    compact
+  />
+);
+
 const ExperimentalStatefulBlockPlaceholder: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => (
@@ -104,6 +118,7 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   document: WorksheetMarkdownDocumentBlockRenderer,
   'sql-query': WorksheetSqlQueryBlockRenderer,
   'html-app': WorksheetHtmlAppBlockRenderer,
+  python: WorksheetPythonBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer
@@ -121,6 +136,7 @@ function createWorksheetStatefulBlockRenderers(
     document: ExperimentalStatefulBlockPlaceholder,
     'sql-query': ExperimentalStatefulBlockPlaceholder,
     'html-app': ExperimentalStatefulBlockPlaceholder,
+    python: ExperimentalStatefulBlockPlaceholder,
   };
 }
 
