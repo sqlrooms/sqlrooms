@@ -274,11 +274,7 @@ if "/tmp" not in __sqlrooms_sys.path:
 }
 
 function requestHostQuery(query: unknown, maxRows?: unknown) {
-  if (!activeExecutionId) {
-    throw new Error(
-      'SQLRooms host bridge is only available while a Python block runs.',
-    );
-  }
+  const executionId = getActiveHostBridgeExecutionId();
 
   const signal = new SharedArrayBuffer(4);
   const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
@@ -291,7 +287,7 @@ function requestHostQuery(query: unknown, maxRows?: unknown) {
 
   postMessage({
     type: 'hostRequest',
-    executionId: activeExecutionId,
+    executionId,
     requestId: createRequestId(),
     request,
     signal,
@@ -303,11 +299,7 @@ function requestHostQuery(query: unknown, maxRows?: unknown) {
 }
 
 function requestHostTable(tableName: string, maxRows?: unknown) {
-  if (!activeExecutionId) {
-    throw new Error(
-      'SQLRooms host bridge is only available while a Python block runs.',
-    );
-  }
+  const executionId = getActiveHostBridgeExecutionId();
 
   const signal = new SharedArrayBuffer(4);
   const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
@@ -320,7 +312,7 @@ function requestHostTable(tableName: string, maxRows?: unknown) {
 
   postMessage({
     type: 'hostRequest',
-    executionId: activeExecutionId,
+    executionId,
     requestId: createRequestId(),
     request,
     signal,
@@ -332,11 +324,7 @@ function requestHostTable(tableName: string, maxRows?: unknown) {
 }
 
 function requestHostSchema(tableName?: string) {
-  if (!activeExecutionId) {
-    throw new Error(
-      'SQLRooms host bridge is only available while a Python block runs.',
-    );
-  }
+  const executionId = getActiveHostBridgeExecutionId();
 
   const signal = new SharedArrayBuffer(4);
   const response = new SharedArrayBuffer(4 + HOST_RESPONSE_BUFFER_BYTES);
@@ -347,7 +335,7 @@ function requestHostSchema(tableName?: string) {
 
   postMessage({
     type: 'hostRequest',
-    executionId: activeExecutionId,
+    executionId,
     requestId: createRequestId(),
     request,
     signal,
@@ -356,6 +344,20 @@ function requestHostSchema(tableName?: string) {
 
   Atomics.wait(new Int32Array(signal), 0, 0);
   return readHostResponse(response);
+}
+
+function getActiveHostBridgeExecutionId(): string {
+  if (!activeExecutionId) {
+    throw new Error(
+      'SQLRooms host bridge is only available while a Python block runs.',
+    );
+  }
+  if (typeof SharedArrayBuffer === 'undefined') {
+    throw new Error(
+      'SQLRooms host bridge requires SharedArrayBuffer. Enable cross-origin isolation before running Python code that queries SQLRooms data.',
+    );
+  }
+  return activeExecutionId;
 }
 
 function readHostResponse(buffer: SharedArrayBuffer) {

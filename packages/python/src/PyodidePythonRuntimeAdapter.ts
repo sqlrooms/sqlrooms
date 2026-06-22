@@ -122,11 +122,6 @@ class PyodidePythonRuntimeAdapter implements PythonRuntimeAdapter {
     if (typeof Worker === 'undefined') {
       throw new Error('Pyodide Python execution requires a browser Worker.');
     }
-    if (typeof SharedArrayBuffer === 'undefined') {
-      throw new Error(
-        'Pyodide Python execution requires SharedArrayBuffer for SQLRooms host bridge calls.',
-      );
-    }
 
     const resolvedRequest = await resolveHostRequirements(request, host);
     const worker = this.ensureWorker();
