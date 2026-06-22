@@ -144,3 +144,22 @@ export {
   type KnowledgeIndex,
   type UnresolvedDocumentLink,
 } from './knowledgeIndex';
+export {type BlockDocumentAiAdapter} from './ai/BlockDocumentAiAdapter';
+export {
+  type BlockDocumentAgentResult as BlockDocumentAiAgentResult,
+  type BlockDocumentBlockSummary,
+  type ExtraBlockDocumentAiToolsFactory,
+  type ExtraBlockDocumentAiToolsParams,
+} from './ai/blockDocumentAiTypes';
+export {
+  createAddBlockDocumentTextBlockTool,
+  type CreateAddBlockDocumentTextBlockToolOptions,
+} from './ai/createAddBlockDocumentTextBlockTool';
+export {
+  createListBlockDocumentBlocksTool,
+  type CreateListBlockDocumentBlocksToolOptions,
+} from './ai/createListBlockDocumentBlocksTool';
+export {
+  BLOCK_DOCUMENT_TEXT_TOOL_NAME,
+  BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME,
+} from './ai/constants';
