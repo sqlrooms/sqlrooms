@@ -28,10 +28,12 @@ type BlockDocumentChartRendererContextValue = {
 const BlockDocumentChartRendererContext =
   createContext<BlockDocumentChartRendererContextValue>({});
 
+/** Props for providing a chart renderer to block document chart node views. */
 export type BlockDocumentChartRendererProviderProps = PropsWithChildren<{
   renderer?: BlockDocumentChartRenderer;
 }>;
 
+/** Provides the chart renderer used by block document chart node views. */
 export const BlockDocumentChartRendererProvider: FC<
   BlockDocumentChartRendererProviderProps
 > = ({renderer, children}) => {

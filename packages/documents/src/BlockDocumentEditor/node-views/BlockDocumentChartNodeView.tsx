@@ -26,6 +26,8 @@ type ChartRendererBoundaryProps = BlockDocumentChartRendererProps & {
   Renderer: BlockDocumentChartRenderer;
 };
 
+const EMPTY_CHART_CONFIG: Record<string, never> = {};
+
 const ChartRendererBoundary = memo(
   ({Renderer, ...props}: ChartRendererBoundaryProps) =>
     createElement(Renderer, props),
@@ -33,6 +35,7 @@ const ChartRendererBoundary = memo(
 
 ChartRendererBoundary.displayName = 'ChartRendererBoundary';
 
+/** Renders a chart block as a Tiptap node view inside the block document editor. */
 export const BlockDocumentChartNodeView: FC<
   BlockDocumentChartNodeViewProps
 > = ({node, selected, updateAttributes}) => {
@@ -45,7 +48,7 @@ export const BlockDocumentChartNodeView: FC<
   const tableName = optionalString(attrs.tableName) ?? '';
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
-  const config = attrs.config ?? {};
+  const config = attrs.config ?? EMPTY_CHART_CONFIG;
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
