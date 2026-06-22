@@ -55,14 +55,30 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
         }
 
         const tableName = params.tableName;
-        if (tableName) {
-          state.db.findTable(tableName);
+        if (tableName && !state.db.findTable(tableName)) {
+          throw new Error(`Table ${tableName} was not found`);
         }
 
         state.blockDocuments.ensureBlockDocument(worksheetId);
 
         const mapId = params.mapId ?? createDefaultBlockDocumentBlockId();
         const title = params.title || 'Map';
+        const existingMapBlock = params.mapId
+          ? state.blockDocuments
+              .getBlocks(worksheetId)
+              .find(
+                (block): block is BlockDocumentStatefulBlockBlock =>
+                  block.type === 'statefulBlock' &&
+                  block.blockType === 'map' &&
+                  block.blockInstanceId === params.mapId,
+              )
+          : undefined;
+        if (params.mapId && !existingMapBlock) {
+          throw new Error(
+            `Worksheet map block ${params.mapId} was not found in worksheet ${worksheetId}`,
+          );
+        }
+
         state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
         if (tableName) {
           state.mosaicDashboard.setSelectedTable(mapId, tableName);
@@ -98,7 +114,14 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
         }
 
         let blockId: string | undefined;
-        if (!params.mapId) {
+        if (existingMapBlock) {
+          state.blockDocuments.updateBlock(worksheetId, existingMapBlock.id, {
+            ...existingMapBlock,
+            title,
+            caption: title,
+          });
+          blockId = existingMapBlock.id;
+        } else {
           const block: BlockDocumentStatefulBlockBlock = {
             type: 'statefulBlock',
             id: createDefaultBlockDocumentBlockId(),

@@ -1,6 +1,13 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {DeckMapBlockRenderer} from '@sqlrooms/deck';
 
+/**
+ * Renders a worksheet map stateful block through the Deck embeddable map surface.
+ *
+ * @param props - Stateful block renderer props, including the map block instance
+ * ID, block type, title, and caption from the worksheet document.
+ * @returns The configured Deck map block renderer, or an unsupported block message.
+ */
 export const WorksheetMapBlockRenderer = ({
   blockInstanceId,
   blockType,

@@ -219,7 +219,11 @@ ${htmlAppBlocksEnabled ? '❌ Creating a top-level html-app artifact when the us
 ✅ Call create_worksheet_block_* tools to automatically create charts
 ✅ Mix different chart types to show different patterns
 ✅ Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
-✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel
+${
+  mapBlocksEnabled
+    ? '✅ For map requests, use the direct worksheet map block tool; call list_worksheet_blocks first when updating an existing map and pass its mapId'
+    : `✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel`
+}
 ${htmlAppBlocksEnabled ? `✅ For worksheet app requests, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent} so the app is embedded in the worksheet` : ''}
 ✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
 }
@@ -275,6 +279,7 @@ export function createWorksheetAgentTool<
     dashboardAgentTool,
     extraTools,
     htmlAppBlocksEnabled = true,
+    mapBlocksEnabled = false,
   } = options;
 
   return tool({
@@ -289,9 +294,14 @@ IF user requests DASHBOARD:
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with dashboardId to populate it with charts
 
 IF user requests a MAP in a worksheet:
-1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
+${
+  mapBlocksEnabled
+    ? `1. For a new map, call create_worksheet_map_block directly
+2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass the mapId to create_worksheet_map_block`
+    : `1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
-3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel
+3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel`
+}
 
 ${
   htmlAppBlocksEnabled
