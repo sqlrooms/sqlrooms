@@ -14,7 +14,7 @@ What happens:
 
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.
 - Serves the SQLRooms worksheet UI on `http://localhost:4173`, or the next free port, and opens your browser (disable with `--no-open-browser`).
-- Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
+- Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
 ## CLI flags
@@ -42,6 +42,27 @@ Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` i
 - `__sqlrooms.sync_rooms` (only used when `--experimental --experimental-sync` is enabled)
 
 Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
+
+## Manual smoke test
+
+Use this before release candidates to prove the first-launch path:
+
+```bash
+uv run --project python --package sqlrooms sqlrooms \
+  --no-open-browser \
+  ./smoke.duckdb
+```
+
+Then open the printed UI URL and verify:
+
+- The app starts without a database connection error.
+- Dragging `python/sqlrooms/tests/fixtures/cars.csv` into the data panel creates a `cars` table.
+- The uploaded CSV lands next to `smoke.duckdb` under `sqlrooms_uploads/`.
+- The data sidebar shows `main.cars` and does not show SQLRooms internal metadata.
+- A worksheet is created or selected automatically and contains a `cars` data-table explorer block.
+- Users can create worksheet and dashboard artifacts from the `New` menu without enabling `--experimental`.
+- Map, notebook, canvas, app, HTML app, pivot, and SQL query surfaces stay hidden unless `--experimental` is provided.
+- Restarting the same command with `./smoke.duckdb` restores the imported table and persisted workspace state.
 
 ## Config file
 
@@ -177,7 +198,7 @@ Local dev loop for the CLI and UI:
 
 ```bash
 pnpm install
-pnpm --filter sqlrooms-cli-app build
+pnpm --filter sqlrooms-python build:ui
 # build outputs directly to python/sqlrooms/sqlrooms/web/static
 ```
 
@@ -204,5 +225,5 @@ Tips:
 
 - Use `--no-open-browser` if you don’t want the static bundle auto-opened.
 - Use `--no-ui` when pairing the Python API server with the Vite UI dev server.
-- Rebuild the UI (`pnpm --filter sqlrooms-cli-app build`) when you want the Python server to serve new static assets.
+- Rebuild the UI (`pnpm --filter sqlrooms-python build:ui`) when you want the Python server to serve new static assets.
 - `/api/config` reflects runtime config (AI providers/default model, DB bridge metadata, WS URL).
