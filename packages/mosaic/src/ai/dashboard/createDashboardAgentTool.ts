@@ -220,10 +220,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
           abortSignal: toolOptions?.abortSignal,
         });
 
-        const metadata = calculateAgentResultMetadata(
-          tableName,
-          result.agentToolCalls,
-        );
+        const metadata = calculateAgentResultMetadata(result.agentToolCalls);
 
         return {
           success: true,

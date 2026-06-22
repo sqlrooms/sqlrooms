@@ -104,7 +104,7 @@ Block types:
 - heading: Section title (level 1-3)
 - paragraph: Regular text content
 - list: Bullet or numbered list of items`,
-    parameters: AddTextBlockToolInput,
+    inputSchema: AddTextBlockToolInput,
     execute: async (
       params: AddTextBlockToolInput,
     ): Promise<AddTextBlockToolOutput> => {

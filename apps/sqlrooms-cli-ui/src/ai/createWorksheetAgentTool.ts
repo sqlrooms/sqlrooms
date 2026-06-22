@@ -13,7 +13,6 @@ import {BLOCK_DOCUMENT_CHART_TOOL_PREFIX} from '@sqlrooms/mosaic/ai';
 import {resolveChartTypes} from '@sqlrooms/mosaic';
 import {AgentIntentSchemaFields} from '@sqlrooms/mosaic/ai';
 
-const WORKSHEET_AGENT_TOOL_NAME = 'worksheet_agent';
 const EMBEDDED_DASHBOARD_AGENT_TOOL_NAME = 'embedded_dashboard_agent';
 const EMBEDDED_HTML_APP_AGENT_TOOL_NAME = 'embedded_html_app_agent';
 
@@ -52,7 +51,9 @@ export type CreateWorksheetAgentToolOptions<TState> =
       chartMaxDataPoints?: number;
     };
     extraTools?: ExtraWorksheetAiToolsFactory;
-    worksheetTools: Record<string, Tool>;
+    worksheetTools:
+      | Record<string, Tool>
+      | ((blockDocumentId: string) => Record<string, Tool>);
   };
 
 function getWorksheetAgentInstructions<TState>(
@@ -170,6 +171,10 @@ Return a summary of what was created in the worksheet.`;
 }
 
 const WorksheetAgentInputParams = z.object({
+  worksheetId: z
+    .string()
+    .min(1, 'worksheetId is required')
+    .describe('The ID of the worksheet artifact to edit'),
   worksheetTitle: z
     .string()
     .optional()
@@ -188,8 +193,6 @@ export function createWorksheetAgentTool<
 >(
   options: CreateWorksheetAgentToolOptions<TState>,
 ): Tool<WorksheetAgentInputParams, WorksheetAgentResult> {
-  const blockDocumentId = options.blockDocumentId;
-
   return tool({
     description: `Create or update a worksheet with charts, text blocks, and interactive components.
 Use this to build data visualization worksheets with multiple chart blocks showing different aspects of the data.`,
@@ -198,51 +201,50 @@ Use this to build data visualization worksheets with multiple chart blocks showi
       const startTime = Date.now();
 
       try {
+        const blockDocumentId = params.worksheetId;
+
         options.blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         options.blockDocumentAdapter.setCurrentBlockDocument?.(blockDocumentId);
 
         const instructions = getWorksheetAgentInstructions(options);
-        const model = options.getModel({
-          state: options.store.getState(),
-          storeApi: options.store,
-        });
+        const model = options.getModel({state});
 
-        const dataTools = options.createDataTools({
-          state: options.store.getState(),
-          storeApi: options.store,
-        });
+        const dataTools =
+          options.createDataTools?.({store: options.store}) ?? {};
 
         const extraTools = options.extraTools?.() || {};
+
+        // Get worksheet tools - either static object or factory function result
+        const worksheetTools =
+          typeof options.worksheetTools === 'function'
+            ? options.worksheetTools(blockDocumentId)
+            : options.worksheetTools;
 
         const agent = new ToolLoopAgent({
           model,
           tools: {
             ...dataTools,
-            ...options.worksheetTools,
+            ...worksheetTools,
             ...extraTools,
           },
-          system: instructions,
-          loopControlAgent: {
-            maxIterations: 50,
-            stopCondition: (toolCalls) => stepCountIs(toolCalls, 20),
-          },
+          instructions,
+          stopWhen: [stepCountIs(20)],
         });
 
-        const result = await agent.run({
+        const result = await options.runSubAgent({
+          agent,
           prompt: params.intent || 'Create worksheet content',
+          store: options.store,
+          parentToolCallId: '',
+          abortSignal: undefined,
         });
 
-        const finalOutput = result.text || 'Worksheet created';
-        const duration = Date.now() - startTime;
-
+        const finalOutput = result.finalOutput || 'Worksheet created';
         return {
           success: true,
           finalOutput,
           worksheetId: blockDocumentId,
-          metadata: calculateAgentResultMetadata({
-            startTime,
-            result,
-          }),
+          metadata: calculateAgentResultMetadata(result.agentToolCalls),
         };
       } catch (error) {
         const duration = Date.now() - startTime;
@@ -250,10 +252,10 @@ Use this to build data visualization worksheets with multiple chart blocks showi
         if (error instanceof AiAgentError) {
           return {
             success: false,
-            finalOutput: error.finalOutput || '',
+            finalOutput: error.message,
             worksheetId: blockDocumentId,
             error: error.message,
-            metadata: error.metadata,
+            metadata: {duration},
           };
         }
 

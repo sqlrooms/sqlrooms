@@ -10,6 +10,7 @@ import {
   createBlockDocumentDataTableExplorerTool,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
+import {resolveChartTypes} from '@sqlrooms/mosaic';
 import {createAddHtmlAppBlockDocumentTool} from './createAddHtmlAppBlockDocumentTool';
 import type {BlockDocumentStatefulBlockBlock} from '@sqlrooms/documents';
 
@@ -54,7 +55,12 @@ export function createWorksheetBlockDocumentTools(
       blockDocumentAdapter: options.blockDocumentAdapter,
       blockDocumentId: options.blockDocumentId,
       databaseAdapter: options.databaseAdapter,
-      chartToolsOptions: options.chartToolsOptions,
+      chartToolsOptions: options.chartToolsOptions
+        ? {
+            chartTypes: resolveChartTypes(options.chartToolsOptions.chartTypes),
+            chartMaxDataPoints: options.chartToolsOptions.chartMaxDataPoints,
+          }
+        : undefined,
     }),
 
     // Mosaic dashboard block tool

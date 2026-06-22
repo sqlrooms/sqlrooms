@@ -1,8 +1,6 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
 import type {BaseAgentToolOptions} from '@sqlrooms/mosaic/ai';
-import {tool} from 'ai';
-import {z} from 'zod';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {
@@ -13,6 +11,7 @@ import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createWorksheetBlockDocumentTools} from './ai/createWorksheetBlockDocumentTools';
+import type {CreateWorksheetAgentToolOptions} from './ai/createWorksheetAgentTool';
 import {createWorksheetAgentTool} from './ai/createWorksheetAgentTool';
 
 export function worksheetAgentTool(store: StoreApi<RoomState>) {
@@ -44,59 +43,31 @@ export function worksheetAgentTool(store: StoreApi<RoomState>) {
     databaseAdapter,
   });
 
-  // Return a tool that lazily gets the current worksheet ID when executed
-  return tool({
-    description: `Create or update a worksheet with charts, text blocks, and interactive components.
-Use this to build data visualization worksheets with multiple chart blocks showing different aspects of the data.`,
-    inputSchema: z.object({
-      worksheetTitle: z
-        .string()
-        .optional()
-        .describe('Optional worksheet title if creating new worksheet'),
-      tableName: z
-        .string()
-        .optional()
-        .describe('Optional primary table/dataset name'),
-      intent: z
-        .string()
-        .min(1, 'intent cannot be empty')
-        .describe('The natural-language objective for the agent to satisfy.'),
-    }),
-    execute: async (params) => {
-      // Get current worksheet ID at execution time
-      const currentWorksheet = store.getState().artifacts.currentArtifact;
-      if (!currentWorksheet || currentWorksheet.type !== 'worksheet') {
-        return {
-          success: false,
-          finalOutput: '',
-          worksheetId: '',
-          error: 'No current worksheet artifact',
-        };
-      }
-
-      const blockDocumentId = currentWorksheet.id;
-
-      const worksheetTools = createWorksheetBlockDocumentTools({
+  // Create worksheet agent tool options
+  // Note: blockDocumentId will be determined dynamically in the agent tool itself
+  const worksheetAgentOptions: CreateWorksheetAgentToolOptions<RoomState> = {
+    ...baseOptions,
+    blockDocumentAdapter,
+    // Use empty string as placeholder - agent will get actual ID from artifacts at execution
+    blockDocumentId: '',
+    databaseAdapter,
+    dashboardAgentTool,
+    // worksheetTools factory - creates tools with the actual blockDocumentId at execution time
+    worksheetTools: (blockDocumentId: string) =>
+      createWorksheetBlockDocumentTools({
         blockDocumentAdapter,
         blockDocumentId,
         databaseAdapter,
         dashboardAgentTool,
         htmlAppAgentTool: htmlAppAgentTool(store),
-        createDashboardBlock: (p) => createDashboardBlockForWorksheet(store, p),
+        createDashboardBlock: (params) =>
+          createDashboardBlockForWorksheet(store, params),
         extraTools: () => ({}),
-      });
+      }),
+    extraTools: () => ({
+      embedded_html_app_agent: htmlAppAgentTool(store),
+    }),
+  };
 
-      const agentTool = createWorksheetAgentTool({
-        ...baseOptions,
-        blockDocumentAdapter,
-        blockDocumentId,
-        databaseAdapter,
-        dashboardAgentTool,
-        worksheetTools,
-      });
-
-      // Execute the actual agent tool
-      return await agentTool.execute(params);
-    },
-  });
+  return createWorksheetAgentTool(worksheetAgentOptions);
 }

@@ -76,7 +76,7 @@ export function createListBlockDocumentBlocksTool({
     description: `List existing blocks in the block document.
 
 Use this to inspect current document structure before modifying or adding blocks. Stateful blocks include blockType and blockInstanceId for further operations.`,
-    parameters: ListBlockDocumentBlocksToolInput,
+    inputSchema: ListBlockDocumentBlocksToolInput,
     execute: async (): Promise<ListBlockDocumentBlocksToolOutput> => {
       try {
         const blocks = blockDocumentAdapter.getBlocks(blockDocumentId) ?? [];
