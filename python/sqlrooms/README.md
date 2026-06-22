@@ -1,6 +1,6 @@
 # sqlrooms CLI
 
-Launch the SQLRooms AI example locally with a DuckDB websocket backend and persisted UI state inside the same DuckDB file.
+Launch a local SQLRooms DuckDB project for adding data, authoring worksheets, and building Mosaic charts and dashboards.
 
 ## Quick start
 
@@ -13,17 +13,18 @@ uvx sqlrooms \
 What happens:
 
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.
-- Serves the AI example UI on `http://localhost:4173`, or the next free port, and opens your browser (disable with `--no-open-browser`).
-- Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
+- Serves the SQLRooms worksheet UI on `http://localhost:4173`, or the next free port, and opens your browser (disable with `--no-open-browser`).
+- Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
 ## CLI flags
 
 - `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
 - `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
-- `--host` / `--port`: HTTP host/port for the UI. If `--port` is omitted, `4173` or the next free port is chosen automatically.
+- `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `4173` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
-- `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
+- `--experimental`: Enable experimental artifacts, blocks, commands, and agent tools.
+- `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires `--experimental`.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
 - `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
@@ -33,14 +34,45 @@ What happens:
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 
+`--host 0.0.0.0` is an advanced local-network mode. Only use it on trusted
+networks; it exposes the SQLRooms UI/API bind address beyond your loopback
+interface. The DuckDB websocket backend still enforces local-only connections
+unless you explicitly use external proxy settings.
+
+There is intentionally no `sqlrooms add`, `sqlrooms import`, or
+`sqlrooms doctor` command in the first public CLI. Drag-and-drop import is the
+supported first-launch path, and the release smoke checklist below covers the
+doctor-style checks for now.
+
 ## Data persistence
 
 Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` is provided):
 
 - `__sqlrooms.ui_state` (one row: `key='default'`)
-- `__sqlrooms.sync_rooms` (only used when `--sync` is enabled)
+- `__sqlrooms.sync_rooms` (only used when `--experimental --experimental-sync` is enabled)
 
 Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
+
+## Manual smoke test
+
+Use this before release candidates to prove the first-launch path:
+
+```bash
+uv run --project python --package sqlrooms sqlrooms \
+  --no-open-browser \
+  ./smoke.duckdb
+```
+
+Then open the printed UI URL and verify:
+
+- The app starts without a database connection error.
+- Dragging `python/sqlrooms/tests/fixtures/cars.csv` into the data panel creates a `cars` table.
+- The uploaded CSV lands next to `smoke.duckdb` under `sqlrooms_uploads/`.
+- The data sidebar shows `main.cars` and does not show SQLRooms internal metadata.
+- A worksheet is created or selected automatically and contains a `cars` data-table explorer block.
+- Users can create worksheet and dashboard artifacts from the `New` menu without enabling `--experimental`.
+- Map, notebook, canvas, app, HTML app, pivot, and SQL query surfaces stay hidden unless `--experimental` is provided.
+- Restarting the same command with `./smoke.duckdb` restores the imported table and persisted workspace state.
 
 ## Config file
 
@@ -131,7 +163,7 @@ results into core DuckDB for downstream notebook cells.
 Install optional connector dependencies first:
 
 ```bash
-# From python/sqlrooms-cli
+# From python/sqlrooms
 uv sync --extra connectors
 # or install just one connector:
 uv sync --extra postgres
@@ -158,7 +190,7 @@ uvx sqlrooms \
 
 What this enables:
 
-- `sqlrooms-cli` exposes connector bridge endpoints under `/api/db/*`.
+- `sqlrooms` exposes connector bridge endpoints under `/api/db/*`.
 - Runtime connector metadata is exposed via `/api/config`, so frontend `DbSlice` auto-registers available backend connections.
 - Notebook SQL cells can select Postgres/Snowflake connectors from the connector dropdown.
 - Arrow payloads are materialized into DuckDB and can be queried downstream in the same session.
@@ -176,8 +208,8 @@ Local dev loop for the CLI and UI:
 
 ```bash
 pnpm install
-pnpm --filter sqlrooms-cli-app build
-# build outputs directly to python/sqlrooms-cli/sqlrooms/web/static
+pnpm --filter sqlrooms-python build:ui
+# build outputs directly to python/sqlrooms/sqlrooms/web/static
 ```
 
 2. Dev the Python CLI app from the repo root:
@@ -190,12 +222,12 @@ This starts the Python API server on `http://127.0.0.1:4273` with `--no-ui`
 and the Vite UI on `http://localhost:4174`. If those ports are busy, the dev
 script selects the next free API and UI ports from separate ranges and points
 the Vite proxy at the selected API port. The auto-created dev database is named
-after the selected UI port, for example `sqlrooms-cli-4174.db`.
+after the selected UI port, for example `sqlrooms-4174.db`.
 
 3. Run the Python API server on its own (optional):
 
 ```bash
-cd python/sqlrooms-cli
+cd python/sqlrooms
 pnpm dev
 ```
 
@@ -203,5 +235,5 @@ Tips:
 
 - Use `--no-open-browser` if you don’t want the static bundle auto-opened.
 - Use `--no-ui` when pairing the Python API server with the Vite UI dev server.
-- Rebuild the UI (`pnpm --filter sqlrooms-cli-app build`) when you want the Python server to serve new static assets.
+- Rebuild the UI (`pnpm --filter sqlrooms-python build:ui`) when you want the Python server to serve new static assets.
 - `/api/config` reflects runtime config (AI providers/default model, DB bridge metadata, WS URL).

@@ -446,10 +446,20 @@ def main(
         "--no-ui",
         help="Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.",
     ),
-    sync: bool = typer.Option(
+    experimental: bool = typer.Option(
+        False,
+        "--experimental",
+        help="Enable experimental artifacts, blocks, commands, and agent tools.",
+    ),
+    experimental_sync: bool = typer.Option(
+        False,
+        "--experimental-sync",
+        help="Enable experimental sync (CRDT) over WebSocket (Loro). Requires --experimental.",
+    ),
+    legacy_sync: bool = typer.Option(
         False,
         "--sync",
-        help="Enable optional sync (CRDT) over WebSocket (Loro).",
+        hidden=True,
     ),
     ai_devtools: bool = typer.Option(
         False,
@@ -467,12 +477,35 @@ def main(
         "--meta-namespace",
         help="Namespace used for SQLRooms meta tables. If --meta-db is provided, this is the ATTACH alias; otherwise it's a schema in the main DB.",
     ),
+    external_url: str | None = typer.Option(
+        None,
+        "--external-url",
+        envvar="SQLROOMS_EXTERNAL_URL",
+        help="Public HTTP base URL to expose in runtime config, e.g. https://my-sprite.sprites.dev.",
+    ),
+    external_ws_url: str | None = typer.Option(
+        None,
+        "--external-ws-url",
+        envvar="SQLROOMS_EXTERNAL_WS_URL",
+        help="Public DuckDB websocket URL to expose in runtime config, e.g. wss://my-sprite.sprites.dev:4000.",
+    ),
 ):
     """
-    Start the SQLRooms local experience:
+    Launch a local SQLRooms project for adding data and building worksheets with Mosaic charts and dashboards.
+
     - Boots a DuckDB websocket server (sqlrooms-server).
-    - Serves the AI example UI with persisted state stored in DuckDB.
+    - Serves the worksheet UI with persisted state stored in DuckDB.
     """
+    if legacy_sync:
+        typer.echo(
+            "--sync has been renamed to --experimental-sync and is not part of the public launch surface.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    if experimental_sync and not experimental:
+        typer.echo("--experimental-sync requires --experimental.", err=True)
+        raise typer.Exit(code=1)
+
     try:
         config_path = _resolve_config_path(config, no_config=no_config)
         connector_settings = _load_connector_config(config_path)
@@ -505,7 +538,8 @@ def main(
         host=host,
         port=selected_port,
         ws_port=ws_port,
-        sync_enabled=sync,
+        sync_enabled=experimental_sync,
+        experimental_enabled=experimental,
         meta_db=meta_db,
         meta_namespace=meta_namespace,
         llm_provider=llm_provider,
@@ -519,9 +553,14 @@ def main(
         ui_dir=ui,
         serve_ui=not no_ui,
         config_path=save_config_path,
+        external_url=external_url,
+        external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
     )
     try:
         asyncio.run(server.start())
+    except RuntimeError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
     except KeyboardInterrupt:
         sys.stderr.write("\nShutting down...\n")

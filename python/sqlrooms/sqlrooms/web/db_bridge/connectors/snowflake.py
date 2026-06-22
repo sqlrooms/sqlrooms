@@ -9,9 +9,9 @@ from .base import BaseSqlBridgeConnector
 
 SNOWFLAKE_INSTALL_COMMANDS = {
     "uvProject": "uv sync --extra snowflake",
-    "uvxRelaunch": 'uvx --from "sqlrooms-cli[snowflake]" sqlrooms --db-path :memory:',
+    "uvxRelaunch": 'uvx --from "sqlrooms[snowflake]" sqlrooms --db-path :memory:',
     "uvxWith": (
-        'uvx --from sqlrooms-cli --with "snowflake-connector-python>=4.3.0" '
+        'uvx --from sqlrooms --with "snowflake-connector-python>=4.3.0" '
         "sqlrooms --db-path :memory:"
     ),
 }

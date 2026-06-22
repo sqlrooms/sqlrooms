@@ -4590,7 +4590,7 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
 
-  python/sqlrooms-cli:
+  python/sqlrooms:
     dependencies:
       sqlrooms-cli-app:
         specifier: workspace:*

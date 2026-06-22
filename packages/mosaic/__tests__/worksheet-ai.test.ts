@@ -143,6 +143,43 @@ describe('createWorksheetAiTools', () => {
     );
   });
 
+  it('omits html-app block creation tools when html app blocks are disabled', async () => {
+    const worksheetAdapter: WorksheetAiAdapter = {
+      setCurrentWorksheet: jest.fn(),
+      ensureWorksheet: jest.fn(),
+      getBlocks: () => [],
+      addBlock: jest.fn(),
+      addDashboardBlock: () => ({
+        blockId: 'dashboard-block-id',
+        dashboardId: 'dashboard-id',
+      }),
+      addDataTableExplorerBlock: () => 'table-block-id',
+    };
+
+    const tools = createWorksheetAiTools({
+      databaseAdapter: createMockDatabaseAdapter(),
+      worksheetAdapter,
+      worksheetId: 'worksheet-1',
+      dashboardAgentTool: tool({
+        description: 'mock dashboard agent',
+        inputSchema: z.object({}),
+        execute: async () => ({success: true}),
+      }),
+      htmlAppBlocksEnabled: false,
+    });
+
+    expect(tools[KnownWorksheetTools.add_html_app_block]).toBeUndefined();
+    expect(Object.keys(tools)).not.toContain(
+      KnownWorksheetTools.add_html_app_block,
+    );
+    expect(tools[KnownWorksheetTools.list_blocks]?.description).not.toContain(
+      'add_html_app_block',
+    );
+    expect(tools[KnownWorksheetTools.list_blocks]?.description).not.toContain(
+      'embedded_html_app_agent',
+    );
+  });
+
   it('lets existing worksheet html-app blocks be updated by appId without creating another block', async () => {
     const addBlock = jest.fn(
       (_worksheetId: string, block: BlockDocumentBlock) => block.id,

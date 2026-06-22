@@ -10,7 +10,7 @@ import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo} from 'react';
-import {useRoomStore} from '../store';
+import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
   type StatefulBlockArtifactType,
@@ -92,6 +92,25 @@ const WorksheetPythonBlockRenderer: FC<
   />
 );
 
+const ExperimentalStatefulBlockPlaceholder: FC<
+  BlockDocumentStatefulBlockRendererProps
+> = (props) => (
+  <div className="bg-muted/20 flex h-full min-h-[160px] items-center justify-center p-4 text-center">
+    <div className="bg-background max-w-md rounded-md border p-4">
+      <div className="text-sm font-medium">
+        {props.title || 'Experimental block'}
+      </div>
+      <p className="text-muted-foreground mt-2 text-sm">
+        This block uses an experimental SQLRooms surface. Reopen this project
+        with --experimental to view and edit it.
+      </p>
+      <div className="text-muted-foreground mt-3 text-xs">
+        Block type: {props.blockType}
+      </div>
+    </div>
+  </div>
+);
+
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
   pivot: WorksheetPivotBlockRenderer,
@@ -104,6 +123,21 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer
 >;
+
+function createWorksheetStatefulBlockRenderers(
+  includeExperimental: boolean,
+): Record<StatefulBlockArtifactType, BlockDocumentStatefulBlockRenderer> {
+  if (includeExperimental) {
+    return WORKSHEET_STATEFUL_BLOCK_RENDERERS;
+  }
+  return {
+    ...WORKSHEET_STATEFUL_BLOCK_RENDERERS,
+    pivot: ExperimentalStatefulBlockPlaceholder,
+    document: ExperimentalStatefulBlockPlaceholder,
+    'sql-query': ExperimentalStatefulBlockPlaceholder,
+    'html-app': ExperimentalStatefulBlockPlaceholder,
+  };
+}
 
 export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const artifactId = (meta?.artifactId as string) ?? panelId;
@@ -127,7 +161,12 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     () =>
       createStatefulBlockTypes({
         getState: useRoomStore.getState,
+        experimentalEnabled,
       }),
+    [],
+  );
+  const statefulBlockRenderers = useMemo(
+    () => createWorksheetStatefulBlockRenderers(experimentalEnabled),
     [],
   );
 
@@ -145,7 +184,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   return (
     <BlockDocumentChartRendererProvider renderer={ChartBlockRenderer}>
       <BlockDocumentStatefulBlockRendererProvider
-        renderers={WORKSHEET_STATEFUL_BLOCK_RENDERERS}
+        renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
       >
         <BlockDocumentArtifact

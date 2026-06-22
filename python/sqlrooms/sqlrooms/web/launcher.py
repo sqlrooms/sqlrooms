@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import errno
 import json
 import logging
@@ -12,10 +13,11 @@ import threading
 import webbrowser
 from pathlib import Path
 from typing import Any, Dict
+from urllib.parse import urlsplit, urlunsplit
 
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
-from fastapi import Request
+from fastapi import Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -410,6 +412,13 @@ def _encode_stream_frame(
     return len(header_bytes).to_bytes(4, byteorder="big") + header_bytes + payload
 
 
+def _derive_ws_proxy_url(external_url: str) -> str:
+    parsed = urlsplit(external_url.rstrip("/"))
+    scheme = {"http": "ws", "https": "wss"}.get(parsed.scheme, parsed.scheme)
+    base_path = parsed.path.rstrip("/")
+    return urlunsplit((scheme, parsed.netloc, f"{base_path}/ws/duckdb", "", ""))
+
+
 class SqlroomsHttpServer:
     def __init__(
         self,
@@ -432,7 +441,10 @@ class SqlroomsHttpServer:
         open_browser: bool = True,
         ui_dir: str | None = None,
         serve_ui: bool = True,
+        experimental_enabled: bool = False,
         config_path: Path | None = None,
+        external_url: str | None = None,
+        external_ws_url: str | None = None,
         ai_devtools: bool = False,
     ):
         db_path_str = str(db_path)
@@ -440,7 +452,7 @@ class SqlroomsHttpServer:
         if self.is_in_memory:
             self.db_path: Path | None = None
             self.duckdb_database = ":memory:"
-            base_dir = Path(tempfile.gettempdir()) / "sqlrooms-cli"
+            base_dir = Path(tempfile.gettempdir()) / "sqlrooms"
         else:
             self.db_path = Path(db_path).expanduser().resolve()
             self.duckdb_database = str(self.db_path)
@@ -462,6 +474,7 @@ class SqlroomsHttpServer:
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
+        self.experimental_enabled = bool(experimental_enabled)
         self.ai_devtools = bool(ai_devtools)
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -473,6 +486,8 @@ class SqlroomsHttpServer:
         )
         self.config_path = config_path
         self.connector_settings = connector_settings or []
+        self.external_url = external_url.rstrip("/") if external_url else None
+        self.external_ws_url = external_ws_url if external_ws_url else None
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -487,6 +502,7 @@ class SqlroomsHttpServer:
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
+        self._assert_ui_available()
         if self.meta_db:
             logger.info(
                 "Meta DB is ENABLED (db=%s, namespace=%s)",
@@ -506,6 +522,9 @@ class SqlroomsHttpServer:
         if self.open_browser and self.serve_ui:
             threading.Timer(1.0, self._open_browser).start()
 
+        logger.info("SQLRooms UI URL: %s", self._ui_url())
+        logger.info("DuckDB websocket URL: %s", self._ws_url())
+
         config = uvicorn.Config(
             app, host=self.host, port=self.port, log_level="info", loop="asyncio"
         )
@@ -513,7 +532,7 @@ class SqlroomsHttpServer:
         await server.serve()
 
     def _open_browser(self) -> None:
-        url = f"http://{self._public_host()}:{self.port}"
+        url = self._ui_url()
         try:
             webbrowser.open_new_tab(url)
         except Exception as exc:
@@ -522,7 +541,45 @@ class SqlroomsHttpServer:
             logger.info("Opened browser at %s", url)
 
     def _public_host(self) -> str:
+        return (
+            "localhost"
+            if self.host in ("0.0.0.0", "::", "127.0.0.1", "::1")
+            else self.host
+        )
+
+    def _ui_host(self) -> str:
         return "localhost" if self.host in ("0.0.0.0", "::") else self.host
+
+    @staticmethod
+    def _host_for_url(host: str) -> str:
+        if ":" in host and not host.startswith("["):
+            return f"[{host}]"
+        return host
+
+    def _ui_url(self) -> str:
+        return f"http://{self._host_for_url(self._ui_host())}:{self.port}"
+
+    def _ws_url(self) -> str:
+        return (
+            self.external_ws_url
+            or f"ws://{self._host_for_url(self._public_host())}:{self.ws_port}"
+        )
+
+    def _assert_ui_available(self) -> None:
+        if not self.serve_ui:
+            return
+        if self.index_html.exists():
+            return
+        if isinstance(self.ui_provider, DirectoryUiProvider):
+            raise RuntimeError(
+                f"SQLRooms UI bundle is missing: {self.index_html}. "
+                "Build the UI bundle or pass --no-ui to start only the API server."
+            )
+        raise RuntimeError(
+            f"Bundled SQLRooms UI is missing from this installation: {self.index_html}. "
+            "Reinstall sqlrooms or report a packaging issue. "
+            "Developers can rebuild it with `pnpm --filter sqlrooms-python build:ui`."
+        )
 
     def _start_duckdb_backend(self) -> None:
         self._duckdb_ready.clear()
@@ -587,19 +644,25 @@ class SqlroomsHttpServer:
         }
 
     def _runtime_config(self) -> Dict[str, Any]:
+        derived_ws_url = (
+            _derive_ws_proxy_url(self.external_url)
+            if self.external_url and not self.external_ws_url
+            else None
+        )
+        ws_url = self.external_ws_url or derived_ws_url or self._ws_url()
         return {
-            "wsUrl": f"ws://{self._public_host()}:{self.ws_port}",
+            "wsUrl": ws_url,
             "wsAuthToken": self.session_token,
-            "apiBaseUrl": "",
+            "apiBaseUrl": self.external_url or "",
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
-            "apiKey": self.api_key or "",
             "configWritable": self.config_path is not None,
+            "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
             "syncEnabled": self.sync_enabled,
-            "crdtWsUrl": f"ws://{self._public_host()}:{self.ws_port}",
+            "crdtWsUrl": ws_url,
             "crdtRoomId": (
-                f"sqlrooms-cli:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
+                f"sqlrooms:{self.meta_namespace}:{self.duckdb_database or 'memory'}"
             ),
             "aiProviders": self.ai_providers,
             "aiSettings": {
@@ -666,6 +729,60 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
+
+        @app.websocket("/ws/duckdb")
+        async def duckdb_websocket_proxy(client_ws: WebSocket):
+            await client_ws.accept()
+            try:
+                import websockets
+            except ImportError:
+                await client_ws.close(code=1011, reason="websockets package missing")
+                return
+
+            upstream_url = f"ws://127.0.0.1:{self.ws_port}"
+            try:
+                async with websockets.connect(
+                    upstream_url,
+                    max_size=None,
+                ) as upstream_ws:
+
+                    async def client_to_upstream() -> None:
+                        while True:
+                            message = await client_ws.receive()
+                            if message["type"] == "websocket.disconnect":
+                                await upstream_ws.close()
+                                return
+                            if message.get("bytes") is not None:
+                                await upstream_ws.send(message["bytes"])
+                            elif message.get("text") is not None:
+                                await upstream_ws.send(message["text"])
+
+                    async def upstream_to_client() -> None:
+                        async for message in upstream_ws:
+                            if isinstance(message, bytes):
+                                await client_ws.send_bytes(message)
+                            else:
+                                await client_ws.send_text(message)
+
+                    done, pending = await asyncio.wait(
+                        {
+                            asyncio.create_task(client_to_upstream()),
+                            asyncio.create_task(upstream_to_client()),
+                        },
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for task in pending:
+                        task.cancel()
+                    for task in done:
+                        task.result()
+            except WebSocketDisconnect:
+                return
+            except Exception:
+                logger.exception("DuckDB websocket proxy failed")
+                try:
+                    await client_ws.close(code=1011)
+                except Exception:
+                    pass
 
         @app.get("/api/status")
         async def get_status():

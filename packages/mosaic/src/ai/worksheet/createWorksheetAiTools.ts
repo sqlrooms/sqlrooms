@@ -32,6 +32,12 @@ export type CreateWorksheetAiToolsOptions = {
   worksheetId: string;
   /** Optional factory for additional custom tools */
   extraTools?: ExtraWorksheetAiToolsFactory;
+  /**
+   * Whether to expose built-in HTML app block tools. Defaults to `true` for
+   * existing integrations. Set to `false` when HTML app blocks are feature
+   * gated or unsupported by the host application.
+   */
+  htmlAppBlocksEnabled?: boolean;
 };
 
 /**
@@ -48,6 +54,7 @@ export function createWorksheetAiTools({
   worksheetId,
   dashboardAgentTool,
   extraTools,
+  htmlAppBlocksEnabled = true,
 }: CreateWorksheetAiToolsOptions): Record<string, Tool> {
   const chartTools = createWorksheetChartTools({
     databaseAdapter,
@@ -66,11 +73,6 @@ export function createWorksheetAiTools({
     worksheetId,
   });
 
-  const addHtmlAppBlockTool = createAddHtmlAppBlockTool({
-    worksheetAdapter,
-    worksheetId,
-  });
-
   const addDataTableExplorerTool = createWorksheetDataTableExplorerTool({
     databaseAdapter,
     worksheetAdapter,
@@ -80,6 +82,7 @@ export function createWorksheetAiTools({
   const listWorksheetBlocksTool = createListWorksheetBlocksTool({
     worksheetAdapter,
     worksheetId,
+    htmlAppBlocksEnabled,
   });
 
   const builtInTools: Record<string, Tool> = {
@@ -87,9 +90,16 @@ export function createWorksheetAiTools({
     [KnownWorksheetTools.list_blocks]: listWorksheetBlocksTool,
     [KnownWorksheetTools.add_text_block]: addTextBlockTool,
     [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
-    [KnownWorksheetTools.add_html_app_block]: addHtmlAppBlockTool,
     [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,
     [KnownWorksheetTools.embedded_dashboard_agent]: dashboardAgentTool,
+    ...(htmlAppBlocksEnabled
+      ? {
+          [KnownWorksheetTools.add_html_app_block]: createAddHtmlAppBlockTool({
+            worksheetAdapter,
+            worksheetId,
+          }),
+        }
+      : {}),
   };
 
   const additionalTools =

@@ -31,8 +31,8 @@ export type RuntimeConfig = {
   apiBaseUrl?: string;
   llmProvider?: string;
   llmModel?: string;
-  apiKey?: string;
   configWritable?: boolean;
+  experimentalEnabled?: boolean;
   aiDevtools?: boolean;
   syncEnabled?: boolean;
   crdtWsUrl?: string;

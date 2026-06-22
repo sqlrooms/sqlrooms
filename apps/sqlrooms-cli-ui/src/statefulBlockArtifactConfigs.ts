@@ -5,9 +5,12 @@ import type {
 } from '@sqlrooms/documents';
 import type {RoomState} from './store-types';
 
+export type FeatureStability = 'stable' | 'experimental';
+
 export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
   {
     artifactType: TArtifactType;
+    stability: FeatureStability;
     label: string;
     defaultTitle: string;
     embeddedTitle: string;
@@ -31,6 +34,7 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
 export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   dashboard: {
     artifactType: 'dashboard',
+    stability: 'stable',
     label: 'Dashboard',
     defaultTitle: 'Dashboard',
     embeddedTitle: 'Embedded Dashboard',
@@ -53,6 +57,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   pivot: {
     artifactType: 'pivot',
+    stability: 'experimental',
     label: 'Pivot Table',
     defaultTitle: 'Pivot Table',
     embeddedTitle: 'Embedded Pivot Table',
@@ -69,6 +74,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   'data-table': {
     artifactType: 'data-table',
+    stability: 'stable',
     label: 'Data Table',
     defaultTitle: 'Data Table',
     embeddedTitle: 'Data Table',
@@ -84,6 +90,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   document: {
     artifactType: 'document',
+    stability: 'experimental',
     label: 'Document',
     defaultTitle: 'Document',
     embeddedTitle: 'Embedded Document',
@@ -97,6 +104,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   'sql-query': {
     artifactType: 'sql-query',
+    stability: 'experimental',
     label: 'SQL Query',
     defaultTitle: 'SQL Query',
     embeddedTitle: 'Embedded SQL Query',
@@ -116,6 +124,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   'html-app': {
     artifactType: 'html-app',
+    stability: 'experimental',
     label: 'HTML App',
     defaultTitle: 'HTML App',
     embeddedTitle: 'Embedded HTML App',
@@ -140,6 +149,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
   },
   python: {
     artifactType: 'python',
+    stability: 'stable',
     label: 'Python',
     defaultTitle: 'Python',
     embeddedTitle: 'Python',
@@ -178,57 +188,74 @@ export function getStatefulBlockArtifactConfig(
   return STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
 }
 
-export function createStatefulBlockTypes({
-  getState,
-}: {
-  getState: () => RoomState;
-}): BlockDocumentStatefulBlockType[] {
-  return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
+function getEnabledStatefulBlockArtifactTypes(experimentalEnabled: boolean) {
+  return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
-    return {
-      blockType: config.artifactType,
-      label: config.label,
-      description: config.embeddedDescription,
-      resizableHeight: config.resizableHeight,
-      defaultHeight: config.defaultHeight,
-      minHeight: config.minHeight,
-      maxHeight: config.maxHeight,
-      requireScrollModifier: config.requireScrollModifier,
-      scrollHintLabel: config.scrollHintLabel,
-      createNode: (blockId, options) => {
-        const state = getState();
-        config.ensureState(state, blockId, config.embeddedTitle, options);
-        return {
-          type: 'blockDocumentStatefulBlock',
-          attrs: {
-            id: blockId,
-            blockType: config.artifactType,
-            blockInstanceId: blockId,
-            ownership: 'owned',
-            title: config.embeddedTitle,
-            caption: '',
-            ...(config.resizableHeight
-              ? {height: config.defaultHeight ?? 560}
-              : {}),
-          },
-        };
-      },
-    };
+    return config.stability === 'stable' || experimentalEnabled;
   });
 }
 
-export function createStatefulBlockCommandTypes(): BlockDocumentStatefulBlockCommandType<RoomState>[] {
-  return STATEFUL_BLOCK_ARTIFACT_TYPES.map((artifactType) => {
-    const config = getStatefulBlockArtifactConfig(artifactType);
-    return {
-      blockType: config.artifactType,
-      label: config.label,
-      description: config.embeddedDescription,
-      defaultTitle: config.embeddedTitle,
-      defaultHeight: config.defaultHeight,
-      ensureState: ({state, blockInstanceId, title}) => {
-        config.ensureState(state, blockInstanceId, title);
-      },
-    };
-  });
+export function createStatefulBlockTypes({
+  getState,
+  experimentalEnabled = false,
+}: {
+  getState: () => RoomState;
+  experimentalEnabled?: boolean;
+}): BlockDocumentStatefulBlockType[] {
+  return getEnabledStatefulBlockArtifactTypes(experimentalEnabled).map(
+    (artifactType) => {
+      const config = getStatefulBlockArtifactConfig(artifactType);
+      return {
+        blockType: config.artifactType,
+        label: config.label,
+        description: config.embeddedDescription,
+        resizableHeight: config.resizableHeight,
+        defaultHeight: config.defaultHeight,
+        minHeight: config.minHeight,
+        maxHeight: config.maxHeight,
+        requireScrollModifier: config.requireScrollModifier,
+        scrollHintLabel: config.scrollHintLabel,
+        createNode: (blockId, options) => {
+          const state = getState();
+          config.ensureState(state, blockId, config.embeddedTitle, options);
+          return {
+            type: 'blockDocumentStatefulBlock',
+            attrs: {
+              id: blockId,
+              blockType: config.artifactType,
+              blockInstanceId: blockId,
+              ownership: 'owned',
+              title: config.embeddedTitle,
+              caption: '',
+              ...(config.resizableHeight
+                ? {height: config.defaultHeight ?? 560}
+                : {}),
+            },
+          };
+        },
+      };
+    },
+  );
+}
+
+export function createStatefulBlockCommandTypes({
+  experimentalEnabled = false,
+}: {
+  experimentalEnabled?: boolean;
+} = {}): BlockDocumentStatefulBlockCommandType<RoomState>[] {
+  return getEnabledStatefulBlockArtifactTypes(experimentalEnabled).map(
+    (artifactType) => {
+      const config = getStatefulBlockArtifactConfig(artifactType);
+      return {
+        blockType: config.artifactType,
+        label: config.label,
+        description: config.embeddedDescription,
+        defaultTitle: config.embeddedTitle,
+        defaultHeight: config.defaultHeight,
+        ensureState: ({state, blockInstanceId, title}) => {
+          config.ensureState(state, blockInstanceId, title);
+        },
+      };
+    },
+  );
 }

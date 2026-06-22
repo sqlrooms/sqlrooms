@@ -1,5 +1,6 @@
 import socket
 
+import duckdb
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
@@ -12,6 +13,8 @@ from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
 from pathlib import Path
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -38,6 +41,7 @@ def test_api_config(server):
     assert "dbBridge" in data
     assert "aiProviders" in data
     assert data["aiDevtools"] is False
+    assert data["experimentalEnabled"] is False
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
@@ -45,6 +49,77 @@ def test_api_config(server):
     assert (
         data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
     )
+
+
+def test_api_config_normalizes_loopback_ws_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["wsUrl"] == "ws://localhost:48174"
+
+
+def test_ui_url_wraps_ipv6_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="::1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+
+    assert server._ui_url() == "http://[::1]:4173"
+
+
+def test_ws_url_wraps_ipv6_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="2001:db8::1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+
+    assert server._ws_url() == "ws://[2001:db8::1]:48174"
+
+
+def test_startup_fails_when_configured_ui_bundle_is_missing(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(tmp_path / "missing-ui"),
+    )
+
+    with pytest.raises(RuntimeError, match="SQLRooms UI bundle is missing"):
+        server._assert_ui_available()
+
+
+def test_api_config_with_experimental_enabled(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        experimental_enabled=True,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["experimentalEnabled"] is True
 
 
 def test_pick_free_port_scans_up_from_occupied_port():
@@ -157,6 +232,67 @@ def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
     assert server._runtime_status()["status"] == "ready"
 
 
+def test_api_config_with_external_urls(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+        external_ws_url="wss://demo.sprites.dev/ws/duckdb",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
+def test_api_config_derives_ws_url_from_external_url(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
+def test_api_config_derives_proxy_ws_url_from_local_external_url(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="http://localhost:4173",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "http://localhost:4173"
+    assert data["wsUrl"] == "ws://localhost:4173/ws/duckdb"
+
+
 def test_api_config_with_ai_provider_metadata(tmp_path):
     db_path = tmp_path / "test.db"
     server = SqlroomsHttpServer(
@@ -183,7 +319,9 @@ def test_api_config_with_ai_provider_metadata(tmp_path):
     data = response.json()
     assert data["llmProvider"] == "openai"
     assert data["llmModel"] == "gpt-5"
+    assert "apiKey" not in data
     assert "openai" in data["aiProviders"]
+    assert data["aiProviders"]["openai"]["apiKey"] == "demo-key"
 
 
 def test_api_config_with_ai_devtools_flag(tmp_path):
@@ -217,6 +355,62 @@ def test_api_upload(server, tmp_path):
     assert "path" in data
     assert Path(data["path"]).name == "test.txt"
     assert Path(data["path"]).read_bytes() == file_content
+
+
+def test_api_upload_sanitizes_filename_to_upload_dir(server, tmp_path):
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("../../evil.csv", b"id\n1\n", "text/csv")},
+    )
+
+    assert response.status_code == 200
+    uploaded_path = Path(response.json()["path"])
+    assert uploaded_path == tmp_path / "sqlrooms_uploads" / "evil.csv"
+    assert uploaded_path.read_text() == "id\n1\n"
+
+
+def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
+    app = server._build_app()
+    fixture = FIXTURES_DIR / "cars.csv"
+
+    client = TestClient(app)
+    with fixture.open("rb") as file:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("cars.csv", file, "text/csv")},
+        )
+
+    assert response.status_code == 200
+    uploaded_path = Path(response.json()["path"])
+    assert uploaded_path == tmp_path / "sqlrooms_uploads" / "cars.csv"
+    assert uploaded_path.read_text() == fixture.read_text()
+
+    with duckdb.connect(str(tmp_path / "fresh.duckdb")) as con:
+        con.execute(
+            "CREATE TABLE cars AS SELECT * FROM read_csv_auto(?)",
+            [str(uploaded_path)],
+        )
+        row_count = con.sql("SELECT count(*) FROM cars").fetchone()[0]
+        columns = [row[1] for row in con.sql("PRAGMA table_info('cars')").fetchall()]
+
+    assert row_count == 4
+    assert columns == ["make", "model", "year", "origin", "horsepower", "mpg"]
+
+
+def test_project_query_blocks_internal_metadata_namespace(server):
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/project/query",
+        json={"sql": "SELECT * FROM __sqlrooms.ui_state"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Access to internal schema __sqlrooms is denied"
 
 
 def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):

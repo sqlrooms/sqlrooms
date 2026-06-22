@@ -88,6 +88,12 @@ export type CreateWorksheetAgentToolOptions<TState> =
     databaseAdapter: DatabaseAiAdapter;
     dashboardAgentTool: Tool;
     /**
+     * Whether the worksheet agent should expose built-in HTML app block tools
+     * and instructions. Defaults to `true` for existing integrations. Hosts
+     * can set this to `false` when HTML app blocks are behind a feature gate.
+     */
+    htmlAppBlocksEnabled?: boolean;
+    /**
      * Host-provided worksheet tools keyed by their registered tool name.
      * Register custom tools (e.g., maps, charts, data loaders) to extend
      * the worksheet agent's capabilities.
