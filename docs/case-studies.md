@@ -8,6 +8,24 @@ Built something with SQLRooms? We'd love to feature it!
 
 [Submit your app](https://github.com/sqlrooms/sqlrooms/discussions/categories/case-studies) to be included on this page.
 
+## [ChordShell.com](https://www.chordshell.com/) {#chordshellcom}
+
+[ChordShell.com](https://www.chordshell.com/) is a harmony workspace for musicians built with SQLRooms. It adapts SQLRooms' room, artifact, layout, document, and AI primitives for music theory workflows, bringing chord exploration, scale exploration, chord sheets, recordings, notes, and an assistant into one composable workspace.
+
+<video src="/media/case-studies/chordshell.mp4" alt="ChordShell.com harmony workspace" width="450" loop muted controls autoplay>
+  <img src="/media/case-studies/chordshell.webp" alt="ChordShell.com harmony workspace" width="450" />
+</video>
+
+ChordShell demonstrates SQLRooms beyond traditional analytics dashboards: musical structures become inspectable workspace state, and the assistant can use the same application tools as the UI to analyze theory and make edits.
+
+Key features include:
+
+- **Domain-specific Artifacts**: Compose chords explorers, scales explorers, chord sheets, recordings, and documents inside a shared SQLRooms workspace
+- **Interactive Harmony Exploration**: Explore guitar and piano voicings, tunings, note spellings, chord tones, scales, and circle-of-fifths relationships
+- **AI-Assisted Music Theory**: Parse chord symbols, analyze notes, harmonize scales, suggest scales over chords, and update workspace artifacts through app-level tools
+- **Composable Workspace Model**: Keep musical context visible across panels so chord sheets, theory views, recordings, notes, and assistant conversations can work together
+- **Musician-Friendly Playback**: Audition selected chords and scales while changing voicings, instruments, and harmonic context
+
 ## [Foursquare Spatial Desktop](https://foursquare.com/products/spatial-desktop)
 
 [Foursquare Spatial Desktop](https://foursquare.com/products/spatial-desktop) is a powerful geospatial computing tool that transforms your desktop into a comprehensive spatial analysis environment. Built on SQLRooms, it delivers native DuckDB query performance and real-time visualization rendering—all powered natively on your machine without requiring server infrastructure.

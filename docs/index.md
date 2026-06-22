@@ -25,6 +25,10 @@ hero:
     alt: SQLRooms AI
 
 caseStudies:
+  - title: 'ChordShell.com'
+    href: '/case-studies.html#chordshellcom'
+    img: '/carousel/chordshell.webp'
+    alt: 'ChordShell.com harmony workspace screenshot'
   - title: 'Foursquare Spatial Desktop'
     href: '/case-studies.html#foursquare-spatial-desktop'
     img: '/carousel/fsq-spatial-desktop-earthquakes.webp'
