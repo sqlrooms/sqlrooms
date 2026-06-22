@@ -7,6 +7,7 @@ export * from './ai/types';
 export * from './ai/database-types';
 export * from './ai/dashboard/dashboard-types';
 export * from './ai/constants';
+export {AgentIntentSchemaFields} from './ai/agentIntent';
 export {createDashboardAiTools} from './ai/dashboard/createDashboardAiTools';
 export {createDashboardAgentTool} from './ai/dashboard/createDashboardAgentTool';
 export {
@@ -26,3 +27,5 @@ export {
   ADD_MOSAIC_DASHBOARD_BLOCK_TOOL_NAME,
   ADD_DATA_TABLE_EXPLORER_BLOCK_TOOL_NAME,
 } from './ai/block-document/constants';
+export {calculateAgentResultMetadata} from './ai/tool-helpers';
+export {AiAgentError} from './ai/errors';

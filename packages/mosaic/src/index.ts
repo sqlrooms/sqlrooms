@@ -304,6 +304,10 @@ export {
   BoxPlotChartSettings,
 } from './charts/chart-types';
 
+// Chart utilities
+export {createChartToolsInstructions} from './charts/chart-types/createChartInstructions';
+export {resolveChartTypes} from './charts/chart-types/resolveChartTypes';
+
 export type {
   ChartBuilderColumn,
   ChartBuilderDashboardPanelOutput,
