@@ -25,10 +25,6 @@ hero:
     alt: SQLRooms AI
 
 caseStudies:
-  - title: 'ChordShell.com'
-    href: '/case-studies.html#chordshellcom'
-    img: '/carousel/chordshell.webp'
-    alt: 'ChordShell.com harmony workspace screenshot'
   - title: 'Foursquare Spatial Desktop'
     href: '/case-studies.html#foursquare-spatial-desktop'
     img: '/carousel/fsq-spatial-desktop-earthquakes.webp'
@@ -45,6 +41,10 @@ caseStudies:
     href: '/case-studies.html#transcality'
     img: '/carousel/transcality-600px.webp'
     alt: 'Transcality screenshot'
+  - title: 'ChordShell.com'
+    href: '/case-studies.html#chordshellcom'
+    img: '/carousel/chordshell.webp'
+    alt: 'ChordShell.com harmony workspace screenshot'
 
 features:
   - title: Local Analytics, No Backend Required
