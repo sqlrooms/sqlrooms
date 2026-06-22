@@ -41,9 +41,9 @@ function createDefaultDbPath() {
 }
 
 // Keep the standalone dev API aligned with the Vite proxy default. Production
-// `sqlrooms` still auto-selects a free port when --port is omitted.
+// `sqlrooms` still starts from the public CLI app port when --port is omitted.
 const portArgs =
-  readOptionValue(forwardedArgs, '--port') === null ? ['--port', '4173'] : [];
+  readOptionValue(forwardedArgs, '--port') === null ? ['--port', '4273'] : [];
 const dbPathArgs =
   readOptionValue(forwardedArgs, '--db-path') === null &&
   readOptionValue(forwardedArgs, '-d') === null

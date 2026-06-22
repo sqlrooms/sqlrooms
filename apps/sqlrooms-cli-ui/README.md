@@ -2,7 +2,7 @@
 
 This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms`).
 
-In development it runs as a separate dev server (default `http://localhost:4174`) and **proxies API calls** to the Python server.
+In development it runs as a separate dev server (default `http://localhost:3100`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:
 
@@ -24,7 +24,7 @@ uv run --project python --package sqlrooms sqlrooms \
 ```
 
 Open the UI URL printed in the terminal. It should be
-`http://127.0.0.1:4173` or the next free port.
+`http://127.0.0.1:3000` or the next free port.
 
 The bare CLI command works only after installing the CLI somewhere on your
 `PATH`:
@@ -62,13 +62,13 @@ pnpm dev cli
 This starts:
 
 - the Python API server on `http://127.0.0.1:4273` without serving static UI, or the next free port
-- the Vite UI on `http://localhost:4174`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
-- a per-session dev database named after the selected UI port, for example `sqlrooms-4174.db`
+- the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
+- a per-session dev database named after the selected UI port, for example `sqlrooms-3100.db`
 
 If you want fixed ports, pass them to the Python server:
 
 ```bash
-pnpm dev cli -- --port 4176 --ws-port 4002
+pnpm dev cli -- --port 4274 --ws-port 4002
 ```
 
 ## Dev mode (separate terminals)
@@ -83,10 +83,10 @@ pnpm dev -- --no-ui
 Terminal B (UI):
 
 ```bash
-pnpm --filter sqlrooms-cli-app dev -- --host --port 4174
+pnpm --filter sqlrooms-cli-app dev -- --host --port 3100
 ```
 
-The Python package dev helper uses API port `4173` by default to match the
+The Python package dev helper uses API port `4273` by default to match the
 Vite proxy. If you pass a different Python API port, also set
 `SQLROOMS_CLI_API_PROXY_TARGET` when starting Vite.
 

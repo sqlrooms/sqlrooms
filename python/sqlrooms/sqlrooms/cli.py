@@ -37,7 +37,7 @@ if sys.platform.startswith("win"):
 else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
-DEFAULT_HTTP_PORT = 4173
+DEFAULT_HTTP_PORT = 3000
 
 
 def _configure_logging(*, debug: bool) -> None:
@@ -419,7 +419,7 @@ def main(
     port: int | None = typer.Option(
         None,
         "--port",
-        help="HTTP port for the UI. If omitted, 4173 or the next free port is chosen automatically.",
+        help="HTTP port for the UI. If omitted, 3000 or the next free port is chosen automatically.",
     ),
     ws_port: int | None = typer.Option(
         None,

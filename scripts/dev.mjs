@@ -84,7 +84,7 @@ const childEnv = {
   SQLROOMS_CLI_DEV_ARGS: JSON.stringify(cliArgs),
 };
 const CLI_DEV_API_DEFAULT_PORT = 4273;
-const CLI_DEV_UI_DEFAULT_PORT = 4174;
+const CLI_DEV_UI_DEFAULT_PORT = 3100;
 
 function readOptionValue(args, name) {
   const prefix = `${name}=`;
