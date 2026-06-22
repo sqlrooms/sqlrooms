@@ -211,9 +211,9 @@ importers:
       '@sqlrooms/pivot':
         specifier: workspace:*
         version: link:../../packages/pivot
-      '@sqlrooms/python-cell':
+      '@sqlrooms/python':
         specifier: workspace:*
-        version: link:../../packages/python-cell
+        version: link:../../packages/python
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -3924,7 +3924,7 @@ importers:
 
   packages/preset-typescript: {}
 
-  packages/python-cell:
+  packages/python:
     dependencies:
       '@codemirror/autocomplete':
         specifier: ^6.20.2

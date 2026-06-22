@@ -1,6 +1,6 @@
 import {z} from 'zod';
 
-/** Runtime adapter families supported by Python cell state. */
+/** Runtime adapter families supported by Python block state. */
 export const PythonRuntimeAdapterKind = z.enum([
   'pyodide',
   'sidecar',
@@ -8,7 +8,7 @@ export const PythonRuntimeAdapterKind = z.enum([
 ]);
 export type PythonRuntimeAdapterKind = z.infer<typeof PythonRuntimeAdapterKind>;
 
-/** Execution status persisted in bounded Python cell result summaries. */
+/** Execution status persisted in bounded Python result summaries. */
 export const PythonExecutionStatus = z.enum([
   'idle',
   'running',
@@ -18,8 +18,8 @@ export const PythonExecutionStatus = z.enum([
 ]);
 export type PythonExecutionStatus = z.infer<typeof PythonExecutionStatus>;
 
-/** Declared input made available to a Python cell execution. */
-export const PythonCellInput = z.discriminatedUnion('kind', [
+/** Declared input made available to Python execution. */
+export const PythonInput = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('tableRef'),
     name: z.string(),
@@ -43,10 +43,10 @@ export const PythonCellInput = z.discriminatedUnion('kind', [
     value: z.unknown(),
   }),
 ]);
-export type PythonCellInput = z.infer<typeof PythonCellInput>;
+export type PythonInput = z.infer<typeof PythonInput>;
 
-/** Declared output a Python cell may write back into SQLRooms. */
-export const PythonCellOutputDeclaration = z.discriminatedUnion('type', [
+/** Declared output Python may write back into SQLRooms. */
+export const PythonOutputDeclaration = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('text'),
     name: z.string(),
@@ -78,11 +78,9 @@ export const PythonCellOutputDeclaration = z.discriminatedUnion('type', [
     name: z.string(),
   }),
 ]);
-export type PythonCellOutputDeclaration = z.infer<
-  typeof PythonCellOutputDeclaration
->;
+export type PythonOutputDeclaration = z.infer<typeof PythonOutputDeclaration>;
 
-/** Package requirement requested by a Python cell. */
+/** Package requirement requested by Python execution. */
 export const PythonRequirementSpec = z.object({
   name: z.string(),
   version: z.string().optional(),
@@ -90,23 +88,21 @@ export const PythonRequirementSpec = z.object({
 });
 export type PythonRequirementSpec = z.infer<typeof PythonRequirementSpec>;
 
-/** Bounded persisted execution policy for a Python cell. */
-export const PythonCellExecutionPolicy = z
+/** Bounded persisted execution policy for a Python block. */
+export const PythonExecutionPolicy = z
   .object({
     autorun: z.literal(false).optional(),
     runOnInputChange: z.literal(false).optional(),
   })
   .default({});
-export type PythonCellExecutionPolicy = z.infer<
-  typeof PythonCellExecutionPolicy
->;
+export type PythonExecutionPolicy = z.infer<typeof PythonExecutionPolicy>;
 
-/** Runtime preference stored with a Python cell without naming Pyodide as state. */
-export const PythonCellRuntimeSpec = z.object({
+/** Runtime preference stored with a Python block without naming Pyodide as state. */
+export const PythonRuntimeSpec = z.object({
   kind: z.literal('python').default('python'),
   preferredAdapter: PythonRuntimeAdapterKind.optional(),
 });
-export type PythonCellRuntimeSpec = z.infer<typeof PythonCellRuntimeSpec>;
+export type PythonRuntimeSpec = z.infer<typeof PythonRuntimeSpec>;
 
 /** Portable output handle returned by Python execution. */
 export const PythonExecutionOutput = z.discriminatedUnion('type', [
@@ -159,8 +155,8 @@ export const PythonExecutionError = z.object({
 });
 export type PythonExecutionError = z.infer<typeof PythonExecutionError>;
 
-/** Bounded result summary persisted in Python cell state. */
-export const PythonCellResultSummary = z.object({
+/** Bounded result summary persisted in Python block state. */
+export const PythonResultSummary = z.object({
   executionId: z.string(),
   status: PythonExecutionStatus.exclude(['idle', 'running']),
   startedAt: z.number().optional(),
@@ -171,28 +167,28 @@ export const PythonCellResultSummary = z.object({
   error: PythonExecutionError.optional(),
   outputs: z.array(PythonExecutionOutput).default([]),
 });
-export type PythonCellResultSummary = z.infer<typeof PythonCellResultSummary>;
+export type PythonResultSummary = z.infer<typeof PythonResultSummary>;
 
-/** Durable Python cell state stored in SQLRooms room config. */
-export const PythonCellState = z.object({
+/** Durable Python block state stored in SQLRooms room config. */
+export const PythonBlockState = z.object({
   id: z.string(),
-  title: z.string().default('Python Cell'),
+  title: z.string().default('Python'),
   code: z.string().default(''),
-  runtime: PythonCellRuntimeSpec.default({kind: 'python'}),
-  inputs: z.array(PythonCellInput).default([]),
-  outputs: z.array(PythonCellOutputDeclaration).default([]),
+  runtime: PythonRuntimeSpec.default({kind: 'python'}),
+  inputs: z.array(PythonInput).default([]),
+  outputs: z.array(PythonOutputDeclaration).default([]),
   requirements: z.array(PythonRequirementSpec).default([]),
-  executionPolicy: PythonCellExecutionPolicy,
-  lastResult: PythonCellResultSummary.optional(),
+  executionPolicy: PythonExecutionPolicy,
+  lastResult: PythonResultSummary.optional(),
   updatedAt: z.number().default(0),
 });
-export type PythonCellState = z.infer<typeof PythonCellState>;
+export type PythonBlockState = z.infer<typeof PythonBlockState>;
 
-/** Persisted slice config for Python cells. */
-export const PythonCellSliceConfig = z.object({
-  cells: z.record(z.string(), PythonCellState).default({}),
+/** Persisted slice config for Python blocks. */
+export const PythonSliceConfig = z.object({
+  blocks: z.record(z.string(), PythonBlockState).default({}),
 });
-export type PythonCellSliceConfig = z.infer<typeof PythonCellSliceConfig>;
+export type PythonSliceConfig = z.infer<typeof PythonSliceConfig>;
 
 /** Request passed from SQLRooms to a Python runtime adapter. */
 export type PythonExecutionRequest = {
@@ -200,9 +196,9 @@ export type PythonExecutionRequest = {
   blockId: string;
   artifactId?: string;
   code: string;
-  inputs: PythonCellInput[];
+  inputs: PythonInput[];
   grantedCapabilities: PythonRuntimeCapability[];
-  outputDeclarations: PythonCellOutputDeclaration[];
+  outputDeclarations: PythonOutputDeclaration[];
   requirements?: PythonRequirementSpec[];
   limits?: {
     timeoutMs?: number;
@@ -260,11 +256,11 @@ export type PythonSchemaSummary = {
 };
 
 /** Table input spec resolved by the SQLRooms host. */
-export type PythonTableInputSpec = Extract<PythonCellInput, {kind: 'tableRef'}>;
+export type PythonTableInputSpec = Extract<PythonInput, {kind: 'tableRef'}>;
 
 /** Table output spec resolved by the SQLRooms host. */
 export type PythonTableOutputSpec = Extract<
-  PythonCellOutputDeclaration,
+  PythonOutputDeclaration,
   {type: 'table'}
 >;
 

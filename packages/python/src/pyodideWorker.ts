@@ -2,8 +2,8 @@
 
 import {loadPyodide, type PyodideAPI} from 'pyodide';
 import type {
-  PythonCellInput,
-  PythonCellOutputDeclaration,
+  PythonInput,
+  PythonOutputDeclaration,
   PythonExecutionOutput,
   PythonExecutionRequest,
   PythonExecutionResult,
@@ -215,7 +215,7 @@ async function executePython(
     try {
       bindInputs(pyodide, request.inputs);
       const lastExpressionResult = await pyodide.runPythonAsync(request.code, {
-        filename: `<sqlrooms-python-cell:${request.blockId}>`,
+        filename: `<sqlrooms-python-block:${request.blockId}>`,
       });
       const hasResult = pyodide.runPython('"result" in globals()');
       if (!hasResult && lastExpressionResult !== undefined) {
@@ -263,7 +263,7 @@ if "/tmp" not in __sqlrooms_sys.path:
 function requestHostQuery(query: unknown, maxRows?: unknown) {
   if (!activeExecutionId) {
     throw new Error(
-      'SQLRooms host bridge is only available while a cell runs.',
+      'SQLRooms host bridge is only available while a Python block runs.',
     );
   }
 
@@ -292,7 +292,7 @@ function requestHostQuery(query: unknown, maxRows?: unknown) {
 function requestHostTable(tableName: string, maxRows?: unknown) {
   if (!activeExecutionId) {
     throw new Error(
-      'SQLRooms host bridge is only available while a cell runs.',
+      'SQLRooms host bridge is only available while a Python block runs.',
     );
   }
 
@@ -321,7 +321,7 @@ function requestHostTable(tableName: string, maxRows?: unknown) {
 function requestHostSchema(tableName?: string) {
   if (!activeExecutionId) {
     throw new Error(
-      'SQLRooms host bridge is only available while a cell runs.',
+      'SQLRooms host bridge is only available while a Python block runs.',
     );
   }
 
@@ -408,7 +408,7 @@ await __sqlrooms_micropip.install("altair")
 `);
 }
 
-function bindInputs(pyodide: PyodideAPI, inputs: PythonCellInput[]) {
+function bindInputs(pyodide: PyodideAPI, inputs: PythonInput[]) {
   for (const input of inputs) {
     if (input.kind === 'literal') {
       bindPythonGlobal(pyodide, input.name, input.value);
@@ -464,7 +464,7 @@ function createRequestId() {
 
 function clearDeclaredOutputs(
   pyodide: PyodideAPI,
-  declarations: PythonCellOutputDeclaration[],
+  declarations: PythonOutputDeclaration[],
 ) {
   for (const declaration of declarations) {
     pyodide.globals.delete(declaration.name);
@@ -473,7 +473,7 @@ function clearDeclaredOutputs(
 
 function readResultOutput(
   pyodide: PyodideAPI,
-  outputDeclarations: PythonCellOutputDeclaration[],
+  outputDeclarations: PythonOutputDeclaration[],
 ): PythonExecutionOutput[] {
   const hasResult = pyodide.runPython('"result" in globals()');
   const declaredOutputs = outputDeclarations.map((output) => ({

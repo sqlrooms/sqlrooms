@@ -8,7 +8,7 @@ import {
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
-import {PythonCellBlock} from '@sqlrooms/python-cell';
+import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {
@@ -79,10 +79,10 @@ const WorksheetHtmlAppBlockRenderer: FC<
   />
 );
 
-const WorksheetPythonCellBlockRenderer: FC<
+const WorksheetPythonBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => (
-  <PythonCellBlock
+  <PythonBlock
     artifactId={props.documentId}
     blockId={props.blockInstanceId}
     blockType={props.blockType}
@@ -99,7 +99,7 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   document: WorksheetMarkdownDocumentBlockRenderer,
   'sql-query': WorksheetSqlQueryBlockRenderer,
   'html-app': WorksheetHtmlAppBlockRenderer,
-  'python-cell': WorksheetPythonCellBlockRenderer,
+  python: WorksheetPythonBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer

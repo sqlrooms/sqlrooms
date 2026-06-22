@@ -50,12 +50,14 @@ import {
 import {createNotebookSlice, NotebookSliceConfig} from '@sqlrooms/notebook';
 import {createPivotSlice, PivotSliceConfig} from '@sqlrooms/pivot';
 import {
-  createPythonCellCommands,
-  createPythonCellSlice,
+  createPythonBlockCommands,
+  createPythonSlice,
+  PythonSliceConfig,
+} from '@sqlrooms/python/block';
+import {
   createPyodidePythonRuntimeAdapter,
-  PythonCellSliceConfig,
   type PythonRuntimeHost,
-} from '@sqlrooms/python-cell';
+} from '@sqlrooms/python/runtime';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -135,7 +137,7 @@ export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
-const WORKSHEET_PYTHON_CELL_COMMAND_OWNER = '@sqlrooms/python-cell/worksheet';
+const WORKSHEET_PYTHON_COMMAND_OWNER = '@sqlrooms/python/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const SQLROOMS_CLI_AI_INSTRUCTIONS = `
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, app, map, chart, or other visual surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
@@ -430,7 +432,7 @@ const sliceConfigSchemas = {
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
   pivot: PivotSliceConfig,
-  pythonCells: PythonCellSliceConfig,
+  python: PythonSliceConfig,
 } as const;
 
 const persistHelpers = createPersistHelpers(sliceConfigSchemas);
@@ -536,8 +538,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           );
           registerCommandsForOwner(
             store,
-            WORKSHEET_PYTHON_CELL_COMMAND_OWNER,
-            createPythonCellCommands<RoomState>({
+            WORKSHEET_PYTHON_COMMAND_OWNER,
+            createPythonBlockCommands<RoomState>({
               artifactType: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactType,
               artifactLabel: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactLabel,
               commandNamespace:
@@ -555,10 +557,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
-          unregisterCommandsForOwner(
-            store,
-            WORKSHEET_PYTHON_CELL_COMMAND_OWNER,
-          );
+          unregisterCommandsForOwner(store, WORKSHEET_PYTHON_COMMAND_OWNER);
           unregisterCommandsForOwner(store, HTML_APP_REVISION_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
@@ -787,7 +786,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...createPivotSlice()(set, get, store),
 
-        ...createPythonCellSlice({
+        ...createPythonSlice({
           runtimeAdapter: createPyodidePythonRuntimeAdapter(),
           host: createCliPythonRuntimeHost(),
         })(set, get, store),

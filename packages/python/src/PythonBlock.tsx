@@ -25,27 +25,27 @@ import {
   type ComponentType,
   type FC,
 } from 'react';
-import {PYTHON_CELL_BLOCK_TYPE} from './PythonCellCommands';
-import type {PythonCellSliceState} from './PythonCellSlice';
+import {PYTHON_BLOCK_TYPE} from './PythonBlockCommands';
+import type {PythonSliceState} from './PythonSlice';
 import type {
-  PythonCellInput,
-  PythonCellOutputDeclaration,
-  PythonCellResultSummary,
+  PythonInput,
+  PythonOutputDeclaration,
+  PythonResultSummary,
   PythonExecutionOutput,
 } from './types';
-import {useStoreWithPythonCells} from './useStoreWithPythonCells';
+import {useStoreWithPython} from './useStoreWithPython';
 
-export type PythonCellBlockRenderProps<
-  TRoomState extends PythonCellSliceState = PythonCellSliceState,
+export type PythonBlockRenderProps<
+  TRoomState extends PythonSliceState = PythonSliceState,
 > = StatefulBlockRenderProps<TRoomState> & {
   artifactId?: string;
   compact?: boolean;
   className?: string;
 };
 
-export type PythonCellBlockProps = PythonCellBlockRenderProps;
+export type PythonBlockProps = PythonBlockRenderProps;
 
-export const PythonCellBlock: FC<PythonCellBlockProps> = ({
+export const PythonBlock: FC<PythonBlockProps> = ({
   blockId,
   title,
   readOnly,
@@ -53,40 +53,38 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
   compact,
   className,
 }) => {
-  const cell = useStoreWithPythonCells((state) =>
-    blockId ? state.pythonCells.config.cells[blockId] : undefined,
+  const pythonBlock = useStoreWithPython((state) =>
+    blockId ? state.python.config.blocks[blockId] : undefined,
   );
-  const runtime = useStoreWithPythonCells((state) =>
-    blockId ? state.pythonCells.runtimeByCellId[blockId] : undefined,
+  const runtime = useStoreWithPython((state) =>
+    blockId ? state.python.runtimeByBlockId[blockId] : undefined,
   );
-  const ensureCell = useStoreWithPythonCells(
-    (state) => state.pythonCells.ensureCell,
+  const ensureBlock = useStoreWithPython((state) => state.python.ensureBlock);
+  const updateBlockCode = useStoreWithPython(
+    (state) => state.python.updateBlockCode,
   );
-  const updateCellCode = useStoreWithPythonCells(
-    (state) => state.pythonCells.updateCellCode,
-  );
-  const runCell = useStoreWithPythonCells((state) => state.pythonCells.runCell);
-  const clearCellResult = useStoreWithPythonCells(
-    (state) => state.pythonCells.clearCellResult,
+  const runBlock = useStoreWithPython((state) => state.python.runBlock);
+  const clearBlockResult = useStoreWithPython(
+    (state) => state.python.clearBlockResult,
   );
 
   useEffect(() => {
     if (!blockId) return;
-    ensureCell(blockId, {title: title ?? 'Python Cell'});
-  }, [blockId, ensureCell, title]);
+    ensureBlock(blockId, {title: title ?? 'Python'});
+  }, [blockId, ensureBlock, title]);
 
   const handleCodeChange = useCallback(
     (code: string) => {
       if (!blockId || readOnly) return;
-      updateCellCode(blockId, code);
+      updateBlockCode(blockId, code);
     },
-    [blockId, readOnly, updateCellCode],
+    [blockId, readOnly, updateBlockCode],
   );
 
   const handleRun = useCallback(() => {
     if (!blockId || readOnly || runtime?.status === 'running') return;
-    void runCell(blockId, {artifactId});
-  }, [artifactId, blockId, readOnly, runCell, runtime?.status]);
+    void runBlock(blockId, {artifactId});
+  }, [artifactId, blockId, readOnly, runBlock, runtime?.status]);
 
   const editorExtensions = useMemo(
     () => [
@@ -120,19 +118,19 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
 
   const handleClear = useCallback(() => {
     if (!blockId || readOnly) return;
-    clearCellResult(blockId);
-  }, [blockId, clearCellResult, readOnly]);
+    clearBlockResult(blockId);
+  }, [blockId, clearBlockResult, readOnly]);
 
   if (!blockId) {
     return (
       <div className="text-muted-foreground p-4 text-sm">
-        Python cell block is missing a cell id.
+        Python block is missing a block id.
       </div>
     );
   }
 
   const isRunning = runtime?.status === 'running';
-  const result = cell?.lastResult;
+  const result = pythonBlock?.lastResult;
 
   return (
     <section
@@ -145,7 +143,7 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
         <FileCode2Icon className="text-muted-foreground h-4 w-4 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">
-            {cell?.title ?? title ?? 'Python Cell'}
+            {pythonBlock?.title ?? title ?? 'Python'}
           </div>
           <div className="text-muted-foreground truncate text-xs">
             {runtimeLabel(isRunning, result)}
@@ -159,14 +157,14 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
                 size="icon"
                 variant="secondary"
                 className="h-7 w-7 shrink-0"
-                disabled={readOnly || isRunning || !cell?.code.trim()}
+                disabled={readOnly || isRunning || !pythonBlock?.code.trim()}
                 onClick={handleRun}
-                aria-label="Run Python cell"
+                aria-label="Run Python"
               >
                 <PlayIcon className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Run Python cell</TooltipContent>
+            <TooltipContent>Run Python</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -176,7 +174,7 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
                 className="h-7 w-7 shrink-0"
                 disabled={readOnly || isRunning || !result}
                 onClick={handleClear}
-                aria-label="Clear Python cell result"
+                aria-label="Clear Python result"
               >
                 <EraserIcon className="h-3.5 w-3.5" />
               </Button>
@@ -190,7 +188,7 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
           'h-auto min-h-[160px] border-0 [&_.cm-editor]:min-h-[160px]',
           compact ? 'min-h-[120px] [&_.cm-editor]:min-h-[120px]' : undefined,
         )}
-        value={cell?.code ?? ''}
+        value={pythonBlock?.code ?? ''}
         readOnly={readOnly}
         onChange={handleCodeChange}
         extensions={editorExtensions}
@@ -201,35 +199,33 @@ export const PythonCellBlock: FC<PythonCellBlockProps> = ({
           autocompletion: true,
         }}
       />
-      <CellDeclarations
-        inputs={cell?.inputs ?? []}
-        outputs={cell?.outputs ?? []}
+      <PythonDeclarations
+        inputs={pythonBlock?.inputs ?? []}
+        outputs={pythonBlock?.outputs ?? []}
       />
-      <PythonCellResultPanel isRunning={isRunning} result={result} />
+      <PythonResultPanel isRunning={isRunning} result={result} />
     </section>
   );
 };
 
-export type CreatePythonCellBlockDefinitionOptions<
-  TRoomState extends PythonCellSliceState = PythonCellSliceState,
+export type CreatePythonBlockDefinitionOptions<
+  TRoomState extends PythonSliceState = PythonSliceState,
 > = {
-  render?: ComponentType<PythonCellBlockRenderProps<TRoomState>>;
+  render?: ComponentType<PythonBlockRenderProps<TRoomState>>;
   label?: string;
   defaultTitle?: string;
 };
 
-/** Creates the embeddable stateful block definition for Python cells. */
-export function createPythonCellBlockDefinition<
-  TRoomState extends PythonCellSliceState = PythonCellSliceState,
+/** Creates the embeddable stateful block definition for Python blocks. */
+export function createPythonBlockDefinition<
+  TRoomState extends PythonSliceState = PythonSliceState,
 >({
-  render = PythonCellBlock as ComponentType<
-    PythonCellBlockRenderProps<TRoomState>
-  >,
-  label = 'Python Cell',
-  defaultTitle = 'Python Cell',
-}: CreatePythonCellBlockDefinitionOptions<TRoomState> = {}): StatefulBlockDefinition<TRoomState> {
+  render = PythonBlock as ComponentType<PythonBlockRenderProps<TRoomState>>,
+  label = 'Python',
+  defaultTitle = 'Python',
+}: CreatePythonBlockDefinitionOptions<TRoomState> = {}): StatefulBlockDefinition<TRoomState> {
   return {
-    type: PYTHON_CELL_BLOCK_TYPE,
+    type: PYTHON_BLOCK_TYPE,
     label,
     defaultTitle,
     icon: FileCode2Icon,
@@ -243,22 +239,22 @@ export function createPythonCellBlockDefinition<
     },
     render,
     ensureState: ({blockId, title, getState}) => {
-      getState().pythonCells.ensureCell(blockId, {
+      getState().python.ensureBlock(blockId, {
         title: title ?? defaultTitle,
       });
     },
     rename: ({blockId, title, getState}) => {
-      getState().pythonCells.renameCell(blockId, title);
+      getState().python.renameBlock(blockId, title);
     },
     deleteState: ({blockId, getState}) => {
-      getState().pythonCells.removeCell(blockId);
+      getState().python.removeBlock(blockId);
     },
   };
 }
 
 const ResultStatusBadge: FC<{
   isRunning: boolean;
-  result?: PythonCellResultSummary;
+  result?: PythonResultSummary;
 }> = ({isRunning, result}) => {
   if (isRunning) return <Badge variant="secondary">Running</Badge>;
   if (!result) return <Badge variant="outline">Idle</Badge>;
@@ -266,9 +262,9 @@ const ResultStatusBadge: FC<{
   return <Badge variant="destructive">{result.status}</Badge>;
 };
 
-const CellDeclarations: FC<{
-  inputs: PythonCellInput[];
-  outputs: PythonCellOutputDeclaration[];
+const PythonDeclarations: FC<{
+  inputs: PythonInput[];
+  outputs: PythonOutputDeclaration[];
 }> = ({inputs, outputs}) => {
   if (inputs.length === 0 && outputs.length === 0) return null;
   return (
@@ -287,9 +283,9 @@ const CellDeclarations: FC<{
   );
 };
 
-const PythonCellResultPanel: FC<{
+const PythonResultPanel: FC<{
   isRunning: boolean;
-  result?: PythonCellResultSummary;
+  result?: PythonResultSummary;
 }> = ({isRunning, result}) => {
   if (isRunning) {
     return (
@@ -464,7 +460,7 @@ function createVegaLiteOutputHtml(spec: Record<string, unknown>) {
 </html>`;
 }
 
-function runtimeLabel(isRunning: boolean, result?: PythonCellResultSummary) {
+function runtimeLabel(isRunning: boolean, result?: PythonResultSummary) {
   if (isRunning) return 'Execution in progress';
   if (!result) return 'Local Python runtime adapter pending';
   if (result.status === 'success') {

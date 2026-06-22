@@ -28,7 +28,7 @@
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
-    "@sqlrooms/python-cell": "workspace:*",
+    "@sqlrooms/python": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

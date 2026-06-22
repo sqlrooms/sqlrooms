@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/python-cell",
+  "name": "@sqlrooms/python",
   "version": "0.29.0-rc.8",
   "repository": {
     "type": "git",
@@ -9,6 +9,24 @@
   "author": "SQLRooms Contributors",
   "sideEffects": false,
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js",
+      "default": "./dist/runtime.js"
+    },
+    "./block": {
+      "types": "./dist/block.d.ts",
+      "import": "./dist/block.js",
+      "default": "./dist/block.js"
+    },
+    "./package.json": "./package.json"
+  },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

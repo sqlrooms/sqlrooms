@@ -1,36 +1,36 @@
-Python cell blocks for SQLRooms worksheets and block documents.
+Python runtime and block primitives for SQLRooms worksheets and block documents.
 
 This package provides:
 
-- persisted Python cell state schemas for code, inputs, outputs, requirements,
+- persisted Python block state schemas for code, inputs, outputs, requirements,
   execution policy, and bounded last-result summaries
-- `createPythonCellSlice()` for durable cell state and runtime result updates
+- `createPythonSlice()` for durable block state and runtime result updates
 - a Pyodide worker runtime adapter with SQLRooms host-query bridge support
-- `PythonCellBlock` and `createPythonCellBlockDefinition()` for embeddable
+- `PythonBlock` and `createPythonBlockDefinition()` for embeddable
   worksheet/document blocks
-- `createPythonCellCommands()` for command-backed create, update, run, and clear
-  operations
+- `createPythonBlockCommands()` for command-backed create, update, run, and
+  clear operations
 
-If no runtime adapter is configured, running a cell records a bounded error
+If no runtime adapter is configured, running a block records a bounded error
 result instead of executing hidden Python.
 
 ## Store setup
 
 ```tsx
 import {
-  createPythonCellSlice,
-  PythonCellSliceConfig,
-  type PythonCellSliceState,
-} from '@sqlrooms/python-cell';
+  createPythonSlice,
+  PythonSliceConfig,
+  type PythonSliceState,
+} from '@sqlrooms/python/block';
 
-type RoomState = PythonCellSliceState;
+type RoomState = PythonSliceState;
 
 const sliceConfigSchemas = {
-  pythonCells: PythonCellSliceConfig,
+  python: PythonSliceConfig,
 };
 
 const storeSlices = {
-  ...createPythonCellSlice()(set, get, store),
+  ...createPythonSlice()(set, get, store),
 };
 ```
 
@@ -53,14 +53,14 @@ const adapter = {
 };
 ```
 
-Pass the adapter to `createPythonCellSlice({runtimeAdapter: adapter})`.
+Pass the adapter to `createPythonSlice({runtimeAdapter: adapter})`.
 
 The bundled Pyodide adapter captures the global `result` value, or the final
 expression value when no `result` global is assigned. It returns JSON, text,
 HTML, and Vega-Lite outputs when Python objects expose common rich-display
 methods such as `_repr_mimebundle_()`, `_repr_html_()`, or Altair `to_dict()`.
 HTML and Vega-Lite previews are rendered in sandboxed iframes by
-`PythonCellBlock`.
+`PythonBlock`.
 
 When user code imports `altair`, the Pyodide worker installs Altair on demand
 through `micropip`. The SQLRooms bridge exposes `sqlrooms.query()` and
@@ -69,12 +69,19 @@ directly to libraries such as Altair. Use `sqlrooms.query_records()` for plain
 row records and `sqlrooms.query_raw()` when column metadata or `rowCount` is
 needed.
 
+## Export paths
+
+- `@sqlrooms/python/runtime` exports runtime contracts and the Pyodide adapter.
+- `@sqlrooms/python/block` exports the React block, Zustand slice, commands,
+  and block-facing state schemas.
+- `@sqlrooms/python` is the curated root entrypoint.
+
 ## Worksheet commands
 
-Use `createPythonCellCommands({commandNamespace: 'worksheet'})` alongside the
+Use `createPythonBlockCommands({commandNamespace: 'worksheet'})` alongside the
 worksheet block-document commands to expose:
 
-- `worksheet.add-python-cell-block`
-- `worksheet.update-python-cell-code`
-- `worksheet.run-python-cell-block`
-- `worksheet.clear-python-cell-result`
+- `worksheet.add-python-block`
+- `worksheet.update-python-block-code`
+- `worksheet.run-python-block`
+- `worksheet.clear-python-block-result`

@@ -6,50 +6,50 @@ import {
 import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import {
-  PythonCellInput,
-  PythonCellOutputDeclaration,
+  PythonInput,
+  PythonOutputDeclaration,
   PythonRequirementSpec,
 } from './types';
-import type {PythonCellSliceState} from './PythonCellSlice';
+import type {PythonSliceState} from './PythonSlice';
 
-export const PYTHON_CELL_BLOCK_TYPE = 'python-cell';
+export const PYTHON_BLOCK_TYPE = 'python';
 
-export const PYTHON_CELL_COMMAND_SUFFIXES = [
-  'add-python-cell-block',
-  'update-python-cell-code',
-  'run-python-cell-block',
-  'clear-python-cell-result',
+export const PYTHON_BLOCK_COMMAND_SUFFIXES = [
+  'add-python-block',
+  'update-python-block-code',
+  'run-python-block',
+  'clear-python-block-result',
 ] as const;
 
-export type PythonCellCommandSuffix =
-  (typeof PYTHON_CELL_COMMAND_SUFFIXES)[number];
+export type PythonBlockCommandSuffix =
+  (typeof PYTHON_BLOCK_COMMAND_SUFFIXES)[number];
 
-type PythonCellCommandState = BaseRoomStoreState &
-  PythonCellSliceState &
+type PythonBlockCommandState = BaseRoomStoreState &
+  PythonSliceState &
   BlockDocumentsSliceState & {
     artifacts: {
       getArtifact: (id: string) => {type: string} | undefined;
     };
   };
 
-export type CreatePythonCellCommandsOptions = {
+export type CreatePythonBlockCommandsOptions = {
   artifactType?: string;
   artifactLabel?: string;
   commandNamespace?: string;
   commandGroup?: string;
 };
 
-const AddPythonCellBlockInput = z.object({
+const AddPythonBlockInput = z.object({
   artifactId: z.string().describe('Target worksheet or block document ID.'),
   blockId: z.string().optional().describe('Optional document block ID.'),
   blockInstanceId: z
     .string()
     .optional()
-    .describe('Optional backing Python cell ID. Defaults to blockId.'),
-  title: z.string().optional().describe('Optional Python cell title.'),
+    .describe('Optional backing Python block ID. Defaults to blockId.'),
+  title: z.string().optional().describe('Optional Python block title.'),
   code: z.string().optional().describe('Initial Python code.'),
-  inputs: z.array(PythonCellInput).optional(),
-  outputs: z.array(PythonCellOutputDeclaration).optional(),
+  inputs: z.array(PythonInput).optional(),
+  outputs: z.array(PythonOutputDeclaration).optional(),
   requirements: z.array(PythonRequirementSpec).optional(),
   index: z
     .number()
@@ -59,51 +59,51 @@ const AddPythonCellBlockInput = z.object({
     .describe('Optional top-level insertion index. Defaults to append.'),
 });
 
-const PythonCellBlockInput = z.object({
+const PythonBlockInput = z.object({
   artifactId: z.string().describe('Target worksheet or block document ID.'),
-  blockId: z.string().describe('Document Python cell block ID.'),
+  blockId: z.string().describe('Document Python block ID.'),
 });
 
-const UpdatePythonCellCodeInput = PythonCellBlockInput.extend({
+const UpdatePythonBlockCodeInput = PythonBlockInput.extend({
   code: z.string().describe('Replacement Python code.'),
   run: z
     .boolean()
     .optional()
     .default(true)
-    .describe('Whether to run the cell after updating the code.'),
+    .describe('Whether to run the block after updating the code.'),
 });
 
-/** Creates command-backed Python cell operations for worksheet/block documents. */
-export function createPythonCellCommands<
-  TRoomState extends PythonCellCommandState = PythonCellCommandState,
+/** Creates command-backed Python block operations for worksheet/block documents. */
+export function createPythonBlockCommands<
+  TRoomState extends PythonBlockCommandState = PythonBlockCommandState,
 >({
   artifactType = 'worksheet',
   artifactLabel = 'Worksheet',
   commandNamespace = 'worksheet',
   commandGroup = artifactLabel,
-}: CreatePythonCellCommandsOptions = {}): RoomCommand<TRoomState>[] {
-  const commandId = (suffix: PythonCellCommandSuffix) =>
+}: CreatePythonBlockCommandsOptions = {}): RoomCommand<TRoomState>[] {
+  const commandId = (suffix: PythonBlockCommandSuffix) =>
     `${commandNamespace}.${suffix}`;
 
   const commands = {
-    'add-python-cell-block': {
-      id: commandId('add-python-cell-block'),
-      name: 'Add Python cell block',
+    'add-python-block': {
+      id: commandId('add-python-block'),
+      name: 'Add Python block',
       description:
-        'Create a visible Python cell block with persisted code and declarations.',
+        'Create a visible Python block with persisted code and declarations.',
       group: commandGroup,
-      keywords: ['python', 'cell', 'block', 'worksheet'],
-      inputSchema: AddPythonCellBlockInput,
+      keywords: ['python', 'block', 'worksheet'],
+      inputSchema: AddPythonBlockInput,
       inputDescription:
         'Worksheet artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
-        const parsed = AddPythonCellBlockInput.parse(input);
+        const parsed = AddPythonBlockInput.parse(input);
         const resolved = resolveBlockDocumentArtifact(
           state,
           parsed.artifactId,
-          commandId('add-python-cell-block'),
+          commandId('add-python-block'),
           artifactType,
           artifactLabel,
         );
@@ -111,8 +111,8 @@ export function createPythonCellCommands<
 
         const blockId = parsed.blockId ?? createBlockId();
         const blockInstanceId = parsed.blockInstanceId ?? blockId;
-        const title = parsed.title ?? 'Python Cell';
-        const cell = state.pythonCells.ensureCell(blockInstanceId, {
+        const title = parsed.title ?? 'Python';
+        const pythonBlock = state.python.ensureBlock(blockInstanceId, {
           title,
           code: parsed.code,
           inputs: parsed.inputs,
@@ -122,7 +122,7 @@ export function createPythonCellCommands<
         const block = BlockDocumentStatefulBlockBlock.parse({
           id: blockId,
           type: 'statefulBlock',
-          blockType: PYTHON_CELL_BLOCK_TYPE,
+          blockType: PYTHON_BLOCK_TYPE,
           blockInstanceId,
           ownership: 'owned',
           title,
@@ -131,59 +131,56 @@ export function createPythonCellCommands<
 
         return {
           success: true,
-          commandId: commandId('add-python-cell-block'),
-          message: `Added Python cell block "${blockId}".`,
+          commandId: commandId('add-python-block'),
+          message: `Added Python block "${blockId}".`,
           data: {
             artifactId: parsed.artifactId,
             block,
-            cell,
+            pythonBlock,
           },
         };
       },
     },
-    'update-python-cell-code': {
-      id: commandId('update-python-cell-code'),
-      name: 'Update Python cell code',
-      description: 'Update the code stored for a visible Python cell block.',
+    'update-python-block-code': {
+      id: commandId('update-python-block-code'),
+      name: 'Update Python block code',
+      description: 'Update the code stored for a visible Python block.',
       group: commandGroup,
-      keywords: ['python', 'cell', 'code', 'update'],
-      inputSchema: UpdatePythonCellCodeInput,
+      keywords: ['python', 'block', 'code', 'update'],
+      inputSchema: UpdatePythonBlockCodeInput,
       inputDescription:
         'Worksheet artifact ID, Python block ID, replacement code, and optional run flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
-        const parsed = UpdatePythonCellCodeInput.parse(input);
-        const block = resolvePythonCellBlock(
+        const parsed = UpdatePythonBlockCodeInput.parse(input);
+        const block = resolvePythonBlock(
           state,
           parsed.artifactId,
           parsed.blockId,
-          commandId('update-python-cell-code'),
+          commandId('update-python-block-code'),
           artifactType,
           artifactLabel,
         );
         if (!block.success) return block;
-        state.pythonCells.updateCellCode(
-          block.block.blockInstanceId,
-          parsed.code,
-        );
+        state.python.updateBlockCode(block.block.blockInstanceId, parsed.code);
         const result = parsed.run
-          ? await state.pythonCells.runCell(block.block.blockInstanceId, {
+          ? await state.python.runBlock(block.block.blockInstanceId, {
               artifactId: parsed.artifactId,
             })
           : undefined;
         return {
           success: result ? result.status === 'success' : true,
-          commandId: commandId('update-python-cell-code'),
+          commandId: commandId('update-python-block-code'),
           message: result
             ? result.status === 'success'
-              ? `Updated and ran Python cell block "${parsed.blockId}".`
-              : `Updated Python cell block "${parsed.blockId}", then run finished with ${result.status}.`
-            : `Updated Python cell block "${parsed.blockId}".`,
+              ? `Updated and ran Python block "${parsed.blockId}".`
+              : `Updated Python block "${parsed.blockId}", then run finished with ${result.status}.`
+            : `Updated Python block "${parsed.blockId}".`,
           data: {
             artifactId: parsed.artifactId,
             block: block.block,
-            cell: state.pythonCells.getCell(block.block.blockInstanceId),
+            pythonBlock: state.python.getBlock(block.block.blockInstanceId),
             ...(result ? {executionId: result.executionId, result} : undefined),
           },
           ...(result && result.status !== 'success'
@@ -192,39 +189,39 @@ export function createPythonCellCommands<
         };
       },
     },
-    'run-python-cell-block': {
-      id: commandId('run-python-cell-block'),
-      name: 'Run Python cell block',
+    'run-python-block': {
+      id: commandId('run-python-block'),
+      name: 'Run Python block',
       description:
-        'Run a visible Python cell block through the configured Python runtime adapter.',
+        'Run a visible Python block through the configured Python runtime adapter.',
       group: commandGroup,
-      keywords: ['python', 'cell', 'run', 'execute'],
-      inputSchema: PythonCellBlockInput,
+      keywords: ['python', 'block', 'run', 'execute'],
+      inputSchema: PythonBlockInput,
       inputDescription: 'Worksheet artifact ID and Python block ID.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
-        const parsed = PythonCellBlockInput.parse(input);
-        const block = resolvePythonCellBlock(
+        const parsed = PythonBlockInput.parse(input);
+        const block = resolvePythonBlock(
           state,
           parsed.artifactId,
           parsed.blockId,
-          commandId('run-python-cell-block'),
+          commandId('run-python-block'),
           artifactType,
           artifactLabel,
         );
         if (!block.success) return block;
-        const result = await state.pythonCells.runCell(
+        const result = await state.python.runBlock(
           block.block.blockInstanceId,
           {artifactId: parsed.artifactId},
         );
         return {
           success: result.status === 'success',
-          commandId: commandId('run-python-cell-block'),
+          commandId: commandId('run-python-block'),
           message:
             result.status === 'success'
-              ? `Ran Python cell block "${parsed.blockId}".`
-              : `Python cell block "${parsed.blockId}" finished with ${result.status}.`,
+              ? `Ran Python block "${parsed.blockId}".`
+              : `Python block "${parsed.blockId}" finished with ${result.status}.`,
           data: {
             artifactId: parsed.artifactId,
             block: block.block,
@@ -237,33 +234,32 @@ export function createPythonCellCommands<
         };
       },
     },
-    'clear-python-cell-result': {
-      id: commandId('clear-python-cell-result'),
-      name: 'Clear Python cell result',
-      description:
-        'Clear the persisted result summary for a Python cell block.',
+    'clear-python-block-result': {
+      id: commandId('clear-python-block-result'),
+      name: 'Clear Python block result',
+      description: 'Clear the persisted result summary for a Python block.',
       group: commandGroup,
-      keywords: ['python', 'cell', 'clear', 'result'],
-      inputSchema: PythonCellBlockInput,
+      keywords: ['python', 'block', 'clear', 'result'],
+      inputSchema: PythonBlockInput,
       inputDescription: 'Worksheet artifact ID and Python block ID.',
       metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
       execute: ({getState}, input) => {
         const state = getState();
-        const parsed = PythonCellBlockInput.parse(input);
-        const block = resolvePythonCellBlock(
+        const parsed = PythonBlockInput.parse(input);
+        const block = resolvePythonBlock(
           state,
           parsed.artifactId,
           parsed.blockId,
-          commandId('clear-python-cell-result'),
+          commandId('clear-python-block-result'),
           artifactType,
           artifactLabel,
         );
         if (!block.success) return block;
-        state.pythonCells.clearCellResult(block.block.blockInstanceId);
+        state.python.clearBlockResult(block.block.blockInstanceId);
         return {
           success: true,
-          commandId: commandId('clear-python-cell-result'),
-          message: `Cleared Python cell block "${parsed.blockId}" result.`,
+          commandId: commandId('clear-python-block-result'),
+          message: `Cleared Python block "${parsed.blockId}" result.`,
           data: {
             artifactId: parsed.artifactId,
             block: block.block,
@@ -271,13 +267,13 @@ export function createPythonCellCommands<
         };
       },
     },
-  } satisfies Record<PythonCellCommandSuffix, RoomCommand<TRoomState>>;
+  } satisfies Record<PythonBlockCommandSuffix, RoomCommand<TRoomState>>;
 
-  return PYTHON_CELL_COMMAND_SUFFIXES.map((suffix) => commands[suffix]);
+  return PYTHON_BLOCK_COMMAND_SUFFIXES.map((suffix) => commands[suffix]);
 }
 
 function resolveBlockDocumentArtifact(
-  state: PythonCellCommandState,
+  state: PythonBlockCommandState,
   artifactId: string,
   commandId: string,
   artifactType: string,
@@ -301,8 +297,8 @@ function resolveBlockDocumentArtifact(
   return {success: true as const, artifact};
 }
 
-function resolvePythonCellBlock(
-  state: PythonCellCommandState,
+function resolvePythonBlock(
+  state: PythonBlockCommandState,
   artifactId: string,
   blockId: string,
   commandId: string,
@@ -328,21 +324,18 @@ function resolvePythonCellBlock(
       error: `Unknown block "${blockId}".`,
     };
   }
-  if (
-    block.type !== 'statefulBlock' ||
-    block.blockType !== PYTHON_CELL_BLOCK_TYPE
-  ) {
+  if (block.type !== 'statefulBlock' || block.blockType !== PYTHON_BLOCK_TYPE) {
     return {
       success: false as const,
       commandId,
-      error: `Block "${blockId}" is not a Python cell block.`,
+      error: `Block "${blockId}" is not a Python block.`,
     };
   }
   return {success: true as const, block};
 }
 
 function insertOrAppendBlocks(
-  state: PythonCellCommandState,
+  state: PythonBlockCommandState,
   artifactId: string,
   blocks: BlockDocumentBlockType[],
   index: number | undefined,
@@ -359,5 +352,5 @@ function createBlockId() {
   if (randomUUID) {
     return randomUUID.call(globalThis.crypto);
   }
-  return `python-cell-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `python-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
