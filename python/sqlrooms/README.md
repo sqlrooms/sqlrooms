@@ -19,8 +19,8 @@ What happens:
 
 ## CLI flags
 
-- `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
-- `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
+- `DB_PATH` (positional): DuckDB project file to load/create (e.g. `sqlrooms ./my.db`). Required unless `--db-path` is provided.
+- `--db-path`: DuckDB database to use as a flag alternative. Pass a filepath to persist, or `:memory:` for an explicit temporary in-memory session.
 - `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `4173` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--experimental`: Enable experimental artifacts, blocks, commands, and agent tools.

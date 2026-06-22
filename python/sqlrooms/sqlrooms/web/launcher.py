@@ -1139,11 +1139,11 @@ class SqlroomsHttpServer:
 
         if self.serve_ui and self.static_dir.exists():
 
-            @app.get("/")
+            @app.api_route("/", methods=["GET", "HEAD"])
             async def spa_index():
                 return self._index_response()
 
-            @app.get("/{full_path:path}")
+            @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
             async def spa_fallback(full_path: str):
                 static_file = self._resolve_static_file(full_path)
                 if static_file is not None:
@@ -1152,6 +1152,11 @@ class SqlroomsHttpServer:
                 stale_entry_redirect = self._stale_entry_asset_redirect(full_path)
                 if stale_entry_redirect is not None:
                     return stale_entry_redirect
+
+                if full_path == "api" or full_path.startswith("api/"):
+                    return JSONResponse(
+                        {"error": "Endpoint not found"}, status_code=404
+                    )
 
                 if full_path.startswith("assets/"):
                     return JSONResponse(

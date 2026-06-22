@@ -126,6 +126,27 @@ def test_serves_ui_index_without_browser_cache(tmp_path):
     assert response.headers["cache-control"] == "no-store"
 
 
+def test_serves_ui_index_for_head_requests(tmp_path):
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.head("/")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+
+
 def test_serves_static_ui_assets(tmp_path):
     ui_dir = tmp_path / "ui"
     assets_dir = ui_dir / "assets"
@@ -147,6 +168,28 @@ def test_serves_static_ui_assets(tmp_path):
 
     assert response.status_code == 200
     assert response.text == "console.log('ok')"
+
+
+def test_serves_static_ui_assets_for_head_requests(tmp_path):
+    ui_dir = tmp_path / "ui"
+    assets_dir = ui_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (assets_dir / "index-current.js").write_text("console.log('ok')", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.head("/assets/index-current.js")
+
+    assert response.status_code == 200
 
 
 def test_redirects_stale_vite_entry_assets(tmp_path):
@@ -197,6 +240,27 @@ def test_missing_non_entry_asset_returns_404(tmp_path):
     response = client.get("/assets/not-built.js")
 
     assert response.status_code == 404
+
+
+def test_unknown_api_paths_do_not_fall_back_to_spa(tmp_path):
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.get("/api/not-a-route")
+
+    assert response.status_code == 404
+    assert response.json() == {"error": "Endpoint not found"}
 
 
 def test_api_config_with_experimental_enabled(tmp_path):

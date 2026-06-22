@@ -404,12 +404,12 @@ def main(
         None,
         help="DuckDB database to use (positional). Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",
     ),
-    db_path_option: str = typer.Option(
-        ":memory:",
+    db_path_option: str | None = typer.Option(
+        None,
         "--db-path",
         "-d",
-        help="DuckDB database to use (flag). Defaults to ':memory:'.",
-        show_default=True,
+        help="DuckDB database to use (flag). Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",
+        show_default=False,
     ),
     host: str = typer.Option("127.0.0.1", "--host", help="HTTP host for the UI."),
     port: int | None = typer.Option(
@@ -493,6 +493,8 @@ def main(
     """
     Launch a local SQLRooms project for adding data and building worksheets with Mosaic charts and dashboards.
 
+    Example: sqlrooms ./my-project.duckdb
+
     - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the worksheet UI with persisted state stored in DuckDB.
     """
@@ -504,6 +506,15 @@ def main(
         raise typer.Exit(code=1)
     if experimental_sync and not experimental:
         typer.echo("--experimental-sync requires --experimental.", err=True)
+        raise typer.Exit(code=1)
+
+    resolved_db_path = db_path if db_path is not None else db_path_option
+    if resolved_db_path is None:
+        typer.echo(
+            "Please provide a DuckDB project file, e.g. `sqlrooms ./my-project.duckdb`, "
+            "or pass `--db-path :memory:` for a temporary in-memory session.",
+            err=True,
+        )
         raise typer.Exit(code=1)
 
     try:
@@ -526,7 +537,6 @@ def main(
         config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
     )
 
-    resolved_db_path = db_path if db_path is not None else db_path_option
     selected_port = _resolve_http_port(host, port, ws_port)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")

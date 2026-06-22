@@ -180,16 +180,9 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
         )}
         {currentSessionId && !showHistory && (
           <>
-            <Chat.PromptSuggestions>
-              <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
-              <Chat.PromptSuggestions.Item text="Show me a summary of the data" />
-              <Chat.PromptSuggestions.Item text="What are the key trends?" />
-              <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
-            </Chat.PromptSuggestions>
             <Chat.Composer
               placeholder="What would you like to learn about the data?"
               contextDropTarget={contextDropTarget}
-              topActions={<Chat.PromptSuggestions.VisibilityToggle />}
             >
               <Chat.InlineApiKeyInput
                 onSaveApiKey={(provider, apiKey) => {
