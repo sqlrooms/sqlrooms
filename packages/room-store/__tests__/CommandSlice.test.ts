@@ -152,6 +152,76 @@ describe('CommandSlice', () => {
     ]);
   });
 
+  it('surfaces validated command input and trace metadata to invocation callbacks', async () => {
+    const onCommandInvokeSuccess = jest.fn();
+    const {store} = createTestCommandStore({onCommandInvokeSuccess});
+
+    store.getState().commands.registerCommand('test-owner', {
+      id: 'test.trace',
+      name: 'Trace command',
+      inputSchema: z.object({
+        count: z.coerce.number().int(),
+      }),
+      execute: (_context, input) => ({
+        success: true,
+        commandId: 'test.trace',
+        code: 'traced',
+        message: 'Traced command',
+        data: {
+          targetArtifactChange: {
+            artifactId: 'artifact-1',
+            change: 'updated',
+          },
+          input,
+        },
+      }),
+    });
+
+    await store.getState().commands.invokeCommand(
+      'test.trace',
+      {count: '4'},
+      {
+        surface: 'ai',
+        actor: 'skill-runtime',
+        traceId: 'trace-1',
+        metadata: {
+          aiSessionId: 'session-1',
+          skillId: 'skill-1',
+          toolCallId: 'call-1',
+        },
+      },
+    );
+
+    expect(onCommandInvokeSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        command: expect.objectContaining({id: 'test.trace'}),
+        input: {count: 4},
+        context: expect.objectContaining({
+          invocation: {
+            surface: 'ai',
+            actor: 'skill-runtime',
+            traceId: 'trace-1',
+            metadata: {
+              aiSessionId: 'session-1',
+              skillId: 'skill-1',
+              toolCallId: 'call-1',
+            },
+          },
+        }),
+        result: expect.objectContaining({
+          code: 'traced',
+          message: 'Traced command',
+          data: expect.objectContaining({
+            targetArtifactChange: {
+              artifactId: 'artifact-1',
+              change: 'updated',
+            },
+          }),
+        }),
+      }),
+    );
+  });
+
   it('allows middleware to short-circuit command execution', async () => {
     const executeSpy = jest.fn();
     const {store} = createTestCommandStore({

@@ -5,6 +5,7 @@ import type {
   BaseRoomStoreState,
   RoomCommandDescriptor,
   RoomCommandRiskLevel,
+  RoomCommandSurface,
   StoreApi,
 } from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -165,6 +166,13 @@ export const ExecuteCommandToolParameters = z.object({
     .unknown()
     .optional()
     .describe('Optional command input. Must satisfy the command input schema.'),
+  confirmed: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      'Set true only after the user explicitly confirms a high-risk or confirmation-required command.',
+    ),
 });
 
 export type ExecuteCommandToolParameters = z.infer<
@@ -185,6 +193,10 @@ export type ExecuteCommandToolLlmResult = {
 
 type CommandToolExecutionContext = {
   sessionId?: string;
+  skillId?: string;
+  traceId?: string;
+  toolCallId?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type CommandToolsOptions = {
@@ -192,6 +204,11 @@ export type CommandToolsOptions = {
   getToolName?: string;
   listToolName?: string;
   executeToolName?: string;
+  defaultSurface?: RoomCommandSurface;
+  defaultActor?: string;
+  defaultTraceId?: string;
+  defaultSkillId?: string;
+  defaultMetadata?: Record<string, unknown>;
   includeInvisibleCommandsByDefault?: boolean;
   includeDisabledCommandsInList?: boolean;
 };
@@ -233,13 +250,20 @@ export function createCommandTools<RS extends BaseRoomStoreState>(
   const getToolName = options?.getToolName ?? DEFAULT_GET_TOOL_NAME;
   const listToolName = options?.listToolName ?? DEFAULT_LIST_TOOL_NAME;
   const executeToolName = options?.executeToolName ?? DEFAULT_EXECUTE_TOOL_NAME;
+  const defaultSurface = options?.defaultSurface ?? 'ai';
 
   return {
     [searchToolName]: tool({
       description: `Search available room commands by intent or command ID.
 Use this for routine command discovery before calling ${getToolName} for the selected command schema and ${executeToolName} to run it.`,
       inputSchema: SearchCommandsToolParameters,
-      execute: async (params: SearchCommandsToolParameters) => {
+      execute: async (
+        params: SearchCommandsToolParameters,
+        executionOptions,
+      ) => {
+        const context = executionOptions as
+          | CommandToolExecutionContext
+          | undefined;
         const state = store.getState();
         if (!hasCommandSliceState(state)) {
           return {
@@ -249,7 +273,11 @@ Use this for routine command discovery before calling ${getToolName} for the sel
         }
 
         const descriptors = state.commands.listCommands({
-          surface: params.surface,
+          ...createCommandToolInvocationOptions(
+            params.surface ?? defaultSurface,
+            options,
+            context,
+          ),
           includeInvisible: params.includeHidden,
           includeDisabled: params.includeDisabled,
           includeInputSchema: params.includeInputSchema,
@@ -276,7 +304,10 @@ Use this for routine command discovery before calling ${getToolName} for the sel
       description: `Get full metadata and input schema for one room command.
 Call this after ${searchToolName} and before ${executeToolName} when the command requires input.`,
       inputSchema: GetCommandToolParameters,
-      execute: async (params: GetCommandToolParameters) => {
+      execute: async (params: GetCommandToolParameters, executionOptions) => {
+        const context = executionOptions as
+          | CommandToolExecutionContext
+          | undefined;
         const state = store.getState();
         if (!hasCommandSliceState(state)) {
           return {
@@ -286,7 +317,11 @@ Call this after ${searchToolName} and before ${executeToolName} when the command
         }
 
         const descriptors = state.commands.listCommands({
-          surface: params.surface,
+          ...createCommandToolInvocationOptions(
+            params.surface ?? defaultSurface,
+            options,
+            context,
+          ),
           includeInvisible: params.includeHidden,
           includeDisabled: params.includeDisabled,
           includeInputSchema: true,
@@ -312,7 +347,10 @@ Call this after ${searchToolName} and before ${executeToolName} when the command
       description: `List available room commands for broad exploration or debugging.
 For routine command use, prefer ${searchToolName}, then ${getToolName} for the selected command schema, then ${executeToolName}.`,
       inputSchema: ListCommandsToolParameters,
-      execute: async (params: ListCommandsToolParameters) => {
+      execute: async (params: ListCommandsToolParameters, executionOptions) => {
+        const context = executionOptions as
+          | CommandToolExecutionContext
+          | undefined;
         const state = store.getState();
         if (!hasCommandSliceState(state)) {
           return {
@@ -322,7 +360,11 @@ For routine command use, prefer ${searchToolName}, then ${getToolName} for the s
         }
 
         const descriptors = state.commands.listCommands({
-          surface: 'ai',
+          ...createCommandToolInvocationOptions(
+            defaultSurface,
+            options,
+            context,
+          ),
           includeInvisible: params.includeInvisible,
           includeDisabled: params.includeDisabled,
           includeInputSchema: params.includeInputSchema,
@@ -340,7 +382,7 @@ For routine command use, prefer ${searchToolName}, then ${getToolName} for the s
 Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} when you need the selected command input schema.`,
       inputSchema: ExecuteCommandToolParameters,
       execute: async (
-        {commandId, input}: ExecuteCommandToolParameters,
+        {commandId, input, confirmed}: ExecuteCommandToolParameters,
         executionOptions,
       ) => {
         const context = executionOptions as
@@ -363,13 +405,44 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
           } satisfies ExecuteCommandToolLlmResult;
         }
 
-        const result = await state.commands.invokeCommand(commandId, input, {
-          surface: 'ai',
-          metadata:
-            typeof context?.sessionId === 'string'
-              ? {aiSessionId: context.sessionId}
-              : undefined,
-        });
+        const descriptor = state.commands
+          .listCommands({
+            ...createCommandToolInvocationOptions(
+              defaultSurface,
+              options,
+              context,
+            ),
+            includeInvisible: true,
+            includeDisabled: true,
+            includeInputSchema: false,
+          })
+          .find((command) => command.id === commandId);
+        if (
+          descriptor &&
+          !confirmed &&
+          (descriptor.riskLevel === 'high' || descriptor.requiresConfirmation)
+        ) {
+          return {
+            success: false,
+            commandId,
+            errorMessage: `Command "${commandId}" requires explicit user confirmation before execution.`,
+            result: {
+              code: 'command-confirmation-required',
+              message:
+                'Ask the user to confirm this high-risk command, then retry with confirmed: true.',
+              data: {
+                riskLevel: descriptor.riskLevel,
+                requiresConfirmation: descriptor.requiresConfirmation,
+              },
+            },
+          } satisfies ExecuteCommandToolLlmResult;
+        }
+
+        const result = await state.commands.invokeCommand(
+          commandId,
+          input,
+          createCommandToolInvocationOptions(defaultSurface, options, context),
+        );
         if (result.success) {
           return {
             success: true,
@@ -403,6 +476,36 @@ type RankedCommandDescriptor = {
   descriptor: RoomCommandDescriptor;
   score: number;
 };
+
+function createCommandToolInvocationOptions(
+  surface: RoomCommandSurface,
+  options: CommandToolsOptions | undefined,
+  context: CommandToolExecutionContext | undefined,
+) {
+  const metadata: Record<string, unknown> = {
+    ...(options?.defaultMetadata ?? {}),
+    ...(context?.metadata ?? {}),
+  };
+  if (typeof context?.sessionId === 'string') {
+    metadata.aiSessionId = context.sessionId;
+  }
+  const skillId = context?.skillId ?? options?.defaultSkillId;
+  if (typeof skillId === 'string') {
+    metadata.skillId = skillId;
+  }
+  if (typeof context?.toolCallId === 'string') {
+    metadata.toolCallId = context.toolCallId;
+  }
+  const traceId =
+    context?.traceId ?? options?.defaultTraceId ?? context?.toolCallId;
+
+  return {
+    surface,
+    ...(options?.defaultActor ? {actor: options.defaultActor} : {}),
+    ...(traceId ? {traceId} : {}),
+    ...(Object.keys(metadata).length > 0 ? {metadata} : {}),
+  };
+}
 
 function rankCommandDescriptors(
   descriptors: RoomCommandDescriptor[],

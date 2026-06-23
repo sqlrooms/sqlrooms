@@ -74,10 +74,11 @@ const commandDescriptors = [
 function createCommandState(
   invokeCommand: any,
   descriptors: readonly any[] = [],
+  options?: any,
 ) {
-  const listCommands = jest.fn((options?: {includeInputSchema?: boolean}) =>
+  const listCommands = jest.fn((listOptions?: {includeInputSchema?: boolean}) =>
     descriptors.map((descriptor) =>
-      options?.includeInputSchema
+      listOptions?.includeInputSchema
         ? descriptor
         : {...descriptor, inputSchema: undefined},
     ),
@@ -87,18 +88,21 @@ function createCommandState(
       descriptors.find((descriptor) => descriptor.id === commandId) ??
       (commandId === 'artifact.create' ? {id: 'artifact.create'} : undefined),
   );
-  return createCommandTools({
-    getState: () => ({
-      commands: {
-        registerCommands: jest.fn(),
-        unregisterCommands: jest.fn(),
-        listCommands,
-        getCommand,
-        executeCommand: jest.fn(),
-        invokeCommand,
-      },
-    }),
-  } as any);
+  return createCommandTools(
+    {
+      getState: () => ({
+        commands: {
+          registerCommands: jest.fn(),
+          unregisterCommands: jest.fn(),
+          listCommands,
+          getCommand,
+          executeCommand: jest.fn(),
+          invokeCommand,
+        },
+      }),
+    } as any,
+    options,
+  );
 }
 
 describe('command tools', () => {
@@ -195,5 +199,74 @@ describe('command tools', () => {
         metadata: {aiSessionId: 'session-1'},
       },
     );
+  });
+
+  it('propagates skill trace metadata through command invocation options', async () => {
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.rename',
+      data: {artifactId: 'artifact-1'},
+    }));
+    const tools = createCommandState(invokeCommand, commandDescriptors, {
+      defaultActor: 'skill-runtime',
+      defaultMetadata: {runtime: 'skill'},
+    });
+
+    await (tools.execute_command as any).execute(
+      {commandId: 'artifact.rename', input: {title: 'Artifact'}},
+      {
+        sessionId: 'session-1',
+        skillId: 'skill-1',
+        toolCallId: 'call-1',
+        traceId: 'trace-1',
+        metadata: {step: 'rename'},
+      },
+    );
+
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'artifact.rename',
+      {title: 'Artifact'},
+      {
+        surface: 'ai',
+        actor: 'skill-runtime',
+        traceId: 'trace-1',
+        metadata: {
+          runtime: 'skill',
+          step: 'rename',
+          aiSessionId: 'session-1',
+          skillId: 'skill-1',
+          toolCallId: 'call-1',
+        },
+      },
+    );
+  });
+
+  it('requires explicit confirmation before executing high-risk commands', async () => {
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.delete',
+    }));
+    const tools = createCommandState(invokeCommand, commandDescriptors);
+
+    const blocked = await (tools.execute_command as any).execute({
+      commandId: 'artifact.delete',
+      input: {artifactId: 'artifact-1'},
+    });
+
+    expect(blocked).toMatchObject({
+      success: false,
+      commandId: 'artifact.delete',
+      result: {code: 'command-confirmation-required'},
+    });
+    expect(invokeCommand).not.toHaveBeenCalled();
+
+    const confirmed = await (tools.execute_command as any).execute({
+      commandId: 'artifact.delete',
+      input: {artifactId: 'artifact-1'},
+      confirmed: true,
+    });
+
+    expect(confirmed.success).toBe(true);
+    expect(invokeCommand).toHaveBeenCalled();
   });
 });
