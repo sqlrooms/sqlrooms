@@ -88,8 +88,7 @@ export {
 } from './BlockDocumentCommands';
 export {
   BLOCK_DOCUMENT_AGENT_TOOL_NAME,
-  BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME,
-  BLOCK_DOCUMENT_TEXT_TOOL_NAME,
+  KnownDocumentBlockTools,
   type BlockDocumentAiAdapter,
   type BlockDocumentAgentPlanStep,
   type BlockDocumentAgentResult,

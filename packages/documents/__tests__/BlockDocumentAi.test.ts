@@ -1,8 +1,5 @@
 import {
   blockDocumentBlockToNode,
-  BLOCK_DOCUMENT_AGENT_TOOL_NAME,
-  BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME,
-  BLOCK_DOCUMENT_TEXT_TOOL_NAME,
   createBlockDocumentCommandIds,
   createAddBlockDocumentTextBlockTool,
   createListBlockDocumentBlocksTool,
@@ -12,11 +9,6 @@ import {
 
 describe('block document AI helpers', () => {
   it('describes the command surface used by block document authoring agents', () => {
-    expect(BLOCK_DOCUMENT_AGENT_TOOL_NAME).toBe('block_document_agent');
-    expect(BLOCK_DOCUMENT_TEXT_TOOL_NAME).toBe('add_block_document_text_block');
-    expect(BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME).toBe(
-      'list_block_document_blocks',
-    );
     expect(createBlockDocumentCommandIds()).toContain('block-document.create');
     expect(createBlockDocumentCommandIds()).toContain(
       'block-document.create-chart-block',
@@ -36,6 +28,7 @@ describe('block document AI helpers', () => {
       ensureBlockDocument: (blockDocumentId) => {
         ensuredBlockDocumentIds.push(blockDocumentId);
       },
+      setCurrentBlockDocument: () => {},
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => {
         addedBlocks.push(block);
@@ -102,6 +95,7 @@ describe('block document AI helpers', () => {
 
   it('summarizes stateful blocks with generic stateful block metadata', async () => {
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
       getBlocks: () => [
         blockDocumentBlockToNode({

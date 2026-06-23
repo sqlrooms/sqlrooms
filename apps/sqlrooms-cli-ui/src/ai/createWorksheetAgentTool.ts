@@ -16,9 +16,9 @@ import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import {
   createWorksheetBlockDocumentAiTools,
-  KnownWorksheetTools,
   type ExtraWorksheetAiToolsFactory,
 } from './createWorksheetBlockDocumentAiTools';
+import {KnownWorksheetTools, WORKSHEET_AGENT_TOOL_NAME} from './constants';
 
 const AgentIntentSchemaFields = {
   intent: z
@@ -83,7 +83,7 @@ CRITICAL RULES:
       ? 'If the user asks to add a map or geospatial visualization to a worksheet, use the available direct worksheet map block tool; do not create a dashboard block solely to hold a map.'
       : `If the user asks to add a map or geospatial visualization to a worksheet dashboard, use a dashboard block and ${KnownWorksheetTools.embedded_dashboard_agent}; worksheet chart tools cannot create map panels.`
   }
-${htmlAppBlocksEnabled ? `8. If the user asks for an HTML app, D3 app, Chart.js app, browser app, custom interactive visualization, or generated app inside a worksheet, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent}. Do not create a top-level html-app artifact from inside worksheet_agent.` : ''}
+${htmlAppBlocksEnabled ? `8. If the user asks for an HTML app, D3 app, Chart.js app, browser app, custom interactive visualization, or generated app inside a worksheet, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent}. Do not create a top-level html-app artifact from inside ${WORKSHEET_AGENT_TOOL_NAME}.` : ''}
 
 ## Creating Blocks
 
@@ -324,7 +324,7 @@ IF user requests DASHBOARD:
 IF user requests a MAP in a worksheet:
 ${
   mapBlocksEnabled
-    ? `1. For a new map, call create_worksheet_map_block directly
+    ? `1. For a new map, call ${KnownWorksheetTools.create_worksheet_map_block} directly
 2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to create_worksheet_map_block`
     : `1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
@@ -357,7 +357,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
       try {
         blockDocumentAdapter.ensureBlockDocument(worksheetId);
-        blockDocumentAdapter.setCurrentBlockDocument?.(worksheetId);
+        blockDocumentAdapter.setCurrentBlockDocument(worksheetId);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
 

@@ -85,7 +85,7 @@ Use this when you need to create a custom HTML, D3, Chart.js, or browser app blo
     execute: async ({appTitle, intent}) => {
       try {
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
-        blockDocumentAdapter.setCurrentBlockDocument?.(blockDocumentId);
+        blockDocumentAdapter.setCurrentBlockDocument(blockDocumentId);
 
         const {appId, block} = createHtmlAppBlockDocumentBlock({
           title: appTitle,

@@ -24,6 +24,10 @@ import {
   createWorksheetAgentTool,
   type CreateWorksheetAgentToolOptions,
 } from './ai/createWorksheetAgentTool';
+import {
+  EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS,
+  KnownWorksheetTools,
+} from './ai/constants';
 
 const WorksheetMapBlockToolParameters = DeckMapDashboardToolParameters.extend({
   mapId: z
@@ -271,24 +275,19 @@ export function worksheetAgentTool(
       caption: title,
     }),
     additionalInstructions: experimentalEnabled
-      ? [
-          'Direct worksheet map blocks are available in this CLI app.',
-          'For worksheet map requests, call create_worksheet_map_block. Do not create a dashboard block just to hold a map.',
-          'If updating an existing worksheet map, call list_block_document_blocks first and pass its statefulBlock.blockInstanceId as mapId to create_worksheet_map_block.',
-        ].join('\n')
+      ? EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS
       : undefined,
     extraTools: ({worksheetId}) => {
-      const extraTools: Record<string, Tool> = {};
-
       if (experimentalEnabled) {
-        extraTools.embedded_html_app_agent = htmlAppAgentTool(store);
-        extraTools.create_worksheet_map_block = createWorksheetMapBlockTool(
-          store,
-          worksheetId,
-        );
+        return {
+          [KnownWorksheetTools.embedded_html_app_agent]:
+            htmlAppAgentTool(store),
+          [KnownWorksheetTools.create_worksheet_map_block]:
+            createWorksheetMapBlockTool(store, worksheetId),
+        };
       }
 
-      return extraTools;
+      return {} as Record<string, Tool>;
     },
   };
 

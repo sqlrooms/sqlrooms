@@ -5,16 +5,18 @@ import type {
 } from './BlockDocumentSliceConfig';
 
 export const BLOCK_DOCUMENT_AGENT_TOOL_NAME = 'block_document_agent';
-export const BLOCK_DOCUMENT_TEXT_TOOL_NAME = 'add_block_document_text_block';
-export const BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME =
-  'list_block_document_blocks';
+
+export const KnownDocumentBlockTools = {
+  add_text_block: 'add_block_document_text_block',
+  list_blocks: 'list_block_document_blocks',
+} as const;
 
 /**
  * Generic adapter for AI tools that mutate or inspect a block document.
  */
 export type BlockDocumentAiAdapter = {
   /** Set the current active block document, if the host tracks one. */
-  setCurrentBlockDocument?(blockDocumentId: string): void;
+  setCurrentBlockDocument(blockDocumentId: string): void;
   /** Ensure the target block document exists before mutation. */
   ensureBlockDocument(blockDocumentId: string): void;
   /** Read the target block document nodes. */

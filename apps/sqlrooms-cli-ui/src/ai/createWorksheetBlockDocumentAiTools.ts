@@ -1,7 +1,5 @@
 import type {Tool} from 'ai';
 import {
-  BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME,
-  BLOCK_DOCUMENT_TEXT_TOOL_NAME,
   createAddBlockDocumentTextBlockTool,
   createListBlockDocumentBlocksTool,
   type BlockDocumentAiAdapter,
@@ -11,27 +9,11 @@ import {
   createAddMosaicDashboardBlockTool,
   createBlockDocumentChartTools,
   createBlockDocumentDataTableExplorerTool,
-  KnownMosaicBlockDocumentTools,
   type ChartToolsOptions,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
 import {createAddHtmlAppBlockDocumentBlockTool} from './createAddHtmlAppBlockDocumentBlockTool';
-
-export const WORKSHEET_AGENT_TOOL_NAME = 'worksheet_agent';
-export const ADD_HTML_APP_BLOCK_TOOL_NAME = 'add_html_app_block';
-export const EMBEDDED_DASHBOARD_AGENT_TOOL_NAME = 'embedded_dashboard_agent';
-export const EMBEDDED_HTML_APP_AGENT_TOOL_NAME = 'embedded_html_app_agent';
-
-export const KnownWorksheetTools = {
-  list_blocks: BLOCK_DOCUMENT_LIST_BLOCKS_TOOL_NAME,
-  add_text_block: BLOCK_DOCUMENT_TEXT_TOOL_NAME,
-  add_dashboard_block: KnownMosaicBlockDocumentTools.add_dashboard_block,
-  add_html_app_block: ADD_HTML_APP_BLOCK_TOOL_NAME,
-  add_data_table_explorer:
-    KnownMosaicBlockDocumentTools.add_data_table_explorer,
-  embedded_dashboard_agent: EMBEDDED_DASHBOARD_AGENT_TOOL_NAME,
-  embedded_html_app_agent: EMBEDDED_HTML_APP_AGENT_TOOL_NAME,
-} as const;
+import {KnownWorksheetTools} from './constants';
 
 export type ExtraWorksheetAiToolsParams = {
   /** ID of the worksheet artifact being edited. */
