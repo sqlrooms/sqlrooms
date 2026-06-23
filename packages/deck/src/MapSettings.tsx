@@ -29,7 +29,10 @@ import {
 import {XIcon} from 'lucide-react';
 import {LatitudeSelector} from './LatitudeSelector';
 import {LongitudeSelector} from './LongitudeSelector';
-import type {DeckMapDashboardPanelConfig} from './dashboardConfig';
+import type {
+  DeckMapDashboardDatasetClientState,
+  DeckMapDashboardPanelConfig,
+} from './dashboardConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -66,46 +69,6 @@ function extractTableFromSqlQuery(
   if (!sqlQuery) return undefined;
   const match = sqlQuery.match(/\bFROM\s+(?:"([^"]+)"|(\w[\w.]*))/i);
   return match?.[1] ?? match?.[2];
-}
-
-/**
- * Extracts column aliases from a SQL SELECT clause (e.g. `... AS geom`).
- * Returns names of columns that are produced by the query but may not
- * exist in the raw source table.
- */
-function extractSelectAliases(sqlQuery: string | undefined): string[] {
-  if (!sqlQuery) return [];
-  const selectMatch = sqlQuery.match(/\bSELECT\b(.+?)\bFROM\b/is);
-  if (!selectMatch?.[1]) return [];
-  const aliases: string[] = [];
-  const aliasPattern = /\bAS\s+(?:"([^"]+)"|(\w+))/gi;
-  let match;
-  while ((match = aliasPattern.exec(selectMatch[1])) !== null) {
-    const name = match[1] ?? match[2];
-    if (name) aliases.push(name);
-  }
-  return aliases;
-}
-
-/**
- * Augments raw table columns with virtual columns derived from the dataset's
- * sqlQuery. These are columns generated at query time (e.g. geometry columns
- * created via ST_AsWKB) that don't exist in the raw source table.
- */
-function getColumnsWithVirtual(
-  tableColumns: TableColumn[],
-  sqlQuery: string | undefined,
-): TableColumn[] {
-  const aliases = extractSelectAliases(sqlQuery);
-  if (!aliases.length) return tableColumns;
-
-  const existingNames = new Set(tableColumns.map((c) => c.name.toLowerCase()));
-  const virtualColumns: TableColumn[] = aliases
-    .filter((name) => !existingNames.has(name.toLowerCase()))
-    .map((name) => ({name, type: 'GEOMETRY (computed)'}));
-
-  if (!virtualColumns.length) return tableColumns;
-  return [...tableColumns, ...virtualColumns];
 }
 
 const HEATMAP_COLOR_STEPS = 6;
@@ -156,7 +119,19 @@ function detectHeatmapScheme(colorRange: unknown): string {
 interface MapSettingsPanelProps {
   dashboardId: string;
   panel: MosaicDashboardPanelConfigType;
+  datasetStates?: Record<string, DeckMapDashboardDatasetClientState>;
   onClose?: () => void;
+}
+
+function getArrowTableColumns(
+  state: DeckMapDashboardDatasetClientState | undefined,
+): TableColumn[] | undefined {
+  const fields = state?.arrowTable?.schema.fields;
+  if (!fields) return undefined;
+  return fields.map((field) => ({
+    name: field.name,
+    type: field.type.toString(),
+  }));
 }
 
 function getSchemeOptions(type: ColorScaleConfig['type']) {
@@ -175,6 +150,7 @@ function getSchemeOptions(type: ColorScaleConfig['type']) {
 export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   dashboardId,
   panel,
+  datasetStates,
   onClose,
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
@@ -209,16 +185,14 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const fallbackTable = useDataTable(fallbackTableName);
   const dataTable = primaryTable ?? fallbackTable;
 
-  const columnsWithVirtual = useMemo(
+  const activeDatasetColumns = useMemo(
     () =>
-      dataTable
-        ? getColumnsWithVirtual(
-            dataTable.columns,
-            activeLayerDataset?.source?.sqlQuery,
-          )
-        : [],
-    [dataTable, activeLayerDataset?.source?.sqlQuery],
+      activeLayerDatasetId
+        ? getArrowTableColumns(datasetStates?.[activeLayerDatasetId])
+        : undefined,
+    [activeLayerDatasetId, datasetStates],
   );
+  const columns = activeDatasetColumns ?? dataTable?.columns ?? [];
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
@@ -243,7 +217,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
-  const firstColumnName = dataTable?.columns[0]?.name;
+  const firstColumnName = columns[0]?.name;
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
@@ -512,8 +486,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                   </Field>
                 )}
 
-                {colorScale && dataTable && (
-                  <ColumnsProvider columns={dataTable.columns}>
+                {colorScale && columns.length > 0 && (
+                  <ColumnsProvider columns={columns}>
                     <Field label="Color field" required>
                       {colorScaleType === 'categorical' ? (
                         <ColumnSelector.Categorical
@@ -673,8 +647,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </Field>
         )}
 
-        {dataTable && showGeometryColumnSetting && (
-          <ColumnsProvider columns={columnsWithVirtual}>
+        {columns.length > 0 && showGeometryColumnSetting && (
+          <ColumnsProvider columns={columns}>
             <Field label="Geometry column" required>
               <ColumnSelector
                 value={
@@ -697,8 +671,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
-        {dataTable && showH3ColumnSetting && (
-          <ColumnsProvider columns={dataTable.columns}>
+        {columns.length > 0 && showH3ColumnSetting && (
+          <ColumnsProvider columns={columns}>
             <Field label="H3 column" required>
               <ColumnSelector
                 value={
@@ -720,8 +694,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </ColumnsProvider>
         )}
 
-        {dataTable && showArcColumnSetting && (
-          <ColumnsProvider columns={dataTable.columns}>
+        {columns.length > 0 && showArcColumnSetting && (
+          <ColumnsProvider columns={columns}>
             <Field label="Source latitude" required>
               <ColumnSelector
                 value={
@@ -857,8 +831,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               />
             </div>
 
-            {Boolean(activeLayer?.extruded) && dataTable && (
-              <ColumnsProvider columns={dataTable.columns}>
+            {Boolean(activeLayer?.extruded) && columns.length > 0 && (
+              <ColumnsProvider columns={columns}>
                 <Field label="Elevation column">
                   <ColumnSelector.Numeric
                     value={(() => {

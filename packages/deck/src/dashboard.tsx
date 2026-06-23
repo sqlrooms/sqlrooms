@@ -541,6 +541,7 @@ function DeckMapDashboardRenderer({
     <MapSettingsPanel
       dashboardId={dashboardId}
       panel={panel}
+      datasetStates={datasetStates}
       onClose={() => handleSettingsOpenChange(false)}
     />
   );
