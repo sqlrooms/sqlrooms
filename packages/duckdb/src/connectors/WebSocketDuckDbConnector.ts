@@ -30,6 +30,9 @@ export interface WebSocketDuckDbConnectorOptions {
   /** Optional handler for server notifications `{ type: 'notify', payload }` */
   onNotification?: (payload: any) => void;
 
+  /** Optional handler for persistent WebSocket connection lifecycle changes. */
+  onConnectionStatusChange?: (status: WebSocketDuckDbConnectionStatus) => void;
+
   /** Optional list of channels to subscribe to upon (re)connect */
   subscribeChannels?: string[];
 
@@ -37,8 +40,39 @@ export interface WebSocketDuckDbConnectorOptions {
   authToken?: string;
 }
 
+/**
+ * Persistent WebSocket connection lifecycle status.
+ *
+ * @public
+ */
+export type WebSocketDuckDbConnectionStatus =
+  | 'idle'
+  | 'connecting'
+  | 'connected'
+  | 'disconnected';
+
 export interface WebSocketDuckDbConnector extends DuckDbConnector {
   readonly type: 'ws';
+
+  /**
+   * Current persistent WebSocket connection status.
+   */
+  readonly connectionStatus: WebSocketDuckDbConnectionStatus;
+
+  /**
+   * Subscribe to persistent WebSocket connection lifecycle changes.
+   *
+   * @returns Unsubscribe callback.
+   */
+  subscribeConnectionStatus(
+    listener: (status: WebSocketDuckDbConnectionStatus) => void,
+  ): () => void;
+
+  /**
+   * Reopen the persistent WebSocket and rerun connector initialization SQL
+   * without destroying the connector instance.
+   */
+  reconnect(): Promise<void>;
 }
 
 /**
@@ -71,6 +105,11 @@ export function createWebSocketDuckDbConnector(
   // Persistent socket and per-query waiters
   let socket: WebSocket | null = null;
   let opening: Promise<void> | null = null;
+  let intentionalClose = false;
+  let connectionStatus: WebSocketDuckDbConnectionStatus = 'idle';
+  const connectionStatusListeners = new Set<
+    (status: WebSocketDuckDbConnectionStatus) => void
+  >();
   const lastSubscribedChannels: string[] | undefined = subscribeChannels;
   const pending = new Map<
     string,
@@ -104,6 +143,21 @@ export function createWebSocketDuckDbConnector(
     }
   };
 
+  const setConnectionStatus = (status: WebSocketDuckDbConnectionStatus) => {
+    if (connectionStatus === status) return;
+    connectionStatus = status;
+    try {
+      options.onConnectionStatusChange?.(status);
+      // eslint-disable-next-line no-empty
+    } catch {}
+    for (const listener of connectionStatusListeners) {
+      try {
+        listener(status);
+        // eslint-disable-next-line no-empty
+      } catch {}
+    }
+  };
+
   // Guard to avoid duplicate subscribe sends on open + initialize
   const resubscribe = () => {
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -120,10 +174,12 @@ export function createWebSocketDuckDbConnector(
     if (socket && socket.readyState === WebSocket.OPEN)
       return Promise.resolve();
     if (opening) return opening;
+    setConnectionStatus('connecting');
     opening = new Promise<void>((resolve, reject) => {
       try {
         const ws = new WebSocket(wsUrl);
         socket = ws;
+        intentionalClose = false;
         ws.binaryType = 'arraybuffer';
 
         let authAcked = !authToken;
@@ -140,6 +196,7 @@ export function createWebSocketDuckDbConnector(
               // No auth required; resolve immediately
               opening = null;
               resubscribe();
+              setConnectionStatus('connected');
               resolve();
             }
             // eslint-disable-next-line no-empty
@@ -162,11 +219,18 @@ export function createWebSocketDuckDbConnector(
                   opening = null;
                   // Subscribe once authed
                   resubscribe();
+                  setConnectionStatus('connected');
                   resolve();
                 } else if (t === 'error') {
                   const msg = parsed?.error || 'Unauthorized';
                   opening = null;
+                  setConnectionStatus('disconnected');
                   reject(new Error(msg));
+                  try {
+                    ws.close();
+                    // eslint-disable-next-line no-empty
+                  } catch {}
+                  socket = null;
                 }
                 return;
               }
@@ -280,6 +344,7 @@ export function createWebSocketDuckDbConnector(
             ws.close();
             // eslint-disable-next-line no-empty
           } catch {}
+          setConnectionStatus('disconnected');
         };
 
         ws.onclose = () => {
@@ -289,9 +354,12 @@ export function createWebSocketDuckDbConnector(
           }
           closeAndRejectAll('WebSocket closed');
           socket = null;
+          setConnectionStatus(intentionalClose ? 'idle' : 'disconnected');
+          intentionalClose = false;
         };
       } catch (e) {
         opening = null;
+        setConnectionStatus('disconnected');
         reject(e);
       }
     });
@@ -307,10 +375,12 @@ export function createWebSocketDuckDbConnector(
 
     async destroyInternal() {
       try {
+        intentionalClose = true;
         socket?.close();
         // eslint-disable-next-line no-empty
       } catch {}
       socket = null;
+      setConnectionStatus('idle');
     },
 
     async executeQueryInternal<T extends arrow.TypeMap = any>(
@@ -460,6 +530,24 @@ export function createWebSocketDuckDbConnector(
     ...base,
     get type() {
       return 'ws' as const;
+    },
+    get connectionStatus() {
+      return connectionStatus;
+    },
+    subscribeConnectionStatus(listener) {
+      connectionStatusListeners.add(listener);
+      return () => {
+        connectionStatusListeners.delete(listener);
+      };
+    },
+    async reconnect() {
+      await ensureSocket();
+      if (initializationQuery) {
+        await impl.executeQueryInternal(
+          initializationQuery,
+          new AbortController().signal,
+        );
+      }
     },
   };
 }

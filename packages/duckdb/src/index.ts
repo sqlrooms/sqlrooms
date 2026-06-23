@@ -25,6 +25,7 @@ export {
 export {
   createWebSocketDuckDbConnector,
   type WebSocketDuckDbConnector,
+  type WebSocketDuckDbConnectionStatus,
   type WebSocketDuckDbConnectorOptions,
 } from './connectors/WebSocketDuckDbConnector';
 
