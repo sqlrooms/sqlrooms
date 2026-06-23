@@ -91,7 +91,10 @@ Use this when you need to create a custom HTML, D3, Chart.js, or browser app blo
           title: appTitle,
           intent,
         });
-        const blockId = blockDocumentAdapter.addBlock(blockDocumentId, block);
+        const blockId = await blockDocumentAdapter.addBlock(
+          blockDocumentId,
+          block,
+        );
 
         return {
           success: true,

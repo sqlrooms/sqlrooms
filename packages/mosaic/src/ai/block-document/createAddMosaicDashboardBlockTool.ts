@@ -66,7 +66,10 @@ This tool ONLY creates the container structure. To populate it with charts and p
           tableName,
           intent,
         });
-        const blockId = blockDocumentAdapter.addBlock(blockDocumentId, block);
+        const blockId = await blockDocumentAdapter.addBlock(
+          blockDocumentId,
+          block,
+        );
 
         return {
           success: true,

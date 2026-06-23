@@ -94,6 +94,43 @@ describe('block document AI helpers', () => {
     expect(addBlockCalled).toBe(false);
   });
 
+  it('awaits command-backed adapters when adding generic text blocks', async () => {
+    const addedBlocks: BlockDocumentBlock[] = [];
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      ensureBlockDocument: () => {},
+      setCurrentBlockDocument: () => {},
+      getBlocks: () => [],
+      addBlock: async (_blockDocumentId, block) => {
+        addedBlocks.push(block);
+        return `command:${block.id}`;
+      },
+    };
+
+    const tool = createAddBlockDocumentTextBlockTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (tool as any).execute({
+      reasoning: 'Add a short heading.',
+      type: 'heading',
+      level: 2,
+      text: 'Summary',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      blockId: expect.stringMatching(/^command:/),
+      message: 'Added heading block to block document',
+    });
+    expect(addedBlocks).toEqual([
+      expect.objectContaining({
+        type: 'heading',
+        text: 'Summary',
+      }),
+    ]);
+  });
+
   it('summarizes stateful blocks with generic stateful block metadata', async () => {
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
       setCurrentBlockDocument: () => {},

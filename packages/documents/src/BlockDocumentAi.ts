@@ -22,7 +22,10 @@ export type BlockDocumentAiAdapter = {
   /** Read the target block document nodes. */
   getBlocks(blockDocumentId: string): BlockDocumentNode[] | undefined;
   /** Append a block to the target block document and return its block ID. */
-  addBlock(blockDocumentId: string, block: BlockDocumentBlock): string;
+  addBlock(
+    blockDocumentId: string,
+    block: BlockDocumentBlock,
+  ): string | Promise<string>;
 };
 
 /**

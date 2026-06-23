@@ -167,6 +167,11 @@ const tools = {
 };
 ```
 
+`BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
+promise. Hosts that already expose block-document mutations as room commands can
+therefore invoke the command layer from the adapter while keeping generic AI
+tools package-neutral.
+
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, lists, todos, images, chart images,
@@ -366,6 +371,12 @@ the package API generic.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
+
+Block mutation command results include the full refreshed document data plus
+focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
+`blockTypes`, and `affectedBlocks`. Chart and stateful block creation also
+return follow-up IDs such as `tableName`, `blockInstanceId`,
+`statefulBlockType`, and chosen `title` or `caption` values.
 
 Structured block payloads may include an optional `intent` string. Use it for
 the durable natural-language purpose of an agent- or command-created block,

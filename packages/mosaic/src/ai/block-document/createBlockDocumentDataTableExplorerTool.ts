@@ -36,7 +36,7 @@ export function createBlockDocumentDataTableExplorerTool({
 }: CreateBlockDocumentDataTableExplorerToolParams): Tool {
   return createDataTableExplorerTool({
     databaseAdapter,
-    addDataTable: ({title, tableName, intent}) => {
+    addDataTable: async ({title, tableName, intent}) => {
       if (!tableName) {
         throw new Error(
           'Table name is required to add a data table explorer block',
@@ -44,7 +44,7 @@ export function createBlockDocumentDataTableExplorerTool({
       }
 
       blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
-      blockDocumentAdapter.addBlock(
+      await blockDocumentAdapter.addBlock(
         blockDocumentId,
         createDataTableExplorerBlock({
           title: title ?? 'Data Table Explorer',

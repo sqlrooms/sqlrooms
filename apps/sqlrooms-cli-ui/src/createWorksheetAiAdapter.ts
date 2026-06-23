@@ -2,6 +2,8 @@ import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 
+const WORKSHEET_APPEND_BLOCKS_COMMAND_ID = 'worksheet.append-blocks';
+
 /**
  * Creates a worksheet-specific adapter for the worksheet agent.
  * Worksheets are block documents, not dashboards.
@@ -40,13 +42,36 @@ export function createWorksheetAiAdapter(
       return blockDocument.content.content;
     },
 
-    addBlock: (worksheetId, block) => {
+    addBlock: async (worksheetId, block) => {
       ensureWorksheet(worksheetId);
 
-      const state = store.getState();
-      state.blockDocuments.appendBlocks(worksheetId, [block]);
+      const result = await store.getState().commands.invokeCommand(
+        WORKSHEET_APPEND_BLOCKS_COMMAND_ID,
+        {
+          artifactId: worksheetId,
+          blocks: [block],
+        },
+        {
+          surface: 'ai',
+          actor: 'worksheet-agent',
+        },
+      );
 
-      return block.id;
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            result.message ??
+            `Failed to execute ${WORKSHEET_APPEND_BLOCKS_COMMAND_ID}`,
+        );
+      }
+
+      const data = result.data as
+        | {
+            blockId?: string;
+            blockIds?: string[];
+          }
+        | undefined;
+      return data?.blockId ?? data?.blockIds?.[0] ?? block.id;
     },
   };
 }

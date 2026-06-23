@@ -152,6 +152,13 @@ Ambiguous worksheet cases fail with a clear message so the caller can ask the
 user to select the target block. Chat undo/redo should execute these commands
 instead of mutating app state through hidden paths or rewriting chat messages.
 
+## Worksheet AI Block Writes
+
+Worksheet AI tools compose generic block-document helpers with CLI-specific
+agent policy. Durable block appends route through the registered
+`worksheet.append-blocks` command, so text and chart block creation use the same
+traceable mutation path as palette, API, and future skill surfaces.
+
 ## AI Artifact Context
 
 The assistant captures selected artifact context at run start. The first

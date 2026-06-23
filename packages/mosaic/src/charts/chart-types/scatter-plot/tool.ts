@@ -46,7 +46,7 @@ Do NOT use for: distributions (use histogram), categorical counts (use count-plo
           settings,
         };
 
-        addChart({
+        await addChart({
           tableName,
           panelId,
           config: chartConfig,
