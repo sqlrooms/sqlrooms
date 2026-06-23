@@ -226,6 +226,11 @@ export function createWebSocketDuckDbConnector(
                   opening = null;
                   setConnectionStatus('disconnected');
                   reject(new Error(msg));
+                  try {
+                    ws.close();
+                    // eslint-disable-next-line no-empty
+                  } catch {}
+                  socket = null;
                 }
                 return;
               }

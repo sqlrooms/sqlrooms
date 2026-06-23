@@ -38,6 +38,12 @@ function useDuckDbConnectionStatus() {
   );
 }
 
+/**
+ * Renders the SQLRooms server lost-connection dialog and manages automatic
+ * WebSocket reconnect attempts without reloading the page.
+ *
+ * @returns Dialog content for lost SQLRooms server connections.
+ */
 export function CliDuckDbConnectionLostDialog() {
   const status = useDuckDbConnectionStatus();
   const serverEndpoint = React.useMemo(
@@ -95,7 +101,7 @@ export function CliDuckDbConnectionLostDialog() {
   }, []);
 
   React.useEffect(() => {
-    if (!isOpen || status !== 'disconnected') return;
+    if (!hasConnectedRef.current || status !== 'disconnected') return;
     let cancelled = false;
     let timeoutId: number | undefined;
 
@@ -120,7 +126,7 @@ export function CliDuckDbConnectionLostDialog() {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [isOpen, retryConnection, status]);
+  }, [retryConnection, status]);
 
   const handleRetry = React.useCallback(() => {
     autoReconnectAttemptRef.current = 0;
