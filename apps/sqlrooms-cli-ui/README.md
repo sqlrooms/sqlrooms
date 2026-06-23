@@ -51,6 +51,72 @@ In the UI, drag in:
 Verify `cars` appears, create a worksheet/Mosaic chart/dashboard, stop the
 server, restart the same command, and confirm the state comes back.
 
+## Python CLI release workflow
+
+The Python CLI release is split into an intentional version step and a publish
+step. Publishing never bumps versions automatically.
+
+Before versioning or publishing, test a production build locally:
+
+```bash
+pnpm --dir python/sqlrooms build
+
+uv run --project python --package sqlrooms sqlrooms \
+  --version
+
+uv run --project python --package sqlrooms sqlrooms \
+  --no-open-browser \
+  ./smoke.duckdb
+```
+
+For the closest local install check, install the freshly built wheel from
+`python/dist` into a `uv tool` environment:
+
+```bash
+uv tool install --reinstall python/dist/sqlrooms-*.whl
+sqlrooms --version
+sqlrooms --no-open-browser ./smoke.duckdb
+```
+
+Open the printed UI URL, drag in the CSV fixture listed above, create a
+worksheet/chart/dashboard, then restart against the same `smoke.duckdb` and
+confirm the imported data and workspace state come back.
+
+1. Choose the package target:
+   - `sqlrooms` for the CLI package and bundled UI.
+   - `sqlrooms-server` for the DuckDB websocket server package.
+   - `all` when both packages should be released in dependency order.
+2. Version the selected package or packages explicitly:
+
+   ```bash
+   pnpm cli:version --target sqlrooms-server --bump patch
+   pnpm cli:version --target sqlrooms --set 0.2.0
+   pnpm cli:version --target all --bump minor
+   ```
+
+   Hatch reads package versions from each package's `package.json`. When
+   `sqlrooms-server` is versioned, the workflow also updates the
+   `sqlrooms-server>=...` dependency floor in `python/sqlrooms/pyproject.toml`.
+
+3. Run the dry publish workflow for the intended target:
+
+   ```bash
+   pnpm cli:publish:dry --target sqlrooms
+   ```
+
+   The dry workflow runs validation and builds the selected package or packages,
+   but it does not upload to PyPI.
+
+4. Publish the same target:
+
+   ```bash
+   pnpm cli:publish --target sqlrooms
+   ```
+
+   Publishing runs validation, builds the package, then uploads the built
+   distributions with Twine. Use `--target all` only when both packages are part
+   of the release.
+
 ## Dev mode (UI + Python server together)
 
 From the repo root:

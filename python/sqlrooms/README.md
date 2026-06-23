@@ -74,46 +74,6 @@ Then open the printed UI URL and verify:
 - Map, notebook, canvas, app, HTML app, pivot, and SQL query surfaces stay hidden unless `--experimental` is provided.
 - Restarting the same command with `./smoke.duckdb` restores the imported table and persisted workspace state.
 
-## Release workflow
-
-The Python CLI release is split into an intentional version step and a publish
-step. Publishing never bumps versions automatically.
-
-1. Choose the package target:
-   - `sqlrooms` for the CLI package and bundled UI.
-   - `sqlrooms-server` for the DuckDB websocket server package.
-   - `all` when both packages should be released in dependency order.
-2. Version the selected package or packages explicitly:
-
-   ```bash
-   pnpm cli:version --target sqlrooms-server --bump patch
-   pnpm cli:version --target sqlrooms --set 0.2.0
-   pnpm cli:version --target all --bump minor
-   ```
-
-   Hatch reads package versions from each package's `package.json`. When
-   `sqlrooms-server` is versioned, the workflow also updates the
-   `sqlrooms-server>=...` dependency floor in `python/sqlrooms/pyproject.toml`.
-
-3. Run the dry publish workflow for the intended target:
-
-   ```bash
-   pnpm cli:publish:dry --target sqlrooms
-   ```
-
-   The dry workflow runs the same validation and build steps as publish, but it
-   does not upload to PyPI.
-
-4. Publish the same target:
-
-   ```bash
-   pnpm cli:publish --target sqlrooms
-   ```
-
-   Publishing runs validation, builds the package, then uploads the built
-   distributions with Twine. Use `--target all` only when both packages are part
-   of the release.
-
 ## Config file
 
 `sqlrooms` reads AI provider and connector settings from a TOML config file.
