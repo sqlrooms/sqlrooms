@@ -28,7 +28,7 @@ SQLRooms is a local-first, modular analytics workspace built around DuckDB, Reac
 
 ## GitHub Pull Requests
 
-- PR titles should respect conventional-commits spec or the [CI check](.github/workflows/pr-title.yml) will fail
+- Use Conventional Commit format for PR titles, for example `feat: add query snapshots` or `fix(cli): handle empty inputs`. Plain descriptive PR titles without an allowed type prefix will fail the [CI check](.github/workflows/pr-title.yml).
 
 ## Review guidelines
 
