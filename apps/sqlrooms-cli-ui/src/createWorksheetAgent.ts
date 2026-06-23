@@ -55,6 +55,21 @@ function getFirstDatasetSourceTableName(
     .find((source) => source?.tableName)?.tableName;
 }
 
+function hasSqlOnlyDatasetSource(
+  config: DeckMapDashboardConfigToolConfig,
+): boolean {
+  if (!config.datasets || typeof config.datasets !== 'object') {
+    return false;
+  }
+
+  return Object.values(config.datasets).some((dataset) => {
+    const source = (dataset as Record<string, unknown>).source as
+      | {tableName?: string; sqlQuery?: string}
+      | undefined;
+    return Boolean(source?.sqlQuery && !source.tableName);
+  });
+}
+
 function createWorksheetMapBlockTool(
   store: StoreApi<RoomState>,
   worksheetId: string,
@@ -74,6 +89,15 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
 
         const tableName =
           params.tableName ?? getFirstDatasetSourceTableName(params.config);
+        if (
+          params.mapId &&
+          !tableName &&
+          hasSqlOnlyDatasetSource(params.config)
+        ) {
+          throw new Error(
+            'tableName is required when updating a worksheet map block with SQL-only dataset sources',
+          );
+        }
         if (tableName && !state.db.findTable(tableName)) {
           throw new Error(`Table ${tableName} was not found`);
         }
