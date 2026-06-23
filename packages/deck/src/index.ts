@@ -13,6 +13,7 @@ export {
   createDeckMapDashboardAiTools,
   createDeckMapDashboardTool,
   createDeckMapConfigTool,
+  createDeckMapPanelFromNativeConfig,
   DeckMapDashboardConfigParameter,
   DeckMapConfigToolParameters,
   DeckMapDashboardToolParameters,
@@ -27,6 +28,11 @@ export {
   deckMapDashboardAddPanelAction,
   deckMapDashboardPanelRenderer,
 } from './dashboard';
+export {
+  DeckMapBlockRenderer,
+  ensureDeckMapBlockState,
+  type DeckMapBlockRendererProps,
+} from './block';
 export {createDeckMapDashboardSliceOptions} from './dashboardIntegration';
 export {
   asDeckJsonMapConfig,
@@ -42,6 +48,7 @@ export {
   createDeckMapDashboardConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
   findDeckMapLongitudeLatitudeColumns,
+  findGeometryColumn,
   findLongitudeLatitudeColumns,
   normalizeDeckMapFillColor,
   quoteDeckMapSqlIdentifier,

@@ -22,6 +22,7 @@ type WorksheetBlockSummary = {
   caption?: string;
   dashboardId?: string;
   htmlAppId?: string;
+  mapId?: string;
   blockType?: string;
   tableName?: string;
 };
@@ -58,6 +59,7 @@ function summarizeBlock(
       ...(block.blockType === 'html-app'
         ? {htmlAppId: block.blockInstanceId}
         : {}),
+      ...(block.blockType === 'map' ? {mapId: block.blockInstanceId} : {}),
       ...(block.title !== undefined ? {title: block.title} : {}),
       ...(block.caption !== undefined ? {caption: block.caption} : {}),
     };
@@ -94,7 +96,7 @@ export function createListWorksheetBlocksTool({
   return tool<ListWorksheetBlocksToolInput, ListWorksheetBlocksToolOutput>({
     description: `List existing blocks in the worksheet.
 
-Use this before updating an existing worksheet dashboard or adding a map to a worksheet. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels.${
+Use this before updating an existing worksheet dashboard, map, or app block. Dashboard blocks include dashboardId; pass that dashboardId to embedded_dashboard_agent to add dashboard panels. Map blocks include mapId; pass that mapId to a direct worksheet map tool when available.${
       htmlAppBlocksEnabled
         ? ' HTML app blocks include htmlAppId; pass that htmlAppId to embedded_html_app_agent as appId. For a new worksheet HTML app, use add_html_app_block first.'
         : ''

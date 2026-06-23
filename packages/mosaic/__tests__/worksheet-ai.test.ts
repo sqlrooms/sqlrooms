@@ -37,6 +37,13 @@ describe('createWorksheetAiTools', () => {
           blockInstanceId: 'html-app-1',
           title: 'Country Explorer',
         }),
+        blockDocumentBlockToNode({
+          type: 'statefulBlock',
+          id: 'block-3',
+          blockType: 'map',
+          blockInstanceId: 'map-1',
+          title: 'Earthquake Map',
+        }),
       ],
       addBlock: () => 'block-id',
       addDashboardBlock: () => ({
@@ -77,6 +84,13 @@ describe('createWorksheetAiTools', () => {
           blockType: 'html-app',
           htmlAppId: 'html-app-1',
           title: 'Country Explorer',
+        },
+        {
+          blockId: 'block-3',
+          type: 'statefulBlock',
+          blockType: 'map',
+          mapId: 'map-1',
+          title: 'Earthquake Map',
         },
       ],
     });

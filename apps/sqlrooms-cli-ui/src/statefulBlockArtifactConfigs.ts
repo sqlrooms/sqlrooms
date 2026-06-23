@@ -3,6 +3,7 @@ import type {
   BlockDocumentStatefulBlockCommandType,
   BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
+import {ensureDeckMapBlockState} from '@sqlrooms/deck';
 import type {RoomState} from './store-types';
 
 export type FeatureStability = 'stable' | 'experimental';
@@ -87,6 +88,29 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     scrollHintLabel: 'this data table',
     ensureState: () => {},
     deleteState: () => {},
+  },
+  map: {
+    artifactType: 'map',
+    stability: 'experimental',
+    label: 'Map',
+    defaultTitle: 'Map',
+    embeddedTitle: 'Embedded Map',
+    embeddedDescription: 'Embedded Deck.gl map',
+    resizableHeight: true,
+    defaultHeight: 560,
+    minHeight: 360,
+    maxHeight: 1600,
+    requireScrollModifier: true,
+    scrollHintLabel: 'this map',
+    ensureState: (state, artifactId, title) => {
+      ensureDeckMapBlockState(state, artifactId, title);
+    },
+    deleteState: (state, artifactId) => {
+      state.mosaicDashboard.removeDashboard(artifactId);
+    },
+    renameState: (state, artifactId, title) => {
+      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
+    },
   },
   document: {
     artifactType: 'document',

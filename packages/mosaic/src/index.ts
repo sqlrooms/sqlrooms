@@ -56,6 +56,11 @@ export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboa
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/createDefaultMosaicDashboardPanelRenderers';
 export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
+export {
+  DataTableSelector,
+  DataTableSelectorEmptyState,
+  type DataTableSelectorProps,
+} from './components/DataTableSelector';
 
 // Dashboard hooks
 export {useSelectedOrFirstTable} from './dashboard/useSelectedOrFirstTable';

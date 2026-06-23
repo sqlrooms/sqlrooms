@@ -265,15 +265,35 @@ describe('createDeckMapDashboardTool', () => {
 
   it('provides default dashboard slice options with the deck map panel action', () => {
     const options = createDeckMapDashboardSliceOptions();
+    const mapAction = options.addPanelActions?.find(
+      (action) => action.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
+    );
 
     expect(
       options.panelRenderers?.[DECK_MAP_DASHBOARD_PANEL_TYPE],
     ).toBeDefined();
-    expect(options.addPanelActions).toContainEqual(
-      expect.objectContaining({
-        type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+    expect(mapAction).toBeDefined();
+    expect(mapAction?.isEnabled).toBeUndefined();
+    expect(
+      mapAction?.createPanel({
+        dashboardId: 'dashboard-1',
+        dashboard: undefined,
+        selectedTable: {
+          tableName: 'plain_table',
+          columns: [{name: 'name', type: 'VARCHAR'}],
+          table: 'plain_table',
+        } as any,
+        tables: [],
+        chartTypes: undefined,
       }),
-    );
+    ).toMatchObject({
+      type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+      title: 'plain_table map',
+      config: {
+        datasets: {},
+        spec: {layers: []},
+      },
+    });
     expect(options.chartTypes?.length).toBeGreaterThan(0);
   });
 

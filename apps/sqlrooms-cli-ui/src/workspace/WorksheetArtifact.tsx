@@ -16,6 +16,7 @@ import {
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
+import {WorksheetMapBlockRenderer} from './WorksheetMapBlockRenderer';
 import {WorksheetMarkdownDocumentBlockRenderer} from './WorksheetMarkdownDocumentBlockRenderer';
 import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
 import {WorksheetSqlQueryBlockRenderer} from './WorksheetSqlQueryBlockRenderer';
@@ -113,6 +114,7 @@ const ExperimentalStatefulBlockPlaceholder: FC<
 
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
+  map: WorksheetMapBlockRenderer,
   pivot: WorksheetPivotBlockRenderer,
   'data-table': WorksheetDataTableBlockRenderer,
   document: WorksheetMarkdownDocumentBlockRenderer,
@@ -132,6 +134,7 @@ function createWorksheetStatefulBlockRenderers(
   }
   return {
     ...WORKSHEET_STATEFUL_BLOCK_RENDERERS,
+    map: ExperimentalStatefulBlockPlaceholder,
     pivot: ExperimentalStatefulBlockPlaceholder,
     document: ExperimentalStatefulBlockPlaceholder,
     'sql-query': ExperimentalStatefulBlockPlaceholder,

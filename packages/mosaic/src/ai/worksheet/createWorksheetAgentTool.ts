@@ -18,6 +18,7 @@ function getWorksheetAgentInstructions<TState>(
 ): string {
   const chartTools = resolveChartTypes(options.chartToolsOptions?.chartTypes);
   const htmlAppBlocksEnabled = options.htmlAppBlocksEnabled !== false;
+  const mapBlocksEnabled = options.mapBlocksEnabled === true;
 
   const chartToolsInstructions = createChartToolsInstructions(
     chartTools,
@@ -38,7 +39,11 @@ CRITICAL RULES:
 4. Prefer CHARTS with TEXT BLOCKS for context. Text blocks alone are insufficient.
 5. Use DASHBOARD BLOCKS when interactive exploration of multiple related dimensions would enhance the analysis.
 6. Use DATA TABLE EXPLORER BLOCK when users need to explore raw data in a tabular format. Only add one block per worksheet, and only if the user explicitly requests it or if it is necessary for exploration.
-7. If the user asks to add a map or geospatial visualization to a worksheet dashboard, use a dashboard block and ${KnownWorksheetTools.embedded_dashboard_agent}; worksheet chart tools cannot create map panels.
+7. ${
+    mapBlocksEnabled
+      ? 'If the user asks to add a map or geospatial visualization to a worksheet, use the available direct worksheet map block tool; do not create a dashboard block solely to hold a map.'
+      : `If the user asks to add a map or geospatial visualization to a worksheet dashboard, use a dashboard block and ${KnownWorksheetTools.embedded_dashboard_agent}; worksheet chart tools cannot create map panels.`
+  }
 ${htmlAppBlocksEnabled ? `8. If the user asks for an HTML app, D3 app, Chart.js app, browser app, custom interactive visualization, or generated app inside a worksheet, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent}. Do not create a top-level html-app artifact from inside worksheet_agent.` : ''}
 
 ## Creating Blocks
@@ -90,7 +95,7 @@ STEP 2: Populate the dashboard with charts and panels
 
 Use dashboard blocks when:
 - User explicitly requests a dashboard: "add dashboard analyzing sales data"
-- User asks for a map, geospatial visualization, locations, longitude/latitude, geometry, H3, routes, or spatial analysis
+- User asks for a map, geospatial visualization, locations, longitude/latitude, geometry, H3, routes, or spatial analysis and no direct worksheet map block tool is available
 - Interactive exploration would be valuable: multiple related dimensions benefit from coordinated views
 - Dataset has multiple dimensions suitable for multi-faceted analysis
 - The dashboard will contain 3-5 panels showing different aspects of the data
@@ -140,7 +145,11 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 1. Call ${KnownWorksheetTools.add_dashboard_block} to create the container
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with the returned dashboardId to populate it
 
-**Map requests:** If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and an intent to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.
+**Map requests:** ${
+    mapBlocksEnabled
+      ? 'If user asks to add a map to a worksheet, use the direct worksheet map block tool. If updating an existing worksheet map, call list_worksheet_blocks first and pass the map resource ID to the map tool.'
+      : `If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and an intent to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.`
+  }
 
 ${htmlAppBlocksEnabled ? `**HTML app requests:** If user asks to create a new app inside the worksheet, call ${KnownWorksheetTools.add_html_app_block}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target htmlAppId as appId.` : ''}
 
@@ -159,7 +168,7 @@ When user asks for "comprehensive analysis" or "high-level insights":
 
 **Consider dashboard blocks when:**
 - Dataset has multiple dimensions that benefit from coordinated visualization (e.g., geography + product category + time)
-- A map panel is requested; map panels are dashboard panels, not worksheet chart blocks
+- A map panel is requested and no direct worksheet map block tool is available
 - User wants to "explore" or analyze the data from multiple perspectives
 - Analysis benefits from seeing multiple related views together in one interactive dashboard
 
@@ -210,7 +219,11 @@ ${htmlAppBlocksEnabled ? '❌ Creating a top-level html-app artifact when the us
 ✅ Call create_worksheet_block_* tools to automatically create charts
 ✅ Mix different chart types to show different patterns
 ✅ Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
-✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel
+${
+  mapBlocksEnabled
+    ? '✅ For map requests, use the direct worksheet map block tool; call list_worksheet_blocks first when updating an existing map and pass its mapId'
+    : `✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel`
+}
 ${htmlAppBlocksEnabled ? `✅ For worksheet app requests, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent} so the app is embedded in the worksheet` : ''}
 ✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
 }
@@ -266,6 +279,7 @@ export function createWorksheetAgentTool<
     dashboardAgentTool,
     extraTools,
     htmlAppBlocksEnabled = true,
+    mapBlocksEnabled = false,
   } = options;
 
   return tool({
@@ -280,9 +294,14 @@ IF user requests DASHBOARD:
 2. Call ${KnownWorksheetTools.embedded_dashboard_agent} with dashboardId to populate it with charts
 
 IF user requests a MAP in a worksheet:
-1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
+${
+  mapBlocksEnabled
+    ? `1. For a new map, call create_worksheet_map_block directly
+2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass the mapId to create_worksheet_map_block`
+    : `1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
-3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel
+3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel`
+}
 
 ${
   htmlAppBlocksEnabled
