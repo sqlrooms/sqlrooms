@@ -20,7 +20,7 @@ pnpm --dir python/sqlrooms build
 
 uv run --project python --package sqlrooms sqlrooms \
   --no-open-browser \
-  ./smoke.duckdb
+  /tmp/sqlrooms-smoke.db
 ```
 
 Open the UI URL printed in the terminal. It should be
@@ -31,15 +31,15 @@ The bare CLI command works only after installing the CLI somewhere on your
 
 ```bash
 uv tool install /Users/ilya/Workspace/sqlrooms/python/sqlrooms
-sqlrooms --no-open-browser ./smoke.duckdb
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
 ```
 
 For release smoke testing, verify both local execution paths:
 
 ```bash
-uv run --project python --package sqlrooms sqlrooms --no-open-browser ./smoke.duckdb
+uv run --project python --package sqlrooms sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
 uv tool install --reinstall /Users/ilya/Workspace/sqlrooms/python/sqlrooms
-sqlrooms --no-open-browser ./smoke.duckdb
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
 ```
 
 In the UI, drag in:
@@ -66,7 +66,7 @@ uv run --project python --package sqlrooms sqlrooms \
 
 uv run --project python --package sqlrooms sqlrooms \
   --no-open-browser \
-  ./smoke.duckdb
+  /tmp/sqlrooms-smoke.db
 ```
 
 For the closest local install check, install the freshly built wheel from
@@ -75,11 +75,11 @@ For the closest local install check, install the freshly built wheel from
 ```bash
 uv tool install --reinstall python/dist/sqlrooms-*.whl
 sqlrooms --version
-sqlrooms --no-open-browser ./smoke.duckdb
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
 ```
 
 Open the printed UI URL, drag in the CSV fixture listed above, create a
-worksheet/chart/dashboard, then restart against the same `smoke.duckdb` and
+worksheet/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.db` and
 confirm the imported data and workspace state come back.
 
 1. Choose the package target:
