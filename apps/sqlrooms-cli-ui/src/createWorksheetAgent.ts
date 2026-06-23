@@ -7,19 +7,9 @@ import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createWorksheetAiAdapter} from './createWorksheetAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
-import {
-  createDashboardAgentToolWithDeckMaps,
-  createDeckMapPanelFromNativeConfig,
-  DeckMapDashboardToolParameters,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  type DeckMapDashboardConfigToolConfig,
-} from '@sqlrooms/deck';
+import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
-import {
-  BlockDocumentStatefulBlockBlock,
-  createDefaultBlockDocumentBlockId,
-} from '@sqlrooms/documents';
-import {z} from 'zod';
+import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
 import {
   createWorksheetAgentTool,
   type CreateWorksheetAgentToolOptions,
@@ -28,49 +18,11 @@ import {
   EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS,
   KnownWorksheetTools,
 } from './ai/constants';
+import {WorksheetMapBlockToolParameters} from './createWorksheetCommands';
 
-const WorksheetMapBlockToolParameters = DeckMapDashboardToolParameters.extend({
-  mapId: z
-    .string()
-    .optional()
-    .describe('Existing worksheet map block resource ID to update.'),
-  intent: z
-    .string()
-    .optional()
-    .describe('Durable purpose for this worksheet map block.'),
+const WorksheetMapBlockToolInput = WorksheetMapBlockToolParameters.omit({
+  worksheetId: true,
 });
-
-function getFirstDatasetSourceTableName(
-  config: DeckMapDashboardConfigToolConfig,
-): string | undefined {
-  if (!config.datasets || typeof config.datasets !== 'object') {
-    return undefined;
-  }
-
-  return Object.values(config.datasets)
-    .map(
-      (dataset) =>
-        (dataset as Record<string, unknown>).source as
-          | {tableName?: string}
-          | undefined,
-    )
-    .find((source) => source?.tableName)?.tableName;
-}
-
-function hasSqlOnlyDatasetSource(
-  config: DeckMapDashboardConfigToolConfig,
-): boolean {
-  if (!config.datasets || typeof config.datasets !== 'object') {
-    return false;
-  }
-
-  return Object.values(config.datasets).some((dataset) => {
-    const source = (dataset as Record<string, unknown>).source as
-      | {tableName?: string; sqlQuery?: string}
-      | undefined;
-    return Boolean(source?.sqlQuery && !source.tableName);
-  });
-}
 
 function createWorksheetMapBlockTool(
   store: StoreApi<RoomState>,
@@ -80,115 +32,37 @@ function createWorksheetMapBlockTool(
     description: `Create or update a direct worksheet map block from a native Deck JSON map config.
 
 Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.`,
-    inputSchema: WorksheetMapBlockToolParameters,
+    inputSchema: WorksheetMapBlockToolInput,
     execute: async (params) => {
       try {
-        const state = store.getState();
-        const artifact = state.artifacts.getArtifact(worksheetId);
-        if (!artifact || artifact.type !== 'worksheet') {
-          throw new Error(`Artifact ${worksheetId} is not a worksheet`);
-        }
-
-        const tableName =
-          params.tableName ?? getFirstDatasetSourceTableName(params.config);
-        if (
-          params.mapId &&
-          !tableName &&
-          hasSqlOnlyDatasetSource(params.config)
-        ) {
+        const result = await store
+          .getState()
+          .commands.invokeCommand(
+            'worksheet.add-map-block',
+            {worksheetId, ...params},
+            {surface: 'ai', actor: 'worksheet-agent'},
+          );
+        if (!result.success) {
           throw new Error(
-            'tableName is required when updating a worksheet map block with SQL-only dataset sources',
+            result.error ??
+              result.message ??
+              'Failed to add worksheet map block.',
           );
         }
-        if (tableName && !state.db.findTable(tableName)) {
-          throw new Error(`Table ${tableName} was not found`);
-        }
-
-        state.blockDocuments.ensureBlockDocument(worksheetId);
-
-        const mapId = params.mapId ?? createDefaultBlockDocumentBlockId();
-        const title = params.title || 'Map';
-        const existingMapBlock = params.mapId
-          ? state.blockDocuments
-              .getBlocks(worksheetId)
-              .find(
-                (block): block is BlockDocumentStatefulBlockBlock =>
-                  block.type === 'statefulBlock' &&
-                  block.blockType === 'map' &&
-                  block.blockInstanceId === params.mapId,
-              )
-          : undefined;
-        if (params.mapId && !existingMapBlock) {
-          throw new Error(
-            `Worksheet map block ${params.mapId} was not found in worksheet ${worksheetId}`,
-          );
-        }
-
-        state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
-        if (tableName) {
-          state.mosaicDashboard.setSelectedTable(mapId, tableName);
-        }
-
-        const panel = createDeckMapPanelFromNativeConfig({
-          title,
-          config: params.config,
-        });
-
-        const dashboard = state.mosaicDashboard.getDashboard(mapId);
-        const existingPanel = params.panelId
-          ? dashboard?.panels.find(
-              (candidate) =>
-                candidate.id === params.panelId &&
-                candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-            )
-          : dashboard?.panels.find(
-              (candidate) => candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-            );
-
-        if (params.panelId && !existingPanel) {
-          throw new Error(`Map panel ${params.panelId} was not found`);
-        }
-
-        if (existingPanel) {
-          state.mosaicDashboard.updatePanel(mapId, existingPanel.id, {
-            title: panel.title,
-            config: panel.config,
-          });
-        } else {
-          state.mosaicDashboard.addPanel(mapId, panel);
-        }
-
-        let blockId: string | undefined;
-        if (existingMapBlock) {
-          state.blockDocuments.updateBlock(worksheetId, existingMapBlock.id, {
-            ...existingMapBlock,
-            title,
-            caption: title,
-          });
-          blockId = existingMapBlock.id;
-        } else {
-          const block: BlockDocumentStatefulBlockBlock = {
-            type: 'statefulBlock',
-            id: createDefaultBlockDocumentBlockId(),
-            blockInstanceId: mapId,
-            blockType: 'map',
-            intent: params.intent,
-            title,
-            caption: title,
-            height: 560,
-          };
-          state.blockDocuments.appendBlocks(worksheetId, [block]);
-          blockId = block.id;
-        }
+        const data = result.data as
+          | {
+              mapId?: string;
+              blockId?: string;
+              panelId?: string;
+            }
+          | undefined;
 
         return {
           success: true,
-          mapId,
-          blockId,
-          panelId: existingPanel?.id ?? panel.id,
-          message: params.mapId
-            ? `Updated worksheet map block "${title}".`
-            : `Added worksheet map block "${title}".`,
+          mapId: data?.mapId,
+          blockId: data?.blockId,
+          panelId: data?.panelId,
+          message: result.message,
         };
       } catch (error) {
         return {
@@ -247,6 +121,68 @@ export function worksheetAgentTool(
     dashboardAgentTool,
     htmlAppBlocksEnabled: experimentalEnabled,
     mapBlocksEnabled: experimentalEnabled,
+    addDashboardBlock: async ({worksheetId, title, tableName, intent}) => {
+      const result = await store
+        .getState()
+        .commands.invokeCommand(
+          'worksheet.add-dashboard-block',
+          {worksheetId, title, tableName, intent},
+          {surface: 'ai', actor: 'worksheet-agent'},
+        );
+      if (!result.success) {
+        throw new Error(
+          result.error ?? result.message ?? 'Failed to add dashboard block.',
+        );
+      }
+      const data = result.data as
+        | {dashboardId?: string; blockId?: string}
+        | undefined;
+      if (!data?.dashboardId || !data.blockId) {
+        throw new Error('Dashboard block command did not return IDs.');
+      }
+      return {dashboardId: data.dashboardId, blockId: data.blockId};
+    },
+    addDataTableExplorerBlock: async ({
+      worksheetId,
+      title,
+      tableName,
+      intent,
+    }) => {
+      const result = await store
+        .getState()
+        .commands.invokeCommand(
+          'worksheet.add-data-table-block',
+          {worksheetId, title, tableName, intent},
+          {surface: 'ai', actor: 'worksheet-agent'},
+        );
+      if (!result.success) {
+        throw new Error(
+          result.error ?? result.message ?? 'Failed to add data table block.',
+        );
+      }
+      return result.data;
+    },
+    addHtmlAppBlock: async ({worksheetId, title, intent}) => {
+      const result = await store
+        .getState()
+        .commands.invokeCommand(
+          'worksheet.add-html-app-block',
+          {worksheetId, title, intent},
+          {surface: 'ai', actor: 'worksheet-agent'},
+        );
+      if (!result.success) {
+        throw new Error(
+          result.error ?? result.message ?? 'Failed to add HTML app block.',
+        );
+      }
+      const data = result.data as
+        | {appId?: string; blockId?: string}
+        | undefined;
+      if (!data?.appId || !data.blockId) {
+        throw new Error('HTML app block command did not return IDs.');
+      }
+      return {appId: data.appId, blockId: data.blockId};
+    },
     createDashboardBlock: ({title, tableName, intent}) => {
       const state = store.getState();
       const dashboardId = state.mosaicDashboard.createDashboard(title);

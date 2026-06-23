@@ -77,13 +77,13 @@ Useful for: quick data exploration, understanding data quality, finding missing 
           ensureTable(databaseAdapter, params.tableName);
         }
 
-        await addDataTable(params);
+        const dataTable = await addDataTable(params);
 
         return {
           llmResult: {
             success: true,
             details: `Created Data Table Explorer "${params.title}".`,
-            data: params,
+            data: dataTable ? {...params, dataTable} : params,
           },
         };
       } catch (error) {

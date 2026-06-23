@@ -137,6 +137,10 @@ import {
 } from './statefulBlockArtifactConfigs';
 import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
+import {
+  CLI_WORKSHEET_COMMAND_OWNER,
+  createWorksheetCommands,
+} from './createWorksheetCommands';
 import {KnownWorksheetTools, WORKSHEET_AGENT_TOOL_NAME} from './ai/constants';
 
 export type {RoomState} from './store-types';
@@ -751,6 +755,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             }),
           );
+          registerCommandsForOwner(
+            store,
+            CLI_WORKSHEET_COMMAND_OWNER,
+            createWorksheetCommands(),
+          );
           if (experimentalEnabled) {
             registerCommandsForOwner(
               store,
@@ -775,6 +784,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, CLI_WORKSHEET_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_PYTHON_COMMAND_OWNER);
           unregisterCommandsForOwner(store, HTML_APP_REVISION_COMMAND_OWNER);
         },
