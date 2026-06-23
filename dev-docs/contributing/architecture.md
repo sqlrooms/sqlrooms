@@ -47,6 +47,10 @@ Stateful blocks are feature-backed blocks whose backing state lives in the ownin
 
 Tools use `tool()` from the Vercel AI SDK; renderers are registered separately. See `packages/ai/src/tools/defaultTools.ts` and `examples/ai` for current API.
 
+## Commands
+
+Commands are durable workspace actions shared by UI, AI, MCP, and future automation surfaces. Use them for user-visible mutations or selections that should be discoverable and traceable across surfaces; keep model-only affordances as AI tools and complex private loops as specialized agents with command-backed durable writes where practical. See [Commands](commands.md) for the eligibility bar, result convention, and current command-layer audit.
+
 ## Packages
 
 See [docs/packages.md](../docs/packages.md). Categories: Core, Feature, Experimental, Utility.
