@@ -62,7 +62,8 @@ For more information and examples on using the `useSql` hook, see the [useSql AP
 `createWebSocketDuckDbConnector()` exposes the persistent WebSocket lifecycle
 through `connectionStatus`, `subscribeConnectionStatus()`, and the optional
 `onConnectionStatusChange` callback. Use this for live UI affordances such as
-lost-connection dialogs.
+lost-connection dialogs. Call `reconnect()` to reopen the socket and rerun the
+connector initialization SQL without destroying the connector instance.
 
 ```tsx
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
@@ -79,6 +80,8 @@ const unsubscribe = connector.subscribeConnectionStatus((status) => {
     console.warn('DuckDB WebSocket disconnected');
   }
 });
+
+await connector.reconnect();
 ```
 
 ### Looking up Table Metadata

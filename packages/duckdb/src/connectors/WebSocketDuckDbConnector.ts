@@ -67,6 +67,12 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
   subscribeConnectionStatus(
     listener: (status: WebSocketDuckDbConnectionStatus) => void,
   ): () => void;
+
+  /**
+   * Reopen the persistent WebSocket and rerun connector initialization SQL
+   * without destroying the connector instance.
+   */
+  reconnect(): Promise<void>;
 }
 
 /**
@@ -528,6 +534,15 @@ export function createWebSocketDuckDbConnector(
       return () => {
         connectionStatusListeners.delete(listener);
       };
+    },
+    async reconnect() {
+      await ensureSocket();
+      if (initializationQuery) {
+        await impl.executeQueryInternal(
+          initializationQuery,
+          new AbortController().signal,
+        );
+      }
     },
   };
 }

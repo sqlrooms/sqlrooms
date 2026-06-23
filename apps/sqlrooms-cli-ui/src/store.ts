@@ -262,6 +262,7 @@ function createDisabledCrdtState(): CrdtSliceState {
 }
 
 const runtimeWsUrl = runtimeConfig.wsUrl || 'ws://localhost:4000';
+export const cliDuckDbWsUrl = runtimeWsUrl;
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeWsUrl,
   initializationQuery: [
