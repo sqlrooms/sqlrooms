@@ -391,6 +391,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                             (layer) => ({
                               ...layer,
                               widthMinPixels: value,
+                              getWidth: value,
                             }),
                           ),
                         );
@@ -612,7 +613,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
 
         {showRadiusSetting && (
           <Field
-            label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
+            label={`Point radius: ${(activeLayer?.getRadius as number | undefined) ?? (activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
           >
             <div className="pt-0.5">
               <Slider
@@ -620,7 +621,9 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 max={50}
                 step={1}
                 value={[
-                  (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
+                  (activeLayer?.getRadius as number | undefined) ??
+                    (activeLayer?.radiusMinPixels as number | undefined) ??
+                    2,
                 ]}
                 onValueChange={(values) => {
                   const value = values[0] ?? 2;
@@ -630,7 +633,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       activeLayerIndex,
                       (layer) => ({
                         ...layer,
-                        radiusMinPixels: value,
+                        getRadius: value,
+                        radiusMinPixels: 1,
                         radiusMaxPixels: Math.max(
                           value,
                           (layer.radiusMaxPixels as number | undefined) ??
@@ -827,6 +831,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       (layer) => ({
                         ...layer,
                         widthMinPixels: value,
+                        getWidth: value,
                       }),
                     ),
                   );

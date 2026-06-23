@@ -345,6 +345,10 @@ export function setDeckMapLayerColorScale(
   }));
 }
 
+const DEFAULT_LAYER_FILL_COLOR: [number, number, number, number] = [
+  56, 189, 248, 180,
+];
+
 export function clearDeckMapLayerColorScale(
   config: DeckMapDashboardPanelConfig,
   layerIndex: number,
@@ -352,7 +356,11 @@ export function clearDeckMapLayerColorScale(
 ): DeckMapDashboardPanelConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => {
     const nextLayer = {...layer};
-    delete nextLayer[accessor];
+    if (accessor === 'getFillColor') {
+      nextLayer[accessor] = [...DEFAULT_LAYER_FILL_COLOR];
+    } else {
+      delete nextLayer[accessor];
+    }
     return nextLayer;
   });
 }
