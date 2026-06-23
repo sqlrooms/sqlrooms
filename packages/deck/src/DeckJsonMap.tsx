@@ -108,7 +108,7 @@ function filterUnavailableLayers(
       return false;
     }
 
-    return datasetState.status === 'ready';
+    return datasetState.status !== 'error';
   });
 
   return {
