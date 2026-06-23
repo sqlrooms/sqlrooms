@@ -6,14 +6,94 @@ jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
 
 const {createCommandTools} = await import('../src/tools/commandTools');
 
-function createCommandState(invokeCommand: any) {
+const inputSchema = {
+  type: 'object',
+  properties: {
+    title: {type: 'string'},
+  },
+  required: ['title'],
+};
+
+const commandDescriptors = [
+  {
+    id: 'artifact.rename',
+    owner: 'app',
+    name: 'Rename Artifact',
+    description: 'Rename an existing dashboard or worksheet artifact.',
+    group: 'Artifacts',
+    keywords: ['artifact', 'title', 'rename'],
+    enabled: true,
+    visible: true,
+    requiresInput: true,
+    inputDescription: 'Artifact id and title.',
+    inputSchema,
+    keystrokes: [],
+    readOnly: false,
+    idempotent: true,
+    riskLevel: 'low',
+    requiresConfirmation: false,
+  },
+  {
+    id: 'worksheet.add-dashboard-block',
+    owner: 'app',
+    name: 'Add Dashboard Block',
+    description: 'Add a dashboard block to a worksheet.',
+    group: 'Worksheet',
+    keywords: ['worksheet', 'dashboard', 'block', 'add'],
+    enabled: true,
+    visible: true,
+    requiresInput: true,
+    inputDescription: 'Worksheet id, dashboard title, and table.',
+    inputSchema,
+    keystrokes: [],
+    readOnly: false,
+    idempotent: false,
+    riskLevel: 'medium',
+    requiresConfirmation: false,
+  },
+  {
+    id: 'artifact.delete',
+    owner: 'app',
+    name: 'Delete Artifact',
+    description: 'Remove an artifact from the workspace.',
+    group: 'Artifacts',
+    keywords: ['artifact', 'remove', 'delete'],
+    enabled: false,
+    visible: true,
+    requiresInput: true,
+    inputDescription: 'Artifact id.',
+    inputSchema,
+    keystrokes: [],
+    readOnly: false,
+    idempotent: false,
+    riskLevel: 'high',
+    requiresConfirmation: true,
+  },
+] as const;
+
+function createCommandState(
+  invokeCommand: any,
+  descriptors: readonly any[] = [],
+) {
+  const listCommands = jest.fn((options?: {includeInputSchema?: boolean}) =>
+    descriptors.map((descriptor) =>
+      options?.includeInputSchema
+        ? descriptor
+        : {...descriptor, inputSchema: undefined},
+    ),
+  );
+  const getCommand = jest.fn(
+    (commandId: string) =>
+      descriptors.find((descriptor) => descriptor.id === commandId) ??
+      (commandId === 'artifact.create' ? {id: 'artifact.create'} : undefined),
+  );
   return createCommandTools({
     getState: () => ({
       commands: {
         registerCommands: jest.fn(),
         unregisterCommands: jest.fn(),
-        listCommands: jest.fn(() => []),
-        getCommand: jest.fn(() => ({id: 'artifact.create'})),
+        listCommands,
+        getCommand,
         executeCommand: jest.fn(),
         invokeCommand,
       },
@@ -22,6 +102,78 @@ function createCommandState(invokeCommand: any) {
 }
 
 describe('command tools', () => {
+  it('searches commands by intent with deterministic ranking', async () => {
+    const tools = createCommandState(jest.fn(), commandDescriptors);
+
+    const result = await (tools.search_commands as any).execute({
+      query: 'rename artifact title',
+      limit: 2,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.commands.map((command: any) => command.id)).toEqual([
+      'artifact.rename',
+      'artifact.delete',
+    ]);
+    expect(result.commands[0].score).toBeGreaterThan(result.commands[1].score);
+  });
+
+  it('keeps command search compact by omitting schemas by default', async () => {
+    const tools = createCommandState(jest.fn(), commandDescriptors);
+
+    const result = await (tools.search_commands as any).execute({
+      query: 'dashboard block',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.commands[0]).toMatchObject({
+      id: 'worksheet.add-dashboard-block',
+      requiresInput: true,
+      riskLevel: 'medium',
+      enabled: true,
+      visible: true,
+      matchReason: expect.any(String),
+    });
+    expect(result.commands[0]).not.toHaveProperty('inputSchema');
+    expect(result.commands[0]).not.toHaveProperty('owner');
+    expect(result.commands[0]).not.toHaveProperty('inputDescription');
+  });
+
+  it('flags weak command metadata that can hurt search quality', async () => {
+    const tools = createCommandState(jest.fn(), [
+      {
+        ...commandDescriptors[0],
+        description: undefined,
+        keywords: [],
+      },
+    ]);
+
+    const result = await (tools.search_commands as any).execute({
+      query: 'artifact.rename',
+    });
+
+    expect(result.commands[0]).toMatchObject({
+      id: 'artifact.rename',
+      metadataWarnings: ['missing description', 'missing keywords'],
+    });
+  });
+
+  it('loads the selected command schema through get_command', async () => {
+    const tools = createCommandState(jest.fn(), commandDescriptors);
+
+    const result = await (tools.get_command as any).execute({
+      commandId: 'artifact.rename',
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      command: {
+        id: 'artifact.rename',
+        inputSchema,
+      },
+    });
+  });
+
   it('passes the owning AI session id through command invocation metadata', async () => {
     const invokeCommand = jest.fn(async () => ({
       success: true,

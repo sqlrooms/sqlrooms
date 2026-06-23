@@ -43,7 +43,8 @@ export type DefaultTableTools = {
  * Includes:
  * - query: Executes SQL queries against DuckDB
  * - list_tables / read_table_schema: Discover and inspect database tables
- * - list_commands / execute_command: Bridge to room command registry
+ * - search_commands / get_command / execute_command: Discover and run room commands
+ * - list_commands: Broad command registry debugging
  *
  * Pass `commands: false` to opt out of the command tools (e.g. in rooms
  * without a command registry).

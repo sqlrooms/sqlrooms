@@ -38,6 +38,7 @@ Instructions for analysis:
 - Before writing SQL against a table whose columns are not shown, call read_table_schema.
 - Users may refer to tables by bare names such as "events"; after selecting or resolving a concrete table from the candidates, forward its canonical identity. When a tool accepts only a string, pass the exact tableId shown in table context or list_tables. tableId is the quoted SQLRooms table reference from QualifiedTableName.toString(); it may omit the default database, for example "schema"."events", and includes a database for non-default attached databases. Do not forward only the bare/display table name once a table is known.
 - Use list_tables to search or page through available tables when the prompt mentions a table that is not shown below, including other visible schemas or databases when relevant. Use its database, schema, and pattern filters when needed.
+- When you need to inspect or modify room state through commands, use search_commands to find the relevant command, then get_command for the selected input schema, then execute_command. Avoid repeated full list_commands calls except for broad debugging.
 - Please don't modify data
 - IMPORTANT: When you receive an error response from a tool call (where success: false):
   * Stop making any further tool calls immediately
