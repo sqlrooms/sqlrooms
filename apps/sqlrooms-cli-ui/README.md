@@ -62,18 +62,15 @@ Before versioning or publishing, test a production build locally:
 pnpm --dir python/sqlrooms build
 
 # Source/workspace check. This should reflect python/sqlrooms/package.json.
-uv run --project python/sqlrooms sqlrooms \
-  --version
+uv run --project python/sqlrooms sqlrooms --version
 
-uv run --project python/sqlrooms sqlrooms \
-  --no-open-browser \
-  /tmp/sqlrooms-smoke.duckdb
+uv run --project python/sqlrooms sqlrooms --no-open-browser --experimental /tmp/sqlrooms-smoke.duckdb
 ```
 
 For the closest local install check, install the freshly built wheel from
 `python/dist` into a `uv tool` environment. Use the exact wheel for the current
 `python/sqlrooms/package.json` version so older files in `python/dist` are not
-selected accidentally:
+selected accidentally. Run these commands from the repository root:
 
 ```bash
 SQLROOMS_VERSION=$(node -p "require('./python/sqlrooms/package.json').version")
@@ -93,8 +90,8 @@ confirm the imported data and workspace state come back.
 2. Version the selected package or packages explicitly:
 
    ```bash
-   pnpm cli:version --target sqlrooms-server --bump patch
-   pnpm cli:version --target sqlrooms --set 0.2.0
+   pnpm cli:version --target sqlrooms --bump patch
+   pnpm cli:version --target sqlrooms-server --set 0.2.0
    pnpm cli:version --target all --bump minor
    ```
 

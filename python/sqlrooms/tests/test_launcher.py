@@ -65,6 +65,7 @@ def test_api_config_uses_same_origin_ws_proxy(tmp_path):
 
     assert response.status_code == 200
     assert response.json()["wsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
+    assert response.json()["crdtWsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):
