@@ -142,6 +142,8 @@ Generated `html-app` artifacts and worksheet HTML app blocks store source
 revisions in `@sqlrooms/app-runtime` state. The CLI registers these room
 commands for palette and AI surfaces:
 
+- `html-app.write-revision`
+- `html-app.rename`
 - `html-app.restore-revision`
 - `html-app.undo-revision`
 - `html-app.redo-revision`
@@ -158,6 +160,17 @@ Worksheet AI tools compose generic block-document helpers with CLI-specific
 agent policy. Durable block appends route through the registered
 `worksheet.append-blocks` command, so text and chart block creation use the same
 traceable mutation path as palette, API, and future skill surfaces.
+Stateful worksheet blocks use CLI-owned commands that wrap the generic document
+commands and feature-specific state creation:
+
+- `worksheet.add-dashboard-block`
+- `worksheet.add-data-table-block`
+- `worksheet.add-html-app-block`
+- `worksheet.add-map-block`
+- `worksheet.update-block-metadata`
+
+Topbar artifact title edits route through `artifact.rename`, which preserves
+artifact-type rename hooks and returns previous/new title metadata for traces.
 
 ## AI Artifact Context
 
