@@ -54,7 +54,7 @@ export type DataTableExplorerToolInput = z.infer<
  */
 export type CreateDataTableExplorerToolOptions = {
   databaseAdapter: DatabaseAiAdapter;
-  addDataTable(params: DataTableExplorerParameters): void;
+  addDataTable(params: DataTableExplorerParameters): unknown | Promise<unknown>;
 };
 
 /**
@@ -77,7 +77,7 @@ Useful for: quick data exploration, understanding data quality, finding missing 
           ensureTable(databaseAdapter, params.tableName);
         }
 
-        addDataTable(params);
+        await addDataTable(params);
 
         return {
           llmResult: {

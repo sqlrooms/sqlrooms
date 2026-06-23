@@ -44,7 +44,7 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
           settings,
         };
 
-        addChart({
+        await addChart({
           tableName,
           panelId,
           title,

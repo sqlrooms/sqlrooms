@@ -383,6 +383,7 @@ export function createBlockDocumentCommands<
           commandId('append-blocks'),
           artifactId,
           labelLower,
+          blockResultData(blocks),
         );
       },
     },
@@ -415,6 +416,10 @@ export function createBlockDocumentCommands<
           commandId('insert-blocks'),
           artifactId,
           labelLower,
+          {
+            index,
+            ...blockResultData(blocks),
+          },
         );
       },
     },
@@ -441,6 +446,10 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
+        const replacementBlock = {
+          ...block,
+          id: blockId,
+        } as BlockDocumentBlockType;
         const updated = state.blockDocuments.updateBlock(
           artifactId,
           blockId,
@@ -452,6 +461,7 @@ export function createBlockDocumentCommands<
           commandId('update-block'),
           artifactId,
           labelLower,
+          blockResultData([replacementBlock]),
         );
       },
     },
@@ -478,6 +488,7 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
+        const block = findBlockById(state, artifactId, blockId);
         const removed = state.blockDocuments.removeBlock(artifactId, blockId);
         if (!removed) return missingBlock(commandId('remove-block'), blockId);
         return blockMutationSuccess(
@@ -485,6 +496,7 @@ export function createBlockDocumentCommands<
           commandId('remove-block'),
           artifactId,
           labelLower,
+          block ? {removedBlock: block, ...blockResultData([block])} : {},
         );
       },
     },
@@ -511,6 +523,7 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
+        const block = findBlockById(state, artifactId, blockId);
         const moved = state.blockDocuments.moveBlock(
           artifactId,
           blockId,
@@ -522,6 +535,10 @@ export function createBlockDocumentCommands<
           commandId('move-block'),
           artifactId,
           labelLower,
+          {
+            toIndex,
+            ...(block ? blockResultData([block]) : {}),
+          },
         );
       },
     },
@@ -570,7 +587,12 @@ export function createBlockDocumentCommands<
           commandId('create-chart-block'),
           artifactId,
           labelLower,
-          {block},
+          {
+            tableName,
+            selectionGroupId,
+            caption,
+            ...blockResultData([block]),
+          },
         );
       },
     },
@@ -655,7 +677,14 @@ export function createBlockDocumentCommands<
           commandId('create-stateful-block'),
           artifactId,
           labelLower,
-          {block},
+          {
+            blockInstanceId,
+            ownership,
+            title: blockTitle,
+            caption,
+            height: height ?? blockConfig?.defaultHeight,
+            ...blockResultData([block]),
+          },
         );
       },
     },
@@ -741,6 +770,53 @@ function readBlockDocumentData(
     ),
     updatedAt: blockDocument?.updatedAt,
   };
+}
+
+function findBlockById(
+  state: BlockDocumentCommandState,
+  artifactId: string,
+  blockId: string,
+) {
+  return state.blockDocuments
+    .getBlocks(artifactId)
+    .find((block) => block.id === blockId);
+}
+
+function blockResultData(blocks: BlockDocumentBlockType[]) {
+  const blockIds = blocks.map((block) => block.id);
+  const blockTypes = blocks.map((block) => block.type);
+  const data: Record<string, unknown> = {
+    blockIds,
+    blockTypes,
+    affectedBlocks: blocks,
+  };
+
+  if (blocks.length === 1) {
+    const block = blocks[0];
+    if (!block) {
+      return data;
+    }
+    data.blockId = block.id;
+    data.blockType = block.type;
+    data.block = block;
+
+    if (block.type === 'statefulBlock') {
+      data.statefulBlockType = block.blockType;
+      data.blockInstanceId = block.blockInstanceId;
+      data.ownership = block.ownership;
+      data.title = block.title;
+      data.caption = block.caption;
+      data.height = block.height;
+    }
+
+    if (block.type === 'chart') {
+      data.tableName = block.tableName;
+      data.selectionGroupId = block.selectionGroupId;
+      data.caption = block.caption;
+    }
+  }
+
+  return data;
 }
 
 function blockMutationSuccess(

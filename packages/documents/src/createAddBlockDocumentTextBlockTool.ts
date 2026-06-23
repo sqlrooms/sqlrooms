@@ -118,7 +118,10 @@ Block types:
       try {
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         const block = createBlockDocumentTextBlock(params);
-        const blockId = blockDocumentAdapter.addBlock(blockDocumentId, block);
+        const blockId = await blockDocumentAdapter.addBlock(
+          blockDocumentId,
+          block,
+        );
 
         return {
           success: true,

@@ -24,7 +24,9 @@ type AddChartFunctionArgs = {
 /**
  * Callback used by chart tools to add or update a rendered chart panel.
  */
-export type AddChartFunction = (args: AddChartFunctionArgs) => string;
+export type AddChartFunction = (
+  args: AddChartFunctionArgs,
+) => string | Promise<string>;
 
 /**
  * Dependencies for chart configuration tools.

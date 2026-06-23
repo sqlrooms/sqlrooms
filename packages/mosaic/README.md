@@ -182,7 +182,9 @@ table blocks.
 `createBlockDocumentDataTableExplorerTool` expose Mosaic-owned capabilities for
 block-document hosts. The host provides a `BlockDocumentAiAdapter` from
 `@sqlrooms/documents` plus callbacks for creating host-specific stateful block
-state, then composes these tools with app-specific agent policy.
+state, then composes these tools with app-specific agent policy. The adapter may
+append blocks through direct slice methods or by awaiting a command-backed
+mutation supplied by the host.
 
 ### Mosaic Dashboard Panels
 
