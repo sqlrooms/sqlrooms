@@ -28,10 +28,10 @@ const usage = () => {
   console.log(`Manage SQLRooms Python CLI package releases.
 
 Usage:
-  pnpm cli:version -- --target <sqlrooms|sqlrooms-server|all> --bump <patch|minor|major>
-  pnpm cli:version -- --target <sqlrooms|sqlrooms-server|all> --set <version>
-  pnpm cli:publish -- [--target <sqlrooms|sqlrooms-server|all>]
-  pnpm cli:publish:dry -- [--target <sqlrooms|sqlrooms-server|all>]
+  pnpm cli:version --target <sqlrooms|sqlrooms-server|all> --bump <patch|minor|major>
+  pnpm cli:version --target <sqlrooms|sqlrooms-server|all> --set <version>
+  pnpm cli:publish [--target <sqlrooms|sqlrooms-server|all>]
+  pnpm cli:publish:dry [--target <sqlrooms|sqlrooms-server|all>]
 
 Compatibility:
   pnpm publish-cli

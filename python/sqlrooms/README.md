@@ -85,9 +85,9 @@ step. Publishing never bumps versions automatically.
 2. Version the selected package or packages explicitly:
 
    ```bash
-   pnpm cli:version -- --target sqlrooms-server --bump patch
-   pnpm cli:version -- --target sqlrooms --set 0.2.0
-   pnpm cli:version -- --target all --bump minor
+   pnpm cli:version --target sqlrooms-server --bump patch
+   pnpm cli:version --target sqlrooms --set 0.2.0
+   pnpm cli:version --target all --bump minor
    ```
 
    Hatch reads package versions from each package's `package.json`. When
@@ -97,7 +97,7 @@ step. Publishing never bumps versions automatically.
 3. Run the dry publish workflow for the intended target:
 
    ```bash
-   pnpm cli:publish:dry -- --target sqlrooms
+   pnpm cli:publish:dry --target sqlrooms
    ```
 
    The dry workflow runs the same validation and build steps as publish, but it
@@ -106,7 +106,7 @@ step. Publishing never bumps versions automatically.
 4. Publish the same target:
 
    ```bash
-   pnpm cli:publish -- --target sqlrooms
+   pnpm cli:publish --target sqlrooms
    ```
 
    Publishing runs validation, builds the package, then uploads the built
