@@ -11,7 +11,12 @@ const packagesByTarget = {
     label: 'sqlrooms-server',
     cwd: resolve(rootDir, 'python/sqlrooms-server'),
     packageJson: resolve(rootDir, 'python/sqlrooms-server/package.json'),
-    uploadArgs: ['twine', 'upload', '--skip-existing', '../dist/sqlrooms_server*'],
+    uploadArgs: [
+      'twine',
+      'upload',
+      '--skip-existing',
+      '../dist/sqlrooms_server*',
+    ],
   },
   sqlrooms: {
     label: 'sqlrooms',
@@ -32,10 +37,6 @@ Usage:
   pnpm cli:version --target <sqlrooms|sqlrooms-server|all> --set <version>
   pnpm cli:publish [--target <sqlrooms|sqlrooms-server|all>]
   pnpm cli:publish:dry [--target <sqlrooms|sqlrooms-server|all>]
-
-Compatibility:
-  pnpm publish-cli
-  pnpm publish-cli:check
 
 Options:
   --target <target>  Package to operate on. Defaults to all.
@@ -141,7 +142,9 @@ const updateServerDependencyFloor = (version) => {
   const pyproject = readFileSync(sqlroomsPyproject, 'utf8');
   const dependencyPattern = /"sqlrooms-server>=([^"]+)"/;
   if (!dependencyPattern.test(pyproject)) {
-    fail('Could not find sqlrooms-server dependency floor in python/sqlrooms/pyproject.toml.');
+    fail(
+      'Could not find sqlrooms-server dependency floor in python/sqlrooms/pyproject.toml.',
+    );
   }
 
   const updated = pyproject.replace(
@@ -171,7 +174,9 @@ const versionPackages = ({target, bump, setVersion}) => {
     fail('Use either --bump or --set, not both.');
   }
   if (!bump && !setVersion) {
-    fail('Versioning is explicit. Pass --bump patch|minor|major or --set <version>.');
+    fail(
+      'Versioning is explicit. Pass --bump patch|minor|major or --set <version>.',
+    );
   }
   if (setVersion && !versionPattern.test(setVersion)) {
     fail(`Invalid version: ${setVersion}`);
@@ -184,7 +189,9 @@ const versionPackages = ({target, bump, setVersion}) => {
     const pkg = readPackageJson(packageTarget);
     const nextVersion = setVersion ?? bumpVersion(pkg.version, bump);
     writePackageVersion(packageTarget, nextVersion);
-    console.log(`${packagesByTarget[packageTarget].label}: ${pkg.version} -> ${nextVersion}`);
+    console.log(
+      `${packagesByTarget[packageTarget].label}: ${pkg.version} -> ${nextVersion}`,
+    );
 
     if (packageTarget === 'sqlrooms-server') {
       serverVersion = nextVersion;
@@ -215,7 +222,9 @@ const publishPackages = ({target, dryRun, bump, setVersion}) => {
   }
 
   if (dryRun) {
-    console.log('\nSQLRooms CLI publish dry run passed. No packages were uploaded.');
+    console.log(
+      '\nSQLRooms CLI publish dry run passed. No packages were uploaded.',
+    );
     return;
   }
 
