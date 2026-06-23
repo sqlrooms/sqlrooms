@@ -267,6 +267,15 @@ export function setDeckMapLayerGeometryColumn(
         geometryColumn,
       },
     },
+    fitToData:
+      config.fitToData &&
+      config.fitToData.dataset === datasetId &&
+      'geometryColumn' in config.fitToData
+        ? {
+            ...config.fitToData,
+            geometryColumn,
+          }
+        : config.fitToData,
   };
 
   return updateDeckMapLayer(updatedConfig, layerIndex, (l) => ({

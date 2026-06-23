@@ -26,7 +26,9 @@ export function CategoricalLegend({
     <div className="flex flex-col">
       <div
         className="[&::-webkit-scrollbar-thumb]:bg-border overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
-        style={{maxHeight: `${MAX_VISIBLE_ITEMS * 22}px`}}
+        style={{
+          maxHeight: `${Math.ceil(MAX_VISIBLE_ITEMS / Math.max(columns, 1)) * 22}px`,
+        }}
       >
         <div
           className="grid gap-x-3 gap-y-1.5"

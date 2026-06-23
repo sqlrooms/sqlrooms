@@ -1,10 +1,6 @@
 import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
-import {
-  continuousSequentialInterpolators,
-  parseColorString,
-} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
@@ -15,6 +11,7 @@ import {
   DEFAULT_DECK_JSON_CONSTANTS,
   DEFAULT_DECK_JSON_ENUMERATIONS,
 } from './defaultClasses';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
 import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
@@ -29,25 +26,6 @@ type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
   datasetIds: string[];
 };
-
-const HEATMAP_COLOR_STEPS = 6;
-const DEFAULT_HEATMAP_COLOR_RANGE: Array<[number, number, number, number]> =
-  continuousSequentialInterpolators.YlOrRd
-    ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
-        parseColorString(
-          continuousSequentialInterpolators.YlOrRd(
-            i / (HEATMAP_COLOR_STEPS - 1),
-          ),
-        ),
-      )
-    : [
-        [255, 255, 178, 255],
-        [254, 178, 76, 255],
-        [253, 141, 60, 255],
-        [240, 59, 32, 255],
-        [189, 0, 38, 255],
-        [128, 0, 38, 255],
-      ];
 
 function getLayerName(Class: unknown) {
   const maybeClass = Class as {layerName?: string; name?: string};
@@ -365,9 +343,13 @@ export function createDeckJsonConfiguration(
           !Array.isArray(rewritten.updateTriggers)
             ? (rewritten.updateTriggers as Record<string, unknown>)
             : {};
+        const previousGetWeight = existingTriggers.getWeight;
         rewritten.updateTriggers = {
           ...existingTriggers,
-          getWeight: JSON.stringify(rewritten.colorRange),
+          getWeight:
+            previousGetWeight === undefined
+              ? JSON.stringify(rewritten.colorRange)
+              : [previousGetWeight, JSON.stringify(rewritten.colorRange)],
         };
       }
 

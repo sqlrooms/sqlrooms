@@ -1,31 +1,9 @@
 import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
-import {
-  continuousSequentialInterpolators,
-  parseColorString,
-} from '@sqlrooms/color-scales';
 import type {PreparedDeckDatasetState} from '../types';
 import {getColorScale} from './colorScaleFunction';
 import {buildColorScaleLegend} from './compileColorScale';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
 import {resolveColorLegend, resolveDatasetId} from './layerConfig';
-
-const HEATMAP_COLOR_STEPS = 6;
-const DEFAULT_HEATMAP_COLOR_RANGE: Array<[number, number, number, number]> =
-  continuousSequentialInterpolators.YlOrRd
-    ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
-        parseColorString(
-          continuousSequentialInterpolators.YlOrRd(
-            i / (HEATMAP_COLOR_STEPS - 1),
-          ),
-        ),
-      )
-    : [
-        [255, 255, 178, 255],
-        [254, 178, 76, 255],
-        [253, 141, 60, 255],
-        [240, 59, 32, 255],
-        [189, 0, 38, 255],
-        [128, 0, 38, 255],
-      ];
 
 function resolveLegendTitle(
   layerProps: Record<string, unknown>,
