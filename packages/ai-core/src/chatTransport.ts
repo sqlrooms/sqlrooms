@@ -389,11 +389,19 @@ export function createLocalChatTransportFactory({
             // Prefer totalUsage from the finish event (authoritative cumulative value
             // from the agent) over per-step accumulated values which may be zeros
             // when the provider doesn't report usage in streaming chunks.
+            const finishPart = part as {
+              totalUsage?: LanguageModelUsage;
+              usage?: LanguageModelUsage;
+            };
             const finishUsage = toMessageTokenUsage(
-              (part as {totalUsage?: LanguageModelUsage}).totalUsage,
+              finishPart.totalUsage ?? finishPart.usage,
             );
             const finalUsage =
-              finishUsage.totalTokens > 0 ? finishUsage : accumulatedUsage;
+              finishUsage.totalTokens > 0 ||
+              finishUsage.inputTokens > 0 ||
+              finishUsage.outputTokens > 0
+                ? finishUsage
+                : accumulatedUsage;
             finalUsage.lastStepInputTokens = lastStepInputTokens;
             rememberSessionTokenUsage(sessionId, finalUsage);
             return {

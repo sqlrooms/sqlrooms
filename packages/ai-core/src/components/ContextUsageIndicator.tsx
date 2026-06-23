@@ -67,6 +67,7 @@ function computeTokenUsage(
   let cumulativeTokens = 0;
   let lastContextTokens = 0;
   let hasAnyReportedUsage = false;
+  let estimatedConversationTokens = 0;
 
   for (const msg of messages) {
     if (msg.role === 'assistant') {
@@ -85,21 +86,22 @@ function computeTokenUsage(
       }
     }
     // Estimate from content for user messages and assistant messages without usage
-    const estimate = estimateMessageTokens(msg);
-    cumulativeTokens += estimate;
+    estimatedConversationTokens += estimateMessageTokens(msg);
   }
 
-  if (!hasAnyReportedUsage && systemInstructions) {
-    const sysEstimate = estimateTokenCount(systemInstructions);
-    cumulativeTokens += sysEstimate;
-    return {contextTokens: cumulativeTokens, cumulativeTokens};
+  if (!hasAnyReportedUsage) {
+    if (systemInstructions) {
+      estimatedConversationTokens += estimateTokenCount(systemInstructions);
+    }
+    return {
+      contextTokens: estimatedConversationTokens,
+      cumulativeTokens: estimatedConversationTokens,
+    };
   }
 
   // Context tokens = last turn's input tokens (what fills the context window now).
-  // If we have reported usage, inputTokens already includes system instructions.
-  const contextTokens = hasAnyReportedUsage
-    ? lastContextTokens
-    : cumulativeTokens;
+  // inputTokens from reported usage already includes system instructions.
+  const contextTokens = lastContextTokens;
 
   return {contextTokens, cumulativeTokens};
 }
