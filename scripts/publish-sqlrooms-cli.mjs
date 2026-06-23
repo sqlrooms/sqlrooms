@@ -205,6 +205,11 @@ const publishPackages = ({target, dryRun}) => {
     run(pkg.label, pkg.cwd, 'pnpm', ['prerelease']);
   }
 
+  for (const packageTarget of targets) {
+    const pkg = packagesByTarget[packageTarget];
+    run(pkg.label, pkg.cwd, 'pnpm', ['build']);
+  }
+
   if (dryRun) {
     console.log('\nSQLRooms CLI publish dry run passed. No packages were uploaded.');
     return;
