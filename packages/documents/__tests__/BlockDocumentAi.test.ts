@@ -65,6 +65,7 @@ describe('block document AI helpers', () => {
   it('does not create text blocks when the target document is missing', async () => {
     let addBlockCalled = false;
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {
         throw new Error('Block document was deleted');
       },

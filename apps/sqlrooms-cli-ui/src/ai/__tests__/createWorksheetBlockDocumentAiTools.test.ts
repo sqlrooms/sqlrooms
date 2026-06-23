@@ -5,14 +5,13 @@ import type {
   BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import type {DatabaseAiAdapter} from '@sqlrooms/mosaic/ai';
-import {
-  createWorksheetBlockDocumentAiTools,
-  KnownWorksheetTools,
-} from '../createWorksheetBlockDocumentAiTools';
+import {createWorksheetBlockDocumentAiTools} from '../createWorksheetBlockDocumentAiTools';
+import {KnownWorksheetTools} from '../constants';
 
 describe('createWorksheetBlockDocumentAiTools', () => {
   function createBlockDocumentAdapter(): BlockDocumentAiAdapter {
     return {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => block.id,
