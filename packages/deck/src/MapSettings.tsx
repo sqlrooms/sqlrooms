@@ -69,43 +69,21 @@ function extractTableFromSqlQuery(
 }
 
 /**
- * Extracts column aliases from a SQL SELECT clause (e.g. `... AS geom`).
- * Returns names of columns that are produced by the query but may not
- * exist in the raw source table.
- */
-function extractSelectAliases(sqlQuery: string | undefined): string[] {
-  if (!sqlQuery) return [];
-  const selectMatch = sqlQuery.match(/\bSELECT\b(.+?)\bFROM\b/is);
-  if (!selectMatch?.[1]) return [];
-  const aliases: string[] = [];
-  const aliasPattern = /\bAS\s+(?:"([^"]+)"|(\w+))/gi;
-  let match;
-  while ((match = aliasPattern.exec(selectMatch[1])) !== null) {
-    const name = match[1] ?? match[2];
-    if (name) aliases.push(name);
-  }
-  return aliases;
-}
-
-/**
- * Augments raw table columns with virtual columns derived from the dataset's
- * sqlQuery. These are columns generated at query time (e.g. geometry columns
- * created via ST_AsWKB) that don't exist in the raw source table.
+ * Augments raw table columns with the configured geometry column if it
+ * doesn't already exist in the table schema. This handles computed columns
+ * (e.g. geometry created via ST_AsWKB in the dataset SQL query) that the
+ * raw source table doesn't contain.
  */
 function getColumnsWithVirtual(
   tableColumns: TableColumn[],
-  sqlQuery: string | undefined,
+  geometryColumn: string | undefined,
 ): TableColumn[] {
-  const aliases = extractSelectAliases(sqlQuery);
-  if (!aliases.length) return tableColumns;
+  if (!geometryColumn) return tableColumns;
 
   const existingNames = new Set(tableColumns.map((c) => c.name.toLowerCase()));
-  const virtualColumns: TableColumn[] = aliases
-    .filter((name) => !existingNames.has(name.toLowerCase()))
-    .map((name) => ({name, type: 'GEOMETRY (computed)'}));
+  if (existingNames.has(geometryColumn.toLowerCase())) return tableColumns;
 
-  if (!virtualColumns.length) return tableColumns;
-  return [...tableColumns, ...virtualColumns];
+  return [...tableColumns, {name: geometryColumn, type: 'GEOMETRY (computed)'}];
 }
 
 const HEATMAP_COLOR_STEPS = 6;
@@ -214,10 +192,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       dataTable
         ? getColumnsWithVirtual(
             dataTable.columns,
-            activeLayerDataset?.source?.sqlQuery,
+            activeLayerDataset?.geometryColumn,
           )
         : [],
-    [dataTable, activeLayerDataset?.source?.sqlQuery],
+    [dataTable, activeLayerDataset?.geometryColumn],
   );
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
