@@ -375,27 +375,14 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
           );
         }
 
-        state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
-        if (tableName) {
-          await invokeRequiredCommand(
-            state,
-            DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID,
-            {dashboardId: mapId, tableName},
-          );
-        }
-
-        const panel = createDeckMapPanelFromNativeConfig({
-          title,
-          config: params.config,
-        });
-        const dashboard = state.mosaicDashboard.getDashboard(mapId);
+        const existingDashboard = state.mosaicDashboard.getDashboard(mapId);
         const existingPanel = params.panelId
-          ? dashboard?.panels.find(
+          ? existingDashboard?.panels.find(
               (candidate: {id?: string; type?: string}) =>
                 candidate.id === params.panelId &&
                 candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
             )
-          : dashboard?.panels.find(
+          : existingDashboard?.panels.find(
               (candidate: {type?: string}) =>
                 candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
             );
@@ -403,31 +390,8 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
           throw new Error(`Map panel ${params.panelId} was not found`);
         }
 
-        if (existingPanel) {
-          await invokeRequiredCommand(state, 'dashboard.update-panel', {
-            dashboardId: mapId,
-            panelId: existingPanel.id,
-            patch: {title: panel.title, config: panel.config},
-          });
-        } else {
-          await invokeRequiredCommand(state, 'dashboard.add-panel', {
-            dashboardId: mapId,
-            panel,
-          });
-        }
-
         let blockId: string;
         if (existingMapBlock) {
-          await invokeRequiredCommand(
-            state,
-            'worksheet.update-block-metadata',
-            {
-              worksheetId: params.worksheetId,
-              blockId: existingMapBlock.id,
-              title,
-              caption: title,
-            },
-          );
           blockId = existingMapBlock.id;
         } else {
           const result = await invokeRequiredCommand(
@@ -444,6 +408,45 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
             },
           );
           blockId = statefulBlockFromCommandData(result.data).blockId;
+        }
+
+        state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
+        if (tableName) {
+          await invokeRequiredCommand(
+            state,
+            DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID,
+            {dashboardId: mapId, tableName},
+          );
+        }
+
+        const panel = createDeckMapPanelFromNativeConfig({
+          title,
+          config: params.config,
+        });
+        if (existingPanel) {
+          await invokeRequiredCommand(state, 'dashboard.update-panel', {
+            dashboardId: mapId,
+            panelId: existingPanel.id,
+            patch: {title: panel.title, config: panel.config},
+          });
+        } else {
+          await invokeRequiredCommand(state, 'dashboard.add-panel', {
+            dashboardId: mapId,
+            panel,
+          });
+        }
+
+        if (existingMapBlock) {
+          await invokeRequiredCommand(
+            state,
+            'worksheet.update-block-metadata',
+            {
+              worksheetId: params.worksheetId,
+              blockId: existingMapBlock.id,
+              title,
+              caption: title,
+            },
+          );
         }
 
         return {

@@ -192,4 +192,54 @@ describe('createWorksheetCommands', () => {
       }),
     );
   });
+
+  it('does not mutate dashboard state when map block creation fails', async () => {
+    const {state, invokeCommand} = createState();
+    invokeCommand.mockImplementation(async (commandId: string, input: any) => {
+      if (
+        commandId === 'worksheet.create-stateful-block' &&
+        input.blockType === 'map'
+      ) {
+        return {
+          success: false,
+          commandId,
+          error: 'Unsupported block type: map',
+          data: undefined,
+        };
+      }
+      if (commandId.startsWith('dashboard.')) {
+        return {success: true, commandId, data: input};
+      }
+      return {success: true, commandId, data: input};
+    });
+
+    await expect(
+      getCommand('worksheet.add-map-block').execute(
+        createCommandContext(state),
+        {
+          worksheetId: 'worksheet-1',
+          title: 'Map',
+          reasoning: 'show earthquake points',
+          config: {
+            spec: {},
+            datasets: {
+              earthquakes: {source: {tableName: 'earthquakes'}},
+            },
+          },
+        },
+      ),
+    ).rejects.toThrow('Unsupported block type: map');
+
+    expect(state.mosaicDashboard.ensureDashboard).not.toHaveBeenCalled();
+    expect(invokeCommand).not.toHaveBeenCalledWith(
+      'dashboard.set-selected-table',
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(invokeCommand).not.toHaveBeenCalledWith(
+      'dashboard.add-panel',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
 });

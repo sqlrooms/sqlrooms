@@ -171,6 +171,7 @@ async function renameHtmlAppTitle(
       {
         appId: input.appId,
         title,
+        ...(renamedFiles ? {files: renamedFiles} : {}),
       },
       {surface: 'ai', actor: 'html-app-agent'},
     );
