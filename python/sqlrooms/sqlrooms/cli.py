@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from importlib.metadata import PackageNotFoundError, version
 import logging
 import json
 import os
@@ -38,6 +39,29 @@ else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 3000
+
+
+def _get_cli_version() -> str:
+    package_json = Path(__file__).resolve().parents[1] / "package.json"
+    try:
+        payload = json.loads(package_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    else:
+        package_version = payload.get("version")
+        if isinstance(package_version, str):
+            return package_version
+
+    try:
+        return version("sqlrooms")
+    except PackageNotFoundError:
+        return "unknown"
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"sqlrooms {_get_cli_version()}")
+        raise typer.Exit()
 
 
 def _configure_logging(*, debug: bool) -> None:
@@ -404,6 +428,13 @@ def export_project(
 
 @app.callback(invoke_without_command=True)
 def main(
+    show_version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show the sqlrooms CLI version and exit.",
+    ),
     db_path: str | None = typer.Argument(
         None,
         help="DuckDB database to use (positional). Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",

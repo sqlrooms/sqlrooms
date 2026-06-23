@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi import UploadFile
 from starlette.requests import Request
+from starlette.websockets import WebSocketDisconnect
 from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _can_bind_port
@@ -51,11 +52,11 @@ def test_api_config(server):
     )
 
 
-def test_api_config_normalizes_loopback_ws_host(tmp_path):
+def test_api_config_uses_same_origin_ws_proxy(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
-        port=0,
+        port=4173,
         ws_port=48174,
         open_browser=False,
     )
@@ -64,7 +65,27 @@ def test_api_config_normalizes_loopback_ws_host(tmp_path):
     response = client.get("/api/config")
 
     assert response.status_code == 200
-    assert response.json()["wsUrl"] == "ws://localhost:48174"
+    assert response.json()["wsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
+    assert response.json()["crdtWsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
+
+
+def test_duckdb_websocket_proxy_requires_auth(server):
+    client = TestClient(server._build_app())
+
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect("/ws/duckdb") as ws:
+            ws.receive_text()
+
+    assert exc_info.value.code == 1008
+
+
+def test_duckdb_websocket_proxy_accepts_first_message_auth(server):
+    client = TestClient(server._build_app())
+
+    with client.websocket_connect("/ws/duckdb") as ws:
+        ws.send_json({"type": "auth", "token": server.session_token})
+
+        assert ws.receive_json() == {"type": "authAck"}
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):

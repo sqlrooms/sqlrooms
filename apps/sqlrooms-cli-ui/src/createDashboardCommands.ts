@@ -231,7 +231,10 @@ const ARTIFACT_CREATE_COMMANDS: {
     artifactType: 'canvas',
     command: () => createArtifactCommand('canvas', 'Canvas'),
   },
-  {artifactType: 'app', command: () => createArtifactCommand('app', 'App')},
+  {
+    artifactType: 'app-builder',
+    command: () => createArtifactCommand('app-builder', 'App Builder'),
+  },
   {artifactType: 'dashboard', command: createDashboardCreateArtifactCommand},
 ];
 

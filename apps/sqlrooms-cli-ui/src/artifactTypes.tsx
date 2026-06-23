@@ -44,7 +44,7 @@ const ARTIFACT_STABILITY = {
   'html-app': 'experimental',
   python: 'experimental',
   canvas: 'experimental',
-  app: 'experimental',
+  'app-builder': 'experimental',
 } as const satisfies Record<CliArtifactType, FeatureStability>;
 
 const ExperimentalArtifactPlaceholder: RoomPanelComponent = ({panelInfo}) => {
@@ -174,8 +174,8 @@ export function createCliArtifactTypes({
   };
 
   const appDefinition: ArtifactTypeDefinition<RoomState> = {
-    label: 'App',
-    defaultTitle: 'App',
+    label: 'App Builder',
+    defaultTitle: 'App Builder',
     icon: AppWindow,
     component: AppBuilderArtifact,
     onDelete: ({artifactId, store}) => {
@@ -225,7 +225,11 @@ export function createCliArtifactTypes({
       experimentalEnabled,
     ),
     canvas: withStability('canvas', canvasDefinition, experimentalEnabled),
-    app: withStability('app', appDefinition, experimentalEnabled),
+    'app-builder': withStability(
+      'app-builder',
+      appDefinition,
+      experimentalEnabled,
+    ),
   } satisfies Record<CliArtifactType, CliArtifactTypeDefinition>);
 }
 
