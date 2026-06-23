@@ -247,6 +247,7 @@ function createCliCrdtSyncConnector() {
     roomId:
       runtimeConfig.crdtRoomId ||
       `sqlrooms-cli:${runtimeConfig.metaNamespace || '__sqlrooms'}:${runtimeConfig.dbPath || 'memory'}`,
+    token: runtimeConfig.wsAuthToken,
     sendSnapshotOnConnect: false,
   });
 }
@@ -267,6 +268,7 @@ const runtimeWsUrl = runtimeConfig.wsUrl || 'ws://localhost:4000';
 export const cliDuckDbWsUrl = runtimeWsUrl;
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeWsUrl,
+  authToken: runtimeConfig.wsAuthToken,
   initializationQuery: [
     'INSTALL spatial',
     'LOAD spatial',
@@ -278,6 +280,7 @@ export const cliDuckDbConnector = connector;
 addCliDatabaseInitializationDiagnostics(connector, {
   runtimeConfig,
   wsUrl: runtimeWsUrl,
+  authToken: runtimeConfig.wsAuthToken,
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
