@@ -129,6 +129,8 @@ and provide block DTO helpers for command and AI authoring surfaces:
 ```tsx
 import {
   BlockDocumentsSliceConfig,
+  createAddBlockDocumentTextBlockTool,
+  createListBlockDocumentBlocksTool,
   createBlockDocumentsSlice,
 } from '@sqlrooms/documents';
 
@@ -145,6 +147,24 @@ const roomStore = createRoomStore(
     }),
   ),
 );
+```
+
+Generic AI helpers use the same block DTOs as commands and the editor. Hosts
+provide a small `BlockDocumentAiAdapter` that ensures a document, lists its
+blocks, and appends new blocks; feature packages or apps can then compose these
+tools with their own stateful-block tools:
+
+```ts
+const tools = {
+  add_block_document_text_block: createAddBlockDocumentTextBlockTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
+  list_block_document_blocks: createListBlockDocumentBlocksTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
+};
 ```
 
 The slice can create block documents, replace the Tiptap JSON body, and

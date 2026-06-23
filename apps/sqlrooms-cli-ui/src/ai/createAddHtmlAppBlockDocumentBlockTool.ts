@@ -1,0 +1,110 @@
+import {HTML_APP_BLOCK_TYPE} from '@sqlrooms/app-runtime';
+import {
+  createDefaultBlockDocumentBlockId,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentStatefulBlockBlock,
+} from '@sqlrooms/documents';
+import {tool} from 'ai';
+import {z} from 'zod';
+
+const AddHtmlAppBlockToolInput = z.object({
+  reasoning: z.string().describe('Brief rationale for HTML app block choice.'),
+  intent: z
+    .string()
+    .optional()
+    .describe('Optional natural-language objective for this HTML app block.'),
+  appTitle: z.string().describe('The title of the HTML app block.'),
+});
+
+type AddHtmlAppBlockToolInput = z.infer<typeof AddHtmlAppBlockToolInput>;
+
+type AddHtmlAppBlockToolOutput =
+  | {
+      success: true;
+      appId: string;
+      blockId: string;
+      message: string;
+    }
+  | {success: false; errorMessage: string};
+
+/**
+ * Creates the block-document wrapper for an owned HTML app runtime.
+ */
+export function createHtmlAppBlockDocumentBlock({
+  title,
+  intent,
+  height = 560,
+  appId = createDefaultBlockDocumentBlockId(),
+  blockId = createDefaultBlockDocumentBlockId(),
+}: {
+  title: string;
+  intent?: string;
+  height?: number;
+  appId?: string;
+  blockId?: string;
+}): {appId: string; block: BlockDocumentStatefulBlockBlock} {
+  return {
+    appId,
+    block: {
+      type: 'statefulBlock',
+      id: blockId,
+      blockType: HTML_APP_BLOCK_TYPE,
+      blockInstanceId: appId,
+      ownership: 'owned',
+      intent,
+      title,
+      caption: title,
+      height,
+    },
+  };
+}
+
+/**
+ * Options for creating the CLI HTML app block-document tool.
+ */
+export type CreateAddHtmlAppBlockDocumentBlockToolOptions = {
+  blockDocumentAdapter: BlockDocumentAiAdapter;
+  blockDocumentId: string;
+};
+
+/**
+ * Creates a tool for adding empty HTML app block containers to a worksheet
+ * block document.
+ */
+export function createAddHtmlAppBlockDocumentBlockTool({
+  blockDocumentAdapter,
+  blockDocumentId,
+}: CreateAddHtmlAppBlockDocumentBlockToolOptions) {
+  return tool<AddHtmlAppBlockToolInput, AddHtmlAppBlockToolOutput>({
+    description: `Create an EMPTY html-app block container in the worksheet.
+
+This tool ONLY creates the container structure. To write app files and observe runtime diagnostics, use embedded_html_app_agent afterward with the returned appId.
+
+Use this when you need to create a custom HTML, D3, Chart.js, or browser app block inside a worksheet.`,
+    inputSchema: AddHtmlAppBlockToolInput,
+    execute: async ({appTitle, intent}) => {
+      try {
+        blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
+        blockDocumentAdapter.setCurrentBlockDocument?.(blockDocumentId);
+
+        const {appId, block} = createHtmlAppBlockDocumentBlock({
+          title: appTitle,
+          intent,
+        });
+        const blockId = blockDocumentAdapter.addBlock(blockDocumentId, block);
+
+        return {
+          success: true,
+          appId,
+          blockId,
+          message: 'Added HTML app block to worksheet',
+        };
+      } catch (error) {
+        return {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  });
+}
