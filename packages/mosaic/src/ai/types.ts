@@ -3,7 +3,7 @@ import type {DataTable} from '@sqlrooms/db';
 import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
 
 /**
- * Common types used by both dashboard and worksheet agents
+ * Common types used by Mosaic AI agents and tool composition.
  */
 
 export type AiStore<TState> = {
