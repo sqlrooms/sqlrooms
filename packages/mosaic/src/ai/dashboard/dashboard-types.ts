@@ -14,11 +14,14 @@ export type DashboardAiAdapter = {
   getPanelIssue?: (panelId: string) => ChartRuntimeIssue | undefined;
   getSelectedTable?: () => string | undefined;
   getPanels?: () => MosaicDashboardPanelConfig[];
-  setSelectedTable: (tableName: string) => void;
+  setSelectedTable: (tableName: string) => void | Promise<void>;
   getPanel(panelId: string): MosaicDashboardPanelConfig | undefined;
-  updatePanel(panelId: string, patch: Partial<PanelPatch>): void;
-  removePanel(panelId: string): void;
-  addPanel(panel: MosaicDashboardPanelConfig): string;
+  updatePanel(
+    panelId: string,
+    patch: Partial<PanelPatch>,
+  ): void | Promise<void>;
+  removePanel(panelId: string): void | Promise<void>;
+  addPanel(panel: MosaicDashboardPanelConfig): string | Promise<string>;
 };
 
 /**

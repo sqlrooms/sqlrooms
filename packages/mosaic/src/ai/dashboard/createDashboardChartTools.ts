@@ -43,7 +43,7 @@ export function createDashboardChartTools({
     maxDataPoints:
       chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
     databaseAdapter,
-    addChart: ({config, tableName, title, panelId}) => {
+    addChart: async ({config, tableName, title, panelId}) => {
       if (panelId) {
         const panel = dashboardAdapter.getPanel(panelId);
         if (!panel) {
@@ -56,16 +56,16 @@ export function createDashboardChartTools({
         }
 
         if (tableName) {
-          dashboardAdapter.setSelectedTable(tableName);
+          await dashboardAdapter.setSelectedTable(tableName);
         }
-        dashboardAdapter.updatePanel(panelId, {
+        await dashboardAdapter.updatePanel(panelId, {
           title: title ?? panel.title,
           config,
         });
         return panelId;
       }
 
-      return dashboardAdapter.addPanel(
+      return await dashboardAdapter.addPanel(
         createMosaicDashboardChartPanelConfig(title ?? 'Chart', config),
       );
     },

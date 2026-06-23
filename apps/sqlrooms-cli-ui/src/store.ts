@@ -44,6 +44,7 @@ import {
 import {
   createDefaultChartTypes,
   createDefaultMosaicDashboardPanelRenderers,
+  createMosaicDashboardCommands,
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardSlice,
   createMosaicSlice,
@@ -141,6 +142,7 @@ import {KnownWorksheetTools, WORKSHEET_AGENT_TOOL_NAME} from './ai/constants';
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
 const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
 const WORKSHEET_PYTHON_COMMAND_OWNER = '@sqlrooms/python/worksheet';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
@@ -727,6 +729,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             DASHBOARD_COMMAND_OWNER,
             createDashboardCommands({artifactTypes: cliArtifactTypes}),
           );
+          registerCommandsForOwner(
+            store,
+            MOSAIC_DASHBOARD_COMMAND_OWNER,
+            createMosaicDashboardCommands<RoomState>(),
+          );
           if (experimentalEnabled) {
             registerCommandsForOwner(
               store,
@@ -765,6 +772,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
           unregisterCommandsForOwner(store, WORKSHEET_PYTHON_COMMAND_OWNER);
