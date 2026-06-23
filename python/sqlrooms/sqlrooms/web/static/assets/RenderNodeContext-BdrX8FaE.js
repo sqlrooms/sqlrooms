@@ -1,1 +1,0 @@
-import{o as e}from"./chunk-jRWAZmH_.js";import{Q as t,b as n}from"./CommandSlice-DPSuuiIV.js";var r=e(t(),1),i=n(),a=(0,r.createContext)(null),o=({children:e,renderNode:t})=>(0,i.jsx)(a.Provider,{value:t,children:e}),s=()=>{let e=(0,r.useContext)(a);if(!e)throw Error(`useRenderNode must be used within a RenderNodeProvider`);return e};export{s as n,o as t};
