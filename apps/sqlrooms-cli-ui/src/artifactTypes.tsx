@@ -174,8 +174,8 @@ export function createCliArtifactTypes({
   };
 
   const appDefinition: ArtifactTypeDefinition<RoomState> = {
-    label: 'App',
-    defaultTitle: 'App',
+    label: 'App Builder',
+    defaultTitle: 'App Builder',
     icon: AppWindow,
     component: AppBuilderArtifact,
     onDelete: ({artifactId, store}) => {

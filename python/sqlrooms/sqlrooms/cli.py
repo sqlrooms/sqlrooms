@@ -42,16 +42,20 @@ DEFAULT_HTTP_PORT = 3000
 
 
 def _get_cli_version() -> str:
+    package_json = Path(__file__).resolve().parents[1] / "package.json"
+    try:
+        payload = json.loads(package_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    else:
+        package_version = payload.get("version")
+        if isinstance(package_version, str):
+            return package_version
+
     try:
         return version("sqlrooms")
     except PackageNotFoundError:
-        package_json = Path(__file__).resolve().parents[1] / "package.json"
-        try:
-            payload = json.loads(package_json.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return "unknown"
-        package_version = payload.get("version")
-        return package_version if isinstance(package_version, str) else "unknown"
+        return "unknown"
 
 
 def _version_callback(value: bool) -> None:

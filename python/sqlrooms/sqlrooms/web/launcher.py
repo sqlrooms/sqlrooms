@@ -579,6 +579,9 @@ class SqlroomsHttpServer:
             or f"ws://{self._host_for_url(self._public_host())}:{self.ws_port}"
         )
 
+    def _ws_proxy_url(self) -> str:
+        return f"ws://{self._host_for_url(self._ui_host())}:{self.port}/ws/duckdb"
+
     def _assert_ui_available(self) -> None:
         if not self.serve_ui:
             return
@@ -698,7 +701,7 @@ class SqlroomsHttpServer:
             if self.external_url and not self.external_ws_url
             else None
         )
-        ws_url = self.external_ws_url or derived_ws_url or self._ws_url()
+        ws_url = self.external_ws_url or derived_ws_url or self._ws_proxy_url()
         return {
             "wsUrl": ws_url,
             "wsAuthToken": self.session_token,

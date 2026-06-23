@@ -51,11 +51,11 @@ def test_api_config(server):
     )
 
 
-def test_api_config_normalizes_loopback_ws_host(tmp_path):
+def test_api_config_uses_same_origin_ws_proxy(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
-        port=0,
+        port=4173,
         ws_port=48174,
         open_browser=False,
     )
@@ -64,7 +64,7 @@ def test_api_config_normalizes_loopback_ws_host(tmp_path):
     response = client.get("/api/config")
 
     assert response.status_code == 200
-    assert response.json()["wsUrl"] == "ws://localhost:48174"
+    assert response.json()["wsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):

@@ -18,9 +18,9 @@ cd /Users/ilya/Workspace/sqlrooms
 
 pnpm --dir python/sqlrooms build
 
-uv run --project python --package sqlrooms sqlrooms \
+uv run --project python/sqlrooms sqlrooms \
   --no-open-browser \
-  /tmp/sqlrooms-smoke.db
+  /tmp/sqlrooms-smoke.duckdb
 ```
 
 Open the UI URL printed in the terminal. It should be
@@ -31,15 +31,15 @@ The bare CLI command works only after installing the CLI somewhere on your
 
 ```bash
 uv tool install /Users/ilya/Workspace/sqlrooms/python/sqlrooms
-sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
 ```
 
 For release smoke testing, verify both local execution paths:
 
 ```bash
-uv run --project python --package sqlrooms sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
+uv run --project python/sqlrooms sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
 uv tool install --reinstall /Users/ilya/Workspace/sqlrooms/python/sqlrooms
-sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
 ```
 
 In the UI, drag in:
@@ -61,25 +61,29 @@ Before versioning or publishing, test a production build locally:
 ```bash
 pnpm --dir python/sqlrooms build
 
-uv run --project python --package sqlrooms sqlrooms \
+# Source/workspace check. This should reflect python/sqlrooms/package.json.
+uv run --project python/sqlrooms sqlrooms \
   --version
 
-uv run --project python --package sqlrooms sqlrooms \
+uv run --project python/sqlrooms sqlrooms \
   --no-open-browser \
-  /tmp/sqlrooms-smoke.db
+  /tmp/sqlrooms-smoke.duckdb
 ```
 
 For the closest local install check, install the freshly built wheel from
-`python/dist` into a `uv tool` environment:
+`python/dist` into a `uv tool` environment. Use the exact wheel for the current
+`python/sqlrooms/package.json` version so older files in `python/dist` are not
+selected accidentally:
 
 ```bash
-uv tool install --reinstall python/dist/sqlrooms-*.whl
+SQLROOMS_VERSION=$(node -p "require('./python/sqlrooms/package.json').version")
+uv tool install --reinstall "python/dist/sqlrooms-${SQLROOMS_VERSION}-py3-none-any.whl"
 sqlrooms --version
-sqlrooms --no-open-browser /tmp/sqlrooms-smoke.db
+sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
 ```
 
 Open the printed UI URL, drag in the CSV fixture listed above, create a
-worksheet/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.db` and
+worksheet/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
 confirm the imported data and workspace state come back.
 
 1. Choose the package target:
