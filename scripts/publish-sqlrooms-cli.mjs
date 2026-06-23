@@ -197,7 +197,11 @@ const versionPackages = ({target, bump, setVersion}) => {
   }
 };
 
-const publishPackages = ({target, dryRun}) => {
+const publishPackages = ({target, dryRun, bump, setVersion}) => {
+  if (bump || setVersion) {
+    fail('Publishing does not change versions. Run pnpm cli:version first.');
+  }
+
   const targets = getTargets(target);
 
   for (const packageTarget of targets) {
