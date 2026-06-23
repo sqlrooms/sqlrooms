@@ -10,6 +10,7 @@ import {
 import {createMarkdownDocumentBlockDefinition} from '@sqlrooms/documents';
 import {createMosaicDashboardBlockDefinition} from '@sqlrooms/mosaic';
 import {createPivotBlockDefinition} from '@sqlrooms/pivot';
+import {createPythonBlockDefinition} from '@sqlrooms/python/block';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {
   AppWindow,
@@ -41,6 +42,7 @@ const ARTIFACT_STABILITY = {
   document: 'experimental',
   'sql-query': 'experimental',
   'html-app': 'experimental',
+  python: 'experimental',
   canvas: 'experimental',
   app: 'experimental',
 } as const satisfies Record<CliArtifactType, FeatureStability>;
@@ -111,6 +113,11 @@ const htmlAppBlockDefinition = createHtmlAppBlockDefinition<RoomState>({
     requestedCapabilities: ['query'],
     grantedCapabilities: ['query'],
   },
+});
+
+const pythonBlockDefinition = createPythonBlockDefinition<RoomState>({
+  label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.python.label,
+  defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.python.defaultTitle,
 });
 
 export function createCliArtifactTypes({
@@ -210,6 +217,11 @@ export function createCliArtifactTypes({
     'html-app': withStability(
       'html-app',
       createArtifactTypeFromStatefulBlock(htmlAppBlockDefinition),
+      experimentalEnabled,
+    ),
+    python: withStability(
+      'python',
+      createArtifactTypeFromStatefulBlock(pythonBlockDefinition),
       experimentalEnabled,
     ),
     canvas: withStability('canvas', canvasDefinition, experimentalEnabled),
