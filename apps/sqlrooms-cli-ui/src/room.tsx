@@ -9,6 +9,7 @@ import {
 import {CliWorkspaceTopbar} from './workspace/CliWorkspaceTopbar';
 import {CliWorkspaceSidebar} from './workspace/sidebar';
 import {roomStore} from './store';
+import {CliDuckDbConnectionLostDialog} from './components/CliDuckDbConnectionLostDialog';
 
 export const Room = () => {
   const sqlEditor = useDisclosure();
@@ -22,6 +23,7 @@ export const Room = () => {
             <RoomShell.LayoutComposer className="min-h-0 flex-1 overflow-hidden [&_[data-slot=resizable-handle][aria-controls=assistant-sidebar][aria-valuenow='0']]:hidden" />
             <RoomShell.LoadingProgress />
             <RoomShell.CommandPalette />
+            <CliDuckDbConnectionLostDialog />
             <SqlEditorModal
               isOpen={sqlEditor.isOpen}
               onClose={sqlEditor.onClose}
