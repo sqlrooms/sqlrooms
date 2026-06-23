@@ -9,13 +9,12 @@ import {
 } from '@sqlrooms/room-store';
 import {createStore} from 'zustand';
 import {createDashboardCommands} from '../createDashboardCommands';
-import type {RoomState} from '../store-types';
 
 type TestRoomState = BaseRoomStoreState & ArtifactsSliceState;
 
-function createCommandContext(getState: () => Partial<RoomState>) {
+function createCommandContext(getState: () => unknown) {
   return {
-    getState: () => getState() as RoomState,
+    getState: () => getState() as any,
     store: {getState} as any,
     invocation: {surface: 'unknown' as const},
   };

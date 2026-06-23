@@ -141,7 +141,7 @@ function isTitleOnlyRequest(input: HtmlAppAgentInput) {
   );
 }
 
-function renameHtmlAppTitle(
+async function renameHtmlAppTitle(
   store: StoreApi<RoomState>,
   input: HtmlAppAgentInput,
 ): Promise<Record<string, unknown>> {
@@ -493,7 +493,7 @@ export async function writeHtmlAppRuntimeState(
   const app = store.getState().htmlApps.getApp(appId);
   const latestDiagnostics = app?.diagnostics ?? diagnostics;
   const errorCount = latestDiagnostics.filter(
-    (diagnostic) => diagnostic.level === 'error',
+    (diagnostic: {level?: string}) => diagnostic.level === 'error',
   ).length;
 
   return {
@@ -727,7 +727,11 @@ export async function observeHtmlAppRuntimeDiagnostics(
   const start = Date.now();
   let diagnostics = store.getState().htmlApps.getApp(appId)?.diagnostics ?? [];
   while (Date.now() - start < DEFAULT_DIAGNOSTIC_OBSERVATION_MS) {
-    if (diagnostics.some((diagnostic) => diagnostic.level === 'error')) {
+    if (
+      diagnostics.some(
+        (diagnostic: {level?: string}) => diagnostic.level === 'error',
+      )
+    ) {
       return diagnostics;
     }
     await new Promise((resolve) =>

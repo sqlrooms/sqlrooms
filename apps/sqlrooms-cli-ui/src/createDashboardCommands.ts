@@ -65,9 +65,9 @@ type RenameArtifactCommandInput = z.infer<typeof RenameArtifactCommandInput>;
 function getUniqueArtifactTitle(state: RoomState, baseTitle: string) {
   return generateUniqueName(
     baseTitle,
-    Object.values(state.artifacts.config.artifactsById).map(
-      (artifact) => artifact.title,
-    ),
+    Object.values(
+      state.artifacts.config.artifactsById as Record<string, {title: string}>,
+    ).map((artifact) => artifact.title),
     ' ',
   );
 }

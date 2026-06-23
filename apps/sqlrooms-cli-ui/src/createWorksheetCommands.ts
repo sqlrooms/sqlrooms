@@ -156,12 +156,17 @@ function findStatefulBlock(
 ) {
   return state.blockDocuments
     .getBlocks(worksheetId)
-    .find(
-      (block): block is BlockDocumentStatefulBlockBlock =>
-        block.type === 'statefulBlock' &&
-        block.blockType === blockType &&
-        block.blockInstanceId === blockInstanceId,
-    );
+    .find((block: unknown): block is BlockDocumentStatefulBlockBlock => {
+      if (typeof block !== 'object' || block === null) {
+        return false;
+      }
+      const candidate = block as Partial<BlockDocumentStatefulBlockBlock>;
+      return (
+        candidate.type === 'statefulBlock' &&
+        candidate.blockType === blockType &&
+        candidate.blockInstanceId === blockInstanceId
+      );
+    });
 }
 
 export function createWorksheetCommands(): RoomCommand<RoomState>[] {
@@ -308,7 +313,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         resolveWorksheet(state, worksheetId);
         const existing = state.blockDocuments
           .getBlocks(worksheetId)
-          .find((block) => block.id === blockId);
+          .find((block: {id?: string}) => block.id === blockId);
         if (!existing) {
           throw new Error(
             `Worksheet block ${blockId} was not found in worksheet ${worksheetId}`,
@@ -386,12 +391,13 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         const dashboard = state.mosaicDashboard.getDashboard(mapId);
         const existingPanel = params.panelId
           ? dashboard?.panels.find(
-              (candidate) =>
+              (candidate: {id?: string; type?: string}) =>
                 candidate.id === params.panelId &&
                 candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
             )
           : dashboard?.panels.find(
-              (candidate) => candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
+              (candidate: {type?: string}) =>
+                candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
             );
         if (params.panelId && !existingPanel) {
           throw new Error(`Map panel ${params.panelId} was not found`);

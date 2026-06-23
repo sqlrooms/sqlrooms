@@ -1,10 +1,9 @@
 import {jest} from '@jest/globals';
 import {createWorksheetCommands} from '../createWorksheetCommands';
-import type {RoomState} from '../store-types';
 
-function createCommandContext(state: Partial<RoomState>) {
+function createCommandContext(state: unknown) {
   return {
-    getState: () => state as RoomState,
+    getState: () => state as any,
     store: {getState: () => state} as any,
     invocation: {surface: 'unknown' as const},
   };

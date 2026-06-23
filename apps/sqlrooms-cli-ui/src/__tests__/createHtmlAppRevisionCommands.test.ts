@@ -1,10 +1,9 @@
 import {jest} from '@jest/globals';
 import {createHtmlAppRevisionCommands} from '../createHtmlAppRevisionCommands';
-import type {RoomState} from '../store-types';
 
-function createCommandContext(state: Partial<RoomState>) {
+function createCommandContext(state: unknown) {
   return {
-    getState: () => state as RoomState,
+    getState: () => state as any,
     store: {getState: () => state} as any,
     invocation: {surface: 'unknown' as const},
   };
@@ -21,7 +20,7 @@ function getCommand(id: string) {
 }
 
 function createState() {
-  const app = {
+  const app: any = {
     id: 'app-1',
     title: 'App',
     files: {'/index.html': '<html><title>App</title></html>'},

@@ -284,6 +284,9 @@ addCliDatabaseInitializationDiagnostics(connector, {
   wsUrl: runtimeWsUrl,
 });
 
+export const cliDuckDbWsUrl = runtimeWsUrl;
+export const cliDuckDbConnector = connector;
+
 const baseLoadFile = connector.loadFile.bind(connector);
 connector.loadFile = async (file, desiredTableName, options) => {
   if (file instanceof File) {
