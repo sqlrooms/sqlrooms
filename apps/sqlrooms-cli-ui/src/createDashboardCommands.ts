@@ -52,6 +52,12 @@ const SelectArtifactCommandInput = z
   });
 type SelectArtifactCommandInput = z.infer<typeof SelectArtifactCommandInput>;
 
+const RenameArtifactCommandInput = z.object({
+  artifactId: z.string().describe('Target artifact ID.'),
+  title: z.string().describe('New artifact title.'),
+});
+type RenameArtifactCommandInput = z.infer<typeof RenameArtifactCommandInput>;
+
 // ---------------------------------------------------------------------------
 // Generic create-artifact helper per artifact type
 // ---------------------------------------------------------------------------
@@ -328,6 +334,75 @@ export function createDashboardCommands({
               change: 'selected',
               shouldContinueChat: true,
             },
+          },
+        };
+      },
+    },
+    {
+      id: 'artifact.rename',
+      name: 'Rename item',
+      description: 'Rename an existing workspace item by ID',
+      group: 'Workspace',
+      keywords: ['item', 'workspace', 'rename', 'title'],
+      inputSchema: RenameArtifactCommandInput,
+      inputDescription: 'Provide the item ID and non-empty title.',
+      metadata: {
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+      },
+      validateInput: (input, {getState}) => {
+        const {artifactId, title} = input as RenameArtifactCommandInput;
+        if (!artifactId) {
+          throw new Error('No artifactId provided.');
+        }
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+          throw new Error('Artifact title cannot be empty.');
+        }
+        const artifact = getState().artifacts.getArtifact(artifactId);
+        if (!artifact) {
+          throw new Error(`Unknown artifact "${artifactId}".`);
+        }
+      },
+      execute: ({getState}, input) => {
+        const {artifactId, title} = input as RenameArtifactCommandInput;
+        const trimmedTitle = title.trim();
+        const state = getState();
+        const artifact = state.artifacts.getArtifact(artifactId);
+        if (!artifact) {
+          throw new Error(`Unknown artifact "${artifactId}".`);
+        }
+        if (!trimmedTitle) {
+          throw new Error('Artifact title cannot be empty.');
+        }
+        const previousTitle = artifact.title;
+        if (previousTitle === trimmedTitle) {
+          return {
+            success: true,
+            commandId: 'artifact.rename',
+            code: 'artifact-title-unchanged',
+            message: `Artifact "${artifactId}" is already named "${trimmedTitle}".`,
+            data: {
+              artifactId,
+              artifactType: artifact.type,
+              previousTitle,
+              title: trimmedTitle,
+            },
+          };
+        }
+
+        state.artifacts.renameArtifact(artifactId, trimmedTitle);
+        const renamedArtifact = state.artifacts.getArtifact(artifactId);
+        return {
+          success: true,
+          commandId: 'artifact.rename',
+          message: `Renamed artifact "${artifactId}" to "${trimmedTitle}".`,
+          data: {
+            artifactId,
+            artifactType: renamedArtifact?.type ?? artifact.type,
+            previousTitle,
+            title: renamedArtifact?.title ?? trimmedTitle,
           },
         };
       },

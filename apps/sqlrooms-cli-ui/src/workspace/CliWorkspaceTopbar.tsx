@@ -27,9 +27,7 @@ export function CliWorkspaceTopbar() {
       ? state.artifacts.config.artifactsById[currentArtifactId]
       : undefined,
   );
-  const renameArtifact = useRoomStore(
-    (state) => state.artifacts.renameArtifact,
-  );
+  const invokeCommand = useRoomStore((state) => state.commands.invokeCommand);
   const setShowArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.setShowArtifactChooser,
   );
@@ -53,10 +51,13 @@ export function CliWorkspaceTopbar() {
     (nextTitle: string) => {
       const trimmedTitle = nextTitle.trim();
       if (currentArtifactId && trimmedTitle) {
-        renameArtifact(currentArtifactId, trimmedTitle);
+        void invokeCommand('artifact.rename', {
+          artifactId: currentArtifactId,
+          title: trimmedTitle,
+        });
       }
     },
-    [currentArtifactId, renameArtifact],
+    [currentArtifactId, invokeCommand],
   );
 
   const handleConfirmDelete = useCallback(() => {
