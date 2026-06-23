@@ -17,5 +17,6 @@ export function getModel(store: StoreApi<AiSliceState>): LanguageModel {
     apiKey: state.ai.getApiKeyFromSettings(),
     name: provider || '',
     baseURL: state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+    includeUsage: true,
   }).chatModel(modelId);
 }

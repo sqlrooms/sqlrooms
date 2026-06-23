@@ -382,6 +382,7 @@ export function createLocalChatTransportFactory({
           name: provider,
           baseURL: baseUrl ?? 'https://api.openai.com/v1',
           headers,
+          includeUsage: true,
         });
         model = openai.chatModel(modelId);
       }
@@ -428,10 +429,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        onFinish: ({totalUsage, usage}) => {
-          const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
-          rememberSessionTokenUsage(sessionId, finalUsage);
-        },
         ...(providerOptions ? {providerOptions} : {}),
       });
 
@@ -441,6 +438,7 @@ export function createLocalChatTransportFactory({
         outputTokens: 0,
         totalTokens: 0,
       };
+      let lastStepInputTokens = 0;
 
       return createAgentUIStreamResponse({
         agent,
@@ -455,6 +453,7 @@ export function createLocalChatTransportFactory({
             accumulatedUsage.inputTokens += u.inputTokens ?? 0;
             accumulatedUsage.outputTokens += u.outputTokens ?? 0;
             accumulatedUsage.totalTokens += u.totalTokens ?? 0;
+            lastStepInputTokens = u.inputTokens ?? 0;
             if (
               u.inputTokenDetails?.cacheReadTokens != null ||
               u.inputTokenDetails?.cacheWriteTokens != null
@@ -477,9 +476,26 @@ export function createLocalChatTransportFactory({
             }
           }
           if (part.type === 'finish') {
-            rememberSessionTokenUsage(sessionId, accumulatedUsage);
+            // Prefer totalUsage from the finish event (authoritative cumulative value
+            // from the agent) over per-step accumulated values which may be zeros
+            // when the provider doesn't report usage in streaming chunks.
+            const finishPart = part as {
+              totalUsage?: LanguageModelUsage;
+              usage?: LanguageModelUsage;
+            };
+            const finishUsage = toMessageTokenUsage(
+              finishPart.totalUsage ?? finishPart.usage,
+            );
+            const finalUsage =
+              finishUsage.totalTokens > 0 ||
+              finishUsage.inputTokens > 0 ||
+              finishUsage.outputTokens > 0
+                ? finishUsage
+                : accumulatedUsage;
+            finalUsage.lastStepInputTokens = lastStepInputTokens;
+            rememberSessionTokenUsage(sessionId, finalUsage);
             return {
-              tokenUsage: accumulatedUsage,
+              tokenUsage: finalUsage,
             } satisfies AssistantMessageMetadata;
           }
           return undefined;
