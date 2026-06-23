@@ -6,6 +6,7 @@ export const CLI_ARTIFACT_TYPES = [
   'document',
   'sql-query',
   'html-app',
+  'python',
   'canvas',
   'app',
 ] as const;

@@ -111,6 +111,8 @@ function createArtifactCommand(
         state.canvas.ensureArtifact(artifactId);
       } else if (artifactType === 'pivot') {
         state.pivot.ensurePivot(artifactId, {title: uniqueTitle});
+      } else if (artifactType === 'python') {
+        state.python.ensureBlock(artifactId, {title: uniqueTitle});
       }
       state.artifacts.setCurrentArtifact(artifactId);
       if (shouldCreateInitialArtifactChat(context)) {
@@ -222,6 +224,10 @@ const ARTIFACT_CREATE_COMMANDS: {
     command: () => createArtifactCommand('html-app', 'HTML App'),
   },
   {
+    artifactType: 'python',
+    command: () => createArtifactCommand('python', 'Python'),
+  },
+  {
     artifactType: 'canvas',
     command: () => createArtifactCommand('canvas', 'Canvas'),
   },
@@ -305,6 +311,9 @@ export function createDashboardCommands({
         }
         if (artifact.type === 'pivot') {
           state.pivot.ensurePivot(artifactId, {title: artifact.title});
+        }
+        if (artifact.type === 'python') {
+          state.python.ensureBlock(artifactId, {title: artifact.title});
         }
         return {
           success: true,
