@@ -429,7 +429,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
 
         if (tableName) {
           ensureTable(databaseAdapter, tableName);
-          dashboardAdapter.setSelectedTable(tableName);
+          await dashboardAdapter.setSelectedTable(tableName);
         }
 
         const panel = createDeckMapPanelFromNativeConfig(params);
@@ -441,7 +441,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
             DECK_MAP_DASHBOARD_PANEL_TYPE,
           );
 
-          dashboardAdapter.updatePanel(params.panelId, {
+          await dashboardAdapter.updatePanel(params.panelId, {
             title: panel.title,
             config: panel.config,
           });
@@ -460,7 +460,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           };
         }
 
-        const panelId = dashboardAdapter.addPanel(panel);
+        const panelId = await dashboardAdapter.addPanel(panel);
 
         return {
           llmResult: {

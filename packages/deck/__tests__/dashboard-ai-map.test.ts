@@ -350,6 +350,80 @@ describe('createDeckMapDashboardTool', () => {
     });
   });
 
+  it('awaits async dashboard adapter mutations', async () => {
+    const calls: string[] = [];
+    let selectedTable: string | undefined;
+    const panels: any[] = [
+      {
+        id: 'existing-panel',
+        type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+        title: 'Original map',
+        config: scatterConfig,
+      },
+    ];
+    const dashboardAdapter: DashboardAiAdapter = {
+      setSelectedTable: async (tableName) => {
+        calls.push('setSelectedTable:start');
+        await Promise.resolve();
+        selectedTable = tableName;
+        calls.push('setSelectedTable:end');
+      },
+      addPanel: async (panel) => {
+        calls.push('addPanel:start');
+        expect(selectedTable).toBe('earthquakes');
+        await Promise.resolve();
+        panels.push({...panel, id: 'async-panel'});
+        calls.push('addPanel:end');
+        return 'async-panel';
+      },
+      updatePanel: async (panelId, patch) => {
+        calls.push('updatePanel:start');
+        await Promise.resolve();
+        const panel = panels.find((candidate) => candidate.id === panelId);
+        Object.assign(panel, patch);
+        calls.push('updatePanel:end');
+      },
+      removePanel: () => {},
+      getPanel: (panelId) =>
+        panels.find((candidate) => candidate.id === panelId),
+      getPanelIssue: () => undefined,
+    };
+    const {databaseAdapter} = createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const createResult = await (tool as any).execute({
+      title: 'Async map',
+      config: scatterConfig,
+      reasoning: 'show locations',
+    });
+
+    expect(createResult.llmResult.success).toBe(true);
+    expect(createResult.llmResult.data.panelId).toBe('async-panel');
+    expect(calls).toEqual([
+      'setSelectedTable:start',
+      'setSelectedTable:end',
+      'addPanel:start',
+      'addPanel:end',
+    ]);
+
+    const updateResult = await (tool as any).execute({
+      panelId: 'existing-panel',
+      title: 'Updated async map',
+      config: multiLayerConfig,
+      reasoning: 'add density layer',
+    });
+
+    expect(updateResult.llmResult.success).toBe(true);
+    expect(panels[0]).toMatchObject({
+      title: 'Updated async map',
+      config: multiLayerConfig,
+    });
+    expect(calls).toContain('updatePanel:end');
+  });
+
   it('keeps the manual table helper as a lon/lat convenience path', () => {
     const panel = createDeckMapDashboardPanelConfigForTable({
       title: 'Earthquake map',
