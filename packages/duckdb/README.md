@@ -57,6 +57,30 @@ function UserList() {
 
 For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
 
+### Monitoring WebSocket DuckDB Connections
+
+`createWebSocketDuckDbConnector()` exposes the persistent WebSocket lifecycle
+through `connectionStatus`, `subscribeConnectionStatus()`, and the optional
+`onConnectionStatusChange` callback. Use this for live UI affordances such as
+lost-connection dialogs.
+
+```tsx
+import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = createWebSocketDuckDbConnector({
+  wsUrl: 'ws://localhost:4000',
+  onConnectionStatusChange: (status) => {
+    console.log('DuckDB WebSocket status:', status);
+  },
+});
+
+const unsubscribe = connector.subscribeConnectionStatus((status) => {
+  if (status === 'disconnected') {
+    console.warn('DuckDB WebSocket disconnected');
+  }
+});
+```
+
 ### Looking up Table Metadata
 
 Use `useDataTable()` in React components or `db.findTable()` from the room

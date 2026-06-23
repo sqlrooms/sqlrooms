@@ -271,6 +271,7 @@ const connector = createWebSocketDuckDbConnector({
     `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
   ].join('; '),
 });
+export const cliDuckDbConnector = connector;
 addCliDatabaseInitializationDiagnostics(connector, {
   runtimeConfig,
   wsUrl: runtimeWsUrl,
