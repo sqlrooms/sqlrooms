@@ -30,6 +30,7 @@
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/python": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
