@@ -1,4 +1,4 @@
-import {FC, useCallback, useMemo, useState} from 'react';
+import {FC, useCallback, useState} from 'react';
 import {
   Field,
   ColumnSelector,
@@ -66,24 +66,6 @@ function extractTableFromSqlQuery(
   if (!sqlQuery) return undefined;
   const match = sqlQuery.match(/\bFROM\s+(?:"([^"]+)"|(\w[\w.]*))/i);
   return match?.[1] ?? match?.[2];
-}
-
-/**
- * Augments raw table columns with the configured geometry column if it
- * doesn't already exist in the table schema. This handles computed columns
- * (e.g. geometry created via ST_AsWKB in the dataset SQL query) that the
- * raw source table doesn't contain.
- */
-function getColumnsWithVirtual(
-  tableColumns: TableColumn[],
-  geometryColumn: string | undefined,
-): TableColumn[] {
-  if (!geometryColumn) return tableColumns;
-
-  const existingNames = new Set(tableColumns.map((c) => c.name.toLowerCase()));
-  if (existingNames.has(geometryColumn.toLowerCase())) return tableColumns;
-
-  return [...tableColumns, {name: geometryColumn, type: 'GEOMETRY (computed)'}];
 }
 
 const HEATMAP_COLOR_STEPS = 6;
@@ -186,17 +168,6 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const primaryTable = useDataTable(dashboardSelectedTable);
   const fallbackTable = useDataTable(fallbackTableName);
   const dataTable = primaryTable ?? fallbackTable;
-
-  const columnsWithVirtual = useMemo(
-    () =>
-      dataTable
-        ? getColumnsWithVirtual(
-            dataTable.columns,
-            activeLayerDataset?.geometryColumn,
-          )
-        : [],
-    [dataTable, activeLayerDataset?.geometryColumn],
-  );
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
@@ -656,7 +627,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
         )}
 
         {dataTable && showGeometryColumnSetting && (
-          <ColumnsProvider columns={columnsWithVirtual}>
+          <ColumnsProvider columns={dataTable.columns}>
             <Field label="Geometry column" required>
               <ColumnSelector
                 value={
