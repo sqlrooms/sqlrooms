@@ -4,6 +4,7 @@ import {
   ColumnSelector,
   ColumnsProvider,
   useStoreWithMosaicDashboard,
+  QUANTITATIVE_COLUMN_TYPES,
 } from '@sqlrooms/mosaic';
 import {useDataTable, type TableColumn} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
@@ -211,12 +212,25 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     const field = patch.field ?? colorScale?.field ?? firstColumnName;
     if (!field || !effectiveColorAccessor) return;
 
-    const type = patch.type ?? colorScale?.type ?? 'sequential';
+    let type = patch.type ?? colorScale?.type ?? 'sequential';
+
+    // Auto-detect scale type when user changes the field
+    if (patch.field && !patch.type && dataTable) {
+      const col = dataTable.columns.find((c) => c.name === patch.field);
+      if (col) {
+        const normalized = col.type.split('(')[0]!.toUpperCase();
+        const isQuantitative = QUANTITATIVE_COLUMN_TYPES.includes(normalized);
+        type = isQuantitative ? 'sequential' : 'categorical';
+      }
+    }
+
     const scheme =
       patch.scheme ??
       (patch.type && patch.type !== colorScale?.type
         ? undefined
-        : colorScale?.scheme);
+        : type !== colorScale?.type
+          ? undefined
+          : colorScale?.scheme);
 
     applyConfig(
       setDeckMapLayerColorScale(
@@ -465,17 +479,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 {colorScale && dataTable && (
                   <ColumnsProvider columns={dataTable.columns}>
                     <Field label="Color field" required>
-                      {colorScaleType === 'categorical' ? (
-                        <ColumnSelector.Categorical
-                          value={colorScale.field}
-                          onChange={(field) => updateColorScale({field})}
-                        />
-                      ) : (
-                        <ColumnSelector.Quantitative
-                          value={colorScale.field}
-                          onChange={(field) => updateColorScale({field})}
-                        />
-                      )}
+                      <ColumnSelector
+                        value={colorScale.field}
+                        onChange={(field) => updateColorScale({field})}
+                      />
                     </Field>
                   </ColumnsProvider>
                 )}
