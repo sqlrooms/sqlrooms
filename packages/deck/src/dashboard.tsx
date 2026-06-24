@@ -11,22 +11,15 @@ import {
   useMosaicClient,
   useStoreWithMosaicDashboard,
   usePanelClientRegistration,
-  MosaicDashboardPanelLayout,
 } from '@sqlrooms/mosaic';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
-import {
-  AlertTriangleIcon,
-  FocusIcon,
-  MapIcon,
-  SettingsIcon,
-} from 'lucide-react';
+import {AlertTriangleIcon, FocusIcon, MapIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckJsonMapHandle} from './types';
-import {MapSettingsPanel} from './MapSettings';
 import {
   asDeckJsonMapConfig,
   createDeckMapDashboardPanelConfig,
@@ -368,8 +361,6 @@ function DeckMapDashboardHeaderActions({
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
 
-  const isSettingsOpen = Boolean(mapConfig?.settingsOpen);
-
   const handleConfigApply = useCallback(
     (nextConfig: Record<string, unknown>) => {
       updatePanel(dashboardId, panel.id, {
@@ -379,29 +370,8 @@ function DeckMapDashboardHeaderActions({
     [dashboardId, panel.id, updatePanel],
   );
 
-  const handleToggleSettings = useCallback(() => {
-    updatePanel(dashboardId, panel.id, {
-      config: {...panel.config, settingsOpen: !isSettingsOpen},
-    });
-  }, [dashboardId, isSettingsOpen, panel.config, panel.id, updatePanel]);
-
   return (
     <div className="flex items-center gap-0.5">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="data-[state=active]:bg-accent h-6 w-6"
-            title="Map settings"
-            onClick={handleToggleSettings}
-            data-state={isSettingsOpen ? 'active' : 'inactive'}
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Map settings</TooltipContent>
-      </Tooltip>
       <DeckMapConfigPopoverEditor
         value={panel.config}
         onApply={handleConfigApply}
@@ -456,18 +426,6 @@ function DeckMapDashboardRenderer({
     panel.id,
   ]);
 
-  const isSettingsOpen = Boolean(
-    (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
-  );
-
-  const handleSettingsOpenChange = useCallback(
-    (isOpen: boolean) => {
-      updatePanel(dashboardId, panel.id, {
-        config: {...panel.config, settingsOpen: isOpen},
-      });
-    },
-    [dashboardId, panel.config, panel.id, updatePanel],
-  );
   const selection = useMemo<Selection>(
     () => getSelection(selectionName, 'crossfilter'),
     [getSelection, selectionName],
@@ -549,14 +507,6 @@ function DeckMapDashboardRenderer({
     [datasetStates, mapConfig?.interaction, selection],
   );
 
-  const settingsContent = (
-    <MapSettingsPanel
-      dashboardId={dashboardId}
-      panel={panel}
-      onClose={() => handleSettingsOpenChange(false)}
-    />
-  );
-
   const datasetError = useMemo(() => {
     for (const state of Object.values(datasetStates)) {
       if (state.error) return state.error;
@@ -633,7 +583,9 @@ function DeckMapDashboardRenderer({
                       ? 'top-9'
                       : 'top-2'
                   }`}
-                  onClick={() => handleSettingsOpenChange(true)}
+                  onClick={() => {
+                    // Settings now shown in side panel via block selection
+                  }}
                 >
                   <AlertTriangleIcon className="h-4 w-4 text-amber-500 drop-shadow-sm" />
                 </button>
@@ -646,7 +598,7 @@ function DeckMapDashboardRenderer({
           )}
           <DeckJsonMap
             ref={deckMapRef}
-            className="h-full w-full"
+            className="h-full w-full px-0.5 pb-0.5"
             spec={mapConfig.spec}
             datasets={
               mapConfig
@@ -671,16 +623,7 @@ function DeckMapDashboardRenderer({
     </>
   );
 
-  return (
-    <div className="h-full min-h-0">
-      <MosaicDashboardPanelLayout
-        isOpen={isSettingsOpen}
-        onIsOpenChange={handleSettingsOpenChange}
-        settings={settingsContent}
-        content={mapContent}
-      />
-    </div>
-  );
+  return mapContent;
 }
 
 export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
