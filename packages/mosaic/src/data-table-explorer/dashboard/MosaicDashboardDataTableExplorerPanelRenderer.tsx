@@ -14,6 +14,7 @@ import {useDataTable} from '@sqlrooms/db';
 import {useDataTableExplorer} from '../useDataTableExplorer';
 import {MosaicDashboardDataTableExplorerHeaderActions} from './MosaicDashboardDataTableExplorerHeaderActions';
 import type {DataTable} from '@sqlrooms/db';
+import {SelectablePanelWrapper} from '@sqlrooms/documents';
 
 type MosaicDashboardDataTableExplorerRendererInnerProps = Omit<
   DataTableExplorerPanelRendererProps,
@@ -61,7 +62,7 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
   return (
     <DataTableExplorer.Root explorer={explorer}>
       <div className="flex h-full min-h-0 flex-col">
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea className="min-h-0 flex-1 px-0.5">
           <DataTableExplorer.Table>
             <DataTableExplorer.Header />
             <DataTableExplorer.Rows />
@@ -76,24 +77,31 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
 
 const MosaicDashboardDataTableExplorerRenderer: FC<
   DataTableExplorerPanelRendererProps
-> = ({panel, dashboard, selectionName}) => {
+> = ({panel, dashboard, selectionName, dashboardId}) => {
   const selectedTable = useDataTable(dashboard.selectedTable);
 
-  if (!selectedTable) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-        Data Table Explorer panels require a table source.
-      </div>
-    );
-  }
-
-  return (
+  const content = !selectedTable ? (
+    <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+      Data Table Explorer panels require a table source.
+    </div>
+  ) : (
     <MosaicDashboardDataTableExplorerRendererInner
       panel={panel}
       dashboard={dashboard}
       selectionName={selectionName}
       selectedTable={selectedTable}
     />
+  );
+
+  return (
+    <SelectablePanelWrapper
+      dashboardId={dashboardId}
+      panelId={panel.id}
+      panelType="data-table-explorer"
+      blockType="dashboard-panel"
+    >
+      {content}
+    </SelectablePanelWrapper>
   );
 };
 

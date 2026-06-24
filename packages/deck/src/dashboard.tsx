@@ -11,6 +11,7 @@ import {
   useMosaicClient,
   useStoreWithMosaicDashboard,
   usePanelClientRegistration,
+  MosaicDashboardPanelLayout,
 } from '@sqlrooms/mosaic';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
@@ -26,7 +27,6 @@ import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckJsonMapHandle} from './types';
 import {MapSettingsPanel} from './MapSettings';
-import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
   asDeckJsonMapConfig,
   createDeckMapDashboardPanelConfig,

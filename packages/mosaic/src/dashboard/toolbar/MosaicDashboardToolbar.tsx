@@ -3,7 +3,6 @@ import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
-import {MosaicDashboardDataTableSelector} from './MosaicDashboardDataTableSelector';
 import {useDataTable} from '@sqlrooms/db';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
 
@@ -44,7 +43,6 @@ export const MosaicDashboardToolbar: FC = () => {
 
       <div className="flex items-center gap-2">
         <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
-        <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
         <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
       </div>
     </div>

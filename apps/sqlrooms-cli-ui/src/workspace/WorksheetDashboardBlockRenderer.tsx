@@ -1,14 +1,11 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {MosaicDashboard} from '@sqlrooms/mosaic';
-import {useEffect} from 'react';
+import {FC, useEffect} from 'react';
 import {useRoomStore} from '../store';
 
-export const WorksheetDashboardBlockRenderer = ({
-  blockInstanceId,
-  blockType,
-  title,
-  caption,
-}: BlockDocumentStatefulBlockRendererProps) => {
+export const WorksheetDashboardBlockRenderer: FC<
+  BlockDocumentStatefulBlockRendererProps
+> = ({blockInstanceId, blockType, title, caption}) => {
   const ensureDashboard = useRoomStore(
     (state) => state.mosaicDashboard.ensureDashboard,
   );
@@ -35,7 +32,7 @@ export const WorksheetDashboardBlockRenderer = ({
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <MosaicDashboard dashboardId={blockInstanceId} />
+        <MosaicDashboard dashboardId={blockInstanceId} selectable />
       </div>
     </div>
   );

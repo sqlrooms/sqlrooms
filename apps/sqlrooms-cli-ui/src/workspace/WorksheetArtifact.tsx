@@ -3,6 +3,7 @@ import {
   BlockDocumentChartRendererProvider,
   BlockDocumentArtifact,
   BlockDocumentStatefulBlockRendererProvider,
+  BlockSettingsPanel,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
 } from '@sqlrooms/documents';
@@ -76,7 +77,7 @@ const WorksheetHtmlAppBlockRenderer: FC<
   <HtmlAppBlock
     blockId={props.blockInstanceId}
     title={props.title}
-    className="bg-background h-full min-h-[320px]"
+    className="bg-background h-full min-h-80"
   />
 );
 
@@ -96,7 +97,7 @@ const WorksheetPythonBlockRenderer: FC<
 const ExperimentalStatefulBlockPlaceholder: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => (
-  <div className="bg-muted/20 flex h-full min-h-[160px] items-center justify-center p-4 text-center">
+  <div className="bg-muted/20 flex h-full min-h-40 items-center justify-center p-4 text-center">
     <div className="bg-background max-w-md rounded-md border p-4">
       <div className="text-sm font-medium">
         {props.title || 'Experimental block'}
@@ -191,11 +192,16 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
       >
-        <BlockDocumentArtifact
-          artifactId={artifactId}
-          title={artifact.title}
-          onTitleChange={handleTitleChange}
-        />
+        <div className="flex h-full">
+          <div className="min-w-0 flex-1">
+            <BlockDocumentArtifact
+              artifactId={artifactId}
+              title={artifact.title}
+              onTitleChange={handleTitleChange}
+            />
+          </div>
+          <BlockSettingsPanel className="w-80 border-l" />
+        </div>
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>
   );

@@ -1,6 +1,4 @@
-import {type FC, useCallback} from 'react';
-import {MosaicDashboardPanelLayout} from '../dashboard/panel/MosaicDashboardPanelLayout';
-import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
+import {type FC} from 'react';
 import type {ChartConfig} from './chart-types/chart-config';
 import {MosaicChartView} from './MosaicChartView';
 import {DataTable} from '@sqlrooms/db';
@@ -20,30 +18,10 @@ export const MosaicChart: FC<MosaicChartProps> = ({
   selectionName,
   config,
   runtimeKey,
-  onConfigChange,
   dashboardId,
   panelId,
 }) => {
-  const handleOpenChange = useCallback(
-    (isOpen: boolean) => onConfigChange?.({...config, settingsOpen: isOpen}),
-    [config, onConfigChange],
-  );
-
-  const handleConfigChange = useCallback(
-    (newConfig: ChartConfig) => onConfigChange?.(newConfig),
-    [onConfigChange],
-  );
-
-  const settingsContent = (
-    <MosaicChartSettingsPanel
-      dataTable={dataTable}
-      config={config}
-      onChange={handleConfigChange}
-      onClose={() => handleOpenChange(false)}
-    />
-  );
-
-  const chartContent = (
+  return (
     <div className="h-full min-h-0 min-w-0 overflow-hidden p-2">
       <MosaicChartView
         dataTable={dataTable}
@@ -53,17 +31,6 @@ export const MosaicChart: FC<MosaicChartProps> = ({
         runtimeIssueKey={runtimeKey}
         dashboardId={dashboardId}
         panelId={panelId}
-      />
-    </div>
-  );
-
-  return (
-    <div className="h-full min-h-0">
-      <MosaicDashboardPanelLayout
-        isOpen={config.settingsOpen}
-        onIsOpenChange={handleOpenChange}
-        settings={settingsContent}
-        content={chartContent}
       />
     </div>
   );

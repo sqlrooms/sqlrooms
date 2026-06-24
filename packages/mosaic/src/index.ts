@@ -53,6 +53,9 @@ export {
 export {DefaultMosaicDashboardBlock} from './dashboard/DefaultMosaicDashboardBlock';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboardPanelErrorBoundary';
+/**
+ * @deprecated Use the new block selection system with BlockSettingsPanel instead.
+ */
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/createDefaultMosaicDashboardPanelRenderers';
 export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
@@ -149,6 +152,10 @@ export {
   type MosaicChartSettingsPanelProps,
 } from './charts/MosaicChartSettingsPanel';
 export {
+  ChartSettingsPanel,
+  type ChartSettingsPanelProps,
+} from './charts/ChartSettingsPanel';
+export {
   createMosaicColorLegendPlot,
   MosaicColorLegend,
   type MosaicColorLegendProps,
@@ -197,6 +204,10 @@ export {
   type DataTableExplorerProps,
   type DataTableExplorerRootProps,
 } from './data-table-explorer/DataTableExplorer';
+export {
+  DataTableSettingsPanel,
+  type DataTableSettingsPanelProps,
+} from './data-table-explorer/DataTableSettingsPanel';
 export {DataTableBlockRenderer} from './data-table-explorer/worksheet/DataTableBlockRenderer';
 export {
   DataTableExplorerHeader,

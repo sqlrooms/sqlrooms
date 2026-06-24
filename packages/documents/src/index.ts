@@ -144,3 +144,4 @@ export {
   type KnowledgeIndex,
   type UnresolvedDocumentLink,
 } from './knowledgeIndex';
+export * from './block-selection';

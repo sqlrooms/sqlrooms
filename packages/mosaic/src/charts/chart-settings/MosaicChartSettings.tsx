@@ -109,7 +109,7 @@ const MosaicChartSettingsHeader: FC<PropsWithChildren> = ({children}) => {
 };
 
 const MosaicChartSettingsContent: FC<PropsWithChildren> = ({children}) => {
-  return <div className="flex flex-col gap-2 p-2">{children}</div>;
+  return <div className="flex flex-col gap-2">{children}</div>;
 };
 
 const MosaicChartSettingsTypeSelector: FC = () => {
@@ -141,13 +141,7 @@ const MosaicChartSettingsFields: FC = () => {
   const chartTypeDef = useChartTypeDefinition(config.chartType);
 
   if (!chartTypeDef) {
-    return (
-      <Field label="Chart type" required>
-        <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-          Unknown chart type: {config.chartType}
-        </div>
-      </Field>
-    );
+    return null;
   }
 
   if (columns.length === 0) {

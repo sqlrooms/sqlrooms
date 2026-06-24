@@ -74,7 +74,7 @@ const MultiFieldSelectorRoot: FC<MultiFieldSelectorProps> = ({
             key={fieldConfig.field}
             className="grid items-end gap-2"
             style={{
-              gridTemplateColumns: 'minmax(120px, 1fr) auto 32px',
+              gridTemplateColumns: '1fr auto 32px',
             }}
           >
             <ColumnSelector

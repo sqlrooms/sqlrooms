@@ -95,6 +95,7 @@ import {
   BlockDocumentsSliceConfig,
   createBlockDocumentCommands,
   createBlockDocumentsSlice,
+  createBlockSelectionSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DocumentsSliceConfig,
@@ -136,6 +137,7 @@ import {
 } from './statefulBlockArtifactConfigs';
 import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
+import {blockSettingsRegistry} from './workspace/block-settings/registry';
 
 export type {RoomState} from './store-types';
 
@@ -1068,6 +1070,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               config.renameState(getState(), blockInstanceId, title);
             }
           },
+        })(set, get, store),
+
+        ...createBlockSelectionSlice<RoomState>({
+          settingsRegistry: blockSettingsRegistry,
         })(set, get, store),
 
         ...(runtimeConfig.syncEnabled

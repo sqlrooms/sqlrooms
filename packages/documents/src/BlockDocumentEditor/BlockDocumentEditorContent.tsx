@@ -1,9 +1,10 @@
 import {cn} from '@sqlrooms/ui';
 import {EditorContent} from '@tiptap/react';
 import type {FC} from 'react';
-import {useState} from 'react';
+import {useCallback, useState} from 'react';
 import {BlockDocumentBlockControls} from './BlockDocumentBlockControls';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
+import {useBlockSelection} from '../block-selection/useBlockSelection';
 
 export type BlockDocumentEditorContentProps = {
   className?: string;
@@ -16,11 +17,26 @@ export const BlockDocumentEditorContent: FC<
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
+  const clearSelection = useBlockSelection(
+    (state) => state.blockSelection.clearSelection,
+  );
+
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Clear selection if clicking on the editor background (not on a block)
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('ProseMirror')) {
+        clearSelection();
+      }
+    },
+    [clearSelection],
+  );
 
   return (
     <div
       ref={setScrollElement}
       className={cn('relative h-full min-h-0 flex-1 overflow-auto', className)}
+      onClick={handleClick}
     >
       <EditorContent editor={editor} className="min-h-full" />
       <BlockDocumentBlockControls scrollElement={scrollElement} />

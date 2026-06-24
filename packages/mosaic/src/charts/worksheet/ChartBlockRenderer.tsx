@@ -82,12 +82,10 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
       <ChartBlockHeader
         caption={caption}
         chartConfig={chartConfig}
-        selectedTable={selectedTable}
+        tableName={selectedTable.table.table}
         onCaptionChange={onCaptionChange}
         onSettingsOpenChange={handleSettingsOpenChange}
-        onTableChange={handleTableChange}
         readOnly={readOnly}
-        tables={tables}
       />
       <div className="min-h-0 flex-1">
         <MosaicChart

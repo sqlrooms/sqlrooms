@@ -5,10 +5,12 @@ import {
   useEffect,
   useMemo,
   useState,
+  FC,
 } from 'react';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './panel/MosaicDashboardPanels';
+import {SelectablePanelWrapper} from '@sqlrooms/documents';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
@@ -124,19 +126,37 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
+  /** Whether to enable selection of the entire dashboard */
+  selectable?: boolean;
 };
 
 function MosaicDashboardComponent({
   dashboardId,
+  selectable = false,
 }: MosaicDashboardProps): ReactElement {
   return (
     <MosaicDashboardRoot dashboardId={dashboardId}>
-      <div className="flex h-full flex-col">
-        <MosaicDashboardToolbar />
-        <div className="h-full overflow-y-auto">
-          <MosaicDashboardPanels />
+      {selectable ? (
+        <SelectablePanelWrapper
+          dashboardId={dashboardId}
+          panelId={dashboardId}
+          panelType="dashboard"
+          blockType="dashboard-block"
+          className="flex flex-col"
+        >
+          <MosaicDashboardToolbar />
+          <div className="h-full min-h-0 flex-1 overflow-y-auto">
+            <MosaicDashboardPanels />
+          </div>
+        </SelectablePanelWrapper>
+      ) : (
+        <div className="flex h-full flex-col">
+          <MosaicDashboardToolbar />
+          <div className="h-full overflow-y-auto">
+            <MosaicDashboardPanels />
+          </div>
         </div>
-      </div>
+      )}
     </MosaicDashboardRoot>
   );
 }

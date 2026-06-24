@@ -25,7 +25,7 @@ export const AggregationSelector: FC<AggregationSelectorProps> = ({
 
   return (
     <Combobox value={value} onChange={onChange}>
-      <Combobox.Trigger className="w-[100px] shadow-none">
+      <Combobox.Trigger className="w-auto shadow-none">
         <span>{selectedOption?.label ?? value.toUpperCase()}</span>
       </Combobox.Trigger>
       <Combobox.Content>
