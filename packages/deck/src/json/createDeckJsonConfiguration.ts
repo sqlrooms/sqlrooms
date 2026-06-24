@@ -330,10 +330,7 @@ export function createDeckJsonConfiguration(
 
       // For HeatmapLayer: apply default colorRange (YlOrRd) when not explicitly set.
       // Also set updateTriggers to force re-aggregation when colorRange changes.
-      if (
-        layerName === 'GeoArrowHeatmapLayer' ||
-        layerName === 'HeatmapLayer'
-      ) {
+      if (layerName === 'GeoArrowHeatmapLayer') {
         if (!rewritten.colorRange) {
           rewritten.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
         }

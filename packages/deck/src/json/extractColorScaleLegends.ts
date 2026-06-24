@@ -73,8 +73,8 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    const layerType = String(layerProps['@@type'] ?? '').toLowerCase();
-    if (layerType.includes('heatmap')) {
+    const layerType = layerProps['@@type'];
+    if (layerType === 'GeoArrowHeatmapLayer') {
       const heatmapLegend = buildHeatmapLegend(layerProps);
       if (heatmapLegend) {
         legends.push(heatmapLegend);
