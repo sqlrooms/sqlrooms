@@ -6,7 +6,7 @@ import {
   useStoreWithMosaicDashboard,
   QUANTITATIVE_COLUMN_TYPES,
 } from '@sqlrooms/mosaic';
-import {useDataTable, type TableColumn} from '@sqlrooms/duckdb';
+import {useDataTable} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   binnedNumericSchemes,
@@ -195,6 +195,18 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const firstColumnName = dataTable?.columns[0]?.name;
 
+  const isWidthInPixels = activeLayer?.widthUnits === 'pixels';
+  const lineWidthValue = isWidthInPixels
+    ? ((activeLayer?.widthMinPixels as number | undefined) ?? 1)
+    : ((activeLayer?.getWidth as number | undefined) ?? 1);
+
+  const isRadiusInPixels = activeLayer?.radiusUnits === 'pixels';
+  const pointRadiusValue = isRadiusInPixels
+    ? ((activeLayer?.getRadius as number | undefined) ??
+      (activeLayer?.radiusMinPixels as number | undefined) ??
+      2)
+    : ((activeLayer?.getRadius as number | undefined) ?? 100);
+
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
       updatePanel(dashboardId, panel.id, {
@@ -334,17 +346,14 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
             {showTripsSettings && (
               <>
                 <Field
-                  label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 3}px`}
+                  label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
                 >
                   <div className="pt-0.5">
                     <Slider
                       min={1}
-                      max={20}
-                      step={1}
-                      value={[
-                        (activeLayer?.widthMinPixels as number | undefined) ??
-                          3,
-                      ]}
+                      max={isWidthInPixels ? 20 : 10000}
+                      step={isWidthInPixels ? 1 : 10}
+                      value={[lineWidthValue]}
                       onValueChange={(values) => {
                         const value = values[0] ?? 3;
                         applyConfig(
@@ -353,7 +362,9 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                             activeLayerIndex,
                             (layer) => ({
                               ...layer,
-                              widthMinPixels: value,
+                              ...(isWidthInPixels
+                                ? {widthMinPixels: value}
+                                : {}),
                               getWidth: value,
                             }),
                           ),
@@ -569,20 +580,16 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
 
         {showRadiusSetting && (
           <Field
-            label={`Point radius: ${(activeLayer?.getRadius as number | undefined) ?? (activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
+            label={`Point radius: ${pointRadiusValue}${isRadiusInPixels ? 'px' : 'm'}`}
           >
             <div className="pt-0.5">
               <Slider
                 min={1}
-                max={50}
-                step={1}
-                value={[
-                  (activeLayer?.getRadius as number | undefined) ??
-                    (activeLayer?.radiusMinPixels as number | undefined) ??
-                    2,
-                ]}
+                max={isRadiusInPixels ? 50 : 10000}
+                step={isRadiusInPixels ? 1 : 10}
+                value={[pointRadiusValue]}
                 onValueChange={(values) => {
-                  const value = values[0] ?? 2;
+                  const value = values[0] ?? (isRadiusInPixels ? 2 : 100);
                   applyConfig(
                     updateDeckMapLayer(
                       mapConfig,
@@ -590,12 +597,16 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       (layer) => ({
                         ...layer,
                         getRadius: value,
-                        radiusMinPixels: 1,
-                        radiusMaxPixels: Math.max(
-                          value,
-                          (layer.radiusMaxPixels as number | undefined) ??
-                            value,
-                        ),
+                        ...(isRadiusInPixels
+                          ? {
+                              radiusMinPixels: 1,
+                              radiusMaxPixels: Math.max(
+                                value,
+                                (layer.radiusMaxPixels as number | undefined) ??
+                                  value,
+                              ),
+                            }
+                          : {}),
                       }),
                     ),
                   );
@@ -768,16 +779,14 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
 
         {showArcColumnSetting && (
           <Field
-            label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 1}px`}
+            label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
           >
             <div className="pt-0.5">
               <Slider
                 min={1}
-                max={20}
-                step={1}
-                value={[
-                  (activeLayer?.widthMinPixels as number | undefined) ?? 1,
-                ]}
+                max={isWidthInPixels ? 20 : 10000}
+                step={isWidthInPixels ? 1 : 10}
+                value={[lineWidthValue]}
                 onValueChange={(values) => {
                   const value = values[0] ?? 1;
                   applyConfig(
@@ -786,7 +795,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       activeLayerIndex,
                       (layer) => ({
                         ...layer,
-                        widthMinPixels: value,
+                        ...(isWidthInPixels ? {widthMinPixels: value} : {}),
                         getWidth: value,
                       }),
                     ),
