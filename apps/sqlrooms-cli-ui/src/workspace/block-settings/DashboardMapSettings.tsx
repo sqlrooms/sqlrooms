@@ -1,7 +1,10 @@
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {useRoomStore} from '../../store';
-import {FC} from 'react';
+import {FC, useCallback} from 'react';
 import {MapSettingsPanel} from '@sqlrooms/deck';
+import {type DataTable} from '@sqlrooms/db';
+import {ConfirmDatasetChangeDialog} from './ConfirmDatasetChangeDialog';
+import {useConfirmDatasetChange} from './useConfirmDatasetChange';
 
 export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
@@ -10,6 +13,22 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
   const dashboard = useRoomStore((state) =>
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
   );
+
+  const setSelectedTable = useRoomStore(
+    (state) => state.mosaicDashboard.setSelectedTable,
+  );
+
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      if (dashboardId) {
+        setSelectedTable(dashboardId, table.table.table);
+      }
+    },
+    [dashboardId, setSelectedTable],
+  );
+
+  const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
+    useConfirmDatasetChange(handleTableChange);
 
   if (!dashboard) {
     return (
@@ -29,5 +48,19 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
     );
   }
 
-  return <MapSettingsPanel dashboardId={dashboardId!} panel={panel} />;
+  return (
+    <>
+      <MapSettingsPanel
+        dashboardId={dashboardId!}
+        panel={panel}
+        onTableChange={handleTableChangeRequest}
+      />
+
+      <ConfirmDatasetChangeDialog
+        open={isDialogOpen}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+    </>
+  );
 };

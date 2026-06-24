@@ -5,6 +5,7 @@ import {BlockDashboardSettings} from './BlockDashboardSettings';
 import {DashboardDataTableSettings} from './DashboardDataTableSettings';
 import {BlockDataTableSettings} from './BlockDataTableSettings';
 import {DashboardMapSettings} from './DashboardMapSettings';
+import {BlockMapSettings} from './BlockMapSettings';
 
 /**
  * Central registry of block settings components.
@@ -19,6 +20,7 @@ import {DashboardMapSettings} from './DashboardMapSettings';
 export const blockSettingsRegistry: Record<string, BlockSettingsComponent> = {
   'standalone-block:chart-block': BlockChartSettings,
   'standalone-block:data-table': BlockDataTableSettings,
+  'standalone-block:map': BlockMapSettings,
   'dashboard-panel:vgplot': DashboardChartSettings,
   'dashboard-panel:data-table-explorer': DashboardDataTableSettings,
   'dashboard-panel:deck-json-map': DashboardMapSettings,

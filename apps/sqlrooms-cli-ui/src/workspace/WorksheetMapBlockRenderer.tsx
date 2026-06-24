@@ -1,4 +1,5 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
+import {SelectablePanelWrapper} from '@sqlrooms/documents';
 import {DeckMapBlockRenderer} from '@sqlrooms/deck';
 
 /**
@@ -9,8 +10,10 @@ import {DeckMapBlockRenderer} from '@sqlrooms/deck';
  * @returns The configured Deck map block renderer, or an unsupported block message.
  */
 export const WorksheetMapBlockRenderer = ({
+  blockId,
   blockInstanceId,
   blockType,
+  documentId,
   title,
   caption,
 }: BlockDocumentStatefulBlockRendererProps) => {
@@ -23,10 +26,17 @@ export const WorksheetMapBlockRenderer = ({
   }
 
   return (
-    <DeckMapBlockRenderer
-      mapId={blockInstanceId}
-      title={title}
-      caption={caption}
-    />
+    <SelectablePanelWrapper
+      dashboardId={documentId}
+      panelId={blockId}
+      panelType="map"
+      blockType="standalone-block"
+    >
+      <DeckMapBlockRenderer
+        mapId={blockInstanceId}
+        title={title}
+        caption={caption}
+      />
+    </SelectablePanelWrapper>
   );
 };
