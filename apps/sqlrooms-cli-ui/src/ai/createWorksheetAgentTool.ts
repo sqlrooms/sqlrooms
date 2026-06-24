@@ -280,13 +280,6 @@ const WorksheetAgentInputSchema = z.object({
     .optional()
     .default(20)
     .describe('Maximum exploration steps (default: 20, range: 5-50)'),
-  temperature: z
-    .number()
-    .optional()
-    .default(0.7)
-    .describe(
-      'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
-    ),
 });
 
 type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
@@ -352,7 +345,7 @@ ${htmlAppBlocksEnabled ? '- App requests in worksheets: "create an app", "make a
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: WorksheetAgentInputSchema,
     execute: async (params, toolOptions): Promise<WorksheetAgentResult> => {
-      const {worksheetId, maxSteps, temperature} = params;
+      const {worksheetId, maxSteps} = params;
       const {intent} = params;
 
       try {
@@ -377,7 +370,6 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
             }),
             ...dataTools,
           },
-          temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getWorksheetAgentInstructions(options),

@@ -270,7 +270,6 @@ Use this after making the requested scoped edit to the existing files. Preserve 
     tools: {
       write_html_app_source: writeHtmlAppSourceTool,
     },
-    temperature: 0.1,
     stopWhen: [
       stepCountIs(
         Math.max(3, Math.min(10, (input.maxRepairAttempts ?? 1) + 4)),
@@ -350,7 +349,6 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
       ...dataTools,
       write_html_app_source: writeHtmlAppSourceTool,
     },
-    temperature: 0.2,
     stopWhen: [
       stepCountIs(
         Math.max(4, Math.min(16, (input.maxRepairAttempts ?? 1) + 6)),
