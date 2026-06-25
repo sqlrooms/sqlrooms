@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {useRoomStore} from '../../store';
-import type {BlockDocumentStatefulBlock} from '@sqlrooms/documents';
+import type {BlockDocumentStatefulBlockBlock} from '@sqlrooms/documents';
 
 /**
  * Hook to get a data table block from a block document.
@@ -13,7 +13,7 @@ import type {BlockDocumentStatefulBlock} from '@sqlrooms/documents';
 export function useDataTableBlock(
   documentId: string | undefined,
   blockId: string | undefined,
-): BlockDocumentStatefulBlock | undefined {
+): BlockDocumentStatefulBlockBlock | undefined {
   // Select the artifact directly so we re-render when it changes
   const artifact = useRoomStore((state) =>
     documentId ? state.blockDocuments.config.artifacts[documentId] : undefined,
@@ -28,7 +28,7 @@ export function useDataTableBlock(
     const blocks = state.blockDocuments.getBlocks(documentId);
 
     return blocks.find(
-      (block): block is BlockDocumentStatefulBlock =>
+      (block): block is BlockDocumentStatefulBlockBlock =>
         block.id === blockId &&
         block.type === 'statefulBlock' &&
         block.blockType === 'data-table',

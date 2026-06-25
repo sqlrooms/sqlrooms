@@ -1,7 +1,8 @@
 import {cn} from '@sqlrooms/ui';
 import type {FC, ReactNode} from 'react';
 import {useCallback} from 'react';
-import {useBlockSelection} from './useBlockSelection';
+import {useBlockSettingsStore} from './useBlockSettingsStore';
+import {useBlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
 
 export type SelectablePanelWrapperProps = {
   /** Dashboard or document ID containing the block */
@@ -46,16 +47,27 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
   children,
   className,
 }) => {
-  const selectBlock = useBlockSelection(
-    (state) => state.blockSelection.selectBlock,
+  const selectBlock = useBlockSettingsStore(
+    (state) => state.blockSettings.selectBlock,
   );
-  const isSelected = useBlockSelection((state) =>
-    state.blockSelection.isBlockSelected(blockType, panelId, dashboardId),
+  const isSelected = useBlockSettingsStore((state) =>
+    state.blockSettings.isBlockSelected(blockType, panelId, dashboardId),
   );
+
+  // Get editor from context to clear TipTap selection when panel is selected
+  const {editor} = useBlockDocumentEditorContext();
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation(); // Prevent click from bubbling to parent handlers
+
+      // Clear TipTap selection when selecting a panel
+      if (editor && !editor.isDestroyed) {
+        // Set selection to end of document to deselect any node
+        const {doc} = editor.state;
+        editor.commands.setTextSelection(doc.content.size);
+      }
+
       selectBlock({
         type: blockType,
         id: panelId,
@@ -63,7 +75,7 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
         panelType,
       });
     },
-    [blockType, dashboardId, panelId, panelType, selectBlock],
+    [blockType, dashboardId, panelId, panelType, selectBlock, editor],
   );
 
   return (

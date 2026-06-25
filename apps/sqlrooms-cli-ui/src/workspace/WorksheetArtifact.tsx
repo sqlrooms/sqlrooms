@@ -6,11 +6,12 @@ import {
   BlockSettingsPanel,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  type Editor,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
 import {PythonBlock} from '@sqlrooms/python/block';
-import {FC, useCallback, useEffect, useMemo} from 'react';
+import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
@@ -155,6 +156,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const renameArtifact = useRoomStore(
     (state) => state.artifacts.renameArtifact,
   );
+  const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
     if (artifact?.type === 'worksheet') {
@@ -198,9 +200,14 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
               artifactId={artifactId}
               title={artifact.title}
               onTitleChange={handleTitleChange}
+              onEditorReady={setEditor}
             />
           </div>
-          <BlockSettingsPanel className="w-80 border-l" />
+          <BlockSettingsPanel
+            className="w-80 border-l"
+            editor={editor}
+            documentId={artifactId}
+          />
         </div>
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>

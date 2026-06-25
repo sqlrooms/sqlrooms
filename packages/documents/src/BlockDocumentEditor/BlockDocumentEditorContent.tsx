@@ -4,7 +4,7 @@ import type {FC} from 'react';
 import {useCallback, useState} from 'react';
 import {BlockDocumentBlockControls} from './BlockDocumentBlockControls';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
-import {useBlockSelection} from '../block-selection/useBlockSelection';
+import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
 
 export type BlockDocumentEditorContentProps = {
   className?: string;
@@ -17,8 +17,8 @@ export const BlockDocumentEditorContent: FC<
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(
     null,
   );
-  const clearSelection = useBlockSelection(
-    (state) => state.blockSelection.clearSelection,
+  const clearSelection = useBlockSettingsStore(
+    (state) => state.blockSettings.clearSelection,
   );
 
   const handleClick = useCallback(

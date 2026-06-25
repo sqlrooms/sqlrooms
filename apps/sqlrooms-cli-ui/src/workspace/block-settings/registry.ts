@@ -15,7 +15,7 @@ import {BlockMapSettings} from './BlockMapSettings';
  * - Standalone blocks: `standalone-block:{blockType}` (e.g., `standalone-block:chart-block`)
  * - Dashboard blocks: `dashboard-block` (the entire dashboard)
  *
- * This registry is passed to createBlockSelectionSlice during store initialization.
+ * This registry is passed to createBlockSettingsSlice during store initialization.
  */
 export const blockSettingsRegistry: Record<string, BlockSettingsComponent> = {
   'standalone-block:chart-block': BlockChartSettings,

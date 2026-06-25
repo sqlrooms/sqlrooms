@@ -7,7 +7,7 @@ export const BlockDocumentStatefulBlockNode = Node.create({
   name: 'blockDocumentStatefulBlock',
   group: 'block',
   atom: true,
-  selectable: false,
+  selectable: true,
   draggable: false,
   isolating: true,
 

@@ -32,7 +32,7 @@ export const WorksheetDashboardBlockRenderer: FC<
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <MosaicDashboard dashboardId={blockInstanceId} selectable />
+        <MosaicDashboard dashboardId={blockInstanceId} />
       </div>
     </div>
   );

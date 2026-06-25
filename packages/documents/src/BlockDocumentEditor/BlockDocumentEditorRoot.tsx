@@ -5,7 +5,7 @@ import TableHeader from '@tiptap/extension-table-header';
 import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
-import {useEditor} from '@tiptap/react';
+import {Editor, useEditor} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
   type FC,
@@ -16,6 +16,7 @@ import {
 } from 'react';
 import type {BlockDocumentContent} from '../BlockDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
+import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
 import {
   BlockDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
@@ -48,6 +49,7 @@ export type BlockDocumentEditorRootProps = PropsWithChildren<{
   generateBlockId?: () => string;
   title?: string;
   onTitleChange?: (title: string) => void;
+  onEditorReady?: (editor: Editor) => void;
 }>;
 
 function stableStringify(value: unknown) {
@@ -122,6 +124,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   generateBlockId = createDefaultBlockDocumentBlockId,
   title = 'Untitled',
   onTitleChange,
+  onEditorReady,
   children,
 }) => {
   const onChangeRef = useRef(onChange);
@@ -291,6 +294,17 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     editor.setEditable(!readOnly);
   }, [editor, readOnly]);
 
+  const clearSelection = useBlockSettingsStore(
+    (state) => state.blockSettings.clearSelection,
+  );
+
+  useEffect(() => {
+    return () => {
+      // Clear custom selection when document changes or editor unmounts
+      clearSelection?.();
+    };
+  }, [documentId, clearSelection]);
+
   const contextValue: BlockDocumentEditorContextValue = useMemo(
     () => ({
       editor,
@@ -303,6 +317,12 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     }),
     [assets, documentId, editor, normalizedValue, onChange, readOnly],
   );
+
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   return (
     <BlockDocumentEditorContext.Provider value={contextValue}>

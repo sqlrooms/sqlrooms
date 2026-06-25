@@ -134,7 +134,7 @@ function SelectedCliArtifactContent({
 }) {
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
   const clearSelection = useRoomStore(
-    (state) => state.blockSelection.clearSelection,
+    (state) => state.blockSettings.clearSelection,
   );
   const typeDefinition = artifactTypes[artifact.type];
   const Component = typeDefinition?.component;

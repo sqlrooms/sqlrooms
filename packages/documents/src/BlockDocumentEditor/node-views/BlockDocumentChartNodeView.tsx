@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import {NodeViewWrapper} from '@tiptap/react';
+import {NodeViewWrapper, type Editor} from '@tiptap/react';
 import {
   createElement,
   memo,
@@ -15,12 +15,13 @@ import {
 } from '../../BlockDocumentChartRendererContext';
 import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
-import {SelectablePanelWrapper} from '../../block-selection/SelectablePanelWrapper';
 
 type BlockDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
+  getPos: () => number | undefined;
+  editor: Editor;
 };
 
 type ChartRendererBoundaryProps = BlockDocumentChartRendererProps & {
@@ -39,7 +40,7 @@ ChartRendererBoundary.displayName = 'ChartRendererBoundary';
 /** Renders a chart block as a Tiptap node view inside the block document editor. */
 export const BlockDocumentChartNodeView: FC<
   BlockDocumentChartNodeViewProps
-> = ({node, selected, updateAttributes}) => {
+> = ({node, selected, updateAttributes, getPos, editor}) => {
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const Renderer = useBlockDocumentChartRenderer();
   const updateAttributesRef = useRef(updateAttributes);
@@ -72,50 +73,58 @@ export const BlockDocumentChartNodeView: FC<
     updateAttributesRef.current({caption: nextCaption});
   }, []);
 
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Select this node when clicked
+      // Panel selection will be cleared automatically by useSelectedBlockOrPanel hook
+      if (editor && !selected) {
+        const pos = getPos();
+        if (pos !== undefined) {
+          editor.commands.setNodeSelection(pos);
+        }
+      }
+    },
+    [editor, selected, getPos],
+  );
+
   return (
     <NodeViewWrapper
       className={cn(
         'not-prose bg-background my-4 rounded-md border',
-        selected && 'ring-ring ring-2',
+        selected && 'outline-primary outline outline-2',
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
+      onClick={handleClick}
     >
-      <SelectablePanelWrapper
-        dashboardId={documentId}
-        panelId={blockId}
-        panelType="chart-block"
-        blockType="standalone-block"
-      >
-        {Renderer ? (
-          <ChartRendererBoundary
-            Renderer={Renderer}
-            documentId={documentId}
-            blockId={blockId}
-            tableName={tableName}
-            config={config}
-            selectionGroupId={selectionGroupId}
-            caption={caption}
-            readOnly={readOnly}
-            onTableNameChange={handleTableNameChange}
-            onConfigChange={handleConfigChange}
-            onCaptionChange={handleCaptionChange}
-          />
-        ) : (
-          <div className="p-4">
-            <div className="text-sm font-medium">Chart block</div>
-            <div className="text-muted-foreground mt-1 text-sm">
-              No block document chart renderer is registered.
-            </div>
-            <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
-              <span>Table: {tableName || 'Unconfigured'}</span>
-              {selectionGroupId ? (
-                <span>Selection group: {selectionGroupId}</span>
-              ) : null}
-            </div>
+      {Renderer ? (
+        <ChartRendererBoundary
+          Renderer={Renderer}
+          documentId={documentId}
+          blockId={blockId}
+          tableName={tableName}
+          config={config}
+          selectionGroupId={selectionGroupId}
+          caption={caption}
+          readOnly={readOnly}
+          onTableNameChange={handleTableNameChange}
+          onConfigChange={handleConfigChange}
+          onCaptionChange={handleCaptionChange}
+        />
+      ) : (
+        <div className="p-4">
+          <div className="text-sm font-medium">Chart block</div>
+          <div className="text-muted-foreground mt-1 text-sm">
+            No block document chart renderer is registered.
           </div>
-        )}
-      </SelectablePanelWrapper>
+          <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
+            <span>Table: {tableName || 'Unconfigured'}</span>
+            {selectionGroupId ? (
+              <span>Selection group: {selectionGroupId}</span>
+            ) : null}
+          </div>
+        </div>
+      )}
     </NodeViewWrapper>
   );
 };

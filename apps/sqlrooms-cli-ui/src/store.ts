@@ -95,7 +95,7 @@ import {
   BlockDocumentsSliceConfig,
   createBlockDocumentCommands,
   createBlockDocumentsSlice,
-  createBlockSelectionSlice,
+  createBlockSettingsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DocumentsSliceConfig,
@@ -1077,7 +1077,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createBlockSelectionSlice<RoomState>({
+        ...createBlockSettingsSlice<RoomState>({
           settingsRegistry: blockSettingsRegistry,
         })(set, get, store),
 

@@ -158,4 +158,5 @@ export {
   type KnowledgeIndex,
   type UnresolvedDocumentLink,
 } from './knowledgeIndex';
-export * from './block-selection';
+export * from './block-settings';
+export type {Editor} from '@tiptap/react';
