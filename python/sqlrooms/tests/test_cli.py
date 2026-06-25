@@ -23,12 +23,21 @@ def test_cli_help():
     assert result.exit_code == 0
     assert "Launch a local SQLRooms project" in stdout
     assert "my-project.duckdb" in stdout
+    assert "--version" in stdout
     assert "--ai-devtools" in stdout
     assert "--debug" in stdout
     assert "--experimental" in stdout
     assert "--experimental-sync" in stdout
     assert "--sync" not in stdout
     assert "next free port" in stdout
+
+
+def test_cli_version_exits_without_database_path():
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.stdout.startswith("sqlrooms ")
+    assert "Please provide a DuckDB project file" not in result.stderr
 
 
 def test_cli_requires_database_path():

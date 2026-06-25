@@ -60,6 +60,7 @@ function delay(ms: number): Promise<void> {
 function openWebSocketConnection(
   wsUrl: string,
   timeoutMs: number,
+  authToken?: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const socket = new WebSocket(wsUrl);
@@ -71,6 +72,7 @@ function openWebSocketConnection(
       settled = true;
       clearTimeout(timeoutId);
       socket.onopen = null;
+      socket.onmessage = null;
       socket.onerror = null;
       socket.onclose = null;
       try {
@@ -89,7 +91,31 @@ function openWebSocketConnection(
       finish(new Error('Timed out connecting to DuckDB websocket backend.'));
     }, timeoutMs);
 
-    socket.onopen = () => finish();
+    socket.onopen = () => {
+      if (!authToken) {
+        finish();
+        return;
+      }
+
+      try {
+        socket.send(JSON.stringify({type: 'auth', token: authToken}));
+      } catch {
+        finish(new Error('Failed to send DuckDB websocket auth token.'));
+      }
+    };
+    socket.onmessage = (event) => {
+      if (!authToken || typeof event.data !== 'string') return;
+      try {
+        const message = JSON.parse(event.data);
+        if (message?.type === 'authAck') {
+          finish();
+        } else if (message?.type === 'error') {
+          finish(new Error(message.error || 'DuckDB websocket auth failed.'));
+        }
+      } catch {
+        // Ignore non-JSON messages while waiting for auth acknowledgement.
+      }
+    };
     socket.onerror = () =>
       finish(new Error('DuckDB websocket connection error.'));
     socket.onclose = () =>
@@ -100,6 +126,7 @@ function openWebSocketConnection(
 async function waitForWebSocketConnection(
   wsUrl: string,
   timeoutMs: number,
+  authToken?: string,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
@@ -110,6 +137,7 @@ async function waitForWebSocketConnection(
       await openWebSocketConnection(
         wsUrl,
         Math.min(DB_CONNECTION_ATTEMPT_TIMEOUT_MS, attemptRemainingMs),
+        authToken,
       );
       return;
     } catch (error) {
@@ -147,9 +175,11 @@ export function addCliDatabaseInitializationDiagnostics(
   {
     runtimeConfig,
     wsUrl,
+    authToken,
   }: {
     runtimeConfig: RuntimeConfig;
     wsUrl: string;
+    authToken?: string;
   },
 ) {
   const baseInitialize = connector.initialize.bind(connector);
@@ -165,7 +195,11 @@ export function addCliDatabaseInitializationDiagnostics(
     }
 
     try {
-      await waitForWebSocketConnection(wsUrl, DB_CONNECTION_TIMEOUT_MS);
+      await waitForWebSocketConnection(
+        wsUrl,
+        DB_CONNECTION_TIMEOUT_MS,
+        authToken,
+      );
     } catch (error) {
       const startupStatus = await fetchRuntimeStartupStatus();
       throw createDatabaseStartupError({

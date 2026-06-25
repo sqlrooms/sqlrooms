@@ -120,13 +120,6 @@ const DashboardAgentInputSchema = z.object({
     .optional()
     .default(20)
     .describe('Maximum exploration steps (default: 20, range: 5-50)'),
-  temperature: z
-    .number()
-    .optional()
-    .default(0.7)
-    .describe(
-      'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
-    ),
 });
 
 type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
@@ -169,7 +162,7 @@ The agent will explore the data and create 3-5 panels showing different aspects 
 IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: DashboardAgentInputSchema,
     execute: async (params, toolOptions): Promise<DashboardAgentResult> => {
-      const {dashboardId, maxSteps, temperature} = params;
+      const {dashboardId, maxSteps} = params;
       const {intent} = params;
 
       const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
@@ -202,7 +195,6 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
               extraTools,
             }),
           },
-          temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getDashboardAgentInstructions(options),

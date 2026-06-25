@@ -176,12 +176,13 @@ Use `DataTableSelector` or `DataTableSelectorEmptyState` when another host
 surface needs the same searchable table picker used by dashboards and data
 table blocks.
 
-### Worksheet Agent HTML App Tools
+### Block Document AI Integrations
 
-`createWorksheetAgentTool` exposes worksheet HTML app block workflows by
-default. Hosts that gate or do not support HTML app blocks should pass
-`htmlAppBlocksEnabled: false` so the agent omits `add_html_app_block` and does
-not advertise HTML app block workflows in its instructions.
+`createBlockDocumentChartTools`, `createAddMosaicDashboardBlockTool`, and
+`createBlockDocumentDataTableExplorerTool` expose Mosaic-owned capabilities for
+block-document hosts. The host provides a `BlockDocumentAiAdapter` from
+`@sqlrooms/documents` plus callbacks for creating host-specific stateful block
+state, then composes these tools with app-specific agent policy.
 
 ### Mosaic Dashboard Panels
 

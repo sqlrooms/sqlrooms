@@ -1257,6 +1257,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             apiKey: state.ai.getApiKeyFromSettings(),
             name: provider,
             baseURL,
+            includeUsage: true,
           }).chatModel(modelId);
 
           try {

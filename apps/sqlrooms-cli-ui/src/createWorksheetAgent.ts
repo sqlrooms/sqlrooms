@@ -1,14 +1,8 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
-import type {
-  BaseAgentToolOptions,
-  CreateWorksheetAgentToolOptions,
-} from '@sqlrooms/mosaic/ai';
+import type {BaseAgentToolOptions} from '@sqlrooms/mosaic/ai';
 import {tool, type Tool} from 'ai';
-import {
-  createDashboardAgentTool,
-  createWorksheetAgentTool,
-} from '@sqlrooms/mosaic/ai';
+import {createDashboardAgentTool} from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createWorksheetAiAdapter} from './createWorksheetAiAdapter';
@@ -26,6 +20,14 @@ import {
   createDefaultBlockDocumentBlockId,
 } from '@sqlrooms/documents';
 import {z} from 'zod';
+import {
+  createWorksheetAgentTool,
+  type CreateWorksheetAgentToolOptions,
+} from './ai/createWorksheetAgentTool';
+import {
+  EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS,
+  KnownWorksheetTools,
+} from './ai/constants';
 
 const WorksheetMapBlockToolParameters = DeckMapDashboardToolParameters.extend({
   mapId: z
@@ -238,32 +240,54 @@ export function worksheetAgentTool(
     databaseAdapter,
   });
 
-  const worksheetAgentOptions: CreateWorksheetAgentToolOptions<RoomState> = {
+  const worksheetAgentOptions: CreateWorksheetAgentToolOptions = {
     ...baseOptions,
     databaseAdapter,
-    worksheetAdapter,
+    blockDocumentAdapter: worksheetAdapter,
     dashboardAgentTool,
     htmlAppBlocksEnabled: experimentalEnabled,
     mapBlocksEnabled: experimentalEnabled,
+    createDashboardBlock: ({title, tableName, intent}) => {
+      const state = store.getState();
+      const dashboardId = state.mosaicDashboard.createDashboard(title);
+
+      state.mosaicDashboard.setSelectedTable(dashboardId, tableName);
+
+      return {
+        dashboardId,
+        block: {
+          type: 'statefulBlock',
+          id: createDefaultBlockDocumentBlockId(),
+          blockInstanceId: dashboardId,
+          blockType: 'dashboard',
+          intent,
+          caption: title,
+        },
+      };
+    },
+    createDataTableExplorerBlock: ({title, tableName, intent}) => ({
+      type: 'statefulBlock',
+      id: createDefaultBlockDocumentBlockId(),
+      blockInstanceId: createDefaultBlockDocumentBlockId(),
+      blockType: 'data-table',
+      intent,
+      title: tableName,
+      caption: title,
+    }),
     additionalInstructions: experimentalEnabled
-      ? [
-          'Direct worksheet map blocks are available in this CLI app.',
-          'For worksheet map requests, call create_worksheet_map_block. Do not create a dashboard block just to hold a map.',
-          'If updating an existing worksheet map, call list_worksheet_blocks first and pass its mapId to create_worksheet_map_block.',
-        ].join('\n')
+      ? EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS
       : undefined,
     extraTools: ({worksheetId}) => {
-      const extraTools: Record<string, Tool> = {};
-
       if (experimentalEnabled) {
-        extraTools.embedded_html_app_agent = htmlAppAgentTool(store);
-        extraTools.create_worksheet_map_block = createWorksheetMapBlockTool(
-          store,
-          worksheetId,
-        );
+        return {
+          [KnownWorksheetTools.embedded_html_app_agent]:
+            htmlAppAgentTool(store),
+          [KnownWorksheetTools.create_worksheet_map_block]:
+            createWorksheetMapBlockTool(store, worksheetId),
+        };
       }
 
-      return extraTools;
+      return {} as Record<string, Tool>;
     },
   };
 

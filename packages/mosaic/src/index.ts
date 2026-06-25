@@ -378,9 +378,8 @@ export {
   DataTableExplorerToolInput,
 } from './ai/createDataTableExplorerTool';
 
-// Dashboard and worksheet AI tools
+// Dashboard and block-document AI tools
 export {MAP_TOOL_KEY} from './ai/constants';
-export {createWorksheetAgentTool} from './ai/worksheet/createWorksheetAgentTool';
 export {
   createDashboardAiTools,
   type CreateDashboardAiToolsOptions,
@@ -390,6 +389,22 @@ export type {
   ExtraDashboardAiToolsParams,
 } from './ai/dashboard/dashboard-types';
 export {createDashboardAgentTool} from './ai/dashboard/createDashboardAgentTool';
+export {
+  BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
+  KnownMosaicBlockDocumentTools,
+} from './ai/block-document/constants';
+export {
+  createAddMosaicDashboardBlockTool,
+  type CreateAddMosaicDashboardBlockToolOptions,
+} from './ai/block-document/createAddMosaicDashboardBlockTool';
+export {
+  createBlockDocumentChartTools,
+  type CreateBlockDocumentChartToolsParams,
+} from './ai/block-document/createBlockDocumentChartTools';
+export {
+  createBlockDocumentDataTableExplorerTool,
+  type CreateBlockDocumentDataTableExplorerToolParams,
+} from './ai/block-document/createBlockDocumentDataTableExplorerTool';
 
 // AI type definitions
 export type {
@@ -404,13 +419,6 @@ export type {
   DashboardAgentResult,
   DashboardAiAdapter,
 } from './ai/dashboard/dashboard-types';
-export type {
-  CreateWorksheetAgentToolOptions,
-  WorksheetAgentResult,
-  WorksheetAiAdapter,
-  ExtraWorksheetAiToolsFactory,
-  ExtraWorksheetAiToolsParams,
-} from './ai/worksheet/worksheet-types';
 
 // AI helpers and error handling
 export {ensurePanel, ensureTable, ensureNoOverride} from './ai/tool-helpers';

@@ -17,6 +17,7 @@ export async function POST(req: Request) {
       apiKey: process.env.OPENAI_API_KEY,
       name: modelProvider,
       baseURL: 'https://api.openai.com/v1',
+      includeUsage: true,
     });
     const languageModel = modelClient.chatModel(model);
 

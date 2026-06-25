@@ -579,6 +579,9 @@ class SqlroomsHttpServer:
             or f"ws://{self._host_for_url(self._public_host())}:{self.ws_port}"
         )
 
+    def _ws_proxy_url(self) -> str:
+        return f"ws://{self._host_for_url(self._ui_host())}:{self.port}/ws/duckdb"
+
     def _assert_ui_available(self) -> None:
         if not self.serve_ui:
             return
@@ -698,7 +701,7 @@ class SqlroomsHttpServer:
             if self.external_url and not self.external_ws_url
             else None
         )
-        ws_url = self.external_ws_url or derived_ws_url or self._ws_url()
+        ws_url = self.external_ws_url or derived_ws_url or self._ws_proxy_url()
         return {
             "wsUrl": ws_url,
             "wsAuthToken": self.session_token,
@@ -748,6 +751,33 @@ class SqlroomsHttpServer:
             return None
         return JSONResponse({"error": "unauthorized"}, status_code=401)
 
+    async def _authenticate_duckdb_proxy_websocket(self, client_ws: WebSocket) -> bool:
+        await client_ws.accept()
+
+        query_token = (client_ws.query_params.get("token") or "").strip()
+        if query_token == self.session_token:
+            return True
+
+        try:
+            message = await asyncio.wait_for(client_ws.receive_text(), timeout=5)
+            payload = json.loads(message)
+        except Exception:
+            await client_ws.close(code=1008, reason="unauthorized")
+            return False
+
+        token = payload.get("token") if isinstance(payload, dict) else None
+        if (
+            isinstance(payload, dict)
+            and payload.get("type") == "auth"
+            and token == self.session_token
+        ):
+            await client_ws.send_json({"type": "authAck"})
+            return True
+
+        await client_ws.send_json({"type": "error", "error": "Unauthorized"})
+        await client_ws.close(code=1008, reason="unauthorized")
+        return False
+
     def _build_app(self) -> FastAPI:
         app = FastAPI(title="sqlrooms", version="0.1.0")
         app.add_middleware(
@@ -781,7 +811,9 @@ class SqlroomsHttpServer:
 
         @app.websocket("/ws/duckdb")
         async def duckdb_websocket_proxy(client_ws: WebSocket):
-            await client_ws.accept()
+            if not await self._authenticate_duckdb_proxy_websocket(client_ws):
+                return
+
             try:
                 import websockets
             except ImportError:

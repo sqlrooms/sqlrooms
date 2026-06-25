@@ -8,6 +8,7 @@
     "dev": "vite --host --port 3100",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -45,6 +46,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "@sqlrooms/preset-jest": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
@@ -52,6 +55,7 @@
     "eslint": "^9.36.0",
     "immer": "^11.0.1",
     "tailwindcss": "^4.1.18",
+    "ts-jest": "^29.4.4",
     "typescript": "^5.9.2",
     "vite": "^8.0.5",
     "vite-plugin-top-level-await": "^1.6.0",

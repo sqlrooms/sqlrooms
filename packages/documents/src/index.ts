@@ -88,9 +88,23 @@ export {
 } from './BlockDocumentCommands';
 export {
   BLOCK_DOCUMENT_AGENT_TOOL_NAME,
+  KnownDocumentBlockTools,
+  type BlockDocumentAiAdapter,
   type BlockDocumentAgentPlanStep,
   type BlockDocumentAgentResult,
+  type BlockDocumentBlockSummary,
+  type ExtraBlockDocumentAiToolsFactory,
+  type ExtraBlockDocumentAiToolsParams,
 } from './BlockDocumentAi';
+export {
+  createAddBlockDocumentTextBlockTool,
+  createBlockDocumentTextBlock,
+  type CreateAddBlockDocumentTextBlockToolOptions,
+} from './createAddBlockDocumentTextBlockTool';
+export {
+  createListBlockDocumentBlocksTool,
+  type CreateListBlockDocumentBlocksToolOptions,
+} from './createListBlockDocumentBlocksTool';
 export {BlockDocumentEditor} from './BlockDocumentEditor';
 export {
   BlockDocumentEditorRoot,

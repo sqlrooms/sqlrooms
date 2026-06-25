@@ -37,7 +37,7 @@ export interface CreateSkillAuthoringAgentOptions {
   onSave: SaveSkillCallback;
   /** Maximum tool-loop steps. Defaults to `DEFAULT_SKILL_AUTHORING_STOP_STEPS`. */
   stopSteps?: number;
-  /** Sampling temperature. Defaults to `0.2` for focused scaffolding output. */
+  /** Optional sampling temperature. Omit it to use the model/provider default. */
   temperature?: number;
 }
 
@@ -52,7 +52,7 @@ export function createSkillAuthoringAgent({
   draftStore,
   onSave,
   stopSteps = DEFAULT_SKILL_AUTHORING_STOP_STEPS,
-  temperature = 0.2,
+  temperature,
 }: CreateSkillAuthoringAgentOptions) {
   const tools = {
     writeManifest: createWriteManifestTool(draftStore, context),
@@ -65,6 +65,6 @@ export function createSkillAuthoringAgent({
     tools,
     instructions: buildSkillAuthoringSystemPrompt(context),
     stopWhen: stepCountIs(stopSteps),
-    temperature,
+    ...(temperature === undefined ? {} : {temperature}),
   });
 }

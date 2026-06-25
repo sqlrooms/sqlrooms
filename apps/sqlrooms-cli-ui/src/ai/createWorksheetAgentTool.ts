@@ -1,20 +1,59 @@
 import {type Tool, ToolLoopAgent, stepCountIs, tool} from 'ai';
 import {z} from 'zod';
 import type {
-  CreateWorksheetAgentToolOptions,
-  WorksheetAgentResult,
-} from './worksheet-types';
-import {AiAgentError} from '../errors';
-import {MosaicDashboardStoreState} from '../../dashboard/MosaicDashboardSlice';
-import {calculateAgentResultMetadata} from '../tool-helpers';
-import {createWorksheetAiTools} from './createWorksheetAiTools';
-import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
-import {WORKSHEET_CHART_TOOL_PREFIX, KnownWorksheetTools} from './constants';
-import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
-import {AgentIntentSchemaFields} from '../agentIntent';
+  BaseAgentToolOptions,
+  ChartToolsOptions,
+} from '@sqlrooms/mosaic/ai';
+import {
+  AiAgentError,
+  BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
+  calculateAgentResultMetadata,
+  createChartToolsInstructions,
+  resolveChartTypes,
+  type DatabaseAiAdapter,
+} from '@sqlrooms/mosaic/ai';
+import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
+import type {RoomState} from '../store-types';
+import {
+  createWorksheetBlockDocumentAiTools,
+  type ExtraWorksheetAiToolsFactory,
+} from './createWorksheetBlockDocumentAiTools';
+import {KnownWorksheetTools, WORKSHEET_AGENT_TOOL_NAME} from './constants';
 
-function getWorksheetAgentInstructions<TState>(
-  options: CreateWorksheetAgentToolOptions<TState>,
+const AgentIntentSchemaFields = {
+  intent: z
+    .string()
+    .min(1, 'intent cannot be empty')
+    .describe('The natural-language objective for the agent to satisfy.'),
+};
+
+export type WorksheetAgentResult = {
+  success: boolean;
+  finalOutput: string;
+  worksheetId: string;
+  error?: string;
+  metadata?: ReturnType<typeof calculateAgentResultMetadata>;
+};
+
+export type CreateWorksheetAgentToolOptions =
+  BaseAgentToolOptions<RoomState> & {
+    blockDocumentAdapter: BlockDocumentAiAdapter;
+    databaseAdapter: DatabaseAiAdapter;
+    dashboardAgentTool: Tool;
+    chartToolsOptions?: ChartToolsOptions;
+    htmlAppBlocksEnabled?: boolean;
+    mapBlocksEnabled?: boolean;
+    extraTools?: ExtraWorksheetAiToolsFactory;
+    createDashboardBlock: Parameters<
+      typeof createWorksheetBlockDocumentAiTools
+    >[0]['createDashboardBlock'];
+    createDataTableExplorerBlock: Parameters<
+      typeof createWorksheetBlockDocumentAiTools
+    >[0]['createDataTableExplorerBlock'];
+  };
+
+function getWorksheetAgentInstructions(
+  options: CreateWorksheetAgentToolOptions,
 ): string {
   const chartTools = resolveChartTypes(options.chartToolsOptions?.chartTypes);
   const htmlAppBlocksEnabled = options.htmlAppBlocksEnabled !== false;
@@ -22,7 +61,7 @@ function getWorksheetAgentInstructions<TState>(
 
   const chartToolsInstructions = createChartToolsInstructions(
     chartTools,
-    WORKSHEET_CHART_TOOL_PREFIX,
+    BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   );
 
   return `You are a worksheet builder AI agent that creates interactive data worksheets.
@@ -44,7 +83,7 @@ CRITICAL RULES:
       ? 'If the user asks to add a map or geospatial visualization to a worksheet, use the available direct worksheet map block tool; do not create a dashboard block solely to hold a map.'
       : `If the user asks to add a map or geospatial visualization to a worksheet dashboard, use a dashboard block and ${KnownWorksheetTools.embedded_dashboard_agent}; worksheet chart tools cannot create map panels.`
   }
-${htmlAppBlocksEnabled ? `8. If the user asks for an HTML app, D3 app, Chart.js app, browser app, custom interactive visualization, or generated app inside a worksheet, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent}. Do not create a top-level html-app artifact from inside worksheet_agent.` : ''}
+${htmlAppBlocksEnabled ? `8. If the user asks for an HTML app, D3 app, Chart.js app, browser app, custom interactive visualization, or generated app inside a worksheet, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent}. Do not create a top-level html-app artifact from inside ${WORKSHEET_AGENT_TOOL_NAME}.` : ''}
 
 ## Creating Blocks
 
@@ -53,7 +92,7 @@ Before updating a worksheet dashboard${
     htmlAppBlocksEnabled ? ', updating an existing worksheet HTML app,' : ''
   } or adding a map to an existing worksheet, call ${KnownWorksheetTools.list_blocks} to find existing dashboard${
     htmlAppBlocksEnabled ? '/html-app' : ''
-  } blocks and their resource IDs.
+  } blocks and their resource IDs. For stateful blocks, use statefulBlock.blockType to identify the surface and statefulBlock.blockInstanceId as dashboardId, appId, or mapId for the matching embedded tool.
 
 ### Chart Blocks
 To create a chart block in a worksheet, call one of the chart generation tools:
@@ -78,7 +117,7 @@ To create an interactive dashboard block for data exploration, use a TWO-STEP wo
 
 If the worksheet already has a dashboard block that matches the request, reuse it:
 - Call ${KnownWorksheetTools.list_blocks}
-- Use the dashboard block's dashboardId when calling ${KnownWorksheetTools.embedded_dashboard_agent}
+- Use the dashboard block's statefulBlock.blockInstanceId as dashboardId when calling ${KnownWorksheetTools.embedded_dashboard_agent}
 
 STEP 1: Create the empty dashboard block container
 - Call ${KnownWorksheetTools.add_dashboard_block} with:
@@ -108,7 +147,7 @@ To create a custom embedded browser app inside the worksheet, use a TWO-STEP wor
 
 If the worksheet already has an html-app block that matches the request, reuse it:
 - Call ${KnownWorksheetTools.list_blocks}
-- Use the html-app block's htmlAppId as appId when calling ${KnownWorksheetTools.embedded_html_app_agent}
+- Use the html-app block's statefulBlock.blockInstanceId as appId when calling ${KnownWorksheetTools.embedded_html_app_agent}
 
 STEP 1: Create the empty html-app block container
 - Call ${KnownWorksheetTools.add_html_app_block} with:
@@ -126,7 +165,7 @@ Use html-app blocks when:
 - The requested interaction is not well represented by built-in worksheet chart blocks or dashboard panels
 - The app should call SQLRooms through window.sqlrooms.query(...) or window.sqlrooms.queryRows(...)
 
-If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its htmlAppId as appId to ${KnownWorksheetTools.embedded_html_app_agent}.
+If updating an existing worksheet app, first call ${KnownWorksheetTools.list_blocks}, find an html-app block, and pass its statefulBlock.blockInstanceId as appId to ${KnownWorksheetTools.embedded_html_app_agent}.
 For incremental edits to an existing worksheet app, such as changing title, labels, colors, styles, layout, controls, or interactions, do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
 `
     : ''
@@ -137,7 +176,7 @@ For incremental edits to an existing worksheet app, such as changing title, labe
 ### Direct Requests
 When user asks for specific charts (e.g., "create histogram of depth and magnitude"):
 1. DO NOT run exploratory queries - go straight to creating charts
-2. Call create_worksheet_block_* for each chart mentioned
+2. Call ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* for each chart mentioned
 3. Add text blocks only for brief context or summaries, if needed
 4. Done after ALL requested charts are created
 
@@ -147,11 +186,11 @@ When user asks for specific charts (e.g., "create histogram of depth and magnitu
 
 **Map requests:** ${
     mapBlocksEnabled
-      ? 'If user asks to add a map to a worksheet, use the direct worksheet map block tool. If updating an existing worksheet map, call list_worksheet_blocks first and pass the map resource ID to the map tool.'
+      ? `If user asks to add a map to a worksheet, use the direct worksheet map block tool. If updating an existing worksheet map, call ${KnownWorksheetTools.list_blocks} first and pass the map resource ID to the map tool.`
       : `If user asks to add a map to an existing worksheet/dashboard, call ${KnownWorksheetTools.list_blocks}. If a dashboard block exists, call ${KnownWorksheetTools.embedded_dashboard_agent} with that dashboardId and an intent to create or update a map panel. If no dashboard block exists, create one first with ${KnownWorksheetTools.add_dashboard_block}.`
   }
 
-${htmlAppBlocksEnabled ? `**HTML app requests:** If user asks to create a new app inside the worksheet, call ${KnownWorksheetTools.add_html_app_block}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target htmlAppId as appId.` : ''}
+${htmlAppBlocksEnabled ? `**HTML app requests:** If user asks to create a new app inside the worksheet, call ${KnownWorksheetTools.add_html_app_block}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId. If modifying an existing app, call ${KnownWorksheetTools.list_blocks} first and pass the target statefulBlock.blockInstanceId as appId.` : ''}
 
 ### Exploratory Requests
 When user asks for "comprehensive analysis" or "high-level insights":
@@ -162,7 +201,7 @@ When user asks for "comprehensive analysis" or "high-level insights":
    c. Create diverse chart types: histograms, count plots, scatter plots, heatmaps, etc.
    d. Each chart should show a different aspect of the data
    e. Add brief text blocks for context or summaries
-3. Call create_worksheet_block_* multiple times for different visualizations
+3. Call ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* multiple times for different visualizations
 4. AVOID: Long text narratives, extensive query exploration, creating text blocks instead of charts
 5. SUCCESS CRITERIA: Worksheet contains 3+ interactive visualizations with summaries and context
 
@@ -205,27 +244,27 @@ When user asks for "comprehensive analysis" or "high-level insights":
 - **Validate columns:** Chart generation tools will validate column existence and types
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach
 
-## Common Mistakes to Avoid
+Common mistakes to avoid:
+- Creating only text blocks describing what you would create
+- Running 10+ queries without creating any charts
+- Creating just 1-2 charts for "comprehensive analysis" requests
+- Writing long narratives instead of showing data visually
+- Missing opportunities for interactive exploration with dashboard blocks
+- Creating a chat-only or markdown map when the user asked to add a map to a worksheet or dashboard
+${htmlAppBlocksEnabled ? '- Creating a top-level html-app artifact when the user asked for an app in the current worksheet' : ''}
 
-❌ Creating only text blocks describing what you WOULD create
-❌ Running 10+ queries without creating any charts
-❌ Creating just 1-2 charts for "comprehensive analysis" requests
-❌ Writing long narratives instead of showing data visually
-❌ Missing opportunities for interactive exploration with dashboard blocks
-❌ Creating a chat-only or markdown map when the user asked to add a map to a worksheet or dashboard
-${htmlAppBlocksEnabled ? '❌ Creating a top-level html-app artifact when the user asked for an app in the current worksheet' : ''}
-
-✅ Create 3-5+ diverse chart blocks for exploratory requests
-✅ Call create_worksheet_block_* tools to automatically create charts
-✅ Mix different chart types to show different patterns
-✅ Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
+Success patterns:
+- Create 3-5+ diverse chart blocks for exploratory requests
+- Call ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* tools to automatically create charts
+- Mix different chart types to show different patterns
+- Use ${KnownWorksheetTools.add_dashboard_block} + ${KnownWorksheetTools.embedded_dashboard_agent} (two-step) when user explicitly asks for dashboard or when coordinated multi-view analysis would enhance exploration
 ${
   mapBlocksEnabled
-    ? '✅ For map requests, use the direct worksheet map block tool; call list_worksheet_blocks first when updating an existing map and pass its mapId'
-    : `✅ For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel`
+    ? `- For map requests, use the direct worksheet map block tool; call ${KnownWorksheetTools.list_blocks} first when updating an existing map and pass its statefulBlock.blockInstanceId as mapId`
+    : `- For map requests, use ${KnownWorksheetTools.list_blocks} then ${KnownWorksheetTools.embedded_dashboard_agent} so the map is added as a dashboard panel`
 }
-${htmlAppBlocksEnabled ? `✅ For worksheet app requests, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent} so the app is embedded in the worksheet` : ''}
-✅ Charts are created immediately when you call the create_worksheet_block_* tools`;
+${htmlAppBlocksEnabled ? `- For worksheet app requests, use ${KnownWorksheetTools.add_html_app_block} + ${KnownWorksheetTools.embedded_html_app_agent} so the app is embedded in the worksheet` : ''}
+- Charts are created immediately when you call the ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* tools`;
 }
 
 const WorksheetAgentInputSchema = z.object({
@@ -235,51 +274,33 @@ const WorksheetAgentInputSchema = z.object({
   ...AgentIntentSchemaFields,
   worksheetId: z
     .string()
-    .describe(
-      'Target worksheet ID. If provided, charts will be added to this worksheet.',
-    ),
+    .describe('Target worksheet ID where blocks will be added.'),
   maxSteps: z
     .number()
     .optional()
     .default(20)
     .describe('Maximum exploration steps (default: 20, range: 5-50)'),
-  temperature: z
-    .number()
-    .optional()
-    .default(0.7)
-    .describe(
-      'Model temperature for creativity vs consistency (default: 0.7, range: 0.0-1.0)',
-    ),
 });
 
 type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
 /**
- * Creates an AI agent tool for building interactive data analysis worksheets with charts, text, and dashboard blocks.
- *
- * @template TState - Store state type extending MosaicDashboardStoreState
- * @param options - Configuration options for the worksheet agent
- * @param options.store - Zustand store instance for state management
- * @param options.worksheetAdapter - Adapter for worksheet-specific operations
- * @param options.databaseAdapter - Adapter for database operations and queries
- * @param options.chartToolsOptions - Optional chart configuration and type restrictions
- * @param options.dashboardAgentTool - Tool for creating embedded dashboard blocks
- * @param options.htmlAppBlocksEnabled - Whether to expose worksheet HTML app block tools and instructions
- * @param options.extraTools - Optional factory for additional custom tools
- * @returns Tool instance that orchestrates multi-turn worksheet creation via a ToolLoopAgent
+ * Creates the CLI worksheet artifact agent tool.
  */
-export function createWorksheetAgentTool<
-  TState extends MosaicDashboardStoreState,
->(options: CreateWorksheetAgentToolOptions<TState>): Tool {
+export function createWorksheetAgentTool(
+  options: CreateWorksheetAgentToolOptions,
+): Tool {
   const {
     store,
-    worksheetAdapter,
+    blockDocumentAdapter,
     databaseAdapter,
     chartToolsOptions,
     dashboardAgentTool,
     extraTools,
     htmlAppBlocksEnabled = true,
     mapBlocksEnabled = false,
+    createDashboardBlock,
+    createDataTableExplorerBlock,
   } = options;
 
   return tool({
@@ -296,8 +317,8 @@ IF user requests DASHBOARD:
 IF user requests a MAP in a worksheet:
 ${
   mapBlocksEnabled
-    ? `1. For a new map, call create_worksheet_map_block directly
-2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass the mapId to create_worksheet_map_block`
+    ? `1. For a new map, call ${KnownWorksheetTools.create_worksheet_map_block} directly
+2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to create_worksheet_map_block`
     : `1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
 3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel`
@@ -308,12 +329,12 @@ ${
     ? `
 IF user requests an HTML/D3/Chart.js/browser app in a worksheet:
 1. For a new app, call ${KnownWorksheetTools.add_html_app_block} to create the container, then call ${KnownWorksheetTools.embedded_html_app_agent} with the returned appId
-2. For an existing app, call ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.embedded_html_app_agent} with the htmlAppId as appId
+2. For an existing app, call ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.embedded_html_app_agent} with statefulBlock.blockInstanceId as appId
 `
     : ''
 }
 
-Otherwise, create chart and text blocks directly using create_worksheet_block_* tools.
+Otherwise, create chart and text blocks directly using ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* tools.
 
 Use this for:
 - Exploratory requests: "analyze the earthquakes dataset", "create comprehensive insights", "high-level overview"
@@ -324,30 +345,31 @@ ${htmlAppBlocksEnabled ? '- App requests in worksheets: "create an app", "make a
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: WorksheetAgentInputSchema,
     execute: async (params, toolOptions): Promise<WorksheetAgentResult> => {
-      const {worksheetId, maxSteps, temperature} = params;
+      const {worksheetId, maxSteps} = params;
       const {intent} = params;
 
       try {
-        worksheetAdapter.ensureWorksheet(worksheetId);
-        worksheetAdapter.setCurrentWorksheet(worksheetId);
+        blockDocumentAdapter.ensureBlockDocument(worksheetId);
+        blockDocumentAdapter.setCurrentBlockDocument(worksheetId);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
 
         const agent = new ToolLoopAgent({
           model: options.getModel({state: store.getState()}),
           tools: {
-            ...dataTools,
-            ...createWorksheetAiTools({
+            ...createWorksheetBlockDocumentAiTools({
               databaseAdapter,
-              worksheetAdapter,
+              blockDocumentAdapter,
               worksheetId,
               chartToolsOptions,
               dashboardAgentTool,
               extraTools,
               htmlAppBlocksEnabled,
+              createDashboardBlock,
+              createDataTableExplorerBlock,
             }),
+            ...dataTools,
           },
-          temperature: Math.max(0, Math.min(1, temperature ?? 0.7)),
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getWorksheetAgentInstructions(options),
