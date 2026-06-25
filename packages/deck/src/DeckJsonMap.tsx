@@ -337,17 +337,24 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       }
     }, [availableSpec, converter, specError]);
 
-    // Animation for TripsLayer — update currentTime on each frame
+    // Animation for TripsLayer — update currentTime on each frame.
+    // Only activate when the trips dataset is ready to avoid spinning the RAF
+    // loop while data is still loading.
     const hasTripsLayer = useMemo(() => {
       if (!availableSpec || !Array.isArray(availableSpec.layers)) return false;
-      return availableSpec.layers.some(
-        (l: unknown) =>
-          l &&
-          typeof l === 'object' &&
-          ((l as {'@@type'?: string})['@@type'] === 'GeoArrowTripsLayer' ||
-            (l as {'@@type'?: string})['@@type'] === 'TripsLayer'),
-      );
-    }, [availableSpec]);
+      return availableSpec.layers.some((l: unknown) => {
+        if (
+          !l ||
+          typeof l !== 'object' ||
+          (l as {'@@type'?: string})['@@type'] !== 'GeoArrowTripsLayer'
+        )
+          return false;
+        const dsId = resolveDatasetId(l as Record<string, unknown>, datasetIds);
+        if (!dsId) return true;
+        const state = datasetStates[dsId];
+        return state?.status === 'ready';
+      });
+    }, [availableSpec, datasetIds, datasetStates]);
 
     const [tripsTime, setTripsTime] = useState(0);
     const [tripsPlaying, setTripsPlaying] = useState(true);
