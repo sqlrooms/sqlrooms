@@ -1,6 +1,8 @@
 import {cn} from '@sqlrooms/ui';
 import {createElement, FC, useMemo} from 'react';
 import {useBlockSelection} from './useBlockSelection';
+import {useSelectedBlockOrPanel} from './useSelectedBlockOrPanel';
+import {useBlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
 import {SettingsErrorBoundary} from './SettingsErrorBoundary';
 
 export type BlockSettingsPanelProps = {
@@ -33,37 +35,71 @@ export type BlockSettingsPanelProps = {
 export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
   className,
 }) => {
-  const selectedBlock = useBlockSelection(
-    (state) => state.blockSelection.config.selectedBlock,
-  );
+  const {editor} = useBlockDocumentEditorContext();
+  const selectedItem = useSelectedBlockOrPanel(editor);
   const getSettings = useBlockSelection(
     (state) => state.blockSelection.getSettings,
   );
-  // Construct block type key and get settings component using useMemo
+
+  // Determine settings component based on selection type
   const SettingsComponent = useMemo(() => {
-    if (!selectedBlock) {
+    if (!selectedItem) {
       return null;
     }
 
-    // Dashboard block has its own registry key
-    if (selectedBlock.type === 'dashboard-block') {
-      return getSettings('dashboard-block');
+    if (selectedItem.type === 'panel') {
+      const {selectedBlock} = selectedItem;
+
+      // Dashboard block has its own registry key
+      if (selectedBlock.type === 'dashboard-block') {
+        return getSettings('dashboard-block');
+      }
+
+      // Panel types need panelType to construct the key
+      if (!selectedBlock.panelType) {
+        return null;
+      }
+
+      const blockType =
+        selectedBlock.type === 'dashboard-panel'
+          ? `dashboard-panel:${selectedBlock.panelType}`
+          : `standalone-block:${selectedBlock.panelType}`;
+
+      return getSettings(blockType);
     }
 
-    // Panel types need panelType to construct the key
-    if (!selectedBlock.panelType) {
-      return null;
+    // Block selection from TipTap
+    if (selectedItem.type === 'block') {
+      // Construct registry key for stateful blocks
+      const registryKey = `standalone-block:${selectedItem.blockType}`;
+      return getSettings(registryKey);
     }
 
-    const blockType =
-      selectedBlock.type === 'dashboard-panel'
-        ? `dashboard-panel:${selectedBlock.panelType}`
-        : `standalone-block:${selectedBlock.panelType}`;
+    return null;
+  }, [selectedItem, getSettings]);
 
-    return getSettings(blockType);
-  }, [selectedBlock, getSettings]);
+  // Determine props to pass to settings component
+  const settingsProps = useMemo(() => {
+    if (!selectedItem) return null;
 
-  if (!selectedBlock) {
+    if (selectedItem.type === 'panel') {
+      return {
+        blockId: selectedItem.selectedBlock.id,
+        dashboardId: selectedItem.selectedBlock.dashboardId,
+      };
+    }
+
+    if (selectedItem.type === 'block') {
+      return {
+        blockId: selectedItem.blockId,
+        dashboardId: selectedItem.attrs.blockInstanceId,
+      };
+    }
+
+    return null;
+  }, [selectedItem]);
+
+  if (!selectedItem || !settingsProps) {
     return (
       <div
         className={cn('flex h-full items-center justify-center p-4', className)}
@@ -90,10 +126,7 @@ export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
   return (
     <div className={className}>
       <SettingsErrorBoundary>
-        {createElement(SettingsComponent, {
-          blockId: selectedBlock.id,
-          dashboardId: selectedBlock.dashboardId,
-        })}
+        {createElement(SettingsComponent, settingsProps)}
       </SettingsErrorBoundary>
     </div>
   );
