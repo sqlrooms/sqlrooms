@@ -1,6 +1,8 @@
 import {type DataTable} from '@sqlrooms/db';
-import {DataTableSelector, useTablesWithColumns, Field} from '@sqlrooms/mosaic';
 import {FC} from 'react';
+import {DataTableSelector} from '../components/DataTableSelector';
+import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
+import {Field} from '../components/Field';
 
 export type DataTableSettingsPanelProps = {
   value: DataTable | undefined;

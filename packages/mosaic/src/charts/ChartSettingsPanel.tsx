@@ -1,12 +1,10 @@
 import {type DataTable} from '@sqlrooms/db';
-import {
-  ChartConfig,
-  DataTableSelector,
-  Field,
-  MosaicChartSettingsPanel,
-  useTablesWithColumns,
-} from '../index';
 import {FC} from 'react';
+import {type ChartConfig} from './chart-types/chart-config';
+import {DataTableSelector} from '../components/DataTableSelector';
+import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
+import {Field} from '../components/Field';
+import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
 
 export type ChartSettingsPanelProps = {
   dataTable: DataTable | undefined;
