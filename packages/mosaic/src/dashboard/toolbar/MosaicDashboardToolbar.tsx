@@ -47,7 +47,10 @@ export const MosaicDashboardToolbar: FC = () => {
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 border-b px-5 py-2">
+    <div
+      className="flex items-center justify-between gap-2 border-b px-5 py-2"
+      data-dashboard-toolbar
+    >
       <BlockCaptionEditor
         value={dashboardTitle}
         placeholder={tableName || 'Dashboard title'}

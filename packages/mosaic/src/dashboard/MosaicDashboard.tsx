@@ -10,7 +10,10 @@ import {
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './panel/MosaicDashboardPanels';
-import {SelectablePanelWrapper} from '@sqlrooms/documents';
+import {
+  SelectablePanelWrapper,
+  useBlockSettingsStore,
+} from '@sqlrooms/documents';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
@@ -134,6 +137,26 @@ function MosaicDashboardComponent({
   dashboardId,
   selectable = false,
 }: MosaicDashboardProps): ReactElement {
+  const clearSelection = useBlockSettingsStore(
+    (state) => state.blockSettings.clearSelection,
+  );
+
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Don't clear if clicking on a panel - SelectablePanelWrapper has data-selectable-panel
+      const isPanel = target.closest('[data-selectable-panel]');
+      if (isPanel) {
+        return;
+      }
+
+      // Clear selection for clicks on toolbar, empty space, or layout elements
+      clearSelection();
+    },
+    [clearSelection],
+  );
+
   return (
     <MosaicDashboardRoot dashboardId={dashboardId}>
       {selectable ? (
@@ -150,7 +173,7 @@ function MosaicDashboardComponent({
           </div>
         </SelectablePanelWrapper>
       ) : (
-        <div className="flex h-full flex-col">
+        <div className="flex h-full flex-col" onClick={handleContainerClick}>
           <MosaicDashboardToolbar />
           <div className="h-full overflow-y-auto">
             <MosaicDashboardPanels />

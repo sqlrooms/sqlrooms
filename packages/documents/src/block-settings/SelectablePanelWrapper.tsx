@@ -88,6 +88,7 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
         className,
       )}
       onClick={handleClick}
+      data-selectable-panel
     >
       {children}
     </div>
