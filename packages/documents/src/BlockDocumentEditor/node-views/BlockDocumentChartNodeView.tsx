@@ -15,7 +15,6 @@ import {
 } from '../../BlockDocumentChartRendererContext';
 import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
 import {optionalString, unknownRecord} from './nodeViewUtils';
-import {SelectablePanelWrapper} from '../../block-selection/SelectablePanelWrapper';
 
 type BlockDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
@@ -76,46 +75,39 @@ export const BlockDocumentChartNodeView: FC<
     <NodeViewWrapper
       className={cn(
         'not-prose bg-background my-4 rounded-md border',
-        selected && 'ring-ring ring-2',
+        selected && 'outline-primary outline outline-2',
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
     >
-      <SelectablePanelWrapper
-        dashboardId={documentId}
-        panelId={blockId}
-        panelType="chart-block"
-        blockType="standalone-block"
-      >
-        {Renderer ? (
-          <ChartRendererBoundary
-            Renderer={Renderer}
-            documentId={documentId}
-            blockId={blockId}
-            tableName={tableName}
-            config={config}
-            selectionGroupId={selectionGroupId}
-            caption={caption}
-            readOnly={readOnly}
-            onTableNameChange={handleTableNameChange}
-            onConfigChange={handleConfigChange}
-            onCaptionChange={handleCaptionChange}
-          />
-        ) : (
-          <div className="p-4">
-            <div className="text-sm font-medium">Chart block</div>
-            <div className="text-muted-foreground mt-1 text-sm">
-              No block document chart renderer is registered.
-            </div>
-            <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
-              <span>Table: {tableName || 'Unconfigured'}</span>
-              {selectionGroupId ? (
-                <span>Selection group: {selectionGroupId}</span>
-              ) : null}
-            </div>
+      {Renderer ? (
+        <ChartRendererBoundary
+          Renderer={Renderer}
+          documentId={documentId}
+          blockId={blockId}
+          tableName={tableName}
+          config={config}
+          selectionGroupId={selectionGroupId}
+          caption={caption}
+          readOnly={readOnly}
+          onTableNameChange={handleTableNameChange}
+          onConfigChange={handleConfigChange}
+          onCaptionChange={handleCaptionChange}
+        />
+      ) : (
+        <div className="p-4">
+          <div className="text-sm font-medium">Chart block</div>
+          <div className="text-muted-foreground mt-1 text-sm">
+            No block document chart renderer is registered.
           </div>
-        )}
-      </SelectablePanelWrapper>
+          <div className="text-muted-foreground mt-3 grid gap-1 text-xs">
+            <span>Table: {tableName || 'Unconfigured'}</span>
+            {selectionGroupId ? (
+              <span>Selection group: {selectionGroupId}</span>
+            ) : null}
+          </div>
+        </div>
+      )}
     </NodeViewWrapper>
   );
 };
