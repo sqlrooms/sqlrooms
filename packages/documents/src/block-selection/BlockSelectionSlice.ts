@@ -4,6 +4,27 @@ import {produce} from 'immer';
 import type {BlockSettingsComponent, SelectedBlock} from './types';
 
 /**
+ * Block Selection Slice
+ *
+ * TWO-TIER SELECTION SYSTEM:
+ *
+ * This slice manages panel-level selection (dashboard panels, standalone blocks
+ * that need custom selection). As of the TipTap selection migration:
+ *
+ * - BLOCK-LEVEL selection: Handled by TipTap's native node selection
+ *   (dashboard blocks, chart blocks, data table blocks in documents)
+ *
+ * - PANEL-LEVEL selection: Handled by this slice (custom selection)
+ *   (individual panels inside dashboards, standalone selectable components)
+ *
+ * The BlockSettingsPanel reads from both sources with panel selection taking
+ * priority (more specific than block selection).
+ *
+ * DO NOT use this slice for selecting blocks in TipTap documents - use
+ * TipTap's editor.commands.setNodeSelection() instead.
+ */
+
+/**
  * Configuration for the block selection slice
  */
 export type BlockSelectionSliceConfig = {
