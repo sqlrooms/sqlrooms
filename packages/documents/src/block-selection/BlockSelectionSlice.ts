@@ -56,6 +56,10 @@ export type BlockSelectionSliceState = {
     ) => boolean;
     /** Get the settings component for a block type */
     getSettings: (blockType: string) => BlockSettingsComponent | undefined;
+    /** Clear selection if a block is deleted */
+    clearSelectionIfBlockDeleted: (blockId: string) => void;
+    /** Clear all selection state */
+    clearAllSelection: () => void;
   };
 };
 
@@ -141,6 +145,31 @@ export function createBlockSelectionSlice<
 
       getSettings: (blockType: string): BlockSettingsComponent | undefined => {
         return get().blockSelection.runtime.settingsRegistry[blockType];
+      },
+
+      /**
+       * Clear panel selection if the selected block is deleted.
+       * Call this when a block is removed from the document.
+       */
+      clearSelectionIfBlockDeleted: (blockId: string) => {
+        const {selectedBlock} = get().blockSelection.config;
+        if (!selectedBlock) return;
+
+        // Clear if the deleted block matches the selection
+        if (
+          selectedBlock.id === blockId ||
+          selectedBlock.dashboardId === blockId
+        ) {
+          get().blockSelection.clearSelection();
+        }
+      },
+
+      /**
+       * Clear all custom selection state.
+       * Call this when switching documents or unmounting editor.
+       */
+      clearAllSelection: () => {
+        get().blockSelection.clearSelection();
       },
     },
   }));

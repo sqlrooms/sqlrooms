@@ -16,6 +16,7 @@ import {
 } from 'react';
 import type {BlockDocumentContent} from '../BlockDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
+import {useBlockSelection} from '../block-selection/useBlockSelection';
 import {
   BlockDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
@@ -290,6 +291,17 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     }
     editor.setEditable(!readOnly);
   }, [editor, readOnly]);
+
+  const clearAllSelection = useBlockSelection(
+    (state) => state.blockSelection.clearAllSelection,
+  );
+
+  useEffect(() => {
+    return () => {
+      // Clear custom selection when document changes or editor unmounts
+      clearAllSelection?.();
+    };
+  }, [documentId, clearAllSelection]);
 
   const contextValue: BlockDocumentEditorContextValue = useMemo(
     () => ({
