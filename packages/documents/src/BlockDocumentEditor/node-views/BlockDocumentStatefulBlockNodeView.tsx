@@ -343,7 +343,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     <NodeViewWrapper
       className={cn(
         'not-prose bg-background group/stateful-block relative my-4 rounded-md border',
-        selected && 'ring-ring ring-2',
+        selected && 'outline-primary outline outline-2',
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
