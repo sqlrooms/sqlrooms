@@ -65,7 +65,7 @@ Deck map tools:
 - IMPORTANT: If you are creating a map layer for a table that is NOT the currently selected dashboard table, you MUST switch the dashboard's selected table to that dataset BEFORE or WHEN calling create_dashboard_map (pass the correct tableName). The map panel resolves data from the dashboard's active table — if you don't switch it, the layer will query the wrong table and fail.
 - IMPORTANT: When referencing tables in tableName or sqlQuery, use ONLY the bare table name (e.g. "my_table") or schema-qualified name (e.g. "main.my_table"). NEVER include the database/catalog prefix (e.g. do NOT use "sqlrooms-cli.main.my_table") — the catalog does not exist in the query execution context.
 - IMPORTANT: For point data with longitude/latitude columns, the dataset source MUST use a sqlQuery that creates a geometry column, for example: "SELECT *, ST_AsWKB(ST_Point(\\"Longitude\\", \\"Latitude\\")) AS \\"__sqlrooms_geom\\" FROM tableName WHERE \\"Longitude\\" IS NOT NULL AND \\"Latitude\\" IS NOT NULL". Set geometryColumn to the same name used in the AS clause (e.g. "__sqlrooms_geom") and geometryEncodingHint to "wkb".
-- IMPORTANT: When providing fitToData, include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For H3 hexagon layers, just specify the dataset: "fitToData": {"dataset": "datasetId"} — the H3 column is auto-detected from the layer binding. For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}.
+- IMPORTANT: When providing fitToData, it MUST be a flat object (NOT nested by dataset ID). Include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For H3 hexagon layers, just specify the dataset: "fitToData": {"dataset": "datasetId"} — the H3 column is auto-detected from the layer binding. For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}. NEVER nest fitToData as {"datasetId": {...}} — always use a flat object with "dataset" as a string field.
 - IMPORTANT: For GeoJSON or spatial files that already have a native geometry column (e.g. "geometry", "geom"), use the table directly with source.tableName (no sqlQuery needed), set the dataset's geometryColumn to "geom", set geometryEncodingHint to "wkb", and use fitToData with geometryColumn: {"dataset": "datasetId", "geometryColumn": "geom"}.
 - IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use source.tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Use "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"} to zoom to the data extent.
 - For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. Valid schemes: for "categorical" type use one of Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. For "sequential" use Viridis, Inferno, Magma, Plasma, Turbo, Blues, Greens, Oranges, Reds, Purples, etc. For "diverging" use RdBu, Spectral, RdYlGn, BrBG, PiYG, etc. IMPORTANT: The colorScale "field" must reference a column that exists in the FINAL query output (after any GROUP BY aggregation). Do not reference columns that are lost during aggregation.
@@ -246,10 +246,23 @@ function normalizeAiMapConfig(
   config: DeckMapDashboardConfigToolConfig,
 ): DeckMapDashboardConfigToolConfig {
   const datasets = config.datasets;
-  const fitToData = config.fitToData as
+  let fitToData = config.fitToData as
     | Record<string, unknown>
     | null
     | undefined;
+
+  // Fix common AI mistake: fitToData wrapped as { datasetId: { dataset, ... } }
+  // instead of the expected flat { dataset, longitudeColumn, ... }.
+  if (fitToData && !fitToData.dataset && typeof fitToData === 'object') {
+    const keys = Object.keys(fitToData);
+    if (keys.length === 1) {
+      const nested = fitToData[keys[0]!] as Record<string, unknown> | undefined;
+      if (nested && typeof nested === 'object' && nested.dataset) {
+        fitToData = nested;
+        config = {...config, fitToData: fitToData as any};
+      }
+    }
+  }
 
   if (!datasets || typeof datasets !== 'object' || !fitToData) {
     return config;
