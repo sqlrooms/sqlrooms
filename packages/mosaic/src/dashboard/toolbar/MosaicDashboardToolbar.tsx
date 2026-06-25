@@ -3,8 +3,10 @@ import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
-import {useDataTable} from '@sqlrooms/db';
+import {useDataTable, type DataTable} from '@sqlrooms/db';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
+import {DataTableSelector} from '../../components/DataTableSelector';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 
 export const MosaicDashboardToolbar: FC = () => {
   const {dashboardId} = useMosaicDashboardContext();
@@ -17,9 +19,13 @@ export const MosaicDashboardToolbar: FC = () => {
 
   const selectedTable = useDataTable(selectedTableName);
   const tableName = selectedTable?.table.table;
+  const tables = useTablesWithColumns();
 
   const setDashboardTitle = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setDashboardTitle,
+  );
+  const setSelectedTable = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.setSelectedTable,
   );
 
   const handleTitleChange = useCallback(
@@ -27,6 +33,13 @@ export const MosaicDashboardToolbar: FC = () => {
       setDashboardTitle(dashboardId, title || '');
     },
     [dashboardId, setDashboardTitle],
+  );
+
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      setSelectedTable(dashboardId, table.table.toString());
+    },
+    [dashboardId, setSelectedTable],
   );
 
   if (!selectedTableName) {
@@ -42,6 +55,11 @@ export const MosaicDashboardToolbar: FC = () => {
       />
 
       <div className="flex items-center gap-2">
+        <DataTableSelector
+          tables={tables}
+          value={selectedTable}
+          onChange={handleTableChange}
+        />
         <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
         <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
       </div>

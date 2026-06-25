@@ -29,7 +29,7 @@ export const DashboardArtifact: FC<
   return (
     <div className="flex h-full">
       <div className="min-w-0 flex-1">
-        <MosaicDashboard dashboardId={artifactId} selectable />
+        <MosaicDashboard dashboardId={artifactId} />
       </div>
       <BlockSettingsPanel className="w-80 border-l" />
     </div>

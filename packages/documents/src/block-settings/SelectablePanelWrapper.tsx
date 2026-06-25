@@ -1,8 +1,8 @@
 import {cn} from '@sqlrooms/ui';
 import type {FC, ReactNode} from 'react';
-import {useCallback} from 'react';
+import {useCallback, useContext} from 'react';
 import {useBlockSettingsStore} from './useBlockSettingsStore';
-import {useBlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
+import {BlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
 
 export type SelectablePanelWrapperProps = {
   /** Dashboard or document ID containing the block */
@@ -55,7 +55,9 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
   );
 
   // Get editor from context to clear TipTap selection when panel is selected
-  const {editor} = useBlockDocumentEditorContext();
+  // Context may not exist if SelectablePanelWrapper is used outside BlockDocumentEditor
+  const editorContext = useContext(BlockDocumentEditorContext);
+  const editor = editorContext?.editor ?? null;
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
