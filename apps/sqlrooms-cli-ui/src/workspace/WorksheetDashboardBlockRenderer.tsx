@@ -1,11 +1,12 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
+import {SelectablePanelWrapper} from '@sqlrooms/documents';
 import {MosaicDashboard} from '@sqlrooms/mosaic';
 import {FC, useEffect} from 'react';
 import {useRoomStore} from '../store';
 
 export const WorksheetDashboardBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = ({blockInstanceId, blockType, title, caption}) => {
+> = ({blockInstanceId, blockType, title, caption, documentId, blockId}) => {
   const ensureDashboard = useRoomStore(
     (state) => state.mosaicDashboard.ensureDashboard,
   );
@@ -25,15 +26,22 @@ export const WorksheetDashboardBlockRenderer: FC<
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {caption ? (
-        <div className="border-border shrink-0 border-b px-3 py-2 text-sm font-medium">
-          {caption}
+    <SelectablePanelWrapper
+      dashboardId={documentId}
+      panelId={blockId}
+      panelType="dashboard"
+      blockType="standalone-block"
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        {caption ? (
+          <div className="border-border shrink-0 border-b px-3 py-2 text-sm font-medium">
+            {caption}
+          </div>
+        ) : null}
+        <div className="min-h-0 flex-1">
+          <MosaicDashboard dashboardId={blockInstanceId} selectable />
         </div>
-      ) : null}
-      <div className="min-h-0 flex-1">
-        <MosaicDashboard dashboardId={blockInstanceId} />
       </div>
-    </div>
+    </SelectablePanelWrapper>
   );
 };

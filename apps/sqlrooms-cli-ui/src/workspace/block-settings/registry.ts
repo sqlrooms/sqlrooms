@@ -21,6 +21,7 @@ export const blockSettingsRegistry: Record<string, BlockSettingsComponent> = {
   'standalone-block:chart-block': BlockChartSettings,
   'standalone-block:data-table': BlockDataTableSettings,
   'standalone-block:map': BlockMapSettings,
+  'standalone-block:dashboard': BlockDashboardSettings,
   'dashboard-panel:vgplot': DashboardChartSettings,
   'dashboard-panel:data-table-explorer': DashboardDataTableSettings,
   'dashboard-panel:deck-json-map': DashboardMapSettings,

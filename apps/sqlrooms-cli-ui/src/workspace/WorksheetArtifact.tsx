@@ -11,7 +11,13 @@ import {
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
 import {PythonBlock} from '@sqlrooms/python/block';
-import {FC, useCallback, useEffect, useMemo, useState} from 'react';
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  ResizablePanelHandle,
+} from '@sqlrooms/ui';
+import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
@@ -157,6 +163,8 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     (state) => state.artifacts.renameArtifact,
   );
   const [editor, setEditor] = useState<Editor | null>(null);
+  const panelRef = useRef<ResizablePanelHandle>(null);
+  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
     if (artifact?.type === 'worksheet') {
@@ -184,6 +192,26 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [artifactId, renameArtifact],
   );
 
+  useEffect(() => {
+    if (isOpen) {
+      panelRef.current?.expand();
+    } else {
+      panelRef.current?.collapse();
+    }
+  }, [isOpen]);
+
+  const onResize = () => {
+    const isCollapsed = panelRef.current?.isCollapsed();
+
+    if (isCollapsed && isOpen) {
+      setIsOpen(false);
+    }
+
+    if (!isCollapsed && !isOpen) {
+      setIsOpen(true);
+    }
+  };
+
   if (!artifact || artifact.type !== 'worksheet') {
     return null;
   }
@@ -194,21 +222,35 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
       >
-        <div className="flex h-full">
-          <div className="min-w-0 flex-1">
+        <ResizablePanelGroup orientation="horizontal" className="h-full">
+          <ResizablePanel>
             <BlockDocumentArtifact
               artifactId={artifactId}
               title={artifact.title}
               onTitleChange={handleTitleChange}
               onEditorReady={setEditor}
             />
-          </div>
-          <BlockSettingsPanel
-            className="w-80 border-l"
-            editor={editor}
-            documentId={artifactId}
-          />
-        </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel
+            ref={panelRef}
+            defaultSize={300}
+            minSize={300}
+            maxSize="35%"
+            className="overflow-hidden"
+            collapsible={true}
+            collapsedSize={10}
+            onResize={onResize}
+          >
+            {isOpen && (
+              <BlockSettingsPanel
+                className="border-l"
+                editor={editor}
+                documentId={artifactId}
+              />
+            )}
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>
   );

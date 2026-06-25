@@ -1025,6 +1025,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             blockType,
             getState,
             title,
+            documentId,
+            blockId,
           }) => {
             if (!isStatefulBlockArtifactType(blockType)) {
               console.warn('Unknown stateful block type on create', {
@@ -1040,6 +1042,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               blockInstanceId,
               title ?? config.embeddedTitle,
             );
+
+            // Auto-select the newly created block
+            // Use setTimeout to ensure the React component is mounted
+            setTimeout(() => {
+              const state = getState();
+              state.blockSelection.selectBlock({
+                type: 'standalone-block',
+                id: blockId,
+                dashboardId: documentId,
+                panelType: blockType,
+              });
+            }, 0);
           },
           onDeleteOwnedStatefulBlock: ({
             blockInstanceId,
