@@ -44,8 +44,8 @@ export const SkillDraftPreview: React.FC<SkillDraftPreviewProps> = ({
           )}
 
           {hasInstructions ? (
-            <div className="bg-muted/20 rounded-md p-3">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
+            <div className="bg-muted/20 min-w-0 rounded-md p-3">
+              <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word [&_pre]:overflow-x-auto">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {instructions}
                 </ReactMarkdown>
@@ -59,6 +59,7 @@ export const SkillDraftPreview: React.FC<SkillDraftPreviewProps> = ({
           )}
         </div>
         <ScrollBar orientation="vertical" />
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );
