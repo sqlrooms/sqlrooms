@@ -33,7 +33,19 @@ export const BlockDataTableSettings: FC<BlockSettingsComponentProps> = ({
     });
   };
 
+  const handleCaptionChange = (newCaption: string) => {
+    updateBlock(dashboardId!, blockId, {
+      ...dataTableBlock,
+      caption: newCaption || undefined,
+    });
+  };
+
   return (
-    <DataTableSettingsPanel value={dataTable} onChange={handleTableChange} />
+    <DataTableSettingsPanel
+      value={dataTable}
+      onChange={handleTableChange}
+      title={dataTableBlock.caption || ''}
+      onTitleChange={handleCaptionChange}
+    />
   );
 };

@@ -19,6 +19,7 @@ import {
 } from '@sqlrooms/color-scales';
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
 import {
+  Input,
   Select,
   SelectContent,
   SelectItem,
@@ -118,6 +119,7 @@ interface MapSettingsPanelProps {
   panel: MosaicDashboardPanelConfigType;
   onClose?: () => void;
   onTableChange?: (table: DataTable) => void;
+  onTitleChange?: (title: string) => void;
 }
 
 function getSchemeOptions(type: ColorScaleConfig['type']) {
@@ -137,6 +139,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   dashboardId,
   panel,
   onTableChange,
+  onTitleChange,
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
   const [colorAccessor, setColorAccessor] =
@@ -257,6 +260,16 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Map Settings</h3>
       </div>
+
+      <Field label="Title">
+        <Input
+          value={panel.title}
+          onChange={(e) => onTitleChange?.(e.target.value)}
+          placeholder="Map title"
+          className="text-xs"
+        />
+      </Field>
+
       <Field label="Dataset" required>
         <DataTableSelector
           onChange={handleTableChange}

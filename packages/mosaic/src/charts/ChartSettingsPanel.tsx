@@ -33,16 +33,14 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
         <h3 className="text-sm font-semibold">Chart Settings</h3>
       </div>
 
-      {title !== undefined && onTitleChange ? (
-        <Field label="Title">
-          <Input
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-            placeholder="Chart title"
-            className="text-xs"
-          />
-        </Field>
-      ) : null}
+      <Field label="Title">
+        <Input
+          value={title}
+          onChange={(e) => onTitleChange?.(e.target.value)}
+          placeholder="Enter title"
+          className="text-xs"
+        />
+      </Field>
 
       <Field label="Dataset" required>
         <DataTableSelector

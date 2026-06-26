@@ -13,7 +13,14 @@ import {DeckMapBlockRenderer} from '@sqlrooms/deck';
  */
 export const WorksheetMapBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = ({blockInstanceId, blockType, title, caption}) => {
+> = ({
+  blockInstanceId,
+  blockType,
+  title,
+  caption,
+  readOnly,
+  onCaptionChange,
+}) => {
   if (!blockInstanceId || blockType !== 'map') {
     return (
       <div className="text-muted-foreground p-4 text-sm">
@@ -27,6 +34,8 @@ export const WorksheetMapBlockRenderer: FC<
       mapId={blockInstanceId}
       title={title}
       caption={caption}
+      onCaptionChange={onCaptionChange}
+      readOnly={readOnly}
     />
   );
 };

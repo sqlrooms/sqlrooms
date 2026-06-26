@@ -279,6 +279,7 @@ export {Field} from './components/Field';
 export {TableSelector} from './components/TableSelector';
 export {ColumnSelector} from './components/ColumnSelector';
 export {MultiFieldSelector} from './components/MultiFieldSelector';
+export {BlockCaptionEditor} from './components/BlockCaptionEditor';
 export {
   ColumnsProvider,
   useColumnsContext,

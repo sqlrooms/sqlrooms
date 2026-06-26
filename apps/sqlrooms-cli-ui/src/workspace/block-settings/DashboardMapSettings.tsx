@@ -14,6 +14,10 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
   );
 
+  const updatePanel = useRoomStore(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
+
   const setSelectedTable = useRoomStore(
     (state) => state.mosaicDashboard.setSelectedTable,
   );
@@ -25,6 +29,15 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
       }
     },
     [dashboardId, setSelectedTable],
+  );
+
+  const handleTitleChange = useCallback(
+    (newTitle: string) => {
+      if (dashboardId) {
+        updatePanel(dashboardId, blockId, {title: newTitle || undefined});
+      }
+    },
+    [dashboardId, blockId, updatePanel],
   );
 
   const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
@@ -51,9 +64,10 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
   return (
     <>
       <MapSettingsPanel
-        dashboardId={dashboardId!}
+        dashboardId={dashboard.id}
         panel={panel}
         onTableChange={handleTableChangeRequest}
+        onTitleChange={handleTitleChange}
       />
 
       <ConfirmDatasetChangeDialog

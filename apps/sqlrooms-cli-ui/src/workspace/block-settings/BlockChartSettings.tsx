@@ -41,10 +41,10 @@ export const BlockChartSettings: FC<BlockSettingsComponentProps> = ({
     });
   };
 
-  const handleTitleChange = (newTitle: string) => {
+  const handleCaptionChange = (newCaption: string) => {
     updateBlock(dashboardId!, blockId, {
       ...chartBlock,
-      title: newTitle || undefined,
+      caption: newCaption || undefined,
     });
   };
 
@@ -54,8 +54,8 @@ export const BlockChartSettings: FC<BlockSettingsComponentProps> = ({
       config={config}
       onConfigChange={handleConfigChange}
       onTableChange={handleTableChange}
-      title={chartBlock.title || ''}
-      onTitleChange={handleTitleChange}
+      title={chartBlock.caption || ''}
+      onTitleChange={handleCaptionChange}
     />
   );
 };

@@ -1047,7 +1047,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             // Use setTimeout to ensure the React component is mounted
             setTimeout(() => {
               const state = getState();
-              state.blockSelection.selectBlock({
+              state.blockSettings.selectBlock({
                 type: 'standalone-block',
                 id: blockId,
                 dashboardId: documentId,
