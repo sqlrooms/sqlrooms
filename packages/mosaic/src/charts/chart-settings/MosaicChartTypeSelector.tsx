@@ -1,4 +1,4 @@
-import {type FC, memo, useMemo, useCallback} from 'react';
+import {type FC, memo, useMemo} from 'react';
 import {ChartNoAxesCombined} from 'lucide-react';
 import {Combobox} from '@sqlrooms/ui';
 import {type ChartType} from '../chart-types/base-types';
@@ -15,20 +15,6 @@ export const MosaicChartTypeSelector: FC<MosaicChartTypeSelectorProps> = memo(
       (state) => state.mosaicDashboard.chartTypes,
     );
 
-    // Custom selection handler: maps from label back to id
-    const handleChange = useCallback(
-      (searchValue: string) => {
-        const chartType = chartTypes?.find(
-          (ct) =>
-            (ct.label ?? ct.id).toLowerCase() === searchValue.toLowerCase(),
-        );
-        if (chartType) {
-          onChange(chartType.id);
-        }
-      },
-      [chartTypes, onChange],
-    );
-
     const selectedChartType = useMemo(
       () => chartTypes?.find((chartType) => chartType.id === value),
       [chartTypes, value],
@@ -38,7 +24,7 @@ export const MosaicChartTypeSelector: FC<MosaicChartTypeSelectorProps> = memo(
       selectedChartType?.icon ?? ChartNoAxesCombined;
 
     return (
-      <Combobox value={value} onChange={handleChange}>
+      <Combobox value={value} onChange={onChange}>
         <Combobox.Trigger className="w-full" ariaLabel="Chart type">
           {selectedChartType ? (
             <div className="flex items-center gap-2">
@@ -59,11 +45,13 @@ export const MosaicChartTypeSelector: FC<MosaicChartTypeSelectorProps> = memo(
             return (
               <Combobox.Item
                 key={chartType.id}
-                value={chartType.label ?? chartType.id}
-                isSelected={value === chartType.id}
+                value={chartType.id}
+                keywords={[chartType.label ?? chartType.id]}
               >
                 <Icon className="mr-2 h-3.5 w-3.5 shrink-0" />
-                <span className="truncate text-xs">{chartType.label}</span>
+                <span className="truncate text-xs">
+                  {chartType.label ?? chartType.id}
+                </span>
               </Combobox.Item>
             );
           })}

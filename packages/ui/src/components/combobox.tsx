@@ -137,12 +137,20 @@ const ComboboxContent: FC<PropsWithChildren<ComboboxContentProps>> = ({
  * Props for an individual selectable combobox item.
  */
 export interface ComboboxItemProps {
+  /**
+   * Stable item value committed through the Combobox onChange handler.
+   */
   value: string;
+  /**
+   * Optional display text or aliases used to match this item during search.
+   */
+  keywords?: string[];
   isSelected?: boolean;
 }
 
 const ComboboxItem: FC<PropsWithChildren<ComboboxItemProps>> = ({
   value,
+  keywords,
   children,
   isSelected,
 }) => {
@@ -150,7 +158,7 @@ const ComboboxItem: FC<PropsWithChildren<ComboboxItemProps>> = ({
   const selected = isSelected ?? currentValue === value;
 
   return (
-    <CommandItem value={value} onSelect={handleSelect}>
+    <CommandItem value={value} keywords={keywords} onSelect={handleSelect}>
       <Check
         className={cn(
           'h-3.5 w-3.5 shrink-0',
