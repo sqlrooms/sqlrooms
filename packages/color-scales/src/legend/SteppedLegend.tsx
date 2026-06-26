@@ -26,7 +26,7 @@ export function SteppedLegend({
   return (
     <div className="min-w-0" style={getRampStyle(width)}>
       <div className="border-border/70 flex h-3 overflow-hidden rounded-[2px] border">
-        {visibleItems.map((item) => (
+        {legend.items.map((item) => (
           <span
             key={`${legend.title}-${item.label}`}
             aria-label={item.label}
