@@ -86,9 +86,6 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
   const panelSelection = useBlockSettingsStore(
     (state) => state.blockSettings.config.selectedBlock,
   );
-  const clearPanelSelection = useBlockSettingsStore(
-    (state) => state.blockSettings.clearSelection,
-  );
 
   // Initialize state from editor
   const [editorSelection, setEditorSelection] = useState<EditorSelection>(() =>
@@ -103,15 +100,6 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
     const updateSelection = () => {
       const selection = getEditorSelection(editor);
       setEditorSelection(selection);
-
-      // Clear panel selection when editor has any selection
-      const hasTextSelection =
-        editor.state.selection &&
-        !(editor.state.selection instanceof NodeSelection);
-
-      if (selection || hasTextSelection) {
-        clearPanelSelection();
-      }
     };
 
     // Subscribe to updates (initial value already set via useState initializer)
@@ -120,7 +108,7 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
     return () => {
       editor.off('selectionUpdate', updateSelection);
     };
-  }, [editor, clearPanelSelection]);
+  }, [editor]);
 
   // Priority 1: Panel selection
   if (panelSelection) {

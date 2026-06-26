@@ -41,6 +41,15 @@ export const DashboardChartSettings: FC<BlockSettingsComponentProps> = ({
     [dashboardId, blockId, updatePanel],
   );
 
+  const handleTitleChange = useCallback(
+    (newTitle: string) => {
+      if (dashboardId) {
+        updatePanel(dashboardId, blockId, {title: newTitle || undefined});
+      }
+    },
+    [dashboardId, blockId, updatePanel],
+  );
+
   const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
     useConfirmDatasetChange(handleTableChange);
 
@@ -77,6 +86,8 @@ export const DashboardChartSettings: FC<BlockSettingsComponentProps> = ({
         config={config}
         onConfigChange={handleConfigChange}
         onTableChange={handleTableChangeRequest}
+        title={panel.title || ''}
+        onTitleChange={handleTitleChange}
       />
       <ConfirmDatasetChangeDialog
         open={isDialogOpen}

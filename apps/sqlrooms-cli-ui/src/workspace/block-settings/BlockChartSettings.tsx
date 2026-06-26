@@ -41,12 +41,21 @@ export const BlockChartSettings: FC<BlockSettingsComponentProps> = ({
     });
   };
 
+  const handleTitleChange = (newTitle: string) => {
+    updateBlock(dashboardId!, blockId, {
+      ...chartBlock,
+      title: newTitle || undefined,
+    });
+  };
+
   return (
     <ChartSettingsPanel
       dataTable={dataTable}
       config={config}
       onConfigChange={handleConfigChange}
       onTableChange={handleTableChange}
+      title={chartBlock.title || ''}
+      onTitleChange={handleTitleChange}
     />
   );
 };

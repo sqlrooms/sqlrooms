@@ -300,10 +300,12 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
 
   useEffect(() => {
     return () => {
-      // Clear custom selection when document changes or editor unmounts
+      // Clear custom selection when editor unmounts
       clearSelection?.();
     };
-  }, [documentId, clearSelection]);
+    // Only clear on unmount, not when documentId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const contextValue: BlockDocumentEditorContextValue = useMemo(
     () => ({
