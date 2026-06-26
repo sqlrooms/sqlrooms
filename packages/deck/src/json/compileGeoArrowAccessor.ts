@@ -129,20 +129,6 @@ export function compileGeoArrowAccessor(
   table: arrow.Table,
 ) {
   const trimmedExpression = expression.trim();
-  if (trimmedExpression === '-') {
-    const accessor = ({
-      index,
-      data,
-    }: {
-      index: number;
-      data: {data: {get: (i: number) => unknown}};
-    }) => data.data.get(index);
-    Object.defineProperty(accessor, GEOARROW_COMPILED_ACCESSOR, {
-      value: true,
-      enumerable: false,
-    });
-    return accessor;
-  }
 
   const bindings = resolveColumnBindings(trimmedExpression, table);
 
