@@ -195,17 +195,29 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const firstColumnName = dataTable?.columns[0]?.name;
 
+  // Width/radius values can be either numeric constants (e.g. getWidth: 3)
+  // or string accessor expressions (e.g. getRadius: '@@=Magnitude').
+  // For pixel-unit layers, prefer getWidth/getRadius over widthMinPixels/radiusMinPixels
+  // since that's the actual rendered value. When the accessor is a string expression,
+  // hide the slider entirely to avoid displaying invalid values or accidentally
+  // overwriting data-driven accessors with a constant on first interaction.
   const isWidthInPixels = activeLayer?.widthUnits === 'pixels';
+  const rawWidth = activeLayer?.getWidth;
+  const numericWidth = typeof rawWidth === 'number' ? rawWidth : undefined;
   const lineWidthValue = isWidthInPixels
-    ? ((activeLayer?.widthMinPixels as number | undefined) ?? 1)
-    : ((activeLayer?.getWidth as number | undefined) ?? 1);
+    ? (numericWidth ?? (activeLayer?.widthMinPixels as number | undefined) ?? 1)
+    : (numericWidth ?? 1);
 
   const isRadiusInPixels = activeLayer?.radiusUnits === 'pixels';
+  const rawRadius = activeLayer?.getRadius;
+  const numericRadius = typeof rawRadius === 'number' ? rawRadius : undefined;
   const pointRadiusValue = isRadiusInPixels
-    ? ((activeLayer?.getRadius as number | undefined) ??
+    ? (numericRadius ??
       (activeLayer?.radiusMinPixels as number | undefined) ??
       2)
-    : ((activeLayer?.getRadius as number | undefined) ?? 100);
+    : (numericRadius ?? 100);
+  const isAccessorBasedRadius = typeof rawRadius === 'string';
+  const isAccessorBasedWidth = typeof rawWidth === 'string';
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
@@ -343,68 +355,66 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Select>
             </Field>
 
-            {showTripsSettings && (
-              <>
-                <Field
-                  label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
-                >
-                  <div className="pt-0.5">
-                    <Slider
-                      min={1}
-                      max={isWidthInPixels ? 20 : 10000}
-                      step={isWidthInPixels ? 1 : 10}
-                      value={[lineWidthValue]}
-                      onValueChange={(values) => {
-                        const value = values[0] ?? 3;
-                        applyConfig(
-                          updateDeckMapLayer(
-                            mapConfig,
-                            activeLayerIndex,
-                            (layer) => ({
-                              ...layer,
-                              ...(isWidthInPixels
-                                ? {widthMinPixels: value}
-                                : {}),
-                              getWidth: value,
-                            }),
-                          ),
-                        );
-                      }}
-                    />
-                  </div>
-                </Field>
-                <Field
-                  label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
-                >
-                  <div className="pt-0.5">
-                    <Slider
-                      min={5}
-                      max={100}
-                      step={5}
-                      value={[
-                        Math.round(
-                          ((activeLayer?._trailLengthFactor as
-                            | number
-                            | undefined) ?? 0.4) * 100,
+            {showTripsSettings && !isAccessorBasedWidth && (
+              <Field
+                label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
+              >
+                <div className="pt-0.5">
+                  <Slider
+                    min={1}
+                    max={isWidthInPixels ? 20 : 10000}
+                    step={isWidthInPixels ? 1 : 10}
+                    value={[lineWidthValue]}
+                    onValueChange={(values) => {
+                      const value = values[0] ?? 3;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            ...(isWidthInPixels ? {widthMinPixels: value} : {}),
+                            getWidth: value,
+                          }),
                         ),
-                      ]}
-                      onValueChange={(values) => {
-                        const value = (values[0] ?? 40) / 100;
-                        applyConfig(
-                          updateDeckMapLayer(
-                            mapConfig,
-                            activeLayerIndex,
-                            (layer) => ({
-                              ...layer,
-                              _trailLengthFactor: value,
-                            }),
-                          ),
-                        );
-                      }}
-                    />
-                  </div>
-                </Field>
-              </>
+                      );
+                    }}
+                  />
+                </div>
+              </Field>
+            )}
+            {showTripsSettings && (
+              <Field
+                label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
+              >
+                <div className="pt-0.5">
+                  <Slider
+                    min={5}
+                    max={100}
+                    step={5}
+                    value={[
+                      Math.round(
+                        ((activeLayer?._trailLengthFactor as
+                          | number
+                          | undefined) ?? 0.4) * 100,
+                      ),
+                    ]}
+                    onValueChange={(values) => {
+                      const value = (values[0] ?? 40) / 100;
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            _trailLengthFactor: value,
+                          }),
+                        ),
+                      );
+                    }}
+                  />
+                </div>
+              </Field>
             )}
 
             {isHeatmapLayer ? (
@@ -578,7 +588,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </Field>
         )}
 
-        {showRadiusSetting && (
+        {showRadiusSetting && !isAccessorBasedRadius && (
           <Field
             label={`Point radius: ${pointRadiusValue}${isRadiusInPixels ? 'px' : 'm'}`}
           >
@@ -777,7 +787,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </div>
         )}
 
-        {showArcColumnSetting && (
+        {showArcColumnSetting && !isAccessorBasedWidth && (
           <Field
             label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
           >
