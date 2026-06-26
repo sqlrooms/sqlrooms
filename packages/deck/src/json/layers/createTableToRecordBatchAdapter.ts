@@ -49,6 +49,7 @@ export function createTableToRecordBatchAdapter(
         };
 
         for (const [propName, propValue] of Object.entries(otherProps)) {
+          if (propName === 'id') continue;
           if (propValue instanceof arrow.Vector) {
             // Convert Vector chunk to Data for this batch
             const chunkData = propValue.data[batchIdx];
