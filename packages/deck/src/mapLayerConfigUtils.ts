@@ -258,7 +258,7 @@ export function setDeckMapLayerGeometryColumn(
     return config;
   }
 
-  return {
+  const updatedConfig = {
     ...config,
     datasets: {
       ...config.datasets,
@@ -267,7 +267,24 @@ export function setDeckMapLayerGeometryColumn(
         geometryColumn,
       },
     },
+    fitToData:
+      config.fitToData &&
+      config.fitToData.dataset === datasetId &&
+      'geometryColumn' in config.fitToData
+        ? {
+            ...config.fitToData,
+            geometryColumn,
+          }
+        : config.fitToData,
   };
+
+  return updateDeckMapLayer(updatedConfig, layerIndex, (l) => ({
+    ...l,
+    _sqlroomsBinding: {
+      ...(l._sqlroomsBinding as Record<string, unknown>),
+      geometryColumn,
+    },
+  }));
 }
 
 export function setDeckMapLayerHexagonColumn(
@@ -328,6 +345,10 @@ export function setDeckMapLayerColorScale(
   }));
 }
 
+const DEFAULT_LAYER_FILL_COLOR: [number, number, number, number] = [
+  56, 189, 248, 180,
+];
+
 export function clearDeckMapLayerColorScale(
   config: DeckMapDashboardPanelConfig,
   layerIndex: number,
@@ -335,7 +356,11 @@ export function clearDeckMapLayerColorScale(
 ): DeckMapDashboardPanelConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => {
     const nextLayer = {...layer};
-    delete nextLayer[accessor];
+    if (accessor === 'getFillColor') {
+      nextLayer[accessor] = [...DEFAULT_LAYER_FILL_COLOR];
+    } else {
+      delete nextLayer[accessor];
+    }
     return nextLayer;
   });
 }

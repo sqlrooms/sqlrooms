@@ -2,6 +2,7 @@ import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
 import type {PreparedDeckDatasetState} from '../types';
 import {getColorScale} from './colorScaleFunction';
 import {buildColorScaleLegend} from './compileColorScale';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
 import {resolveColorLegend, resolveDatasetId} from './layerConfig';
 
 function resolveLegendTitle(
@@ -20,6 +21,33 @@ function resolveLegendTitle(
   }
 
   return fallbackField;
+}
+
+function buildHeatmapLegend(
+  layerProps: Record<string, unknown>,
+): ResolvedColorLegend | null {
+  const rawRange = layerProps.colorRange as
+    | Array<[number, number, number, number]>
+    | undefined;
+  const colorRange =
+    Array.isArray(rawRange) && rawRange.length >= 2
+      ? rawRange
+      : DEFAULT_HEATMAP_COLOR_RANGE;
+
+  const stops = colorRange.map((c, i) => {
+    const pct = (i / (colorRange.length - 1)) * 100;
+    return `rgba(${c[0]},${c[1]},${c[2]},${(c[3] ?? 255) / 255}) ${pct.toFixed(1)}%`;
+  });
+
+  return {
+    type: 'continuous',
+    title: 'Density',
+    gradient: `linear-gradient(to right, ${stops.join(', ')})`,
+    ticks: [
+      {label: 'Low', offset: 0},
+      {label: 'High', offset: 100},
+    ],
+  };
 }
 
 export function extractColorScaleLegends(options: {
@@ -42,6 +70,15 @@ export function extractColorScaleLegends(options: {
     const layerProps = layer as Record<string, unknown>;
 
     if (layerProps.visible === false) {
+      continue;
+    }
+
+    const layerType = layerProps['@@type'];
+    if (layerType === 'GeoArrowHeatmapLayer') {
+      const heatmapLegend = buildHeatmapLegend(layerProps);
+      if (heatmapLegend) {
+        legends.push(heatmapLegend);
+      }
       continue;
     }
 

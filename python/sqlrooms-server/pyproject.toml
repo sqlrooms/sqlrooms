@@ -29,7 +29,7 @@ sqlrooms-server = "sqlrooms.server.__main__:main"
 sqlrooms-duckdb-server = "sqlrooms.server.__main__:main"
 
 [project.urls]
-homepage = "https://sqlrooms.com"
+homepage = "https://sqlrooms.org"
 repository = "https://github.com/sqlrooms/sqlrooms"
 
 [build-system]
