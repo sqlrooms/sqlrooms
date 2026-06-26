@@ -18,7 +18,7 @@ export const BlockDocumentEditorContent: FC<
     null,
   );
   const clearSelection = useBlockSettingsStore(
-    (state) => state.blockSettings.clearSelection,
+    (state) => state.blockSettings?.clearSelection,
   );
 
   const handleClick = useCallback(
@@ -26,7 +26,7 @@ export const BlockDocumentEditorContent: FC<
       // Clear selection if clicking on the editor background (not on a block)
       const target = e.target as HTMLElement;
       if (target.classList.contains('ProseMirror')) {
-        clearSelection();
+        clearSelection?.();
       }
     },
     [clearSelection],

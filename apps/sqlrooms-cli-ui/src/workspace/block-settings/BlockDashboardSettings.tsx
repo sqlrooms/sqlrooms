@@ -27,6 +27,11 @@ export const BlockDashboardSettings: FC<BlockSettingsComponentProps> = ({
   const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
     useConfirmDatasetChange(handleTableChange);
 
+  // Call hooks before any conditional returns
+  const tableName = dashboard?.selectedTable;
+  const dataTable = useDataTable(tableName);
+  const tables = useTablesWithColumns();
+
   if (!dashboard) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -34,10 +39,6 @@ export const BlockDashboardSettings: FC<BlockSettingsComponentProps> = ({
       </div>
     );
   }
-
-  const tableName = dashboard.selectedTable;
-  const dataTable = useDataTable(tableName);
-  const tables = useTablesWithColumns();
 
   return (
     <>

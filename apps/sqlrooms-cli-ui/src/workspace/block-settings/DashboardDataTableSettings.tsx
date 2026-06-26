@@ -43,6 +43,15 @@ export const DashboardDataTableSettings: FC<BlockSettingsComponentProps> = ({
   const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
     useConfirmDatasetChange(handleTableChange);
 
+  // Call hooks before any conditional returns
+  const panel = useMemo(
+    () => dashboard?.panels?.find((p) => p.id === blockId),
+    [dashboard, blockId],
+  );
+
+  const tableName = dashboard?.selectedTable;
+  const dataTable = useDataTable(tableName);
+
   if (!dashboard) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -50,11 +59,6 @@ export const DashboardDataTableSettings: FC<BlockSettingsComponentProps> = ({
       </div>
     );
   }
-
-  const panel = useMemo(
-    () => dashboard.panels.find((p) => p.id === blockId),
-    [dashboard, blockId],
-  );
 
   if (!panel || panel.type !== 'data-table-explorer') {
     return (
@@ -65,9 +69,6 @@ export const DashboardDataTableSettings: FC<BlockSettingsComponentProps> = ({
       </div>
     );
   }
-
-  const tableName = dashboard.selectedTable;
-  const dataTable = useDataTable(tableName);
 
   return (
     <>

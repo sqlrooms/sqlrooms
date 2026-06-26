@@ -13,6 +13,10 @@ export const BlockDataTableSettings: FC<BlockSettingsComponentProps> = ({
   const dataTableBlock = useDataTableBlock(dashboardId, blockId);
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
 
+  // Call hooks before any conditional returns
+  const tableName = dataTableBlock?.title;
+  const dataTable = useDataTable(tableName);
+
   if (!dataTableBlock) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -22,9 +26,6 @@ export const BlockDataTableSettings: FC<BlockSettingsComponentProps> = ({
       </div>
     );
   }
-
-  const tableName = dataTableBlock.title;
-  const dataTable = useDataTable(tableName);
 
   const handleTableChange = (table: DataTable) => {
     updateBlock(dashboardId!, blockId, {

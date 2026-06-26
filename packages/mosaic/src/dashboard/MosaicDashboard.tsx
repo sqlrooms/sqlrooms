@@ -138,7 +138,7 @@ function MosaicDashboardComponent({
   selectable = false,
 }: MosaicDashboardProps): ReactElement {
   const clearSelection = useBlockSettingsStore(
-    (state) => state.blockSettings.clearSelection,
+    (state) => state.blockSettings?.clearSelection,
   );
 
   const handleContainerClick = useCallback(

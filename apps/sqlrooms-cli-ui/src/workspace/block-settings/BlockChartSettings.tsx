@@ -13,6 +13,10 @@ export const BlockChartSettings: FC<BlockSettingsComponentProps> = ({
   const chartBlock = useChartBlock(dashboardId, blockId);
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
 
+  // Get the data table for the chart (must call hooks before any conditional returns)
+  const tableName = chartBlock?.tableName;
+  const dataTable = useDataTable(tableName);
+
   if (!chartBlock) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -21,11 +25,7 @@ export const BlockChartSettings: FC<BlockSettingsComponentProps> = ({
     );
   }
 
-  const tableName = chartBlock.tableName;
   const config = (chartBlock.config || {}) as ChartConfig;
-
-  // Get the data table for the chart
-  const dataTable = useDataTable(tableName);
 
   const handleConfigChange = (newConfig: ChartConfig) => {
     updateBlock(dashboardId!, blockId, {
