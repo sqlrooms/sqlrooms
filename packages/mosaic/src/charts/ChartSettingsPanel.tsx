@@ -1,11 +1,14 @@
 import {type DataTable} from '@sqlrooms/db';
-import {FC} from 'react';
+import {FC, useCallback, useState} from 'react';
 import {type ChartConfig} from './chart-types/chart-config';
 import {DataTableSelector} from '../components/DataTableSelector';
 import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 import {Field} from '../components/Field';
 import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
 import {Input} from '@sqlrooms/ui';
+import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
+import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
+import {MosaicChartSettings} from './chart-settings/MosaicChartSettings';
 
 /**
  * Props for the ChartSettingsPanel component.
@@ -45,11 +48,38 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   onTitleChange,
 }) => {
   const tables = useTablesWithColumns();
+  const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
+  const renderContext = useMosaicChartRenderContext(dataTable, config);
+
+  const handleBackToSettings = useCallback(() => {
+    setViewMode('settings');
+  }, []);
+
+  const handleViewSpec = useCallback(() => {
+    setViewMode('spec');
+  }, []);
+
+  // Show spec viewer if it's a spec-backed chart and user clicked "View Spec"
+  if (renderContext.type === 'spec' && viewMode === 'spec') {
+    return (
+      <div className="flex h-full flex-col">
+        <MosaicChartSpecViewerPanel
+          spec={renderContext.spec}
+          onBack={handleBackToSettings}
+        />
+      </div>
+    );
+  }
+
+  const showViewSpec = renderContext.type === 'spec';
 
   return (
     <div className="flex h-full flex-col gap-2 p-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Chart Settings</h3>
+        {showViewSpec && (
+          <MosaicChartSettings.ViewSpecButton onClick={handleViewSpec} />
+        )}
       </div>
 
       <Field label="Title">
