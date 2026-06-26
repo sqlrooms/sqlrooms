@@ -99,7 +99,14 @@ confirm the imported data and workspace state come back.
    `sqlrooms-server` is versioned, the workflow also updates the
    `sqlrooms-server>=...` dependency floor in `python/sqlrooms/pyproject.toml`.
 
-3. Run the dry publish workflow for the intended target:
+3. Format the Python CLI packages before running publish checks:
+
+   ```bash
+   uv run --project python/sqlrooms ruff format
+   uv run --project python/sqlrooms ruff check --fix
+   ```
+
+4. Run the dry publish workflow for the intended target:
 
    ```bash
    pnpm cli:publish:dry --target sqlrooms
@@ -108,7 +115,7 @@ confirm the imported data and workspace state come back.
    The dry workflow runs validation and builds the selected package or packages,
    but it does not upload to PyPI.
 
-4. Publish the same target:
+5. Publish the same target:
 
    ```bash
    pnpm cli:publish --target sqlrooms

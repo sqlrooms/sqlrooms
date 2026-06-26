@@ -751,9 +751,7 @@ class SqlroomsHttpServer:
             return None
         return JSONResponse({"error": "unauthorized"}, status_code=401)
 
-    async def _authenticate_duckdb_proxy_websocket(
-        self, client_ws: WebSocket
-    ) -> bool:
+    async def _authenticate_duckdb_proxy_websocket(self, client_ws: WebSocket) -> bool:
         await client_ws.accept()
 
         query_token = (client_ws.query_params.get("token") or "").strip()
