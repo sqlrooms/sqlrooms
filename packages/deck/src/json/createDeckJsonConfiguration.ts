@@ -11,6 +11,7 @@ import {
   DEFAULT_DECK_JSON_CONSTANTS,
   DEFAULT_DECK_JSON_ENUMERATIONS,
 } from './defaultClasses';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
 import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
@@ -325,6 +326,28 @@ export function createDeckJsonConfiguration(
             }
           }
         }
+      }
+
+      // For HeatmapLayer: apply default colorRange (YlOrRd) when not explicitly set.
+      // Also set updateTriggers to force re-aggregation when colorRange changes.
+      if (layerName === 'GeoArrowHeatmapLayer') {
+        if (!rewritten.colorRange) {
+          rewritten.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
+        }
+        const existingTriggers =
+          rewritten.updateTriggers &&
+          typeof rewritten.updateTriggers === 'object' &&
+          !Array.isArray(rewritten.updateTriggers)
+            ? (rewritten.updateTriggers as Record<string, unknown>)
+            : {};
+        const previousGetWeight = existingTriggers.getWeight;
+        rewritten.updateTriggers = {
+          ...existingTriggers,
+          getWeight:
+            previousGetWeight === undefined
+              ? JSON.stringify(rewritten.colorRange)
+              : [previousGetWeight, JSON.stringify(rewritten.colorRange)],
+        };
       }
 
       return rewritten;

@@ -269,7 +269,12 @@ export function createDeckMapDashboardConfigForTable(options: {
             ? 'GeoArrowScatterplotLayer'
             : 'GeoArrowPolygonLayer',
           id: datasetId,
-          _sqlroomsBinding: {dataset: datasetId},
+          _sqlroomsBinding: {
+            dataset: datasetId,
+            ...(detectedGeometryColumn
+              ? {geometryColumn: detectedGeometryColumn.geometryColumn}
+              : {}),
+          },
           filled: true,
           stroked: false,
           pickable: true,
@@ -296,7 +301,16 @@ export function createDeckMapDashboardConfigForTable(options: {
             maxZoom: 12,
           },
         }
-      : {}),
+      : detectedGeometryColumn
+        ? {
+            fitToData: {
+              dataset: datasetId,
+              geometryColumn: detectedGeometryColumn.geometryColumn,
+              padding: 40,
+              maxZoom: 12,
+            },
+          }
+        : {}),
     ...(options.mapStyle ? {mapStyle: options.mapStyle} : {}),
   };
 }
