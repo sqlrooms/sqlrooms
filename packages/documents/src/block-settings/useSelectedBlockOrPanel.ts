@@ -86,6 +86,9 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
   const panelSelection = useBlockSettingsStore(
     (state) => state.blockSettings.config.selectedBlock,
   );
+  const clearSelection = useBlockSettingsStore(
+    (state) => state.blockSettings.clearSelection,
+  );
 
   // Initialize state from editor
   const [editorSelection, setEditorSelection] = useState<EditorSelection>(() =>
@@ -100,6 +103,12 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
     const updateSelection = () => {
       const selection = getEditorSelection(editor);
       setEditorSelection(selection);
+
+      // If NodeSelection appeared in TipTap, clear any panel selection
+      // This ensures only one selection is active at a time
+      if (selection && panelSelection) {
+        clearSelection();
+      }
     };
 
     // Subscribe to updates (initial value already set via useState initializer)
@@ -108,7 +117,7 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
     return () => {
       editor.off('selectionUpdate', updateSelection);
     };
-  }, [editor]);
+  }, [editor, panelSelection, clearSelection]);
 
   // Priority 1: Panel selection
   if (panelSelection) {
