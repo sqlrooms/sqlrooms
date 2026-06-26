@@ -111,7 +111,8 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
       }
     };
 
-    // Subscribe to updates (initial value already set via useState initializer)
+    // Sync immediately when editor changes, then subscribe to updates
+    updateSelection();
     editor.on('selectionUpdate', updateSelection);
 
     return () => {

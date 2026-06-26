@@ -13,7 +13,11 @@ export type BlockSettingsPanelProps = {
   onClose?: () => void;
   /** TipTap editor instance (optional - can be passed explicitly or obtained from context) */
   editor?: Editor | null;
-  /** Document ID (required when editor is passed as prop) */
+  /**
+   * Document ID (required when editor is passed as prop).
+   * Note: When providing an explicit editor prop, documentId must also be provided
+   * for block settings to resolve correctly.
+   */
   documentId?: string;
 };
 

@@ -341,19 +341,16 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     updateAttributesRef.current({caption: nextCaption});
   }, []);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      // Select this node when clicked
-      // Panel selection will be cleared automatically by useSelectedBlockOrPanel hook
-      if (editor && !selected) {
-        const pos = getPos();
-        if (pos !== undefined) {
-          editor.commands.setNodeSelection(pos);
-        }
+  const handleClick = useCallback(() => {
+    // Select this node when clicked
+    // Panel selection will be cleared automatically by useSelectedBlockOrPanel hook
+    if (editor && !selected) {
+      const pos = getPos();
+      if (pos !== undefined) {
+        editor.commands.setNodeSelection(pos);
       }
-    },
-    [editor, selected, getPos],
-  );
+    }
+  }, [editor, selected, getPos]);
 
   return (
     <NodeViewWrapper

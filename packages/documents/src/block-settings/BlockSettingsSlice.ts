@@ -112,7 +112,7 @@ function shouldClearOnDelete(
  * @example
  * ```typescript
  * const store = createRoomStore({
- *   ...createBlockSelectionSlice({
+ *   ...createBlockSettingsSlice({
  *     settingsRegistry: {
  *       'dashboard-panel:vgplot': ChartSettings,
  *       'standalone-block:chart-block': ChartSettings,
