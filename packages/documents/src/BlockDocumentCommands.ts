@@ -453,7 +453,7 @@ export function createBlockDocumentCommands<
         const updated = state.blockDocuments.updateBlock(
           artifactId,
           blockId,
-          block,
+          replacementBlock,
         );
         if (!updated) return missingBlock(commandId('update-block'), blockId);
         return blockMutationSuccess(

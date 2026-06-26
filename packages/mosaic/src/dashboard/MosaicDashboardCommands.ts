@@ -4,7 +4,14 @@ import type {
   MosaicDashboardEntry,
   MosaicDashboardPanelConfig,
 } from './dashboard-types';
-import {MosaicDashboardPanelConfig as MosaicDashboardPanelConfigSchema} from './dashboard-types';
+import {
+  ChartPanelConfig,
+  DataTableExplorerPanel,
+  MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
+  MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
+  MosaicDashboardPanelConfig as MosaicDashboardPanelConfigSchema,
+} from './dashboard-types';
+import {MosaicDashboardPanelSource} from './core-types';
 import type {MosaicDashboardSliceState} from './MosaicDashboardSlice';
 
 export const MOSAIC_DASHBOARD_COMMAND_IDS = {
@@ -30,9 +37,9 @@ const DashboardUpdatePanelInput = z.object({
   patch: z
     .object({
       title: z.string().optional(),
-      type: z.string().optional(),
-      source: z.unknown().optional(),
-      config: z.unknown().optional(),
+      type: z.string().min(1).optional(),
+      source: MosaicDashboardPanelSource.optional(),
+      config: z.record(z.string(), z.unknown()).optional(),
     })
     .describe('Partial panel config patch.'),
 });
@@ -175,10 +182,28 @@ export function createMosaicDashboardCommands<
             panelId,
           );
         }
+        const panelValidation = validatePanelConfig({
+          ...existingPanel,
+          ...patch,
+          id: panelId,
+        });
+        if (!panelValidation.success) {
+          return {
+            success: false,
+            commandId: MOSAIC_DASHBOARD_COMMAND_IDS.updatePanel,
+            code: 'invalid-dashboard-panel-patch',
+            error: 'Dashboard panel patch does not match the panel type.',
+            data: {
+              dashboardId,
+              panelId,
+              issues: panelValidation.error.issues,
+            },
+          };
+        }
         state.mosaicDashboard.updatePanel(
           dashboardId,
           panelId,
-          patch as Partial<Omit<MosaicDashboardPanelConfig, 'id'>>,
+          stripPanelId(panelValidation.data),
         );
         const updatedDashboard =
           state.mosaicDashboard.getDashboard(dashboardId);
@@ -243,4 +268,29 @@ export function createMosaicDashboardCommands<
       },
     },
   ];
+}
+
+function stripPanelId(
+  panel: MosaicDashboardPanelConfig,
+): Partial<Omit<MosaicDashboardPanelConfig, 'id'>> {
+  const {id: _id, ...patch} = panel;
+  return patch;
+}
+
+function validatePanelConfig(
+  panel: unknown,
+):
+  | {success: true; data: MosaicDashboardPanelConfig}
+  | {success: false; error: z.ZodError} {
+  const panelType =
+    typeof panel === 'object' && panel !== null && 'type' in panel
+      ? (panel as {type?: unknown}).type
+      : undefined;
+  if (panelType === MOSAIC_DASHBOARD_CHART_PANEL_TYPE) {
+    return ChartPanelConfig.safeParse(panel);
+  }
+  if (panelType === MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE) {
+    return DataTableExplorerPanel.safeParse(panel);
+  }
+  return MosaicDashboardPanelConfigSchema.safeParse(panel);
 }

@@ -144,4 +144,36 @@ describe('Mosaic dashboard commands', () => {
       code: 'dashboard-panel-not-found',
     });
   });
+
+  it('rejects dashboard panel patches that would create invalid panel config', async () => {
+    const store = createTestStore();
+    const dashboardId = 'dashboard-1';
+    const panel = createMosaicDashboardChartPanelConfig('Magnitude', {
+      chartType: 'histogram',
+      settings: {field: 'magnitude'},
+    });
+    store.getState().mosaicDashboard.ensureDashboard(dashboardId);
+    store.getState().mosaicDashboard.addPanel(dashboardId, panel);
+
+    const result = await store
+      .getState()
+      .commands.invokeCommand(MOSAIC_DASHBOARD_COMMAND_IDS.updatePanel, {
+        dashboardId,
+        panelId: panel.id,
+        patch: {config: {pageSize: 25}},
+      });
+
+    expect(result).toMatchObject({
+      success: false,
+      commandId: MOSAIC_DASHBOARD_COMMAND_IDS.updatePanel,
+      code: 'invalid-dashboard-panel-patch',
+    });
+    expect(
+      store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels[0],
+    ).toMatchObject({
+      id: panel.id,
+      title: 'Magnitude',
+      config: {chartType: 'histogram', settings: {field: 'magnitude'}},
+    });
+  });
 });

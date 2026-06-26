@@ -172,6 +172,11 @@ async function renameHtmlAppTitle(
         appId: input.appId,
         title,
         ...(renamedFiles ? {files: renamedFiles} : {}),
+        metadata: createHtmlAppRevisionMetadata(store, input, {
+          title,
+          isTitleOnly: true,
+          isInitialRevision: true,
+        }),
       },
       {surface: 'ai', actor: 'html-app-agent'},
     );
@@ -180,6 +185,8 @@ async function renameHtmlAppTitle(
         result.error ?? result.message ?? 'Failed to rename HTML app.',
       );
     }
+    revision = (result.data as {revision?: HtmlAppRevision} | undefined)
+      ?.revision;
   } else {
     const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
     const result = await store.getState().commands.invokeCommand(
