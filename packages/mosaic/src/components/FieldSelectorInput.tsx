@@ -3,8 +3,7 @@ import {
   ChartBuilderColumn,
   ChartBuilderField,
 } from '../charts/chart-types/base-types';
-import {Combobox} from './Combobox';
-import {cn} from '@sqlrooms/ui';
+import {Combobox, cn} from '@sqlrooms/ui';
 
 export interface FieldSelectorInputProps {
   field: ChartBuilderField;

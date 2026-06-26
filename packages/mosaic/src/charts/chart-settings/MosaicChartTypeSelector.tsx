@@ -1,8 +1,8 @@
 import {type FC, memo, useMemo, useCallback} from 'react';
 import {ChartNoAxesCombined} from 'lucide-react';
+import {Combobox} from '@sqlrooms/ui';
 import {type ChartType} from '../chart-types/base-types';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
-import {Combobox} from '../../components/Combobox';
 
 interface MosaicChartTypeSelectorProps {
   value: ChartType;
