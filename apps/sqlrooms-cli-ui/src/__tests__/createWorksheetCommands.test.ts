@@ -1,4 +1,5 @@
 import {jest} from '@jest/globals';
+import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
 import {createWorksheetCommands} from '../createWorksheetCommands';
 
 function createCommandContext(state: unknown) {
@@ -235,6 +236,72 @@ describe('createWorksheetCommands', () => {
       'dashboard.set-selected-table',
       expect.anything(),
       expect.anything(),
+    );
+    expect(invokeCommand).not.toHaveBeenCalledWith(
+      'dashboard.add-panel',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('updates a map panel seeded by stateful block creation instead of adding a duplicate', async () => {
+    const {state, invokeCommand} = createState();
+    let mapStateSeeded = false;
+    const seededPanel = {
+      id: 'seeded-map-panel',
+      type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+      title: 'Seeded Map',
+      config: {},
+    };
+    state.mosaicDashboard.getDashboard.mockImplementation(() => ({
+      panels: mapStateSeeded ? [seededPanel] : [],
+    }));
+    invokeCommand.mockImplementation(async (commandId: string, input: any) => {
+      if (
+        commandId === 'worksheet.create-stateful-block' &&
+        input.blockType === 'map'
+      ) {
+        mapStateSeeded = true;
+        return {
+          success: true,
+          commandId,
+          data: {
+            blockId: 'map-block',
+            blockInstanceId: input.blockInstanceId,
+          },
+        };
+      }
+      if (commandId.startsWith('dashboard.')) {
+        return {success: true, commandId, data: input};
+      }
+      return {success: true, commandId, data: input};
+    });
+
+    const result = await getCommand('worksheet.add-map-block').execute(
+      createCommandContext(state),
+      {
+        worksheetId: 'worksheet-1',
+        title: 'Map',
+        reasoning: 'show earthquake points',
+        config: {
+          spec: {},
+          datasets: {
+            earthquakes: {source: {tableName: 'earthquakes'}},
+          },
+        },
+      },
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {blockId: 'map-block', panelId: 'seeded-map-panel'},
+    });
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'dashboard.update-panel',
+      expect.objectContaining({
+        panelId: 'seeded-map-panel',
+      }),
+      {surface: 'ai', actor: 'worksheet-command'},
     );
     expect(invokeCommand).not.toHaveBeenCalledWith(
       'dashboard.add-panel',

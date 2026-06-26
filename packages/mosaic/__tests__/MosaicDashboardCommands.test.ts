@@ -168,12 +168,15 @@ describe('Mosaic dashboard commands', () => {
       commandId: MOSAIC_DASHBOARD_COMMAND_IDS.updatePanel,
       code: 'invalid-dashboard-panel-patch',
     });
-    expect(
-      store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels[0],
-    ).toMatchObject({
-      id: panel.id,
-      title: 'Magnitude',
-      config: {chartType: 'histogram', settings: {field: 'magnitude'}},
+    const storedPanel = store
+      .getState()
+      .mosaicDashboard.getDashboard(dashboardId)?.panels[0];
+
+    expect(storedPanel?.id).toBe(panel.id);
+    expect(storedPanel?.title).toBe('Magnitude');
+    expect(storedPanel?.config).toEqual({
+      chartType: 'histogram',
+      settings: {field: 'magnitude'},
     });
   });
 });

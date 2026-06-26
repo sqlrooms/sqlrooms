@@ -169,6 +169,21 @@ function findStatefulBlock(
     });
 }
 
+function findMapPanel(state: RoomState, mapId: string, panelId?: string) {
+  const dashboard = state.mosaicDashboard.getDashboard(mapId);
+  if (panelId) {
+    return dashboard?.panels.find(
+      (candidate: {id?: string; type?: string}) =>
+        candidate.id === panelId &&
+        candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
+    );
+  }
+  return dashboard?.panels.find(
+    (candidate: {type?: string}) =>
+      candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
+  );
+}
+
 export function createWorksheetCommands(): RoomCommand<RoomState>[] {
   return [
     {
@@ -375,17 +390,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
           );
         }
 
-        const existingDashboard = state.mosaicDashboard.getDashboard(mapId);
-        const existingPanel = params.panelId
-          ? existingDashboard?.panels.find(
-              (candidate: {id?: string; type?: string}) =>
-                candidate.id === params.panelId &&
-                candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-            )
-          : existingDashboard?.panels.find(
-              (candidate: {type?: string}) =>
-                candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-            );
+        let existingPanel = findMapPanel(state, mapId, params.panelId);
         if (params.panelId && !existingPanel) {
           throw new Error(`Map panel ${params.panelId} was not found`);
         }
@@ -408,6 +413,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
             },
           );
           blockId = statefulBlockFromCommandData(result.data).blockId;
+          existingPanel = findMapPanel(state, mapId, params.panelId);
         }
 
         state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
