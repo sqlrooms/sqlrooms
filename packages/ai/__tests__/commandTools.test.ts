@@ -4,7 +4,11 @@ jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
   hasCommandSliceState: () => true,
 }));
 
-const {createCommandTools} = await import('../src/tools/commandTools');
+const {
+  createCommandTools,
+  GetCommandToolParameters,
+  SearchCommandsToolParameters,
+} = await import('../src/tools/commandTools');
 
 const inputSchema = {
   type: 'object',
@@ -176,6 +180,49 @@ describe('command tools', () => {
         inputSchema,
       },
     });
+  });
+
+  it('honors the configured default surface for parsed discovery inputs', async () => {
+    const invokeCommand = jest.fn();
+    const listCommands = jest.fn(
+      (listOptions?: {includeInputSchema?: boolean}) =>
+        commandDescriptors.map((descriptor) =>
+          listOptions?.includeInputSchema
+            ? descriptor
+            : {...descriptor, inputSchema: undefined},
+        ),
+    );
+    const tools = createCommandTools(
+      {
+        getState: () => ({
+          commands: {
+            registerCommands: jest.fn(),
+            unregisterCommands: jest.fn(),
+            listCommands,
+            getCommand: jest.fn(),
+            executeCommand: jest.fn(),
+            invokeCommand,
+          },
+        }),
+      } as any,
+      {defaultSurface: 'mcp'},
+    );
+
+    await (tools.search_commands as any).execute(
+      SearchCommandsToolParameters.parse({query: 'rename'}),
+    );
+    await (tools.get_command as any).execute(
+      GetCommandToolParameters.parse({commandId: 'artifact.rename'}),
+    );
+
+    expect(listCommands).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({surface: 'mcp'}),
+    );
+    expect(listCommands).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({surface: 'mcp'}),
+    );
   });
 
   it('passes the owning AI session id through command invocation metadata', async () => {

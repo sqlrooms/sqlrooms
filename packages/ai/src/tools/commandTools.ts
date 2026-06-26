@@ -27,11 +27,9 @@ export const SearchCommandsToolParameters = z.object({
     .optional()
     .default('')
     .describe('Intent or command ID to search for.'),
-  surface: CommandSurfaceSchema.optional()
-    .default('ai')
-    .describe(
-      'Command surface used to evaluate command visibility/enabled state.',
-    ),
+  surface: CommandSurfaceSchema.optional().describe(
+    'Command surface used to evaluate command visibility/enabled state. Defaults to the command tool defaultSurface option.',
+  ),
   includeHidden: z
     .boolean()
     .optional()
@@ -134,11 +132,9 @@ export type ListCommandsToolLlmResult = {
 
 export const GetCommandToolParameters = z.object({
   commandId: z.string().describe('The command ID to inspect.'),
-  surface: CommandSurfaceSchema.optional()
-    .default('ai')
-    .describe(
-      'Command surface used to evaluate command visibility/enabled state.',
-    ),
+  surface: CommandSurfaceSchema.optional().describe(
+    'Command surface used to evaluate command visibility/enabled state. Defaults to the command tool defaultSurface option.',
+  ),
   includeHidden: z
     .boolean()
     .optional()
