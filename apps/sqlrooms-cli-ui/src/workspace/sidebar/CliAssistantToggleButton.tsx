@@ -1,17 +1,28 @@
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {SparklesIcon} from 'lucide-react';
+import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
 import {useRoomStore} from '../../store';
 
 export function CliAssistantToggleButton() {
   const showArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.showArtifactChooser,
   );
+  const currentArtifactId = useRoomStore(
+    (state) => state.artifacts.config.currentArtifactId,
+  );
+  const artifactsById = useRoomStore(
+    (state) => state.artifacts.config.artifactsById,
+  );
   const toggleCollapsed = useRoomStore((state) => state.layout.toggleCollapsed);
   const isAssistantCollapsed = useRoomStore((state) =>
     state.layout.isCollapsed('assistant-sidebar'),
   );
+  const currentArtifact = currentArtifactId && artifactsById[currentArtifactId];
+  const hasCurrentCliArtifact =
+    currentArtifact &&
+    CLI_ARTIFACT_TYPES.includes(currentArtifact.type as CliArtifactType);
 
-  if (showArtifactChooser) {
+  if (showArtifactChooser || !hasCurrentCliArtifact) {
     return null;
   }
 

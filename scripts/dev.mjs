@@ -1,4 +1,6 @@
 import {spawn, spawnSync} from 'node:child_process';
+import net from 'node:net';
+import {tmpdir} from 'node:os';
 import path from 'node:path';
 
 /**
@@ -18,9 +20,9 @@ const target = hasTarget ? rawArgs[0] : null;
 const restArgs = hasTarget ? rawArgs.slice(1) : rawArgs;
 const targetAliases = {
   cli: {
-    packageName: 'sqlrooms-cli-python',
-    targetDevFilters: ['sqlrooms-cli-python...', '!@sqlrooms/*'],
-    dependencyFilters: ['sqlrooms-cli-python^...', '!sqlrooms-cli-app'],
+    packageName: 'sqlrooms-python',
+    targetDevFilters: ['sqlrooms-python...', '!@sqlrooms/*'],
+    dependencyFilters: ['sqlrooms-python^...', '!sqlrooms-cli-app'],
   },
 };
 const targetConfig =
@@ -81,6 +83,169 @@ const childEnv = {
   [pathKey]: childPath,
   SQLROOMS_CLI_DEV_ARGS: JSON.stringify(cliArgs),
 };
+const CLI_DEV_API_DEFAULT_PORT = 4273;
+const CLI_DEV_UI_DEFAULT_PORT = 3100;
+
+function readOptionValue(args, name) {
+  const prefix = `${name}=`;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === name) return args[index + 1] ?? null;
+    if (arg.startsWith(prefix)) return arg.slice(prefix.length);
+  }
+  return null;
+}
+
+function hasOption(args, name) {
+  return readOptionValue(args, name) !== null;
+}
+
+function publicHost(host) {
+  return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
+}
+
+function hostForUrl(host) {
+  return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+}
+
+function portProbeHosts(host) {
+  return host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
+}
+
+async function isPortAvailableOnHost(
+  host,
+  port,
+  {ignoreUnavailable = false} = {},
+) {
+  return await new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once('error', (error) => {
+      if (error.code === 'EADDRINUSE' || error.code === 'EACCES') {
+        resolve(false);
+        return;
+      }
+      if (
+        ignoreUnavailable &&
+        (error.code === 'EADDRNOTAVAIL' || error.code === 'EAFNOSUPPORT')
+      ) {
+        resolve(true);
+        return;
+      }
+      reject(error);
+    });
+    server.once('listening', () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, host);
+  });
+}
+
+async function isPortAvailable(host, port) {
+  const probeHosts = portProbeHosts(host);
+  const results = await Promise.all(
+    probeHosts.map((probeHost) =>
+      isPortAvailableOnHost(probeHost, port, {
+        ignoreUnavailable: host === 'localhost',
+      }),
+    ),
+  );
+  return results.every(Boolean);
+}
+
+async function findAvailablePort(startPort, host, reservedPorts = new Set()) {
+  let port = startPort;
+  while (port <= 65535) {
+    if (!reservedPorts.has(port) && (await isPortAvailable(host, port))) {
+      return port;
+    }
+    console.log(`Port ${port} is in use, trying another one...`);
+    port += 1;
+  }
+  throw new Error(`No available port found starting from ${startPort}.`);
+}
+
+function parsePortOption(args, name) {
+  const value = readOptionValue(args, name);
+  if (value === null) return null;
+  const port = Number.parseInt(value, 10);
+  return Number.isFinite(port) ? port : null;
+}
+
+function hasDbPathArg(args) {
+  if (
+    readOptionValue(args, '--db-path') !== null ||
+    readOptionValue(args, '-d') !== null
+  ) {
+    return true;
+  }
+
+  const optionsWithValue = new Set([
+    '--config',
+    '--db-path',
+    '--host',
+    '--meta-db',
+    '--meta-namespace',
+    '--port',
+    '--ui',
+    '--ws-port',
+    '-d',
+  ]);
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--') {
+      return args.slice(index + 1).some((value) => !value.startsWith('-'));
+    }
+    if (arg.startsWith('--') && arg.includes('=')) continue;
+    if (optionsWithValue.has(arg)) {
+      index += 1;
+      continue;
+    }
+    if (!arg.startsWith('-')) return true;
+  }
+
+  return false;
+}
+
+async function getCliDevPorts(args) {
+  const host = readOptionValue(args, '--host') ?? '127.0.0.1';
+  const proxyHost = hostForUrl(publicHost(host));
+  const explicitApiPort = parsePortOption(args, '--port');
+  const explicitWsPort = parsePortOption(args, '--ws-port');
+  const reservedPorts = new Set(
+    [CLI_DEV_UI_DEFAULT_PORT, explicitWsPort].filter(
+      (port) => typeof port === 'number',
+    ),
+  );
+  const apiPort =
+    explicitApiPort ??
+    (await findAvailablePort(CLI_DEV_API_DEFAULT_PORT, host, reservedPorts));
+  const uiReservedPorts = new Set(
+    [apiPort, explicitWsPort].filter((port) => typeof port === 'number'),
+  );
+  const uiPort = await findAvailablePort(
+    CLI_DEV_UI_DEFAULT_PORT,
+    '0.0.0.0',
+    uiReservedPorts,
+  );
+  return {apiPort, proxyHost, uiPort};
+}
+
+function getPythonCliDevArgs(args, apiPort, uiPort) {
+  const apiPortArgs = hasOption(args, '--port')
+    ? args
+    : ['--port', String(apiPort), ...args];
+  const experimentalArgs = apiPortArgs.includes('--experimental')
+    ? apiPortArgs
+    : ['--experimental', ...apiPortArgs];
+  return hasDbPathArg(experimentalArgs)
+    ? experimentalArgs
+    : [
+        '--db-path',
+        path.join(tmpdir(), `sqlrooms-${uiPort}.db`),
+        ...experimentalArgs,
+      ];
+}
 
 function turboRunArgs(task, filters, extraArgs = []) {
   return [
@@ -167,12 +332,14 @@ if (target !== 'cli') {
     process.exit(1);
   }
 } else if (isDryRun) {
+  const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
+  const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
   console.log(
-    '(cd apps/sqlrooms-cli-ui && ./node_modules/.bin/vite --host --port 4174)',
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   console.log(
-    `(cd python/sqlrooms-cli && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
-      cliArgs,
+    `(cd python/sqlrooms && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
+      pythonCliArgs,
     )} node scripts/dev.mjs)`,
   );
   process.exit(0);
@@ -200,12 +367,17 @@ function stopChildren(signal = 'SIGTERM') {
 function startProcess(
   label,
   args,
-  {allowCleanExit = false, command = pnpmCommand, cwd = process.cwd()} = {},
+  {
+    allowCleanExit = false,
+    command = pnpmCommand,
+    cwd = process.cwd(),
+    env = {},
+  } = {},
 ) {
   const child = spawn(command, args, {
     cwd,
     stdio: 'inherit',
-    env: childEnv,
+    env: {...childEnv, ...env},
     detached: process.platform !== 'win32',
     shell: process.platform === 'win32',
   });
@@ -255,13 +427,25 @@ process.on('SIGTERM', () => {
 });
 
 if (target === 'cli') {
-  startProcess('sqlrooms CLI UI dev server', ['--host', '--port', '4174'], {
-    command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
-    cwd: path.resolve('apps/sqlrooms-cli-ui'),
-  });
+  const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
+  const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
+  startProcess(
+    'sqlrooms CLI UI dev server',
+    ['--host', '--port', String(uiPort)],
+    {
+      command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
+      cwd: path.resolve('apps/sqlrooms-cli-ui'),
+      env: {
+        SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+      },
+    },
+  );
   startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
     command: process.execPath,
-    cwd: path.resolve('python/sqlrooms-cli'),
+    cwd: path.resolve('python/sqlrooms'),
+    env: {
+      SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
+    },
   });
 } else {
   startProcess(

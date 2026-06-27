@@ -1,4 +1,5 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import {createId} from '@paralleldrive/cuid2';
 import {
   setAiRunContextPrimaryItem,
   type AiRunContext,
@@ -21,7 +22,11 @@ import {
 } from 'ai';
 import {produce} from 'immer';
 import {TOOL_CALL_CANCELLED} from './constants';
-import {setChatRequestErrorMessage} from './chatTurns';
+import {
+  CHAT_REQUEST_ERROR_PART_TYPE,
+  createChatRequestErrorPart,
+  setChatRequestErrorMessage,
+} from './chatTurns';
 import type {
   AiSliceStateForTransport,
   AiToolExecutionContext,
@@ -377,6 +382,7 @@ export function createLocalChatTransportFactory({
           name: provider,
           baseURL: baseUrl ?? 'https://api.openai.com/v1',
           headers,
+          includeUsage: true,
         });
         model = openai.chatModel(modelId);
       }
@@ -423,10 +429,6 @@ export function createLocalChatTransportFactory({
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
-        onFinish: ({totalUsage, usage}) => {
-          const finalUsage = toMessageTokenUsage(totalUsage ?? usage);
-          rememberSessionTokenUsage(sessionId, finalUsage);
-        },
         ...(providerOptions ? {providerOptions} : {}),
       });
 
@@ -436,6 +438,7 @@ export function createLocalChatTransportFactory({
         outputTokens: 0,
         totalTokens: 0,
       };
+      let lastStepInputTokens = 0;
 
       return createAgentUIStreamResponse({
         agent,
@@ -450,6 +453,7 @@ export function createLocalChatTransportFactory({
             accumulatedUsage.inputTokens += u.inputTokens ?? 0;
             accumulatedUsage.outputTokens += u.outputTokens ?? 0;
             accumulatedUsage.totalTokens += u.totalTokens ?? 0;
+            lastStepInputTokens = u.inputTokens ?? 0;
             if (
               u.inputTokenDetails?.cacheReadTokens != null ||
               u.inputTokenDetails?.cacheWriteTokens != null
@@ -472,9 +476,26 @@ export function createLocalChatTransportFactory({
             }
           }
           if (part.type === 'finish') {
-            rememberSessionTokenUsage(sessionId, accumulatedUsage);
+            // Prefer totalUsage from the finish event (authoritative cumulative value
+            // from the agent) over per-step accumulated values which may be zeros
+            // when the provider doesn't report usage in streaming chunks.
+            const finishPart = part as {
+              totalUsage?: LanguageModelUsage;
+              usage?: LanguageModelUsage;
+            };
+            const finishUsage = toMessageTokenUsage(
+              finishPart.totalUsage ?? finishPart.usage,
+            );
+            const finalUsage =
+              finishUsage.totalTokens > 0 ||
+              finishUsage.inputTokens > 0 ||
+              finishUsage.outputTokens > 0
+                ? finishUsage
+                : accumulatedUsage;
+            finalUsage.lastStepInputTokens = lastStepInputTokens;
+            rememberSessionTokenUsage(sessionId, finalUsage);
             return {
-              tokenUsage: accumulatedUsage,
+              tokenUsage: finalUsage,
             } satisfies AssistantMessageMetadata;
           }
           return undefined;
@@ -521,8 +542,14 @@ export function createRemoteChatTransportFactory(params: {
         typeof parsed === 'object' && parsed !== null
           ? (parsed as Record<string, unknown>)
           : {};
+      const messages = Array.isArray(parsedObj.messages)
+        ? sanitizeMessagesForLLM(
+            fixIncompleteToolCalls(parsedObj.messages as UIMessage[]),
+          )
+        : [];
       const enhancedBody = {
         ...parsedObj,
+        messages,
         modelProvider,
         model,
         instructions: getInstructions(),
@@ -554,10 +581,40 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
+function selectErrorSourceMessages({
+  sessionMessages,
+  fallbackMessages,
+}: {
+  sessionMessages: UIMessage[];
+  fallbackMessages?: UIMessage[];
+}): UIMessage[] {
+  if (fallbackMessages && fallbackMessages.length > 0) {
+    return fallbackMessages;
+  }
+  return sessionMessages;
+}
+
+function hasChatRequestErrorPart(message: UIMessage | undefined): boolean {
+  return Boolean(
+    message?.role === 'assistant' &&
+    message.parts?.some((part) => part.type === CHAT_REQUEST_ERROR_PART_TYPE),
+  );
+}
+
+function createChatRequestErrorMessage(error: string): UIMessage {
+  return {
+    id: createId(),
+    role: 'assistant',
+    parts: [createChatRequestErrorPart({error})],
+  };
+}
+
 export function createChatHandlers({
   store,
+  onChatFinish,
 }: {
   store: StoreApi<AiSliceStateForTransport>;
+  onChatFinish?: (args: {sessionId: string; messages: UIMessage[]}) => void;
 }) {
   return {
     onChatFinish: ({
@@ -647,13 +704,18 @@ export function createChatHandlers({
         if (shouldEndAnalysis(completedMessages)) {
           state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
+          onChatFinish?.({sessionId, messages: completedMessages});
         }
       } catch (err) {
         console.error('onChatFinish error:', err);
         throw err;
       }
     },
-    onChatError: (sessionId: string, error: unknown) => {
+    onChatError: (
+      sessionId: string,
+      error: unknown,
+      fallbackMessages?: UIMessage[],
+    ) => {
       try {
         consumeSessionTokenUsage(sessionId);
         let errMsg = getErrorMessageForDisplay(error);
@@ -681,21 +743,28 @@ export function createChatHandlers({
             if (targetSession) {
               const existingMessages = (targetSession.uiMessages ||
                 []) as UIMessage[];
-              const completedMessages =
-                fixIncompleteToolCalls(existingMessages);
+              const sourceMessages = selectErrorSourceMessages({
+                sessionMessages: existingMessages,
+                fallbackMessages,
+              });
+              const completedMessages = fixIncompleteToolCalls(sourceMessages);
               writeToolTimingsToMetadata(completedMessages, toolTimings);
-              targetSession.uiMessages =
-                completedMessages as ChatSessionSchema['uiMessages'];
-              writeAgentDebugStateToSession(targetSession, currentState);
 
-              const uiMessages = targetSession.uiMessages as UIMessage[];
-              const lastUserMessage = uiMessages
+              const lastUserMessage = completedMessages
                 .filter((msg) => msg.role === 'user')
                 .slice(-1)[0];
 
               if (lastUserMessage) {
                 setChatRequestErrorMessage(lastUserMessage, {error: errMsg});
               }
+
+              if (!hasChatRequestErrorPart(completedMessages.at(-1))) {
+                completedMessages.push(createChatRequestErrorMessage(errMsg));
+              }
+
+              targetSession.uiMessages =
+                completedMessages as ChatSessionSchema['uiMessages'];
+              writeAgentDebugStateToSession(targetSession, currentState);
             }
           }),
         );

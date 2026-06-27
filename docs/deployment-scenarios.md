@@ -77,7 +77,7 @@ Pricing and limits can change frequently, so treat platform economics as a regul
 
 This scenario is for single-user local workflows, similar to how Jupyter is often used: run a local backend process and connect from your browser.
 
-- **How it works:** Start `sqlrooms-cli` from CLI on your laptop, then point a local SQLRooms app to that local server endpoint.
+- **How it works:** Start `sqlrooms` from CLI on your laptop, then point a local SQLRooms app to that local server endpoint.
 - **Data storage:** Local DuckDB file (or `:memory:`), with optional remote sources/extensions.
 - **App state storage:** Primarily local browser state, with optional server-side metadata tables.
 - **Best fit:** Power users and developers who want local control, reproducibility, and a backend runtime without deploying shared infrastructure.
@@ -85,7 +85,7 @@ This scenario is for single-user local workflows, similar to how Jupyter is ofte
 
 Reference:
 
-- [`sqlrooms-cli` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-cli)
+- [`sqlrooms` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms)
 
 ## 5) Offline-capable PWA
 

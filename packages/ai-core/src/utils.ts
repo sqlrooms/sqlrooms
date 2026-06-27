@@ -18,6 +18,7 @@ import {
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
+import {CHAT_REQUEST_ERROR_PART_TYPE} from './chatTurns';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -345,6 +346,13 @@ export function sanitizeMessagesForLLM(
   };
 
   return messages
+    .filter((message) => {
+      if (message.role !== 'assistant') return true;
+      if (!message.parts || message.parts.length === 0) return true;
+      return !message.parts.every(
+        (part) => part.type === CHAT_REQUEST_ERROR_PART_TYPE,
+      );
+    })
     .map((message) => {
       if (!message.parts || message.parts.length === 0) {
         return message;

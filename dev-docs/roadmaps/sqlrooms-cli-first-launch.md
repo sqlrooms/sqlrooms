@@ -1,24 +1,21 @@
-# sqlrooms-cli First Launch Roadmap
+# sqlrooms First Launch Roadmap
 
 ## Goal
 
-Publish `sqlrooms-cli` as a Python tool that can be run with `uvx` or installed
+Publish `sqlrooms` as a Python tool that can be run with `uvx` or installed
 with `uv tool`, giving users a local-first way to create a SQLRooms project,
 add data, and build useful dashboards without cloning this monorepo.
 
 The first launch should optimize for a small, reliable path:
 
 ```bash
-uvx --from sqlrooms-cli sqlrooms ./my-project.duckdb
+uvx sqlrooms ./my-project.duckdb
 # or, after installation:
-uv tool install sqlrooms-cli
+uv tool install sqlrooms
 sqlrooms ./my-project.duckdb
 ```
 
-If we want the shorter `uvx sqlrooms ./my-project.duckdb` command, the PyPI
-distribution name needs to be `sqlrooms` or we need a separate package/alias.
-The current distribution name is `sqlrooms-cli`, while the console script is
-`sqlrooms`.
+The PyPI distribution name and console script are both `sqlrooms`.
 
 ## Launch Thesis
 
@@ -34,9 +31,9 @@ the core local-data dashboard path.
 
 ## Current State
 
-Already present in `python/sqlrooms-cli`:
+Already present in `python/sqlrooms`:
 
-- Python package named `sqlrooms-cli` with a `sqlrooms` console script.
+- Python package named `sqlrooms` with a `sqlrooms` console script.
 - Bundled static UI support under `sqlrooms/web/static`.
 - `pnpm run build:ui` copies the Vite CLI UI into the Python package bundle.
 - `SqlroomsHttpServer` starts a DuckDB websocket backend via `sqlrooms-server`
@@ -81,7 +78,7 @@ Already present in `python/sqlrooms-cli`:
   - SQL cells can query loaded DuckDB tables.
   - Notebook state persists with the project.
 - Packaging and installation:
-  - Publish wheels and sdists for `sqlrooms-cli`.
+  - Publish wheels and sdists for `sqlrooms`.
   - The wheel must include the built UI bundle.
   - `sqlrooms-server` must be published and installable as a dependency.
   - Clean-environment smoke tests must pass through both `uvx` and
@@ -109,17 +106,12 @@ not require explaining all of them.
 
 ### Packaging
 
-- Decide package naming:
-  - Option A: keep PyPI distribution `sqlrooms-cli`; document
-    `uvx --from sqlrooms-cli sqlrooms`.
-  - Option B: publish distribution `sqlrooms`; then `uvx sqlrooms` works.
-  - Option C: publish both later, with `sqlrooms` as a thin launcher package.
-- Verify the `sqlrooms-cli` and `sqlrooms-server` wheels co-install cleanly into
+- Verify the `sqlrooms` and `sqlrooms-server` wheels co-install cleanly into
   the shared `sqlrooms` namespace package.
 - Verify clean installs on macOS and Linux at minimum:
-  - `uvx --from sqlrooms-cli sqlrooms --help`
-  - `uvx --from sqlrooms-cli sqlrooms ./smoke.duckdb --no-open-browser`
-  - `uv tool install sqlrooms-cli`
+  - `uvx sqlrooms --help`
+  - `uvx sqlrooms ./smoke.duckdb --no-open-browser`
+  - `uv tool install sqlrooms`
   - `sqlrooms --help`
 - Confirm `requires-python` should remain `>=3.10` even though the monorepo
   requires Node `>=22` for development. Users of the published Python tool
@@ -207,9 +199,9 @@ not require explaining all of them.
 - Keep Postgres and Snowflake as optional extras:
 
   ```bash
-  uv tool install "sqlrooms-cli[postgres]"
-  uv tool install "sqlrooms-cli[snowflake]"
-  uv tool install "sqlrooms-cli[connectors]"
+  uv tool install "sqlrooms[postgres]"
+  uv tool install "sqlrooms[snowflake]"
+  uv tool install "sqlrooms[connectors]"
   ```
 
 - Do not include connector setup in the main quickstart.
@@ -236,8 +228,7 @@ not require explaining all of them.
 ### Milestone 0: Decide the Product Shape
 
 - Confirm first-launch positioning: "local data to Mosaic dashboard".
-- Decide whether the package name remains `sqlrooms-cli` or becomes
-  `sqlrooms`.
+- Keep the PyPI distribution name as `sqlrooms`.
 - Decide whether notebooks are visible by default or beta/secondary.
 - Decide whether Canvas and App artifacts should stay visible in the first
   public UI.
@@ -245,7 +236,7 @@ not require explaining all of them.
 ### Milestone 1: Packaging Hardening
 
 - Rebuild and bundle the CLI UI.
-- Build `sqlrooms-server` and `sqlrooms-cli`.
+- Build `sqlrooms-server` and `sqlrooms`.
 - Inspect wheel contents for static assets.
 - Test clean `uvx` execution.
 - Test clean `uv tool install`.
@@ -267,14 +258,15 @@ not require explaining all of them.
 ### Milestone 4: Public Release
 
 - Publish `sqlrooms-server`.
-- Publish `sqlrooms-cli`.
+- Publish `sqlrooms`.
 - Test the exact public install commands after publish.
 - Tag the release.
 - Announce with a single dashboard-first quickstart.
 
 ## Open Questions
 
-- Should the PyPI distribution be `sqlrooms`, `sqlrooms-cli`, or both?
+- Should a compatibility `sqlrooms-cli` alias package be added later, or should
+  the public package remain only `sqlrooms`?
 - Should the first visible UI artifact set be only Dashboard + Notebook, or keep
   Dashboard + Notebook + Canvas + App?
 - Is terminal-driven data import (`sqlrooms add`) important for first launch, or

@@ -6,8 +6,9 @@ export const CLI_ARTIFACT_TYPES = [
   'document',
   'sql-query',
   'html-app',
+  'python',
   'canvas',
-  'app',
+  'app-builder',
 ] as const;
 
 export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];

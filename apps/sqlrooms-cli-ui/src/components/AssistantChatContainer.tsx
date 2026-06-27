@@ -137,7 +137,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 onCreateSession={handleCreateSession}
                 createSessionDisabled={createSessionDisabled}
                 filterSession={filterSession}
-                emptyLabel="No chats for this artifact yet"
+                emptyLabel="No chats for this item yet"
                 onSelectChat={(sessionId) => {
                   const switchSession =
                     useRoomStore.getState().ai.switchSession;
@@ -190,7 +190,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 }}
               />
               <AssistantContextSelector />
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex min-w-0 items-center justify-end">
                 <Chat.ModelSelector />
               </div>
             </Chat.Composer>

@@ -30,7 +30,7 @@ NOTE: Count plots aggregate by counting unique values, so they handle large data
 CRITICAL: Only for categorical data (text, categories, enums).
 Do NOT use for: numeric distributions (use histogram), relationships between columns (use scatter-plot), time series (use line-chart).`,
     inputSchema: CountPlotToolInput,
-    execute: async ({tableName, title, settings}) => {
+    execute: async ({tableName, title, settings, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
 
@@ -46,6 +46,7 @@ Do NOT use for: numeric distributions (use histogram), relationships between col
 
         addChart({
           tableName,
+          panelId,
           title,
           config: chartConfig,
         });

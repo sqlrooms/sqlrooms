@@ -1,4 +1,3 @@
-import {createArtifactLayoutNode} from '@sqlrooms/artifacts';
 import {getRunningAiSessionCountsByArtifact} from '@sqlrooms/artifacts/ai';
 import {useCallback, useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
@@ -11,12 +10,9 @@ export function useCliArtifactSidebarTabs() {
   const aiSessionArtifacts = useRoomStore(
     (state) => state.artifactAi.config.aiSessionArtifacts,
   );
-  const selectedTabId = useRoomStore((state) =>
-    state.layout.getActiveTab('workspace'),
+  const currentArtifactId = useRoomStore(
+    (state) => state.artifacts.config.currentArtifactId,
   );
-  const addTab = useRoomStore((state) => state.layout.addTab);
-  const setActiveTab = useRoomStore((state) => state.layout.setActiveTab);
-  const deleteTab = useRoomStore((state) => state.layout.deleteTab);
   const setCurrentArtifact = useRoomStore(
     (state) => state.artifacts.setCurrentArtifact,
   );
@@ -64,12 +60,19 @@ export function useCliArtifactSidebarTabs() {
 
   const selectArtifact = useCallback(
     (artifactId: string) => {
-      addTab('workspace', createArtifactLayoutNode(artifactId, 'artifact'));
-      setActiveTab('workspace', artifactId);
+      if (!tabs.some((artifact) => artifact.id === artifactId)) return;
       setCurrentArtifact(artifactId);
       setShowArtifactChooser(false);
     },
-    [addTab, setActiveTab, setCurrentArtifact, setShowArtifactChooser],
+    [setCurrentArtifact, setShowArtifactChooser, tabs],
+  );
+  const selectedTabId = useMemo(
+    () =>
+      currentArtifactId &&
+      tabs.some((artifact) => artifact.id === currentArtifactId)
+        ? currentArtifactId
+        : tabs[0]?.id,
+    [currentArtifactId, tabs],
   );
 
   const renameArtifact = useCallback(
@@ -81,14 +84,9 @@ export function useCliArtifactSidebarTabs() {
 
   const deleteArtifact = useCallback(
     (artifactId: string) => {
-      const activeArtifactId = selectedTabId;
       deleteArtifactFromStore(artifactId);
-      deleteTab('workspace', artifactId);
-      if (activeArtifactId && activeArtifactId !== artifactId) {
-        setActiveTab('workspace', activeArtifactId);
-      }
     },
-    [deleteArtifactFromStore, deleteTab, selectedTabId, setActiveTab],
+    [deleteArtifactFromStore],
   );
 
   return {

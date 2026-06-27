@@ -7,14 +7,16 @@ import {
 } from '@sqlrooms/layout';
 import {FolderIcon, SparklesIcon} from 'lucide-react';
 import {StoreApi} from 'zustand';
-import {ARTIFACT_TYPES} from './artifactTypes';
+import type {createCliArtifactTypes} from './artifactTypes';
 import {AssistantPanel} from './components/AssistantPanel';
 import {RoomState} from './store-types';
 import {ArtifactsContainerPanel} from './workspace/ArtifactsContainerPanel';
 
 export const createLayout = ({
+  artifactTypes,
   store,
 }: {
+  artifactTypes: ReturnType<typeof createCliArtifactTypes>;
   store: StoreApi<RoomState>;
 }): CreateLayoutSliceProps => ({
   config: {
@@ -52,10 +54,10 @@ export const createLayout = ({
     },
     workspace: {
       component: ArtifactsContainerPanel,
-      title: 'Artifacts',
+      title: 'Workspace',
       icon: FolderIcon,
     },
-    artifact: createArtifactPanelDefinition(ARTIFACT_TYPES, store),
+    artifact: createArtifactPanelDefinition(artifactTypes, store),
   },
 });
 

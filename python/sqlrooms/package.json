@@ -1,0 +1,20 @@
+{
+  "name": "sqlrooms-python",
+  "version": "0.1.4",
+  "private": true,
+  "scripts": {
+    "build": "pnpm run build:ui && uv build && pnpm run verify:wheel",
+    "build:ui": "pnpm exec turbo build --filter=sqlrooms-cli-app... && node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','..','apps','sqlrooms-cli-ui','dist');const dst=path.resolve('sqlrooms','web','static');fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.cpSync(src,dst,{recursive:true});console.log('Copied UI bundle to',dst);\"",
+    "check-fix": "uv run ruff check --fix",
+    "dev": "node scripts/dev.mjs",
+    "dev:sync": "pnpm run dev --experimental --experimental-sync",
+    "format": "uv run ruff format",
+    "prerelease": "pnpm run build && uv run pytest && uv run ruff check && uv run ruff format --check",
+    "release": "pnpm run build && uvx twine upload --skip-existing ../dist/sqlrooms-*",
+    "test": "uv run pytest -s --log-cli-level=DEBUG",
+    "verify:wheel": "python scripts/verify_wheel.py"
+  },
+  "dependencies": {
+    "sqlrooms-cli-app": "workspace:*"
+  }
+}

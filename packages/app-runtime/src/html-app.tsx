@@ -8,8 +8,16 @@ import {
   useRoomStoreApi,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import {AppWindowIcon} from 'lucide-react';
-import {useEffect, useMemo, useRef, type ComponentType, type FC} from 'react';
+import {AppWindowIcon, HistoryIcon, RotateCcwIcon} from 'lucide-react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+  type FC,
+  type ReactNode,
+} from 'react';
 import {z} from 'zod';
 import {createBridgeHost, createDiagnosticPreludeScript} from './host';
 import {
@@ -33,19 +41,133 @@ export type HtmlAppDependency = z.infer<typeof HtmlAppDependency>;
 export const HtmlAppSourceFileMap = z.record(z.string(), z.string());
 export type HtmlAppSourceFileMap = z.infer<typeof HtmlAppSourceFileMap>;
 
+/**
+ * Origin category recorded for a persisted HTML app revision.
+ */
+export const HtmlAppRevisionSource = z.enum([
+  'assistant',
+  'user',
+  'restore',
+  'system',
+]);
+export type HtmlAppRevisionSource = z.infer<typeof HtmlAppRevisionSource>;
+
+/**
+ * Persisted source-bearing snapshot for an HTML app.
+ *
+ * Revisions store the source, title, intent, dependencies, and capability
+ * grants needed to replay undo, redo, and restore operations without depending
+ * on the live app state. Diagnostics are intentionally excluded because they
+ * describe runtime observations that can be regenerated for the active source.
+ */
+export const HtmlAppRevision = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  sourcePrompt: z.string().optional(),
+  source: HtmlAppRevisionSource,
+  sessionId: z.string().optional(),
+  toolCallId: z.string().optional(),
+  commitGroupId: z.string().optional(),
+  parentRevisionId: z.string().optional(),
+  createdAt: z.number(),
+  title: z.string(),
+  intent: z.string().optional(),
+  files: HtmlAppSourceFileMap,
+  entryHtmlPath: z.string().default('/index.html'),
+  requestedCapabilities: z.array(AppCapability).optional(),
+  grantedCapabilities: z.array(AppCapability).optional(),
+  dependencies: z.array(HtmlAppDependency).default([]),
+});
+export type HtmlAppRevision = z.infer<typeof HtmlAppRevision>;
+
 export const HtmlAppState = z.object({
   id: z.string(),
   title: z.string(),
+  intent: z.string().optional(),
   files: HtmlAppSourceFileMap,
   entryHtmlPath: z.string().default('/index.html'),
   requestedCapabilities: z.array(AppCapability).default([]),
   grantedCapabilities: z.array(AppCapability).default([]),
   dependencies: z.array(HtmlAppDependency).default([]),
   diagnostics: z.array(AppDiagnostic).default([]),
+  revisions: z.array(HtmlAppRevision).default([]),
+  activeRevisionId: z.string().optional(),
+  redoRevisionIds: z.array(z.string()).default([]),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
 export type HtmlAppState = z.infer<typeof HtmlAppState>;
+
+/**
+ * Partial state update used to create an HTML app revision.
+ *
+ * Omitted fields keep their current app value. Fields present with an explicit
+ * `undefined` value can clear optional revision fields such as `intent`.
+ */
+export type HtmlAppRevisionPatch = Partial<
+  Pick<
+    HtmlAppState,
+    | 'title'
+    | 'intent'
+    | 'files'
+    | 'entryHtmlPath'
+    | 'dependencies'
+    | 'requestedCapabilities'
+    | 'grantedCapabilities'
+    | 'diagnostics'
+  >
+>;
+
+/**
+ * Metadata recorded alongside a committed HTML app revision.
+ *
+ * By default commits are treated as user-authored, parented to the currently
+ * active revision, and prune any redo branch. Use `clearRedo: false` only when
+ * preserving redo history is part of a navigation operation.
+ */
+export type CommitHtmlAppRevisionMetadata = {
+  name?: string;
+  description?: string;
+  source?: HtmlAppRevisionSource;
+  sourcePrompt?: string;
+  sessionId?: string;
+  toolCallId?: string;
+  commitGroupId?: string;
+  parentRevisionId?: string;
+  createdAt?: number;
+  revisionId?: string;
+  clearRedo?: boolean;
+};
+
+/**
+ * Metadata accepted when restoring an existing revision.
+ *
+ * Restore operations always create a new revision with `source: "restore"`,
+ * parent it to the revision that was active at restore time, and clear redo
+ * history.
+ */
+export type RestoreHtmlAppRevisionMetadata = Omit<
+  CommitHtmlAppRevisionMetadata,
+  'source' | 'parentRevisionId' | 'clearRedo'
+>;
+
+/**
+ * Derived revision navigation state for history controls.
+ *
+ * `nextRevision` reflects the next linear revision in the retained revision
+ * list, while redo availability is tracked separately through
+ * `redoRevisionIds`.
+ */
+export type HtmlAppRevisionNavigationState = {
+  activeRevision?: HtmlAppRevision;
+  activeIndex: number;
+  totalRevisions: number;
+  canUndo: boolean;
+  canRedo: boolean;
+  previousRevision?: HtmlAppRevision;
+  nextRevision?: HtmlAppRevision;
+};
 
 export const HtmlAppRuntimeConfig = z.object({
   appsById: z.record(z.string(), HtmlAppState).default({}),
@@ -59,6 +181,23 @@ export type HtmlAppRuntimeSliceState = {
     updateApp: (appId: string, patch: Partial<HtmlAppState>) => void;
     updateAppFiles: (appId: string, files: HtmlAppSourceFileMap) => void;
     renameApp: (appId: string, title: string) => void;
+    commitAppRevision: (
+      appId: string,
+      patch: HtmlAppRevisionPatch,
+      metadata?: CommitHtmlAppRevisionMetadata,
+    ) => HtmlAppRevision | undefined;
+    restoreAppRevision: (
+      appId: string,
+      revisionId: string,
+      metadata?: RestoreHtmlAppRevisionMetadata,
+    ) => HtmlAppRevision | undefined;
+    undoAppRevision: (appId: string) => HtmlAppRevision | undefined;
+    redoAppRevision: (appId: string) => HtmlAppRevision | undefined;
+    getCurrentRevision: (appId: string) => HtmlAppRevision | undefined;
+    getRevisionList: (appId: string) => HtmlAppRevision[];
+    getRevisionNavigationState: (
+      appId: string,
+    ) => HtmlAppRevisionNavigationState;
     removeApp: (appId: string) => void;
     addDiagnostic: (appId: string, diagnostic: AppDiagnostic) => void;
     setDiagnostics: (appId: string, diagnostics: AppDiagnostic[]) => void;
@@ -156,6 +295,67 @@ export function createHtmlAppRuntimeSlice({
       renameApp: (appId, title) => {
         get().htmlApps.updateApp(appId, {title});
       },
+      commitAppRevision: (appId, patch, metadata) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const {app: nextApp, revision} = commitHtmlAppRevisionState(
+          existing,
+          patch,
+          metadata,
+        );
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = nextApp;
+          }),
+        );
+        return revision;
+      },
+      restoreAppRevision: (appId, revisionId, metadata) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const result = restoreHtmlAppRevisionState(
+          existing,
+          revisionId,
+          metadata,
+        );
+        if (!result) return undefined;
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = result.app;
+          }),
+        );
+        return result.revision;
+      },
+      undoAppRevision: (appId) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const result = undoHtmlAppRevisionState(existing);
+        if (!result) return undefined;
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = result.app;
+          }),
+        );
+        return result.revision;
+      },
+      redoAppRevision: (appId) => {
+        const existing = get().htmlApps.getApp(appId);
+        if (!existing) return undefined;
+        const result = redoHtmlAppRevisionState(existing);
+        if (!result) return undefined;
+        set((state) =>
+          produce(state, (draft: HtmlAppRuntimeSliceState) => {
+            draft.htmlApps.config.appsById[appId] = result.app;
+          }),
+        );
+        return result.revision;
+      },
+      getCurrentRevision: (appId) =>
+        getCurrentHtmlAppRevision(get().htmlApps.getApp(appId)),
+      getRevisionList: (appId) =>
+        getHtmlAppRevisionList(get().htmlApps.getApp(appId)),
+      getRevisionNavigationState: (appId) =>
+        getHtmlAppRevisionNavigationState(get().htmlApps.getApp(appId)),
       removeApp: (appId) => {
         set((state) =>
           produce(state, (draft: HtmlAppRuntimeSliceState) => {
@@ -185,6 +385,277 @@ export function createHtmlAppRuntimeSlice({
   }));
 }
 
+/**
+ * Apply a patch to an HTML app and append the result as a new revision.
+ *
+ * The returned app has the new revision active. When committing while an older
+ * revision is active, newer linear revisions are discarded by default so the new
+ * commit becomes the branch tip and redo history is cleared. Pass
+ * `clearRedo: false` for internal navigation flows that need to preserve the
+ * redo queue.
+ */
+export function commitHtmlAppRevisionState(
+  app: HtmlAppState,
+  patch: HtmlAppRevisionPatch,
+  metadata: CommitHtmlAppRevisionMetadata = {},
+): {app: HtmlAppState; revision: HtmlAppRevision} {
+  const createdAt = metadata.createdAt ?? Date.now();
+  const hasIntentPatch = Object.prototype.hasOwnProperty.call(patch, 'intent');
+  const previousRevision = getCurrentHtmlAppRevision(app);
+  const activeRevisionId = previousRevision?.id ?? app.activeRevisionId;
+  const activeRevisionIndex = activeRevisionId
+    ? app.revisions.findIndex((revision) => revision.id === activeRevisionId)
+    : -1;
+  const nextBaseApp = HtmlAppState.parse({
+    ...app,
+    ...patch,
+    id: app.id,
+    title: patch.title ?? app.title,
+    intent: hasIntentPatch ? patch.intent : app.intent,
+    files: patch.files ?? app.files,
+    entryHtmlPath: patch.entryHtmlPath ?? app.entryHtmlPath,
+    dependencies: patch.dependencies ?? app.dependencies,
+    updatedAt: createdAt,
+  });
+  const revision = HtmlAppRevision.parse({
+    id: metadata.revisionId ?? createHtmlAppRevisionId(),
+    name: normalizeRevisionName(metadata.name) ?? 'App update',
+    description: metadata.description,
+    sourcePrompt: metadata.sourcePrompt,
+    source: metadata.source ?? 'user',
+    sessionId: metadata.sessionId,
+    toolCallId: metadata.toolCallId,
+    commitGroupId: metadata.commitGroupId,
+    parentRevisionId: metadata.parentRevisionId ?? activeRevisionId,
+    createdAt,
+    title: nextBaseApp.title,
+    intent: nextBaseApp.intent,
+    files: nextBaseApp.files,
+    entryHtmlPath: nextBaseApp.entryHtmlPath,
+    requestedCapabilities: nextBaseApp.requestedCapabilities,
+    grantedCapabilities: nextBaseApp.grantedCapabilities,
+    dependencies: nextBaseApp.dependencies,
+  });
+  const revisions =
+    metadata.clearRedo === false || activeRevisionIndex < 0
+      ? nextBaseApp.revisions
+      : nextBaseApp.revisions.slice(0, activeRevisionIndex + 1);
+
+  return {
+    app: HtmlAppState.parse({
+      ...nextBaseApp,
+      revisions: [...revisions, revision],
+      activeRevisionId: revision.id,
+      redoRevisionIds:
+        metadata.clearRedo === false ? nextBaseApp.redoRevisionIds : [],
+      updatedAt: createdAt,
+    }),
+    revision,
+  };
+}
+
+/**
+ * Restore a historical revision by committing its snapshot as a new revision.
+ *
+ * Restores do not move the active pointer back to the original revision.
+ * Instead, they append a restore revision whose parent is the revision that was
+ * active when restore was requested, then clear redo history.
+ */
+export function restoreHtmlAppRevisionState(
+  app: HtmlAppState,
+  revisionId: string,
+  metadata: RestoreHtmlAppRevisionMetadata = {},
+): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const currentRevisionId =
+    getCurrentHtmlAppRevision(app)?.id ?? app.activeRevisionId;
+  const targetRevision = app.revisions.find(
+    (revision) => revision.id === revisionId,
+  );
+  if (!targetRevision) return undefined;
+  return commitHtmlAppRevisionState(
+    app,
+    {
+      title: targetRevision.title,
+      intent: targetRevision.intent,
+      files: targetRevision.files,
+      entryHtmlPath: targetRevision.entryHtmlPath,
+      requestedCapabilities:
+        targetRevision.requestedCapabilities ?? app.requestedCapabilities,
+      grantedCapabilities:
+        targetRevision.grantedCapabilities ?? app.grantedCapabilities,
+      dependencies: targetRevision.dependencies,
+      diagnostics: [],
+    },
+    {
+      ...metadata,
+      name:
+        normalizeRevisionName(metadata.name) ??
+        `Restore ${targetRevision.name}`,
+      source: 'restore',
+      parentRevisionId: currentRevisionId,
+      clearRedo: true,
+    },
+  );
+}
+
+/**
+ * Move the active HTML app state to the previous retained revision.
+ *
+ * Undo replays the previous revision snapshot directly and pushes the formerly
+ * active revision id onto `redoRevisionIds`. It returns `undefined` when there
+ * is no earlier revision to activate.
+ */
+export function undoHtmlAppRevisionState(
+  app: HtmlAppState,
+): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const activeIndex = getActiveRevisionIndex(app);
+  if (activeIndex <= 0) return undefined;
+  const currentRevision = app.revisions[activeIndex];
+  const previousRevision = app.revisions[activeIndex - 1];
+  if (!currentRevision || !previousRevision) return undefined;
+  return {
+    app: applyExistingHtmlAppRevision(app, previousRevision, {
+      redoRevisionIds: [currentRevision.id, ...app.redoRevisionIds],
+    }),
+    revision: previousRevision,
+  };
+}
+
+/**
+ * Move the active HTML app state to the next revision from the redo queue.
+ *
+ * Redo replays the first revision id from `redoRevisionIds` and removes it from
+ * the queue. It returns `undefined` when no redo target is available or the
+ * stored redo revision id no longer exists.
+ */
+export function redoHtmlAppRevisionState(
+  app: HtmlAppState,
+): {app: HtmlAppState; revision: HtmlAppRevision} | undefined {
+  const [redoRevisionId, ...remainingRedoRevisionIds] = app.redoRevisionIds;
+  if (!redoRevisionId) return undefined;
+  const revision = app.revisions.find(
+    (candidate) => candidate.id === redoRevisionId,
+  );
+  if (!revision) return undefined;
+  return {
+    app: applyExistingHtmlAppRevision(app, revision, {
+      redoRevisionIds: remainingRedoRevisionIds,
+    }),
+    revision,
+  };
+}
+
+/**
+ * Return the active HTML app revision.
+ *
+ * If `activeRevisionId` is missing or stale, this falls back to the latest
+ * retained revision so legacy states without an explicit active pointer still
+ * have a current snapshot.
+ */
+export function getCurrentHtmlAppRevision(
+  app?: HtmlAppState,
+): HtmlAppRevision | undefined {
+  if (!app) return undefined;
+  if (app.activeRevisionId) {
+    const activeRevision = app.revisions.find(
+      (revision) => revision.id === app.activeRevisionId,
+    );
+    if (activeRevision) return activeRevision;
+  }
+  return app.revisions.at(-1);
+}
+
+/**
+ * Return the retained revisions for an HTML app, or an empty list when no app is
+ * available.
+ */
+export function getHtmlAppRevisionList(app?: HtmlAppState): HtmlAppRevision[] {
+  return app?.revisions ?? [];
+}
+
+/**
+ * Compute revision navigation affordances for an HTML app.
+ *
+ * The result is safe to use for history panels and toolbar buttons: missing apps
+ * report no active revision and disabled undo/redo actions.
+ */
+export function getHtmlAppRevisionNavigationState(
+  app?: HtmlAppState,
+): HtmlAppRevisionNavigationState {
+  if (!app) {
+    return {
+      activeIndex: -1,
+      totalRevisions: 0,
+      canUndo: false,
+      canRedo: false,
+    };
+  }
+  const activeIndex = getActiveRevisionIndex(app);
+  const activeRevision =
+    activeIndex >= 0 ? app.revisions[activeIndex] : undefined;
+  return {
+    activeRevision,
+    activeIndex,
+    totalRevisions: app.revisions.length,
+    canUndo: activeIndex > 0,
+    canRedo: app.redoRevisionIds.length > 0,
+    previousRevision:
+      activeIndex > 0 ? app.revisions[activeIndex - 1] : undefined,
+    nextRevision:
+      activeIndex >= 0 && activeIndex < app.revisions.length - 1
+        ? app.revisions[activeIndex + 1]
+        : undefined,
+  };
+}
+
+function applyExistingHtmlAppRevision(
+  app: HtmlAppState,
+  revision: HtmlAppRevision,
+  patch: Pick<HtmlAppState, 'redoRevisionIds'>,
+) {
+  return HtmlAppState.parse({
+    ...app,
+    title: revision.title,
+    intent: revision.intent,
+    files: revision.files,
+    entryHtmlPath: revision.entryHtmlPath,
+    requestedCapabilities:
+      revision.requestedCapabilities ?? app.requestedCapabilities,
+    grantedCapabilities: revision.grantedCapabilities ?? app.grantedCapabilities,
+    dependencies: revision.dependencies,
+    diagnostics: [],
+    activeRevisionId: revision.id,
+    redoRevisionIds: patch.redoRevisionIds,
+    updatedAt: Date.now(),
+  });
+}
+
+function getActiveRevisionIndex(app: HtmlAppState) {
+  const activeRevisionId = app.activeRevisionId ?? app.revisions.at(-1)?.id;
+  return app.revisions.findIndex(
+    (revision) => revision.id === activeRevisionId,
+  );
+}
+
+function createHtmlAppRevisionId() {
+  return `rev-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+}
+
+function normalizeRevisionName(name?: string) {
+  const normalized = name?.replace(/\s+/g, ' ').trim();
+  if (!normalized) return undefined;
+  return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized;
+}
+
+/**
+ * Stateful block renderer for sandboxed HTML apps.
+ *
+ * The block renders the current app source by default and can temporarily
+ * preview a historical revision without writing preview diagnostics back to the
+ * active app.
+ */
 export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   blockId,
   appId,
@@ -195,42 +666,17 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
 }) => {
   const resolvedAppId = appId ?? blockId;
   const roomStore = useRoomStoreApi();
-  const appTitle = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.title
-      : undefined,
-  );
-  const files = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.files
-      : undefined,
-  );
-  const entryHtmlPath = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.entryHtmlPath
-      : undefined,
-  );
-  const dependencies = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? state.htmlApps.config.appsById[resolvedAppId]?.dependencies
-      : undefined,
-  );
-  const grantedCapabilities = useBaseRoomStore(
-    (state: HtmlAppRuntimeSliceState) =>
-      resolvedAppId
-        ? state.htmlApps.config.appsById[resolvedAppId]?.grantedCapabilities
-        : undefined,
-  );
-  const hasApp = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
-    resolvedAppId
-      ? Boolean(state.htmlApps.config.appsById[resolvedAppId])
-      : false,
+  const app = useBaseRoomStore((state: HtmlAppRuntimeSliceState) =>
+    resolvedAppId ? state.htmlApps.config.appsById[resolvedAppId] : undefined,
   );
   const ensureApp = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.ensureApp,
   );
   const addDiagnostic = useBaseRoomStore(
     (state: HtmlAppRuntimeSliceState) => state.htmlApps.addDiagnostic,
+  );
+  const restoreAppRevision = useBaseRoomStore(
+    (state: HtmlAppRuntimeSliceState) => state.htmlApps.restoreAppRevision,
   );
   const getState = useMemo(
     () => () =>
@@ -239,11 +685,52 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     [roomStore],
   );
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [previewRevisionId, setPreviewRevisionId] = useState<string>();
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!resolvedAppId) return;
     ensureApp(resolvedAppId, {title: title ?? 'HTML App'});
   }, [ensureApp, resolvedAppId, title]);
+
+  useEffect(() => {
+    setPreviewRevisionId(undefined);
+  }, [app?.activeRevisionId]);
+
+  useEffect(() => {
+    if (!historyOpen) {
+      setPreviewRevisionId(undefined);
+    }
+  }, [historyOpen]);
+
+  const revisions = app?.revisions ?? [];
+  const activeRevision = getCurrentHtmlAppRevision(app);
+  const activeRevisionId = activeRevision?.id ?? app?.activeRevisionId;
+  const previewRevision = previewRevisionId
+    ? revisions.find((revision) => revision.id === previewRevisionId)
+    : undefined;
+  const displayedRevision = previewRevision ?? activeRevision;
+  const displayedRevisionIndex = displayedRevision
+    ? revisions.findIndex((revision) => revision.id === displayedRevision.id)
+    : -1;
+  const isPreviewing =
+    Boolean(previewRevision) && previewRevision?.id !== activeRevisionId;
+  const appTitle = isPreviewing
+    ? (displayedRevision?.title ?? app?.title ?? title)
+    : (app?.title ?? displayedRevision?.title ?? title);
+  const files = isPreviewing
+    ? (displayedRevision?.files ?? app?.files)
+    : (app?.files ?? displayedRevision?.files);
+  const entryHtmlPath = isPreviewing
+    ? (displayedRevision?.entryHtmlPath ?? app?.entryHtmlPath ?? '/index.html')
+    : (app?.entryHtmlPath ?? displayedRevision?.entryHtmlPath ?? '/index.html');
+  const dependencies = isPreviewing
+    ? (displayedRevision?.dependencies ?? app?.dependencies)
+    : (app?.dependencies ?? displayedRevision?.dependencies);
+  const grantedCapabilities = isPreviewing
+    ? (displayedRevision?.grantedCapabilities ?? app?.grantedCapabilities)
+    : app?.grantedCapabilities;
+  const hasApp = Boolean(app);
 
   const srcDoc = useMemo(() => {
     if (!files) return '';
@@ -279,6 +766,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
           }),
       },
       onDiagnostic: (diagnostic) => {
+        if (isPreviewing) return;
         addDiagnostic(resolvedAppId, diagnostic);
       },
     });
@@ -292,6 +780,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
     addDiagnostic,
     grantedCapabilities,
     hasApp,
+    isPreviewing,
     getState,
     maxRows,
     queryTimeoutMs,
@@ -308,16 +797,107 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   }
 
   return (
-    <div className={className ?? 'bg-background h-full min-h-[320px]'}>
-      <iframe
-        ref={iframeRef}
-        className="h-full min-h-[320px] w-full bg-white"
-        sandbox="allow-scripts"
-        title={appTitle ?? title ?? 'HTML App'}
-      />
+    <div
+      className={[
+        'bg-background flex h-full min-h-[320px] flex-col overflow-hidden',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="border-border bg-background flex shrink-0 items-center gap-1 border-b px-2 py-1.5 text-sm">
+        <div className="min-w-0 flex-1 truncate font-medium">
+          {appTitle ?? 'HTML App'}
+        </div>
+        <IconButton
+          disabled={revisions.length === 0}
+          label="Revision history"
+          onClick={() => setHistoryOpen((open) => !open)}
+        >
+          <HistoryIcon className="h-4 w-4" />
+        </IconButton>
+      </div>
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-w-0 flex-1">
+          {isPreviewing && previewRevision ? (
+            <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-24px)] items-center gap-2 rounded border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-950 shadow-sm">
+              <span className="shrink-0 font-medium">
+                Preview v{displayedRevisionIndex + 1} of {revisions.length}
+              </span>
+              <span className="min-w-0 truncate">{previewRevision.name}</span>
+              <button
+                className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-300 bg-white px-2 py-1 font-medium hover:bg-amber-100"
+                onClick={() => {
+                  if (!resolvedAppId) return;
+                  restoreAppRevision(resolvedAppId, previewRevision.id, {
+                    name: `Restore ${previewRevision.name}`,
+                  });
+                }}
+                type="button"
+              >
+                <RotateCcwIcon className="h-3.5 w-3.5" />
+                Restore this version
+              </button>
+            </div>
+          ) : null}
+          <iframe
+            ref={iframeRef}
+            className="h-full min-h-0 w-full bg-white"
+            sandbox="allow-scripts"
+            title={appTitle ?? title ?? 'HTML App'}
+          />
+        </div>
+        {historyOpen && revisions.length > 0 ? (
+          <aside className="border-border bg-muted/30 w-56 shrink-0 overflow-auto border-l text-xs sm:w-64">
+            <div className="text-muted-foreground border-border border-b px-3 py-2 font-medium">
+              History
+            </div>
+            {revisions.map((revision, index) => (
+              <button
+                className={`hover:bg-muted flex w-full items-start gap-2 px-3 py-2 text-left ${
+                  revision.id === displayedRevision?.id ? 'bg-muted' : ''
+                }`}
+                key={revision.id}
+                onClick={() => setPreviewRevisionId(revision.id)}
+                type="button"
+              >
+                <span className="text-muted-foreground w-8 shrink-0 tabular-nums">
+                  v{index + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">
+                    {revision.name}
+                  </span>
+                  <span className="text-muted-foreground block truncate">
+                    {revision.source}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </aside>
+        ) : null}
+      </div>
     </div>
   );
 };
+
+const IconButton: FC<{
+  children: ReactNode;
+  disabled?: boolean;
+  label: string;
+  onClick: () => void;
+}> = ({children, disabled, label, onClick}) => (
+  <button
+    aria-label={label}
+    className="hover:bg-muted disabled:text-muted-foreground/50 flex h-7 w-7 shrink-0 items-center justify-center rounded disabled:pointer-events-none"
+    disabled={disabled}
+    onClick={onClick}
+    title={label}
+    type="button"
+  >
+    {children}
+  </button>
+);
 
 export type CreateHtmlAppBlockDefinitionOptions<
   TRoomState extends HtmlAppRuntimeSliceState = HtmlAppRuntimeSliceState,

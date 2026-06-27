@@ -6,6 +6,7 @@ import type {
   StoredToolSet,
   ToolRendererRegistry,
 } from '../types';
+import {getChatRequestErrorPartMessage} from '../chatTurns';
 
 /** High-level counts and model/session metadata for a debugged chat session. */
 export type SessionDebugSummary = {
@@ -387,6 +388,16 @@ export function getSessionDebugTimeline({
         }
 
         const type = getPartType(part);
+        const errorPartMessage = getChatRequestErrorPartMessage(part);
+        if (errorPartMessage) {
+          return {
+            kind: 'text' as const,
+            index: partIndex,
+            text: errorPartMessage.error,
+            raw: part,
+          };
+        }
+
         const text = getPartText(part);
         if (type === 'text' && text !== undefined) {
           return {

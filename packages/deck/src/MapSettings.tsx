@@ -4,6 +4,7 @@ import {
   ColumnSelector,
   ColumnsProvider,
   useStoreWithMosaicDashboard,
+  QUANTITATIVE_COLUMN_TYPES,
 } from '@sqlrooms/mosaic';
 import {useDataTable} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
@@ -78,10 +79,10 @@ function schemeToColorRange(
       scheme as keyof typeof continuousSequentialInterpolators
     ];
   if (!interpolator) {
-    return continuousSequentialInterpolators.Viridis
+    return continuousSequentialInterpolators.YlOrRd
       ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
           parseColorString(
-            continuousSequentialInterpolators.Viridis(
+            continuousSequentialInterpolators.YlOrRd(
               i / (HEATMAP_COLOR_STEPS - 1),
             ),
           ),
@@ -94,7 +95,7 @@ function schemeToColorRange(
 }
 
 function detectHeatmapScheme(colorRange: unknown): string {
-  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'Viridis';
+  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'YlOrRd';
   for (const scheme of continuousSequentialSchemes) {
     const sampled = schemeToColorRange(scheme);
     if (sampled.length === colorRange.length) {
@@ -110,7 +111,7 @@ function detectHeatmapScheme(colorRange: unknown): string {
       if (matches) return scheme;
     }
   }
-  return 'Viridis';
+  return 'YlOrRd';
 }
 
 interface MapSettingsPanelProps {
@@ -194,6 +195,30 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const firstColumnName = dataTable?.columns[0]?.name;
 
+  // Width/radius values can be either numeric constants (e.g. getWidth: 3)
+  // or string accessor expressions (e.g. getRadius: '@@=Magnitude').
+  // For pixel-unit layers, prefer getWidth/getRadius over widthMinPixels/radiusMinPixels
+  // since that's the actual rendered value. When the accessor is a string expression,
+  // hide the slider entirely to avoid displaying invalid values or accidentally
+  // overwriting data-driven accessors with a constant on first interaction.
+  const isWidthInPixels = activeLayer?.widthUnits === 'pixels';
+  const rawWidth = activeLayer?.getWidth;
+  const numericWidth = typeof rawWidth === 'number' ? rawWidth : undefined;
+  const lineWidthValue = isWidthInPixels
+    ? (numericWidth ?? (activeLayer?.widthMinPixels as number | undefined) ?? 1)
+    : (numericWidth ?? 1);
+
+  const isRadiusInPixels = activeLayer?.radiusUnits === 'pixels';
+  const rawRadius = activeLayer?.getRadius;
+  const numericRadius = typeof rawRadius === 'number' ? rawRadius : undefined;
+  const pointRadiusValue = isRadiusInPixels
+    ? (numericRadius ??
+      (activeLayer?.radiusMinPixels as number | undefined) ??
+      2)
+    : (numericRadius ?? 100);
+  const isAccessorBasedRadius = typeof rawRadius === 'string';
+  const isAccessorBasedWidth = typeof rawWidth === 'string';
+
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
       updatePanel(dashboardId, panel.id, {
@@ -211,12 +236,25 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     const field = patch.field ?? colorScale?.field ?? firstColumnName;
     if (!field || !effectiveColorAccessor) return;
 
-    const type = patch.type ?? colorScale?.type ?? 'sequential';
+    let type = patch.type ?? colorScale?.type ?? 'sequential';
+
+    // Auto-detect scale type when user changes the field
+    if (patch.field && !patch.type && dataTable) {
+      const col = dataTable.columns.find((c) => c.name === patch.field);
+      if (col) {
+        const normalized = col.type.split('(')[0]!.toUpperCase();
+        const isQuantitative = QUANTITATIVE_COLUMN_TYPES.includes(normalized);
+        type = isQuantitative ? 'sequential' : 'categorical';
+      }
+    }
+
     const scheme =
       patch.scheme ??
       (patch.type && patch.type !== colorScale?.type
         ? undefined
-        : colorScale?.scheme);
+        : type !== colorScale?.type
+          ? undefined
+          : colorScale?.scheme);
 
     applyConfig(
       setDeckMapLayerColorScale(
@@ -317,18 +355,16 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Select>
             </Field>
 
-            {showTripsSettings && (
-              <>
-                <Field
-                  label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 3}px`}
-                >
+            {showTripsSettings && !isAccessorBasedWidth && (
+              <Field
+                label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
+              >
+                <div className="pt-0.5">
                   <Slider
                     min={1}
-                    max={20}
-                    step={1}
-                    value={[
-                      (activeLayer?.widthMinPixels as number | undefined) ?? 3,
-                    ]}
+                    max={isWidthInPixels ? 20 : 10000}
+                    step={isWidthInPixels ? 1 : 10}
+                    value={[lineWidthValue]}
                     onValueChange={(values) => {
                       const value = values[0] ?? 3;
                       applyConfig(
@@ -337,16 +373,21 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                           activeLayerIndex,
                           (layer) => ({
                             ...layer,
-                            widthMinPixels: value,
+                            ...(isWidthInPixels ? {widthMinPixels: value} : {}),
+                            getWidth: value,
                           }),
                         ),
                       );
                     }}
                   />
-                </Field>
-                <Field
-                  label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
-                >
+                </div>
+              </Field>
+            )}
+            {showTripsSettings && (
+              <Field
+                label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
+              >
+                <div className="pt-0.5">
                   <Slider
                     min={5}
                     max={100}
@@ -372,8 +413,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       );
                     }}
                   />
-                </Field>
-              </>
+                </div>
+              </Field>
             )}
 
             {isHeatmapLayer ? (
@@ -459,17 +500,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 {colorScale && dataTable && (
                   <ColumnsProvider columns={dataTable.columns}>
                     <Field label="Color field" required>
-                      {colorScaleType === 'categorical' ? (
-                        <ColumnSelector.Categorical
-                          value={colorScale.field}
-                          onChange={(field) => updateColorScale({field})}
-                        />
-                      ) : (
-                        <ColumnSelector.Quantitative
-                          value={colorScale.field}
-                          onChange={(field) => updateColorScale({field})}
-                        />
-                      )}
+                      <ColumnSelector
+                        value={colorScale.field}
+                        onChange={(field) => updateColorScale({field})}
+                      />
                     </Field>
                   </ColumnsProvider>
                 )}
@@ -554,32 +588,35 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </Field>
         )}
 
-        {showRadiusSetting && (
+        {showRadiusSetting && !isAccessorBasedRadius && (
           <Field
-            label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
+            label={`Point radius: ${pointRadiusValue}${isRadiusInPixels ? 'px' : 'm'}`}
           >
             <div className="pt-0.5">
               <Slider
                 min={1}
-                max={50}
-                step={1}
-                value={[
-                  (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
-                ]}
+                max={isRadiusInPixels ? 50 : 10000}
+                step={isRadiusInPixels ? 1 : 10}
+                value={[pointRadiusValue]}
                 onValueChange={(values) => {
-                  const value = values[0] ?? 2;
+                  const value = values[0] ?? (isRadiusInPixels ? 2 : 100);
                   applyConfig(
                     updateDeckMapLayer(
                       mapConfig,
                       activeLayerIndex,
                       (layer) => ({
                         ...layer,
-                        radiusMinPixels: value,
-                        radiusMaxPixels: Math.max(
-                          value,
-                          (layer.radiusMaxPixels as number | undefined) ??
-                            value,
-                        ),
+                        getRadius: value,
+                        ...(isRadiusInPixels
+                          ? {
+                              radiusMinPixels: 1,
+                              radiusMaxPixels: Math.max(
+                                value,
+                                (layer.radiusMaxPixels as number | undefined) ??
+                                  value,
+                              ),
+                            }
+                          : {}),
                       }),
                     ),
                   );
@@ -621,7 +658,11 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           <ColumnsProvider columns={dataTable.columns}>
             <Field label="Geometry column" required>
               <ColumnSelector
-                value={activeLayerDataset?.geometryColumn}
+                value={
+                  ((activeLayer?._sqlroomsBinding as Record<string, unknown>)
+                    ?.geometryColumn as string | undefined) ??
+                  activeLayerDataset?.geometryColumn
+                }
                 onChange={(geometryColumn) =>
                   applyConfig(
                     setDeckMapLayerGeometryColumn(
@@ -746,25 +787,32 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           </div>
         )}
 
-        {showArcColumnSetting && (
+        {showArcColumnSetting && !isAccessorBasedWidth && (
           <Field
-            label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 1}px`}
+            label={`Line width: ${lineWidthValue}${isWidthInPixels ? 'px' : 'm'}`}
           >
-            <Slider
-              min={1}
-              max={20}
-              step={1}
-              value={[(activeLayer?.widthMinPixels as number | undefined) ?? 1]}
-              onValueChange={(values) => {
-                const value = values[0] ?? 1;
-                applyConfig(
-                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
-                    ...layer,
-                    widthMinPixels: value,
-                  })),
-                );
-              }}
-            />
+            <div className="pt-0.5">
+              <Slider
+                min={1}
+                max={isWidthInPixels ? 20 : 10000}
+                step={isWidthInPixels ? 1 : 10}
+                value={[lineWidthValue]}
+                onValueChange={(values) => {
+                  const value = values[0] ?? 1;
+                  applyConfig(
+                    updateDeckMapLayer(
+                      mapConfig,
+                      activeLayerIndex,
+                      (layer) => ({
+                        ...layer,
+                        ...(isWidthInPixels ? {widthMinPixels: value} : {}),
+                        getWidth: value,
+                      }),
+                    ),
+                  );
+                }}
+              />
+            </div>
           </Field>
         )}
 

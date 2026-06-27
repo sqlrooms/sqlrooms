@@ -196,6 +196,22 @@ dataset extent using the declared longitude/latitude columns and fits the
 initial map view once, instead of inferring bounds from the loaded Arrow
 payload in React.
 
+Use `createDeckMapPanelFromNativeConfig(...)` when a host surface already has a
+native Deck map config, for example from AI tooling, and needs the same
+dashboard-compatible `deck-json-map` panel shape that the dashboard map tool
+creates.
+
+## Embeddable Map Blocks
+
+Host applications that expose document-like block surfaces can render maps
+without first creating a visible dashboard. Use `ensureDeckMapBlockState(...)`
+to initialize persisted map state for a durable block id, then render it with
+`DeckMapBlockRenderer`.
+
+The block primitive reuses the dashboard map panel runtime internally, while
+leaving each host surface free to adapt its own block/document semantics around
+it.
+
 ## Core Concepts
 
 ### `DeckJsonMap`

@@ -1,0 +1,75 @@
+{
+  "name": "@sqlrooms/python",
+  "version": "0.29.0-rc.8",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "license": "MIT",
+  "author": "SQLRooms Contributors",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js",
+      "default": "./dist/runtime.js"
+    },
+    "./block": {
+      "types": "./dist/block.d.ts",
+      "import": "./dist/block.js",
+      "default": "./dist/block.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.2",
+    "@codemirror/commands": "^6.10.3",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/state": "^6.6.0",
+    "@codemirror/view": "^6.42.1",
+    "@paralleldrive/cuid2": "^3.0.0",
+    "@sqlrooms/blocks": "workspace:*",
+    "@sqlrooms/codemirror": "workspace:*",
+    "@sqlrooms/documents": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.556.0",
+    "pyodide": "0.28.3",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@sqlrooms/preset-eslint": "workspace:*",
+    "@sqlrooms/preset-typedoc": "workspace:*",
+    "@sqlrooms/preset-typescript": "workspace:*",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "typescript": "5.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

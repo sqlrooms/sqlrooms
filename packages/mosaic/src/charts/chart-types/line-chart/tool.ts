@@ -43,7 +43,7 @@ NOTE: Line charts with aggregation (xInterval or aggregate functions) handle lar
 
 Do NOT use for: single point distributions (use histogram), categorical counts (use count-plot), two-variable correlations (use scatter-plot).`,
     inputSchema: LineChartToolInput,
-    execute: async ({tableName, title, settings}) => {
+    execute: async ({tableName, title, settings, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
 
@@ -59,6 +59,7 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
 
         addChart({
           tableName,
+          panelId,
           title,
           config: chartConfig,
         });

@@ -4,7 +4,11 @@ import {tool} from 'ai';
 import {ToolLoopAgent, stepCountIs} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
-import type {HtmlAppDependency} from '@sqlrooms/app-runtime';
+import {
+  createDefaultHtmlAppFiles,
+  type HtmlAppDependency,
+  type HtmlAppRevision,
+} from '@sqlrooms/app-runtime';
 import type {RoomState} from './store-types';
 
 const HtmlAppDependencySchema = z.object({
@@ -15,11 +19,14 @@ const HtmlAppDependencySchema = z.object({
   global: z.string().optional(),
 });
 
-export const HtmlAppRuntimeInputSchema = z.object({
+const HtmlAppRuntimeInputFields = z.object({
   reasoning: z
     .string()
     .describe('Reasoning for why the HTML app agent is being called.'),
-  prompt: z.string().describe('The app or visualization the user wants.'),
+  intent: z
+    .string()
+    .min(1, 'intent cannot be empty')
+    .describe('The app or visualization objective to satisfy.'),
   title: z.string().optional().describe('Optional app title.'),
   querySql: z
     .string()
@@ -41,6 +48,14 @@ export const HtmlAppRuntimeInputSchema = z.object({
     .array(HtmlAppDependencySchema)
     .optional()
     .describe('Versioned browser dependencies resolved by SQLRooms.'),
+  revisionName: z
+    .string()
+    .optional()
+    .describe('Concise persisted revision name for this app change.'),
+  revisionDescription: z
+    .string()
+    .optional()
+    .describe('Optional short description of what changed in this revision.'),
   maxRepairAttempts: z
     .number()
     .int()
@@ -51,7 +66,9 @@ export const HtmlAppRuntimeInputSchema = z.object({
     .describe('Maximum expected observe/repair attempts for the caller.'),
 });
 
-const HtmlAppAgentInputSchema = HtmlAppRuntimeInputSchema.extend({
+export const HtmlAppRuntimeInputSchema = HtmlAppRuntimeInputFields;
+
+const HtmlAppAgentInputSchema = HtmlAppRuntimeInputFields.extend({
   appId: z
     .string()
     .describe(
@@ -67,9 +84,9 @@ export type HtmlAppRuntimeWriteInput = Omit<
   maxRepairAttempts?: number;
 };
 
-const WriteHtmlAppFilesInputSchema = HtmlAppRuntimeInputSchema.omit({
+const WriteHtmlAppFilesInputSchema = HtmlAppRuntimeInputFields.omit({
   maxRepairAttempts: true,
-  prompt: true,
+  intent: true,
 });
 
 const DEFAULT_DIAGNOSTIC_OBSERVATION_MS = 2_000;
@@ -83,7 +100,7 @@ Use this after the caller has created or identified the right container:
 - top-level html-app artifact id
 - embedded worksheet html-app blockInstanceId
 
-This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested prompt, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit prompt; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
+This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested intent, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit intent; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
       if (input.html || input.files) {
@@ -117,10 +134,10 @@ function isTitleOnlyRequest(input: HtmlAppAgentInput) {
     return false;
   }
 
-  const prompt = input.prompt.toLowerCase();
+  const intent = input.intent.toLowerCase();
   return (
-    /\b(rename|change|set|update)\b[\s\S]{0,80}\b(title|name)\b/.test(prompt) ||
-    /\b(title|name)\b[\s\S]{0,80}\b(to|as)\b/.test(prompt)
+    /\b(rename|change|set|update)\b[\s\S]{0,80}\b(title|name)\b/.test(intent) ||
+    /\b(title|name)\b[\s\S]{0,80}\b(to|as)\b/.test(intent)
   );
 }
 
@@ -147,10 +164,27 @@ function renameHtmlAppTitle(
     nextTitle: title,
   });
 
-  store.getState().htmlApps.updateApp(input.appId, {
+  const renamePatch = {
     title,
-    ...(renamedFiles ? {files: renamedFiles} : {}),
-  });
+    ...(renamedFiles ? {files: renamedFiles, diagnostics: []} : {}),
+  };
+  let revision: HtmlAppRevision | undefined;
+  if (app.revisions.length === 0 && isDefaultHtmlAppScaffold(app)) {
+    store.getState().htmlApps.updateApp(input.appId, renamePatch);
+  } else {
+    const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
+    revision = store.getState().htmlApps.commitAppRevision(
+      input.appId,
+      renamePatch,
+      createHtmlAppRevisionMetadata(store, input, {
+        title,
+        isTitleOnly: true,
+        isInitialRevision:
+          app.revisions.length === 0 && !seededBaselineRevision,
+      }),
+    );
+  }
+  const latestApp = store.getState().htmlApps.getApp(input.appId);
 
   return {
     ok: true,
@@ -158,12 +192,13 @@ function renameHtmlAppTitle(
     title,
     filePaths: renamedFiles
       ? Object.keys(renamedFiles)
-      : Object.keys(app.files),
-    diagnostics: app.diagnostics,
+      : Object.keys(latestApp?.files ?? app.files),
+    diagnostics: latestApp?.diagnostics ?? app.diagnostics,
     diagnosticsSummary:
       'Title updated without regenerating app source or running diagnostics.',
     status: 'renamed_title_only',
     sourceTitleUpdated: Boolean(renamedFiles),
+    revision: formatHtmlAppRevisionResult(revision),
   };
 }
 
@@ -172,17 +207,17 @@ function isIncrementalAppEditRequest(input: HtmlAppAgentInput) {
     return false;
   }
 
-  const prompt = input.prompt.toLowerCase();
+  const intent = input.intent.toLowerCase();
   if (
     /\b(new|another|fresh|separate)\b[\s\S]{0,40}\b(app|artifact)\b/.test(
-      prompt,
+      intent,
     )
   ) {
     return false;
   }
 
   return /\b(change|update|edit|modify|rename|set|tweak|adjust|fix|improve|make|remove|replace|add)\b/.test(
-    prompt,
+    intent,
   );
 }
 
@@ -221,7 +256,7 @@ Use this after making the requested scoped edit to the existing files. Preserve 
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
-        prompt: input.prompt,
+        intent: input.intent,
         title: writeInput.title ?? input.title ?? app.title,
         dependencies: writeInput.dependencies ?? app.dependencies,
         maxRepairAttempts: input.maxRepairAttempts,
@@ -235,7 +270,6 @@ Use this after making the requested scoped edit to the existing files. Preserve 
     tools: {
       write_html_app_source: writeHtmlAppSourceTool,
     },
-    temperature: 0.1,
     stopWhen: [
       stepCountIs(
         Math.max(3, Math.min(10, (input.maxRepairAttempts ?? 1) + 4)),
@@ -246,7 +280,7 @@ Use this after making the requested scoped edit to the existing files. Preserve 
 
   const result = await streamSubAgent(
     agent,
-    formatHtmlAppEditPrompt(input, app),
+    formatHtmlAppEditMessage(input, app),
     store,
     parentToolCallId,
     abortSignal,
@@ -296,7 +330,7 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
       latestWriteResult = await writeHtmlAppRuntimeState(store, {
         ...writeInput,
         appId: input.appId,
-        prompt: input.prompt,
+        intent: input.intent,
         maxRepairAttempts: input.maxRepairAttempts,
       });
       return latestWriteResult;
@@ -315,7 +349,6 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
       ...dataTools,
       write_html_app_source: writeHtmlAppSourceTool,
     },
-    temperature: 0.2,
     stopWhen: [
       stepCountIs(
         Math.max(4, Math.min(16, (input.maxRepairAttempts ?? 1) + 6)),
@@ -326,7 +359,7 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
 
   const result = await streamSubAgent(
     agent,
-    formatHtmlAppGenerationPrompt(input),
+    formatHtmlAppGenerationMessage(input),
     store,
     parentToolCallId,
     abortSignal,
@@ -352,14 +385,20 @@ For a self-contained iframe app, prefer the html field. Use files only when mult
   };
 }
 
+/**
+ * Persist generated HTML app source, commit a revision, and return runtime
+ * diagnostics observed after the write.
+ */
 export async function writeHtmlAppRuntimeState(
   store: StoreApi<RoomState>,
   input: HtmlAppRuntimeWriteInput,
 ): Promise<Record<string, unknown>> {
   const appId = input.appId;
   const title = input.title?.trim() || 'HTML App';
+  const {intent} = input;
   const dependencies = resolveDependencies(input);
   const files = normalizeHtmlAppFiles(input);
+  const existingApp = store.getState().htmlApps.getApp(appId);
 
   if (!files || Object.keys(files).length === 0) {
     return {
@@ -398,15 +437,34 @@ export async function writeHtmlAppRuntimeState(
     };
   }
 
+  const seededBaselineRevision = seedHtmlAppBaselineRevision(
+    store,
+    existingApp,
+  );
+
   store.getState().htmlApps.ensureApp(appId, {
     title,
-    files,
-    entryHtmlPath: '/index.html',
-    dependencies,
-    diagnostics: [],
-    requestedCapabilities: ['query'],
-    grantedCapabilities: ['query'],
+    ...(intent ? {intent} : {}),
   });
+  const revision = store.getState().htmlApps.commitAppRevision(
+    appId,
+    {
+      title,
+      files,
+      entryHtmlPath: '/index.html',
+      dependencies,
+      diagnostics: [],
+      requestedCapabilities: ['query'],
+      grantedCapabilities: ['query'],
+    },
+    createHtmlAppRevisionMetadata(store, input, {
+      title,
+      isTitleOnly: false,
+      isInitialRevision:
+        !existingApp ||
+        (existingApp.revisions.length === 0 && !seededBaselineRevision),
+    }),
+  );
 
   const diagnostics = await observeHtmlAppRuntimeDiagnostics(store, appId);
   const app = store.getState().htmlApps.getApp(appId);
@@ -433,12 +491,171 @@ export async function writeHtmlAppRuntimeState(
     repairAttempts: 0,
     maxRepairAttempts: input.maxRepairAttempts ?? 1,
     diagnosticObservationMs: DEFAULT_DIAGNOSTIC_OBSERVATION_MS,
+    revision: formatHtmlAppRevisionResult(revision),
     status:
       latestDiagnostics.length === 0
         ? 'written_pending_iframe_observation'
         : errorCount === 0
           ? 'written_no_errors_observed'
           : 'written_errors_observed',
+  };
+}
+
+function seedHtmlAppBaselineRevision(
+  store: StoreApi<RoomState>,
+  existingApp: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
+): HtmlAppRevision | undefined;
+function seedHtmlAppBaselineRevision(
+  store: StoreApi<RoomState>,
+  existingApp: ReturnType<RoomState['htmlApps']['getApp']>,
+): HtmlAppRevision | undefined;
+function seedHtmlAppBaselineRevision(
+  store: StoreApi<RoomState>,
+  existingApp: ReturnType<RoomState['htmlApps']['getApp']>,
+) {
+  if (
+    !existingApp ||
+    existingApp.revisions.length > 0 ||
+    isDefaultHtmlAppScaffold(existingApp)
+  ) {
+    return undefined;
+  }
+  return store.getState().htmlApps.commitAppRevision(
+    existingApp.id,
+    {},
+    {
+      name: existingApp.title
+        ? `Initial ${existingApp.title}`
+        : 'Initial version',
+      description: 'Baseline revision captured before the first saved edit.',
+      source: 'system',
+      sourcePrompt: existingApp.intent,
+    },
+  );
+}
+
+function isDefaultHtmlAppScaffold(
+  app: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
+) {
+  if (app.intent || app.entryHtmlPath !== '/index.html') return false;
+  if (app.dependencies.length > 0) return false;
+  if (areHtmlAppFilesEqual(app.files, createDefaultHtmlAppFiles(app.title))) {
+    return true;
+  }
+  return areDefaultHtmlAppScaffoldFiles(app.files);
+}
+
+function areHtmlAppFilesEqual(
+  left: Record<string, string>,
+  right: Record<string, string>,
+) {
+  const leftPaths = Object.keys(left);
+  const rightPaths = Object.keys(right);
+  if (leftPaths.length !== rightPaths.length) return false;
+  return leftPaths.every((path) => left[path] === right[path]);
+}
+
+function areDefaultHtmlAppScaffoldFiles(files: Record<string, string>) {
+  const paths = Object.keys(files);
+  if (paths.length !== 1 || paths[0] !== '/index.html') return false;
+  const defaultFiles = createDefaultHtmlAppFiles();
+  return (
+    normalizeDefaultHtmlAppScaffold(files['/index.html'] ?? '') ===
+    normalizeDefaultHtmlAppScaffold(defaultFiles['/index.html'] ?? '')
+  );
+}
+
+function normalizeDefaultHtmlAppScaffold(html: string) {
+  return html
+    .replace(/<title>[\s\S]*?<\/title>/, '<title></title>')
+    .replace(/<h1>[\s\S]*?<\/h1>/, '<h1></h1>');
+}
+
+function createHtmlAppRevisionMetadata(
+  store: StoreApi<RoomState>,
+  input: Pick<
+    HtmlAppAgentInput,
+    'intent' | 'revisionName' | 'revisionDescription'
+  >,
+  {
+    title,
+    isTitleOnly,
+    isInitialRevision,
+  }: {title?: string; isTitleOnly: boolean; isInitialRevision: boolean},
+) {
+  const currentSession = store.getState().ai.getCurrentSession();
+  return {
+    name: deriveHtmlAppRevisionName({
+      revisionName: input.revisionName,
+      intent: input.intent,
+      title,
+      isInitialRevision,
+      isTitleOnly,
+    }),
+    description: input.revisionDescription,
+    source: 'assistant' as const,
+    sourcePrompt: input.intent,
+    sessionId: currentSession?.id,
+  };
+}
+
+function deriveHtmlAppRevisionName({
+  revisionName,
+  intent,
+  title,
+  isInitialRevision,
+  isTitleOnly,
+}: {
+  revisionName?: string;
+  intent: string;
+  title?: string;
+  isInitialRevision: boolean;
+  isTitleOnly: boolean;
+}) {
+  const explicitName = normalizeRevisionName(revisionName);
+  if (explicitName) return explicitName;
+  if (isInitialRevision) return title ? `Initial ${title}` : 'Initial version';
+  if (isTitleOnly && title) return `Rename to ${title}`;
+  return summarizeIntentAsRevisionName(intent) ?? 'App update';
+}
+
+function summarizeIntentAsRevisionName(intent: string) {
+  const normalized = intent
+    .replace(/\s+/g, ' ')
+    .replace(
+      /^(please|can you|could you|would you|i want you to|make it|make the app|update the app to)\s+/i,
+      '',
+    )
+    .trim();
+  if (!normalized) return undefined;
+  const sentence = normalized.split(/[.!?]/)[0]?.trim() || normalized;
+  const withoutFiller = sentence.replace(
+    /^(change|update|edit|modify|fix|improve|add|remove|replace|rename|set)\s+/i,
+    (match) => `${capitalize(match.trim())} `,
+  );
+  return normalizeRevisionName(capitalize(withoutFiller));
+}
+
+function normalizeRevisionName(name?: string) {
+  const normalized = name?.replace(/\s+/g, ' ').trim();
+  if (!normalized) return undefined;
+  return normalized.length > 60 ? `${normalized.slice(0, 57)}...` : normalized;
+}
+
+function capitalize(value: string) {
+  if (!value) return value;
+  return `${value[0].toUpperCase()}${value.slice(1)}`;
+}
+
+function formatHtmlAppRevisionResult(revision?: HtmlAppRevision) {
+  if (!revision) return undefined;
+  return {
+    id: revision.id,
+    name: revision.name,
+    description: revision.description,
+    source: revision.source,
+    createdAt: revision.createdAt,
+    parentRevisionId: revision.parentRevisionId,
   };
 }
 
@@ -506,12 +723,12 @@ Required workflow:
 1. Understand the requested app.
 2. Use list_tables, read_table_schema, and query when needed to verify table and column names.
 3. Generate complete app source. Prefer a single self-contained html string for iframe apps; use files only for advanced multi-file cases.
-4. Call write_html_app_source with either html or files.
+4. Call write_html_app_source with either html or files, plus a concise revisionName such as "Initial sales dashboard", "Add region filter", or "Fix D3 scale error".
 5. If diagnostics include errors, fix the source and call write_html_app_source again.
 6. Do not finish without calling write_html_app_source at least once.
 
 Important constraints:
-- Do not write a placeholder, scaffold, generic bar chart, or prompt summary. The rendered app must implement the requested app.
+- Do not write a placeholder, scaffold, generic bar chart, or request summary. The rendered app must implement the requested app.
 - Use window.sqlrooms.queryRows(sql) or window.sqlrooms.query(sql) for data access.
 - Query results may contain BigInt values. Convert all plotted numeric values with Number(value) before passing them to D3, Chart.js, scales, Math functions, or SVG attributes.
 - Prefer the html field with a complete self-contained document unless multiple files materially improve clarity.
@@ -529,23 +746,23 @@ Your job is to make a scoped edit to an existing html-app runtime. You receive t
 Required workflow:
 1. Read the current source and the user's requested change.
 2. Modify only what is needed for the request. Preserve unrelated SQL, data access, layout, styles, interactions, and dependencies.
-3. Call write_html_app_source with either html or files.
+3. Call write_html_app_source with either html or files, plus a concise revisionName that names the requested change.
 4. If diagnostics include errors caused by the edit, fix the source and call write_html_app_source again.
 5. Do not finish without calling write_html_app_source at least once.
 
 Important constraints:
 - This is an incremental edit path, not a rebuild path.
 - Do not re-discover data or change SQL unless the user explicitly asks for a data/schema/query change.
-- Do not replace the app with a placeholder, scaffold, generic chart, or prompt summary.
+- Do not replace the app with a placeholder, scaffold, generic chart, or request summary.
 - Query results may contain BigInt values. Preserve or add Number(value) conversions before passing values to D3, Chart.js, scales, Math functions, or SVG attributes.
 - Prefer preserving the existing file structure. Use the html field only when the app is currently a single /index.html file.`;
 }
 
-function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
+function formatHtmlAppGenerationMessage(input: HtmlAppAgentInput) {
   const parts = [
     `App runtime id: ${input.appId}`,
     `Title: ${input.title?.trim() || 'HTML App'}`,
-    `User request: ${input.prompt}`,
+    `Intent: ${input.intent}`,
   ];
 
   if (input.querySql) {
@@ -559,13 +776,13 @@ function formatHtmlAppGenerationPrompt(input: HtmlAppAgentInput) {
   }
 
   parts.push(
-    'Generate and write the complete app source now. Prefer the html field for a self-contained app. Do not use a placeholder scaffold.',
+    'Generate and write the complete app source now. Prefer the html field for a self-contained app. Include a concise revisionName. Do not use a placeholder scaffold.',
   );
 
   return parts.join('\n\n');
 }
 
-function formatHtmlAppEditPrompt(
+function formatHtmlAppEditMessage(
   input: HtmlAppAgentInput,
   app: NonNullable<ReturnType<RoomState['htmlApps']['getApp']>>,
 ) {
@@ -573,7 +790,8 @@ function formatHtmlAppEditPrompt(
     `App runtime id: ${input.appId}`,
     `Current title: ${app.title}`,
     `Requested title: ${input.title?.trim() || app.title}`,
-    `User request: ${input.prompt}`,
+    ...(app.intent ? [`Current intent: ${app.intent}`] : []),
+    `Edit intent: ${input.intent}`,
     `Entry HTML path: ${app.entryHtmlPath || '/index.html'}`,
   ];
 
@@ -600,7 +818,7 @@ function formatHtmlAppEditPrompt(
   );
 
   parts.push(
-    'Write the complete updated app source now. Preserve unrelated behavior and avoid data discovery unless the request explicitly changes data/query behavior.',
+    'Write the complete updated app source now. Include a concise revisionName. Preserve unrelated behavior and avoid data discovery unless the request explicitly changes data/query behavior.',
   );
 
   return parts.join('\n\n');

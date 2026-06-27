@@ -1,0 +1,1062 @@
+import socket
+
+import duckdb
+import pytest
+from fastapi.testclient import TestClient
+from fastapi import UploadFile
+from starlette.requests import Request
+from starlette.websockets import WebSocketDisconnect
+from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnectorSettings
+from sqlrooms.web.launcher import SqlroomsHttpServer
+from sqlrooms.web.launcher import _can_bind_port
+from sqlrooms.web.launcher import _pick_free_port
+from sqlrooms.web.launcher import _write_ai_settings_to_toml
+from sqlrooms.web.launcher import _write_db_connectors_to_toml
+from sqlrooms.web.launcher import _write_upload_to_path
+from pathlib import Path
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def server(tmp_path):
+    db_path = tmp_path / "test.db"
+    return SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+    )
+
+
+def test_api_config(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "wsUrl" in data
+    assert "dbPath" in data
+    assert "dbBridge" in data
+    assert "aiProviders" in data
+    assert data["aiDevtools"] is False
+    assert data["experimentalEnabled"] is False
+    assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
+    assert data["dbBridge"]["connections"] == []
+    assert data["dbBridge"]["diagnostics"] == []
+    assert "wsAuthToken" in data
+    assert (
+        data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
+    )
+
+
+def test_api_config_uses_same_origin_ws_proxy(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["wsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
+    assert response.json()["crdtWsUrl"] == "ws://127.0.0.1:4173/ws/duckdb"
+
+
+def test_duckdb_websocket_proxy_requires_auth(server):
+    client = TestClient(server._build_app())
+
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect("/ws/duckdb") as ws:
+            ws.receive_text()
+
+    assert exc_info.value.code == 1008
+
+
+def test_duckdb_websocket_proxy_accepts_first_message_auth(server):
+    client = TestClient(server._build_app())
+
+    with client.websocket_connect("/ws/duckdb") as ws:
+        ws.send_json({"type": "auth", "token": server.session_token})
+
+        assert ws.receive_json() == {"type": "authAck"}
+
+
+def test_ui_url_wraps_ipv6_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="::1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+
+    assert server._ui_url() == "http://[::1]:4173"
+
+
+def test_ws_url_wraps_ipv6_host(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="2001:db8::1",
+        port=4173,
+        ws_port=48174,
+        open_browser=False,
+    )
+
+    assert server._ws_url() == "ws://[2001:db8::1]:48174"
+
+
+def test_startup_fails_when_configured_ui_bundle_is_missing(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(tmp_path / "missing-ui"),
+    )
+
+    with pytest.raises(RuntimeError, match="SQLRooms UI bundle is missing"):
+        server._assert_ui_available()
+
+
+def test_serves_ui_index_without_browser_cache(tmp_path):
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_serves_ui_index_for_head_requests(tmp_path):
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.head("/")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_serves_static_ui_assets(tmp_path):
+    ui_dir = tmp_path / "ui"
+    assets_dir = ui_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (assets_dir / "index-current.js").write_text("console.log('ok')", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.get("/assets/index-current.js")
+
+    assert response.status_code == 200
+    assert response.text == "console.log('ok')"
+
+
+def test_serves_static_ui_assets_for_head_requests(tmp_path):
+    ui_dir = tmp_path / "ui"
+    assets_dir = ui_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (assets_dir / "index-current.js").write_text("console.log('ok')", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.head("/assets/index-current.js")
+
+    assert response.status_code == 200
+
+
+def test_redirects_stale_vite_entry_assets(tmp_path):
+    ui_dir = tmp_path / "ui"
+    assets_dir = ui_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+    (assets_dir / "index-current.js").write_text("console.log('ok')", encoding="utf-8")
+    (assets_dir / "index-current.css").write_text("body{}", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    js_response = client.get("/assets/index-stale.js", follow_redirects=False)
+    css_response = client.get("/assets/index-stale.css", follow_redirects=False)
+
+    assert js_response.status_code == 302
+    assert js_response.headers["location"] == "/assets/index-current.js"
+    assert js_response.headers["cache-control"] == "no-store"
+    assert css_response.status_code == 302
+    assert css_response.headers["location"] == "/assets/index-current.css"
+    assert css_response.headers["cache-control"] == "no-store"
+
+
+def test_missing_non_entry_asset_returns_404(tmp_path):
+    ui_dir = tmp_path / "ui"
+    assets_dir = ui_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.get("/assets/not-built.js")
+
+    assert response.status_code == 404
+
+
+def test_unknown_api_paths_do_not_fall_back_to_spa(tmp_path):
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<div id='root'></div>", encoding="utf-8")
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=48174,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+    )
+    client = TestClient(server._build_app())
+
+    response = client.get("/api/not-a-route")
+
+    assert response.status_code == 404
+    assert response.json() == {"error": "Endpoint not found"}
+
+
+def test_api_config_with_experimental_enabled(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        experimental_enabled=True,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["experimentalEnabled"] is True
+
+
+def test_pick_free_port_scans_up_from_occupied_port():
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host, 0))
+        sock.listen()
+        occupied_port = int(sock.getsockname()[1])
+
+        selected_port = _pick_free_port(host, occupied_port)
+
+        assert selected_port > occupied_port
+    finally:
+        sock.close()
+
+
+def test_pick_free_port_skips_reserved_port():
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host, 0))
+        reserved_port = int(sock.getsockname()[1])
+    finally:
+        sock.close()
+
+    selected_port = _pick_free_port(
+        host,
+        reserved_port,
+        reserved_ports={reserved_port},
+    )
+
+    assert selected_port > reserved_port
+
+
+def test_localhost_port_probe_checks_ipv4_loopback():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", 0))
+        sock.listen()
+        occupied_port = int(sock.getsockname()[1])
+
+        assert _can_bind_port("localhost", occupied_port) is False
+    finally:
+        sock.close()
+
+
+def test_pick_free_port_fails_fast_for_invalid_host():
+    with pytest.raises(OSError):
+        _pick_free_port("not-a-bindable-host.invalid", 4173)
+
+
+def test_duckdb_backend_start_failure_is_propagated(server, monkeypatch):
+    def fail_init_global_connection(*_args, **_kwargs):
+        raise RuntimeError("duckdb lock held")
+
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.db_async.init_global_connection",
+        fail_init_global_connection,
+    )
+
+    server._start_duckdb_backend()
+
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/status")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "degraded"
+    duckdb_status = data["components"]["duckdbWebSocket"]
+    assert duckdb_status["status"] == "error"
+    assert duckdb_status["message"] == "DuckDB websocket backend failed to start"
+    assert duckdb_status["error"] == "duckdb lock held"
+    assert "RuntimeError: duckdb lock held" in duckdb_status["details"]
+
+
+def test_duckdb_backend_slow_start_remains_starting(server, monkeypatch):
+    class FakeThread:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def start(self):
+            pass
+
+    monkeypatch.setattr("sqlrooms.web.launcher.threading.Thread", FakeThread)
+    monkeypatch.setattr(server._duckdb_ready, "wait", lambda timeout=None: False)
+
+    server._start_duckdb_backend()
+
+    duckdb_status = server._runtime_status()["components"]["duckdbWebSocket"]
+    assert server._duckdb_start_error is None
+    assert duckdb_status["status"] == "starting"
+
+
+def test_duckdb_backend_late_success_clears_timeout_status(server, monkeypatch):
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.db_async.init_global_connection",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "sqlrooms.web.launcher.duckdb_ws_server",
+        lambda *_args, **_kwargs: None,
+    )
+    server._duckdb_start_error = TimeoutError("Timed out starting")
+
+    server._run_duckdb_server()
+
+    assert server._duckdb_start_error is None
+    assert server._runtime_status()["status"] == "ready"
+
+
+def test_api_config_with_external_urls(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+        external_ws_url="wss://demo.sprites.dev/ws/duckdb",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
+def test_api_config_derives_ws_url_from_external_url(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="https://demo.sprites.dev/",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "https://demo.sprites.dev"
+    assert data["wsUrl"] == "wss://demo.sprites.dev/ws/duckdb"
+
+
+def test_api_config_derives_proxy_ws_url_from_local_external_url(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="0.0.0.0",
+        port=8080,
+        ws_port=4000,
+        open_browser=False,
+        external_url="http://localhost:4173",
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["apiBaseUrl"] == "http://localhost:4173"
+    assert data["wsUrl"] == "ws://localhost:4173/ws/duckdb"
+
+
+def test_api_config_with_ai_provider_metadata(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        llm_provider="openai",
+        llm_model="gpt-5",
+        ai_providers={
+            "openai": {
+                "baseUrl": "https://api.openai.com/v1",
+                "apiKey": "demo-key",
+                "models": [{"modelName": "gpt-5"}],
+            }
+        },
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["llmProvider"] == "openai"
+    assert data["llmModel"] == "gpt-5"
+    assert "apiKey" not in data
+    assert "openai" in data["aiProviders"]
+    assert data["aiProviders"]["openai"]["apiKey"] == "demo-key"
+
+
+def test_api_config_with_ai_devtools_flag(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        ai_devtools=True,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["aiDevtools"] is True
+
+
+def test_api_upload(server, tmp_path):
+    app = server._build_app()
+    file_content = b"test content"
+    files = {"file": ("test.txt", file_content)}
+
+    client = TestClient(app)
+    response = client.post("/api/upload", files=files)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "path" in data
+    assert Path(data["path"]).name == "test.txt"
+    assert Path(data["path"]).read_bytes() == file_content
+
+
+def test_api_upload_sanitizes_filename_to_upload_dir(server, tmp_path):
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/upload",
+        files={"file": ("../../evil.csv", b"id\n1\n", "text/csv")},
+    )
+
+    assert response.status_code == 200
+    uploaded_path = Path(response.json()["path"])
+    assert uploaded_path == tmp_path / "sqlrooms_uploads" / "evil.csv"
+    assert uploaded_path.read_text() == "id\n1\n"
+
+
+def test_cars_fixture_upload_imports_from_project_uploads_dir(server, tmp_path):
+    app = server._build_app()
+    fixture = FIXTURES_DIR / "cars.csv"
+
+    client = TestClient(app)
+    with fixture.open("rb") as file:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("cars.csv", file, "text/csv")},
+        )
+
+    assert response.status_code == 200
+    uploaded_path = Path(response.json()["path"])
+    assert uploaded_path == tmp_path / "sqlrooms_uploads" / "cars.csv"
+    assert uploaded_path.read_text() == fixture.read_text()
+
+    with duckdb.connect(str(tmp_path / "fresh.duckdb")) as con:
+        con.execute(
+            "CREATE TABLE cars AS SELECT * FROM read_csv_auto(?)",
+            [str(uploaded_path)],
+        )
+        row_count = con.sql("SELECT count(*) FROM cars").fetchone()[0]
+        columns = [row[1] for row in con.sql("PRAGMA table_info('cars')").fetchall()]
+
+    assert row_count == 4
+    assert columns == ["make", "model", "year", "origin", "horsepower", "mpg"]
+
+
+def test_project_query_blocks_internal_metadata_namespace(server):
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/project/query",
+        json={"sql": "SELECT * FROM __sqlrooms.ui_state"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "Access to internal schema __sqlrooms is denied"
+
+
+def test_api_upload_allows_files_larger_than_previous_cap(server, tmp_path):
+    app = server._build_app()
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    client = TestClient(app)
+    with open(source, "rb") as f:
+        response = client.post(
+            "/api/upload",
+            files={"file": ("large.bin", f, "application/octet-stream")},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    uploaded = Path(data["path"])
+    assert uploaded.name == "large.bin"
+    assert uploaded.stat().st_size == source_size
+
+
+@pytest.mark.asyncio
+async def test_write_upload_to_path_streams_files_larger_than_previous_cap(tmp_path):
+    source = tmp_path / "large.bin"
+    source_size = 50 * 1024 * 1024 + 1
+    with open(source, "wb") as f:
+        f.truncate(source_size)
+
+    target = tmp_path / "uploaded.bin"
+    with open(source, "rb") as f:
+        bytes_written = await _write_upload_to_path(
+            UploadFile(file=f, filename="large.bin"),
+            target,
+        )
+
+    assert bytes_written == source_size
+    assert target.stat().st_size == source_size
+
+
+def test_no_ui_keeps_api_but_does_not_mount_static_ui(tmp_path):
+    db_path = tmp_path / "test.db"
+    ui_dir = tmp_path / "ui"
+    ui_dir.mkdir()
+    (ui_dir / "index.html").write_text("<h1>SQLRooms UI</h1>", encoding="utf-8")
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        ui_dir=str(ui_dir),
+        serve_ui=False,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    assert client.get("/api/config").status_code == 200
+    assert client.get("/").status_code == 404
+
+
+def test_api_config_with_postgres_connector(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        connector_settings=[
+            PostgresConnectorSettings(host="localhost", database="example", user="u")
+        ],
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
+    assert data["dbBridge"]["connections"] == [
+        {
+            "id": "postgres-default",
+            "engineId": "postgres",
+            "title": "Postgres",
+            "runtimeSupport": "server",
+            "requiresBridge": True,
+            "bridgeId": "sqlrooms-cli-http-bridge",
+            "isCore": False,
+            "config": {
+                "host": "localhost",
+                "port": "5432",
+                "database": "example",
+                "user": "u",
+            },
+        }
+    ]
+    assert len(data["dbBridge"]["diagnostics"]) == 1
+    assert data["dbBridge"]["diagnostics"][0]["id"] == "postgres-default"
+    assert data["dbBridge"]["diagnostics"][0]["engineId"] == "postgres"
+    assert "available" in data["dbBridge"]["diagnostics"][0]
+
+
+def test_api_config_with_snowflake_connector_metadata(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        connector_settings=[
+            SnowflakeConnectorSettings(
+                account="demo-account",
+                user="demo-user",
+            )
+        ],
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["dbBridge"]["connections"] == [
+        {
+            "id": "snowflake-default",
+            "engineId": "snowflake",
+            "title": "Snowflake",
+            "runtimeSupport": "server",
+            "requiresBridge": True,
+            "bridgeId": "sqlrooms-cli-http-bridge",
+            "isCore": False,
+            "config": {
+                "account": "demo-account",
+                "user": "demo-user",
+            },
+        }
+    ]
+    assert len(data["dbBridge"]["diagnostics"]) == 1
+    assert data["dbBridge"]["diagnostics"][0]["id"] == "snowflake-default"
+    assert data["dbBridge"]["diagnostics"][0]["engineId"] == "snowflake"
+    assert "available" in data["dbBridge"]["diagnostics"][0]
+
+
+def test_api_config_with_multiple_same_engine_connectors(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        connector_settings=[
+            PostgresConnectorSettings(
+                host="localhost",
+                database="a",
+                user="u",
+                connection_id="pg-a",
+                title="Postgres A",
+            ),
+            PostgresConnectorSettings(
+                host="localhost",
+                database="b",
+                user="u",
+                connection_id="pg-b",
+                title="Postgres B",
+            ),
+        ],
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [c["id"] for c in data["dbBridge"]["connections"]] == ["pg-a", "pg-b"]
+
+
+def test_api_test_connection_adhoc_unsupported_engine(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.post(
+        "/api/db/test-connection",
+        json={"engine": "mysql", "config": {"host": "localhost"}},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "Unsupported engine" in data["error"]
+
+
+def test_api_test_connection_adhoc_missing_driver(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.post(
+        "/api/db/test-connection",
+        json={
+            "engine": "postgres",
+            "config": {"host": "localhost", "database": "x", "user": "x"},
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "error" in data
+
+
+def test_api_test_connection_missing_params(server):
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.post("/api/db/test-connection", json={})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["ok"] is False
+    assert "error" in data
+
+
+def test_api_config_redacts_secret_fields(tmp_path):
+    db_path = tmp_path / "test.db"
+    server = SqlroomsHttpServer(
+        db_path=db_path,
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        connector_settings=[
+            PostgresConnectorSettings(
+                host="localhost",
+                database="db",
+                user="u",
+                password="top-secret",
+                connection_id="pg-secret",
+            ),
+        ],
+    )
+    app = server._build_app()
+    client = TestClient(app)
+    response = client.get("/api/config")
+
+    assert response.status_code == 200
+    conn = response.json()["dbBridge"]["connections"][0]
+    assert "password" not in conn.get("config", {})
+
+
+def test_write_toml_engine_change_clears_stale_keys(tmp_path):
+    """Switching a connection from snowflake to postgres drops snowflake-only keys."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[[db.connectors]]
+id = "c1"
+engine = "snowflake"
+title = "My Conn"
+account = "xy12345"
+user = "sf_user"
+warehouse = "WH"
+schema = "PUBLIC"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    _write_db_connectors_to_toml(
+        config_path,
+        [
+            {
+                "id": "c1",
+                "engineId": "postgres",
+                "title": "My Conn",
+                "config": {
+                    "host": "localhost",
+                    "port": "5432",
+                    "database": "mydb",
+                    "user": "pg_user",
+                },
+            }
+        ],
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    entry = doc["db"]["connectors"][0]
+    assert entry["engine"] == "postgres"
+    assert entry["host"] == "localhost"
+    assert entry["user"] == "pg_user"
+    assert "account" not in entry
+    assert "warehouse" not in entry
+    assert "schema" not in entry
+
+
+def test_write_ai_settings_to_toml_preserves_api_key_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "env-secret")
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        """
+[other]
+value = "preserved"
+
+[ai]
+default_provider = "openai"
+default_model = "gpt-4.1"
+
+[[ai.providers]]
+id = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+models = ["gpt-4.1"]
+""".strip(),
+        encoding="utf-8",
+    )
+
+    _write_ai_settings_to_toml(
+        config_path,
+        {
+            "defaultProvider": "openai",
+            "defaultModel": "gpt-5",
+            "settings": {
+                "providers": {
+                    "openai": {
+                        "baseUrl": "https://api.openai.com/v1",
+                        "apiKey": "env-secret",
+                        "models": [{"modelName": "gpt-5"}],
+                    }
+                },
+                "customModels": [
+                    {
+                        "modelName": "local-qwen",
+                        "baseUrl": "http://localhost:11434/v1",
+                        "apiKey": "local-key",
+                    }
+                ],
+                "modelParameters": {
+                    "maxSteps": 12,
+                    "additionalInstruction": "Be concise.",
+                },
+            },
+        },
+    )
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["other"]["value"] == "preserved"
+    assert doc["ai"]["default_model"] == "gpt-5"
+    provider = doc["ai"]["providers"][0]
+    assert provider["api_key_env"] == "OPENAI_API_KEY"
+    assert "api_key" not in provider
+    assert provider["models"] == ["gpt-5"]
+    assert doc["ai"]["custom_models"][0]["model_name"] == "local-qwen"
+    assert doc["ai"]["model_parameters"]["max_steps"] == 12
+
+
+def test_api_put_ai_settings_writes_config(tmp_path):
+    config_path = tmp_path / "config.toml"
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/ai/settings",
+        json={
+            "defaultProvider": "anthropic",
+            "defaultModel": "claude-4-sonnet",
+            "settings": {
+                "providers": {
+                    "anthropic": {
+                        "baseUrl": "https://api.anthropic.com",
+                        "apiKey": "anthropic-key",
+                        "models": [{"modelName": "claude-4-sonnet"}],
+                    }
+                },
+                "customModels": [],
+                "modelParameters": {
+                    "maxSteps": 8,
+                    "additionalInstruction": "",
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+
+    import tomllib
+
+    with config_path.open("rb") as fh:
+        doc = tomllib.load(fh)
+    assert doc["ai"]["default_provider"] == "anthropic"
+    assert doc["ai"]["default_model"] == "claude-4-sonnet"
+    assert doc["ai"]["providers"][0]["api_key"] == "anthropic-key"
+    assert doc["ai"]["model_parameters"]["max_steps"] == 8
+    assert doc["ai"]["model_parameters"]["additional_instruction"] == ""
+    assert server.llm_provider == "anthropic"
+    assert server.llm_model == "claude-4-sonnet"
+    assert server.ai_model_parameters["maxSteps"] == 8
+    assert server.ai_model_parameters["additionalInstruction"] == ""
+
+
+def test_api_put_ai_settings_rejects_fractional_max_steps(tmp_path):
+    config_path = tmp_path / "config.toml"
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        config_path=config_path,
+    )
+    app = server._build_app()
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/ai/settings",
+        json={
+            "defaultProvider": "anthropic",
+            "defaultModel": "claude-4-sonnet",
+            "settings": {
+                "providers": {},
+                "modelParameters": {
+                    "maxSteps": 8.5,
+                },
+            },
+        },
+    )
+
+    assert response.status_code == 400
+    assert "maxSteps" in response.json()["error"]
+    assert not config_path.exists()
+    assert server.llm_provider is None
+
+
+def test_api_auth_allows_loopback_without_token(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is True
+
+
+def test_api_auth_requires_token_for_non_loopback(server):
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/db/settings",
+            "headers": [],
+            "client": ("10.0.0.2", 12345),
+            "server": ("127.0.0.1", 4173),
+            "scheme": "http",
+        }
+    )
+    assert server._is_authorized_request(request) is False

@@ -16,6 +16,7 @@ import type {
 } from '@sqlrooms/mosaic';
 import {NotebookSliceState} from '@sqlrooms/notebook';
 import {PivotSliceState} from '@sqlrooms/pivot';
+import {PythonSliceState} from '@sqlrooms/python/block';
 import {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {WebContainerSliceState} from '@sqlrooms/webcontainer';
@@ -27,7 +28,7 @@ const AppBuilderProjectEntries = z.record(
   z.string(),
   z.object({
     name: z.string().default('Untitled App'),
-    prompt: z.string().default(''),
+    intent: z.string().default(''),
     template: z.string().default('mosaic-dashboard'),
     files: z.record(z.string(), z.string()).default({}),
     updatedAt: z.number().default(0),
@@ -52,6 +53,7 @@ export type RoomState = RoomShellSliceState &
   CellsSliceState &
   NotebookSliceState &
   PivotSliceState &
+  PythonSliceState &
   CanvasSliceState &
   DocumentsSliceState &
   BlockDocumentsSliceState &

@@ -8,7 +8,7 @@ import {getChartToolName} from './utils';
  *
  * @param chartTypes - Array of chart type definitions
  * @param params - Chart tool parameters containing addChart function, maxDataPoints limit, and databaseAdapter for table/column resolution
- * @param toolNamePrefix - Required prefix for generated tool names (e.g., 'create_dashboard_' or 'create_worksheet_block_')
+ * @param toolNamePrefix - Required prefix for generated tool names (e.g., 'create_dashboard_' or 'create_block_document_chart_')
  * @returns Record mapping tool names to tool instances
  *
  * @example

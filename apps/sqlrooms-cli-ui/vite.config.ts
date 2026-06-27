@@ -9,6 +9,8 @@ import wasm from 'vite-plugin-wasm';
 import scaffoldsPlugin from './plugins/scaffolds';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const apiProxyTarget =
+  process.env.SQLROOMS_CLI_API_PROXY_TARGET ?? 'http://localhost:4273';
 
 type ViteAlias = {find: string | RegExp; replacement: string};
 
@@ -82,19 +84,19 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 4174,
+    port: 3100,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Resource-Policy': 'cross-origin',
     },
     proxy: {
-      '/api': 'http://localhost:4173',
-      '/config.json': 'http://localhost:4173',
+      '/api': apiProxyTarget,
+      '/config.json': apiProxyTarget,
     },
   },
   preview: {
-    port: 4175,
+    port: 3101,
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',

@@ -36,7 +36,7 @@ Best for: comparing distributions between groups, finding outliers per category,
 
 Do NOT use for: single distribution (use histogram), time trends (use line-chart), simple counts (use count-plot).`,
     inputSchema: BoxPlotToolInput,
-    execute: async ({tableName, title, settings}) => {
+    execute: async ({tableName, title, settings, panelId}) => {
       try {
         const dataTable = ensureTable(databaseAdapter, tableName);
 
@@ -52,6 +52,7 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
 
         addChart({
           tableName,
+          panelId,
           title,
           config,
         });

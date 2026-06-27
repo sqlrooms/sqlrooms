@@ -1,10 +1,6 @@
-import type {WorksheetAiAdapter} from '@sqlrooms/mosaic/ai';
+import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
-import {
-  BlockDocumentStatefulBlockBlock,
-  createDefaultBlockDocumentBlockId,
-} from '@sqlrooms/documents';
 
 /**
  * Creates a worksheet-specific adapter for the worksheet agent.
@@ -12,7 +8,7 @@ import {
  */
 export function createWorksheetAiAdapter(
   store: StoreApi<RoomState>,
-): WorksheetAiAdapter {
+): BlockDocumentAiAdapter {
   const ensureWorksheet = (worksheetId: string) => {
     const state = store.getState();
 
@@ -24,10 +20,10 @@ export function createWorksheetAiAdapter(
   };
 
   return {
-    setCurrentWorksheet: (artifactId) =>
+    setCurrentBlockDocument: (artifactId) =>
       store.getState().artifacts.setCurrentArtifact(artifactId),
 
-    ensureWorksheet,
+    ensureBlockDocument: ensureWorksheet,
 
     getBlocks: (worksheetId) => {
       const state = store.getState();
@@ -41,7 +37,6 @@ export function createWorksheetAiAdapter(
         return undefined;
       }
 
-      // Return blocks from the block document
       return blockDocument.content.content;
     },
 
@@ -49,56 +44,8 @@ export function createWorksheetAiAdapter(
       ensureWorksheet(worksheetId);
 
       const state = store.getState();
-      // Append the block to the worksheet
       state.blockDocuments.appendBlocks(worksheetId, [block]);
 
-      // Return the block ID
-      return block.id;
-    },
-
-    addDashboardBlock: (worksheetId, title, tableName) => {
-      ensureWorksheet(worksheetId);
-
-      const state = store.getState();
-      const dashboardId = state.mosaicDashboard.createDashboard(title);
-
-      state.mosaicDashboard.setSelectedTable(dashboardId, tableName);
-
-      const block: BlockDocumentStatefulBlockBlock = {
-        type: 'statefulBlock',
-        id: createDefaultBlockDocumentBlockId(),
-        blockInstanceId: dashboardId,
-        blockType: 'dashboard',
-        caption: title,
-      };
-
-      // Append the block to the worksheet
-      state.blockDocuments.appendBlocks(worksheetId, [block]);
-
-      // Return the block ID
-      return {
-        blockId: block.id,
-        dashboardId,
-      };
-    },
-
-    addDataTableExplorerBlock: (worksheetId, title, tableName) => {
-      ensureWorksheet(worksheetId);
-
-      const state = store.getState();
-      const block: BlockDocumentStatefulBlockBlock = {
-        type: 'statefulBlock',
-        id: createDefaultBlockDocumentBlockId(),
-        blockInstanceId: createDefaultBlockDocumentBlockId(),
-        blockType: 'data-table',
-        title: tableName,
-        caption: title,
-      };
-
-      // Append the block to the worksheet
-      state.blockDocuments.appendBlocks(worksheetId, [block]);
-
-      // Return the block ID
       return block.id;
     },
   };
