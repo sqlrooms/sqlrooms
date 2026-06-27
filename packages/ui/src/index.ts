@@ -42,7 +42,18 @@ export {
 
 export {Checkbox} from './components/checkbox';
 
-export {ComboboxDemo} from './components/combobox';
+export {
+  Combobox,
+  type ComboboxContentProps,
+  type ComboboxItemProps,
+  type ComboboxRootProps,
+  type ComboboxTriggerProps,
+} from './components/combobox';
+export {
+  useCombobox,
+  type UseComboboxOptions,
+  type UseComboboxReturn,
+} from './hooks/useCombobox';
 
 export {
   Collapsible,

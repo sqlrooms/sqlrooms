@@ -1,6 +1,5 @@
 import type {FC} from 'react';
-import {Combobox} from './Combobox';
-import {cn} from '@sqlrooms/ui';
+import {Combobox, cn} from '@sqlrooms/ui';
 
 type ColorSelectorItemProps = {
   color: string;

@@ -1,7 +1,7 @@
 import {type FC, memo, useCallback} from 'react';
+import {Combobox} from '@sqlrooms/ui';
 import {TEMPORAL_COLUMN_TYPES} from '../column-types-utils';
 import type {TemporalInterval} from '../schemas';
-import {Combobox} from './Combobox';
 
 interface TemporalGranularitySelectorProps {
   value?: TemporalInterval;

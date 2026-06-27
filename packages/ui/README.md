@@ -91,12 +91,60 @@ function MyComponent() {
 ## Available Components
 
 - **Layout**: Card, Resizable, Tabs
-- **Forms**: Button, Checkbox, Input, Select, Slider, Switch, Textarea
+- **Forms**: Button, Checkbox, Combobox, Input, Select, Slider, Switch, Textarea
 - **Feedback**: Alert, Progress, Spinner, Toast
 - **Navigation**: Accordion, Breadcrumb, Dropdown Menu, TabStrip
 - **Overlay**: Dialog, ModifierScrollOverlay, Popover, Tooltip
 - **Data Display**: Badge, Table
 - **Utility**: Error Boundary, Theme Switch
+
+## Combobox
+
+Use the compound `Combobox` component for searchable select dropdowns built on
+the package's Popover and Command primitives.
+
+```tsx
+import {Combobox} from '@sqlrooms/ui';
+
+function MySelector() {
+  const [value, setValue] = useState('');
+  const options = [
+    {value: 'option1', label: 'Option 1'},
+    {value: 'option2', label: 'Option 2'},
+    {value: 'option3', label: 'Option 3'},
+  ];
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? 'Select option';
+
+  return (
+    <Combobox value={value} onChange={setValue}>
+      <Combobox.Trigger>
+        <span>{selectedLabel}</span>
+      </Combobox.Trigger>
+      <Combobox.Content
+        searchable
+        searchPlaceholder="Search..."
+        emptyMessage="No results found."
+      >
+        {options.map((option) => (
+          <Combobox.Item key={option.value} value={option.value}>
+            <span>{option.label}</span>
+          </Combobox.Item>
+        ))}
+      </Combobox.Content>
+    </Combobox>
+  );
+}
+```
+
+Available compound components:
+
+- `Combobox` (root) - Manages state and provides context
+- `Combobox.Trigger` - Button to open the dropdown
+- `Combobox.Content` - Popover content wrapper
+- `Combobox.Item` - Individual selectable item
+
+For advanced composition, the lower-level `useCombobox` hook is also exported.
 
 ## Advanced Features
 

@@ -504,45 +504,6 @@ Available compound components:
 
 For simpler use cases, the legacy `ChartBuilderDialog` component is still available but deprecated.
 
-### Combobox Component
-
-The package provides a reusable compound `Combobox` component for building searchable select dropdowns. This component is used internally by chart settings fields like `AggregationSelector`, `FieldSelectorInput`, and `TemporalGranularitySelector`.
-
-```tsx
-import {Combobox} from '@sqlrooms/mosaic';
-
-function MySelector() {
-  const [value, setValue] = useState('');
-
-  return (
-    <Combobox value={value} onChange={setValue}>
-      <Combobox.Trigger placeholder="Select option..." />
-      <Combobox.Content>
-        <Combobox.Search placeholder="Search..." />
-        <Combobox.Empty>No results found.</Combobox.Empty>
-        <Combobox.List>
-          <Combobox.Item value="option1">Option 1</Combobox.Item>
-          <Combobox.Item value="option2">Option 2</Combobox.Item>
-          <Combobox.Item value="option3">Option 3</Combobox.Item>
-        </Combobox.List>
-      </Combobox.Content>
-    </Combobox>
-  );
-}
-```
-
-Available compound components:
-
-- `Combobox` (root) - Manages state and provides context
-- `Combobox.Trigger` - Button to open the dropdown
-- `Combobox.Content` - Popover content wrapper
-- `Combobox.Search` - Search input field
-- `Combobox.Empty` - Empty state message
-- `Combobox.List` - Items container
-- `Combobox.Item` - Individual selectable item
-
-For advanced use cases, the underlying `useCombobox` hook is also exported.
-
 ### Working with Selections
 
 Selections enable cross-filtering between multiple visualizations. You can get or create a named selection from the store:
