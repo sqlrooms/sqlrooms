@@ -1,5 +1,6 @@
 import {jest} from '@jest/globals';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {createWorksheetCommands} from '../createWorksheetCommands';
 
 function createCommandContext(state: unknown) {
@@ -74,7 +75,9 @@ function createState() {
       },
       mosaicDashboard: {
         ensureDashboard: jest.fn(),
-        getDashboard: jest.fn(() => ({panels: []})),
+        getDashboard: jest.fn(() => ({
+          panels: [] as MosaicDashboardPanelConfigType[],
+        })),
       },
     },
     invokeCommand,
@@ -247,7 +250,7 @@ describe('createWorksheetCommands', () => {
   it('updates a map panel seeded by stateful block creation instead of adding a duplicate', async () => {
     const {state, invokeCommand} = createState();
     let mapStateSeeded = false;
-    const seededPanel = {
+    const seededPanel: MosaicDashboardPanelConfigType = {
       id: 'seeded-map-panel',
       type: DECK_MAP_DASHBOARD_PANEL_TYPE,
       title: 'Seeded Map',

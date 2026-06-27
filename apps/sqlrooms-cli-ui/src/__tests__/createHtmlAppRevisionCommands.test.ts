@@ -132,6 +132,41 @@ describe('createHtmlAppRevisionCommands', () => {
     });
   });
 
+  it('commits metadata-backed title-only renames as revisions', async () => {
+    const {state, renameApp, commitAppRevision} = createState();
+
+    const result = await getCommand('html-app.rename').execute(
+      createCommandContext(state),
+      {
+        appId: 'app-1',
+        title: 'Audited App',
+        metadata: {name: 'Rename to Audited App', source: 'assistant'},
+      },
+    );
+
+    expect(renameApp).not.toHaveBeenCalled();
+    expect(commitAppRevision).toHaveBeenCalledWith(
+      'app-1',
+      expect.objectContaining({
+        title: 'Audited App',
+      }),
+      expect.objectContaining({
+        name: 'Rename to Audited App',
+        source: 'assistant',
+      }),
+    );
+    expect(result).toMatchObject({
+      success: true,
+      commandId: 'html-app.rename',
+      data: {
+        appId: 'app-1',
+        previousTitle: 'App',
+        title: 'Audited App',
+        revisionId: 'revision-1',
+      },
+    });
+  });
+
   it('renames HTML apps through a revision when updated files are provided', async () => {
     const {state, renameApp, commitAppRevision} = createState();
 

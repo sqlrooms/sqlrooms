@@ -155,13 +155,14 @@ export function createHtmlAppRevisionCommands(): RoomCommand<RoomState>[] {
         }
         const previousTitle = app.title;
         let revision;
-        if (files) {
+        const shouldCommitRevision =
+          files || (metadata && app.title !== trimmedTitle);
+        if (shouldCommitRevision) {
           revision = state.htmlApps.commitAppRevision(
             appId,
             {
               title: trimmedTitle,
-              files,
-              diagnostics: [],
+              ...(files ? {files, diagnostics: []} : {}),
             },
             (metadata ?? {}) as CommitHtmlAppRevisionMetadata,
           );
