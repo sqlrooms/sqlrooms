@@ -36,7 +36,9 @@ export function createTableToRecordBatchAdapter(
       }
 
       // Must be an arrow.Table — split into per-batch sublayers
-      const table = data as arrow.Table;
+      if (!(data instanceof arrow.Table)) return null;
+
+      const table = data;
       const batches = table.batches;
       if (!batches.length) return null;
 
