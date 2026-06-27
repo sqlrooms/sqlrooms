@@ -1,10 +1,14 @@
 import {
   parseQualifiedSqlIdentifier,
+  escapeId,
   type QualifiedTableName,
+  resolveTableReference,
+  type ResolveTableReferenceResult,
 } from '@sqlrooms/db';
 import {asTableRef, type TableRefNode} from '@uwdata/mosaic-sql';
 
 export type MosaicTableReferenceInput = string | QualifiedTableName;
+export type MosaicTableReferenceCandidate = {table: QualifiedTableName};
 
 /**
  * Converts SQLRooms table identity into a Mosaic query table reference.
@@ -33,16 +37,54 @@ export function getMosaicTableIdentity(
 }
 
 /**
- * Converts SQLRooms table identity into a schema/table SQL string for APIs that
- * only accept string table references.
+ * Converts SQLRooms table identity into a serializable vgplot `data.from`
+ * reference.
+ *
+ * SQLRooms normalizes this string into a Mosaic TableRefNode before handing the
+ * spec to Mosaic at runtime. Keeping this string SQL-quoted preserves dotted
+ * identifier boundaries through JSON serialization.
  */
-export function getMosaicTableReferenceString(
+export function getMosaicVgPlotTableReference(
+  tableName: MosaicTableReferenceInput,
+): string {
+  return getMosaicRawSqlTableReference(tableName);
+}
+
+/**
+ * Converts SQLRooms table identity into a schema/table SQL fragment for raw SQL
+ * builders. The active Mosaic connector owns the catalog, so the database part
+ * is intentionally omitted.
+ */
+export function getMosaicRawSqlTableReference(
   tableName: MosaicTableReferenceInput,
 ): string {
   return getMosaicTableReferenceParts(tableName)
-    .map(quoteMosaicTableReferencePart)
+    .map(escapeId)
     .join('.');
 }
+
+/**
+ * Resolves a persisted dashboard table identity against the current SQLRooms
+ * table catalog. Canonical identities and qualified SQL identifiers are
+ * preferred; legacy bare names resolve only when unambiguous.
+ */
+export function resolveMosaicTableReference<
+  T extends MosaicTableReferenceCandidate,
+>(
+  tables: T[],
+  tableName: MosaicTableReferenceInput | undefined,
+): ResolveTableReferenceResult<T> {
+  if (!tableName) {
+    return {};
+  }
+  return resolveTableReference(tables, tableName);
+}
+
+/**
+ * @deprecated Use `getMosaicVgPlotTableReference` for chart specs or
+ * `getMosaicRawSqlTableReference` for string-built SQL.
+ */
+export const getMosaicTableReferenceString = getMosaicVgPlotTableReference;
 
 function getMosaicTableReferenceParts(
   tableName: MosaicTableReferenceInput,
@@ -60,8 +102,4 @@ function getMosaicTableReferenceParts(
   }
 
   return [String(tableName).trim()];
-}
-
-function quoteMosaicTableReferencePart(part: string): string {
-  return `"${part.replaceAll('"', '""')}"`;
 }

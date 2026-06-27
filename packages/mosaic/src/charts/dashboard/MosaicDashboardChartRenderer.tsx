@@ -1,5 +1,5 @@
 import {BarChart3Icon} from 'lucide-react';
-import {useCallback, type FC} from 'react';
+import {useCallback, useMemo, type FC} from 'react';
 import {MosaicDashboardChartHeaderActions} from './MosaicDashboardChartHeaderActions';
 import type {ChartPanelConfig} from '../../dashboard/dashboard-types';
 import {
@@ -10,7 +10,8 @@ import {
 } from '../../dashboard/MosaicDashboardSlice';
 import {ChartConfig} from '../chart-types/chart-config';
 import {MosaicChart} from '../MosaicChart';
-import {useDataTable} from '@sqlrooms/db';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
+import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
 const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   panel,
@@ -19,7 +20,11 @@ const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   selectionName,
 }) => {
   const tableName = dashboard.selectedTable;
-  const dataTable = useDataTable(tableName);
+  const tables = useTablesWithColumns();
+  const dataTable = useMemo(
+    () => resolveMosaicTableReference(tables, tableName).table,
+    [tableName, tables],
+  );
 
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,

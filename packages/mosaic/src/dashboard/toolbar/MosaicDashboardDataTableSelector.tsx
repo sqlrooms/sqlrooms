@@ -1,9 +1,12 @@
-import {FC, useCallback} from 'react';
+import {FC, useCallback, useMemo} from 'react';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {DataTableSelector} from '../../components/DataTableSelector';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
-import {useDataTable} from '@sqlrooms/db';
 import type {DataTable} from '@sqlrooms/db';
+import {
+  getMosaicTableIdentity,
+  resolveMosaicTableReference,
+} from '../../mosaicTableReference';
 
 interface MosaicDashboardDataTableSelectorProps {
   dashboardId: string;
@@ -18,7 +21,10 @@ export const MosaicDashboardDataTableSelector: FC<
   );
   const selectedTableName = dashboard?.selectedTable;
 
-  const selectedTable = useDataTable(selectedTableName);
+  const selectedTable = useMemo(
+    () => resolveMosaicTableReference(tables, selectedTableName).table,
+    [selectedTableName, tables],
+  );
 
   const setSelectedTable = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setSelectedTable,
@@ -26,7 +32,7 @@ export const MosaicDashboardDataTableSelector: FC<
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      setSelectedTable(dashboardId, table.table.toString());
+      setSelectedTable(dashboardId, getMosaicTableIdentity(table.table));
     },
     [dashboardId, setSelectedTable],
   );

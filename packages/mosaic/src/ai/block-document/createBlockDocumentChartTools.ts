@@ -10,6 +10,7 @@ import type {ChartToolsOptions} from '../types';
 import {DEFAULT_CHART_MAX_DATA_POINTS} from '../constants';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {BLOCK_DOCUMENT_CHART_TOOL_PREFIX} from './constants';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 
 /**
  * Parameters for creating Mosaic chart tools that append chart blocks to a
@@ -44,11 +45,16 @@ export function createBlockDocumentChartTools({
         );
       }
 
+      const resolvedTable = databaseAdapter.findTable(tableName);
+      const tableIdentity = resolvedTable?.table
+        ? getMosaicTableIdentity(resolvedTable.table)
+        : tableName;
+
       return blockDocumentAdapter.addBlock(blockDocumentId, {
         type: 'chart',
         id: createDefaultBlockDocumentBlockId(),
         config,
-        tableName,
+        tableName: tableIdentity,
         caption: title ?? 'Chart',
       });
     },

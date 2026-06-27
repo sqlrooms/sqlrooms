@@ -12,7 +12,7 @@ import {
   type ChartRuntimeIssueContext,
   type ChartRuntimeIssueReporter,
 } from '../../../../chart-runtime';
-import {getMosaicSqlTableReference} from '../../../../mosaicTableReference';
+import {getMosaicRawSqlTableReference} from '../../../../mosaicTableReference';
 
 export type BoxPlotSummaryRow = {
   category: unknown;
@@ -48,7 +48,7 @@ export type BoxPlotState = {
  * @property runtimeIssueReporter - Optional reporter used for query and policy failures.
  * @property selection - Mosaic selection used for external filters and y-axis brushing.
  * @property table - Canonical SQLRooms table identity. The client converts it
- *   with `getMosaicSqlTableReference`, so callers should pass the structured
+ *   with `getMosaicRawSqlTableReference`, so callers should pass the structured
  *   `QualifiedTableName` instead of a pre-rendered SQL string.
  * @property x - Category column name.
  * @property y - Numeric value column name.
@@ -151,11 +151,11 @@ type BuildBoxPlotQueryArgs = {
  * @returns SQL that returns summary rows and outlier rows for the box plot.
  *
  * The structured `QualifiedTableName` is converted with
- * `getMosaicSqlTableReference`, which intentionally produces the table
- * reference shape expected by Mosaic queries.
+ * `getMosaicRawSqlTableReference`, which intentionally produces the
+ * catalog-free SQL fragment expected by Mosaic's active connector.
  */
 export function buildBoxPlotQuery(args: BuildBoxPlotQueryArgs): string {
-  const tableReference = getMosaicSqlTableReference(args.table);
+  const tableReference = getMosaicRawSqlTableReference(args.table);
   const x = escapeId(args.x);
   const y = escapeId(args.y);
   const filters = normalizeFilter(args.filter).join(' AND ');
