@@ -50,7 +50,7 @@ Do NOT use for: single distribution (use histogram), time trends (use line-chart
           settings,
         };
 
-        addChart({
+        await addChart({
           tableName,
           panelId,
           title,

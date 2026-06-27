@@ -57,7 +57,7 @@ Do NOT use for: single point distributions (use histogram), categorical counts (
           settings,
         };
 
-        addChart({
+        await addChart({
           tableName,
           panelId,
           title,

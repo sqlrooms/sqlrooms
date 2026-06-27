@@ -182,7 +182,9 @@ table blocks.
 `createBlockDocumentDataTableExplorerTool` expose Mosaic-owned capabilities for
 block-document hosts. The host provides a `BlockDocumentAiAdapter` from
 `@sqlrooms/documents` plus callbacks for creating host-specific stateful block
-state, then composes these tools with app-specific agent policy.
+state, then composes these tools with app-specific agent policy. The adapter may
+append blocks through direct slice methods or by awaiting a command-backed
+mutation supplied by the host.
 
 ### Mosaic Dashboard Panels
 
@@ -369,6 +371,10 @@ including chart tools, a Data Table Explorer panel tool, and an optional
 exploratory `dashboard_agent`. Client apps supply small adapters that map
 Mosaic's generic dashboard operations to their store and table metadata.
 Agent tools use `intent` for the natural-language objective they should satisfy.
+Mutation callbacks may return promises, so hosts can route dashboard table and
+panel writes through room commands such as `dashboard.set-selected-table`,
+`dashboard.add-panel`, `dashboard.update-panel`, and `dashboard.remove-panel`
+while preserving the reusable Mosaic AI surface.
 
 ```ts
 import {
@@ -391,14 +397,27 @@ const dashboardAdapter: DashboardAiAdapter = {
     store.getState().mosaicDashboard.getDashboard(dashboardId)?.selectedTable,
   getPanels: () =>
     store.getState().mosaicDashboard.getDashboard(dashboardId)?.panels ?? [],
-  setSelectedTable: (tableName) =>
-    store.getState().mosaicDashboard.setSelectedTable(dashboardId, tableName),
-  addPanel: (panel) =>
-    store.getState().mosaicDashboard.addPanel(dashboardId, panel),
-  updatePanel: (panelId, patch) =>
-    store.getState().mosaicDashboard.updatePanel(dashboardId, panelId, patch),
-  removePanel: (panelId) =>
-    store.getState().mosaicDashboard.removePanel(dashboardId, panelId),
+  setSelectedTable: async (tableName) =>
+    store.getState().commands.invokeCommand('dashboard.set-selected-table', {
+      dashboardId,
+      tableName,
+    }),
+  addPanel: async (panel) =>
+    store.getState().commands.invokeCommand('dashboard.add-panel', {
+      dashboardId,
+      panel,
+    }),
+  updatePanel: async (panelId, patch) =>
+    store.getState().commands.invokeCommand('dashboard.update-panel', {
+      dashboardId,
+      panelId,
+      patch,
+    }),
+  removePanel: async (panelId) =>
+    store.getState().commands.invokeCommand('dashboard.remove-panel', {
+      dashboardId,
+      panelId,
+    }),
   getPanel: (panelId) =>
     store
       .getState()

@@ -19,15 +19,29 @@ export {
 export {
   createCommandTools,
   ExecuteCommandToolParameters,
+  GetCommandToolParameters,
   ListCommandsToolParameters,
+  SearchCommandsToolParameters,
 } from './tools/commandTools';
 export type {
   CommandToolDescriptor,
+  CommandToolSearchDescriptor,
   CommandToolsOptions,
   DefaultCommandTools,
   ExecuteCommandToolLlmResult,
+  ExecuteCommandToolParameters as ExecuteCommandToolParametersType,
+  GetCommandToolLlmResult,
+  GetCommandToolParameters as GetCommandToolParametersType,
   ListCommandsToolLlmResult,
+  ListCommandsToolParameters as ListCommandsToolParametersType,
+  SearchCommandsToolLlmResult,
+  SearchCommandsToolParameters as SearchCommandsToolParametersType,
 } from './tools/commandTools';
+export {DEFAULT_SKILL_RUNTIME_TOOL_POLICY} from './tools/skillRuntimeToolPolicy';
+export type {
+  SkillRuntimeCommandToolPolicy,
+  SkillRuntimeToolPolicy,
+} from './tools/skillRuntimeToolPolicy';
 export {
   createDefaultAiTools,
   createDefaultAiToolRenderers,

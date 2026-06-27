@@ -104,13 +104,13 @@ This tool does not create artifacts, select artifacts, or create worksheet block
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
       if (input.html || input.files) {
-        return writeHtmlAppRuntimeState(store, input);
+        return await writeHtmlAppRuntimeState(store, input);
       }
 
       const existingApp = store.getState().htmlApps.getApp(input.appId);
 
       if (existingApp && isTitleOnlyRequest(input)) {
-        return renameHtmlAppTitle(store, input);
+        return await renameHtmlAppTitle(store, input);
       }
 
       if (existingApp && isIncrementalAppEditRequest(input)) {
@@ -141,10 +141,10 @@ function isTitleOnlyRequest(input: HtmlAppAgentInput) {
   );
 }
 
-function renameHtmlAppTitle(
+async function renameHtmlAppTitle(
   store: StoreApi<RoomState>,
   input: HtmlAppAgentInput,
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   const title = input.title?.trim();
   const app = store.getState().htmlApps.getApp(input.appId);
   if (!title || !app) {
@@ -164,25 +164,53 @@ function renameHtmlAppTitle(
     nextTitle: title,
   });
 
-  const renamePatch = {
-    title,
-    ...(renamedFiles ? {files: renamedFiles, diagnostics: []} : {}),
-  };
   let revision: HtmlAppRevision | undefined;
   if (app.revisions.length === 0 && isDefaultHtmlAppScaffold(app)) {
-    store.getState().htmlApps.updateApp(input.appId, renamePatch);
+    const result = await store.getState().commands.invokeCommand(
+      'html-app.rename',
+      {
+        appId: input.appId,
+        title,
+        ...(renamedFiles ? {files: renamedFiles} : {}),
+        metadata: createHtmlAppRevisionMetadata(store, input, {
+          title,
+          isTitleOnly: true,
+          isInitialRevision: true,
+        }),
+      },
+      {surface: 'ai', actor: 'html-app-agent'},
+    );
+    if (!result.success) {
+      throw new Error(
+        result.error ?? result.message ?? 'Failed to rename HTML app.',
+      );
+    }
+    revision = (result.data as {revision?: HtmlAppRevision} | undefined)
+      ?.revision;
   } else {
     const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
-    revision = store.getState().htmlApps.commitAppRevision(
-      input.appId,
-      renamePatch,
-      createHtmlAppRevisionMetadata(store, input, {
+    const result = await store.getState().commands.invokeCommand(
+      'html-app.rename',
+      {
+        appId: input.appId,
         title,
-        isTitleOnly: true,
-        isInitialRevision:
-          app.revisions.length === 0 && !seededBaselineRevision,
-      }),
+        ...(renamedFiles ? {files: renamedFiles} : {}),
+        metadata: createHtmlAppRevisionMetadata(store, input, {
+          title,
+          isTitleOnly: true,
+          isInitialRevision:
+            app.revisions.length === 0 && !seededBaselineRevision,
+        }),
+      },
+      {surface: 'ai', actor: 'html-app-agent'},
     );
+    if (!result.success) {
+      throw new Error(
+        result.error ?? result.message ?? 'Failed to rename HTML app.',
+      );
+    }
+    revision = (result.data as {revision?: HtmlAppRevision} | undefined)
+      ?.revision;
   }
   const latestApp = store.getState().htmlApps.getApp(input.appId);
 
@@ -446,7 +474,8 @@ export async function writeHtmlAppRuntimeState(
     title,
     ...(intent ? {intent} : {}),
   });
-  const revision = store.getState().htmlApps.commitAppRevision(
+  const revision = await commitHtmlAppRevisionWithCommand(
+    store,
     appId,
     {
       title,
@@ -470,7 +499,7 @@ export async function writeHtmlAppRuntimeState(
   const app = store.getState().htmlApps.getApp(appId);
   const latestDiagnostics = app?.diagnostics ?? diagnostics;
   const errorCount = latestDiagnostics.filter(
-    (diagnostic) => diagnostic.level === 'error',
+    (diagnostic: {level?: string}) => diagnostic.level === 'error',
   ).length;
 
   return {
@@ -520,7 +549,8 @@ function seedHtmlAppBaselineRevision(
   ) {
     return undefined;
   }
-  return store.getState().htmlApps.commitAppRevision(
+  return commitHtmlAppRevisionDirect(
+    store,
     existingApp.id,
     {},
     {
@@ -532,6 +562,41 @@ function seedHtmlAppBaselineRevision(
       sourcePrompt: existingApp.intent,
     },
   );
+}
+
+async function commitHtmlAppRevisionWithCommand(
+  store: StoreApi<RoomState>,
+  appId: string,
+  patch: Parameters<RoomState['htmlApps']['commitAppRevision']>[1],
+  metadata: Parameters<RoomState['htmlApps']['commitAppRevision']>[2],
+): Promise<HtmlAppRevision> {
+  const result = await store
+    .getState()
+    .commands.invokeCommand(
+      'html-app.write-revision',
+      {appId, patch, metadata},
+      {surface: 'ai', actor: 'html-app-agent'},
+    );
+  if (!result.success) {
+    throw new Error(
+      result.error ?? result.message ?? 'Failed to write HTML app revision.',
+    );
+  }
+  const revision = (result.data as {revision?: HtmlAppRevision} | undefined)
+    ?.revision;
+  if (!revision) {
+    throw new Error('HTML app write command did not return a revision.');
+  }
+  return revision;
+}
+
+function commitHtmlAppRevisionDirect(
+  store: StoreApi<RoomState>,
+  appId: string,
+  patch: Parameters<RoomState['htmlApps']['commitAppRevision']>[1],
+  metadata: Parameters<RoomState['htmlApps']['commitAppRevision']>[2],
+) {
+  return store.getState().htmlApps.commitAppRevision(appId, patch, metadata);
 }
 
 function isDefaultHtmlAppScaffold(
@@ -668,7 +733,11 @@ export async function observeHtmlAppRuntimeDiagnostics(
   const start = Date.now();
   let diagnostics = store.getState().htmlApps.getApp(appId)?.diagnostics ?? [];
   while (Date.now() - start < DEFAULT_DIAGNOSTIC_OBSERVATION_MS) {
-    if (diagnostics.some((diagnostic) => diagnostic.level === 'error')) {
+    if (
+      diagnostics.some(
+        (diagnostic: {level?: string}) => diagnostic.level === 'error',
+      )
+    ) {
       return diagnostics;
     }
     await new Promise((resolve) =>

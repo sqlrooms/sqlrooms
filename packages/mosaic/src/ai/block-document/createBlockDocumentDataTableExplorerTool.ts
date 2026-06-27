@@ -16,12 +16,20 @@ export type CreateBlockDocumentDataTableExplorerToolParams = {
   blockDocumentAdapter: BlockDocumentAiAdapter;
   /** ID of the block document where data-table explorer blocks will be added. */
   blockDocumentId: string;
+  /** Host callback that performs the full durable block creation. */
+  addDataTableExplorerBlock?: (params: {
+    title: string;
+    tableName: string;
+    intent?: string;
+  }) => Promise<unknown>;
   /** Host callback that creates the data-table explorer stateful block. */
   createDataTableExplorerBlock: (params: {
     title: string;
     tableName: string;
     intent?: string;
-  }) => BlockDocumentStatefulBlockBlock;
+  }) =>
+    | BlockDocumentStatefulBlockBlock
+    | Promise<BlockDocumentStatefulBlockBlock>;
 };
 
 /**
@@ -32,11 +40,12 @@ export function createBlockDocumentDataTableExplorerTool({
   blockDocumentAdapter,
   databaseAdapter,
   blockDocumentId,
+  addDataTableExplorerBlock,
   createDataTableExplorerBlock,
 }: CreateBlockDocumentDataTableExplorerToolParams): Tool {
   return createDataTableExplorerTool({
     databaseAdapter,
-    addDataTable: ({title, tableName, intent}) => {
+    addDataTable: async ({title, tableName, intent}) => {
       if (!tableName) {
         throw new Error(
           'Table name is required to add a data table explorer block',
@@ -44,9 +53,17 @@ export function createBlockDocumentDataTableExplorerTool({
       }
 
       blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
-      blockDocumentAdapter.addBlock(
+      if (addDataTableExplorerBlock) {
+        return await addDataTableExplorerBlock({
+          title: title ?? 'Data Table Explorer',
+          tableName,
+          intent,
+        });
+      }
+
+      await blockDocumentAdapter.addBlock(
         blockDocumentId,
-        createDataTableExplorerBlock({
+        await createDataTableExplorerBlock({
           title: title ?? 'Data Table Explorer',
           tableName,
           intent,

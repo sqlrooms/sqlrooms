@@ -46,7 +46,7 @@ Do NOT use for: individual point plots (use scatter-plot), single variable distr
           settings,
         };
 
-        addChart({
+        await addChart({
           tableName,
           panelId,
           title,

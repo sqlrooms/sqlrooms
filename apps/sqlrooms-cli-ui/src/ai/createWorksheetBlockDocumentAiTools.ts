@@ -42,12 +42,39 @@ export type CreateWorksheetBlockDocumentAiToolsOptions = {
     title: string;
     tableName: string;
     intent?: string;
-  }) => {dashboardId: string; block: BlockDocumentStatefulBlockBlock};
+  }) =>
+    | {dashboardId: string; block: BlockDocumentStatefulBlockBlock}
+    | Promise<{dashboardId: string; block: BlockDocumentStatefulBlockBlock}>;
   createDataTableExplorerBlock: (params: {
     title: string;
     tableName: string;
     intent?: string;
-  }) => BlockDocumentStatefulBlockBlock;
+  }) =>
+    | BlockDocumentStatefulBlockBlock
+    | Promise<BlockDocumentStatefulBlockBlock>;
+  createHtmlAppBlock?: (params: {
+    title: string;
+    intent?: string;
+  }) =>
+    | {appId: string; block: BlockDocumentStatefulBlockBlock}
+    | Promise<{appId: string; block: BlockDocumentStatefulBlockBlock}>;
+  addDashboardBlock?: (params: {
+    worksheetId: string;
+    title: string;
+    tableName: string;
+    intent?: string;
+  }) => Promise<{dashboardId: string; blockId: string}>;
+  addDataTableExplorerBlock?: (params: {
+    worksheetId: string;
+    title: string;
+    tableName: string;
+    intent?: string;
+  }) => Promise<unknown>;
+  addHtmlAppBlock?: (params: {
+    worksheetId: string;
+    title: string;
+    intent?: string;
+  }) => Promise<{appId: string; blockId: string}>;
 };
 
 function ensureNoOverride(
@@ -81,6 +108,10 @@ export function createWorksheetBlockDocumentAiTools({
   htmlAppBlocksEnabled = false,
   createDashboardBlock,
   createDataTableExplorerBlock,
+  createHtmlAppBlock,
+  addDashboardBlock,
+  addDataTableExplorerBlock,
+  addHtmlAppBlock,
 }: CreateWorksheetBlockDocumentAiToolsOptions): Record<string, Tool> {
   const chartTools = createBlockDocumentChartTools({
     databaseAdapter,
@@ -97,6 +128,9 @@ export function createWorksheetBlockDocumentAiTools({
   const addDashboardBlockTool = createAddMosaicDashboardBlockTool({
     blockDocumentAdapter,
     blockDocumentId: worksheetId,
+    addDashboardBlock: addDashboardBlock
+      ? (params) => addDashboardBlock({worksheetId, ...params})
+      : undefined,
     createDashboardBlock,
   });
 
@@ -104,6 +138,9 @@ export function createWorksheetBlockDocumentAiTools({
     databaseAdapter,
     blockDocumentAdapter,
     blockDocumentId: worksheetId,
+    addDataTableExplorerBlock: addDataTableExplorerBlock
+      ? (params) => addDataTableExplorerBlock({worksheetId, ...params})
+      : undefined,
     createDataTableExplorerBlock,
   });
 
@@ -147,6 +184,10 @@ export function createWorksheetBlockDocumentAiTools({
             createAddHtmlAppBlockDocumentBlockTool({
               blockDocumentAdapter,
               blockDocumentId: worksheetId,
+              addHtmlAppBlock: addHtmlAppBlock
+                ? (params) => addHtmlAppBlock({worksheetId, ...params})
+                : undefined,
+              createHtmlAppBlock,
             }),
         }
       : {}),

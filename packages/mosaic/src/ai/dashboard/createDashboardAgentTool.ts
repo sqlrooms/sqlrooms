@@ -180,7 +180,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
 
         ensureTable(databaseAdapter, tableName);
 
-        dashboardAdapter.setSelectedTable(tableName);
+        await dashboardAdapter.setSelectedTable(tableName);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
 

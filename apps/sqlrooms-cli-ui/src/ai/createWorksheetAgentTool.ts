@@ -50,6 +50,18 @@ export type CreateWorksheetAgentToolOptions =
     createDataTableExplorerBlock: Parameters<
       typeof createWorksheetBlockDocumentAiTools
     >[0]['createDataTableExplorerBlock'];
+    createHtmlAppBlock?: Parameters<
+      typeof createWorksheetBlockDocumentAiTools
+    >[0]['createHtmlAppBlock'];
+    addDashboardBlock?: Parameters<
+      typeof createWorksheetBlockDocumentAiTools
+    >[0]['addDashboardBlock'];
+    addDataTableExplorerBlock?: Parameters<
+      typeof createWorksheetBlockDocumentAiTools
+    >[0]['addDataTableExplorerBlock'];
+    addHtmlAppBlock?: Parameters<
+      typeof createWorksheetBlockDocumentAiTools
+    >[0]['addHtmlAppBlock'];
   };
 
 function getWorksheetAgentInstructions(
@@ -301,6 +313,10 @@ export function createWorksheetAgentTool(
     mapBlocksEnabled = false,
     createDashboardBlock,
     createDataTableExplorerBlock,
+    createHtmlAppBlock,
+    addDashboardBlock,
+    addDataTableExplorerBlock,
+    addHtmlAppBlock,
   } = options;
 
   return tool({
@@ -367,6 +383,10 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
               htmlAppBlocksEnabled,
               createDashboardBlock,
               createDataTableExplorerBlock,
+              createHtmlAppBlock,
+              addDashboardBlock,
+              addDataTableExplorerBlock,
+              addHtmlAppBlock,
             }),
             ...dataTools,
           },
