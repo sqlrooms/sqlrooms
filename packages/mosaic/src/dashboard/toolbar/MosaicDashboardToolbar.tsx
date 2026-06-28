@@ -1,11 +1,12 @@
-import {FC, useCallback} from 'react';
+import {FC, useCallback, useMemo} from 'react';
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 import {useStoreWithMosaicDashboard} from '../MosaicDashboardSlice';
 import {MosaicDashboardAddPanelDropdown} from './MosaicDashboardAddPanelDropdown';
 import {MosaicDashboardResetFiltersButton} from './MosaicDashboardResetFiltersButton';
 import {MosaicDashboardDataTableSelector} from './MosaicDashboardDataTableSelector';
-import {useDataTable} from '@sqlrooms/db';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
+import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
 export const MosaicDashboardToolbar: FC = () => {
   const {dashboardId} = useMosaicDashboardContext();
@@ -16,7 +17,11 @@ export const MosaicDashboardToolbar: FC = () => {
   const selectedTableName = dashboard?.selectedTable;
   const dashboardTitle = dashboard?.title ?? '';
 
-  const selectedTable = useDataTable(selectedTableName);
+  const tables = useTablesWithColumns();
+  const selectedTable = useMemo(
+    () => resolveMosaicTableReference(tables, selectedTableName).table,
+    [selectedTableName, tables],
+  );
   const tableName = selectedTable?.table.table;
 
   const setDashboardTitle = useStoreWithMosaicDashboard(

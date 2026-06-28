@@ -83,6 +83,30 @@ describe('createLineChartSpec', () => {
     );
   });
 
+  it('omits memory catalog identities from generated data sources', () => {
+    const settings: LineChartSettings = {
+      x: 'date',
+      yFields: [{field: 'sales'}],
+      showLegend: false,
+    };
+
+    const spec = createLineChartSpec({
+      dataTable: {
+        ...mockDataTable,
+        table: makeQualifiedTableName({
+          database: 'memory',
+          schema: 'main',
+          table: 'events',
+        }),
+      },
+      settings,
+      selectionName: 'test_selection',
+    }) as any;
+
+    expect(spec.plot[0].data.from).toBe('"main"."events"');
+    expect(spec.plot[0].data.from).not.toContain('memory');
+  });
+
   it('generates spec with legend when showLegend is true', () => {
     const settings: LineChartSettings = {
       x: 'date',

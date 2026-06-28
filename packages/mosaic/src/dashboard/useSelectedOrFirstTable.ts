@@ -2,9 +2,10 @@ import {useMemo} from 'react';
 import {type DataTable} from '@sqlrooms/db';
 import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
 import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
+import {resolveMosaicTableReference} from '../mosaicTableReference';
 
 /**
- * Returns the last selected table for a dashboard if it exists,
+ * Returns the selected table for a dashboard if it exists,
  * otherwise falls back to the first table with columns.
  *
  * @param dashboardId - The dashboard ID
@@ -19,17 +20,21 @@ export function useSelectedOrFirstTable(
   const tables = useTablesWithColumns();
 
   return useMemo(() => {
-    const lastSelectedTableName = dashboard?.lastSelectedTable;
+    const selectedTableName =
+      dashboard?.selectedTable ?? dashboard?.lastSelectedTable;
 
-    if (!lastSelectedTableName) {
+    if (!selectedTableName) {
       return tables[0];
     }
 
-    // Try to find the last selected table first
-    const lastSelectedTable = tables.find(
-      (table) => table.table.table === lastSelectedTableName,
+    const {table, ambiguousMatches} = resolveMosaicTableReference(
+      tables,
+      selectedTableName,
     );
-    // Fall back to the first table if the selected one doesn't exist
-    return lastSelectedTable ?? tables[0];
-  }, [dashboard?.lastSelectedTable, tables]);
+    if (ambiguousMatches?.length) {
+      return undefined;
+    }
+
+    return table ?? tables[0];
+  }, [dashboard?.lastSelectedTable, dashboard?.selectedTable, tables]);
 }

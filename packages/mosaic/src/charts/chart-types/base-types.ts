@@ -22,7 +22,7 @@ import type {
 } from '../../chart-runtime';
 import {ChartToolParams} from './tool-types';
 import {DataTable, type QualifiedTableName} from '@sqlrooms/duckdb';
-import {getMosaicTableReferenceString} from '../../mosaicTableReference';
+import {getMosaicVgPlotTableReference} from '../../mosaicTableReference';
 import type {ChartBuilderColumn} from './column-types';
 
 export type {ChartType};
@@ -197,7 +197,7 @@ export type ValidateSpecOptions<TSettings = ChartSettings> = Pick<
 >;
 
 export function getChartTableReference(dataTable: DataTable): string {
-  return getMosaicTableReferenceString(dataTable.table);
+  return getMosaicVgPlotTableReference(dataTable.table);
 }
 
 export const getChartTableReferenceString = getChartTableReference;

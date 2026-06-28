@@ -9,11 +9,12 @@ import {
 } from '../../dashboard/MosaicDashboardSlice';
 import {usePanelClientRegistration} from '../../dashboard/usePanelClientRegistration';
 import {useDataTableExplorerPanelClients} from './useDataTableExplorerPanelClients';
-import {FC} from 'react';
-import {useDataTable} from '@sqlrooms/db';
+import {FC, useMemo} from 'react';
 import {useDataTableExplorer} from '../useDataTableExplorer';
 import {MosaicDashboardDataTableExplorerHeaderActions} from './MosaicDashboardDataTableExplorerHeaderActions';
 import type {DataTable} from '@sqlrooms/db';
+import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
+import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
 type MosaicDashboardDataTableExplorerRendererInnerProps = Omit<
   DataTableExplorerPanelRendererProps,
@@ -77,7 +78,11 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
 const MosaicDashboardDataTableExplorerRenderer: FC<
   DataTableExplorerPanelRendererProps
 > = ({panel, dashboard, selectionName}) => {
-  const selectedTable = useDataTable(dashboard.selectedTable);
+  const tables = useTablesWithColumns();
+  const selectedTable = useMemo(
+    () => resolveMosaicTableReference(tables, dashboard.selectedTable).table,
+    [dashboard.selectedTable, tables],
+  );
 
   if (!selectedTable) {
     return (
