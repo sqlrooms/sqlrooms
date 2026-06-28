@@ -45,17 +45,7 @@ export function createDashboardChartTools({
       chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
     databaseAdapter,
     addChart: async ({config, tableName, title, panelId}) => {
-      const resolvedTable = tableName
-        ? databaseAdapter.findTable(tableName)
-        : undefined;
-      const selectedTableIdentity = resolvedTable?.table
-        ? getMosaicTableIdentity(resolvedTable.table)
-        : tableName;
-
-      if (selectedTableIdentity) {
-        await dashboardAdapter.setSelectedTable(selectedTableIdentity);
-      }
-
+      let panelTitle: string | undefined;
       if (panelId) {
         const panel = dashboardAdapter.getPanel(panelId);
         if (!panel) {
@@ -66,9 +56,23 @@ export function createDashboardChartTools({
             `Panel "${panelId}" is not a chart panel. Cannot update it with a chart tool.`,
           );
         }
+        panelTitle = panel.title;
+      }
 
+      const resolvedTable = tableName
+        ? databaseAdapter.findTable(tableName)
+        : undefined;
+      const selectedTableIdentity = resolvedTable?.table
+        ? getMosaicTableIdentity(resolvedTable.table)
+        : undefined;
+
+      if (selectedTableIdentity) {
+        await dashboardAdapter.setSelectedTable(selectedTableIdentity);
+      }
+
+      if (panelId) {
         await dashboardAdapter.updatePanel(panelId, {
-          title: title ?? panel.title,
+          title: title ?? panelTitle,
           config,
         });
         return panelId;

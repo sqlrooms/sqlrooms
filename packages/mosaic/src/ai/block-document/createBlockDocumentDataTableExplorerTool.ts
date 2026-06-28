@@ -57,7 +57,13 @@ export function createBlockDocumentDataTableExplorerTool({
       const resolvedTable = databaseAdapter.findTable(tableName);
       const tableIdentity = resolvedTable?.table
         ? getMosaicTableIdentity(resolvedTable.table)
-        : tableName;
+        : getMosaicTableIdentity(tableName);
+
+      if (!tableIdentity) {
+        throw new Error(
+          'Table name is required to add a data table explorer block',
+        );
+      }
 
       if (addDataTableExplorerBlock) {
         return await addDataTableExplorerBlock({

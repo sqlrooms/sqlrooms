@@ -5,6 +5,7 @@ import {createMosaicDashboardDataTableExplorerPanelConfig} from '../../dashboard
 import {DatabaseAiAdapter} from '../database-types';
 import {DashboardAiAdapter} from './dashboard-types';
 import {getMosaicTableIdentity} from '../../mosaicTableReference';
+import {ensureTable} from '../tool-helpers';
 
 /**
  * Parameters for creating a dashboard data table explorer tool.
@@ -33,14 +34,12 @@ export function createDashboardDataTableExplorerTool({
     databaseAdapter,
     addDataTable: async ({tableName, title}) => {
       const resolvedTable = tableName
-        ? databaseAdapter.findTable(tableName)
+        ? ensureTable(databaseAdapter, tableName)
         : undefined;
       if (resolvedTable?.table) {
         await dashboardAdapter.setSelectedTable(
           getMosaicTableIdentity(resolvedTable.table),
         );
-      } else if (tableName) {
-        await dashboardAdapter.setSelectedTable(tableName);
       }
 
       return dashboardAdapter.addPanel(

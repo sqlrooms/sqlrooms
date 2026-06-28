@@ -7,7 +7,20 @@ import {
 } from '@sqlrooms/db';
 import {asTableRef, type TableRefNode} from '@uwdata/mosaic-sql';
 
+/**
+ * SQLRooms table reference input accepted at Mosaic boundaries.
+ *
+ * Strings represent persisted identities or user-provided references;
+ * QualifiedTableName values carry structured SQLRooms table identity.
+ */
 export type MosaicTableReferenceInput = string | QualifiedTableName;
+
+/**
+ * Runtime object carrying a structured SQLRooms table identity.
+ *
+ * Use this shape for catalog candidates so persisted identity strings stay
+ * distinct from resolved runtime table objects.
+ */
 export type MosaicTableReferenceCandidate = {table: QualifiedTableName};
 
 /**
@@ -58,9 +71,7 @@ export function getMosaicVgPlotTableReference(
 export function getMosaicRawSqlTableReference(
   tableName: MosaicTableReferenceInput,
 ): string {
-  return getMosaicTableReferenceParts(tableName)
-    .map(escapeId)
-    .join('.');
+  return getMosaicTableReferenceParts(tableName).map(escapeId).join('.');
 }
 
 /**

@@ -48,7 +48,13 @@ export function createBlockDocumentChartTools({
       const resolvedTable = databaseAdapter.findTable(tableName);
       const tableIdentity = resolvedTable?.table
         ? getMosaicTableIdentity(resolvedTable.table)
-        : tableName;
+        : getMosaicTableIdentity(tableName);
+
+      if (!tableIdentity) {
+        throw new Error(
+          'tableName is required for block document chart blocks but was empty or undefined',
+        );
+      }
 
       return blockDocumentAdapter.addBlock(blockDocumentId, {
         type: 'chart',

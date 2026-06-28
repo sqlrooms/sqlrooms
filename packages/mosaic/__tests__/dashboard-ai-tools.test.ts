@@ -7,6 +7,7 @@ import type {DatabaseAiAdapter} from '../src/ai/database-types';
 import type {DashboardAiAdapter} from '../src/ai/dashboard/dashboard-types';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from '../src/dashboard/dashboard-types';
 import {MOSAIC_DASHBOARD_COMMAND_IDS} from '../src/dashboard/MosaicDashboardCommands';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 
 describe('createDashboardAiTools', () => {
   it('lists dashboard panels with selected table and runtime issues', async () => {
@@ -99,6 +100,11 @@ describe('createDashboardAiTools', () => {
       getTables: () => [],
       findTable: () =>
         ({
+          table: makeQualifiedTableName({
+            database: 'memory',
+            schema: 'main',
+            table: 'earthquakes',
+          }),
           tableName: 'earthquakes',
           columns: [{name: 'depth', type: 'DOUBLE'}],
         }) as any,
@@ -121,7 +127,9 @@ describe('createDashboardAiTools', () => {
 
     expect(result.success).toBe(true);
     expect(addPanel).not.toHaveBeenCalled();
-    expect(setSelectedTable).toHaveBeenCalledWith('earthquakes');
+    expect(setSelectedTable).toHaveBeenCalledWith(
+      '"memory"."main"."earthquakes"',
+    );
     expect(updatePanel).toHaveBeenCalledWith('panel-1', {
       title: 'Depth histogram',
       config: {
@@ -133,9 +141,10 @@ describe('createDashboardAiTools', () => {
 
   it('returns an error when panelId references a missing panel', async () => {
     const updatePanel = jest.fn();
+    const setSelectedTable = jest.fn();
     const dashboardAdapter: DashboardAiAdapter = {
       getPanel: () => undefined,
-      setSelectedTable: () => {},
+      setSelectedTable,
       addPanel: () => 'new-panel',
       updatePanel,
       removePanel: () => {},
@@ -167,11 +176,13 @@ describe('createDashboardAiTools', () => {
 
     expect(result.success).toBe(false);
     expect(result.errorMessage).toContain('Panel "missing-panel" not found');
+    expect(setSelectedTable).not.toHaveBeenCalled();
     expect(updatePanel).not.toHaveBeenCalled();
   });
 
   it('returns an error when panelId references a non-chart panel', async () => {
     const updatePanel = jest.fn();
+    const setSelectedTable = jest.fn();
     const dashboardAdapter: DashboardAiAdapter = {
       getPanel: () => ({
         id: 'panel-1',
@@ -179,7 +190,7 @@ describe('createDashboardAiTools', () => {
         title: 'Data Explorer',
         config: {},
       }),
-      setSelectedTable: () => {},
+      setSelectedTable,
       addPanel: () => 'new-panel',
       updatePanel,
       removePanel: () => {},
@@ -213,6 +224,7 @@ describe('createDashboardAiTools', () => {
     expect(result.errorMessage).toContain(
       'Panel "panel-1" is not a chart panel',
     );
+    expect(setSelectedTable).not.toHaveBeenCalled();
     expect(updatePanel).not.toHaveBeenCalled();
   });
 });
