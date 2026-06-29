@@ -20,6 +20,25 @@ search the current database `main` schema by default, and accept broader
 `schema`, `database`, and pattern filters for other visible schemas or attached
 databases.
 
+`createDefaultAiTools` also registers command-layer tools when the room store
+has a command registry:
+
+- `search_commands` for compact intent-based command discovery;
+- `get_command` for full command metadata and input schema after selecting a
+  command;
+- `execute_command` for invoking the selected command;
+- `list_commands` for broad command-registry debugging.
+
+Model-facing flows should prefer
+`search_commands -> get_command -> execute_command` instead of repeatedly
+listing the full command catalog. `execute_command` refuses high-risk or
+confirmation-required commands until the caller sets `confirmed: true` after an
+explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
+`traceId`, and metadata through tool execution options; the command invocation
+receives those fields for trace callbacks. `DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
+documents the default command, artifact-context, table/query, and high-level
+agent tool policy for future skill runtimes.
+
 ## Installation
 
 ```bash

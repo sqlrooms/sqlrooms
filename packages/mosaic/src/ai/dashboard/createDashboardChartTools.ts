@@ -9,6 +9,7 @@ import {DEFAULT_CHART_MAX_DATA_POINTS} from '../../chart-runtime';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {DASHBOARD_CHART_TOOL_PREFIX} from './constants';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from '../../dashboard/dashboard-types';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 
 /**
  * Parameters for creating dashboard chart tools.
@@ -43,7 +44,8 @@ export function createDashboardChartTools({
     maxDataPoints:
       chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
     databaseAdapter,
-    addChart: ({config, tableName, title, panelId}) => {
+    addChart: async ({config, tableName, title, panelId}) => {
+      let panelTitle: string | undefined;
       if (panelId) {
         const panel = dashboardAdapter.getPanel(panelId);
         if (!panel) {
@@ -54,18 +56,29 @@ export function createDashboardChartTools({
             `Panel "${panelId}" is not a chart panel. Cannot update it with a chart tool.`,
           );
         }
+        panelTitle = panel.title;
+      }
 
-        if (tableName) {
-          dashboardAdapter.setSelectedTable(tableName);
-        }
-        dashboardAdapter.updatePanel(panelId, {
-          title: title ?? panel.title,
+      const resolvedTable = tableName
+        ? databaseAdapter.findTable(tableName)
+        : undefined;
+      const selectedTableIdentity = resolvedTable?.table
+        ? getMosaicTableIdentity(resolvedTable.table)
+        : undefined;
+
+      if (selectedTableIdentity) {
+        await dashboardAdapter.setSelectedTable(selectedTableIdentity);
+      }
+
+      if (panelId) {
+        await dashboardAdapter.updatePanel(panelId, {
+          title: title ?? panelTitle,
           config,
         });
         return panelId;
       }
 
-      return dashboardAdapter.addPanel(
+      return await dashboardAdapter.addPanel(
         createMosaicDashboardChartPanelConfig(title ?? 'Chart', config),
       );
     },

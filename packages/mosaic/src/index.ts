@@ -91,6 +91,10 @@ export {addChartPanelAction} from './charts/addChartPanelAction';
 
 // Dashboard state slice
 export {
+  createMosaicDashboardCommands,
+  MOSAIC_DASHBOARD_COMMAND_IDS,
+} from './dashboard/MosaicDashboardCommands';
+export {
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
   createDefaultMosaicDashboardConfig,

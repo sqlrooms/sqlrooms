@@ -34,12 +34,20 @@ export type CreateAddMosaicDashboardBlockToolOptions = {
   blockDocumentAdapter: BlockDocumentAiAdapter;
   /** ID of the block document where dashboard blocks will be added. */
   blockDocumentId: string;
+  /** Host callback that performs the full durable block creation. */
+  addDashboardBlock?: (params: {
+    title: string;
+    tableName: string;
+    intent?: string;
+  }) => Promise<{dashboardId: string; blockId: string}>;
   /** Host callback that creates Mosaic dashboard state and its document block. */
   createDashboardBlock: (params: {
     title: string;
     tableName: string;
     intent?: string;
-  }) => {dashboardId: string; block: BlockDocumentStatefulBlockBlock};
+  }) =>
+    | {dashboardId: string; block: BlockDocumentStatefulBlockBlock}
+    | Promise<{dashboardId: string; block: BlockDocumentStatefulBlockBlock}>;
 };
 
 /**
@@ -48,6 +56,7 @@ export type CreateAddMosaicDashboardBlockToolOptions = {
 export function createAddMosaicDashboardBlockTool({
   blockDocumentAdapter,
   blockDocumentId,
+  addDashboardBlock,
   createDashboardBlock,
 }: CreateAddMosaicDashboardBlockToolOptions) {
   return tool<
@@ -60,13 +69,30 @@ This tool ONLY creates the container structure. To populate it with charts and p
     inputSchema: AddMosaicDashboardBlockToolInput,
     execute: async ({dashboardTitle, tableName, intent}) => {
       try {
+        if (addDashboardBlock) {
+          const result = await addDashboardBlock({
+            title: dashboardTitle,
+            tableName,
+            intent,
+          });
+          return {
+            success: true,
+            dashboardId: result.dashboardId,
+            blockId: result.blockId,
+            message: 'Added Mosaic dashboard block to block document',
+          };
+        }
+
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
-        const {dashboardId, block} = createDashboardBlock({
+        const {dashboardId, block} = await createDashboardBlock({
           title: dashboardTitle,
           tableName,
           intent,
         });
-        const blockId = blockDocumentAdapter.addBlock(blockDocumentId, block);
+        const blockId = await blockDocumentAdapter.addBlock(
+          blockDocumentId,
+          block,
+        );
 
         return {
           success: true,

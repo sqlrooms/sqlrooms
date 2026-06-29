@@ -1,10 +1,16 @@
-import {useState, useCallback} from 'react';
+import {useCallback, useState} from 'react';
 
+/**
+ * Options for the shared combobox state hook.
+ */
 export interface UseComboboxOptions<T extends string = string> {
   value: T;
   onChange: (value: T) => void;
 }
 
+/**
+ * State and prop helpers returned by useCombobox.
+ */
 export interface UseComboboxReturn {
   open: boolean;
   setOpen: (open: boolean) => void;

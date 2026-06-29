@@ -68,7 +68,7 @@ Do NOT use for: categorical data (use count-plot), relationships between columns
           settings,
         };
 
-        addChart({
+        await addChart({
           tableName,
           panelId,
           config: chartConfig,

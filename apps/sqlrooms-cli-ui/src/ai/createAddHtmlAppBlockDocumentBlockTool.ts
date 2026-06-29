@@ -65,6 +65,16 @@ export function createHtmlAppBlockDocumentBlock({
 export type CreateAddHtmlAppBlockDocumentBlockToolOptions = {
   blockDocumentAdapter: BlockDocumentAiAdapter;
   blockDocumentId: string;
+  addHtmlAppBlock?: (params: {
+    title: string;
+    intent?: string;
+  }) => Promise<{appId: string; blockId: string}>;
+  createHtmlAppBlock?: (params: {
+    title: string;
+    intent?: string;
+  }) =>
+    | {appId: string; block: BlockDocumentStatefulBlockBlock}
+    | Promise<{appId: string; block: BlockDocumentStatefulBlockBlock}>;
 };
 
 /**
@@ -74,6 +84,8 @@ export type CreateAddHtmlAppBlockDocumentBlockToolOptions = {
 export function createAddHtmlAppBlockDocumentBlockTool({
   blockDocumentAdapter,
   blockDocumentId,
+  addHtmlAppBlock,
+  createHtmlAppBlock,
 }: CreateAddHtmlAppBlockDocumentBlockToolOptions) {
   return tool<AddHtmlAppBlockToolInput, AddHtmlAppBlockToolOutput>({
     description: `Create an EMPTY html-app block container in the worksheet.
@@ -84,14 +96,29 @@ Use this when you need to create a custom HTML, D3, Chart.js, or browser app blo
     inputSchema: AddHtmlAppBlockToolInput,
     execute: async ({appTitle, intent}) => {
       try {
+        if (addHtmlAppBlock) {
+          const result = await addHtmlAppBlock({title: appTitle, intent});
+          return {
+            success: true,
+            appId: result.appId,
+            blockId: result.blockId,
+            message: 'Added HTML app block to worksheet',
+          };
+        }
+
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         blockDocumentAdapter.setCurrentBlockDocument(blockDocumentId);
 
-        const {appId, block} = createHtmlAppBlockDocumentBlock({
-          title: appTitle,
-          intent,
-        });
-        const blockId = blockDocumentAdapter.addBlock(blockDocumentId, block);
+        const {appId, block} = createHtmlAppBlock
+          ? await createHtmlAppBlock({title: appTitle, intent})
+          : createHtmlAppBlockDocumentBlock({
+              title: appTitle,
+              intent,
+            });
+        const blockId = await blockDocumentAdapter.addBlock(
+          blockDocumentId,
+          block,
+        );
 
         return {
           success: true,

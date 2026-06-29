@@ -113,12 +113,20 @@ describe('block document commands', () => {
       .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
-    await store
+    const appendResult = await store
       .getState()
       .commands.invokeCommand('block-document.append-blocks', {
         artifactId,
         blocks: [{id: 'p1', type: 'paragraph', text: 'First'}],
       });
+    expect(appendResult.data).toMatchObject({
+      artifactId,
+      blockId: 'p1',
+      blockType: 'paragraph',
+      blockIds: ['p1'],
+      blockTypes: ['paragraph'],
+      affectedBlocks: [{id: 'p1', type: 'paragraph', text: 'First'}],
+    });
     await store
       .getState()
       .commands.invokeCommand('block-document.insert-blocks', {
@@ -126,13 +134,21 @@ describe('block document commands', () => {
         index: 0,
         blocks: [{id: 'h1', type: 'heading', level: 2, text: 'Overview'}],
       });
-    await store
+    const updateResult = await store
       .getState()
       .commands.invokeCommand('block-document.update-block', {
         artifactId,
         blockId: 'p1',
         block: {id: 'ignored', type: 'paragraph', text: 'Updated'},
       });
+    expect(updateResult.data).toMatchObject({
+      artifactId,
+      blockId: 'p1',
+      blockType: 'paragraph',
+      blockIds: ['p1'],
+      blockTypes: ['paragraph'],
+      affectedBlocks: [{id: 'p1', type: 'paragraph', text: 'Updated'}],
+    });
     await store.getState().commands.invokeCommand('block-document.move-block', {
       artifactId,
       blockId: 'p1',
@@ -157,7 +173,7 @@ describe('block document commands', () => {
       .commands.invokeCommand('block-document.create');
     const artifactId = (createResult.data as any).artifactId as string;
 
-    await store
+    const chartResult = await store
       .getState()
       .commands.invokeCommand('block-document.create-chart-block', {
         artifactId,
@@ -168,6 +184,14 @@ describe('block document commands', () => {
         selectionGroupId: 'overview',
         caption: 'Revenue',
       });
+    expect(chartResult.data).toMatchObject({
+      artifactId,
+      blockId: 'chart-1',
+      blockType: 'chart',
+      tableName: 'sales',
+      selectionGroupId: 'overview',
+      caption: 'Revenue',
+    });
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'chart-1',
@@ -200,6 +224,16 @@ describe('block document commands', () => {
       });
 
     expect(statefulBlockResult.success).toBe(true);
+    expect(statefulBlockResult.data).toMatchObject({
+      artifactId,
+      blockId: 'dashboard-block',
+      blockType: 'statefulBlock',
+      statefulBlockType: 'dashboard',
+      blockInstanceId: 'dashboard-block',
+      ownership: 'owned',
+      title: 'Regional Dashboard',
+      caption: 'Regions',
+    });
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {
         id: 'dashboard-block',

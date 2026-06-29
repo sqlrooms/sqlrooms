@@ -31,6 +31,7 @@
     "@sqlrooms/pivot": "workspace:*",
     "@sqlrooms/python": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

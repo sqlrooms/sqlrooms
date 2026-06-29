@@ -46,6 +46,17 @@ describe('dataTableExplorer utils', () => {
     expect(query.toString()).not.toContain('sqlrooms-cli');
   });
 
+  it('builds SQL from DuckDB WASM memory table identities without the catalog', () => {
+    const query = buildDataTableExplorerBaseQuery({
+      columns: ['Magnitude'],
+      tableName: getMosaicSqlTableReference('"memory"."main"."events"'),
+    });
+
+    expect(query.toString()).toContain('FROM "main"."events"');
+    expect(query.toString()).not.toContain('memory');
+    expect(query.toString()).not.toContain('""memory""');
+  });
+
   it('sanitizes invalid pagination values before generating LIMIT/OFFSET', () => {
     const base = buildDataTableExplorerBaseQuery({
       columns: ['Magnitude'],

@@ -105,7 +105,7 @@ function readCliArtifact({
 
   if (artifact.type === 'sql-query') {
     let query = state.sqlEditor.config.queries.find(
-      (candidate) => candidate.id === artifactId,
+      (candidate: {id?: string}) => candidate.id === artifactId,
     );
     let result = state.sqlEditor.queryResultsById[artifactId];
     if (!query) {
@@ -115,7 +115,7 @@ function readCliArtifact({
       const nextState = store.getState();
       query =
         nextState.sqlEditor.config.queries.find(
-          (candidate) => candidate.id === artifactId,
+          (candidate: {id?: string}) => candidate.id === artifactId,
         ) ?? ensuredQuery;
       result = nextState.sqlEditor.queryResultsById[artifactId];
     }

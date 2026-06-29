@@ -1,10 +1,13 @@
 import {jest} from '@jest/globals';
 import {createDashboardAiTools} from '../src/ai/dashboard/createDashboardAiTools';
+import {createDashboardAiAdapter} from '../src/ai/dashboard/createDashboardAiAdapter';
 import {createDashboardAgentTool} from '../src/ai/dashboard/createDashboardAgentTool';
 import {KnownDashboardTools} from '../src/ai/dashboard/constants';
 import type {DatabaseAiAdapter} from '../src/ai/database-types';
 import type {DashboardAiAdapter} from '../src/ai/dashboard/dashboard-types';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from '../src/dashboard/dashboard-types';
+import {MOSAIC_DASHBOARD_COMMAND_IDS} from '../src/dashboard/MosaicDashboardCommands';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 
 describe('createDashboardAiTools', () => {
   it('lists dashboard panels with selected table and runtime issues', async () => {
@@ -97,6 +100,11 @@ describe('createDashboardAiTools', () => {
       getTables: () => [],
       findTable: () =>
         ({
+          table: makeQualifiedTableName({
+            database: 'memory',
+            schema: 'main',
+            table: 'earthquakes',
+          }),
           tableName: 'earthquakes',
           columns: [{name: 'depth', type: 'DOUBLE'}],
         }) as any,
@@ -119,7 +127,9 @@ describe('createDashboardAiTools', () => {
 
     expect(result.success).toBe(true);
     expect(addPanel).not.toHaveBeenCalled();
-    expect(setSelectedTable).toHaveBeenCalledWith('earthquakes');
+    expect(setSelectedTable).toHaveBeenCalledWith(
+      '"memory"."main"."earthquakes"',
+    );
     expect(updatePanel).toHaveBeenCalledWith('panel-1', {
       title: 'Depth histogram',
       config: {
@@ -131,9 +141,10 @@ describe('createDashboardAiTools', () => {
 
   it('returns an error when panelId references a missing panel', async () => {
     const updatePanel = jest.fn();
+    const setSelectedTable = jest.fn();
     const dashboardAdapter: DashboardAiAdapter = {
       getPanel: () => undefined,
-      setSelectedTable: () => {},
+      setSelectedTable,
       addPanel: () => 'new-panel',
       updatePanel,
       removePanel: () => {},
@@ -165,11 +176,13 @@ describe('createDashboardAiTools', () => {
 
     expect(result.success).toBe(false);
     expect(result.errorMessage).toContain('Panel "missing-panel" not found');
+    expect(setSelectedTable).not.toHaveBeenCalled();
     expect(updatePanel).not.toHaveBeenCalled();
   });
 
   it('returns an error when panelId references a non-chart panel', async () => {
     const updatePanel = jest.fn();
+    const setSelectedTable = jest.fn();
     const dashboardAdapter: DashboardAiAdapter = {
       getPanel: () => ({
         id: 'panel-1',
@@ -177,7 +190,7 @@ describe('createDashboardAiTools', () => {
         title: 'Data Explorer',
         config: {},
       }),
-      setSelectedTable: () => {},
+      setSelectedTable,
       addPanel: () => 'new-panel',
       updatePanel,
       removePanel: () => {},
@@ -211,6 +224,7 @@ describe('createDashboardAiTools', () => {
     expect(result.errorMessage).toContain(
       'Panel "panel-1" is not a chart panel',
     );
+    expect(setSelectedTable).not.toHaveBeenCalled();
     expect(updatePanel).not.toHaveBeenCalled();
   });
 });
@@ -273,5 +287,68 @@ describe('createDashboardAgentTool', () => {
     });
     expect(setSelectedTable).toHaveBeenCalledWith('dashboard-1', 'earthquakes');
     expect(runSubAgent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createDashboardAiAdapter', () => {
+  it('routes dashboard mutations through commands when registered', async () => {
+    const invokeCommand = jest.fn(async (commandId, input) => ({
+      success: true,
+      commandId,
+      data:
+        commandId === MOSAIC_DASHBOARD_COMMAND_IDS.addPanel
+          ? {panelId: (input as any).panel.id}
+          : undefined,
+    }));
+    const directAddPanel = jest.fn(() => 'direct-panel');
+    const store = {
+      getState: () =>
+        ({
+          commands: {
+            getCommand: (commandId: string) =>
+              Object.values(MOSAIC_DASHBOARD_COMMAND_IDS).includes(
+                commandId as any,
+              )
+                ? {id: commandId}
+                : undefined,
+            invokeCommand,
+            registerCommands: jest.fn(),
+            unregisterCommands: jest.fn(),
+            listCommands: jest.fn(),
+            executeCommand: jest.fn(),
+          },
+          mosaicDashboard: {
+            getDashboard: () => ({selectedTable: undefined, panels: []}),
+            setSelectedTable: jest.fn(),
+            addPanel: directAddPanel,
+            updatePanel: jest.fn(),
+            removePanel: jest.fn(),
+            getPanelIssue: jest.fn(),
+          },
+        }) as any,
+    };
+    const adapter = createDashboardAiAdapter(store as any, 'dashboard-1');
+    const panel = {
+      id: 'panel-1',
+      type: MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
+      title: 'Chart',
+      config: {chartType: 'histogram', settings: {field: 'magnitude'}},
+    };
+
+    await adapter.setSelectedTable('earthquakes');
+    const panelId = await adapter.addPanel(panel);
+
+    expect(panelId).toBe('panel-1');
+    expect(directAddPanel).not.toHaveBeenCalled();
+    expect(invokeCommand).toHaveBeenCalledWith(
+      MOSAIC_DASHBOARD_COMMAND_IDS.setSelectedTable,
+      {dashboardId: 'dashboard-1', tableName: 'earthquakes'},
+      {surface: 'ai', actor: 'dashboard-ai-adapter'},
+    );
+    expect(invokeCommand).toHaveBeenCalledWith(
+      MOSAIC_DASHBOARD_COMMAND_IDS.addPanel,
+      {dashboardId: 'dashboard-1', panel},
+      {surface: 'ai', actor: 'dashboard-ai-adapter'},
+    );
   });
 });

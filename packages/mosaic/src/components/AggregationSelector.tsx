@@ -1,6 +1,6 @@
 import type {FC} from 'react';
+import {Combobox} from '@sqlrooms/ui';
 import type {AggregateFunction} from '../schemas';
-import {Combobox} from './Combobox';
 
 export interface AggregationSelectorProps {
   value: AggregateFunction;

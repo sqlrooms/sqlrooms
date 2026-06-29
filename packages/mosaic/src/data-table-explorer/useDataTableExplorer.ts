@@ -13,9 +13,9 @@ import {useDataTableExplorerColumns} from './hooks/useDataTableExplorerColumns';
 import {useDataTableExplorerStatus} from './hooks/useDataTableExplorerStatus';
 import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisiblePage';
 import {
+  getMosaicRawSqlTableReference,
   getMosaicSqlTableReference,
   getMosaicTableIdentity,
-  getMosaicTableReferenceString,
 } from '../mosaicTableReference';
 
 /**
@@ -38,12 +38,12 @@ export function useDataTableExplorer(
 
   const tableIdentity = useMemo(() => getMosaicTableIdentity(table), [table]);
   const tableName = useMemo(
-    () => getMosaicTableReferenceString(table),
+    () => getMosaicRawSqlTableReference(table),
     [table],
   );
   const tableReference = useMemo(
-    () => getMosaicSqlTableReference(tableName),
-    [tableName],
+    () => getMosaicSqlTableReference(table),
+    [table],
   );
 
   const connection = useStoreWithMosaic((state) => state.mosaic.connection);
