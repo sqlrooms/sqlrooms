@@ -576,19 +576,16 @@ function DeckMapDashboardRenderer({
           {missingColumns.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <span
                   className={`absolute left-2 z-10 flex h-5 w-5 items-center justify-center ${
                     Object.values(datasetStates).some((s) => s.isSampled) &&
                     !sampledDismissed
                       ? 'top-9'
                       : 'top-2'
                   }`}
-                  onClick={() => {
-                    // Settings now shown in side panel via block selection
-                  }}
                 >
                   <AlertTriangleIcon className="h-4 w-4 text-amber-500 drop-shadow-sm" />
-                </button>
+                </span>
               </TooltipTrigger>
               <TooltipContent side="right">
                 <p className="text-xs font-medium">Missing columns:</p>

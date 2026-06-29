@@ -47,6 +47,7 @@ import {
   setDeckMapLayerType,
   updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
+  type DeckMapLayerRecord,
   usesGeometryColumnSetting,
   usesH3ColumnSetting,
   usesArcColumnSetting,
@@ -208,6 +209,11 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const effectiveColorAccessor =
     colorAccessorOptions.find((option) => option.value === colorAccessor)
       ?.value ?? colorAccessorOptions[0]?.value;
+  const pointRadiusPixels =
+    activeLayer?.radiusUnits === 'pixels' &&
+    typeof activeLayer?.getRadius === 'number'
+      ? activeLayer.getRadius
+      : ((activeLayer?.radiusMinPixels as number | undefined) ?? 2);
   const colorScale = effectiveColorAccessor
     ? getDeckMapLayerColorScale(activeLayer, effectiveColorAccessor)
     : undefined;
@@ -574,28 +580,32 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       )}
 
       {showRadiusSetting && (
-        <Field
-          label={`Point radius: ${(activeLayer?.radiusMinPixels as number | undefined) ?? 2}px`}
-        >
+        <Field label={`Point radius: ${pointRadiusPixels}px`}>
           <div className="pt-0.5">
             <Slider
               min={1}
               max={50}
               step={1}
-              value={[
-                (activeLayer?.radiusMinPixels as number | undefined) ?? 2,
-              ]}
+              value={[pointRadiusPixels]}
               onValueChange={(values) => {
                 const value = values[0] ?? 2;
                 applyConfig(
-                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
-                    ...layer,
-                    radiusMinPixels: value,
-                    radiusMaxPixels: Math.max(
-                      value,
-                      (layer.radiusMaxPixels as number | undefined) ?? value,
-                    ),
-                  })),
+                  updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => {
+                    const nextLayer: DeckMapLayerRecord = {
+                      ...layer,
+                      radiusMinPixels: value,
+                      radiusMaxPixels: Math.max(
+                        value,
+                        (layer.radiusMaxPixels as number | undefined) ?? value,
+                      ),
+                    };
+
+                    if (layer.radiusUnits === 'pixels') {
+                      nextLayer.getRadius = value;
+                    }
+
+                    return nextLayer;
+                  }),
                 );
               }}
             />
