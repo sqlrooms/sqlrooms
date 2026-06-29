@@ -22,6 +22,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   tableName,
   config,
   caption,
+  selected,
   readOnly,
   onTableNameChange,
   onConfigChange,
@@ -83,6 +84,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
         caption={caption}
         chartConfig={chartConfig}
         tableName={selectedTable.table.table}
+        selected={selected}
         onCaptionChange={onCaptionChange}
         onSettingsOpenChange={handleSettingsOpenChange}
         readOnly={readOnly}

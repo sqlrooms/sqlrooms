@@ -224,7 +224,9 @@ does not import Mosaic, pivot, or other feature packages:
 
 If no renderer is registered, chart and stateful blocks render a clear
 unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
-controls the host-specific entries shown in the plus menu.
+controls the host-specific entries shown in the plus menu. Chart renderers also
+receive a `selected` flag so their controls can reflect whether the block is the
+active Tiptap node selection.
 When a block is converted through the handle menu, custom `createNode`
 callbacks receive an optional `{initialText}` value with the source block text;
 hosts can use it to seed stateful blocks such as embedded Markdown documents.

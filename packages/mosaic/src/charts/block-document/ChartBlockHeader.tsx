@@ -11,6 +11,7 @@ export type ChartBlockHeaderProps = {
   onCaptionChange?: (caption: string | undefined) => void;
   onSettingsOpenChange: (open: boolean) => void;
   readOnly?: boolean;
+  selected?: boolean;
   tableName: string;
 };
 
@@ -19,16 +20,35 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
   onCaptionChange,
   onSettingsOpenChange,
   readOnly,
+  selected,
   tableName,
 }) => {
   const requestOpenSettingsPanel = useBlockSettingsStore(
     (state) => state.blockSettings.requestOpenSettingsPanel,
   );
+  const requestCloseSettingsPanel = useBlockSettingsStore(
+    (state) => state.blockSettings.requestCloseSettingsPanel,
+  );
+  const isSettingsPanelOpen = useBlockSettingsStore(
+    (state) => state.blockSettings.runtime.isSettingsPanelOpen,
+  );
+  const isSettingsShown = Boolean(selected && isSettingsPanelOpen);
 
   const handleSettingsClick = useCallback(() => {
+    if (isSettingsShown) {
+      onSettingsOpenChange(false);
+      requestCloseSettingsPanel();
+      return;
+    }
+
     onSettingsOpenChange(true);
     requestOpenSettingsPanel();
-  }, [onSettingsOpenChange, requestOpenSettingsPanel]);
+  }, [
+    isSettingsShown,
+    onSettingsOpenChange,
+    requestCloseSettingsPanel,
+    requestOpenSettingsPanel,
+  ]);
 
   return (
     <div className="border-border flex min-h-10 items-center gap-2 border-b px-3 py-2">
@@ -40,10 +60,13 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
       />
       <Button
         type="button"
-        variant="ghost"
+        variant={isSettingsShown ? 'secondary' : 'ghost'}
         size="icon"
         className="h-6 w-6 shrink-0"
-        aria-label="Open chart settings"
+        aria-label={
+          isSettingsShown ? 'Close chart settings' : 'Open chart settings'
+        }
+        aria-pressed={isSettingsShown}
         onClick={handleSettingsClick}
       >
         <SettingsIcon className="h-3.5 w-3.5" aria-hidden />

@@ -14,6 +14,8 @@ export type BlockDocumentChartRendererProps = {
   config: unknown;
   selectionGroupId?: string;
   caption?: string;
+  /** Whether this chart block is the active TipTap node selection. */
+  selected?: boolean;
   readOnly?: boolean;
   onTableNameChange?: (tableName: string) => void;
   onConfigChange?: (config: unknown) => void;

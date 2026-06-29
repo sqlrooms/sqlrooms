@@ -103,6 +103,7 @@ export const BlockDocumentChartNodeView: FC<
           config={config}
           selectionGroupId={selectionGroupId}
           caption={caption}
+          selected={selected}
           readOnly={readOnly}
           onTableNameChange={handleTableNameChange}
           onConfigChange={handleConfigChange}
