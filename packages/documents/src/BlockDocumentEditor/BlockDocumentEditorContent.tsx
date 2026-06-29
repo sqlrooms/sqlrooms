@@ -1,4 +1,4 @@
-import {cn} from '@sqlrooms/ui';
+import {cn, ScrollArea} from '@sqlrooms/ui';
 import {EditorContent} from '@tiptap/react';
 import type {FC} from 'react';
 import {useCallback, useState} from 'react';
@@ -33,13 +33,16 @@ export const BlockDocumentEditorContent: FC<
   );
 
   return (
-    <div
-      ref={setScrollElement}
-      className={cn('relative h-full min-h-0 flex-1 overflow-auto', className)}
+    <ScrollArea
+      viewportRef={setScrollElement}
+      className={cn(
+        'relative h-full min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full',
+        className,
+      )}
       onClick={handleClick}
     >
       <EditorContent editor={editor} className="min-h-full" />
       <BlockDocumentBlockControls scrollElement={scrollElement} />
-    </div>
+    </ScrollArea>
   );
 };
