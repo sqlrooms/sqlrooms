@@ -858,6 +858,24 @@ class SqlroomsHttpServer:
                         task.result()
             except WebSocketDisconnect:
                 return
+            except OSError as exc:
+                if exc.errno in {
+                    errno.ECONNREFUSED,
+                    errno.ECONNRESET,
+                    errno.EHOSTUNREACH,
+                    errno.ENETUNREACH,
+                }:
+                    logger.warning(
+                        "DuckDB websocket backend unavailable at %s: %s",
+                        upstream_url,
+                        exc,
+                    )
+                    try:
+                        await client_ws.close(code=1013, reason="backend unavailable")
+                    except Exception:
+                        pass
+                    return
+                raise
             except Exception:
                 logger.exception("DuckDB websocket proxy failed")
                 try:

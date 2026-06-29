@@ -1,3 +1,4 @@
+import logging
 import socket
 
 import duckdb
@@ -79,13 +80,20 @@ def test_duckdb_websocket_proxy_requires_auth(server):
     assert exc_info.value.code == 1008
 
 
-def test_duckdb_websocket_proxy_accepts_first_message_auth(server):
+def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
+    caplog.set_level(logging.WARNING, logger="sqlrooms.web.launcher")
     client = TestClient(server._build_app())
 
     with client.websocket_connect("/ws/duckdb") as ws:
         ws.send_json({"type": "auth", "token": server.session_token})
 
         assert ws.receive_json() == {"type": "authAck"}
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            ws.receive_text()
+
+    assert exc_info.value.code == 1013
+    assert "DuckDB websocket backend unavailable" in caplog.text
+    assert "DuckDB websocket proxy failed" not in caplog.text
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):
