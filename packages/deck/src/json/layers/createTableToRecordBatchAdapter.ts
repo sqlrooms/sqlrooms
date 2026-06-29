@@ -10,6 +10,13 @@ type GeoArrowLayerClass = new (props: Record<string, unknown>) => Layer;
  *
  * The wrapper splits a multi-batch Table into per-batch sublayers, converting
  * each Vector prop into its corresponding Data chunk.
+ *
+ * @param UpstreamLayer - The GeoArrow 0.4.x layer class to wrap
+ *   (e.g. `GeoArrowScatterplotLayer`).
+ * @param layerName - The `layerName` assigned to the adapter class, used by
+ *   deck.gl for layer type identification in the JSON configuration.
+ * @returns A CompositeLayer subclass that can be used as a drop-in replacement
+ *   in the deck.gl JSON pipeline.
  */
 export function createTableToRecordBatchAdapter(
   UpstreamLayer: GeoArrowLayerClass,
@@ -28,11 +35,22 @@ export function createTableToRecordBatchAdapter(
 
       // If already a RecordBatch, pass through directly
       if (data instanceof arrow.RecordBatch) {
-        return new UpstreamLayer({
-          ...otherProps,
+        const batchProps: Record<string, unknown> = {
           id: `${this.props.id}-0`,
           data,
-        } as Record<string, unknown>);
+        };
+        for (const [propName, propValue] of Object.entries(otherProps)) {
+          if (propName === 'id') continue;
+          if (propValue instanceof arrow.Vector) {
+            const chunkData = propValue.data[0];
+            if (chunkData) {
+              batchProps[propName] = chunkData;
+            }
+          } else {
+            batchProps[propName] = propValue;
+          }
+        }
+        return new UpstreamLayer(batchProps);
       }
 
       // Must be an arrow.Table — split into per-batch sublayers
