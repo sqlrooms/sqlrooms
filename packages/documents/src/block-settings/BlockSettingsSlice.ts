@@ -38,9 +38,13 @@ export type BlockSettingsSliceState = {
     runtime: {
       /** Currently selected block, if any */
       selectedBlock?: SelectedBlock;
+      /** Monotonic counter used by shells to reopen their settings panel */
+      settingsPanelOpenRequest: number;
     };
     /** Select a block */
     selectBlock: (block: SelectedBlock) => void;
+    /** Request the host settings panel to open */
+    requestOpenSettingsPanel: () => void;
     /** Clear the current selection */
     clearSelection: () => void;
     /** Check if a specific block is selected */
@@ -99,12 +103,21 @@ export function createBlockSettingsSlice<
       config: {},
       runtime: {
         selectedBlock: undefined,
+        settingsPanelOpenRequest: 0,
       },
 
       selectBlock: (block: SelectedBlock) => {
         set((state) =>
           produce(state, (draft) => {
             draft.blockSettings.runtime.selectedBlock = block;
+          }),
+        );
+      },
+
+      requestOpenSettingsPanel: () => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.blockSettings.runtime.settingsPanelOpenRequest += 1;
           }),
         );
       },

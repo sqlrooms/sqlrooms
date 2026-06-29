@@ -1,12 +1,20 @@
 import type {Editor} from '@sqlrooms/documents';
-import {BlockSettingsPanel} from '@sqlrooms/documents';
+import {BlockSettingsPanel, useBlockSettingsStore} from '@sqlrooms/documents';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
   ResizablePanelHandle,
+  ScrollArea,
 } from '@sqlrooms/ui';
-import {FC, ReactNode, useEffect, useRef, useState} from 'react';
+import {
+  FC,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 export type ResizableSettingsPanelLayoutProps = {
   /** Main content to render in the left panel */
@@ -35,6 +43,13 @@ export const ResizableSettingsPanelLayout: FC<
 > = ({children, editor, documentId}) => {
   const panelRef = useRef<ResizablePanelHandle>(null);
   const [isOpen, setIsOpen] = useState(true);
+  const settingsPanelOpenRequest = useBlockSettingsStore(
+    (state) => state.blockSettings.runtime.settingsPanelOpenRequest,
+  );
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,6 +58,12 @@ export const ResizableSettingsPanelLayout: FC<
       panelRef.current?.collapse();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (settingsPanelOpenRequest > 0) {
+      setIsOpen(true);
+    }
+  }, [settingsPanelOpenRequest]);
 
   const onResize = () => {
     const isCollapsed = panelRef.current?.isCollapsed();
@@ -59,7 +80,7 @@ export const ResizableSettingsPanelLayout: FC<
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       <ResizablePanel>{children}</ResizablePanel>
-      <ResizableHandle withHandle />
+      <ResizableHandle className="w-px" />
       <ResizablePanel
         ref={panelRef}
         defaultSize={300}
@@ -67,17 +88,25 @@ export const ResizableSettingsPanelLayout: FC<
         maxSize="35%"
         className="overflow-hidden"
         collapsible={true}
-        collapsedSize={10}
+        collapsedSize={0}
         onResize={onResize}
       >
         {isOpen && editor !== undefined && documentId ? (
-          <BlockSettingsPanel
-            className="border-l"
-            editor={editor}
-            documentId={documentId}
-          />
+          <ScrollArea className="h-full [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!h-full">
+            <BlockSettingsPanel
+              className="h-full"
+              editor={editor}
+              documentId={documentId}
+              onClose={handleClose}
+            />
+          </ScrollArea>
         ) : isOpen ? (
-          <BlockSettingsPanel className="border-l" />
+          <ScrollArea className="h-full [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!h-full">
+            <BlockSettingsPanel
+              className="h-full"
+              onClose={handleClose}
+            />
+          </ScrollArea>
         ) : null}
       </ResizablePanel>
     </ResizablePanelGroup>

@@ -120,7 +120,8 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
     <div
       className={cn(
         'relative h-full rounded-sm transition-all',
-        isSelected && 'outline-primary outline outline-2 outline-offset-[-2px]',
+        isSelected &&
+          'outline-primary rounded-none outline outline-2 outline-offset-[-2px]',
         className,
       )}
       onClick={handleClick}

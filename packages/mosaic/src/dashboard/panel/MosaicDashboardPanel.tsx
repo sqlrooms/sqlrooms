@@ -1,6 +1,9 @@
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {useMemo} from 'react';
-import {SelectablePanelWrapper} from '@sqlrooms/documents';
+import {useCallback, useMemo} from 'react';
+import {
+  SelectablePanelWrapper,
+  useBlockSettingsStore,
+} from '@sqlrooms/documents';
 import {MosaicDashboardPanelErrorBoundary} from './MosaicDashboardPanelErrorBoundary';
 import {MosaicDashboardPanelHeader} from './MosaicDashboardPanelHeader';
 import {
@@ -20,6 +23,12 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
     (state) => state.mosaicDashboard.panelRenderers,
   );
   const selectionName = getMosaicDashboardSelectionName(dashboardId);
+  const selectBlock = useBlockSettingsStore(
+    (state) => state.blockSettings.selectBlock,
+  );
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
 
   const panel = useMemo(
     () =>
@@ -29,6 +38,25 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
     [dashboard?.panels, panelId],
   );
   const renderer = panel ? panelRenderers[panel.type] : undefined;
+  const handleSelectPanel = useCallback(() => {
+    if (!panel) return;
+
+    selectBlock({
+      type: 'dashboard-panel',
+      id: panel.id,
+      dashboardId,
+      panelType: panel.type,
+      settingsComponent: renderer?.settings,
+    });
+  }, [dashboardId, panel, renderer?.settings, selectBlock]);
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      if (!panel) return;
+
+      updatePanel(dashboardId, panel.id, {title: title || undefined});
+    },
+    [dashboardId, panel, updatePanel],
+  );
 
   if (!dashboard || !panel) {
     return (
@@ -55,6 +83,8 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
           panel={panel}
           renderer={renderer}
           selectionName={selectionName}
+          onSelectPanel={handleSelectPanel}
+          onTitleChange={handleTitleChange}
         />
 
         <div className="min-h-0 flex-1 overflow-hidden">

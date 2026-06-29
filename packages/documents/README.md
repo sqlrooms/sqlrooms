@@ -213,7 +213,7 @@ does not import Mosaic, pivot, or other feature packages:
   >
     <BlockDocumentArtifact
       artifactId={blockDocumentArtifactId}
-      title="Worksheet"
+      title="Analysis"
       onTitleChange={(title) =>
         renameBlockDocument(blockDocumentArtifactId, title)
       }
@@ -236,6 +236,14 @@ handle just below the block for writable documents. Interactive blocks can also 
 document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
 elsewhere scrolls nested overflow regions inside the block. Use
 `scrollHintLabel` to customize the hint target text.
+
+Block and panel definitions can provide reusable settings components. The
+host settings shell is owned by `@sqlrooms/documents`, while feature packages
+own the actual settings UI. Settings components receive the selected
+`blockId`, optional parent `dashboardId`, optional `blockInstanceId`, and an
+optional `onClose` callback when the host shell can be collapsed. Custom
+controls that should reveal the settings shell can call
+`blockSettings.requestOpenSettingsPanel()`.
 
 ### Stateful Blocks
 

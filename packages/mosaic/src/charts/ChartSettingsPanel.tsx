@@ -5,7 +5,8 @@ import {DataTableSelector} from '../components/DataTableSelector';
 import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 import {Field} from '../components/Field';
 import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
-import {Input} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 
 /**
  * Props for the ChartSettingsPanel component.
@@ -16,6 +17,7 @@ import {Input} from '@sqlrooms/ui';
  * @property onTableChange - Callback when the selected data table changes
  * @property title - Optional title/caption for the chart
  * @property onTitleChange - Callback when the chart title changes
+ * @property onClose - Optional callback to close the host settings panel
  */
 export type ChartSettingsPanelProps = {
   dataTable: DataTable | undefined;
@@ -24,6 +26,7 @@ export type ChartSettingsPanelProps = {
   onTableChange: (table: DataTable) => void;
   title?: string;
   onTitleChange?: (title: string) => void;
+  onClose?: () => void;
 };
 
 /**
@@ -43,21 +46,34 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   onTableChange,
   title,
   onTitleChange,
+  onClose,
 }) => {
   const tables = useTablesWithColumns();
 
   return (
-    <div className="flex h-full flex-col gap-2 p-2">
+    <div className="flex min-h-full flex-col gap-2 p-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Chart Settings</h3>
+        {onClose ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            aria-label="Close chart settings"
+            onClick={onClose}
+          >
+            <XIcon className="h-3.5 w-3.5" aria-hidden />
+          </Button>
+        ) : null}
       </div>
 
       <Field label="Title">
-        <Input
-          value={title}
+        <input
+          value={title ?? ''}
           onChange={(e) => onTitleChange?.(e.target.value)}
           placeholder="Enter title"
-          className="text-xs"
+          className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-6 w-full rounded-sm border bg-transparent px-2 py-0 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </Field>
 

@@ -24,6 +24,7 @@ import {ChartBuilderColumn} from '../charts/chart-types/base-types';
 import {ChartConfig} from '../charts/chart-types/chart-config';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
 import {MosaicDashboardSettings} from './MosaicDashboardSettings';
+import {ScrollArea} from '@sqlrooms/ui';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
@@ -170,16 +171,16 @@ function MosaicDashboardComponent({
           settingsComponent={MosaicDashboardSettings}
         >
           <MosaicDashboardToolbar />
-          <div className="h-full min-h-0 flex-1 overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full">
             <MosaicDashboardPanels />
-          </div>
+          </ScrollArea>
         </SelectablePanelWrapper>
       ) : (
         <div className="flex h-full flex-col" onClick={handleContainerClick}>
           <MosaicDashboardToolbar />
-          <div className="h-full overflow-y-auto">
+          <ScrollArea className="min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full">
             <MosaicDashboardPanels />
-          </div>
+          </ScrollArea>
         </div>
       )}
     </MosaicDashboardRoot>

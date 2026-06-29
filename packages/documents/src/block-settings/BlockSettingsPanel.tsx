@@ -1,10 +1,11 @@
-import {cn} from '@sqlrooms/ui';
+import {Button, cn} from '@sqlrooms/ui';
 import {createElement, FC, useContext} from 'react';
 import type {Editor} from '@tiptap/react';
 import {useSelectedBlockOrPanel} from './useSelectedBlockOrPanel';
 import {useBlockSettings} from './useBlockSettings';
 import {BlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
 import {SettingsErrorBoundary} from './SettingsErrorBoundary';
+import {XIcon} from 'lucide-react';
 
 type SharedBlockSettingsPanelProps = {
   /** Additional CSS classes to apply to the panel */
@@ -34,6 +35,41 @@ export type BlockSettingsPanelProps =
   | ContextBackedBlockSettingsPanelProps
   | PropBackedBlockSettingsPanelProps;
 
+type BlockSettingsEmptyStateProps = {
+  className?: string;
+  message: string;
+  onClose?: () => void;
+};
+
+const BlockSettingsEmptyState: FC<BlockSettingsEmptyStateProps> = ({
+  className,
+  message,
+  onClose,
+}) => {
+  return (
+    <div
+      className={cn(
+        'relative flex h-full min-h-full items-center justify-center p-4',
+        className,
+      )}
+    >
+      {onClose ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute top-2 right-2 h-6 w-6"
+          aria-label="Close settings panel"
+          onClick={onClose}
+        >
+          <XIcon className="h-3.5 w-3.5" aria-hidden />
+        </Button>
+      ) : null}
+      <p className="text-muted-foreground text-sm">{message}</p>
+    </div>
+  );
+};
+
 /**
  * Panel that displays settings for the currently selected block.
  *
@@ -58,6 +94,7 @@ export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
   className,
   editor: editorProp,
   documentId: documentIdProp,
+  onClose,
 }) => {
   // Use editor and documentId from props if provided, otherwise try to get from context
   const editorContext = useContext(BlockDocumentEditorContext);
@@ -73,33 +110,29 @@ export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
   // No selection or missing required props
   if (!settingsProps) {
     return (
-      <div
-        className={cn('flex h-full items-center justify-center p-4', className)}
-      >
-        <p className="text-muted-foreground text-sm">
-          Select a block to edit settings
-        </p>
-      </div>
+      <BlockSettingsEmptyState
+        className={className}
+        message="Select a block to edit settings"
+        onClose={onClose}
+      />
     );
   }
 
   // No settings component available for this block
   if (!SettingsComponent) {
     return (
-      <div
-        className={cn('flex h-full items-center justify-center p-4', className)}
-      >
-        <p className="text-muted-foreground text-sm">
-          No settings available for this block
-        </p>
-      </div>
+      <BlockSettingsEmptyState
+        className={className}
+        message="No settings available for this block"
+        onClose={onClose}
+      />
     );
   }
 
   return (
     <div className={className}>
       <SettingsErrorBoundary key={settingsProps.blockId}>
-        {createElement(SettingsComponent, settingsProps)}
+        {createElement(SettingsComponent, {...settingsProps, onClose})}
       </SettingsErrorBoundary>
     </div>
   );

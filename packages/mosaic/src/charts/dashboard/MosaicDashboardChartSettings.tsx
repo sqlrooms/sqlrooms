@@ -15,7 +15,7 @@ import {ChartSettingsPanel} from '../ChartSettingsPanel';
  */
 export const MosaicDashboardChartSettings: FC<
   BlockSettingsComponentProps
-> = ({blockId, dashboardId}) => {
+> = ({blockId, dashboardId, onClose}) => {
   const dashboard = useStoreWithMosaicDashboard((state) =>
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
   );
@@ -86,19 +86,20 @@ export const MosaicDashboardChartSettings: FC<
 
   return (
     <>
-    <ChartSettingsPanel
-      dataTable={dataTable}
-      config={(chartPanel.config || {}) as ChartConfig}
-      onConfigChange={handleConfigChange}
-      onTableChange={handleChangeRequest}
-      title={chartPanel.title || ''}
-      onTitleChange={handleTitleChange}
-    />
-    <ConfirmDatasetChangeDialog
-      open={isDialogOpen}
-      onConfirm={handleConfirm}
-      onCancel={handleCancel}
-    />
+      <ChartSettingsPanel
+        dataTable={dataTable}
+        config={(chartPanel.config || {}) as ChartConfig}
+        onConfigChange={handleConfigChange}
+        onTableChange={handleChangeRequest}
+        title={chartPanel.title || ''}
+        onTitleChange={handleTitleChange}
+        onClose={onClose}
+      />
+      <ConfirmDatasetChangeDialog
+        open={isDialogOpen}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </>
   );
 };

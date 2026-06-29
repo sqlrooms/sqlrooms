@@ -88,7 +88,7 @@ export const BlockDocumentChartNodeView: FC<
     <NodeViewWrapper
       className={cn(
         'not-prose bg-background my-4 rounded-md border',
-        selected && 'outline-primary outline outline-2',
+        selected && 'outline-primary rounded-none outline outline-2',
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""

@@ -37,6 +37,7 @@ function useChartBlock(
 export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
+  onClose,
 }) => {
   const chartBlock = useChartBlock(dashboardId, blockId);
   const updateBlock = useStoreWithBlockDocuments(
@@ -81,6 +82,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
       onTableChange={handleTableChange}
       title={chartBlock.caption || ''}
       onTitleChange={handleCaptionChange}
+      onClose={onClose}
     />
   );
 };
