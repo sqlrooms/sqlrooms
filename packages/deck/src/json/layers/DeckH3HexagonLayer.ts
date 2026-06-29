@@ -5,11 +5,11 @@ import * as arrow from 'apache-arrow';
 /**
  * Custom GeoArrow-compatible H3HexagonLayer wrapper.
  *
- * GeoArrowH3HexagonLayer from @geoarrow/deck.gl-layers@0.3.2 is incompatible
- * with @deck.gl/geo-layers@9.3.x: the wrapper passes H3 indices via binary
- * attributes, but H3HexagonLayer internally iterates rows using createIterable
- * and calls getHexagon(object) expecting string H3 indices. This causes
- * "Cannot read properties of undefined" errors at runtime.
+ * The upstream GeoArrowH3HexagonLayer (from @geoarrow/deck.gl-geoarrow@0.4.x)
+ * expects `getHexagon: Data<Utf8 | Uint64>`, but our pipeline may produce
+ * BigInt H3 indices that need hex-string conversion. Additionally, H3HexagonLayer
+ * internally iterates rows using createIterable and calls getHexagon(object)
+ * expecting string H3 indices, which is incompatible with binary attribute passing.
  *
  * This wrapper converts Arrow data to row objects with proper BigInt→hex string
  * conversion, then passes them to the native H3HexagonLayer.
@@ -48,6 +48,28 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
       (hexProp.type instanceof arrow.Int64 ||
         hexProp.type instanceof arrow.Uint64);
 
+    // Build a lookup from global row index to {batch, localIndex} for
+    // multi-batch tables so compiled accessors receive the correct batch.
+    const batches = table.batches;
+    const batchOffsets = new Int32Array(batches.length);
+    for (let i = 1; i < batches.length; i++) {
+      batchOffsets[i] = batchOffsets[i - 1]! + batches[i - 1]!.numRows;
+    }
+
+    const resolveBatchContext = (globalIndex: number) => {
+      let batchIdx = batches.length - 1;
+      for (let i = 1; i < batches.length; i++) {
+        if (globalIndex < batchOffsets[i]!) {
+          batchIdx = i - 1;
+          break;
+        }
+      }
+      return {
+        batch: batches[batchIdx]!,
+        localIndex: globalIndex - batchOffsets[batchIdx]!,
+      };
+    };
+
     // Resolve hex value per row
     const getHexValue = (i: number): string => {
       if (isVector) {
@@ -59,9 +81,10 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
       }
       // Compiled accessor function
       if (typeof hexProp === 'function') {
+        const {batch, localIndex} = resolveBatchContext(i);
         const result = (hexProp as (...args: unknown[]) => unknown)({
-          index: i,
-          data: {data: table.batches[0]},
+          index: localIndex,
+          data: {data: batch},
           target: [],
         });
         if (typeof result === 'bigint') return result.toString(16);
@@ -102,9 +125,10 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
           _object: unknown,
           objectInfo: {index: number; target?: number[]},
         ) => {
+          const {batch, localIndex} = resolveBatchContext(objectInfo.index);
           return fn({
-            index: objectInfo.index,
-            data: {data: table.batches[0]},
+            index: localIndex,
+            data: {data: batch},
             target: objectInfo.target,
           });
         };

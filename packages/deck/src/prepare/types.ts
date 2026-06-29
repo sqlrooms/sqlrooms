@@ -23,9 +23,10 @@ export type ResolvedGeometryColumn = {
 };
 
 export type PreparedGeoArrowLayerData = {
-  // TODO(geoarrow-upgrade): This `Table` + `Vector` payload shape matches published
-  // `@geoarrow/deck.gl-layers@0.3.x`. Revisit it on the next GeoArrow bump; newer
-  // versions may prefer RecordBatch/Data-chunk inputs instead of Table/Vector.
+  // NOTE: This `Table` + `Vector` payload shape was used by the old
+  // `@geoarrow/deck.gl-layers@0.3.x`. The current `@geoarrow/deck.gl-geoarrow@0.4.x`
+  // prefers RecordBatch inputs, but our custom layer wrappers still consume
+  // Table/Vector and chunk internally.
   table: arrow.Table;
   geometryColumnName: string;
   geometryColumn: arrow.Vector;

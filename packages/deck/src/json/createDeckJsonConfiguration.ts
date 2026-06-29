@@ -208,11 +208,9 @@ export function createDeckJsonConfiguration(
         return `@@=${field}`;
       },
     },
-    // TODO(geoarrow-upgrade): In 0.3.x we preserve raw `@@=` strings here because
-    // `@deck.gl/json` would otherwise eagerly compile them into row-based accessors
-    // before `preProcessClassProps` can rewrite them for GeoArrow. If the next
-    // GeoArrow version can consume deck.gl/json's converted accessors directly, or
-    // exposes a cleaner injection seam, remove this shim.
+    // We preserve raw `@@=` strings here because `@deck.gl/json` would otherwise
+    // eagerly compile them into row-based accessors before `preProcessClassProps`
+    // can rewrite them for GeoArrow's batch-oriented callback contract.
     convertFunction: ((expression: string) => `@@=${expression}`) as never,
     preProcessClassProps: (Class: unknown, props: Record<string, unknown>) => {
       const layerName = getLayerName(Class);

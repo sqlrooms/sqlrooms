@@ -1,5 +1,6 @@
 import {ColumnLayer} from '@deck.gl/layers';
-import {GeoArrowColumnLayer} from '@geoarrow/deck.gl-layers';
+import {GeoArrowColumnLayer} from '@geoarrow/deck.gl-geoarrow';
+import {createTableToRecordBatchAdapter} from './createTableToRecordBatchAdapter';
 
 // Workaround for deck.gl bug #10021: the ColumnLayer's wireframe index buffer
 // leaks onto the fill model when using binary data (as GeoArrow does), causing
@@ -25,14 +26,14 @@ ColumnLayer.prototype.draw = function (opts: {uniforms: unknown}) {
 };
 
 /**
- * GeoArrowColumnLayer wrapper with a fix for the deck.gl ColumnLayer
- * wireframe index buffer bug (#10021). The fix patches the base ColumnLayer
- * draw method which GeoArrowColumnLayer instantiates as sublayers.
+ * GeoArrowColumnLayer adapter that accepts Table + Vector data (the format
+ * used by our JSON pipeline) and bridges to the 0.4.x RecordBatch API.
+ * Also includes a fix for the deck.gl ColumnLayer wireframe index buffer
+ * bug (#10021).
  *
- * Remove this wrapper once deck.gl includes the upstream fix (PR #10094).
+ * Remove the prototype patch once deck.gl includes the upstream fix (PR #10094).
  */
-export class DeckColumnLayer<
-  ExtraProps extends object = object,
-> extends GeoArrowColumnLayer<ExtraProps> {
-  static layerName = 'GeoArrowColumnLayer';
-}
+export const DeckColumnLayer = createTableToRecordBatchAdapter(
+  GeoArrowColumnLayer as any,
+  'GeoArrowColumnLayer',
+);

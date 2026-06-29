@@ -187,7 +187,32 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
   mapProps: z.record(z.string(), z.unknown()).optional(),
   showLegends: z.boolean().optional(),
   interaction: z.record(z.string(), z.unknown()).optional(),
-  fitToData: z.record(z.string(), z.unknown()).optional(),
+  fitToData: z
+    .object({
+      dataset: z.string().describe('Dataset id to compute bounds from.'),
+      longitudeColumn: z
+        .string()
+        .optional()
+        .describe('Longitude column name for point data.'),
+      latitudeColumn: z
+        .string()
+        .optional()
+        .describe('Latitude column name for point data.'),
+      geometryColumn: z
+        .string()
+        .optional()
+        .describe('WKB geometry column name for computing bounds.'),
+      h3Column: z
+        .string()
+        .optional()
+        .describe('H3 hex index column for computing bounds.'),
+      padding: z.number().optional(),
+      maxZoom: z.number().optional(),
+    })
+    .optional()
+    .describe(
+      'Fit map view to data bounds. Provide dataset plus either geometryColumn (for WKB geometry) or longitudeColumn+latitudeColumn (for separate coordinate columns). Example: {"dataset": "myDataset", "geometryColumn": "geom"}',
+    ),
   dataPolicy: DeckMapDataPolicyConfig.optional().describe(
     'Optional per-map runtime data policy. Maps default to 100000 rows; set maxRows for a panel-specific override or disabled=true to bypass row-count validation.',
   ),
