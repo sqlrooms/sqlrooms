@@ -2,6 +2,7 @@ import type {DataTable} from '@sqlrooms/db';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {ScrollArea, ScrollBar, SpinnerPane} from '@sqlrooms/ui';
 import {FC, useCallback} from 'react';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {useStoreWithMosaic} from '../../MosaicSlice';
 import {DataTableSelectorEmptyState} from '../../components/DataTableSelector';
 import {useDataTable} from '@sqlrooms/db';
@@ -35,7 +36,7 @@ export const DataTableBlockRenderer: FC<
   const handleTableChange = useCallback(
     (table: DataTable) => {
       (selection ?? getSelection(selectionName, 'crossfilter')).reset();
-      onTitleChange?.(table.table.toString());
+      onTitleChange?.(getMosaicTableIdentity(table.table));
     },
     [getSelection, onTitleChange, selection, selectionName],
   );

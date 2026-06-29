@@ -3,7 +3,11 @@ import {
   getVisibleSessionContextItemIds,
   type ContextSelectorItem,
 } from '@sqlrooms/ai';
-import {type DataTable} from '@sqlrooms/duckdb';
+import {
+  getTableDisplayName,
+  getTableIdentity,
+  type DataTable,
+} from '@sqlrooms/duckdb';
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {useRoomStore} from '../store';
@@ -63,9 +67,9 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
 
     const tableItems = tables.map((table) => {
       return {
-        id: table.table.toString(),
+        id: getTableIdentity(table.table),
         kind: 'table',
-        title: table.table.table,
+        title: getTableDisplayName(table.table),
         type: table.isView ? 'view' : 'table',
         subtitle: `${table.table.database}.${table.table.schema}`,
         keywords: [
@@ -123,7 +127,9 @@ export function useValidatedSelectedIds(): string[] {
 
   return useMemo(() => {
     const contextItemIds = getVisibleSessionContextItemIds(currentSession);
-    const tableIdSet = new Set(tables.map((table) => table.table.toString()));
+    const tableIdSet = new Set(
+      tables.map((table) => getTableIdentity(table.table)),
+    );
 
     return contextItemIds.filter((id) => {
       if (id === owningArtifactId) {

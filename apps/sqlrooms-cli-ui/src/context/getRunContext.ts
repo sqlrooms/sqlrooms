@@ -1,4 +1,8 @@
-import {type DataTable} from '@sqlrooms/duckdb';
+import {
+  getTableDisplayName,
+  getTableIdentity,
+  type DataTable,
+} from '@sqlrooms/duckdb';
 import {
   getRunContextItemIds,
   type AiRunContext,
@@ -25,10 +29,10 @@ function buildTablesMap(
   const tablesByQualifiedName = new Map<string, TableInfo>();
 
   for (const tableObj of tables ?? []) {
-    tablesByQualifiedName.set(tableObj.table.toString(), {
+    tablesByQualifiedName.set(getTableIdentity(tableObj.table), {
       database: tableObj.table.database,
       schema: tableObj.table.schema,
-      table: tableObj.table.table,
+      table: getTableDisplayName(tableObj.table),
       isView: tableObj.isView,
     });
   }

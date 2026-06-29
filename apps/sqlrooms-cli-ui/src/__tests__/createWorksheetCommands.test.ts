@@ -1,7 +1,17 @@
 import {jest} from '@jest/globals';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {createWorksheetCommands} from '../createWorksheetCommands';
+
+const earthquakesTable = {
+  table: makeQualifiedTableName({schema: 'main', table: 'earthquakes'}),
+  tableName: 'earthquakes',
+  schema: 'main',
+  isView: false,
+  columns: [{name: 'id', type: 'INTEGER'}],
+};
+const earthquakesTableIdentity = '"main"."earthquakes"';
 
 function createCommandContext(state: unknown) {
   return {
@@ -71,7 +81,9 @@ function createState() {
       },
       db: {
         findTable: (tableName: string) =>
-          tableName === 'earthquakes' ? {tableName} : undefined,
+          tableName === 'earthquakes' || tableName === earthquakesTableIdentity
+            ? earthquakesTable
+            : undefined,
       },
       mosaicDashboard: {
         ensureDashboard: jest.fn(),
@@ -114,7 +126,7 @@ describe('createWorksheetCommands', () => {
         worksheetId: 'worksheet-1',
         blockId: 'dashboard-block',
         dashboardId: 'dashboard-id',
-        selectedTable: 'earthquakes',
+        selectedTable: earthquakesTableIdentity,
       },
     });
     expect(invokeCommand).toHaveBeenCalledWith(
@@ -128,7 +140,7 @@ describe('createWorksheetCommands', () => {
     );
     expect(invokeCommand).toHaveBeenCalledWith(
       'dashboard.set-selected-table',
-      {dashboardId: 'dashboard-id', tableName: 'earthquakes'},
+      {dashboardId: 'dashboard-id', tableName: earthquakesTableIdentity},
       {surface: 'ai', actor: 'worksheet-command'},
     );
   });

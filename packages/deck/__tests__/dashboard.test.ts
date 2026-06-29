@@ -92,6 +92,31 @@ describe('deck dashboard integration', () => {
     ).toEqual({tableName: 'dashboard_table'});
   });
 
+  it('preserves quoted selected table identities when resolving sources', () => {
+    const dashboard = createDashboard('"main"."events.2026"');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {sqlQuery: 'SELECT * FROM "main"."old.events"'},
+        },
+      }),
+    ).toEqual({sqlQuery: 'SELECT * FROM "main"."events.2026"'});
+
+    const tableSql = createDeckMapDashboardDatasetQuery(
+      {tableName: '"main"."events.2026"'},
+      [],
+    ).toString();
+    expect(tableSql).toContain('FROM "main"."events.2026"');
+    expect(tableSql).not.toContain('"events"."2026"');
+  });
+
   it('builds Mosaic dataset queries for table and trusted SQL sources', () => {
     const tableSql = createDeckMapDashboardDatasetQuery(
       {tableName: 'earthquakes'},

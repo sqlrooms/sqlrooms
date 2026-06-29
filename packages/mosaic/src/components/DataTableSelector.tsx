@@ -1,4 +1,8 @@
-import type {DataTable} from '@sqlrooms/db';
+import {
+  getTableDisplayName,
+  getTableIdentity,
+  type DataTable,
+} from '@sqlrooms/db';
 import {
   Button,
   cn,
@@ -46,8 +50,8 @@ function getTableGroupLabel(table: DataTable): string {
  */
 function getTableSearchValue(table: DataTable): string {
   return [
-    table.table.toString(),
-    table.table.table,
+    getTableIdentity(table.table),
+    getTableDisplayName(table.table),
     table.table.schema,
     table.table.database,
   ]
@@ -78,7 +82,9 @@ const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
 }) => {
   const groupedTables = useMemo(() => groupTables(tables), [tables]);
 
-  const selectedTableReference = value?.table.toString();
+  const selectedTableReference = value
+    ? getTableIdentity(value.table)
+    : undefined;
 
   return (
     <Command>
@@ -88,7 +94,7 @@ const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
         {groupedTables.map((group) => (
           <CommandGroup key={group.group} heading={group.group}>
             {group.tables.map((table) => {
-              const tableReference = table.table.toString();
+              const tableReference = getTableIdentity(table.table);
               const selectTable = () => onChange?.(table);
 
               const isSelected = selectedTableReference === tableReference;
@@ -108,7 +114,7 @@ const DataTableSelectorCommand: FC<DataTableSelectorProps> = ({
                     )}
                   />
                   <span className="min-w-0 flex-1 truncate font-mono">
-                    {table.table.table}
+                    {getTableDisplayName(table.table)}
                   </span>
                   {table.isView ? (
                     <span className="text-muted-foreground ml-2 text-[10px]">
@@ -137,13 +143,17 @@ export const DataTableSelector: FC<DataTableSelectorProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  const selectedTableReference = value?.table.toString();
+  const selectedTableReference = value
+    ? getTableIdentity(value.table)
+    : undefined;
 
   const selectedTable = tables.find(
-    (table) => selectedTableReference === table.table.toString(),
+    (table) => selectedTableReference === getTableIdentity(table.table),
   );
 
-  const selectedLabel = selectedTable?.table.table ?? value?.table.table;
+  const selectedLabel =
+    (selectedTable ? getTableDisplayName(selectedTable.table) : undefined) ??
+    (value ? getTableDisplayName(value.table) : undefined);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

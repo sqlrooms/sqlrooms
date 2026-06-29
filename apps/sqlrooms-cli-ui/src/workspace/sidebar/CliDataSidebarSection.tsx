@@ -1,5 +1,8 @@
 import {DataTableModal} from '@sqlrooms/data-table';
 import {
+  getRawSqlTableReference,
+  getTableDisplayName,
+  getTableIdentity,
   type DataTable,
   type DbSchemaNode,
   type TableNodeObject,
@@ -84,7 +87,7 @@ export function CliDataSidebarSection() {
 
   const handleSelectTable = useCallback(
     (table: DataTable) => {
-      selectTable(table.table.toString());
+      selectTable(getTableIdentity(table.table));
     },
     [selectTable],
   );
@@ -99,46 +102,43 @@ export function CliDataSidebarSection() {
     [handleSelectTable, openTableModal],
   );
 
-  const renderSchemaNode = useCallback(
-    (node: DbSchemaNode) => {
-      if (node.object.type !== 'table') {
-        return defaultRenderTableSchemaNode(node);
-      }
+  const renderSchemaNode = useCallback((node: DbSchemaNode) => {
+    if (node.object.type !== 'table') {
+      return defaultRenderTableSchemaNode(node);
+    }
 
-      return (
-        <TableTreeNode
-          nodeObject={node.object}
-          renderMenuItems={(nodeObject, viewTableModal) => (
-            <>
-              {defaultRenderTableNodeMenuItems(nodeObject, viewTableModal)}
-              {!nodeObject.isView && (
-                <>
-                  <DropdownMenuSeparator />
-                  <TreeNodeActionsMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => {
-                      setDeleteTable(nodeObject);
-                    }}
-                  >
-                    <Trash2Icon width="15px" />
-                    Delete table
-                  </TreeNodeActionsMenuItem>
-                </>
-              )}
-            </>
-          )}
-        />
-      );
-    },
-    [],
-  );
+    return (
+      <TableTreeNode
+        nodeObject={node.object}
+        renderMenuItems={(nodeObject, viewTableModal) => (
+          <>
+            {defaultRenderTableNodeMenuItems(nodeObject, viewTableModal)}
+            {!nodeObject.isView && (
+              <>
+                <DropdownMenuSeparator />
+                <TreeNodeActionsMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    setDeleteTable(nodeObject);
+                  }}
+                >
+                  <Trash2Icon width="15px" />
+                  Delete table
+                </TreeNodeActionsMenuItem>
+              </>
+            )}
+          </>
+        )}
+      />
+    );
+  }, []);
 
   const handleConfirmDeleteTable = useCallback(async () => {
     if (!deleteTable) return;
 
     const tableToDelete = deleteTable;
     const loadingToastId = toast.loading('Deleting table...', {
-      description: tableToDelete.table.toString(),
+      description: getTableDisplayName(tableToDelete.table),
     });
     setIsDeletingTable(true);
     try {
@@ -216,8 +216,8 @@ export function CliDataSidebarSection() {
                   <CommandGroup heading="Tables">
                     {tables.map((table) => (
                       <CommandItem
-                        key={table.table.toString()}
-                        value={`${table.table.toString()} ${formatTableMeta(table)}`}
+                        key={getTableIdentity(table.table)}
+                        value={`${getTableIdentity(table.table)} ${formatTableMeta(table)}`}
                         onSelect={() => {
                           handlePreviewTable(table);
                         }}
@@ -254,7 +254,9 @@ export function CliDataSidebarSection() {
       <DataTableModal
         title={previewTable?.table.table}
         query={
-          previewTable ? `SELECT * FROM ${previewTable.table.toString()}` : ''
+          previewTable
+            ? `SELECT * FROM ${getRawSqlTableReference(previewTable.table)}`
+            : ''
         }
         tableModal={tableModal}
       />

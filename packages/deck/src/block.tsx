@@ -5,7 +5,7 @@ import {
   useTablesWithColumns,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
-import type {DataTable} from '@sqlrooms/duckdb';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {MapIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo} from 'react';
 import {
@@ -58,7 +58,10 @@ export function ensureDeckMapBlockState(
   );
 
   if (table) {
-    state.mosaicDashboard.setSelectedTable(mapId, table.tableName);
+    state.mosaicDashboard.setSelectedTable(
+      mapId,
+      getTableIdentity(table.table),
+    );
     state.mosaicDashboard.addPanel(
       mapId,
       createDeckMapDashboardPanelConfigForTable({
@@ -140,7 +143,7 @@ export function DeckMapBlockRenderer({
     );
 
     if (table) {
-      setSelectedTable(mapId, table.tableName);
+      setSelectedTable(mapId, getTableIdentity(table.table));
       addPanel(
         mapId,
         createDeckMapDashboardPanelConfigForTable({
@@ -169,7 +172,7 @@ export function DeckMapBlockRenderer({
   const selectedTable = useMemo(
     () =>
       tablesWithColumns.find(
-        (table) => table.table.toString() === dashboard?.selectedTable,
+        (table) => getTableIdentity(table.table) === dashboard?.selectedTable,
       ),
     [dashboard?.selectedTable, tablesWithColumns],
   );
@@ -180,7 +183,7 @@ export function DeckMapBlockRenderer({
         return;
       }
 
-      setSelectedTable(mapId, table.table.toString());
+      setSelectedTable(mapId, getTableIdentity(table.table));
       const hasGeospatialColumns =
         Boolean(findLongitudeLatitudeColumns(table)) ||
         Boolean(findGeometryColumn(table));

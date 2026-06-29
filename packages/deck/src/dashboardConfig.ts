@@ -105,7 +105,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   fitToData?: DeckMapDashboardFitToDataConfig;
 }): {tableName?: string; sqlQuery?: string} | undefined {
   const datasetSource = options.dataset?.source;
-  const dashboardTable = stripCatalogPrefix(options.dashboard.selectedTable);
+  const dashboardTable = options.dashboard.selectedTable;
 
   // The dashboard's selected table always takes precedence as the data source.
   // When the user switches the table in the selector, all panels update.
@@ -164,43 +164,6 @@ export function resolveDeckMapDashboardDatasetSource(options: {
 
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/**
- * Strips the catalog/database and schema prefixes from a fully qualified table name.
- * DuckDB queries run in a context where the catalog prefix is not valid,
- * and the default schema is typically "main".
- * E.g. "sqlrooms-cli"."main"."earthquakes" → earthquakes
- *      "main"."earthquakes" → earthquakes
- *      earthquakes → earthquakes (unchanged)
- */
-function stripCatalogPrefix(tableName: string | undefined): string | undefined {
-  if (!tableName) return tableName;
-  // Split on dots that are outside quotes
-  const parts: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < tableName.length; i++) {
-    const ch = tableName[i];
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-      current += ch;
-    } else if (ch === '.' && !inQuotes) {
-      parts.push(current);
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  parts.push(current);
-
-  // Use the last part (bare table name), stripping quotes
-  const lastPart = parts[parts.length - 1] ?? tableName;
-  // Remove surrounding quotes if present
-  if (lastPart.startsWith('"') && lastPart.endsWith('"')) {
-    return lastPart.slice(1, -1);
-  }
-  return lastPart;
 }
 
 export function createDeckMapDashboardDatasetQuery(

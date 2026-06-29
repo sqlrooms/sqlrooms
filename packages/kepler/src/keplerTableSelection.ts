@@ -1,4 +1,4 @@
-import type {DataTable} from '@sqlrooms/duckdb-core';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb-core';
 import type {RGBColor} from '@kepler.gl/types';
 
 const UNLOADED_TABLE_COLOR: RGBColor = [143, 149, 161];
@@ -189,7 +189,7 @@ function findMatchingKeplerTableForDatasetId(
 
   const defaultDbSchema = resolveDefaultDbSchema(options);
   for (const table of tables) {
-    if (table.table.toString() === datasetId) {
+    if (getTableIdentity(table.table) === datasetId) {
       return table;
     }
 
@@ -240,7 +240,7 @@ export function getKeplerDatasetIdForTable(
     return table.table.table;
   }
 
-  return table.table.toString();
+  return getTableIdentity(table.table);
 }
 
 /**
