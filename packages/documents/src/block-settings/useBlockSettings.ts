@@ -79,6 +79,7 @@ export function useBlockSettings(
         settingsProps: {
           blockId: selectedBlock.id,
           dashboardId: selectedBlock.dashboardId,
+          blockInstanceId: selectedBlock.id,
         },
       };
     }
@@ -97,6 +98,10 @@ export function useBlockSettings(
         settingsProps: {
           blockId: selectedItem.blockId,
           dashboardId: documentId,
+          blockInstanceId:
+            typeof selectedItem.attrs.blockInstanceId === 'string'
+              ? selectedItem.attrs.blockInstanceId
+              : undefined,
         },
       };
     }

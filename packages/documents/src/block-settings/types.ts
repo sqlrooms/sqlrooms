@@ -23,10 +23,12 @@ export type SelectedBlock = {
  *
  * @property blockId - The ID of the block or panel being configured
  * @property dashboardId - The ID of the parent dashboard (optional, used for worksheet blocks)
+ * @property blockInstanceId - Backing state id for stateful document blocks, when available
  */
 export type BlockSettingsComponentProps = {
   blockId: string;
   dashboardId?: string;
+  blockInstanceId?: string;
 };
 
 /**

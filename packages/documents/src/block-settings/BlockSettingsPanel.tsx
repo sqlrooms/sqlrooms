@@ -6,20 +6,33 @@ import {useBlockSettings} from './useBlockSettings';
 import {BlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
 import {SettingsErrorBoundary} from './SettingsErrorBoundary';
 
-export type BlockSettingsPanelProps = {
+type SharedBlockSettingsPanelProps = {
   /** Additional CSS classes to apply to the panel */
   className?: string;
   /** Callback when the panel is closed */
   onClose?: () => void;
-  /** TipTap editor instance (optional - can be passed explicitly or obtained from context) */
-  editor?: Editor | null;
-  /**
-   * Document ID (required when editor is passed as prop).
-   * Note: When providing an explicit editor prop, documentId must also be provided
-   * for block settings to resolve correctly.
-   */
-  documentId?: string;
 };
+
+type ContextBackedBlockSettingsPanelProps = SharedBlockSettingsPanelProps & {
+  /** TipTap editor from BlockDocumentEditorContext. */
+  editor?: undefined;
+  /** Document ID from BlockDocumentEditorContext. */
+  documentId?: undefined;
+};
+
+type PropBackedBlockSettingsPanelProps = SharedBlockSettingsPanelProps & {
+  /** TipTap editor instance (optional - can be passed explicitly or obtained from context) */
+  editor: Editor | null;
+  /**
+   * Document ID required when providing an explicit editor prop.
+   * Used to resolve selected TipTap block settings.
+   */
+  documentId: string;
+};
+
+export type BlockSettingsPanelProps =
+  | ContextBackedBlockSettingsPanelProps
+  | PropBackedBlockSettingsPanelProps;
 
 /**
  * Panel that displays settings for the currently selected block.

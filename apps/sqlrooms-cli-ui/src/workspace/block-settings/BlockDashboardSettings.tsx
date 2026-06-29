@@ -8,9 +8,11 @@ import {useConfirmDatasetChange} from './useConfirmDatasetChange';
 
 export const BlockDashboardSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
+  blockInstanceId,
 }) => {
+  const dashboardId = blockInstanceId ?? blockId;
   const dashboard = useRoomStore((state) =>
-    state.mosaicDashboard.getDashboard(blockId),
+    state.mosaicDashboard.getDashboard(dashboardId),
   );
 
   const setSelectedTable = useRoomStore(
@@ -19,9 +21,9 @@ export const BlockDashboardSettings: FC<BlockSettingsComponentProps> = ({
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      setSelectedTable(blockId, table.table.table);
+      setSelectedTable(dashboardId, table.table.table);
     },
-    [blockId, setSelectedTable],
+    [dashboardId, setSelectedTable],
   );
 
   const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =

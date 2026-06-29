@@ -84,7 +84,7 @@ function getEditorSelection(editor: Editor): EditorSelection {
  */
 export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
   const panelSelection = useBlockSettingsStore(
-    (state) => state.blockSettings.config.selectedBlock,
+    (state) => state.blockSettings.runtime.selectedBlock,
   );
   const clearSelection = useBlockSettingsStore(
     (state) => state.blockSettings.clearSelection,

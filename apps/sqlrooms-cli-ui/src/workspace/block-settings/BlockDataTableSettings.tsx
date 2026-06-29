@@ -12,6 +12,7 @@ export const BlockDataTableSettings: FC<BlockSettingsComponentProps> = ({
   // For standalone data table blocks (in worksheets)
   const dataTableBlock = useDataTableBlock(dashboardId, blockId);
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
+  const getSelection = useRoomStore((state) => state.mosaic.getSelection);
 
   // Call hooks before any conditional returns
   const tableName = dataTableBlock?.title;
@@ -27,7 +28,14 @@ export const BlockDataTableSettings: FC<BlockSettingsComponentProps> = ({
     );
   }
 
+  const selectionName = dashboardId
+    ? `block-document:${dashboardId}:data-table:${blockId}:brush`
+    : undefined;
+
   const handleTableChange = (table: DataTable) => {
+    if (selectionName) {
+      getSelection(selectionName, 'crossfilter').reset();
+    }
     updateBlock(dashboardId!, blockId, {
       ...dataTableBlock,
       title: table.table.toString(),

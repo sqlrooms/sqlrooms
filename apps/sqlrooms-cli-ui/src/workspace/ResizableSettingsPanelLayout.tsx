@@ -70,13 +70,15 @@ export const ResizableSettingsPanelLayout: FC<
         collapsedSize={10}
         onResize={onResize}
       >
-        {isOpen && (
+        {isOpen && editor !== undefined && documentId ? (
           <BlockSettingsPanel
             className="border-l"
             editor={editor}
             documentId={documentId}
           />
-        )}
+        ) : isOpen ? (
+          <BlockSettingsPanel className="border-l" />
+        ) : null}
       </ResizablePanel>
     </ResizablePanelGroup>
   );

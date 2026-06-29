@@ -1,10 +1,27 @@
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {useRoomStore} from '../../store';
-import {FC, useCallback} from 'react';
-import {MapSettingsPanel} from '@sqlrooms/deck';
+import {FC, useCallback, useMemo} from 'react';
+import {
+  createDeckMapDashboardPanelConfig,
+  createDeckMapDashboardPanelConfigForTable,
+  findGeometryColumn,
+  findLongitudeLatitudeColumns,
+  MapSettingsPanel,
+} from '@sqlrooms/deck';
 import {type DataTable} from '@sqlrooms/db';
 import {ConfirmDatasetChangeDialog} from './ConfirmDatasetChangeDialog';
 import {useConfirmDatasetChange} from './useConfirmDatasetChange';
+
+function createEmptyMapPanelConfig(title = 'Map') {
+  return createDeckMapDashboardPanelConfig({
+    title,
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [],
+    },
+    datasets: {},
+  });
+}
 
 export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
@@ -22,13 +39,34 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
     (state) => state.mosaicDashboard.setSelectedTable,
   );
 
+  const panel = useMemo(
+    () => dashboard?.panels.find((p) => p.id === blockId),
+    [dashboard?.panels, blockId],
+  );
+
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      if (dashboardId) {
-        setSelectedTable(dashboardId, table.table.table);
+      if (dashboardId && panel) {
+        setSelectedTable(dashboardId, table.table.toString());
+        const hasGeospatialColumns =
+          Boolean(findLongitudeLatitudeColumns(table)) ||
+          Boolean(findGeometryColumn(table));
+        const nextPanel = hasGeospatialColumns
+          ? createDeckMapDashboardPanelConfigForTable({
+              title: `${table.tableName} map`,
+              tableName: table.tableName,
+              columns: table.columns,
+              tableReference: table.table,
+            })
+          : createEmptyMapPanelConfig(panel.title);
+        updatePanel(dashboardId, blockId, {
+          title: nextPanel.title,
+          type: nextPanel.type,
+          config: nextPanel.config,
+        });
       }
     },
-    [dashboardId, setSelectedTable],
+    [blockId, dashboardId, panel, setSelectedTable, updatePanel],
   );
 
   const handleTitleChange = useCallback(
@@ -50,8 +88,6 @@ export const DashboardMapSettings: FC<BlockSettingsComponentProps> = ({
       </div>
     );
   }
-
-  const panel = dashboard.panels.find((p) => p.id === blockId);
 
   if (!panel || panel.type !== 'deck-json-map') {
     return (

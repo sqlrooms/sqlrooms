@@ -1,9 +1,26 @@
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {useRoomStore} from '../../store';
 import {FC, useMemo, useCallback} from 'react';
-import {MapSettingsPanel} from '@sqlrooms/deck';
+import {
+  createDeckMapDashboardPanelConfig,
+  createDeckMapDashboardPanelConfigForTable,
+  findGeometryColumn,
+  findLongitudeLatitudeColumns,
+  MapSettingsPanel,
+} from '@sqlrooms/deck';
 import {type DataTable} from '@sqlrooms/db';
 import {useMapBlock} from './useMapBlock';
+
+function createEmptyMapPanelConfig(title = 'Map') {
+  return createDeckMapDashboardPanelConfig({
+    title,
+    spec: {
+      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
+      layers: [],
+    },
+    datasets: {},
+  });
+}
 
 export const BlockMapSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
@@ -29,13 +46,33 @@ export const BlockMapSettings: FC<BlockSettingsComponentProps> = ({
     (state) => state.mosaicDashboard.setSelectedTable,
   );
 
+  const updatePanel = useRoomStore(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
+
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      if (mapId) {
-        setSelectedTable(mapId, table.table.table);
+      if (mapId && panel) {
+        setSelectedTable(mapId, table.table.toString());
+        const hasGeospatialColumns =
+          Boolean(findLongitudeLatitudeColumns(table)) ||
+          Boolean(findGeometryColumn(table));
+        const nextPanel = hasGeospatialColumns
+          ? createDeckMapDashboardPanelConfigForTable({
+              title: `${table.tableName} map`,
+              tableName: table.tableName,
+              columns: table.columns,
+              tableReference: table.table,
+            })
+          : createEmptyMapPanelConfig(mapBlock?.caption ?? panel.title);
+        updatePanel(mapId, panel.id, {
+          title: nextPanel.title,
+          type: nextPanel.type,
+          config: nextPanel.config,
+        });
       }
     },
-    [mapId, setSelectedTable],
+    [mapBlock?.caption, mapId, panel, setSelectedTable, updatePanel],
   );
 
   const handleTitleChange = useCallback(

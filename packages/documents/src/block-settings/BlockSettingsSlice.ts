@@ -27,10 +27,7 @@ import type {BlockSettingsComponent, SelectedBlock} from './types';
 /**
  * Configuration for the block settings slice
  */
-export type BlockSettingsSliceConfig = {
-  /** Currently selected block, if any */
-  selectedBlock?: SelectedBlock;
-};
+export type BlockSettingsSliceConfig = Record<string, never>;
 
 /**
  * State shape for the block settings slice
@@ -39,6 +36,8 @@ export type BlockSettingsSliceState = {
   blockSettings: {
     config: BlockSettingsSliceConfig;
     runtime: {
+      /** Currently selected block, if any */
+      selectedBlock?: SelectedBlock;
       /** Registry of settings components by block type */
       settingsRegistry: Record<string, BlockSettingsComponent>;
     };
@@ -126,17 +125,16 @@ export function createBlockSettingsSlice<
 >(options?: CreateBlockSettingsSliceOptions) {
   return createSlice<BlockSettingsSliceState, TRoomState>((set, get) => ({
     blockSettings: {
-      config: {
-        selectedBlock: undefined,
-      },
+      config: {},
       runtime: {
+        selectedBlock: undefined,
         settingsRegistry: options?.settingsRegistry ?? {},
       },
 
       selectBlock: (block: SelectedBlock) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.blockSettings.config.selectedBlock = block;
+            draft.blockSettings.runtime.selectedBlock = block;
           }),
         );
       },
@@ -144,7 +142,7 @@ export function createBlockSettingsSlice<
       clearSelection: () => {
         set((state) =>
           produce(state, (draft) => {
-            draft.blockSettings.config.selectedBlock = undefined;
+            draft.blockSettings.runtime.selectedBlock = undefined;
           }),
         );
       },
@@ -154,7 +152,7 @@ export function createBlockSettingsSlice<
         id: string,
         dashboardId?: string,
       ): boolean => {
-        const selected = get().blockSettings.config.selectedBlock;
+        const selected = get().blockSettings.runtime.selectedBlock;
         return selected ? isBlockMatch(selected, type, id, dashboardId) : false;
       },
 
@@ -163,7 +161,7 @@ export function createBlockSettingsSlice<
       },
 
       clearSelectionIfBlockDeleted: (blockId: string) => {
-        const {selectedBlock} = get().blockSettings.config;
+        const {selectedBlock} = get().blockSettings.runtime;
         if (selectedBlock && shouldClearOnDelete(selectedBlock, blockId)) {
           get().blockSettings.clearSelection();
         }

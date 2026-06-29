@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import type {FC, ReactNode} from 'react';
+import type {FC, MouseEvent, ReactNode} from 'react';
 import {useCallback, useContext} from 'react';
 import {useBlockSettingsStore} from './useBlockSettingsStore';
 import {BlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
@@ -60,8 +60,26 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
   const editor = editorContext?.editor ?? null;
 
   const handleClick = useCallback(
-    (e: React.MouseEvent) => {
+    (e: MouseEvent) => {
       e.stopPropagation(); // Prevent click from bubbling to parent handlers
+      const target = e.target as HTMLElement | null;
+      if (
+        target?.closest(
+          [
+            'button',
+            'a',
+            'input',
+            'select',
+            'textarea',
+            '[contenteditable="true"]',
+            '[role="button"]',
+            '[role="menuitem"]',
+            '[data-selectable-panel-ignore]',
+          ].join(','),
+        )
+      ) {
+        return;
+      }
 
       // Clear TipTap selection when selecting a panel
       if (editor && !editor.isDestroyed) {
