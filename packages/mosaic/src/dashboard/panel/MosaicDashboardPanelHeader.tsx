@@ -168,12 +168,6 @@ export const MosaicDashboardPanelHeader: FC<
     titleInputRef.current?.select();
   }, [isEditingTitle]);
 
-  useEffect(() => {
-    if (isEditingTitle) return;
-
-    setDraftTitle(title);
-  }, [isEditingTitle, title]);
-
   const Icon = renderer?.icon;
   const HeaderActions = renderer?.headerActions;
   const expandLabel = isGridPanelHorizontallyExpanded
