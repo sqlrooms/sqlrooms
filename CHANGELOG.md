@@ -3,6 +3,49 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.9](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.8...v0.29.0-rc.9) (2026-06-29)
+
+### Bug Fixes
+
+* align CLI workspace item actions ([#751](https://github.com/sqlrooms/sqlrooms/issues/751)) ([aef15f5](https://github.com/sqlrooms/sqlrooms/commit/aef15f5bf9758530a3ebd7f6c94482f6d15b7fd0))
+* dashboard chart panel updates ([#736](https://github.com/sqlrooms/sqlrooms/issues/736)) ([31cdd95](https://github.com/sqlrooms/sqlrooms/commit/31cdd95f0aa0bcaea267ae7a7e1a45f65227c8ed))
+* improve CLI app serving and publishing ([#755](https://github.com/sqlrooms/sqlrooms/issues/755)) ([7924b5a](https://github.com/sqlrooms/sqlrooms/commit/7924b5a249dad22269d33ecea7fb8092b911925a))
+* Mosaic table references for memory-backed datasets ([#774](https://github.com/sqlrooms/sqlrooms/issues/774)) ([f7b7a2e](https://github.com/sqlrooms/sqlrooms/commit/f7b7a2e70ee391916452e4ec6b45f9813fe84411))
+* Native scrollbars in sidebar and panel views ([#730](https://github.com/sqlrooms/sqlrooms/issues/730)) ([c58e0a1](https://github.com/sqlrooms/sqlrooms/commit/c58e0a1bcbe48ba77d2e22789cd7df17b5749e22))
+* Normalize Mosaic table references to omit DuckDB catalogs ([#731](https://github.com/sqlrooms/sqlrooms/issues/731)) ([2330b43](https://github.com/sqlrooms/sqlrooms/commit/2330b43ae397aa4faaa7d47eec666543a3c6f107))
+* Polish CLI sidebar interactions and layout overflow ([#733](https://github.com/sqlrooms/sqlrooms/issues/733)) ([36dbc67](https://github.com/sqlrooms/sqlrooms/commit/36dbc67945cd3d63490bfce3ada17f7e74e2ef08))
+* Remove hardcoded agent temperatures ([#769](https://github.com/sqlrooms/sqlrooms/issues/769)) ([d0faca8](https://github.com/sqlrooms/sqlrooms/commit/d0faca8545e12f047e112c9169dae0a49dced211))
+* Replace table explorer overflow with ScrollArea and horizontal scrollbar ([#735](https://github.com/sqlrooms/sqlrooms/issues/735)) ([a71152e](https://github.com/sqlrooms/sqlrooms/commit/a71152e995bf676017dcd98172ce25872d5dddfd))
+* **skill-authoring:** prevent skill markdown preview from overflowing ([#773](https://github.com/sqlrooms/sqlrooms/issues/773)) ([abbd8a3](https://github.com/sqlrooms/sqlrooms/commit/abbd8a31fefbfa033dc62ae97df48ef978c66bd9))
+* Stabilize block document renderer props to reduce rerenders ([#761](https://github.com/sqlrooms/sqlrooms/issues/761)) ([613bd9f](https://github.com/sqlrooms/sqlrooms/commit/613bd9f8408eddaf076ed01ec6081db14c7dd92c))
+* Standardize table name qualification across SQLRooms ([#734](https://github.com/sqlrooms/sqlrooms/issues/734)) ([c86c7f1](https://github.com/sqlrooms/sqlrooms/commit/c86c7f13d30127a09dbf15fd6d771f9c31ee316f))
+* Textarea resize  ([#726](https://github.com/sqlrooms/sqlrooms/issues/726)) ([282d0cb](https://github.com/sqlrooms/sqlrooms/commit/282d0cb1a1595dea3f129119828eede3abfb9e79))
+* token usage tracking in AI models and UI components ([#710](https://github.com/sqlrooms/sqlrooms/issues/710)) ([d3db72d](https://github.com/sqlrooms/sqlrooms/commit/d3db72d9871ca8b15ab6feb65aec56f1a08efdfd))
+
+### Features
+
+* Add AI debug session view ([#729](https://github.com/sqlrooms/sqlrooms/issues/729)) ([ed64d40](https://github.com/sqlrooms/sqlrooms/commit/ed64d40edad8cfd97a2ea2159dc0ba8750dbf181))
+* Add app runtime bridge for sandboxed HTML apps ([#737](https://github.com/sqlrooms/sqlrooms/issues/737)) ([496de33](https://github.com/sqlrooms/sqlrooms/commit/496de333b538cec0e44d307365405846689671fa))
+* Add block type dropdown for focused empty paragraphs ([#752](https://github.com/sqlrooms/sqlrooms/issues/752)) ([6203805](https://github.com/sqlrooms/sqlrooms/commit/6203805b125b2b6ca598307aaac6ed15ae813217))
+* add direct worksheet map blocks ([#757](https://github.com/sqlrooms/sqlrooms/issues/757)) ([28e6cd5](https://github.com/sqlrooms/sqlrooms/commit/28e6cd5d4f30cf9ccfd1240507cf0280363a804e))
+* add HTML app revision history ([#748](https://github.com/sqlrooms/sqlrooms/issues/748)) ([ab14232](https://github.com/sqlrooms/sqlrooms/commit/ab1423243b93c11a85d21b49d13ad6d29045eb22))
+* add intent metadata for AI-created blocks ([#749](https://github.com/sqlrooms/sqlrooms/issues/749)) ([9e23f71](https://github.com/sqlrooms/sqlrooms/commit/9e23f71f9d9c975e900c42f95c08cb42da9e03b8))
+* Add python block artifacts to the CLI UI ([#762](https://github.com/sqlrooms/sqlrooms/issues/762)) ([730effd](https://github.com/sqlrooms/sqlrooms/commit/730effdb081f2da29ac25d01741e37bca04902a5))
+* add Python cell worksheet blocks ([#753](https://github.com/sqlrooms/sqlrooms/issues/753)) ([de90cf1](https://github.com/sqlrooms/sqlrooms/commit/de90cf1a115d25b46fa6ffc61d4ff7669e18d540))
+* Add rename and delete actions to CLI artifact sidebar ([#738](https://github.com/sqlrooms/sqlrooms/issues/738)) ([571cae1](https://github.com/sqlrooms/sqlrooms/commit/571cae1c1f5ac47637322e2efaf8b8c7c9e0d2d4))
+* Add table delete action to the CLI sidebar ([#744](https://github.com/sqlrooms/sqlrooms/issues/744)) ([7be3da6](https://github.com/sqlrooms/sqlrooms/commit/7be3da65320cbcfcc0757268a3cbd02c6709bb98))
+* **cli:** prepare sqlrooms publishing ([#754](https://github.com/sqlrooms/sqlrooms/issues/754)) ([8245678](https://github.com/sqlrooms/sqlrooms/commit/8245678b3c497f9115074cd2812cd0826973121b))
+* Command layer implementation ([#766](https://github.com/sqlrooms/sqlrooms/issues/766)) ([8648895](https://github.com/sqlrooms/sqlrooms/commit/8648895a3ca87e00d5ab75e1e3865b95baeb3624))
+* Compact assistant composer controls ([#743](https://github.com/sqlrooms/sqlrooms/issues/743)) ([d68e2a1](https://github.com/sqlrooms/sqlrooms/commit/d68e2a1111cd879a916df385d15b80b82f6648eb))
+* dashboard maps improvements ([#746](https://github.com/sqlrooms/sqlrooms/issues/746)) ([896ccd4](https://github.com/sqlrooms/sqlrooms/commit/896ccd4d0ad9f00b2bfe8d27872a873c941d4951))
+* hand off artifact chats after AI artifact changes ([#747](https://github.com/sqlrooms/sqlrooms/issues/747)) ([6c93e61](https://github.com/sqlrooms/sqlrooms/commit/6c93e61e72e95239a897044e4107677168ecd397))
+* Handle CLI dev port conflicts automatically ([#739](https://github.com/sqlrooms/sqlrooms/issues/739)) ([2b0f2ac](https://github.com/sqlrooms/sqlrooms/commit/2b0f2ac2debc9e0674d119e3e9843f4d6d5831a1))
+* improvements for geoarrow deck layers in dashboard maps ([#700](https://github.com/sqlrooms/sqlrooms/issues/700)) ([d5e30b0](https://github.com/sqlrooms/sqlrooms/commit/d5e30b0fa7131149aba132a2ed90f93c6ba78c0d))
+* Persist chat request errors in session state ([#750](https://github.com/sqlrooms/sqlrooms/issues/750)) ([2eca7bb](https://github.com/sqlrooms/sqlrooms/commit/2eca7bb0e351cfc92b9ea1d04bfdce728d389423))
+* reuse empty artifact chat sessions ([#742](https://github.com/sqlrooms/sqlrooms/issues/742)) ([bd26a35](https://github.com/sqlrooms/sqlrooms/commit/bd26a355a555544ca595bb170b0475c3c82fe933))
+* Show a disconnect dialog for lost DuckDB WebSocket connections ([#763](https://github.com/sqlrooms/sqlrooms/issues/763)) ([213239f](https://github.com/sqlrooms/sqlrooms/commit/213239fb5c79e7f0efb23ef20db06ae0cdf7cf41))
+* Worksheet agent ([#711](https://github.com/sqlrooms/sqlrooms/issues/711)) ([0f40da8](https://github.com/sqlrooms/sqlrooms/commit/0f40da84c74f4facfd6a058fbce4b2ae91cb0ec5))
+
 # [0.29.0-rc.8](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.7...v0.29.0-rc.8) (2026-06-17)
 
 ### Bug Fixes

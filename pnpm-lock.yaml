@@ -214,12 +214,12 @@ importers:
       '@sqlrooms/python':
         specifier: workspace:*
         version: link:../../packages/python
-      '@sqlrooms/room-store':
-        specifier: workspace:*
-        version: link:../../packages/room-store
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../../packages/room-store
       '@sqlrooms/schema-tree':
         specifier: workspace:*
         version: link:../../packages/schema-tree
