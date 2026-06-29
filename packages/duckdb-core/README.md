@@ -207,8 +207,11 @@ function DatabaseManager() {
 
 ```tsx
 import {
+  getRawSqlTableReference,
+  getTableDisplayName,
+  getTableIdentity,
   makeQualifiedTableName,
-  quoteTableReference,
+  parseTableIdentity,
   resolveTableReference,
 } from '@sqlrooms/duckdb';
 
@@ -222,11 +225,20 @@ const qualifiedTable = makeQualifiedTableName({
 // qualifiedTable.toString(): '"public"."users"'
 // qualifiedTable.toFullString(): '"mydb"."public"."users"'
 
-const tableSql = quoteTableReference('"mydb"."public"."users"');
-// tableSql: '"mydb"."public"."users"'
+const tableId = getTableIdentity(qualifiedTable);
+// tableId: '"public"."users"'
+
+const rehydratedTableId = parseTableIdentity(tableId);
+// rehydratedTableId: '"public"."users"'
+
+const tableSql = getRawSqlTableReference(qualifiedTable);
+// tableSql: '"public"."users"'
 
 const resolved = resolveTableReference([{table: qualifiedTable}], 'users');
 // resolved.table?.table.toString(): '"public"."users"'
+
+const tableLabel = getTableDisplayName(qualifiedTable);
+// tableLabel: 'users'
 
 // Use with table operations
 await createTableFromQuery(qualifiedTable, 'SELECT * FROM source_table');

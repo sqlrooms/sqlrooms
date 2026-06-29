@@ -24,6 +24,41 @@ export type QualifiedTableName = {
   toString: () => string;
 };
 
+declare const tableIdentityBrand: unique symbol;
+declare const fullTableIdentityBrand: unique symbol;
+declare const rawSqlTableReferenceBrand: unique symbol;
+
+/**
+ * Persisted SQLRooms table identity.
+ *
+ * This is the canonical `QualifiedTableName.toString()` shape. It may omit the
+ * default database/catalog, so use it for persisted state, lookup keys, cache
+ * keys, and selected-table state, not as an implicit SQL execution fragment.
+ */
+export type TableIdentity = string & {
+  readonly [tableIdentityBrand]: 'TableIdentity';
+};
+
+/**
+ * Fully-qualified SQLRooms table identity.
+ *
+ * Use this when diagnostics, migrations, or cross-catalog workflows need the
+ * catalog/database to remain visible.
+ */
+export type FullTableIdentity = string & {
+  readonly [fullTableIdentityBrand]: 'FullTableIdentity';
+};
+
+/**
+ * SQL-rendered table reference for direct SQL string builders.
+ *
+ * This type is intentionally distinct from persisted identity strings. Construct
+ * it from a resolved `QualifiedTableName` whenever possible.
+ */
+export type RawSqlTableReference = string & {
+  readonly [rawSqlTableReferenceBrand]: 'RawSqlTableReference';
+};
+
 type QualifiedTableNameParts = Pick<
   QualifiedTableName,
   'database' | 'schema' | 'table' | 'defaultDatabase'
@@ -49,6 +84,17 @@ function qualifiedTableNameToFullString(tableName: QualifiedTableName): string {
     (tableName as {toFullString?: () => string}).toFullString?.() ??
     tableName.toString()
   );
+}
+
+function getCanonicalTableReference(
+  tableName: Partial<QualifiedTableName>,
+): string | undefined {
+  if (!tableName.table) return undefined;
+  return makeQualifiedTableName({
+    database: tableName.database,
+    schema: tableName.schema,
+    table: tableName.table,
+  }).toString();
 }
 
 /**
@@ -108,6 +154,30 @@ export function makeQualifiedTableName({
     toFullString: () => fullyQualifiedTableName,
     toString: () => canonicalTableName,
   };
+}
+
+/**
+ * Returns the canonical persisted SQLRooms table identity for a resolved table.
+ *
+ * Use this for saved state, lookup keys, cache keys, and selected-table state.
+ * Rehydrate JSON/Zod/tool strings with `parseTableIdentity(...)` or resolve
+ * them against the catalog before treating them as identities.
+ */
+export function getTableIdentity(table: QualifiedTableName): TableIdentity {
+  return table.toString() as TableIdentity;
+}
+
+/**
+ * Returns the fully-qualified SQLRooms table identity for a resolved table.
+ *
+ * Prefer `getTableIdentity(...)` for normal persisted state. Use this helper for
+ * migrations, diagnostics, and workflows where the database/catalog cannot be
+ * inferred from the default connection context.
+ */
+export function getFullTableIdentity(
+  table: QualifiedTableName,
+): FullTableIdentity {
+  return table.toFullString() as FullTableIdentity;
 }
 
 function unquoteSqlIdentifierSegment(identifier: string): string {
@@ -201,6 +271,56 @@ export function parseQualifiedSqlIdentifier(
 }
 
 /**
+ * Rehydrates a persisted SQLRooms table identity string.
+ *
+ * This intentionally accepts only the canonical quoted representation produced
+ * by `getTableIdentity(...)`. Legacy/user inputs such as `events` or
+ * `main.events` should be resolved through `resolveTableReference(...)` first.
+ */
+export function parseTableIdentity(
+  input: string | undefined,
+): TableIdentity | undefined {
+  const trimmedInput = input?.trim();
+  if (!trimmedInput) return undefined;
+
+  const parsed = parseQualifiedSqlIdentifier(trimmedInput);
+  const canonical = parsed ? getCanonicalTableReference(parsed) : undefined;
+  return canonical === trimmedInput ? (canonical as TableIdentity) : undefined;
+}
+
+/**
+ * Rehydrates a persisted fully-qualified SQLRooms table identity string.
+ *
+ * The full identity must include database, schema, and table parts.
+ */
+export function parseFullTableIdentity(
+  input: string | undefined,
+): FullTableIdentity | undefined {
+  const tableIdentity = parseTableIdentity(input);
+  if (!tableIdentity) return undefined;
+  const parsed = parseQualifiedSqlIdentifier(tableIdentity);
+  return parsed?.database && parsed.schema
+    ? (tableIdentity as string as FullTableIdentity)
+    : undefined;
+}
+
+/**
+ * Converts a rehydrated persisted table identity back to structured table parts.
+ */
+export function parseTableIdentityToQualifiedName(
+  input: TableIdentity | FullTableIdentity,
+): QualifiedTableName | undefined {
+  const parsed = parseQualifiedSqlIdentifier(input);
+  return parsed?.table
+    ? makeQualifiedTableName({
+        database: parsed.database,
+        schema: parsed.schema,
+        table: parsed.table,
+      })
+    : undefined;
+}
+
+/**
  * Returns the final identifier segment from a possibly-qualified SQL name.
  *
  * The parser is quote-aware: dots inside double-quoted identifiers are treated
@@ -220,6 +340,34 @@ export function getUnqualifiedSqlIdentifier(
 }
 
 /**
+ * Returns a SQL-rendered quoted table reference from a resolved table name.
+ *
+ * Use this at direct SQL string-builder boundaries. Persisted strings, command
+ * inputs, AI tool arguments, and other plain strings should resolve to a
+ * `QualifiedTableName` first, or use `quoteParsedRawSqlTableReference(...)` at
+ * explicit legacy/user-input boundaries.
+ */
+export function getRawSqlTableReference(
+  table: QualifiedTableName,
+): RawSqlTableReference {
+  return table.toString() as RawSqlTableReference;
+}
+
+/**
+ * Parses and quotes a legacy/user-provided table reference for direct SQL.
+ *
+ * Prefer resolving against the catalog and calling `getRawSqlTableReference(...)`.
+ * This helper exists for boundaries that still receive plain strings.
+ */
+export function quoteParsedRawSqlTableReference(
+  input: string | undefined,
+): RawSqlTableReference | undefined {
+  const parsed = parseQualifiedSqlIdentifier(input);
+  const canonical = parsed ? getCanonicalTableReference(parsed) : undefined;
+  return canonical ? (canonical as RawSqlTableReference) : undefined;
+}
+
+/**
  * Quotes a table reference for SQL.
  *
  * Accepts bare names, unquoted qualified names, or already-quoted qualified
@@ -230,6 +378,10 @@ export function getUnqualifiedSqlIdentifier(
  * quoteTableReference('events') // '"events"'
  * quoteTableReference('main.events') // '"main"."events"'
  * quoteTableReference('"memory"."main"."events.2026"') // '"memory"."main"."events.2026"'
+ *
+ * @deprecated Prefer `getRawSqlTableReference(...)` after resolving a
+ * `QualifiedTableName`, or `quoteParsedRawSqlTableReference(...)` at explicit
+ * legacy/user-input boundaries.
  */
 export function quoteTableReference(tableName: string): string {
   const parsed = parseQualifiedSqlIdentifier(tableName);
@@ -242,6 +394,15 @@ export function quoteTableReference(tableName: string): string {
   }
 
   return escapeId(tableName);
+}
+
+/**
+ * Returns a display-only label for a structured SQLRooms table name.
+ *
+ * Do not use this value for persistence, lookup, or SQL execution.
+ */
+export function getTableDisplayName(table: QualifiedTableName): string {
+  return table.table;
 }
 
 function matchesQualifiedTableName<T extends TableReferenceCandidate>(
