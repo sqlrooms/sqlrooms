@@ -5,6 +5,6 @@ export default {
   ...nodeConfig,
   moduleNameMapper: {
     ...(nodeConfig.moduleNameMapper ?? {}),
-    '^@sqlrooms/duckdb-core$': '<rootDir>/../duckdb-core/src/duckdb-utils.ts',
+    '^@sqlrooms/duckdb-core$': '<rootDir>/../duckdb-core/src/index.ts',
   },
 };
