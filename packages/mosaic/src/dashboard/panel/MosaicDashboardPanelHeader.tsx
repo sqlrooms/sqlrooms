@@ -11,7 +11,7 @@ import {
   ChevronsRightLeftIcon,
   GripVerticalIcon,
   MoveHorizontalIcon,
-  SettingsIcon,
+  SlidersVerticalIcon,
   Trash2Icon,
 } from 'lucide-react';
 import {
@@ -238,7 +238,7 @@ export const MosaicDashboardPanelHeader: FC<
                       aria-pressed={isSettingsShown}
                       onClick={handleSettingsClick}
                     >
-                      <SettingsIcon className="h-3.5 w-3.5" />
+                      <SlidersVerticalIcon className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>

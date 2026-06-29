@@ -6,7 +6,7 @@ import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 import {Field} from '../components/Field';
 import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
 import {Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
+import {SlidersVerticalIcon, XIcon} from 'lucide-react';
 
 /**
  * Props for the ChartSettingsPanel component.
@@ -53,7 +53,10 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   return (
     <div className="flex min-h-full flex-col gap-2 p-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Chart Settings</h3>
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+          <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
+          Settings
+        </h3>
         {onClose ? (
           <Button
             type="button"

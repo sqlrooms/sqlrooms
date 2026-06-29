@@ -2,7 +2,7 @@ import {Button} from '@sqlrooms/ui';
 import type {ChartConfig} from '../chart-types/chart-config';
 import {FC, useCallback} from 'react';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
-import {SettingsIcon} from 'lucide-react';
+import {SlidersVerticalIcon} from 'lucide-react';
 import {useBlockSettingsStore} from '@sqlrooms/documents';
 
 export type ChartBlockHeaderProps = {
@@ -69,7 +69,7 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
         aria-pressed={isSettingsShown}
         onClick={handleSettingsClick}
       >
-        <SettingsIcon className="h-3.5 w-3.5" aria-hidden />
+        <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
       </Button>
     </div>
   );
