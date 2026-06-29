@@ -6,12 +6,22 @@ import {
 import {
   getTableDisplayName,
   getTableIdentity,
+  parseTableIdentity,
   type DataTable,
+  type TableIdentity,
 } from '@sqlrooms/duckdb';
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {useRoomStore} from '../store';
 import {isContextArtifactType} from './assistantUtils';
+
+function hasTableIdentity(
+  tableIds: ReadonlySet<TableIdentity>,
+  id: string,
+): boolean {
+  const tableIdentity = parseTableIdentity(id);
+  return tableIdentity ? tableIds.has(tableIdentity) : false;
+}
 
 /**
  * Hook to get context-eligible artifacts from the store
@@ -93,7 +103,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
           );
         }
         if (item.kind === 'table') {
-          return !tableIdSet.has(item.id);
+          return !hasTableIdentity(tableIdSet, item.id);
         }
         return false;
       })
@@ -140,7 +150,7 @@ export function useValidatedSelectedIds(): string[] {
         return true;
       }
       // Check if it's a valid table ID
-      return tableIdSet.has(id);
+      return hasTableIdentity(tableIdSet, id);
     });
   }, [currentSession, artifactsById, owningArtifactId, tables]);
 }
