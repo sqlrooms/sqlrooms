@@ -243,7 +243,9 @@ own the actual settings UI. Settings components receive the selected
 `blockId`, optional parent `dashboardId`, optional `blockInstanceId`, and an
 optional `onClose` callback when the host shell can be collapsed. Custom
 controls that should reveal the settings shell can call
-`blockSettings.requestOpenSettingsPanel()`.
+`blockSettings.requestOpenSettingsPanel()`. Controls that represent the
+currently shown settings can read `blockSettings.runtime.isSettingsPanelOpen`
+and call `blockSettings.requestCloseSettingsPanel()` to toggle the shell closed.
 
 ### Stateful Blocks
 

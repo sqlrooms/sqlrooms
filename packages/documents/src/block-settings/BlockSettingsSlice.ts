@@ -38,6 +38,8 @@ export type BlockSettingsSliceState = {
     runtime: {
       /** Currently selected block, if any */
       selectedBlock?: SelectedBlock;
+      /** Whether the host settings panel shell is currently expanded */
+      isSettingsPanelOpen: boolean;
       /** Monotonic counter used by shells to reopen their settings panel */
       settingsPanelOpenRequest: number;
     };
@@ -45,6 +47,10 @@ export type BlockSettingsSliceState = {
     selectBlock: (block: SelectedBlock) => void;
     /** Request the host settings panel to open */
     requestOpenSettingsPanel: () => void;
+    /** Request the host settings panel to close */
+    requestCloseSettingsPanel: () => void;
+    /** Synchronize host settings panel visibility */
+    setSettingsPanelOpen: (isOpen: boolean) => void;
     /** Clear the current selection */
     clearSelection: () => void;
     /** Check if a specific block is selected */
@@ -103,6 +109,7 @@ export function createBlockSettingsSlice<
       config: {},
       runtime: {
         selectedBlock: undefined,
+        isSettingsPanelOpen: true,
         settingsPanelOpenRequest: 0,
       },
 
@@ -117,7 +124,24 @@ export function createBlockSettingsSlice<
       requestOpenSettingsPanel: () => {
         set((state) =>
           produce(state, (draft) => {
+            draft.blockSettings.runtime.isSettingsPanelOpen = true;
             draft.blockSettings.runtime.settingsPanelOpenRequest += 1;
+          }),
+        );
+      },
+
+      requestCloseSettingsPanel: () => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.blockSettings.runtime.isSettingsPanelOpen = false;
+          }),
+        );
+      },
+
+      setSettingsPanelOpen: (isOpen: boolean) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.blockSettings.runtime.isSettingsPanelOpen = isOpen;
           }),
         );
       },

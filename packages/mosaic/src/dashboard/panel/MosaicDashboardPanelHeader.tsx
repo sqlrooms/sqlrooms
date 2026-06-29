@@ -67,6 +67,22 @@ export const MosaicDashboardPanelHeader: FC<
   const requestOpenSettingsPanel = useBlockSettingsStore(
     (state) => state.blockSettings.requestOpenSettingsPanel,
   );
+  const requestCloseSettingsPanel = useBlockSettingsStore(
+    (state) => state.blockSettings.requestCloseSettingsPanel,
+  );
+  const isSettingsPanelOpen = useBlockSettingsStore(
+    (state) => state.blockSettings.runtime.isSettingsPanelOpen,
+  );
+  const isPanelSelected = useBlockSettingsStore((state) =>
+    panelId
+      ? state.blockSettings.isBlockSelected(
+          'dashboard-panel',
+          panelId,
+          dashboardId,
+        )
+      : false,
+  );
+  const isSettingsShown = isSettingsPanelOpen && isPanelSelected;
 
   const handleRemove = useCallback(() => {
     if (!panelId) return;
@@ -98,9 +114,19 @@ export const MosaicDashboardPanelHeader: FC<
   );
 
   const handleSettingsClick = useCallback(() => {
+    if (isSettingsShown) {
+      requestCloseSettingsPanel();
+      return;
+    }
+
     onSelectPanel?.();
     requestOpenSettingsPanel();
-  }, [onSelectPanel, requestOpenSettingsPanel]);
+  }, [
+    isSettingsShown,
+    onSelectPanel,
+    requestCloseSettingsPanel,
+    requestOpenSettingsPanel,
+  ]);
 
   const handleTitleDoubleClick = useCallback(
     (event: MouseEvent<HTMLSpanElement>) => {
@@ -201,16 +227,25 @@ export const MosaicDashboardPanelHeader: FC<
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="ghost"
+                      variant={isSettingsShown ? 'secondary' : 'ghost'}
                       size="icon"
                       className="h-6 w-6"
-                      aria-label="Open panel settings"
+                      aria-label={
+                        isSettingsShown
+                          ? 'Close panel settings'
+                          : 'Open panel settings'
+                      }
+                      aria-pressed={isSettingsShown}
                       onClick={handleSettingsClick}
                     >
                       <SettingsIcon className="h-3.5 w-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Open panel settings</TooltipContent>
+                  <TooltipContent>
+                    {isSettingsShown
+                      ? 'Close panel settings'
+                      : 'Open panel settings'}
+                  </TooltipContent>
                 </Tooltip>
               ) : null}
               {canExpandGridPanel ? (

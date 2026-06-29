@@ -7,14 +7,7 @@ import {
   ResizablePanelHandle,
   ScrollArea,
 } from '@sqlrooms/ui';
-import {
-  FC,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import {FC, ReactNode, useCallback, useEffect, useRef} from 'react';
 
 export type ResizableSettingsPanelLayoutProps = {
   /** Main content to render in the left panel */
@@ -42,14 +35,16 @@ export const ResizableSettingsPanelLayout: FC<
   ResizableSettingsPanelLayoutProps
 > = ({children, editor, documentId}) => {
   const panelRef = useRef<ResizablePanelHandle>(null);
-  const [isOpen, setIsOpen] = useState(true);
-  const settingsPanelOpenRequest = useBlockSettingsStore(
-    (state) => state.blockSettings.runtime.settingsPanelOpenRequest,
+  const isOpen = useBlockSettingsStore(
+    (state) => state.blockSettings.runtime.isSettingsPanelOpen,
+  );
+  const setSettingsPanelOpen = useBlockSettingsStore(
+    (state) => state.blockSettings.setSettingsPanelOpen,
   );
 
   const handleClose = useCallback(() => {
-    setIsOpen(false);
-  }, []);
+    setSettingsPanelOpen(false);
+  }, [setSettingsPanelOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -59,21 +54,15 @@ export const ResizableSettingsPanelLayout: FC<
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (settingsPanelOpenRequest > 0) {
-      setIsOpen(true);
-    }
-  }, [settingsPanelOpenRequest]);
-
   const onResize = () => {
     const isCollapsed = panelRef.current?.isCollapsed();
 
     if (isCollapsed && isOpen) {
-      setIsOpen(false);
+      setSettingsPanelOpen(false);
     }
 
     if (!isCollapsed && !isOpen) {
-      setIsOpen(true);
+      setSettingsPanelOpen(true);
     }
   };
 
@@ -102,10 +91,7 @@ export const ResizableSettingsPanelLayout: FC<
           </ScrollArea>
         ) : isOpen ? (
           <ScrollArea className="h-full [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!h-full">
-            <BlockSettingsPanel
-              className="h-full"
-              onClose={handleClose}
-            />
+            <BlockSettingsPanel className="h-full" onClose={handleClose} />
           </ScrollArea>
         ) : null}
       </ResizablePanel>
