@@ -501,7 +501,7 @@ describe('MosaicDashboardSlice generic panels', () => {
   it('tracks retained charts and runtime issues by caller-provided keys', () => {
     const store = createTestStore();
     const runtime = createRuntimeChart();
-    const runtimeKey = 'worksheet:worksheet-1:chart-block:chart-1';
+    const runtimeKey = 'block-document:worksheet-1:chart-block:chart-1';
 
     store
       .getState()

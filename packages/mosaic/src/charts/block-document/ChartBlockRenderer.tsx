@@ -13,7 +13,7 @@ function getBlockDocumentChartRuntimeKey({
   documentId,
   blockId,
 }: Pick<BlockDocumentChartRendererProps, 'documentId' | 'blockId'>) {
-  return `worksheet:${documentId}:chart-block:${blockId}`;
+  return `block-document:${documentId}:chart-block:${blockId}`;
 }
 
 export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({

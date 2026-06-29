@@ -165,7 +165,7 @@ export {
   ChartSettingsPanel,
   type ChartSettingsPanelProps,
 } from './charts/ChartSettingsPanel';
-export {ChartBlockSettings} from './charts/worksheet/ChartBlockSettings';
+export {ChartBlockSettings} from './charts/block-document/ChartBlockSettings';
 export {MosaicDashboardChartSettings} from './charts/dashboard/MosaicDashboardChartSettings';
 export {
   createMosaicColorLegendPlot,
@@ -220,8 +220,8 @@ export {
   DataTableSettingsPanel,
   type DataTableSettingsPanelProps,
 } from './data-table-explorer/DataTableSettingsPanel';
-export {DataTableBlockRenderer} from './data-table-explorer/worksheet/DataTableBlockRenderer';
-export {DataTableBlockSettings} from './data-table-explorer/worksheet/DataTableBlockSettings';
+export {DataTableBlockRenderer} from './data-table-explorer/block-document/DataTableBlockRenderer';
+export {DataTableBlockSettings} from './data-table-explorer/block-document/DataTableBlockSettings';
 export {MosaicDashboardDataTableExplorerSettings} from './data-table-explorer/dashboard/MosaicDashboardDataTableExplorerSettings';
 export {
   DataTableExplorerHeader,
@@ -440,8 +440,8 @@ export {ensurePanel, ensureTable, ensureNoOverride} from './ai/tool-helpers';
 export {AiAgentError} from './ai/errors';
 export type {ToolOutput} from './ai/tool-types';
 
-// Block renderers for worksheets
-export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';
+// Block renderers for block documents
+export {ChartBlockRenderer} from './charts/block-document/ChartBlockRenderer';
 
 // ============================================================================
 // Spec Editor Components
