@@ -138,7 +138,6 @@ import {
 } from './statefulBlockArtifactConfigs';
 import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
-import {blockSettingsRegistry} from './workspace/block-settings/registry';
 import {
   CLI_WORKSHEET_COMMAND_OWNER,
   createWorksheetCommands,
@@ -1110,9 +1109,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createBlockSettingsSlice<RoomState>({
-          settingsRegistry: blockSettingsRegistry,
-        })(set, get, store),
+        ...createBlockSettingsSlice<RoomState>()(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({

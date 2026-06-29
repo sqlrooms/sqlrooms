@@ -14,6 +14,7 @@ import {useDataTableExplorer} from '../useDataTableExplorer';
 import {MosaicDashboardDataTableExplorerHeaderActions} from './MosaicDashboardDataTableExplorerHeaderActions';
 import type {DataTable} from '@sqlrooms/db';
 import {SelectablePanelWrapper} from '@sqlrooms/documents';
+import {MosaicDashboardDataTableExplorerSettings} from './MosaicDashboardDataTableExplorerSettings';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
@@ -104,6 +105,7 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
       panelId={panel.id}
       panelType="data-table-explorer"
       blockType="dashboard-panel"
+      settingsComponent={MosaicDashboardDataTableExplorerSettings}
     >
       {content}
     </SelectablePanelWrapper>
@@ -115,4 +117,5 @@ export const mosaicDashboardDataTableExplorerPanelRenderer: MosaicDashboardPanel
     component: MosaicDashboardDataTableExplorerRenderer,
     headerActions: MosaicDashboardDataTableExplorerHeaderActions,
     icon: TablePropertiesIcon,
+    settings: MosaicDashboardDataTableExplorerSettings,
   };

@@ -192,6 +192,13 @@ mutation supplied by the host.
 panels instead of a chart-only list. Configure supported panel renderers and
 runtime add-panel actions when creating the dashboard slice.
 
+Default Mosaic panel renderers also expose reusable settings components through
+their renderer definitions. `ChartSettingsPanel`, `ChartBlockSettings`,
+`MosaicDashboardChartSettings`, `DataTableBlockSettings`,
+`MosaicDashboardDataTableExplorerSettings`, and `MosaicDashboardSettings` can be
+used by apps that provide the standard SQLRooms block-document, dashboard,
+Mosaic, and DB slices.
+
 ```tsx
 import {
   createDefaultMosaicDashboardPanelRenderers,
@@ -362,7 +369,8 @@ export const dashboardArtifactType = createArtifactTypeFromStatefulBlock(
 
 The adapter preserves existing dashboard state in
 `mosaicDashboard.config.dashboardsById` and delegates lifecycle work to the
-dashboard slice.
+dashboard slice. It includes `MosaicDashboardSettings` by default, and callers
+may pass a custom `settings` component when creating the block definition.
 
 ### Dashboard AI Tools
 

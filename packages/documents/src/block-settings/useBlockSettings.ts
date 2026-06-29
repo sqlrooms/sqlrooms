@@ -1,49 +1,18 @@
 import {useMemo} from 'react';
-import {useBlockSettingsStore} from './useBlockSettingsStore';
 import type {SelectedItem} from './useSelectedBlockOrPanel';
+import {
+  useBlockDocumentStatefulBlockSettings,
+} from '../BlockDocumentStatefulBlockRendererContext';
+import {useBlockDocumentChartSettings} from '../BlockDocumentChartRendererContext';
 import type {
   BlockSettingsComponent,
   BlockSettingsComponentProps,
-  SelectedBlock,
 } from './types';
 
 type BlockSettingsResult = {
   SettingsComponent: BlockSettingsComponent | null;
   settingsProps: BlockSettingsComponentProps | null;
 };
-
-/**
- * Determines the settings registry key for a selected panel.
- * Returns null if the panel type doesn't have settings.
- */
-function getPanelRegistryKey(selectedBlock: SelectedBlock): string | null {
-  switch (selectedBlock.type) {
-    case 'dashboard-block':
-      return 'dashboard-block';
-
-    case 'dashboard-panel':
-      return selectedBlock.panelType
-        ? `dashboard-panel:${selectedBlock.panelType}`
-        : null;
-
-    case 'standalone-block':
-      return selectedBlock.panelType
-        ? `standalone-block:${selectedBlock.panelType}`
-        : null;
-
-    default:
-      return null;
-  }
-}
-
-/**
- * Determines the settings registry key for a TipTap block selection.
- */
-function getBlockRegistryKey(blockType: string): string {
-  return blockType === 'dashboard'
-    ? 'dashboard-block'
-    : `standalone-block:${blockType}`;
-}
 
 /**
  * Hook that resolves the settings component and props for a selected block.
@@ -56,8 +25,9 @@ export function useBlockSettings(
   selectedItem: SelectedItem,
   documentId: string | undefined,
 ): BlockSettingsResult {
-  const getSettings = useBlockSettingsStore(
-    (state) => state.blockSettings.getSettings,
+  const chartSettings = useBlockDocumentChartSettings();
+  const statefulBlockSettings = useBlockDocumentStatefulBlockSettings(
+    selectedItem?.type === 'block' ? selectedItem.blockType : '',
   );
 
   return useMemo(() => {
@@ -68,18 +38,13 @@ export function useBlockSettings(
     // Handle panel selection
     if (selectedItem.type === 'panel') {
       const {selectedBlock} = selectedItem;
-      const registryKey = getPanelRegistryKey(selectedBlock);
-
-      if (!registryKey) {
-        return {SettingsComponent: null, settingsProps: null};
-      }
 
       return {
-        SettingsComponent: getSettings(registryKey) ?? null,
+        SettingsComponent: selectedBlock.settingsComponent ?? null,
         settingsProps: {
           blockId: selectedBlock.id,
           dashboardId: selectedBlock.dashboardId,
-          blockInstanceId: selectedBlock.id,
+          blockInstanceId: selectedBlock.blockInstanceId ?? selectedBlock.id,
         },
       };
     }
@@ -91,10 +56,13 @@ export function useBlockSettings(
         return {SettingsComponent: null, settingsProps: null};
       }
 
-      const registryKey = getBlockRegistryKey(selectedItem.blockType);
+      const SettingsComponent =
+        selectedItem.blockType === 'chart-block'
+          ? chartSettings
+          : statefulBlockSettings;
 
       return {
-        SettingsComponent: getSettings(registryKey) ?? null,
+        SettingsComponent: SettingsComponent ?? null,
         settingsProps: {
           blockId: selectedItem.blockId,
           dashboardId: documentId,
@@ -107,5 +75,5 @@ export function useBlockSettings(
     }
 
     return {SettingsComponent: null, settingsProps: null};
-  }, [selectedItem, documentId, getSettings]);
+  }, [selectedItem, documentId, chartSettings, statefulBlockSettings]);
 }

@@ -46,6 +46,7 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
       panelId={panel.id}
       panelType={panel.type}
       blockType="dashboard-panel"
+      settingsComponent={renderer?.settings}
     >
       <div className="flex h-full flex-col">
         <MosaicDashboardPanelHeader

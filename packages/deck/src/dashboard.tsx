@@ -41,6 +41,7 @@ import {
 } from './useDeckMapFitToBounds';
 export {createDeckMapBoundsQuery};
 import {useDeckMapDatasets} from './useDeckMapDatasets';
+import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
   createDeckMapDashboardPanelConfigForTable,
   findGeometryColumn,
@@ -627,6 +628,7 @@ export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
   component: DeckMapDashboardRenderer,
   headerActions: DeckMapDashboardHeaderActions,
   icon: MapIcon,
+  settings: DeckMapDashboardSettings,
 };
 
 export const deckMapDashboardAddPanelAction: import('@sqlrooms/mosaic').MosaicDashboardAddPanelAction =

@@ -3149,6 +3149,9 @@ importers:
       '@sqlrooms/color-scales':
         specifier: workspace:*
         version: link:../color-scales
+      '@sqlrooms/documents':
+        specifier: workspace:*
+        version: link:../documents
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb

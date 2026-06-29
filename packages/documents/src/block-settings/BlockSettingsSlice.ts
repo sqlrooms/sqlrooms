@@ -1,7 +1,7 @@
 import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import {createSlice} from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import type {BlockSettingsComponent, SelectedBlock} from './types';
+import type {SelectedBlock} from './types';
 
 /**
  * Block Settings Slice
@@ -38,8 +38,6 @@ export type BlockSettingsSliceState = {
     runtime: {
       /** Currently selected block, if any */
       selectedBlock?: SelectedBlock;
-      /** Registry of settings components by block type */
-      settingsRegistry: Record<string, BlockSettingsComponent>;
     };
     /** Select a block */
     selectBlock: (block: SelectedBlock) => void;
@@ -51,22 +49,9 @@ export type BlockSettingsSliceState = {
       id: string,
       dashboardId?: string,
     ) => boolean;
-    /** Get the settings component for a block type */
-    getSettings: (blockType: string) => BlockSettingsComponent | undefined;
     /** Clear selection if a block is deleted */
     clearSelectionIfBlockDeleted: (blockId: string) => void;
   };
-};
-
-/**
- * Options for creating the block settings slice
- */
-export type CreateBlockSettingsSliceOptions = {
-  /**
-   * Initial settings components registry.
-   * Key format: 'dashboard-panel:{panelType}' or 'standalone-block:{blockType}'
-   */
-  settingsRegistry?: Record<string, BlockSettingsComponent>;
 };
 
 /**
@@ -102,33 +87,18 @@ function shouldClearOnDelete(
  *
  * This slice handles:
  * - Selecting/deselecting blocks
- * - Storing settings component registry
  * - Querying selection state
  *
- * @param options - Configuration options including initial settings registry
  * @returns Zustand slice creator function
- *
- * @example
- * ```typescript
- * const store = createRoomStore({
- *   ...createBlockSettingsSlice({
- *     settingsRegistry: {
- *       'dashboard-panel:vgplot': ChartSettings,
- *       'standalone-block:chart-block': ChartSettings,
- *     }
- *   })(set, get, store)
- * });
- * ```
  */
 export function createBlockSettingsSlice<
   TRoomState extends BaseRoomStoreState & BlockSettingsSliceState,
->(options?: CreateBlockSettingsSliceOptions) {
+>() {
   return createSlice<BlockSettingsSliceState, TRoomState>((set, get) => ({
     blockSettings: {
       config: {},
       runtime: {
         selectedBlock: undefined,
-        settingsRegistry: options?.settingsRegistry ?? {},
       },
 
       selectBlock: (block: SelectedBlock) => {
@@ -154,10 +124,6 @@ export function createBlockSettingsSlice<
       ): boolean => {
         const selected = get().blockSettings.runtime.selectedBlock;
         return selected ? isBlockMatch(selected, type, id, dashboardId) : false;
-      },
-
-      getSettings: (blockType: string): BlockSettingsComponent | undefined => {
-        return get().blockSettings.runtime.settingsRegistry[blockType];
       },
 
       clearSelectionIfBlockDeleted: (blockId: string) => {

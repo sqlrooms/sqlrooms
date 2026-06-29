@@ -9,6 +9,7 @@ import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {DataTableExplorer} from '../DataTableExplorer';
 import {DataTableBlockHeader} from './DataTableBlockHeader';
 import {SelectablePanelWrapper} from '@sqlrooms/documents';
+import {DataTableBlockSettings} from './DataTableBlockSettings';
 
 export const DataTableBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
@@ -95,7 +96,9 @@ export const DataTableBlockRenderer: FC<
       dashboardId={documentId}
       panelId={blockId}
       panelType="data-table"
+      blockInstanceId={blockInstanceId}
       blockType="standalone-block"
+      settingsComponent={DataTableBlockSettings}
     >
       {content}
     </SelectablePanelWrapper>

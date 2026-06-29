@@ -53,6 +53,7 @@ export {
 } from './BlockDocumentsSlice';
 export {
   BlockDocumentChartRendererProvider,
+  useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
   type BlockDocumentChartRendererProps,
@@ -61,6 +62,7 @@ export {
 export {
   BlockDocumentStatefulBlockRendererProvider,
   useBlockDocumentStatefulBlockRenderer,
+  useBlockDocumentStatefulBlockSettings,
   useBlockDocumentStatefulBlockTypes,
   type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockRenderer,

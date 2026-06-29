@@ -8,7 +8,11 @@ import {
   type Editor,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
+import {
+  ChartBlockRenderer,
+  ChartBlockSettings,
+  DataTableBlockRenderer,
+} from '@sqlrooms/mosaic';
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {experimentalEnabled, useRoomStore} from '../store';
@@ -189,7 +193,10 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   }
 
   return (
-    <BlockDocumentChartRendererProvider renderer={ChartBlockRenderer}>
+    <BlockDocumentChartRendererProvider
+      renderer={ChartBlockRenderer}
+      settings={ChartBlockSettings}
+    >
       <BlockDocumentStatefulBlockRendererProvider
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}

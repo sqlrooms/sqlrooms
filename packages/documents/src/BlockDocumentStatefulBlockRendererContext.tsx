@@ -5,6 +5,7 @@ import {
   type FC,
   type PropsWithChildren,
 } from 'react';
+import type {BlockSettingsComponent} from './block-settings/types';
 
 export type BlockDocumentStatefulBlockRendererProps = {
   documentId: string;
@@ -42,6 +43,7 @@ export type BlockDocumentStatefulBlockType = {
   maxHeight?: number;
   requireScrollModifier?: boolean;
   scrollHintLabel?: string;
+  settings?: BlockSettingsComponent;
   createNode?: (
     blockId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
@@ -99,4 +101,10 @@ export function useBlockDocumentStatefulBlockRenderer(blockType: string) {
 
 export function useBlockDocumentStatefulBlockTypes() {
   return useContext(BlockDocumentStatefulBlockRendererContext).blockTypes;
+}
+
+export function useBlockDocumentStatefulBlockSettings(blockType: string) {
+  return useBlockDocumentStatefulBlockTypes().find(
+    (candidate) => candidate.blockType === blockType,
+  )?.settings;
 }

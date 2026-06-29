@@ -3,6 +3,7 @@ import type {FC, MouseEvent, ReactNode} from 'react';
 import {useCallback, useContext} from 'react';
 import {useBlockSettingsStore} from './useBlockSettingsStore';
 import {BlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
+import type {BlockSettingsComponent} from './types';
 
 export type SelectablePanelWrapperProps = {
   /** Dashboard or document ID containing the block */
@@ -11,8 +12,12 @@ export type SelectablePanelWrapperProps = {
   panelId: string;
   /** Type of panel (e.g., 'vgplot', 'chart-block') */
   panelType: string;
+  /** Backing state id for stateful document blocks, when it differs from panelId */
+  blockInstanceId?: string;
   /** Whether this is a dashboard panel, standalone block, or dashboard itself */
   blockType: 'dashboard-panel' | 'standalone-block' | 'dashboard-block';
+  /** Settings component supplied by the owning block/panel definition */
+  settingsComponent?: BlockSettingsComponent;
   /** Content to render inside the selectable wrapper */
   children: ReactNode;
   /** Additional CSS classes to apply to the wrapper */
@@ -43,7 +48,9 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
   dashboardId,
   panelId,
   panelType,
+  blockInstanceId,
   blockType,
+  settingsComponent,
   children,
   className,
 }) => {
@@ -92,10 +99,21 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
         type: blockType,
         id: panelId,
         dashboardId: dashboardId,
+        blockInstanceId,
         panelType,
+        settingsComponent,
       });
     },
-    [blockType, dashboardId, panelId, panelType, selectBlock, editor],
+    [
+      blockInstanceId,
+      blockType,
+      dashboardId,
+      panelId,
+      panelType,
+      selectBlock,
+      settingsComponent,
+      editor,
+    ],
   );
 
   return (

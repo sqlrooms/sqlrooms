@@ -5,10 +5,12 @@ import type {
 import {BarChart3} from 'lucide-react';
 import type {ComponentType} from 'react';
 import {DefaultMosaicDashboardBlock} from './DefaultMosaicDashboardBlock';
+import {MosaicDashboardSettings} from './MosaicDashboardSettings';
 import type {
   MosaicDashboardLayoutType,
   MosaicDashboardSliceState,
 } from './MosaicDashboardSlice';
+import type {StatefulBlockSettingsProps} from '@sqlrooms/blocks';
 
 export type MosaicDashboardBlockRenderProps<
   TRoomState extends MosaicDashboardSliceState = MosaicDashboardSliceState,
@@ -18,6 +20,7 @@ export type CreateMosaicDashboardBlockDefinitionOptions<
   TRoomState extends MosaicDashboardSliceState = MosaicDashboardSliceState,
 > = {
   render?: ComponentType<MosaicDashboardBlockRenderProps<TRoomState>>;
+  settings?: ComponentType<StatefulBlockSettingsProps<TRoomState>>;
   label?: string;
   defaultTitle?: string;
   layoutType?: MosaicDashboardLayoutType;
@@ -28,6 +31,9 @@ export function createMosaicDashboardBlockDefinition<
 >({
   render = DefaultMosaicDashboardBlock as ComponentType<
     MosaicDashboardBlockRenderProps<TRoomState>
+  >,
+  settings = MosaicDashboardSettings as ComponentType<
+    StatefulBlockSettingsProps<TRoomState>
   >,
   label = 'Dashboard',
   defaultTitle = 'Dashboard',
@@ -45,6 +51,7 @@ export function createMosaicDashboardBlockDefinition<
       hasRuntimeCache: true,
     },
     render,
+    settings,
     ensureState: ({blockId, title, getState}) => {
       getState().mosaicDashboard.ensureDashboard(
         blockId,

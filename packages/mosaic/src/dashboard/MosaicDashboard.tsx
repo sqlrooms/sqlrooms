@@ -23,6 +23,7 @@ import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
 import {ChartBuilderColumn} from '../charts/chart-types/base-types';
 import {ChartConfig} from '../charts/chart-types/chart-config';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
+import {MosaicDashboardSettings} from './MosaicDashboardSettings';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
@@ -166,6 +167,7 @@ function MosaicDashboardComponent({
           panelType="dashboard"
           blockType="dashboard-block"
           className="flex flex-col"
+          settingsComponent={MosaicDashboardSettings}
         >
           <MosaicDashboardToolbar />
           <div className="h-full min-h-0 flex-1 overflow-y-auto">

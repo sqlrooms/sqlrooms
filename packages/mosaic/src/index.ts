@@ -51,6 +51,12 @@ export {
   type MosaicDashboardBlockRenderProps,
 } from './dashboard/createMosaicDashboardBlockDefinition';
 export {DefaultMosaicDashboardBlock} from './dashboard/DefaultMosaicDashboardBlock';
+export {MosaicDashboardSettings} from './dashboard/MosaicDashboardSettings';
+export {
+  ConfirmDatasetChangeDialog,
+  useConfirmDatasetChange,
+  type ConfirmDatasetChangeDialogProps,
+} from './dashboard/ConfirmDatasetChangeDialog';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboardPanelErrorBoundary';
 /**
@@ -159,6 +165,8 @@ export {
   ChartSettingsPanel,
   type ChartSettingsPanelProps,
 } from './charts/ChartSettingsPanel';
+export {ChartBlockSettings} from './charts/worksheet/ChartBlockSettings';
+export {MosaicDashboardChartSettings} from './charts/dashboard/MosaicDashboardChartSettings';
 export {
   createMosaicColorLegendPlot,
   MosaicColorLegend,
@@ -213,6 +221,8 @@ export {
   type DataTableSettingsPanelProps,
 } from './data-table-explorer/DataTableSettingsPanel';
 export {DataTableBlockRenderer} from './data-table-explorer/worksheet/DataTableBlockRenderer';
+export {DataTableBlockSettings} from './data-table-explorer/worksheet/DataTableBlockSettings';
+export {MosaicDashboardDataTableExplorerSettings} from './data-table-explorer/dashboard/MosaicDashboardDataTableExplorerSettings';
 export {
   DataTableExplorerHeader,
   type DataTableExplorerHeaderProps,

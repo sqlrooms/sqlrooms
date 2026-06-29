@@ -37,12 +37,12 @@ export type BlockSettingsPanelProps =
 /**
  * Panel that displays settings for the currently selected block.
  *
- * Automatically renders the appropriate settings component based on
- * the selected block type by looking it up in the settings registry.
+ * Automatically renders the settings component supplied by the selected
+ * block or panel definition.
  *
  * Shows empty states for:
  * - No block selected
- * - No settings component registered for the block type
+ * - No settings component available for the selected block
  *
  * @example
  * ```tsx
@@ -83,7 +83,7 @@ export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
     );
   }
 
-  // No settings component registered for this block type
+  // No settings component available for this block
   if (!SettingsComponent) {
     return (
       <div

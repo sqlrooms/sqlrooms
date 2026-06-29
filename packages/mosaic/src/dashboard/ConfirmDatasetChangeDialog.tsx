@@ -1,13 +1,13 @@
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Button,
 } from '@sqlrooms/ui';
-import {FC} from 'react';
+import {type FC, useState} from 'react';
 
 export type ConfirmDatasetChangeDialogProps = {
   open: boolean;
@@ -38,3 +38,30 @@ export const ConfirmDatasetChangeDialog: FC<
     </Dialog>
   );
 };
+
+export function useConfirmDatasetChange<T>(onConfirmed: (value: T) => void) {
+  const [pendingValue, setPendingValue] = useState<T | null>(null);
+
+  const handleChangeRequest = (value: T) => {
+    setPendingValue(value);
+  };
+
+  const handleConfirm = () => {
+    if (pendingValue) {
+      onConfirmed(pendingValue);
+      setPendingValue(null);
+    }
+  };
+
+  const handleCancel = () => {
+    setPendingValue(null);
+  };
+
+  return {
+    pendingValue,
+    handleChangeRequest,
+    handleConfirm,
+    handleCancel,
+    isDialogOpen: pendingValue !== null,
+  };
+}

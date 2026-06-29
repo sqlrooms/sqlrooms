@@ -1,56 +1,59 @@
 import {useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
-import {useRoomStore} from '../../store';
-import {FC, useCallback, useMemo} from 'react';
-import {DataTableSettingsPanel} from '@sqlrooms/mosaic';
-import {ConfirmDatasetChangeDialog} from './ConfirmDatasetChangeDialog';
-import {useConfirmDatasetChange} from './useConfirmDatasetChange';
+import {type FC, useCallback, useMemo} from 'react';
+import {
+  ConfirmDatasetChangeDialog,
+  useConfirmDatasetChange,
+} from '../../dashboard/ConfirmDatasetChangeDialog';
+import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
+import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
 
-export const DashboardDataTableSettings: FC<BlockSettingsComponentProps> = ({
-  dashboardId,
-  blockId,
-}) => {
-  const dashboard = useRoomStore((state) =>
+/**
+ * Settings adapter for a Mosaic data-table explorer dashboard panel.
+ */
+export const MosaicDashboardDataTableExplorerSettings: FC<
+  BlockSettingsComponentProps
+> = ({blockId, dashboardId}) => {
+  const dashboard = useStoreWithMosaicDashboard((state) =>
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
   );
-
-  const updatePanel = useRoomStore(
+  const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
-
-  const setSelectedTable = useRoomStore(
+  const setSelectedTable = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setSelectedTable,
   );
+
+  const panel = useMemo(
+    () => dashboard?.panels.find((candidate) => candidate.id === blockId),
+    [dashboard?.panels, blockId],
+  );
+  const dataTable = useDataTable(dashboard?.selectedTable);
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
       if (dashboardId) {
-        setSelectedTable(dashboardId, table.table.table);
+        setSelectedTable(dashboardId, table.table.toString());
       }
     },
     [dashboardId, setSelectedTable],
   );
 
   const handleTitleChange = useCallback(
-    (newTitle: string) => {
+    (title: string) => {
       if (dashboardId) {
-        updatePanel(dashboardId, blockId, {title: newTitle || undefined});
+        updatePanel(dashboardId, blockId, {title: title || undefined});
       }
     },
     [dashboardId, blockId, updatePanel],
   );
 
-  const {handleTableChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
-    useConfirmDatasetChange(handleTableChange);
-
-  // Call hooks before any conditional returns
-  const panel = useMemo(
-    () => dashboard?.panels?.find((p) => p.id === blockId),
-    [dashboard, blockId],
-  );
-
-  const tableName = dashboard?.selectedTable;
-  const dataTable = useDataTable(tableName);
+  const {
+    handleChangeRequest,
+    handleConfirm,
+    handleCancel,
+    isDialogOpen,
+  } = useConfirmDatasetChange(handleTableChange);
 
   if (!dashboard) {
     return (
@@ -74,7 +77,7 @@ export const DashboardDataTableSettings: FC<BlockSettingsComponentProps> = ({
     <>
       <DataTableSettingsPanel
         value={dataTable}
-        onChange={handleTableChangeRequest}
+        onChange={handleChangeRequest}
         title={panel.title || ''}
         onTitleChange={handleTitleChange}
       />
