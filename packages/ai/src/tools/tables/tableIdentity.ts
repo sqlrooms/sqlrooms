@@ -1,4 +1,9 @@
-import {resolveTableReference, type DataTable} from '@sqlrooms/duckdb-core';
+import {
+  getTableDisplayName,
+  getTableIdentity,
+  resolveTableReference,
+  type DataTable,
+} from '@sqlrooms/duckdb-core';
 
 /**
  * Compact, model-facing description of a table or view in the AI table catalog.
@@ -28,7 +33,7 @@ export type TableIdentitySummary = {
  * @returns Canonical quoted table id from the table's QualifiedTableName.
  */
 export function getCanonicalTableId(table: DataTable): string {
-  return table.table.toString();
+  return getTableIdentity(table.table);
 }
 
 /**
@@ -45,7 +50,7 @@ export function createTableIdentitySummary(
     tableId,
     database: table.table.database,
     schema: table.table.schema,
-    tableName: table.table.table,
+    tableName: getTableDisplayName(table.table),
     isView: table.isView,
     columnCount: table.columns.length,
     rowCount: table.rowCount,

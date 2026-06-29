@@ -1,9 +1,9 @@
 import type {QualifiedTableName} from '@sqlrooms/db';
 import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
-import type {TableRefNode} from '@uwdata/mosaic-sql';
 import type {Interval1D} from '@uwdata/mosaic-plot';
 import type {Field, Table} from 'apache-arrow';
 import type {Dispatch, SetStateAction} from 'react';
+import type {MosaicSqlTableReference} from '../mosaicTableReference';
 
 export type DataTableExplorerSorting = Array<{id: string; desc: boolean}>;
 
@@ -88,7 +88,7 @@ export type DataTableExplorerTableReference = string | QualifiedTableName;
  * especially when schema or table identifier parts may contain dots or quotes,
  * so Mosaic does not reparse those parts from a flattened string.
  */
-export type DataTableExplorerSqlTableReference = string | TableRefNode;
+export type DataTableExplorerSqlTableReference = MosaicSqlTableReference;
 
 export type DataTableExplorerOptions = {
   categoryLimit?: number;

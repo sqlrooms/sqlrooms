@@ -6,6 +6,7 @@ import type {
   DataTableExplorerUnsupportedSummary,
 } from './types';
 import {buildDistinctCountQuery, readCountData} from './utils';
+import {getMosaicSqlTableReference} from '../mosaicTableReference';
 
 type UnsupportedSummaryClientOptions = {
   field: arrow.Field;
@@ -27,7 +28,8 @@ export class DataTableExplorerUnsupportedSummaryClient extends MosaicClient {
     super(options.selection);
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableReference = options.tableReference ?? options.tableName;
+    this.tableReference =
+      options.tableReference ?? getMosaicSqlTableReference(options.tableName);
   }
 
   override get filterStable(): boolean {

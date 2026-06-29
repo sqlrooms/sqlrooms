@@ -10,6 +10,7 @@ import {
   buildDataTableExplorerBaseQuery,
   buildDataTableExplorerPageQuery,
 } from './utils';
+import {getMosaicSqlTableReference} from '../mosaicTableReference';
 
 export type DataTableExplorerPageState = {
   datasetId?: string;
@@ -49,7 +50,8 @@ export class DataTableExplorerPageClient extends MosaicClient {
     this.pagination = options.pagination;
     this.sorting = options.sorting;
     this.tableName = options.tableName;
-    this.tableReference = options.tableReference ?? options.tableName;
+    this.tableReference =
+      options.tableReference ?? getMosaicSqlTableReference(options.tableName);
   }
 
   override get filterStable(): boolean {
