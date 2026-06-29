@@ -3,6 +3,7 @@ import {
   type MosaicDashboardPanelConfigType,
   Query,
 } from '@sqlrooms/mosaic';
+import {quoteParsedRawSqlTableReference} from '@sqlrooms/duckdb';
 import {createId} from '@paralleldrive/cuid2';
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
@@ -207,10 +208,13 @@ export function createDeckMapDashboardDatasetQuery(
   filter: unknown,
   options?: {sampleRows?: number},
 ) {
+  const tableReference = source.sqlQuery
+    ? ''
+    : getDeckMapDatasetSourceTableReference(source.tableName);
   // Apply USING SAMPLE at the source level so Mosaic filters work on top.
-  const sourceExpr = source.sqlQuery
+  const sourceExpr: string = source.sqlQuery
     ? `(${source.sqlQuery})`
-    : (source.tableName ?? '');
+    : tableReference;
 
   const sampledSource = options?.sampleRows
     ? `(SELECT * FROM ${sourceExpr} USING SAMPLE ${options.sampleRows} ROWS)`
@@ -221,9 +225,17 @@ export function createDeckMapDashboardDatasetQuery(
       ? Query.from({
           __dashboard_map_dataset: verbatim(sampledSource),
         })
-      : Query.from(source.tableName ?? '');
+      : Query.from({__dashboard_map_dataset: verbatim(tableReference)});
 
   return query.select('*').where(filter as never);
+}
+
+function getDeckMapDatasetSourceTableReference(tableName: string | undefined) {
+  const tableReference = quoteParsedRawSqlTableReference(tableName);
+  if (!tableReference) {
+    throw new Error('Deck map dataset query requires a valid table source.');
+  }
+  return tableReference;
 }
 
 export function createDeckMapDashboardDatasets(

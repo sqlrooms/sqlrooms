@@ -1,4 +1,10 @@
-import {DataTable, escapeId, escapeVal} from '@sqlrooms/duckdb';
+import {
+  DataTable,
+  escapeId,
+  escapeVal,
+  getRawSqlTableReference,
+  type RawSqlTableReference,
+} from '@sqlrooms/duckdb';
 import {getAggregatorLabel, getPivotAggregator} from './aggregators';
 import {
   PivotConfig,
@@ -12,11 +18,13 @@ const NULL_LABEL = 'null';
 type PivotQueryInput = DataTable | PivotQuerySource;
 
 function getTableReference(source: PivotQueryInput) {
-  return 'tableRef' in source ? source.tableRef : source.table.toString();
+  return 'tableRef' in source
+    ? source.tableRef
+    : getRawSqlTableReference(source.table);
 }
 
 export function createPivotQuerySource(
-  tableRef: string,
+  tableRef: RawSqlTableReference,
   columns: PivotField[],
 ): PivotQuerySource {
   return {tableRef, columns};
@@ -26,7 +34,7 @@ export function createPivotQuerySourceFromTable(
   table: DataTable,
 ): PivotQuerySource {
   return {
-    tableRef: table.table.toString(),
+    tableRef: getRawSqlTableReference(table.table),
     columns: table.columns.map((column) => ({
       name: column.name,
       type: column.type,

@@ -1,11 +1,27 @@
 import {
   parseQualifiedSqlIdentifier,
   escapeId,
+  type RawSqlTableReference,
   type QualifiedTableName,
   resolveTableReference,
   type ResolveTableReferenceResult,
 } from '@sqlrooms/db';
 import {asTableRef, type TableRefNode} from '@uwdata/mosaic-sql';
+
+declare const vgPlotTableReferenceBrand: unique symbol;
+
+/**
+ * Mosaic SQL AST table reference used by Mosaic query APIs.
+ */
+export type MosaicSqlTableReference = TableRefNode;
+
+/**
+ * Serializable vgplot `data.from` value that must be normalized through
+ * SQLRooms' vgplot renderer before it reaches Mosaic execution.
+ */
+export type VgPlotTableReference = string & {
+  readonly [vgPlotTableReferenceBrand]: 'VgPlotTableReference';
+};
 
 /**
  * SQLRooms table reference input accepted at Mosaic boundaries.
@@ -34,7 +50,7 @@ export type MosaicTableReferenceCandidate = {table: QualifiedTableName};
  */
 export function getMosaicSqlTableReference(
   tableName: MosaicTableReferenceInput,
-): TableRefNode {
+): MosaicSqlTableReference {
   return asTableRef(getMosaicTableReferenceParts(tableName))!;
 }
 
@@ -59,8 +75,10 @@ export function getMosaicTableIdentity(
  */
 export function getMosaicVgPlotTableReference(
   tableName: MosaicTableReferenceInput,
-): string {
-  return getMosaicRawSqlTableReference(tableName);
+): VgPlotTableReference {
+  return getMosaicRawSqlTableReference(
+    tableName,
+  ) as string as VgPlotTableReference;
 }
 
 /**
@@ -70,8 +88,10 @@ export function getMosaicVgPlotTableReference(
  */
 export function getMosaicRawSqlTableReference(
   tableName: MosaicTableReferenceInput,
-): string {
-  return getMosaicTableReferenceParts(tableName).map(escapeId).join('.');
+): RawSqlTableReference {
+  return getMosaicTableReferenceParts(tableName)
+    .map(escapeId)
+    .join('.') as RawSqlTableReference;
 }
 
 /**
