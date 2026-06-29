@@ -41,8 +41,10 @@ export const BlockDocumentEditorContent: FC<
       )}
       onClick={handleClick}
     >
-      <EditorContent editor={editor} className="min-h-full" />
-      <BlockDocumentBlockControls scrollElement={scrollElement} />
+      <div className="relative min-h-full">
+        <EditorContent editor={editor} className="min-h-full" />
+        <BlockDocumentBlockControls scrollElement={scrollElement} />
+      </div>
     </ScrollArea>
   );
 };
