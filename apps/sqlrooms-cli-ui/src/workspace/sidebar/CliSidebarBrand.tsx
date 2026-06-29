@@ -12,7 +12,7 @@ export function CliSidebarBrand() {
     >
       <img
         className="size-10 shrink-0 object-contain group-data-[collapsible=icon]:size-7"
-        src="/logo.png"
+        src="/logo.svg"
         alt=""
       />
       <div className="min-w-0 group-data-[collapsible=icon]:hidden">
