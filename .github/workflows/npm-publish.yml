@@ -131,7 +131,10 @@ jobs:
       - name: Push version commit and tags
         if: ${{ success() }}
         # CI already validated quality gates earlier; avoid local husky pre-push checks here.
+        # This publish job does not use Git LFS locking, and lock verification can fail auth
+        # during the final metadata push even after npm packages were published successfully.
         run: |
+          git config lfs.https://github.com/sqlrooms/sqlrooms.git/info/lfs.locksverify false
           git push origin HEAD:${{ github.ref_name }}
           git push origin --tags
 
