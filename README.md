@@ -1,4 +1,12 @@
-# <img src=https://github.com/user-attachments/assets/dd6b2929-29f5-4c8b-a0c0-51ec84603e6b width=23> SQLRooms
+<h1>
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="docs/public/sqlrooms-logo-text-white.svg"
+    >
+    <img src="docs/public/sqlrooms-logo-text.svg" alt="SQLRooms" height="44">
+  </picture>
+</h1>
 
 Building blocks for React data analytics applications powered by [DuckDB](https://duckdb.org/docs/api/wasm/overview.html)
 

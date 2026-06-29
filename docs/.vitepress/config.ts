@@ -168,7 +168,7 @@ Canonical package combos:
     hostname: SITE_URL,
   },
   head: [
-    ['link', {rel: 'icon', href: '/logo.png'}],
+    ['link', {rel: 'icon', href: '/logo.svg', type: 'image/svg+xml'}],
     [
       'meta',
       {
@@ -179,7 +179,7 @@ Canonical package combos:
   ],
   themeConfig: {
     outline: 'deep',
-    logo: '/logo.png',
+    logo: '/logo.svg',
     search: {
       provider: 'local',
     },
