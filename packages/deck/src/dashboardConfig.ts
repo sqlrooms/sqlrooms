@@ -121,7 +121,8 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   // If the dataset has a sqlQuery and the dashboard table differs from the
   // original source table, rewrite the FROM clause to use the new table.
   if (datasetSource?.sqlQuery && dashboardTable) {
-    const originalTable = stripCatalogPrefix(datasetSource.tableName);
+    const sourceTable = datasetSource.tableName;
+    const originalTable = stripCatalogPrefix(sourceTable);
     const quotedDashboard = quoteRuntimeTableReference(dashboardTable);
     if (!quotedDashboard) {
       return datasetSource;
@@ -131,7 +132,14 @@ export function resolveDeckMapDashboardDatasetSource(options: {
       const quotedOriginal = quoteRuntimeTableReference(originalTable);
       if (quotedOriginal && quotedOriginal !== quotedDashboard) {
         const originalReferences = Array.from(
-          new Set([originalTable, quotedOriginal]),
+          new Set(
+            [
+              sourceTable,
+              quoteParsedRawSqlTableReference(sourceTable),
+              originalTable,
+              quotedOriginal,
+            ].filter((reference): reference is string => Boolean(reference)),
+          ),
         );
         const rewritten = originalReferences.reduce(
           (sqlQuery, originalReference) =>

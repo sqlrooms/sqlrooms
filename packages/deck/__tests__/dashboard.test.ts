@@ -139,7 +139,8 @@ describe('deck dashboard integration', () => {
         dataset: {
           source: {
             tableName: '"memory"."main"."old.events"',
-            sqlQuery: 'SELECT * FROM "main"."old.events" WHERE value > 0',
+            sqlQuery:
+              'SELECT * FROM "memory"."main"."old.events" WHERE value > 0',
           },
         },
       }),
