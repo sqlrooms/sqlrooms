@@ -12,6 +12,10 @@ export interface FieldSelectorInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  /**
+   * Disable opening the column selector.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -23,6 +27,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
   value,
   onChange,
   className,
+  disabled,
   placeholder = 'Select...',
 }) => {
   const filteredColumns = field.types
@@ -36,7 +41,7 @@ export const FieldSelectorInput: React.FC<FieldSelectorInputProps> = ({
 
   return (
     <div className={cn('@container flex flex-col gap-1', className)}>
-      <Combobox value={value ?? ''} onChange={onChange}>
+      <Combobox value={value ?? ''} onChange={onChange} disabled={disabled}>
         <Combobox.Trigger
           className={cn(
             'w-full',

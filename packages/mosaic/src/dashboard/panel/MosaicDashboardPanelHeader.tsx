@@ -87,11 +87,17 @@ export const MosaicDashboardPanelHeader: FC<
   );
   const isSettingsShown = isSettingsPanelOpen && isPanelSelected;
 
-  const handleRemove = useCallback(() => {
-    if (!panelId) return;
-    removePanel(dashboardId, panelId);
-    clearSelectionIfBlockDeleted(panelId);
-  }, [clearSelectionIfBlockDeleted, dashboardId, panelId, removePanel]);
+  const handleRemove = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+
+      if (!panelId) return;
+
+      removePanel(dashboardId, panelId);
+      clearSelectionIfBlockDeleted(panelId);
+    },
+    [clearSelectionIfBlockDeleted, dashboardId, panelId, removePanel],
+  );
 
   const handleHeaderClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

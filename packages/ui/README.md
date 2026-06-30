@@ -144,6 +144,9 @@ Available compound components:
 - `Combobox.Content` - Popover content wrapper
 - `Combobox.Item` - Individual selectable item
 
+Pass `disabled` to the root `Combobox` to disable opening the dropdown and
+selecting items.
+
 For advanced composition, the lower-level `useCombobox` hook is also exported.
 
 ## Advanced Features

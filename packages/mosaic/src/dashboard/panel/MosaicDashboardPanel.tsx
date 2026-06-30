@@ -52,11 +52,11 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
   }, [dashboardId, panel, readOnly, renderer?.settings, selectBlock]);
   const handleTitleChange = useCallback(
     (title: string) => {
-      if (!panel) return;
+      if (!panel || readOnly) return;
 
       updatePanel(dashboardId, panel.id, {title: title || undefined});
     },
-    [dashboardId, panel, updatePanel],
+    [dashboardId, panel, readOnly, updatePanel],
   );
 
   if (!dashboard || !panel) {
@@ -86,7 +86,7 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
           renderer={renderer}
           selectionName={selectionName}
           onSelectPanel={handleSelectPanel}
-          onTitleChange={handleTitleChange}
+          onTitleChange={readOnly ? undefined : handleTitleChange}
         />
 
         <div className="min-h-0 flex-1 overflow-hidden">

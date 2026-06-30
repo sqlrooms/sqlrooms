@@ -860,6 +860,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                     )
                   }
                   placeholder="Select elevation column..."
+                  disabled={readOnly}
                 />
               </Field>
             </ColumnsProvider>
@@ -877,6 +878,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 dashboardId={dashboardId}
                 panel={panel}
                 currentTable={dataTable}
+                readOnly={readOnly}
               />
             </Field>
             <Field label="Longitude column" required>
@@ -884,6 +886,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 dashboardId={dashboardId}
                 panel={panel}
                 currentTable={dataTable}
+                readOnly={readOnly}
               />
             </Field>
           </ColumnsProvider>
