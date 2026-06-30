@@ -118,8 +118,8 @@ export function resolveDeckMapDashboardDatasetSource(options: {
     return undefined;
   }
 
-  // If the dataset has a sqlQuery and the dashboard table differs from the
-  // original source table, rewrite the FROM clause to use the new table.
+  // If the dataset has a sqlQuery, rewrite the FROM clause to use the
+  // dashboard's runtime table form.
   if (datasetSource?.sqlQuery && dashboardTable) {
     const sourceTable = datasetSource.tableName;
     const originalTable = stripCatalogPrefix(sourceTable);
@@ -130,7 +130,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
 
     if (originalTable) {
       const quotedOriginal = quoteRuntimeTableReference(originalTable);
-      if (quotedOriginal && quotedOriginal !== quotedDashboard) {
+      if (quotedOriginal) {
         const originalReferences = Array.from(
           new Set(
             [

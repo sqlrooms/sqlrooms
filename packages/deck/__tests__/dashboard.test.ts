@@ -149,6 +149,29 @@ describe('deck dashboard integration', () => {
     });
   });
 
+  it('strips catalog-qualified source SQL when the source matches the selected table', () => {
+    const dashboard = createDashboard('"memory"."main"."events"');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {
+            tableName: '"memory"."main"."events"',
+            sqlQuery: 'SELECT * FROM "memory"."main"."events" WHERE value > 0',
+          },
+        },
+      }),
+    ).toEqual({
+      sqlQuery: 'SELECT * FROM "main"."events" WHERE value > 0',
+    });
+  });
+
   it('builds Mosaic dataset queries for table and trusted SQL sources', () => {
     const tableSql = createDeckMapDashboardDatasetQuery(
       {tableName: 'earthquakes'},
