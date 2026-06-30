@@ -70,6 +70,9 @@ export const MosaicDashboardPanelHeader: FC<
   const requestCloseSettingsPanel = useBlockSettingsStore(
     (state) => state.blockSettings.requestCloseSettingsPanel,
   );
+  const clearSelectionIfBlockDeleted = useBlockSettingsStore(
+    (state) => state.blockSettings.clearSelectionIfBlockDeleted,
+  );
   const isSettingsPanelOpen = useBlockSettingsStore(
     (state) => state.blockSettings.runtime.isSettingsPanelOpen,
   );
@@ -87,7 +90,8 @@ export const MosaicDashboardPanelHeader: FC<
   const handleRemove = useCallback(() => {
     if (!panelId) return;
     removePanel(dashboardId, panelId);
-  }, [dashboardId, panelId, removePanel]);
+    clearSelectionIfBlockDeleted(panelId);
+  }, [clearSelectionIfBlockDeleted, dashboardId, panelId, removePanel]);
 
   const handleHeaderClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

@@ -100,11 +100,14 @@ export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
   const editorContext = useContext(BlockDocumentEditorContext);
   const editor = editorProp ?? editorContext?.editor ?? null;
   const documentId = documentIdProp ?? editorContext?.documentId;
+  const readOnly =
+    editorContext?.readOnly ?? (editor ? !editor.isEditable : undefined);
 
   const selectedItem = useSelectedBlockOrPanel(editor);
   const {SettingsComponent, settingsProps} = useBlockSettings(
     selectedItem,
     documentId,
+    readOnly,
   );
 
   // No selection or missing required props

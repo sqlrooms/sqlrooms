@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  FC,
 } from 'react';
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
@@ -28,11 +27,13 @@ import {ScrollArea} from '@sqlrooms/ui';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
+  readOnly?: boolean;
 }>;
 
 export function MosaicDashboardRoot({
   children,
   dashboardId,
+  readOnly,
 }: MosaicDashboardRootProps) {
   const ensureDashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.ensureDashboard,
@@ -89,6 +90,7 @@ export function MosaicDashboardRoot({
   const contextValue = useMemo(
     () => ({
       dashboardId,
+      readOnly,
       builderOpen,
       canCreateChart: Boolean(
         selectedTableInfo &&
@@ -102,6 +104,7 @@ export function MosaicDashboardRoot({
     }),
     [
       dashboardId,
+      readOnly,
       builderOpen,
       selectedTableInfo,
       panelRenderers,
@@ -133,11 +136,14 @@ export type MosaicDashboardProps = {
   dashboardId: string;
   /** Whether to enable selection of the entire dashboard */
   selectable?: boolean;
+  /** Whether settings for this dashboard should avoid mutating state. */
+  readOnly?: boolean;
 };
 
 function MosaicDashboardComponent({
   dashboardId,
   selectable = false,
+  readOnly,
 }: MosaicDashboardProps): ReactElement {
   const clearSelection = useBlockSettingsStore(
     (state) => state.blockSettings?.clearSelection,
@@ -160,7 +166,7 @@ function MosaicDashboardComponent({
   );
 
   return (
-    <MosaicDashboardRoot dashboardId={dashboardId}>
+    <MosaicDashboardRoot dashboardId={dashboardId} readOnly={readOnly}>
       {selectable ? (
         <SelectablePanelWrapper
           dashboardId={dashboardId}
@@ -169,6 +175,7 @@ function MosaicDashboardComponent({
           blockType="dashboard-block"
           className="flex flex-col"
           settingsComponent={MosaicDashboardSettings}
+          readOnly={readOnly}
         >
           <MosaicDashboardToolbar />
           <ScrollArea className="min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full">

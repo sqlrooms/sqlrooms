@@ -18,6 +18,8 @@ export type SelectablePanelWrapperProps = {
   blockType: 'dashboard-panel' | 'standalone-block' | 'dashboard-block';
   /** Settings component supplied by the owning block/panel definition */
   settingsComponent?: BlockSettingsComponent;
+  /** Whether settings for this selected surface should avoid mutating state */
+  readOnly?: boolean;
   /** Content to render inside the selectable wrapper */
   children: ReactNode;
   /** Additional CSS classes to apply to the wrapper */
@@ -51,6 +53,7 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
   blockInstanceId,
   blockType,
   settingsComponent,
+  readOnly: readOnlyProp,
   children,
   className,
 }) => {
@@ -65,6 +68,7 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
   // Context may not exist if SelectablePanelWrapper is used outside BlockDocumentEditor
   const editorContext = useContext(BlockDocumentEditorContext);
   const editor = editorContext?.editor ?? null;
+  const readOnly = readOnlyProp ?? editorContext?.readOnly;
 
   const handleClick = useCallback(
     (e: MouseEvent) => {
@@ -102,6 +106,7 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
         blockInstanceId,
         panelType,
         settingsComponent,
+        readOnly,
       });
     },
     [
@@ -110,6 +115,7 @@ export const SelectablePanelWrapper: FC<SelectablePanelWrapperProps> = ({
       dashboardId,
       panelId,
       panelType,
+      readOnly,
       selectBlock,
       settingsComponent,
       editor,

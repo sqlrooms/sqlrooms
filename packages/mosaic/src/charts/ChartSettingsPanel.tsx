@@ -17,6 +17,7 @@ import {SlidersVerticalIcon, XIcon} from 'lucide-react';
  * @property onTableChange - Callback when the selected data table changes
  * @property title - Optional title/caption for the chart
  * @property onTitleChange - Callback when the chart title changes
+ * @property readOnly - Whether settings should be non-mutating
  * @property onClose - Optional callback to close the host settings panel
  */
 export type ChartSettingsPanelProps = {
@@ -26,6 +27,7 @@ export type ChartSettingsPanelProps = {
   onTableChange: (table: DataTable) => void;
   title?: string;
   onTitleChange?: (title: string) => void;
+  readOnly?: boolean;
   onClose?: () => void;
 };
 
@@ -46,6 +48,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   onTableChange,
   title,
   onTitleChange,
+  readOnly,
   onClose,
 }) => {
   const tables = useTablesWithColumns();
@@ -76,6 +79,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
           value={title ?? ''}
           onChange={(e) => onTitleChange?.(e.target.value)}
           placeholder="Enter title"
+          disabled={readOnly}
           className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-6 w-full rounded-sm border bg-transparent px-2 py-0 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </Field>
@@ -86,6 +90,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
           tables={tables}
           value={dataTable}
           className="w-full"
+          disabled={readOnly}
         />
       </Field>
 
@@ -93,6 +98,7 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
         dataTable={dataTable}
         config={config}
         onChange={onConfigChange}
+        readOnly={readOnly}
       />
     </div>
   );

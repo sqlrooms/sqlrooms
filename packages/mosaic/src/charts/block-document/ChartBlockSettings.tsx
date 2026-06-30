@@ -37,6 +37,7 @@ function useChartBlock(
 export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
+  readOnly,
   onClose,
 }) => {
   const chartBlock = useChartBlock(dashboardId, blockId);
@@ -54,6 +55,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
   }
 
   const handleConfigChange = (config: ChartConfig) => {
+    if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...chartBlock,
       config,
@@ -61,6 +63,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
   };
 
   const handleTableChange = (table: DataTable) => {
+    if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...chartBlock,
       tableName: table.table.toString(),
@@ -68,6 +71,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
   };
 
   const handleCaptionChange = (caption: string) => {
+    if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...chartBlock,
       caption: caption || undefined,
@@ -82,6 +86,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
       onTableChange={handleTableChange}
       title={chartBlock.caption || ''}
       onTitleChange={handleCaptionChange}
+      readOnly={readOnly}
       onClose={onClose}
     />
   );

@@ -15,6 +15,7 @@ import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
 export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
+  readOnly,
 }) => {
   const dashboard = useStoreWithMosaicDashboard((state) =>
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
@@ -28,28 +29,28 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         setSelectedTable(dashboardId, table.table.toString());
       }
     },
-    [dashboardId, setSelectedTable],
+    [dashboardId, readOnly, setSelectedTable],
   );
 
   const handleTitleChange = useCallback(
     (title: string) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         updatePanel(dashboardId, blockId, {title: title || undefined});
       }
     },
-    [dashboardId, blockId, updatePanel],
+    [dashboardId, blockId, readOnly, updatePanel],
   );
 
-  const {
-    handleChangeRequest,
-    handleConfirm,
-    handleCancel,
-    isDialogOpen,
-  } = useConfirmDatasetChange(handleTableChange);
+  const {handleChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
+    useConfirmDatasetChange(handleTableChange);
 
   if (!dashboard) {
     return (
@@ -76,6 +77,7 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
         panel={panel}
         onTableChange={handleChangeRequest}
         onTitleChange={handleTitleChange}
+        readOnly={readOnly}
       />
       <ConfirmDatasetChangeDialog
         open={isDialogOpen}

@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {Editor} from '@tiptap/react';
 import {NodeSelection} from '@tiptap/pm/state';
 import {useBlockSettingsStore} from './useBlockSettingsStore';
@@ -89,6 +89,11 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
   const clearSelection = useBlockSettingsStore(
     (state) => state.blockSettings.clearSelection,
   );
+  const panelSelectionRef = useRef(panelSelection);
+
+  useEffect(() => {
+    panelSelectionRef.current = panelSelection;
+  }, [panelSelection]);
 
   // Initialize state from editor
   const [editorSelection, setEditorSelection] = useState<EditorSelection>(() =>
@@ -100,13 +105,21 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
       return;
     }
 
-    const updateSelection = () => {
+    const updateSelection = (clearCustomSelection: boolean) => {
       const selection = getEditorSelection(editor);
       setEditorSelection(selection);
 
+      if (!clearCustomSelection) return;
+
       // If NodeSelection appeared in TipTap, clear any panel selection
       // This ensures only one selection is active at a time
-      if (selection && panelSelection) {
+      if (selection && panelSelectionRef.current) {
+        clearSelection();
+      }
+
+      // If the user moved into normal document text, clear the custom selection
+      // so the settings panel no longer edits the previous panel.
+      if (!selection && panelSelectionRef.current) {
         clearSelection();
         return;
       }
@@ -119,13 +132,14 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
     };
 
     // Sync immediately when editor changes, then subscribe to updates
-    updateSelection();
-    editor.on('selectionUpdate', updateSelection);
+    updateSelection(false);
+    const handleSelectionUpdate = () => updateSelection(true);
+    editor.on('selectionUpdate', handleSelectionUpdate);
 
     return () => {
-      editor.off('selectionUpdate', updateSelection);
+      editor.off('selectionUpdate', handleSelectionUpdate);
     };
-  }, [editor, panelSelection, clearSelection]);
+  }, [editor, clearSelection]);
 
   // Priority 1: Panel selection
   if (panelSelection) {

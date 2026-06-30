@@ -335,7 +335,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   }, [editor, readOnly]);
 
   const clearSelection = useBlockSettingsStore(
-    (state) => state.blockSettings.clearSelection,
+    (state) => state.blockSettings?.clearSelection,
   );
 
   useEffect(() => {

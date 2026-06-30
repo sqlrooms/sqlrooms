@@ -122,6 +122,7 @@ interface MapSettingsPanelProps {
   onClose?: () => void;
   onTableChange?: (table: DataTable) => void;
   onTitleChange?: (title: string) => void;
+  readOnly?: boolean;
 }
 
 function getSchemeOptions(type: ColorScaleConfig['type']) {
@@ -142,6 +143,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   panel,
   onTableChange,
   onTitleChange,
+  readOnly,
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
   const [colorAccessor, setColorAccessor] =
@@ -165,13 +167,14 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
+      if (readOnly) return;
       if (onTableChange) {
         onTableChange(table);
       } else {
         setSelectedTable(dashboardId, table.table.table);
       }
     },
-    [dashboardId, onTableChange, setSelectedTable],
+    [dashboardId, onTableChange, readOnly, setSelectedTable],
   );
 
   const mapConfig = panel.config as DeckMapDashboardPanelConfig;
@@ -225,11 +228,12 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
+      if (readOnly) return;
       updatePanel(dashboardId, panel.id, {
         config: {...config, settingsOpen: mapConfig.settingsOpen} as any,
       });
     },
-    [dashboardId, mapConfig.settingsOpen, panel.id, updatePanel],
+    [dashboardId, mapConfig.settingsOpen, panel.id, readOnly, updatePanel],
   );
 
   const updateColorScale = (patch: {
@@ -277,6 +281,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           onChange={(e) => onTitleChange?.(e.target.value)}
           placeholder="Map title"
           className="text-xs"
+          disabled={readOnly}
         />
       </Field>
 
@@ -286,6 +291,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           tables={tables}
           value={selectedDataTable}
           className="w-full"
+          disabled={readOnly}
         />
       </Field>
 
@@ -604,7 +610,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       ),
                     };
 
-                    if (layer.radiusUnits === 'pixels') {
+                    if (
+                      layer.radiusUnits === 'pixels' &&
+                      typeof layer.getRadius !== 'string'
+                    ) {
                       nextLayer.getRadius = value;
                     }
 

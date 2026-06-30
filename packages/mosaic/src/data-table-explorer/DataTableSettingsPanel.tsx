@@ -19,6 +19,7 @@ export type DataTableSettingsPanelProps = {
   titleLabel?: string;
   /** Called when the display title or caption changes. */
   onTitleChange?: (title: string) => void;
+  readOnly?: boolean;
 };
 
 /**
@@ -30,6 +31,7 @@ export const DataTableSettingsPanel: FC<DataTableSettingsPanelProps> = ({
   title,
   titleLabel = 'Title',
   onTitleChange,
+  readOnly,
 }) => {
   const tables = useTablesWithColumns();
 
@@ -45,6 +47,7 @@ export const DataTableSettingsPanel: FC<DataTableSettingsPanelProps> = ({
           onChange={(e) => onTitleChange?.(e.target.value)}
           placeholder={`Enter ${titleLabel.toLowerCase()}`}
           className="text-xs"
+          disabled={readOnly}
         />
       </Field>
 
@@ -54,6 +57,7 @@ export const DataTableSettingsPanel: FC<DataTableSettingsPanelProps> = ({
           tables={tables}
           value={value}
           className="w-full"
+          disabled={readOnly}
         />
       </Field>
     </div>

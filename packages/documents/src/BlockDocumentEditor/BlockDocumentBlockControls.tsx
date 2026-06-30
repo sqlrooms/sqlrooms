@@ -86,6 +86,7 @@ type BlockMenuItem = {
   label: string;
   description: string;
   icon: FC<{className?: string}>;
+  selectAfterInsert?: boolean;
   createNode: (
     id: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
@@ -566,6 +567,7 @@ function buildStatefulBlockMenuItems(
       label,
       description: blockType.description ?? `Insert ${label}`,
       icon: Rows3Icon,
+      selectAfterInsert: true,
       createNode:
         blockType.createNode ??
         ((id: string) => ({
@@ -1048,16 +1050,13 @@ export const BlockDocumentBlockControls: FC<
   ]);
 
   const turnBlockInto = useCallback(
-    (
-      block: BlockControlState | null,
-      createNode: BlockMenuItem['createNode'],
-    ) => {
+    (block: BlockControlState | null, item: BlockMenuItem) => {
       if (!editor || !block) return;
       const node = getNodeAt(editor, block.pos);
       if (!node || isTitleNode(node)) return;
 
       const replacement = preserveTextInNode(
-        createNode(getNodeId(node, generateBlockId), {
+        item.createNode(getNodeId(node, generateBlockId), {
           initialText: node.textContent,
         }),
         node.textContent,
@@ -1074,7 +1073,7 @@ export const BlockDocumentBlockControls: FC<
         return;
       }
 
-      editor
+      const chain = editor
         .chain()
         .focus()
         .insertContentAt(
@@ -1083,8 +1082,13 @@ export const BlockDocumentBlockControls: FC<
             to: block.pos + node.nodeSize,
           },
           replacement,
-        )
-        .run();
+        );
+
+      if (item.selectAfterInsert) {
+        chain.setNodeSelection(block.pos);
+      }
+
+      chain.run();
 
       setHandleMenuOpen(false);
       clearBlockTypeSearchView();
@@ -1094,20 +1098,20 @@ export const BlockDocumentBlockControls: FC<
   );
 
   const turnActiveBlockInto = useCallback(
-    (createNode: BlockMenuItem['createNode']) => {
-      turnBlockInto(activeBlock, createNode);
+    (item: BlockMenuItem) => {
+      turnBlockInto(activeBlock, item);
     },
     [activeBlock, turnBlockInto],
   );
 
   const turnBlockTypeSearchInto = useCallback(
-    (createNode: BlockMenuItem['createNode']) => {
+    (item: BlockMenuItem) => {
       if (!editor || !blockTypeSearch) return;
       const node = getNodeAt(editor, blockTypeSearch.pos);
       if (!node || isTitleNode(node)) return;
 
       const replacement = clearTextInNode(
-        createNode(getNodeId(node, generateBlockId), {initialText: ''}),
+        item.createNode(getNodeId(node, generateBlockId), {initialText: ''}),
       );
 
       if (
@@ -1119,7 +1123,7 @@ export const BlockDocumentBlockControls: FC<
         return;
       }
 
-      editor
+      const chain = editor
         .chain()
         .focus()
         .insertContentAt(
@@ -1128,8 +1132,13 @@ export const BlockDocumentBlockControls: FC<
             to: blockTypeSearch.pos + node.nodeSize,
           },
           replacement,
-        )
-        .run();
+        );
+
+      if (item.selectAfterInsert) {
+        chain.setNodeSelection(blockTypeSearch.pos);
+      }
+
+      chain.run();
 
       clearBlockTypeSearchView();
     },
@@ -1138,14 +1147,14 @@ export const BlockDocumentBlockControls: FC<
 
   const handleActiveBlockTypeSelect = useCallback(
     (item: BlockMenuItem) => {
-      turnActiveBlockInto(item.createNode);
+      turnActiveBlockInto(item);
     },
     [turnActiveBlockInto],
   );
 
   const handleBlockTypeSearchSelect = useCallback(
     (item: BlockMenuItem) => {
-      turnBlockTypeSearchInto(item.createNode);
+      turnBlockTypeSearchInto(item);
     },
     [turnBlockTypeSearchInto],
   );

@@ -13,7 +13,7 @@ import {
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 
 export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
-  const {dashboardId} = useMosaicDashboardContext();
+  const {dashboardId, readOnly} = useMosaicDashboardContext();
   const panelId = meta?.panelId as string | undefined;
 
   const dashboard = useStoreWithMosaicDashboard(
@@ -47,8 +47,9 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
       dashboardId,
       panelType: panel.type,
       settingsComponent: renderer?.settings,
+      readOnly,
     });
-  }, [dashboardId, panel, renderer?.settings, selectBlock]);
+  }, [dashboardId, panel, readOnly, renderer?.settings, selectBlock]);
   const handleTitleChange = useCallback(
     (title: string) => {
       if (!panel) return;
@@ -75,6 +76,7 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
       panelType={panel.type}
       blockType="dashboard-panel"
       settingsComponent={renderer?.settings}
+      readOnly={readOnly}
     >
       <div className="flex h-full flex-col">
         <MosaicDashboardPanelHeader

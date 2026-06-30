@@ -5,7 +5,7 @@ import {useRoomStore} from '../store';
 
 export const WorksheetDashboardBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = ({blockInstanceId, blockType, title, caption}) => {
+> = ({blockInstanceId, blockType, title, caption, readOnly}) => {
   const ensureDashboard = useRoomStore(
     (state) => state.mosaicDashboard.ensureDashboard,
   );
@@ -32,7 +32,11 @@ export const WorksheetDashboardBlockRenderer: FC<
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <MosaicDashboard dashboardId={blockInstanceId} selectable />
+        <MosaicDashboard
+          dashboardId={blockInstanceId}
+          selectable
+          readOnly={readOnly}
+        />
       </div>
     </div>
   );

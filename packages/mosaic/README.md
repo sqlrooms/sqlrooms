@@ -191,6 +191,8 @@ mutation supplied by the host.
 `MosaicDashboard` is a compound dashboard surface backed by generic dashboard
 panels instead of a chart-only list. Configure supported panel renderers and
 runtime add-panel actions when creating the dashboard slice.
+Pass `readOnly` when embedding a dashboard in a read-only surface so reusable
+settings panels disable or no-op mutating controls.
 
 Default Mosaic panel renderers also expose reusable settings components through
 their renderer definitions. `ChartSettingsPanel`, `ChartBlockSettings`,

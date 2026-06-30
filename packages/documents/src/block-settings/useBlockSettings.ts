@@ -1,8 +1,6 @@
 import {useMemo} from 'react';
 import type {SelectedItem} from './useSelectedBlockOrPanel';
-import {
-  useBlockDocumentStatefulBlockSettings,
-} from '../BlockDocumentStatefulBlockRendererContext';
+import {useBlockDocumentStatefulBlockSettings} from '../BlockDocumentStatefulBlockRendererContext';
 import {useBlockDocumentChartSettings} from '../BlockDocumentChartRendererContext';
 import type {
   BlockSettingsComponent,
@@ -24,6 +22,7 @@ type BlockSettingsResult = {
 export function useBlockSettings(
   selectedItem: SelectedItem,
   documentId: string | undefined,
+  readOnly?: boolean,
 ): BlockSettingsResult {
   const chartSettings = useBlockDocumentChartSettings();
   const statefulBlockSettings = useBlockDocumentStatefulBlockSettings(
@@ -45,6 +44,7 @@ export function useBlockSettings(
           blockId: selectedBlock.id,
           dashboardId: selectedBlock.dashboardId,
           blockInstanceId: selectedBlock.blockInstanceId ?? selectedBlock.id,
+          readOnly: selectedBlock.readOnly,
         },
       };
     }
@@ -70,10 +70,17 @@ export function useBlockSettings(
             typeof selectedItem.attrs.blockInstanceId === 'string'
               ? selectedItem.attrs.blockInstanceId
               : undefined,
+          readOnly,
         },
       };
     }
 
     return {SettingsComponent: null, settingsProps: null};
-  }, [selectedItem, documentId, chartSettings, statefulBlockSettings]);
+  }, [
+    selectedItem,
+    documentId,
+    readOnly,
+    chartSettings,
+    statefulBlockSettings,
+  ]);
 }

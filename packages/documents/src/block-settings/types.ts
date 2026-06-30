@@ -6,12 +6,14 @@ import type {ComponentType} from 'react';
  * @property blockId - The ID of the block or panel being configured
  * @property dashboardId - The ID of the parent dashboard/document, when available
  * @property blockInstanceId - Backing state id for stateful document blocks, when available
+ * @property readOnly - Whether the selected document block is read-only
  * @property onClose - Optional callback for settings UIs that can close the host settings panel
  */
 export type BlockSettingsComponentProps = {
   blockId: string;
   dashboardId?: string;
   blockInstanceId?: string;
+  readOnly?: boolean;
   onClose?: () => void;
 };
 
@@ -32,6 +34,7 @@ export type BlockSettingsComponent = ComponentType<BlockSettingsComponentProps>;
  * @property blockInstanceId - Backing state id for stateful document blocks, when available
  * @property panelType - The type of panel (e.g., 'vgplot', 'deck-json-map') for dashboard panels
  * @property settingsComponent - Runtime settings component supplied by the selected surface
+ * @property readOnly - Whether the selected block is in a read-only document
  */
 export type SelectedBlock = {
   type: 'dashboard-panel' | 'standalone-block' | 'dashboard-block';
@@ -40,4 +43,5 @@ export type SelectedBlock = {
   blockInstanceId?: string;
   panelType?: string;
   settingsComponent?: BlockSettingsComponent;
+  readOnly?: boolean;
 };

@@ -13,9 +13,12 @@ import {ChartSettingsPanel} from '../ChartSettingsPanel';
 /**
  * Settings adapter for a Mosaic chart panel inside a dashboard.
  */
-export const MosaicDashboardChartSettings: FC<
-  BlockSettingsComponentProps
-> = ({blockId, dashboardId, onClose}) => {
+export const MosaicDashboardChartSettings: FC<BlockSettingsComponentProps> = ({
+  blockId,
+  dashboardId,
+  readOnly,
+  onClose,
+}) => {
   const dashboard = useStoreWithMosaicDashboard((state) =>
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
   );
@@ -34,37 +37,39 @@ export const MosaicDashboardChartSettings: FC<
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         setSelectedTable(dashboardId, table.table.toString());
       }
     },
-    [dashboardId, setSelectedTable],
+    [dashboardId, readOnly, setSelectedTable],
   );
 
   const handleConfigChange = useCallback(
     (config: ChartConfig) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         updatePanel(dashboardId, blockId, {config});
       }
     },
-    [dashboardId, blockId, updatePanel],
+    [dashboardId, blockId, readOnly, updatePanel],
   );
 
   const handleTitleChange = useCallback(
     (title: string) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         updatePanel(dashboardId, blockId, {title: title || undefined});
       }
     },
-    [dashboardId, blockId, updatePanel],
+    [dashboardId, blockId, readOnly, updatePanel],
   );
 
-  const {
-    handleChangeRequest,
-    handleConfirm,
-    handleCancel,
-    isDialogOpen,
-  } = useConfirmDatasetChange(handleTableChange);
+  const {handleChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
+    useConfirmDatasetChange(handleTableChange);
 
   if (!dashboard) {
     return (
@@ -94,6 +99,7 @@ export const MosaicDashboardChartSettings: FC<
         title={chartPanel.title || ''}
         onTitleChange={handleTitleChange}
         onClose={onClose}
+        readOnly={readOnly}
       />
       <ConfirmDatasetChangeDialog
         open={isDialogOpen}

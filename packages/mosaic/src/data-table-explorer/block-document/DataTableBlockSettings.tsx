@@ -35,6 +35,7 @@ function useDataTableBlock(
 export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
+  readOnly,
 }) => {
   const dataTableBlock = useDataTableBlock(dashboardId, blockId);
   const updateBlock = useStoreWithBlockDocuments(
@@ -54,6 +55,8 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
   }
 
   const handleTableChange = (table: DataTable) => {
+    if (readOnly) return;
+
     getSelection(
       `block-document:${dashboardId}:data-table:${blockId}:brush`,
       'crossfilter',
@@ -65,6 +68,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
   };
 
   const handleCaptionChange = (caption: string) => {
+    if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...dataTableBlock,
       caption: caption || undefined,
@@ -78,6 +82,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
       title={dataTableBlock.caption || ''}
       titleLabel="Caption"
       onTitleChange={handleCaptionChange}
+      readOnly={readOnly}
     />
   );
 };

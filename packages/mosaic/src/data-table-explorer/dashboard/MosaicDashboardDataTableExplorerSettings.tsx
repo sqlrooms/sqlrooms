@@ -13,7 +13,7 @@ import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
  */
 export const MosaicDashboardDataTableExplorerSettings: FC<
   BlockSettingsComponentProps
-> = ({blockId, dashboardId}) => {
+> = ({blockId, dashboardId, readOnly}) => {
   const dashboard = useStoreWithMosaicDashboard((state) =>
     dashboardId ? state.mosaicDashboard.getDashboard(dashboardId) : undefined,
   );
@@ -32,28 +32,28 @@ export const MosaicDashboardDataTableExplorerSettings: FC<
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         setSelectedTable(dashboardId, table.table.toString());
       }
     },
-    [dashboardId, setSelectedTable],
+    [dashboardId, readOnly, setSelectedTable],
   );
 
   const handleTitleChange = useCallback(
     (title: string) => {
+      if (readOnly) return;
+
       if (dashboardId) {
         updatePanel(dashboardId, blockId, {title: title || undefined});
       }
     },
-    [dashboardId, blockId, updatePanel],
+    [dashboardId, blockId, readOnly, updatePanel],
   );
 
-  const {
-    handleChangeRequest,
-    handleConfirm,
-    handleCancel,
-    isDialogOpen,
-  } = useConfirmDatasetChange(handleTableChange);
+  const {handleChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
+    useConfirmDatasetChange(handleTableChange);
 
   if (!dashboard) {
     return (
@@ -80,6 +80,7 @@ export const MosaicDashboardDataTableExplorerSettings: FC<
         onChange={handleChangeRequest}
         title={panel.title || ''}
         onTitleChange={handleTitleChange}
+        readOnly={readOnly}
       />
       <ConfirmDatasetChangeDialog
         open={isDialogOpen}

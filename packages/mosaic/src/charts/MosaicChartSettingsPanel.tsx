@@ -15,6 +15,7 @@ export type MosaicChartSettingsPanelProps = {
   config: ChartConfig;
   /** Called when the chart configuration changes. */
   onChange: (config: ChartConfig) => void;
+  readOnly?: boolean;
 };
 
 /**
@@ -24,6 +25,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
   dataTable,
   config,
   onChange,
+  readOnly,
 }) => {
   const columns = dataTable?.columns || [];
   const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
@@ -52,7 +54,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     <MosaicChartSettings.Root
       config={config}
       columns={columns}
-      onChange={onChange}
+      onChange={readOnly ? () => {} : onChange}
     >
       {showViewSpec && (
         <div className="mb-2 flex justify-end">

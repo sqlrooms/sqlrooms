@@ -37,6 +37,7 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
   blockInstanceId,
+  readOnly,
 }) => {
   const mapId = blockInstanceId ?? blockId;
   const mapBlock = useMapBlock(dashboardId, blockId);
@@ -60,13 +61,15 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
+      if (readOnly) return;
       setSelectedTable(mapId, table.table.toString());
     },
-    [mapId, setSelectedTable],
+    [mapId, readOnly, setSelectedTable],
   );
 
   const handleTitleChange = useCallback(
     (title: string) => {
+      if (readOnly) return;
       if (dashboardId && mapBlock) {
         updateBlock(dashboardId, blockId, {
           ...mapBlock,
@@ -74,7 +77,7 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
         });
       }
     },
-    [dashboardId, blockId, mapBlock, updateBlock],
+    [dashboardId, blockId, mapBlock, readOnly, updateBlock],
   );
 
   if (!dashboard || !panel) {
@@ -98,6 +101,7 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
       panel={panelWithCaption}
       onTableChange={handleTableChange}
       onTitleChange={handleTitleChange}
+      readOnly={readOnly}
     />
   );
 };

@@ -16,6 +16,7 @@ import {useStoreWithMosaicDashboard} from './MosaicDashboardSlice';
 export const MosaicDashboardSettings: FC<BlockSettingsComponentProps> = ({
   blockInstanceId,
   blockId,
+  readOnly,
 }) => {
   const dashboardId = blockInstanceId ?? blockId;
   const dashboard = useStoreWithMosaicDashboard((state) =>
@@ -29,17 +30,15 @@ export const MosaicDashboardSettings: FC<BlockSettingsComponentProps> = ({
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
+      if (readOnly) return;
+
       setSelectedTable(dashboardId, table.table.toString());
     },
-    [dashboardId, setSelectedTable],
+    [dashboardId, readOnly, setSelectedTable],
   );
 
-  const {
-    handleChangeRequest,
-    handleConfirm,
-    handleCancel,
-    isDialogOpen,
-  } = useConfirmDatasetChange(handleTableChange);
+  const {handleChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
+    useConfirmDatasetChange(handleTableChange);
 
   if (!dashboard) {
     return (
@@ -51,25 +50,26 @@ export const MosaicDashboardSettings: FC<BlockSettingsComponentProps> = ({
 
   return (
     <>
-    <div className="flex h-full flex-col gap-2 p-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Dashboard Settings</h3>
-      </div>
+      <div className="flex h-full flex-col gap-2 p-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Dashboard Settings</h3>
+        </div>
 
-      <Field label="Dataset" required>
-        <DataTableSelector
-          onChange={handleChangeRequest}
-          tables={tables}
-          value={dataTable}
-          className="w-full"
-        />
-      </Field>
-    </div>
-    <ConfirmDatasetChangeDialog
-      open={isDialogOpen}
-      onConfirm={handleConfirm}
-      onCancel={handleCancel}
-    />
+        <Field label="Dataset" required>
+          <DataTableSelector
+            onChange={handleChangeRequest}
+            tables={tables}
+            value={dataTable}
+            className="w-full"
+            disabled={readOnly}
+          />
+        </Field>
+      </div>
+      <ConfirmDatasetChangeDialog
+        open={isDialogOpen}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </>
   );
 };
