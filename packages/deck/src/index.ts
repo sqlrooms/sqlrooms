@@ -61,6 +61,7 @@ export type {
   DeckMapTableReference,
 } from './mapConfigUtils';
 export type {
+  DeckMapConfigMode,
   DeckMapDashboardFitToDataConfig,
   CreateDeckMapDashboardPanelConfigOptions,
   DeckMapDashboardDatasetClientState,

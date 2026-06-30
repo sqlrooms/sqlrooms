@@ -43,6 +43,10 @@ Deck map tools:
 - create_deck_map_config validates and returns a reusable native Deck JSON map config without requiring a dashboard artifact.
 - create_dashboard_map creates or updates an interactive map panel inside a dashboard from a native Deck JSON map config.
 - Use map tools when the user asks for a map, geospatial/spatial visualization, locations, longitude/latitude data, or geometry columns.
+- CONFIG MODE: Every map config must include a configMode field ("basic" or "custom") that determines how the map was authored and whether the UI settings panel is available.
+  - "basic" (default): Use for straightforward requests — single layer, standard color scale, simple geometry binding. Stick ONLY to properties that the UI configurator supports: layer @@type, visibility, color scale (@@function colorScale), point radius (numeric getRadius with radiusUnits), line width (numeric getWidth with widthUnits), geometry/H3/arc column bindings, extrusion with a single elevation column. Do NOT use string accessors (@@= expressions), custom extensions, multiple layers, or advanced deck.gl props in basic mode. The user can fine-tune these maps through the settings panel.
+  - "custom": Use when the request demands creative, complex, or advanced visualization — multiple layers, data-driven accessors (@@= expressions), custom color arrays, advanced deck.gl props (opacity, transitions, material, highlightColor, etc.), layer extensions, or any props not representable in the UI configurator. The UI settings panel will be disabled for custom configs; users edit via the JSON editor instead.
+  - Decision rule: If the map can be fully expressed with a single layer + basic color scale + simple numeric radius/width, use "basic". Otherwise use "custom".
 - Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer.
 - LAYER SELECTION: Choose the layer type based on the geometry type in the data.
   IMPORTANT: Only create a layer if the table contains data suitable for that layer type, or if you can transform the data into the required format with a sqlQuery. Do NOT create a layer if the data is clearly incompatible (e.g. do not create a path layer from point-only data without aggregation, do not create a polygon layer from point coordinates, do not create an arc layer without origin-destination pairs).
@@ -182,6 +186,12 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
     .record(z.string(), DeckMapDatasetConfig)
     .describe(
       'Datasets keyed by dataset id. Layers bind to these ids through _sqlroomsBinding.dataset. Each dataset source may use tableName or sqlQuery.',
+    ),
+  configMode: z
+    .enum(['basic', 'custom'])
+    .optional()
+    .describe(
+      'Config authoring mode. Use "basic" (default) for straightforward single-layer maps that the user can tweak via the UI settings panel. Use "custom" for complex, multi-layer, or creative maps that use advanced deck.gl props beyond what the UI configurator supports — the settings panel will be disabled for custom configs.',
     ),
   mapStyle: z.string().optional(),
   mapProps: z.record(z.string(), z.unknown()).optional(),

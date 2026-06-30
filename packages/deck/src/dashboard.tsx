@@ -367,6 +367,7 @@ function DeckMapDashboardHeaderActions({
 
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
+  const isCustomMode = mapConfig?.configMode === 'custom';
 
   const isSettingsOpen = Boolean(mapConfig?.settingsOpen);
 
@@ -380,10 +381,18 @@ function DeckMapDashboardHeaderActions({
   );
 
   const handleToggleSettings = useCallback(() => {
+    if (isCustomMode) return;
     updatePanel(dashboardId, panel.id, {
       config: {...panel.config, settingsOpen: !isSettingsOpen},
     });
-  }, [dashboardId, isSettingsOpen, panel.config, panel.id, updatePanel]);
+  }, [
+    dashboardId,
+    isCustomMode,
+    isSettingsOpen,
+    panel.config,
+    panel.id,
+    updatePanel,
+  ]);
 
   return (
     <div className="flex items-center gap-0.5">
@@ -393,14 +402,21 @@ function DeckMapDashboardHeaderActions({
             variant="ghost"
             size="icon"
             className="data-[state=active]:bg-accent h-6 w-6"
-            title="Map settings"
+            title={
+              isCustomMode
+                ? 'Settings unavailable for custom map configs'
+                : 'Map settings'
+            }
             onClick={handleToggleSettings}
             data-state={isSettingsOpen ? 'active' : 'inactive'}
+            disabled={isCustomMode}
           >
             <SettingsIcon className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Map settings</TooltipContent>
+        <TooltipContent>
+          {isCustomMode ? 'Custom config — use JSON editor' : 'Map settings'}
+        </TooltipContent>
       </Tooltip>
       <DeckMapConfigPopoverEditor
         value={panel.config}
@@ -459,14 +475,17 @@ function DeckMapDashboardRenderer({
   const isSettingsOpen = Boolean(
     (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
   );
+  const isCustomMode =
+    (panel.config as DeckMapDashboardPanelConfig).configMode === 'custom';
 
   const handleSettingsOpenChange = useCallback(
     (isOpen: boolean) => {
+      if (isCustomMode && isOpen) return;
       updatePanel(dashboardId, panel.id, {
         config: {...panel.config, settingsOpen: isOpen},
       });
     },
-    [dashboardId, panel.config, panel.id, updatePanel],
+    [dashboardId, isCustomMode, panel.config, panel.id, updatePanel],
   );
   const selection = useMemo<Selection>(
     () => getSelection(selectionName, 'crossfilter'),
@@ -623,7 +642,7 @@ function DeckMapDashboardRenderer({
                 </button>
               </div>
             )}
-          {missingColumns.length > 0 && (
+          {missingColumns.length > 0 && !isCustomMode && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
