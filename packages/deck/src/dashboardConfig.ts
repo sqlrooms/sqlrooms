@@ -3,7 +3,11 @@ import {
   type MosaicDashboardPanelConfigType,
   Query,
 } from '@sqlrooms/mosaic';
-import {quoteParsedRawSqlTableReference} from '@sqlrooms/duckdb';
+import {
+  makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  quoteParsedRawSqlTableReference,
+} from '@sqlrooms/duckdb';
 import {createId} from '@paralleldrive/cuid2';
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
@@ -105,7 +109,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   fitToData?: DeckMapDashboardFitToDataConfig;
 }): {tableName?: string; sqlQuery?: string} | undefined {
   const datasetSource = options.dataset?.source;
-  const dashboardTable = options.dashboard.selectedTable;
+  const dashboardTable = stripCatalogPrefix(options.dashboard.selectedTable);
 
   // The dashboard's selected table always takes precedence as the data source.
   // When the user switches the table in the selector, all panels update.
@@ -164,6 +168,17 @@ export function resolveDeckMapDashboardDatasetSource(options: {
 
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripCatalogPrefix(tableName: string | undefined) {
+  const parsed = parseQualifiedSqlIdentifier(tableName);
+  if (!parsed?.database || !parsed.schema || !parsed.table) {
+    return tableName;
+  }
+  return makeQualifiedTableName({
+    schema: parsed.schema,
+    table: parsed.table,
+  }).toString();
 }
 
 export function createDeckMapDashboardDatasetQuery(

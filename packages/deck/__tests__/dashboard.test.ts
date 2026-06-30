@@ -92,8 +92,8 @@ describe('deck dashboard integration', () => {
     ).toEqual({tableName: 'dashboard_table'});
   });
 
-  it('preserves quoted selected table identities when resolving sources', () => {
-    const dashboard = createDashboard('"main"."events.2026"');
+  it('omits catalog-qualified selected table identities in map runtime SQL', () => {
+    const dashboard = createDashboard('"memory"."main"."events.2026"');
     const panel = createDeckMapDashboardPanelConfig({
       spec: {layers: []},
       datasets: {},
@@ -108,6 +108,14 @@ describe('deck dashboard integration', () => {
         },
       }),
     ).toEqual({sqlQuery: 'SELECT * FROM "main"."events.2026"'});
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {},
+      }),
+    ).toEqual({tableName: '"main"."events.2026"'});
 
     const tableSql = createDeckMapDashboardDatasetQuery(
       {tableName: '"main"."events.2026"'},
