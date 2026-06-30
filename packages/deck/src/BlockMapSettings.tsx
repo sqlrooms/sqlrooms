@@ -37,6 +37,7 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
   blockInstanceId,
+  onClose,
   readOnly,
 }) => {
   const mapId = blockInstanceId ?? blockId;
@@ -99,6 +100,7 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
     <MapSettingsPanel
       dashboardId={mapId}
       panel={panelWithCaption}
+      onClose={onClose}
       onTableChange={handleTableChange}
       onTitleChange={handleTitleChange}
       readOnly={readOnly}

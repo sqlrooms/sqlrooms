@@ -452,6 +452,14 @@ export {ChartBlockRenderer} from './charts/block-document/ChartBlockRenderer';
 // ============================================================================
 
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+export {
+  CodeViewToggleButton,
+  type CodeViewToggleButtonProps,
+} from './editor/CodeViewToggleButton';
+export {
+  MosaicCodeViewerPanel,
+  type MosaicCodeViewerPanelProps,
+} from './editor/MosaicCodeViewerPanel';
 export {useMosaicEditorContext} from './editor/MosaicEditorContext';
 export {
   getCachedMosaicSchema,

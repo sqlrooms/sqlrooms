@@ -3,7 +3,6 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
   ResizablePanelHandle,
-  ScrollArea,
   cn,
 } from '@sqlrooms/ui';
 import type {Editor} from '@tiptap/react';
@@ -108,7 +107,7 @@ export const BlockSettingsPanelLayout: FC<BlockSettingsPanelLayoutProps> = ({
         onResize={handleResize}
       >
         {isOpen ? (
-          <ScrollArea className="h-full [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!h-full">
+          <>
             {editor !== undefined && documentId ? (
               <BlockSettingsPanel
                 className={cn('h-full', settingsClassName)}
@@ -122,7 +121,7 @@ export const BlockSettingsPanelLayout: FC<BlockSettingsPanelLayoutProps> = ({
                 onClose={handleClose}
               />
             )}
-          </ScrollArea>
+          </>
         ) : null}
       </ResizablePanel>
     </ResizablePanelGroup>

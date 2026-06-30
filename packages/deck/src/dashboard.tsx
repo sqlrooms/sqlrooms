@@ -17,7 +17,6 @@ import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
 import {AlertTriangleIcon, FocusIcon, MapIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckJsonMapHandle} from './types';
 import {
@@ -352,31 +351,13 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
 }
 
 function DeckMapDashboardHeaderActions({
-  dashboardId,
   panel,
 }: MosaicDashboardPanelRendererProps) {
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
-  );
-
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
 
-  const handleConfigApply = useCallback(
-    (nextConfig: Record<string, unknown>) => {
-      updatePanel(dashboardId, panel.id, {
-        config: nextConfig,
-      });
-    },
-    [dashboardId, panel.id, updatePanel],
-  );
-
   return (
     <div className="flex items-center gap-0.5">
-      <DeckMapConfigPopoverEditor
-        value={panel.config}
-        onApply={handleConfigApply}
-      />
       <Button
         variant="ghost"
         size="icon"
@@ -404,9 +385,6 @@ function DeckMapDashboardRenderer({
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
-  );
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
   );
   const issue = useStoreWithMosaicDashboard((state) =>
     state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),

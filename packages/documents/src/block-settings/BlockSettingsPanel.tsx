@@ -1,11 +1,11 @@
 import {Button, cn} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 import {createElement, FC, useContext} from 'react';
 import type {Editor} from '@tiptap/react';
 import {useSelectedBlockOrPanel} from './useSelectedBlockOrPanel';
 import {useBlockSettings} from './useBlockSettings';
 import {BlockDocumentEditorContext} from '../BlockDocumentEditor/BlockDocumentEditorContext';
 import {SettingsErrorBoundary} from './SettingsErrorBoundary';
-import {XIcon} from 'lucide-react';
 
 type SharedBlockSettingsPanelProps = {
   /** Additional CSS classes to apply to the panel */
@@ -39,21 +39,23 @@ type BlockSettingsEmptyStateProps = {
   className?: string;
   message: string;
   onClose?: () => void;
+  showCloseButton?: boolean;
 };
 
 const BlockSettingsEmptyState: FC<BlockSettingsEmptyStateProps> = ({
   className,
   message,
   onClose,
+  showCloseButton,
 }) => {
   return (
     <div
       className={cn(
-        'relative flex h-full min-h-full items-center justify-center p-4',
+        'relative flex h-full min-h-full flex-col items-center justify-center gap-2 p-4',
         className,
       )}
     >
-      {onClose ? (
+      {onClose && showCloseButton ? (
         <Button
           type="button"
           variant="ghost"
@@ -66,6 +68,17 @@ const BlockSettingsEmptyState: FC<BlockSettingsEmptyStateProps> = ({
         </Button>
       ) : null}
       <p className="text-muted-foreground text-sm">{message}</p>
+      {onClose ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="Close settings panel"
+          onClick={onClose}
+        >
+          Close settings
+        </Button>
+      ) : null}
     </div>
   );
 };
@@ -117,6 +130,7 @@ export const BlockSettingsPanel: FC<BlockSettingsPanelProps> = ({
         className={className}
         message="Select a block to edit settings"
         onClose={onClose}
+        showCloseButton
       />
     );
   }

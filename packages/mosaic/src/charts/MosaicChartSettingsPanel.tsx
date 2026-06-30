@@ -16,6 +16,8 @@ export type MosaicChartSettingsPanelProps = {
   /** Called when the chart configuration changes. */
   onChange: (config: ChartConfig) => void;
   readOnly?: boolean;
+  /** Whether to render the inline view-spec button above chart controls. */
+  showViewSpecButton?: boolean;
 };
 
 /**
@@ -26,6 +28,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
   config,
   onChange,
   readOnly,
+  showViewSpecButton = true,
 }) => {
   const columns = dataTable?.columns || [];
   const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
@@ -48,7 +51,7 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     );
   }
 
-  const showViewSpec = renderContext.type === 'spec';
+  const showViewSpec = showViewSpecButton && renderContext.type === 'spec';
 
   return (
     <MosaicChartSettings.Root

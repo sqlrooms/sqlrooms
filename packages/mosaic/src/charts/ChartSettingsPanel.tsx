@@ -1,12 +1,14 @@
 import {type DataTable} from '@sqlrooms/db';
-import {FC} from 'react';
+import {FC, useCallback, useState} from 'react';
 import {type ChartConfig} from './chart-types/chart-config';
 import {DataTableSelector} from '../components/DataTableSelector';
 import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 import {Field} from '../components/Field';
 import {MosaicChartSettingsPanel} from './MosaicChartSettingsPanel';
-import {Button} from '@sqlrooms/ui';
-import {SlidersVerticalIcon, XIcon} from 'lucide-react';
+import {ScrollArea, SettingsPanelHeader} from '@sqlrooms/ui';
+import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
+import {MosaicChartSettings} from './chart-settings/MosaicChartSettings';
+import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
 
 /**
  * Props for the ChartSettingsPanel component.
@@ -52,54 +54,76 @@ export const ChartSettingsPanel: FC<ChartSettingsPanelProps> = ({
   onClose,
 }) => {
   const tables = useTablesWithColumns();
+  const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
+  const renderContext = useMosaicChartRenderContext(dataTable, config);
+
+  const hasSpec = renderContext.type === 'spec';
+  const showSpec = hasSpec && viewMode === 'spec';
+
+  const handleToggleSpec = useCallback(() => {
+    setViewMode((currentViewMode) =>
+      currentViewMode === 'spec' ? 'settings' : 'spec',
+    );
+  }, []);
 
   return (
-    <div className="flex min-h-full flex-col gap-2 p-2">
-      <div className="flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-          <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
-          Settings
-        </h3>
-        {onClose ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            aria-label="Close chart settings"
-            onClick={onClose}
-          >
-            <XIcon className="h-3.5 w-3.5" aria-hidden />
-          </Button>
-        ) : null}
-      </div>
-
-      <Field label="Title">
-        <input
-          value={title ?? ''}
-          onChange={(e) => onTitleChange?.(e.target.value)}
-          placeholder="Enter title"
-          disabled={readOnly}
-          className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-6 w-full rounded-sm border bg-transparent px-2 py-0 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-      </Field>
-
-      <Field label="Dataset" required>
-        <DataTableSelector
-          onChange={onTableChange}
-          tables={tables}
-          value={dataTable}
-          className="w-full"
-          disabled={readOnly}
-        />
-      </Field>
-
-      <MosaicChartSettingsPanel
-        dataTable={dataTable}
-        config={config}
-        onChange={onConfigChange}
-        readOnly={readOnly}
+    <div className="flex h-full min-h-0 flex-col">
+      <SettingsPanelHeader
+        className="shrink-0 p-2"
+        actions={
+          hasSpec ? (
+            <MosaicChartSettings.ViewSpecButton
+              label={showSpec ? 'Show settings' : 'View spec'}
+              selected={showSpec}
+              onClick={handleToggleSpec}
+            />
+          ) : undefined
+        }
+        onClose={onClose}
+        closeLabel="Close chart settings"
       />
+
+      {showSpec ? (
+        <div className="min-h-0 flex-1">
+          <MosaicChartSpecViewerPanel
+            spec={renderContext.spec}
+            onBack={() => setViewMode('settings')}
+            showHeader={false}
+          />
+        </div>
+      ) : (
+        <ScrollArea className="min-h-0 flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
+          <div className="flex flex-col gap-2 p-2 pt-0">
+            <Field label="Title">
+              <input
+                value={title ?? ''}
+                onChange={(e) => onTitleChange?.(e.target.value)}
+                placeholder="Enter title"
+                disabled={readOnly}
+                className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-8 w-full rounded-md border bg-transparent px-3 py-2 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </Field>
+
+            <Field label="Dataset" required>
+              <DataTableSelector
+                onChange={onTableChange}
+                tables={tables}
+                value={dataTable}
+                className="w-full"
+                disabled={readOnly}
+              />
+            </Field>
+
+            <MosaicChartSettingsPanel
+              dataTable={dataTable}
+              config={config}
+              onChange={onConfigChange}
+              readOnly={readOnly}
+              showViewSpecButton={false}
+            />
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 };

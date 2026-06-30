@@ -29,10 +29,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@sqlrooms/ui';
-import {CodeIcon, XIcon} from 'lucide-react';
+import {XIcon} from 'lucide-react';
 import {useChartTypeDefinition} from '../useChartTypeDefinition';
 import {Field} from '../../components/Field';
 import {useColumnsContext} from '../../components/ColumnsContext';
+import {CodeViewToggleButton} from '../../editor/CodeViewToggleButton';
 
 interface MosaicChartSettingsRootProps {
   config: ChartConfig;
@@ -54,26 +55,13 @@ const MosaicChartSettingsRoot: FC<
   );
 };
 
-const MosaicChartSettingsViewSpecButton: FC<{onClick?: () => void}> = ({
-  onClick,
-}) => {
+const MosaicChartSettingsViewSpecButton: FC<{
+  label?: string;
+  onClick?: () => void;
+  selected?: boolean;
+}> = ({label = 'View spec', onClick, selected}) => {
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={onClick}
-            aria-label="View spec"
-          >
-            <CodeIcon className="h-3.5 w-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>View spec</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <CodeViewToggleButton label={label} selected={selected} onClick={onClick} />
   );
 };
 

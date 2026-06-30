@@ -11,6 +11,7 @@ This package provides:
 - React components for rendering Vega-Lite charts using Mosaic
 - Hooks for integrating Mosaic with DuckDB in SQLRooms applications
 - Utilities for working with Mosaic specifications
+- Reusable editor primitives for SQLRooms settings panels and code views
 
 ## Installation
 
@@ -160,6 +161,36 @@ function EarthquakeExplorer() {
       </div>
     </DataTableExplorer>
   );
+}
+```
+
+### Code View Primitives
+
+Use `MosaicCodeViewerPanel` with `CodeViewToggleButton` for settings panels
+that can switch between form controls and a read-only JSON/spec view with a
+copy overlay.
+
+```tsx
+import {CodeViewToggleButton, MosaicCodeViewerPanel} from '@sqlrooms/mosaic';
+
+function SettingsHeaderAction({
+  showCode,
+  onToggle,
+}: {
+  showCode: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <CodeViewToggleButton
+      label={showCode ? 'Show settings' : 'View code'}
+      selected={showCode}
+      onClick={onToggle}
+    />
+  );
+}
+
+function CodeView({value}: {value: string}) {
+  return <MosaicCodeViewerPanel value={value} copyTooltipLabel="Copy config" />;
 }
 ```
 

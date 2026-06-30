@@ -1,18 +1,18 @@
 import {type FC, useMemo} from 'react';
-import {ScrollArea} from '@sqlrooms/ui';
-import {MosaicCodeMirrorEditor} from '../../editor/MosaicCodeMirrorEditor';
 import {MosaicChartSettings} from './MosaicChartSettings';
 import {Spec} from '@uwdata/mosaic-spec';
 import {toRenderableMosaicSpec} from '../../dashboard/utils';
+import {MosaicCodeViewerPanel} from '../../editor/MosaicCodeViewerPanel';
 
 interface MosaicChartSpecViewerPanelProps {
   spec: Spec;
   onBack: () => void;
+  showHeader?: boolean;
 }
 
 export const MosaicChartSpecViewerPanel: FC<
   MosaicChartSpecViewerPanelProps
-> = ({spec, onBack}) => {
+> = ({spec, onBack, showHeader = true}) => {
   const renderableSpec = toRenderableMosaicSpec(spec);
 
   const serializedValue = useMemo(
@@ -22,26 +22,21 @@ export const MosaicChartSpecViewerPanel: FC<
 
   return (
     <div className="flex h-full flex-col">
-      <MosaicChartSettings.Header>
-        <div className="flex items-center">
-          <span>Spec viewer</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <MosaicChartSettings.CloseButton onClick={onBack} />
-        </div>
-      </MosaicChartSettings.Header>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="h-full p-2">
-          <div className="border-input h-full overflow-hidden rounded-md border">
-            <MosaicCodeMirrorEditor
-              value={serializedValue}
-              className="h-full"
-              enableSchemaValidation
-              readOnly
-            />
+      {showHeader ? (
+        <MosaicChartSettings.Header>
+          <div className="flex items-center">
+            <span>Spec viewer</span>
           </div>
-        </div>
-      </ScrollArea>
+          <div className="flex items-center gap-1">
+            <MosaicChartSettings.CloseButton onClick={onBack} />
+          </div>
+        </MosaicChartSettings.Header>
+      ) : null}
+      <MosaicCodeViewerPanel
+        value={serializedValue}
+        copyTooltipLabel="Copy spec"
+        enableSchemaValidation
+      />
     </div>
   );
 };

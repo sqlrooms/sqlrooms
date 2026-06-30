@@ -15,6 +15,7 @@ import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
 export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
   blockId,
   dashboardId,
+  onClose,
   readOnly,
 }) => {
   const dashboard = useStoreWithMosaicDashboard((state) =>
@@ -75,6 +76,7 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
       <MapSettingsPanel
         dashboardId={dashboard.id}
         panel={panel}
+        onClose={onClose}
         onTableChange={handleChangeRequest}
         onTitleChange={handleTitleChange}
         readOnly={readOnly}
