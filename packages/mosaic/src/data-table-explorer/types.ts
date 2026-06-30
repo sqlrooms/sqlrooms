@@ -78,7 +78,10 @@ export type DataTableExplorerColumnState = {
   summary: DataTableExplorerSummaryState;
 };
 
-export type DataTableExplorerTableReference = string | QualifiedTableName;
+/**
+ * Resolved SQLRooms table identity accepted by DataTableExplorer.
+ */
+export type DataTableExplorerTableReference = QualifiedTableName;
 
 /**
  * DataTableExplorer-specific alias for Mosaic SQL AST table references.

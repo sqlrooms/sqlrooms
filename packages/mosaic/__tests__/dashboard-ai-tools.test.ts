@@ -266,6 +266,10 @@ describe('createDashboardAgentTool', () => {
           tableName === 'earthquakes'
             ? ({
                 tableName: 'earthquakes',
+                table: makeQualifiedTableName({
+                  schema: 'main',
+                  table: 'earthquakes',
+                }),
                 columns: [],
               } as any)
             : undefined,
@@ -285,7 +289,10 @@ describe('createDashboardAgentTool', () => {
       dashboardId: 'dashboard-1',
       metadata: {tableName: 'earthquakes'},
     });
-    expect(setSelectedTable).toHaveBeenCalledWith('dashboard-1', 'earthquakes');
+    expect(setSelectedTable).toHaveBeenCalledWith(
+      'dashboard-1',
+      '"main"."earthquakes"',
+    );
     expect(runSubAgent).toHaveBeenCalledTimes(1);
   });
 });

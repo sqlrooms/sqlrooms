@@ -10,12 +10,19 @@ import type {
   BlockDocumentBlock,
   BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
+import {makeQualifiedTableName} from '@sqlrooms/db';
 
 describe('Mosaic block-document AI tools', () => {
   function createMockDatabaseAdapter(): DatabaseAiAdapter {
     return {
       getTables: () => [],
-      findTable: (tableName) => ({tableName}),
+      findTable: (tableName) => ({
+        tableName: String(tableName),
+        table: makeQualifiedTableName({
+          schema: 'main',
+          table: String(tableName),
+        }),
+      }),
     };
   }
 
@@ -176,7 +183,7 @@ describe('Mosaic block-document AI tools', () => {
         type: 'statefulBlock',
         blockType: 'data-table',
         blockInstanceId: 'table-instance-1',
-        title: 'earthquakes',
+        title: '"main"."earthquakes"',
         caption: 'Earthquake Rows',
       }),
     ]);

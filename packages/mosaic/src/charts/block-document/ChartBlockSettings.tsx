@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {
   BlockDocumentChartBlock,
   BlockSettingsComponentProps,
@@ -8,7 +8,6 @@ import {
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
 import {type FC, useMemo} from 'react';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {type ChartConfig} from '../chart-types/chart-config';
 import {ChartSettingsPanel} from '../ChartSettingsPanel';
 
@@ -67,7 +66,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
     if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...chartBlock,
-      tableName: getMosaicTableIdentity(table.table),
+      tableName: getTableIdentity(table.table),
     });
   };
 

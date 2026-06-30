@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {type FC, useCallback, useMemo} from 'react';
 import {
@@ -6,7 +6,6 @@ import {
   useConfirmDatasetChange,
 } from '../../dashboard/ConfirmDatasetChangeDialog';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
 
 /**
@@ -36,7 +35,7 @@ export const MosaicDashboardDataTableExplorerSettings: FC<
       if (readOnly) return;
 
       if (dashboardId) {
-        setSelectedTable(dashboardId, getMosaicTableIdentity(table.table));
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
       }
     },
     [dashboardId, readOnly, setSelectedTable],

@@ -4,8 +4,8 @@ import {createDataTableExplorerTool} from '../createDataTableExplorerTool';
 import {createMosaicDashboardDataTableExplorerPanelConfig} from '../../dashboard/MosaicDashboardSlice';
 import {DatabaseAiAdapter} from '../database-types';
 import {DashboardAiAdapter} from './dashboard-types';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {ensureTable} from '../tool-helpers';
+import {getTableIdentity} from '@sqlrooms/db';
 
 /**
  * Parameters for creating a dashboard data table explorer tool.
@@ -38,7 +38,7 @@ export function createDashboardDataTableExplorerTool({
         : undefined;
       if (resolvedTable?.table) {
         await dashboardAdapter.setSelectedTable(
-          getMosaicTableIdentity(resolvedTable.table),
+          getTableIdentity(resolvedTable.table),
         );
       }
 

@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import {
   blockDocumentContentToBlocks,
   type BlockDocumentStatefulBlockBlock,
@@ -7,7 +7,6 @@ import {
 } from '@sqlrooms/documents';
 import {type FC, useMemo} from 'react';
 import {useStoreWithMosaic} from '../../MosaicSlice';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
 
 function useDataTableBlock(
@@ -64,7 +63,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
     ).reset();
     updateBlock(dashboardId, blockId, {
       ...dataTableBlock,
-      title: getMosaicTableIdentity(table.table),
+      title: getTableIdentity(table.table),
     });
   };
 

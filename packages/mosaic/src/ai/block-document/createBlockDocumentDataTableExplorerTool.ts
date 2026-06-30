@@ -5,7 +5,8 @@ import type {
 } from '@sqlrooms/documents';
 import {createDataTableExplorerTool} from '../createDataTableExplorerTool';
 import type {DatabaseAiAdapter} from '../database-types';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
+import {getTableIdentity} from '@sqlrooms/db';
+import {ensureTable} from '../tool-helpers';
 
 /**
  * Parameters for creating a Mosaic data-table explorer block-document tool.
@@ -54,16 +55,8 @@ export function createBlockDocumentDataTableExplorerTool({
       }
 
       blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
-      const resolvedTable = databaseAdapter.findTable(tableName);
-      const tableIdentity = resolvedTable?.table
-        ? getMosaicTableIdentity(resolvedTable.table)
-        : getMosaicTableIdentity(tableName);
-
-      if (!tableIdentity) {
-        throw new Error(
-          'Table name is required to add a data table explorer block',
-        );
-      }
+      const resolvedTable = ensureTable(databaseAdapter, tableName);
+      const tableIdentity = getTableIdentity(resolvedTable.table);
 
       if (addDataTableExplorerBlock) {
         return await addDataTableExplorerBlock({

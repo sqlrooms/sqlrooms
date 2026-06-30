@@ -9,7 +9,7 @@ import {DEFAULT_CHART_MAX_DATA_POINTS} from '../../chart-runtime';
 import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {DASHBOARD_CHART_TOOL_PREFIX} from './constants';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from '../../dashboard/dashboard-types';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
+import {getTableIdentity} from '@sqlrooms/db';
 
 /**
  * Parameters for creating dashboard chart tools.
@@ -63,7 +63,7 @@ export function createDashboardChartTools({
         ? databaseAdapter.findTable(tableName)
         : undefined;
       const selectedTableIdentity = resolvedTable?.table
-        ? getMosaicTableIdentity(resolvedTable.table)
+        ? getTableIdentity(resolvedTable.table)
         : undefined;
 
       if (selectedTableIdentity) {

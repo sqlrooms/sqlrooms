@@ -1,8 +1,7 @@
-import {makeQualifiedTableName} from '@sqlrooms/db';
+import {getTableIdentity, makeQualifiedTableName} from '@sqlrooms/db';
 import {
   getMosaicRawSqlTableReference,
   getMosaicSqlTableReference,
-  getMosaicTableIdentity,
   getMosaicVgPlotTableReference,
   resolveMosaicTableReference,
 } from '../src/mosaicTableReference';
@@ -20,8 +19,8 @@ describe('mosaic table references', () => {
       table: 'orders',
     });
 
-    expect(getMosaicTableIdentity(first)).toBe('"db1"."main"."orders"');
-    expect(getMosaicTableIdentity(second)).toBe('"db2"."main"."orders"');
+    expect(getTableIdentity(first)).toBe('"db1"."main"."orders"');
+    expect(getTableIdentity(second)).toBe('"db2"."main"."orders"');
   });
 
   it('drops the catalog and quotes schema/table for vgplot string refs', () => {
@@ -59,7 +58,6 @@ describe('mosaic table references', () => {
   it('keeps memory catalog identities out of Mosaic execution references', () => {
     const identity = '"memory"."main"."events"';
 
-    expect(getMosaicTableIdentity(identity)).toBe(identity);
     expect(getMosaicSqlTableReference(identity).toString()).toContain(
       '"main"."events"',
     );

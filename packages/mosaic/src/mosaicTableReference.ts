@@ -58,20 +58,6 @@ export function getMosaicSqlTableReference(
 }
 
 /**
- * Returns the SQLRooms table identity string for React/store keys.
- *
- * This is a persistence/lookup identity, not a Mosaic AST reference or raw SQL
- * fragment.
- */
-export function getMosaicTableIdentity(
-  tableName: MosaicTableReferenceInput,
-): string {
-  return typeof tableName === 'string'
-    ? tableName.trim()
-    : tableName.toString();
-}
-
-/**
  * Converts SQLRooms table identity into a serializable vgplot `data.from`
  * reference.
  *

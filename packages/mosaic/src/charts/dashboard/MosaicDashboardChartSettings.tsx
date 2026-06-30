@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {type FC, useCallback, useMemo} from 'react';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
@@ -7,7 +7,6 @@ import {
   ConfirmDatasetChangeDialog,
   useConfirmDatasetChange,
 } from '../../dashboard/ConfirmDatasetChangeDialog';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {type ChartConfig} from '../chart-types/chart-config';
 import {ChartSettingsPanel} from '../ChartSettingsPanel';
 
@@ -41,7 +40,7 @@ export const MosaicDashboardChartSettings: FC<BlockSettingsComponentProps> = ({
       if (readOnly) return;
 
       if (dashboardId) {
-        setSelectedTable(dashboardId, getMosaicTableIdentity(table.table));
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
       }
     },
     [dashboardId, readOnly, setSelectedTable],
