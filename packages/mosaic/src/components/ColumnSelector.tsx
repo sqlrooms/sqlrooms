@@ -13,6 +13,10 @@ export interface ColumnSelectorProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  /**
+   * Disable opening the column selector.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -30,6 +34,7 @@ const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
   onChange,
   placeholder,
   className,
+  disabled,
 }) => {
   const {columns} = useColumnsContext();
 
@@ -45,6 +50,7 @@ const ColumnSelectorRoot: FC<ColumnSelectorProps> = ({
       onChange={onChange}
       placeholder={placeholder ?? 'Select column…'}
       className={className}
+      disabled={disabled}
     />
   );
 };

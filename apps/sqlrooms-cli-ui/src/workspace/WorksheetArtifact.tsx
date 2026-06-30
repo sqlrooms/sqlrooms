@@ -2,14 +2,20 @@ import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
   BlockDocumentArtifact,
+  BlockSettingsPanelLayout,
   BlockDocumentStatefulBlockRendererProvider,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  type Editor,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {DataTableBlockRenderer, ChartBlockRenderer} from '@sqlrooms/mosaic';
+import {
+  ChartBlockRenderer,
+  ChartBlockSettings,
+  DataTableBlockRenderer,
+} from '@sqlrooms/mosaic';
 import {PythonBlock} from '@sqlrooms/python/block';
-import {FC, useCallback, useEffect, useMemo} from 'react';
+import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
@@ -76,7 +82,7 @@ const WorksheetHtmlAppBlockRenderer: FC<
   <HtmlAppBlock
     blockId={props.blockInstanceId}
     title={props.title}
-    className="bg-background h-full min-h-[320px]"
+    className="bg-background h-full min-h-80"
   />
 );
 
@@ -96,7 +102,7 @@ const WorksheetPythonBlockRenderer: FC<
 const ExperimentalStatefulBlockPlaceholder: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => (
-  <div className="bg-muted/20 flex h-full min-h-[160px] items-center justify-center p-4 text-center">
+  <div className="bg-muted/20 flex h-full min-h-40 items-center justify-center p-4 text-center">
     <div className="bg-background max-w-md rounded-md border p-4">
       <div className="text-sm font-medium">
         {props.title || 'Experimental block'}
@@ -154,6 +160,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const renameArtifact = useRoomStore(
     (state) => state.artifacts.renameArtifact,
   );
+  const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
     if (artifact?.type === 'worksheet') {
@@ -186,16 +193,22 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   }
 
   return (
-    <BlockDocumentChartRendererProvider renderer={ChartBlockRenderer}>
+    <BlockDocumentChartRendererProvider
+      renderer={ChartBlockRenderer}
+      settings={ChartBlockSettings}
+    >
       <BlockDocumentStatefulBlockRendererProvider
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
       >
-        <BlockDocumentArtifact
-          artifactId={artifactId}
-          title={artifact.title}
-          onTitleChange={handleTitleChange}
-        />
+        <BlockSettingsPanelLayout editor={editor} documentId={artifactId}>
+          <BlockDocumentArtifact
+            artifactId={artifactId}
+            title={artifact.title}
+            onTitleChange={handleTitleChange}
+            onEditorReady={setEditor}
+          />
+        </BlockSettingsPanelLayout>
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>
   );

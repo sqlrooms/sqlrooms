@@ -31,9 +31,7 @@ describe('mosaic table references', () => {
       table: 'earthquakes',
     });
 
-    expect(getMosaicVgPlotTableReference(table)).toBe(
-      '"main"."earthquakes"',
-    );
+    expect(getMosaicVgPlotTableReference(table)).toBe('"main"."earthquakes"');
   });
 
   it('preserves dotted and quoted identifier boundaries', () => {
@@ -43,9 +41,7 @@ describe('mosaic table references', () => {
       table: 'events"2026',
     });
 
-    expect(getMosaicVgPlotTableReference(table)).toBe(
-      '"ma.in"."events""2026"',
-    );
+    expect(getMosaicVgPlotTableReference(table)).toBe('"ma.in"."events""2026"');
     expect(getMosaicSqlTableReference(table).toString()).toContain(
       '"ma.in"."events""2026"',
     );

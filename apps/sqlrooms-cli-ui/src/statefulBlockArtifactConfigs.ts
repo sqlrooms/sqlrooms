@@ -1,9 +1,14 @@
 import type {
+  BlockSettingsComponent,
   BlockDocumentStatefulBlockCreateNodeOptions,
   BlockDocumentStatefulBlockCommandType,
   BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
-import {ensureDeckMapBlockState} from '@sqlrooms/deck';
+import {DeckMapBlockSettings, ensureDeckMapBlockState} from '@sqlrooms/deck';
+import {
+  DataTableBlockSettings,
+  MosaicDashboardSettings,
+} from '@sqlrooms/mosaic';
 import type {RoomState} from './store-types';
 
 export type FeatureStability = 'stable' | 'experimental';
@@ -22,6 +27,7 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     maxHeight?: number;
     requireScrollModifier?: boolean;
     scrollHintLabel?: string;
+    settings?: BlockSettingsComponent;
     ensureState: (
       state: RoomState,
       artifactId: string,
@@ -46,6 +52,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     maxHeight: 1600,
     requireScrollModifier: true,
     scrollHintLabel: 'this dashboard',
+    settings: MosaicDashboardSettings,
     ensureState: (state, artifactId, title) => {
       state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
     },
@@ -86,6 +93,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     maxHeight: 1600,
     requireScrollModifier: true,
     scrollHintLabel: 'this data table',
+    settings: DataTableBlockSettings,
     ensureState: () => {},
     deleteState: () => {},
   },
@@ -102,6 +110,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     maxHeight: 1600,
     requireScrollModifier: true,
     scrollHintLabel: 'this map',
+    settings: DeckMapBlockSettings,
     ensureState: (state, artifactId, title) => {
       ensureDeckMapBlockState(state, artifactId, title);
     },
@@ -239,6 +248,7 @@ export function createStatefulBlockTypes({
         maxHeight: config.maxHeight,
         requireScrollModifier: config.requireScrollModifier,
         scrollHintLabel: config.scrollHintLabel,
+        settings: config.settings,
         createNode: (blockId, options) => {
           const state = getState();
           config.ensureState(state, blockId, config.embeddedTitle, options);

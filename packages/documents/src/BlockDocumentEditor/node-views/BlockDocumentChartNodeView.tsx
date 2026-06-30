@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import {NodeViewWrapper} from '@tiptap/react';
+import {NodeViewWrapper, type Editor} from '@tiptap/react';
 import {
   createElement,
   memo,
@@ -20,6 +20,8 @@ type BlockDocumentChartNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
+  getPos: () => number | undefined;
+  editor: Editor;
 };
 
 type ChartRendererBoundaryProps = BlockDocumentChartRendererProps & {
@@ -38,7 +40,7 @@ ChartRendererBoundary.displayName = 'ChartRendererBoundary';
 /** Renders a chart block as a Tiptap node view inside the block document editor. */
 export const BlockDocumentChartNodeView: FC<
   BlockDocumentChartNodeViewProps
-> = ({node, selected, updateAttributes}) => {
+> = ({node, selected, updateAttributes, getPos, editor}) => {
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const Renderer = useBlockDocumentChartRenderer();
   const updateAttributesRef = useRef(updateAttributes);
@@ -71,14 +73,26 @@ export const BlockDocumentChartNodeView: FC<
     updateAttributesRef.current({caption: nextCaption});
   }, []);
 
+  const handleClick = useCallback(() => {
+    // Select this node when clicked
+    // Panel selection will be cleared automatically by useSelectedBlockOrPanel hook
+    if (editor && !selected) {
+      const pos = getPos();
+      if (pos !== undefined) {
+        editor.commands.setNodeSelection(pos);
+      }
+    }
+  }, [editor, selected, getPos]);
+
   return (
     <NodeViewWrapper
       className={cn(
         'not-prose bg-background my-4 rounded-md border',
-        selected && 'ring-ring ring-2',
+        selected && 'outline-primary rounded-none outline outline-2',
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
+      onClick={handleClick}
     >
       {Renderer ? (
         <ChartRendererBoundary
@@ -89,6 +103,7 @@ export const BlockDocumentChartNodeView: FC<
           config={config}
           selectionGroupId={selectionGroupId}
           caption={caption}
+          selected={selected}
           readOnly={readOnly}
           onTableNameChange={handleTableNameChange}
           onConfigChange={handleConfigChange}

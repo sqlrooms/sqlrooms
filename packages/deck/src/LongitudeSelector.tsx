@@ -9,12 +9,14 @@ interface LongitudeSelectorProps {
   dashboardId: string;
   panel: MosaicDashboardPanelConfigType;
   currentTable: DataTable;
+  readOnly?: boolean;
 }
 
 export const LongitudeSelector: FC<LongitudeSelectorProps> = ({
   dashboardId,
   panel,
   currentTable,
+  readOnly,
 }) => {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -26,6 +28,7 @@ export const LongitudeSelector: FC<LongitudeSelectorProps> = ({
 
   const handleChange = useCallback(
     (longitudeColumn: string) => {
+      if (readOnly) return;
       if (!currentLatitudeColumn) return;
 
       const newConfig = regenerateMapConfigForTable(
@@ -45,6 +48,7 @@ export const LongitudeSelector: FC<LongitudeSelectorProps> = ({
       currentTable,
       updatePanel,
       dashboardId,
+      readOnly,
       mapConfig?.settingsOpen,
     ],
   );
@@ -53,6 +57,7 @@ export const LongitudeSelector: FC<LongitudeSelectorProps> = ({
     <ColumnSelector.Numeric
       value={currentLongitudeColumn}
       onChange={handleChange}
+      disabled={readOnly}
     />
   );
 };

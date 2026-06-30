@@ -1,4 +1,5 @@
 import {
+  BlockCaptionEditor,
   DataTableSelectorEmptyState,
   getMosaicDashboardSelectionName,
   type MosaicDashboardStoreState,
@@ -85,6 +86,10 @@ export type DeckMapBlockRendererProps = {
   title?: string;
   /** Optional header text that overrides the title when rendering. */
   caption?: string;
+  /** Callback when caption changes. */
+  onCaptionChange?: (caption: string | undefined) => void;
+  /** Whether the block is read-only. */
+  readOnly?: boolean;
 };
 
 /**
@@ -94,6 +99,8 @@ export function DeckMapBlockRenderer({
   mapId,
   title,
   caption,
+  onCaptionChange,
+  readOnly,
 }: DeckMapBlockRendererProps) {
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[mapId],
@@ -229,9 +236,14 @@ export function DeckMapBlockRenderer({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <MapIcon className="h-4 w-4 shrink-0" />
-          <span className="truncate">{caption || title || panel.title}</span>
+          <BlockCaptionEditor
+            value={caption ?? panel.title ?? ''}
+            placeholder={dashboard.selectedTable || title || 'Map caption'}
+            isReadOnly={readOnly}
+            onChange={(value: string) => onCaptionChange?.(value || undefined)}
+          />
         </div>
         {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
       </div>

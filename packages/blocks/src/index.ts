@@ -81,6 +81,15 @@ export type StatefulBlockRenderProps<TRoomState = unknown> = {
   getState?: () => TRoomState;
 };
 
+export type StatefulBlockSettingsProps<TRoomState = unknown> = {
+  blockId: BlockId;
+  blockType: BlockType;
+  blockInstanceId?: BlockId;
+  title?: string;
+  attrs?: Record<string, unknown>;
+  getState?: () => TRoomState;
+};
+
 export type StatefulBlockDefinition<TRoomState = unknown> = {
   type: BlockType;
   label: string;
@@ -93,4 +102,5 @@ export type StatefulBlockDefinition<TRoomState = unknown> = {
   rename?: (context: StatefulBlockRenameContext<TRoomState>) => void;
   close?: (context: StatefulBlockContext<TRoomState>) => void;
   render: ComponentType<StatefulBlockRenderProps<TRoomState>>;
+  settings?: ComponentType<StatefulBlockSettingsProps<TRoomState>>;
 };

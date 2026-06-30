@@ -22,6 +22,7 @@ import {useCombobox, type UseComboboxOptions} from '../hooks/useCombobox';
 
 interface ComboboxContextValue {
   open: boolean;
+  disabled: boolean;
   currentValue: string;
   handleSelect: (value: string) => void;
 }
@@ -55,14 +56,20 @@ function ComboboxRoot<T extends string = string>({
   value,
   onChange,
   currentValue,
+  disabled,
   children,
 }: ComboboxRootProps<T>) {
-  const {popoverProps, handleSelect, open} = useCombobox({value, onChange});
+  const {popoverProps, handleSelect, open} = useCombobox({
+    value,
+    onChange,
+    disabled,
+  });
 
   return (
     <ComboboxContext.Provider
       value={{
         open,
+        disabled: Boolean(disabled),
         currentValue: currentValue ?? String(value),
         handleSelect,
       }}
@@ -85,7 +92,7 @@ const ComboboxTrigger: FC<PropsWithChildren<ComboboxTriggerProps>> = ({
   className,
   ariaLabel,
 }) => {
-  const {open} = useComboboxContext();
+  const {disabled, open} = useComboboxContext();
 
   return (
     <PopoverTrigger asChild>
@@ -94,6 +101,7 @@ const ComboboxTrigger: FC<PropsWithChildren<ComboboxTriggerProps>> = ({
         role="combobox"
         aria-expanded={open}
         aria-label={ariaLabel}
+        disabled={disabled}
         className={cn('h-8 justify-between text-xs font-normal', className)}
       >
         {children}

@@ -51,8 +51,17 @@ export {
   type MosaicDashboardBlockRenderProps,
 } from './dashboard/createMosaicDashboardBlockDefinition';
 export {DefaultMosaicDashboardBlock} from './dashboard/DefaultMosaicDashboardBlock';
+export {MosaicDashboardSettings} from './dashboard/MosaicDashboardSettings';
+export {
+  ConfirmDatasetChangeDialog,
+  useConfirmDatasetChange,
+  type ConfirmDatasetChangeDialogProps,
+} from './dashboard/ConfirmDatasetChangeDialog';
 export {useMosaicDashboardContext} from './dashboard/MosaicDashboardContext';
 export {MosaicDashboardPanelErrorBoundary} from './dashboard/panel/MosaicDashboardPanelErrorBoundary';
+/**
+ * @deprecated Use the new block selection system with BlockSettingsPanel instead.
+ */
 export {MosaicDashboardPanelLayout} from './dashboard/panel/MosaicDashboardPanelLayout';
 export {createDefaultMosaicDashboardPanelRenderers} from './dashboard/createDefaultMosaicDashboardPanelRenderers';
 export {defaultAddPanelActions} from './dashboard/defaultPanelActions';
@@ -105,6 +114,10 @@ export {
   MosaicDashboardSliceConfig,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
+export {
+  createDashboardFeatureSlices,
+  type MosaicDashboardFeatureSlicesState,
+} from './dashboard/MosaicDashboardFeatureSlices';
 // Dashboard types and constants
 export {
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
@@ -152,6 +165,12 @@ export {
   MosaicChartSettingsPanel,
   type MosaicChartSettingsPanelProps,
 } from './charts/MosaicChartSettingsPanel';
+export {
+  ChartSettingsPanel,
+  type ChartSettingsPanelProps,
+} from './charts/ChartSettingsPanel';
+export {ChartBlockSettings} from './charts/block-document/ChartBlockSettings';
+export {MosaicDashboardChartSettings} from './charts/dashboard/MosaicDashboardChartSettings';
 export {
   createMosaicColorLegendPlot,
   MosaicColorLegend,
@@ -201,7 +220,13 @@ export {
   type DataTableExplorerProps,
   type DataTableExplorerRootProps,
 } from './data-table-explorer/DataTableExplorer';
-export {DataTableBlockRenderer} from './data-table-explorer/worksheet/DataTableBlockRenderer';
+export {
+  DataTableSettingsPanel,
+  type DataTableSettingsPanelProps,
+} from './data-table-explorer/DataTableSettingsPanel';
+export {DataTableBlockRenderer} from './data-table-explorer/block-document/DataTableBlockRenderer';
+export {DataTableBlockSettings} from './data-table-explorer/block-document/DataTableBlockSettings';
+export {MosaicDashboardDataTableExplorerSettings} from './data-table-explorer/dashboard/MosaicDashboardDataTableExplorerSettings';
 export {
   DataTableExplorerHeader,
   type DataTableExplorerHeaderProps,
@@ -272,6 +297,7 @@ export {Field} from './components/Field';
 export {TableSelector} from './components/TableSelector';
 export {ColumnSelector} from './components/ColumnSelector';
 export {MultiFieldSelector} from './components/MultiFieldSelector';
+export {BlockCaptionEditor} from './components/BlockCaptionEditor';
 export {
   ColumnsProvider,
   useColumnsContext,
@@ -418,14 +444,22 @@ export {ensurePanel, ensureTable, ensureNoOverride} from './ai/tool-helpers';
 export {AiAgentError} from './ai/errors';
 export type {ToolOutput} from './ai/tool-types';
 
-// Block renderers for worksheets
-export {ChartBlockRenderer} from './charts/worksheet/ChartBlockRenderer';
+// Block renderers for block documents
+export {ChartBlockRenderer} from './charts/block-document/ChartBlockRenderer';
 
 // ============================================================================
 // Spec Editor Components
 // ============================================================================
 
 export {MosaicCodeMirrorEditor} from './editor/MosaicCodeMirrorEditor';
+export {
+  CodeViewToggleButton,
+  type CodeViewToggleButtonProps,
+} from './editor/CodeViewToggleButton';
+export {
+  MosaicCodeViewerPanel,
+  type MosaicCodeViewerPanelProps,
+} from './editor/MosaicCodeViewerPanel';
 export {useMosaicEditorContext} from './editor/MosaicEditorContext';
 export {
   getCachedMosaicSchema,

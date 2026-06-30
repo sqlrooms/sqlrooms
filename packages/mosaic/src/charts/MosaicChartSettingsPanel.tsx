@@ -1,33 +1,45 @@
 import {type FC, useCallback, useState} from 'react';
 import {MosaicChartSettings} from './chart-settings/MosaicChartSettings';
-import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
 import {type ChartConfig} from './chart-types/chart-config';
+import {type DataTable} from '@sqlrooms/db';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
-import {DataTable} from '@sqlrooms/db';
+import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
 
+/**
+ * Props for the Mosaic chart settings panel.
+ */
 export type MosaicChartSettingsPanelProps = {
+  /** Data table that supplies fields available to the chart configuration. */
   dataTable?: DataTable;
+  /** Current chart configuration shown in the settings controls. */
   config: ChartConfig;
+  /** Called when the chart configuration changes. */
   onChange: (config: ChartConfig) => void;
-  onClose?: () => void;
+  readOnly?: boolean;
+  /** Whether to render the inline view-spec button above chart controls. */
+  showViewSpecButton?: boolean;
 };
 
+/**
+ * Renders chart configuration controls and the generated chart spec viewer.
+ */
 export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
   dataTable,
   config,
   onChange,
-  onClose,
+  readOnly,
+  showViewSpecButton = true,
 }) => {
+  const columns = dataTable?.columns || [];
   const [viewMode, setViewMode] = useState<'settings' | 'spec'>('settings');
-
   const renderContext = useMosaicChartRenderContext(dataTable, config);
-
-  const handleViewSpec = useCallback(() => {
-    setViewMode('spec');
-  }, []);
 
   const handleBackToSettings = useCallback(() => {
     setViewMode('settings');
+  }, []);
+
+  const handleViewSpec = useCallback(() => {
+    setViewMode('spec');
   }, []);
 
   if (renderContext.type === 'spec' && viewMode === 'spec') {
@@ -39,27 +51,21 @@ export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
     );
   }
 
-  const columns = dataTable?.columns || [];
+  const showViewSpec = showViewSpecButton && renderContext.type === 'spec';
 
   return (
     <MosaicChartSettings.Root
       config={config}
       columns={columns}
-      onChange={onChange}
+      onChange={readOnly ? () => {} : onChange}
     >
-      <MosaicChartSettings.Header>
-        <div className="flex items-center">Chart settings</div>
-        <div className="flex items-center gap-1">
-          {renderContext.type === 'spec' && (
-            <MosaicChartSettings.ViewSpecButton onClick={handleViewSpec} />
-          )}
-          {onClose && <MosaicChartSettings.CloseButton onClick={onClose} />}
+      {showViewSpec && (
+        <div className="mb-2 flex justify-end">
+          <MosaicChartSettings.ViewSpecButton onClick={handleViewSpec} />
         </div>
-      </MosaicChartSettings.Header>
-      <MosaicChartSettings.Content>
-        <MosaicChartSettings.TypeSelector />
-        <MosaicChartSettings.Fields />
-      </MosaicChartSettings.Content>
+      )}
+      <MosaicChartSettings.TypeSelector />
+      <MosaicChartSettings.Fields />
     </MosaicChartSettings.Root>
   );
 };

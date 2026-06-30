@@ -2,6 +2,7 @@ import {createContext, useContext} from 'react';
 
 export type MosaicDashboardContextValue = {
   dashboardId: string;
+  readOnly?: boolean;
   builderOpen: boolean;
   canCreateChart: boolean;
   openBuilder: () => void;

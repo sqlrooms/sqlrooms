@@ -9,6 +9,10 @@ import {
 import {MosaicChartBuilder} from '../MosaicChartBuilder';
 import {MosaicDashboardContext} from './MosaicDashboardContext';
 import {MosaicDashboardPanels} from './panel/MosaicDashboardPanels';
+import {
+  SelectablePanelWrapper,
+  useBlockSettingsStore,
+} from '@sqlrooms/documents';
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
@@ -18,14 +22,18 @@ import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
 import {ChartBuilderColumn} from '../charts/chart-types/base-types';
 import {ChartConfig} from '../charts/chart-types/chart-config';
 import {useSelectedOrFirstTable} from './useSelectedOrFirstTable';
+import {MosaicDashboardSettings} from './MosaicDashboardSettings';
+import {ScrollArea} from '@sqlrooms/ui';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
+  readOnly?: boolean;
 }>;
 
 export function MosaicDashboardRoot({
   children,
   dashboardId,
+  readOnly,
 }: MosaicDashboardRootProps) {
   const ensureDashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.ensureDashboard,
@@ -82,6 +90,7 @@ export function MosaicDashboardRoot({
   const contextValue = useMemo(
     () => ({
       dashboardId,
+      readOnly,
       builderOpen,
       canCreateChart: Boolean(
         selectedTableInfo &&
@@ -95,6 +104,7 @@ export function MosaicDashboardRoot({
     }),
     [
       dashboardId,
+      readOnly,
       builderOpen,
       selectedTableInfo,
       panelRenderers,
@@ -124,19 +134,62 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
+  /** Whether to enable selection of the entire dashboard */
+  selectable?: boolean;
+  /** Whether settings for this dashboard should avoid mutating state. */
+  readOnly?: boolean;
 };
 
 function MosaicDashboardComponent({
   dashboardId,
+  selectable = false,
+  readOnly,
 }: MosaicDashboardProps): ReactElement {
+  const clearSelection = useBlockSettingsStore(
+    (state) => state.blockSettings?.clearSelection,
+  );
+
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Don't clear if clicking on a panel - SelectablePanelWrapper has data-selectable-panel
+      const isPanel = target.closest('[data-selectable-panel]');
+      if (isPanel) {
+        return;
+      }
+
+      // Clear selection for clicks on toolbar, empty space, or layout elements
+      clearSelection();
+    },
+    [clearSelection],
+  );
+
   return (
-    <MosaicDashboardRoot dashboardId={dashboardId}>
-      <div className="flex h-full flex-col">
-        <MosaicDashboardToolbar />
-        <div className="h-full overflow-y-auto">
-          <MosaicDashboardPanels />
+    <MosaicDashboardRoot dashboardId={dashboardId} readOnly={readOnly}>
+      {selectable ? (
+        <SelectablePanelWrapper
+          dashboardId={dashboardId}
+          panelId={dashboardId}
+          panelType="dashboard"
+          blockType="dashboard-block"
+          className="flex flex-col"
+          settingsComponent={MosaicDashboardSettings}
+          readOnly={readOnly}
+        >
+          <MosaicDashboardToolbar />
+          <ScrollArea className="min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full">
+            <MosaicDashboardPanels />
+          </ScrollArea>
+        </SelectablePanelWrapper>
+      ) : (
+        <div className="flex h-full flex-col" onClick={handleContainerClick}>
+          <MosaicDashboardToolbar />
+          <ScrollArea className="min-h-0 flex-1 overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!min-h-full">
+            <MosaicDashboardPanels />
+          </ScrollArea>
         </div>
-      </div>
+      )}
     </MosaicDashboardRoot>
   );
 }

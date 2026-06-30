@@ -52,7 +52,12 @@ export {
   type CreateBlockDocumentsSliceProps,
 } from './BlockDocumentsSlice';
 export {
+  createBlockDocumentFeatureSlices,
+  type BlockDocumentFeatureSlicesState,
+} from './BlockDocumentFeatureSlices';
+export {
   BlockDocumentChartRendererProvider,
+  useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
   type BlockDocumentChartRendererProps,
@@ -61,6 +66,7 @@ export {
 export {
   BlockDocumentStatefulBlockRendererProvider,
   useBlockDocumentStatefulBlockRenderer,
+  useBlockDocumentStatefulBlockSettings,
   useBlockDocumentStatefulBlockTypes,
   type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockRenderer,
@@ -158,3 +164,5 @@ export {
   type KnowledgeIndex,
   type UnresolvedDocumentLink,
 } from './knowledgeIndex';
+export * from './block-settings';
+export type {Editor} from '@tiptap/react';
