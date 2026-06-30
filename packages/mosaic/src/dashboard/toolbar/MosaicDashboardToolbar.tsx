@@ -9,7 +9,7 @@ import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
 export const MosaicDashboardToolbar: FC = () => {
-  const {dashboardId} = useMosaicDashboardContext();
+  const {dashboardId, readOnly} = useMosaicDashboardContext();
 
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
@@ -30,9 +30,11 @@ export const MosaicDashboardToolbar: FC = () => {
 
   const handleTitleChange = useCallback(
     (title: string | undefined) => {
+      if (readOnly) return;
+
       setDashboardTitle(dashboardId, title || '');
     },
-    [dashboardId, setDashboardTitle],
+    [dashboardId, readOnly, setDashboardTitle],
   );
 
   if (!selectedTableName) {
@@ -40,16 +42,22 @@ export const MosaicDashboardToolbar: FC = () => {
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 border-b px-5 py-2">
+    <div
+      className="flex items-center justify-between gap-2 border-b px-5 py-2"
+      data-dashboard-toolbar
+    >
       <BlockCaptionEditor
         value={dashboardTitle}
         placeholder={tableName || 'Dashboard title'}
+        isReadOnly={readOnly}
         onChange={handleTitleChange}
       />
 
       <div className="flex items-center gap-2">
-        <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
         <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
+        {!readOnly ? (
+          <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
+        ) : null}
         <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
       </div>
     </div>

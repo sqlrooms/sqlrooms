@@ -1,5 +1,9 @@
 import type {RoomPanelComponent} from '@sqlrooms/layout';
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
+import {
+  SelectablePanelWrapper,
+  useBlockSettingsStore,
+} from '@sqlrooms/documents';
 import {MosaicDashboardPanelErrorBoundary} from './MosaicDashboardPanelErrorBoundary';
 import {MosaicDashboardPanelHeader} from './MosaicDashboardPanelHeader';
 import {
@@ -9,7 +13,7 @@ import {
 import {useMosaicDashboardContext} from '../MosaicDashboardContext';
 
 export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
-  const {dashboardId} = useMosaicDashboardContext();
+  const {dashboardId, readOnly} = useMosaicDashboardContext();
   const panelId = meta?.panelId as string | undefined;
 
   const dashboard = useStoreWithMosaicDashboard(
@@ -19,6 +23,12 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
     (state) => state.mosaicDashboard.panelRenderers,
   );
   const selectionName = getMosaicDashboardSelectionName(dashboardId);
+  const selectBlock = useBlockSettingsStore(
+    (state) => state.blockSettings.selectBlock,
+  );
+  const updatePanel = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.updatePanel,
+  );
 
   const panel = useMemo(
     () =>
@@ -28,6 +38,26 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
     [dashboard?.panels, panelId],
   );
   const renderer = panel ? panelRenderers[panel.type] : undefined;
+  const handleSelectPanel = useCallback(() => {
+    if (!panel) return;
+
+    selectBlock({
+      type: 'dashboard-panel',
+      id: panel.id,
+      dashboardId,
+      panelType: panel.type,
+      settingsComponent: renderer?.settings,
+      readOnly,
+    });
+  }, [dashboardId, panel, readOnly, renderer?.settings, selectBlock]);
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      if (!panel || readOnly) return;
+
+      updatePanel(dashboardId, panel.id, {title: title || undefined});
+    },
+    [dashboardId, panel, readOnly, updatePanel],
+  );
 
   if (!dashboard || !panel) {
     return (
@@ -40,34 +70,46 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
   const RendererComponent = renderer?.component;
 
   return (
-    <div className="flex h-full flex-col">
-      <MosaicDashboardPanelHeader
-        dashboardId={dashboardId}
-        dashboard={dashboard}
-        panel={panel}
-        renderer={renderer}
-        selectionName={selectionName}
-      />
+    <SelectablePanelWrapper
+      dashboardId={dashboardId}
+      panelId={panel.id}
+      panelType={panel.type}
+      blockType="dashboard-panel"
+      settingsComponent={renderer?.settings}
+      readOnly={readOnly}
+    >
+      <div className="flex h-full flex-col">
+        <MosaicDashboardPanelHeader
+          dashboardId={dashboardId}
+          dashboard={dashboard}
+          panel={panel}
+          renderer={renderer}
+          selectionName={selectionName}
+          onSelectPanel={handleSelectPanel}
+          onTitleChange={readOnly ? undefined : handleTitleChange}
+          readOnly={readOnly}
+        />
 
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <MosaicDashboardPanelErrorBoundary
-          key={dashboard?.selectedTable ?? ''}
-          panelType={panel.type}
-        >
-          {RendererComponent ? (
-            <RendererComponent
-              dashboardId={dashboardId}
-              dashboard={dashboard}
-              panel={panel}
-              selectionName={selectionName}
-            />
-          ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
-              Unsupported dashboard panel type: {panel.type}
-            </div>
-          )}
-        </MosaicDashboardPanelErrorBoundary>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <MosaicDashboardPanelErrorBoundary
+            key={dashboard?.selectedTable ?? ''}
+            panelType={panel.type}
+          >
+            {RendererComponent ? (
+              <RendererComponent
+                dashboardId={dashboardId}
+                dashboard={dashboard}
+                panel={panel}
+                selectionName={selectionName}
+              />
+            ) : (
+              <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
+                Unsupported dashboard panel type: {panel.type}
+              </div>
+            )}
+          </MosaicDashboardPanelErrorBoundary>
+        </div>
       </div>
-    </div>
+    </SelectablePanelWrapper>
   );
 };

@@ -14,7 +14,7 @@ function getBlockDocumentChartRuntimeKey({
   documentId,
   blockId,
 }: Pick<BlockDocumentChartRendererProps, 'documentId' | 'blockId'>) {
-  return `worksheet:${documentId}:chart-block:${blockId}`;
+  return `block-document:${documentId}:chart-block:${blockId}`;
 }
 
 export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
@@ -23,6 +23,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
   tableName,
   config,
   caption,
+  selected,
   readOnly,
   onTableNameChange,
   onConfigChange,
@@ -83,12 +84,11 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
       <ChartBlockHeader
         caption={caption}
         chartConfig={chartConfig}
-        selectedTable={selectedTable}
+        tableName={selectedTable.table.table}
+        selected={selected}
         onCaptionChange={onCaptionChange}
         onSettingsOpenChange={handleSettingsOpenChange}
-        onTableChange={handleTableChange}
         readOnly={readOnly}
-        tables={tables}
       />
       <div className="min-h-0 flex-1">
         <MosaicChart

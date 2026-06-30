@@ -155,6 +155,11 @@ export {
 
 export {Input} from './components/input';
 
+export {
+  SettingsPanelHeader,
+  type SettingsPanelHeaderProps,
+} from './components/settings-panel-header';
+
 export {Label} from './components/label';
 
 export {

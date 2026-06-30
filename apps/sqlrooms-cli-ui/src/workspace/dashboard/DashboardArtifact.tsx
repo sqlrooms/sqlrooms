@@ -1,3 +1,4 @@
+import {BlockSettingsPanelLayout} from '@sqlrooms/documents';
 import {
   MosaicDashboard,
   type MosaicDashboardBlockRenderProps,
@@ -25,5 +26,9 @@ export const DashboardArtifact: FC<
     return null;
   }
 
-  return <MosaicDashboard dashboardId={artifactId} />;
+  return (
+    <BlockSettingsPanelLayout>
+      <MosaicDashboard dashboardId={artifactId} />
+    </BlockSettingsPanelLayout>
+  );
 };

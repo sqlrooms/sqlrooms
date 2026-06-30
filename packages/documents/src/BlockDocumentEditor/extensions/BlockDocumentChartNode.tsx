@@ -6,7 +6,7 @@ export const BlockDocumentChartNode = Node.create({
   name: 'blockDocumentChart',
   group: 'block',
   atom: true,
-  selectable: false,
+  selectable: true,
   draggable: false,
   isolating: true,
 

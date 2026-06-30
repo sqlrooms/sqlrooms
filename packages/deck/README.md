@@ -134,6 +134,10 @@ const spec = createDeckJsonSpecFromDatasets({
 deck.gl or MapLibre. Pass the renderer when creating the Mosaic dashboard
 slice.
 
+The dashboard renderer exposes `DeckMapDashboardSettings` through its renderer
+definition. `DeckMapBlockSettings` is also exported for block-document hosts
+that embed maps as stateful blocks.
+
 ```tsx
 import {
   createDeckMapDashboardPanelConfig,

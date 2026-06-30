@@ -15,18 +15,10 @@ import {
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
-import {
-  AlertTriangleIcon,
-  FocusIcon,
-  MapIcon,
-  SettingsIcon,
-} from 'lucide-react';
+import {AlertTriangleIcon, FocusIcon, MapIcon} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {DeckMapConfigPopoverEditor} from './DeckMapConfigPopoverEditor';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckJsonMapHandle} from './types';
-import {MapSettingsPanel} from './MapSettings';
-import {MosaicDashboardPanelLayout} from '@sqlrooms/mosaic';
 import {
   asDeckJsonMapConfig,
   createDeckMapDashboardPanelConfig,
@@ -48,6 +40,7 @@ import {
 } from './useDeckMapFitToBounds';
 export {createDeckMapBoundsQuery};
 import {useDeckMapDatasets} from './useDeckMapDatasets';
+import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
   createDeckMapDashboardPanelConfigForTable,
   findGeometryColumn,
@@ -358,54 +351,13 @@ function isPickedMapFeature(info: DeckMapInteractionEvent) {
 }
 
 function DeckMapDashboardHeaderActions({
-  dashboardId,
   panel,
 }: MosaicDashboardPanelRendererProps) {
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
-  );
-
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
 
-  const isSettingsOpen = Boolean(mapConfig?.settingsOpen);
-
-  const handleConfigApply = useCallback(
-    (nextConfig: Record<string, unknown>) => {
-      updatePanel(dashboardId, panel.id, {
-        config: nextConfig,
-      });
-    },
-    [dashboardId, panel.id, updatePanel],
-  );
-
-  const handleToggleSettings = useCallback(() => {
-    updatePanel(dashboardId, panel.id, {
-      config: {...panel.config, settingsOpen: !isSettingsOpen},
-    });
-  }, [dashboardId, isSettingsOpen, panel.config, panel.id, updatePanel]);
-
   return (
     <div className="flex items-center gap-0.5">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="data-[state=active]:bg-accent h-6 w-6"
-            title="Map settings"
-            onClick={handleToggleSettings}
-            data-state={isSettingsOpen ? 'active' : 'inactive'}
-          >
-            <SettingsIcon className="h-3.5 w-3.5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Map settings</TooltipContent>
-      </Tooltip>
-      <DeckMapConfigPopoverEditor
-        value={panel.config}
-        onApply={handleConfigApply}
-      />
       <Button
         variant="ghost"
         size="icon"
@@ -434,9 +386,6 @@ function DeckMapDashboardRenderer({
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
   );
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
-  );
   const issue = useStoreWithMosaicDashboard((state) =>
     state.mosaicDashboard.getPanelIssue(dashboardId, panel.id),
   );
@@ -456,18 +405,6 @@ function DeckMapDashboardRenderer({
     panel.id,
   ]);
 
-  const isSettingsOpen = Boolean(
-    (panel.config as DeckMapDashboardPanelConfig).settingsOpen,
-  );
-
-  const handleSettingsOpenChange = useCallback(
-    (isOpen: boolean) => {
-      updatePanel(dashboardId, panel.id, {
-        config: {...panel.config, settingsOpen: isOpen},
-      });
-    },
-    [dashboardId, panel.config, panel.id, updatePanel],
-  );
   const selection = useMemo<Selection>(
     () => getSelection(selectionName, 'crossfilter'),
     [getSelection, selectionName],
@@ -549,14 +486,6 @@ function DeckMapDashboardRenderer({
     [datasetStates, mapConfig?.interaction, selection],
   );
 
-  const settingsContent = (
-    <MapSettingsPanel
-      dashboardId={dashboardId}
-      panel={panel}
-      onClose={() => handleSettingsOpenChange(false)}
-    />
-  );
-
   const datasetError = useMemo(() => {
     for (const state of Object.values(datasetStates)) {
       if (state.error) return state.error;
@@ -626,17 +555,16 @@ function DeckMapDashboardRenderer({
           {missingColumns.length > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
+                <span
                   className={`absolute left-2 z-10 flex h-5 w-5 items-center justify-center ${
                     Object.values(datasetStates).some((s) => s.isSampled) &&
                     !sampledDismissed
                       ? 'top-9'
                       : 'top-2'
                   }`}
-                  onClick={() => handleSettingsOpenChange(true)}
                 >
                   <AlertTriangleIcon className="h-4 w-4 text-amber-500 drop-shadow-sm" />
-                </button>
+                </span>
               </TooltipTrigger>
               <TooltipContent side="right">
                 <p className="text-xs font-medium">Missing columns:</p>
@@ -646,7 +574,7 @@ function DeckMapDashboardRenderer({
           )}
           <DeckJsonMap
             ref={deckMapRef}
-            className="h-full w-full"
+            className="h-full w-full px-0.5 pb-0.5"
             spec={mapConfig.spec}
             datasets={
               mapConfig
@@ -671,22 +599,14 @@ function DeckMapDashboardRenderer({
     </>
   );
 
-  return (
-    <div className="h-full min-h-0">
-      <MosaicDashboardPanelLayout
-        isOpen={isSettingsOpen}
-        onIsOpenChange={handleSettingsOpenChange}
-        settings={settingsContent}
-        content={mapContent}
-      />
-    </div>
-  );
+  return mapContent;
 }
 
 export const deckMapDashboardPanelRenderer: MosaicDashboardPanelRenderer = {
   component: DeckMapDashboardRenderer,
   headerActions: DeckMapDashboardHeaderActions,
   icon: MapIcon,
+  settings: DeckMapDashboardSettings,
 };
 
 export const deckMapDashboardAddPanelAction: import('@sqlrooms/mosaic').MosaicDashboardAddPanelAction =

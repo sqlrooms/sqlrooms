@@ -12,6 +12,7 @@ import {ChartConfig} from '../chart-types/chart-config';
 import {MosaicChart} from '../MosaicChart';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {resolveMosaicTableReference} from '../../mosaicTableReference';
+import {MosaicDashboardChartSettings} from './MosaicDashboardChartSettings';
 
 const MosaicDashboardChartRenderer: FC<ChartPanelRendererProps> = ({
   panel,
@@ -57,4 +58,5 @@ export const mosaicDashboardChartRenderer: MosaicDashboardPanelRenderer<ChartPan
     component: MosaicDashboardChartRenderer,
     headerActions: MosaicDashboardChartHeaderActions,
     icon: BarChart3Icon,
+    settings: MosaicDashboardChartSettings,
   };

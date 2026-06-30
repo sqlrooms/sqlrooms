@@ -25,7 +25,8 @@ other block containers.
 - `BlockReference` points at state managed elsewhere and records whether that
   state is owned, shared, or external.
 - `StatefulBlockDefinition` describes how a feature package creates, ensures,
-  renames, deletes, closes, and renders its block state.
+  renames, deletes, closes, renders, and optionally exposes settings for its
+  block state.
 - `OrderedBlockContainer` and `GraphBlockContainer` describe common container
   shapes: linear documents and DAG-like notebooks.
 

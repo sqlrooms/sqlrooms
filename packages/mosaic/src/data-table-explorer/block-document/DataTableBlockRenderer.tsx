@@ -9,6 +9,8 @@ import {useDataTable} from '@sqlrooms/db';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {DataTableExplorer} from '../DataTableExplorer';
 import {DataTableBlockHeader} from './DataTableBlockHeader';
+import {SelectablePanelWrapper} from '@sqlrooms/documents';
+import {DataTableBlockSettings} from './DataTableBlockSettings';
 
 export const DataTableBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
@@ -49,35 +51,23 @@ export const DataTableBlockRenderer: FC<
     );
   }
 
-  if (!selectedTable) {
-    return (
-      <DataTableSelectorEmptyState
-        disabled={readOnly || !onTitleChange}
-        onChange={handleTableChange}
-        tables={tables}
-      />
-    );
-  }
-
-  if (connection.status === 'loading') {
-    return (
-      <div className="flex h-full min-h-0 flex-col">
-        <SpinnerPane className="min-h-0 flex-1" />
+  const content = !selectedTable ? (
+    <DataTableSelectorEmptyState
+      disabled={readOnly || !onTitleChange}
+      onChange={handleTableChange}
+      tables={tables}
+    />
+  ) : connection.status === 'loading' ? (
+    <div className="flex h-full min-h-0 flex-col">
+      <SpinnerPane className="min-h-0 flex-1" />
+    </div>
+  ) : connection.status !== 'ready' ? (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center p-4 text-sm">
+        Mosaic connection is not ready.
       </div>
-    );
-  }
-
-  if (connection.status !== 'ready') {
-    return (
-      <div className="flex h-full min-h-0 flex-col">
-        <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center p-4 text-sm">
-          Mosaic connection is not ready.
-        </div>
-      </div>
-    );
-  }
-
-  return (
+    </div>
+  ) : (
     <DataTableExplorer
       pageSize={25}
       selectionName={selectionName}
@@ -89,10 +79,8 @@ export const DataTableBlockRenderer: FC<
           onCaptionChange={onCaptionChange}
           selectedTable={selectedTable}
           readOnly={readOnly}
-          tables={tables}
-          onTableChange={handleTableChange}
         />
-        <ScrollArea className="min-h-0 flex-1">
+        <ScrollArea className="min-h-0 flex-1 px-0.5">
           <DataTableExplorer.Table>
             <DataTableExplorer.Header />
             <DataTableExplorer.Rows />
@@ -102,5 +90,18 @@ export const DataTableBlockRenderer: FC<
         <DataTableExplorer.StatusBar />
       </div>
     </DataTableExplorer>
+  );
+
+  return (
+    <SelectablePanelWrapper
+      dashboardId={documentId}
+      panelId={blockId}
+      panelType="data-table"
+      blockInstanceId={blockInstanceId}
+      blockType="standalone-block"
+      settingsComponent={DataTableBlockSettings}
+    >
+      {content}
+    </SelectablePanelWrapper>
   );
 };

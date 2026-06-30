@@ -6,6 +6,10 @@ import {useCallback, useState} from 'react';
 export interface UseComboboxOptions<T extends string = string> {
   value: T;
   onChange: (value: T) => void;
+  /**
+   * Prevent opening the popover and committing selections.
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -32,27 +36,31 @@ export interface UseComboboxReturn {
 export function useCombobox<T extends string = string>(
   options: UseComboboxOptions<T>,
 ): UseComboboxReturn {
+  const {disabled = false, onChange} = options;
   const [open, setOpen] = useState(false);
+  const effectiveOpen = disabled ? false : open;
 
   const handleSelect = useCallback(
     (value: string) => {
-      options.onChange(value as T);
+      if (disabled) return;
+
+      onChange(value as T);
       setOpen(false);
     },
-    [options],
+    [disabled, onChange],
   );
 
   return {
-    open,
+    open: effectiveOpen,
     setOpen,
     handleSelect,
     popoverProps: {
-      open,
-      onOpenChange: setOpen,
+      open: effectiveOpen,
+      onOpenChange: disabled ? () => {} : setOpen,
     },
     triggerProps: {
       role: 'combobox' as const,
-      'aria-expanded': open,
+      'aria-expanded': effectiveOpen,
     },
   };
 }

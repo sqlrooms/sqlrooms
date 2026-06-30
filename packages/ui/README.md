@@ -90,7 +90,7 @@ function MyComponent() {
 
 ## Available Components
 
-- **Layout**: Card, Resizable, Tabs
+- **Layout**: Card, Resizable, SettingsPanelHeader, Tabs
 - **Forms**: Button, Checkbox, Combobox, Input, Select, Slider, Switch, Textarea
 - **Feedback**: Alert, Progress, Spinner, Toast
 - **Navigation**: Accordion, Breadcrumb, Dropdown Menu, TabStrip
@@ -144,7 +144,36 @@ Available compound components:
 - `Combobox.Content` - Popover content wrapper
 - `Combobox.Item` - Individual selectable item
 
+Pass `disabled` to the root `Combobox` to disable opening the dropdown and
+selecting items.
+
 For advanced composition, the lower-level `useCombobox` hook is also exported.
+
+## Settings Panel Header
+
+Use `SettingsPanelHeader` for compact settings surfaces that should share the
+standard settings icon and optional close affordance.
+
+```tsx
+import {Button, SettingsPanelHeader} from '@sqlrooms/ui';
+import {CodeIcon} from 'lucide-react';
+
+function SettingsPanel({onClose}: {onClose: () => void}) {
+  return (
+    <div className="flex h-full flex-col gap-2 p-2">
+      <SettingsPanelHeader
+        actions={
+          <Button type="button" variant="ghost" size="icon">
+            <CodeIcon className="h-3.5 w-3.5" />
+          </Button>
+        }
+        onClose={onClose}
+      />
+      {/* settings controls */}
+    </div>
+  );
+}
+```
 
 ## Advanced Features
 

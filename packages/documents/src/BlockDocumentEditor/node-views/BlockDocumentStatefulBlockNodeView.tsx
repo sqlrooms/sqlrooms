@@ -1,6 +1,6 @@
 import {cn, ModifierScrollOverlay} from '@sqlrooms/ui';
 import {isMacOS} from '@sqlrooms/utils';
-import {NodeViewWrapper} from '@tiptap/react';
+import {NodeViewWrapper, type Editor} from '@tiptap/react';
 import {
   createElement,
   memo,
@@ -25,6 +25,8 @@ type BlockDocumentStatefulBlockNodeViewProps = {
   node: {attrs: Record<string, unknown>};
   selected: boolean;
   updateAttributes: (attrs: Record<string, unknown>) => void;
+  getPos: () => number | undefined;
+  editor: Editor;
 };
 
 type StatefulBlockRendererBoundaryProps =
@@ -126,7 +128,7 @@ function scrollElementByWheel(element: HTMLElement, event: WheelEvent) {
 /** Renders a stateful block as a Tiptap node view inside the block document editor. */
 export const BlockDocumentStatefulBlockNodeView: FC<
   BlockDocumentStatefulBlockNodeViewProps
-> = ({node, selected, updateAttributes}) => {
+> = ({node, selected, updateAttributes, getPos, editor}) => {
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const updateAttributesRef = useRef(updateAttributes);
@@ -339,15 +341,27 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     updateAttributesRef.current({caption: nextCaption});
   }, []);
 
+  const handleClick = useCallback(() => {
+    // Select this node when clicked
+    // Panel selection will be cleared automatically by useSelectedBlockOrPanel hook
+    if (editor && !selected) {
+      const pos = getPos();
+      if (pos !== undefined) {
+        editor.commands.setNodeSelection(pos);
+      }
+    }
+  }, [editor, selected, getPos]);
+
   return (
     <NodeViewWrapper
       className={cn(
         'not-prose bg-background group/stateful-block relative my-4 rounded-md border',
-        selected && 'ring-ring ring-2',
+        selected && 'outline-primary outline outline-2',
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
       style={wrapperStyle}
+      onClick={handleClick}
     >
       <div
         ref={wrapperRef}
