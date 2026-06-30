@@ -7,6 +7,7 @@ import {
 } from '@sqlrooms/documents';
 import {type FC, useMemo} from 'react';
 import {useStoreWithMosaic} from '../../MosaicSlice';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
 
 function useDataTableBlock(
@@ -63,7 +64,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
     ).reset();
     updateBlock(dashboardId, blockId, {
       ...dataTableBlock,
-      title: table.table.toString(),
+      title: getMosaicTableIdentity(table.table),
     });
   };
 

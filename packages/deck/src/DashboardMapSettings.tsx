@@ -1,4 +1,4 @@
-import type {DataTable} from '@sqlrooms/duckdb';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {
   ConfirmDatasetChangeDialog,
@@ -33,7 +33,7 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
       if (readOnly) return;
 
       if (dashboardId) {
-        setSelectedTable(dashboardId, table.table.toString());
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
       }
     },
     [dashboardId, readOnly, setSelectedTable],

@@ -1,4 +1,4 @@
-import type {DataTable} from '@sqlrooms/duckdb';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {
   blockDocumentContentToBlocks,
   type BlockDocumentStatefulBlockBlock,
@@ -63,7 +63,7 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
   const handleTableChange = useCallback(
     (table: DataTable) => {
       if (readOnly) return;
-      setSelectedTable(mapId, table.table.toString());
+      setSelectedTable(mapId, getTableIdentity(table.table));
     },
     [mapId, readOnly, setSelectedTable],
   );

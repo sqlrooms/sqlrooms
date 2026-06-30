@@ -8,6 +8,7 @@ import {
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
 import {type FC, useMemo} from 'react';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {type ChartConfig} from '../chart-types/chart-config';
 import {ChartSettingsPanel} from '../ChartSettingsPanel';
 
@@ -66,7 +67,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
     if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...chartBlock,
-      tableName: table.table.toString(),
+      tableName: getMosaicTableIdentity(table.table),
     });
   };
 

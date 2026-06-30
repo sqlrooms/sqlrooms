@@ -7,6 +7,7 @@ import {
   ConfirmDatasetChangeDialog,
   useConfirmDatasetChange,
 } from '../../dashboard/ConfirmDatasetChangeDialog';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {type ChartConfig} from '../chart-types/chart-config';
 import {ChartSettingsPanel} from '../ChartSettingsPanel';
 
@@ -40,7 +41,7 @@ export const MosaicDashboardChartSettings: FC<BlockSettingsComponentProps> = ({
       if (readOnly) return;
 
       if (dashboardId) {
-        setSelectedTable(dashboardId, table.table.toString());
+        setSelectedTable(dashboardId, getMosaicTableIdentity(table.table));
       }
     },
     [dashboardId, readOnly, setSelectedTable],

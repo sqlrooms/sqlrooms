@@ -6,6 +6,7 @@ import {
   useConfirmDatasetChange,
 } from '../../dashboard/ConfirmDatasetChangeDialog';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
+import {getMosaicTableIdentity} from '../../mosaicTableReference';
 import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
 
 /**
@@ -35,7 +36,7 @@ export const MosaicDashboardDataTableExplorerSettings: FC<
       if (readOnly) return;
 
       if (dashboardId) {
-        setSelectedTable(dashboardId, table.table.toString());
+        setSelectedTable(dashboardId, getMosaicTableIdentity(table.table));
       }
     },
     [dashboardId, readOnly, setSelectedTable],
