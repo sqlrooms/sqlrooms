@@ -177,7 +177,19 @@ export function getTableIdentity(table: QualifiedTableName): TableIdentity {
 export function getFullTableIdentity(
   table: QualifiedTableName,
 ): FullTableIdentity {
-  return table.toFullString() as FullTableIdentity;
+  if (!table.database || !table.schema || !table.table) {
+    throw new Error(
+      'FullTableIdentity requires database, schema, and table parts.',
+    );
+  }
+  const fullTableIdentity = table.toFullString();
+  const parsedFullTableIdentity = parseFullTableIdentity(fullTableIdentity);
+  if (!parsedFullTableIdentity) {
+    throw new Error(
+      `Invalid FullTableIdentity generated from qualified table "${fullTableIdentity}".`,
+    );
+  }
+  return parsedFullTableIdentity;
 }
 
 function unquoteSqlIdentifierSegment(identifier: string): string {

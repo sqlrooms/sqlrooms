@@ -146,7 +146,7 @@ describe('createWorksheetCommands', () => {
   });
 
   it('adds data table and HTML app blocks through worksheet commands', async () => {
-    const {state} = createState();
+    const {state, invokeCommand} = createState();
 
     await expect(
       getCommand('worksheet.add-data-table-block').execute(
@@ -159,8 +159,21 @@ describe('createWorksheetCommands', () => {
       ),
     ).resolves.toMatchObject({
       success: true,
-      data: {blockId: 'data-table-block', dataTableId: 'data-table-id'},
+      data: {
+        blockId: 'data-table-block',
+        dataTableId: 'data-table-id',
+        selectedTable: earthquakesTableIdentity,
+      },
     });
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'worksheet.create-stateful-block',
+      expect.objectContaining({
+        artifactId: 'worksheet-1',
+        blockType: 'data-table',
+        title: earthquakesTableIdentity,
+      }),
+      {surface: 'ai', actor: 'worksheet-command'},
+    );
 
     await expect(
       getCommand('worksheet.add-html-app-block').execute(
@@ -174,6 +187,41 @@ describe('createWorksheetCommands', () => {
       success: true,
       data: {blockId: 'html-app-block', appId: 'html-app-id'},
     });
+  });
+
+  it('adds map blocks with canonical selected table identity', async () => {
+    const {state, invokeCommand} = createState();
+
+    await expect(
+      getCommand('worksheet.add-map-block').execute(
+        createCommandContext(state),
+        {
+          worksheetId: 'worksheet-1',
+          title: 'Map',
+          mapId: 'map-1',
+          tableName: 'earthquakes',
+          reasoning: 'show earthquake points',
+          config: {
+            spec: {},
+            datasets: {
+              earthquakes: {source: {tableName: 'earthquakes'}},
+            },
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        blockId: 'block-1',
+        mapId: 'map-1',
+        selectedTable: earthquakesTableIdentity,
+      },
+    });
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'dashboard.set-selected-table',
+      {dashboardId: 'map-1', tableName: earthquakesTableIdentity},
+      {surface: 'ai', actor: 'worksheet-command'},
+    );
   });
 
   it('updates worksheet block metadata through the block document slice', async () => {

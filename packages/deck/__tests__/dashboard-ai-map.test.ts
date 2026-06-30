@@ -207,6 +207,21 @@ describe('createDeckMapBoundsQuery', () => {
     expect(query).toContain('FROM "main"."events.2026"');
     expect(query).not.toContain('"events"."2026"');
   });
+
+  it('rejects invalid table sources in bounds queries', () => {
+    expect(() =>
+      createDeckMapBoundsQuery({
+        source: {
+          tableName: 'main.',
+        },
+        fitToData: {
+          dataset: 'events',
+          longitudeColumn: 'lon',
+          latitudeColumn: 'lat',
+        },
+      }),
+    ).toThrow('Deck map fit-to-data requires a valid table source.');
+  });
 });
 
 describe('quoteDeckMapSqlTableReference', () => {
@@ -220,6 +235,15 @@ describe('quoteDeckMapSqlTableReference', () => {
         table: 'events.2026',
       }),
     ).toBe('"main"."events.2026"');
+  });
+
+  it('rejects malformed table references', () => {
+    expect(() => quoteDeckMapSqlTableReference('main.')).toThrow(
+      'Invalid deck map table reference "main.".',
+    );
+    expect(() => quoteDeckMapSqlTableReference({schema: 'main'})).toThrow(
+      'Deck map table reference object requires a table name.',
+    );
   });
 });
 

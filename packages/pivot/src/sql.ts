@@ -23,6 +23,12 @@ function getTableReference(source: PivotQueryInput) {
     : getRawSqlTableReference(source.table);
 }
 
+/**
+ * Creates a pivot query source from an existing SQL-rendered table reference.
+ *
+ * Use this when the caller has already resolved and validated the table at a
+ * SQL boundary and can provide the available columns.
+ */
 export function createPivotQuerySource(
   tableRef: RawSqlTableReference,
   columns: PivotField[],
@@ -30,6 +36,13 @@ export function createPivotQuerySource(
   return {tableRef, columns};
 }
 
+/**
+ * Creates a pivot query source from a resolved SQLRooms table.
+ *
+ * This builds the `RawSqlTableReference` from `table.table` via
+ * `getRawSqlTableReference(...)`, so callers with a `DataTable` should prefer
+ * this helper over manually constructing a SQL table reference.
+ */
 export function createPivotQuerySourceFromTable(
   table: DataTable,
 ): PivotQuerySource {

@@ -195,6 +195,17 @@ describe('table reference boundary helpers', () => {
     expect(parseFullTableIdentity('"main"."events.2026"')).toBeUndefined();
   });
 
+  it('rejects incomplete structured names for full table identities', () => {
+    expect(() =>
+      getFullTableIdentity(
+        makeQualifiedTableName({
+          schema: 'main',
+          table: 'events.2026',
+        }),
+      ),
+    ).toThrow(/requires database, schema, and table/);
+  });
+
   it('converts rehydrated identities back to structured table names', () => {
     const identity = parseTableIdentity('"main"."events.2026"');
 

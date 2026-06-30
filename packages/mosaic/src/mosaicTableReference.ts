@@ -11,7 +11,10 @@ import {asTableRef, type TableRefNode} from '@uwdata/mosaic-sql';
 declare const vgPlotTableReferenceBrand: unique symbol;
 
 /**
- * Mosaic SQL AST table reference used by Mosaic query APIs.
+ * Mosaic SQL AST table reference used by Mosaic query-builder APIs.
+ *
+ * This is a structured `TableRefNode`, not a persisted identity string or a raw
+ * SQL fragment.
  */
 export type MosaicSqlTableReference = TableRefNode;
 
@@ -55,7 +58,10 @@ export function getMosaicSqlTableReference(
 }
 
 /**
- * Returns the full SQLRooms table identity for React/store keys.
+ * Returns the SQLRooms table identity string for React/store keys.
+ *
+ * This is a persistence/lookup identity, not a Mosaic AST reference or raw SQL
+ * fragment.
  */
 export function getMosaicTableIdentity(
   tableName: MosaicTableReferenceInput,
@@ -117,6 +123,12 @@ export function resolveMosaicTableReference<
  */
 export const getMosaicTableReferenceString = getMosaicVgPlotTableReference;
 
+/**
+ * Returns raw identifier parts for Mosaic-owned table-reference conversions.
+ *
+ * The database/catalog is omitted because Mosaic queries execute in the active
+ * connector context.
+ */
 function getMosaicTableReferenceParts(
   tableName: MosaicTableReferenceInput,
 ): string[] {

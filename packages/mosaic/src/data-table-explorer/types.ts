@@ -81,12 +81,7 @@ export type DataTableExplorerColumnState = {
 export type DataTableExplorerTableReference = string | QualifiedTableName;
 
 /**
- * Table reference accepted by dataTableExplorer query builders.
- *
- * Use a string for simple unqualified table names or for call sites that already
- * require a string SQL boundary. Use a TableRefNode for qualified names,
- * especially when schema or table identifier parts may contain dots or quotes,
- * so Mosaic does not reparse those parts from a flattened string.
+ * DataTableExplorer-specific alias for Mosaic SQL AST table references.
  */
 export type DataTableExplorerSqlTableReference = MosaicSqlTableReference;
 

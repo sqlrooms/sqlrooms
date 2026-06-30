@@ -31,12 +31,12 @@ type SqlConnectorLike = {
 };
 
 function toRelationSqlName(relationName: ResultRelationName): string {
-  if (typeof relationName !== 'string') {
-    return relationName.toString();
-  }
-  const rawSqlTableReference = quoteParsedRawSqlTableReference(relationName);
+  const relationReference =
+    typeof relationName === 'string' ? relationName : relationName.toString();
+  const rawSqlTableReference =
+    quoteParsedRawSqlTableReference(relationReference);
   if (!rawSqlTableReference) {
-    throw new Error(`Invalid SQL cell result relation "${relationName}".`);
+    throw new Error(`Invalid SQL cell result relation "${relationReference}".`);
   }
   return rawSqlTableReference;
 }
