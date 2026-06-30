@@ -104,12 +104,6 @@ export function resolveMosaicTableReference<
 }
 
 /**
- * @deprecated Use `getMosaicVgPlotTableReference` for chart specs or
- * `getMosaicRawSqlTableReference` for string-built SQL.
- */
-export const getMosaicTableReferenceString = getMosaicVgPlotTableReference;
-
-/**
  * Returns raw identifier parts for Mosaic-owned table-reference conversions.
  *
  * The database/catalog is omitted because Mosaic queries execute in the active

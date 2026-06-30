@@ -22,7 +22,6 @@ export * as vg from '@uwdata/vgplot';
 export {
   getMosaicRawSqlTableReference,
   getMosaicSqlTableReference,
-  getMosaicTableReferenceString,
   getMosaicVgPlotTableReference,
   resolveMosaicTableReference,
   type MosaicSqlTableReference,
