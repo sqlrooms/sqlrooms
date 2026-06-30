@@ -121,30 +121,31 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   // If the dataset has a sqlQuery and the dashboard table differs from the
   // original source table, rewrite the FROM clause to use the new table.
   if (datasetSource?.sqlQuery && dashboardTable) {
-    const originalTable = datasetSource.tableName;
-    const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
-    const quotedDashboard = dashboardTable.includes('"')
-      ? dashboardTable
-      : dashboardTable.split('.').map(quote).join('.');
+    const originalTable = stripCatalogPrefix(datasetSource.tableName);
+    const quotedDashboard = quoteRuntimeTableReference(dashboardTable);
+    if (!quotedDashboard) {
+      return datasetSource;
+    }
 
-    if (originalTable && dashboardTable !== originalTable) {
-      const quotedOriginal = originalTable.split('.').map(quote).join('.');
-      const rewritten = datasetSource.sqlQuery
-        .replace(
-          new RegExp(
-            `\\bFROM\\s+${escapeRegExp(originalTable)}(?=\\s|$|[,;)\\[\\]])`,
-            'gi',
-          ),
-          `FROM ${quotedDashboard}`,
-        )
-        .replace(
-          new RegExp(
-            `\\bFROM\\s+${escapeRegExp(quotedOriginal)}(?=\\s|$|[,;)\\[\\]])`,
-            'gi',
-          ),
-          `FROM ${quotedDashboard}`,
+    if (originalTable) {
+      const quotedOriginal = quoteRuntimeTableReference(originalTable);
+      if (quotedOriginal && quotedOriginal !== quotedDashboard) {
+        const originalReferences = Array.from(
+          new Set([originalTable, quotedOriginal]),
         );
-      return {sqlQuery: rewritten};
+        const rewritten = originalReferences.reduce(
+          (sqlQuery, originalReference) =>
+            sqlQuery.replace(
+              new RegExp(
+                `\\bFROM\\s+${escapeRegExp(originalReference)}(?=\\s|$|[,;)\\[\\]])`,
+                'gi',
+              ),
+              `FROM ${quotedDashboard}`,
+            ),
+          datasetSource.sqlQuery,
+        );
+        return {sqlQuery: rewritten};
+      }
     }
 
     if (!originalTable) {
@@ -164,6 +165,10 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   const resolvedSource = {tableName: baseTableName!};
 
   return resolvedSource;
+}
+
+function quoteRuntimeTableReference(tableName: string | undefined) {
+  return quoteParsedRawSqlTableReference(stripCatalogPrefix(tableName));
 }
 
 function escapeRegExp(str: string): string {

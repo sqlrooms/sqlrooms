@@ -125,6 +125,29 @@ describe('deck dashboard integration', () => {
     expect(tableSql).not.toContain('"events"."2026"');
   });
 
+  it('normalizes catalog-qualified source tables before rewriting dataset SQL', () => {
+    const dashboard = createDashboard('"memory"."main"."events.2026"');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {
+            tableName: '"memory"."main"."old.events"',
+            sqlQuery: 'SELECT * FROM "main"."old.events" WHERE value > 0',
+          },
+        },
+      }),
+    ).toEqual({
+      sqlQuery: 'SELECT * FROM "main"."events.2026" WHERE value > 0',
+    });
+  });
+
   it('builds Mosaic dataset queries for table and trusted SQL sources', () => {
     const tableSql = createDeckMapDashboardDatasetQuery(
       {tableName: 'earthquakes'},

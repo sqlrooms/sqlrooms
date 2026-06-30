@@ -201,9 +201,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const fallbackTableName =
     activeLayerDataset?.source?.tableName ||
     extractTableFromSqlQuery(activeLayerDataset?.source?.sqlQuery);
-  const primaryTable = useDataTable(dashboardSelectedTable);
   const fallbackTable = useDataTable(fallbackTableName);
-  const dataTable = primaryTable ?? fallbackTable;
+  const dataTable = selectedDataTable ?? fallbackTable;
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
