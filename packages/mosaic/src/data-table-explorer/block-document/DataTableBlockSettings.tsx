@@ -6,6 +6,7 @@ import {
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
 import {type FC, useMemo} from 'react';
+import {useStoreWithMosaic} from '../../MosaicSlice';
 import {DataTableSettingsPanel} from '../DataTableSettingsPanel';
 
 function useDataTableBlock(
@@ -39,6 +40,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
   const updateBlock = useStoreWithBlockDocuments(
     (state) => state.blockDocuments.updateBlock,
   );
+  const getSelection = useStoreWithMosaic((state) => state.mosaic.getSelection);
   const dataTable = useDataTable(dataTableBlock?.title);
 
   if (!dataTableBlock || !dashboardId) {
@@ -52,6 +54,10 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
   }
 
   const handleTableChange = (table: DataTable) => {
+    getSelection(
+      `block-document:${dashboardId}:data-table:${blockId}:brush`,
+      'crossfilter',
+    ).reset();
     updateBlock(dashboardId, blockId, {
       ...dataTableBlock,
       title: table.table.toString(),
@@ -70,6 +76,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
       value={dataTable}
       onChange={handleTableChange}
       title={dataTableBlock.caption || ''}
+      titleLabel="Caption"
       onTitleChange={handleCaptionChange}
     />
   );

@@ -5,18 +5,30 @@ import {DataTableSelector} from '../components/DataTableSelector';
 import {useTablesWithColumns} from '../hooks/useTablesWithColumns';
 import {Field} from '../components/Field';
 
+/**
+ * Props for the data-table explorer settings panel.
+ */
 export type DataTableSettingsPanelProps = {
+  /** Currently selected table for the data-table explorer. */
   value: DataTable | undefined;
+  /** Called when the selected table changes. */
   onChange: (table: DataTable) => void;
-  /** Optional title value and change handler */
+  /** Optional display title or caption value. */
   title?: string;
+  /** Label for the editable title field. */
+  titleLabel?: string;
+  /** Called when the display title or caption changes. */
   onTitleChange?: (title: string) => void;
 };
 
+/**
+ * Renders dataset and title controls for data-table explorer settings.
+ */
 export const DataTableSettingsPanel: FC<DataTableSettingsPanelProps> = ({
   value,
   onChange,
   title,
+  titleLabel = 'Title',
   onTitleChange,
 }) => {
   const tables = useTablesWithColumns();
@@ -27,11 +39,11 @@ export const DataTableSettingsPanel: FC<DataTableSettingsPanelProps> = ({
         <h3 className="text-sm font-semibold">Data Table Settings</h3>
       </div>
 
-      <Field label="Title">
+      <Field label={titleLabel}>
         <Input
-          value={title}
+          value={title ?? ''}
           onChange={(e) => onTitleChange?.(e.target.value)}
-          placeholder="Enter title"
+          placeholder={`Enter ${titleLabel.toLowerCase()}`}
           className="text-xs"
         />
       </Field>

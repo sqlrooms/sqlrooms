@@ -108,6 +108,13 @@ export function useSelectedBlockOrPanel(editor: Editor | null): SelectedItem {
       // This ensures only one selection is active at a time
       if (selection && panelSelection) {
         clearSelection();
+        return;
+      }
+
+      // If the user moves focus into normal editor text, clear custom panel
+      // selection so the settings pane does not keep editing the old panel.
+      if (!selection && panelSelection && editor.view.hasFocus()) {
+        clearSelection();
       }
     };
 

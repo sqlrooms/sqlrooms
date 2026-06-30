@@ -1061,6 +1061,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               title ?? config.embeddedTitle,
             );
 
+            const syncMetadata =
+              getState().blockDocuments.getSyncMetadata(documentId);
+            if (syncMetadata?.origin !== 'editor') {
+              return;
+            }
+
             // Auto-select the newly created block
             // Use setTimeout to ensure the React component is mounted
             setTimeout(() => {
@@ -1069,6 +1075,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 type: 'standalone-block',
                 id: blockId,
                 dashboardId: documentId,
+                blockInstanceId,
                 panelType: blockType,
               });
             }, 0);

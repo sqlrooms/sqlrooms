@@ -5,12 +5,21 @@ import {type DataTable} from '@sqlrooms/db';
 import {useMosaicChartRenderContext} from './useMosaicChartRenderContext';
 import {MosaicChartSpecViewerPanel} from './chart-settings/MosaicChartSpecViewerPanel';
 
+/**
+ * Props for the Mosaic chart settings panel.
+ */
 export type MosaicChartSettingsPanelProps = {
+  /** Data table that supplies fields available to the chart configuration. */
   dataTable?: DataTable;
+  /** Current chart configuration shown in the settings controls. */
   config: ChartConfig;
+  /** Called when the chart configuration changes. */
   onChange: (config: ChartConfig) => void;
 };
 
+/**
+ * Renders chart configuration controls and the generated chart spec viewer.
+ */
 export const MosaicChartSettingsPanel: FC<MosaicChartSettingsPanelProps> = ({
   dataTable,
   config,
