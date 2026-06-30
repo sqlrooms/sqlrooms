@@ -52,6 +52,10 @@ export {
   type CreateBlockDocumentsSliceProps,
 } from './BlockDocumentsSlice';
 export {
+  createBlockDocumentFeatureSlices,
+  type BlockDocumentFeatureSlicesState,
+} from './BlockDocumentFeatureSlices';
+export {
   BlockDocumentChartRendererProvider,
   useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,

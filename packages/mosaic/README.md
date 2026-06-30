@@ -203,14 +203,14 @@ Mosaic, and DB slices.
 
 ```tsx
 import {
+  createDashboardFeatureSlices,
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardSlice,
   MosaicDashboard,
 } from '@sqlrooms/mosaic';
 
-const dashboardSlice = createMosaicDashboardSlice({
+const dashboardSlice = createDashboardFeatureSlices({
   panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
   // Optional: pass chartTypes/chartBuilders to customize Add Chart.
   // Optional: pass addPanelActions to add app-specific menu entries.
@@ -253,6 +253,12 @@ Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
 panel omits a source it falls back to the dashboard selected table. Panel renderer
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
+
+`createDashboardFeatureSlices()` composes `createMosaicDashboardSlice()` with
+the shared `createBlockSettingsSlice()` from `@sqlrooms/documents`, which is the
+slice used by reusable dashboard panel settings. If an app also uses block
+documents with settings, install the shared settings slice only once by using
+one feature helper plus the other feature's lower-level slice.
 
 ### Reset Filters
 

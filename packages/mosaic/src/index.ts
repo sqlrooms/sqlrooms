@@ -114,6 +114,10 @@ export {
   MosaicDashboardSliceConfig,
   useStoreWithMosaicDashboard,
 } from './dashboard/MosaicDashboardSlice';
+export {
+  createDashboardFeatureSlices,
+  type MosaicDashboardFeatureSlicesState,
+} from './dashboard/MosaicDashboardFeatureSlices';
 // Dashboard types and constants
 export {
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,

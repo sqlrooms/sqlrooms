@@ -12,7 +12,7 @@ import {
   DocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlockDocumentCommands,
-  createBlockDocumentsSlice,
+  createBlockDocumentFeatureSlices,
   createDocumentCommands,
   createDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
@@ -54,7 +54,7 @@ const roomStore = createRoomStore(
     },
     (set, get, store) => ({
       ...createDocumentsSlice()(set, get, store),
-      ...createBlockDocumentsSlice({
+      ...createBlockDocumentFeatureSlices({
         onDeleteOwnedStatefulBlock: ({
           blockType,
           blockInstanceId,
@@ -130,8 +130,8 @@ and provide block DTO helpers for command and AI authoring surfaces:
 import {
   BlockDocumentsSliceConfig,
   createAddBlockDocumentTextBlockTool,
+  createBlockDocumentFeatureSlices,
   createListBlockDocumentBlocksTool,
-  createBlockDocumentsSlice,
 } from '@sqlrooms/documents';
 
 const roomStore = createRoomStore(
@@ -143,7 +143,7 @@ const roomStore = createRoomStore(
       },
     },
     (set, get, store) => ({
-      ...createBlockDocumentsSlice()(set, get, store),
+      ...createBlockDocumentFeatureSlices()(set, get, store),
     }),
   ),
 );
@@ -252,6 +252,12 @@ Hosts that want the standard resizable side panel shell can wrap their surface
 with `BlockSettingsPanelLayout`; pass `editor` and `documentId` when rendering
 outside a `BlockDocumentEditor` context, or omit them for dashboard panels that
 use `SelectablePanelWrapper`.
+
+`createBlockDocumentFeatureSlices()` composes `createBlockDocumentsSlice()` with
+the shared `createBlockSettingsSlice()` for apps that want a block document
+surface with reusable settings. If an app also uses another feature helper that
+includes block settings, install the shared settings slice only once by using
+one feature helper plus the other feature's lower-level slice.
 
 ### Stateful Blocks
 

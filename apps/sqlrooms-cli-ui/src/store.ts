@@ -44,9 +44,9 @@ import {
 import {
   createDefaultChartTypes,
   createDefaultMosaicDashboardPanelRenderers,
+  createDashboardFeatureSlices,
   createMosaicDashboardCommands,
   createMosaicDashboardDataTableExplorerPanelConfig,
-  createMosaicDashboardSlice,
   createMosaicSlice,
   defaultAddPanelActions,
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
@@ -96,7 +96,6 @@ import {
   BlockDocumentsSliceConfig,
   createBlockDocumentCommands,
   createBlockDocumentsSlice,
-  createBlockSettingsSlice,
   createDocumentCommands,
   createDocumentsSlice,
   DocumentsSliceConfig,
@@ -1005,7 +1004,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createMosaicDashboardSlice(
+        ...createDashboardFeatureSlices(
           experimentalEnabled
             ? createDeckMapDashboardSliceOptions()
             : {
@@ -1094,8 +1093,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             }
           },
         })(set, get, store),
-
-        ...createBlockSettingsSlice<RoomState>()(set, get, store),
 
         ...(runtimeConfig.syncEnabled
           ? createCrdtSlice<RoomState>({
