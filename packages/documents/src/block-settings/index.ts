@@ -5,4 +5,5 @@ export * from './useSelectedBlockOrPanel';
 export * from './useBlockSettings';
 export * from './SelectablePanelWrapper';
 export * from './BlockSettingsPanel';
+export * from './BlockSettingsPanelLayout';
 export * from './SettingsErrorBoundary';

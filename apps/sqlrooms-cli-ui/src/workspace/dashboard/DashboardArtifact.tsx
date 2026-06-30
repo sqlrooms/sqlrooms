@@ -1,10 +1,10 @@
+import {BlockSettingsPanelLayout} from '@sqlrooms/documents';
 import {
   MosaicDashboard,
   type MosaicDashboardBlockRenderProps,
 } from '@sqlrooms/mosaic';
 import {FC, useEffect} from 'react';
 import {useRoomStore, type RoomState} from '../../store';
-import {ResizableSettingsPanelLayout} from '../ResizableSettingsPanelLayout';
 
 export const DashboardArtifact: FC<
   MosaicDashboardBlockRenderProps<RoomState>
@@ -27,8 +27,8 @@ export const DashboardArtifact: FC<
   }
 
   return (
-    <ResizableSettingsPanelLayout>
+    <BlockSettingsPanelLayout>
       <MosaicDashboard dashboardId={artifactId} />
-    </ResizableSettingsPanelLayout>
+    </BlockSettingsPanelLayout>
   );
 };

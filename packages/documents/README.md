@@ -248,6 +248,10 @@ controls that should reveal the settings shell can call
 `blockSettings.requestOpenSettingsPanel()`. Controls that represent the
 currently shown settings can read `blockSettings.runtime.isSettingsPanelOpen`
 and call `blockSettings.requestCloseSettingsPanel()` to toggle the shell closed.
+Hosts that want the standard resizable side panel shell can wrap their surface
+with `BlockSettingsPanelLayout`; pass `editor` and `documentId` when rendering
+outside a `BlockDocumentEditor` context, or omit them for dashboard panels that
+use `SelectablePanelWrapper`.
 
 ### Stateful Blocks
 

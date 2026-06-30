@@ -2,6 +2,7 @@ import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
   BlockDocumentArtifact,
+  BlockSettingsPanelLayout,
   BlockDocumentStatefulBlockRendererProvider,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
@@ -16,7 +17,6 @@ import {
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {experimentalEnabled, useRoomStore} from '../store';
-import {ResizableSettingsPanelLayout} from './ResizableSettingsPanelLayout';
 import {
   createStatefulBlockTypes,
   type StatefulBlockArtifactType,
@@ -201,14 +201,14 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
       >
-        <ResizableSettingsPanelLayout editor={editor} documentId={artifactId}>
+        <BlockSettingsPanelLayout editor={editor} documentId={artifactId}>
           <BlockDocumentArtifact
             artifactId={artifactId}
             title={artifact.title}
             onTitleChange={handleTitleChange}
             onEditorReady={setEditor}
           />
-        </ResizableSettingsPanelLayout>
+        </BlockSettingsPanelLayout>
       </BlockDocumentStatefulBlockRendererProvider>
     </BlockDocumentChartRendererProvider>
   );
