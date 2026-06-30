@@ -17,6 +17,7 @@ import {SelectablePanelWrapper} from '@sqlrooms/documents';
 import {MosaicDashboardDataTableExplorerSettings} from './MosaicDashboardDataTableExplorerSettings';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {resolveMosaicTableReference} from '../../mosaicTableReference';
+import {useMosaicDashboardContext} from '../../dashboard/MosaicDashboardContext';
 
 type MosaicDashboardDataTableExplorerRendererInnerProps = Omit<
   DataTableExplorerPanelRendererProps,
@@ -80,6 +81,7 @@ const MosaicDashboardDataTableExplorerRendererInner: FC<
 const MosaicDashboardDataTableExplorerRenderer: FC<
   DataTableExplorerPanelRendererProps
 > = ({panel, dashboard, selectionName, dashboardId}) => {
+  const {readOnly} = useMosaicDashboardContext();
   const tables = useTablesWithColumns();
   const selectedTable = useMemo(
     () => resolveMosaicTableReference(tables, dashboard.selectedTable).table,
@@ -106,6 +108,7 @@ const MosaicDashboardDataTableExplorerRenderer: FC<
       panelType="data-table-explorer"
       blockType="dashboard-panel"
       settingsComponent={MosaicDashboardDataTableExplorerSettings}
+      readOnly={readOnly}
     >
       {content}
     </SelectablePanelWrapper>

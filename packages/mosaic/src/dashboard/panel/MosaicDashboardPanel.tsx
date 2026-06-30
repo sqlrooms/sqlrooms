@@ -87,6 +87,7 @@ export const MosaicDashboardPanel: RoomPanelComponent = ({meta}) => {
           selectionName={selectionName}
           onSelectPanel={handleSelectPanel}
           onTitleChange={readOnly ? undefined : handleTitleChange}
+          readOnly={readOnly}
         />
 
         <div className="min-h-0 flex-1 overflow-hidden">

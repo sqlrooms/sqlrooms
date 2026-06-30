@@ -41,6 +41,7 @@ type MosaicDashboardPanelHeaderProps = {
   selectionName: string;
   onSelectPanel?: () => void;
   onTitleChange?: (title: string) => void;
+  readOnly?: boolean;
 };
 
 export const MosaicDashboardPanelHeader: FC<
@@ -53,6 +54,7 @@ export const MosaicDashboardPanelHeader: FC<
   selectionName,
   onSelectPanel,
   onTitleChange,
+  readOnly,
 }) => {
   const panelId = panel?.id;
   const title = panel?.title ?? 'Dashboard panel';
@@ -91,12 +93,12 @@ export const MosaicDashboardPanelHeader: FC<
     (event: MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
 
-      if (!panelId) return;
+      if (!panelId || readOnly) return;
 
       removePanel(dashboardId, panelId);
       clearSelectionIfBlockDeleted(panelId);
     },
-    [clearSelectionIfBlockDeleted, dashboardId, panelId, removePanel],
+    [clearSelectionIfBlockDeleted, dashboardId, panelId, readOnly, removePanel],
   );
 
   const handleHeaderClick = useCallback(
@@ -268,20 +270,22 @@ export const MosaicDashboardPanelHeader: FC<
                   <TooltipContent>{expandLabel}</TooltipContent>
                 </Tooltip>
               ) : null}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    aria-label="Remove dashboard panel"
-                    onClick={handleRemove}
-                  >
-                    <Trash2Icon className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Remove dashboard panel</TooltipContent>
-              </Tooltip>
+              {!readOnly ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label="Remove dashboard panel"
+                      onClick={handleRemove}
+                    >
+                      <Trash2Icon className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Remove dashboard panel</TooltipContent>
+                </Tooltip>
+              ) : null}
             </div>
           </TooltipProvider>
         ) : null}
