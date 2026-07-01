@@ -5,7 +5,8 @@ import TableHeader from '@tiptap/extension-table-header';
 import TableRow from '@tiptap/extension-table-row';
 import TaskItem from '@tiptap/extension-task-item';
 import TaskList from '@tiptap/extension-task-list';
-import {useEditor} from '@tiptap/react';
+import {Editor, useEditor} from '@tiptap/react';
+import {NodeSelection, TextSelection} from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import {
   type FC,
@@ -16,6 +17,7 @@ import {
 } from 'react';
 import type {BlockDocumentContent} from '../BlockDocumentSliceConfig';
 import type {DocumentAsset} from '../DocumentsSliceConfig';
+import {useBlockSettingsStore} from '../block-settings/useBlockSettingsStore';
 import {
   BlockDocumentBlockIdExtension,
   getBlockNodeExtensionNames,
@@ -48,6 +50,7 @@ export type BlockDocumentEditorRootProps = PropsWithChildren<{
   generateBlockId?: () => string;
   title?: string;
   onTitleChange?: (title: string) => void;
+  onEditorReady?: (editor: Editor) => void;
 }>;
 
 function stableStringify(value: unknown) {
@@ -63,6 +66,26 @@ function textFromNode(node: unknown): string {
   if (typeof candidate.text === 'string') return candidate.text;
   if (!Array.isArray(candidate.content)) return '';
   return candidate.content.map((child) => textFromNode(child)).join('');
+}
+
+/**
+ * Finds the position of a node with the given ID in the document.
+ * Returns null if not found.
+ */
+function findNodePositionById(
+  doc: {
+    descendants: (callback: (node: any, pos: number) => boolean | void) => void;
+  },
+  nodeId: string,
+): number | null {
+  let foundPos: number | null = null;
+  doc.descendants((node: any, pos: number) => {
+    if (node.attrs?.id === nodeId) {
+      foundPos = pos;
+      return false; // Stop iteration
+    }
+  });
+  return foundPos;
 }
 
 function createTitleNode(title: string) {
@@ -122,6 +145,7 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
   generateBlockId = createDefaultBlockDocumentBlockId,
   title = 'Untitled',
   onTitleChange,
+  onEditorReady,
   children,
 }) => {
   const onChangeRef = useRef(onChange);
@@ -259,21 +283,40 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
       lastEmittedContentKeyRef.current === normalizedValueKey;
     const shouldBackfillEditorIds =
       isOwnStoreEcho && hasUnnormalizedBlockDocumentIds(editorBodyContent);
+
     if (isOwnStoreEcho && !shouldBackfillEditorIds && !titleChanged) {
       return;
     }
-    const selection = editor.state.selection;
-    const restoreSelection = editor.isFocused;
+
     if (editor.isDestroyed) {
       return;
     }
-    editor.commands.setContent(editorValue, {emitUpdate: false});
-    if (restoreSelection && !editor.isDestroyed) {
-      editor.commands.setTextSelection({
-        from: selection.from,
-        to: selection.to,
-      });
+
+    const {state} = editor;
+    const selection = state.selection;
+    const wasNodeSelection = selection instanceof NodeSelection;
+    const selectedNodeId = wasNodeSelection ? selection.node.attrs.id : null;
+
+    // Build transaction to replace content and restore selection atomically
+    const tr = state.tr;
+    const newDoc = editor.schema.nodeFromJSON(editorValue);
+    tr.replaceWith(0, state.doc.content.size, newDoc.content);
+
+    // Restore selection in the same transaction to prevent intermediate selectionUpdate events
+    // NodeSelection: always restore (block selections should persist even when editor loses focus)
+    // TextSelection: only restore if editor was focused (avoid unexpected cursor movement)
+    if (wasNodeSelection && selectedNodeId) {
+      const nodePos = findNodePositionById(tr.doc, selectedNodeId);
+      if (nodePos !== null) {
+        tr.setSelection(NodeSelection.create(tr.doc, nodePos));
+      }
+    } else if (editor.isFocused) {
+      const from = Math.min(selection.from, tr.doc.content.size);
+      const to = Math.min(selection.to, tr.doc.content.size);
+      tr.setSelection(TextSelection.create(tr.doc, from, to));
     }
+
+    editor.view.dispatch(tr);
   }, [
     editor,
     editorValue,
@@ -291,6 +334,19 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     editor.setEditable(!readOnly);
   }, [editor, readOnly]);
 
+  const clearSelection = useBlockSettingsStore(
+    (state) => state.blockSettings?.clearSelection,
+  );
+
+  useEffect(() => {
+    return () => {
+      // Clear custom selection when editor unmounts
+      clearSelection?.();
+    };
+    // Only clear on unmount, not when documentId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const contextValue: BlockDocumentEditorContextValue = useMemo(
     () => ({
       editor,
@@ -303,6 +359,12 @@ export const BlockDocumentEditorRoot: FC<BlockDocumentEditorRootProps> = ({
     }),
     [assets, documentId, editor, normalizedValue, onChange, readOnly],
   );
+
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   return (
     <BlockDocumentEditorContext.Provider value={contextValue}>

@@ -16,6 +16,10 @@ type MosaicDashboardPanelLayoutProps = {
 
 const MIN_WIDTH_FOR_SPLIT_VIEW = 200; // pixels
 
+/**
+ * @deprecated This component is deprecated and will be removed in a future version.
+ * Use the new block selection system with BlockSettingsPanel instead.
+ */
 export const MosaicDashboardPanelLayout: FC<
   MosaicDashboardPanelLayoutProps
 > = ({isOpen, onIsOpenChange, settings, content}) => {

@@ -2,6 +2,7 @@ export PATH="$HOME/.volta/bin:$PATH"
 
 pnpm knip
 pnpm typecheck
+pnpm check-circular-deps
 pnpm test
 
 # Git LFS pre-push hook

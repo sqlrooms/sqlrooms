@@ -12,7 +12,7 @@ import {
   DocumentsSliceConfig,
   buildKnowledgeIndex,
   createBlockDocumentCommands,
-  createBlockDocumentsSlice,
+  createBlockDocumentFeatureSlices,
   createDocumentCommands,
   createDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
@@ -54,7 +54,7 @@ const roomStore = createRoomStore(
     },
     (set, get, store) => ({
       ...createDocumentsSlice()(set, get, store),
-      ...createBlockDocumentsSlice({
+      ...createBlockDocumentFeatureSlices({
         onDeleteOwnedStatefulBlock: ({
           blockType,
           blockInstanceId,
@@ -130,8 +130,8 @@ and provide block DTO helpers for command and AI authoring surfaces:
 import {
   BlockDocumentsSliceConfig,
   createAddBlockDocumentTextBlockTool,
+  createBlockDocumentFeatureSlices,
   createListBlockDocumentBlocksTool,
-  createBlockDocumentsSlice,
 } from '@sqlrooms/documents';
 
 const roomStore = createRoomStore(
@@ -143,7 +143,7 @@ const roomStore = createRoomStore(
       },
     },
     (set, get, store) => ({
-      ...createBlockDocumentsSlice()(set, get, store),
+      ...createBlockDocumentFeatureSlices()(set, get, store),
     }),
   ),
 );
@@ -213,7 +213,7 @@ does not import Mosaic, pivot, or other feature packages:
   >
     <BlockDocumentArtifact
       artifactId={blockDocumentArtifactId}
-      title="Worksheet"
+      title="Analysis"
       onTitleChange={(title) =>
         renameBlockDocument(blockDocumentArtifactId, title)
       }
@@ -224,7 +224,9 @@ does not import Mosaic, pivot, or other feature packages:
 
 If no renderer is registered, chart and stateful blocks render a clear
 unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
-controls the host-specific entries shown in the plus menu.
+controls the host-specific entries shown in the plus menu. Chart renderers also
+receive a `selected` flag so their controls can reflect whether the block is the
+active Tiptap node selection.
 When a block is converted through the handle menu, custom `createNode`
 callbacks receive an optional `{initialText}` value with the source block text;
 hosts can use it to seed stateful blocks such as embedded Markdown documents.
@@ -236,6 +238,26 @@ handle just below the block for writable documents. Interactive blocks can also 
 document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
 elsewhere scrolls nested overflow regions inside the block. Use
 `scrollHintLabel` to customize the hint target text.
+
+Block and panel definitions can provide reusable settings components. The
+host settings shell is owned by `@sqlrooms/documents`, while feature packages
+own the actual settings UI. Settings components receive the selected
+`blockId`, optional parent `dashboardId`, optional `blockInstanceId`, and an
+optional `onClose` callback when the host shell can be collapsed. Custom
+controls that should reveal the settings shell can call
+`blockSettings.requestOpenSettingsPanel()`. Controls that represent the
+currently shown settings can read `blockSettings.runtime.isSettingsPanelOpen`
+and call `blockSettings.requestCloseSettingsPanel()` to toggle the shell closed.
+Hosts that want the standard resizable side panel shell can wrap their surface
+with `BlockSettingsPanelLayout`; pass `editor` and `documentId` when rendering
+outside a `BlockDocumentEditor` context, or omit them for dashboard panels that
+use `SelectablePanelWrapper`.
+
+`createBlockDocumentFeatureSlices()` composes `createBlockDocumentsSlice()` with
+the shared `createBlockSettingsSlice()` for apps that want a block document
+surface with reusable settings. If an app also uses another feature helper that
+includes block settings, install the shared settings slice only once by using
+one feature helper plus the other feature's lower-level slice.
 
 ### Stateful Blocks
 

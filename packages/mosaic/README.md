@@ -11,6 +11,7 @@ This package provides:
 - React components for rendering Vega-Lite charts using Mosaic
 - Hooks for integrating Mosaic with DuckDB in SQLRooms applications
 - Utilities for working with Mosaic specifications
+- Reusable editor primitives for SQLRooms settings panels and code views
 
 ## Installation
 
@@ -163,6 +164,36 @@ function EarthquakeExplorer() {
 }
 ```
 
+### Code View Primitives
+
+Use `MosaicCodeViewerPanel` with `CodeViewToggleButton` for settings panels
+that can switch between form controls and a read-only JSON/spec view with a
+copy overlay.
+
+```tsx
+import {CodeViewToggleButton, MosaicCodeViewerPanel} from '@sqlrooms/mosaic';
+
+function SettingsHeaderAction({
+  showCode,
+  onToggle,
+}: {
+  showCode: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <CodeViewToggleButton
+      label={showCode ? 'Show settings' : 'View code'}
+      selected={showCode}
+      onClick={onToggle}
+    />
+  );
+}
+
+function CodeView({value}: {value: string}) {
+  return <MosaicCodeViewerPanel value={value} copyTooltipLabel="Copy config" />;
+}
+```
+
 For the common case, prefer the compound `DataTableExplorer` API.
 `useDataTableExplorer` is still available when you need direct access to the
 explorer state for custom layout, sizing, or advanced composition.
@@ -191,17 +222,26 @@ mutation supplied by the host.
 `MosaicDashboard` is a compound dashboard surface backed by generic dashboard
 panels instead of a chart-only list. Configure supported panel renderers and
 runtime add-panel actions when creating the dashboard slice.
+Pass `readOnly` when embedding a dashboard in a read-only surface so reusable
+settings panels disable or no-op mutating controls.
+
+Default Mosaic panel renderers also expose reusable settings components through
+their renderer definitions. `ChartSettingsPanel`, `ChartBlockSettings`,
+`MosaicDashboardChartSettings`, `DataTableBlockSettings`,
+`MosaicDashboardDataTableExplorerSettings`, and `MosaicDashboardSettings` can be
+used by apps that provide the standard SQLRooms block-document, dashboard,
+Mosaic, and DB slices.
 
 ```tsx
 import {
+  createDashboardFeatureSlices,
   createDefaultMosaicDashboardPanelRenderers,
   createMosaicDashboardDataTableExplorerPanelConfig,
   createMosaicDashboardChartPanelConfig,
-  createMosaicDashboardSlice,
   MosaicDashboard,
 } from '@sqlrooms/mosaic';
 
-const dashboardSlice = createMosaicDashboardSlice({
+const dashboardSlice = createDashboardFeatureSlices({
   panelRenderers: createDefaultMosaicDashboardPanelRenderers(),
   // Optional: pass chartTypes/chartBuilders to customize Add Chart.
   // Optional: pass addPanelActions to add app-specific menu entries.
@@ -244,6 +284,12 @@ Dashboard panel sources may specify a `tableName` or trusted `sqlQuery`; when a
 panel omits a source it falls back to the dashboard selected table. Panel renderer
 definitions and chart builder definitions are runtime-only and intentionally
 live outside persisted dashboard config.
+
+`createDashboardFeatureSlices()` composes `createMosaicDashboardSlice()` with
+the shared `createBlockSettingsSlice()` from `@sqlrooms/documents`, which is the
+slice used by reusable dashboard panel settings. If an app also uses block
+documents with settings, install the shared settings slice only once by using
+one feature helper plus the other feature's lower-level slice.
 
 ### Reset Filters
 
@@ -362,7 +408,8 @@ export const dashboardArtifactType = createArtifactTypeFromStatefulBlock(
 
 The adapter preserves existing dashboard state in
 `mosaicDashboard.config.dashboardsById` and delegates lifecycle work to the
-dashboard slice.
+dashboard slice. It includes `MosaicDashboardSettings` by default, and callers
+may pass a custom `settings` component when creating the block definition.
 
 ### Dashboard AI Tools
 

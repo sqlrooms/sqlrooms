@@ -3,8 +3,6 @@
   /* Add your custom CSS variables here */
   .logo {
     border-radius: 4px;
-    filter: grayscale(0.5);
-    opacity: 0.75;
   }
 }
 

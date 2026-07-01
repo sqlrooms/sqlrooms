@@ -11,8 +11,8 @@ export type ChartToolOutput<T> = ToolOutput<{
  * Arguments passed to chart panel creation and update callbacks.
  */
 type AddChartFunctionArgs = {
-  /** Optional table name; worksheet charts require it, dashboard charts may inherit it. */
-  tableName?: string; // Optional: worksheet charts need it, dashboard charts inherit from dashboard.selectedTable
+  /** Optional table name; block-document charts require it, dashboard charts may inherit it. */
+  tableName?: string; // Optional: block-document charts need it, dashboard charts inherit from dashboard.selectedTable
   /** Optional existing dashboard panel ID to update instead of creating a new panel. */
   panelId?: string;
   /** Optional human-readable chart title. */

@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@sqlrooms/ui';
-import {Settings2Icon} from 'lucide-react';
+import {SlidersVerticalIcon} from 'lucide-react';
 import {type FC} from 'react';
 
 /**
@@ -38,7 +38,7 @@ export const MosaicChartSettingsButton: FC<MosaicChartSettingsButtonProps> = ({
             onClick={onToggleSettings}
             data-state={isSettingsOpen ? 'active' : 'inactive'}
           >
-            <Settings2Icon className="h-3.5 w-3.5" />
+            <SlidersVerticalIcon className="h-3.5 w-3.5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>Chart settings</TooltipContent>

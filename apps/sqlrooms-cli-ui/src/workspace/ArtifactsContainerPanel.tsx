@@ -133,8 +133,16 @@ function SelectedCliArtifactContent({
   artifact: ArtifactMetadataType;
 }) {
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
+  const clearSelection = useRoomStore(
+    (state) => state.blockSettings.clearSelection,
+  );
   const typeDefinition = artifactTypes[artifact.type];
   const Component = typeDefinition?.component;
+
+  useEffect(() => {
+    // Clear block selection when artifact changes
+    clearSelection();
+  }, [artifact.id, clearSelection]);
 
   const panelInfo = useMemo<RoomPanelInfo>(
     () => ({

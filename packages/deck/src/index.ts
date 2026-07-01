@@ -28,6 +28,9 @@ export {
   deckMapDashboardAddPanelAction,
   deckMapDashboardPanelRenderer,
 } from './dashboard';
+export {DeckMapBlockSettings} from './BlockMapSettings';
+export {DeckMapDashboardSettings} from './DashboardMapSettings';
+export {MapSettingsPanel} from './MapSettings';
 export {
   DeckMapBlockRenderer,
   ensureDeckMapBlockState,

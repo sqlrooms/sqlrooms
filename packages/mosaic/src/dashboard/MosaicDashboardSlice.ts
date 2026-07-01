@@ -35,6 +35,7 @@ import {
 import type {MosaicDashboardAddPanelAction} from './action-types';
 import type {ChartRuntimeIssue} from '../chart-runtime';
 import type {MosaicClient} from '@uwdata/mosaic-core';
+import type {BlockSettingsComponent} from '@sqlrooms/documents';
 
 /**
  * Panel key used for function-form panel definitions registered by
@@ -114,6 +115,7 @@ export type MosaicDashboardPanelRenderer<
   component: ComponentType<MosaicDashboardPanelRendererProps<TPanel>>;
   headerActions?: ComponentType<MosaicDashboardPanelRendererProps<TPanel>>;
   icon?: ComponentType<{className?: string}>;
+  settings?: BlockSettingsComponent;
 };
 
 // Type-erased renderer for storage (avoids circular dependency issues)
@@ -121,6 +123,7 @@ export type AnyPanelRenderer = {
   component: ComponentType<any>;
   headerActions?: ComponentType<any>;
   icon?: ComponentType<{className?: string}>;
+  settings?: BlockSettingsComponent;
 };
 
 // Map of panel type string to panel config type

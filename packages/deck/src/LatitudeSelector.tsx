@@ -9,12 +9,14 @@ interface LatitudeSelectorProps {
   dashboardId: string;
   panel: MosaicDashboardPanelConfigType;
   currentTable: DataTable;
+  readOnly?: boolean;
 }
 
 export const LatitudeSelector: FC<LatitudeSelectorProps> = ({
   dashboardId,
   panel,
   currentTable,
+  readOnly,
 }) => {
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
@@ -26,6 +28,8 @@ export const LatitudeSelector: FC<LatitudeSelectorProps> = ({
 
   const handleChange = useCallback(
     (latitudeColumn: string) => {
+      if (readOnly) return;
+
       const newConfig = regenerateMapConfigForTable(
         panel,
         currentTable,
@@ -43,6 +47,7 @@ export const LatitudeSelector: FC<LatitudeSelectorProps> = ({
       currentTable,
       updatePanel,
       dashboardId,
+      readOnly,
       mapConfig?.settingsOpen,
     ],
   );
@@ -51,6 +56,7 @@ export const LatitudeSelector: FC<LatitudeSelectorProps> = ({
     <ColumnSelector.Numeric
       value={currentLatitudeColumn}
       onChange={handleChange}
+      disabled={readOnly}
     />
   );
 };

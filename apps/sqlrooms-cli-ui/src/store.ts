@@ -44,9 +44,9 @@ import {
 import {
   createDefaultChartTypes,
   createDefaultMosaicDashboardPanelRenderers,
+  createDashboardFeatureSlices,
   createMosaicDashboardCommands,
   createMosaicDashboardDataTableExplorerPanelConfig,
-  createMosaicDashboardSlice,
   createMosaicSlice,
   defaultAddPanelActions,
   MOSAIC_DASHBOARD_DATA_TABLE_EXPLORER_PANEL_TYPE,
@@ -1004,7 +1004,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         })(set, get, store),
 
-        ...createMosaicDashboardSlice(
+        ...createDashboardFeatureSlices(
           experimentalEnabled
             ? createDeckMapDashboardSliceOptions()
             : {
