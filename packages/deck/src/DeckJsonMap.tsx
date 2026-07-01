@@ -259,11 +259,9 @@ function DeckOverlayControl({
     }
   }, [clearing, overlay]);
 
-  useEffect(() => {
-    if (!clearing && overlay) {
-      overlay.setProps(deckProps);
-    }
-  });
+  if (!clearing && overlay) {
+    overlay.setProps(deckProps);
+  }
 
   return null;
 }
