@@ -7,6 +7,7 @@ import type {
 import {
   AiAgentError,
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
+  buildAgentSkillsInstructions,
   calculateAgentResultMetadata,
   createChartToolsInstructions,
   resolveChartTypes,
@@ -369,9 +370,21 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
         blockDocumentAdapter.setCurrentBlockDocument(worksheetId);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
+        const state = store.getState();
+        const selectedSkillIds =
+          (await options.selectSkillIds?.({
+            intent,
+            state,
+            agent: 'worksheet',
+          })) ?? [];
+        const skillContext = await buildAgentSkillsInstructions({
+          storage: options.skillStorage,
+          skillIds: selectedSkillIds,
+          heading: 'Selected Worksheet And Dashboard Skills',
+        });
 
         const agent = new ToolLoopAgent({
-          model: options.getModel({state: store.getState()}),
+          model: options.getModel({state}),
           tools: {
             ...createWorksheetBlockDocumentAiTools({
               databaseAdapter,
@@ -393,6 +406,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getWorksheetAgentInstructions(options),
+            skillContext.instructions,
             options.additionalInstructions,
           ]
             .filter(Boolean)
@@ -411,6 +425,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           undefined,
           result.agentToolCalls,
         );
+        metadata.skillsApplied = skillContext.appliedSkills;
 
         return {
           success: true,

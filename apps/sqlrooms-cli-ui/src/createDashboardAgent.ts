@@ -8,6 +8,10 @@ import {
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
+import {
+  createSqlroomsCliDashboardSkillStorage,
+  selectSqlroomsCliDashboardSkillIds,
+} from './ai/dashboardSkills';
 
 export function dashboardAgentTool(
   store: StoreApi<RoomState>,
@@ -37,6 +41,9 @@ export function dashboardAgentTool(
       createDefaultAiTools(store, {query: {}, tables: true, commands: false}),
     runSubAgent: ({agent, prompt, parentToolCallId, abortSignal}) =>
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
+    skillStorage: createSqlroomsCliDashboardSkillStorage(),
+    selectSkillIds: ({agent, intent}) =>
+      selectSqlroomsCliDashboardSkillIds({agent, intent}),
   };
 
   return deckMapsEnabled

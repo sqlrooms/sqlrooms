@@ -15,6 +15,8 @@ import {createChartToolsInstructions} from '../../charts/chart-types/createChart
 import {DASHBOARD_CHART_TOOL_PREFIX, KnownDashboardTools} from './constants';
 import {AgentIntentSchemaFields} from '../agentIntent';
 import {getTableIdentity} from '@sqlrooms/db';
+import {buildAgentSkillsInstructions} from '../skills';
+import {selectMosaicDashboardSkillIds} from './dashboardSkills';
 
 function getDashboardAgentInstructions<TState>(
   options: CreateDashboardAgentToolOptions<TState>,
@@ -186,6 +188,17 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
         );
 
         const dataTools = options.createDataTools?.({store}) ?? {};
+        const selectedSkillIds =
+          (await options.selectSkillIds?.({
+            intent,
+            state,
+            agent: 'dashboard',
+          })) ?? selectMosaicDashboardSkillIds(intent);
+        const skillContext = await buildAgentSkillsInstructions({
+          storage: options.skillStorage,
+          skillIds: selectedSkillIds,
+          heading: 'Selected Dashboard Skills',
+        });
 
         const agent = new ToolLoopAgent({
           model: options.getModel({state}),
@@ -201,6 +214,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getDashboardAgentInstructions(options),
+            skillContext.instructions,
             options.additionalInstructions,
           ]
             .filter(Boolean)
@@ -219,6 +233,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
           tableName,
           result.agentToolCalls,
         );
+        metadata.skillsApplied = skillContext.appliedSkills;
 
         return {
           success: true,

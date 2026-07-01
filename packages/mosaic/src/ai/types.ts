@@ -1,6 +1,7 @@
 import type {LanguageModel, Tool, ToolLoopAgent} from 'ai';
 import type {DataTable} from '@sqlrooms/db';
 import type {ChartTypeDefinition} from '../charts/chart-types/base-types';
+import type {AgentSkillStorage} from './skills';
 
 /**
  * Common types used by Mosaic AI agents and tool composition.
@@ -63,5 +64,19 @@ export type BaseAgentToolOptions<TState> = {
    * usage guidance while preserving the base workflow.
    */
   additionalInstructions?: string;
+  /**
+   * Optional catalog of package, app, user, or workspace skills available to
+   * this agent. Agents remain executable without skills.
+   */
+  skillStorage?: AgentSkillStorage;
+  /**
+   * Optional deterministic selector that returns the skill ids relevant to a
+   * single agent run. Selected root ids are echoed in result metadata.
+   */
+  selectSkillIds?: (args: {
+    intent: string;
+    state: TState;
+    agent: 'dashboard' | 'worksheet';
+  }) => ReadonlyArray<string> | Promise<ReadonlyArray<string>>;
   chartToolsOptions?: ChartToolsOptions;
 };
