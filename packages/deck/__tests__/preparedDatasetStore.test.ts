@@ -164,6 +164,51 @@ describe('PreparedDatasetStore', () => {
     expect(prepareDataset).toHaveBeenCalledTimes(1);
   });
 
+  it('isolates invalid table dataset inputs during consumer sync', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const validInput: DeckDatasetInput = {sqlQuery: 'select 1'};
+    const invalidInput: DeckDatasetInput = {tableName: 'main.'};
+    const validKey = resolvePreparedDatasetCacheKey({
+      input: validInput,
+      sqlSourceIdentity: connector,
+    })!;
+    const invalidKey = resolvePreparedDatasetCacheKey({
+      input: invalidInput,
+      sqlSourceIdentity: connector,
+    })!;
+
+    expect(() =>
+      store.getState().syncDatasetsForConsumer({
+        consumerId: 'consumer-a',
+        datasets: {
+          valid: validInput,
+          invalid: invalidInput,
+        },
+        executeSql,
+        sqlSourceIdentity: connector,
+      }),
+    ).not.toThrow();
+
+    await waitForEntry(store, validKey);
+    await waitForEntry(store, invalidKey);
+
+    expect(store.getState().entries[validKey]).toMatchObject({
+      status: 'ready',
+    });
+    expect(store.getState().entries[invalidKey]).toMatchObject({
+      status: 'error',
+    });
+  });
+
   it('changes cache keys when geometry options or sql source change', () => {
     const table = new Table({value: vectorFromArray([1, 2, 3])});
     const connectorA = {};

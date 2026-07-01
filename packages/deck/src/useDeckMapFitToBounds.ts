@@ -17,7 +17,10 @@ import {
   type DeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
 } from './dashboardConfig';
-import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
+import {
+  DeckTableDatasetInvalidTableNameError,
+  createDeckTableDatasetSql,
+} from './datasets/tableDatasetSql';
 import type {DeckJsonMapHandle} from './types';
 
 type DeckMapDashboardFitState = {
@@ -220,10 +223,7 @@ function createDeckMapBoundsTableSourceSql(
   try {
     return createDeckTableDatasetSql(source);
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === 'Deck table dataset input requires a valid tableName.'
-    ) {
+    if (error instanceof DeckTableDatasetInvalidTableNameError) {
       throw new Error('Deck map fit-to-data requires a valid table source.');
     }
     throw error;

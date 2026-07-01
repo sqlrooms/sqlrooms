@@ -25,6 +25,7 @@ describe('createDeckTableDatasetSql', () => {
 
     expect(sql).toContain(`WITH ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`);
     expect(sql).toContain('SELECT * FROM "events"');
+    expect(sql).toContain(',\nnested AS (SELECT * FROM other_table)');
     expect(sql).toContain('FROM other_table');
     expect(sql).toContain(
       `SELECT * FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
@@ -35,6 +36,24 @@ describe('createDeckTableDatasetSql', () => {
       ),
     ).toHaveLength(1);
     expect(sql.trim().endsWith(';')).toBe(false);
+  });
+
+  it('preserves recursive transform CTEs by making the full CTE list recursive', () => {
+    const sql = createDeckTableDatasetSql({
+      tableName: 'events',
+      transformSql: [
+        'WITH RECURSIVE nested AS (',
+        `  SELECT * FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+        ')',
+        'SELECT * FROM nested',
+      ].join(' '),
+    });
+
+    expect(sql).toContain(
+      `WITH RECURSIVE ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`,
+    );
+    expect(sql).toContain(',\nnested AS (');
+    expect(sql).not.toMatch(/\)\s*WITH\s+RECURSIVE/i);
   });
 
   it('rejects transform SQL that does not read from the source relation', () => {

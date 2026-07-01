@@ -5,7 +5,6 @@ import {
   type DeckDatasetInput,
 } from '../types';
 import {resolveArrowTable} from './normalizeDatasets';
-import {createDeckTableDatasetSql} from './tableDatasetSql';
 import type {PreparedDatasetCacheEntry} from './types';
 
 export const DEFAULT_MAX_PREPARED_DATASET_ENTRIES = 20;
@@ -89,14 +88,20 @@ export function resolvePreparedDatasetCacheKey(options: {
       );
     }
 
-    const sql = isSqlDatasetInput(input)
-      ? input.sqlQuery
-      : createDeckTableDatasetSql(input);
+    if (isTableDatasetInput(input)) {
+      return [
+        'table',
+        getSqlSourceIdentity(sqlSourceIdentity),
+        input.tableName,
+        input.transformSql ?? '',
+        buildGeometryKey(input),
+      ].join('\u0001');
+    }
 
     return [
       'sql',
       getSqlSourceIdentity(sqlSourceIdentity),
-      sql,
+      input.sqlQuery,
       buildGeometryKey(input),
     ].join('\u0001');
   }

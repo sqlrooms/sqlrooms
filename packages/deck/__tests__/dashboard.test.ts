@@ -158,6 +158,24 @@ describe('deck dashboard integration', () => {
     expect(tableSql).not.toContain('"events"."2026"');
   });
 
+  it('preserves authored catalog-qualified table sources when no dashboard table is selected', () => {
+    const dashboard = createDashboard();
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {tableName: '"remote"."main"."events"'},
+        },
+      }),
+    ).toEqual({tableName: '"remote"."main"."events"'});
+  });
+
   it('does not rewrite literal SQL containing nested FROM clauses', () => {
     const dashboard = createDashboard('"memory"."main"."events.2026"');
     const panel = createDeckMapDashboardPanelConfig({

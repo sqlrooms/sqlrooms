@@ -34,16 +34,19 @@ export type DeckMapDashboardDatasetConfig = Omit<
   source?: DeckMapDashboardDatasetSource;
 };
 
+/** Dashboard map source that is either a pinned SQL query or table-backed data. */
 export type DeckMapDashboardDatasetSource =
   | Pick<DeckSqlDatasetInput, 'sqlQuery'>
   | Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'>;
 
+/** Returns true when a dashboard map source is a literal pinned SQL query. */
 export function isDeckMapDashboardSqlDatasetSource(
   source: DeckMapDashboardDatasetSource | undefined,
 ): source is Pick<DeckSqlDatasetInput, 'sqlQuery'> {
   return Boolean(source && 'sqlQuery' in source);
 }
 
+/** Returns true when a dashboard map source is backed by a structured table. */
 export function isDeckMapDashboardTableDatasetSource(
   source: DeckMapDashboardDatasetSource | undefined,
 ): source is Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'> {
@@ -141,11 +144,9 @@ export function resolveDeckMapDashboardDatasetSource(options: {
 
   const baseTableName =
     dashboardTable ||
-    stripCatalogPrefix(
-      isDeckMapDashboardTableDatasetSource(datasetSource)
-        ? datasetSource.tableName
-        : undefined,
-    );
+    (isDeckMapDashboardTableDatasetSource(datasetSource)
+      ? datasetSource.tableName
+      : undefined);
   if (!baseTableName) {
     return undefined;
   }

@@ -280,7 +280,9 @@ export function createDeckMapDashboardConfigForTable(options: {
           }),
         }
       : {
-          tableName: options.tableName,
+          tableName: options.tableReference
+            ? quoteDeckMapSqlTableReference(options.tableReference)
+            : options.tableName,
           transformSql: createDeckMapPointTransformSql({
             longitudeColumn: coordinates.longitudeColumn,
             latitudeColumn: coordinates.latitudeColumn,

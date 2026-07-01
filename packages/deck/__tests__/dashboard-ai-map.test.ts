@@ -209,6 +209,41 @@ describe('createDeckMapBoundsQuery', () => {
     expect(query).not.toContain('"events"."2026"');
   });
 
+  it('builds fit-to-data bounds queries from literal SQL sources', () => {
+    const query = createDeckMapBoundsQuery({
+      source: {
+        sqlQuery: 'SELECT * FROM events WHERE value > 0',
+      },
+      fitToData: {
+        dataset: 'events',
+        longitudeColumn: 'lon',
+        latitudeColumn: 'lat',
+      },
+    });
+
+    expect(query).toContain(
+      'SELECT * FROM (SELECT * FROM events WHERE value > 0) AS "__sqlrooms_dashboard_map_source"',
+    );
+  });
+
+  it('builds fit-to-data bounds queries from table transforms', () => {
+    const query = createDeckMapBoundsQuery({
+      source: {
+        tableName: 'events',
+        transformSql:
+          'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      },
+      fitToData: {
+        dataset: 'events',
+        geometryColumn: 'geom',
+      },
+    });
+
+    expect(query).toContain('WITH __sqlrooms_source AS');
+    expect(query).toContain('SELECT * FROM "events"');
+    expect(query).toContain('ST_GeomFromWKB("geom")');
+  });
+
   it('rejects invalid table sources in bounds queries', () => {
     expect(() =>
       createDeckMapBoundsQuery({
@@ -507,6 +542,24 @@ describe('createDeckMapDashboardTool', () => {
     });
     expect(panel.config.datasets.earthquakes.source).toEqual({
       tableName: 'earthquakes',
+      transformSql:
+        'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+    });
+  });
+
+  it('preserves explicit table references in generated lon/lat transforms', () => {
+    const panel = createDeckMapDashboardPanelConfigForTable({
+      title: 'Attached earthquake map',
+      tableName: 'earthquakes',
+      tableReference: {database: 'remote', schema: 'main', table: 'events'},
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    });
+
+    expect(panel.config.datasets.earthquakes.source).toMatchObject({
+      tableName: '"remote"."main"."events"',
       transformSql:
         'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
     });

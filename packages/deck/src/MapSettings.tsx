@@ -33,7 +33,11 @@ import {
 } from '@sqlrooms/ui';
 import {LatitudeSelector} from './LatitudeSelector';
 import {LongitudeSelector} from './LongitudeSelector';
-import type {DeckMapDashboardPanelConfig} from './dashboardConfig';
+import {
+  isDeckMapDashboardSqlDatasetSource,
+  isDeckMapDashboardTableDatasetSource,
+  type DeckMapDashboardPanelConfig,
+} from './dashboardConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -199,12 +203,13 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   // table (which represents the user's active choice), falling back to the
   // dataset's explicit source table when no dashboard table is selected.
   const activeLayerDatasetSource = activeLayerDataset?.source;
-  const fallbackTableName =
-    activeLayerDatasetSource && 'tableName' in activeLayerDatasetSource
-      ? activeLayerDatasetSource.tableName
-      : activeLayerDatasetSource && 'sqlQuery' in activeLayerDatasetSource
-        ? extractTableFromSqlQuery(activeLayerDatasetSource.sqlQuery)
-        : undefined;
+  const fallbackTableName = isDeckMapDashboardTableDatasetSource(
+    activeLayerDatasetSource,
+  )
+    ? activeLayerDatasetSource.tableName
+    : isDeckMapDashboardSqlDatasetSource(activeLayerDatasetSource)
+      ? extractTableFromSqlQuery(activeLayerDatasetSource.sqlQuery)
+      : undefined;
   const fallbackTable = useDataTable(fallbackTableName);
   const dataTable = selectedDataTable ?? fallbackTable;
 

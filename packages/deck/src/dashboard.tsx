@@ -281,7 +281,9 @@ function DeckMapDashboardDatasetClient({
   );
   const sourceKey = isDeckMapDashboardTableDatasetSource(source)
     ? source.tableName
-    : (dashboard.selectedTable ?? '');
+    : isDeckMapDashboardSqlDatasetSource(source)
+      ? ''
+      : (dashboard.selectedTable ?? '');
   const sourceQueryKey = isDeckMapDashboardSqlDatasetSource(source)
     ? source.sqlQuery
     : isDeckMapDashboardTableDatasetSource(source)
