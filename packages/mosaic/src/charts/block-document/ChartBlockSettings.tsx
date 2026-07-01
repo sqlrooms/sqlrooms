@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {
   BlockDocumentChartBlock,
   BlockSettingsComponentProps,
@@ -66,7 +66,7 @@ export const ChartBlockSettings: FC<BlockSettingsComponentProps> = ({
     if (readOnly) return;
     updateBlock(dashboardId, blockId, {
       ...chartBlock,
-      tableName: table.table.toString(),
+      tableName: getTableIdentity(table.table),
     });
   };
 

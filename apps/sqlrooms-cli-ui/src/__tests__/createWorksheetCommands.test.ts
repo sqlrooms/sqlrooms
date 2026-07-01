@@ -1,7 +1,17 @@
 import {jest} from '@jest/globals';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {createWorksheetCommands} from '../createWorksheetCommands';
+
+const earthquakesTable = {
+  table: makeQualifiedTableName({schema: 'main', table: 'earthquakes'}),
+  tableName: 'earthquakes',
+  schema: 'main',
+  isView: false,
+  columns: [{name: 'id', type: 'INTEGER'}],
+};
+const earthquakesTableIdentity = '"main"."earthquakes"';
 
 function createCommandContext(state: unknown) {
   return {
@@ -71,7 +81,9 @@ function createState() {
       },
       db: {
         findTable: (tableName: string) =>
-          tableName === 'earthquakes' ? {tableName} : undefined,
+          tableName === 'earthquakes' || tableName === earthquakesTableIdentity
+            ? earthquakesTable
+            : undefined,
       },
       mosaicDashboard: {
         ensureDashboard: jest.fn(),
@@ -114,7 +126,7 @@ describe('createWorksheetCommands', () => {
         worksheetId: 'worksheet-1',
         blockId: 'dashboard-block',
         dashboardId: 'dashboard-id',
-        selectedTable: 'earthquakes',
+        selectedTable: earthquakesTableIdentity,
       },
     });
     expect(invokeCommand).toHaveBeenCalledWith(
@@ -128,13 +140,13 @@ describe('createWorksheetCommands', () => {
     );
     expect(invokeCommand).toHaveBeenCalledWith(
       'dashboard.set-selected-table',
-      {dashboardId: 'dashboard-id', tableName: 'earthquakes'},
+      {dashboardId: 'dashboard-id', tableName: earthquakesTableIdentity},
       {surface: 'ai', actor: 'worksheet-command'},
     );
   });
 
   it('adds data table and HTML app blocks through worksheet commands', async () => {
-    const {state} = createState();
+    const {state, invokeCommand} = createState();
 
     await expect(
       getCommand('worksheet.add-data-table-block').execute(
@@ -147,8 +159,21 @@ describe('createWorksheetCommands', () => {
       ),
     ).resolves.toMatchObject({
       success: true,
-      data: {blockId: 'data-table-block', dataTableId: 'data-table-id'},
+      data: {
+        blockId: 'data-table-block',
+        dataTableId: 'data-table-id',
+        selectedTable: earthquakesTableIdentity,
+      },
     });
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'worksheet.create-stateful-block',
+      expect.objectContaining({
+        artifactId: 'worksheet-1',
+        blockType: 'data-table',
+        title: earthquakesTableIdentity,
+      }),
+      {surface: 'ai', actor: 'worksheet-command'},
+    );
 
     await expect(
       getCommand('worksheet.add-html-app-block').execute(
@@ -162,6 +187,41 @@ describe('createWorksheetCommands', () => {
       success: true,
       data: {blockId: 'html-app-block', appId: 'html-app-id'},
     });
+  });
+
+  it('adds map blocks with canonical selected table identity', async () => {
+    const {state, invokeCommand} = createState();
+
+    await expect(
+      getCommand('worksheet.add-map-block').execute(
+        createCommandContext(state),
+        {
+          worksheetId: 'worksheet-1',
+          title: 'Map',
+          mapId: 'map-1',
+          tableName: 'earthquakes',
+          reasoning: 'show earthquake points',
+          config: {
+            spec: {},
+            datasets: {
+              earthquakes: {source: {tableName: 'earthquakes'}},
+            },
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        blockId: 'block-1',
+        mapId: 'map-1',
+        selectedTable: earthquakesTableIdentity,
+      },
+    });
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'dashboard.set-selected-table',
+      {dashboardId: 'map-1', tableName: earthquakesTableIdentity},
+      {surface: 'ai', actor: 'worksheet-command'},
+    );
   });
 
   it('updates worksheet block metadata through the block document slice', async () => {

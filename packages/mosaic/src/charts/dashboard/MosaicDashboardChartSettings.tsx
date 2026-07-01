@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {type FC, useCallback, useMemo} from 'react';
 import {useStoreWithMosaicDashboard} from '../../dashboard/MosaicDashboardSlice';
@@ -40,7 +40,7 @@ export const MosaicDashboardChartSettings: FC<BlockSettingsComponentProps> = ({
       if (readOnly) return;
 
       if (dashboardId) {
-        setSelectedTable(dashboardId, table.table.toString());
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
       }
     },
     [dashboardId, readOnly, setSelectedTable],

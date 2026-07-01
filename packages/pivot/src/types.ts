@@ -1,4 +1,5 @@
 import {SliceFunctions} from '@sqlrooms/room-store';
+import type {RawSqlTableReference} from '@sqlrooms/duckdb';
 import {z} from 'zod';
 import type {StoreApi} from 'zustand/vanilla';
 
@@ -145,7 +146,7 @@ export type PivotField = {
 };
 
 export type PivotQuerySource = {
-  tableRef: string;
+  tableRef: RawSqlTableReference;
   columns: PivotField[];
 };
 

@@ -1,10 +1,9 @@
-import type {DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockDocumentChartRendererProps} from '@sqlrooms/documents';
 import {FC, useCallback} from 'react';
 import type {ChartConfig} from '../chart-types/chart-config';
 import {MosaicChart} from '../MosaicChart';
 import {useParseChartConfig} from '../useParseChartConfig';
-import {useDataTable} from '@sqlrooms/db';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {ChartBlockHeader} from './ChartBlockHeader';
 import {ChartSelectorEmptyState} from './ChartSelectorEmptyState';
@@ -53,7 +52,7 @@ export const ChartBlockRenderer: FC<BlockDocumentChartRendererProps> = ({
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      onTableNameChange?.(table.table.toString());
+      onTableNameChange?.(getTableIdentity(table.table));
     },
     [onTableNameChange],
   );

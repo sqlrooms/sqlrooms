@@ -1,4 +1,5 @@
 import {useDebounce} from '@sqlrooms/ui';
+import {getTableIdentity} from '@sqlrooms/db';
 import {useMemo} from 'react';
 import {useStoreWithMosaic} from '../MosaicSlice';
 import type {
@@ -15,7 +16,6 @@ import {useDataTableExplorerVisiblePage} from './hooks/useDataTableExplorerVisib
 import {
   getMosaicRawSqlTableReference,
   getMosaicSqlTableReference,
-  getMosaicTableIdentity,
 } from '../mosaicTableReference';
 
 /**
@@ -36,7 +36,7 @@ export function useDataTableExplorer(
     tableName: table,
   } = options;
 
-  const tableIdentity = useMemo(() => getMosaicTableIdentity(table), [table]);
+  const tableIdentity = useMemo(() => getTableIdentity(table), [table]);
   const tableName = useMemo(
     () => getMosaicRawSqlTableReference(table),
     [table],

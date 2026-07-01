@@ -1,4 +1,8 @@
-import type {QualifiedTableName} from '@sqlrooms/duckdb';
+import {
+  quoteParsedRawSqlTableReference,
+  type QualifiedTableName,
+  type RawSqlTableReference,
+} from '@sqlrooms/duckdb';
 
 /**
  * Centralized policy for persisting SQL cell query results.
@@ -14,7 +18,10 @@ import type {QualifiedTableName} from '@sqlrooms/duckdb';
  * migrations may have created either form for the same logical result name.
  */
 export type ResultRelationType = 'view' | 'table';
-export type ResultRelationName = string | QualifiedTableName;
+export type ResultRelationName =
+  | string
+  | QualifiedTableName
+  | RawSqlTableReference;
 
 type SqlConnectorLike = {
   query: (
@@ -24,7 +31,14 @@ type SqlConnectorLike = {
 };
 
 function toRelationSqlName(relationName: ResultRelationName): string {
-  return relationName.toString();
+  const relationReference =
+    typeof relationName === 'string' ? relationName : relationName.toString();
+  const rawSqlTableReference =
+    quoteParsedRawSqlTableReference(relationReference);
+  if (!rawSqlTableReference) {
+    throw new Error(`Invalid SQL cell result relation "${relationReference}".`);
+  }
+  return rawSqlTableReference;
 }
 
 /**

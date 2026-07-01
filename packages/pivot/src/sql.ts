@@ -1,4 +1,10 @@
-import {DataTable, escapeId, escapeVal} from '@sqlrooms/duckdb';
+import {
+  DataTable,
+  escapeId,
+  escapeVal,
+  getRawSqlTableReference,
+  type RawSqlTableReference,
+} from '@sqlrooms/duckdb';
 import {getAggregatorLabel, getPivotAggregator} from './aggregators';
 import {
   PivotConfig,
@@ -12,21 +18,36 @@ const NULL_LABEL = 'null';
 type PivotQueryInput = DataTable | PivotQuerySource;
 
 function getTableReference(source: PivotQueryInput) {
-  return 'tableRef' in source ? source.tableRef : source.table.toString();
+  return 'tableRef' in source
+    ? source.tableRef
+    : getRawSqlTableReference(source.table);
 }
 
+/**
+ * Creates a pivot query source from an existing SQL-rendered table reference.
+ *
+ * Use this when the caller has already resolved and validated the table at a
+ * SQL boundary and can provide the available columns.
+ */
 export function createPivotQuerySource(
-  tableRef: string,
+  tableRef: RawSqlTableReference,
   columns: PivotField[],
 ): PivotQuerySource {
   return {tableRef, columns};
 }
 
+/**
+ * Creates a pivot query source from a resolved SQLRooms table.
+ *
+ * This builds the `RawSqlTableReference` from `table.table` via
+ * `getRawSqlTableReference(...)`, so callers with a `DataTable` should prefer
+ * this helper over manually constructing a SQL table reference.
+ */
 export function createPivotQuerySourceFromTable(
   table: DataTable,
 ): PivotQuerySource {
   return {
-    tableRef: table.table.toString(),
+    tableRef: getRawSqlTableReference(table.table),
     columns: table.columns.map((column) => ({
       name: column.name,
       type: column.type,

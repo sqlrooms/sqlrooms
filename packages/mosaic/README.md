@@ -133,6 +133,23 @@ The hook accepts the following options:
 - `queryResult` - Optional callback when query results are received
 - `enabled` - Whether to automatically connect when mosaic is ready (default: `true`)
 
+### Table Reference Boundaries
+
+Persisted selected-table and block table identities use DuckDB's canonical
+identity path: `getTableIdentity(table)` from `@sqlrooms/db`. Mosaic execution
+helpers intentionally omit the catalog/database because Mosaic queries run
+against the active connector.
+
+| Use case                                                      | Helper/input                                             |
+| ------------------------------------------------------------- | -------------------------------------------------------- |
+| Persist selected table or block table identity                | `getTableIdentity(table)`                                |
+| Rehydrate or validate persisted identity                      | `parseTableIdentity(...)` or resolve against the catalog |
+| Resolve dashboard/UI selected table string to a catalog table | `resolveMosaicTableReference(tables, value)`             |
+| Build Mosaic query AST reference                              | `getMosaicSqlTableReference(...)`                        |
+| Build raw SQL fragment for Mosaic-owned SQL                   | `getMosaicRawSqlTableReference(...)`                     |
+| Serialize vgplot `data.from`                                  | `getMosaicVgPlotTableReference(...)`                     |
+| Pass a table into `DataTableExplorer`                         | resolved `QualifiedTableName`, usually `dataTable.table` |
+
 ### Data Table Explorer Primitives
 
 The Data Table Explorer primitives let you build a Quake-style cross-filtered
@@ -140,6 +157,7 @@ table with per-column summaries on top of `MosaicSlice`.
 
 ```tsx
 import {DataTableExplorer} from '@sqlrooms/mosaic';
+import {useDataTable} from '@sqlrooms/db';
 import {ScrollArea} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from './store';
@@ -147,9 +165,18 @@ import {useRoomStore} from './store';
 function EarthquakeExplorer() {
   const mosaic = useRoomStore((state) => state.mosaic);
   const brush = useMemo(() => mosaic.getSelection('brush'), [mosaic]);
+  const dataTable = useDataTable('"main"."earthquakes"');
+
+  if (!dataTable) {
+    return null;
+  }
 
   return (
-    <DataTableExplorer tableName="earthquakes" selection={brush} pageSize={25}>
+    <DataTableExplorer
+      tableName={dataTable.table}
+      selection={brush}
+      pageSize={25}
+    >
       <div className="flex min-h-0 flex-col border">
         <ScrollArea className="min-h-0 flex-1">
           <DataTableExplorer.Table>

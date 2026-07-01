@@ -92,6 +92,86 @@ describe('deck dashboard integration', () => {
     ).toEqual({tableName: 'dashboard_table'});
   });
 
+  it('omits catalog-qualified selected table identities in map runtime SQL', () => {
+    const dashboard = createDashboard('"memory"."main"."events.2026"');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {sqlQuery: 'SELECT * FROM "main"."old.events"'},
+        },
+      }),
+    ).toEqual({sqlQuery: 'SELECT * FROM "main"."events.2026"'});
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {},
+      }),
+    ).toEqual({tableName: '"main"."events.2026"'});
+
+    const tableSql = createDeckMapDashboardDatasetQuery(
+      {tableName: '"main"."events.2026"'},
+      [],
+    ).toString();
+    expect(tableSql).toContain('FROM "main"."events.2026"');
+    expect(tableSql).not.toContain('"events"."2026"');
+  });
+
+  it('normalizes catalog-qualified source tables before rewriting dataset SQL', () => {
+    const dashboard = createDashboard('"memory"."main"."events.2026"');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {
+            tableName: '"memory"."main"."old.events"',
+            sqlQuery:
+              'SELECT * FROM "memory"."main"."old.events" WHERE value > 0',
+          },
+        },
+      }),
+    ).toEqual({
+      sqlQuery: 'SELECT * FROM "main"."events.2026" WHERE value > 0',
+    });
+  });
+
+  it('strips catalog-qualified source SQL when the source matches the selected table', () => {
+    const dashboard = createDashboard('"memory"."main"."events"');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {
+            tableName: '"memory"."main"."events"',
+            sqlQuery: 'SELECT * FROM "memory"."main"."events" WHERE value > 0',
+          },
+        },
+      }),
+    ).toEqual({
+      sqlQuery: 'SELECT * FROM "main"."events" WHERE value > 0',
+    });
+  });
+
   it('builds Mosaic dataset queries for table and trusted SQL sources', () => {
     const tableSql = createDeckMapDashboardDatasetQuery(
       {tableName: 'earthquakes'},

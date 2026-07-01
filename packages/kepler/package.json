@@ -19,7 +19,7 @@
     "build": "tsc",
     "dev": "tsc -w",
     "lint": "eslint .",
-    "test": "jest",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "test:watch": "jest --watch",
     "typedoc": "typedoc"
   },

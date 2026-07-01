@@ -9,6 +9,7 @@ import {
   findArtifactIdForCell,
   resolveArtifactSchemaName,
 } from '@sqlrooms/cells';
+import {quoteParsedRawSqlTableReference} from '@sqlrooms/duckdb';
 import {produce} from 'immer';
 import {PivotCellContent} from './PivotCellContent';
 import {isPivotCell, type PivotCell} from './pivotCellTypes';
@@ -51,7 +52,10 @@ function resolveSqlQuerySource(
   }));
   if (!columns?.length) return undefined;
 
-  return createPivotQuerySource(resultView, columns);
+  const tableRef = quoteParsedRawSqlTableReference(resultView);
+  if (!tableRef) return undefined;
+
+  return createPivotQuerySource(tableRef, columns);
 }
 
 export const pivotCellRegistryEntry: CellRegistryItem<PivotCell> = {

@@ -14,7 +14,7 @@ import {resolveChartTypes} from '../../charts/chart-types/resolveChartTypes';
 import {createChartToolsInstructions} from '../../charts/chart-types/createChartInstructions';
 import {DASHBOARD_CHART_TOOL_PREFIX, KnownDashboardTools} from './constants';
 import {AgentIntentSchemaFields} from '../agentIntent';
-import {getMosaicTableIdentity} from '../../mosaicTableReference';
+import {getTableIdentity} from '@sqlrooms/db';
 
 function getDashboardAgentInstructions<TState>(
   options: CreateDashboardAgentToolOptions<TState>,
@@ -182,7 +182,7 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
         const dataTable = ensureTable(databaseAdapter, tableName);
 
         await dashboardAdapter.setSelectedTable(
-          dataTable.table ? getMosaicTableIdentity(dataTable.table) : tableName,
+          getTableIdentity(dataTable.table),
         );
 
         const dataTools = options.createDataTools?.({store}) ?? {};

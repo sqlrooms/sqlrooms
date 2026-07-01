@@ -2,7 +2,7 @@ import {WebMercatorViewport} from '@deck.gl/core';
 import {
   escapeId,
   getColValAsNumber,
-  quoteTableReference,
+  quoteParsedRawSqlTableReference,
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import type {
@@ -112,7 +112,7 @@ export function createDeckMapBoundsQuery(options: {
   }
   const baseSourceSql = source.sqlQuery
     ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : `SELECT * FROM ${quoteTableReference(source.tableName ?? '')}`;
+    : `SELECT * FROM ${getDeckMapBoundsSourceTableReference(source.tableName)}`;
 
   if (fitToData.h3Column) {
     const h3Col = escapeId(fitToData.h3Column);
@@ -182,6 +182,14 @@ export function createDeckMapBoundsQuery(options: {
     ) AS "__sqlrooms_dashboard_map_extent"
     WHERE extent IS NOT NULL
   `;
+}
+
+function getDeckMapBoundsSourceTableReference(tableName: string | undefined) {
+  const tableReference = quoteParsedRawSqlTableReference(tableName);
+  if (!tableReference) {
+    throw new Error('Deck map fit-to-data requires a valid table source.');
+  }
+  return tableReference;
 }
 
 function readBoundsFromExtentResult(result: ArrowTable) {

@@ -32,7 +32,7 @@ import {
   escapeVal,
   makeQualifiedTableName,
   QualifiedTableName,
-  quoteTableReference,
+  quoteParsedRawSqlTableReference,
   type SchemaCatalogFilterEntry,
 } from '@sqlrooms/duckdb';
 import {
@@ -304,7 +304,7 @@ function createCliPythonRuntimeHost(): PythonRuntimeHost {
   return {
     readTable: ({tableName, maxRows}) =>
       runReadonlyPythonSql(
-        `SELECT * FROM ${quoteTableReference(tableName)}`,
+        `SELECT * FROM ${getCliRawSqlTableReference(tableName)}`,
         maxRows,
       ),
     runReadonlySql: ({query, maxRows}) => runReadonlyPythonSql(query, maxRows),
@@ -532,7 +532,7 @@ function findTrailingSemicolonStart(query: string) {
 async function readPythonSchema(tableName?: string) {
   if (tableName) {
     const arrowTable = await connector.query(
-      `SELECT * FROM ${quoteTableReference(tableName)} LIMIT 0`,
+      `SELECT * FROM ${getCliRawSqlTableReference(tableName)} LIMIT 0`,
     );
     return {
       tables: [
@@ -586,6 +586,14 @@ async function readPythonSchema(tableName?: string) {
       columns,
     })),
   };
+}
+
+function getCliRawSqlTableReference(tableName: string) {
+  const tableReference = quoteParsedRawSqlTableReference(tableName);
+  if (!tableReference) {
+    throw new Error(`Invalid table reference "${tableName}".`);
+  }
+  return tableReference;
 }
 
 async function readCurrentDatabaseName() {

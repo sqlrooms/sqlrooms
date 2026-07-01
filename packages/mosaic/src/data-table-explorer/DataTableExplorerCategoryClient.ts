@@ -13,6 +13,7 @@ import {
   isSelectableCategoryKey,
   rowsFromQueryResult,
 } from './utils';
+import {getMosaicSqlTableReference} from '../mosaicTableReference';
 
 type CategoryClientOptions = {
   categoryLimit: number;
@@ -43,7 +44,8 @@ export class DataTableExplorerCategoryClient extends MosaicClient {
     this.categoryLimit = options.categoryLimit;
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableReference = options.tableReference ?? options.tableName;
+    this.tableReference =
+      options.tableReference ?? getMosaicSqlTableReference(options.tableName);
   }
 
   override get filterStable(): boolean {

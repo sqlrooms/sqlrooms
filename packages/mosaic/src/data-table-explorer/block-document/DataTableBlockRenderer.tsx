@@ -1,14 +1,13 @@
-import type {DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
+import {SelectablePanelWrapper} from '@sqlrooms/documents';
 import {ScrollArea, ScrollBar, SpinnerPane} from '@sqlrooms/ui';
 import {FC, useCallback} from 'react';
 import {useStoreWithMosaic} from '../../MosaicSlice';
 import {DataTableSelectorEmptyState} from '../../components/DataTableSelector';
-import {useDataTable} from '@sqlrooms/db';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {DataTableExplorer} from '../DataTableExplorer';
 import {DataTableBlockHeader} from './DataTableBlockHeader';
-import {SelectablePanelWrapper} from '@sqlrooms/documents';
 import {DataTableBlockSettings} from './DataTableBlockSettings';
 
 export const DataTableBlockRenderer: FC<
@@ -37,7 +36,7 @@ export const DataTableBlockRenderer: FC<
   const handleTableChange = useCallback(
     (table: DataTable) => {
       (selection ?? getSelection(selectionName, 'crossfilter')).reset();
-      onTitleChange?.(table.table.toString());
+      onTitleChange?.(getTableIdentity(table.table));
     },
     [getSelection, onTitleChange, selection, selectionName],
   );

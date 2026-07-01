@@ -19,6 +19,17 @@ export type {Spec} from '@uwdata/mosaic-spec';
 export {asc, column, desc, Query, sql} from '@uwdata/mosaic-sql';
 export * as vg from '@uwdata/vgplot';
 
+export {
+  getMosaicRawSqlTableReference,
+  getMosaicSqlTableReference,
+  getMosaicVgPlotTableReference,
+  resolveMosaicTableReference,
+  type MosaicSqlTableReference,
+  type MosaicTableReferenceCandidate,
+  type MosaicTableReferenceInput,
+  type VgPlotTableReference,
+} from './mosaicTableReference';
+
 // ============================================================================
 // Core Mosaic State Management
 // ============================================================================

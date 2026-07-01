@@ -13,7 +13,10 @@ import {
 import {createDeckMapBoundsQuery} from '../src/dashboard';
 import {createDeckMapDashboardSliceOptions} from '../src/dashboardIntegration';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '../src/dashboardConfig';
-import {createDeckMapDashboardPanelConfigForTable} from '../src/mapConfigUtils';
+import {
+  createDeckMapDashboardPanelConfigForTable,
+  quoteDeckMapSqlTableReference,
+} from '../src/mapConfigUtils';
 import type {MosaicDashboardEntry} from '@sqlrooms/mosaic';
 
 const scatterConfig = {
@@ -187,6 +190,60 @@ describe('createDeckMapBoundsQuery', () => {
     expect(query).toContain('SELECT * FROM "events"');
     expect(query).toContain('"longitude"');
     expect(query).toContain('"latitude"');
+  });
+
+  it('keeps quoted dotted table identifiers intact in bounds queries', () => {
+    const query = createDeckMapBoundsQuery({
+      source: {
+        tableName: '"main"."events.2026"',
+      },
+      fitToData: {
+        dataset: 'events',
+        longitudeColumn: 'lon',
+        latitudeColumn: 'lat',
+      },
+    });
+
+    expect(query).toContain('FROM "main"."events.2026"');
+    expect(query).not.toContain('"events"."2026"');
+  });
+
+  it('rejects invalid table sources in bounds queries', () => {
+    expect(() =>
+      createDeckMapBoundsQuery({
+        source: {
+          tableName: 'main.',
+        },
+        fitToData: {
+          dataset: 'events',
+          longitudeColumn: 'lon',
+          latitudeColumn: 'lat',
+        },
+      }),
+    ).toThrow('Deck map fit-to-data requires a valid table source.');
+  });
+});
+
+describe('quoteDeckMapSqlTableReference', () => {
+  it('quotes table references with dotted identifier parts', () => {
+    expect(quoteDeckMapSqlTableReference('"main"."events.2026"')).toBe(
+      '"main"."events.2026"',
+    );
+    expect(
+      quoteDeckMapSqlTableReference({
+        schema: 'main',
+        table: 'events.2026',
+      }),
+    ).toBe('"main"."events.2026"');
+  });
+
+  it('rejects malformed table references', () => {
+    expect(() => quoteDeckMapSqlTableReference('main.')).toThrow(
+      'Invalid deck map table reference "main.".',
+    );
+    expect(() => quoteDeckMapSqlTableReference({schema: 'main'})).toThrow(
+      'Deck map table reference object requires a table name.',
+    );
   });
 });
 

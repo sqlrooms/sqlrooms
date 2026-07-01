@@ -9,7 +9,7 @@ import {
   DataTableSelector,
   useTablesWithColumns,
 } from '@sqlrooms/mosaic';
-import {useDataTable, type DataTable} from '@sqlrooms/duckdb';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   binnedNumericSchemes,
@@ -175,7 +175,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       if (onTableChange) {
         onTableChange(table);
       } else {
-        setSelectedTable(dashboardId, table.table.table);
+        setSelectedTable(dashboardId, getTableIdentity(table.table));
       }
     },
     [dashboardId, onTableChange, readOnly, setSelectedTable],
@@ -201,9 +201,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const fallbackTableName =
     activeLayerDataset?.source?.tableName ||
     extractTableFromSqlQuery(activeLayerDataset?.source?.sqlQuery);
-  const primaryTable = useDataTable(dashboardSelectedTable);
   const fallbackTable = useDataTable(fallbackTableName);
-  const dataTable = primaryTable ?? fallbackTable;
+  const dataTable = selectedDataTable ?? fallbackTable;
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],

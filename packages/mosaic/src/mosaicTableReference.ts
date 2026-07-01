@@ -1,11 +1,30 @@
 import {
   parseQualifiedSqlIdentifier,
   escapeId,
+  type RawSqlTableReference,
   type QualifiedTableName,
   resolveTableReference,
   type ResolveTableReferenceResult,
 } from '@sqlrooms/db';
 import {asTableRef, type TableRefNode} from '@uwdata/mosaic-sql';
+
+declare const vgPlotTableReferenceBrand: unique symbol;
+
+/**
+ * Mosaic SQL AST table reference used by Mosaic query-builder APIs.
+ *
+ * This is a structured `TableRefNode`, not a persisted identity string or a raw
+ * SQL fragment.
+ */
+export type MosaicSqlTableReference = TableRefNode;
+
+/**
+ * Serializable vgplot `data.from` value that must be normalized through
+ * SQLRooms' vgplot renderer before it reaches Mosaic execution.
+ */
+export type VgPlotTableReference = string & {
+  readonly [vgPlotTableReferenceBrand]: 'VgPlotTableReference';
+};
 
 /**
  * SQLRooms table reference input accepted at Mosaic boundaries.
@@ -34,19 +53,8 @@ export type MosaicTableReferenceCandidate = {table: QualifiedTableName};
  */
 export function getMosaicSqlTableReference(
   tableName: MosaicTableReferenceInput,
-): TableRefNode {
+): MosaicSqlTableReference {
   return asTableRef(getMosaicTableReferenceParts(tableName))!;
-}
-
-/**
- * Returns the full SQLRooms table identity for React/store keys.
- */
-export function getMosaicTableIdentity(
-  tableName: MosaicTableReferenceInput,
-): string {
-  return typeof tableName === 'string'
-    ? tableName.trim()
-    : tableName.toString();
 }
 
 /**
@@ -59,8 +67,10 @@ export function getMosaicTableIdentity(
  */
 export function getMosaicVgPlotTableReference(
   tableName: MosaicTableReferenceInput,
-): string {
-  return getMosaicRawSqlTableReference(tableName);
+): VgPlotTableReference {
+  return getMosaicRawSqlTableReference(
+    tableName,
+  ) as string as VgPlotTableReference;
 }
 
 /**
@@ -70,8 +80,10 @@ export function getMosaicVgPlotTableReference(
  */
 export function getMosaicRawSqlTableReference(
   tableName: MosaicTableReferenceInput,
-): string {
-  return getMosaicTableReferenceParts(tableName).map(escapeId).join('.');
+): RawSqlTableReference {
+  return getMosaicTableReferenceParts(tableName)
+    .map(escapeId)
+    .join('.') as RawSqlTableReference;
 }
 
 /**
@@ -92,11 +104,11 @@ export function resolveMosaicTableReference<
 }
 
 /**
- * @deprecated Use `getMosaicVgPlotTableReference` for chart specs or
- * `getMosaicRawSqlTableReference` for string-built SQL.
+ * Returns raw identifier parts for Mosaic-owned table-reference conversions.
+ *
+ * The database/catalog is omitted because Mosaic queries execute in the active
+ * connector context.
  */
-export const getMosaicTableReferenceString = getMosaicVgPlotTableReference;
-
 function getMosaicTableReferenceParts(
   tableName: MosaicTableReferenceInput,
 ): string[] {

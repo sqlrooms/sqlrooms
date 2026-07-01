@@ -2,6 +2,7 @@ import {MosaicClient, type Selection} from '@uwdata/mosaic-core';
 import {type ExprNode, type Query} from '@uwdata/mosaic-sql';
 import type {DataTableExplorerSqlTableReference} from './types';
 import {buildCountQuery, readCountData} from './utils';
+import {getMosaicSqlTableReference} from '../mosaicTableReference';
 
 export type DataTableExplorerCountState = {
   count?: number;
@@ -28,7 +29,8 @@ export class DataTableExplorerCountClient extends MosaicClient {
     super(options.selection);
     this.isFilterStable = options.filterStable ?? false;
     this.onStateChange = options.onStateChange;
-    this.tableReference = options.tableReference ?? options.tableName;
+    this.tableReference =
+      options.tableReference ?? getMosaicSqlTableReference(options.tableName);
   }
 
   override get filterStable(): boolean {

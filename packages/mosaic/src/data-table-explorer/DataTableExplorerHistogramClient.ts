@@ -12,6 +12,7 @@ import type {
   DataTableExplorerSqlTableReference,
 } from './types';
 import {rowsFromQueryResult, splitHistogramBins} from './utils';
+import {getMosaicSqlTableReference} from '../mosaicTableReference';
 
 type HistogramStateChange = (
   summary: DataTableExplorerHistogramSummary,
@@ -60,7 +61,8 @@ export class DataTableExplorerHistogramClient extends MosaicClient {
     super(options.selection);
     this.field = options.field;
     this.onStateChange = options.onStateChange;
-    this.tableReference = options.tableReference ?? options.tableName;
+    this.tableReference =
+      options.tableReference ?? getMosaicSqlTableReference(options.tableName);
     this.valueType = options.valueType;
 
     const binned = bin(options.field.name, {steps: options.steps})(

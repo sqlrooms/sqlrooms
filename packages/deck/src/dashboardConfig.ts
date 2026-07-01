@@ -3,6 +3,11 @@ import {
   type MosaicDashboardPanelConfigType,
   Query,
 } from '@sqlrooms/mosaic';
+import {
+  makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  quoteParsedRawSqlTableReference,
+} from '@sqlrooms/duckdb';
 import {createId} from '@paralleldrive/cuid2';
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
@@ -113,33 +118,42 @@ export function resolveDeckMapDashboardDatasetSource(options: {
     return undefined;
   }
 
-  // If the dataset has a sqlQuery and the dashboard table differs from the
-  // original source table, rewrite the FROM clause to use the new table.
+  // If the dataset has a sqlQuery, rewrite the FROM clause to use the
+  // dashboard's runtime table form.
   if (datasetSource?.sqlQuery && dashboardTable) {
-    const originalTable = datasetSource.tableName;
-    const quote = (id: string) => `"${id.replace(/"/g, '""')}"`;
-    const quotedDashboard = dashboardTable.includes('"')
-      ? dashboardTable
-      : dashboardTable.split('.').map(quote).join('.');
+    const sourceTable = datasetSource.tableName;
+    const originalTable = stripCatalogPrefix(sourceTable);
+    const quotedDashboard = quoteRuntimeTableReference(dashboardTable);
+    if (!quotedDashboard) {
+      return datasetSource;
+    }
 
-    if (originalTable && dashboardTable !== originalTable) {
-      const quotedOriginal = originalTable.split('.').map(quote).join('.');
-      const rewritten = datasetSource.sqlQuery
-        .replace(
-          new RegExp(
-            `\\bFROM\\s+${escapeRegExp(originalTable)}(?=\\s|$|[,;)\\[\\]])`,
-            'gi',
+    if (originalTable) {
+      const quotedOriginal = quoteRuntimeTableReference(originalTable);
+      if (quotedOriginal) {
+        const originalReferences = Array.from(
+          new Set(
+            [
+              sourceTable,
+              quoteParsedRawSqlTableReference(sourceTable),
+              originalTable,
+              quotedOriginal,
+            ].filter((reference): reference is string => Boolean(reference)),
           ),
-          `FROM ${quotedDashboard}`,
-        )
-        .replace(
-          new RegExp(
-            `\\bFROM\\s+${escapeRegExp(quotedOriginal)}(?=\\s|$|[,;)\\[\\]])`,
-            'gi',
-          ),
-          `FROM ${quotedDashboard}`,
         );
-      return {sqlQuery: rewritten};
+        const rewritten = originalReferences.reduce(
+          (sqlQuery, originalReference) =>
+            sqlQuery.replace(
+              new RegExp(
+                `\\bFROM\\s+${escapeRegExp(originalReference)}(?=\\s|$|[,;)\\[\\]])`,
+                'gi',
+              ),
+              `FROM ${quotedDashboard}`,
+            ),
+          datasetSource.sqlQuery,
+        );
+        return {sqlQuery: rewritten};
+      }
     }
 
     if (!originalTable) {
@@ -161,45 +175,23 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   return resolvedSource;
 }
 
+function quoteRuntimeTableReference(tableName: string | undefined) {
+  return quoteParsedRawSqlTableReference(stripCatalogPrefix(tableName));
+}
+
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Strips the catalog/database and schema prefixes from a fully qualified table name.
- * DuckDB queries run in a context where the catalog prefix is not valid,
- * and the default schema is typically "main".
- * E.g. "sqlrooms-cli"."main"."earthquakes" → earthquakes
- *      "main"."earthquakes" → earthquakes
- *      earthquakes → earthquakes (unchanged)
- */
-function stripCatalogPrefix(tableName: string | undefined): string | undefined {
-  if (!tableName) return tableName;
-  // Split on dots that are outside quotes
-  const parts: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < tableName.length; i++) {
-    const ch = tableName[i];
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-      current += ch;
-    } else if (ch === '.' && !inQuotes) {
-      parts.push(current);
-      current = '';
-    } else {
-      current += ch;
-    }
+function stripCatalogPrefix(tableName: string | undefined) {
+  const parsed = parseQualifiedSqlIdentifier(tableName);
+  if (!parsed?.database || !parsed.schema || !parsed.table) {
+    return tableName;
   }
-  parts.push(current);
-
-  // Use the last part (bare table name), stripping quotes
-  const lastPart = parts[parts.length - 1] ?? tableName;
-  // Remove surrounding quotes if present
-  if (lastPart.startsWith('"') && lastPart.endsWith('"')) {
-    return lastPart.slice(1, -1);
-  }
-  return lastPart;
+  return makeQualifiedTableName({
+    schema: parsed.schema,
+    table: parsed.table,
+  }).toString();
 }
 
 export function createDeckMapDashboardDatasetQuery(
@@ -207,10 +199,13 @@ export function createDeckMapDashboardDatasetQuery(
   filter: unknown,
   options?: {sampleRows?: number},
 ) {
+  const tableReference = source.sqlQuery
+    ? ''
+    : getDeckMapDatasetSourceTableReference(source.tableName);
   // Apply USING SAMPLE at the source level so Mosaic filters work on top.
-  const sourceExpr = source.sqlQuery
+  const sourceExpr: string = source.sqlQuery
     ? `(${source.sqlQuery})`
-    : (source.tableName ?? '');
+    : tableReference;
 
   const sampledSource = options?.sampleRows
     ? `(SELECT * FROM ${sourceExpr} USING SAMPLE ${options.sampleRows} ROWS)`
@@ -221,9 +216,17 @@ export function createDeckMapDashboardDatasetQuery(
       ? Query.from({
           __dashboard_map_dataset: verbatim(sampledSource),
         })
-      : Query.from(source.tableName ?? '');
+      : Query.from({__dashboard_map_dataset: verbatim(tableReference)});
 
   return query.select('*').where(filter as never);
+}
+
+function getDeckMapDatasetSourceTableReference(tableName: string | undefined) {
+  const tableReference = quoteParsedRawSqlTableReference(tableName);
+  if (!tableReference) {
+    throw new Error('Deck map dataset query requires a valid table source.');
+  }
+  return tableReference;
 }
 
 export function createDeckMapDashboardDatasets(

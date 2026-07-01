@@ -1,4 +1,4 @@
-import type {DataTable} from '@sqlrooms/duckdb';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {getDefaultValuesForAggregator} from '../src/aggregators';
 import {buildCellsQuery, buildPivotExportQuery} from '../src/sql';
 import {createDefaultPivotConfig} from '../src/PivotCoreSlice';
@@ -61,5 +61,18 @@ describe('pivot SQL helpers', () => {
     const sql = buildPivotExportQuery(config, table, ['Female', 'Male']);
     expect(sql).toContain('PIVOT(');
     expect(sql).toContain("FOR \"col_label\" IN ('Female', 'Male')");
+  });
+
+  it('does not accept persisted table identities as raw SQL sources', () => {
+    const config = createDefaultPivotConfig({tableName: 'tips'});
+    const tableIdentity = getTableIdentity(table.table);
+
+    const assertRawSqlSource = () => {
+      // @ts-expect-error TableIdentity needs an explicit raw SQL conversion.
+      buildCellsQuery(config, tableIdentity);
+    };
+    void assertRawSqlSource;
+
+    expect(tableIdentity).toBe('"main"."tips"');
   });
 });

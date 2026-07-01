@@ -16,11 +16,8 @@ import {
 } from '../MosaicDashboardSlice';
 import {DataTableSelectorEmptyState} from '../../components/DataTableSelector';
 import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
-import type {DataTable} from '@sqlrooms/db';
-import {
-  getMosaicTableIdentity,
-  resolveMosaicTableReference,
-} from '../../mosaicTableReference';
+import {getTableIdentity, type DataTable} from '@sqlrooms/db';
+import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
 const EMPTY_DASHBOARD_PANELS: MosaicDashboardPanelConfig[] = [];
 
@@ -62,7 +59,7 @@ export const MosaicDashboardPanels: React.FC = () => {
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      setSelectedTable(dashboardId, getMosaicTableIdentity(table.table));
+      setSelectedTable(dashboardId, getTableIdentity(table.table));
     },
     [dashboardId, setSelectedTable],
   );

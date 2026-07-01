@@ -2,6 +2,7 @@ import {
   BlockDocumentStatefulBlockBlock,
   createDefaultBlockDocumentBlockId,
 } from '@sqlrooms/documents';
+import {getTableIdentity} from '@sqlrooms/duckdb';
 import {
   createDeckMapPanelFromNativeConfig,
   DeckMapDashboardToolParameters,
@@ -200,9 +201,11 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         >;
         const state = getState();
         resolveWorksheet(state, worksheetId);
-        if (!state.db.findTable(tableName)) {
+        const table = state.db.findTable(tableName);
+        if (!table) {
           throw new Error(`Table ${tableName} was not found`);
         }
+        const tableIdentity = getTableIdentity(table.table);
         const result = await invokeRequiredCommand(
           state,
           WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID,
@@ -220,13 +223,18 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         await invokeRequiredCommand(
           state,
           DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID,
-          {dashboardId, tableName},
+          {dashboardId, tableName: tableIdentity},
         );
         return {
           success: true,
           commandId: 'worksheet.add-dashboard-block',
           message: `Added worksheet dashboard block "${title}".`,
-          data: {worksheetId, blockId, dashboardId, selectedTable: tableName},
+          data: {
+            worksheetId,
+            blockId,
+            dashboardId,
+            selectedTable: tableIdentity,
+          },
         };
       },
     },
@@ -244,9 +252,11 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         >;
         const state = getState();
         resolveWorksheet(state, worksheetId);
-        if (!state.db.findTable(tableName)) {
+        const table = state.db.findTable(tableName);
+        if (!table) {
           throw new Error(`Table ${tableName} was not found`);
         }
+        const tableIdentity = getTableIdentity(table.table);
         const result = await invokeRequiredCommand(
           state,
           WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID,
@@ -254,7 +264,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
             artifactId: worksheetId,
             blockType: 'data-table',
             intent,
-            title: tableName,
+            title: tableIdentity,
             caption: title,
             height: 640,
           },
@@ -270,7 +280,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
             worksheetId,
             blockId,
             dataTableId: blockInstanceId,
-            selectedTable: tableName,
+            selectedTable: tableIdentity,
           },
         };
       },
@@ -375,9 +385,11 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
             'tableName is required when updating a worksheet map block with SQL-only dataset sources',
           );
         }
-        if (tableName && !state.db.findTable(tableName)) {
+        const table = tableName ? state.db.findTable(tableName) : undefined;
+        if (tableName && !table) {
           throw new Error(`Table ${tableName} was not found`);
         }
+        const tableIdentity = table ? getTableIdentity(table.table) : undefined;
 
         const mapId = params.mapId ?? createDefaultBlockDocumentBlockId();
         const title = params.title || 'Map';
@@ -421,7 +433,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
           await invokeRequiredCommand(
             state,
             DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID,
-            {dashboardId: mapId, tableName},
+            {dashboardId: mapId, tableName: tableIdentity},
           );
         }
 
@@ -466,7 +478,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
             blockId,
             mapId,
             panelId: existingPanel?.id ?? panel.id,
-            selectedTable: tableName,
+            selectedTable: tableIdentity,
           },
         };
       },

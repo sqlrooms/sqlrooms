@@ -1,4 +1,8 @@
-import type {DataTable, TableColumn} from '@sqlrooms/duckdb';
+import {
+  getTableIdentity,
+  type DataTable,
+  type TableColumn,
+} from '@sqlrooms/duckdb';
 
 /**
  * Prompt-size limits used when formatting table schema context for an AI model.
@@ -269,7 +273,7 @@ function formatColumnForAi(column: TableColumn): string {
  *   count, columns, and optional comment.
  */
 export function formatTableSchemaForAi(table: DataTable): string {
-  const header = [`tableId: ${table.table.toString()}`];
+  const header = [`tableId: ${getTableIdentity(table.table)}`];
   const rowCount = formatRowCount(table.rowCount);
   if (rowCount) header.push(`[${rowCount}]`);
 
@@ -291,7 +295,7 @@ export function formatTableSchemaForAi(table: DataTable): string {
  */
 export function formatTableSummaryForAi(table: DataTable): string {
   const rowCount = formatRowCount(table.rowCount);
-  return `- tableId: ${table.table.toString()}${
+  return `- tableId: ${getTableIdentity(table.table)}${
     rowCount ? ` [${rowCount}]` : ''
   }`;
 }

@@ -1,9 +1,9 @@
 import type {QualifiedTableName} from '@sqlrooms/db';
 import type {MosaicClient, Selection} from '@uwdata/mosaic-core';
-import type {TableRefNode} from '@uwdata/mosaic-sql';
 import type {Interval1D} from '@uwdata/mosaic-plot';
 import type {Field, Table} from 'apache-arrow';
 import type {Dispatch, SetStateAction} from 'react';
+import type {MosaicSqlTableReference} from '../mosaicTableReference';
 
 export type DataTableExplorerSorting = Array<{id: string; desc: boolean}>;
 
@@ -78,17 +78,15 @@ export type DataTableExplorerColumnState = {
   summary: DataTableExplorerSummaryState;
 };
 
-export type DataTableExplorerTableReference = string | QualifiedTableName;
+/**
+ * Resolved SQLRooms table identity accepted by DataTableExplorer.
+ */
+export type DataTableExplorerTableReference = QualifiedTableName;
 
 /**
- * Table reference accepted by dataTableExplorer query builders.
- *
- * Use a string for simple unqualified table names or for call sites that already
- * require a string SQL boundary. Use a TableRefNode for qualified names,
- * especially when schema or table identifier parts may contain dots or quotes,
- * so Mosaic does not reparse those parts from a flattened string.
+ * DataTableExplorer-specific alias for Mosaic SQL AST table references.
  */
-export type DataTableExplorerSqlTableReference = string | TableRefNode;
+export type DataTableExplorerSqlTableReference = MosaicSqlTableReference;
 
 export type DataTableExplorerOptions = {
   categoryLimit?: number;

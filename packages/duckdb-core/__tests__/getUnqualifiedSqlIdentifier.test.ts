@@ -1,7 +1,15 @@
 import {
+  getFullTableIdentity,
+  getRawSqlTableReference,
+  getTableDisplayName,
+  getTableIdentity,
   getUnqualifiedSqlIdentifier,
   makeQualifiedTableName,
+  parseFullTableIdentity,
   parseQualifiedSqlIdentifier,
+  parseTableIdentity,
+  parseTableIdentityToQualifiedName,
+  quoteParsedRawSqlTableReference,
   quoteTableReference,
 } from '../src/duckdb-utils';
 
@@ -142,6 +150,92 @@ describe('parseQualifiedSqlIdentifier', () => {
   it('returns undefined for malformed names', () => {
     expect(parseQualifiedSqlIdentifier('schema.')).toBeUndefined();
     expect(parseQualifiedSqlIdentifier('schema."events')).toBeUndefined();
+  });
+});
+
+describe('table reference boundary helpers', () => {
+  const table = makeQualifiedTableName({
+    database: 'memory',
+    defaultDatabase: 'memory',
+    schema: 'main',
+    table: 'events.2026',
+  });
+  const attachedTable = makeQualifiedTableName({
+    database: 'remote',
+    defaultDatabase: 'memory',
+    schema: 'main',
+    table: 'events.2026',
+  });
+
+  it('creates canonical and full table identities from structured names', () => {
+    expect(getTableIdentity(table)).toBe('"main"."events.2026"');
+    expect(getFullTableIdentity(table)).toBe('"memory"."main"."events.2026"');
+    expect(getTableIdentity(attachedTable)).toBe(
+      '"remote"."main"."events.2026"',
+    );
+  });
+
+  it('strictly rehydrates persisted canonical identity strings', () => {
+    expect(parseTableIdentity('"main"."events.2026"')).toBe(
+      '"main"."events.2026"',
+    );
+    expect(parseTableIdentity('"remote"."main"."events.2026"')).toBe(
+      '"remote"."main"."events.2026"',
+    );
+    expect(parseTableIdentity('main.events')).toBeUndefined();
+    expect(parseTableIdentity('events')).toBeUndefined();
+    expect(parseTableIdentity('')).toBeUndefined();
+    expect(parseTableIdentity('   ')).toBeUndefined();
+  });
+
+  it('rehydrates only fully qualified full table identities', () => {
+    expect(parseFullTableIdentity('"memory"."main"."events.2026"')).toBe(
+      '"memory"."main"."events.2026"',
+    );
+    expect(parseFullTableIdentity('"main"."events.2026"')).toBeUndefined();
+  });
+
+  it('rejects incomplete structured names for full table identities', () => {
+    expect(() =>
+      getFullTableIdentity(
+        makeQualifiedTableName({
+          schema: 'main',
+          table: 'events.2026',
+        }),
+      ),
+    ).toThrow(/requires database, schema, and table/);
+  });
+
+  it('converts rehydrated identities back to structured table names', () => {
+    const identity = parseTableIdentity('"main"."events.2026"');
+
+    expect(identity).toBeDefined();
+    expect(parseTableIdentityToQualifiedName(identity!)?.toArray()).toEqual([
+      'main',
+      'events.2026',
+    ]);
+  });
+
+  it('creates raw SQL table references from structured names', () => {
+    expect(getRawSqlTableReference(table)).toBe('"main"."events.2026"');
+    expect(getRawSqlTableReference(attachedTable)).toBe(
+      '"remote"."main"."events.2026"',
+    );
+  });
+
+  it('quotes parsed legacy raw SQL table references explicitly', () => {
+    expect(quoteParsedRawSqlTableReference('main.events')).toBe(
+      '"main"."events"',
+    );
+    expect(
+      quoteParsedRawSqlTableReference('"memory"."main"."events.2026"'),
+    ).toBe('"memory"."main"."events.2026"');
+    expect(quoteParsedRawSqlTableReference('')).toBeUndefined();
+    expect(quoteParsedRawSqlTableReference('main.')).toBeUndefined();
+  });
+
+  it('returns display-only table names', () => {
+    expect(getTableDisplayName(table)).toBe('events.2026');
   });
 });
 

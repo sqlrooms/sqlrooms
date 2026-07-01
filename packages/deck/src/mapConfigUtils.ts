@@ -1,5 +1,11 @@
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
-import type {DataTable} from '@sqlrooms/duckdb';
+import {
+  getRawSqlTableReference,
+  makeQualifiedTableName,
+  quoteParsedRawSqlTableReference,
+  type DataTable,
+  type RawSqlTableReference,
+} from '@sqlrooms/duckdb';
 import {
   createDeckMapDashboardPanelConfig,
   type DeckMapDashboardPanelConfig,
@@ -102,17 +108,25 @@ export function quoteDeckMapSqlIdentifier(identifier: string) {
 
 export function quoteDeckMapSqlTableReference(
   tableReference: DeckMapTableReference,
-) {
+): RawSqlTableReference {
   if (typeof tableReference === 'string') {
-    return tableReference
-      .split('.')
-      .map((part) => quoteDeckMapSqlIdentifier(part))
-      .join('.');
+    const rawSqlTableReference =
+      quoteParsedRawSqlTableReference(tableReference);
+    if (!rawSqlTableReference) {
+      throw new Error(`Invalid deck map table reference "${tableReference}".`);
+    }
+    return rawSqlTableReference;
   }
-  return [tableReference.database, tableReference.schema, tableReference.table]
-    .filter((part): part is string => Boolean(part))
-    .map(quoteDeckMapSqlIdentifier)
-    .join('.');
+  if (!tableReference.table) {
+    throw new Error('Deck map table reference object requires a table name.');
+  }
+  return getRawSqlTableReference(
+    makeQualifiedTableName({
+      database: tableReference.database,
+      schema: tableReference.schema,
+      table: tableReference.table,
+    }),
+  );
 }
 
 function ensureDeckMapColumnExists(

@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import {
   blockDocumentContentToBlocks,
   type BlockDocumentStatefulBlockBlock,
@@ -63,7 +63,7 @@ export const DataTableBlockSettings: FC<BlockSettingsComponentProps> = ({
     ).reset();
     updateBlock(dashboardId, blockId, {
       ...dataTableBlock,
-      title: table.table.toString(),
+      title: getTableIdentity(table.table),
     });
   };
 

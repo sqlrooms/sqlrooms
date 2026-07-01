@@ -66,7 +66,10 @@ import type {
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import type {DefaultTheme} from 'styled-components';
-import {getUnqualifiedSqlIdentifier} from '@sqlrooms/duckdb-core';
+import {
+  getTableIdentity,
+  getUnqualifiedSqlIdentifier,
+} from '@sqlrooms/duckdb-core';
 import {
   findKeplerTableForDatasetId,
   getKeplerDatasetIdForTable,
@@ -712,7 +715,9 @@ export function createKeplerSlice({
             tableName,
             tableSelection,
           );
-          const sqlTableName = table ? table.table.toString() : tableName;
+          const sqlTableName = table
+            ? getTableIdentity(table.table)
+            : tableName;
           let datasetId = explicitDatasetId;
           if (!datasetId && table) {
             datasetId = getKeplerDatasetIdForTable(table, tableSelection);

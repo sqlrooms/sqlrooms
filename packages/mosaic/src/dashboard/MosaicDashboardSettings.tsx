@@ -1,4 +1,4 @@
-import {useDataTable, type DataTable} from '@sqlrooms/db';
+import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/db';
 import type {BlockSettingsComponentProps} from '@sqlrooms/documents';
 import {type FC, useCallback} from 'react';
 import {DataTableSelector} from '../components/DataTableSelector';
@@ -32,7 +32,7 @@ export const MosaicDashboardSettings: FC<BlockSettingsComponentProps> = ({
     (table: DataTable) => {
       if (readOnly) return;
 
-      setSelectedTable(dashboardId, table.table.toString());
+      setSelectedTable(dashboardId, getTableIdentity(table.table));
     },
     [dashboardId, readOnly, setSelectedTable],
   );
