@@ -37,7 +37,9 @@ explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
 `traceId`, and metadata through tool execution options; the command invocation
 receives those fields for trace callbacks. `DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
 documents the default command, artifact-context, table/query, and high-level
-agent tool policy for future skill runtimes.
+agent tool policy for future skill runtimes. Hosts with product-specific agent
+tool names can call `createSkillRuntimeToolPolicy()` to substitute names such
+as their own block document agent while keeping the package defaults generic.
 
 ## Installation
 

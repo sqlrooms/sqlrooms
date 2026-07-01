@@ -39,51 +39,69 @@ export type CreatePythonBlockCommandsOptions = {
   commandGroup?: string;
 };
 
-const AddPythonBlockInput = z.object({
-  artifactId: z.string().describe('Target worksheet or block document ID.'),
-  blockId: z.string().optional().describe('Optional document block ID.'),
-  blockInstanceId: z
-    .string()
-    .optional()
-    .describe('Optional backing Python block ID. Defaults to blockId.'),
-  title: z.string().optional().describe('Optional Python block title.'),
-  code: z.string().optional().describe('Initial Python code.'),
-  inputs: z.array(PythonInput).optional(),
-  outputs: z.array(PythonOutputDeclaration).optional(),
-  requirements: z.array(PythonRequirementSpec).optional(),
-  index: z
-    .number()
-    .int()
-    .min(0)
-    .optional()
-    .describe('Optional top-level insertion index. Defaults to append.'),
-});
+function createPythonBlockInputSchemas(artifactLabel: string) {
+  const artifactIdDescription = `Target ${artifactLabel.toLowerCase()} artifact ID.`;
+  const PythonBlockInput = z.object({
+    artifactId: z.string().describe(artifactIdDescription),
+    blockId: z.string().describe('Document Python block ID.'),
+  });
 
-const PythonBlockInput = z.object({
-  artifactId: z.string().describe('Target worksheet or block document ID.'),
-  blockId: z.string().describe('Document Python block ID.'),
-});
+  return {
+    AddPythonBlockInput: z.object({
+      artifactId: z.string().describe(artifactIdDescription),
+      blockId: z.string().optional().describe('Optional document block ID.'),
+      blockInstanceId: z
+        .string()
+        .optional()
+        .describe('Optional backing Python block ID. Defaults to blockId.'),
+      title: z.string().optional().describe('Optional Python block title.'),
+      code: z.string().optional().describe('Initial Python code.'),
+      inputs: z.array(PythonInput).optional(),
+      outputs: z.array(PythonOutputDeclaration).optional(),
+      requirements: z.array(PythonRequirementSpec).optional(),
+      index: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe('Optional top-level insertion index. Defaults to append.'),
+    }),
+    PythonBlockInput,
+    UpdatePythonBlockCodeInput: PythonBlockInput.extend({
+      code: z.string().describe('Replacement Python code.'),
+      run: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe('Whether to run the block after updating the code.'),
+    }),
+  };
+}
 
-const UpdatePythonBlockCodeInput = PythonBlockInput.extend({
-  code: z.string().describe('Replacement Python code.'),
-  run: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe('Whether to run the block after updating the code.'),
-});
+function keywordParts(...values: string[]) {
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => value.toLowerCase().split(/[-_\s]+/))
+        .filter(Boolean),
+    ),
+  );
+}
 
-/** Creates command-backed Python block operations for worksheet/block documents. */
+/** Creates command-backed Python block operations for block document artifacts. */
 export function createPythonBlockCommands<
   TRoomState extends PythonBlockCommandState = PythonBlockCommandState,
 >({
-  artifactType = 'worksheet',
-  artifactLabel = 'Worksheet',
-  commandNamespace = 'worksheet',
+  artifactType = 'block-document',
+  artifactLabel = 'Block Document',
+  commandNamespace = 'block-document',
   commandGroup = artifactLabel,
 }: CreatePythonBlockCommandsOptions = {}): RoomCommand<TRoomState>[] {
   const commandId = (suffix: PythonBlockCommandSuffix) =>
     `${commandNamespace}.${suffix}`;
+  const {AddPythonBlockInput, PythonBlockInput, UpdatePythonBlockCodeInput} =
+    createPythonBlockInputSchemas(artifactLabel);
+  const artifactKeywords = keywordParts(commandNamespace, artifactLabel);
 
   const commands = {
     'add-python-block': {
@@ -92,10 +110,9 @@ export function createPythonBlockCommands<
       description:
         'Create a visible Python block with persisted code and declarations.',
       group: commandGroup,
-      keywords: ['python', 'block', 'worksheet'],
+      keywords: ['python', 'block', ...artifactKeywords],
       inputSchema: AddPythonBlockInput,
-      inputDescription:
-        'Worksheet artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.',
+      inputDescription: `${artifactLabel} artifact ID plus optional title, code, inputs, outputs, requirements, and insertion index.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -148,8 +165,7 @@ export function createPythonBlockCommands<
       group: commandGroup,
       keywords: ['python', 'block', 'code', 'update'],
       inputSchema: UpdatePythonBlockCodeInput,
-      inputDescription:
-        'Worksheet artifact ID, Python block ID, replacement code, and optional run flag.',
+      inputDescription: `${artifactLabel} artifact ID, Python block ID, replacement code, and optional run flag.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
@@ -197,7 +213,7 @@ export function createPythonBlockCommands<
       group: commandGroup,
       keywords: ['python', 'block', 'run', 'execute'],
       inputSchema: PythonBlockInput,
-      inputDescription: 'Worksheet artifact ID and Python block ID.',
+      inputDescription: `${artifactLabel} artifact ID and Python block ID.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'high'},
       execute: async ({getState}, input) => {
         const state = getState();
@@ -241,7 +257,7 @@ export function createPythonBlockCommands<
       group: commandGroup,
       keywords: ['python', 'block', 'clear', 'result'],
       inputSchema: PythonBlockInput,
-      inputDescription: 'Worksheet artifact ID and Python block ID.',
+      inputDescription: `${artifactLabel} artifact ID and Python block ID.`,
       metadata: {readOnly: false, idempotent: true, riskLevel: 'low'},
       execute: ({getState}, input) => {
         const state = getState();

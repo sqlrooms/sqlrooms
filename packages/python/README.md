@@ -1,4 +1,4 @@
-Python runtime and block primitives for SQLRooms worksheets and block documents.
+Python runtime and block primitives for SQLRooms block documents.
 
 This package provides:
 
@@ -6,8 +6,8 @@ This package provides:
   execution policy, and bounded last-result summaries
 - `createPythonSlice()` for durable block state and runtime result updates
 - a Pyodide worker runtime adapter with SQLRooms host-query bridge support
-- `PythonBlock` and `createPythonBlockDefinition()` for embeddable
-  worksheet/document blocks
+- `PythonBlock` and `createPythonBlockDefinition()` for embeddable block
+  document blocks
 - `createPythonBlockCommands()` for command-backed create, update, run, and
   clear operations
 
@@ -76,12 +76,27 @@ needed.
   and block-facing state schemas.
 - `@sqlrooms/python` is the curated root entrypoint.
 
-## Worksheet commands
+## Block document commands
 
-Use `createPythonBlockCommands({commandNamespace: 'worksheet'})` alongside the
-worksheet block-document commands to expose:
+Use `createPythonBlockCommands()` alongside the block-document commands to
+expose:
 
-- `worksheet.add-python-block`
-- `worksheet.update-python-block-code`
-- `worksheet.run-python-block`
-- `worksheet.clear-python-block-result`
+- `block-document.add-python-block`
+- `block-document.update-python-block-code`
+- `block-document.run-python-block`
+- `block-document.clear-python-block-result`
+
+Hosts can pass `artifactType`, `artifactLabel`, and `commandNamespace` to expose
+the same Python block operations under product-specific artifact names. For
+example, the SQLRooms CLI app uses:
+
+```ts
+createPythonBlockCommands({
+  artifactType: 'worksheet',
+  artifactLabel: 'Worksheet',
+  commandNamespace: 'worksheet',
+});
+```
+
+That registers worksheet-scoped command IDs such as
+`worksheet.add-python-block` while keeping the package API generic.
