@@ -205,6 +205,21 @@ native Deck map config, for example from AI tooling, and needs the same
 dashboard-compatible `deck-json-map` panel shape that the dashboard map tool
 creates.
 
+### Config Mode
+
+The optional `configMode` field (`'basic' | 'custom'`) on
+`DeckMapDashboardPanelConfig` controls how the map was authored and what editing
+UI is available:
+
+- **`'basic'`** (default when absent) — the config uses only properties that the
+  settings panel can represent (layer type, color scale, radius, geometry
+  bindings). The UI settings panel is enabled for user tweaks.
+- **`'custom'`** — the config may use any deck.gl JSON props, including those not
+  representable in the UI configurator. The settings panel is disabled and shows
+  a message directing users to the JSON editor instead.
+
+AI tools set this field automatically based on request complexity.
+
 ## Embeddable Map Blocks
 
 Host applications that expose document-like block surfaces can render maps

@@ -603,9 +603,7 @@ const Root: FC<RootProps> = ({node, path, parentDirection}) => {
         <div
           className="min-h-full px-5 py-2"
           style={
-            isDragging
-              ? {paddingBottom: 'calc(50vh + 0.5rem)'}
-              : undefined
+            isDragging ? {paddingBottom: 'calc(50vh + 0.5rem)'} : undefined
           }
         >
           <ResponsiveGridLayout

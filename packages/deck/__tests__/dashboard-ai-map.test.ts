@@ -316,6 +316,41 @@ describe('createDeckMapConfigTool', () => {
       multiLayerConfig.spec.layers,
     );
   });
+
+  it('preserves configMode in the created panel config', async () => {
+    const tool = createDeckMapConfigTool();
+
+    const basicResult = await (tool as any).execute({
+      title: 'Basic map',
+      config: {...scatterConfig, configMode: 'basic'},
+      reasoning: 'simple point map',
+    });
+
+    expect(basicResult.llmResult.success).toBe(true);
+    expect(basicResult.llmResult.data.config.configMode).toBe('basic');
+
+    const customResult = await (tool as any).execute({
+      title: 'Custom map',
+      config: {...multiLayerConfig, configMode: 'custom'},
+      reasoning: 'advanced multi-layer visualization',
+    });
+
+    expect(customResult.llmResult.success).toBe(true);
+    expect(customResult.llmResult.data.config.configMode).toBe('custom');
+  });
+
+  it('omits configMode when not provided', async () => {
+    const tool = createDeckMapConfigTool();
+
+    const result = await (tool as any).execute({
+      title: 'Map without mode',
+      config: scatterConfig,
+      reasoning: 'backwards compatible',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(result.llmResult.data.config.configMode).toBeUndefined();
+  });
 });
 
 describe('createDeckMapDashboardTool', () => {

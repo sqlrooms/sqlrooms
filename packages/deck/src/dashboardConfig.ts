@@ -75,9 +75,22 @@ export type DeckMapDashboardFitToDataConfig = {
   maxZoom?: number;
 };
 
+/**
+ * Determines how the AI authored the map config and what UI editing is available.
+ * - `'basic'` — AI produced a minimal config using only properties the UI
+ *   configurator understands. The settings panel is enabled for user tweaks.
+ * - `'custom'` — AI produced a rich, free-form config that may use any deck.gl
+ *   props beyond what the UI configurator can represent. The settings panel is
+ *   disabled; users should edit the raw JSON instead.
+ *
+ * When absent, the config is treated as `'basic'` (settings panel enabled).
+ */
+export type DeckMapConfigMode = 'basic' | 'custom';
+
 export type DeckMapDashboardPanelConfig = {
   spec: DeckJsonMapProps['spec'];
   datasets: Record<string, DeckMapDashboardDatasetConfig>;
+  configMode?: DeckMapConfigMode;
   mapStyle?: string;
   mapProps?: Record<string, unknown>;
   showLegends?: boolean;
