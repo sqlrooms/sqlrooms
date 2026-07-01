@@ -231,4 +231,20 @@ describe('compileColorScale', () => {
     expect(accessor({index: 0})).toHaveLength(4);
     expect(accessor({index: 0})).not.toEqual(accessor({index: 1}));
   });
+
+  it('returns red fallback color when the field is missing from the dataset', () => {
+    const table = createScaleTable();
+    const accessor = compileColorScale({
+      table,
+      colorScale: {
+        field: 'nonexistent_column',
+        type: 'sequential',
+        scheme: 'Blues',
+        domain: 'auto',
+      },
+    });
+
+    expect(accessor({index: 0})).toEqual([255, 0, 0, 200]);
+    expect(accessor({index: 1})).toEqual([255, 0, 0, 200]);
+  });
 });
