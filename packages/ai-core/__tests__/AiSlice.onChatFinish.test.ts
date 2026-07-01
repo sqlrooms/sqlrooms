@@ -36,7 +36,7 @@ function createCompletedMessages(): UIMessage[] {
     {
       id: 'user-1',
       role: 'user',
-      parts: [{type: 'text', text: 'Create a worksheet'}],
+      parts: [{type: 'text', text: 'Create a block document'}],
     },
     {
       id: 'assistant-1',

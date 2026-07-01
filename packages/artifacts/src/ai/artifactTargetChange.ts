@@ -9,7 +9,7 @@
 export type ArtifactTargetChange = {
   /** Artifact that became the primary working target. */
   artifactId: string;
-  /** Runtime artifact type, such as `worksheet`, `dashboard`, or `document`. */
+  /** Runtime artifact type, such as `block-document`, `dashboard`, or `document`. */
   artifactType: string;
   /** Human-readable artifact title at the time of the change. */
   title: string;

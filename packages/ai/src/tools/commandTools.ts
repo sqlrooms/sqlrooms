@@ -52,7 +52,7 @@ export const SearchCommandsToolParameters = z.object({
     .string()
     .optional()
     .describe(
-      'Optional resource hint, such as artifact, worksheet, dashboard, or sql.',
+      'Optional resource hint, such as artifact, block-document, dashboard, or sql.',
     ),
   action: z
     .string()

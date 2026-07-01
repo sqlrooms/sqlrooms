@@ -37,8 +37,12 @@ export type {
   SearchCommandsToolLlmResult,
   SearchCommandsToolParameters as SearchCommandsToolParametersType,
 } from './tools/commandTools';
-export {DEFAULT_SKILL_RUNTIME_TOOL_POLICY} from './tools/skillRuntimeToolPolicy';
+export {
+  DEFAULT_SKILL_RUNTIME_TOOL_POLICY,
+  createSkillRuntimeToolPolicy,
+} from './tools/skillRuntimeToolPolicy';
 export type {
+  CreateSkillRuntimeToolPolicyOptions,
   SkillRuntimeCommandToolPolicy,
   SkillRuntimeToolPolicy,
 } from './tools/skillRuntimeToolPolicy';

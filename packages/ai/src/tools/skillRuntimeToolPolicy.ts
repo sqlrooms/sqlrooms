@@ -22,6 +22,14 @@ export type SkillRuntimeToolPolicy = {
   traceMetadataFields: string[];
 };
 
+export type CreateSkillRuntimeToolPolicyOptions = {
+  /**
+   * Host-provided high-level agent tool names. Use this when an app exposes a
+   * product-specific block document agent.
+   */
+  highLevelAgentTools?: string[];
+};
+
 /**
  * Default tool policy for future skill runtimes.
  *
@@ -48,7 +56,11 @@ export const DEFAULT_SKILL_RUNTIME_TOOL_POLICY: SkillRuntimeToolPolicy = {
     'set_primary_context_artifact',
   ],
   dataTools: ['list_tables', 'read_table_schema', 'query'],
-  highLevelAgentTools: ['worksheet_agent', 'dashboard_agent', 'html_app_agent'],
+  highLevelAgentTools: [
+    'block_document_agent',
+    'dashboard_agent',
+    'html_app_agent',
+  ],
   futureTools: ['runSkill'],
   traceMetadataFields: [
     'commandId',
@@ -63,3 +75,41 @@ export const DEFAULT_SKILL_RUNTIME_TOOL_POLICY: SkillRuntimeToolPolicy = {
     'targetArtifactChange',
   ],
 };
+
+/**
+ * Creates a skill-runtime policy with host-specific tool-name substitutions.
+ */
+export function createSkillRuntimeToolPolicy({
+  highLevelAgentTools = DEFAULT_SKILL_RUNTIME_TOOL_POLICY.highLevelAgentTools,
+}: CreateSkillRuntimeToolPolicyOptions = {}): SkillRuntimeToolPolicy {
+  return {
+    ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY,
+    commandTools: {
+      ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools,
+      discoveryTools: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools.discoveryTools,
+      ],
+      allowedDiscoveryRiskLevels: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools
+          .allowedDiscoveryRiskLevels,
+      ],
+      confirmationRequiredRiskLevels: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools
+          .confirmationRequiredRiskLevels,
+      ],
+      confirmationMetadataFields: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools
+          .confirmationMetadataFields,
+      ],
+    },
+    artifactContextTools: [
+      ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.artifactContextTools,
+    ],
+    dataTools: [...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.dataTools],
+    highLevelAgentTools: [...highLevelAgentTools],
+    futureTools: [...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.futureTools],
+    traceMetadataFields: [
+      ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.traceMetadataFields,
+    ],
+  };
+}

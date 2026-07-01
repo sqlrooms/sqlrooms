@@ -228,7 +228,8 @@ explorer state for custom layout, sizing, or advanced composition.
 `DataTableBlockRenderer` wraps the same explorer UI as a stateful block
 renderer for `@sqlrooms/documents` block documents. Register it with a
 host-provided stateful block type such as `data-table` when a document or
-worksheet surface should embed an interactive Data Table Explorer directly.
+other block document surface should embed an interactive Data Table Explorer
+directly.
 
 Use `DataTableSelector` or `DataTableSelectorEmptyState` when another host
 surface needs the same searchable table picker used by dashboards and data
@@ -519,12 +520,12 @@ dashboard prompts and tool registration stay aligned. When host tools need
 specialized agent guidance, pass `additionalInstructions` to append that
 guidance after the built-in agent workflow without replacing it.
 
-Worksheet agents also accept host tools through `extraTools`. Worksheet extra
-tool factories receive the active `worksheetId` alongside the worksheet and
-database adapters, so host apps can add worksheet-scoped tools such as embedded
-stateful blocks without guessing which worksheet the sub-agent is editing.
-Worksheet block-container tools propagate optional `intent` onto the created
-block when the host adapter persists block document state.
+Block-document agents can also accept host tools through `extraTools`. Host
+tool factories should receive the active block document ID alongside the block
+document and database adapters, so apps can add scoped tools such as embedded
+stateful blocks without guessing which document the sub-agent is editing.
+Block-container tools propagate optional `intent` onto the created block when
+the host adapter persists block document state.
 
 ### Box Plot Chart Type
 

@@ -67,9 +67,9 @@ function createTestStore() {
       label: 'Dashboard',
       defaultTitle: 'Dashboard',
     },
-    worksheet: {
-      label: 'Worksheet',
-      defaultTitle: 'Worksheet',
+    'block-document': {
+      label: 'Block Document',
+      defaultTitle: 'Block Document',
     },
   });
 
@@ -123,8 +123,8 @@ function createTestStore() {
     title: 'Dashboard A',
   });
   store.getState().artifacts.ensureArtifact('artifact-b', {
-    type: 'worksheet',
-    title: 'Worksheet B',
+    type: 'block-document',
+    title: 'Block Document B',
   });
 
   return store;
@@ -272,8 +272,8 @@ describe('artifact AI session helpers', () => {
           },
           'artifact-b': {
             id: 'artifact-b',
-            type: 'worksheet',
-            title: 'Worksheet B',
+            type: 'block-document',
+            title: 'Block Document B',
           },
         },
         extraItems: [
@@ -286,8 +286,8 @@ describe('artifact AI session helpers', () => {
           {
             kind: 'artifact',
             id: 'artifact-b',
-            type: 'worksheet',
-            title: 'Worksheet B',
+            type: 'block-document',
+            title: 'Block Document B',
           },
         ],
       }).map((item) => item.id),
