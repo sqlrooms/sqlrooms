@@ -333,8 +333,8 @@ IF user requests DASHBOARD:
 IF user requests a MAP in a worksheet:
 ${
   mapBlocksEnabled
-    ? `1. For a new map, call ${KnownWorksheetTools.create_worksheet_map_block} directly
-2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to create_worksheet_map_block`
+    ? `1. For a new map, call ${KnownWorksheetTools.create_block_document_map_block} directly
+2. For an existing map, call ${KnownWorksheetTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to create_block_document_map_block`
     : `1. Call ${KnownWorksheetTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownWorksheetTools.add_dashboard_block}
 3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel`

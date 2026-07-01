@@ -147,10 +147,12 @@ export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
-const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/worksheet';
-const WORKSHEET_PYTHON_COMMAND_OWNER = '@sqlrooms/python/worksheet';
+const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/block-document';
+const WORKSHEET_PYTHON_COMMAND_OWNER = '@sqlrooms/python/block-document';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
+In the SQLRooms CLI app, a Worksheet is a block document artifact. When the user asks to create, edit, inspect, or add content to a worksheet, target the current worksheet artifact using block-document commands and block-document agent tools. Use the word Worksheet in user-facing replies, but use block-document tool names and command IDs when invoking tools. The artifact type may still be "worksheet"; its editable content model is a block document.
+
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 
 - Use ${WORKSHEET_AGENT_TOOL_NAME} when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
@@ -174,10 +176,10 @@ Experimental SQLRooms tools are available in this session. Use them for app, map
 const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
   artifactType: 'worksheet',
   artifactLabel: 'Worksheet',
-  commandNamespace: 'worksheet',
+  commandNamespace: 'block-document',
   commandGroup: 'Worksheet',
   defaultTitle: 'Worksheet',
-  blockDocumentAgentToolName: 'worksheet_agent',
+  blockDocumentAgentToolName: WORKSHEET_AGENT_TOOL_NAME,
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -1175,7 +1177,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ...(experimentalEnabled
                 ? {html_app_agent: htmlAppAgentTool(store)}
                 : {}),
-              worksheet_agent: worksheetAgentTool(store, {
+              [WORKSHEET_AGENT_TOOL_NAME]: worksheetAgentTool(store, {
                 experimentalEnabled,
               }),
               ...webContainerToolkit.tools,

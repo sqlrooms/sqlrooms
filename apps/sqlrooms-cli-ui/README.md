@@ -232,16 +232,16 @@ instead of mutating app state through hidden paths or rewriting chat messages.
 
 Worksheet AI tools compose generic block-document helpers with CLI-specific
 agent policy. Durable block appends route through the registered
-`worksheet.append-blocks` command, so text and chart block creation use the same
-traceable mutation path as palette, API, and future skill surfaces.
+`block-document.append-blocks` command, so text and chart block creation use the
+same traceable mutation path as palette, API, and future skill surfaces.
 Stateful worksheet blocks use CLI-owned commands that wrap the generic document
 commands and feature-specific state creation:
 
-- `worksheet.add-dashboard-block`
-- `worksheet.add-data-table-block`
-- `worksheet.add-html-app-block`
-- `worksheet.add-map-block`
-- `worksheet.update-block-metadata`
+- `block-document.add-dashboard-block`
+- `block-document.add-data-table-block`
+- `block-document.add-html-app-block`
+- `block-document.add-map-block`
+- `block-document.update-block-metadata`
 
 Topbar artifact title edits route through `artifact.rename`, which preserves
 artifact-type rename hooks and returns previous/new title metadata for traces.
