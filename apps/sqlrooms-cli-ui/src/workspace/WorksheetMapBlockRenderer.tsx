@@ -18,6 +18,7 @@ export const WorksheetMapBlockRenderer: FC<
   blockType,
   title,
   caption,
+  selected,
   readOnly,
   onCaptionChange,
 }) => {
@@ -34,6 +35,7 @@ export const WorksheetMapBlockRenderer: FC<
       mapId={blockInstanceId}
       title={title}
       caption={caption}
+      selected={selected}
       onCaptionChange={onCaptionChange}
       readOnly={readOnly}
     />
