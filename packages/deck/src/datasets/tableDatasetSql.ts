@@ -20,18 +20,14 @@ function createTransformedTableDatasetSql(options: {
   tableReference: string;
   transformSql: string;
 }) {
-  const leadingWith = /^\s*WITH\s+(RECURSIVE\s+)?/i.exec(options.transformSql);
-  const withKeyword = leadingWith?.[1] ? 'WITH RECURSIVE' : 'WITH';
-  const transformBody = leadingWith
-    ? options.transformSql.slice(leadingWith[0].length)
-    : options.transformSql;
-  const cteSeparator = leadingWith ? ',' : '';
-
   return [
-    `${withKeyword} ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`,
+    `WITH ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`,
     `  SELECT * FROM ${options.tableReference}`,
-    `)${cteSeparator}`,
-    transformBody,
+    `)`,
+    `SELECT *`,
+    `FROM (`,
+    options.transformSql,
+    `) AS "__sqlrooms_transform"`,
   ].join('\n');
 }
 
@@ -39,8 +35,8 @@ function createTransformedTableDatasetSql(options: {
  * Compiles a structured table dataset input into executable SQL.
  *
  * Direct table inputs compile to `SELECT * FROM <quoted table>`. Transformed
- * inputs bind the table to the reserved `__sqlrooms_source` CTE and preserve
- * any authored CTEs from `transformSql`.
+ * inputs bind the table to the reserved `__sqlrooms_source` CTE and nest the
+ * authored `transformSql` so its CTEs remain self-contained.
  */
 export function createDeckTableDatasetSql(
   input: DeckTableDatasetInput,

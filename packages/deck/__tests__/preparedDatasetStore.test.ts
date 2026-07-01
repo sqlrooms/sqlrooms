@@ -158,7 +158,10 @@ describe('PreparedDatasetStore', () => {
         'WITH __sqlrooms_source AS (',
         '  SELECT * FROM "earthquakes"',
         ')',
+        'SELECT *',
+        'FROM (',
         'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+        ') AS "__sqlrooms_transform"',
       ].join('\n'),
     );
     expect(prepareDataset).toHaveBeenCalledTimes(1);

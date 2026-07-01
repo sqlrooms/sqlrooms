@@ -17,7 +17,32 @@ describe('createDeckTableDatasetSql', () => {
     const sql = createDeckTableDatasetSql({
       tableName: 'events',
       transformSql: [
-        'WITH nested AS (SELECT * FROM other_table)',
+        'SELECT id',
+        `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+        'WHERE id > 10;',
+      ].join(' '),
+    });
+
+    expect(sql).toBe(
+      [
+        `WITH ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`,
+        '  SELECT * FROM "events"',
+        ')',
+        'SELECT *',
+        'FROM (',
+        `SELECT id FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} WHERE id > 10`,
+        ') AS "__sqlrooms_transform"',
+      ].join('\n'),
+    );
+  });
+
+  it('nests transform CTEs without merging authored SQL', () => {
+    const sql = createDeckTableDatasetSql({
+      tableName: 'events',
+      transformSql: [
+        'WITH nested AS (',
+        `  SELECT id FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+        ')',
         `SELECT * FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
         'WHERE id IN (SELECT id FROM nested);',
       ].join(' '),
@@ -25,20 +50,15 @@ describe('createDeckTableDatasetSql', () => {
 
     expect(sql).toContain(`WITH ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`);
     expect(sql).toContain('SELECT * FROM "events"');
-    expect(sql).toContain(',\nnested AS (SELECT * FROM other_table)');
-    expect(sql).toContain('FROM other_table');
+    expect(sql).toContain('FROM (\nWITH nested AS (');
+    expect(sql).not.toContain(',\nnested AS (');
     expect(sql).toContain(
       `SELECT * FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
     );
-    expect(
-      sql.match(
-        new RegExp(`WITH\\s+${DECK_TABLE_DATASET_SOURCE_RELATION}\\s+AS`, 'gi'),
-      ),
-    ).toHaveLength(1);
     expect(sql.trim().endsWith(';')).toBe(false);
   });
 
-  it('preserves recursive transform CTEs by making the full CTE list recursive', () => {
+  it('preserves recursive transform CTEs inside the nested transform query', () => {
     const sql = createDeckTableDatasetSql({
       tableName: 'events',
       transformSql: [
@@ -49,11 +69,9 @@ describe('createDeckTableDatasetSql', () => {
       ].join(' '),
     });
 
-    expect(sql).toContain(
-      `WITH RECURSIVE ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`,
-    );
-    expect(sql).toContain(',\nnested AS (');
-    expect(sql).not.toMatch(/\)\s*WITH\s+RECURSIVE/i);
+    expect(sql).toContain(`WITH ${DECK_TABLE_DATASET_SOURCE_RELATION} AS (`);
+    expect(sql).toContain('FROM (\nWITH RECURSIVE nested AS (');
+    expect(sql).toContain(') AS "__sqlrooms_transform"');
   });
 
   it('rejects transform SQL that does not read from the source relation', () => {
