@@ -7,7 +7,7 @@ import type {RoomState} from '../store-types';
 function createMockStore({
   invokeCommand = jest.fn(async (_commandId, input: any) => ({
     success: true,
-    commandId: 'worksheet.append-blocks',
+    commandId: 'block-document.append-blocks',
     data: {
       blockId: input.blocks[0].id,
     },
@@ -47,7 +47,7 @@ function createMockStore({
 }
 
 describe('createWorksheetAiAdapter', () => {
-  it('adds worksheet blocks through the worksheet append command', async () => {
+  it('adds worksheet blocks through the block document append command', async () => {
     const {store, ensureBlockDocument, invokeCommand} = createMockStore();
     const adapter = createWorksheetAiAdapter(store);
     const block: BlockDocumentBlock = {
@@ -62,14 +62,14 @@ describe('createWorksheetAiAdapter', () => {
 
     expect(ensureBlockDocument).toHaveBeenCalledWith('worksheet-1');
     expect(invokeCommand).toHaveBeenCalledWith(
-      'worksheet.append-blocks',
+      'block-document.append-blocks',
       {
         artifactId: 'worksheet-1',
         blocks: [block],
       },
       {
         surface: 'ai',
-        actor: 'worksheet-agent',
+        actor: 'block-document-agent',
       },
     );
   });
@@ -78,7 +78,7 @@ describe('createWorksheetAiAdapter', () => {
     const {store} = createMockStore({
       invokeCommand: jest.fn(async () => ({
         success: false,
-        commandId: 'worksheet.append-blocks',
+        commandId: 'block-document.append-blocks',
         error: 'Command failed',
       })),
     });

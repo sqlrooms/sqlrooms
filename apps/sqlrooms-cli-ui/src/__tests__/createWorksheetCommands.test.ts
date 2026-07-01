@@ -42,7 +42,7 @@ function createState() {
     },
   ];
   const invokeCommand = jest.fn(async (commandId: string, input: any) => {
-    if (commandId === 'worksheet.create-stateful-block') {
+    if (commandId === 'block-document.create-stateful-block') {
       return {
         success: true,
         commandId,
@@ -98,27 +98,26 @@ function createState() {
 }
 
 describe('createWorksheetCommands', () => {
-  it('registers the Stage 5 worksheet command IDs', () => {
+  it('registers the block document command IDs for worksheet stateful blocks', () => {
     expect(createWorksheetCommands().map((command) => command.id)).toEqual([
-      'worksheet.add-dashboard-block',
-      'worksheet.add-data-table-block',
-      'worksheet.add-html-app-block',
-      'worksheet.update-block-metadata',
-      'worksheet.add-map-block',
+      'block-document.add-dashboard-block',
+      'block-document.add-data-table-block',
+      'block-document.add-html-app-block',
+      'block-document.update-block-metadata',
+      'block-document.add-map-block',
     ]);
   });
 
   it('adds dashboard blocks through worksheet and dashboard commands', async () => {
     const {state, invokeCommand} = createState();
-    const result = await getCommand('worksheet.add-dashboard-block').execute(
-      createCommandContext(state),
-      {
-        worksheetId: 'worksheet-1',
-        title: 'Dashboard',
-        tableName: 'earthquakes',
-        intent: 'show trends',
-      },
-    );
+    const result = await getCommand(
+      'block-document.add-dashboard-block',
+    ).execute(createCommandContext(state), {
+      worksheetId: 'worksheet-1',
+      title: 'Dashboard',
+      tableName: 'earthquakes',
+      intent: 'show trends',
+    });
 
     expect(result).toMatchObject({
       success: true,
@@ -130,18 +129,18 @@ describe('createWorksheetCommands', () => {
       },
     });
     expect(invokeCommand).toHaveBeenCalledWith(
-      'worksheet.create-stateful-block',
+      'block-document.create-stateful-block',
       expect.objectContaining({
         artifactId: 'worksheet-1',
         blockType: 'dashboard',
         title: 'Dashboard',
       }),
-      {surface: 'ai', actor: 'worksheet-command'},
+      {surface: 'ai', actor: 'block-document-command'},
     );
     expect(invokeCommand).toHaveBeenCalledWith(
       'dashboard.set-selected-table',
       {dashboardId: 'dashboard-id', tableName: earthquakesTableIdentity},
-      {surface: 'ai', actor: 'worksheet-command'},
+      {surface: 'ai', actor: 'block-document-command'},
     );
   });
 
@@ -149,7 +148,7 @@ describe('createWorksheetCommands', () => {
     const {state, invokeCommand} = createState();
 
     await expect(
-      getCommand('worksheet.add-data-table-block').execute(
+      getCommand('block-document.add-data-table-block').execute(
         createCommandContext(state),
         {
           worksheetId: 'worksheet-1',
@@ -166,17 +165,17 @@ describe('createWorksheetCommands', () => {
       },
     });
     expect(invokeCommand).toHaveBeenCalledWith(
-      'worksheet.create-stateful-block',
+      'block-document.create-stateful-block',
       expect.objectContaining({
         artifactId: 'worksheet-1',
         blockType: 'data-table',
         title: earthquakesTableIdentity,
       }),
-      {surface: 'ai', actor: 'worksheet-command'},
+      {surface: 'ai', actor: 'block-document-command'},
     );
 
     await expect(
-      getCommand('worksheet.add-html-app-block').execute(
+      getCommand('block-document.add-html-app-block').execute(
         createCommandContext(state),
         {
           worksheetId: 'worksheet-1',
@@ -193,7 +192,7 @@ describe('createWorksheetCommands', () => {
     const {state, invokeCommand} = createState();
 
     await expect(
-      getCommand('worksheet.add-map-block').execute(
+      getCommand('block-document.add-map-block').execute(
         createCommandContext(state),
         {
           worksheetId: 'worksheet-1',
@@ -220,22 +219,21 @@ describe('createWorksheetCommands', () => {
     expect(invokeCommand).toHaveBeenCalledWith(
       'dashboard.set-selected-table',
       {dashboardId: 'map-1', tableName: earthquakesTableIdentity},
-      {surface: 'ai', actor: 'worksheet-command'},
+      {surface: 'ai', actor: 'block-document-command'},
     );
   });
 
   it('updates worksheet block metadata through the block document slice', async () => {
     const {state, updateBlock} = createState();
 
-    const result = await getCommand('worksheet.update-block-metadata').execute(
-      createCommandContext(state),
-      {
-        worksheetId: 'worksheet-1',
-        blockId: 'block-1',
-        title: 'Updated Map',
-        caption: 'Updated Map',
-      },
-    );
+    const result = await getCommand(
+      'block-document.update-block-metadata',
+    ).execute(createCommandContext(state), {
+      worksheetId: 'worksheet-1',
+      blockId: 'block-1',
+      title: 'Updated Map',
+      caption: 'Updated Map',
+    });
 
     expect(result).toMatchObject({
       success: true,
@@ -261,7 +259,7 @@ describe('createWorksheetCommands', () => {
     const {state, invokeCommand} = createState();
     invokeCommand.mockImplementation(async (commandId: string, input: any) => {
       if (
-        commandId === 'worksheet.create-stateful-block' &&
+        commandId === 'block-document.create-stateful-block' &&
         input.blockType === 'map'
       ) {
         return {
@@ -278,7 +276,7 @@ describe('createWorksheetCommands', () => {
     });
 
     await expect(
-      getCommand('worksheet.add-map-block').execute(
+      getCommand('block-document.add-map-block').execute(
         createCommandContext(state),
         {
           worksheetId: 'worksheet-1',
@@ -321,7 +319,7 @@ describe('createWorksheetCommands', () => {
     }));
     invokeCommand.mockImplementation(async (commandId: string, input: any) => {
       if (
-        commandId === 'worksheet.create-stateful-block' &&
+        commandId === 'block-document.create-stateful-block' &&
         input.blockType === 'map'
       ) {
         mapStateSeeded = true;
@@ -340,7 +338,7 @@ describe('createWorksheetCommands', () => {
       return {success: true, commandId, data: input};
     });
 
-    const result = await getCommand('worksheet.add-map-block').execute(
+    const result = await getCommand('block-document.add-map-block').execute(
       createCommandContext(state),
       {
         worksheetId: 'worksheet-1',
@@ -364,7 +362,7 @@ describe('createWorksheetCommands', () => {
       expect.objectContaining({
         panelId: 'seeded-map-panel',
       }),
-      {surface: 'ai', actor: 'worksheet-command'},
+      {surface: 'ai', actor: 'block-document-command'},
     );
     expect(invokeCommand).not.toHaveBeenCalledWith(
       'dashboard.add-panel',

@@ -13,10 +13,19 @@ import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 import type {RoomState} from './store-types';
 
-export const CLI_WORKSHEET_COMMAND_OWNER = '@sqlrooms-cli-ui/worksheet';
+export const CLI_WORKSHEET_COMMAND_OWNER = '@sqlrooms-cli-ui/block-document';
 
 const WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID =
-  'worksheet.create-stateful-block';
+  'block-document.create-stateful-block';
+const WORKSHEET_ADD_DASHBOARD_BLOCK_COMMAND_ID =
+  'block-document.add-dashboard-block';
+const WORKSHEET_ADD_DATA_TABLE_BLOCK_COMMAND_ID =
+  'block-document.add-data-table-block';
+const WORKSHEET_ADD_HTML_APP_BLOCK_COMMAND_ID =
+  'block-document.add-html-app-block';
+const WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID =
+  'block-document.update-block-metadata';
+const WORKSHEET_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
 
 const WorksheetIdInput = z.object({
@@ -124,7 +133,7 @@ async function invokeRequiredCommand(
 ) {
   const result = await state.commands.invokeCommand(commandId, input, {
     surface: 'ai',
-    actor: 'worksheet-command',
+    actor: 'block-document-command',
   });
   if (!result.success) {
     throw new Error(
@@ -188,7 +197,7 @@ function findMapPanel(state: RoomState, mapId: string, panelId?: string) {
 export function createWorksheetCommands(): RoomCommand<RoomState>[] {
   return [
     {
-      id: 'worksheet.add-dashboard-block',
+      id: WORKSHEET_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add worksheet dashboard block',
       description: 'Add an owned dashboard block to a worksheet.',
       group: 'Worksheet',
@@ -227,7 +236,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         );
         return {
           success: true,
-          commandId: 'worksheet.add-dashboard-block',
+          commandId: WORKSHEET_ADD_DASHBOARD_BLOCK_COMMAND_ID,
           message: `Added worksheet dashboard block "${title}".`,
           data: {
             worksheetId,
@@ -239,7 +248,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
       },
     },
     {
-      id: 'worksheet.add-data-table-block',
+      id: WORKSHEET_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
       name: 'Add worksheet data table block',
       description: 'Add a data table explorer block to a worksheet.',
       group: 'Worksheet',
@@ -274,7 +283,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         );
         return {
           success: true,
-          commandId: 'worksheet.add-data-table-block',
+          commandId: WORKSHEET_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
           message: `Added worksheet data table block "${title}".`,
           data: {
             worksheetId,
@@ -286,7 +295,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
       },
     },
     {
-      id: 'worksheet.add-html-app-block',
+      id: WORKSHEET_ADD_HTML_APP_BLOCK_COMMAND_ID,
       name: 'Add worksheet HTML app block',
       description: 'Add an owned HTML app block to a worksheet.',
       group: 'Worksheet',
@@ -316,14 +325,14 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         );
         return {
           success: true,
-          commandId: 'worksheet.add-html-app-block',
+          commandId: WORKSHEET_ADD_HTML_APP_BLOCK_COMMAND_ID,
           message: `Added worksheet HTML app block "${title}".`,
           data: {worksheetId, blockId, appId},
         };
       },
     },
     {
-      id: 'worksheet.update-block-metadata',
+      id: WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID,
       name: 'Update worksheet block metadata',
       description: 'Update title, caption, or height for a worksheet block.',
       group: 'Worksheet',
@@ -355,14 +364,14 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         }
         return {
           success: true,
-          commandId: 'worksheet.update-block-metadata',
+          commandId: WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID,
           message: `Updated worksheet block "${blockId}".`,
           data: {worksheetId, blockId, title, caption, height},
         };
       },
     },
     {
-      id: 'worksheet.add-map-block',
+      id: WORKSHEET_ADD_MAP_BLOCK_COMMAND_ID,
       name: 'Add or update worksheet map block',
       description: 'Create or update a direct worksheet map block.',
       group: 'Worksheet',
@@ -457,7 +466,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         if (existingMapBlock) {
           await invokeRequiredCommand(
             state,
-            'worksheet.update-block-metadata',
+            WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID,
             {
               worksheetId: params.worksheetId,
               blockId: existingMapBlock.id,
@@ -469,7 +478,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
 
         return {
           success: true,
-          commandId: 'worksheet.add-map-block',
+          commandId: WORKSHEET_ADD_MAP_BLOCK_COMMAND_ID,
           message: params.mapId
             ? `Updated worksheet map block "${title}".`
             : `Added worksheet map block "${title}".`,

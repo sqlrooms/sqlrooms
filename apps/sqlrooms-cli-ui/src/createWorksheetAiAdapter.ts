@@ -2,7 +2,7 @@ import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 
-const WORKSHEET_APPEND_BLOCKS_COMMAND_ID = 'worksheet.append-blocks';
+const WORKSHEET_APPEND_BLOCKS_COMMAND_ID = 'block-document.append-blocks';
 
 /**
  * Creates a worksheet-specific adapter for the worksheet agent.
@@ -53,7 +53,7 @@ export function createWorksheetAiAdapter(
         },
         {
           surface: 'ai',
-          actor: 'worksheet-agent',
+          actor: 'block-document-agent',
         },
       );
 

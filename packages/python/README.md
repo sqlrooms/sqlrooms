@@ -94,9 +94,9 @@ example, the SQLRooms CLI app uses:
 createPythonBlockCommands({
   artifactType: 'worksheet',
   artifactLabel: 'Worksheet',
-  commandNamespace: 'worksheet',
+  commandNamespace: 'block-document',
 });
 ```
 
-That registers worksheet-scoped command IDs such as
-`worksheet.add-python-block` while keeping the package API generic.
+That keeps Worksheet as the host-facing artifact label while registering
+block-document command IDs such as `block-document.add-python-block`.
