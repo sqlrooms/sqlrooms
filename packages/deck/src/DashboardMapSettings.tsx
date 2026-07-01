@@ -7,7 +7,10 @@ import {
 } from '@sqlrooms/mosaic';
 import {type FC, useCallback} from 'react';
 import {MapSettingsPanel} from './MapSettings';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
+import {
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  type DeckMapDashboardPanelConfig,
+} from './dashboardConfig';
 
 /**
  * Settings adapter for a Deck map panel inside a Mosaic dashboard.
@@ -72,7 +75,7 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
   }
 
   const isCustomMode =
-    (panel.config as Record<string, unknown>)?.configMode === 'custom';
+    (panel.config as DeckMapDashboardPanelConfig)?.configMode === 'custom';
 
   if (isCustomMode) {
     return (
