@@ -336,6 +336,47 @@ const unsubscribe = storage.subscribe(() => {
 // later: unsubscribe();
 ```
 
+### Bundled storage
+
+`BundledSkillStorage` exposes read-only skills shipped inside a package or app
+bundle. Use it for baseline product or package guidance, then compose it below
+workspace and user roots:
+
+```tsx
+import {BundledSkillStorage, CompositeSkillStorage} from '@sqlrooms/ai';
+
+const packageSkills = new BundledSkillStorage(
+  {
+    id: 'package:@sqlrooms/mosaic',
+    label: '@sqlrooms/mosaic skills',
+    writable: false,
+  },
+  [
+    {
+      id: 'chart-selection',
+      manifest: {
+        id: 'chart-selection',
+        version: '0.1.0',
+        name: 'Chart Selection',
+        description: 'Choose chart types from intent and data shape.',
+      },
+      instructions: 'Prefer histograms for one numeric distribution.',
+    },
+  ],
+);
+
+const storage = new CompositeSkillStorage([
+  workspaceStorage,
+  userStorage,
+  appBundledSkills,
+  packageSkills,
+]);
+```
+
+Bundled roots reject `writeSkill` and `deleteSkill`. Their root ids are retained
+in `SkillRef`, so agent traces can show whether selected guidance came from a
+workspace, user, app, or package root.
+
 ### Manifest utilities
 
 - `parseSkillManifest(raw)` — parse and validate a skill manifest (Zod-backed, throws `SkillManifestError` on failure)

@@ -19,6 +19,10 @@ import {
   KnownWorksheetTools,
 } from './ai/constants';
 import {WorksheetMapBlockToolParameters} from './createWorksheetCommands';
+import {
+  createSqlroomsCliDashboardSkillStorage,
+  selectSqlroomsCliDashboardSkillIds,
+} from './ai/dashboardSkills';
 
 const WorksheetMapBlockToolInput = WorksheetMapBlockToolParameters.omit({
   worksheetId: true,
@@ -103,6 +107,9 @@ export function worksheetAgentTool(
       createDefaultAiTools(store, {query: {}, tables: true, commands: false}),
     runSubAgent: ({agent, prompt, parentToolCallId, abortSignal}) =>
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
+    skillStorage: createSqlroomsCliDashboardSkillStorage(),
+    selectSkillIds: ({agent, intent}) =>
+      selectSqlroomsCliDashboardSkillIds({agent, intent}),
   };
 
   const dashboardAgentTool = (
