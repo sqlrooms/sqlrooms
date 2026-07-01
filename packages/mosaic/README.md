@@ -446,6 +446,8 @@ including chart tools, a Data Table Explorer panel tool, and an optional
 exploratory `dashboard_agent`. Client apps supply small adapters that map
 Mosaic's generic dashboard operations to their store and table metadata.
 Agent tools use `intent` for the natural-language objective they should satisfy.
+DuckDB-backed hosts can use `createDuckDbDatabaseAiAdapter(store)` for the
+database adapter.
 Mutation callbacks may return promises, so hosts can route dashboard table and
 panel writes through room commands such as `dashboard.set-selected-table`,
 `dashboard.add-panel`, `dashboard.update-panel`, and `dashboard.remove-panel`
@@ -454,18 +456,14 @@ while preserving the reusable Mosaic AI surface.
 ```ts
 import {
   createDashboardAiTools,
+  createDuckDbDatabaseAiAdapter,
   MAP_TOOL_KEY,
   type DashboardAiAdapter,
-  type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic';
 
 const dashboardId = 'dashboard-1';
 
-const databaseAdapter: DatabaseAiAdapter = {
-  getTables: () => store.getState().db.tables,
-  findTable: (tableName) =>
-    store.getState().db.tables.find((table) => table.tableName === tableName),
-};
+const databaseAdapter = createDuckDbDatabaseAiAdapter(store);
 
 const dashboardAdapter: DashboardAiAdapter = {
   getSelectedTable: () =>
