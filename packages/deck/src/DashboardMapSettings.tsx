@@ -5,6 +5,8 @@ import {
   useConfirmDatasetChange,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
+import {Button} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import {MapSettingsPanel} from './MapSettings';
 import {
@@ -82,6 +84,17 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
           <span>Map settings</span>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
         <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
           <p>
