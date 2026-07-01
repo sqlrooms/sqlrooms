@@ -1,5 +1,5 @@
 import {useDuckDb, type TableColumn} from '@sqlrooms/duckdb';
-import type * as arrow from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {useEffect, useMemo, useState} from 'react';
 import {
   isDeckMapDashboardSqlDatasetSource,
@@ -92,10 +92,95 @@ function shouldInspectOutputSchema(
   );
 }
 
+function mapArrowIntTypeToDuckDb(type: arrow.DataType): string {
+  const {bitWidth, isSigned} = type as {bitWidth?: number; isSigned?: boolean};
+
+  if (isSigned === false) {
+    switch (bitWidth) {
+      case 8:
+        return 'UTINYINT';
+      case 16:
+        return 'USMALLINT';
+      case 32:
+        return 'UINTEGER';
+      case 64:
+        return 'UBIGINT';
+      default:
+        return 'UINTEGER';
+    }
+  }
+
+  switch (bitWidth) {
+    case 8:
+      return 'TINYINT';
+    case 16:
+      return 'SMALLINT';
+    case 32:
+      return 'INTEGER';
+    case 64:
+      return 'BIGINT';
+    default:
+      return 'INTEGER';
+  }
+}
+
+export function arrowTypeToDuckDbColumnType(type: arrow.DataType): string {
+  if (arrow.DataType.isInt(type)) {
+    return mapArrowIntTypeToDuckDb(type);
+  }
+
+  if (arrow.DataType.isFloat(type)) {
+    return (type as {precision?: number}).precision === 1 ? 'FLOAT' : 'DOUBLE';
+  }
+
+  if (arrow.DataType.isDecimal(type)) {
+    return 'DECIMAL';
+  }
+
+  if (arrow.DataType.isUtf8(type) || arrow.DataType.isLargeUtf8(type)) {
+    return 'VARCHAR';
+  }
+
+  if (
+    arrow.DataType.isBinary(type) ||
+    arrow.DataType.isLargeBinary(type) ||
+    arrow.DataType.isFixedSizeBinary(type)
+  ) {
+    return 'BLOB';
+  }
+
+  if (arrow.DataType.isBool(type)) {
+    return 'BOOLEAN';
+  }
+
+  if (arrow.DataType.isDate(type)) {
+    return 'DATE';
+  }
+
+  if (arrow.DataType.isTime(type)) {
+    return 'TIME';
+  }
+
+  if (arrow.DataType.isTimestamp(type)) {
+    switch ((type as {unit?: number}).unit) {
+      case 0:
+        return 'TIMESTAMP_S';
+      case 1:
+        return 'TIMESTAMP_MS';
+      case 3:
+        return 'TIMESTAMP_NS';
+      default:
+        return 'TIMESTAMP';
+    }
+  }
+
+  return String(type);
+}
+
 function arrowSchemaToTableColumns(table: arrow.Table): TableColumn[] {
   return table.schema.fields.map((field) => ({
     name: field.name,
-    type: String(field.type),
+    type: arrowTypeToDuckDbColumnType(field.type),
   }));
 }
 

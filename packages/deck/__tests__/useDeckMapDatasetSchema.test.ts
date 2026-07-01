@@ -1,4 +1,6 @@
+import * as arrow from 'apache-arrow';
 import {
+  arrowTypeToDuckDbColumnType,
   createDeckMapDatasetOutputSchemaSql,
   isDeckMapGeneratedColumn,
   resolveDeckMapDatasetSchema,
@@ -109,5 +111,28 @@ describe('Deck map dataset schema helpers', () => {
       'timestamps',
       'source_geom',
     ]);
+  });
+
+  it('normalizes inspected Arrow schema types to DuckDB-style column types', () => {
+    expect(arrowTypeToDuckDbColumnType(new arrow.Float64())).toBe('DOUBLE');
+    expect(arrowTypeToDuckDbColumnType(new arrow.Float32())).toBe('FLOAT');
+    expect(arrowTypeToDuckDbColumnType(new arrow.Int32())).toBe('INTEGER');
+    expect(arrowTypeToDuckDbColumnType(new arrow.Uint16())).toBe('USMALLINT');
+    expect(arrowTypeToDuckDbColumnType(new arrow.Utf8())).toBe('VARCHAR');
+    expect(arrowTypeToDuckDbColumnType(new arrow.Binary())).toBe('BLOB');
+    expect(arrowTypeToDuckDbColumnType(new arrow.Bool())).toBe('BOOLEAN');
+    expect(arrowTypeToDuckDbColumnType(new arrow.DateDay())).toBe('DATE');
+    expect(arrowTypeToDuckDbColumnType(new arrow.TimestampSecond())).toBe(
+      'TIMESTAMP_S',
+    );
+    expect(arrowTypeToDuckDbColumnType(new arrow.TimestampMillisecond())).toBe(
+      'TIMESTAMP_MS',
+    );
+    expect(arrowTypeToDuckDbColumnType(new arrow.TimestampMicrosecond())).toBe(
+      'TIMESTAMP',
+    );
+    expect(arrowTypeToDuckDbColumnType(new arrow.TimestampNanosecond())).toBe(
+      'TIMESTAMP_NS',
+    );
   });
 });
