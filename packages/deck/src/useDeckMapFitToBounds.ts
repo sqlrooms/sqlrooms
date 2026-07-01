@@ -2,7 +2,6 @@ import {WebMercatorViewport} from '@deck.gl/core';
 import {
   escapeId,
   getColValAsNumber,
-  quoteParsedRawSqlTableReference,
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import type {
@@ -14,8 +13,10 @@ import {useEffect, useMemo, useState, type RefObject} from 'react';
 import {
   asDeckJsonMapConfig,
   resolveDeckMapDashboardDatasetSource,
+  type DeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
 } from './dashboardConfig';
+import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
 import type {DeckJsonMapHandle} from './types';
 
 type DeckMapDashboardFitState = {
@@ -103,16 +104,17 @@ function resolveFitToData(
 }
 
 export function createDeckMapBoundsQuery(options: {
-  source: {tableName?: string; sqlQuery?: string};
+  source: DeckMapDashboardDatasetSource;
   fitToData: DeckMapDashboardFitToDataConfig;
 }) {
   const {source, fitToData} = options;
   if (!isDeckMapFitToDataValid(fitToData)) {
     return null;
   }
-  const baseSourceSql = source.sqlQuery
-    ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-    : `SELECT * FROM ${getDeckMapBoundsSourceTableReference(source.tableName)}`;
+  const baseSourceSql =
+    'sqlQuery' in source
+      ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
+      : createDeckMapBoundsTableSourceSql(source);
 
   if (fitToData.h3Column) {
     const h3Col = escapeId(fitToData.h3Column);
@@ -129,8 +131,9 @@ export function createDeckMapBoundsQuery(options: {
 
   if (fitToData.geometryColumn) {
     const geometryCol = escapeId(fitToData.geometryColumn);
-    const isWkb =
-      source.sqlQuery && source.sqlQuery.toLowerCase().includes('st_aswkb');
+    const sourceSql =
+      'sqlQuery' in source ? source.sqlQuery : (source.transformSql ?? '');
+    const isWkb = sourceSql.toLowerCase().includes('st_aswkb');
     const geomExpr = isWkb
       ? `ST_GeomFromWKB(${geometryCol})`
       : `${geometryCol}::GEOMETRY`;
@@ -184,14 +187,6 @@ export function createDeckMapBoundsQuery(options: {
   `;
 }
 
-function getDeckMapBoundsSourceTableReference(tableName: string | undefined) {
-  const tableReference = quoteParsedRawSqlTableReference(tableName);
-  if (!tableReference) {
-    throw new Error('Deck map fit-to-data requires a valid table source.');
-  }
-  return tableReference;
-}
-
 function readBoundsFromExtentResult(result: ArrowTable) {
   const minLongitude = getColValAsNumber(result, 'min_longitude');
   const minLatitude = getColValAsNumber(result, 'min_latitude');
@@ -216,6 +211,22 @@ function readBoundsFromExtentResult(result: ArrowTable) {
       minLatitude === maxLatitude ? maxLatitude + 0.01 : maxLatitude,
     ],
   ] as const;
+}
+
+function createDeckMapBoundsTableSourceSql(
+  source: Exclude<DeckMapDashboardDatasetSource, {sqlQuery: string}>,
+) {
+  try {
+    return createDeckTableDatasetSql(source);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'Deck table dataset input requires a valid tableName.'
+    ) {
+      throw new Error('Deck map fit-to-data requires a valid table source.');
+    }
+    throw error;
+  }
 }
 
 function fitViewStateToBounds(options: {

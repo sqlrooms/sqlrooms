@@ -3,7 +3,11 @@ import {
   normalizeDatasets,
   resolveArrowTable,
 } from '../src/datasets/normalizeDatasets';
-import {isArrowTableDatasetInput, isSqlDatasetInput} from '../src/types';
+import {
+  isArrowTableDatasetInput,
+  isSqlDatasetInput,
+  isTableDatasetInput,
+} from '../src/types';
 
 describe('normalizeDatasets', () => {
   it('normalizes arrowTable dataset entries', () => {
@@ -56,6 +60,27 @@ describe('normalizeDatasets', () => {
     });
 
     expect(isSqlDatasetInput(datasets.earthquakes!)).toBe(true);
+  });
+
+  it('normalizes table dataset entries', () => {
+    const datasets = normalizeDatasets({
+      earthquakes: {
+        tableName: 'earthquakes',
+        transformSql:
+          'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb',
+      },
+    });
+
+    expect(datasets.earthquakes).toEqual({
+      tableName: 'earthquakes',
+      transformSql:
+        'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    });
+    expect(isTableDatasetInput(datasets.earthquakes!)).toBe(true);
   });
 
   it('rejects empty dataset registries', () => {

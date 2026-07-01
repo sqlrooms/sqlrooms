@@ -54,8 +54,9 @@ const normalizedScatterConfig = {
   datasets: {
     earthquakes: {
       source: {
-        sqlQuery:
-          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM "earthquakes" WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+        tableName: 'earthquakes',
+        transformSql:
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
       },
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',
@@ -504,9 +505,11 @@ describe('createDeckMapDashboardTool', () => {
         latitudeColumn: 'latitude',
       },
     });
-    expect(panel.config.datasets.earthquakes.source.sqlQuery).toContain(
-      'ST_Point("longitude", "latitude")',
-    );
+    expect(panel.config.datasets.earthquakes.source).toEqual({
+      tableName: 'earthquakes',
+      transformSql:
+        'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+    });
   });
 
   it('strips trailing semicolons from wrapped manual source SQL queries', () => {

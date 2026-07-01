@@ -121,6 +121,49 @@ describe('PreparedDatasetStore', () => {
     });
   });
 
+  it('executes table dataset inputs through compiled SQL', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {
+      tableName: 'earthquakes',
+      transformSql:
+        'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      geometryColumn: 'geom',
+    };
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    expect(executeSql).toHaveBeenCalledWith(
+      [
+        'WITH __sqlrooms_source AS (',
+        '  SELECT * FROM "earthquakes"',
+        ')',
+        'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      ].join('\n'),
+    );
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+  });
+
   it('changes cache keys when geometry options or sql source change', () => {
     const table = new Table({value: vectorFromArray([1, 2, 3])});
     const connectorA = {};

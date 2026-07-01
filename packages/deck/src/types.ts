@@ -31,7 +31,26 @@ export type DeckAutoLayerType =
   | 'GeoArrowH3HexagonLayer';
 
 export type DeckSqlDatasetInput = DeckDatasetBase & {
+  /**
+   * Literal SQL query used as the full dataset source.
+   *
+   * SQLRooms does not rewrite this query when dashboard selected tables change.
+   * Use `DeckTableDatasetInput` when a dataset should follow a structured
+   * table source.
+   */
   sqlQuery: string;
+};
+
+/**
+ * Structured table-backed dataset source.
+ *
+ * `tableName` identifies the source relation. When `transformSql` is present,
+ * it must be a complete SELECT query that reads from the reserved
+ * `__sqlrooms_source` relation supplied by SQLRooms at execution time.
+ */
+export type DeckTableDatasetInput = DeckDatasetBase & {
+  tableName: string;
+  transformSql?: string;
 };
 
 export type DeckTable = arrow.Table;
@@ -39,7 +58,10 @@ export type DeckTable = arrow.Table;
 export type DeckArrowTableDatasetInput = DeckDatasetBase & {
   arrowTable: DeckTable | undefined;
 };
-export type DeckDatasetInput = DeckSqlDatasetInput | DeckArrowTableDatasetInput;
+export type DeckDatasetInput =
+  | DeckSqlDatasetInput
+  | DeckTableDatasetInput
+  | DeckArrowTableDatasetInput;
 
 export type DeckJsonSpecDatasetHint = {
   prefer?: 'heatmap';
@@ -96,6 +118,13 @@ export function isSqlDatasetInput(
   input: DeckDatasetInput,
 ): input is DeckSqlDatasetInput {
   return 'sqlQuery' in input;
+}
+
+/** Returns true when the dataset input describes a structured table source. */
+export function isTableDatasetInput(
+  input: DeckDatasetInput,
+): input is DeckTableDatasetInput {
+  return 'tableName' in input;
 }
 
 export function isArrowTableDatasetInput(

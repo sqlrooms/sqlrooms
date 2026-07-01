@@ -3,6 +3,7 @@ import {createStore} from 'zustand/vanilla';
 import {prepareDeckDataset} from '../prepare/prepareDeckDataset';
 import {
   isSqlDatasetInput,
+  isTableDatasetInput,
   type DeckDatasetInput,
   type PreparedDeckDatasetState,
 } from '../types';
@@ -15,6 +16,7 @@ import {
   touchEntry,
 } from './helpers';
 import {resolveArrowTable} from './normalizeDatasets';
+import {createDeckTableDatasetSql} from './tableDatasetSql';
 import type {
   PreparedDatasetCacheEntry,
   PreparedDatasetStoreOptions,
@@ -159,8 +161,14 @@ export function createPreparedDatasetStore(
       const promise = Promise.resolve().then(async () => {
         try {
           let table = resolveArrowTable(input);
-          if (!table && isSqlDatasetInput(input)) {
-            const queryHandle = await executeSql(input.sqlQuery);
+          if (
+            !table &&
+            (isSqlDatasetInput(input) || isTableDatasetInput(input))
+          ) {
+            const sql = isSqlDatasetInput(input)
+              ? input.sqlQuery
+              : createDeckTableDatasetSql(input);
+            const queryHandle = await executeSql(sql);
             if (!queryHandle) {
               throw new Error(
                 `Query for dataset "${datasetId}" was cancelled.`,

@@ -92,7 +92,15 @@ export type {
   ResolvedGeometryColumn,
   ResolvedGeometryEncoding,
 } from './prepare/types';
-export {isArrowTableDatasetInput, isSqlDatasetInput} from './types';
+export {
+  isArrowTableDatasetInput,
+  isSqlDatasetInput,
+  isTableDatasetInput,
+} from './types';
+export {
+  DECK_TABLE_DATASET_SOURCE_RELATION,
+  createDeckTableDatasetSql,
+} from './datasets/tableDatasetSql';
 export type {
   CreateDeckJsonSpecFromDatasetsOptions,
   DeckArrowTableDatasetInput,
@@ -102,6 +110,7 @@ export type {
   DeckJsonMapProps,
   DeckJsonSpecDatasetHint,
   DeckSqlDatasetInput,
+  DeckTableDatasetInput,
   DeckTable,
   PreparedDeckDatasetState,
 } from './types';

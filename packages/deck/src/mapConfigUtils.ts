@@ -10,6 +10,7 @@ import {
   createDeckMapDashboardPanelConfig,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
+import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
 
 const LONGITUDE_COLUMN_NAMES = ['longitude', 'lon', 'lng', 'long', 'x'];
@@ -198,6 +199,21 @@ function createDeckMapPointSourceSql(options: {
   ].join(' ');
 }
 
+function createDeckMapPointTransformSql(options: {
+  longitudeColumn: string;
+  latitudeColumn: string;
+  geometryColumn: string;
+}) {
+  const quotedLongitude = quoteDeckMapSqlIdentifier(options.longitudeColumn);
+  const quotedLatitude = quoteDeckMapSqlIdentifier(options.latitudeColumn);
+
+  return [
+    `SELECT *, ST_AsWKB(ST_Point(${quotedLongitude}, ${quotedLatitude})) AS ${quoteDeckMapSqlIdentifier(options.geometryColumn)}`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    `WHERE ${quotedLongitude} IS NOT NULL AND ${quotedLatitude} IS NOT NULL`,
+  ].join(' ');
+}
+
 export function normalizeDeckMapFillColor(
   fillColor?: number[],
 ): DeckMapFillColor {
@@ -253,15 +269,24 @@ export function createDeckMapDashboardConfigForTable(options: {
     options.geometryEncodingHint ??
     detectedGeometryColumn?.geometryEncodingHint;
   const source = coordinates
-    ? {
-        sqlQuery: createDeckMapPointSourceSql({
-          sourceSqlQuery: options.sourceSqlQuery,
-          tableReference: options.tableReference ?? options.tableName,
-          longitudeColumn: coordinates.longitudeColumn,
-          latitudeColumn: coordinates.latitudeColumn,
-          geometryColumn,
-        }),
-      }
+    ? options.sourceSqlQuery
+      ? {
+          sqlQuery: createDeckMapPointSourceSql({
+            sourceSqlQuery: options.sourceSqlQuery,
+            tableReference: options.tableReference ?? options.tableName,
+            longitudeColumn: coordinates.longitudeColumn,
+            latitudeColumn: coordinates.latitudeColumn,
+            geometryColumn,
+          }),
+        }
+      : {
+          tableName: options.tableName,
+          transformSql: createDeckMapPointTransformSql({
+            longitudeColumn: coordinates.longitudeColumn,
+            latitudeColumn: coordinates.latitudeColumn,
+            geometryColumn,
+          }),
+        }
     : options.sourceSqlQuery
       ? {sqlQuery: options.sourceSqlQuery}
       : {tableName: options.tableName};

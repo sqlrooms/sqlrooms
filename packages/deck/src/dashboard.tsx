@@ -277,8 +277,16 @@ function DeckMapDashboardDatasetClient({
     },
     [datasetId, onDatasetState],
   );
-  const sourceKey = source?.tableName ?? dashboard.selectedTable ?? '';
-  const sourceQueryKey = source?.sqlQuery ?? '';
+  const sourceKey =
+    source && 'tableName' in source
+      ? source.tableName
+      : (dashboard.selectedTable ?? '');
+  const sourceQueryKey =
+    source && 'sqlQuery' in source
+      ? source.sqlQuery
+      : source && 'tableName' in source
+        ? (source.transformSql ?? '')
+        : '';
   const {data, error, isLoading, client} = useMosaicClient({
     id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}`,
     selectionName,

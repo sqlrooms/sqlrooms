@@ -2,6 +2,7 @@ import type * as arrow from 'apache-arrow';
 import {
   isArrowTableDatasetInput,
   isSqlDatasetInput,
+  isTableDatasetInput,
   type DeckDatasetInput,
   type DeckJsonMapProps,
 } from '../types';
@@ -27,8 +28,17 @@ function normalizeDatasetEntry(
     };
   }
 
+  if (isTableDatasetInput(input)) {
+    return {
+      tableName: input.tableName,
+      transformSql: input.transformSql,
+      geometryColumn: input.geometryColumn,
+      geometryEncodingHint: input.geometryEncodingHint,
+    };
+  }
+
   throw new Error(
-    `Dataset "${datasetId}" has an unrecognized input shape. Expected either { sqlQuery } or { arrowTable }.`,
+    `Dataset "${datasetId}" has an unrecognized input shape. Expected { sqlQuery }, { tableName }, { tableName, transformSql }, or { arrowTable }.`,
   );
 }
 

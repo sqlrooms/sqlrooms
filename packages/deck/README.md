@@ -259,8 +259,8 @@ Each SQLRooms-managed layer binds to exactly one dataset through
 <DeckJsonMap
   spec={spec}
   datasets={{
-    earthquakes: {sqlQuery: 'SELECT * FROM earthquakes'},
-    faults: {sqlQuery: 'SELECT * FROM faults'},
+    earthquakes: {tableName: 'earthquakes'},
+    faults: {tableName: 'faults'},
   }}
 />
 ```
@@ -280,6 +280,21 @@ datasets={{
     geometryColumn: 'geom',
     geometryEncodingHint: 'wkb',
   },
+  earthquakePoints: {
+    tableName: 'earthquakes',
+    transformSql: `
+      SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom
+      FROM __sqlrooms_source
+      WHERE longitude IS NOT NULL AND latitude IS NOT NULL
+    `,
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
+  faults: {
+    tableName: 'faults',
+    geometryColumn: 'geom',
+    geometryEncodingHint: 'wkb',
+  },
   preview: {
     arrowTable,
     geometryColumn: 'geom',
@@ -289,7 +304,16 @@ datasets={{
 ```
 
 - `sqlQuery`
-  Runs through the DuckDB slice execution path.
+  Runs a standalone literal query through the DuckDB slice execution path. This
+  query is not rewritten by dashboard table selection.
+- `tableName`
+  Reads directly from a table or schema-qualified table reference.
+- `tableName` + `transformSql`
+  Reads a structured table source through a SQL transform. `transformSql` must
+  be a complete `SELECT` statement that reads from SQLRooms' reserved
+  `__sqlrooms_source` relation. SQLRooms binds that relation to the quoted
+  `tableName` at execution time, so dashboards can swap the table source
+  without editing authored SQL.
 - `arrowTable`
   Uses an already available Apache Arrow table. This is the right input for
   Arrow-native SQLRooms hooks such as `useSql` and `useMosaicClient`.

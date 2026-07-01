@@ -11,7 +11,12 @@ import {
 import {createId} from '@paralleldrive/cuid2';
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
-import type {DeckJsonMapProps, DeckSqlDatasetInput} from './types';
+import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
+import type {
+  DeckJsonMapProps,
+  DeckSqlDatasetInput,
+  DeckTableDatasetInput,
+} from './types';
 
 export const DECK_MAP_DASHBOARD_PANEL_TYPE = 'deck-json-map';
 export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 100_000;
@@ -26,8 +31,12 @@ export type DeckMapDashboardDatasetConfig = Omit<
   DeckSqlDatasetInput,
   'sqlQuery'
 > & {
-  source?: {tableName?: string; sqlQuery?: string};
+  source?: DeckMapDashboardDatasetSource;
 };
+
+export type DeckMapDashboardDatasetSource =
+  | Pick<DeckSqlDatasetInput, 'sqlQuery'>
+  | Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'>;
 
 export type DeckMapDashboardInteractionConfig = {
   type: 'point-radius-brush';
@@ -107,80 +116,38 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   panel: MosaicDashboardPanelConfigType;
   dataset?: DeckMapDashboardDatasetConfig;
   fitToData?: DeckMapDashboardFitToDataConfig;
-}): {tableName?: string; sqlQuery?: string} | undefined {
+}): DeckMapDashboardDatasetSource | undefined {
   const datasetSource = options.dataset?.source;
   const dashboardTable = stripCatalogPrefix(options.dashboard.selectedTable);
 
   // The dashboard's selected table always takes precedence as the data source.
-  // When the user switches the table in the selector, all panels update.
-  const baseTableName = dashboardTable || datasetSource?.tableName;
-  if (!baseTableName && !datasetSource?.sqlQuery) {
-    return undefined;
-  }
-
-  // If the dataset has a sqlQuery, rewrite the FROM clause to use the
-  // dashboard's runtime table form.
-  if (datasetSource?.sqlQuery && dashboardTable) {
-    const sourceTable = datasetSource.tableName;
-    const originalTable = stripCatalogPrefix(sourceTable);
-    const quotedDashboard = quoteRuntimeTableReference(dashboardTable);
-    if (!quotedDashboard) {
-      return datasetSource;
-    }
-
-    if (originalTable) {
-      const quotedOriginal = quoteRuntimeTableReference(originalTable);
-      if (quotedOriginal) {
-        const originalReferences = Array.from(
-          new Set(
-            [
-              sourceTable,
-              quoteParsedRawSqlTableReference(sourceTable),
-              originalTable,
-              quotedOriginal,
-            ].filter((reference): reference is string => Boolean(reference)),
-          ),
-        );
-        const rewritten = originalReferences.reduce(
-          (sqlQuery, originalReference) =>
-            sqlQuery.replace(
-              new RegExp(
-                `\\bFROM\\s+${escapeRegExp(originalReference)}(?=\\s|$|[,;)\\[\\]])`,
-                'gi',
-              ),
-              `FROM ${quotedDashboard}`,
-            ),
-          datasetSource.sqlQuery,
-        );
-        return {sqlQuery: rewritten};
-      }
-    }
-
-    if (!originalTable) {
-      // No explicit tableName — replace the first FROM <identifier> with the dashboard table.
-      const rewritten = datasetSource.sqlQuery.replace(
-        /\bFROM\s+((?:"[^"]*"(?:\."[^"]*")*)|(?:[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*))(?=\s|$|[,;)[\]])/i,
-        `FROM ${quotedDashboard}`,
-      );
-      if (rewritten !== datasetSource.sqlQuery) {
-        return {sqlQuery: rewritten};
-      }
-    }
-
+  // When the user switches the table in the selector, structured table-backed
+  // datasets update while literal SQL remains pinned to its authored query.
+  if (datasetSource && 'sqlQuery' in datasetSource) {
     return datasetSource;
   }
 
-  const resolvedSource = {tableName: baseTableName!};
+  const baseTableName =
+    dashboardTable ||
+    stripCatalogPrefix(
+      datasetSource && 'tableName' in datasetSource
+        ? datasetSource.tableName
+        : undefined,
+    );
+  if (!baseTableName) {
+    return undefined;
+  }
+
+  const resolvedSource: DeckMapDashboardDatasetSource = {
+    tableName: baseTableName,
+    ...(datasetSource &&
+    'tableName' in datasetSource &&
+    datasetSource.transformSql
+      ? {transformSql: datasetSource.transformSql}
+      : {}),
+  };
 
   return resolvedSource;
-}
-
-function quoteRuntimeTableReference(tableName: string | undefined) {
-  return quoteParsedRawSqlTableReference(stripCatalogPrefix(tableName));
-}
-
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function stripCatalogPrefix(tableName: string | undefined) {
@@ -195,24 +162,28 @@ function stripCatalogPrefix(tableName: string | undefined) {
 }
 
 export function createDeckMapDashboardDatasetQuery(
-  source: {tableName?: string; sqlQuery?: string},
+  source: DeckMapDashboardDatasetSource,
   filter: unknown,
   options?: {sampleRows?: number},
 ) {
-  const tableReference = source.sqlQuery
-    ? ''
-    : getDeckMapDatasetSourceTableReference(source.tableName);
+  const isSqlSource = 'sqlQuery' in source;
+  const isDirectTableSource = 'tableName' in source && !source.transformSql;
+  const tableReference = isDirectTableSource
+    ? getDeckMapDatasetSourceTableReference(source.tableName)
+    : '';
   // Apply USING SAMPLE at the source level so Mosaic filters work on top.
-  const sourceExpr: string = source.sqlQuery
+  const sourceExpr: string = isSqlSource
     ? `(${source.sqlQuery})`
-    : tableReference;
+    : isDirectTableSource
+      ? tableReference
+      : `(${createDeckTableDatasetSql(source)})`;
 
   const sampledSource = options?.sampleRows
     ? `(SELECT * FROM ${sourceExpr} USING SAMPLE ${options.sampleRows} ROWS)`
     : sourceExpr;
 
   const query =
-    source.sqlQuery || options?.sampleRows
+    isSqlSource || !isDirectTableSource || options?.sampleRows
       ? Query.from({
           __dashboard_map_dataset: verbatim(sampledSource),
         })
