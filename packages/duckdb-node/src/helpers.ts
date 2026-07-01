@@ -1,12 +1,18 @@
 import {DuckDBConnection} from '@duckdb/node-api';
-import {literalToSQL, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
+import {
+  getRawSqlTableReference,
+  literalToSQL,
+  makeQualifiedTableName,
+} from '@sqlrooms/duckdb-core';
 import * as arrow from 'apache-arrow';
 
 /**
  * Builds a qualified table name string from table name and optional schema.
  */
 export function buildQualifiedName(tableName: string, schema?: string): string {
-  return makeQualifiedTableName({table: tableName, schema}).toString();
+  return getRawSqlTableReference(
+    makeQualifiedTableName({table: tableName, schema}),
+  );
 }
 
 /**

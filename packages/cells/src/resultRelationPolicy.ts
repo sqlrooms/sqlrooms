@@ -1,4 +1,5 @@
 import {
+  getRawSqlTableReference,
   quoteParsedRawSqlTableReference,
   type QualifiedTableName,
   type RawSqlTableReference,
@@ -32,7 +33,9 @@ type SqlConnectorLike = {
 
 function toRelationSqlName(relationName: ResultRelationName): string {
   const relationReference =
-    typeof relationName === 'string' ? relationName : relationName.toString();
+    typeof relationName === 'string'
+      ? relationName
+      : getRawSqlTableReference(relationName);
   const rawSqlTableReference =
     quoteParsedRawSqlTableReference(relationReference);
   if (!rawSqlTableReference) {

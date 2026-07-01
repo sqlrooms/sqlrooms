@@ -1,4 +1,4 @@
-import {escapeId} from '@sqlrooms/duckdb';
+import {escapeId, getRawSqlTableReference} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
@@ -162,13 +162,13 @@ export async function executeSqlCell(
         {signal},
       );
 
-      tableName = db
-        .qualifyTableName({
+      tableName = getRawSqlTableReference(
+        db.qualifyTableName({
           table: effectiveResultName,
           schema: finalSchemaName,
           database: db.currentDatabase,
-        })
-        .toString();
+        }),
+      );
       // Adaptive policy:
       // - first run: choose table when there are downstream dependents,
       //   otherwise keep a lightweight view.
