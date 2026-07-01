@@ -31,6 +31,7 @@ export function isColorScaleMarker(value: unknown): value is ColorScaleMarker {
   );
 }
 
+/** Names of layer accessor props that can carry a color scale. */
 export type ColorScalePropName =
   | 'getFillColor'
   | 'getLineColor'
@@ -38,6 +39,10 @@ export type ColorScalePropName =
   | 'getSourceColor'
   | 'getTargetColor';
 
+/**
+ * Returns the first color scale entry found on the layer props, if any.
+ * Prefer {@link getAllColorScales} when a layer may define multiple color scale accessors.
+ */
 export function getColorScale(props: Record<string, unknown>):
   | {
       propName: ColorScalePropName;
@@ -48,6 +53,7 @@ export function getColorScale(props: Record<string, unknown>):
   return all.length > 0 ? all[0] : undefined;
 }
 
+/** Returns every color scale entry found across all known accessor props on the layer. */
 export function getAllColorScales(props: Record<string, unknown>): Array<{
   propName: ColorScalePropName;
   colorScale: ColorScaleConfig;
