@@ -38,6 +38,18 @@ export type DeckMapDashboardDatasetSource =
   | Pick<DeckSqlDatasetInput, 'sqlQuery'>
   | Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'>;
 
+export function isDeckMapDashboardSqlDatasetSource(
+  source: DeckMapDashboardDatasetSource | undefined,
+): source is Pick<DeckSqlDatasetInput, 'sqlQuery'> {
+  return Boolean(source && 'sqlQuery' in source);
+}
+
+export function isDeckMapDashboardTableDatasetSource(
+  source: DeckMapDashboardDatasetSource | undefined,
+): source is Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'> {
+  return Boolean(source && 'tableName' in source);
+}
+
 export type DeckMapDashboardInteractionConfig = {
   type: 'point-radius-brush';
   dataset: string;
@@ -123,14 +135,14 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   // The dashboard's selected table always takes precedence as the data source.
   // When the user switches the table in the selector, structured table-backed
   // datasets update while literal SQL remains pinned to its authored query.
-  if (datasetSource && 'sqlQuery' in datasetSource) {
+  if (isDeckMapDashboardSqlDatasetSource(datasetSource)) {
     return datasetSource;
   }
 
   const baseTableName =
     dashboardTable ||
     stripCatalogPrefix(
-      datasetSource && 'tableName' in datasetSource
+      isDeckMapDashboardTableDatasetSource(datasetSource)
         ? datasetSource.tableName
         : undefined,
     );
@@ -140,8 +152,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
 
   const resolvedSource: DeckMapDashboardDatasetSource = {
     tableName: baseTableName,
-    ...(datasetSource &&
-    'tableName' in datasetSource &&
+    ...(isDeckMapDashboardTableDatasetSource(datasetSource) &&
     datasetSource.transformSql
       ? {transformSql: datasetSource.transformSql}
       : {}),
@@ -166,8 +177,9 @@ export function createDeckMapDashboardDatasetQuery(
   filter: unknown,
   options?: {sampleRows?: number},
 ) {
-  const isSqlSource = 'sqlQuery' in source;
-  const isDirectTableSource = 'tableName' in source && !source.transformSql;
+  const isSqlSource = isDeckMapDashboardSqlDatasetSource(source);
+  const isTableSource = isDeckMapDashboardTableDatasetSource(source);
+  const isDirectTableSource = isTableSource && !source.transformSql;
   const tableReference = isDirectTableSource
     ? getDeckMapDatasetSourceTableReference(source.tableName)
     : '';

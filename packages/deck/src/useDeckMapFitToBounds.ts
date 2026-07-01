@@ -12,6 +12,7 @@ import type {Table as ArrowTable} from 'apache-arrow';
 import {useEffect, useMemo, useState, type RefObject} from 'react';
 import {
   asDeckJsonMapConfig,
+  isDeckMapDashboardSqlDatasetSource,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
@@ -111,10 +112,9 @@ export function createDeckMapBoundsQuery(options: {
   if (!isDeckMapFitToDataValid(fitToData)) {
     return null;
   }
-  const baseSourceSql =
-    'sqlQuery' in source
-      ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
-      : createDeckMapBoundsTableSourceSql(source);
+  const baseSourceSql = isDeckMapDashboardSqlDatasetSource(source)
+    ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
+    : createDeckMapBoundsTableSourceSql(source);
 
   if (fitToData.h3Column) {
     const h3Col = escapeId(fitToData.h3Column);
@@ -131,8 +131,9 @@ export function createDeckMapBoundsQuery(options: {
 
   if (fitToData.geometryColumn) {
     const geometryCol = escapeId(fitToData.geometryColumn);
-    const sourceSql =
-      'sqlQuery' in source ? source.sqlQuery : (source.transformSql ?? '');
+    const sourceSql = isDeckMapDashboardSqlDatasetSource(source)
+      ? source.sqlQuery
+      : (source.transformSql ?? '');
     const isWkb = sourceSql.toLowerCase().includes('st_aswkb');
     const geomExpr = isWkb
       ? `ST_GeomFromWKB(${geometryCol})`

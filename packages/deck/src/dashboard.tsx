@@ -26,6 +26,8 @@ import {
   createDeckMapDashboardDatasets,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   DEFAULT_DECK_MAP_MAX_DATA_POINTS,
+  isDeckMapDashboardSqlDatasetSource,
+  isDeckMapDashboardTableDatasetSource,
   resolveDeckMapDashboardDatasetSource,
   type DeckMapDashboardFitToDataConfig,
   type DeckMapDashboardDatasetClientState,
@@ -277,16 +279,14 @@ function DeckMapDashboardDatasetClient({
     },
     [datasetId, onDatasetState],
   );
-  const sourceKey =
-    source && 'tableName' in source
-      ? source.tableName
-      : (dashboard.selectedTable ?? '');
-  const sourceQueryKey =
-    source && 'sqlQuery' in source
-      ? source.sqlQuery
-      : source && 'tableName' in source
-        ? (source.transformSql ?? '')
-        : '';
+  const sourceKey = isDeckMapDashboardTableDatasetSource(source)
+    ? source.tableName
+    : (dashboard.selectedTable ?? '');
+  const sourceQueryKey = isDeckMapDashboardSqlDatasetSource(source)
+    ? source.sqlQuery
+    : isDeckMapDashboardTableDatasetSource(source)
+      ? (source.transformSql ?? '')
+      : '';
   const {data, error, isLoading, client} = useMosaicClient({
     id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}`,
     selectionName,

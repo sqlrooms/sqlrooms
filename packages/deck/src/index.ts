@@ -44,6 +44,8 @@ export {
   createDeckMapDashboardPanelConfig,
   DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
+  isDeckMapDashboardSqlDatasetSource,
+  isDeckMapDashboardTableDatasetSource,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
 export {getDeckMapDataPolicy} from './mapDataPolicy';
