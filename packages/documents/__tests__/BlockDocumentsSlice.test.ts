@@ -134,6 +134,66 @@ describe('BlockDocumentsSlice', () => {
     ).toEqual([block]);
   });
 
+  it('preserves legacy worksheet table reference strings in block nodes', () => {
+    const tableReferences = [
+      'events',
+      '"main"."events"',
+      '"memory"."main"."events"',
+      '"remote"."main"."events"',
+    ];
+
+    for (const tableReference of tableReferences) {
+      expect(
+        blockDocumentContentToBlocks({
+          type: 'doc',
+          content: [
+            blockDocumentBlockToNode({
+              id: 'chart',
+              type: 'chart',
+              tableName: tableReference,
+              config: {chartType: 'histogram', settings: {field: 'amount'}},
+            }),
+            blockDocumentBlockToNode({
+              id: 'data-table',
+              type: 'statefulBlock',
+              blockType: 'data-table',
+              blockInstanceId: 'data-table',
+              title: tableReference,
+            }),
+            blockDocumentBlockToNode({
+              id: 'map',
+              type: 'statefulBlock',
+              blockType: 'map',
+              blockInstanceId: 'map',
+              title: tableReference,
+            }),
+          ],
+        }),
+      ).toEqual([
+        {
+          id: 'chart',
+          type: 'chart',
+          tableName: tableReference,
+          config: {chartType: 'histogram', settings: {field: 'amount'}},
+        },
+        {
+          id: 'data-table',
+          type: 'statefulBlock',
+          blockType: 'data-table',
+          blockInstanceId: 'data-table',
+          title: tableReference,
+        },
+        {
+          id: 'map',
+          type: 'statefulBlock',
+          blockType: 'map',
+          blockInstanceId: 'map',
+          title: tableReference,
+        },
+      ]);
+    }
+  });
+
   it('appends, inserts, updates, removes, and moves top-level blocks', () => {
     const store = createTestStore();
 

@@ -1,7 +1,11 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
 import {DataTableModal} from '@sqlrooms/data-table';
-import {TableNodeObject} from '@sqlrooms/duckdb';
+import {
+  getRawSqlTableReference,
+  getTableIdentity,
+  TableNodeObject,
+} from '@sqlrooms/duckdb';
 import {cn, useDisclosure} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {CopyIcon, EyeIcon, TableIcon, ViewIcon} from 'lucide-react';
@@ -40,7 +44,7 @@ export const defaultRenderTableNodeMenuItems = (
 
       <TreeNodeActionsMenuItem
         onClick={() => {
-          navigator.clipboard.writeText(qualifiedTableName.toString());
+          navigator.clipboard.writeText(getTableIdentity(qualifiedTableName));
         }}
       >
         <CopyIcon width="15px" />
@@ -49,7 +53,9 @@ export const defaultRenderTableNodeMenuItems = (
 
       <TreeNodeActionsMenuItem
         onClick={() => {
-          navigator.clipboard.writeText(`SELECT * FROM ${qualifiedTableName}`);
+          navigator.clipboard.writeText(
+            `SELECT * FROM ${getRawSqlTableReference(qualifiedTableName)}`,
+          );
         }}
       >
         <CopyIcon width="15px" />
@@ -87,7 +93,9 @@ export const TableTreeNode: FC<{
 
   const tableModal = useDisclosure();
   const {name, rowCount, isView, table: qualifiedTableName} = nodeObject;
-  const sqlQuery = `SELECT * FROM ${qualifiedTableName}`;
+  const sqlQuery = `SELECT * FROM ${getRawSqlTableReference(
+    qualifiedTableName,
+  )}`;
 
   return (
     <>

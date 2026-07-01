@@ -21,6 +21,14 @@ export type QualifiedTableName = {
    * this object carries one.
    */
   toFullString: () => string;
+  /**
+   * Returns SQLRooms' canonical persisted table identity.
+   *
+   * Prefer the named boundary helpers instead of calling this directly:
+   * `getTableIdentity(...)` for persisted ids and lookup keys,
+   * `getRawSqlTableReference(...)` for direct SQL builders, and
+   * `getTableDisplayName(...)` for UI labels.
+   */
   toString: () => string;
 };
 
@@ -444,12 +452,13 @@ export function resolveTableReference<T extends TableReferenceCandidate>(
   tableReference: string | QualifiedTableName,
 ): ResolveTableReferenceResult<T> {
   if (typeof tableReference !== 'string') {
+    const tableIdentity = getTableIdentity(tableReference);
+    const fullTableIdentity = qualifiedTableNameToFullString(tableReference);
     return {
       table: tables.find(
         (candidate) =>
-          candidate.table.toString() === tableReference.toString() ||
-          qualifiedTableNameToFullString(candidate.table) ===
-            qualifiedTableNameToFullString(tableReference),
+          getTableIdentity(candidate.table) === tableIdentity ||
+          qualifiedTableNameToFullString(candidate.table) === fullTableIdentity,
       ),
     };
   }
@@ -457,7 +466,7 @@ export function resolveTableReference<T extends TableReferenceCandidate>(
   const trimmedTableReference = tableReference.trim();
   const canonicalMatches = tables.filter(
     (candidate) =>
-      candidate.table.toString() === trimmedTableReference ||
+      getTableIdentity(candidate.table) === trimmedTableReference ||
       qualifiedTableNameToFullString(candidate.table) === trimmedTableReference,
   );
   if (canonicalMatches.length === 1) return {table: canonicalMatches[0]};

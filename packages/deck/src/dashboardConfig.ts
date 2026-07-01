@@ -4,6 +4,7 @@ import {
   Query,
 } from '@sqlrooms/mosaic';
 import {
+  getTableIdentity,
   makeQualifiedTableName,
   parseQualifiedSqlIdentifier,
   quoteParsedRawSqlTableReference,
@@ -167,10 +168,12 @@ function stripCatalogPrefix(tableName: string | undefined) {
   if (!parsed?.database || !parsed.schema || !parsed.table) {
     return tableName;
   }
-  return makeQualifiedTableName({
-    schema: parsed.schema,
-    table: parsed.table,
-  }).toString();
+  return getTableIdentity(
+    makeQualifiedTableName({
+      schema: parsed.schema,
+      table: parsed.table,
+    }),
+  );
 }
 
 export function createDeckMapDashboardDatasetQuery(
