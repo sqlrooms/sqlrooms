@@ -84,7 +84,24 @@ export function createSkillRuntimeToolPolicy({
 }: CreateSkillRuntimeToolPolicyOptions = {}): SkillRuntimeToolPolicy {
   return {
     ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY,
-    commandTools: {...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools},
+    commandTools: {
+      ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools,
+      discoveryTools: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools.discoveryTools,
+      ],
+      allowedDiscoveryRiskLevels: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools
+          .allowedDiscoveryRiskLevels,
+      ],
+      confirmationRequiredRiskLevels: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools
+          .confirmationRequiredRiskLevels,
+      ],
+      confirmationMetadataFields: [
+        ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools
+          .confirmationMetadataFields,
+      ],
+    },
     artifactContextTools: [
       ...DEFAULT_SKILL_RUNTIME_TOOL_POLICY.artifactContextTools,
     ],

@@ -32,4 +32,20 @@ describe('skill runtime tool policy', () => {
       'html_app_agent',
     ]);
   });
+
+  it('does not share nested command tool arrays with the default policy', () => {
+    const policy = createSkillRuntimeToolPolicy();
+
+    policy.commandTools.discoveryTools.push('custom_search');
+    policy.commandTools.allowedDiscoveryRiskLevels.pop();
+    policy.commandTools.confirmationRequiredRiskLevels.push('medium');
+    policy.commandTools.confirmationMetadataFields.push('customField');
+
+    expect(DEFAULT_SKILL_RUNTIME_TOOL_POLICY.commandTools).toMatchObject({
+      discoveryTools: ['search_commands', 'find_commands'],
+      allowedDiscoveryRiskLevels: ['low', 'medium', 'high'],
+      confirmationRequiredRiskLevels: ['high'],
+      confirmationMetadataFields: ['riskLevel', 'requiresConfirmation'],
+    });
+  });
 });
