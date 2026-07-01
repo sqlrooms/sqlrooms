@@ -259,9 +259,11 @@ function DeckOverlayControl({
     }
   }, [clearing, overlay]);
 
-  if (!clearing && overlay) {
-    overlay.setProps(deckProps);
-  }
+  useEffect(() => {
+    if (!clearing && overlay) {
+      overlay.setProps(deckProps);
+    }
+  });
 
   return null;
 }

@@ -31,17 +31,32 @@ export function isColorScaleMarker(value: unknown): value is ColorScaleMarker {
   );
 }
 
+export type ColorScalePropName =
+  | 'getFillColor'
+  | 'getLineColor'
+  | 'getColor'
+  | 'getSourceColor'
+  | 'getTargetColor';
+
 export function getColorScale(props: Record<string, unknown>):
   | {
-      propName:
-        | 'getFillColor'
-        | 'getLineColor'
-        | 'getColor'
-        | 'getSourceColor'
-        | 'getTargetColor';
+      propName: ColorScalePropName;
       colorScale: ColorScaleConfig;
     }
   | undefined {
+  const all = getAllColorScales(props);
+  return all.length > 0 ? all[0] : undefined;
+}
+
+export function getAllColorScales(props: Record<string, unknown>): Array<{
+  propName: ColorScalePropName;
+  colorScale: ColorScaleConfig;
+}> {
+  const results: Array<{
+    propName: ColorScalePropName;
+    colorScale: ColorScaleConfig;
+  }> = [];
+
   for (const propName of [
     'getFillColor',
     'getLineColor',
@@ -51,18 +66,11 @@ export function getColorScale(props: Record<string, unknown>):
   ] as const) {
     const value = props[propName];
     if (isColorScaleMarker(value)) {
-      return {
-        propName,
-        colorScale: value.colorScale,
-      };
-    }
-    if (isColorScaleFunction(value)) {
-      return {
-        propName,
-        colorScale: value,
-      };
+      results.push({propName, colorScale: value.colorScale});
+    } else if (isColorScaleFunction(value)) {
+      results.push({propName, colorScale: value});
     }
   }
 
-  return undefined;
+  return results;
 }

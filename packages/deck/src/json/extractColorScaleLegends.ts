@@ -1,6 +1,6 @@
 import type {ResolvedColorLegend} from '@sqlrooms/color-scales';
 import type {PreparedDeckDatasetState} from '../types';
-import {getColorScale} from './colorScaleFunction';
+import {getAllColorScales} from './colorScaleFunction';
 import {buildColorScaleLegend} from './compileColorScale';
 import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
 import {resolveColorLegend, resolveDatasetId} from './layerConfig';
@@ -82,11 +82,10 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    const resolvedColorScale = getColorScale(layerProps);
-    if (!resolvedColorScale) {
+    const resolvedColorScales = getAllColorScales(layerProps);
+    if (resolvedColorScales.length === 0) {
       continue;
     }
-    const {colorScale} = resolvedColorScale;
 
     const datasetId = resolveDatasetId(layerProps, datasetIds);
     if (!datasetId) {
@@ -98,20 +97,21 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    let resolvedLegend: ResolvedColorLegend | null = null;
-    try {
-      resolvedLegend = buildColorScaleLegend({
-        table: datasetState.prepared.table,
-        colorScale,
-        title: resolveLegendTitle(layerProps, colorScale.field),
-      });
-    } catch {
-      // Skip legends for fields that don't exist in the dataset
-      continue;
-    }
+    for (const {colorScale} of resolvedColorScales) {
+      let resolvedLegend: ResolvedColorLegend | null = null;
+      try {
+        resolvedLegend = buildColorScaleLegend({
+          table: datasetState.prepared.table,
+          colorScale,
+          title: resolveLegendTitle(layerProps, colorScale.field),
+        });
+      } catch {
+        continue;
+      }
 
-    if (resolvedLegend) {
-      legends.push(resolvedLegend);
+      if (resolvedLegend) {
+        legends.push(resolvedLegend);
+      }
     }
   }
 

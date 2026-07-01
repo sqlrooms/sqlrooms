@@ -356,4 +356,87 @@ describe('createDeckJsonConfiguration', () => {
 
     expect(typeof converted.layers[0]?.props.getFillColor).toBe('function');
   });
+
+  it('compiles multiple colorScale properties on the same layer', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'earthquakes',
+          getFillColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Viridis',
+            domain: 'auto',
+          },
+          getLineColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'YlOrRd',
+            domain: [0, 10],
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(typeof converted.layers[0]?.props.getFillColor).toBe('function');
+    expect(typeof converted.layers[0]?.props.getLineColor).toBe('function');
+
+    const updateTriggers = converted.layers[0]?.props.updateTriggers as
+      | Record<string, unknown>
+      | undefined;
+    expect(updateTriggers?.getFillColor).toBeTruthy();
+    expect(updateTriggers?.getLineColor).toBeTruthy();
+  });
+
+  it('compiles both getSourceColor and getTargetColor on arc layers', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowArcLayer',
+          id: 'arcs',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+            sourceGeometryColumn: 'source_geom',
+            targetGeometryColumn: 'target_geom',
+          },
+          getSourceColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Blues',
+            domain: 'auto',
+          },
+          getTargetColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Reds',
+            domain: 'auto',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(typeof converted.layers[0]?.props.getSourceColor).toBe('function');
+    expect(typeof converted.layers[0]?.props.getTargetColor).toBe('function');
+  });
 });
