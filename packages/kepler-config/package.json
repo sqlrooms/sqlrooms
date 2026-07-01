@@ -22,6 +22,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/duckdb-core": "workspace:*",
     "zod": "^4.1.8"
   },
   "publishConfig": {

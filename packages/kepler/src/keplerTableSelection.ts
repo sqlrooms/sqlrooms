@@ -1,4 +1,8 @@
-import type {DataTable} from '@sqlrooms/duckdb-core';
+import {
+  makeQualifiedTableName,
+  parseQualifiedSqlIdentifier,
+  type DataTable,
+} from '@sqlrooms/duckdb-core';
 import type {RGBColor} from '@kepler.gl/types';
 
 const UNLOADED_TABLE_COLOR: RGBColor = [143, 149, 161];
@@ -187,9 +191,26 @@ function findMatchingKeplerTableForDatasetId(
     return options.findTableForDatasetId(tables, datasetId);
   }
 
+  // Parse the saved dataset id so we can ignore any leading database segment.
+  // Older configs stored dataset ids as `"database"."schema"."table"`; the
+  // database name is derived from the project file name and shifts when the
+  // file is renamed, so match on schema + table only.
+  const parsed = parseQualifiedSqlIdentifier(datasetId);
+  const parsedSchema = parsed?.schema;
+  const parsedTable = parsed?.table;
+
   const defaultDbSchema = resolveDefaultDbSchema(options);
   for (const table of tables) {
     if (table.table.toString() === datasetId) {
+      return table;
+    }
+
+    if (
+      parsedSchema &&
+      parsedTable &&
+      table.table.schema === parsedSchema &&
+      table.table.table === parsedTable
+    ) {
       return table;
     }
 
@@ -223,8 +244,10 @@ export function shouldIncludeKeplerTable(
 /**
  * Choose the dataset id that should be written into new Kepler layer config.
  *
- * By default, tables in `defaultDbSchema` use bare ids (`places`) and all
- * other tables use qualified SQL references. Hosts can override this with
+ * By default, tables in `defaultDbSchema` use bare ids (`places`) and other
+ * tables use schema-qualified SQL references (`"analytics"."events"`). The
+ * database segment is intentionally omitted so dataset ids stay stable if the
+ * project database file is renamed. Hosts can override this with
  * `getDatasetIdForTable`.
  */
 export function getKeplerDatasetIdForTable(
@@ -240,7 +263,10 @@ export function getKeplerDatasetIdForTable(
     return table.table.table;
   }
 
-  return table.table.toString();
+  return makeQualifiedTableName({
+    schema: table.table.schema,
+    table: table.table.table,
+  }).toString();
 }
 
 /**
