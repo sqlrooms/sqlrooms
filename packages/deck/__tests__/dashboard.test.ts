@@ -60,7 +60,7 @@ describe('deck dashboard integration', () => {
     });
   });
 
-  it('rewrites dataset sqlQuery FROM clause with dashboard.selectedTable', () => {
+  it('keeps literal dataset sqlQuery pinned when dashboard.selectedTable changes', () => {
     const dashboard = createDashboard('dashboard_table');
     const panel = createDeckMapDashboardPanelConfig({
       spec: {layers: []},
@@ -71,7 +71,6 @@ describe('deck dashboard integration', () => {
       },
     });
 
-    // Dashboard table rewrites the FROM clause in dataset sqlQuery
     expect(
       resolveDeckMapDashboardDatasetSource({
         dashboard,
@@ -80,7 +79,7 @@ describe('deck dashboard integration', () => {
           source: {sqlQuery: 'SELECT * FROM dataset_table'},
         },
       }),
-    ).toEqual({sqlQuery: 'SELECT * FROM "dashboard_table"'});
+    ).toEqual({sqlQuery: 'SELECT * FROM dataset_table'});
 
     // Falls back to dashboard source when no dataset source
     expect(
@@ -92,7 +91,41 @@ describe('deck dashboard integration', () => {
     ).toEqual({tableName: 'dashboard_table'});
   });
 
-  it('omits catalog-qualified selected table identities in map runtime SQL', () => {
+  it('resolves table dataset inputs with dashboard.selectedTable', () => {
+    const dashboard = createDashboard('dashboard_table');
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {
+        dataset: {
+          source: {
+            tableName: 'dataset_table',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+          },
+        },
+      },
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {
+            tableName: 'dataset_table',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+          },
+        },
+      }),
+    ).toEqual({
+      tableName: 'dashboard_table',
+      transformSql:
+        'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+    });
+  });
+
+  it('omits catalog-qualified selected table identities in structured map runtime SQL', () => {
     const dashboard = createDashboard('"memory"."main"."events.2026"');
     const panel = createDeckMapDashboardPanelConfig({
       spec: {layers: []},
@@ -104,10 +137,10 @@ describe('deck dashboard integration', () => {
         dashboard,
         panel,
         dataset: {
-          source: {sqlQuery: 'SELECT * FROM "main"."old.events"'},
+          source: {tableName: '"main"."old.events"'},
         },
       }),
-    ).toEqual({sqlQuery: 'SELECT * FROM "main"."events.2026"'});
+    ).toEqual({tableName: '"main"."events.2026"'});
 
     expect(
       resolveDeckMapDashboardDatasetSource({
@@ -125,7 +158,25 @@ describe('deck dashboard integration', () => {
     expect(tableSql).not.toContain('"events"."2026"');
   });
 
-  it('normalizes catalog-qualified source tables before rewriting dataset SQL', () => {
+  it('preserves authored catalog-qualified table sources when no dashboard table is selected', () => {
+    const dashboard = createDashboard();
+    const panel = createDeckMapDashboardPanelConfig({
+      spec: {layers: []},
+      datasets: {},
+    });
+
+    expect(
+      resolveDeckMapDashboardDatasetSource({
+        dashboard,
+        panel,
+        dataset: {
+          source: {tableName: '"remote"."main"."events"'},
+        },
+      }),
+    ).toEqual({tableName: '"remote"."main"."events"'});
+  });
+
+  it('does not rewrite literal SQL containing nested FROM clauses', () => {
     const dashboard = createDashboard('"memory"."main"."events.2026"');
     const panel = createDeckMapDashboardPanelConfig({
       spec: {layers: []},
@@ -138,18 +189,18 @@ describe('deck dashboard integration', () => {
         panel,
         dataset: {
           source: {
-            tableName: '"memory"."main"."old.events"',
             sqlQuery:
-              'SELECT * FROM "memory"."main"."old.events" WHERE value > 0',
+              'WITH nested AS (SELECT * FROM other_table) SELECT * FROM "memory"."main"."old.events" WHERE value > 0',
           },
         },
       }),
     ).toEqual({
-      sqlQuery: 'SELECT * FROM "main"."events.2026" WHERE value > 0',
+      sqlQuery:
+        'WITH nested AS (SELECT * FROM other_table) SELECT * FROM "memory"."main"."old.events" WHERE value > 0',
     });
   });
 
-  it('strips catalog-qualified source SQL when the source matches the selected table', () => {
+  it('strips catalog-qualified structured source tables', () => {
     const dashboard = createDashboard('"memory"."main"."events"');
     const panel = createDeckMapDashboardPanelConfig({
       spec: {layers: []},
@@ -163,18 +214,23 @@ describe('deck dashboard integration', () => {
         dataset: {
           source: {
             tableName: '"memory"."main"."events"',
-            sqlQuery: 'SELECT * FROM "memory"."main"."events" WHERE value > 0',
           },
         },
       }),
-    ).toEqual({
-      sqlQuery: 'SELECT * FROM "main"."events" WHERE value > 0',
-    });
+    ).toEqual({tableName: '"main"."events"'});
   });
 
-  it('builds Mosaic dataset queries for table and trusted SQL sources', () => {
+  it('builds Mosaic dataset queries for table, transform, and trusted SQL sources', () => {
     const tableSql = createDeckMapDashboardDatasetQuery(
       {tableName: 'earthquakes'},
+      [],
+    ).toString();
+    const transformSql = createDeckMapDashboardDatasetQuery(
+      {
+        tableName: 'earthquakes',
+        transformSql:
+          'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      },
       [],
     ).toString();
     const subquerySql = createDeckMapDashboardDatasetQuery(
@@ -188,6 +244,9 @@ describe('deck dashboard integration', () => {
     expect(subquerySql).toContain(
       'FROM (SELECT * FROM earthquakes WHERE Magnitude > 4)',
     );
+    expect(transformSql).toContain('WITH __sqlrooms_source AS');
+    expect(transformSql).toContain('SELECT * FROM "earthquakes"');
+    expect(transformSql).toContain('FROM __sqlrooms_source');
   });
 
   it('wires Arrow client results into DeckJsonMap dataset inputs', () => {

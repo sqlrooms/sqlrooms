@@ -6,8 +6,10 @@ import {
   useTablesWithColumns,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
+import {useBlockSettingsStore} from '@sqlrooms/documents';
 import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
-import {MapIcon} from 'lucide-react';
+import {MapIcon, SlidersVerticalIcon} from 'lucide-react';
+import {Button} from '@sqlrooms/ui';
 import {useCallback, useEffect, useMemo} from 'react';
 import {
   createDeckMapDashboardPanelConfig,
@@ -91,6 +93,8 @@ export type DeckMapBlockRendererProps = {
   caption?: string;
   /** Callback when caption changes. */
   onCaptionChange?: (caption: string | undefined) => void;
+  /** Whether the containing document block is selected. */
+  selected?: boolean;
   /** Whether the block is read-only. */
   readOnly?: boolean;
 };
@@ -103,6 +107,7 @@ export function DeckMapBlockRenderer({
   title,
   caption,
   onCaptionChange,
+  selected,
   readOnly,
 }: DeckMapBlockRendererProps) {
   const dashboard = useStoreWithMosaicDashboard(
@@ -122,6 +127,16 @@ export function DeckMapBlockRenderer({
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
+  const requestOpenSettingsPanel = useBlockSettingsStore(
+    (state) => state.blockSettings.requestOpenSettingsPanel,
+  );
+  const requestCloseSettingsPanel = useBlockSettingsStore(
+    (state) => state.blockSettings.requestCloseSettingsPanel,
+  );
+  const isSettingsPanelOpen = useBlockSettingsStore(
+    (state) => state.blockSettings.runtime.isSettingsPanelOpen,
+  );
+  const isSettingsShown = Boolean(selected && isSettingsPanelOpen);
 
   useEffect(() => {
     if (!mapId) {
@@ -210,6 +225,14 @@ export function DeckMapBlockRenderer({
     },
     [mapId, panel, setSelectedTable, title, updatePanel],
   );
+  const handleSettingsClick = useCallback(() => {
+    if (isSettingsShown) {
+      requestCloseSettingsPanel();
+      return;
+    }
+
+    requestOpenSettingsPanel();
+  }, [isSettingsShown, requestCloseSettingsPanel, requestOpenSettingsPanel]);
 
   if (!dashboard || !panel) {
     return (
@@ -248,7 +271,22 @@ export function DeckMapBlockRenderer({
             onChange={(value: string) => onCaptionChange?.(value || undefined)}
           />
         </div>
-        {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
+        <div className="flex items-center gap-0.5">
+          {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
+          <Button
+            type="button"
+            variant={isSettingsShown ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            aria-label={
+              isSettingsShown ? 'Close map settings' : 'Open map settings'
+            }
+            aria-pressed={isSettingsShown}
+            onClick={handleSettingsClick}
+          >
+            <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
+          </Button>
+        </div>
       </div>
       <div className="min-h-0 flex-1">
         {hasDatasets ? (

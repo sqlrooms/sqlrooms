@@ -379,6 +379,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             title={title}
             caption={caption}
             height={resolvedHeight}
+            selected={selected}
             readOnly={readOnly}
             onTitleChange={handleTitleChange}
             onCaptionChange={handleCaptionChange}

@@ -1,5 +1,9 @@
 import type * as arrow from 'apache-arrow';
-import {isSqlDatasetInput, type DeckDatasetInput} from '../types';
+import {
+  isSqlDatasetInput,
+  isTableDatasetInput,
+  type DeckDatasetInput,
+} from '../types';
 import {resolveArrowTable} from './normalizeDatasets';
 import type {PreparedDatasetCacheEntry} from './types';
 
@@ -65,7 +69,7 @@ export function buildGeometryKey(input: DeckDatasetInput): string {
  * The key intentionally ignores the user-facing dataset id and instead uses
  * the underlying data identity:
  *
- * - SQL datasets: DuckDB connector identity + SQL text + geometry options
+ * - SQL/table datasets: DuckDB connector identity + compiled SQL + geometry options
  * - Arrow datasets: table object identity + geometry options
  *
  * Unresolved Arrow inputs (`arrowTable: undefined`) return `undefined`, which
@@ -77,11 +81,21 @@ export function resolvePreparedDatasetCacheKey(options: {
 }): string | undefined {
   const {input, sqlSourceIdentity} = options;
 
-  if (isSqlDatasetInput(input)) {
+  if (isSqlDatasetInput(input) || isTableDatasetInput(input)) {
     if (!sqlSourceIdentity) {
       throw new Error(
-        'SQL dataset cache keys require a sqlSourceIdentity object.',
+        'SQL-backed dataset cache keys require a sqlSourceIdentity object.',
       );
+    }
+
+    if (isTableDatasetInput(input)) {
+      return [
+        'table',
+        getSqlSourceIdentity(sqlSourceIdentity),
+        input.tableName,
+        input.transformSql ?? '',
+        buildGeometryKey(input),
+      ].join('\u0001');
     }
 
     return [
