@@ -272,24 +272,10 @@ export function createDeckJsonConfiguration(
           props: strippedProps,
           table: prepared.table,
         });
-        const geoJsonResult: Record<string, unknown> = {
+        return {
           ...baseProps,
           data: prepared.getGeoJsonBinaryData(geometryColumn),
         };
-        // Set updateTriggers for getElevation in the GeoJSON path as well.
-        const rawElevation = strippedProps.getElevation;
-        const existingTriggers =
-          geoJsonResult.updateTriggers &&
-          typeof geoJsonResult.updateTriggers === 'object' &&
-          !Array.isArray(geoJsonResult.updateTriggers)
-            ? (geoJsonResult.updateTriggers as Record<string, unknown>)
-            : {};
-        geoJsonResult.updateTriggers = {
-          ...existingTriggers,
-          getElevation:
-            rawElevation !== undefined ? JSON.stringify(rawElevation) : 'none',
-        };
-        return geoJsonResult;
       }
 
       const {table, boundProps} = resolveGeoArrowBindings({
@@ -305,17 +291,61 @@ export function createDeckJsonConfiguration(
         props: strippedProps,
         table,
       });
-      const nextProps = {
+      const nextProps: Record<string, unknown> = {
         ...baseProps,
         data: table,
         ...boundProps,
       };
+
+      // Normalize getElevation: subtract column minimum so heights start at 0.
+      const rawElev = nextProps.getElevation;
+      if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
+        const elevField = rawElev.slice(3).trim();
+        const elevVector = table.getChild(elevField);
+        if (elevVector) {
+          let min = Infinity;
+          for (let i = 0; i < elevVector.length; i++) {
+            const v = Number(elevVector.get(i));
+            if (Number.isFinite(v) && v < min) min = v;
+          }
+          if (Number.isFinite(min) && min !== 0) {
+            nextProps.getElevation = `@@=${elevField} - ${min}`;
+          }
+        }
+      }
 
       const rewritten = rewriteGeoArrowAccessors({
         props: nextProps,
         table,
         layerName,
       });
+
+      // Set updateTriggers for any @@= accessor props that were rewritten
+      // so deck.gl re-evaluates them when the column reference changes.
+      {
+        const accessorTriggers: Record<string, string> = {};
+        for (const [propName, propValue] of Object.entries(nextProps)) {
+          if (
+            typeof propValue === 'string' &&
+            propValue.startsWith('@@=') &&
+            propName.startsWith('get')
+          ) {
+            accessorTriggers[propName] = propValue;
+          }
+        }
+        if (Object.keys(accessorTriggers).length > 0) {
+          const existingTriggers =
+            rewritten.updateTriggers &&
+            typeof rewritten.updateTriggers === 'object' &&
+            !Array.isArray(rewritten.updateTriggers)
+              ? (rewritten.updateTriggers as Record<string, unknown>)
+              : {};
+          rewritten.updateTriggers = {
+            ...existingTriggers,
+            ...accessorTriggers,
+          };
+        }
+      }
 
       // For TripsLayer: compute max timestamp for animation and set defaults
       if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
@@ -373,24 +403,6 @@ export function createDeckJsonConfiguration(
             previousGetWeight === undefined
               ? JSON.stringify(rewritten.colorRange)
               : [previousGetWeight, JSON.stringify(rewritten.colorRange)],
-        };
-      }
-
-      // Set updateTriggers for getElevation so deck.gl re-evaluates the
-      // accessor when the elevation column or scale config changes or is cleared.
-      {
-        const existingTriggers =
-          rewritten.updateTriggers &&
-          typeof rewritten.updateTriggers === 'object' &&
-          !Array.isArray(rewritten.updateTriggers)
-            ? (rewritten.updateTriggers as Record<string, unknown>)
-            : {};
-        const rawElevation = (nextProps as Record<string, unknown>)
-          .getElevation;
-        rewritten.updateTriggers = {
-          ...existingTriggers,
-          getElevation:
-            rawElevation !== undefined ? JSON.stringify(rawElevation) : 'none',
         };
       }
 

@@ -958,7 +958,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                     <div className="pt-0.5">
                       <Slider
                         min={0.01}
-                        max={10}
+                        max={100}
                         step={0.01}
                         value={[
                           (activeLayer?.elevationScale as number | undefined) ??
