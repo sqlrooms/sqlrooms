@@ -310,7 +310,7 @@ export function createDeckJsonConfiguration(
             if (Number.isFinite(v) && v < min) min = v;
           }
           if (Number.isFinite(min) && min !== 0) {
-            nextProps.getElevation = `@@=${elevField} - ${min}`;
+            nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
           }
         }
       }
