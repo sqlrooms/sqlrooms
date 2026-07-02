@@ -376,7 +376,9 @@ export function createDeckJsonConfiguration(
             : {};
         rewritten.updateTriggers = {
           ...existingTriggers,
-          getElevation: JSON.stringify(nextProps.getElevation),
+          getElevation: JSON.stringify(
+            (nextProps as Record<string, unknown>).getElevation,
+          ),
         };
       }
 
