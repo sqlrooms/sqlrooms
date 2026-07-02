@@ -1,5 +1,9 @@
 import {setAiRunContextPrimaryItem} from '@sqlrooms/ai';
 import type {ArtifactTargetChange} from '@sqlrooms/artifacts/ai';
+import {
+  createDefaultBlockDocumentBlockId,
+  type BlockDocumentBlockType,
+} from '@sqlrooms/documents';
 import type {RoomCommandMiddleware} from '@sqlrooms/room-shell';
 import type {UIMessage} from 'ai';
 import type {StoreApi} from 'zustand';
@@ -10,6 +14,7 @@ type PendingArtifactChatHandoff = {
   sourceSessionId: string;
   sourceArtifactId: string;
   sourceUserMessageId: string;
+  shouldCopySourceChartBlocks: boolean;
   target: ArtifactTargetChange;
   commandId: string;
 };
@@ -74,6 +79,73 @@ function getLastUserMessageId(
   return undefined;
 }
 
+function getMessageText(message: UIMessage | undefined): string {
+  if (!message) return '';
+
+  return (
+    message.parts
+      ?.map((part) => {
+        if (
+          part &&
+          typeof part === 'object' &&
+          'text' in part &&
+          typeof part.text === 'string'
+        ) {
+          return part.text;
+        }
+        return '';
+      })
+      .join(' ') ?? ''
+  );
+}
+
+function getLastUserMessage(messages: UIMessage[]) {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = messages[index];
+    if (message?.role === 'user') {
+      return {
+        id: message.id,
+        text: getMessageText(message),
+      };
+    }
+  }
+  return undefined;
+}
+
+function isSameChartRequest(text: string) {
+  const normalized = text.toLowerCase();
+  return (
+    /\bsame\s+chart\b/.test(normalized) ||
+    /\bcopy\s+(?:the\s+)?chart\b/.test(normalized) ||
+    /\bduplicate\s+(?:the\s+)?chart\b/.test(normalized)
+  );
+}
+
+function cloneChartBlocks(blocks: BlockDocumentBlockType[]) {
+  return blocks
+    .filter((block) => block.type === 'chart')
+    .map((block) => ({
+      ...structuredClone(block),
+      id: createDefaultBlockDocumentBlockId(),
+    })) as BlockDocumentBlockType[];
+}
+
+function copySourceChartBlocksToEmptyTarget(
+  state: RoomState,
+  sourceArtifactId: string,
+  targetArtifactId: string,
+) {
+  const targetBlocks = state.blockDocuments.getBlocks(targetArtifactId);
+  if (targetBlocks.length > 0) return;
+
+  const chartBlocks = cloneChartBlocks(
+    state.blockDocuments.getBlocks(sourceArtifactId),
+  );
+  if (chartBlocks.length === 0) return;
+
+  state.blockDocuments.appendBlocks(targetArtifactId, chartBlocks);
+}
+
 /**
  * Creates the command and chat-finish hooks that continue an artifact-scoped
  * AI chat when an AI-invoked command switches to another artifact.
@@ -121,21 +193,24 @@ export function createArtifactChatHandoffController(
     const nextState = store.getState();
     const targetArtifact = nextState.artifacts.getArtifact(target.artifactId);
     if (!targetArtifact) return result;
+    const sourceArtifact = nextState.artifacts.getArtifact(sourceArtifactId);
+    if (!sourceArtifact) return result;
     if (nextState.artifacts.config.currentArtifactId !== target.artifactId) {
       return result;
     }
     const sourceSession = nextState.ai.config.sessions.find(
       (session) => session.id === sourceSessionId,
     );
-    const sourceUserMessageId = getLastUserMessageId(
-      sourceSession?.uiMessages ?? [],
+    const sourceUserMessage = getLastUserMessage(
+      (sourceSession?.uiMessages ?? []) as UIMessage[],
     );
-    if (!sourceUserMessageId) return result;
+    if (!sourceUserMessage?.id) return result;
 
     pendingHandoffs.set(sourceSessionId, {
       sourceSessionId,
       sourceArtifactId,
-      sourceUserMessageId,
+      sourceUserMessageId: sourceUserMessage.id,
+      shouldCopySourceChartBlocks: isSameChartRequest(sourceUserMessage.text),
       target: {
         ...target,
         title: targetArtifact.title,
@@ -143,6 +218,21 @@ export function createArtifactChatHandoffController(
       },
       commandId: command.id,
     });
+    nextState.artifactAi.setSessionArtifact(sourceSessionId, sourceArtifactId);
+    nextState.ai.setSessionDraftContextItemIds(sourceSessionId, undefined);
+    nextState.ai.setSessionRunContext(
+      sourceSessionId,
+      setAiRunContextPrimaryItem(
+        nextState.ai.getSessionRunContext(sourceSessionId),
+        {
+          kind: 'artifact',
+          id: sourceArtifactId,
+          type: sourceArtifact.type,
+          title: sourceArtifact.title,
+        },
+      ),
+    );
+    nextState.artifacts.setCurrentArtifact(sourceArtifactId);
 
     return result;
   };
@@ -169,8 +259,10 @@ export function createArtifactChatHandoffController(
     ) {
       return;
     }
+    const currentArtifactId = state.artifacts.config.currentArtifactId;
     if (
-      state.artifacts.config.currentArtifactId !== handoff.target.artifactId
+      currentArtifactId !== handoff.sourceArtifactId &&
+      currentArtifactId !== handoff.target.artifactId
     ) {
       return;
     }
@@ -179,6 +271,14 @@ export function createArtifactChatHandoffController(
     if (!assistantMessage) return;
     if (getLastUserMessageId(messages) !== handoff.sourceUserMessageId) {
       return;
+    }
+
+    if (handoff.shouldCopySourceChartBlocks) {
+      copySourceChartBlocksToEmptyTarget(
+        state,
+        handoff.sourceArtifactId,
+        targetArtifact.id,
+      );
     }
 
     const targetSessionId = state.ai.forkSessionFromMessage({
@@ -190,6 +290,7 @@ export function createArtifactChatHandoffController(
     if (!targetSessionId) return;
 
     state.artifactAi.setSessionArtifact(targetSessionId, targetArtifact.id);
+    state.ai.setSessionDraftContextItemIds(targetSessionId, undefined);
     state.ai.setSessionRunContext(
       targetSessionId,
       setAiRunContextPrimaryItem(
@@ -202,6 +303,7 @@ export function createArtifactChatHandoffController(
         },
       ),
     );
+    state.artifacts.setCurrentArtifact(targetArtifact.id);
     state.artifactAi.selectLatestSessionForArtifact(targetArtifact.id);
   };
 
