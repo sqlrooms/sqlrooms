@@ -3,6 +3,7 @@ import {
   createBlockDocumentCommandIds,
   createAddBlockDocumentTextBlockTool,
   createListBlockDocumentBlocksTool,
+  createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
   type BlockDocumentBlock,
 } from '../src';
@@ -34,6 +35,7 @@ describe('block document AI helpers', () => {
         addedBlocks.push(block);
         return block.id;
       },
+      moveBlock: () => true,
     };
 
     const tool = createAddBlockDocumentTextBlockTool({
@@ -74,6 +76,7 @@ describe('block document AI helpers', () => {
         addBlockCalled = true;
         return block.id;
       },
+      moveBlock: () => true,
     };
 
     const tool = createAddBlockDocumentTextBlockTool({
@@ -104,6 +107,7 @@ describe('block document AI helpers', () => {
         addedBlocks.push(block);
         return `command:${block.id}`;
       },
+      moveBlock: () => true,
     };
 
     const tool = createAddBlockDocumentTextBlockTool({
@@ -153,6 +157,7 @@ describe('block document AI helpers', () => {
         }),
       ],
       addBlock: (_blockDocumentId, block) => block.id,
+      moveBlock: () => true,
     };
 
     const tool = createListBlockDocumentBlocksTool({
@@ -167,6 +172,7 @@ describe('block document AI helpers', () => {
       blocks: [
         {
           blockId: 'block-1',
+          index: 0,
           type: 'statefulBlock',
           caption: 'Dashboard',
           statefulBlock: {
@@ -177,6 +183,7 @@ describe('block document AI helpers', () => {
         },
         {
           blockId: 'block-2',
+          index: 1,
           type: 'statefulBlock',
           title: 'Country Explorer',
           statefulBlock: {
@@ -188,5 +195,67 @@ describe('block document AI helpers', () => {
     });
     expect(result.blocks[0]).not.toHaveProperty('dashboardId');
     expect(result.blocks[1]).not.toHaveProperty('htmlAppId');
+  });
+
+  it('moves a top-level block through the block document adapter', async () => {
+    const moveCalls: unknown[][] = [];
+    const ensuredBlockDocumentIds: string[] = [];
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: (blockDocumentId) => {
+        ensuredBlockDocumentIds.push(blockDocumentId);
+      },
+      getBlocks: () => [],
+      addBlock: (_blockDocumentId, block) => block.id,
+      moveBlock: (blockDocumentId, blockId, toIndex) => {
+        moveCalls.push([blockDocumentId, blockId, toIndex]);
+        return true;
+      },
+    };
+
+    const moveTool = createMoveBlockDocumentBlockTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (moveTool as any).execute({
+      reasoning: 'Move the joke to the top.',
+      blockId: 'joke-block',
+      toIndex: 0,
+    });
+
+    expect(result).toEqual({
+      success: true,
+      blockId: 'joke-block',
+      toIndex: 0,
+      message: 'Moved block joke-block to index 0',
+    });
+    expect(ensuredBlockDocumentIds).toEqual(['document-1']);
+    expect(moveCalls).toEqual([['document-1', 'joke-block', 0]]);
+  });
+
+  it('reports missing blocks when the adapter cannot move a block', async () => {
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [],
+      addBlock: (_blockDocumentId, block) => block.id,
+      moveBlock: () => false,
+    };
+
+    const moveTool = createMoveBlockDocumentBlockTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (moveTool as any).execute({
+      blockId: 'missing-block',
+      toIndex: 0,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      errorMessage: 'Block "missing-block" was not found.',
+    });
   });
 });

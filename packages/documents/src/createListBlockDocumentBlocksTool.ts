@@ -39,12 +39,14 @@ export type CreateListBlockDocumentBlocksToolOptions = {
 
 function summarizeBlock(
   block: ReturnType<typeof blockDocumentNodeToBlock>,
+  index: number,
 ): BlockDocumentBlockSummary | undefined {
   if (!block) return undefined;
 
   if (block.type === 'statefulBlock') {
     return {
       blockId: block.id,
+      index,
       type: block.type,
       ...(block.title !== undefined ? {title: block.title} : {}),
       ...(block.caption !== undefined ? {caption: block.caption} : {}),
@@ -61,6 +63,7 @@ function summarizeBlock(
   if (block.type === 'chart') {
     return {
       blockId: block.id,
+      index,
       type: block.type,
       tableName: block.tableName,
       ...(block.caption !== undefined ? {caption: block.caption} : {}),
@@ -69,6 +72,7 @@ function summarizeBlock(
 
   return {
     blockId: block.id,
+    index,
     type: block.type,
     ...('text' in block ? {title: block.text} : {}),
     ...('caption' in block && block.caption !== undefined
@@ -104,7 +108,9 @@ export function createListBlockDocumentBlocksTool({
         return {
           success: true,
           blocks: blocks
-            .map((node) => summarizeBlock(blockDocumentNodeToBlock(node)))
+            .map((node, index) =>
+              summarizeBlock(blockDocumentNodeToBlock(node), index),
+            )
             .filter(
               (block): block is BlockDocumentBlockSummary =>
                 block !== undefined,

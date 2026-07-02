@@ -29,12 +29,14 @@ describe('Mosaic block-document AI tools', () => {
   function createMockBlockDocumentAdapter() {
     const addedBlocks: BlockDocumentBlock[] = [];
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => {
         addedBlocks.push(block);
         return block.id;
       },
+      moveBlock: () => true,
     };
 
     return {blockDocumentAdapter, addedBlocks};
@@ -119,11 +121,13 @@ describe('Mosaic block-document AI tools', () => {
       } satisfies BlockDocumentStatefulBlockBlock,
     }));
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {
         throw new Error('Block document was deleted');
       },
       getBlocks: () => [],
       addBlock: jest.fn((_blockDocumentId, block) => block.id),
+      moveBlock: () => true,
     };
 
     const tool = createAddMosaicDashboardBlockTool({
@@ -210,11 +214,13 @@ describe('Mosaic block-document AI tools', () => {
       }),
     );
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {
         throw new Error('Block document was deleted');
       },
       getBlocks: () => [],
       addBlock: jest.fn((_blockDocumentId, block) => block.id),
+      moveBlock: () => true,
     };
 
     const dataTableTool = createBlockDocumentDataTableExplorerTool({
