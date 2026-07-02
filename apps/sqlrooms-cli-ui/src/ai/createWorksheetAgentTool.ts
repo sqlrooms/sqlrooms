@@ -10,6 +10,8 @@ import {
   calculateAgentResultMetadata,
   createChartToolsInstructions,
   resolveChartTypes,
+  type AgentRunResult,
+  type AgentToolCall,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
 import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
@@ -296,6 +298,48 @@ const WorksheetAgentInputSchema = z.object({
 
 type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
+const WORKSHEET_MUTATION_TOOL_NAMES = new Set<string>([
+  KnownWorksheetTools.add_text_block,
+  KnownWorksheetTools.add_dashboard_block,
+  KnownWorksheetTools.add_data_table_explorer,
+  KnownWorksheetTools.add_html_app_block,
+  KnownWorksheetTools.create_block_document_map_block,
+  KnownWorksheetTools.embedded_dashboard_agent,
+  KnownWorksheetTools.embedded_html_app_agent,
+]);
+
+function hasWorksheetMutationToolCall(toolCalls: AgentToolCall[] = []) {
+  for (const toolCall of toolCalls) {
+    if (
+      toolCall.toolName.startsWith(BLOCK_DOCUMENT_CHART_TOOL_PREFIX) ||
+      WORKSHEET_MUTATION_TOOL_NAMES.has(toolCall.toolName)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function shouldRequireWorksheetMutation(intent: string) {
+  const normalized = intent.toLowerCase();
+  if (
+    /^\s*(what|which|who|when|where|why|how|list|tell|describe|explain|inspect)\b/.test(
+      normalized,
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    /\b(add|append|build|copy|create|delete|duplicate|edit|embed|graph|insert|make|modify|move|plot|put|remove|replace|update|visuali[sz]e)\b/.test(
+      normalized,
+    ) ||
+    /\b(chart|dashboard|data table explorer|html app|map|text block|worksheet block)\b/.test(
+      normalized,
+    )
+  );
+}
+
 /**
  * Creates the CLI worksheet artifact agent tool.
  */
@@ -366,7 +410,8 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
       try {
         blockDocumentAdapter.ensureBlockDocument(worksheetId);
-        blockDocumentAdapter.setCurrentBlockDocument(worksheetId);
+        const initialBlockCount =
+          blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
 
         const dataTools = options.createDataTools?.({store}) ?? {};
 
@@ -399,18 +444,50 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
             .join('\n\n'),
         });
 
-        const result = await options.runSubAgent({
-          agent,
-          prompt: intent,
-          store,
-          parentToolCallId: toolOptions?.toolCallId || '',
-          abortSignal: toolOptions?.abortSignal,
-        });
+        const runWorksheetSubAgent = (prompt: string) =>
+          options.runSubAgent({
+            agent,
+            prompt,
+            store,
+            parentToolCallId: toolOptions?.toolCallId || '',
+            abortSignal: toolOptions?.abortSignal,
+          });
 
-        const metadata = calculateAgentResultMetadata(
-          undefined,
-          result.agentToolCalls,
-        );
+        let result: AgentRunResult = await runWorksheetSubAgent(intent);
+        const allToolCalls = [...(result.agentToolCalls ?? [])];
+        const requiresWorksheetMutation =
+          shouldRequireWorksheetMutation(intent);
+        let currentBlockCount =
+          blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
+
+        if (
+          requiresWorksheetMutation &&
+          currentBlockCount === initialBlockCount &&
+          !hasWorksheetMutationToolCall(allToolCalls)
+        ) {
+          result = await runWorksheetSubAgent(`${intent}
+
+The previous attempt did not modify the worksheet. You must call one of the worksheet block mutation tools, such as a ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* chart tool, ${KnownWorksheetTools.add_text_block}, ${KnownWorksheetTools.add_dashboard_block}, or another add/update worksheet block tool. Do not answer with only text.`);
+          allToolCalls.push(...(result.agentToolCalls ?? []));
+          currentBlockCount =
+            blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
+        }
+
+        if (
+          requiresWorksheetMutation &&
+          currentBlockCount === initialBlockCount &&
+          !hasWorksheetMutationToolCall(allToolCalls)
+        ) {
+          return {
+            success: false,
+            finalOutput:
+              'Worksheet agent did not modify the worksheet. Please retry and call a worksheet block mutation tool.',
+            worksheetId,
+            error: 'Worksheet agent completed without a worksheet mutation.',
+          };
+        }
+
+        const metadata = calculateAgentResultMetadata(undefined, allToolCalls);
 
         return {
           success: true,
