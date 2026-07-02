@@ -9,6 +9,7 @@ export const BLOCK_DOCUMENT_AGENT_TOOL_NAME = 'block_document_agent';
 export const KnownDocumentBlockTools = {
   add_text_block: 'add_block_document_text_block',
   list_blocks: 'list_block_document_blocks',
+  move_block: 'move_block_document_block',
 } as const;
 
 /**
@@ -26,6 +27,12 @@ export type BlockDocumentAiAdapter = {
     blockDocumentId: string,
     block: BlockDocumentBlock,
   ): string | Promise<string>;
+  /** Move a top-level block to a new zero-based index. */
+  moveBlock(
+    blockDocumentId: string,
+    blockId: string,
+    toIndex: number,
+  ): boolean | Promise<boolean>;
 };
 
 /**
@@ -33,6 +40,7 @@ export type BlockDocumentAiAdapter = {
  */
 export type BlockDocumentBlockSummary = {
   blockId: string;
+  index: number;
   type: string;
   title?: string;
   caption?: string;

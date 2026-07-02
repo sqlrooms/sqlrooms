@@ -1,6 +1,7 @@
 import {
   BLOCK_DOCUMENT_AGENT_ACTOR,
   BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
+  BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID,
   createBlockDocumentCommandAiAdapter,
   type BlockDocumentBlock,
 } from '../src';
@@ -23,12 +24,15 @@ function createMockStore({
   };
   const invokeCommandImpl =
     invokeCommand ??
-    (async (_commandId, input: any) => ({
+    (async (commandId, input: any) => ({
       success: true,
-      commandId: BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
-      data: {
-        blockId: input.blocks[0].id,
-      },
+      commandId,
+      data:
+        commandId === BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID
+          ? {
+              blockId: input.blocks[0].id,
+            }
+          : {},
     }));
   const trackedInvokeCommand = async (...args: any[]) => {
     invokeCommandCalls.push(args);
@@ -110,6 +114,32 @@ describe('createBlockDocumentCommandAiAdapter', () => {
     ]);
   });
 
+  it('moves blocks through the canonical block document command', async () => {
+    const {store, ensureBlockDocumentCalls, invokeCommandCalls} =
+      createMockStore();
+    const adapter = createBlockDocumentCommandAiAdapter({store});
+
+    await expect(adapter.moveBlock('doc-1', 'paragraph-1', 0)).resolves.toBe(
+      true,
+    );
+
+    expect(ensureBlockDocumentCalls).toEqual([['doc-1']]);
+    expect(invokeCommandCalls).toEqual([
+      [
+        BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID,
+        {
+          artifactId: 'doc-1',
+          blockId: 'paragraph-1',
+          toIndex: 0,
+        },
+        {
+          surface: 'ai',
+          actor: BLOCK_DOCUMENT_AGENT_ACTOR,
+        },
+      ],
+    ]);
+  });
+
   it('allows hosts to recognize compatible block-document artifact types', () => {
     const {store} = createMockStore({artifactType: 'analysis-doc'});
     const adapter = createBlockDocumentCommandAiAdapter({
@@ -164,5 +194,20 @@ describe('createBlockDocumentCommandAiAdapter', () => {
         text: 'Summary',
       }),
     ).rejects.toThrow('Append failed');
+  });
+
+  it('throws command errors when move command invocation fails', async () => {
+    const {store} = createMockStore({
+      invokeCommand: async () => ({
+        success: false,
+        commandId: BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID,
+        error: 'Move failed',
+      }),
+    });
+    const adapter = createBlockDocumentCommandAiAdapter({store});
+
+    await expect(adapter.moveBlock('doc-1', 'paragraph-1', 0)).rejects.toThrow(
+      'Move failed',
+    );
   });
 });

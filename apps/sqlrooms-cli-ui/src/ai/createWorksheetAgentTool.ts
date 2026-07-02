@@ -102,9 +102,9 @@ ${htmlAppBlocksEnabled ? `8. If the user asks for an HTML app, D3 app, Chart.js 
 ### Existing Blocks
 Before updating a worksheet dashboard${
     htmlAppBlocksEnabled ? ', updating an existing worksheet HTML app,' : ''
-  } or adding a map to an existing worksheet, call ${KnownWorksheetTools.list_blocks} to find existing dashboard${
+  }, adding a map to an existing worksheet, or reordering blocks, call ${KnownWorksheetTools.list_blocks} to find existing dashboard${
     htmlAppBlocksEnabled ? '/html-app' : ''
-  } blocks and their resource IDs. For stateful blocks, use statefulBlock.blockType to identify the surface and statefulBlock.blockInstanceId as dashboardId, appId, or mapId for the matching embedded tool.
+  } blocks and their resource IDs. For stateful blocks, use statefulBlock.blockType to identify the surface and statefulBlock.blockInstanceId as dashboardId, appId, or mapId for the matching embedded tool. For reorder requests, use blockId and index from ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.move_block}; moving a block to the top means toIndex 0.
 
 ### Chart Blocks
 To create a chart block in a worksheet, call one of the chart generation tools:
@@ -254,6 +254,7 @@ When user asks for "comprehensive analysis" or "high-level insights":
   - For line charts: use GROUP BY with time buckets or aggregations
   - Histograms and count plots are always safe (they aggregate automatically)
 - **Validate columns:** Chart generation tools will validate column existence and types
+- **Reorder existing blocks:** Use ${KnownWorksheetTools.list_blocks} to identify the target block ID, then ${KnownWorksheetTools.move_block} with the desired zero-based destination index
 - **Handle errors gracefully:** If a query or chart creation fails, try alternative approach
 
 Common mistakes to avoid:
@@ -349,6 +350,10 @@ IF user requests an HTML/D3/Chart.js/browser app in a worksheet:
 `
     : ''
 }
+
+IF user asks to reorder or move worksheet content:
+1. Call ${KnownWorksheetTools.list_blocks} to identify the target blockId
+2. Call ${KnownWorksheetTools.move_block} with the target blockId and zero-based toIndex
 
 Otherwise, create chart and text blocks directly using ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* tools.
 

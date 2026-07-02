@@ -15,6 +15,7 @@ describe('createWorksheetBlockDocumentAiTools', () => {
       ensureBlockDocument: () => {},
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => block.id,
+      moveBlock: () => true,
     };
   }
 
@@ -27,6 +28,7 @@ describe('createWorksheetBlockDocumentAiTools', () => {
 
   function createOptions(
     overrides: {
+      blockDocumentAdapter?: BlockDocumentAiAdapter;
       extraTools?: () => Record<string, Tool>;
       htmlAppBlocksEnabled?: boolean;
     } = {},
@@ -75,6 +77,31 @@ describe('createWorksheetBlockDocumentAiTools', () => {
 
     expect(tools[KnownWorksheetTools.add_html_app_block]).toBeUndefined();
     expect(tools[KnownWorksheetTools.embedded_html_app_agent]).toBeUndefined();
+  });
+
+  it('registers a built-in worksheet block move tool', async () => {
+    const blockDocumentAdapter = createBlockDocumentAdapter();
+    const moveBlock = jest.spyOn(blockDocumentAdapter, 'moveBlock');
+    const tools = createWorksheetBlockDocumentAiTools(
+      createOptions({blockDocumentAdapter}),
+    );
+
+    expect(tools[KnownWorksheetTools.move_block]).toBeDefined();
+
+    const result = await (tools[KnownWorksheetTools.move_block] as any).execute(
+      {
+        blockId: 'paragraph-1',
+        toIndex: 0,
+      },
+    );
+
+    expect(result).toEqual({
+      success: true,
+      blockId: 'paragraph-1',
+      toIndex: 0,
+      message: 'Moved block paragraph-1 to index 0',
+    });
+    expect(moveBlock).toHaveBeenCalledWith('worksheet-1', 'paragraph-1', 0);
   });
 
   it('rejects HTML app block tools when the embedded app agent is unavailable', () => {
