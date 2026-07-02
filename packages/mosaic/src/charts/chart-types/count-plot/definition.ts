@@ -13,7 +13,7 @@ export const countPlotChartType: SpecChartTypeDefinition<CountPlotChartConfig> =
     id: 'count-plot',
     label: 'Count Plot',
     description: DESCRIPTION,
-    aiDescription: `${DESCRIPTION} - frequency of categorical values (always safe, aggregates automatically)`,
+    aiDescription: `${DESCRIPTION} - frequency of categorical values or numeric aggregates by category (aggregates automatically)`,
     icon: BarChartHorizontal,
     schema: CountPlotChartSettings,
     settingsComponent: CountPlotSettingsComponent,

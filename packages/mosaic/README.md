@@ -221,6 +221,25 @@ function CodeView({value}: {value: string}) {
 }
 ```
 
+### Count Plot Settings
+
+`count-plot` chart configs support categorical counts by default and can also
+aggregate a numeric `valueField` per category:
+
+- `metric`: `"count"` or `"aggregate"`; defaults to `"count"`.
+- `valueField`: numeric column required when `metric` is `"aggregate"`.
+- `aggregate`: `"sum"`, `"avg"`, `"min"`, or `"max"`; defaults to `"sum"`.
+- `sort`: `"value-desc"`, `"value-asc"`, `"label-asc"`, or `"label-desc"`;
+  defaults to `"value-desc"`.
+- `maxBars`: maximum number of displayed category bars; defaults to `10`.
+- `barMaxHeight`: target maximum bar height in pixels; defaults to `32`.
+- `leftMargin`: optional manual left margin in pixels. When omitted, SQLRooms
+  derives a bounded left margin from chart metadata.
+
+Count plots cap the visible categories instead of folding the hidden tail into
+`Others` so the generated vgplot spec continues to cross-filter against the
+source table without a separate pre-aggregation query client.
+
 For the common case, prefer the compound `DataTableExplorer` API.
 `useDataTableExplorer` is still available when you need direct access to the
 explorer state for custom layout, sizing, or advanced composition.
