@@ -29,6 +29,7 @@ Example queries: "count by land use type", "how many features per administrative
 Required: field must be categorical/text (${CATEGORICAL_COLUMN_TYPES.join(', ')}).
 Optional aggregation: set metric to "aggregate", valueField to a numeric column, and aggregate to one of ${AGGREGATE_FUNCTIONS.join(', ')}.
 Optional sorting: sort can be "value-desc", "value-asc", "label-asc", or "label-desc".
+Optional density: maxBars caps the number of displayed categories; barMaxHeight controls the target maximum bar height in pixels.
 
 NOTE: Count plots aggregate by counting unique values, so they handle large datasets efficiently (no data point limit).
 

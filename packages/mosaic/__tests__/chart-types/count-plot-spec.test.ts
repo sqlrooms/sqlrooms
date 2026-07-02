@@ -32,9 +32,11 @@ describe('createCountPlotSpec', () => {
     expect(spec.plot[0].x).toEqual({count: null});
     expect(spec.plot[0].y).toEqual({
       column: 'class',
-      sort: {x: 'sum', order: 'desc', limit: 100},
+      sort: {x: 'sum', order: 'desc', limit: 10},
     });
     expect(spec.xLabel).toBe('Count');
+    expect(spec.height).toBe(400);
+    expect(spec.yPaddingInner).toBe(0.7);
     expect(spec.margins.left).toBeGreaterThan(50);
   });
 
@@ -52,7 +54,7 @@ describe('createCountPlotSpec', () => {
     expect(spec.plot[0].y.sort).toEqual({
       x: 'sum',
       order: 'asc',
-      limit: 100,
+      limit: 10,
     });
   });
 
@@ -70,7 +72,7 @@ describe('createCountPlotSpec', () => {
     expect(spec.plot[0].y.sort).toEqual({
       y: 'min',
       order: 'asc',
-      limit: 100,
+      limit: 10,
     });
   });
 
@@ -92,9 +94,29 @@ describe('createCountPlotSpec', () => {
     expect(spec.plot[0].y.sort).toEqual({
       x: 'avg',
       order: 'desc',
-      limit: 100,
+      limit: 10,
     });
     expect(spec.xLabel).toBe('AVG length_m');
+  });
+
+  it('uses maxBars for category limiting and plot height', () => {
+    const settings: CountPlotChartSettings = {
+      field: 'class',
+      maxBars: 6,
+      barMaxHeight: 32,
+    };
+
+    const spec = createCountPlotSpec({
+      dataTable: mockDataTable,
+      settings,
+    }) as any;
+
+    expect(spec.plot[0].y.sort).toEqual({
+      x: 'sum',
+      order: 'desc',
+      limit: 6,
+    });
+    expect(spec.height).toBe(286);
   });
 
   it('uses manual left margin when provided', () => {

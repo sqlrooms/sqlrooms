@@ -13,6 +13,13 @@ export const CountPlotSort = z.enum([
 ]);
 export type CountPlotSort = z.infer<typeof CountPlotSort>;
 
+export const DEFAULT_COUNT_PLOT_MAX_BARS = 10;
+export const MIN_COUNT_PLOT_MAX_BARS = 1;
+export const MAX_COUNT_PLOT_MAX_BARS = 100;
+export const DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT = 32;
+export const MIN_COUNT_PLOT_BAR_MAX_HEIGHT = 8;
+export const MAX_COUNT_PLOT_BAR_MAX_HEIGHT = 64;
+
 export const CountPlotChartSettings = z.object({
   field: z
     .string()
@@ -31,6 +38,22 @@ export const CountPlotChartSettings = z.object({
   sort: CountPlotSort.optional()
     .default('value-desc')
     .describe('Sort categories by metric value or label'),
+  maxBars: z
+    .number()
+    .int()
+    .min(MIN_COUNT_PLOT_MAX_BARS)
+    .max(MAX_COUNT_PLOT_MAX_BARS)
+    .optional()
+    .default(DEFAULT_COUNT_PLOT_MAX_BARS)
+    .describe('Maximum number of category bars to display'),
+  barMaxHeight: z
+    .number()
+    .int()
+    .min(MIN_COUNT_PLOT_BAR_MAX_HEIGHT)
+    .max(MAX_COUNT_PLOT_BAR_MAX_HEIGHT)
+    .optional()
+    .default(DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT)
+    .describe('Target maximum bar height in pixels'),
   leftMargin: z
     .number()
     .int()
