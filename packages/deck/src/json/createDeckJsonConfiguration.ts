@@ -66,11 +66,11 @@ function applyColorScale(options: {
     triggers[propName] = JSON.stringify(colorScale);
   }
 
-  // Set stable updateTriggers for color props that are static (not a scale)
-  // so deck.gl detects the change when a scale is cleared back to a constant.
+  // Set stable updateTriggers for color props that are static or absent (not a scale)
+  // so deck.gl detects the change when a scale is cleared back to a constant or deleted.
   for (const propName of COLOR_ACCESSOR_PROP_NAMES) {
-    if (propName in result && !(propName in triggers)) {
-      triggers[propName] = 'static';
+    if (!(propName in triggers)) {
+      triggers[propName] = propName in result ? 'static' : 'none';
     }
   }
 
@@ -366,19 +366,20 @@ export function createDeckJsonConfiguration(
       }
 
       // Set updateTriggers for getElevation so deck.gl re-evaluates the
-      // accessor when the elevation column or scale config changes.
-      if (rewritten.getElevation !== undefined) {
+      // accessor when the elevation column or scale config changes or is cleared.
+      {
         const existingTriggers =
           rewritten.updateTriggers &&
           typeof rewritten.updateTriggers === 'object' &&
           !Array.isArray(rewritten.updateTriggers)
             ? (rewritten.updateTriggers as Record<string, unknown>)
             : {};
+        const rawElevation = (nextProps as Record<string, unknown>)
+          .getElevation;
         rewritten.updateTriggers = {
           ...existingTriggers,
-          getElevation: JSON.stringify(
-            (nextProps as Record<string, unknown>).getElevation,
-          ),
+          getElevation:
+            rawElevation !== undefined ? JSON.stringify(rawElevation) : 'none',
         };
       }
 
