@@ -11,6 +11,7 @@ import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
 import {useRoomStore} from '../store';
 import {AssistantContextSelector} from './AssistantContextSelector';
+import {switchToArtifactAiSession} from '../artifactAiNavigation';
 import {
   isDefaultAssistantSessionName,
   useGenSessionTitle,
@@ -64,6 +65,13 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
     createArtifactScopedSession();
   }, [createArtifactScopedSession, createSessionDisabled]);
 
+  const handleSwitchToForkSource = useCallback(
+    (sourceSession: (typeof sessions)[number]) => {
+      switchToArtifactAiSession(useRoomStore, sourceSession.id);
+    },
+    [],
+  );
+
   const filterSession = useCallback(
     (session: (typeof sessions)[number]) =>
       isAiSessionVisibleForArtifact(
@@ -93,7 +101,11 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const messagesPane = (
     <div className="print-container h-full min-h-0 grow overflow-hidden">
       {isDataAvailable ? (
-        <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        <Chat.Messages
+          key={currentSessionId}
+          hoistedRenderers={['chart']}
+          onSwitchToForkSource={handleSwitchToForkSource}
+        />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center">
           <SkeletonPane className="p-4" />
@@ -139,9 +151,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 filterSession={filterSession}
                 emptyLabel="No chats for this item yet"
                 onSelectChat={(sessionId) => {
-                  const switchSession =
-                    useRoomStore.getState().ai.switchSession;
-                  switchSession(sessionId);
+                  switchToArtifactAiSession(useRoomStore, sessionId);
                   setShowHistory(false);
                 }}
                 className="flex-1"
