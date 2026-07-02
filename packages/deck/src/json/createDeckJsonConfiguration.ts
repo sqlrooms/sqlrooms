@@ -4,7 +4,11 @@ import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
-import {createColorScaleMarker, getAllColorScales} from './colorScaleFunction';
+import {
+  createColorScaleMarker,
+  getAllColorScales,
+  COLOR_SCALE_PROP_NAMES,
+} from './colorScaleFunction';
 import {compileColorScale} from './compileColorScale';
 import {
   DEFAULT_DECK_JSON_CLASSES,
@@ -32,14 +36,6 @@ function getLayerName(Class: unknown) {
   return maybeClass.layerName ?? maybeClass.name ?? 'UnknownLayer';
 }
 
-const COLOR_ACCESSOR_PROP_NAMES = [
-  'getFillColor',
-  'getLineColor',
-  'getColor',
-  'getSourceColor',
-  'getTargetColor',
-] as const;
-
 function applyColorScale(options: {
   props: Record<string, unknown>;
   table: import('apache-arrow').Table;
@@ -66,11 +62,12 @@ function applyColorScale(options: {
     triggers[propName] = JSON.stringify(colorScale);
   }
 
-  // Set stable updateTriggers for color props that are static or absent (not a scale)
-  // so deck.gl detects the change when a scale is cleared back to a constant or deleted.
-  for (const propName of COLOR_ACCESSOR_PROP_NAMES) {
+  // Set updateTriggers for color props that are static or absent (not a scale)
+  // so deck.gl detects changes when a scale is cleared or a constant value changes.
+  for (const propName of COLOR_SCALE_PROP_NAMES) {
     if (!(propName in triggers)) {
-      triggers[propName] = propName in result ? 'static' : 'none';
+      const value = result[propName];
+      triggers[propName] = value !== undefined ? JSON.stringify(value) : 'none';
     }
   }
 
@@ -275,10 +272,24 @@ export function createDeckJsonConfiguration(
           props: strippedProps,
           table: prepared.table,
         });
-        return {
+        const geoJsonResult: Record<string, unknown> = {
           ...baseProps,
           data: prepared.getGeoJsonBinaryData(geometryColumn),
         };
+        // Set updateTriggers for getElevation in the GeoJSON path as well.
+        const rawElevation = strippedProps.getElevation;
+        const existingTriggers =
+          geoJsonResult.updateTriggers &&
+          typeof geoJsonResult.updateTriggers === 'object' &&
+          !Array.isArray(geoJsonResult.updateTriggers)
+            ? (geoJsonResult.updateTriggers as Record<string, unknown>)
+            : {};
+        geoJsonResult.updateTriggers = {
+          ...existingTriggers,
+          getElevation:
+            rawElevation !== undefined ? JSON.stringify(rawElevation) : 'none',
+        };
+        return geoJsonResult;
       }
 
       const {table, boundProps} = resolveGeoArrowBindings({

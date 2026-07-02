@@ -39,6 +39,15 @@ export type ColorScalePropName =
   | 'getSourceColor'
   | 'getTargetColor';
 
+/** All known color accessor prop names. */
+export const COLOR_SCALE_PROP_NAMES: readonly ColorScalePropName[] = [
+  'getFillColor',
+  'getLineColor',
+  'getColor',
+  'getSourceColor',
+  'getTargetColor',
+];
+
 /**
  * Returns the first color scale entry found on the layer props, if any.
  * Prefer {@link getAllColorScales} when a layer may define multiple color scale accessors.
@@ -63,13 +72,7 @@ export function getAllColorScales(props: Record<string, unknown>): Array<{
     colorScale: ColorScaleConfig;
   }> = [];
 
-  for (const propName of [
-    'getFillColor',
-    'getLineColor',
-    'getColor',
-    'getSourceColor',
-    'getTargetColor',
-  ] as const) {
+  for (const propName of COLOR_SCALE_PROP_NAMES) {
     const value = props[propName];
     if (isColorScaleMarker(value)) {
       results.push({propName, colorScale: value.colorScale});
