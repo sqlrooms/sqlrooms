@@ -297,7 +297,8 @@ export function createDeckJsonConfiguration(
         ...boundProps,
       };
 
-      // Normalize getElevation: subtract column minimum so heights start at 0.
+      // Normalize getElevation: subtract column minimum so the lowest
+      // feature sits at ground level and differences are clearly visible.
       const rawElev = nextProps.getElevation;
       if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
         const elevField = rawElev.slice(3).trim();
@@ -320,10 +321,10 @@ export function createDeckJsonConfiguration(
         layerName,
       });
 
-      // Set updateTriggers for any @@= accessor props that were rewritten
-      // so deck.gl re-evaluates them when the column reference changes.
+      // Set updateTriggers for @@= accessor props and getElevation
+      // so deck.gl re-evaluates them when references change or are cleared.
       {
-        const accessorTriggers: Record<string, string> = {};
+        const accessorTriggers: Record<string, unknown> = {};
         for (const [propName, propValue] of Object.entries(nextProps)) {
           if (
             typeof propValue === 'string' &&
@@ -333,18 +334,23 @@ export function createDeckJsonConfiguration(
             accessorTriggers[propName] = propValue;
           }
         }
-        if (Object.keys(accessorTriggers).length > 0) {
-          const existingTriggers =
-            rewritten.updateTriggers &&
-            typeof rewritten.updateTriggers === 'object' &&
-            !Array.isArray(rewritten.updateTriggers)
-              ? (rewritten.updateTriggers as Record<string, unknown>)
-              : {};
-          rewritten.updateTriggers = {
-            ...existingTriggers,
-            ...accessorTriggers,
-          };
+        // Always emit getElevation trigger so clearing the column invalidates
+        // stale heights from a previous column-based accessor.
+        if (!('getElevation' in accessorTriggers)) {
+          const elev = nextProps.getElevation;
+          accessorTriggers.getElevation =
+            elev !== undefined ? String(elev) : 'none';
         }
+        const existingTriggers =
+          rewritten.updateTriggers &&
+          typeof rewritten.updateTriggers === 'object' &&
+          !Array.isArray(rewritten.updateTriggers)
+            ? (rewritten.updateTriggers as Record<string, unknown>)
+            : {};
+        rewritten.updateTriggers = {
+          ...existingTriggers,
+          ...accessorTriggers,
+        };
       }
 
       // For TripsLayer: compute max timestamp for animation and set defaults
