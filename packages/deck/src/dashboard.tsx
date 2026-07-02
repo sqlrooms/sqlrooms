@@ -48,6 +48,7 @@ import {
   findGeometryColumn,
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
+import {isDeckMapGeneratedColumn} from './useDeckMapDatasetSchema';
 
 function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
   return createDeckMapDashboardPanelConfig({
@@ -83,6 +84,10 @@ function parseMissingColumnsFromError(message: string): string[] | null {
     /Geometry column "([^"]+)" was not found/i,
   );
   if (geomNotFound) return [geomNotFound[1]!];
+
+  // "Layer ... references unknown column "X" for getTimestamps."
+  const unknownColumn = message.match(/references unknown column "([^"]+)"/i);
+  if (unknownColumn) return [unknownColumn[1]!];
 
   return null;
 }
@@ -133,6 +138,16 @@ function detectMissingColumns(
       }
     };
 
+    for (const bindingColumn of [
+      binding?.geometryColumn,
+      binding?.sourceGeometryColumn,
+      binding?.targetGeometryColumn,
+      binding?.timestampColumn,
+      binding?.hexagonColumn,
+    ]) {
+      check(bindingColumn as string | undefined);
+    }
+
     // Check @@= accessors
     for (const [propName, propValue] of Object.entries(layerObj)) {
       // Skip elevation references when extrusion is disabled
@@ -162,6 +177,32 @@ function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
   if (issue.kind === 'sql-error' || issue.kind === 'render-error') {
     const missingColumns = parseMissingColumnsFromError(issue.message);
     if (missingColumns) {
+      const generatedMissingColumns = missingColumns.filter(
+        isDeckMapGeneratedColumn,
+      );
+      if (generatedMissingColumns.length > 0) {
+        return (
+          <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+            <div className="mb-2 text-center font-semibold">
+              The visualization can&apos;t be displayed
+            </div>
+            <div className="text-center text-sm">
+              <span>
+                The dataset transform did not produce required map output
+                columns:{' '}
+              </span>
+              {generatedMissingColumns.map((col, idx) => (
+                <span key={idx}>
+                  <span className="inline-flex items-center rounded-md border border-gray-600 bg-gray-800 px-1 py-0.5 text-xs font-medium text-gray-300">
+                    {col}
+                  </span>{' '}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
           <div className="mb-2 text-center font-semibold">
