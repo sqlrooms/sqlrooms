@@ -32,36 +32,50 @@ function getLayerName(Class: unknown) {
   return maybeClass.layerName ?? maybeClass.name ?? 'UnknownLayer';
 }
 
+const COLOR_ACCESSOR_PROP_NAMES = [
+  'getFillColor',
+  'getLineColor',
+  'getColor',
+  'getSourceColor',
+  'getTargetColor',
+] as const;
+
 function applyColorScale(options: {
   props: Record<string, unknown>;
   table: import('apache-arrow').Table;
 }) {
   const {props, table} = options;
   const allScales = getAllColorScales(props);
-  if (allScales.length === 0) {
-    return props;
-  }
 
   let result = props;
-  for (const {propName, colorScale} of allScales) {
-    const updateTriggers =
-      result.updateTriggers &&
-      typeof result.updateTriggers === 'object' &&
-      !Array.isArray(result.updateTriggers)
-        ? (result.updateTriggers as Record<string, unknown>)
-        : {};
+  const triggers: Record<string, unknown> =
+    result.updateTriggers &&
+    typeof result.updateTriggers === 'object' &&
+    !Array.isArray(result.updateTriggers)
+      ? {...(result.updateTriggers as Record<string, unknown>)}
+      : {};
 
+  for (const {propName, colorScale} of allScales) {
     result = {
       ...result,
       [propName]: compileColorScale({
         table,
         colorScale,
       }),
-      updateTriggers: {
-        ...updateTriggers,
-        [propName]: JSON.stringify(colorScale),
-      },
     };
+    triggers[propName] = JSON.stringify(colorScale);
+  }
+
+  // Set stable updateTriggers for color props that are static (not a scale)
+  // so deck.gl detects the change when a scale is cleared back to a constant.
+  for (const propName of COLOR_ACCESSOR_PROP_NAMES) {
+    if (propName in result && !(propName in triggers)) {
+      triggers[propName] = 'static';
+    }
+  }
+
+  if (Object.keys(triggers).length > 0) {
+    result = {...result, updateTriggers: triggers};
   }
 
   return result;
@@ -348,6 +362,21 @@ export function createDeckJsonConfiguration(
             previousGetWeight === undefined
               ? JSON.stringify(rewritten.colorRange)
               : [previousGetWeight, JSON.stringify(rewritten.colorRange)],
+        };
+      }
+
+      // Set updateTriggers for getElevation so deck.gl re-evaluates the
+      // accessor when the elevation column or scale config changes.
+      if (rewritten.getElevation !== undefined) {
+        const existingTriggers =
+          rewritten.updateTriggers &&
+          typeof rewritten.updateTriggers === 'object' &&
+          !Array.isArray(rewritten.updateTriggers)
+            ? (rewritten.updateTriggers as Record<string, unknown>)
+            : {};
+        rewritten.updateTriggers = {
+          ...existingTriggers,
+          getElevation: JSON.stringify(nextProps.getElevation),
         };
       }
 
