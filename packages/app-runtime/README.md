@@ -73,6 +73,27 @@ WebContainer app project records such as `appProject.config.appsByArtifactId`.
 Those projects can be migrated to `html-app` state later, but they should not
 drive the shared runtime history API.
 
+Hosts can expose revision controls through canonical room commands with
+`createHtmlAppRevisionCommands`. The runtime package owns the command IDs and
+revision operations; the host supplies callbacks for target resolution and state
+updates:
+
+```ts
+const commands = createHtmlAppRevisionCommands({
+  resolveCurrentAppId: (state) => state.currentHtmlAppId,
+  getHtmlAppIds: (state) => Object.keys(state.htmlApps.config.appsById),
+  getHtmlAppState: (state, appId) => state.htmlApps.getApp(appId),
+  renameHtmlApp: (state, appId, title) =>
+    state.htmlApps.renameApp(appId, title),
+  commitHtmlAppRevision: (state, appId, patch, metadata) =>
+    state.htmlApps.commitAppRevision(appId, patch, metadata),
+  restoreHtmlAppRevision: (state, appId, revisionId, metadata) =>
+    state.htmlApps.restoreAppRevision(appId, revisionId, metadata),
+  undoHtmlAppRevision: (state, appId) => state.htmlApps.undoAppRevision(appId),
+  redoHtmlAppRevision: (state, appId) => state.htmlApps.redoAppRevision(appId),
+});
+```
+
 ## HTML App Blocks
 
 The `html-app` block stores a small source file map instead of one opaque HTML
@@ -91,6 +112,9 @@ scripts run, so generated apps can call:
 
 `HtmlAppState.intent` can store the durable natural-language objective for a
 generated or edited app. Prefer this over storing raw model input in app state.
+
+Block-document hosts can use `createHtmlAppBlockDocumentBlock` to create the
+stateful block DTO for an owned HTML app runtime without importing CLI app code.
 
 ```js
 const {rows, columns, truncated} = await window.sqlrooms.query(

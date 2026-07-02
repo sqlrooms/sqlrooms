@@ -169,8 +169,19 @@ const tools = {
 
 `BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
 promise. Hosts that already expose block-document mutations as room commands can
-therefore invoke the command layer from the adapter while keeping generic AI
-tools package-neutral.
+therefore use `createBlockDocumentCommandAiAdapter` to invoke the canonical
+`block-document.append-blocks` command while keeping generic AI tools
+package-neutral:
+
+```ts
+const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
+  store,
+});
+```
+
+Hosts with persisted compatibility artifact types can pass
+`isBlockDocumentArtifact` without adding that product vocabulary to the shared
+adapter API.
 
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs

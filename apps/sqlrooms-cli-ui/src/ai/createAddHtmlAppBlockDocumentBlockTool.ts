@@ -1,4 +1,4 @@
-import {HTML_APP_BLOCK_TYPE} from '@sqlrooms/app-runtime';
+import {createHtmlAppBlockDocumentBlock as createHtmlAppRuntimeBlockDocumentBlock} from '@sqlrooms/app-runtime';
 import {
   createDefaultBlockDocumentBlockId,
   type BlockDocumentAiAdapter,
@@ -43,19 +43,18 @@ export function createHtmlAppBlockDocumentBlock({
   appId?: string;
   blockId?: string;
 }): {appId: string; block: BlockDocumentStatefulBlockBlock} {
-  return {
-    appId,
-    block: {
-      type: 'statefulBlock',
-      id: blockId,
-      blockType: HTML_APP_BLOCK_TYPE,
-      blockInstanceId: appId,
-      ownership: 'owned',
-      intent,
+  const {appId: runtimeAppId, block: runtimeBlock} =
+    createHtmlAppRuntimeBlockDocumentBlock({
+      appId,
+      blockId,
       title,
-      caption: title,
+      intent,
       height,
-    },
+    });
+  const block: BlockDocumentStatefulBlockBlock = runtimeBlock;
+  return {
+    appId: runtimeAppId,
+    block,
   };
 }
 
