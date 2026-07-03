@@ -109,7 +109,7 @@ export function createBlockSettingsSlice<
       config: {},
       runtime: {
         selectedBlock: undefined,
-        isSettingsPanelOpen: true,
+        isSettingsPanelOpen: false,
         settingsPanelOpenRequest: 0,
       },
 

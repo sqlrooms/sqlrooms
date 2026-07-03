@@ -46,6 +46,7 @@ export const ArtifactAiConfigSchema = ArtifactAiConfig;
 export type ArtifactAiSliceState = {
   artifactAi: SliceFunctions & {
     config: ArtifactAiConfig;
+    setConfig: (config: z.input<typeof ArtifactAiConfig>) => void;
     setSessionArtifact: (sessionId: string, artifactId: string) => void;
     clearSessionArtifact: (sessionId: string) => void;
     getSessionArtifactId: (sessionId: string) => string | undefined;
@@ -233,6 +234,14 @@ export function createArtifactAiSlice<
     return {
       artifactAi: {
         config: ArtifactAiConfig.parse(options.config ?? {}),
+        setConfig: (config) => {
+          const nextConfig = ArtifactAiConfig.parse(config ?? {});
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config = nextConfig;
+            }),
+          );
+        },
         initialize: async () => {
           if (!autoSync || unsubscribe) return;
           let previousSnapshot = getArtifactAiSyncSnapshot(get());
