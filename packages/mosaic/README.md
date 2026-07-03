@@ -240,6 +240,8 @@ Count plots cap the visible categories instead of folding the hidden tail into
 source table without pre-aggregating the rendered values.
 At runtime, count plots query the category cardinality and size the rendered
 chart to the number of visible categories, capped by `maxBars`.
+Bars use fixed row geometry; the chart grows or scrolls rather than stretching
+or squeezing bar thickness.
 
 For the common case, prefer the compound `DataTableExplorer` API.
 `useDataTableExplorer` is still available when you need direct access to the

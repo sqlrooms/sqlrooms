@@ -35,8 +35,8 @@ describe('createCountPlotSpec', () => {
       expect(mark.sort).toEqual({y: '-x', limit: 10});
     }
     expect(spec.xLabel).toBe('Count');
-    expect(spec.height).toBe(400);
-    expect(spec.yPaddingInner).toBe(0.7);
+    expect(spec.height).toBe(512);
+    expect(spec.yPaddingInner).toBeCloseTo(10 / 42);
     expect(spec.margins.left).toBeGreaterThan(50);
   });
 
@@ -99,7 +99,7 @@ describe('createCountPlotSpec', () => {
     }) as any;
 
     expect(spec.plot[0].sort).toEqual({y: '-x', limit: 6});
-    expect(spec.height).toBe(286);
+    expect(spec.height).toBe(344);
   });
 
   it('uses visible category count for plot height when provided', () => {
@@ -115,7 +115,24 @@ describe('createCountPlotSpec', () => {
     }) as any;
 
     expect(spec.plot[0].sort).toEqual({y: '-x', limit: 10});
-    expect(spec.height).toBe(180);
+    expect(spec.height).toBe(218);
+  });
+
+  it('keeps the same row geometry for a single visible category', () => {
+    const settings: CountPlotChartSettings = {
+      field: 'class',
+      maxBars: 10,
+    };
+
+    const spec = createCountPlotSpec({
+      dataTable: mockDataTable,
+      settings,
+      visibleCategoryCount: 1,
+    }) as any;
+
+    expect(spec.height).toBe(134);
+    expect(spec.yPaddingInner).toBeCloseTo(10 / 42);
+    expect(spec.yPaddingOuter).toBeCloseTo(16 / 42);
   });
 
   it('uses manual left margin when provided', () => {

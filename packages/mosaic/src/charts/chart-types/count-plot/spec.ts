@@ -18,12 +18,12 @@ const MAX_AUTO_LEFT_MARGIN = 220;
 const LABEL_CHARACTER_WIDTH = 8;
 const AXIS_GUTTER_WIDTH = 40;
 const HEIGHT_MARGINS = {top: 20, bottom: 50};
-const MIN_COUNT_PLOT_HEIGHT = 180;
-const MAX_COUNT_PLOT_HEIGHT = 400;
-const COUNT_PLOT_BAR_MAX_HEIGHT = 32;
-const ROW_GAP = 4;
-const DEFAULT_Y_PADDING_INNER = 0.7;
-const DEFAULT_Y_PADDING_OUTER = 0.2;
+const COUNT_PLOT_BAR_HEIGHT = 32;
+const COUNT_PLOT_ROW_GAP = 10;
+const COUNT_PLOT_OUTER_GAP = 16;
+const COUNT_PLOT_ROW_STEP = COUNT_PLOT_BAR_HEIGHT + COUNT_PLOT_ROW_GAP;
+const DEFAULT_Y_PADDING_INNER = COUNT_PLOT_ROW_GAP / COUNT_PLOT_ROW_STEP;
+const DEFAULT_Y_PADDING_OUTER = COUNT_PLOT_OUTER_GAP / COUNT_PLOT_ROW_STEP;
 
 type CountPlotMarkSort = {
   y: 'x' | '-x' | 'y' | '-y';
@@ -113,14 +113,12 @@ function getValueLabel(
 }
 
 function getPlotHeight(maxBars: number): number {
-  const height =
+  return (
     HEIGHT_MARGINS.top +
     HEIGHT_MARGINS.bottom +
-    maxBars * (COUNT_PLOT_BAR_MAX_HEIGHT + ROW_GAP);
-
-  return Math.max(
-    MIN_COUNT_PLOT_HEIGHT,
-    Math.min(MAX_COUNT_PLOT_HEIGHT, height),
+    maxBars * COUNT_PLOT_BAR_HEIGHT +
+    Math.max(0, maxBars - 1) * COUNT_PLOT_ROW_GAP +
+    2 * COUNT_PLOT_OUTER_GAP
   );
 }
 
