@@ -128,7 +128,7 @@ const DRAG_SCROLL_EDGE_THRESHOLD = 80;
 const DRAG_SCROLL_MAX_STEP = 28;
 const BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT = 300;
 const BLOCK_TYPE_SEARCH_MENU_LIST_MAX_HEIGHT = 240;
-const BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN = 16;
+const BLOCK_TYPE_SEARCH_MENU_VIEWPORT_PADDING = 16;
 const BLOCK_DOCUMENT_CONTENT_LEFT_GUTTER = 96;
 const EMPTY_BLOCK_PLACEHOLDER = "Press '/' to change block type";
 const SLASH_SEARCH_PLACEHOLDER = 'Type to search';
@@ -1608,16 +1608,15 @@ export const BlockDocumentBlockControls: FC<
                 align="start"
                 side="bottom"
                 sideOffset={4}
-                avoidCollisions={false}
                 collisionPadding={{
-                  bottom: BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN,
+                  bottom: BLOCK_TYPE_SEARCH_MENU_VIEWPORT_PADDING,
                   left: 8,
                   right: 8,
-                  top: 8,
+                  top: BLOCK_TYPE_SEARCH_MENU_VIEWPORT_PADDING,
                 }}
                 className="flex w-72 flex-col overflow-hidden p-1"
                 style={{
-                  maxHeight: `min(${BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT}px, calc(var(--radix-popover-content-available-height) - ${BLOCK_TYPE_SEARCH_MENU_BOTTOM_MARGIN}px))`,
+                  maxHeight: `min(${BLOCK_TYPE_SEARCH_MENU_MAX_HEIGHT}px, var(--radix-popover-content-available-height))`,
                 }}
                 onOpenAutoFocus={(event) => event.preventDefault()}
                 onCloseAutoFocus={(event) => event.preventDefault()}
