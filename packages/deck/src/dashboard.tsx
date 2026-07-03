@@ -594,7 +594,7 @@ function DeckMapDashboardRenderer({
             }
             mapStyle={mapConfig.mapStyle}
             mapProps={mapConfig.mapProps}
-            showLegends={mapConfig.showLegends}
+            showLegends={mapConfig.showLegends !== false}
             onRenderingError={handleRenderingError}
             deckProps={{
               controller: true,
