@@ -8,6 +8,7 @@ export const BLOCK_DOCUMENT_AGENT_TOOL_NAME = 'block_document_agent';
 
 export const KnownDocumentBlockTools = {
   add_text_block: 'add_block_document_text_block',
+  copy_blocks: 'copy_block_document_blocks',
   list_blocks: 'list_block_document_blocks',
 } as const;
 

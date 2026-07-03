@@ -115,13 +115,6 @@ export type CreateArtifactAiChatHandoffControllerOptions<
   onBeforeSourceRestore?: (
     context: ArtifactAiChatHandoffHookContext<TState>,
   ) => void;
-  /**
-   * Runs after the source turn finishes and before the target chat session is
-   * forked. Use this for artifact-type-specific content policy.
-   */
-  onBeforeTargetFork?: (
-    context: ArtifactAiChatHandoffTargetForkContext<TState>,
-  ) => void;
   /** Runs after the target session is forked and bound to the target artifact. */
   onAfterTargetFork?: (
     context: ArtifactAiChatHandoffAfterTargetForkContext<TState>,
@@ -257,7 +250,6 @@ export function createArtifactAiChatHandoffController<
   isSupportedArtifact,
   shouldContinueChat,
   onBeforeSourceRestore,
-  onBeforeTargetFork,
   onAfterTargetFork,
 }: CreateArtifactAiChatHandoffControllerOptions<TState>) {
   const pendingHandoffs = new Map<string, PendingArtifactAiChatHandoff>();
@@ -415,9 +407,6 @@ export function createArtifactAiChatHandoffController<
       assistantMessage: assistantMessage.message,
       assistantMessageIndex: assistantMessage.index,
     };
-
-    onBeforeTargetFork?.(targetForkContext);
-
     const targetSessionId = state.ai.forkSessionFromMessage({
       sourceSessionId: handoff.sourceSessionId,
       sourceMessageId: assistantMessage.message.id,

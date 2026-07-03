@@ -24,34 +24,8 @@ function assistantMessage(): UIMessage {
   };
 }
 
-function createState({
-  prompt = 'create a new worksheet with the same chart',
-  targetBlocks = [],
-  targetType = 'worksheet',
-}: {
-  prompt?: string;
-  targetBlocks?: any[];
-  targetType?: string;
-} = {}) {
-  const blocksByArtifact: Record<string, any[]> = {
-    [sourceArtifactId]: [
-      {
-        id: 'source-chart',
-        type: 'chart',
-        tableName: '"main"."cars"',
-        config: {chartType: 'scatter', settings: {x: 'Weight', y: 'MPG'}},
-        caption: 'MPG vs Weight',
-      },
-    ],
-    [targetArtifactId]: targetBlocks,
-  };
-
-  const appendBlocks = jest.fn((artifactId: string, blocks: any[]) => {
-    blocksByArtifact[artifactId] = [
-      ...(blocksByArtifact[artifactId] ?? []),
-      ...blocks,
-    ];
-  });
+function createState() {
+  const appendBlocks = jest.fn();
   const setSessionArtifact = jest.fn();
   const setSessionDraftContextItemIds = jest.fn();
   const setSessionRunContext = jest.fn();
@@ -68,7 +42,9 @@ function createState({
         sessions: [
           {
             id: sourceSessionId,
-            uiMessages: [userMessage(prompt)],
+            uiMessages: [
+              userMessage('create a new worksheet with the same chart'),
+            ],
           },
         ],
       },
@@ -106,7 +82,7 @@ function createState({
         if (artifactId === targetArtifactId) {
           return {
             id: targetArtifactId,
-            type: targetType,
+            type: 'worksheet',
             title: 'Target Worksheet',
           };
         }
@@ -115,90 +91,84 @@ function createState({
       setCurrentArtifact,
     },
     blockDocuments: {
-      getBlocks: jest.fn((artifactId: string) => blocksByArtifact[artifactId]),
       appendBlocks,
     },
   } as unknown as RoomState;
 
   return {
     appendBlocks,
-    blocksByArtifact,
     forkSessionFromMessage,
     selectLatestSessionForArtifact,
     setCurrentArtifact,
     setSessionArtifact,
     setSessionDraftContextItemIds,
-    setSessionRunContext,
     state,
   };
 }
 
-async function triggerHandoff(state: RoomState) {
-  const controller = createArtifactChatHandoffController({
-    getState: () => state,
-  } as any);
-  await controller.commandMiddleware(
-    {id: 'block-document.create'} as any,
-    undefined,
-    {
-      getState: () => state,
-      invocation: {
-        surface: 'ai',
-        metadata: {aiSessionId: sourceSessionId},
-      },
-    } as any,
-    async () => ({
-      success: true,
-      data: {
-        artifactTargetChange: {
-          artifactId: targetArtifactId,
-          artifactType: 'worksheet',
-          title: 'Target Worksheet',
-          change: 'created',
-          shouldContinueChat: true,
-        },
-      },
-    }),
-  );
-  expect(state.artifacts.config.currentArtifactId).toBe(sourceArtifactId);
-  controller.onChatFinish({
-    sessionId: sourceSessionId,
-    messages: [
-      userMessage('create a new worksheet with the same chart'),
-      assistantMessage(),
-    ],
-  });
-}
-
 describe('createArtifactChatHandoffController', () => {
-  it('copies source chart blocks into an empty target for same-chart handoff', async () => {
+  it('hands off worksheet chats without hidden block document copying', async () => {
     const {
       appendBlocks,
-      blocksByArtifact,
+      forkSessionFromMessage,
+      selectLatestSessionForArtifact,
       setCurrentArtifact,
       setSessionArtifact,
       setSessionDraftContextItemIds,
       state,
     } = createState();
+    const controller = createArtifactChatHandoffController({
+      getState: () => state,
+    } as any);
 
-    await triggerHandoff(state);
-
-    expect(appendBlocks).toHaveBeenCalledTimes(1);
-    expect(appendBlocks).toHaveBeenCalledWith(targetArtifactId, [
-      expect.objectContaining({
-        type: 'chart',
-        tableName: '"main"."cars"',
-        caption: 'MPG vs Weight',
+    await controller.commandMiddleware(
+      {id: 'block-document.create'} as any,
+      undefined,
+      {
+        getState: () => state,
+        invocation: {
+          surface: 'ai',
+          metadata: {aiSessionId: sourceSessionId},
+        },
+      } as any,
+      async () => ({
+        success: true,
+        data: {
+          artifactTargetChange: {
+            artifactId: targetArtifactId,
+            artifactType: 'worksheet',
+            title: 'Target Worksheet',
+            change: 'created',
+            shouldContinueChat: true,
+          },
+        },
       }),
-    ]);
-    expect(blocksByArtifact[targetArtifactId][0].id).not.toBe('source-chart');
-    expect(setSessionArtifact).toHaveBeenCalledWith(
-      targetSessionId,
-      targetArtifactId,
     );
+
+    expect(state.artifacts.config.currentArtifactId).toBe(sourceArtifactId);
+
+    controller.onChatFinish({
+      sessionId: sourceSessionId,
+      messages: [
+        userMessage('create a new worksheet with the same chart'),
+        assistantMessage(),
+      ],
+    });
+
+    expect(appendBlocks).not.toHaveBeenCalled();
+    expect(forkSessionFromMessage).toHaveBeenCalledWith({
+      sourceSessionId,
+      sourceMessageId: 'assistant-1',
+      sourceMessageIndex: 1,
+      name: 'Continue: Target Worksheet',
+    });
     expect(setSessionArtifact).toHaveBeenCalledWith(
       sourceSessionId,
       sourceArtifactId,
+    );
+    expect(setSessionArtifact).toHaveBeenCalledWith(
+      targetSessionId,
+      targetArtifactId,
     );
     expect(setSessionDraftContextItemIds).toHaveBeenCalledWith(
       sourceSessionId,
@@ -210,42 +180,8 @@ describe('createArtifactChatHandoffController', () => {
     );
     expect(setCurrentArtifact).toHaveBeenNthCalledWith(1, sourceArtifactId);
     expect(setCurrentArtifact).toHaveBeenLastCalledWith(targetArtifactId);
-  });
-
-  it('does not copy chart blocks when the target was already populated', async () => {
-    const {appendBlocks, state} = createState({
-      targetBlocks: [
-        {
-          id: 'target-chart',
-          type: 'chart',
-          tableName: '"main"."cars"',
-          config: {chartType: 'scatter'},
-        },
-      ],
-    });
-
-    await triggerHandoff(state);
-
-    expect(appendBlocks).not.toHaveBeenCalled();
-  });
-
-  it('does not copy chart blocks for a non-copy prompt with an empty target', async () => {
-    const {appendBlocks, state} = createState({
-      prompt: 'what columns are in this worksheet?',
-    });
-
-    await triggerHandoff(state);
-
-    expect(appendBlocks).not.toHaveBeenCalled();
-  });
-
-  it('does not copy chart blocks into non-worksheet targets', async () => {
-    const {appendBlocks, state} = createState({
-      targetType: 'dashboard',
-    });
-
-    await triggerHandoff(state);
-
-    expect(appendBlocks).not.toHaveBeenCalled();
+    expect(selectLatestSessionForArtifact).toHaveBeenCalledWith(
+      targetArtifactId,
+    );
   });
 });

@@ -215,13 +215,11 @@ describe('createArtifactAiChatHandoffController', () => {
       state,
     } = createState();
     const beforeSourceRestoreContexts: unknown[] = [];
-    const beforeTargetForkContexts: unknown[] = [];
     const afterTargetForkContexts: unknown[] = [];
     const controller = createArtifactAiChatHandoffController({
       store: {getState: () => state},
       onBeforeSourceRestore: (context) =>
         beforeSourceRestoreContexts.push(context),
-      onBeforeTargetFork: (context) => beforeTargetForkContexts.push(context),
       onAfterTargetFork: (context) => afterTargetForkContexts.push(context),
     });
 
@@ -275,12 +273,6 @@ describe('createArtifactAiChatHandoffController', () => {
       messages: [userMessage('create a new artifact'), assistantMessage()],
     });
 
-    expect(beforeTargetForkContexts).toEqual([
-      expect.objectContaining({
-        assistantMessage: expect.objectContaining({id: 'assistant-1'}),
-        targetArtifact: expect.objectContaining({id: targetArtifactId}),
-      }),
-    ]);
     expect(forkSessionFromMessageCalls).toEqual([
       {
         sourceSessionId,

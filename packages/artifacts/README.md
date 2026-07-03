@@ -246,9 +246,10 @@ behavior in the package:
 - binds source and target sessions to their artifacts
 - clears inherited draft context and updates artifact run context
 
-App-specific artifact content policy stays in hooks. For example, a document
-app can provide `onBeforeTargetFork` to copy selected blocks into an empty
-target artifact without teaching the package about that artifact type.
+Artifact content transfer should stay in artifact-specific commands or AI
+tools. For example, a document app can expose a block-copying tool that reads
+from the source artifact and appends selected blocks to the target artifact
+without teaching the handoff controller about that artifact type.
 
 - `getAiSessionGroupsByArtifact`
 - `getRunningAiSessionCountsByArtifact`

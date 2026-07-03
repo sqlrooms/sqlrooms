@@ -73,6 +73,7 @@ describe('createWorksheetBlockDocumentAiTools', () => {
   it('does not register HTML app block tools by default', () => {
     const tools = createWorksheetBlockDocumentAiTools(createOptions());
 
+    expect(tools[KnownWorksheetTools.copy_blocks]).toBeDefined();
     expect(tools[KnownWorksheetTools.add_html_app_block]).toBeUndefined();
     expect(tools[KnownWorksheetTools.embedded_html_app_agent]).toBeUndefined();
   });

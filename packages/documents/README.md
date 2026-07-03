@@ -131,6 +131,7 @@ import {
   BlockDocumentsSliceConfig,
   createAddBlockDocumentTextBlockTool,
   createBlockDocumentFeatureSlices,
+  createCopyBlockDocumentBlocksTool,
   createListBlockDocumentBlocksTool,
 } from '@sqlrooms/documents';
 
@@ -164,6 +165,10 @@ const tools = {
     blockDocumentAdapter,
     blockDocumentId,
   }),
+  copy_block_document_blocks: createCopyBlockDocumentBlocksTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
 };
 ```
 
@@ -171,6 +176,11 @@ const tools = {
 promise. Hosts that already expose block-document mutations as room commands can
 therefore invoke the command layer from the adapter while keeping generic AI
 tools package-neutral.
+
+`createCopyBlockDocumentBlocksTool()` copies selected block DTOs from one block
+document to another through the same adapter. Passing the same source and target
+block document ID duplicates blocks inside that document; copied stateful blocks
+become shared references so the same stateful resource is not owned twice.
 
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs

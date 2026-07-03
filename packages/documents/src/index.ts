@@ -111,6 +111,10 @@ export {
   createListBlockDocumentBlocksTool,
   type CreateListBlockDocumentBlocksToolOptions,
 } from './createListBlockDocumentBlocksTool';
+export {
+  createCopyBlockDocumentBlocksTool,
+  type CreateCopyBlockDocumentBlocksToolOptions,
+} from './createCopyBlockDocumentBlocksTool';
 export {BlockDocumentEditor} from './BlockDocumentEditor';
 export {
   BlockDocumentEditorRoot,

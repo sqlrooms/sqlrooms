@@ -197,4 +197,97 @@ describe('createWorksheetAgentTool', () => {
     expect(runSubAgent).toHaveBeenCalledTimes(1);
     expect(blocks).toEqual([]);
   });
+
+  it('passes source and target block document IDs to the sub-agent for copy-like requests', async () => {
+    const blocks: BlockDocumentBlockType[] = [];
+    const blockDocumentAdapter: TestBlockDocumentAiAdapter = {
+      ensureBlockDocument: jest.fn(),
+      setCurrentBlockDocument: jest.fn(),
+      getBlocks: jest.fn(() => blocks),
+      addBlock: jest.fn<BlockDocumentAiAdapter['addBlock']>(
+        (_worksheetId, block) => block.id,
+      ),
+      moveBlock: jest.fn(() => true),
+    };
+    const runSubAgent = jest.fn<RunSubAgent>().mockImplementation(async () => {
+      blocks.push({
+        id: 'chart-copy',
+        type: 'chart',
+        tableName: '"main"."cars"',
+        config: {chartType: 'scatter'},
+      });
+      return {
+        finalOutput: 'Copied chart.',
+        agentToolCalls: [{toolName: 'copy_block_document_blocks'}],
+      };
+    });
+
+    const worksheetAgent = createWorksheetAgentTool({
+      store: {
+        getState: () =>
+          ({
+            artifacts: {
+              config: {currentArtifactId: 'source-worksheet'},
+              getArtifact: (artifactId: string) =>
+                artifactId === 'source-worksheet'
+                  ? {
+                      id: 'source-worksheet',
+                      type: 'worksheet',
+                      title: 'Source Worksheet',
+                    }
+                  : undefined,
+            },
+          }) as any,
+      },
+      getModel: () => ({}) as any,
+      runSubAgent,
+      databaseAdapter: {
+        getTables: () => [],
+        findTable: () => undefined,
+      },
+      blockDocumentAdapter,
+      dashboardAgentTool: tool({
+        description: 'No-op dashboard agent for tests.',
+        inputSchema: z.object({}),
+        execute: async () => ({success: true}),
+      }),
+      htmlAppBlocksEnabled: false,
+      createDashboardBlock: jest.fn() as any,
+      createDataTableExplorerBlock: jest.fn() as any,
+    });
+
+    const result = (await (
+      worksheetAgent as unknown as {
+        execute: (
+          input: {
+            reasoning: string;
+            intent: string;
+            worksheetId: string;
+            maxSteps: number;
+          },
+          options: {toolCallId: string},
+        ) => Promise<WorksheetAgentToolResult>;
+      }
+    ).execute(
+      {
+        reasoning: 'test',
+        intent: 'create a new worksheet with the same chart',
+        worksheetId: 'target-worksheet',
+        maxSteps: 5,
+      },
+      {toolCallId: 'parent-tool'},
+    )) as WorksheetAgentToolResult;
+
+    expect(result.success).toBe(true);
+    expect(runSubAgent).toHaveBeenCalledTimes(1);
+    expect(runSubAgent.mock.calls[0]?.[0].prompt).toContain(
+      'Target worksheet block document artifact ID: target-worksheet',
+    );
+    expect(runSubAgent.mock.calls[0]?.[0].prompt).toContain(
+      'Source worksheet block document artifact ID: source-worksheet',
+    );
+    expect(runSubAgent.mock.calls[0]?.[0].prompt).toContain(
+      'copy_block_document_blocks',
+    );
+  });
 });

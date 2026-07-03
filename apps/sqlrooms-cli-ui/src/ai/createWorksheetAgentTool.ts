@@ -110,6 +110,11 @@ Before updating a worksheet dashboard${
     htmlAppBlocksEnabled ? '/html-app' : ''
   } blocks and their resource IDs. For stateful blocks, use statefulBlock.blockType to identify the surface and statefulBlock.blockInstanceId as dashboardId, appId, or mapId for the matching embedded tool.
 
+When the user asks to copy, duplicate, recreate, or use the same chart/content from another worksheet, treat both worksheets as block document artifacts:
+- Call ${KnownWorksheetTools.list_blocks} with the source block document artifact ID to identify the source blockIds.
+- Call ${KnownWorksheetTools.copy_blocks} with sourceBlockDocumentId, targetBlockDocumentId, and the selected blockIds.
+- You may use the same sourceBlockDocumentId and targetBlockDocumentId to duplicate blocks inside the current worksheet.
+
 ### Chart Blocks
 To create a chart block in a worksheet, call one of the chart generation tools:
 ${chartToolsInstructions}
@@ -293,6 +298,12 @@ const WorksheetAgentInputSchema = z.object({
     .describe(
       'Target worksheet block-document artifact ID where blocks will be added.',
     ),
+  sourceBlockDocumentId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional source worksheet/block document artifact ID to inspect when copying, duplicating, or recreating existing blocks.',
+    ),
   maxSteps: z
     .number()
     .optional()
@@ -307,6 +318,7 @@ const WORKSHEET_MUTATION_TOOL_NAMES = new Set<string>([
   KnownWorksheetTools.add_dashboard_block,
   KnownWorksheetTools.add_data_table_explorer,
   KnownWorksheetTools.add_html_app_block,
+  KnownWorksheetTools.copy_blocks,
   KnownWorksheetTools.create_block_document_map_block,
   KnownWorksheetTools.embedded_dashboard_agent,
   KnownWorksheetTools.embedded_html_app_agent,
@@ -342,6 +354,42 @@ function shouldRequireWorksheetMutation(intent: string) {
       normalized,
     )
   );
+}
+
+function shouldHintSourceBlockDocument(intent: string) {
+  return /\b(copy|clone|duplicate|recreate|same)\b/.test(intent.toLowerCase());
+}
+
+function inferSourceBlockDocumentId(
+  state: RoomState,
+  targetWorksheetId: string,
+) {
+  const currentArtifactId = state.artifacts?.config.currentArtifactId;
+  if (!currentArtifactId || currentArtifactId === targetWorksheetId) {
+    return undefined;
+  }
+
+  const currentArtifact = state.artifacts?.getArtifact?.(currentArtifactId);
+  return currentArtifact?.type === 'worksheet' ? currentArtifactId : undefined;
+}
+
+function createWorksheetSubAgentPrompt({
+  intent,
+  sourceBlockDocumentId,
+  worksheetId,
+}: {
+  intent: string;
+  sourceBlockDocumentId?: string;
+  worksheetId: string;
+}) {
+  if (!sourceBlockDocumentId) return intent;
+
+  return `${intent}
+
+Target worksheet block document artifact ID: ${worksheetId}
+Source worksheet block document artifact ID: ${sourceBlockDocumentId}
+
+For copy, duplicate, recreate, or "same chart/content" requests, inspect the source with ${KnownWorksheetTools.list_blocks} and copy selected blocks into the target with ${KnownWorksheetTools.copy_blocks}.`;
 }
 
 /**
@@ -388,6 +436,10 @@ ${
 3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel`
 }
 
+IF user requests copying, duplicating, or recreating the same worksheet chart/content:
+1. Use ${KnownWorksheetTools.list_blocks} to inspect the source worksheet block document
+2. Use ${KnownWorksheetTools.copy_blocks} to append the selected source blocks into the target worksheet block document
+
 ${
   htmlAppBlocksEnabled
     ? `
@@ -413,6 +465,18 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
       const {intent} = params;
 
       try {
+        const state = store.getState();
+        const sourceBlockDocumentId =
+          params.sourceBlockDocumentId ??
+          (shouldHintSourceBlockDocument(intent)
+            ? inferSourceBlockDocumentId(state, worksheetId)
+            : undefined);
+        const worksheetSubAgentPrompt = createWorksheetSubAgentPrompt({
+          intent,
+          sourceBlockDocumentId,
+          worksheetId,
+        });
+
         blockDocumentAdapter.ensureBlockDocument(worksheetId);
         const initialBlockCount =
           blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
@@ -420,7 +484,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
         const dataTools = options.createDataTools?.({store}) ?? {};
 
         const agent = new ToolLoopAgent({
-          model: options.getModel({state: store.getState()}),
+          model: options.getModel({state}),
           tools: {
             ...createWorksheetBlockDocumentAiTools({
               databaseAdapter,
@@ -457,7 +521,9 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
             abortSignal: toolOptions?.abortSignal,
           });
 
-        let result: AgentRunResult = await runWorksheetSubAgent(intent);
+        let result: AgentRunResult = await runWorksheetSubAgent(
+          worksheetSubAgentPrompt,
+        );
         const allToolCalls = [...(result.agentToolCalls ?? [])];
         const requiresWorksheetMutation =
           shouldRequireWorksheetMutation(intent);
@@ -469,9 +535,9 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           currentBlockCount === initialBlockCount &&
           !hasWorksheetMutationToolCall(allToolCalls)
         ) {
-          result = await runWorksheetSubAgent(`${intent}
+          result = await runWorksheetSubAgent(`${worksheetSubAgentPrompt}
 
-The previous attempt did not modify the worksheet block document. You must call one of the block document mutation tools, such as a ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* chart tool, ${KnownWorksheetTools.add_text_block}, ${KnownWorksheetTools.add_dashboard_block}, or another add/update block tool. Do not answer with only text.`);
+The previous attempt did not modify the worksheet block document. You must call one of the block document mutation tools, such as a ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* chart tool, ${KnownWorksheetTools.add_text_block}, ${KnownWorksheetTools.copy_blocks}, ${KnownWorksheetTools.add_dashboard_block}, or another add/update block tool. Do not answer with only text.`);
           allToolCalls.push(...(result.agentToolCalls ?? []));
           currentBlockCount =
             blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;

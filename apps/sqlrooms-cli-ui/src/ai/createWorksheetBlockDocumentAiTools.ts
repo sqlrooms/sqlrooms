@@ -1,6 +1,7 @@
 import type {Tool} from 'ai';
 import {
   createAddBlockDocumentTextBlockTool,
+  createCopyBlockDocumentBlocksTool,
   createListBlockDocumentBlocksTool,
   type BlockDocumentAiAdapter,
   type BlockDocumentStatefulBlockBlock,
@@ -147,11 +148,18 @@ export function createWorksheetBlockDocumentAiTools({
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
     blockDocumentId: worksheetId,
-    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownWorksheetTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to a direct worksheet map tool when available.${
+    usageHint: `Use this before updating an existing worksheet (block document) dashboard, map, or app block. You may also pass another block document artifact ID to inspect a source worksheet before copying blocks from it. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownWorksheetTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to a direct worksheet map tool when available.${
       htmlAppBlocksEnabled
         ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownWorksheetTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownWorksheetTools.add_html_app_block} first.`
         : ''
     }`,
+  });
+
+  const copyBlocksTool = createCopyBlockDocumentBlocksTool({
+    blockDocumentAdapter,
+    blockDocumentId: worksheetId,
+    usageHint:
+      'In the CLI app, worksheets are block document artifacts. Use this to copy chart, text, image, or stateful blocks from a source worksheet into the current worksheet. Passing the same source and target worksheet ID duplicates blocks within that worksheet.',
   });
 
   const additionalTools =
@@ -174,6 +182,7 @@ export function createWorksheetBlockDocumentAiTools({
   const builtInTools: Record<string, Tool> = {
     ...chartTools,
     [KnownWorksheetTools.list_blocks]: listBlocksTool,
+    [KnownWorksheetTools.copy_blocks]: copyBlocksTool,
     [KnownWorksheetTools.add_text_block]: addTextBlockTool,
     [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
     [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,
