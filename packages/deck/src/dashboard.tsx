@@ -140,8 +140,11 @@ function detectMissingColumns(
 
       if (typeof propValue === 'string' && propValue.startsWith('@@=')) {
         const expression = propValue.slice(3).trim();
-        if (/^[A-Za-z_$][\w$]*$/.test(expression)) {
-          check(expression);
+        const identifiers = expression.match(/\b[A-Za-z_$][\w$]*\b/g);
+        if (identifiers) {
+          for (const id of identifiers) {
+            check(id);
+          }
         }
       }
       // Check @@function colorScale/scale field references
@@ -293,7 +296,7 @@ function DeckMapDashboardDatasetClient({
       ? (source.transformSql ?? '')
       : '';
   const {data, error, isLoading, client} = useMosaicClient({
-    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}`,
+    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}:${maxRows}`,
     selectionName,
     query,
     queryError,
