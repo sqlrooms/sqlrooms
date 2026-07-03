@@ -30,10 +30,10 @@ describe('createCountPlotSpec', () => {
     }) as any;
 
     expect(spec.plot[0].x).toEqual({count: null});
-    expect(spec.plot[0].y).toEqual({
-      column: 'class',
-      sort: {x: 'sum', order: 'desc', limit: 10},
-    });
+    for (const mark of spec.plot.slice(0, 3)) {
+      expect(mark.y).toBe('class');
+      expect(mark.sort).toEqual({y: '-x', limit: 10});
+    }
     expect(spec.xLabel).toBe('Count');
     expect(spec.height).toBe(400);
     expect(spec.yPaddingInner).toBe(0.7);
@@ -51,11 +51,7 @@ describe('createCountPlotSpec', () => {
       settings,
     }) as any;
 
-    expect(spec.plot[0].y.sort).toEqual({
-      x: 'sum',
-      order: 'asc',
-      limit: 10,
-    });
+    expect(spec.plot[0].sort).toEqual({y: 'x', limit: 10});
   });
 
   it('can sort categories by label', () => {
@@ -69,11 +65,7 @@ describe('createCountPlotSpec', () => {
       settings,
     }) as any;
 
-    expect(spec.plot[0].y.sort).toEqual({
-      y: 'min',
-      order: 'asc',
-      limit: 10,
-    });
+    expect(spec.plot[0].sort).toEqual({y: 'y', limit: 10});
   });
 
   it('can aggregate a numeric value column', () => {
@@ -91,11 +83,7 @@ describe('createCountPlotSpec', () => {
 
     expect(spec.plot[0].x).toEqual({avg: 'length_m'});
     expect(spec.plot[2].text).toEqual({avg: 'length_m'});
-    expect(spec.plot[0].y.sort).toEqual({
-      x: 'avg',
-      order: 'desc',
-      limit: 10,
-    });
+    expect(spec.plot[0].sort).toEqual({y: '-x', limit: 10});
     expect(spec.xLabel).toBe('AVG length_m');
   });
 
@@ -111,11 +99,7 @@ describe('createCountPlotSpec', () => {
       settings,
     }) as any;
 
-    expect(spec.plot[0].y.sort).toEqual({
-      x: 'sum',
-      order: 'desc',
-      limit: 6,
-    });
+    expect(spec.plot[0].sort).toEqual({y: '-x', limit: 6});
     expect(spec.height).toBe(286);
   });
 

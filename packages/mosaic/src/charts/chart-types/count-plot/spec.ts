@@ -27,6 +27,11 @@ const ROW_GAP = 4;
 const DEFAULT_Y_PADDING_INNER = 0.7;
 const DEFAULT_Y_PADDING_OUTER = 0.2;
 
+type CountPlotMarkSort = {
+  y: 'x' | '-x' | 'y' | '-y';
+  limit: number;
+};
+
 function clampInteger(
   value: number | undefined,
   fallback: number,
@@ -79,22 +84,13 @@ function getMetricChannel(
 
 function getSortConfig(
   sort: CountPlotSort | undefined,
-  metric: 'count' | 'aggregate',
-  aggregate: AggregateFunction,
   maxBars: number,
-): unknown {
+): CountPlotMarkSort {
   const sortOption = sort ?? 'value-desc';
-  const order = sortOption.endsWith('asc') ? 'asc' : 'desc';
+  const channel = sortOption.startsWith('label') ? 'y' : 'x';
+  const descending = sortOption.endsWith('desc');
 
-  if (sortOption.startsWith('label')) {
-    return {y: 'min', order, limit: maxBars};
-  }
-
-  return {
-    x: metric === 'count' ? 'sum' : aggregate,
-    order,
-    limit: maxBars,
-  };
+  return {y: `${descending ? '-' : ''}${channel}`, limit: maxBars};
 }
 
 function getValueLabel(
@@ -142,10 +138,8 @@ export function createCountPlotSpec(
     MIN_COUNT_PLOT_BAR_MAX_HEIGHT,
     MAX_COUNT_PLOT_BAR_MAX_HEIGHT,
   );
-  const yChannel = {
-    column: fieldColumn.name,
-    sort: getSortConfig(settings.sort, metric, aggregate, maxBars),
-  };
+  const yChannel = fieldColumn.name;
+  const markSort = getSortConfig(settings.sort, maxBars);
 
   // Count plot shows categorical frequency as horizontal bars
   // Categories on Y-axis, counts on X-axis
@@ -155,6 +149,7 @@ export function createCountPlotSpec(
       data: {from: tableReference},
       x: metricChannel,
       y: yChannel,
+      sort: markSort,
       fill: BG_COLOR,
       inset: 0.5,
     },
@@ -163,6 +158,7 @@ export function createCountPlotSpec(
       data: {from: tableReference, filterBy: '$brush'},
       x: metricChannel,
       y: yChannel,
+      sort: markSort,
       fill: FG_COLOR,
       inset: 0.5,
     },
@@ -171,6 +167,7 @@ export function createCountPlotSpec(
       data: {from: tableReference, filterBy: '$brush'},
       x: metricChannel,
       y: yChannel,
+      sort: markSort,
       text: metricChannel,
       dx: 5,
       textAnchor: 'start',
