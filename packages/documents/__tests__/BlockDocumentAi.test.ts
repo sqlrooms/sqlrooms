@@ -6,6 +6,7 @@ import {
   createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
   type BlockDocumentBlock,
+  type BlockDocumentMoveBlockAiAdapter,
 } from '../src';
 
 describe('block document AI helpers', () => {
@@ -35,7 +36,6 @@ describe('block document AI helpers', () => {
         addedBlocks.push(block);
         return block.id;
       },
-      moveBlock: () => true,
     };
 
     const tool = createAddBlockDocumentTextBlockTool({
@@ -76,7 +76,6 @@ describe('block document AI helpers', () => {
         addBlockCalled = true;
         return block.id;
       },
-      moveBlock: () => true,
     };
 
     const tool = createAddBlockDocumentTextBlockTool({
@@ -107,7 +106,6 @@ describe('block document AI helpers', () => {
         addedBlocks.push(block);
         return `command:${block.id}`;
       },
-      moveBlock: () => true,
     };
 
     const tool = createAddBlockDocumentTextBlockTool({
@@ -157,7 +155,6 @@ describe('block document AI helpers', () => {
         }),
       ],
       addBlock: (_blockDocumentId, block) => block.id,
-      moveBlock: () => true,
     };
 
     const tool = createListBlockDocumentBlocksTool({
@@ -200,13 +197,10 @@ describe('block document AI helpers', () => {
   it('moves a top-level block through the block document adapter', async () => {
     const moveCalls: unknown[][] = [];
     const ensuredBlockDocumentIds: string[] = [];
-    const blockDocumentAdapter: BlockDocumentAiAdapter = {
-      setCurrentBlockDocument: () => {},
+    const blockDocumentAdapter: BlockDocumentMoveBlockAiAdapter = {
       ensureBlockDocument: (blockDocumentId) => {
         ensuredBlockDocumentIds.push(blockDocumentId);
       },
-      getBlocks: () => [],
-      addBlock: (_blockDocumentId, block) => block.id,
       moveBlock: (blockDocumentId, blockId, toIndex) => {
         moveCalls.push([blockDocumentId, blockId, toIndex]);
         return true;
@@ -234,12 +228,28 @@ describe('block document AI helpers', () => {
     expect(moveCalls).toEqual([['document-1', 'joke-block', 0]]);
   });
 
-  it('reports missing blocks when the adapter cannot move a block', async () => {
-    const blockDocumentAdapter: BlockDocumentAiAdapter = {
-      setCurrentBlockDocument: () => {},
+  it('rejects negative move indexes at the tool schema boundary', () => {
+    const blockDocumentAdapter: BlockDocumentMoveBlockAiAdapter = {
       ensureBlockDocument: () => {},
-      getBlocks: () => [],
-      addBlock: (_blockDocumentId, block) => block.id,
+      moveBlock: () => true,
+    };
+
+    const moveTool = createMoveBlockDocumentBlockTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    expect(
+      (moveTool as any).inputSchema.safeParse({
+        blockId: 'joke-block',
+        toIndex: -1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('reports missing blocks when the adapter cannot move a block', async () => {
+    const blockDocumentAdapter: BlockDocumentMoveBlockAiAdapter = {
+      ensureBlockDocument: () => {},
       moveBlock: () => false,
     };
 

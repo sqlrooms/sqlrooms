@@ -27,6 +27,15 @@ export type BlockDocumentAiAdapter = {
     blockDocumentId: string,
     block: BlockDocumentBlock,
   ): string | Promise<string>;
+};
+
+/**
+ * Narrow adapter for tools that reorder top-level block document blocks.
+ */
+export type BlockDocumentMoveBlockAiAdapter = Pick<
+  BlockDocumentAiAdapter,
+  'ensureBlockDocument'
+> & {
   /** Move a top-level block to a new zero-based index. */
   moveBlock(
     blockDocumentId: string,

@@ -152,8 +152,9 @@ const roomStore = createRoomStore(
 
 Generic AI helpers use the same block DTOs as commands and the editor. Hosts
 provide a small `BlockDocumentAiAdapter` that ensures a document, lists its
-blocks, appends new blocks, and reorders top-level blocks; feature packages or
-apps can then compose these tools with their own stateful-block tools:
+blocks, and appends new blocks; feature packages or apps can then compose these
+tools with their own stateful-block tools. Reorder tools require the narrower
+`BlockDocumentMoveBlockAiAdapter` capability:
 
 ```ts
 const tools = {

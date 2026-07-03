@@ -4,6 +4,7 @@ import {
   createListBlockDocumentBlocksTool,
   createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {
@@ -33,7 +34,8 @@ export type ExtraWorksheetAiToolsFactory = (
  */
 export type CreateWorksheetBlockDocumentAiToolsOptions = {
   databaseAdapter: DatabaseAiAdapter;
-  blockDocumentAdapter: BlockDocumentAiAdapter;
+  blockDocumentAdapter: BlockDocumentAiAdapter &
+    BlockDocumentMoveBlockAiAdapter;
   dashboardAgentTool: Tool;
   chartToolsOptions?: ChartToolsOptions;
   worksheetId: string;

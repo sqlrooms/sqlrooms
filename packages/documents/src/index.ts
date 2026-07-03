@@ -106,6 +106,7 @@ export {
   type BlockDocumentAgentPlanStep,
   type BlockDocumentAgentResult,
   type BlockDocumentBlockSummary,
+  type BlockDocumentMoveBlockAiAdapter,
   type ExtraBlockDocumentAiToolsFactory,
   type ExtraBlockDocumentAiToolsParams,
 } from './BlockDocumentAi';

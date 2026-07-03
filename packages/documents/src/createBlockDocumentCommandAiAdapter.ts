@@ -1,7 +1,10 @@
 import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
 import type {CommandSliceState} from '@sqlrooms/room-store';
 import type {StoreApi} from 'zustand';
-import type {BlockDocumentAiAdapter} from './BlockDocumentAi';
+import type {
+  BlockDocumentAiAdapter,
+  BlockDocumentMoveBlockAiAdapter,
+} from './BlockDocumentAi';
 import type {BlockDocumentBlock} from './BlockDocumentSliceConfig';
 import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
 
@@ -45,15 +48,16 @@ function blockIdFromAppendResult(data: unknown, block: BlockDocumentBlock) {
 }
 
 /**
- * Creates a block-document AI adapter that appends blocks through the canonical
- * block-document command.
+ * Creates a block-document AI adapter that mutates blocks through canonical
+ * block-document commands.
  */
 export function createBlockDocumentCommandAiAdapter<
   TRoomState extends BlockDocumentCommandAiAdapterState,
 >({
   store,
   isBlockDocumentArtifact = (artifact) => artifact.type === 'block-document',
-}: CreateBlockDocumentCommandAiAdapterOptions<TRoomState>): BlockDocumentAiAdapter {
+}: CreateBlockDocumentCommandAiAdapterOptions<TRoomState>): BlockDocumentAiAdapter &
+  BlockDocumentMoveBlockAiAdapter {
   const ensureBlockDocument = (artifactId: string) => {
     const state = store.getState();
     const artifact = state.artifacts.getArtifact(artifactId);

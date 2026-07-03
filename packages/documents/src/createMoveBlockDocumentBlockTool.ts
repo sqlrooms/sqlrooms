@@ -1,6 +1,6 @@
 import {tool} from 'ai';
 import {z} from 'zod';
-import type {BlockDocumentAiAdapter} from './BlockDocumentAi';
+import type {BlockDocumentMoveBlockAiAdapter} from './BlockDocumentAi';
 
 const MoveBlockDocumentBlockToolInput = z.object({
   reasoning: z
@@ -11,6 +11,7 @@ const MoveBlockDocumentBlockToolInput = z.object({
   toIndex: z
     .number()
     .int()
+    .nonnegative()
     .describe('Zero-based destination index among top-level blocks.'),
 });
 
@@ -33,7 +34,7 @@ type MoveBlockDocumentBlockToolOutput = BlockDocumentToolOutput<{
  */
 export type CreateMoveBlockDocumentBlockToolOptions = {
   /** Adapter for block document operations. */
-  blockDocumentAdapter: BlockDocumentAiAdapter;
+  blockDocumentAdapter: BlockDocumentMoveBlockAiAdapter;
   /** ID of the block document where blocks will be reordered. */
   blockDocumentId: string;
 };

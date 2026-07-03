@@ -2,6 +2,7 @@ import {jest} from '@jest/globals';
 import {tool, type Tool} from 'ai';
 import type {
   BlockDocumentAiAdapter,
+  BlockDocumentMoveBlockAiAdapter,
   BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import type {DatabaseAiAdapter} from '@sqlrooms/mosaic/ai';
@@ -9,7 +10,8 @@ import {createWorksheetBlockDocumentAiTools} from '../createWorksheetBlockDocume
 import {KnownWorksheetTools} from '../constants';
 
 describe('createWorksheetBlockDocumentAiTools', () => {
-  function createBlockDocumentAdapter(): BlockDocumentAiAdapter {
+  function createBlockDocumentAdapter(): BlockDocumentAiAdapter &
+    BlockDocumentMoveBlockAiAdapter {
     return {
       setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
@@ -28,7 +30,8 @@ describe('createWorksheetBlockDocumentAiTools', () => {
 
   function createOptions(
     overrides: {
-      blockDocumentAdapter?: BlockDocumentAiAdapter;
+      blockDocumentAdapter?: BlockDocumentAiAdapter &
+        BlockDocumentMoveBlockAiAdapter;
       extraTools?: () => Record<string, Tool>;
       htmlAppBlocksEnabled?: boolean;
     } = {},

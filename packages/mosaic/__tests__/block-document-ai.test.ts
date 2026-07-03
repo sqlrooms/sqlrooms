@@ -36,7 +36,6 @@ describe('Mosaic block-document AI tools', () => {
         addedBlocks.push(block);
         return block.id;
       },
-      moveBlock: () => true,
     };
 
     return {blockDocumentAdapter, addedBlocks};
@@ -127,7 +126,6 @@ describe('Mosaic block-document AI tools', () => {
       },
       getBlocks: () => [],
       addBlock: jest.fn((_blockDocumentId, block) => block.id),
-      moveBlock: () => true,
     };
 
     const tool = createAddMosaicDashboardBlockTool({
@@ -220,7 +218,6 @@ describe('Mosaic block-document AI tools', () => {
       },
       getBlocks: () => [],
       addBlock: jest.fn((_blockDocumentId, block) => block.id),
-      moveBlock: () => true,
     };
 
     const dataTableTool = createBlockDocumentDataTableExplorerTool({

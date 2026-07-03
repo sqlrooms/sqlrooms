@@ -12,7 +12,10 @@ import {
   resolveChartTypes,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
-import type {BlockDocumentAiAdapter} from '@sqlrooms/documents';
+import type {
+  BlockDocumentAiAdapter,
+  BlockDocumentMoveBlockAiAdapter,
+} from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import {
   createWorksheetBlockDocumentAiTools,
@@ -37,7 +40,8 @@ export type WorksheetAgentResult = {
 
 export type CreateWorksheetAgentToolOptions =
   BaseAgentToolOptions<RoomState> & {
-    blockDocumentAdapter: BlockDocumentAiAdapter;
+    blockDocumentAdapter: BlockDocumentAiAdapter &
+      BlockDocumentMoveBlockAiAdapter;
     databaseAdapter: DatabaseAiAdapter;
     dashboardAgentTool: Tool;
     chartToolsOptions?: ChartToolsOptions;
