@@ -1589,7 +1589,14 @@ export const BlockDocumentBlockControls: FC<
           ) : null}
           <div
             className="pointer-events-none absolute z-30 h-px w-px"
-            style={{top: blockTypeSearch.menuTop, left: blockTypeSearch.left}}
+            style={{
+              height: Math.max(
+                1,
+                blockTypeSearch.menuTop - blockTypeSearch.top - 4,
+              ),
+              left: blockTypeSearch.left,
+              top: blockTypeSearch.top,
+            }}
           >
             <Popover
               open={blockTypeSearchMenuOpen && !handleMenuOpen}
@@ -1602,7 +1609,7 @@ export const BlockDocumentBlockControls: FC<
               }}
             >
               <PopoverAnchor asChild>
-                <span className="pointer-events-none block h-px w-px" />
+                <span className="pointer-events-none block h-full w-px" />
               </PopoverAnchor>
               <PopoverContent
                 align="start"
