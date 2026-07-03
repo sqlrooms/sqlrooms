@@ -153,6 +153,8 @@ export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
    * Keys are param names (without $), values are Param or Selection instances.
    */
   params?: BrushSelectionParams;
+  /** Optional shared selection name used to add chart-local brush interactors. */
+  selectionName?: string;
   /**
    * Optional retention adapter for preserving the underlying vgplot
    * instance across temporary unmount/remount cycles.

@@ -135,6 +135,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
           config,
           coordinator: connection.coordinator,
           params,
+          selectionName,
           retention,
           dataPolicy,
           runtimeIssueContext,

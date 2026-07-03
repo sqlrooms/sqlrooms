@@ -38,6 +38,7 @@ describe('createCountPlotSpec', () => {
     expect(spec.height).toBe(512);
     expect(spec.yPaddingInner).toBeCloseTo(10 / 42);
     expect(spec.margins.left).toBeGreaterThan(50);
+    expect(spec.plot[3]).toEqual({select: 'intervalY', as: '$brush'});
   });
 
   it('applies ascending value sorting', () => {

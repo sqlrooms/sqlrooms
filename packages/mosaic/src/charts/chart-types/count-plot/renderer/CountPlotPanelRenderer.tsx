@@ -20,6 +20,7 @@ export const CountPlotPanelRenderer: FC<
   retention,
   runtimeIssueContext,
   runtimeIssueReporter,
+  selectionName,
   table,
 }) => {
   const field =
@@ -37,6 +38,7 @@ export const CountPlotPanelRenderer: FC<
       return {
         spec: createCountPlotSpec({
           dataTable,
+          selectionName,
           settings: config.settings,
           visibleCategoryCount: categoryCount.count,
         }),
@@ -44,7 +46,7 @@ export const CountPlotPanelRenderer: FC<
     } catch (error) {
       return {error: error instanceof Error ? error : new Error(String(error))};
     }
-  }, [categoryCount.count, config.settings, dataTable]);
+  }, [categoryCount.count, config.settings, dataTable, selectionName]);
 
   if (specResult.error) {
     return (
