@@ -1,12 +1,16 @@
 import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
 import type {CommandSliceState} from '@sqlrooms/room-store';
 import type {StoreApi} from 'zustand';
-import type {BlockDocumentAiAdapter} from './BlockDocumentAi';
+import type {
+  BlockDocumentAiAdapter,
+  BlockDocumentMoveBlockAiAdapter,
+} from './BlockDocumentAi';
 import type {BlockDocumentBlock} from './BlockDocumentSliceConfig';
 import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
 
 export const BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID =
   'block-document.append-blocks';
+export const BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID = 'block-document.move-block';
 
 export const BLOCK_DOCUMENT_AGENT_ACTOR = 'block-document-agent';
 
@@ -44,15 +48,16 @@ function blockIdFromAppendResult(data: unknown, block: BlockDocumentBlock) {
 }
 
 /**
- * Creates a block-document AI adapter that appends blocks through the canonical
- * block-document command.
+ * Creates a block-document AI adapter that mutates blocks through canonical
+ * block-document commands.
  */
 export function createBlockDocumentCommandAiAdapter<
   TRoomState extends BlockDocumentCommandAiAdapterState,
 >({
   store,
   isBlockDocumentArtifact = (artifact) => artifact.type === 'block-document',
-}: CreateBlockDocumentCommandAiAdapterOptions<TRoomState>): BlockDocumentAiAdapter {
+}: CreateBlockDocumentCommandAiAdapterOptions<TRoomState>): BlockDocumentAiAdapter &
+  BlockDocumentMoveBlockAiAdapter {
   const ensureBlockDocument = (artifactId: string) => {
     const state = store.getState();
     const artifact = state.artifacts.getArtifact(artifactId);
@@ -105,6 +110,33 @@ export function createBlockDocumentCommandAiAdapter<
       }
 
       return blockIdFromAppendResult(result.data, block);
+    },
+
+    moveBlock: async (artifactId, blockId, toIndex) => {
+      ensureBlockDocument(artifactId);
+
+      const result = await store.getState().commands.invokeCommand(
+        BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID,
+        {
+          artifactId,
+          blockId,
+          toIndex,
+        },
+        {
+          surface: 'ai',
+          actor: BLOCK_DOCUMENT_AGENT_ACTOR,
+        },
+      );
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            result.message ??
+            `Failed to execute ${BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID}`,
+        );
+      }
+
+      return true;
     },
   };
 }

@@ -1,6 +1,7 @@
 import {
   createBlockDocumentCommandAiAdapter,
   type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
 } from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
@@ -11,7 +12,7 @@ import type {RoomState} from './store-types';
  */
 export function createWorksheetAiAdapter(
   store: StoreApi<RoomState>,
-): BlockDocumentAiAdapter {
+): BlockDocumentAiAdapter & BlockDocumentMoveBlockAiAdapter {
   return createBlockDocumentCommandAiAdapter({
     store,
     isBlockDocumentArtifact: (artifact) => artifact.type === 'worksheet',
