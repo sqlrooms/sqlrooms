@@ -85,6 +85,16 @@ function getGeoArrowOrRowValue(options: {
       return batch.getChild(batchFieldName)?.get(objectInfo.index);
     }
 
+    if (batch) {
+      // Batch is present (GeoArrow path) but the field wasn't found in it.
+      // The index is batch-local and cannot be safely used against the global
+      // vector which spans all batches. Return undefined so the mapper
+      // applies nullColor rather than reading the wrong row.
+      return undefined;
+    }
+
+    // No batch context (e.g. GeoJSON binary path): the index is global,
+    // so using the table-level vector is safe.
     return vector.get(objectInfo.index);
   }
 
