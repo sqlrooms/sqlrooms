@@ -1,3 +1,7 @@
+import {
+  getArrowColumnTypeCategory,
+  getDuckDbTypeCategory,
+} from '@sqlrooms/duckdb';
 import type {FieldInfo} from '@uwdata/mosaic-core';
 import {asc, column, count, desc, Query, sql, sum} from '@uwdata/mosaic-sql';
 import * as arrow from 'apache-arrow';
@@ -21,35 +25,25 @@ type QueryWhereInput = Parameters<ReturnType<typeof Query.from>['where']>[0];
 export function isDataTableExplorerHistogramType(
   type: arrow.DataType,
 ): boolean {
-  return (
-    arrow.DataType.isDate(type) ||
-    arrow.DataType.isTimestamp(type) ||
-    arrow.DataType.isDecimal(type) ||
-    arrow.DataType.isFloat(type) ||
-    arrow.DataType.isInt(type)
-  );
+  const category = getArrowColumnTypeCategory(type);
+  return category === 'datetime' || category === 'number';
 }
 
 export function isDataTableExplorerUnsupportedSummaryType(
   type: arrow.DataType,
 ): boolean {
-  return (
-    arrow.DataType.isBinary(type) ||
-    type.toString().toLowerCase().includes('geometry')
-  );
+  const category = getArrowColumnTypeCategory(type);
+  return category === 'binary' || category === 'geometry';
 }
 
 export function getDataTableExplorerValueType(
   type: arrow.DataType,
 ): 'date' | 'number' | 'string' {
-  if (arrow.DataType.isDate(type) || arrow.DataType.isTimestamp(type)) {
+  const category = getArrowColumnTypeCategory(type);
+  if (category === 'datetime') {
     return 'date';
   }
-  if (
-    arrow.DataType.isDecimal(type) ||
-    arrow.DataType.isFloat(type) ||
-    arrow.DataType.isInt(type)
-  ) {
+  if (category === 'number') {
     return 'number';
   }
   return 'string';
@@ -74,49 +68,39 @@ export function buildSchemaQuery(
 }
 
 function createDataTableExplorerArrowType(sqlType: string): arrow.DataType {
+  const category = getDuckDbTypeCategory(sqlType);
   const type = sqlType.toLowerCase();
 
-  if (/^bool(ean)?/.test(type)) {
-    return new arrow.Bool();
+  switch (category) {
+    case 'boolean':
+      return new arrow.Bool();
+    case 'datetime':
+      return /^date$/.test(type)
+        ? new arrow.DateDay()
+        : new arrow.TimestampMillisecond();
+    case 'number':
+      if (
+        /^(tinyint|smallint|integer|bigint|hugeint|utinyint|usmallint|uinteger|ubigint|uhugeint)/.test(
+          type,
+        )
+      ) {
+        return new arrow.Int64();
+      }
+      if (/^(decimal|numeric)/.test(type)) {
+        return new arrow.Decimal(38, 9);
+      }
+      return new arrow.Float64();
+    case 'binary':
+      return new arrow.Binary();
+    case 'geometry':
+      return {
+        toString() {
+          return sqlType;
+        },
+      } as arrow.DataType;
+    default:
+      return new arrow.Utf8();
   }
-
-  if (/^date$/.test(type)) {
-    return new arrow.DateDay();
-  }
-
-  if (/^time$|^timestamp|^timestamptz/.test(type)) {
-    return new arrow.TimestampMillisecond();
-  }
-
-  if (
-    /^(tinyint|smallint|integer|bigint|hugeint|utinyint|usmallint|uinteger|ubigint|uhugeint)/.test(
-      type,
-    )
-  ) {
-    return new arrow.Int64();
-  }
-
-  if (/^(decimal|numeric)/.test(type)) {
-    return new arrow.Decimal(38, 9);
-  }
-
-  if (/^(double|float|real)/.test(type)) {
-    return new arrow.Float64();
-  }
-
-  if (/^(blob|bytea|binary|varbinary)/.test(type)) {
-    return new arrow.Binary();
-  }
-
-  if (/^geometry/.test(type)) {
-    return {
-      toString() {
-        return sqlType;
-      },
-    } as arrow.DataType;
-  }
-
-  return new arrow.Utf8();
 }
 
 export function fieldInfoToDataTableExplorerField(

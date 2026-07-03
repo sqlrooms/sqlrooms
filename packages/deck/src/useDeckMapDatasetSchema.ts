@@ -1,4 +1,9 @@
-import {useDuckDb, type TableColumn} from '@sqlrooms/duckdb';
+import {
+  columnTypeCategoryToSelectorType,
+  getArrowColumnTypeCategory,
+  useDuckDb,
+  type TableColumn,
+} from '@sqlrooms/duckdb';
 import * as arrow from 'apache-arrow';
 import {useEffect, useMemo, useState} from 'react';
 import {
@@ -99,93 +104,14 @@ function shouldInspectOutputSchema(
 ) {
   return Boolean(
     source &&
-      (isDeckMapDashboardSqlDatasetSource(source) ||
-        hasTableTransformSql(source)),
+    (isDeckMapDashboardSqlDatasetSource(source) ||
+      hasTableTransformSql(source)),
   );
 }
 
-function mapArrowIntTypeToDuckDb(type: arrow.Int): string {
-  if (type.isSigned === false) {
-    switch (type.bitWidth) {
-      case 8:
-        return 'UTINYINT';
-      case 16:
-        return 'USMALLINT';
-      case 32:
-        return 'UINTEGER';
-      case 64:
-        return 'UBIGINT';
-      default:
-        return 'UINTEGER';
-    }
-  }
-
-  switch (type.bitWidth) {
-    case 8:
-      return 'TINYINT';
-    case 16:
-      return 'SMALLINT';
-    case 32:
-      return 'INTEGER';
-    case 64:
-      return 'BIGINT';
-    default:
-      return 'INTEGER';
-  }
-}
-
-/** Converts an Apache Arrow data type into the closest DuckDB column type. */
+/** Converts an Apache Arrow data type into a selector-compatible DuckDB type. */
 export function arrowTypeToDuckDbColumnType(type: arrow.DataType): string {
-  if (arrow.DataType.isInt(type)) {
-    return mapArrowIntTypeToDuckDb(type);
-  }
-
-  if (arrow.DataType.isFloat(type)) {
-    return (type as {precision?: number}).precision === 1 ? 'FLOAT' : 'DOUBLE';
-  }
-
-  if (arrow.DataType.isDecimal(type)) {
-    return 'DECIMAL';
-  }
-
-  if (arrow.DataType.isUtf8(type) || arrow.DataType.isLargeUtf8(type)) {
-    return 'VARCHAR';
-  }
-
-  if (
-    arrow.DataType.isBinary(type) ||
-    arrow.DataType.isLargeBinary(type) ||
-    arrow.DataType.isFixedSizeBinary(type)
-  ) {
-    return 'BLOB';
-  }
-
-  if (arrow.DataType.isBool(type)) {
-    return 'BOOLEAN';
-  }
-
-  if (arrow.DataType.isDate(type)) {
-    return 'DATE';
-  }
-
-  if (arrow.DataType.isTime(type)) {
-    return 'TIME';
-  }
-
-  if (arrow.DataType.isTimestamp(type)) {
-    switch (type.unit) {
-      case 0:
-        return 'TIMESTAMP_S';
-      case 1:
-        return 'TIMESTAMP_MS';
-      case 3:
-        return 'TIMESTAMP_NS';
-      default:
-        return 'TIMESTAMP';
-    }
-  }
-
-  return String(type);
+  return columnTypeCategoryToSelectorType(getArrowColumnTypeCategory(type));
 }
 
 function arrowSchemaToTableColumns(table: arrow.Table): TableColumn[] {

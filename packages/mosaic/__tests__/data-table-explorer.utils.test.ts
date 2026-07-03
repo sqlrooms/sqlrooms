@@ -1,3 +1,4 @@
+import * as arrow from 'apache-arrow';
 import {sql} from '@uwdata/mosaic-sql';
 import {getMosaicSqlTableReference} from '../src/mosaicTableReference';
 import {
@@ -6,6 +7,10 @@ import {
   buildDistinctCountQuery,
   buildDataTableExplorerBaseQuery,
   buildDataTableExplorerPageQuery,
+  fieldInfoToDataTableExplorerField,
+  getDataTableExplorerValueType,
+  isDataTableExplorerHistogramType,
+  isDataTableExplorerUnsupportedSummaryType,
   normalizeDataTableExplorerPagination,
   serializeCategoryBucketKey,
   rowsFromQueryResult,
@@ -90,6 +95,50 @@ describe('dataTableExplorer utils', () => {
       pageIndex: 2,
       pageSize: 1000,
     });
+  });
+
+  it('uses shared semantic categories for explorer summary type decisions', () => {
+    expect(isDataTableExplorerHistogramType(new arrow.Float64())).toBe(true);
+    expect(isDataTableExplorerHistogramType(new arrow.DateDay())).toBe(true);
+    expect(isDataTableExplorerHistogramType(new arrow.Utf8())).toBe(false);
+    expect(isDataTableExplorerUnsupportedSummaryType(new arrow.Binary())).toBe(
+      true,
+    );
+    expect(
+      getDataTableExplorerValueType(new arrow.TimestampMillisecond()),
+    ).toBe('date');
+    expect(getDataTableExplorerValueType(new arrow.Int32())).toBe('number');
+    expect(getDataTableExplorerValueType(new arrow.Bool())).toBe('string');
+  });
+
+  it('normalizes Mosaic field info with shared DuckDB type categories', () => {
+    expect(
+      arrow.DataType.isFloat(
+        fieldInfoToDataTableExplorerField({
+          column: 'score',
+          nullable: true,
+          sqlType: 'REAL',
+        }).type,
+      ),
+    ).toBe(true);
+    expect(
+      arrow.DataType.isTimestamp(
+        fieldInfoToDataTableExplorerField({
+          column: 'created_at',
+          nullable: true,
+          sqlType: 'TIMESTAMP_MS',
+        }).type,
+      ),
+    ).toBe(true);
+    expect(
+      arrow.DataType.isUtf8(
+        fieldInfoToDataTableExplorerField({
+          column: 'kind',
+          nullable: false,
+          sqlType: 'ENUM',
+        }).type,
+      ),
+    ).toBe(true);
   });
 
   it('builds category buckets with overflow, unique, and null buckets', () => {
