@@ -37,6 +37,7 @@ describe('typeCategories', () => {
     expect(isColumnNumeric('BIT')).toBe(true);
     expect(isColumnTemporal('TIMESTAMP_NS')).toBe(true);
     expect(isColumnQuantitative('DATE')).toBe(true);
+    expect(isColumnQuantitative('BIT')).toBe(true);
     expect(isColumnCategorical('VARCHAR')).toBe(true);
     expect(isColumnCategorical('BLOB')).toBe(true);
     expect(isColumnCategorical('BOOLEAN')).toBe(false);

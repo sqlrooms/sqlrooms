@@ -146,8 +146,9 @@ export function isColumnTemporal(column: ColumnTypeLike): boolean {
 
 /** Returns true when a DuckDB column type is numeric or temporal. */
 export function isColumnQuantitative(column: ColumnTypeLike): boolean {
-  const category = getColumnTypeCategory(column);
-  return category === 'number' || category === 'datetime';
+  return (
+    isColumnNumeric(column) || getColumnTypeCategory(column) === 'datetime'
+  );
 }
 
 /** Returns true when a DuckDB column type is useful as a categorical field. */
