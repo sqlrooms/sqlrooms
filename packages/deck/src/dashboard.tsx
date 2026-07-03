@@ -154,7 +154,13 @@ function detectMissingColumns(
       if (propName === 'getElevation' && !layerObj.extruded) continue;
 
       if (typeof propValue === 'string' && propValue.startsWith('@@=')) {
-        check(propValue.slice(3).trim());
+        const expression = propValue.slice(3).trim();
+        const identifiers = expression.match(/\b[A-Za-z_$][\w$]*\b/g);
+        if (identifiers) {
+          for (const id of identifiers) {
+            check(id);
+          }
+        }
       }
       // Check @@function colorScale/scale field references
       if (
@@ -331,7 +337,7 @@ function DeckMapDashboardDatasetClient({
       ? (source.transformSql ?? '')
       : '';
   const {data, error, isLoading, client} = useMosaicClient({
-    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}`,
+    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}:${maxRows}`,
     selectionName,
     query,
     queryError,
@@ -550,6 +556,9 @@ function DeckMapDashboardRenderer({
     [mapConfig, datasetStates],
   );
 
+  const maxRows =
+    mapConfig?.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
+
   const mapContent = !mapConfig ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Invalid map panel config.
@@ -572,7 +581,7 @@ function DeckMapDashboardRenderer({
           runtimeIssueContext={runtimeIssueContext}
           runtimeIssueReporter={runtimeIssueReporter}
           selectionName={selectionName}
-          maxRows={DEFAULT_DECK_MAP_MAX_DATA_POINTS}
+          maxRows={maxRows}
         />
       ))}
       {issue ? (
@@ -592,10 +601,7 @@ function DeckMapDashboardRenderer({
           {Object.values(datasetStates).some((s) => s.isSampled) &&
             !sampledDismissed && (
               <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
-                <span>
-                  Data sampled to{' '}
-                  {DEFAULT_DECK_MAP_MAX_DATA_POINTS.toLocaleString()} rows
-                </span>
+                <span>Data sampled to {maxRows.toLocaleString()} rows</span>
                 <button
                   className="text-muted-foreground/60 hover:text-foreground -mr-0.5 ml-0.5"
                   onClick={() => setSampledDismissed(true)}

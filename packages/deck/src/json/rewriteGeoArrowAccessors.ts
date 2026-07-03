@@ -56,11 +56,11 @@ export function rewriteGeoArrowAccessors(options: {
         continue;
       }
       if (!vector) {
+        // Column not found — fall through to compileGeoArrowAccessor which
+        // handles missing bindings gracefully (returns undefined per row).
         console.warn(
-          `Column "${expression.trim()}" not found in dataset for accessor "${propName}". Skipping accessor.`,
+          `Column "${expression.trim()}" not found in dataset for accessor "${propName}".`,
         );
-        delete nextProps[propName];
-        continue;
       }
     }
 
