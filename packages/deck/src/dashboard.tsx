@@ -434,6 +434,7 @@ function DeckMapDashboardRenderer({
   selectionName,
 }: MosaicDashboardPanelRendererProps) {
   const mapConfig = asDeckJsonMapConfig(panel.config);
+  const isCustomMode = mapConfig?.configMode === 'custom';
   const getSelection = useStoreWithMosaicDashboard(
     (state) => state.mosaic.getSelection,
   );
@@ -603,7 +604,7 @@ function DeckMapDashboardRenderer({
                 </button>
               </div>
             )}
-          {missingColumns.length > 0 && (
+          {missingColumns.length > 0 && !isCustomMode && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span

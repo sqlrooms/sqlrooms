@@ -93,6 +93,12 @@ export {
   type CreateBlockDocumentCommandsOptions,
 } from './BlockDocumentCommands';
 export {
+  BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
+  BLOCK_DOCUMENT_AGENT_ACTOR,
+  createBlockDocumentCommandAiAdapter,
+  type CreateBlockDocumentCommandAiAdapterOptions,
+} from './createBlockDocumentCommandAiAdapter';
+export {
   BLOCK_DOCUMENT_AGENT_TOOL_NAME,
   KnownDocumentBlockTools,
   type BlockDocumentAiAdapter,

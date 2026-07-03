@@ -1,4 +1,5 @@
 import type {DbSchemaNode, TableNodeObject} from './types';
+import {getTableIdentity} from '../duckdb-utils';
 
 /**
  * Flattens a schema tree and extracts all table nodes.
@@ -49,7 +50,7 @@ export function findTableInSchemaTrees(
           for (const tableNode of schemaNode.children) {
             if (tableNode.object.type === 'table') {
               const tableObj = tableNode.object as TableNodeObject;
-              if (tableObj.table.toString() === qualifiedName) {
+              if (getTableIdentity(tableObj.table) === qualifiedName) {
                 return tableObj;
               }
             }

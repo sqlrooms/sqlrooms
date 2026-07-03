@@ -5,6 +5,8 @@ import {
   DuckDbConnector,
   escapeVal,
   getColValAsNumber,
+  getRawSqlTableReference,
+  getTableIdentity,
   isQualifiedTableName,
   joinStatements,
   makeQualifiedTableName,
@@ -466,7 +468,9 @@ export function createDuckDbSlice({
         const qualifiedName = isQualifiedTableName(tableName)
           ? get().db.qualifyTableName(tableName)
           : get().db.qualifyTableName(parseTableReferenceParts(tableName));
-        throw new Error(`Relation "${qualifiedName}" not found.`);
+        throw new Error(
+          `Relation "${getRawSqlTableReference(qualifiedName)}" not found.`,
+        );
       };
 
       return {
@@ -612,7 +616,9 @@ export function createDuckDbSlice({
               .filter(Boolean)
               .join(' ');
 
-            const createStatement = `${createKeyword} ${qualifiedName} AS (
+            const createStatement = `${createKeyword} ${getRawSqlTableReference(
+              qualifiedName,
+            )} AS (
               ${lastStatement}
             )`;
 
@@ -662,12 +668,13 @@ export function createDuckDbSlice({
                 ? get().db.qualifyTableName(parseTableReferenceParts(tableName))
                 : get().db.qualifyTableName(tableName);
             const connector = await get().db.getConnector();
+            const qualifiedName = get().db.qualifyTableName({
+              schema,
+              database,
+              table,
+            });
             const result = await connector.query(
-              `SELECT COUNT(*) FROM ${get().db.qualifyTableName({
-                schema,
-                database,
-                table,
-              })}`,
+              `SELECT COUNT(*) FROM ${getRawSqlTableReference(qualifiedName)}`,
             );
             return getColValAsNumber(result);
           },
@@ -711,10 +718,16 @@ export function createDuckDbSlice({
                     parseTableReferenceParts(tableName),
                   ));
             const isView = table?.isView;
+            const qualifiedTableReference =
+              getRawSqlTableReference(qualifiedTable);
             if (isView) {
-              await connector.query(`DROP VIEW IF EXISTS ${qualifiedTable};`);
+              await connector.query(
+                `DROP VIEW IF EXISTS ${qualifiedTableReference};`,
+              );
             } else {
-              await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
+              await connector.query(
+                `DROP TABLE IF EXISTS ${qualifiedTableReference};`,
+              );
             }
             get().db.refreshTableSchemas();
           },
@@ -735,11 +748,17 @@ export function createDuckDbSlice({
 
             if (table?.isView) {
               throw new Error(
-                `"${qualifiedTable}" is a view. Use dropRelation() to remove views.`,
+                `"${getRawSqlTableReference(
+                  qualifiedTable,
+                )}" is a view. Use dropRelation() to remove views.`,
               );
             }
 
-            await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
+            await connector.query(
+              `DROP TABLE IF EXISTS ${getRawSqlTableReference(
+                qualifiedTable,
+              )};`,
+            );
             get().db.refreshTableSchemas();
           },
 
@@ -747,11 +766,12 @@ export function createDuckDbSlice({
             const qualifiedName = get().db.qualifyTableName(tableName);
 
             const {db} = get();
+            const tableReference = getRawSqlTableReference(qualifiedName);
             if (data instanceof arrow.Table) {
               // TODO: make sure the table is replaced
-              await db.connector.loadArrow(data, qualifiedName.toString());
+              await db.connector.loadArrow(data, tableReference);
             } else {
-              await db.connector.loadObjects(data, qualifiedName.toString(), {
+              await db.connector.loadObjects(data, tableReference, {
                 replace: true,
               });
             }
@@ -772,7 +792,8 @@ export function createDuckDbSlice({
             const qualifiedName = get().db.qualifyTableName(tableName);
             set((state) =>
               produce(state, (draft) => {
-                draft.db.tableRowCounts[qualifiedName.toString()] = rowCount;
+                draft.db.tableRowCounts[getTableIdentity(qualifiedName)] =
+                  rowCount;
               }),
             );
           },

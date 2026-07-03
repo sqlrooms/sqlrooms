@@ -1,4 +1,5 @@
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {getRawSqlTableReference} from '@sqlrooms/duckdb';
 import {produce} from 'immer';
 import {InputCellContent} from './components/InputCellContent';
 import {SqlCellContent} from './components/SqlCellContent';
@@ -136,13 +137,13 @@ export function createDefaultCellRegistry(): CellRegistry {
           cell.data as SqlCellData,
           convertToValidColumnOrTableName,
         );
-        const newTableName = state.db
-          .qualifyTableName({
+        const newTableName = getRawSqlTableReference(
+          state.db.qualifyTableName({
             table: effectiveResultName,
             schema: schemaName,
             database: state.db.currentDatabase,
-          })
-          .toString();
+          }),
+        );
 
         if (newTableName === oldResultView) {
           return;

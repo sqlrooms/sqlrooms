@@ -1,4 +1,8 @@
 import {jest} from '@jest/globals';
+import {
+  HTML_APP_RENAME_COMMAND_ID,
+  HTML_APP_WRITE_REVISION_COMMAND_ID,
+} from '@sqlrooms/app-runtime';
 import {createHtmlAppRevisionCommands} from '../createHtmlAppRevisionCommands';
 
 function createCommandContext(state: unknown) {
@@ -74,7 +78,7 @@ describe('createHtmlAppRevisionCommands', () => {
   it('writes committed HTML app revisions with metadata', async () => {
     const {state, commitAppRevision} = createState();
 
-    const result = await getCommand('html-app.write-revision').execute(
+    const result = await getCommand(HTML_APP_WRITE_REVISION_COMMAND_ID).execute(
       createCommandContext(state),
       {
         appId: 'app-1',
@@ -101,7 +105,7 @@ describe('createHtmlAppRevisionCommands', () => {
     );
     expect(result).toMatchObject({
       success: true,
-      commandId: 'html-app.write-revision',
+      commandId: HTML_APP_WRITE_REVISION_COMMAND_ID,
       data: {
         appId: 'app-1',
         title: 'Updated App',
@@ -114,7 +118,7 @@ describe('createHtmlAppRevisionCommands', () => {
   it('renames HTML apps directly when no source files are committed', async () => {
     const {state, renameApp, commitAppRevision} = createState();
 
-    const result = await getCommand('html-app.rename').execute(
+    const result = await getCommand(HTML_APP_RENAME_COMMAND_ID).execute(
       createCommandContext(state),
       {appId: 'app-1', title: 'Renamed App'},
     );
@@ -123,7 +127,7 @@ describe('createHtmlAppRevisionCommands', () => {
     expect(commitAppRevision).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       success: true,
-      commandId: 'html-app.rename',
+      commandId: HTML_APP_RENAME_COMMAND_ID,
       data: {
         appId: 'app-1',
         previousTitle: 'App',
@@ -135,7 +139,7 @@ describe('createHtmlAppRevisionCommands', () => {
   it('commits metadata-backed title-only renames as revisions', async () => {
     const {state, renameApp, commitAppRevision} = createState();
 
-    const result = await getCommand('html-app.rename').execute(
+    const result = await getCommand(HTML_APP_RENAME_COMMAND_ID).execute(
       createCommandContext(state),
       {
         appId: 'app-1',
@@ -157,7 +161,7 @@ describe('createHtmlAppRevisionCommands', () => {
     );
     expect(result).toMatchObject({
       success: true,
-      commandId: 'html-app.rename',
+      commandId: HTML_APP_RENAME_COMMAND_ID,
       data: {
         appId: 'app-1',
         previousTitle: 'App',
@@ -170,7 +174,7 @@ describe('createHtmlAppRevisionCommands', () => {
   it('renames HTML apps through a revision when updated files are provided', async () => {
     const {state, renameApp, commitAppRevision} = createState();
 
-    const result = await getCommand('html-app.rename').execute(
+    const result = await getCommand(HTML_APP_RENAME_COMMAND_ID).execute(
       createCommandContext(state),
       {
         appId: 'app-1',
@@ -193,7 +197,7 @@ describe('createHtmlAppRevisionCommands', () => {
     );
     expect(result).toMatchObject({
       success: true,
-      commandId: 'html-app.rename',
+      commandId: HTML_APP_RENAME_COMMAND_ID,
       data: {
         appId: 'app-1',
         previousTitle: 'App',

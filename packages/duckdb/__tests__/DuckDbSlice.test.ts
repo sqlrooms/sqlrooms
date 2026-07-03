@@ -7,7 +7,11 @@ import {
 } from '../src/DuckDbSlice';
 import {createBaseRoomSlice, BaseRoomStoreState} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
-import {DuckDbConnector, makeQualifiedTableName} from '@sqlrooms/duckdb-core';
+import {
+  DuckDbConnector,
+  getTableIdentity,
+  makeQualifiedTableName,
+} from '@sqlrooms/duckdb-core';
 import {loadSchemaCatalog} from '../src/loadTableSchemas';
 
 type TestStoreState = BaseRoomStoreState & DuckDbSliceState;
@@ -191,15 +195,49 @@ describe('DuckDbSlice', () => {
       );
 
       expect(table).toBeDefined();
-      expect(table!.table.toString()).toBe('"analytics.2026"."daily events"');
+      expect(getTableIdentity(table!.table)).toBe(
+        '"analytics.2026"."daily events"',
+      );
       expect(table!.table.toFullString()).toBe(
         `"${store.getState().db.currentDatabase}"."analytics.2026"."daily events"`,
       );
       expect(
         store.getState().db.findTable('"analytics.2026"."daily events"'),
       ).toBe(table);
-      expect(store.getState().db.findTable(table!.table.toString())).toBe(
-        table,
+      expect(
+        store.getState().db.findTable(getTableIdentity(table!.table)),
+      ).toBe(table);
+    });
+
+    it('opens legacy saved table references through lazy runtime resolution', async () => {
+      const connector = await store.getState().db.getConnector();
+      await connector.query('CREATE TABLE events (id INT)');
+      await connector.query("ATTACH ':memory:' AS remote");
+      await connector.query('CREATE TABLE remote.main.events (id INT)');
+      const tables = await store.getState().db.refreshTableSchemas();
+      const defaultDatabase = store.getState().db.currentDatabase;
+      const local = tables.find(
+        (candidate) =>
+          candidate.table.database === defaultDatabase &&
+          candidate.table.schema === 'main' &&
+          candidate.table.table === 'events',
+      );
+      const remote = tables.find(
+        (candidate) =>
+          candidate.table.database === 'remote' &&
+          candidate.table.schema === 'main' &&
+          candidate.table.table === 'events',
+      );
+
+      expect(local).toBeDefined();
+      expect(remote).toBeDefined();
+      expect(store.getState().db.findTable('events')).toBe(local);
+      expect(store.getState().db.findTable('"main"."events"')).toBe(local);
+      expect(
+        store.getState().db.findTable(`"${defaultDatabase}"."main"."events"`),
+      ).toBe(local);
+      expect(store.getState().db.findTable('"remote"."main"."events"')).toBe(
+        remote,
       );
     });
 

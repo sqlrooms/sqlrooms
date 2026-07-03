@@ -38,9 +38,9 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
         const result = await store
           .getState()
           .commands.invokeCommand(
-            'worksheet.add-map-block',
+            'block-document.add-map-block',
             {worksheetId, ...params},
-            {surface: 'ai', actor: 'worksheet-agent'},
+            {surface: 'ai', actor: 'block-document-agent'},
           );
         if (!result.success) {
           throw new Error(
@@ -125,9 +125,9 @@ export function worksheetAgentTool(
       const result = await store
         .getState()
         .commands.invokeCommand(
-          'worksheet.add-dashboard-block',
+          'block-document.add-dashboard-block',
           {worksheetId, title, tableName, intent},
-          {surface: 'ai', actor: 'worksheet-agent'},
+          {surface: 'ai', actor: 'block-document-agent'},
         );
       if (!result.success) {
         throw new Error(
@@ -151,9 +151,9 @@ export function worksheetAgentTool(
       const result = await store
         .getState()
         .commands.invokeCommand(
-          'worksheet.add-data-table-block',
+          'block-document.add-data-table-block',
           {worksheetId, title, tableName, intent},
-          {surface: 'ai', actor: 'worksheet-agent'},
+          {surface: 'ai', actor: 'block-document-agent'},
         );
       if (!result.success) {
         throw new Error(
@@ -166,9 +166,9 @@ export function worksheetAgentTool(
       const result = await store
         .getState()
         .commands.invokeCommand(
-          'worksheet.add-html-app-block',
+          'block-document.add-html-app-block',
           {worksheetId, title, intent},
-          {surface: 'ai', actor: 'worksheet-agent'},
+          {surface: 'ai', actor: 'block-document-agent'},
         );
       if (!result.success) {
         throw new Error(
@@ -218,7 +218,7 @@ export function worksheetAgentTool(
         return {
           [KnownWorksheetTools.embedded_html_app_agent]:
             htmlAppAgentTool(store),
-          [KnownWorksheetTools.create_worksheet_map_block]:
+          [KnownWorksheetTools.create_block_document_map_block]:
             createWorksheetMapBlockTool(store, worksheetId),
         };
       }

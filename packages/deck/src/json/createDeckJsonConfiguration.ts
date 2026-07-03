@@ -4,7 +4,7 @@ import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
-import {createColorScaleMarker, getColorScale} from './colorScaleFunction';
+import {createColorScaleMarker, getAllColorScales} from './colorScaleFunction';
 import {compileColorScale} from './compileColorScale';
 import {
   DEFAULT_DECK_JSON_CLASSES,
@@ -37,31 +37,34 @@ function applyColorScale(options: {
   table: import('apache-arrow').Table;
 }) {
   const {props, table} = options;
-  const resolved = getColorScale(props);
-  if (!resolved) {
+  const allScales = getAllColorScales(props);
+  if (allScales.length === 0) {
     return props;
   }
 
-  const {propName, colorScale} = resolved;
+  let result = props;
+  for (const {propName, colorScale} of allScales) {
+    const updateTriggers =
+      result.updateTriggers &&
+      typeof result.updateTriggers === 'object' &&
+      !Array.isArray(result.updateTriggers)
+        ? (result.updateTriggers as Record<string, unknown>)
+        : {};
 
-  const updateTriggers =
-    props.updateTriggers &&
-    typeof props.updateTriggers === 'object' &&
-    !Array.isArray(props.updateTriggers)
-      ? (props.updateTriggers as Record<string, unknown>)
-      : {};
+    result = {
+      ...result,
+      [propName]: compileColorScale({
+        table,
+        colorScale,
+      }),
+      updateTriggers: {
+        ...updateTriggers,
+        [propName]: JSON.stringify(colorScale),
+      },
+    };
+  }
 
-  return {
-    ...props,
-    [propName]: compileColorScale({
-      table,
-      colorScale,
-    }),
-    updateTriggers: {
-      ...updateTriggers,
-      [propName]: JSON.stringify(colorScale),
-    },
-  };
+  return result;
 }
 
 function resolveGeoArrowBindings(options: {

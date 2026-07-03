@@ -10,6 +10,7 @@ import {
   vectorFromArray,
 } from 'apache-arrow';
 import {createDeckJsonConfiguration} from '../src/json/createDeckJsonConfiguration';
+import {extractColorScaleLegends} from '../src/json/extractColorScaleLegends';
 import type {PreparedDeckDataset} from '../src/prepare/types';
 import type {PreparedDeckDatasetState} from '../src/types';
 
@@ -355,5 +356,200 @@ describe('createDeckJsonConfiguration', () => {
     }) as {layers: Array<{props: Record<string, unknown>}>};
 
     expect(typeof converted.layers[0]?.props.getFillColor).toBe('function');
+  });
+
+  it('compiles multiple colorScale properties on the same layer', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'earthquakes',
+          getFillColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Viridis',
+            domain: 'auto',
+          },
+          getLineColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'YlOrRd',
+            domain: [0, 10],
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(typeof converted.layers[0]?.props.getFillColor).toBe('function');
+    expect(typeof converted.layers[0]?.props.getLineColor).toBe('function');
+
+    const updateTriggers = converted.layers[0]?.props.updateTriggers as
+      | Record<string, unknown>
+      | undefined;
+    expect(updateTriggers?.getFillColor).toBeTruthy();
+    expect(updateTriggers?.getLineColor).toBeTruthy();
+  });
+
+  it('compiles both getSourceColor and getTargetColor on arc layers', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowArcLayer',
+          id: 'arcs',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+            sourceGeometryColumn: 'source_geom',
+            targetGeometryColumn: 'target_geom',
+          },
+          getSourceColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Blues',
+            domain: 'auto',
+          },
+          getTargetColor: {
+            '@@function': 'colorScale',
+            field: 'magnitude',
+            type: 'sequential',
+            scheme: 'Reds',
+            domain: 'auto',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(typeof converted.layers[0]?.props.getSourceColor).toBe('function');
+    expect(typeof converted.layers[0]?.props.getTargetColor).toBe('function');
+  });
+});
+
+describe('extractColorScaleLegends', () => {
+  function createReadyState(table: Table): PreparedDeckDatasetState {
+    return {
+      status: 'ready',
+      prepared: createPreparedDataset(table),
+    };
+  }
+
+  it('returns a legend for each color scale property on a layer', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(2);
+  });
+
+  it('uses the correct legend title for each accessor', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              legend: {title: 'Fill Legend'},
+            },
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+              legend: {title: 'Line Legend'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(2);
+    expect(legends[0]!.title).toBe('Fill Legend');
+    expect(legends[1]!.title).toBe('Line Legend');
+  });
+
+  it('skips a failing color scale without blocking others', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'nonexistent_column',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(1);
   });
 });

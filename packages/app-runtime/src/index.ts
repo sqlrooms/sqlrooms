@@ -55,6 +55,21 @@ export {
   type RuntimeResponseMessage as RuntimeResponseMessageType,
 } from './protocol';
 export {
+  HTML_APP_REDO_REVISION_COMMAND_ID,
+  HTML_APP_RENAME_COMMAND_ID,
+  HTML_APP_RESTORE_REVISION_COMMAND_ID,
+  HTML_APP_REVISION_COMMAND_IDS,
+  HTML_APP_UNDO_REVISION_COMMAND_ID,
+  HTML_APP_WRITE_REVISION_COMMAND_ID,
+  createHtmlAppRevisionCommands,
+  type CreateHtmlAppRevisionCommandsOptions,
+} from './HtmlAppRevisionCommands';
+export {
+  createHtmlAppBlockDocumentBlock,
+  type CreateHtmlAppBlockDocumentBlockOptions,
+  type HtmlAppBlockDocumentBlock,
+} from './html-app-block-document';
+export {
   HTML_APP_BLOCK_TYPE,
   HtmlAppBlock,
   HtmlAppDependency,

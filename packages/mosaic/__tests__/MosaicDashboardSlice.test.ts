@@ -72,6 +72,50 @@ function collectPanelIds(
 }
 
 describe('MosaicDashboardSlice generic panels', () => {
+  it('parses legacy dashboard table references without rewriting saved state', () => {
+    const references = [
+      'events',
+      '"main"."events"',
+      '"memory"."main"."events"',
+      '"remote"."main"."events"',
+    ];
+
+    for (const tableReference of references) {
+      const dashboard = MosaicDashboardEntry.parse({
+        id: `dashboard-${tableReference}`,
+        title: 'Legacy dashboard',
+        selectedTable: tableReference,
+        panels: [
+          createMosaicDashboardChartPanelConfig('Chart', {
+            chartType: 'histogram',
+            settings: {field: 'amount'},
+          }),
+          createMosaicDashboardDataTableExplorerPanelConfig(),
+          {
+            id: 'legacy-map-panel',
+            type: 'deck-json-map',
+            title: 'Map',
+            config: {
+              datasets: {
+                events: {source: {tableName: tableReference}},
+              },
+            },
+          },
+        ],
+      });
+
+      expect(dashboard.selectedTable).toBe(tableReference);
+      expect(dashboard.panels[2]).toMatchObject({
+        type: 'deck-json-map',
+        config: {
+          datasets: {
+            events: {source: {tableName: tableReference}},
+          },
+        },
+      });
+    }
+  });
+
   it('defaults parsed legacy dashboards to dock layout type', () => {
     const dashboard = MosaicDashboardEntry.parse({
       id: 'legacy-dashboard',

@@ -112,6 +112,8 @@ function getColumn(table: arrow.Table, field: string) {
   };
 }
 
+const MISSING_FIELD_COLOR: [number, number, number, number] = [255, 0, 0, 200];
+
 export function compileColorScale(options: {
   table: arrow.Table;
   colorScale: ColorScaleConfig;
@@ -122,9 +124,9 @@ export function compileColorScale(options: {
     column = getColumn(table, colorScale.field);
   } catch {
     console.warn(
-      `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use default colors.`,
+      `[compileColorScale] Field "${colorScale.field}" not found in dataset. Color scale will use fallback color.`,
     );
-    return () => null;
+    return () => MISSING_FIELD_COLOR;
   }
   const {fieldName, vector} = column;
   let mapper: ReturnType<typeof createColorScaleMapper>;
@@ -138,7 +140,7 @@ export function compileColorScale(options: {
       `[compileColorScale] Failed to create color scale for field "${colorScale.field}":`,
       err,
     );
-    return () => null;
+    return () => MISSING_FIELD_COLOR;
   }
 
   return (value: unknown) =>

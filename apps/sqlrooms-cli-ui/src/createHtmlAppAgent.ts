@@ -5,6 +5,8 @@ import {ToolLoopAgent, stepCountIs} from 'ai';
 import type {StoreApi} from 'zustand';
 import {z} from 'zod';
 import {
+  HTML_APP_RENAME_COMMAND_ID,
+  HTML_APP_WRITE_REVISION_COMMAND_ID,
   createDefaultHtmlAppFiles,
   type HtmlAppDependency,
   type HtmlAppRevision,
@@ -167,7 +169,7 @@ async function renameHtmlAppTitle(
   let revision: HtmlAppRevision | undefined;
   if (app.revisions.length === 0 && isDefaultHtmlAppScaffold(app)) {
     const result = await store.getState().commands.invokeCommand(
-      'html-app.rename',
+      HTML_APP_RENAME_COMMAND_ID,
       {
         appId: input.appId,
         title,
@@ -190,7 +192,7 @@ async function renameHtmlAppTitle(
   } else {
     const seededBaselineRevision = seedHtmlAppBaselineRevision(store, app);
     const result = await store.getState().commands.invokeCommand(
-      'html-app.rename',
+      HTML_APP_RENAME_COMMAND_ID,
       {
         appId: input.appId,
         title,
@@ -573,7 +575,7 @@ async function commitHtmlAppRevisionWithCommand(
   const result = await store
     .getState()
     .commands.invokeCommand(
-      'html-app.write-revision',
+      HTML_APP_WRITE_REVISION_COMMAND_ID,
       {appId, patch, metadata},
       {surface: 'ai', actor: 'html-app-agent'},
     );

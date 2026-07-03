@@ -1,4 +1,5 @@
 import {
+  getTableIdentity,
   makeQualifiedTableName,
   resolveTableReference,
   type QualifiedTableName,
@@ -9,12 +10,18 @@ import type {DataTable} from '../src/types';
 
 function makeTable(
   tableName: string,
-  options: {database?: string; schema?: string; isView?: boolean} = {},
+  options: {
+    database?: string;
+    schema?: string;
+    defaultDatabase?: string;
+    isView?: boolean;
+  } = {},
 ): DataTable {
   const table = makeQualifiedTableName({
     database: options.database,
     schema: options.schema ?? 'main',
     table: tableName,
+    defaultDatabase: options.defaultDatabase,
   });
 
   return {
@@ -31,10 +38,30 @@ describe('resolveTableReference', () => {
   it('resolves canonical quoted table ids', () => {
     const table = makeTable('earthquakes', {database: 'local'});
 
-    const result = resolveTableReference([table], table.table.toString());
+    const result = resolveTableReference(
+      [table],
+      getTableIdentity(table.table),
+    );
 
     expect(result.table).toBe(table);
     expect(result.ambiguousMatches).toBeUndefined();
+  });
+
+  it('resolves legacy saved-state table reference shapes explicitly', () => {
+    const local = makeTable('events', {
+      database: 'memory',
+      defaultDatabase: 'memory',
+    });
+    const remote = makeTable('events', {database: 'remote'});
+    const catalog = [local, remote];
+
+    expect(resolveTableReference(catalog, '"main"."events"').table).toBe(local);
+    expect(
+      resolveTableReference(catalog, '"memory"."main"."events"').table,
+    ).toBe(local);
+    expect(
+      resolveTableReference(catalog, '"remote"."main"."events"').table,
+    ).toBe(remote);
   });
 
   it('resolves qualified SQL identifier strings by parts', () => {

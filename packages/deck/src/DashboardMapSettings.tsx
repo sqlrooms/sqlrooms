@@ -5,9 +5,14 @@ import {
   useConfirmDatasetChange,
   useStoreWithMosaicDashboard,
 } from '@sqlrooms/mosaic';
+import {Button} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import {MapSettingsPanel} from './MapSettings';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from './dashboardConfig';
+import {
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  type DeckMapDashboardPanelConfig,
+} from './dashboardConfig';
 
 /**
  * Settings adapter for a Deck map panel inside a Mosaic dashboard.
@@ -67,6 +72,37 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
     return (
       <div className="flex h-full items-center justify-center p-4">
         <p className="text-muted-foreground text-sm">Map panel not found</p>
+      </div>
+    );
+  }
+
+  const isCustomMode =
+    (panel.config as DeckMapDashboardPanelConfig)?.configMode === 'custom';
+
+  if (isCustomMode) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
+          <span>Map settings</span>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+        <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
+          <p>
+            This map uses a custom AI-generated configuration.
+            <br />
+            Use the JSON editor to make changes.
+          </p>
+        </div>
       </div>
     );
   }
