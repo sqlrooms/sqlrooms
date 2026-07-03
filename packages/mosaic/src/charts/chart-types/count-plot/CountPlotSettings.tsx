@@ -5,11 +5,8 @@ import {ColumnSelector} from '../../../components/ColumnSelector';
 import {AggregationSelector} from '../../../components/AggregationSelector';
 import {useMosaicChartSettingsContext} from '../../chart-settings/MosaicChartSettingsContext';
 import {
-  DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT,
   DEFAULT_COUNT_PLOT_MAX_BARS,
-  MAX_COUNT_PLOT_BAR_MAX_HEIGHT,
   MAX_COUNT_PLOT_MAX_BARS,
-  MIN_COUNT_PLOT_BAR_MAX_HEIGHT,
   MIN_COUNT_PLOT_MAX_BARS,
   type CountPlotMetric,
   type CountPlotSort,
@@ -118,27 +115,6 @@ export const CountPlotSettingsComponent: FC = () => {
             );
           }}
           placeholder={String(DEFAULT_COUNT_PLOT_MAX_BARS)}
-        />
-      </Field>
-      <Field label="Bar height">
-        <Input
-          type="number"
-          min={MIN_COUNT_PLOT_BAR_MAX_HEIGHT}
-          max={MAX_COUNT_PLOT_BAR_MAX_HEIGHT}
-          value={
-            config.settings.barMaxHeight ?? DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT
-          }
-          className="no-spinner"
-          onChange={(event) => {
-            const value = event.target.value;
-            onChangeConfig(
-              'barMaxHeight',
-              value === ''
-                ? DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT
-                : parseInt(value, 10),
-            );
-          }}
-          placeholder={String(DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT)}
         />
       </Field>
       <Field label="Left padding">

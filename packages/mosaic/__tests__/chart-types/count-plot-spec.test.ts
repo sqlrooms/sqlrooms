@@ -91,7 +91,6 @@ describe('createCountPlotSpec', () => {
     const settings: CountPlotChartSettings = {
       field: 'class',
       maxBars: 6,
-      barMaxHeight: 32,
     };
 
     const spec = createCountPlotSpec({
@@ -101,6 +100,22 @@ describe('createCountPlotSpec', () => {
 
     expect(spec.plot[0].sort).toEqual({y: '-x', limit: 6});
     expect(spec.height).toBe(286);
+  });
+
+  it('uses visible category count for plot height when provided', () => {
+    const settings: CountPlotChartSettings = {
+      field: 'class',
+      maxBars: 10,
+    };
+
+    const spec = createCountPlotSpec({
+      dataTable: mockDataTable,
+      settings,
+      visibleCategoryCount: 3,
+    }) as any;
+
+    expect(spec.plot[0].sort).toEqual({y: '-x', limit: 10});
+    expect(spec.height).toBe(180);
   });
 
   it('uses manual left margin when provided', () => {

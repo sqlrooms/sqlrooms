@@ -2,11 +2,8 @@ import type {Spec} from '@uwdata/mosaic-spec';
 import {
   CountPlotChartSettings,
   CountPlotSort,
-  DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT,
   DEFAULT_COUNT_PLOT_MAX_BARS,
-  MAX_COUNT_PLOT_BAR_MAX_HEIGHT,
   MAX_COUNT_PLOT_MAX_BARS,
-  MIN_COUNT_PLOT_BAR_MAX_HEIGHT,
   MIN_COUNT_PLOT_MAX_BARS,
 } from './schema';
 import {CreateSpecOptions, getChartTableReference} from '../base-types';
@@ -23,6 +20,7 @@ const AXIS_GUTTER_WIDTH = 40;
 const HEIGHT_MARGINS = {top: 20, bottom: 50};
 const MIN_COUNT_PLOT_HEIGHT = 180;
 const MAX_COUNT_PLOT_HEIGHT = 400;
+const COUNT_PLOT_BAR_MAX_HEIGHT = 32;
 const ROW_GAP = 4;
 const DEFAULT_Y_PADDING_INNER = 0.7;
 const DEFAULT_Y_PADDING_OUTER = 0.2;
@@ -31,6 +29,15 @@ type CountPlotMarkSort = {
   y: 'x' | '-x' | 'y' | '-y';
   limit: number;
 };
+
+export type CreateCountPlotSpecOptions =
+  CreateSpecOptions<CountPlotChartSettings> & {
+    /**
+     * Number of categories expected to render after applying the count plot
+     * category cap. When omitted, the chart sizes itself for `maxBars`.
+     */
+    visibleCategoryCount?: number;
+  };
 
 function clampInteger(
   value: number | undefined,
@@ -105,11 +112,11 @@ function getValueLabel(
   return `${aggregate.toUpperCase()} ${valueColumn.name}`;
 }
 
-function getPlotHeight(maxBars: number, barMaxHeight: number): number {
+function getPlotHeight(maxBars: number): number {
   const height =
     HEIGHT_MARGINS.top +
     HEIGHT_MARGINS.bottom +
-    maxBars * (barMaxHeight + ROW_GAP);
+    maxBars * (COUNT_PLOT_BAR_MAX_HEIGHT + ROW_GAP);
 
   return Math.max(
     MIN_COUNT_PLOT_HEIGHT,
@@ -117,9 +124,21 @@ function getPlotHeight(maxBars: number, barMaxHeight: number): number {
   );
 }
 
-export function createCountPlotSpec(
-  options: CreateSpecOptions<CountPlotChartSettings>,
-): Spec {
+function getVisibleBarCount(
+  visibleCategoryCount: number | undefined,
+  maxBars: number,
+): number {
+  if (
+    visibleCategoryCount === undefined ||
+    !Number.isFinite(visibleCategoryCount)
+  ) {
+    return maxBars;
+  }
+
+  return Math.max(1, Math.min(maxBars, Math.ceil(visibleCategoryCount)));
+}
+
+export function createCountPlotSpec(options: CreateCountPlotSpecOptions): Spec {
   const {dataTable, selectionName, settings} = options;
 
   const {aggregate, fieldColumn, metric, valueColumn} =
@@ -132,14 +151,12 @@ export function createCountPlotSpec(
     MIN_COUNT_PLOT_MAX_BARS,
     MAX_COUNT_PLOT_MAX_BARS,
   );
-  const barMaxHeight = clampInteger(
-    settings.barMaxHeight,
-    DEFAULT_COUNT_PLOT_BAR_MAX_HEIGHT,
-    MIN_COUNT_PLOT_BAR_MAX_HEIGHT,
-    MAX_COUNT_PLOT_BAR_MAX_HEIGHT,
-  );
   const yChannel = fieldColumn.name;
   const markSort = getSortConfig(settings.sort, maxBars);
+  const visibleBarCount = getVisibleBarCount(
+    options.visibleCategoryCount,
+    maxBars,
+  );
 
   // Count plot shows categorical frequency as horizontal bars
   // Categories on Y-axis, counts on X-axis
@@ -184,7 +201,7 @@ export function createCountPlotSpec(
     plot,
     xLabel: getValueLabel(metric, aggregate, valueColumn),
     yLabel: fieldColumn.name,
-    height: getPlotHeight(maxBars, barMaxHeight),
+    height: getPlotHeight(visibleBarCount),
     width: 380,
     yPaddingInner: DEFAULT_Y_PADDING_INNER,
     yPaddingOuter: DEFAULT_Y_PADDING_OUTER,

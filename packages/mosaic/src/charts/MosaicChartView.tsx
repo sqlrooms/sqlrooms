@@ -130,6 +130,7 @@ export const MosaicChartView: FC<MosaicChartViewProps> = ({
     return (
       <div className={cn('h-full w-full', className)}>
         {createElement(renderContext.renderer, {
+          dataTable: renderContext.dataTable,
           table: renderContext.dataTable.table,
           config,
           coordinator: connection.coordinator,

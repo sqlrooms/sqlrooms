@@ -134,6 +134,8 @@ export type BrushSelectionParams = Map<string, Selection>;
  * helper instead of reconstructing table references from display names.
  */
 export interface ChartRendererProps<TConfig extends ChartConfig = ChartConfig> {
+  /** Resolved table metadata for the chart's data source. */
+  dataTable: DataTable;
   /** Canonical qualified table identity for the chart's data source. */
   table: QualifiedTableName;
   /** Validated chart configuration for this renderer. */
