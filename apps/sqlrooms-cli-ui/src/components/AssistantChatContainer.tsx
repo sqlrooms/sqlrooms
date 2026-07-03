@@ -1,8 +1,5 @@
 import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
-import {
-  isAiSessionVisibleForArtifact,
-  switchToArtifactAiSession,
-} from '@sqlrooms/artifacts/ai';
+import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {
   Button,
   ResizableHandle,
@@ -67,13 +64,6 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
     createArtifactScopedSession();
   }, [createArtifactScopedSession, createSessionDisabled]);
 
-  const handleSwitchToForkSource = useCallback(
-    (sourceSession: (typeof sessions)[number]) => {
-      switchToArtifactAiSession(useRoomStore, sourceSession.id);
-    },
-    [],
-  );
-
   const filterSession = useCallback(
     (session: (typeof sessions)[number]) =>
       isAiSessionVisibleForArtifact(
@@ -103,11 +93,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const messagesPane = (
     <div className="print-container h-full min-h-0 grow overflow-hidden">
       {isDataAvailable ? (
-        <Chat.Messages
-          key={currentSessionId}
-          hoistedRenderers={['chart']}
-          onSwitchToForkSource={handleSwitchToForkSource}
-        />
+        <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center">
           <SkeletonPane className="p-4" />
@@ -153,7 +139,9 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 filterSession={filterSession}
                 emptyLabel="No chats for this item yet"
                 onSelectChat={(sessionId) => {
-                  switchToArtifactAiSession(useRoomStore, sessionId);
+                  const switchSession =
+                    useRoomStore.getState().ai.switchSession;
+                  switchSession(sessionId);
                   setShowHistory(false);
                 }}
                 className="flex-1"
