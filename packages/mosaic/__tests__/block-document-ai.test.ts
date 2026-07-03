@@ -29,6 +29,7 @@ describe('Mosaic block-document AI tools', () => {
   function createMockBlockDocumentAdapter() {
     const addedBlocks: BlockDocumentBlock[] = [];
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => {
@@ -119,6 +120,7 @@ describe('Mosaic block-document AI tools', () => {
       } satisfies BlockDocumentStatefulBlockBlock,
     }));
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {
         throw new Error('Block document was deleted');
       },
@@ -210,6 +212,7 @@ describe('Mosaic block-document AI tools', () => {
       }),
     );
     const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {
         throw new Error('Block document was deleted');
       },

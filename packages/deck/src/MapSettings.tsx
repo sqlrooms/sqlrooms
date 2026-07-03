@@ -913,6 +913,9 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                           (layer) => ({
                             ...layer,
                             extruded: checked,
+                            getElevation: checked
+                              ? (layer.getElevation ?? 1)
+                              : layer.getElevation,
                           }),
                         ),
                       )
@@ -971,6 +974,37 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       </Field>
                     </ColumnsProvider>
                   )}
+
+                {Boolean(activeLayer?.extruded) && (
+                  <Field
+                    label={`Elevation scale: ${(activeLayer?.elevationScale as number | undefined) ?? 1}x`}
+                  >
+                    <div className="pt-1.5">
+                      <Slider
+                        min={0.01}
+                        max={100}
+                        step={0.01}
+                        value={[
+                          (activeLayer?.elevationScale as number | undefined) ??
+                            1,
+                        ]}
+                        onValueChange={(values) => {
+                          const value = values[0] ?? 1;
+                          applyConfig(
+                            updateDeckMapLayer(
+                              mapConfig,
+                              activeLayerIndex,
+                              (layer) => ({
+                                ...layer,
+                                elevationScale: value,
+                              }),
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+                  </Field>
+                )}
               </div>
             )}
 

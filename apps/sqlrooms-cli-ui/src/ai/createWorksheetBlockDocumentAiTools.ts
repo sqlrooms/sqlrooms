@@ -2,7 +2,9 @@ import type {Tool} from 'ai';
 import {
   createAddBlockDocumentTextBlockTool,
   createListBlockDocumentBlocksTool,
+  createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {
@@ -32,7 +34,8 @@ export type ExtraWorksheetAiToolsFactory = (
  */
 export type CreateWorksheetBlockDocumentAiToolsOptions = {
   databaseAdapter: DatabaseAiAdapter;
-  blockDocumentAdapter: BlockDocumentAiAdapter;
+  blockDocumentAdapter: BlockDocumentAiAdapter &
+    BlockDocumentMoveBlockAiAdapter;
   dashboardAgentTool: Tool;
   chartToolsOptions?: ChartToolsOptions;
   worksheetId: string;
@@ -154,6 +157,11 @@ export function createWorksheetBlockDocumentAiTools({
     }`,
   });
 
+  const moveBlockTool = createMoveBlockDocumentBlockTool({
+    blockDocumentAdapter,
+    blockDocumentId: worksheetId,
+  });
+
   const additionalTools =
     extraTools?.({
       worksheetId,
@@ -174,6 +182,7 @@ export function createWorksheetBlockDocumentAiTools({
   const builtInTools: Record<string, Tool> = {
     ...chartTools,
     [KnownWorksheetTools.list_blocks]: listBlocksTool,
+    [KnownWorksheetTools.move_block]: moveBlockTool,
     [KnownWorksheetTools.add_text_block]: addTextBlockTool,
     [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
     [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,

@@ -181,7 +181,12 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
     ),
   mapStyle: z.string().optional(),
   mapProps: z.record(z.string(), z.unknown()).optional(),
-  showLegends: z.boolean().optional(),
+  showLegends: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether to show color scale legends on the map. Defaults to true; omit or set true unless the user explicitly asks to hide legends.',
+    ),
   interaction: z.record(z.string(), z.unknown()).optional(),
   fitToData: z
     .object({
