@@ -955,7 +955,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                   <Field
                     label={`Elevation scale: ${(activeLayer?.elevationScale as number | undefined) ?? 1}x`}
                   >
-                    <div className="pt-0.5">
+                    <div className="pt-1.5">
                       <Slider
                         min={0.01}
                         max={100}
