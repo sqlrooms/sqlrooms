@@ -4,7 +4,11 @@ import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
-import {createColorScaleMarker, getAllColorScales} from './colorScaleFunction';
+import {
+  createColorScaleMarker,
+  getAllColorScales,
+  COLOR_SCALE_PROP_NAMES,
+} from './colorScaleFunction';
 import {compileColorScale} from './compileColorScale';
 import {
   DEFAULT_DECK_JSON_CLASSES,
@@ -38,30 +42,37 @@ function applyColorScale(options: {
 }) {
   const {props, table} = options;
   const allScales = getAllColorScales(props);
-  if (allScales.length === 0) {
-    return props;
-  }
 
   let result = props;
-  for (const {propName, colorScale} of allScales) {
-    const updateTriggers =
-      result.updateTriggers &&
-      typeof result.updateTriggers === 'object' &&
-      !Array.isArray(result.updateTriggers)
-        ? (result.updateTriggers as Record<string, unknown>)
-        : {};
+  const triggers: Record<string, unknown> =
+    result.updateTriggers &&
+    typeof result.updateTriggers === 'object' &&
+    !Array.isArray(result.updateTriggers)
+      ? {...(result.updateTriggers as Record<string, unknown>)}
+      : {};
 
+  for (const {propName, colorScale} of allScales) {
     result = {
       ...result,
       [propName]: compileColorScale({
         table,
         colorScale,
       }),
-      updateTriggers: {
-        ...updateTriggers,
-        [propName]: JSON.stringify(colorScale),
-      },
     };
+    triggers[propName] = JSON.stringify(colorScale);
+  }
+
+  // Set updateTriggers for color props that are static or absent (not a scale)
+  // so deck.gl detects changes when a scale is cleared or a constant value changes.
+  for (const propName of COLOR_SCALE_PROP_NAMES) {
+    if (!(propName in triggers)) {
+      const value = result[propName];
+      triggers[propName] = value !== undefined ? JSON.stringify(value) : 'none';
+    }
+  }
+
+  if (Object.keys(triggers).length > 0) {
+    result = {...result, updateTriggers: triggers};
   }
 
   return result;
@@ -280,17 +291,67 @@ export function createDeckJsonConfiguration(
         props: strippedProps,
         table,
       });
-      const nextProps = {
+      const nextProps: Record<string, unknown> = {
         ...baseProps,
         data: table,
         ...boundProps,
       };
+
+      // Normalize getElevation: subtract column minimum so the lowest
+      // feature sits at ground level and differences are clearly visible.
+      const rawElev = nextProps.getElevation;
+      if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
+        const elevField = rawElev.slice(3).trim();
+        const elevVector = table.getChild(elevField);
+        if (elevVector) {
+          let min = Infinity;
+          for (let i = 0; i < elevVector.length; i++) {
+            const v = Number(elevVector.get(i));
+            if (Number.isFinite(v) && v < min) min = v;
+          }
+          if (Number.isFinite(min) && min !== 0) {
+            nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+          }
+        }
+      }
 
       const rewritten = rewriteGeoArrowAccessors({
         props: nextProps,
         table,
         layerName,
       });
+
+      // Set updateTriggers for @@= accessor props and getElevation
+      // so deck.gl re-evaluates them when references change or are cleared.
+      {
+        const accessorTriggers: Record<string, unknown> = {};
+        for (const [propName, propValue] of Object.entries(nextProps)) {
+          if (
+            typeof propValue === 'string' &&
+            propValue.startsWith('@@=') &&
+            propName.startsWith('get')
+          ) {
+            accessorTriggers[propName] = propValue;
+          }
+        }
+        // Always emit getElevation trigger so clearing the column invalidates
+        // stale heights from a previous column-based accessor.
+        if (!('getElevation' in accessorTriggers)) {
+          const elev = nextProps.getElevation;
+          accessorTriggers.getElevation =
+            elev !== undefined ? String(elev) : 'none';
+        }
+        const existingTriggers =
+          rewritten.updateTriggers &&
+          typeof rewritten.updateTriggers === 'object' &&
+          !Array.isArray(rewritten.updateTriggers)
+            ? (rewritten.updateTriggers as Record<string, unknown>)
+            : {};
+        rewritten.updateTriggers = {
+          ...existingTriggers,
+          ...accessorTriggers,
+        };
+      }
 
       // For TripsLayer: compute max timestamp for animation and set defaults
       if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
