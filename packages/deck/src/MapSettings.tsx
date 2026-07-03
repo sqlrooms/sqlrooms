@@ -34,7 +34,6 @@ import {
 import {LatitudeSelector} from './LatitudeSelector';
 import {LongitudeSelector} from './LongitudeSelector';
 import {
-  isDeckMapDashboardSqlDatasetSource,
   isDeckMapDashboardTableDatasetSource,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
@@ -51,6 +50,7 @@ import {
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerHexagonColumn,
   setDeckMapLayerArcColumns,
+  setDeckMapLayerTimestampColumn,
   setDeckMapLayerType,
   updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
@@ -63,21 +63,10 @@ import {
   usesTripsSettings,
   usesExtrusionSettings,
 } from './mapLayerConfigUtils';
-
-/**
- * Extracts the primary table name from a simple SQL query.
- * Handles patterns like: `SELECT ... FROM tableName ...`
- * and `SELECT ... FROM "tableName" ...`
- */
-function extractTableFromSqlQuery(
-  sqlQuery: string | undefined,
-): string | undefined {
-  if (!sqlQuery) return undefined;
-  const match = sqlQuery.match(/\bFROM\s+(?:"([^"]+)"|(\w[\w.]*))/i);
-  return match?.[1] ?? match?.[2];
-}
+import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
 
 const HEATMAP_COLOR_STEPS = 6;
+const EMPTY_COLUMNS: DataTable['columns'] = [];
 
 function schemeToColorRange(
   scheme: string,
@@ -199,19 +188,44 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     ? mapConfig.datasets?.[activeLayerDatasetId]
     : undefined;
 
-  // Resolve the table for column listing: prefer the dashboard's selected
-  // table (which represents the user's active choice), falling back to the
-  // dataset's explicit source table when no dashboard table is selected.
+  // Resolve the structured source table separately from the compiled dataset
+  // output. Coordinate selectors edit the source transform, while render
+  // bindings such as geometry/color/elevation target output columns.
   const activeLayerDatasetSource = activeLayerDataset?.source;
   const fallbackTableName = isDeckMapDashboardTableDatasetSource(
     activeLayerDatasetSource,
   )
     ? activeLayerDatasetSource.tableName
-    : isDeckMapDashboardSqlDatasetSource(activeLayerDatasetSource)
-      ? extractTableFromSqlQuery(activeLayerDatasetSource.sqlQuery)
-      : undefined;
+    : undefined;
   const fallbackTable = useDataTable(fallbackTableName);
-  const dataTable = selectedDataTable ?? fallbackTable;
+  const sourceDataTable = selectedDataTable ?? fallbackTable;
+  const sourceColumns = sourceDataTable?.columns ?? EMPTY_COLUMNS;
+  const resolvedActiveLayerDatasetSource = useMemo(() => {
+    if (!activeLayerDatasetSource) {
+      return selectedDataTable
+        ? {tableName: getTableIdentity(selectedDataTable.table)}
+        : undefined;
+    }
+    if (!isDeckMapDashboardTableDatasetSource(activeLayerDatasetSource)) {
+      return activeLayerDatasetSource;
+    }
+
+    return {
+      tableName: selectedDataTable
+        ? getTableIdentity(selectedDataTable.table)
+        : activeLayerDatasetSource.tableName,
+      ...(activeLayerDatasetSource.transformSql
+        ? {transformSql: activeLayerDatasetSource.transformSql}
+        : {}),
+    };
+  }, [activeLayerDatasetSource, selectedDataTable]);
+  const datasetSchema = useDeckMapDatasetSchema({
+    source: resolvedActiveLayerDatasetSource,
+    sourceColumns,
+  });
+  const outputColumns = datasetSchema.outputColumns;
+  const dataOutputColumns = datasetSchema.dataOutputColumns;
+  const datasetSchemaErrorMessage = datasetSchema.error?.message;
 
   const showGeometryColumnSetting = usesGeometryColumnSetting(
     activeLayer?.['@@type'],
@@ -241,7 +255,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
-  const firstColumnName = dataTable?.columns[0]?.name;
+  const firstColumnName = dataOutputColumns[0]?.name;
 
   const applyConfig = useCallback(
     (config: DeckMapDashboardPanelConfig) => {
@@ -397,8 +411,43 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                   </Select>
                 </Field>
 
+                {(datasetSchema.isLoading || datasetSchemaErrorMessage) && (
+                  <div className="text-muted-foreground rounded-md border px-2 py-1.5 text-xs">
+                    {datasetSchema.isLoading
+                      ? 'Inspecting dataset schema...'
+                      : `Dataset schema unavailable: ${datasetSchemaErrorMessage}`}
+                  </div>
+                )}
+
                 {showTripsSettings && (
                   <>
+                    {outputColumns.length > 0 && (
+                      <ColumnsProvider columns={outputColumns}>
+                        <Field label="Timestamp column" required>
+                          <ColumnSelector
+                            value={
+                              (
+                                activeLayer?._sqlroomsBinding as Record<
+                                  string,
+                                  unknown
+                                >
+                              )?.timestampColumn as string | undefined
+                            }
+                            onChange={(timestampColumn) =>
+                              applyConfig(
+                                setDeckMapLayerTimestampColumn(
+                                  mapConfig,
+                                  activeLayerIndex,
+                                  timestampColumn,
+                                ),
+                              )
+                            }
+                            placeholder="Select timestamp column..."
+                            disabled={readOnly}
+                          />
+                        </Field>
+                      </ColumnsProvider>
+                    )}
                     <Field
                       label={`Line width: ${(activeLayer?.widthMinPixels as number | undefined) ?? 3}px`}
                     >
@@ -540,18 +589,20 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       </Field>
                     )}
 
-                    {colorScale && dataTable && (
-                      <ColumnsProvider columns={dataTable.columns}>
+                    {colorScale && dataOutputColumns.length > 0 && (
+                      <ColumnsProvider columns={dataOutputColumns}>
                         <Field label="Color field" required>
                           {colorScaleType === 'categorical' ? (
                             <ColumnSelector.Categorical
                               value={colorScale.field}
                               onChange={(field) => updateColorScale({field})}
+                              disabled={readOnly}
                             />
                           ) : (
                             <ColumnSelector.Quantitative
                               value={colorScale.field}
                               onChange={(field) => updateColorScale({field})}
+                              disabled={readOnly}
                             />
                           )}
                         </Field>
@@ -715,8 +766,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </Field>
             )}
 
-            {dataTable && showGeometryColumnSetting && (
-              <ColumnsProvider columns={dataTable.columns}>
+            {outputColumns.length > 0 && showGeometryColumnSetting && (
+              <ColumnsProvider columns={outputColumns}>
                 <Field label="Geometry column" required>
                   <ColumnSelector
                     value={activeLayerDataset?.geometryColumn}
@@ -730,13 +781,14 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       )
                     }
                     placeholder="Select geometry column..."
+                    disabled={readOnly}
                   />
                 </Field>
               </ColumnsProvider>
             )}
 
-            {dataTable && showH3ColumnSetting && (
-              <ColumnsProvider columns={dataTable.columns}>
+            {outputColumns.length > 0 && showH3ColumnSetting && (
+              <ColumnsProvider columns={outputColumns}>
                 <Field label="H3 column" required>
                   <ColumnSelector
                     value={
@@ -753,75 +805,46 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                       )
                     }
                     placeholder="Select H3 index column..."
+                    disabled={readOnly}
                   />
                 </Field>
               </ColumnsProvider>
             )}
 
-            {dataTable && showArcColumnSetting && (
-              <ColumnsProvider columns={dataTable.columns}>
-                <Field label="Source latitude" required>
+            {outputColumns.length > 0 && showArcColumnSetting && (
+              <ColumnsProvider columns={outputColumns}>
+                <Field label="Source geometry" required>
                   <ColumnSelector
                     value={
                       (activeLayer?._sqlroomsBinding as Record<string, unknown>)
-                        ?.sourceLatitudeColumn as string | undefined
+                        ?.sourceGeometryColumn as string | undefined
                     }
-                    onChange={(sourceLatitudeColumn) =>
+                    onChange={(sourceGeometryColumn) =>
                       applyConfig(
                         setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
-                          sourceLatitudeColumn,
+                          sourceGeometryColumn,
                         }),
                       )
                     }
-                    placeholder="Select source latitude..."
+                    placeholder="Select source geometry..."
+                    disabled={readOnly}
                   />
                 </Field>
-                <Field label="Source longitude" required>
+                <Field label="Target geometry" required>
                   <ColumnSelector
                     value={
                       (activeLayer?._sqlroomsBinding as Record<string, unknown>)
-                        ?.sourceLongitudeColumn as string | undefined
+                        ?.targetGeometryColumn as string | undefined
                     }
-                    onChange={(sourceLongitudeColumn) =>
+                    onChange={(targetGeometryColumn) =>
                       applyConfig(
                         setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
-                          sourceLongitudeColumn,
+                          targetGeometryColumn,
                         }),
                       )
                     }
-                    placeholder="Select source longitude..."
-                  />
-                </Field>
-                <Field label="Target latitude" required>
-                  <ColumnSelector
-                    value={
-                      (activeLayer?._sqlroomsBinding as Record<string, unknown>)
-                        ?.targetLatitudeColumn as string | undefined
-                    }
-                    onChange={(targetLatitudeColumn) =>
-                      applyConfig(
-                        setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
-                          targetLatitudeColumn,
-                        }),
-                      )
-                    }
-                    placeholder="Select target latitude..."
-                  />
-                </Field>
-                <Field label="Target longitude" required>
-                  <ColumnSelector
-                    value={
-                      (activeLayer?._sqlroomsBinding as Record<string, unknown>)
-                        ?.targetLongitudeColumn as string | undefined
-                    }
-                    onChange={(targetLongitudeColumn) =>
-                      applyConfig(
-                        setDeckMapLayerArcColumns(mapConfig, activeLayerIndex, {
-                          targetLongitudeColumn,
-                        }),
-                      )
-                    }
-                    placeholder="Select target longitude..."
+                    placeholder="Select target geometry..."
+                    disabled={readOnly}
                   />
                 </Field>
               </ColumnsProvider>
@@ -900,56 +923,57 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                   />
                 </div>
 
-                {Boolean(activeLayer?.extruded) && dataTable && (
-                  <ColumnsProvider columns={dataTable.columns}>
-                    <Field label="Elevation column">
-                      <ColumnSelector.Numeric
-                        value={(() => {
-                          const elev = activeLayer?.getElevation;
-                          if (
-                            elev &&
-                            typeof elev === 'object' &&
-                            '@@function' in (elev as object)
-                          ) {
-                            return (elev as Record<string, unknown>).field as
-                              | string
-                              | undefined;
+                {Boolean(activeLayer?.extruded) &&
+                  dataOutputColumns.length > 0 && (
+                    <ColumnsProvider columns={dataOutputColumns}>
+                      <Field label="Elevation column">
+                        <ColumnSelector.Numeric
+                          value={(() => {
+                            const elev = activeLayer?.getElevation;
+                            if (
+                              elev &&
+                              typeof elev === 'object' &&
+                              '@@function' in (elev as object)
+                            ) {
+                              return (elev as Record<string, unknown>).field as
+                                | string
+                                | undefined;
+                            }
+                            if (
+                              typeof elev === 'string' &&
+                              elev.startsWith('@@=')
+                            ) {
+                              return elev.slice(3);
+                            }
+                            return undefined;
+                          })()}
+                          onChange={(elevationColumn) =>
+                            applyConfig(
+                              updateDeckMapLayer(
+                                mapConfig,
+                                activeLayerIndex,
+                                (layer) => ({
+                                  ...layer,
+                                  getElevation: elevationColumn
+                                    ? {
+                                        '@@function': 'scale',
+                                        field: elevationColumn,
+                                        type: 'linear',
+                                        domain: 'auto',
+                                        range: [0, 200],
+                                      }
+                                    : undefined,
+                                  elevationScale: layer.elevationScale ?? 1,
+                                }),
+                              ),
+                            )
                           }
-                          if (
-                            typeof elev === 'string' &&
-                            elev.startsWith('@@=')
-                          ) {
-                            return elev.slice(3);
-                          }
-                          return undefined;
-                        })()}
-                        onChange={(elevationColumn) =>
-                          applyConfig(
-                            updateDeckMapLayer(
-                              mapConfig,
-                              activeLayerIndex,
-                              (layer) => ({
-                                ...layer,
-                                getElevation: elevationColumn
-                                  ? {
-                                      '@@function': 'scale',
-                                      field: elevationColumn,
-                                      type: 'linear',
-                                      domain: 'auto',
-                                      range: [0, 200],
-                                    }
-                                  : undefined,
-                                elevationScale: layer.elevationScale ?? 1,
-                              }),
-                            ),
-                          )
-                        }
-                        placeholder="Select elevation column..."
-                        disabled={readOnly}
-                      />
-                    </Field>
-                  </ColumnsProvider>
-                )}
+                          placeholder="Select elevation column..."
+                          disabled={readOnly}
+                        />
+                      </Field>
+                    </ColumnsProvider>
+                  )}
 
                 {Boolean(activeLayer?.extruded) && (
                   <Field
@@ -984,16 +1008,16 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               </div>
             )}
 
-            {dataTable &&
+            {sourceDataTable &&
               !showGeometryColumnSetting &&
               !showH3ColumnSetting &&
               !showArcColumnSetting && (
-                <ColumnsProvider columns={dataTable.columns}>
+                <ColumnsProvider columns={sourceColumns}>
                   <Field label="Latitude column" required>
                     <LatitudeSelector
                       dashboardId={dashboardId}
                       panel={panel}
-                      currentTable={dataTable}
+                      currentTable={sourceDataTable}
                       readOnly={readOnly}
                     />
                   </Field>
@@ -1001,7 +1025,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                     <LongitudeSelector
                       dashboardId={dashboardId}
                       panel={panel}
-                      currentTable={dataTable}
+                      currentTable={sourceDataTable}
                       readOnly={readOnly}
                     />
                   </Field>

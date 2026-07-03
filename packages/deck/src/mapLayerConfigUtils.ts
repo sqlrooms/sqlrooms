@@ -323,6 +323,20 @@ export function setDeckMapLayerArcColumns(
   }));
 }
 
+export function setDeckMapLayerTimestampColumn(
+  config: DeckMapDashboardPanelConfig,
+  layerIndex: number,
+  timestampColumn: string,
+): DeckMapDashboardPanelConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    _sqlroomsBinding: {
+      ...(isRecord(layer._sqlroomsBinding) ? layer._sqlroomsBinding : {}),
+      timestampColumn,
+    },
+  }));
+}
+
 export function getDeckMapLayerColorScale(
   layer: DeckMapLayerRecord | undefined,
   accessor: DeckMapLayerColorAccessor,
