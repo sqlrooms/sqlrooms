@@ -142,6 +142,23 @@ function ArrowTableSchemaExample() {
 }
 ```
 
+### Classifying Column Types
+
+Use the shared type category helpers when UI code needs semantic answers such
+as numeric, temporal, categorical, or binary instead of exact DuckDB type names:
+
+```ts
+import {
+  getDuckDbTypeCategory,
+  isColumnNumeric,
+  isColumnQuantitative,
+} from '@sqlrooms/duckdb';
+
+getDuckDbTypeCategory('DECIMAL(10, 2)'); // "number"
+isColumnNumeric({name: 'magnitude', type: 'DOUBLE'}); // true
+isColumnQuantitative('TIMESTAMP_MS'); // true
+```
+
 ## Working with Tables
 
 ### Using the Store for Direct Database Operations

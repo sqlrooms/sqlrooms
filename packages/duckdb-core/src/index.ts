@@ -60,9 +60,16 @@ export {
 } from './duckdb-utils';
 
 export {
+  columnTypeCategoryToSelectorType,
+  getColumnTypeCategory,
   getDuckDbTypeCategory,
   getArrowColumnTypeCategory,
+  isColumnCategorical,
+  isColumnNumeric,
+  isColumnQuantitative,
+  isColumnTemporal,
   type ColumnTypeCategory,
+  type ColumnTypeLike,
 } from './schema-tree/typeCategories';
 
 export {createDbSchemaTrees} from './schema-tree/schemaTree';
