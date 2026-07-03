@@ -201,7 +201,11 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const sourceDataTable = selectedDataTable ?? fallbackTable;
   const sourceColumns = sourceDataTable?.columns ?? EMPTY_COLUMNS;
   const resolvedActiveLayerDatasetSource = useMemo(() => {
-    if (!activeLayerDatasetSource) return undefined;
+    if (!activeLayerDatasetSource) {
+      return selectedDataTable
+        ? {tableName: getTableIdentity(selectedDataTable.table)}
+        : undefined;
+    }
     if (!isDeckMapDashboardTableDatasetSource(activeLayerDatasetSource)) {
       return activeLayerDatasetSource;
     }
