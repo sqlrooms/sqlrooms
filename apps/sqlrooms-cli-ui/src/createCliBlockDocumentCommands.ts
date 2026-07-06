@@ -13,35 +13,36 @@ import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 import type {RoomState} from './store-types';
 
-export const CLI_WORKSHEET_COMMAND_OWNER = '@sqlrooms-cli-ui/block-document';
+export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
+  '@sqlrooms-cli-ui/block-document';
 
-const WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID =
+const BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID =
   'block-document.create-stateful-block';
-const WORKSHEET_ADD_DASHBOARD_BLOCK_COMMAND_ID =
+const BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID =
   'block-document.add-dashboard-block';
-const WORKSHEET_ADD_DATA_TABLE_BLOCK_COMMAND_ID =
+const BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID =
   'block-document.add-data-table-block';
-const WORKSHEET_ADD_HTML_APP_BLOCK_COMMAND_ID =
+const BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID =
   'block-document.add-html-app-block';
-const WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID =
+const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
   'block-document.update-block-metadata';
-const WORKSHEET_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
+const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
 
-const WorksheetIdInput = z.object({
-  worksheetId: z.string().describe('Target worksheet artifact ID.'),
+const BlockDocumentIdInput = z.object({
+  blockDocumentId: z.string().describe('Target block document artifact ID.'),
 });
 
-const WorksheetAddDashboardBlockInput = WorksheetIdInput.extend({
+const BlockDocumentAddDashboardBlockInput = BlockDocumentIdInput.extend({
   title: z.string().default('Dashboard').describe('Dashboard block title.'),
   tableName: z.string().describe('Selected table for the dashboard.'),
   intent: z
     .string()
     .optional()
-    .describe('Optional durable purpose for this worksheet block.'),
+    .describe('Optional durable purpose for this block document block.'),
 });
 
-const WorksheetAddDataTableBlockInput = WorksheetIdInput.extend({
+const BlockDocumentAddDataTableBlockInput = BlockDocumentIdInput.extend({
   title: z
     .string()
     .default('Data Table Explorer')
@@ -50,39 +51,39 @@ const WorksheetAddDataTableBlockInput = WorksheetIdInput.extend({
   intent: z
     .string()
     .optional()
-    .describe('Optional durable purpose for this worksheet block.'),
+    .describe('Optional durable purpose for this block document block.'),
 });
 
-const WorksheetAddHtmlAppBlockInput = WorksheetIdInput.extend({
+const BlockDocumentAddHtmlAppBlockInput = BlockDocumentIdInput.extend({
   title: z.string().default('HTML App').describe('HTML app block title.'),
   intent: z
     .string()
     .optional()
-    .describe('Optional durable purpose for this worksheet block.'),
+    .describe('Optional durable purpose for this block document block.'),
 });
 
-const WorksheetUpdateBlockMetadataInput = WorksheetIdInput.extend({
-  blockId: z.string().describe('Worksheet document block ID to update.'),
+const BlockDocumentUpdateBlockMetadataInput = BlockDocumentIdInput.extend({
+  blockId: z.string().describe('Block document block ID to update.'),
   title: z.string().optional().describe('Updated block title.'),
   caption: z.string().optional().describe('Updated block caption.'),
   height: z.number().positive().optional().describe('Updated block height.'),
 });
 
-export const WorksheetMapBlockToolParameters =
+export const BlockDocumentMapBlockToolParameters =
   DeckMapDashboardToolParameters.extend({
-    worksheetId: z.string().describe('Target worksheet artifact ID.'),
+    blockDocumentId: z.string().describe('Target block document artifact ID.'),
     mapId: z
       .string()
       .optional()
-      .describe('Existing worksheet map block resource ID to update.'),
+      .describe('Existing block document map block resource ID to update.'),
     intent: z
       .string()
       .optional()
-      .describe('Durable purpose for this worksheet map block.'),
+      .describe('Durable purpose for this block document map block.'),
   });
 
-type WorksheetMapBlockToolParameters = z.infer<
-  typeof WorksheetMapBlockToolParameters
+type BlockDocumentMapBlockToolParameters = z.infer<
+  typeof BlockDocumentMapBlockToolParameters
 >;
 
 function getFirstDatasetSourceTableName(
@@ -117,12 +118,17 @@ function hasSqlOnlyDatasetSource(
   });
 }
 
-function resolveWorksheet(state: RoomState, worksheetId: string) {
-  const artifact = state.artifacts.getArtifact(worksheetId);
+function resolveBlockDocumentArtifact(
+  state: RoomState,
+  blockDocumentId: string,
+) {
+  const artifact = state.artifacts.getArtifact(blockDocumentId);
   if (!artifact || artifact.type !== 'worksheet') {
-    throw new Error(`Artifact ${worksheetId} is not a worksheet`);
+    throw new Error(
+      `Artifact ${blockDocumentId} is not a Worksheet block document`,
+    );
   }
-  state.blockDocuments.ensureBlockDocument(worksheetId);
+  state.blockDocuments.ensureBlockDocument(blockDocumentId);
   return artifact;
 }
 
@@ -160,12 +166,12 @@ function statefulBlockFromCommandData(data: unknown): {
 
 function findStatefulBlock(
   state: RoomState,
-  worksheetId: string,
+  blockDocumentId: string,
   blockInstanceId: string,
   blockType: string,
 ) {
   return state.blockDocuments
-    .getBlocks(worksheetId)
+    .getBlocks(blockDocumentId)
     .find((block: unknown): block is BlockDocumentStatefulBlockBlock => {
       if (typeof block !== 'object' || block === null) {
         return false;
@@ -194,22 +200,22 @@ function findMapPanel(state: RoomState, mapId: string, panelId?: string) {
   );
 }
 
-export function createWorksheetCommands(): RoomCommand<RoomState>[] {
+export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
   return [
     {
-      id: WORKSHEET_ADD_DASHBOARD_BLOCK_COMMAND_ID,
-      name: 'Add worksheet dashboard block',
-      description: 'Add an owned dashboard block to a worksheet.',
+      id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
+      name: 'Add block document dashboard block',
+      description: 'Add an owned dashboard block to a block document.',
       group: 'Worksheet',
-      keywords: ['worksheet', 'dashboard', 'block', 'add'],
-      inputSchema: WorksheetAddDashboardBlockInput,
+      keywords: ['block document', 'dashboard', 'block', 'add'],
+      inputSchema: BlockDocumentAddDashboardBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: async ({getState}, input) => {
-        const {worksheetId, title, tableName, intent} = input as z.infer<
-          typeof WorksheetAddDashboardBlockInput
+        const {blockDocumentId, title, tableName, intent} = input as z.infer<
+          typeof BlockDocumentAddDashboardBlockInput
         >;
         const state = getState();
-        resolveWorksheet(state, worksheetId);
+        resolveBlockDocumentArtifact(state, blockDocumentId);
         const table = state.db.findTable(tableName);
         if (!table) {
           throw new Error(`Table ${tableName} was not found`);
@@ -217,9 +223,9 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         const tableIdentity = getTableIdentity(table.table);
         const result = await invokeRequiredCommand(
           state,
-          WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID,
+          BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID,
           {
-            artifactId: worksheetId,
+            artifactId: blockDocumentId,
             blockType: 'dashboard',
             intent,
             title,
@@ -236,10 +242,10 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         );
         return {
           success: true,
-          commandId: WORKSHEET_ADD_DASHBOARD_BLOCK_COMMAND_ID,
+          commandId: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
           message: `Added worksheet dashboard block "${title}".`,
           data: {
-            worksheetId,
+            blockDocumentId,
             blockId,
             dashboardId,
             selectedTable: tableIdentity,
@@ -248,19 +254,19 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
       },
     },
     {
-      id: WORKSHEET_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
-      name: 'Add worksheet data table block',
-      description: 'Add a data table explorer block to a worksheet.',
+      id: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
+      name: 'Add block document data table block',
+      description: 'Add a data table explorer block to a block document.',
       group: 'Worksheet',
-      keywords: ['worksheet', 'data table', 'block', 'add'],
-      inputSchema: WorksheetAddDataTableBlockInput,
+      keywords: ['block document', 'data table', 'block', 'add'],
+      inputSchema: BlockDocumentAddDataTableBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: async ({getState}, input) => {
-        const {worksheetId, title, tableName, intent} = input as z.infer<
-          typeof WorksheetAddDataTableBlockInput
+        const {blockDocumentId, title, tableName, intent} = input as z.infer<
+          typeof BlockDocumentAddDataTableBlockInput
         >;
         const state = getState();
-        resolveWorksheet(state, worksheetId);
+        resolveBlockDocumentArtifact(state, blockDocumentId);
         const table = state.db.findTable(tableName);
         if (!table) {
           throw new Error(`Table ${tableName} was not found`);
@@ -268,9 +274,9 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         const tableIdentity = getTableIdentity(table.table);
         const result = await invokeRequiredCommand(
           state,
-          WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID,
+          BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID,
           {
-            artifactId: worksheetId,
+            artifactId: blockDocumentId,
             blockType: 'data-table',
             intent,
             title: tableIdentity,
@@ -283,10 +289,10 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         );
         return {
           success: true,
-          commandId: WORKSHEET_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
+          commandId: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
           message: `Added worksheet data table block "${title}".`,
           data: {
-            worksheetId,
+            blockDocumentId,
             blockId,
             dataTableId: blockInstanceId,
             selectedTable: tableIdentity,
@@ -295,24 +301,24 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
       },
     },
     {
-      id: WORKSHEET_ADD_HTML_APP_BLOCK_COMMAND_ID,
-      name: 'Add worksheet HTML app block',
-      description: 'Add an owned HTML app block to a worksheet.',
+      id: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
+      name: 'Add block document HTML app block',
+      description: 'Add an owned HTML app block to a block document.',
       group: 'Worksheet',
-      keywords: ['worksheet', 'html', 'app', 'block', 'add'],
-      inputSchema: WorksheetAddHtmlAppBlockInput,
+      keywords: ['block document', 'html', 'app', 'block', 'add'],
+      inputSchema: BlockDocumentAddHtmlAppBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: async ({getState}, input) => {
-        const {worksheetId, title, intent} = input as z.infer<
-          typeof WorksheetAddHtmlAppBlockInput
+        const {blockDocumentId, title, intent} = input as z.infer<
+          typeof BlockDocumentAddHtmlAppBlockInput
         >;
         const state = getState();
-        resolveWorksheet(state, worksheetId);
+        resolveBlockDocumentArtifact(state, blockDocumentId);
         const result = await invokeRequiredCommand(
           state,
-          WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID,
+          BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID,
           {
-            artifactId: worksheetId,
+            artifactId: blockDocumentId,
             blockType: 'html-app',
             intent,
             title,
@@ -325,63 +331,67 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         );
         return {
           success: true,
-          commandId: WORKSHEET_ADD_HTML_APP_BLOCK_COMMAND_ID,
+          commandId: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
           message: `Added worksheet HTML app block "${title}".`,
-          data: {worksheetId, blockId, appId},
+          data: {blockDocumentId, blockId, appId},
         };
       },
     },
     {
-      id: WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID,
-      name: 'Update worksheet block metadata',
-      description: 'Update title, caption, or height for a worksheet block.',
+      id: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
+      name: 'Update block document block metadata',
+      description:
+        'Update title, caption, or height for a block document block.',
       group: 'Worksheet',
-      keywords: ['worksheet', 'block', 'metadata', 'update'],
-      inputSchema: WorksheetUpdateBlockMetadataInput,
+      keywords: ['block document', 'block', 'metadata', 'update'],
+      inputSchema: BlockDocumentUpdateBlockMetadataInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
-        const {worksheetId, blockId, title, caption, height} = input as z.infer<
-          typeof WorksheetUpdateBlockMetadataInput
-        >;
+        const {blockDocumentId, blockId, title, caption, height} =
+          input as z.infer<typeof BlockDocumentUpdateBlockMetadataInput>;
         const state = getState();
-        resolveWorksheet(state, worksheetId);
+        resolveBlockDocumentArtifact(state, blockDocumentId);
         const existing = state.blockDocuments
-          .getBlocks(worksheetId)
+          .getBlocks(blockDocumentId)
           .find((block: {id?: string}) => block.id === blockId);
         if (!existing) {
           throw new Error(
-            `Worksheet block ${blockId} was not found in worksheet ${worksheetId}`,
+            `Block document block ${blockId} was not found in ${blockDocumentId}`,
           );
         }
-        const updated = state.blockDocuments.updateBlock(worksheetId, blockId, {
-          ...existing,
-          ...(title !== undefined ? {title} : {}),
-          ...(caption !== undefined ? {caption} : {}),
-          ...(height !== undefined ? {height} : {}),
-        });
+        const updated = state.blockDocuments.updateBlock(
+          blockDocumentId,
+          blockId,
+          {
+            ...existing,
+            ...(title !== undefined ? {title} : {}),
+            ...(caption !== undefined ? {caption} : {}),
+            ...(height !== undefined ? {height} : {}),
+          },
+        );
         if (!updated) {
-          throw new Error(`Failed to update worksheet block ${blockId}`);
+          throw new Error(`Failed to update block document block ${blockId}`);
         }
         return {
           success: true,
-          commandId: WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID,
+          commandId: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
           message: `Updated worksheet block "${blockId}".`,
-          data: {worksheetId, blockId, title, caption, height},
+          data: {blockDocumentId, blockId, title, caption, height},
         };
       },
     },
     {
-      id: WORKSHEET_ADD_MAP_BLOCK_COMMAND_ID,
-      name: 'Add or update worksheet map block',
-      description: 'Create or update a direct worksheet map block.',
+      id: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
+      name: 'Add or update block document map block',
+      description: 'Create or update a direct block document map block.',
       group: 'Worksheet',
-      keywords: ['worksheet', 'map', 'deck', 'block', 'add', 'update'],
-      inputSchema: WorksheetMapBlockToolParameters,
+      keywords: ['block document', 'map', 'deck', 'block', 'add', 'update'],
+      inputSchema: BlockDocumentMapBlockToolParameters,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: async ({getState}, input) => {
-        const params = input as WorksheetMapBlockToolParameters;
+        const params = input as BlockDocumentMapBlockToolParameters;
         const state = getState();
-        resolveWorksheet(state, params.worksheetId);
+        resolveBlockDocumentArtifact(state, params.blockDocumentId);
 
         const tableName =
           params.tableName ?? getFirstDatasetSourceTableName(params.config);
@@ -391,7 +401,7 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
           hasSqlOnlyDatasetSource(params.config)
         ) {
           throw new Error(
-            'tableName is required when updating a worksheet map block with SQL-only dataset sources',
+            'tableName is required when updating a block document map block with SQL-only dataset sources',
           );
         }
         const table = tableName ? state.db.findTable(tableName) : undefined;
@@ -403,11 +413,16 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         const mapId = params.mapId ?? createDefaultBlockDocumentBlockId();
         const title = params.title || 'Map';
         const existingMapBlock = params.mapId
-          ? findStatefulBlock(state, params.worksheetId, params.mapId, 'map')
+          ? findStatefulBlock(
+              state,
+              params.blockDocumentId,
+              params.mapId,
+              'map',
+            )
           : undefined;
         if (params.mapId && !existingMapBlock) {
           throw new Error(
-            `Worksheet map block ${params.mapId} was not found in worksheet ${params.worksheetId}`,
+            `Block document map block ${params.mapId} was not found in ${params.blockDocumentId}`,
           );
         }
 
@@ -422,9 +437,9 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         } else {
           const result = await invokeRequiredCommand(
             state,
-            WORKSHEET_CREATE_STATEFUL_BLOCK_COMMAND_ID,
+            BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID,
             {
-              artifactId: params.worksheetId,
+              artifactId: params.blockDocumentId,
               blockType: 'map',
               blockInstanceId: mapId,
               intent: params.intent,
@@ -466,9 +481,9 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
         if (existingMapBlock) {
           await invokeRequiredCommand(
             state,
-            WORKSHEET_UPDATE_BLOCK_METADATA_COMMAND_ID,
+            BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
             {
-              worksheetId: params.worksheetId,
+              blockDocumentId: params.blockDocumentId,
               blockId: existingMapBlock.id,
               title,
               caption: title,
@@ -478,12 +493,12 @@ export function createWorksheetCommands(): RoomCommand<RoomState>[] {
 
         return {
           success: true,
-          commandId: WORKSHEET_ADD_MAP_BLOCK_COMMAND_ID,
+          commandId: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
           message: params.mapId
             ? `Updated worksheet map block "${title}".`
             : `Added worksheet map block "${title}".`,
           data: {
-            worksheetId: params.worksheetId,
+            blockDocumentId: params.blockDocumentId,
             blockId,
             mapId,
             panelId: existingPanel?.id ?? panel.id,

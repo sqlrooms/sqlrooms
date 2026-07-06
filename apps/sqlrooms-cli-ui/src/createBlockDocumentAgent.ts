@@ -5,41 +5,43 @@ import {tool, type Tool} from 'ai';
 import {createDashboardAgentTool} from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
-import {createWorksheetAiAdapter} from './createWorksheetAiAdapter';
+import {createCliBlockDocumentAiAdapter} from './createCliBlockDocumentAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
 import {
-  createWorksheetAgentTool,
-  type CreateWorksheetAgentToolOptions,
-} from './ai/createWorksheetAgentTool';
+  createCliBlockDocumentAgentTool,
+  type CreateCliBlockDocumentAgentToolOptions,
+} from './ai/createCliBlockDocumentAgentTool';
 import {
-  EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS,
-  KnownWorksheetTools,
+  EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS,
+  KnownBlockDocumentTools,
 } from './ai/constants';
-import {WorksheetMapBlockToolParameters} from './createWorksheetCommands';
+import {BlockDocumentMapBlockToolParameters} from './createCliBlockDocumentCommands';
 
-const WorksheetMapBlockToolInput = WorksheetMapBlockToolParameters.omit({
-  worksheetId: true,
-});
+const BlockDocumentMapBlockToolInput = BlockDocumentMapBlockToolParameters.omit(
+  {
+    blockDocumentId: true,
+  },
+);
 
-function createWorksheetMapBlockTool(
+function createBlockDocumentMapBlockTool(
   store: StoreApi<RoomState>,
-  worksheetId: string,
+  blockDocumentId: string,
 ): Tool {
   return tool({
     description: `Create or update a direct worksheet map block from a native Deck JSON map config.
 
 Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.`,
-    inputSchema: WorksheetMapBlockToolInput,
+    inputSchema: BlockDocumentMapBlockToolInput,
     execute: async (params) => {
       try {
         const result = await store
           .getState()
           .commands.invokeCommand(
             'block-document.add-map-block',
-            {worksheetId, ...params},
+            {blockDocumentId, ...params},
             {surface: 'ai', actor: 'block-document-agent'},
           );
         if (!result.success) {
@@ -74,7 +76,7 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
   });
 }
 
-export function worksheetAgentTool(
+export function blockDocumentAgentTool(
   store: StoreApi<RoomState>,
   {
     experimentalEnabled = false,
@@ -82,7 +84,7 @@ export function worksheetAgentTool(
     experimentalEnabled?: boolean;
   } = {},
 ) {
-  const worksheetAdapter = createWorksheetAiAdapter(store);
+  const blockDocumentAdapter = createCliBlockDocumentAiAdapter(store);
   const databaseAdapter = createDatabaseAiAdapter(store);
 
   const baseOptions: BaseAgentToolOptions<RoomState> = {
@@ -114,19 +116,19 @@ export function worksheetAgentTool(
     databaseAdapter,
   });
 
-  const worksheetAgentOptions: CreateWorksheetAgentToolOptions = {
+  const blockDocumentAgentOptions: CreateCliBlockDocumentAgentToolOptions = {
     ...baseOptions,
     databaseAdapter,
-    blockDocumentAdapter: worksheetAdapter,
+    blockDocumentAdapter,
     dashboardAgentTool,
     htmlAppBlocksEnabled: experimentalEnabled,
     mapBlocksEnabled: experimentalEnabled,
-    addDashboardBlock: async ({worksheetId, title, tableName, intent}) => {
+    addDashboardBlock: async ({blockDocumentId, title, tableName, intent}) => {
       const result = await store
         .getState()
         .commands.invokeCommand(
           'block-document.add-dashboard-block',
-          {worksheetId, title, tableName, intent},
+          {blockDocumentId, title, tableName, intent},
           {surface: 'ai', actor: 'block-document-agent'},
         );
       if (!result.success) {
@@ -143,7 +145,7 @@ export function worksheetAgentTool(
       return {dashboardId: data.dashboardId, blockId: data.blockId};
     },
     addDataTableExplorerBlock: async ({
-      worksheetId,
+      blockDocumentId,
       title,
       tableName,
       intent,
@@ -152,7 +154,7 @@ export function worksheetAgentTool(
         .getState()
         .commands.invokeCommand(
           'block-document.add-data-table-block',
-          {worksheetId, title, tableName, intent},
+          {blockDocumentId, title, tableName, intent},
           {surface: 'ai', actor: 'block-document-agent'},
         );
       if (!result.success) {
@@ -162,12 +164,12 @@ export function worksheetAgentTool(
       }
       return result.data;
     },
-    addHtmlAppBlock: async ({worksheetId, title, intent}) => {
+    addHtmlAppBlock: async ({blockDocumentId, title, intent}) => {
       const result = await store
         .getState()
         .commands.invokeCommand(
           'block-document.add-html-app-block',
-          {worksheetId, title, intent},
+          {blockDocumentId, title, intent},
           {surface: 'ai', actor: 'block-document-agent'},
         );
       if (!result.success) {
@@ -211,15 +213,15 @@ export function worksheetAgentTool(
       caption: title,
     }),
     additionalInstructions: experimentalEnabled
-      ? EXPERIMENTAL_WORKSHEET_AGENT_INSTRUCTIONS
+      ? EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS
       : undefined,
-    extraTools: ({worksheetId}) => {
+    extraTools: ({blockDocumentId}) => {
       if (experimentalEnabled) {
         return {
-          [KnownWorksheetTools.embedded_html_app_agent]:
+          [KnownBlockDocumentTools.embedded_html_app_agent]:
             htmlAppAgentTool(store),
-          [KnownWorksheetTools.create_block_document_map_block]:
-            createWorksheetMapBlockTool(store, worksheetId),
+          [KnownBlockDocumentTools.create_block_document_map_block]:
+            createBlockDocumentMapBlockTool(store, blockDocumentId),
         };
       }
 
@@ -227,5 +229,5 @@ export function worksheetAgentTool(
     },
   };
 
-  return createWorksheetAgentTool(worksheetAgentOptions);
+  return createCliBlockDocumentAgentTool(blockDocumentAgentOptions);
 }

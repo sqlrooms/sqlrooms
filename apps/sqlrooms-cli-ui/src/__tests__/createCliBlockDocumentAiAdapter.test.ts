@@ -5,7 +5,7 @@ import {
   type BlockDocumentBlock,
 } from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
-import {createWorksheetAiAdapter} from '../createWorksheetAiAdapter';
+import {createCliBlockDocumentAiAdapter} from '../createCliBlockDocumentAiAdapter';
 import type {RoomState} from '../store-types';
 
 function createMockStore({
@@ -50,10 +50,10 @@ function createMockStore({
   };
 }
 
-describe('createWorksheetAiAdapter', () => {
-  it('adds worksheet blocks through the block document append command', async () => {
+describe('createCliBlockDocumentAiAdapter', () => {
+  it('adds blocks through the block document append command', async () => {
     const {store, ensureBlockDocument, invokeCommand} = createMockStore();
-    const adapter = createWorksheetAiAdapter(store);
+    const adapter = createCliBlockDocumentAiAdapter(store);
     const block: BlockDocumentBlock = {
       id: 'paragraph-1',
       type: 'paragraph',
@@ -86,7 +86,7 @@ describe('createWorksheetAiAdapter', () => {
         error: 'Command failed',
       })),
     });
-    const adapter = createWorksheetAiAdapter(store);
+    const adapter = createCliBlockDocumentAiAdapter(store);
 
     await expect(
       adapter.addBlock('worksheet-1', {

@@ -105,7 +105,7 @@ import {toast} from '@sqlrooms/ui';
 import {createArtifactChatHandoffController} from './artifactChatHandoff';
 import {createCliArtifactTypes} from './artifactTypes';
 import {addCliDatabaseInitializationDiagnostics} from './cliDatabaseInitialization';
-import {worksheetAgentTool} from './createWorksheetAgent';
+import {blockDocumentAgentTool} from './createBlockDocumentAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
 import {getRunContext} from './context/getRunContext';
@@ -138,33 +138,36 @@ import {
 import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {
-  CLI_WORKSHEET_COMMAND_OWNER,
-  createWorksheetCommands,
-} from './createWorksheetCommands';
-import {KnownWorksheetTools, WORKSHEET_AGENT_TOOL_NAME} from './ai/constants';
+  CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
+  createCliBlockDocumentCommands,
+} from './createCliBlockDocumentCommands';
+import {
+  KnownBlockDocumentTools,
+  CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
+} from './ai/constants';
 
 export type {RoomState} from './store-types';
 
 const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
-const WORKSHEET_COMMAND_OWNER = '@sqlrooms/documents/block-document';
-const WORKSHEET_PYTHON_COMMAND_OWNER = '@sqlrooms/python/block-document';
+const BLOCK_DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents/block-document';
+const BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER = '@sqlrooms/python/block-document';
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
 In the SQLRooms CLI app, a Worksheet is a block document artifact. When the user asks to create, edit, inspect, or add content to a worksheet, target the current worksheet artifact using block-document commands and block-document agent tools. Use the word Worksheet in user-facing replies, but use block-document tool names and command IDs when invoking tools. The artifact type may still be "worksheet"; its editable content model is a block document.
 
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 
-- Use ${WORKSHEET_AGENT_TOOL_NAME} when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
+- Use ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
 - For dashboard artifacts, call dashboard_agent.
 - Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
 `;
 const EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS = `
 Experimental SQLRooms tools are available in this session. Use them for app, map, and generated interactive visualization requests when they match the user's target artifact.
 
-- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call ${WORKSHEET_AGENT_TOOL_NAME}. The worksheet agent should create/reuse the worksheet html-app block, then call ${KnownWorksheetTools.embedded_html_app_agent} with the block's appId.
+- If the primary artifact is a worksheet and the user asks for an app, HTML app, D3 app, Chart.js app, browser app, or generated interactive visualization inside it, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME}. The worksheet agent should create/reuse the worksheet html-app block, then call ${KnownBlockDocumentTools.embedded_html_app_agent} with the block's appId.
 - Do not use top-level html_app_agent to populate worksheet stateful blocks inside worksheets.
-- For worksheet map requests, call ${WORKSHEET_AGENT_TOOL_NAME}. It should add or reuse a direct worksheet map block, not create a dashboard block just to hold the map.
+- For worksheet map requests, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME}. It should add or reuse a direct worksheet map block, not create a dashboard block just to hold the map.
 - For generated HTML, D3, Chart.js, or browser app visualizations only when the primary artifact is an html-app artifact or no worksheet/dashboard artifact is the requested target, write through html_app_agent. html_app_agent requires appId and never creates artifacts or worksheet blocks.
 - If the primary artifact is an html-app artifact, call html_app_agent with appId set to the current artifact id and update it instead of creating a new html-app artifact.
 - For incremental edits to an existing html-app artifact, such as changing title, labels, colors, styles, layout, controls, or interactions, call html_app_agent directly with the current appId and the user's edit request. Do not inspect tables or schemas first unless the user explicitly asks to change the app's data/query behavior.
@@ -173,13 +176,13 @@ Experimental SQLRooms tools are available in this session. Use them for app, map
 - If an embedded worksheet HTML app target is ambiguous, ask the user to select the app/block or provide appId instead of mutating a guessed app.
 `;
 
-const WORKSHEET_BLOCK_DOCUMENT_OPTIONS = {
+const BLOCK_DOCUMENT_OPTIONS = {
   artifactType: 'worksheet',
   artifactLabel: 'Worksheet',
   commandNamespace: 'block-document',
   commandGroup: 'Worksheet',
   defaultTitle: 'Worksheet',
-  blockDocumentAgentToolName: WORKSHEET_AGENT_TOOL_NAME,
+  blockDocumentAgentToolName: CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -763,9 +766,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           }
           registerCommandsForOwner(
             store,
-            WORKSHEET_COMMAND_OWNER,
+            BLOCK_DOCUMENT_COMMAND_OWNER,
             createBlockDocumentCommands<RoomState>({
-              ...WORKSHEET_BLOCK_DOCUMENT_OPTIONS,
+              ...BLOCK_DOCUMENT_OPTIONS,
               statefulBlockTypes: createStatefulBlockCommandTypes({
                 experimentalEnabled,
               }),
@@ -773,19 +776,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           );
           registerCommandsForOwner(
             store,
-            CLI_WORKSHEET_COMMAND_OWNER,
-            createWorksheetCommands(),
+            CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
+            createCliBlockDocumentCommands(),
           );
           if (experimentalEnabled) {
             registerCommandsForOwner(
               store,
-              WORKSHEET_PYTHON_COMMAND_OWNER,
+              BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER,
               createPythonBlockCommands<RoomState>({
-                artifactType: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactType,
-                artifactLabel: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.artifactLabel,
-                commandNamespace:
-                  WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandNamespace,
-                commandGroup: WORKSHEET_BLOCK_DOCUMENT_OPTIONS.commandGroup,
+                artifactType: BLOCK_DOCUMENT_OPTIONS.artifactType,
+                artifactLabel: BLOCK_DOCUMENT_OPTIONS.artifactLabel,
+                commandNamespace: BLOCK_DOCUMENT_OPTIONS.commandNamespace,
+                commandGroup: BLOCK_DOCUMENT_OPTIONS.commandGroup,
               }),
             );
             registerCommandsForOwner(
@@ -799,9 +801,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
           unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, WORKSHEET_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, CLI_WORKSHEET_COMMAND_OWNER);
-          unregisterCommandsForOwner(store, WORKSHEET_PYTHON_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, BLOCK_DOCUMENT_COMMAND_OWNER);
+          unregisterCommandsForOwner(store, CLI_BLOCK_DOCUMENT_COMMAND_OWNER);
+          unregisterCommandsForOwner(
+            store,
+            BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER,
+          );
           unregisterCommandsForOwner(store, HTML_APP_REVISION_COMMAND_OWNER);
         },
         ensureDashboardArtifact: (artifactId) => {
@@ -1177,9 +1182,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ...(experimentalEnabled
                 ? {html_app_agent: htmlAppAgentTool(store)}
                 : {}),
-              [WORKSHEET_AGENT_TOOL_NAME]: worksheetAgentTool(store, {
-                experimentalEnabled,
-              }),
+              [CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME]: blockDocumentAgentTool(
+                store,
+                {
+                  experimentalEnabled,
+                },
+              ),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),
               chart_image_for_markdown: createChartImageForMarkdownTool(store),

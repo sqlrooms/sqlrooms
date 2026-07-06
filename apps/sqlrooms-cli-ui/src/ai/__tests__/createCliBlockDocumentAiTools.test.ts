@@ -6,10 +6,10 @@ import type {
   BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import type {DatabaseAiAdapter} from '@sqlrooms/mosaic/ai';
-import {createWorksheetBlockDocumentAiTools} from '../createWorksheetBlockDocumentAiTools';
-import {KnownWorksheetTools} from '../constants';
+import {createCliBlockDocumentAiTools} from '../createCliBlockDocumentAiTools';
+import {KnownBlockDocumentTools} from '../constants';
 
-describe('createWorksheetBlockDocumentAiTools', () => {
+describe('createCliBlockDocumentAiTools', () => {
   function createBlockDocumentAdapter(): BlockDocumentAiAdapter &
     BlockDocumentMoveBlockAiAdapter {
     return {
@@ -45,7 +45,7 @@ describe('createWorksheetBlockDocumentAiTools', () => {
         execute: async () => ({success: true}),
       }),
       chartToolsOptions: {chartTypes: []},
-      worksheetId: 'worksheet-1',
+      blockDocumentId: 'worksheet-1',
       createDashboardBlock: ({title}: {title: string}) => ({
         dashboardId: 'dashboard-1',
         block: {
@@ -76,27 +76,29 @@ describe('createWorksheetBlockDocumentAiTools', () => {
   }
 
   it('does not register HTML app block tools by default', () => {
-    const tools = createWorksheetBlockDocumentAiTools(createOptions());
+    const tools = createCliBlockDocumentAiTools(createOptions());
 
-    expect(tools[KnownWorksheetTools.add_html_app_block]).toBeUndefined();
-    expect(tools[KnownWorksheetTools.embedded_html_app_agent]).toBeUndefined();
+    expect(tools[KnownBlockDocumentTools.add_html_app_block]).toBeUndefined();
+    expect(
+      tools[KnownBlockDocumentTools.embedded_html_app_agent],
+    ).toBeUndefined();
   });
 
-  it('registers a built-in worksheet block move tool', async () => {
+  it('registers a built-in block document block move tool', async () => {
     const blockDocumentAdapter = createBlockDocumentAdapter();
     const moveBlock = jest.spyOn(blockDocumentAdapter, 'moveBlock');
-    const tools = createWorksheetBlockDocumentAiTools(
+    const tools = createCliBlockDocumentAiTools(
       createOptions({blockDocumentAdapter}),
     );
 
-    expect(tools[KnownWorksheetTools.move_block]).toBeDefined();
+    expect(tools[KnownBlockDocumentTools.move_block]).toBeDefined();
 
-    const result = await (tools[KnownWorksheetTools.move_block] as any).execute(
-      {
-        blockId: 'paragraph-1',
-        toIndex: 0,
-      },
-    );
+    const result = await (
+      tools[KnownBlockDocumentTools.move_block] as any
+    ).execute({
+      blockId: 'paragraph-1',
+      toIndex: 0,
+    });
 
     expect(result).toEqual({
       success: true,
@@ -109,7 +111,7 @@ describe('createWorksheetBlockDocumentAiTools', () => {
 
   it('rejects HTML app block tools when the embedded app agent is unavailable', () => {
     expect(() =>
-      createWorksheetBlockDocumentAiTools(
+      createCliBlockDocumentAiTools(
         createOptions({htmlAppBlocksEnabled: true}),
       ),
     ).toThrow(
@@ -124,17 +126,18 @@ describe('createWorksheetBlockDocumentAiTools', () => {
       execute: async () => ({success: true}),
     });
 
-    const tools = createWorksheetBlockDocumentAiTools(
+    const tools = createCliBlockDocumentAiTools(
       createOptions({
         htmlAppBlocksEnabled: true,
         extraTools: jest.fn(() => ({
-          [KnownWorksheetTools.embedded_html_app_agent]: embeddedHtmlAppAgent,
+          [KnownBlockDocumentTools.embedded_html_app_agent]:
+            embeddedHtmlAppAgent,
         })),
       }),
     );
 
-    expect(tools[KnownWorksheetTools.add_html_app_block]).toBeDefined();
-    expect(tools[KnownWorksheetTools.embedded_html_app_agent]).toBe(
+    expect(tools[KnownBlockDocumentTools.add_html_app_block]).toBeDefined();
+    expect(tools[KnownBlockDocumentTools.embedded_html_app_agent]).toBe(
       embeddedHtmlAppAgent,
     );
   });
