@@ -6,11 +6,8 @@ import {
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 
-/**
- * Creates a worksheet-specific adapter for the worksheet agent.
- * Worksheets are block documents, not dashboards.
- */
-export function createWorksheetAiAdapter(
+/** Creates the CLI block-document adapter for Worksheet artifacts. */
+export function createCliBlockDocumentAiAdapter(
   store: StoreApi<RoomState>,
 ): BlockDocumentAiAdapter & BlockDocumentMoveBlockAiAdapter {
   return createBlockDocumentCommandAiAdapter({

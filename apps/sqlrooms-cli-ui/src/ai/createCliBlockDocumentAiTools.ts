@@ -15,31 +15,30 @@ import {
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
 import {createAddHtmlAppBlockDocumentBlockTool} from './createAddHtmlAppBlockDocumentBlockTool';
-import {KnownWorksheetTools} from './constants';
+import {KnownBlockDocumentTools} from './constants';
 
-export type ExtraWorksheetAiToolsParams = {
-  /** ID of the worksheet artifact being edited. */
-  worksheetId: string;
+export type ExtraBlockDocumentAiToolsParams = {
+  /** ID of the block document artifact being edited. */
   blockDocumentId: string;
   blockDocumentAdapter: BlockDocumentAiAdapter;
   databaseAdapter: DatabaseAiAdapter;
 };
 
-export type ExtraWorksheetAiToolsFactory = (
-  params: ExtraWorksheetAiToolsParams,
+export type ExtraBlockDocumentAiToolsFactory = (
+  params: ExtraBlockDocumentAiToolsParams,
 ) => Record<string, Tool>;
 
 /**
- * Options for creating worksheet block-document AI tools in the CLI app.
+ * Options for creating block-document AI tools in the CLI app.
  */
-export type CreateWorksheetBlockDocumentAiToolsOptions = {
+export type CreateCliBlockDocumentAiToolsOptions = {
   databaseAdapter: DatabaseAiAdapter;
   blockDocumentAdapter: BlockDocumentAiAdapter &
     BlockDocumentMoveBlockAiAdapter;
   dashboardAgentTool: Tool;
   chartToolsOptions?: ChartToolsOptions;
-  worksheetId: string;
-  extraTools?: ExtraWorksheetAiToolsFactory;
+  blockDocumentId: string;
+  extraTools?: ExtraBlockDocumentAiToolsFactory;
   htmlAppBlocksEnabled?: boolean;
   createDashboardBlock: (params: {
     title: string;
@@ -62,19 +61,19 @@ export type CreateWorksheetBlockDocumentAiToolsOptions = {
     | {appId: string; block: BlockDocumentStatefulBlockBlock}
     | Promise<{appId: string; block: BlockDocumentStatefulBlockBlock}>;
   addDashboardBlock?: (params: {
-    worksheetId: string;
+    blockDocumentId: string;
     title: string;
     tableName: string;
     intent?: string;
   }) => Promise<{dashboardId: string; blockId: string}>;
   addDataTableExplorerBlock?: (params: {
-    worksheetId: string;
+    blockDocumentId: string;
     title: string;
     tableName: string;
     intent?: string;
   }) => Promise<unknown>;
   addHtmlAppBlock?: (params: {
-    worksheetId: string;
+    blockDocumentId: string;
     title: string;
     intent?: string;
   }) => Promise<{appId: string; blockId: string}>;
@@ -90,7 +89,7 @@ function ensureNoOverride(
 
   if (duplicates.length > 0) {
     throw new Error(
-      `Custom worksheet AI tools cannot override built-in tools: ${duplicates.join(
+      `Custom block-document AI tools cannot override built-in tools: ${duplicates.join(
         ', ',
       )}`,
     );
@@ -98,14 +97,14 @@ function ensureNoOverride(
 }
 
 /**
- * Creates the CLI worksheet tool collection by composing generic document
+ * Creates the CLI block-document tool collection by composing generic document
  * tools with Mosaic and HTML app integration tools.
  */
-export function createWorksheetBlockDocumentAiTools({
+export function createCliBlockDocumentAiTools({
   blockDocumentAdapter,
   databaseAdapter,
   chartToolsOptions,
-  worksheetId,
+  blockDocumentId,
   dashboardAgentTool,
   extraTools,
   htmlAppBlocksEnabled = false,
@@ -115,24 +114,24 @@ export function createWorksheetBlockDocumentAiTools({
   addDashboardBlock,
   addDataTableExplorerBlock,
   addHtmlAppBlock,
-}: CreateWorksheetBlockDocumentAiToolsOptions): Record<string, Tool> {
+}: CreateCliBlockDocumentAiToolsOptions): Record<string, Tool> {
   const chartTools = createBlockDocumentChartTools({
     databaseAdapter,
     blockDocumentAdapter,
     chartToolsOptions,
-    blockDocumentId: worksheetId,
+    blockDocumentId,
   });
 
   const addTextBlockTool = createAddBlockDocumentTextBlockTool({
     blockDocumentAdapter,
-    blockDocumentId: worksheetId,
+    blockDocumentId,
   });
 
   const addDashboardBlockTool = createAddMosaicDashboardBlockTool({
     blockDocumentAdapter,
-    blockDocumentId: worksheetId,
+    blockDocumentId,
     addDashboardBlock: addDashboardBlock
-      ? (params) => addDashboardBlock({worksheetId, ...params})
+      ? (params) => addDashboardBlock({blockDocumentId, ...params})
       : undefined,
     createDashboardBlock,
   });
@@ -140,61 +139,60 @@ export function createWorksheetBlockDocumentAiTools({
   const addDataTableExplorerTool = createBlockDocumentDataTableExplorerTool({
     databaseAdapter,
     blockDocumentAdapter,
-    blockDocumentId: worksheetId,
+    blockDocumentId,
     addDataTableExplorerBlock: addDataTableExplorerBlock
-      ? (params) => addDataTableExplorerBlock({worksheetId, ...params})
+      ? (params) => addDataTableExplorerBlock({blockDocumentId, ...params})
       : undefined,
     createDataTableExplorerBlock,
   });
 
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
-    blockDocumentId: worksheetId,
-    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownWorksheetTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to a direct worksheet map tool when available.${
+    blockDocumentId,
+    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to a direct worksheet map tool when available.${
       htmlAppBlocksEnabled
-        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownWorksheetTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownWorksheetTools.add_html_app_block} first.`
+        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
         : ''
     }`,
   });
 
   const moveBlockTool = createMoveBlockDocumentBlockTool({
     blockDocumentAdapter,
-    blockDocumentId: worksheetId,
+    blockDocumentId,
   });
 
   const additionalTools =
     extraTools?.({
-      worksheetId,
-      blockDocumentId: worksheetId,
+      blockDocumentId,
       blockDocumentAdapter,
       databaseAdapter,
     }) ?? {};
 
   if (
     htmlAppBlocksEnabled &&
-    !additionalTools[KnownWorksheetTools.embedded_html_app_agent]
+    !additionalTools[KnownBlockDocumentTools.embedded_html_app_agent]
   ) {
     throw new Error(
-      `${KnownWorksheetTools.add_html_app_block} requires ${KnownWorksheetTools.embedded_html_app_agent} in extraTools when htmlAppBlocksEnabled is true.`,
+      `${KnownBlockDocumentTools.add_html_app_block} requires ${KnownBlockDocumentTools.embedded_html_app_agent} in extraTools when htmlAppBlocksEnabled is true.`,
     );
   }
 
   const builtInTools: Record<string, Tool> = {
     ...chartTools,
-    [KnownWorksheetTools.list_blocks]: listBlocksTool,
-    [KnownWorksheetTools.move_block]: moveBlockTool,
-    [KnownWorksheetTools.add_text_block]: addTextBlockTool,
-    [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
-    [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,
-    [KnownWorksheetTools.embedded_dashboard_agent]: dashboardAgentTool,
+    [KnownBlockDocumentTools.list_blocks]: listBlocksTool,
+    [KnownBlockDocumentTools.move_block]: moveBlockTool,
+    [KnownBlockDocumentTools.add_text_block]: addTextBlockTool,
+    [KnownBlockDocumentTools.add_dashboard_block]: addDashboardBlockTool,
+    [KnownBlockDocumentTools.add_data_table_explorer]: addDataTableExplorerTool,
+    [KnownBlockDocumentTools.embedded_dashboard_agent]: dashboardAgentTool,
     ...(htmlAppBlocksEnabled
       ? {
-          [KnownWorksheetTools.add_html_app_block]:
+          [KnownBlockDocumentTools.add_html_app_block]:
             createAddHtmlAppBlockDocumentBlockTool({
               blockDocumentAdapter,
-              blockDocumentId: worksheetId,
+              blockDocumentId,
               addHtmlAppBlock: addHtmlAppBlock
-                ? (params) => addHtmlAppBlock({worksheetId, ...params})
+                ? (params) => addHtmlAppBlock({blockDocumentId, ...params})
                 : undefined,
               createHtmlAppBlock,
             }),

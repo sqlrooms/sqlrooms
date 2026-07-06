@@ -16,7 +16,9 @@ export const LOCAL_DATA_ACCEPTED_FORMATS = {
   'application/geo+json': ['.geojson'],
 };
 
-function getCurrentOrFirstWorksheetId(state: RoomState): string | undefined {
+function getCurrentOrFirstWorksheetArtifactId(
+  state: RoomState,
+): string | undefined {
   const currentArtifactId = state.artifacts.config.currentArtifactId;
   const currentArtifact = currentArtifactId
     ? state.artifacts.config.artifactsById[currentArtifactId]
@@ -34,20 +36,20 @@ function getCurrentOrFirstWorksheetId(state: RoomState): string | undefined {
 
 function ensureImportWorksheetForTable(tableName: string) {
   const state = useRoomStore.getState();
-  const worksheetId =
-    getCurrentOrFirstWorksheetId(state) ??
+  const worksheetArtifactId =
+    getCurrentOrFirstWorksheetArtifactId(state) ??
     state.artifacts.createArtifact({
       type: 'worksheet',
       title: 'Worksheet',
     });
 
-  state.artifacts.setCurrentArtifact(worksheetId);
-  state.blockDocuments.ensureBlockDocument(worksheetId);
+  state.artifacts.setCurrentArtifact(worksheetArtifactId);
+  state.blockDocuments.ensureBlockDocument(worksheetArtifactId);
 
   const nextState = useRoomStore.getState();
   const existingBlocks =
-    nextState.blockDocuments.config.artifacts[worksheetId]?.content.content ??
-    [];
+    nextState.blockDocuments.config.artifacts[worksheetArtifactId]?.content
+      .content ?? [];
   const hasDataTableExplorer = existingBlocks.some(
     (block) =>
       block.type === 'statefulBlock' &&
@@ -69,7 +71,7 @@ function ensureImportWorksheetForTable(tableName: string) {
     intent: `Initial profile for imported table ${tableName}`,
   };
 
-  nextState.blockDocuments.appendBlocks(worksheetId, [block]);
+  nextState.blockDocuments.appendBlocks(worksheetArtifactId, [block]);
 }
 
 export function useLocalFileLoader() {

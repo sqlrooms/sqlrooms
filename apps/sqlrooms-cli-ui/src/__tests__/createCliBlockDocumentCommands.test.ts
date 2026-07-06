@@ -2,7 +2,7 @@ import {jest} from '@jest/globals';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
-import {createWorksheetCommands} from '../createWorksheetCommands';
+import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands';
 
 const earthquakesTable = {
   table: makeQualifiedTableName({schema: 'main', table: 'earthquakes'}),
@@ -22,7 +22,7 @@ function createCommandContext(state: unknown) {
 }
 
 function getCommand(id: string) {
-  const command = createWorksheetCommands().find(
+  const command = createCliBlockDocumentCommands().find(
     (candidate) => candidate.id === id,
   );
   if (!command) {
@@ -57,12 +57,14 @@ function createState() {
     }
     return {success: true, commandId, data: input};
   });
-  const updateBlock = jest.fn((worksheetId: string, blockId: string, block) => {
-    const index = blocks.findIndex((candidate) => candidate.id === blockId);
-    if (worksheetId !== 'worksheet-1' || index < 0) return false;
-    blocks[index] = block;
-    return true;
-  });
+  const updateBlock = jest.fn(
+    (blockDocumentId: string, blockId: string, block) => {
+      const index = blocks.findIndex((candidate) => candidate.id === blockId);
+      if (blockDocumentId !== 'worksheet-1' || index < 0) return false;
+      blocks[index] = block;
+      return true;
+    },
+  );
 
   return {
     blocks,
@@ -97,9 +99,11 @@ function createState() {
   };
 }
 
-describe('createWorksheetCommands', () => {
+describe('createCliBlockDocumentCommands', () => {
   it('registers the block document command IDs for worksheet stateful blocks', () => {
-    expect(createWorksheetCommands().map((command) => command.id)).toEqual([
+    expect(
+      createCliBlockDocumentCommands().map((command) => command.id),
+    ).toEqual([
       'block-document.add-dashboard-block',
       'block-document.add-data-table-block',
       'block-document.add-html-app-block',
@@ -108,12 +112,12 @@ describe('createWorksheetCommands', () => {
     ]);
   });
 
-  it('adds dashboard blocks through worksheet and dashboard commands', async () => {
+  it('adds dashboard blocks through block document and dashboard commands', async () => {
     const {state, invokeCommand} = createState();
     const result = await getCommand(
       'block-document.add-dashboard-block',
     ).execute(createCommandContext(state), {
-      worksheetId: 'worksheet-1',
+      blockDocumentId: 'worksheet-1',
       title: 'Dashboard',
       tableName: 'earthquakes',
       intent: 'show trends',
@@ -122,7 +126,7 @@ describe('createWorksheetCommands', () => {
     expect(result).toMatchObject({
       success: true,
       data: {
-        worksheetId: 'worksheet-1',
+        blockDocumentId: 'worksheet-1',
         blockId: 'dashboard-block',
         dashboardId: 'dashboard-id',
         selectedTable: earthquakesTableIdentity,
@@ -144,14 +148,14 @@ describe('createWorksheetCommands', () => {
     );
   });
 
-  it('adds data table and HTML app blocks through worksheet commands', async () => {
+  it('adds data table and HTML app blocks through block document commands', async () => {
     const {state, invokeCommand} = createState();
 
     await expect(
       getCommand('block-document.add-data-table-block').execute(
         createCommandContext(state),
         {
-          worksheetId: 'worksheet-1',
+          blockDocumentId: 'worksheet-1',
           title: 'Profile',
           tableName: 'earthquakes',
         },
@@ -178,7 +182,7 @@ describe('createWorksheetCommands', () => {
       getCommand('block-document.add-html-app-block').execute(
         createCommandContext(state),
         {
-          worksheetId: 'worksheet-1',
+          blockDocumentId: 'worksheet-1',
           title: 'Explorer App',
         },
       ),
@@ -195,7 +199,7 @@ describe('createWorksheetCommands', () => {
       getCommand('block-document.add-map-block').execute(
         createCommandContext(state),
         {
-          worksheetId: 'worksheet-1',
+          blockDocumentId: 'worksheet-1',
           title: 'Map',
           mapId: 'map-1',
           tableName: 'earthquakes',
@@ -223,13 +227,13 @@ describe('createWorksheetCommands', () => {
     );
   });
 
-  it('updates worksheet block metadata through the block document slice', async () => {
+  it('updates block document block metadata through the block document slice', async () => {
     const {state, updateBlock} = createState();
 
     const result = await getCommand(
       'block-document.update-block-metadata',
     ).execute(createCommandContext(state), {
-      worksheetId: 'worksheet-1',
+      blockDocumentId: 'worksheet-1',
       blockId: 'block-1',
       title: 'Updated Map',
       caption: 'Updated Map',
@@ -238,7 +242,7 @@ describe('createWorksheetCommands', () => {
     expect(result).toMatchObject({
       success: true,
       data: {
-        worksheetId: 'worksheet-1',
+        blockDocumentId: 'worksheet-1',
         blockId: 'block-1',
         title: 'Updated Map',
         caption: 'Updated Map',
@@ -279,7 +283,7 @@ describe('createWorksheetCommands', () => {
       getCommand('block-document.add-map-block').execute(
         createCommandContext(state),
         {
-          worksheetId: 'worksheet-1',
+          blockDocumentId: 'worksheet-1',
           title: 'Map',
           reasoning: 'show earthquake points',
           config: {
@@ -341,7 +345,7 @@ describe('createWorksheetCommands', () => {
     const result = await getCommand('block-document.add-map-block').execute(
       createCommandContext(state),
       {
-        worksheetId: 'worksheet-1',
+        blockDocumentId: 'worksheet-1',
         title: 'Map',
         reasoning: 'show earthquake points',
         config: {
