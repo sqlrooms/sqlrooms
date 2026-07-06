@@ -48,6 +48,7 @@ import {
   findGeometryColumn,
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
+import {isDeckMapGeneratedColumn} from './useDeckMapDatasetSchema';
 
 function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
   return createDeckMapDashboardPanelConfig({
@@ -83,6 +84,10 @@ function parseMissingColumnsFromError(message: string): string[] | null {
     /Geometry column "([^"]+)" was not found/i,
   );
   if (geomNotFound) return [geomNotFound[1]!];
+
+  // "Layer ... references unknown column "X" for getTimestamps."
+  const unknownColumn = message.match(/references unknown column "([^"]+)"/i);
+  if (unknownColumn) return [unknownColumn[1]!];
 
   return null;
 }
@@ -133,13 +138,29 @@ function detectMissingColumns(
       }
     };
 
+    for (const bindingColumn of [
+      binding?.geometryColumn,
+      binding?.sourceGeometryColumn,
+      binding?.targetGeometryColumn,
+      binding?.timestampColumn,
+      binding?.hexagonColumn,
+    ]) {
+      check(bindingColumn as string | undefined);
+    }
+
     // Check @@= accessors
     for (const [propName, propValue] of Object.entries(layerObj)) {
       // Skip elevation references when extrusion is disabled
       if (propName === 'getElevation' && !layerObj.extruded) continue;
 
       if (typeof propValue === 'string' && propValue.startsWith('@@=')) {
-        check(propValue.slice(3).trim());
+        const expression = propValue.slice(3).trim();
+        const identifiers = expression.match(/\b[A-Za-z_$][\w$]*\b/g);
+        if (identifiers) {
+          for (const id of identifiers) {
+            check(id);
+          }
+        }
       }
       // Check @@function colorScale/scale field references
       if (
@@ -162,6 +183,32 @@ function DeckMapRuntimeIssuePanel({issue}: {issue: ChartRuntimeIssue}) {
   if (issue.kind === 'sql-error' || issue.kind === 'render-error') {
     const missingColumns = parseMissingColumnsFromError(issue.message);
     if (missingColumns) {
+      const generatedMissingColumns = missingColumns.filter(
+        isDeckMapGeneratedColumn,
+      );
+      if (generatedMissingColumns.length > 0) {
+        return (
+          <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
+            <div className="mb-2 text-center font-semibold">
+              The visualization can&apos;t be displayed
+            </div>
+            <div className="text-center text-sm">
+              <span>
+                The dataset transform did not produce required map output
+                columns:{' '}
+              </span>
+              {generatedMissingColumns.map((col, idx) => (
+                <span key={idx}>
+                  <span className="inline-flex items-center rounded-md border border-gray-600 bg-gray-800 px-1 py-0.5 text-xs font-medium text-gray-300">
+                    {col}
+                  </span>{' '}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-4">
           <div className="mb-2 text-center font-semibold">
@@ -290,7 +337,7 @@ function DeckMapDashboardDatasetClient({
       ? (source.transformSql ?? '')
       : '';
   const {data, error, isLoading, client} = useMosaicClient({
-    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}`,
+    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}:${maxRows}`,
     selectionName,
     query,
     queryError,
@@ -509,6 +556,9 @@ function DeckMapDashboardRenderer({
     [mapConfig, datasetStates],
   );
 
+  const maxRows =
+    mapConfig?.dataPolicy?.maxRows ?? DEFAULT_DECK_MAP_MAX_DATA_POINTS;
+
   const mapContent = !mapConfig ? (
     <div className="text-muted-foreground flex h-full items-center justify-center p-4 text-sm">
       Invalid map panel config.
@@ -531,7 +581,7 @@ function DeckMapDashboardRenderer({
           runtimeIssueContext={runtimeIssueContext}
           runtimeIssueReporter={runtimeIssueReporter}
           selectionName={selectionName}
-          maxRows={DEFAULT_DECK_MAP_MAX_DATA_POINTS}
+          maxRows={maxRows}
         />
       ))}
       {issue ? (
@@ -551,10 +601,7 @@ function DeckMapDashboardRenderer({
           {Object.values(datasetStates).some((s) => s.isSampled) &&
             !sampledDismissed && (
               <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
-                <span>
-                  Data sampled to{' '}
-                  {DEFAULT_DECK_MAP_MAX_DATA_POINTS.toLocaleString()} rows
-                </span>
+                <span>Data sampled to {maxRows.toLocaleString()} rows</span>
                 <button
                   className="text-muted-foreground/60 hover:text-foreground -mr-0.5 ml-0.5"
                   onClick={() => setSampledDismissed(true)}
@@ -594,7 +641,7 @@ function DeckMapDashboardRenderer({
             }
             mapStyle={mapConfig.mapStyle}
             mapProps={mapConfig.mapProps}
-            showLegends={mapConfig.showLegends}
+            showLegends={mapConfig.showLegends !== false}
             onRenderingError={handleRenderingError}
             deckProps={{
               controller: true,

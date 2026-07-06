@@ -10,6 +10,7 @@ export const KnownDocumentBlockTools = {
   add_text_block: 'add_block_document_text_block',
   copy_blocks: 'copy_block_document_blocks',
   list_blocks: 'list_block_document_blocks',
+  move_block: 'move_block_document_block',
 } as const;
 
 /**
@@ -30,10 +31,26 @@ export type BlockDocumentAiAdapter = {
 };
 
 /**
+ * Narrow adapter for tools that reorder top-level block document blocks.
+ */
+export type BlockDocumentMoveBlockAiAdapter = Pick<
+  BlockDocumentAiAdapter,
+  'ensureBlockDocument'
+> & {
+  /** Move a top-level block to a new zero-based index. */
+  moveBlock(
+    blockDocumentId: string,
+    blockId: string,
+    toIndex: number,
+  ): boolean | Promise<boolean>;
+};
+
+/**
  * Generic summary of a block document block for agent planning.
  */
 export type BlockDocumentBlockSummary = {
   blockId: string;
+  index: number;
   type: string;
   title?: string;
   caption?: string;

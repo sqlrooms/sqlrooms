@@ -3,7 +3,9 @@ import {
   createAddBlockDocumentTextBlockTool,
   createCopyBlockDocumentBlocksTool,
   createListBlockDocumentBlocksTool,
+  createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {
@@ -33,7 +35,8 @@ export type ExtraWorksheetAiToolsFactory = (
  */
 export type CreateWorksheetBlockDocumentAiToolsOptions = {
   databaseAdapter: DatabaseAiAdapter;
-  blockDocumentAdapter: BlockDocumentAiAdapter;
+  blockDocumentAdapter: BlockDocumentAiAdapter &
+    BlockDocumentMoveBlockAiAdapter;
   dashboardAgentTool: Tool;
   chartToolsOptions?: ChartToolsOptions;
   worksheetId: string;
@@ -162,6 +165,11 @@ export function createWorksheetBlockDocumentAiTools({
       'In the CLI app, worksheets are block document artifacts. Use this to copy chart, text, image, or stateful blocks from a source worksheet into the current worksheet. Passing the same source and target worksheet ID duplicates blocks within that worksheet.',
   });
 
+  const moveBlockTool = createMoveBlockDocumentBlockTool({
+    blockDocumentAdapter,
+    blockDocumentId: worksheetId,
+  });
+
   const additionalTools =
     extraTools?.({
       worksheetId,
@@ -183,6 +191,7 @@ export function createWorksheetBlockDocumentAiTools({
     ...chartTools,
     [KnownWorksheetTools.list_blocks]: listBlocksTool,
     [KnownWorksheetTools.copy_blocks]: copyBlocksTool,
+    [KnownWorksheetTools.move_block]: moveBlockTool,
     [KnownWorksheetTools.add_text_block]: addTextBlockTool,
     [KnownWorksheetTools.add_dashboard_block]: addDashboardBlockTool,
     [KnownWorksheetTools.add_data_table_explorer]: addDataTableExplorerTool,

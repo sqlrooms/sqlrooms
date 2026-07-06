@@ -93,12 +93,20 @@ export {
   type CreateBlockDocumentCommandsOptions,
 } from './BlockDocumentCommands';
 export {
+  BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
+  BLOCK_DOCUMENT_AGENT_ACTOR,
+  BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID,
+  createBlockDocumentCommandAiAdapter,
+  type CreateBlockDocumentCommandAiAdapterOptions,
+} from './createBlockDocumentCommandAiAdapter';
+export {
   BLOCK_DOCUMENT_AGENT_TOOL_NAME,
   KnownDocumentBlockTools,
   type BlockDocumentAiAdapter,
   type BlockDocumentAgentPlanStep,
   type BlockDocumentAgentResult,
   type BlockDocumentBlockSummary,
+  type BlockDocumentMoveBlockAiAdapter,
   type ExtraBlockDocumentAiToolsFactory,
   type ExtraBlockDocumentAiToolsParams,
 } from './BlockDocumentAi';
@@ -115,6 +123,10 @@ export {
   createCopyBlockDocumentBlocksTool,
   type CreateCopyBlockDocumentBlocksToolOptions,
 } from './createCopyBlockDocumentBlocksTool';
+export {
+  createMoveBlockDocumentBlockTool,
+  type CreateMoveBlockDocumentBlockToolOptions,
+} from './createMoveBlockDocumentBlockTool';
 export {BlockDocumentEditor} from './BlockDocumentEditor';
 export {
   BlockDocumentEditorRoot,

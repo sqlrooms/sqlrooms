@@ -133,6 +133,7 @@ import {
   createBlockDocumentFeatureSlices,
   createCopyBlockDocumentBlocksTool,
   createListBlockDocumentBlocksTool,
+  createMoveBlockDocumentBlockTool,
 } from '@sqlrooms/documents';
 
 const roomStore = createRoomStore(
@@ -153,7 +154,8 @@ const roomStore = createRoomStore(
 Generic AI helpers use the same block DTOs as commands and the editor. Hosts
 provide a small `BlockDocumentAiAdapter` that ensures a document, lists its
 blocks, and appends new blocks; feature packages or apps can then compose these
-tools with their own stateful-block tools:
+tools with their own stateful-block tools. Reorder tools require the narrower
+`BlockDocumentMoveBlockAiAdapter` capability:
 
 ```ts
 const tools = {
@@ -169,13 +171,28 @@ const tools = {
     blockDocumentAdapter,
     blockDocumentId,
   }),
+  move_block_document_block: createMoveBlockDocumentBlockTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
 };
 ```
 
 `BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
 promise. Hosts that already expose block-document mutations as room commands can
-therefore invoke the command layer from the adapter while keeping generic AI
-tools package-neutral.
+therefore use `createBlockDocumentCommandAiAdapter` to invoke the canonical
+`block-document.append-blocks` and `block-document.move-block` commands while
+keeping generic AI tools package-neutral:
+
+```ts
+const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
+  store,
+});
+```
+
+Hosts with persisted compatibility artifact types can pass
+`isBlockDocumentArtifact` without adding that product vocabulary to the shared
+adapter API.
 
 `createCopyBlockDocumentBlocksTool()` copies selected block DTOs from one block
 document to another through the same adapter. Passing the same source and target

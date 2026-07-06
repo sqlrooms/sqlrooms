@@ -1,5 +1,9 @@
 import {jest} from '@jest/globals';
-import type {BlockDocumentBlock} from '@sqlrooms/documents';
+import {
+  BLOCK_DOCUMENT_AGENT_ACTOR,
+  BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
+  type BlockDocumentBlock,
+} from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import {createWorksheetAiAdapter} from '../createWorksheetAiAdapter';
 import type {RoomState} from '../store-types';
@@ -7,7 +11,7 @@ import type {RoomState} from '../store-types';
 function createMockStore({
   invokeCommand = jest.fn(async (_commandId, input: any) => ({
     success: true,
-    commandId: 'block-document.append-blocks',
+    commandId: BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
     data: {
       blockId: input.blocks[0].id,
     },
@@ -62,14 +66,14 @@ describe('createWorksheetAiAdapter', () => {
 
     expect(ensureBlockDocument).toHaveBeenCalledWith('worksheet-1');
     expect(invokeCommand).toHaveBeenCalledWith(
-      'block-document.append-blocks',
+      BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
       {
         artifactId: 'worksheet-1',
         blocks: [block],
       },
       {
         surface: 'ai',
-        actor: 'block-document-agent',
+        actor: BLOCK_DOCUMENT_AGENT_ACTOR,
       },
     );
   });
@@ -78,7 +82,7 @@ describe('createWorksheetAiAdapter', () => {
     const {store} = createMockStore({
       invokeCommand: jest.fn(async () => ({
         success: false,
-        commandId: 'block-document.append-blocks',
+        commandId: BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID,
         error: 'Command failed',
       })),
     });

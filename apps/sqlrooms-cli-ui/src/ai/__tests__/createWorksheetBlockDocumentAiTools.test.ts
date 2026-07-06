@@ -2,6 +2,7 @@ import {jest} from '@jest/globals';
 import {tool, type Tool} from 'ai';
 import type {
   BlockDocumentAiAdapter,
+  BlockDocumentMoveBlockAiAdapter,
   BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import type {DatabaseAiAdapter} from '@sqlrooms/mosaic/ai';
@@ -9,12 +10,14 @@ import {createWorksheetBlockDocumentAiTools} from '../createWorksheetBlockDocume
 import {KnownWorksheetTools} from '../constants';
 
 describe('createWorksheetBlockDocumentAiTools', () => {
-  function createBlockDocumentAdapter(): BlockDocumentAiAdapter {
+  function createBlockDocumentAdapter(): BlockDocumentAiAdapter &
+    BlockDocumentMoveBlockAiAdapter {
     return {
       setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => block.id,
+      moveBlock: () => true,
     };
   }
 
@@ -27,6 +30,8 @@ describe('createWorksheetBlockDocumentAiTools', () => {
 
   function createOptions(
     overrides: {
+      blockDocumentAdapter?: BlockDocumentAiAdapter &
+        BlockDocumentMoveBlockAiAdapter;
       extraTools?: () => Record<string, Tool>;
       htmlAppBlocksEnabled?: boolean;
     } = {},
@@ -76,6 +81,31 @@ describe('createWorksheetBlockDocumentAiTools', () => {
     expect(tools[KnownWorksheetTools.copy_blocks]).toBeDefined();
     expect(tools[KnownWorksheetTools.add_html_app_block]).toBeUndefined();
     expect(tools[KnownWorksheetTools.embedded_html_app_agent]).toBeUndefined();
+  });
+
+  it('registers a built-in worksheet block move tool', async () => {
+    const blockDocumentAdapter = createBlockDocumentAdapter();
+    const moveBlock = jest.spyOn(blockDocumentAdapter, 'moveBlock');
+    const tools = createWorksheetBlockDocumentAiTools(
+      createOptions({blockDocumentAdapter}),
+    );
+
+    expect(tools[KnownWorksheetTools.move_block]).toBeDefined();
+
+    const result = await (tools[KnownWorksheetTools.move_block] as any).execute(
+      {
+        blockId: 'paragraph-1',
+        toIndex: 0,
+      },
+    );
+
+    expect(result).toEqual({
+      success: true,
+      blockId: 'paragraph-1',
+      toIndex: 0,
+      message: 'Moved block paragraph-1 to index 0',
+    });
+    expect(moveBlock).toHaveBeenCalledWith('worksheet-1', 'paragraph-1', 0);
   });
 
   it('rejects HTML app block tools when the embedded app agent is unavailable', () => {

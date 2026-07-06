@@ -444,6 +444,7 @@ export type {
   AgentRunResult,
 } from './ai/types';
 export type {DatabaseAiAdapter} from './ai/database-types';
+export {createDuckDbDatabaseAiAdapter} from './ai/createDatabaseAiAdapter';
 export type {
   CreateDashboardAgentToolOptions,
   DashboardAgentResult,

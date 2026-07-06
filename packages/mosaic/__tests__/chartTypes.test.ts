@@ -1,4 +1,4 @@
-import {boxPlotChartType} from '../src';
+import {boxPlotChartType, countPlotChartType} from '../src';
 
 describe('chart type definitions', () => {
   it('box-plot uses renderer pattern', () => {
@@ -8,5 +8,10 @@ describe('chart type definitions', () => {
     expect(boxPlotChartType.outputKind).toBeUndefined();
     expect(boxPlotChartType.createSpec).toBeUndefined();
     expect(boxPlotChartType.createOutput).toBeUndefined();
+  });
+
+  it('count-plot uses renderer pattern for runtime sizing', () => {
+    expect(countPlotChartType.renderer).toBeDefined();
+    expect(countPlotChartType.createSpec).toBeUndefined();
   });
 });
