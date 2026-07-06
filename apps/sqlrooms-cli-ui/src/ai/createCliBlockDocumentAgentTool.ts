@@ -439,7 +439,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
         const friendlyMessage =
           error instanceof AiAgentError
             ? errorMessage
-            : 'Block document agent execution failed.';
+            : 'Worksheet update failed.';
 
         return {
           success: false,
