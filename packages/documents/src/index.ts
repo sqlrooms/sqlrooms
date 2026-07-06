@@ -120,6 +120,10 @@ export {
   type CreateListBlockDocumentBlocksToolOptions,
 } from './createListBlockDocumentBlocksTool';
 export {
+  createCopyBlockDocumentBlocksTool,
+  type CreateCopyBlockDocumentBlocksToolOptions,
+} from './createCopyBlockDocumentBlocksTool';
+export {
   createMoveBlockDocumentBlockTool,
   type CreateMoveBlockDocumentBlockToolOptions,
 } from './createMoveBlockDocumentBlockTool';

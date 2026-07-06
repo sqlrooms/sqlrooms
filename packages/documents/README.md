@@ -131,6 +131,7 @@ import {
   BlockDocumentsSliceConfig,
   createAddBlockDocumentTextBlockTool,
   createBlockDocumentFeatureSlices,
+  createCopyBlockDocumentBlocksTool,
   createListBlockDocumentBlocksTool,
   createMoveBlockDocumentBlockTool,
 } from '@sqlrooms/documents';
@@ -166,6 +167,10 @@ const tools = {
     blockDocumentAdapter,
     blockDocumentId,
   }),
+  copy_block_document_blocks: createCopyBlockDocumentBlocksTool({
+    blockDocumentAdapter,
+    blockDocumentId,
+  }),
   move_block_document_block: createMoveBlockDocumentBlockTool({
     blockDocumentAdapter,
     blockDocumentId,
@@ -188,6 +193,11 @@ const blockDocumentAdapter = createBlockDocumentCommandAiAdapter({
 Hosts with persisted compatibility artifact types can pass
 `isBlockDocumentArtifact` without adding that product vocabulary to the shared
 adapter API.
+
+`createCopyBlockDocumentBlocksTool()` copies selected block DTOs from one block
+document to another through the same adapter. Passing the same source and target
+block document ID duplicates blocks inside that document; copied stateful blocks
+become shared references so the same stateful resource is not owned twice.
 
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs

@@ -11,6 +11,12 @@ const ListBlockDocumentBlocksToolInput = z.object({
     .string()
     .optional()
     .describe('Brief rationale for inspecting block document blocks.'),
+  blockDocumentId: z
+    .string()
+    .optional()
+    .describe(
+      'Block document ID to inspect. Defaults to the current block document.',
+    ),
 });
 
 type ListBlockDocumentBlocksToolInput = z.infer<
@@ -22,6 +28,7 @@ type BlockDocumentToolOutput<T> =
   | {success: false; errorMessage: string};
 
 type ListBlockDocumentBlocksToolOutput = BlockDocumentToolOutput<{
+  blockDocumentId: string;
   blocks?: BlockDocumentBlockSummary[];
 }>;
 
@@ -31,7 +38,7 @@ type ListBlockDocumentBlocksToolOutput = BlockDocumentToolOutput<{
 export type CreateListBlockDocumentBlocksToolOptions = {
   /** Adapter for block document operations. */
   blockDocumentAdapter: BlockDocumentAiAdapter;
-  /** ID of the block document to inspect. */
+  /** Default ID of the block document to inspect. */
   blockDocumentId: string;
   /** Optional host-specific guidance appended to the tool description. */
   usageHint?: string;
@@ -97,16 +104,20 @@ export function createListBlockDocumentBlocksTool({
     description: [
       'List existing blocks in the block document.',
       'Use this before updating an existing stateful block or adding related content.',
+      'Pass blockDocumentId to inspect a different block document that is available in the current task context.',
       usageHint,
     ]
       .filter(Boolean)
       .join('\n\n'),
     inputSchema: ListBlockDocumentBlocksToolInput,
-    execute: async () => {
+    execute: async (params) => {
       try {
-        const blocks = blockDocumentAdapter.getBlocks(blockDocumentId) ?? [];
+        const targetBlockDocumentId = params.blockDocumentId ?? blockDocumentId;
+        const blocks =
+          blockDocumentAdapter.getBlocks(targetBlockDocumentId) ?? [];
         return {
           success: true,
+          blockDocumentId: targetBlockDocumentId,
           blocks: blocks
             .map((node, index) =>
               summarizeBlock(blockDocumentNodeToBlock(node), index),

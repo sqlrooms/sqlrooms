@@ -10,6 +10,8 @@ import {
   calculateAgentResultMetadata,
   createChartToolsInstructions,
   resolveChartTypes,
+  type AgentRunResult,
+  type AgentToolCall,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
 import type {
@@ -84,7 +86,9 @@ function getWorksheetAgentInstructions(
 
 ## Your Role
 
-You create DATA VISUALIZATION WORKSHEETS with CHART BLOCKS, TEXT BLOCKS, DATA TABLE EXPLORER BLOCKS, and DASHBOARD BLOCKS.
+In this CLI app, a worksheet is a block document artifact: an ordered block-based document whose blocks can contain charts, text, data table explorers, dashboards, maps, and embedded apps.
+
+You create DATA VISUALIZATION WORKSHEETS by adding or updating BLOCK DOCUMENT BLOCKS: CHART BLOCKS, TEXT BLOCKS, DATA TABLE EXPLORER BLOCKS, DASHBOARD BLOCKS, MAP BLOCKS, and APP BLOCKS.
 You can handle both direct requests ("create histogram of magnitude") and exploratory requests ("find interesting insights in earthquakes dataset").
 
 CRITICAL RULES:
@@ -109,6 +113,11 @@ Before updating a worksheet dashboard${
   }, adding a map to an existing worksheet, or reordering blocks, call ${KnownWorksheetTools.list_blocks} to find existing dashboard${
     htmlAppBlocksEnabled ? '/html-app' : ''
   } blocks and their resource IDs. For stateful blocks, use statefulBlock.blockType to identify the surface and statefulBlock.blockInstanceId as dashboardId, appId, or mapId for the matching embedded tool. For reorder requests, use blockId and index from ${KnownWorksheetTools.list_blocks}, then call ${KnownWorksheetTools.move_block}; moving a block to the top means toIndex 0.
+
+When the user asks to copy, duplicate, recreate, or use the same chart/content from another worksheet, treat both worksheets as block document artifacts:
+- Call ${KnownWorksheetTools.list_blocks} with the source block document artifact ID to identify the source blockIds.
+- Call ${KnownWorksheetTools.copy_blocks} with sourceBlockDocumentId, targetBlockDocumentId, and the selected blockIds.
+- You may use the same sourceBlockDocumentId and targetBlockDocumentId to duplicate blocks inside the current worksheet.
 
 ### Chart Blocks
 To create a chart block in a worksheet, call one of the chart generation tools:
@@ -291,7 +300,15 @@ const WorksheetAgentInputSchema = z.object({
   ...AgentIntentSchemaFields,
   worksheetId: z
     .string()
-    .describe('Target worksheet ID where blocks will be added.'),
+    .describe(
+      'Target worksheet block-document artifact ID where blocks will be added.',
+    ),
+  sourceBlockDocumentId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional source worksheet/block document artifact ID to inspect when copying, duplicating, or recreating existing blocks.',
+    ),
   maxSteps: z
     .number()
     .optional()
@@ -301,8 +318,87 @@ const WorksheetAgentInputSchema = z.object({
 
 type WorksheetAgentInputSchema = z.infer<typeof WorksheetAgentInputSchema>;
 
+const WORKSHEET_MUTATION_TOOL_NAMES = new Set<string>([
+  KnownWorksheetTools.add_text_block,
+  KnownWorksheetTools.add_dashboard_block,
+  KnownWorksheetTools.add_data_table_explorer,
+  KnownWorksheetTools.add_html_app_block,
+  KnownWorksheetTools.copy_blocks,
+  KnownWorksheetTools.create_block_document_map_block,
+  KnownWorksheetTools.embedded_dashboard_agent,
+  KnownWorksheetTools.embedded_html_app_agent,
+]);
+
+function hasWorksheetMutationToolCall(toolCalls: AgentToolCall[] = []) {
+  for (const toolCall of toolCalls) {
+    if (
+      toolCall.toolName.startsWith(BLOCK_DOCUMENT_CHART_TOOL_PREFIX) ||
+      WORKSHEET_MUTATION_TOOL_NAMES.has(toolCall.toolName)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function shouldRequireWorksheetMutation(intent: string) {
+  const normalized = intent.toLowerCase();
+  if (
+    /^\s*(what|which|who|when|where|why|how|list|tell|describe|explain|inspect)\b/.test(
+      normalized,
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    /\b(add|append|build|copy|create|delete|duplicate|edit|embed|graph|insert|make|modify|move|plot|put|remove|replace|update|visuali[sz]e)\b/.test(
+      normalized,
+    ) ||
+    /\b(chart|dashboard|data table explorer|html app|map|text block|worksheet block)\b/.test(
+      normalized,
+    )
+  );
+}
+
+function shouldHintSourceBlockDocument(intent: string) {
+  return /\b(copy|clone|duplicate|recreate|same)\b/.test(intent.toLowerCase());
+}
+
+function inferSourceBlockDocumentId(
+  state: RoomState,
+  targetWorksheetId: string,
+) {
+  const currentArtifactId = state.artifacts?.config.currentArtifactId;
+  if (!currentArtifactId || currentArtifactId === targetWorksheetId) {
+    return undefined;
+  }
+
+  const currentArtifact = state.artifacts?.getArtifact?.(currentArtifactId);
+  return currentArtifact?.type === 'worksheet' ? currentArtifactId : undefined;
+}
+
+function createWorksheetSubAgentPrompt({
+  intent,
+  sourceBlockDocumentId,
+  worksheetId,
+}: {
+  intent: string;
+  sourceBlockDocumentId?: string;
+  worksheetId: string;
+}) {
+  if (!sourceBlockDocumentId) return intent;
+
+  return `${intent}
+
+Target worksheet block document artifact ID: ${worksheetId}
+Source worksheet block document artifact ID: ${sourceBlockDocumentId}
+
+For copy, duplicate, recreate, or "same chart/content" requests, inspect the source with ${KnownWorksheetTools.list_blocks} and copy selected blocks into the target with ${KnownWorksheetTools.copy_blocks}.`;
+}
+
 /**
- * Creates the CLI worksheet artifact agent tool.
+ * Creates the CLI worksheet block-document artifact agent tool.
  */
 export function createWorksheetAgentTool(
   options: CreateWorksheetAgentToolOptions,
@@ -345,6 +441,10 @@ ${
 3. Call ${KnownWorksheetTools.embedded_dashboard_agent} with an intent to add a map panel`
 }
 
+IF user requests copying, duplicating, or recreating the same worksheet chart/content:
+1. Use ${KnownWorksheetTools.list_blocks} to inspect the source worksheet block document
+2. Use ${KnownWorksheetTools.copy_blocks} to append the selected source blocks into the target worksheet block document
+
 ${
   htmlAppBlocksEnabled
     ? `
@@ -374,13 +474,26 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
       const {intent} = params;
 
       try {
+        const state = store.getState();
+        const sourceBlockDocumentId =
+          params.sourceBlockDocumentId ??
+          (shouldHintSourceBlockDocument(intent)
+            ? inferSourceBlockDocumentId(state, worksheetId)
+            : undefined);
+        const worksheetSubAgentPrompt = createWorksheetSubAgentPrompt({
+          intent,
+          sourceBlockDocumentId,
+          worksheetId,
+        });
+
         blockDocumentAdapter.ensureBlockDocument(worksheetId);
-        blockDocumentAdapter.setCurrentBlockDocument(worksheetId);
+        const initialBlockCount =
+          blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
 
         const dataTools = options.createDataTools?.({store}) ?? {};
 
         const agent = new ToolLoopAgent({
-          model: options.getModel({state: store.getState()}),
+          model: options.getModel({state}),
           tools: {
             ...createWorksheetBlockDocumentAiTools({
               databaseAdapter,
@@ -408,18 +521,53 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
             .join('\n\n'),
         });
 
-        const result = await options.runSubAgent({
-          agent,
-          prompt: intent,
-          store,
-          parentToolCallId: toolOptions?.toolCallId || '',
-          abortSignal: toolOptions?.abortSignal,
-        });
+        const runWorksheetSubAgent = (prompt: string) =>
+          options.runSubAgent({
+            agent,
+            prompt,
+            store,
+            parentToolCallId: toolOptions?.toolCallId || '',
+            abortSignal: toolOptions?.abortSignal,
+          });
 
-        const metadata = calculateAgentResultMetadata(
-          undefined,
-          result.agentToolCalls,
+        let result: AgentRunResult = await runWorksheetSubAgent(
+          worksheetSubAgentPrompt,
         );
+        const allToolCalls = [...(result.agentToolCalls ?? [])];
+        const requiresWorksheetMutation =
+          shouldRequireWorksheetMutation(intent);
+        let currentBlockCount =
+          blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
+
+        if (
+          requiresWorksheetMutation &&
+          currentBlockCount === initialBlockCount &&
+          !hasWorksheetMutationToolCall(allToolCalls)
+        ) {
+          result = await runWorksheetSubAgent(`${worksheetSubAgentPrompt}
+
+The previous attempt did not modify the worksheet block document. You must call one of the block document mutation tools, such as a ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* chart tool, ${KnownWorksheetTools.add_text_block}, ${KnownWorksheetTools.copy_blocks}, ${KnownWorksheetTools.add_dashboard_block}, or another add/update block tool. Do not answer with only text.`);
+          allToolCalls.push(...(result.agentToolCalls ?? []));
+          currentBlockCount =
+            blockDocumentAdapter.getBlocks(worksheetId)?.length ?? 0;
+        }
+
+        if (
+          requiresWorksheetMutation &&
+          currentBlockCount === initialBlockCount &&
+          !hasWorksheetMutationToolCall(allToolCalls)
+        ) {
+          return {
+            success: false,
+            finalOutput:
+              'Worksheet agent did not modify the worksheet block document. Please retry and call a block mutation tool.',
+            worksheetId,
+            error:
+              'Worksheet agent completed without a block document mutation.',
+          };
+        }
+
+        const metadata = calculateAgentResultMetadata(undefined, allToolCalls);
 
         return {
           success: true,

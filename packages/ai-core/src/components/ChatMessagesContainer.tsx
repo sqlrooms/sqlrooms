@@ -11,6 +11,17 @@ import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {getChatTurnsFromUiMessages} from '../chatTurns';
 import type {AiSessionForkOrigin, ChatSessionSchema} from '@sqlrooms/ai-config';
 
+/**
+ * Host callback invoked when a user chooses a fork's source chat.
+ *
+ * @param sourceSession - The source session referenced by the fork provenance.
+ * @param forkOrigin - Metadata describing how the current session was forked.
+ */
+export type ChatForkSourceSwitchHandler = (
+  sourceSession: ChatSessionSchema,
+  forkOrigin: AiSessionForkOrigin,
+) => void;
+
 function ChatForkProvenance({
   forkOrigin,
   sourceSession,
@@ -23,23 +34,23 @@ function ChatForkProvenance({
   const sourceLabel = sourceSession?.name || forkOrigin.sourceSessionNameAtFork;
 
   return (
-    <div className="text-muted-foreground my-4 flex items-center gap-3 text-sm">
-      <div className="bg-border h-px min-w-8 flex-1" />
+    <div className="text-muted-foreground my-4 flex w-full max-w-full min-w-0 items-center gap-2 text-sm">
+      <div className="bg-border h-px min-w-0 flex-1" />
       <SplitIcon className="h-4 w-4 shrink-0 rotate-90" />
       {sourceSession ? (
         <button
           type="button"
-          className="text-primary hover:text-primary/80 min-w-0 truncate underline-offset-4 hover:underline"
+          className="text-primary hover:text-primary/80 block max-w-full min-w-0 flex-shrink truncate text-left underline-offset-4 hover:underline"
           onClick={onSwitchToSource}
         >
           Forked from {sourceLabel}
         </button>
       ) : (
-        <span className="min-w-0 truncate">
+        <span className="block max-w-full min-w-0 flex-shrink truncate">
           Forked from {sourceLabel || 'deleted conversation'}
         </span>
       )}
-      <div className="bg-border h-px min-w-8 flex-1" />
+      <div className="bg-border h-px min-w-0 flex-1" />
     </div>
   );
 }
@@ -49,11 +60,13 @@ export const ChatMessagesContainer: React.FC<{
   customMarkdownComponents?: Partial<Components>;
   hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
+  onSwitchToForkSource?: ChatForkSourceSwitchHandler;
 }> = ({
   className,
   customMarkdownComponents,
   hoistedRenderers,
   ErrorMessageComponent,
+  onSwitchToForkSource,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
@@ -118,9 +131,9 @@ export const ChatMessagesContainer: React.FC<{
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
         viewportRef={containerRef}
-        className="flex w-full grow flex-col gap-5"
+        className="min-w-0 grow overflow-hidden [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0"
       >
-        <div className="pr-3">
+        <div className="max-w-full min-w-0 pr-3">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
               <ChatTurnView
@@ -134,7 +147,12 @@ export const ChatMessagesContainer: React.FC<{
                   forkOrigin={forkOrigin}
                   sourceSession={sourceSession}
                   onSwitchToSource={() => {
-                    if (sourceSession) switchSession(sourceSession.id);
+                    if (!sourceSession) return;
+                    if (onSwitchToForkSource) {
+                      onSwitchToForkSource(sourceSession, forkOrigin);
+                      return;
+                    }
+                    switchSession(sourceSession.id);
                   }}
                 />
               )}
@@ -146,6 +164,7 @@ export const ChatMessagesContainer: React.FC<{
           <div className="h-10 w-full shrink-0" />
         </div>
         <ScrollBar orientation="vertical" />
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button
