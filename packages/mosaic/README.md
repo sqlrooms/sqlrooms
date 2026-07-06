@@ -540,6 +540,19 @@ dashboard prompts and tool registration stay aligned. When host tools need
 specialized agent guidance, pass `additionalInstructions` to append that
 guidance after the built-in agent workflow without replacing it.
 
+Dashboard agents can also receive selected skill instructions through
+`skillStorage` and `selectSkillIds`. The package exports reusable Mosaic
+dashboard skill definitions via `MOSAIC_DASHBOARD_SKILLS`,
+`MOSAIC_DASHBOARD_SKILL_ROOT`, and `selectMosaicDashboardSkillIds`. These
+skills cover chart selection, dashboard design, exploratory/KPI/diagnostic
+patterns, and Mosaic runtime constraints. They are advisory prompt context only:
+tool schemas, command contracts, and durable mutations remain in code.
+
+When selected skills are available, `dashboard_agent` appends their text to the
+agent instructions and echoes `{id, rootId}` entries in
+`metadata.skillsApplied`. If no skill storage is provided, the agent still runs
+with its built-in instructions.
+
 Block-document agents can also accept host tools through `extraTools`. Host
 tool factories should receive the active block document ID alongside the block
 document and database adapters, so apps can add scoped tools such as embedded

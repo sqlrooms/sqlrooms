@@ -4,9 +4,11 @@
  */
 export type {ChartToolExecutionContext} from './charts/chart-types';
 export * from './ai/types';
+export * from './ai/skills';
 export * from './ai/database-types';
 export * from './ai/createDatabaseAiAdapter';
 export * from './ai/dashboard/dashboard-types';
+export * from './ai/dashboard/dashboardSkills';
 export * from './ai/constants';
 export * from './ai/block-document/constants';
 export {AiAgentError} from './ai/errors';

@@ -49,4 +49,8 @@ export type AgentResultMetadata = {
   tableName?: string;
   stepsExecuted: number;
   queriesRun: number;
+  skillsApplied?: Array<{
+    id: string;
+    rootId: string;
+  }>;
 };

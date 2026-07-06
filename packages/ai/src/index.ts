@@ -88,8 +88,9 @@ export {
   serializeSkillManifest,
   loadSkillFromFiles,
   CompositeSkillStorage,
+  BundledSkillStorage,
 } from './skills';
-export type {SkillManifest} from './skills';
+export type {BundledSkillDefinition, SkillManifest} from './skills';
 export type {
   SkillStorage,
   SkillRoot,
