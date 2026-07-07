@@ -2,13 +2,16 @@ import {jest} from '@jest/globals';
 import {
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   createAddMosaicDashboardBlockTool,
+  createBlockDocumentChartTools,
   createBlockDocumentDataTableExplorerTool,
   type DatabaseAiAdapter,
 } from '../src/ai';
-import type {
-  BlockDocumentAiAdapter,
-  BlockDocumentBlock,
-  BlockDocumentStatefulBlockBlock,
+import {
+  blockDocumentBlockToNode,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentBlock,
+  type BlockDocumentChartBlock,
+  type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {makeQualifiedTableName} from '@sqlrooms/db';
 
@@ -45,6 +48,76 @@ describe('Mosaic block-document AI tools', () => {
     expect(BLOCK_DOCUMENT_CHART_TOOL_PREFIX).toBe(
       'create_block_document_chart_',
     );
+  });
+
+  it('preserves chart selection groups when editing a target chart block', async () => {
+    const existingBlock: BlockDocumentChartBlock = {
+      type: 'chart',
+      id: 'chart-block-1',
+      tableName: 'earthquakes',
+      caption: 'Magnitude Distribution',
+      selectionGroupId: 'linked-overview',
+      config: {
+        chartType: 'histogram',
+        settings: {field: 'magnitude'},
+      },
+    };
+    const updatedBlocks: BlockDocumentBlock[] = [];
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [blockDocumentBlockToNode(existingBlock)],
+      addBlock: jest.fn((_blockDocumentId, block) => block.id),
+      updateBlock: jest.fn((_blockDocumentId, _blockId, block) => {
+        updatedBlocks.push(block);
+      }),
+    };
+    const databaseAdapter: DatabaseAiAdapter = {
+      getTables: () => [],
+      findTable: (tableName) => ({
+        tableName: String(tableName),
+        table: makeQualifiedTableName({
+          schema: 'main',
+          table: String(tableName),
+        }),
+        columns: [{name: 'magnitude', type: 'DOUBLE'}],
+      }),
+    };
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter,
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+      targetBlockId: existingBlock.id,
+    });
+
+    const result = await (
+      tools[`${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}histogram`] as any
+    ).execute({
+      tableName: 'earthquakes',
+      settings: {field: 'magnitude'},
+      title: 'Updated Magnitude Distribution',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+      }),
+    );
+    expect(blockDocumentAdapter.updateBlock).toHaveBeenCalledWith(
+      'document-1',
+      existingBlock.id,
+      expect.objectContaining({
+        type: 'chart',
+        id: existingBlock.id,
+        caption: 'Updated Magnitude Distribution',
+        selectionGroupId: 'linked-overview',
+      }),
+    );
+    expect(updatedBlocks).toEqual([
+      expect.objectContaining({
+        selectionGroupId: 'linked-overview',
+      }),
+    ]);
   });
 
   it('adds Mosaic dashboard blocks through a host callback', async () => {
