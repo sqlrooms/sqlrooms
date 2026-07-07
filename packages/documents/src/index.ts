@@ -28,6 +28,7 @@ export {
   BlockDocumentTodoBlock,
   blockDocumentBlockToNode,
   blockDocumentContentToBlocks,
+  blockDocumentNodeId,
   blockDocumentNodeToBlock,
   createEmptyBlockDocumentContent,
   type BlockDocumentBlock as BlockDocumentBlockType,
@@ -61,19 +62,21 @@ export {
   useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
-  type BlockDocumentBlockHeaderActionsRenderContext,
-  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentChartHeaderActionsRenderer,
   type BlockDocumentChartRendererProps,
   type BlockDocumentChartRendererProviderProps,
 } from './BlockDocumentChartRendererContext';
+export {
+  type BlockDocumentBlockHeaderActionsRenderContext,
+  type BlockDocumentBlockHeaderActionsRenderer,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentChartHeaderActionsRenderer,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentStatefulBlockHeaderActionsRenderer,
+} from './BlockDocumentBlockHeaderActions';
 export {
   BlockDocumentStatefulBlockRendererProvider,
   useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockSettings,
   useBlockDocumentStatefulBlockTypes,
-  type BlockDocumentBlockHeaderActionsRenderContext as BlockDocumentStatefulBlockHeaderActionsRenderContext,
-  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentStatefulBlockHeaderActionsRenderer,
   type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,

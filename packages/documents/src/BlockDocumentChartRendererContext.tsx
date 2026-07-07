@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import type {BlockSettingsComponent} from './block-settings/types';
+import type {BlockDocumentBlockHeaderActionsRenderer} from './BlockDocumentBlockHeaderActions';
 
 export type BlockDocumentChartRendererProps = {
   documentId: string;
@@ -21,21 +22,11 @@ export type BlockDocumentChartRendererProps = {
   onTableNameChange?: (tableName: string) => void;
   onConfigChange?: (config: unknown) => void;
   onCaptionChange?: (caption: string | undefined) => void;
+  /** Optional host-provided actions rendered in the chart block header. */
+  headerActions?: ReactNode;
 };
 
 export type BlockDocumentChartRenderer = FC<BlockDocumentChartRendererProps>;
-
-export type BlockDocumentBlockHeaderActionsRenderContext = {
-  blockDocumentId: string;
-  blockId: string;
-  blockType: string;
-  blockInstanceId?: string;
-  title?: string;
-};
-
-export type BlockDocumentBlockHeaderActionsRenderer = (
-  ctx: BlockDocumentBlockHeaderActionsRenderContext,
-) => ReactNode;
 
 type BlockDocumentChartRendererContextValue = {
   renderer?: BlockDocumentChartRenderer;

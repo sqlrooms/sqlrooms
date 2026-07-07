@@ -1371,7 +1371,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           get().ai.setPrompt(session.id, prompt);
 
           // Wait for SessionChatProvider to mount and register sendMessage
-          void get().ai.startAnalysisWhenReady(session.id);
+          void get()
+            .ai.startAnalysisWhenReady(session.id)
+            .catch((error) => {
+              console.error('Failed to start analysis for new session:', error);
+            });
         },
 
         cancelAnalysis: (sessionId: string) => {

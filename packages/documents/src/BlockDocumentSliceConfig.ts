@@ -209,7 +209,8 @@ function textFromNode(node: BlockDocumentNode | undefined): string {
   return node.content.map((child) => textFromNode(child)).join('');
 }
 
-function nodeId(node: BlockDocumentNode): string {
+/** Returns the document-local id attribute for a block document node, if present. */
+export function blockDocumentNodeId(node: BlockDocumentNode): string {
   const id = node.attrs?.id;
   return typeof id === 'string' ? id : '';
 }
@@ -332,7 +333,7 @@ export function blockDocumentBlockToNode(
 export function blockDocumentNodeToBlock(
   node: BlockDocumentNode,
 ): BlockDocumentBlock | undefined {
-  const id = nodeId(node);
+  const id = blockDocumentNodeId(node);
   if (!id) return undefined;
   const intent = optionalString(node.attrs?.intent);
 

@@ -12,6 +12,7 @@ import {
 } from '@sqlrooms/duckdb';
 import {
   blockContextItemId,
+  blockDocumentNodeId,
   blockDocumentNodeToBlock,
   defaultBlockTitle,
   parseBlockContextItemId,
@@ -142,8 +143,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
 
     const tableIdSet = new Set(tableItems.map((t) => t.id));
     const worksheetArtifactId =
-      owningArtifactId &&
-      artifactsById[owningArtifactId]?.type === 'worksheet'
+      owningArtifactId && artifactsById[owningArtifactId]?.type === 'worksheet'
         ? owningArtifactId
         : currentArtifactId &&
             artifactsById[currentArtifactId]?.type === 'worksheet'
@@ -202,7 +202,12 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
         keywords: [item.title, item.type ?? ''],
       }));
 
-    return [...artifactItems, ...tableItems, ...blockItems, ...missingRunningItems];
+    return [
+      ...artifactItems,
+      ...tableItems,
+      ...blockItems,
+      ...missingRunningItems,
+    ];
   }, [
     artifacts,
     tables,
@@ -246,10 +251,9 @@ export function useValidatedSelectedIds(): string[] {
       if (blockContext) {
         const blockDocument = blockDocuments[blockContext.blockDocumentId];
         if (!blockDocument) return false;
-        return blockDocument.content.content.some((node) => {
-          const block = blockDocumentNodeToBlock(node);
-          return block?.id === blockContext.blockId;
-        });
+        return blockDocument.content.content.some(
+          (node) => blockDocumentNodeId(node) === blockContext.blockId,
+        );
       }
       // Check if it's a valid table ID
       return hasTableIdentity(tableIdSet, id);

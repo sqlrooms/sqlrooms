@@ -1,5 +1,6 @@
 import type {Tool} from 'ai';
 import {
+  blockDocumentNodeToBlock,
   createDefaultBlockDocumentBlockId,
   type BlockDocumentAiAdapter,
 } from '@sqlrooms/documents';
@@ -58,6 +59,17 @@ export function createBlockDocumentChartTools({
           );
         }
 
+        const existingBlock = blockDocumentAdapter
+          .getBlocks(blockDocumentId)
+          ?.map((block) => blockDocumentNodeToBlock(block))
+          .find((block) => block?.id === targetBlockId);
+        const caption =
+          title ??
+          (existingBlock?.type === 'chart'
+            ? existingBlock.caption
+            : undefined) ??
+          'Chart';
+
         const updateResult = blockDocumentAdapter.updateBlock(
           blockDocumentId,
           targetBlockId,
@@ -66,7 +78,7 @@ export function createBlockDocumentChartTools({
             id: targetBlockId,
             config,
             tableName: tableIdentity,
-            caption: title ?? 'Chart',
+            caption,
           },
         );
 

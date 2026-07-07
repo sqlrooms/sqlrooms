@@ -51,10 +51,12 @@ export async function startBlockScopedChat({
   const latestState = useRoomStore.getState();
   const draftContextItemIds =
     latestState.ai.getSessionDraftContextItemIds(sessionId) ?? [];
-  latestState.ai.setSessionDraftContextItemIds(sessionId, [
-    ...draftContextItemIds,
-    contextItemId,
-  ]);
+  if (!draftContextItemIds.includes(contextItemId)) {
+    latestState.ai.setSessionDraftContextItemIds(sessionId, [
+      ...draftContextItemIds,
+      contextItemId,
+    ]);
+  }
 
   revealAssistant();
   latestState.ai.setPrompt(sessionId, prompt);

@@ -152,7 +152,7 @@ export function createCliBlockDocumentAiTools({
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
     blockDocumentId,
-    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to a direct worksheet map tool when available.${
+    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.create_block_document_map_block} as mapId when the direct worksheet map tool is available.${
       htmlAppBlocksEnabled
         ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
         : ''

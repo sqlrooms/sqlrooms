@@ -1,6 +1,6 @@
 import {Button} from '@sqlrooms/ui';
 import type {ChartConfig} from '../chart-types/chart-config';
-import {FC, useCallback} from 'react';
+import {FC, useCallback, type ReactNode} from 'react';
 import {BlockCaptionEditor} from '../../components/BlockCaptionEditor';
 import {SlidersVerticalIcon} from 'lucide-react';
 import {useBlockSettingsStore} from '@sqlrooms/documents';
@@ -10,6 +10,7 @@ export type ChartBlockHeaderProps = {
   chartConfig: ChartConfig;
   onCaptionChange?: (caption: string | undefined) => void;
   onSettingsOpenChange: (open: boolean) => void;
+  headerActions?: ReactNode;
   readOnly?: boolean;
   selected?: boolean;
   tableName: string;
@@ -19,6 +20,7 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
   caption,
   onCaptionChange,
   onSettingsOpenChange,
+  headerActions,
   readOnly,
   selected,
   tableName,
@@ -58,6 +60,14 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
         isReadOnly={readOnly}
         onChange={(value) => onCaptionChange?.(value || undefined)}
       />
+      {headerActions ? (
+        <div
+          className="flex shrink-0 items-center gap-1"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {headerActions}
+        </div>
+      ) : null}
       <Button
         type="button"
         variant={isSettingsShown ? 'secondary' : 'ghost'}

@@ -4,7 +4,11 @@ export {
   createDefaultAiConfig,
 } from './AiSliceConfig';
 export {AiSettingsSliceConfig} from './AiSettingsSliceConfig';
-export {createBlockContextItem} from './createBlockContextItem';
+export {
+  BlockAiRunContextItemSchema,
+  createBlockContextItem,
+  type BlockAiRunContextItem,
+} from './createBlockContextItem';
 export {
   AiRunContextItemSchema,
   AiRunContextSchema,

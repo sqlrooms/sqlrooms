@@ -216,16 +216,16 @@ export function blockDocumentAgentTool(
       ? EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS
       : undefined,
     extraTools: ({blockDocumentId}) => {
-      if (experimentalEnabled) {
-        return {
-          [KnownBlockDocumentTools.embedded_html_app_agent]:
-            htmlAppAgentTool(store),
-          [KnownBlockDocumentTools.create_block_document_map_block]:
-            createBlockDocumentMapBlockTool(store, blockDocumentId),
-        };
+      const tools: Record<string, Tool> = {};
+      if (blockDocumentAgentOptions.htmlAppBlocksEnabled) {
+        tools[KnownBlockDocumentTools.embedded_html_app_agent] =
+          htmlAppAgentTool(store);
       }
-
-      return {} as Record<string, Tool>;
+      if (blockDocumentAgentOptions.mapBlocksEnabled) {
+        tools[KnownBlockDocumentTools.create_block_document_map_block] =
+          createBlockDocumentMapBlockTool(store, blockDocumentId);
+      }
+      return tools;
     },
   };
 

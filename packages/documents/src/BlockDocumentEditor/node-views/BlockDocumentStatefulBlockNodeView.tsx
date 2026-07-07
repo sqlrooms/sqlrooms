@@ -207,7 +207,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       scrollHintTargetRef.current = null;
       hideScrollHintTimeoutRef.current = undefined;
     }, SCROLL_HINT_HIDE_DELAY_MS);
-  }, []);
+  }, [setShowScrollHint]);
 
   const hideScrollHint = useCallback(() => {
     setShowScrollHint(false);
@@ -216,7 +216,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       window.clearTimeout(hideScrollHintTimeoutRef.current);
       hideScrollHintTimeoutRef.current = undefined;
     }
-  }, []);
+  }, [setShowScrollHint]);
 
   const handleWheelCapture = useCallback(
     (event: WheelEvent) => {

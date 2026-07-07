@@ -42,7 +42,7 @@ export function createCliBlockDocumentAiAdapter(
         throw new Error(
           result.error ??
             result.message ??
-            'Failed to update worksheet block.',
+            'Failed to update block document block.',
         );
       }
     },

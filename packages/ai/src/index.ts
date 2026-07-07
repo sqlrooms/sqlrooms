@@ -241,6 +241,7 @@ export {
   AiSessionForkOrigin,
   ChatSessionSchema,
   createBlockContextItem,
+  BlockAiRunContextItemSchema,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,
@@ -250,7 +251,11 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

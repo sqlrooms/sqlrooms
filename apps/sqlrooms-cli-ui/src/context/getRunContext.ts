@@ -71,7 +71,9 @@ function createTableContextItem(
   };
 }
 
-function getBlockContextTitle(block: ReturnType<typeof blockDocumentNodeToBlock>) {
+function getBlockContextTitle(
+  block: ReturnType<typeof blockDocumentNodeToBlock>,
+) {
   if (!block) return undefined;
   if (block.type === 'chart') return block.caption;
   if (block.type === 'statefulBlock') return block.title ?? block.caption;
@@ -85,14 +87,17 @@ function resolveBlockContextItem(
   const parsedId = parseBlockContextItemId(itemId);
   if (!parsedId) return undefined;
 
-  const artifact = state.artifacts.config.artifactsById[parsedId.blockDocumentId];
+  const artifact =
+    state.artifacts.config.artifactsById[parsedId.blockDocumentId];
   const blockDocument =
     state.blockDocuments.config.artifacts[parsedId.blockDocumentId];
-  const node = blockDocument?.content.content.find((candidate) => {
-    const block = blockDocumentNodeToBlock(candidate);
-    return block?.id === parsedId.blockId;
-  });
-  const block = node ? blockDocumentNodeToBlock(node) : undefined;
+  const block = blockDocument?.content.content.reduce<
+    ReturnType<typeof blockDocumentNodeToBlock> | undefined
+  >((matchedBlock, candidate) => {
+    if (matchedBlock) return matchedBlock;
+    const candidateBlock = blockDocumentNodeToBlock(candidate);
+    return candidateBlock?.id === parsedId.blockId ? candidateBlock : undefined;
+  }, undefined);
   if (!block) return undefined;
 
   const target =

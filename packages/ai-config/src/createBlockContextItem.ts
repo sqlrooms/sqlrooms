@@ -1,7 +1,16 @@
-import {
-  AiRunContextItemSchema,
-  type AiRunContextItem,
-} from './schema/ChatSessionSchema';
+import {z} from 'zod';
+import {AiRunContextItemSchema} from './schema/ChatSessionSchema';
+
+export const BlockAiRunContextItemSchema = AiRunContextItemSchema.extend({
+  kind: z.literal('block'),
+  blockDocumentId: z.string(),
+  blockId: z.string(),
+  blockType: z.string(),
+  blockInstanceId: z.string().optional(),
+  panelId: z.string().optional(),
+});
+
+export type BlockAiRunContextItem = z.infer<typeof BlockAiRunContextItemSchema>;
 
 export function createBlockContextItem(fields: {
   id: string;
@@ -12,7 +21,7 @@ export function createBlockContextItem(fields: {
   panelId?: string;
   title: string;
   subtitle?: string;
-}): AiRunContextItem {
+}): BlockAiRunContextItem {
   const item = {
     kind: 'block',
     id: fields.id,
@@ -28,5 +37,5 @@ export function createBlockContextItem(fields: {
     ...(fields.panelId !== undefined ? {panelId: fields.panelId} : {}),
   };
 
-  return AiRunContextItemSchema.parse(item);
+  return BlockAiRunContextItemSchema.parse(item);
 }

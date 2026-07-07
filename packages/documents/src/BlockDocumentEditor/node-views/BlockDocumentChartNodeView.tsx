@@ -120,6 +120,7 @@ export const BlockDocumentChartNodeView: FC<
           onTableNameChange={handleTableNameChange}
           onConfigChange={handleConfigChange}
           onCaptionChange={handleCaptionChange}
+          headerActions={blockHeaderActions}
         />
       ) : (
         <div className="p-4">
@@ -135,14 +136,6 @@ export const BlockDocumentChartNodeView: FC<
           </div>
         </div>
       )}
-      {blockHeaderActions ? (
-        <div
-          className="absolute top-2 right-2 z-20 flex items-center gap-1"
-          onClick={(event) => event.stopPropagation()}
-        >
-          {blockHeaderActions}
-        </div>
-      ) : null}
     </NodeViewWrapper>
   );
 };

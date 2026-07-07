@@ -25,6 +25,12 @@ const KNOWN_BLOCK_TYPE_TITLES: Record<string, string> = {
   document: 'Document',
 };
 
+/**
+ * Builds the stable context item id used when a block is added to AI context.
+ *
+ * The block document id, block id, and optional panel id are URL-encoded so
+ * host-generated ids can safely contain separator characters.
+ */
 export function blockContextItemId(target: BlockAiTarget): string {
   const parts = [
     'block',
@@ -37,6 +43,12 @@ export function blockContextItemId(target: BlockAiTarget): string {
   return parts.join(':');
 }
 
+/**
+ * Parses a block AI context item id created by {@link blockContextItemId}.
+ *
+ * Returns `undefined` when the id is not a block context id, has the wrong
+ * number of parts, or contains invalid URL-encoded components.
+ */
 export function parseBlockContextItemId(
   id: string,
 ): {blockDocumentId: string; blockId: string; panelId?: string} | undefined {
@@ -44,12 +56,18 @@ export function parseBlockContextItemId(
   if (parts[0] !== 'block' || (parts.length !== 3 && parts.length !== 4)) {
     return undefined;
   }
+  const [, encodedBlockDocumentId, encodedBlockId, encodedPanelId] = parts;
+  if (!encodedBlockDocumentId || !encodedBlockId) {
+    return undefined;
+  }
 
   try {
-    const blockDocumentId = decodeURIComponent(parts[1]);
-    const blockId = decodeURIComponent(parts[2]);
+    const blockDocumentId = decodeURIComponent(encodedBlockDocumentId);
+    const blockId = decodeURIComponent(encodedBlockId);
     const panelId =
-      parts.length === 4 ? decodeURIComponent(parts[3]) : undefined;
+      encodedPanelId !== undefined
+        ? decodeURIComponent(encodedPanelId)
+        : undefined;
     return panelId === undefined
       ? {blockDocumentId, blockId}
       : {blockDocumentId, blockId, panelId};
@@ -58,6 +76,12 @@ export function parseBlockContextItemId(
   }
 }
 
+/**
+ * Returns a display title for a block type, preferring a non-empty explicit title.
+ *
+ * Known block types use product-friendly labels, unknown types are title-cased,
+ * and an empty block type falls back to "Block".
+ */
 export function defaultBlockTitle(blockType: string, title?: string): string {
   const trimmedTitle = title?.trim();
   if (trimmedTitle) return trimmedTitle;

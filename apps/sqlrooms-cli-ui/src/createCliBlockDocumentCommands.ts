@@ -243,7 +243,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
-          message: `Added worksheet dashboard block "${title}".`,
+          message: `Added block document dashboard block "${title}".`,
           data: {
             blockDocumentId,
             blockId,
@@ -290,7 +290,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
-          message: `Added worksheet data table block "${title}".`,
+          message: `Added block document data table block "${title}".`,
           data: {
             blockDocumentId,
             blockId,
@@ -332,7 +332,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
-          message: `Added worksheet HTML app block "${title}".`,
+          message: `Added block document HTML app block "${title}".`,
           data: {blockDocumentId, blockId, appId},
         };
       },
@@ -375,8 +375,14 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         return {
           success: true,
           commandId: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
-          message: `Updated worksheet block "${blockId}".`,
-          data: {blockDocumentId, blockId, title, caption, height},
+          message: `Updated block document block "${blockId}".`,
+          data: {
+            blockDocumentId,
+            blockId,
+            title: title ?? existing.title,
+            caption: caption ?? existing.caption,
+            height: height ?? existing.height,
+          },
         };
       },
     },
@@ -495,8 +501,8 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
           success: true,
           commandId: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
           message: params.mapId
-            ? `Updated worksheet map block "${title}".`
-            : `Added worksheet map block "${title}".`,
+            ? `Updated block document map block "${title}".`
+            : `Added block document map block "${title}".`,
           data: {
             blockDocumentId: params.blockDocumentId,
             blockId,

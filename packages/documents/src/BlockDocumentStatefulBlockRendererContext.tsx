@@ -4,9 +4,9 @@ import {
   useMemo,
   type FC,
   type PropsWithChildren,
-  type ReactNode,
 } from 'react';
 import type {BlockSettingsComponent} from './block-settings/types';
+import type {BlockDocumentBlockHeaderActionsRenderer} from './BlockDocumentBlockHeaderActions';
 
 export type BlockDocumentStatefulBlockRendererProps = {
   documentId: string;
@@ -25,18 +25,6 @@ export type BlockDocumentStatefulBlockRendererProps = {
 
 export type BlockDocumentStatefulBlockRenderer =
   FC<BlockDocumentStatefulBlockRendererProps>;
-
-export type BlockDocumentBlockHeaderActionsRenderContext = {
-  blockDocumentId: string;
-  blockId: string;
-  blockType: string;
-  blockInstanceId?: string;
-  title?: string;
-};
-
-export type BlockDocumentBlockHeaderActionsRenderer = (
-  ctx: BlockDocumentBlockHeaderActionsRenderContext,
-) => ReactNode;
 
 export type BlockDocumentStatefulBlockRenderers = Record<
   string,
@@ -121,6 +109,7 @@ export function useBlockDocumentStatefulBlockTypes() {
   return useContext(BlockDocumentStatefulBlockRendererContext).blockTypes;
 }
 
+/** Returns the host-provided renderer for block header actions, when configured. */
 export function useBlockDocumentRenderBlockHeaderActions() {
   return useContext(BlockDocumentStatefulBlockRendererContext)
     .renderBlockHeaderActions;

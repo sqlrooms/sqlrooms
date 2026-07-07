@@ -312,12 +312,10 @@ const BlockDocumentAgentInputSchema = z.object({
     .describe('Maximum exploration steps (default: 20, range: 5-50)'),
 });
 
-type BlockDocumentAgentInputSchema = z.infer<
-  typeof BlockDocumentAgentInputSchema
->;
+type BlockDocumentAgentInput = z.infer<typeof BlockDocumentAgentInputSchema>;
 
 function getTargetBlockInstructions(
-  targetBlock: BlockDocumentAgentInputSchema['targetBlock'],
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
 ): string | undefined {
   if (!targetBlock) return undefined;
 
@@ -335,7 +333,7 @@ Do not list blocks, discover alternate blocks, create replacement blocks, or mod
 
 function selectTargetBlockTools(
   tools: Record<string, Tool>,
-  targetBlock: NonNullable<BlockDocumentAgentInputSchema['targetBlock']>,
+  targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
 ): Record<string, Tool> {
   switch (targetBlock.blockType) {
     case 'dashboard':
@@ -366,7 +364,7 @@ function selectTargetBlockTools(
 
 function targetBlockPrompt(
   intent: string,
-  targetBlock: BlockDocumentAgentInputSchema['targetBlock'],
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
 ): string {
   if (!targetBlock) return intent;
 
@@ -416,7 +414,7 @@ IF user requests a MAP in a worksheet:
 ${
   mapBlocksEnabled
     ? `1. For a new map, call ${KnownBlockDocumentTools.create_block_document_map_block} directly
-2. For an existing map, call ${KnownBlockDocumentTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to create_block_document_map_block`
+2. For an existing map, call ${KnownBlockDocumentTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to ${KnownBlockDocumentTools.create_block_document_map_block}`
     : `1. Call ${KnownBlockDocumentTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownBlockDocumentTools.add_dashboard_block}
 3. Call ${KnownBlockDocumentTools.embedded_dashboard_agent} with an intent to add a map panel`
@@ -470,7 +468,9 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           blockDocumentAdapter,
           blockDocumentId,
           targetBlockId:
-            targetBlock?.blockType === 'chart' ? targetBlock.blockId : undefined,
+            targetBlock?.blockType === 'chart'
+              ? targetBlock.blockId
+              : undefined,
           chartToolsOptions,
           dashboardAgentTool,
           extraTools,
@@ -493,7 +493,10 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
             )
           : undefined;
 
-        if (targetBlock && Object.keys(availableTargetTools ?? {}).length === 0) {
+        if (
+          targetBlock &&
+          Object.keys(availableTargetTools ?? {}).length === 0
+        ) {
           return {
             success: false,
             finalOutput: `Worksheet ${targetBlock.blockType} block edits are not supported by the available tools.`,
@@ -544,7 +547,9 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
         const friendlyMessage =
           error instanceof AiAgentError
             ? errorMessage
-            : 'Worksheet update failed.';
+            : error instanceof Error
+              ? errorMessage
+              : 'Worksheet update failed.';
 
         return {
           success: false,

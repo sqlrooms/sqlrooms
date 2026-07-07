@@ -90,6 +90,7 @@ export {
   AiSliceConfig,
   AiSessionForkOrigin,
   AnalysisSessionSchema,
+  BlockAiRunContextItemSchema,
   ChatSessionSchema,
   createBlockContextItem,
   createDefaultAiConfig,
@@ -97,7 +98,11 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,

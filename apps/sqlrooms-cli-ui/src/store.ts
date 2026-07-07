@@ -183,7 +183,6 @@ const BLOCK_DOCUMENT_OPTIONS = {
   commandNamespace: 'block-document',
   commandGroup: 'Worksheet',
   defaultTitle: 'Worksheet',
-  blockDocumentAgentToolName: CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
