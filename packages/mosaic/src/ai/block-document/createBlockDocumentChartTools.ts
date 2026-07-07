@@ -15,8 +15,8 @@ import {getTableIdentity} from '@sqlrooms/db';
 import {ensureTable} from '../tool-helpers';
 
 /**
- * Parameters for creating Mosaic chart tools that append chart blocks to a
- * block document.
+ * Parameters for creating Mosaic chart tools that add or update chart blocks in
+ * a block document.
  */
 export type CreateBlockDocumentChartToolsParams = {
   databaseAdapter: DatabaseAiAdapter;
@@ -42,7 +42,7 @@ export function createBlockDocumentChartTools({
     maxDataPoints:
       chartToolsOptions?.chartMaxDataPoints ?? DEFAULT_CHART_MAX_DATA_POINTS,
     databaseAdapter,
-    addChart: ({config, tableName, title}) => {
+    addChart: ({config, tableName, title, panelId}) => {
       if (!tableName) {
         throw new Error(
           'tableName is required for block document chart blocks but was empty or undefined',
@@ -51,8 +51,9 @@ export function createBlockDocumentChartTools({
 
       const resolvedTable = ensureTable(databaseAdapter, tableName);
       const tableIdentity = getTableIdentity(resolvedTable.table);
+      const blockIdToUpdate = targetBlockId ?? panelId;
 
-      if (targetBlockId) {
+      if (blockIdToUpdate) {
         if (!blockDocumentAdapter.updateBlock) {
           throw new Error(
             'Block document chart block editing requires the host to provide updateBlock on the block document adapter.',
@@ -62,20 +63,26 @@ export function createBlockDocumentChartTools({
         const existingBlock = blockDocumentAdapter
           .getBlocks(blockDocumentId)
           ?.map((block) => blockDocumentNodeToBlock(block))
-          .find((block) => block?.id === targetBlockId);
-        const caption =
-          title ??
-          (existingBlock?.type === 'chart'
-            ? existingBlock.caption
-            : undefined) ??
-          'Chart';
+          .find((block) => block?.id === blockIdToUpdate);
+
+        if (!existingBlock) {
+          throw new Error(`Chart block "${blockIdToUpdate}" was not found.`);
+        }
+
+        if (existingBlock.type !== 'chart') {
+          throw new Error(
+            `Block "${blockIdToUpdate}" is not a chart block. Cannot update it with a chart tool.`,
+          );
+        }
+
+        const caption = title ?? existingBlock.caption ?? 'Chart';
 
         const updateResult = blockDocumentAdapter.updateBlock(
           blockDocumentId,
-          targetBlockId,
+          blockIdToUpdate,
           {
             type: 'chart',
-            id: targetBlockId,
+            id: blockIdToUpdate,
             config,
             tableName: tableIdentity,
             caption,
@@ -84,8 +91,8 @@ export function createBlockDocumentChartTools({
 
         return updateResult &&
           typeof (updateResult as Promise<void>).then === 'function'
-          ? (updateResult as Promise<void>).then(() => targetBlockId)
-          : targetBlockId;
+          ? (updateResult as Promise<void>).then(() => blockIdToUpdate)
+          : blockIdToUpdate;
       }
 
       return blockDocumentAdapter.addBlock(blockDocumentId, {

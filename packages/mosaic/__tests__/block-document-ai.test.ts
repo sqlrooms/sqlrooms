@@ -2,6 +2,7 @@ import {jest} from '@jest/globals';
 import {
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   createAddMosaicDashboardBlockTool,
+  createBlockDocumentChartTools,
   createBlockDocumentDataTableExplorerTool,
   type DatabaseAiAdapter,
 } from '../src/ai';
@@ -22,6 +23,10 @@ describe('Mosaic block-document AI tools', () => {
           schema: 'main',
           table: String(tableName),
         }),
+        columns: [
+          {name: 'Depth', type: 'DOUBLE'},
+          {name: 'magnitude', type: 'DOUBLE'},
+        ],
       }),
     };
   }
@@ -45,6 +50,97 @@ describe('Mosaic block-document AI tools', () => {
     expect(BLOCK_DOCUMENT_CHART_TOOL_PREFIX).toBe(
       'create_block_document_chart_',
     );
+  });
+
+  it('updates a chart block when a block-document chart tool receives panelId', async () => {
+    const updateBlock = jest.fn();
+    const addBlock = jest.fn((_blockDocumentId, block: BlockDocumentBlock) => {
+      return block.id;
+    });
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [
+        {
+          type: 'chart',
+          id: 'chart-block-1',
+          tableName: 'earthquakes',
+          caption: 'Magnitude histogram',
+          config: {
+            chartType: 'histogram',
+            settings: {field: 'magnitude'},
+          },
+        },
+      ],
+      addBlock,
+      updateBlock,
+    };
+
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter: createMockDatabaseAdapter(),
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (
+      tools.create_block_document_chart_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'chart-block-1',
+      title: 'Depth histogram',
+      settings: {field: 'Depth'},
+      reasoning: 'Update the existing worksheet chart block.',
+    });
+
+    expect(result.success).toBe(true);
+    expect(addBlock).not.toHaveBeenCalled();
+    expect(updateBlock).toHaveBeenCalledWith('document-1', 'chart-block-1', {
+      type: 'chart',
+      id: 'chart-block-1',
+      tableName: '"main"."earthquakes"',
+      caption: 'Depth histogram',
+      config: {
+        chartType: 'histogram',
+        settings: {field: 'Depth'},
+      },
+    });
+  });
+
+  it('returns an error when panelId references a missing chart block', async () => {
+    const updateBlock = jest.fn();
+    const addBlock = jest.fn((_blockDocumentId, block: BlockDocumentBlock) => {
+      return block.id;
+    });
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [],
+      addBlock,
+      updateBlock,
+    };
+
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter: createMockDatabaseAdapter(),
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (
+      tools.create_block_document_chart_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'missing-chart-block',
+      title: 'Depth histogram',
+      settings: {field: 'Depth'},
+      reasoning: 'Update the existing worksheet chart block.',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errorMessage).toContain(
+      'Chart block "missing-chart-block" was not found.',
+    );
+    expect(addBlock).not.toHaveBeenCalled();
+    expect(updateBlock).not.toHaveBeenCalled();
   });
 
   it('adds Mosaic dashboard blocks through a host callback', async () => {
