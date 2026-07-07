@@ -26,7 +26,7 @@ describe('createCliBlockDocumentAgentTool', () => {
       getBlocks: () => [],
       addBlock: (_blockDocumentId, block) => block.id,
       moveBlock: () => true,
-      updateBlock: () => true,
+      updateBlock: () => {},
     };
   }
 
@@ -153,7 +153,9 @@ describe('createCliBlockDocumentAgentTool', () => {
                 : async () => ({success: true}),
           }),
         }),
-        runSubAgent: jest.fn(async ({agent, prompt}) => {
+        runSubAgent: jest.fn<
+          CreateCliBlockDocumentAgentToolOptions['runSubAgent']
+        >(async ({agent, prompt}) => {
           capturedAgent = agent;
           capturedPrompt = prompt;
           await (agent.tools[toolName] as any).execute({
@@ -193,7 +195,9 @@ describe('createCliBlockDocumentAgentTool', () => {
     let capturedAgent: ToolLoopAgent<any, any, any> | undefined;
     const options = createOptions({
       htmlAppBlocksEnabled: false,
-      runSubAgent: jest.fn(async ({agent}) => {
+      runSubAgent: jest.fn<
+        CreateCliBlockDocumentAgentToolOptions['runSubAgent']
+      >(async ({agent}) => {
         capturedAgent = agent;
         return {finalOutput: 'chart updated'};
       }),

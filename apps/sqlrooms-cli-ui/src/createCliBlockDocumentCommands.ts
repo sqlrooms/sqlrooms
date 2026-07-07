@@ -379,9 +379,11 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
           data: {
             blockDocumentId,
             blockId,
-            title: title ?? existing.title,
-            caption: caption ?? existing.caption,
-            height: height ?? existing.height,
+            title: title ?? ('title' in existing ? existing.title : undefined),
+            caption:
+              caption ?? ('caption' in existing ? existing.caption : undefined),
+            height:
+              height ?? ('height' in existing ? existing.height : undefined),
           },
         };
       },
