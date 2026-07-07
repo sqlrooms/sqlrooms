@@ -54,7 +54,7 @@ export function getGroupLabel(kind: string): string {
     case 'table':
       return 'Tables';
     case 'artifact':
-      return 'Items';
+      return 'Workspace items';
     case 'block':
       return 'Document blocks';
     default:
