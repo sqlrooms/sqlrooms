@@ -60,27 +60,29 @@ export const ChartBlockHeader: FC<ChartBlockHeaderProps> = ({
         isReadOnly={readOnly}
         onChange={(value) => onCaptionChange?.(value || undefined)}
       />
-      {headerActions ? (
-        <div
-          className="flex shrink-0 items-center gap-1"
-          onClick={(event) => event.stopPropagation()}
+      <div className="flex shrink-0 items-center gap-0.5">
+        {headerActions ? (
+          <div
+            className="flex items-center gap-0.5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {headerActions}
+          </div>
+        ) : null}
+        <Button
+          type="button"
+          variant={isSettingsShown ? 'secondary' : 'ghost'}
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          aria-label={
+            isSettingsShown ? 'Close chart settings' : 'Open chart settings'
+          }
+          aria-pressed={isSettingsShown}
+          onClick={handleSettingsClick}
         >
-          {headerActions}
-        </div>
-      ) : null}
-      <Button
-        type="button"
-        variant={isSettingsShown ? 'secondary' : 'ghost'}
-        size="icon"
-        className="h-6 w-6 shrink-0"
-        aria-label={
-          isSettingsShown ? 'Close chart settings' : 'Open chart settings'
-        }
-        aria-pressed={isSettingsShown}
-        onClick={handleSettingsClick}
-      >
-        <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
-      </Button>
+          <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
+        </Button>
+      </div>
     </div>
   );
 };
