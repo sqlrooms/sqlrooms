@@ -21,7 +21,9 @@ export const ContextSelectorSearchDropdown: FC<
   ContextSelectorSearchDropdownProps
 > = ({
   className,
-  align = 'end',
+  align = 'start',
+  side = 'top',
+  avoidCollisions = false,
   searchPlaceholder = 'Search context...',
   emptyLabel = 'No context item found.',
 }) => {
@@ -56,7 +58,12 @@ export const ContextSelectorSearchDropdown: FC<
   const hasMultipleKinds = Object.keys(groupedItems).length > 1;
 
   return (
-    <PopoverContent align={align} className={cn('w-72 p-0', className)}>
+    <PopoverContent
+      align={align}
+      side={side}
+      avoidCollisions={avoidCollisions}
+      className={cn('w-72 p-0', className)}
+    >
       <Command>
         <CommandInput placeholder={searchPlaceholder} />
         <CommandList>

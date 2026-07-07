@@ -76,6 +76,10 @@ export function createBlockDocumentChartTools({
         }
 
         const caption = title ?? existingBlock.caption ?? 'Chart';
+        const selectionGroupId =
+          existingBlock?.type === 'chart'
+            ? existingBlock.selectionGroupId
+            : undefined;
 
         const updateResult = blockDocumentAdapter.updateBlock(
           blockDocumentId,
@@ -86,6 +90,7 @@ export function createBlockDocumentChartTools({
             config,
             tableName: tableIdentity,
             caption,
+            ...(selectionGroupId !== undefined ? {selectionGroupId} : {}),
           },
         );
 
