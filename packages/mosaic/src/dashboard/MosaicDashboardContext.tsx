@@ -1,8 +1,9 @@
-import {createContext, useContext} from 'react';
+import {createContext, useContext, type ReactNode} from 'react';
 
 export type MosaicDashboardContextValue = {
   dashboardId: string;
   readOnly?: boolean;
+  headerActions?: ReactNode;
   builderOpen: boolean;
   canCreateChart: boolean;
   openBuilder: () => void;

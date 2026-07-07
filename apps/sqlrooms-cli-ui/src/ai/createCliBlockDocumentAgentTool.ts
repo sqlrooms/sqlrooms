@@ -5,7 +5,6 @@ import type {
   ChartToolsOptions,
 } from '@sqlrooms/mosaic/ai';
 import {
-  AiAgentError,
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   calculateAgentResultMetadata,
   createChartToolsInstructions,
@@ -314,6 +313,10 @@ const BlockDocumentAgentInputSchema = z.object({
 
 type BlockDocumentAgentInput = z.infer<typeof BlockDocumentAgentInputSchema>;
 
+type ExecutableTool = Tool & {
+  execute?: (input: unknown, options?: unknown) => unknown;
+};
+
 function getTargetBlockInstructions(
   targetBlock: BlockDocumentAgentInput['targetBlock'],
 ): string | undefined {
@@ -325,31 +328,71 @@ function getTargetBlockInstructions(
 - blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
 
 Do not list blocks, discover alternate blocks, create replacement blocks, or modify another worksheet block. Route directly by blockType:
-- dashboard: call ${KnownBlockDocumentTools.embedded_dashboard_agent} with dashboardId equal to blockInstanceId.
-- html-app: call ${KnownBlockDocumentTools.embedded_html_app_agent} with appId equal to blockInstanceId.
-- map: call ${KnownBlockDocumentTools.create_block_document_map_block} with mapId equal to blockInstanceId.
+- dashboard: call ${KnownBlockDocumentTools.embedded_dashboard_agent}; dashboardId is pre-bound to blockInstanceId.
+- html-app: call ${KnownBlockDocumentTools.embedded_html_app_agent}; appId is pre-bound to blockInstanceId.
+- map: call ${KnownBlockDocumentTools.create_block_document_map_block}; mapId is pre-bound to blockInstanceId.
 - chart: call the worksheet chart tool that satisfies the request; it is configured to update blockId ${targetBlock.blockId} in place.`;
+}
+
+function bindTargetToolInputField({
+  targetTool,
+  fieldName,
+  fieldValue,
+}: {
+  targetTool: Tool | undefined;
+  fieldName: string;
+  fieldValue: string;
+}): Tool | undefined {
+  if (!targetTool) return undefined;
+
+  const execute = (targetTool as ExecutableTool).execute;
+  if (!execute) return targetTool;
+
+  return {
+    ...targetTool,
+    execute: (input: unknown, toolOptions?: unknown) => {
+      const boundInput =
+        input && typeof input === 'object' && !Array.isArray(input)
+          ? {...input, [fieldName]: fieldValue}
+          : {[fieldName]: fieldValue};
+
+      return execute(boundInput, toolOptions);
+    },
+  } as Tool;
 }
 
 function selectTargetBlockTools(
   tools: Record<string, Tool>,
   targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
-): Record<string, Tool> {
+): Record<string, Tool | undefined> {
   switch (targetBlock.blockType) {
     case 'dashboard':
       return {
         [KnownBlockDocumentTools.embedded_dashboard_agent]:
-          tools[KnownBlockDocumentTools.embedded_dashboard_agent],
+          bindTargetToolInputField({
+            targetTool: tools[KnownBlockDocumentTools.embedded_dashboard_agent],
+            fieldName: 'dashboardId',
+            fieldValue: targetBlock.blockInstanceId ?? '',
+          }),
       };
     case 'html-app':
       return {
         [KnownBlockDocumentTools.embedded_html_app_agent]:
-          tools[KnownBlockDocumentTools.embedded_html_app_agent],
+          bindTargetToolInputField({
+            targetTool: tools[KnownBlockDocumentTools.embedded_html_app_agent],
+            fieldName: 'appId',
+            fieldValue: targetBlock.blockInstanceId ?? '',
+          }),
       };
     case 'map':
       return {
         [KnownBlockDocumentTools.create_block_document_map_block]:
-          tools[KnownBlockDocumentTools.create_block_document_map_block],
+          bindTargetToolInputField({
+            targetTool:
+              tools[KnownBlockDocumentTools.create_block_document_map_block],
+            fieldName: 'mapId',
+            fieldValue: targetBlock.blockInstanceId ?? '',
+          }),
       };
     case 'chart':
       return Object.fromEntries(
@@ -536,7 +579,11 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         return {
           success: true,
-          finalOutput: result.finalOutput || 'Worksheet created successfully.',
+          finalOutput:
+            result.finalOutput ||
+            (targetBlock
+              ? 'Worksheet block updated successfully.'
+              : 'Worksheet created successfully.'),
           blockDocumentId,
           metadata,
         };
@@ -545,11 +592,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           error instanceof Error ? error.message : String(error);
 
         const friendlyMessage =
-          error instanceof AiAgentError
-            ? errorMessage
-            : error instanceof Error
-              ? errorMessage
-              : 'Worksheet update failed.';
+          error instanceof Error ? errorMessage : 'Worksheet update failed.';
 
         return {
           success: false,

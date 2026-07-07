@@ -4,6 +4,7 @@ import {
   useMemo,
   type FC,
   type PropsWithChildren,
+  type ReactNode,
 } from 'react';
 import type {BlockSettingsComponent} from './block-settings/types';
 import type {BlockDocumentBlockHeaderActionsRenderer} from './BlockDocumentBlockHeaderActions';
@@ -17,6 +18,8 @@ export type BlockDocumentStatefulBlockRendererProps = {
   title?: string;
   caption?: string;
   height?: number;
+  /** Actions rendered by the block document host in the block's header. */
+  headerActions?: ReactNode;
   selected?: boolean;
   readOnly?: boolean;
   onTitleChange?: (title: string | undefined) => void;
@@ -46,6 +49,7 @@ export type BlockDocumentStatefulBlockType = {
   requireScrollModifier?: boolean;
   scrollHintLabel?: string;
   settings?: BlockSettingsComponent;
+  /** True when the renderer places host header actions in its own header. */
   hasOwnHeaderActions?: boolean;
   createNode?: (
     blockId: string,
@@ -56,6 +60,7 @@ export type BlockDocumentStatefulBlockType = {
 type BlockDocumentStatefulBlockRendererContextValue = {
   renderers: BlockDocumentStatefulBlockRenderers;
   blockTypes: BlockDocumentStatefulBlockType[];
+  /** Host renderer for per-block header actions, such as Ask AI. */
   renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
 };
 
@@ -69,6 +74,7 @@ export type BlockDocumentStatefulBlockRendererProviderProps =
   PropsWithChildren<{
     renderers?: BlockDocumentStatefulBlockRenderers;
     blockTypes?: BlockDocumentStatefulBlockType[];
+    /** Provides host-rendered header actions to stateful block renderers. */
     renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
   }>;
 

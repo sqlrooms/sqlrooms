@@ -276,8 +276,8 @@ export function DeckMapBlockRenderer({
           />
         </div>
         <div className="flex items-center gap-0.5">
-          {headerActions ??
-            (HeaderActions ? <HeaderActions {...rendererProps} /> : null)}
+          {headerActions}
+          {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
           <Button
             type="button"
             variant={isSettingsShown ? 'secondary' : 'ghost'}

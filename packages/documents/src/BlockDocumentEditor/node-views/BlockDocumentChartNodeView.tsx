@@ -5,6 +5,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   type FC,
 } from 'react';
@@ -54,15 +55,18 @@ export const BlockDocumentChartNodeView: FC<
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
   const config = attrs.config ?? EMPTY_CHART_CONFIG;
-  const blockHeaderActions =
-    !readOnly && renderBlockHeaderActions
-      ? renderBlockHeaderActions({
-          blockDocumentId: documentId,
-          blockId,
-          blockType: 'chart',
-          title: caption,
-        })
-      : null;
+  const blockHeaderActions = useMemo(
+    () =>
+      !readOnly && renderBlockHeaderActions
+        ? renderBlockHeaderActions({
+            blockDocumentId: documentId,
+            blockId,
+            blockType: 'chart',
+            title: caption,
+          })
+        : null,
+    [blockId, caption, documentId, readOnly, renderBlockHeaderActions],
+  );
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
