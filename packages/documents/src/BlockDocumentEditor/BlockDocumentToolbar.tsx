@@ -1,5 +1,10 @@
 import {Button, cn} from '@sqlrooms/ui';
-import {BarChart3Icon, ImageIcon, PilcrowIcon} from 'lucide-react';
+import {
+  BarChart3Icon,
+  ImageIcon,
+  LayoutDashboardIcon,
+  PilcrowIcon,
+} from 'lucide-react';
 import type {FC} from 'react';
 import {RichToolbar} from '../MarkdownDocumentEditor/RichToolbar';
 import {useBlockDocumentEditorContext} from './BlockDocumentEditorContext';
@@ -85,6 +90,27 @@ export const BlockDocumentToolbar: FC<BlockDocumentToolbarProps> = ({
         }
       >
         <BarChart3Icon className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        className="h-8 w-8"
+        disabled={!editor || readOnly}
+        title="Insert dashboard block"
+        aria-label="Insert dashboard block"
+        onClick={() =>
+          insertAtomBlock('blockDocumentStatefulBlock', {
+            blockType: 'dashboard',
+            blockInstanceId: generateBlockId(),
+            ownership: 'owned',
+            title: 'Embedded Dashboard',
+            caption: '',
+            height: 560,
+          })
+        }
+      >
+        <LayoutDashboardIcon className="h-4 w-4" />
       </Button>
     </div>
   );
