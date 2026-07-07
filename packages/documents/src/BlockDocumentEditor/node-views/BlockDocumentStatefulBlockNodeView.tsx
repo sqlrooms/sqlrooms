@@ -15,6 +15,7 @@ import {
 import {
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockTypes,
 } from '../../BlockDocumentStatefulBlockRendererContext';
@@ -145,6 +146,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const caption = optionalString(attrs.caption);
   const height = optionalNumber(attrs.height);
   const Renderer = useBlockDocumentStatefulBlockRenderer(blockType);
+  const renderBlockHeaderActions = useBlockDocumentRenderBlockHeaderActions();
   const blockTypes = useBlockDocumentStatefulBlockTypes();
   const blockTypeConfig = blockTypes.find(
     (candidate) => candidate.blockType === blockType,
@@ -163,6 +165,18 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const [resizingHeight, setResizingHeight] = useState<number | null>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
   const resolvedHeight = resizingHeight ?? persistedHeight;
+  const blockHeaderActions =
+    !readOnly &&
+    renderBlockHeaderActions &&
+    !blockTypeConfig?.hasOwnHeaderActions
+      ? renderBlockHeaderActions({
+          blockDocumentId: documentId,
+          blockId,
+          blockType,
+          blockInstanceId,
+          title,
+        })
+      : null;
 
   const wrapperStyle = useMemo(
     () => (resolvedHeight ? {height: resolvedHeight} : undefined),
@@ -397,6 +411,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             </div>
           </div>
         )}
+        {blockHeaderActions ? (
+          <div
+            className="absolute top-2 right-2 z-20 flex items-center gap-1"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {blockHeaderActions}
+          </div>
+        ) : null}
         {resizableHeight && !readOnly ? (
           <div
             className="absolute right-0 -bottom-4 left-0 z-10 flex h-3 cursor-row-resize items-start justify-center opacity-0 transition-opacity group-hover/stateful-block:opacity-100"

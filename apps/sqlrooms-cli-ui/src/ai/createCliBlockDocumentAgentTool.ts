@@ -295,6 +295,16 @@ const BlockDocumentAgentInputSchema = z.object({
   blockDocumentId: z
     .string()
     .describe('Target block document artifact ID where blocks will be added.'),
+  targetBlock: z
+    .object({
+      blockId: z.string(),
+      blockType: z.string(),
+      blockInstanceId: z.string().optional(),
+    })
+    .optional()
+    .describe(
+      'Optional exact worksheet block to update. When provided, operate only on this block.',
+    ),
   maxSteps: z
     .number()
     .optional()
@@ -305,6 +315,68 @@ const BlockDocumentAgentInputSchema = z.object({
 type BlockDocumentAgentInputSchema = z.infer<
   typeof BlockDocumentAgentInputSchema
 >;
+
+function getTargetBlockInstructions(
+  targetBlock: BlockDocumentAgentInputSchema['targetBlock'],
+): string | undefined {
+  if (!targetBlock) return undefined;
+
+  return `A targetBlock was provided. Operate ONLY on this worksheet block:
+- blockId: ${targetBlock.blockId}
+- blockType: ${targetBlock.blockType}
+- blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
+
+Do not list blocks, discover alternate blocks, create replacement blocks, or modify another worksheet block. Route directly by blockType:
+- dashboard: call ${KnownBlockDocumentTools.embedded_dashboard_agent} with dashboardId equal to blockInstanceId.
+- html-app: call ${KnownBlockDocumentTools.embedded_html_app_agent} with appId equal to blockInstanceId.
+- map: call ${KnownBlockDocumentTools.create_block_document_map_block} with mapId equal to blockInstanceId.
+- chart: call the worksheet chart tool that satisfies the request; it is configured to update blockId ${targetBlock.blockId} in place.`;
+}
+
+function selectTargetBlockTools(
+  tools: Record<string, Tool>,
+  targetBlock: NonNullable<BlockDocumentAgentInputSchema['targetBlock']>,
+): Record<string, Tool> {
+  switch (targetBlock.blockType) {
+    case 'dashboard':
+      return {
+        [KnownBlockDocumentTools.embedded_dashboard_agent]:
+          tools[KnownBlockDocumentTools.embedded_dashboard_agent],
+      };
+    case 'html-app':
+      return {
+        [KnownBlockDocumentTools.embedded_html_app_agent]:
+          tools[KnownBlockDocumentTools.embedded_html_app_agent],
+      };
+    case 'map':
+      return {
+        [KnownBlockDocumentTools.create_block_document_map_block]:
+          tools[KnownBlockDocumentTools.create_block_document_map_block],
+      };
+    case 'chart':
+      return Object.fromEntries(
+        Object.entries(tools).filter(([toolName]) =>
+          toolName.startsWith(BLOCK_DOCUMENT_CHART_TOOL_PREFIX),
+        ),
+      );
+    default:
+      return {};
+  }
+}
+
+function targetBlockPrompt(
+  intent: string,
+  targetBlock: BlockDocumentAgentInputSchema['targetBlock'],
+): string {
+  if (!targetBlock) return intent;
+
+  return `Target worksheet block:
+- blockId: ${targetBlock.blockId}
+- blockType: ${targetBlock.blockType}
+- blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
+
+User request: ${intent}`;
+}
 
 /**
  * Creates the CLI block-document artifact agent tool.
@@ -375,38 +447,71 @@ ${htmlAppBlocksEnabled ? '- App requests in worksheets: "create an app", "make a
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: BlockDocumentAgentInputSchema,
     execute: async (params, toolOptions): Promise<BlockDocumentAgentResult> => {
-      const {blockDocumentId, maxSteps} = params;
+      const {blockDocumentId, maxSteps, targetBlock} = params;
       const {intent} = params;
 
       try {
+        if (
+          targetBlock &&
+          ['dashboard', 'html-app', 'map'].includes(targetBlock.blockType) &&
+          !targetBlock.blockInstanceId
+        ) {
+          throw new Error(
+            `${targetBlock.blockType} block ${targetBlock.blockId} is missing blockInstanceId.`,
+          );
+        }
+
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         blockDocumentAdapter.setCurrentBlockDocument(blockDocumentId);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
+        const blockDocumentTools = createCliBlockDocumentAiTools({
+          databaseAdapter,
+          blockDocumentAdapter,
+          blockDocumentId,
+          targetBlockId:
+            targetBlock?.blockType === 'chart' ? targetBlock.blockId : undefined,
+          chartToolsOptions,
+          dashboardAgentTool,
+          extraTools,
+          htmlAppBlocksEnabled,
+          createDashboardBlock,
+          createDataTableExplorerBlock,
+          createHtmlAppBlock,
+          addDashboardBlock,
+          addDataTableExplorerBlock,
+          addHtmlAppBlock,
+        });
+        const targetTools = targetBlock
+          ? selectTargetBlockTools(blockDocumentTools, targetBlock)
+          : undefined;
+        const availableTargetTools = targetTools
+          ? Object.fromEntries(
+              Object.entries(targetTools).filter(([, targetTool]) =>
+                Boolean(targetTool),
+              ),
+            )
+          : undefined;
+
+        if (targetBlock && Object.keys(availableTargetTools ?? {}).length === 0) {
+          return {
+            success: false,
+            finalOutput: `Worksheet ${targetBlock.blockType} block edits are not supported by the available tools.`,
+            blockDocumentId,
+            error: `No target-block tool available for ${targetBlock.blockType}.`,
+          };
+        }
 
         const agent = new ToolLoopAgent({
           model: options.getModel({state: store.getState()}),
           tools: {
-            ...createCliBlockDocumentAiTools({
-              databaseAdapter,
-              blockDocumentAdapter,
-              blockDocumentId,
-              chartToolsOptions,
-              dashboardAgentTool,
-              extraTools,
-              htmlAppBlocksEnabled,
-              createDashboardBlock,
-              createDataTableExplorerBlock,
-              createHtmlAppBlock,
-              addDashboardBlock,
-              addDataTableExplorerBlock,
-              addHtmlAppBlock,
-            }),
+            ...(availableTargetTools ?? blockDocumentTools),
             ...dataTools,
           },
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getBlockDocumentAgentInstructions(options),
+            getTargetBlockInstructions(targetBlock),
             options.additionalInstructions,
           ]
             .filter(Boolean)
@@ -415,7 +520,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt: intent,
+          prompt: targetBlockPrompt(intent, targetBlock),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,

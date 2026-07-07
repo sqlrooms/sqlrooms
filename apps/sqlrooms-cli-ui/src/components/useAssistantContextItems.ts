@@ -10,10 +10,20 @@ import {
   type DataTable,
   type TableIdentity,
 } from '@sqlrooms/duckdb';
+import {
+  blockContextItemId,
+  blockDocumentNodeToBlock,
+  defaultBlockTitle,
+  parseBlockContextItemId,
+  type BlockAiTarget,
+} from '@sqlrooms/documents';
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
+import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../store';
 import {isContextArtifactType} from './assistantUtils';
+
+const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
 
 function hasTableIdentity(
   tableIds: ReadonlySet<TableIdentity>,
@@ -21,6 +31,42 @@ function hasTableIdentity(
 ): boolean {
   const tableIdentity = parseTableIdentity(id);
   return tableIdentity ? tableIds.has(tableIdentity) : false;
+}
+
+function getBlockTitle(target: BlockAiTarget): string {
+  return defaultBlockTitle(target.blockType, target.title);
+}
+
+function blockTargetFromNode(
+  blockDocumentId: string,
+  node: Parameters<typeof blockDocumentNodeToBlock>[0],
+): BlockAiTarget | undefined {
+  const block = blockDocumentNodeToBlock(node);
+  if (!block) return undefined;
+
+  if (block.type === 'chart') {
+    return {
+      blockDocumentId,
+      blockId: block.id,
+      blockType: 'chart',
+      title: block.caption,
+    };
+  }
+
+  if (
+    block.type === 'statefulBlock' &&
+    CLI_BLOCK_CONTEXT_TYPES.has(block.blockType)
+  ) {
+    return {
+      blockDocumentId,
+      blockId: block.id,
+      blockType: block.blockType,
+      blockInstanceId: block.blockInstanceId,
+      title: block.title ?? block.caption,
+    };
+  }
+
+  return undefined;
 }
 
 /**
@@ -56,6 +102,10 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
   const artifacts = useContextArtifacts();
   const tables = useContextTables();
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
+  const currentArtifactId = useRoomStore(
+    (s) => s.artifacts.config.currentArtifactId,
+  );
+  const blockDocuments = useRoomStore((s) => s.blockDocuments.config.artifacts);
   const runContext = useRoomStore((s) => s.ai.getCurrentSession()?.runContext);
   const currentSessionId = useRoomStore((s) => s.ai.getCurrentSession()?.id);
   const owningArtifactId = useRoomStore((s) =>
@@ -91,6 +141,37 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
     });
 
     const tableIdSet = new Set(tableItems.map((t) => t.id));
+    const worksheetArtifactId =
+      owningArtifactId &&
+      artifactsById[owningArtifactId]?.type === 'worksheet'
+        ? owningArtifactId
+        : currentArtifactId &&
+            artifactsById[currentArtifactId]?.type === 'worksheet'
+          ? currentArtifactId
+          : undefined;
+    const worksheet = worksheetArtifactId
+      ? artifactsById[worksheetArtifactId]
+      : undefined;
+    const blockItems =
+      worksheetArtifactId && worksheet
+        ? (blockDocuments[worksheetArtifactId]?.content.content ?? [])
+            .map((node) => blockTargetFromNode(worksheetArtifactId, node))
+            .filter((target): target is BlockAiTarget => Boolean(target))
+            .map((target) => ({
+              id: blockContextItemId(target),
+              kind: 'block',
+              title: getBlockTitle(target),
+              type: target.blockType,
+              subtitle: `${defaultBlockTitle(target.blockType)} in ${worksheet.title}`,
+              keywords: [
+                getBlockTitle(target),
+                target.blockType,
+                worksheet.title,
+                target.blockInstanceId ?? '',
+              ],
+            }))
+        : [];
+    const blockItemIdSet = new Set(blockItems.map((item) => item.id));
 
     const missingRunningItems = getAiRunContextItems(runContext)
       .filter((item) => {
@@ -105,6 +186,9 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
         if (item.kind === 'table') {
           return !hasTableIdentity(tableIdSet, item.id);
         }
+        if (item.kind === 'block') {
+          return !blockItemIdSet.has(item.id);
+        }
         return false;
       })
       .map((item) => ({
@@ -118,8 +202,16 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
         keywords: [item.title, item.type ?? ''],
       }));
 
-    return [...artifactItems, ...tableItems, ...missingRunningItems];
-  }, [artifacts, tables, artifactsById, owningArtifactId, runContext]);
+    return [...artifactItems, ...tableItems, ...blockItems, ...missingRunningItems];
+  }, [
+    artifacts,
+    tables,
+    artifactsById,
+    owningArtifactId,
+    currentArtifactId,
+    blockDocuments,
+    runContext,
+  ]);
 }
 
 /**
@@ -128,6 +220,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
 export function useValidatedSelectedIds(): string[] {
   const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
+  const blockDocuments = useRoomStore((s) => s.blockDocuments.config.artifacts);
   const owningArtifactId = useRoomStore((s) =>
     currentSession
       ? s.artifactAi.config.aiSessionArtifacts[currentSession.id]
@@ -149,10 +242,19 @@ export function useValidatedSelectedIds(): string[] {
       if (artifact && isContextArtifactType(artifact.type)) {
         return true;
       }
+      const blockContext = parseBlockContextItemId(id);
+      if (blockContext) {
+        const blockDocument = blockDocuments[blockContext.blockDocumentId];
+        if (!blockDocument) return false;
+        return blockDocument.content.content.some((node) => {
+          const block = blockDocumentNodeToBlock(node);
+          return block?.id === blockContext.blockId;
+        });
+      }
       // Check if it's a valid table ID
       return hasTableIdentity(tableIdSet, id);
     });
-  }, [currentSession, artifactsById, owningArtifactId, tables]);
+  }, [currentSession, artifactsById, owningArtifactId, tables, blockDocuments]);
 }
 
 /**

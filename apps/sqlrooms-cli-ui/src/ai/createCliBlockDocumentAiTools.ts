@@ -38,6 +38,7 @@ export type CreateCliBlockDocumentAiToolsOptions = {
   dashboardAgentTool: Tool;
   chartToolsOptions?: ChartToolsOptions;
   blockDocumentId: string;
+  targetBlockId?: string;
   extraTools?: ExtraBlockDocumentAiToolsFactory;
   htmlAppBlocksEnabled?: boolean;
   createDashboardBlock: (params: {
@@ -105,6 +106,7 @@ export function createCliBlockDocumentAiTools({
   databaseAdapter,
   chartToolsOptions,
   blockDocumentId,
+  targetBlockId,
   dashboardAgentTool,
   extraTools,
   htmlAppBlocksEnabled = false,
@@ -120,6 +122,7 @@ export function createCliBlockDocumentAiTools({
     blockDocumentAdapter,
     chartToolsOptions,
     blockDocumentId,
+    targetBlockId,
   });
 
   const addTextBlockTool = createAddBlockDocumentTextBlockTool({

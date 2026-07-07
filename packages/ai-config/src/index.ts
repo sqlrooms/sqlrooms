@@ -4,6 +4,7 @@ export {
   createDefaultAiConfig,
 } from './AiSliceConfig';
 export {AiSettingsSliceConfig} from './AiSettingsSliceConfig';
+export {createBlockContextItem} from './createBlockContextItem';
 export {
   AiRunContextItemSchema,
   AiRunContextSchema,

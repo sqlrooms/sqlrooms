@@ -4,17 +4,24 @@ import {
   type DataTable,
 } from '@sqlrooms/duckdb';
 import {
+  createBlockContextItem,
   getRunContextItemIds,
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai';
 import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
 import {getOwningArtifactRunContextItems} from '@sqlrooms/artifacts/ai';
+import {
+  blockDocumentNodeToBlock,
+  defaultBlockTitle,
+  parseBlockContextItemId,
+} from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
-import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {CLI_AI_BLOCK_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
+const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
 
 type TableInfo = {
   database?: string;
@@ -64,11 +71,72 @@ function createTableContextItem(
   };
 }
 
+function getBlockContextTitle(block: ReturnType<typeof blockDocumentNodeToBlock>) {
+  if (!block) return undefined;
+  if (block.type === 'chart') return block.caption;
+  if (block.type === 'statefulBlock') return block.title ?? block.caption;
+  return undefined;
+}
+
+function resolveBlockContextItem(
+  itemId: string,
+  state: RoomState,
+): AiRunContextItem | undefined {
+  const parsedId = parseBlockContextItemId(itemId);
+  if (!parsedId) return undefined;
+
+  const artifact = state.artifacts.config.artifactsById[parsedId.blockDocumentId];
+  const blockDocument =
+    state.blockDocuments.config.artifacts[parsedId.blockDocumentId];
+  const node = blockDocument?.content.content.find((candidate) => {
+    const block = blockDocumentNodeToBlock(candidate);
+    return block?.id === parsedId.blockId;
+  });
+  const block = node ? blockDocumentNodeToBlock(node) : undefined;
+  if (!block) return undefined;
+
+  const target =
+    block.type === 'chart'
+      ? {
+          blockType: 'chart',
+          blockInstanceId: undefined,
+          title: getBlockContextTitle(block),
+        }
+      : block.type === 'statefulBlock'
+        ? {
+            blockType: block.blockType,
+            blockInstanceId: block.blockInstanceId,
+            title: getBlockContextTitle(block),
+          }
+        : undefined;
+
+  if (!target || !CLI_BLOCK_CONTEXT_TYPES.has(target.blockType)) {
+    return undefined;
+  }
+
+  return createBlockContextItem({
+    id: itemId,
+    blockDocumentId: parsedId.blockDocumentId,
+    blockId: parsedId.blockId,
+    blockType: target.blockType,
+    blockInstanceId: target.blockInstanceId,
+    panelId: parsedId.panelId,
+    title: defaultBlockTitle(target.blockType, target.title),
+    subtitle: artifact?.title,
+  });
+}
+
 function resolveContextItem(
   itemId: string,
+  state: RoomState,
   artifactsById: Record<string, ArtifactMetadataType>,
   tablesByQualifiedName: Map<string, TableInfo>,
 ): AiRunContextItem | undefined {
+  const blockItem = resolveBlockContextItem(itemId, state);
+  if (blockItem) {
+    return blockItem;
+  }
+
   // Check if it's an artifact
   const artifact = artifactsById[itemId];
   if (artifact) {
@@ -107,7 +175,7 @@ export function getRunContext(
   const explicitContextItemIds = session?.draftContextItemIds ?? [];
   const extraItems = Array.from(new Set(explicitContextItemIds))
     .map((itemId) =>
-      resolveContextItem(itemId, artifactsById, tablesByQualifiedName),
+      resolveContextItem(itemId, state, artifactsById, tablesByQualifiedName),
     )
     .filter(Boolean) as AiRunContextItem[];
   const items = getOwningArtifactRunContextItems({

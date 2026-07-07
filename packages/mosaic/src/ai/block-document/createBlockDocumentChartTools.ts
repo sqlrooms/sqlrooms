@@ -21,6 +21,7 @@ export type CreateBlockDocumentChartToolsParams = {
   databaseAdapter: DatabaseAiAdapter;
   blockDocumentAdapter: BlockDocumentAiAdapter;
   blockDocumentId: string;
+  targetBlockId?: string;
   chartToolsOptions?: ChartToolsOptions;
 };
 
@@ -31,6 +32,7 @@ export function createBlockDocumentChartTools({
   databaseAdapter,
   blockDocumentAdapter,
   blockDocumentId,
+  targetBlockId,
   chartToolsOptions,
 }: CreateBlockDocumentChartToolsParams): Record<string, Tool> {
   const resolvedChartTypes = resolveChartTypes(chartToolsOptions?.chartTypes);
@@ -48,6 +50,31 @@ export function createBlockDocumentChartTools({
 
       const resolvedTable = ensureTable(databaseAdapter, tableName);
       const tableIdentity = getTableIdentity(resolvedTable.table);
+
+      if (targetBlockId) {
+        if (!blockDocumentAdapter.updateBlock) {
+          throw new Error(
+            'Block document chart block editing requires the host to provide updateBlock on the block document adapter.',
+          );
+        }
+
+        const updateResult = blockDocumentAdapter.updateBlock(
+          blockDocumentId,
+          targetBlockId,
+          {
+            type: 'chart',
+            id: targetBlockId,
+            config,
+            tableName: tableIdentity,
+            caption: title ?? 'Chart',
+          },
+        );
+
+        return updateResult &&
+          typeof (updateResult as Promise<void>).then === 'function'
+          ? (updateResult as Promise<void>).then(() => targetBlockId)
+          : targetBlockId;
+      }
 
       return blockDocumentAdapter.addBlock(blockDocumentId, {
         type: 'chart',

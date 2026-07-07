@@ -13,6 +13,7 @@ import {
 import {
   cleanupAiSessionArtifacts,
   createArtifactAiSlice,
+  findAiSessionForArtifactWithContextItem,
   getAiSessionGroupsByArtifact,
   getAiSessionIdsForArtifact,
   getEmptyAiSessionIdForArtifact,
@@ -192,6 +193,101 @@ describe('artifact AI session helpers', () => {
         artifactId: 'artifact-a',
       }),
     ).toBe('empty-newer');
+  });
+
+  it('finds the latest owned session with a matching draft context item', () => {
+    expect(
+      findAiSessionForArtifactWithContextItem({
+        sessions: [
+          {
+            ...createSession('older-draft-match', 1),
+            draftContextItemIds: ['block:worksheet:block-a'],
+          },
+          {
+            ...createSession('newer-draft-match', 2),
+            draftContextItemIds: ['block:worksheet:block-a'],
+          },
+          {
+            ...createSession('other-artifact-match', 3),
+            draftContextItemIds: ['block:worksheet:block-a'],
+          },
+        ],
+        aiSessionArtifacts: {
+          'older-draft-match': 'artifact-a',
+          'newer-draft-match': 'artifact-a',
+          'other-artifact-match': 'artifact-b',
+        },
+        artifactId: 'artifact-a',
+        contextItemId: 'block:worksheet:block-a',
+      }),
+    ).toBe('newer-draft-match');
+  });
+
+  it('finds an owned session with a matching run context item', () => {
+    expect(
+      findAiSessionForArtifactWithContextItem({
+        sessions: [
+          {
+            ...createSession('run-match', 1),
+            runContext: {
+              items: [
+                {
+                  kind: 'block',
+                  id: 'block:worksheet:block-a',
+                  title: 'Chart',
+                },
+              ],
+              capturedAt: 1,
+            },
+          },
+        ],
+        aiSessionArtifacts: {'run-match': 'artifact-a'},
+        artifactId: 'artifact-a',
+        contextItemId: 'block:worksheet:block-a',
+      }),
+    ).toBe('run-match');
+  });
+
+  it('skips running context matches unless requested', () => {
+    const matchingRunningSession = {
+      ...createSession('running-match', 3, true),
+      draftContextItemIds: ['block:worksheet:block-a'],
+    };
+
+    expect(
+      findAiSessionForArtifactWithContextItem({
+        sessions: [matchingRunningSession],
+        aiSessionArtifacts: {'running-match': 'artifact-a'},
+        artifactId: 'artifact-a',
+        contextItemId: 'block:worksheet:block-a',
+      }),
+    ).toBeUndefined();
+
+    expect(
+      findAiSessionForArtifactWithContextItem({
+        sessions: [matchingRunningSession],
+        aiSessionArtifacts: {'running-match': 'artifact-a'},
+        artifactId: 'artifact-a',
+        contextItemId: 'block:worksheet:block-a',
+        includeRunning: true,
+      }),
+    ).toBe('running-match');
+  });
+
+  it('returns undefined when no owned session has the context item', () => {
+    expect(
+      findAiSessionForArtifactWithContextItem({
+        sessions: [
+          {
+            ...createSession('no-match', 1),
+            draftContextItemIds: ['block:worksheet:block-b'],
+          },
+        ],
+        aiSessionArtifacts: {'no-match': 'artifact-a'},
+        artifactId: 'artifact-a',
+        contextItemId: 'block:worksheet:block-a',
+      }),
+    ).toBeUndefined();
   });
 
   it('can exclude empty owned sessions when selecting an artifact draft', () => {

@@ -3,6 +3,7 @@ import {
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai';
+import {blockDocumentNodeToBlock} from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
 
@@ -73,6 +74,50 @@ function formatTableContextInstructions(
   ];
 }
 
+function stringField(item: AiRunContextItem, field: string): string | undefined {
+  const value = (item as Record<string, unknown>)[field];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function formatBlockContextInstructions(
+  blockItems: AiRunContextItem[],
+  store: StoreApi<RoomState>,
+): string[] {
+  if (blockItems.length === 0) {
+    return [];
+  }
+
+  const state = store.getState();
+  const details = blockItems.map((item) => {
+    const blockDocumentId = stringField(item, 'blockDocumentId');
+    const blockId = stringField(item, 'blockId');
+    const blockType = stringField(item, 'blockType') ?? item.type ?? 'block';
+    const blockInstanceId = stringField(item, 'blockInstanceId');
+    const artifactTitle = blockDocumentId
+      ? state.artifacts.config.artifactsById[blockDocumentId]?.title
+      : undefined;
+    const blockDocument = blockDocumentId
+      ? state.blockDocuments.config.artifacts[blockDocumentId]
+      : undefined;
+    const blockExists =
+      Boolean(blockId) &&
+      Boolean(
+        blockDocument?.content.content.some((node) => {
+          const block = blockDocumentNodeToBlock(node);
+          return block?.id === blockId;
+        }),
+      );
+
+    if (!blockDocument || !blockExists) {
+      return `Target block is unresolved or deleted: ${blockType} block "${item.title}" (blockId: ${blockId ?? item.id})${artifactTitle ? ` in "${artifactTitle}"` : ''}. Ask the user to choose an existing block before modifying it.`;
+    }
+
+    return `Target block: ${blockType} block "${item.title}" (blockId: ${blockId}, instanceId: ${blockInstanceId ?? 'none'}) in "${artifactTitle ?? blockDocumentId}". When the user asks to modify a block, operate on THIS block. For a dashboard block, delegate to the dashboard agent with dashboardId = the block instance id; for an HTML app block, delegate to the HTML app agent with appId = the block instance id; for a map block, use the map tool with mapId = the block instance id; for a chart block, update the chart in place.`;
+  });
+
+  return ['', 'Current block edit target:', ...details];
+}
+
 export function formatRunContextInstructions(
   runContext: AiRunContext | undefined,
   store: StoreApi<RoomState>,
@@ -85,10 +130,12 @@ export function formatRunContextInstructions(
 
   const artifactItems = items.filter((item) => item.kind === 'artifact');
   const tableItems = items.filter((item) => item.kind === 'table');
+  const blockItems = items.filter((item) => item.kind === 'block');
 
   const sections: string[] = [
     ...formatArtifactContextInstructions(artifactItems, runContext),
     ...formatTableContextInstructions(tableItems, store),
+    ...formatBlockContextInstructions(blockItems, store),
   ];
 
   return sections.join('\n');

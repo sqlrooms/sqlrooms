@@ -11,6 +11,7 @@ import {
 import {
   type BlockDocumentChartRenderer,
   type BlockDocumentChartRendererProps,
+  useBlockDocumentChartRenderBlockHeaderActions,
   useBlockDocumentChartRenderer,
 } from '../../BlockDocumentChartRendererContext';
 import {useBlockDocumentEditorContext} from '../BlockDocumentEditorContext';
@@ -43,6 +44,8 @@ export const BlockDocumentChartNodeView: FC<
 > = ({node, selected, updateAttributes, getPos, editor}) => {
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const Renderer = useBlockDocumentChartRenderer();
+  const renderBlockHeaderActions =
+    useBlockDocumentChartRenderBlockHeaderActions();
   const updateAttributesRef = useRef(updateAttributes);
   const readOnlyRef = useRef(readOnly);
   const attrs = unknownRecord(node.attrs);
@@ -51,6 +54,15 @@ export const BlockDocumentChartNodeView: FC<
   const selectionGroupId = optionalString(attrs.selectionGroupId);
   const caption = optionalString(attrs.caption);
   const config = attrs.config ?? EMPTY_CHART_CONFIG;
+  const blockHeaderActions =
+    !readOnly && renderBlockHeaderActions
+      ? renderBlockHeaderActions({
+          blockDocumentId: documentId,
+          blockId,
+          blockType: 'chart',
+          title: caption,
+        })
+      : null;
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
@@ -87,7 +99,7 @@ export const BlockDocumentChartNodeView: FC<
   return (
     <NodeViewWrapper
       className={cn(
-        'not-prose bg-background my-4 rounded-md border',
+        'not-prose bg-background relative my-4 rounded-md border',
         selected && 'outline-primary rounded-none outline outline-2',
       )}
       contentEditable={false}
@@ -123,6 +135,14 @@ export const BlockDocumentChartNodeView: FC<
           </div>
         </div>
       )}
+      {blockHeaderActions ? (
+        <div
+          className="absolute top-2 right-2 z-20 flex items-center gap-1"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {blockHeaderActions}
+        </div>
+      ) : null}
     </NodeViewWrapper>
   );
 };

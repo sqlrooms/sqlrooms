@@ -57,17 +57,23 @@ export {
 } from './BlockDocumentFeatureSlices';
 export {
   BlockDocumentChartRendererProvider,
+  useBlockDocumentChartRenderBlockHeaderActions,
   useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
+  type BlockDocumentBlockHeaderActionsRenderContext,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentChartHeaderActionsRenderer,
   type BlockDocumentChartRendererProps,
   type BlockDocumentChartRendererProviderProps,
 } from './BlockDocumentChartRendererContext';
 export {
   BlockDocumentStatefulBlockRendererProvider,
+  useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockSettings,
   useBlockDocumentStatefulBlockTypes,
+  type BlockDocumentBlockHeaderActionsRenderContext as BlockDocumentStatefulBlockHeaderActionsRenderContext,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentStatefulBlockHeaderActionsRenderer,
   type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
@@ -75,6 +81,12 @@ export {
   type BlockDocumentStatefulBlockRenderers,
   type BlockDocumentStatefulBlockType,
 } from './BlockDocumentStatefulBlockRendererContext';
+export {
+  blockContextItemId,
+  defaultBlockTitle,
+  parseBlockContextItemId,
+  type BlockAiTarget,
+} from './BlockAiTarget';
 export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,

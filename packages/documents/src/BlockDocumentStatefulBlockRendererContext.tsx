@@ -4,6 +4,7 @@ import {
   useMemo,
   type FC,
   type PropsWithChildren,
+  type ReactNode,
 } from 'react';
 import type {BlockSettingsComponent} from './block-settings/types';
 
@@ -25,6 +26,18 @@ export type BlockDocumentStatefulBlockRendererProps = {
 export type BlockDocumentStatefulBlockRenderer =
   FC<BlockDocumentStatefulBlockRendererProps>;
 
+export type BlockDocumentBlockHeaderActionsRenderContext = {
+  blockDocumentId: string;
+  blockId: string;
+  blockType: string;
+  blockInstanceId?: string;
+  title?: string;
+};
+
+export type BlockDocumentBlockHeaderActionsRenderer = (
+  ctx: BlockDocumentBlockHeaderActionsRenderContext,
+) => ReactNode;
+
 export type BlockDocumentStatefulBlockRenderers = Record<
   string,
   BlockDocumentStatefulBlockRenderer
@@ -45,6 +58,7 @@ export type BlockDocumentStatefulBlockType = {
   requireScrollModifier?: boolean;
   scrollHintLabel?: string;
   settings?: BlockSettingsComponent;
+  hasOwnHeaderActions?: boolean;
   createNode?: (
     blockId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
@@ -54,6 +68,7 @@ export type BlockDocumentStatefulBlockType = {
 type BlockDocumentStatefulBlockRendererContextValue = {
   renderers: BlockDocumentStatefulBlockRenderers;
   blockTypes: BlockDocumentStatefulBlockType[];
+  renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
 };
 
 const BlockDocumentStatefulBlockRendererContext =
@@ -66,11 +81,12 @@ export type BlockDocumentStatefulBlockRendererProviderProps =
   PropsWithChildren<{
     renderers?: BlockDocumentStatefulBlockRenderers;
     blockTypes?: BlockDocumentStatefulBlockType[];
+    renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
   }>;
 
 export const BlockDocumentStatefulBlockRendererProvider: FC<
   BlockDocumentStatefulBlockRendererProviderProps
-> = ({renderers = {}, blockTypes, children}) => {
+> = ({renderers = {}, blockTypes, renderBlockHeaderActions, children}) => {
   const supportedBlockTypes = useMemo(
     () =>
       blockTypes ??
@@ -83,8 +99,9 @@ export const BlockDocumentStatefulBlockRendererProvider: FC<
     () => ({
       renderers,
       blockTypes: supportedBlockTypes,
+      renderBlockHeaderActions,
     }),
-    [renderers, supportedBlockTypes],
+    [renderers, supportedBlockTypes, renderBlockHeaderActions],
   );
 
   return (
@@ -102,6 +119,11 @@ export function useBlockDocumentStatefulBlockRenderer(blockType: string) {
 
 export function useBlockDocumentStatefulBlockTypes() {
   return useContext(BlockDocumentStatefulBlockRendererContext).blockTypes;
+}
+
+export function useBlockDocumentRenderBlockHeaderActions() {
+  return useContext(BlockDocumentStatefulBlockRendererContext)
+    .renderBlockHeaderActions;
 }
 
 export function useBlockDocumentStatefulBlockSettings(blockType: string) {

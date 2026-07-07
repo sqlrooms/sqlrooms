@@ -38,6 +38,7 @@ export type {
 } from './artifactAiSlice';
 export {
   cleanupAiSessionArtifacts,
+  findAiSessionForArtifactWithContextItem,
   getAiSessionGroupsByArtifact,
   getAiSessionIdsForArtifact,
   getEmptyAiSessionIdForArtifact,
@@ -52,7 +53,9 @@ export type {
   ArtifactAiSessionGroupsOptions,
   ArtifactAiSessionOwnership,
   ArtifactAiSessionWithContent,
+  ArtifactAiSessionWithContext,
   ArtifactAiSessionsForArtifactOptions,
+  ArtifactAiSessionsWithContextForArtifactOptions,
   CleanupAiSessionArtifactsOptions,
   EmptyArtifactAiSessionsForArtifactOptions,
   GetOwningArtifactRunContextItemsOptions,

@@ -11,6 +11,7 @@ import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {MapIcon, SlidersVerticalIcon} from 'lucide-react';
 import {Button} from '@sqlrooms/ui';
 import {useCallback, useEffect, useMemo} from 'react';
+import type React from 'react';
 import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
@@ -97,6 +98,8 @@ export type DeckMapBlockRendererProps = {
   selected?: boolean;
   /** Whether the block is read-only. */
   readOnly?: boolean;
+  /** Optional actions rendered in the map header before the settings button. */
+  headerActions?: React.ReactNode;
 };
 
 /**
@@ -109,6 +112,7 @@ export function DeckMapBlockRenderer({
   onCaptionChange,
   selected,
   readOnly,
+  headerActions,
 }: DeckMapBlockRendererProps) {
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[mapId],
@@ -272,7 +276,8 @@ export function DeckMapBlockRenderer({
           />
         </div>
         <div className="flex items-center gap-0.5">
-          {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
+          {headerActions ??
+            (HeaderActions ? <HeaderActions {...rendererProps} /> : null)}
           <Button
             type="button"
             variant={isSettingsShown ? 'secondary' : 'ghost'}

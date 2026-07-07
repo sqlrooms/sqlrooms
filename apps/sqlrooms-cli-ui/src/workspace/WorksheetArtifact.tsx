@@ -1,3 +1,4 @@
+import {BlockAiPromptPopover} from '@sqlrooms/ai';
 import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
@@ -6,6 +7,7 @@ import {
   BlockDocumentStatefulBlockRendererProvider,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  type BlockDocumentBlockHeaderActionsRenderContext,
   type Editor,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
@@ -14,8 +16,12 @@ import {
   ChartBlockSettings,
   DataTableBlockRenderer,
 } from '@sqlrooms/mosaic';
+import {Button} from '@sqlrooms/ui';
+import {SparklesIcon} from 'lucide-react';
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
+import {startBlockScopedChat} from '../ai/startBlockScopedChat';
+import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
@@ -132,6 +138,8 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   BlockDocumentStatefulBlockRenderer
 >;
 
+const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
+
 function createWorksheetStatefulBlockRenderers(
   includeExperimental: boolean,
 ): Record<StatefulBlockArtifactType, BlockDocumentStatefulBlockRenderer> {
@@ -160,6 +168,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const renameArtifact = useRoomStore(
     (state) => state.artifacts.renameArtifact,
   );
+  const setLayoutCollapsed = useRoomStore((state) => state.layout.setCollapsed);
   const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
@@ -188,6 +197,57 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [artifactId, renameArtifact],
   );
 
+  const revealAssistant = useCallback(() => {
+    setLayoutCollapsed('assistant-sidebar', false);
+  }, [setLayoutCollapsed]);
+
+  const renderBlockHeaderActions = useCallback(
+    ({
+      blockDocumentId,
+      blockId,
+      blockType,
+      blockInstanceId,
+      title,
+    }: BlockDocumentBlockHeaderActionsRenderContext) => {
+      if (!WORKSHEET_AI_BLOCK_TYPES.has(blockType)) {
+        return null;
+      }
+
+      return (
+        <BlockAiPromptPopover
+          label="Ask AI"
+          placeholder="Ask AI to edit this block..."
+          trigger={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              aria-label="Ask AI"
+              title="Ask AI"
+            >
+              <SparklesIcon className="h-3.5 w-3.5" aria-hidden />
+            </Button>
+          }
+          onSubmit={(prompt) =>
+            void startBlockScopedChat({
+              target: {
+                blockDocumentId,
+                blockId,
+                blockType,
+                blockInstanceId,
+                title,
+              },
+              prompt,
+              revealAssistant,
+            })
+          }
+        />
+      );
+    },
+    [revealAssistant],
+  );
+
   if (!artifact || artifact.type !== 'worksheet') {
     return null;
   }
@@ -196,10 +256,12 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     <BlockDocumentChartRendererProvider
       renderer={ChartBlockRenderer}
       settings={ChartBlockSettings}
+      renderBlockHeaderActions={renderBlockHeaderActions}
     >
       <BlockDocumentStatefulBlockRendererProvider
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
+        renderBlockHeaderActions={renderBlockHeaderActions}
       >
         <BlockSettingsPanelLayout editor={editor} documentId={artifactId}>
           <BlockDocumentArtifact

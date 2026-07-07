@@ -71,6 +71,10 @@ export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
 export {QueryControls} from './components/QueryControls';
+export {
+  BlockAiPromptPopover,
+  type BlockAiPromptPopoverProps,
+} from './components/BlockAiPromptPopover';
 export {DeleteSessionDialog} from './components/session/DeleteSessionDialog';
 export {SessionActions} from './components/session/SessionActions';
 export {SessionDropdown} from './components/session/SessionDropdown';
@@ -87,6 +91,7 @@ export {
   AiSessionForkOrigin,
   AnalysisSessionSchema,
   ChatSessionSchema,
+  createBlockContextItem,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,
   getAiRunContextItems,
