@@ -1,6 +1,7 @@
 import {
   PropsWithChildren,
   ReactElement,
+  ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -28,11 +29,13 @@ import {ScrollArea} from '@sqlrooms/ui';
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
   readOnly?: boolean;
+  headerActions?: ReactNode;
 }>;
 
 export function MosaicDashboardRoot({
   children,
   dashboardId,
+  headerActions,
   readOnly,
 }: MosaicDashboardRootProps) {
   const ensureDashboard = useStoreWithMosaicDashboard(
@@ -91,6 +94,7 @@ export function MosaicDashboardRoot({
     () => ({
       dashboardId,
       readOnly,
+      headerActions,
       builderOpen,
       canCreateChart: Boolean(
         selectedTableInfo &&
@@ -105,6 +109,7 @@ export function MosaicDashboardRoot({
     [
       dashboardId,
       readOnly,
+      headerActions,
       builderOpen,
       selectedTableInfo,
       panelRenderers,
@@ -134,6 +139,8 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
+  /** Actions rendered at the end of the dashboard toolbar. */
+  headerActions?: ReactNode;
   /** Whether to enable selection of the entire dashboard */
   selectable?: boolean;
   /** Whether settings for this dashboard should avoid mutating state. */
@@ -142,6 +149,7 @@ export type MosaicDashboardProps = {
 
 function MosaicDashboardComponent({
   dashboardId,
+  headerActions,
   selectable = false,
   readOnly,
 }: MosaicDashboardProps): ReactElement {
@@ -166,7 +174,11 @@ function MosaicDashboardComponent({
   );
 
   return (
-    <MosaicDashboardRoot dashboardId={dashboardId} readOnly={readOnly}>
+    <MosaicDashboardRoot
+      dashboardId={dashboardId}
+      headerActions={headerActions}
+      readOnly={readOnly}
+    >
       {selectable ? (
         <SelectablePanelWrapper
           dashboardId={dashboardId}

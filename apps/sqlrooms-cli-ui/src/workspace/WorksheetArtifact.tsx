@@ -89,6 +89,7 @@ const WorksheetHtmlAppBlockRenderer: FC<
     blockId={props.blockInstanceId}
     title={props.title}
     className="bg-background h-full min-h-80"
+    headerActions={props.headerActions}
   />
 );
 

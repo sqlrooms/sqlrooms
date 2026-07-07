@@ -9,7 +9,7 @@ import {useTablesWithColumns} from '../../hooks/useTablesWithColumns';
 import {resolveMosaicTableReference} from '../../mosaicTableReference';
 
 export const MosaicDashboardToolbar: FC = () => {
-  const {dashboardId, readOnly} = useMosaicDashboardContext();
+  const {dashboardId, headerActions, readOnly} = useMosaicDashboardContext();
 
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
@@ -37,7 +37,7 @@ export const MosaicDashboardToolbar: FC = () => {
     [dashboardId, readOnly, setDashboardTitle],
   );
 
-  if (!selectedTableName) {
+  if (!selectedTableName && !headerActions) {
     return null;
   }
 
@@ -54,11 +54,16 @@ export const MosaicDashboardToolbar: FC = () => {
       />
 
       <div className="flex items-center gap-2">
-        <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
-        {!readOnly ? (
-          <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
+        {selectedTableName ? (
+          <>
+            <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
+            {!readOnly ? (
+              <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />
+            ) : null}
+            <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
+          </>
         ) : null}
-        <MosaicDashboardResetFiltersButton dashboardId={dashboardId} />
+        {headerActions}
       </div>
     </div>
   );
