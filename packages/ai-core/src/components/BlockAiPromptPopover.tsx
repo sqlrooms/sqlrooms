@@ -47,9 +47,6 @@ export function BlockAiPromptPopover({
   const setOpen = useCallback(
     (nextOpen: boolean) => {
       if (disabled && nextOpen) return;
-      if (!nextOpen) {
-        setPrompt('');
-      }
       setInternalOpen(nextOpen);
       onOpenChange?.(nextOpen);
     },
