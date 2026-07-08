@@ -21,14 +21,21 @@ import {
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
-import {useRoomStore} from '../store';
+import {experimentalEnabled, useRoomStore} from '../store';
 import {isContextArtifactType} from './assistantUtils';
 import {
+  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
+const ENABLED_CLI_BLOCK_CONTEXT_TYPES = new Set<string>([
+  'chart',
+  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
+    CLI_BLOCK_CONTEXT_TYPES.has(type),
+  ),
+]);
 
 function hasTableIdentity(
   tableIds: ReadonlySet<TableIdentity>,
@@ -70,7 +77,7 @@ function blockTargetFromNode(
 
   if (
     block.type === 'statefulBlock' &&
-    CLI_BLOCK_CONTEXT_TYPES.has(block.blockType)
+    ENABLED_CLI_BLOCK_CONTEXT_TYPES.has(block.blockType)
   ) {
     return {
       blockDocumentId,
@@ -265,9 +272,17 @@ export function useValidatedSelectedIds(): string[] {
       if (blockContext) {
         const blockDocument = blockDocuments[blockContext.blockDocumentId];
         if (!blockDocument) return false;
-        return blockDocument.content.content.some(
-          (node) => blockDocumentNodeId(node) === blockContext.blockId,
-        );
+        return blockDocument.content.content.some((node) => {
+          if (blockDocumentNodeId(node) !== blockContext.blockId) {
+            return false;
+          }
+          const block = blockDocumentNodeToBlock(node);
+          return (
+            block?.type === 'chart' ||
+            (block?.type === 'statefulBlock' &&
+              ENABLED_CLI_BLOCK_CONTEXT_TYPES.has(block.blockType))
+          );
+        });
       }
       // Check if it's a valid table ID
       return hasTableIdentity(tableIdSet, id);
