@@ -70,6 +70,7 @@ const BlockDocumentUpdateBlockMetadataInput = BlockDocumentIdInput.extend({
 
 export const BlockDocumentMapBlockToolParameters =
   DeckMapDashboardToolParameters.extend({
+    title: z.string().optional().describe('Map title.'),
     blockDocumentId: z.string().describe('Target block document artifact ID.'),
     mapId: z
       .string()
@@ -339,15 +340,15 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
     {
       id: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
       name: 'Update block document block metadata',
-      description:
-        'Update caption or height for a block document block.',
+      description: 'Update caption or height for a block document block.',
       group: 'Worksheet',
       keywords: ['block document', 'block', 'metadata', 'update'],
       inputSchema: BlockDocumentUpdateBlockMetadataInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
-        const {blockDocumentId, blockId, caption, height} =
-          input as z.infer<typeof BlockDocumentUpdateBlockMetadataInput>;
+        const {blockDocumentId, blockId, caption, height} = input as z.infer<
+          typeof BlockDocumentUpdateBlockMetadataInput
+        >;
         const state = getState();
         resolveBlockDocumentArtifact(state, blockDocumentId);
         const existing = state.blockDocuments
@@ -416,7 +417,6 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         const tableIdentity = table ? getTableIdentity(table.table) : undefined;
 
         const mapId = params.mapId ?? createDefaultBlockDocumentBlockId();
-        const title = params.title || 'Map';
         const existingMapBlock = params.mapId
           ? findStatefulBlock(
               state,
@@ -435,6 +435,11 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         if (params.panelId && !existingPanel) {
           throw new Error(`Map panel ${params.panelId} was not found`);
         }
+        const title =
+          params.title ||
+          existingMapBlock?.caption ||
+          existingPanel?.title ||
+          'Map';
 
         let blockId: string;
         if (existingMapBlock) {
@@ -457,7 +462,11 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
           existingPanel = findMapPanel(state, mapId, params.panelId);
         }
 
-        state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
+        state.mosaicDashboard.ensureDashboard(
+          mapId,
+          params.title || !existingMapBlock ? title : undefined,
+          'grid',
+        );
         if (tableName) {
           await invokeRequiredCommand(
             state,
