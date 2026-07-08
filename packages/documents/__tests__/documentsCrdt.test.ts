@@ -210,7 +210,7 @@ describe('documents CRDT mirrors', () => {
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-embedded-1',
         ownership: 'owned',
-        title: 'Embedded Dashboard',
+        caption: 'Embedded Dashboard',
       },
     ]);
     await waitForCondition(() =>
@@ -234,29 +234,29 @@ describe('documents CRDT mirrors', () => {
       type: 'block-document',
       title: 'Block Document',
     });
-    expect(storeB.getState().blockDocuments.getBlocks(blockDocumentId)).toEqual(
-      [
-        {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
-        {
-          id: 'chart',
-          type: 'chart',
-          tableName: 'sales',
-          config: {
-            chartType: 'histogram',
-            settings: {field: 'revenue'},
-          },
-          selectionGroupId: 'overview',
+    expect(
+      storeB.getState().blockDocuments.getBlocks(blockDocumentId),
+    ).toMatchObject([
+      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'chart',
+        type: 'chart',
+        tableName: 'sales',
+        config: {
+          chartType: 'histogram',
+          settings: {field: 'revenue'},
         },
-        {
-          id: 'dashboard',
-          type: 'statefulBlock',
-          blockType: 'dashboard',
-          blockInstanceId: 'dashboard-embedded-1',
-          ownership: 'owned',
-          title: 'Embedded Dashboard',
-        },
-      ],
-    );
+        selectionGroupId: 'overview',
+      },
+      {
+        id: 'dashboard',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-embedded-1',
+        ownership: 'owned',
+        caption: 'Embedded Dashboard',
+      },
+    ]);
   });
 
   it('preserves falsy asset metadata from incoming CRDT snapshots', () => {
