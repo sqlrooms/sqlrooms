@@ -84,7 +84,7 @@ class DeckMapBlockErrorBoundary extends Component<
 export function ensureDeckMapBlockState(
   state: MosaicDashboardStoreState,
   mapId: string,
-  title: string,
+  title?: string,
 ) {
   state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
 
