@@ -53,7 +53,7 @@ export const MosaicDashboardToolbar: FC = () => {
         onChange={handleTitleChange}
       />
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 overflow-hidden">
         <MosaicDashboardDataTableSelector dashboardId={dashboardId} />
         {!readOnly ? (
           <MosaicDashboardAddPanelDropdown dashboardId={dashboardId} />

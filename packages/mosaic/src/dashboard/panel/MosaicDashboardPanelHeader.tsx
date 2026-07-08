@@ -196,12 +196,14 @@ export const MosaicDashboardPanelHeader: FC<
   return (
     <LeafLayout.Header>
       <div
-        className="flex items-center justify-between border-b px-2 py-1"
+        className="flex items-center justify-between gap-1 overflow-hidden border-b px-1 py-1"
         onClick={handleHeaderClick}
       >
-        <LeafLayout.DragHandle className="flex min-w-0 flex-1 items-center gap-1">
-          <GripVerticalIcon className="mx-1 h-4 w-4 shrink-0" />
-          {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
+        <LeafLayout.DragHandle className="flex min-w-[1.5rem] flex-1 items-center gap-1 overflow-hidden">
+          <GripVerticalIcon className="mr-1 ml-0.5 h-4 w-4 min-w-[1rem] shrink-0" />
+          {Icon ? (
+            <Icon className="h-3.5 w-3.5 min-w-[0.875rem] shrink-0" />
+          ) : null}
           {isEditingTitle ? (
             <input
               ref={titleInputRef}
@@ -217,7 +219,7 @@ export const MosaicDashboardPanelHeader: FC<
             />
           ) : (
             <span
-              className="min-w-0 truncate text-xs font-medium"
+              className="min-w-0 flex-1 truncate text-xs font-medium"
               onDoubleClick={handleTitleDoubleClick}
             >
               {title}
@@ -227,7 +229,7 @@ export const MosaicDashboardPanelHeader: FC<
 
         {panel && rendererProps ? (
           <TooltipProvider delayDuration={300}>
-            <div className="flex items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5">
               {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
               {renderer?.settings ? (
                 <Tooltip>
@@ -235,7 +237,7 @@ export const MosaicDashboardPanelHeader: FC<
                     <Button
                       variant={isSettingsShown ? 'secondary' : 'ghost'}
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-6 w-6 min-w-[1.5rem]"
                       aria-label={
                         isSettingsShown
                           ? 'Close panel settings'
@@ -260,7 +262,7 @@ export const MosaicDashboardPanelHeader: FC<
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-6 w-6 min-w-[1.5rem]"
                       aria-label={expandLabel}
                       onClick={expandGridPanel}
                     >
@@ -276,7 +278,7 @@ export const MosaicDashboardPanelHeader: FC<
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="h-6 w-6 min-w-[1.5rem]"
                       aria-label="Remove dashboard panel"
                       onClick={handleRemove}
                     >
