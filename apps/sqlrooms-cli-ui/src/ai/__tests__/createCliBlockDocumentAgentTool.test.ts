@@ -148,6 +148,7 @@ describe('createCliBlockDocumentAgentTool', () => {
                         },
                       ],
                     }),
+                    getPanelIssue: () => undefined,
                   },
                 }) as unknown as RoomState,
             }

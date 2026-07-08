@@ -414,7 +414,7 @@ function selectTargetBlockTools(
 }
 
 function targetBlockPrompt(
-  store: StoreApi<RoomState>,
+  store: CreateCliBlockDocumentAgentToolOptions['store'],
   intent: string,
   targetBlock: BlockDocumentAgentInput['targetBlock'],
   targetContext?: string,
