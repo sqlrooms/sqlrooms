@@ -144,6 +144,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const ownership = optionalString(attrs.ownership);
   const title = optionalString(attrs.title);
   const caption = optionalString(attrs.caption);
+  const tableName = optionalString(attrs.tableName);
   const height = optionalNumber(attrs.height);
   const Renderer = useBlockDocumentStatefulBlockRenderer(blockType);
   const renderBlockHeaderActions = useBlockDocumentRenderBlockHeaderActions();
@@ -364,6 +365,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     updateAttributesRef.current({caption: nextCaption});
   }, []);
 
+  const handleTableNameChange = useCallback(
+    (nextTableName: string | undefined) => {
+      if (readOnlyRef.current) return;
+      updateAttributesRef.current({tableName: nextTableName || undefined});
+    },
+    [],
+  );
+
   const handleClick = useCallback(() => {
     // Select this node when clicked
     // Panel selection will be cleared automatically by useSelectedBlockOrPanel hook
@@ -401,12 +410,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             ownership={ownership}
             title={title}
             caption={caption}
+            tableName={tableName}
             height={resolvedHeight}
             headerActions={blockHeaderActions}
             selected={selected}
             readOnly={readOnly}
             onTitleChange={handleTitleChange}
             onCaptionChange={handleCaptionChange}
+            onTableNameChange={handleTableNameChange}
           />
         ) : (
           <div className="p-4">

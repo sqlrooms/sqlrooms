@@ -46,10 +46,10 @@ const WorksheetDataTableBlockRenderer: FC<
 > = (props) => {
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
 
-  const handleTitleChange = useCallback(
-    (title: string | undefined) => {
-      if (props.onTitleChange) {
-        props.onTitleChange(title);
+  const handleTableNameChange = useCallback(
+    (tableName: string | undefined) => {
+      if (props.onTableNameChange) {
+        props.onTableNameChange(tableName);
         return;
       }
 
@@ -59,8 +59,9 @@ const WorksheetDataTableBlockRenderer: FC<
         blockType: props.blockType,
         blockInstanceId: props.blockInstanceId,
         ownership: normalizeStatefulBlockOwnership(props.ownership),
-        title: title || undefined,
+        title: props.title,
         caption: props.caption,
+        tableName: tableName || undefined,
         height: props.height,
       });
     },
@@ -71,14 +72,18 @@ const WorksheetDataTableBlockRenderer: FC<
       props.caption,
       props.documentId,
       props.height,
-      props.onTitleChange,
+      props.onTableNameChange,
       props.ownership,
+      props.title,
       updateBlock,
     ],
   );
 
   return (
-    <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />
+    <DataTableBlockRenderer
+      {...props}
+      onTableNameChange={handleTableNameChange}
+    />
   );
 };
 

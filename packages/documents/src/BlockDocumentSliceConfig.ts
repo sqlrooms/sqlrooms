@@ -172,8 +172,21 @@ export const BlockDocumentStatefulBlockBlock = z.object({
   blockType: z.string(),
   blockInstanceId: z.string(),
   ownership: z.enum(['owned', 'shared', 'external']).optional(),
+  /**
+   * Display name of the embedded artifact/instance (e.g. the dashboard, SQL
+   * query, Python block, or HTML app name). Used to seed and rename the backing
+   * state. This is NOT the block's in-document label — see {@link caption}.
+   */
   title: z.string().optional(),
+  /** User-facing label shown for the block in the document flow. */
   caption: z.string().optional(),
+  /**
+   * Table identity this block reads from, for block types that bind to a single
+   * table (currently `data-table`). Resolved via `db.findTable`, same as the
+   * `chart` block's `tableName`. Other block types leave this unset and keep
+   * their data binding inside their own backing state.
+   */
+  tableName: z.string().optional(),
   height: z.number().optional(),
 });
 
@@ -324,6 +337,9 @@ export function blockDocumentBlockToNode(
             : {}),
           ...(block.title !== undefined ? {title: block.title} : {}),
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
+          ...(block.tableName !== undefined
+            ? {tableName: block.tableName}
+            : {}),
           ...(block.height !== undefined ? {height: block.height} : {}),
         },
       };
@@ -412,6 +428,7 @@ export function blockDocumentNodeToBlock(
         ownership: node.attrs?.ownership,
         title: optionalString(node.attrs?.title),
         caption: optionalString(node.attrs?.caption),
+        tableName: optionalString(node.attrs?.tableName),
         height: optionalNumber(node.attrs?.height),
       });
       return result.success ? result.data : undefined;

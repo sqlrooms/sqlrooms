@@ -239,6 +239,18 @@ does not import Mosaic, pivot, or other feature packages:
 </BlockDocumentChartRendererProvider>
 ```
 
+Stateful blocks carry three distinct label/binding attributes, surfaced to
+renderers via `BlockDocumentStatefulBlockRendererProps`:
+
+- `title` — display name of the embedded artifact/instance (e.g. the dashboard,
+  SQL query, or Python block name); used to seed and rename the backing state.
+- `caption` — the block's user-facing label in the document flow
+  (`onCaptionChange`).
+- `tableName` — the table a table-bound block reads from (e.g. `data-table`),
+  resolved via `db.findTable` like the `chart` block's `tableName`
+  (`onTableNameChange`). Block types that keep their data binding inside their
+  own backing state leave this unset.
+
 If no renderer is registered, chart and stateful blocks render a clear
 unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
 controls the host-specific entries shown in the plus menu. Chart renderers also

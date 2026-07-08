@@ -188,8 +188,19 @@ const BlockDocumentCreateStatefulBlockInput = z.object({
     .enum(['owned', 'shared', 'external'])
     .optional()
     .describe('State ownership mode. Defaults to owned.'),
-  title: z.string().optional().describe('Optional stateful block title.'),
+  title: z
+    .string()
+    .optional()
+    .describe(
+      'Optional display name of the embedded artifact (e.g. dashboard/query name).',
+    ),
   caption: z.string().optional().describe('Optional document-local caption.'),
+  tableName: z
+    .string()
+    .optional()
+    .describe(
+      'Optional table this block reads from, for table-bound types like data-table.',
+    ),
   height: z
     .number()
     .positive()
@@ -616,6 +627,7 @@ export function createBlockDocumentCommands<
           ownership = 'owned',
           title,
           caption,
+          tableName,
           height,
           index,
         } = input as z.infer<typeof BlockDocumentCreateStatefulBlockInput>;
@@ -669,6 +681,7 @@ export function createBlockDocumentCommands<
           ownership,
           title: blockTitle,
           caption,
+          tableName,
           height: height ?? blockConfig?.defaultHeight,
         });
         insertOrAppendBlocks(state, artifactId, [block], index);
