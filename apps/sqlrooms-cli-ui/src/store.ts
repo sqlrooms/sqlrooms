@@ -1065,11 +1065,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               return;
             }
             const config = getStatefulBlockArtifactConfig(blockType);
-            config.ensureState(
-              getState(),
-              blockInstanceId,
-              config.embeddedTitle,
-            );
+            config.ensureState(getState(), blockInstanceId);
           },
           onDeleteOwnedStatefulBlock: ({
             blockInstanceId,
