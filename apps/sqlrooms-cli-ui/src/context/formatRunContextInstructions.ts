@@ -6,6 +6,10 @@ import {
 import {blockDocumentNodeToBlock} from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
+import {
+  formatMapBlockRuntimeIssues,
+  getMapBlockRuntimeIssues,
+} from '../ai/getMapBlockRuntimeIssues';
 
 function formatArtifactContextInstructions(
   artifactItems: AiRunContextItem[],
@@ -74,7 +78,10 @@ function formatTableContextInstructions(
   ];
 }
 
-function stringField(item: AiRunContextItem, field: string): string | undefined {
+function stringField(
+  item: AiRunContextItem,
+  field: string,
+): string | undefined {
   const value = (item as Record<string, unknown>)[field];
   return typeof value === 'string' ? value : undefined;
 }
@@ -112,7 +119,16 @@ function formatBlockContextInstructions(
       return `Target block is unresolved or deleted: ${blockType} block "${item.title}" (blockId: ${blockId ?? item.id})${artifactTitle ? ` in "${artifactTitle}"` : ''}. Ask the user to choose an existing block before modifying it.`;
     }
 
-    return `Target block: ${blockType} block "${item.title}" (blockId: ${blockId}, instanceId: ${blockInstanceId ?? 'none'}) in "${artifactTitle ?? blockDocumentId}". When the user asks to modify a block, operate on THIS block. For a dashboard block, delegate to the dashboard agent with dashboardId = the block instance id; for an HTML app block, delegate to the HTML app agent with appId = the block instance id; for a map block, use the map tool with mapId = the block instance id; for a chart block, update the chart in place.`;
+    const runtimeIssues =
+      blockType === 'map' && blockInstanceId
+        ? getMapBlockRuntimeIssues(state, blockInstanceId)
+        : [];
+    const runtimeIssueText =
+      runtimeIssues.length > 0
+        ? ` Current map runtime issues:\n${formatMapBlockRuntimeIssues(runtimeIssues)}`
+        : '';
+
+    return `Target block: ${blockType} block "${item.title}" (blockId: ${blockId}, instanceId: ${blockInstanceId ?? 'none'}) in "${artifactTitle ?? blockDocumentId}". When the user asks to modify a block, operate on THIS block. For a dashboard block, delegate to the dashboard agent with dashboardId = the block instance id; for an HTML app block, delegate to the HTML app agent with appId = the block instance id; for a map block, use the map tool with mapId = the block instance id; for a chart block, update the chart in place.${runtimeIssueText}`;
   });
 
   return ['', 'Current block edit target:', ...details];

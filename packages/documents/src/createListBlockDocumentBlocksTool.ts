@@ -4,7 +4,10 @@ import {
   type BlockDocumentAiAdapter,
   type BlockDocumentBlockSummary,
 } from './BlockDocumentAi';
-import {blockDocumentNodeToBlock} from './BlockDocumentSliceConfig';
+import {
+  blockDocumentNodeToBlock,
+  type BlockDocumentBlock,
+} from './BlockDocumentSliceConfig';
 
 const ListBlockDocumentBlocksToolInput = z.object({
   reasoning: z
@@ -25,6 +28,12 @@ type ListBlockDocumentBlocksToolOutput = BlockDocumentToolOutput<{
   blocks?: BlockDocumentBlockSummary[];
 }>;
 
+export type BlockDocumentBlockSummaryAugmenter = (params: {
+  block: BlockDocumentBlock;
+  summary: BlockDocumentBlockSummary;
+  index: number;
+}) => Record<string, unknown> | undefined;
+
 /**
  * Options for creating a generic block-document listing tool.
  */
@@ -35,6 +44,8 @@ export type CreateListBlockDocumentBlocksToolOptions = {
   blockDocumentId: string;
   /** Optional host-specific guidance appended to the tool description. */
   usageHint?: string;
+  /** Optional host-specific summary metadata, such as runtime issues. */
+  augmentBlockSummary?: BlockDocumentBlockSummaryAugmenter;
 };
 
 function summarizeBlock(
@@ -89,6 +100,7 @@ export function createListBlockDocumentBlocksTool({
   blockDocumentAdapter,
   blockDocumentId,
   usageHint,
+  augmentBlockSummary,
 }: CreateListBlockDocumentBlocksToolOptions) {
   return tool<
     ListBlockDocumentBlocksToolInput,
@@ -109,7 +121,16 @@ export function createListBlockDocumentBlocksTool({
           success: true,
           blocks: blocks
             .map((node, index) =>
-              summarizeBlock(blockDocumentNodeToBlock(node), index),
+              (() => {
+                const block = blockDocumentNodeToBlock(node);
+                const summary = summarizeBlock(block, index);
+                if (!block || !summary) return undefined;
+
+                return {
+                  ...summary,
+                  ...(augmentBlockSummary?.({block, summary, index}) ?? {}),
+                };
+              })(),
             )
             .filter(
               (block): block is BlockDocumentBlockSummary =>

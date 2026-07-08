@@ -4,6 +4,7 @@ import {
   createListBlockDocumentBlocksTool,
   createMoveBlockDocumentBlockTool,
   type BlockDocumentAiAdapter,
+  type BlockDocumentBlock,
   type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
@@ -16,6 +17,8 @@ import {
 } from '@sqlrooms/mosaic/ai';
 import {createAddHtmlAppBlockDocumentBlockTool} from './createAddHtmlAppBlockDocumentBlockTool';
 import {KnownBlockDocumentTools} from './constants';
+import {getMapBlockRuntimeIssues} from './getMapBlockRuntimeIssues';
+import type {RoomState} from '../store-types';
 
 export type ExtraBlockDocumentAiToolsParams = {
   /** ID of the block document artifact being edited. */
@@ -35,6 +38,7 @@ export type CreateCliBlockDocumentAiToolsOptions = {
   databaseAdapter: DatabaseAiAdapter;
   blockDocumentAdapter: BlockDocumentAiAdapter &
     BlockDocumentMoveBlockAiAdapter;
+  getState?: () => RoomState;
   dashboardAgentTool: Tool;
   chartToolsOptions?: ChartToolsOptions;
   blockDocumentId: string;
@@ -107,6 +111,7 @@ export function createCliBlockDocumentAiTools({
   chartToolsOptions,
   blockDocumentId,
   targetBlockId,
+  getState,
   dashboardAgentTool,
   extraTools,
   htmlAppBlocksEnabled = false,
@@ -156,7 +161,27 @@ export function createCliBlockDocumentAiTools({
       htmlAppBlocksEnabled
         ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
         : ''
-    }`,
+    } If a map block has runtimeIssues, repair the map config in place instead of creating a replacement block.`,
+    augmentBlockSummary: ({block}) => {
+      if (
+        !getState ||
+        block.type !== 'statefulBlock' ||
+        block.blockType !== 'map' ||
+        !block.blockInstanceId
+      ) {
+        return undefined;
+      }
+
+      const runtimeIssues = getMapBlockRuntimeIssues(
+        getState(),
+        block.blockInstanceId,
+      );
+      return runtimeIssues.length > 0 ? {runtimeIssues} : undefined;
+    },
+  } as Parameters<typeof createListBlockDocumentBlocksTool>[0] & {
+    augmentBlockSummary: (params: {
+      block: BlockDocumentBlock;
+    }) => Record<string, unknown> | undefined;
   });
 
   const moveBlockTool = createMoveBlockDocumentBlockTool({

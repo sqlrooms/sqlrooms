@@ -132,6 +132,7 @@ export {
 } from './createAddBlockDocumentTextBlockTool';
 export {
   createListBlockDocumentBlocksTool,
+  type BlockDocumentBlockSummaryAugmenter,
   type CreateListBlockDocumentBlocksToolOptions,
 } from './createListBlockDocumentBlocksTool';
 export {

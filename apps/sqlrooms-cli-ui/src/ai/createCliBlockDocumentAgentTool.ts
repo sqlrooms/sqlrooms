@@ -24,6 +24,10 @@ import {
   KnownBlockDocumentTools,
   CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
 } from './constants';
+import {
+  formatMapBlockRuntimeIssues,
+  getMapBlockRuntimeIssues,
+} from './getMapBlockRuntimeIssues';
 
 const AgentIntentSchemaFields = {
   intent: z
@@ -330,7 +334,7 @@ function getTargetBlockInstructions(
 Do not list blocks, discover alternate blocks, create replacement blocks, or modify another worksheet block. Route directly by blockType:
 - dashboard: call ${KnownBlockDocumentTools.embedded_dashboard_agent}; dashboardId is pre-bound to blockInstanceId.
 - html-app: call ${KnownBlockDocumentTools.embedded_html_app_agent}; appId is pre-bound to blockInstanceId.
-- map: call ${KnownBlockDocumentTools.create_block_document_map_block}; mapId is pre-bound to blockInstanceId.
+- map: call ${KnownBlockDocumentTools.create_block_document_map_block}; mapId is pre-bound to blockInstanceId. If current map runtime issues are provided, repair the existing map config in place.
 - chart: call the worksheet chart tool that satisfies the request; it is configured to update blockId ${targetBlock.blockId} in place.`;
 }
 
@@ -406,15 +410,22 @@ function selectTargetBlockTools(
 }
 
 function targetBlockPrompt(
+  store: StoreApi<RoomState>,
   intent: string,
   targetBlock: BlockDocumentAgentInput['targetBlock'],
 ): string {
   if (!targetBlock) return intent;
 
+  const runtimeIssues =
+    targetBlock.blockType === 'map' && targetBlock.blockInstanceId
+      ? getMapBlockRuntimeIssues(store.getState(), targetBlock.blockInstanceId)
+      : [];
+
   return `Target worksheet block:
 - blockId: ${targetBlock.blockId}
 - blockType: ${targetBlock.blockType}
 - blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
+${runtimeIssues.length > 0 ? `\nCurrent map runtime issues:\n${formatMapBlockRuntimeIssues(runtimeIssues)}` : ''}
 
 User request: ${intent}`;
 }
@@ -514,6 +525,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
             targetBlock?.blockType === 'chart'
               ? targetBlock.blockId
               : undefined,
+          getState: () => store.getState(),
           chartToolsOptions,
           dashboardAgentTool,
           extraTools,
@@ -566,7 +578,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt: targetBlockPrompt(intent, targetBlock),
+          prompt: targetBlockPrompt(store, intent, targetBlock),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
