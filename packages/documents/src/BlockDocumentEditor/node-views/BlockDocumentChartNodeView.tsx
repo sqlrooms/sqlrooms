@@ -62,10 +62,9 @@ export const BlockDocumentChartNodeView: FC<
             blockDocumentId: documentId,
             blockId,
             blockType: 'chart',
-            title: caption,
           })
         : null,
-    [blockId, caption, documentId, readOnly, renderBlockHeaderActions],
+    [blockId, documentId, readOnly, renderBlockHeaderActions],
   );
 
   useEffect(() => {

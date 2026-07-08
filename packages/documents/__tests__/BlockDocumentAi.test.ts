@@ -151,7 +151,7 @@ describe('block document AI helpers', () => {
           id: 'block-2',
           blockType: 'html-app',
           blockInstanceId: 'html-app-1',
-          title: 'Country Explorer',
+          caption: 'Country Explorer',
         }),
       ],
       addBlock: (_blockDocumentId, block) => block.id,
@@ -182,7 +182,7 @@ describe('block document AI helpers', () => {
           blockId: 'block-2',
           index: 1,
           type: 'statefulBlock',
-          title: 'Country Explorer',
+          caption: 'Country Explorer',
           statefulBlock: {
             blockType: 'html-app',
             blockInstanceId: 'html-app-1',

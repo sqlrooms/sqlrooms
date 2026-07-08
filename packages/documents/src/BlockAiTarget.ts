@@ -13,16 +13,11 @@ export type BlockAiTarget = {
   title?: string;
 };
 
-const KNOWN_BLOCK_TYPE_TITLES: Record<string, string> = {
-  chart: 'Chart',
-  dashboard: 'Dashboard',
-  'html-app': 'HTML app',
-  map: 'Map',
-  'data-table': 'Data table',
-  'sql-query': 'SQL query',
-  pivot: 'Pivot',
-  python: 'Python',
-  document: 'Document',
+export type DefaultBlockTitleOptions = {
+  /** Explicit display name, usually resolved from the backing instance. */
+  title?: string;
+  /** Host-provided block-type label resolver. */
+  resolveLabel?: (blockType: string) => string | undefined;
 };
 
 /**
@@ -77,17 +72,21 @@ export function parseBlockContextItemId(
 }
 
 /**
- * Returns a display title for a block type, preferring a non-empty explicit title.
+ * Returns a display title for a block type, preferring a non-empty explicit
+ * title and then a host-provided block-type label.
  *
- * Known block types use product-friendly labels, unknown types are title-cased,
- * and an empty block type falls back to "Block".
+ * Unknown types are title-cased, and an empty block type falls back to "Block".
  */
-export function defaultBlockTitle(blockType: string, title?: string): string {
+export function defaultBlockTitle(
+  blockType: string,
+  options: DefaultBlockTitleOptions = {},
+): string {
+  const {title, resolveLabel} = options;
   const trimmedTitle = title?.trim();
   if (trimmedTitle) return trimmedTitle;
 
-  const knownTitle = KNOWN_BLOCK_TYPE_TITLES[blockType];
-  if (knownTitle) return knownTitle;
+  const resolvedLabel = resolveLabel?.(blockType)?.trim();
+  if (resolvedLabel) return resolvedLabel;
 
   const words = blockType
     .split(/[-_\s]+/)

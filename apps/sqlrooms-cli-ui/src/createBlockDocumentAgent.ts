@@ -209,7 +209,7 @@ export function blockDocumentAgentTool(
       blockInstanceId: createDefaultBlockDocumentBlockId(),
       blockType: 'data-table',
       intent,
-      title: tableName,
+      tableName,
       caption: title,
     }),
     additionalInstructions: experimentalEnabled

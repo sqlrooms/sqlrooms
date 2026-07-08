@@ -15,8 +15,6 @@ export type BlockDocumentStatefulBlockRendererProps = {
   blockType: string;
   blockInstanceId: string;
   ownership?: string;
-  /** Display name of the embedded artifact/instance (not the in-document label). */
-  title?: string;
   /** User-facing label shown for the block in the document flow. */
   caption?: string;
   /** Table identity this block reads from (for table-bound types like `data-table`). */
@@ -26,7 +24,6 @@ export type BlockDocumentStatefulBlockRendererProps = {
   headerActions?: ReactNode;
   selected?: boolean;
   readOnly?: boolean;
-  onTitleChange?: (title: string | undefined) => void;
   onCaptionChange?: (caption: string | undefined) => void;
   onTableNameChange?: (tableName: string | undefined) => void;
 };

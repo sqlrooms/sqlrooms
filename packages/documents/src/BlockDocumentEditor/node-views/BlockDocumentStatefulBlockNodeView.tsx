@@ -142,7 +142,6 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const blockType = optionalString(attrs.blockType) ?? '';
   const blockInstanceId = optionalString(attrs.blockInstanceId) ?? blockId;
   const ownership = optionalString(attrs.ownership);
-  const title = optionalString(attrs.title);
   const caption = optionalString(attrs.caption);
   const tableName = optionalString(attrs.tableName);
   const height = optionalNumber(attrs.height);
@@ -174,7 +173,6 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             blockId,
             blockType,
             blockInstanceId,
-            title,
           })
         : null,
     [
@@ -184,7 +182,6 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       documentId,
       readOnly,
       renderBlockHeaderActions,
-      title,
     ],
   );
 
@@ -355,11 +352,6 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleTitleChange = useCallback((nextTitle: string | undefined) => {
-    if (readOnlyRef.current) return;
-    updateAttributesRef.current({title: nextTitle || undefined});
-  }, []);
-
   const handleCaptionChange = useCallback((nextCaption: string | undefined) => {
     if (readOnlyRef.current) return;
     updateAttributesRef.current({caption: nextCaption});
@@ -408,14 +400,12 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             blockType={blockType}
             blockInstanceId={blockInstanceId}
             ownership={ownership}
-            title={title}
             caption={caption}
             tableName={tableName}
             height={resolvedHeight}
             headerActions={blockHeaderActions}
             selected={selected}
             readOnly={readOnly}
-            onTitleChange={handleTitleChange}
             onCaptionChange={handleCaptionChange}
             onTableNameChange={handleTableNameChange}
           />

@@ -172,12 +172,6 @@ export const BlockDocumentStatefulBlockBlock = z.object({
   blockType: z.string(),
   blockInstanceId: z.string(),
   ownership: z.enum(['owned', 'shared', 'external']).optional(),
-  /**
-   * Display name of the embedded artifact/instance (e.g. the dashboard, SQL
-   * query, Python block, or HTML app name). Used to seed and rename the backing
-   * state. This is NOT the block's in-document label — see {@link caption}.
-   */
-  title: z.string().optional(),
   /** User-facing label shown for the block in the document flow. */
   caption: z.string().optional(),
   /**
@@ -335,7 +329,6 @@ export function blockDocumentBlockToNode(
           ...(block.ownership !== undefined
             ? {ownership: block.ownership}
             : {}),
-          ...(block.title !== undefined ? {title: block.title} : {}),
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
           ...(block.tableName !== undefined
             ? {tableName: block.tableName}
@@ -426,7 +419,6 @@ export function blockDocumentNodeToBlock(
         blockType: node.attrs?.blockType,
         blockInstanceId: node.attrs?.blockInstanceId,
         ownership: node.attrs?.ownership,
-        title: optionalString(node.attrs?.title),
         caption: optionalString(node.attrs?.caption),
         tableName: optionalString(node.attrs?.tableName),
         height: optionalNumber(node.attrs?.height),

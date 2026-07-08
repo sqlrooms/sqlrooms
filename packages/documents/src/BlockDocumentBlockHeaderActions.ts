@@ -10,8 +10,6 @@ export type BlockDocumentBlockHeaderActionsRenderContext = {
   blockType: string;
   /** Optional stateful resource id owned or referenced by the block. */
   blockInstanceId?: string;
-  /** Optional display title for the block action surface. */
-  title?: string;
 };
 
 /**

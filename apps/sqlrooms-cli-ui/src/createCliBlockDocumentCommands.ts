@@ -64,7 +64,6 @@ const BlockDocumentAddHtmlAppBlockInput = BlockDocumentIdInput.extend({
 
 const BlockDocumentUpdateBlockMetadataInput = BlockDocumentIdInput.extend({
   blockId: z.string().describe('Block document block ID to update.'),
-  title: z.string().optional().describe('Updated block title.'),
   caption: z.string().optional().describe('Updated block caption.'),
   height: z.number().positive().optional().describe('Updated block height.'),
 });
@@ -279,8 +278,8 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             artifactId: blockDocumentId,
             blockType: 'data-table',
             intent,
-            title: tableIdentity,
             caption: title,
+            tableName: tableIdentity,
             height: 640,
           },
         );
@@ -341,13 +340,13 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
       name: 'Update block document block metadata',
       description:
-        'Update title, caption, or height for a block document block.',
+        'Update caption or height for a block document block.',
       group: 'Worksheet',
       keywords: ['block document', 'block', 'metadata', 'update'],
       inputSchema: BlockDocumentUpdateBlockMetadataInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
-        const {blockDocumentId, blockId, title, caption, height} =
+        const {blockDocumentId, blockId, caption, height} =
           input as z.infer<typeof BlockDocumentUpdateBlockMetadataInput>;
         const state = getState();
         resolveBlockDocumentArtifact(state, blockDocumentId);
@@ -364,7 +363,6 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
           blockId,
           {
             ...existing,
-            ...(title !== undefined ? {title} : {}),
             ...(caption !== undefined ? {caption} : {}),
             ...(height !== undefined ? {height} : {}),
           },
@@ -379,7 +377,6 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
           data: {
             blockDocumentId,
             blockId,
-            title: title ?? ('title' in existing ? existing.title : undefined),
             caption:
               caption ?? ('caption' in existing ? existing.caption : undefined),
             height:
@@ -493,7 +490,6 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             {
               blockDocumentId: params.blockDocumentId,
               blockId: existingMapBlock.id,
-              title,
               caption: title,
             },
           );

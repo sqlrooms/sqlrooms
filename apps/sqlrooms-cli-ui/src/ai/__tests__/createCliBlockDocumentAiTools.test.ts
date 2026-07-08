@@ -68,7 +68,7 @@ describe('createCliBlockDocumentAiTools', () => {
           id: 'table-block-1',
           blockType: 'data-table',
           blockInstanceId: 'table-instance-1',
-          title: tableName,
+          tableName,
           caption: title,
         }) satisfies BlockDocumentStatefulBlockBlock,
       ...overrides,

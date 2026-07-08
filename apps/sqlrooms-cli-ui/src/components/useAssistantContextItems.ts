@@ -23,6 +23,10 @@ import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../store';
 import {isContextArtifactType} from './assistantUtils';
+import {
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
+} from '../statefulBlockArtifactConfigs';
 
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
 
@@ -35,7 +39,17 @@ function hasTableIdentity(
 }
 
 function getBlockTitle(target: BlockAiTarget): string {
-  return defaultBlockTitle(target.blockType, target.title);
+  return defaultBlockTitle(target.blockType, {
+    title: target.title,
+    resolveLabel: resolveCliBlockLabel,
+  });
+}
+
+function resolveCliBlockLabel(blockType: string): string | undefined {
+  if (blockType === 'chart') return 'Chart';
+  return isStatefulBlockArtifactType(blockType)
+    ? getStatefulBlockArtifactConfig(blockType).label
+    : undefined;
 }
 
 function blockTargetFromNode(
@@ -63,7 +77,7 @@ function blockTargetFromNode(
       blockId: block.id,
       blockType: block.blockType,
       blockInstanceId: block.blockInstanceId,
-      title: block.title ?? block.caption,
+      title: block.caption,
     };
   }
 
@@ -162,7 +176,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
               kind: 'block',
               title: getBlockTitle(target),
               type: target.blockType,
-              subtitle: `${defaultBlockTitle(target.blockType)} in ${worksheet.title}`,
+              subtitle: `${getBlockTitle({...target, title: undefined})} in ${worksheet.title}`,
               keywords: [
                 getBlockTitle(target),
                 target.blockType,

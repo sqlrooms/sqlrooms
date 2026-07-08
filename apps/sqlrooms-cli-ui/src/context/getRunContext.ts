@@ -19,6 +19,10 @@ import {
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
 import {CLI_AI_BLOCK_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
+} from '../statefulBlockArtifactConfigs';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
@@ -76,8 +80,15 @@ function getBlockContextTitle(
 ) {
   if (!block) return undefined;
   if (block.type === 'chart') return block.caption;
-  if (block.type === 'statefulBlock') return block.title ?? block.caption;
+  if (block.type === 'statefulBlock') return block.caption;
   return undefined;
+}
+
+function resolveCliBlockLabel(blockType: string): string | undefined {
+  if (blockType === 'chart') return 'Chart';
+  return isStatefulBlockArtifactType(blockType)
+    ? getStatefulBlockArtifactConfig(blockType).label
+    : undefined;
 }
 
 function resolveBlockContextItem(
@@ -126,7 +137,10 @@ function resolveBlockContextItem(
     blockType: target.blockType,
     blockInstanceId: target.blockInstanceId,
     panelId: parsedId.panelId,
-    title: defaultBlockTitle(target.blockType, target.title),
+    title: defaultBlockTitle(target.blockType, {
+      title: target.title,
+      resolveLabel: resolveCliBlockLabel,
+    }),
     subtitle: artifact?.title,
   });
 }

@@ -192,7 +192,7 @@ const BlockDocumentCreateStatefulBlockInput = z.object({
     .string()
     .optional()
     .describe(
-      'Optional display name of the embedded artifact (e.g. dashboard/query name).',
+      'Optional seed name for the backing state instance (e.g. dashboard/query name). Not stored on the document block.',
     ),
   caption: z.string().optional().describe('Optional document-local caption.'),
   tableName: z
@@ -615,7 +615,7 @@ export function createBlockDocumentCommands<
       group: commandGroup,
       keywords: [labelLower, 'stateful', 'block', 'dashboard', 'pivot'],
       inputSchema: BlockDocumentCreateStatefulBlockInput,
-      inputDescription: `${label} artifact ID, blockType, and optional title/caption/index.`,
+      inputDescription: `${label} artifact ID, blockType, and optional seed title/caption/index.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
         const state = getState();
@@ -679,7 +679,6 @@ export function createBlockDocumentCommands<
           blockType,
           blockInstanceId,
           ownership,
-          title: blockTitle,
           caption,
           tableName,
           height: height ?? blockConfig?.defaultHeight,
@@ -693,7 +692,7 @@ export function createBlockDocumentCommands<
           {
             blockInstanceId,
             ownership,
-            title: blockTitle,
+            instanceTitle: blockTitle,
             caption,
             height: height ?? blockConfig?.defaultHeight,
             ...blockResultData([block]),
@@ -817,7 +816,6 @@ function blockResultData(blocks: BlockDocumentBlockType[]) {
       data.statefulBlockType = block.blockType;
       data.blockInstanceId = block.blockInstanceId;
       data.ownership = block.ownership;
-      data.title = block.title;
       data.caption = block.caption;
       data.height = block.height;
     }

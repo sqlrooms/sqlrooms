@@ -43,7 +43,6 @@ export {
   createDefaultBlockDocumentsConfig,
   type BlockDocumentOwnedStatefulBlockCreateContext,
   type BlockDocumentOwnedStatefulBlockDeleteContext,
-  type BlockDocumentOwnedStatefulBlockRenameContext,
   type BlockDocumentOwnedStatefulBlockReference,
   type BlockDocumentMutationMetadata,
   type BlockDocumentMutationOrigin,

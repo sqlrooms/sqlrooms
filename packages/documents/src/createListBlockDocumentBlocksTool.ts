@@ -59,7 +59,6 @@ function summarizeBlock(
       blockId: block.id,
       index,
       type: block.type,
-      ...(block.title !== undefined ? {title: block.title} : {}),
       ...(block.caption !== undefined ? {caption: block.caption} : {}),
       ...(block.tableName !== undefined ? {tableName: block.tableName} : {}),
       statefulBlock: {

@@ -1,22 +1,11 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
-import {PivotView} from '@sqlrooms/pivot';
-import {useEffect} from 'react';
-import {useRoomStore} from '../store';
+import {PivotBlock} from '@sqlrooms/pivot';
 
 export const WorksheetPivotBlockRenderer = ({
   blockInstanceId,
   blockType,
-  title,
   caption,
 }: BlockDocumentStatefulBlockRendererProps) => {
-  const ensurePivot = useRoomStore((state) => state.pivot.ensurePivot);
-
-  useEffect(() => {
-    if (blockType === 'pivot' && blockInstanceId) {
-      ensurePivot(blockInstanceId, {title: title ?? 'Embedded Pivot Table'});
-    }
-  }, [blockInstanceId, blockType, ensurePivot, title]);
-
   if (!blockInstanceId || blockType !== 'pivot') {
     return (
       <div className="text-muted-foreground p-4 text-sm">
@@ -33,7 +22,12 @@ export const WorksheetPivotBlockRenderer = ({
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <PivotView pivotId={blockInstanceId} />
+        <PivotBlock
+          blockId={blockInstanceId}
+          blockType={blockType}
+          pivotId={blockInstanceId}
+          defaultTitle="Embedded Pivot Table"
+        />
       </div>
     </div>
   );

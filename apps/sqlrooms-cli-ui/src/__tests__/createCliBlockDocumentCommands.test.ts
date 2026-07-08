@@ -38,7 +38,7 @@ function createState() {
       type: 'statefulBlock',
       blockType: 'map',
       blockInstanceId: 'map-1',
-      title: 'Map',
+      caption: 'Map',
     },
   ];
   const invokeCommand = jest.fn(async (commandId: string, input: any) => {
@@ -173,7 +173,7 @@ describe('createCliBlockDocumentCommands', () => {
       expect.objectContaining({
         artifactId: 'worksheet-1',
         blockType: 'data-table',
-        title: earthquakesTableIdentity,
+        tableName: earthquakesTableIdentity,
       }),
       {surface: 'ai', actor: 'block-document-command'},
     );
@@ -235,7 +235,6 @@ describe('createCliBlockDocumentCommands', () => {
     ).execute(createCommandContext(state), {
       blockDocumentId: 'worksheet-1',
       blockId: 'block-1',
-      title: 'Updated Map',
       caption: 'Updated Map',
     });
 
@@ -244,7 +243,6 @@ describe('createCliBlockDocumentCommands', () => {
       data: {
         blockDocumentId: 'worksheet-1',
         blockId: 'block-1',
-        title: 'Updated Map',
         caption: 'Updated Map',
       },
     });
@@ -253,7 +251,6 @@ describe('createCliBlockDocumentCommands', () => {
       'block-1',
       expect.objectContaining({
         id: 'block-1',
-        title: 'Updated Map',
         caption: 'Updated Map',
       }),
     );

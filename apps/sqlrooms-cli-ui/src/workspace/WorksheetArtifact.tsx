@@ -25,6 +25,8 @@ import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
@@ -59,7 +61,6 @@ const WorksheetDataTableBlockRenderer: FC<
         blockType: props.blockType,
         blockInstanceId: props.blockInstanceId,
         ownership: normalizeStatefulBlockOwnership(props.ownership),
-        title: props.title,
         caption: props.caption,
         tableName: tableName || undefined,
         height: props.height,
@@ -74,7 +75,6 @@ const WorksheetDataTableBlockRenderer: FC<
       props.height,
       props.onTableNameChange,
       props.ownership,
-      props.title,
       updateBlock,
     ],
   );
@@ -89,46 +89,65 @@ const WorksheetDataTableBlockRenderer: FC<
 
 const WorksheetHtmlAppBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = (props) => (
-  <HtmlAppBlock
-    blockId={props.blockInstanceId}
-    title={props.title}
-    className="bg-background h-full min-h-80"
-    headerActions={props.headerActions}
-  />
-);
+> = (props) => {
+  const appTitle = useRoomStore((state) =>
+    props.blockInstanceId
+      ? state.htmlApps.config.appsById[props.blockInstanceId]?.title
+      : undefined,
+  );
+  return (
+    <HtmlAppBlock
+      blockId={props.blockInstanceId}
+      title={appTitle}
+      className="bg-background h-full min-h-80"
+      headerActions={props.headerActions}
+    />
+  );
+};
 
 const WorksheetPythonBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = (props) => (
-  <PythonBlock
-    artifactId={props.documentId}
-    blockId={props.blockInstanceId}
-    blockType={props.blockType}
-    title={props.title}
-    readOnly={props.readOnly}
-    compact
-  />
-);
+> = (props) => {
+  const pythonTitle = useRoomStore((state) =>
+    props.blockInstanceId
+      ? state.python.config.blocks[props.blockInstanceId]?.title
+      : undefined,
+  );
+  return (
+    <PythonBlock
+      artifactId={props.documentId}
+      blockId={props.blockInstanceId}
+      blockType={props.blockType}
+      title={pythonTitle}
+      readOnly={props.readOnly}
+      compact
+    />
+  );
+};
 
 const ExperimentalStatefulBlockPlaceholder: FC<
   BlockDocumentStatefulBlockRendererProps
-> = (props) => (
-  <div className="bg-muted/20 flex h-full min-h-40 items-center justify-center p-4 text-center">
-    <div className="bg-background max-w-md rounded-md border p-4">
-      <div className="text-sm font-medium">
-        {props.title || 'Experimental block'}
-      </div>
-      <p className="text-muted-foreground mt-2 text-sm">
-        This block uses an experimental SQLRooms surface. Reopen this project
-        with --experimental to view and edit it.
-      </p>
-      <div className="text-muted-foreground mt-3 text-xs">
-        Block type: {props.blockType}
+> = (props) => {
+  const label = isStatefulBlockArtifactType(props.blockType)
+    ? getStatefulBlockArtifactConfig(props.blockType).label
+    : undefined;
+  return (
+    <div className="bg-muted/20 flex h-full min-h-40 items-center justify-center p-4 text-center">
+      <div className="bg-background max-w-md rounded-md border p-4">
+        <div className="text-sm font-medium">
+          {props.caption || label || 'Experimental block'}
+        </div>
+        <p className="text-muted-foreground mt-2 text-sm">
+          This block uses an experimental SQLRooms surface. Reopen this project
+          with --experimental to view and edit it.
+        </p>
+        <div className="text-muted-foreground mt-3 text-xs">
+          Block type: {props.blockType}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
@@ -213,7 +232,6 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
       blockId,
       blockType,
       blockInstanceId,
-      title,
     }: BlockDocumentBlockHeaderActionsRenderContext) => {
       if (!WORKSHEET_AI_BLOCK_TYPES.has(blockType)) {
         return null;
@@ -242,7 +260,6 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
                 blockId,
                 blockType,
                 blockInstanceId,
-                title,
               },
               prompt,
               revealAssistant,

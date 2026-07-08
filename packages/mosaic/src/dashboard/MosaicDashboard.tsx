@@ -17,6 +17,7 @@ import {
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
+  type MosaicDashboardLayoutType,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
@@ -28,6 +29,10 @@ import {ScrollArea} from '@sqlrooms/ui';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
+  /** Title used when this dashboard needs to be created during render. */
+  defaultTitle?: string;
+  /** Layout used when this dashboard needs to be created during render. */
+  defaultLayoutType?: MosaicDashboardLayoutType;
   readOnly?: boolean;
   headerActions?: ReactNode;
 }>;
@@ -35,6 +40,8 @@ export type MosaicDashboardRootProps = PropsWithChildren<{
 export function MosaicDashboardRoot({
   children,
   dashboardId,
+  defaultTitle,
+  defaultLayoutType,
   headerActions,
   readOnly,
 }: MosaicDashboardRootProps) {
@@ -67,8 +74,8 @@ export function MosaicDashboardRoot({
   );
 
   useEffect(() => {
-    ensureDashboard(dashboardId);
-  }, [dashboardId, ensureDashboard]);
+    ensureDashboard(dashboardId, defaultTitle, defaultLayoutType);
+  }, [dashboardId, defaultLayoutType, defaultTitle, ensureDashboard]);
 
   const handleCreateChart = useCallback(
     (title: string, config: ChartConfig) => {
@@ -139,6 +146,10 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
+  /** Title used when this dashboard needs to be created during render. */
+  defaultTitle?: string;
+  /** Layout used when this dashboard needs to be created during render. */
+  defaultLayoutType?: MosaicDashboardLayoutType;
   /** Actions rendered at the end of the dashboard toolbar. */
   headerActions?: ReactNode;
   /** Whether to enable selection of the entire dashboard */
@@ -149,6 +160,8 @@ export type MosaicDashboardProps = {
 
 function MosaicDashboardComponent({
   dashboardId,
+  defaultTitle,
+  defaultLayoutType,
   headerActions,
   selectable = false,
   readOnly,
@@ -176,6 +189,8 @@ function MosaicDashboardComponent({
   return (
     <MosaicDashboardRoot
       dashboardId={dashboardId}
+      defaultTitle={defaultTitle}
+      defaultLayoutType={defaultLayoutType}
       headerActions={headerActions}
       readOnly={readOnly}
     >

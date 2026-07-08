@@ -5,6 +5,6 @@ import {FC} from 'react';
 
 export const DefaultMosaicDashboardBlock: FC<
   StatefulBlockRenderProps<MosaicDashboardSliceState>
-> = ({blockId}) => {
-  return <MosaicDashboard dashboardId={blockId} />;
+> = ({blockId, title}) => {
+  return <MosaicDashboard dashboardId={blockId} defaultTitle={title} />;
 };

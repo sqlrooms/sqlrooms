@@ -1,21 +1,10 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {MosaicDashboard} from '@sqlrooms/mosaic';
-import {FC, useEffect} from 'react';
-import {useRoomStore} from '../store';
+import {FC} from 'react';
 
 export const WorksheetDashboardBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = ({blockInstanceId, blockType, title, caption, readOnly, headerActions}) => {
-  const ensureDashboard = useRoomStore(
-    (state) => state.mosaicDashboard.ensureDashboard,
-  );
-
-  useEffect(() => {
-    if (blockType === 'dashboard' && blockInstanceId) {
-      ensureDashboard(blockInstanceId, title ?? 'Embedded Dashboard', 'grid');
-    }
-  }, [blockInstanceId, blockType, ensureDashboard, title]);
-
+> = ({blockInstanceId, blockType, caption, readOnly, headerActions}) => {
   if (!blockInstanceId || blockType !== 'dashboard') {
     return (
       <div className="text-muted-foreground p-4 text-sm">
@@ -34,6 +23,8 @@ export const WorksheetDashboardBlockRenderer: FC<
       <div className="min-h-0 flex-1">
         <MosaicDashboard
           dashboardId={blockInstanceId}
+          defaultTitle="Embedded Dashboard"
+          defaultLayoutType="grid"
           headerActions={headerActions}
           selectable
           readOnly={readOnly}

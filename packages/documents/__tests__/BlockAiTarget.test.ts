@@ -76,23 +76,33 @@ describe('BlockAiTarget helpers', () => {
     });
   });
 
-  it('returns known block titles and trims supplied titles', () => {
-    expect(defaultBlockTitle('chart')).toBe('Chart');
-    expect(defaultBlockTitle('dashboard')).toBe('Dashboard');
-    expect(defaultBlockTitle('html-app')).toBe('HTML app');
-    expect(defaultBlockTitle('map')).toBe('Map');
-    expect(defaultBlockTitle('data-table')).toBe('Data table');
-    expect(defaultBlockTitle('sql-query')).toBe('SQL query');
-    expect(defaultBlockTitle('pivot')).toBe('Pivot');
-    expect(defaultBlockTitle('python')).toBe('Python');
-    expect(defaultBlockTitle('document')).toBe('Document');
-    expect(defaultBlockTitle('chart', '  Revenue over time  ')).toBe(
-      'Revenue over time',
-    );
+  it('uses explicit titles and host-provided block labels', () => {
+    const resolveLabel = (blockType: string) =>
+      ({
+        chart: 'Chart',
+        dashboard: 'Dashboard',
+        'html-app': 'HTML app',
+      })[blockType];
+
+    expect(defaultBlockTitle('chart', {resolveLabel})).toBe('Chart');
+    expect(defaultBlockTitle('dashboard', {resolveLabel})).toBe('Dashboard');
+    expect(defaultBlockTitle('html-app', {resolveLabel})).toBe('HTML app');
+    expect(
+      defaultBlockTitle('chart', {
+        title: '  Revenue over time  ',
+        resolveLabel,
+      }),
+    ).toBe('Revenue over time');
   });
 
-  it('falls back to known or title-cased block types for empty titles', () => {
-    expect(defaultBlockTitle('chart', '   ')).toBe('Chart');
+  it('falls back to host labels or title-cased block types for empty titles', () => {
+    expect(
+      defaultBlockTitle('chart', {
+        title: '   ',
+        resolveLabel: (blockType) =>
+          blockType === 'chart' ? 'Chart' : undefined,
+      }),
+    ).toBe('Chart');
     expect(defaultBlockTitle('custom-viz_block')).toBe('Custom Viz Block');
     expect(defaultBlockTitle('')).toBe('Block');
   });

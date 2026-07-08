@@ -158,14 +158,13 @@ describe('BlockDocumentsSlice', () => {
               type: 'statefulBlock',
               blockType: 'data-table',
               blockInstanceId: 'data-table',
-              title: tableReference,
+              tableName: tableReference,
             }),
             blockDocumentBlockToNode({
               id: 'map',
               type: 'statefulBlock',
               blockType: 'map',
               blockInstanceId: 'map',
-              title: tableReference,
             }),
           ],
         }),
@@ -181,14 +180,13 @@ describe('BlockDocumentsSlice', () => {
           type: 'statefulBlock',
           blockType: 'data-table',
           blockInstanceId: 'data-table',
-          title: tableReference,
+          tableName: tableReference,
         },
         {
           id: 'map',
           type: 'statefulBlock',
           blockType: 'map',
           blockInstanceId: 'map',
-          title: tableReference,
         },
       ]);
     }
@@ -396,7 +394,6 @@ describe('BlockDocumentsSlice', () => {
       blockId: string;
       blockType: string;
       blockInstanceId: string;
-      title?: string;
     }> = [];
     const store = createTestStore({
       onCreateOwnedStatefulBlock: ({
@@ -404,14 +401,12 @@ describe('BlockDocumentsSlice', () => {
         blockId,
         blockType,
         blockInstanceId,
-        title,
       }) => {
         createdBlocks.push({
           documentId,
           blockId,
           blockType,
           blockInstanceId,
-          title,
         });
       },
     });
@@ -423,7 +418,6 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-1',
         ownership: 'owned',
-        title: 'Dashboard',
       },
       {
         id: 'shared-dashboard',
@@ -431,7 +425,6 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-2',
         ownership: 'shared',
-        title: 'Shared Dashboard',
       },
     ]);
 
@@ -441,7 +434,6 @@ describe('BlockDocumentsSlice', () => {
         blockId: 'owned-dashboard',
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-1',
-        title: 'Dashboard',
       },
     ]);
   });
@@ -511,15 +503,15 @@ describe('BlockDocumentsSlice', () => {
     expect(deletedBlockIds).toEqual(['dashboard-1']);
   });
 
-  it('renames owned stateful block references when title changes', () => {
-    const renamedBlocks: Array<{
-      blockInstanceId: string;
-      previousTitle: string;
-      title: string;
-    }> = [];
+  it('does not treat caption changes as stateful instance lifecycle changes', () => {
+    const deletedBlockIds: string[] = [];
+    const createdBlockIds: string[] = [];
     const store = createTestStore({
-      onRenameOwnedStatefulBlock: ({blockInstanceId, previousTitle, title}) => {
-        renamedBlocks.push({blockInstanceId, previousTitle, title});
+      onCreateOwnedStatefulBlock: ({blockInstanceId}) => {
+        createdBlockIds.push(blockInstanceId);
+      },
+      onDeleteOwnedStatefulBlock: ({blockInstanceId}) => {
+        deletedBlockIds.push(blockInstanceId);
       },
     });
 
@@ -530,17 +522,10 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'pivot',
         blockInstanceId: 'pivot-1',
         ownership: 'owned',
-        title: 'Original Pivot',
-      },
-      {
-        id: 'shared-pivot-block',
-        type: 'statefulBlock',
-        blockType: 'pivot',
-        blockInstanceId: 'pivot-2',
-        ownership: 'shared',
-        title: 'Original Shared Pivot',
+        caption: 'Original Pivot',
       },
     ]);
+    createdBlockIds.length = 0;
 
     expect(
       store
@@ -551,27 +536,12 @@ describe('BlockDocumentsSlice', () => {
           blockType: 'pivot',
           blockInstanceId: 'pivot-1',
           ownership: 'owned',
-          title: 'Renamed Pivot',
+          caption: 'Renamed Pivot',
         }),
     ).toBe(true);
-    store
-      .getState()
-      .blockDocuments.updateBlock('block-document-1', 'shared-pivot-block', {
-        id: 'ignored',
-        type: 'statefulBlock',
-        blockType: 'pivot',
-        blockInstanceId: 'pivot-2',
-        ownership: 'shared',
-        title: 'Renamed Shared Pivot',
-      });
 
-    expect(renamedBlocks).toEqual([
-      {
-        blockInstanceId: 'pivot-1',
-        previousTitle: 'Original Pivot',
-        title: 'Renamed Pivot',
-      },
-    ]);
+    expect(createdBlockIds).toEqual([]);
+    expect(deletedBlockIds).toEqual([]);
   });
 
   it('round-trips supported block DTOs through Tiptap JSON nodes', () => {
@@ -601,7 +571,6 @@ describe('BlockDocumentsSlice', () => {
         blockType: 'pivot',
         blockInstanceId: 'pivot-instance-1',
         ownership: 'owned',
-        title: 'Embedded Pivot Table',
         caption: 'Pivot',
       },
     ];
@@ -655,7 +624,6 @@ describe('BlockDocumentsSlice', () => {
               blockType: 'dashboard',
               blockInstanceId: 'dashboard-1',
               ownership: 'owned',
-              title: 'Dashboard',
             },
           },
           {
@@ -665,7 +633,6 @@ describe('BlockDocumentsSlice', () => {
               blockType: 'dashboard',
               blockInstanceId: 'dashboard-1',
               ownership: 'owned',
-              title: 'Dashboard copy',
             },
           },
           {
@@ -690,7 +657,6 @@ describe('BlockDocumentsSlice', () => {
           blockType: 'dashboard',
           blockInstanceId: 'dashboard-1',
           ownership: 'owned',
-          title: 'Dashboard',
         },
       },
       {
@@ -700,7 +666,6 @@ describe('BlockDocumentsSlice', () => {
           blockType: 'dashboard',
           blockInstanceId: 'block-1',
           ownership: 'owned',
-          title: 'Dashboard copy',
         },
       },
       {

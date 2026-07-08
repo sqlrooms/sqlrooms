@@ -221,7 +221,6 @@ does not import Mosaic, pivot, or other feature packages:
             blockType: 'dashboard',
             blockInstanceId: createDashboardBlockState(blockId),
             ownership: 'owned',
-            title: 'Dashboard',
             caption: '',
           },
         }),
@@ -239,11 +238,9 @@ does not import Mosaic, pivot, or other feature packages:
 </BlockDocumentChartRendererProvider>
 ```
 
-Stateful blocks carry three distinct label/binding attributes, surfaced to
+Stateful blocks carry document-local label/binding attributes, surfaced to
 renderers via `BlockDocumentStatefulBlockRendererProps`:
 
-- `title` — display name of the embedded artifact/instance (e.g. the dashboard,
-  SQL query, or Python block name); used to seed and rename the backing state.
 - `caption` — the block's user-facing label in the document flow
   (`onCaptionChange`).
 - `tableName` — the table a table-bound block reads from (e.g. `data-table`),
@@ -267,6 +264,12 @@ handle just below the block for writable documents. Interactive blocks can also 
 document and show a short hint, while Cmd+scroll on macOS or Ctrl+scroll
 elsewhere scrolls nested overflow regions inside the block. Use
 `scrollHintLabel` to customize the hint target text.
+
+The backing instance owns its own display name. Hosts should seed that name
+when creating the backing state (for example from the registered block type's
+`label` or command `defaultTitle`) and resolve it from the instance when a UI
+needs the current name. Shared block-document state does not persist a
+stateful-block `title` mirror.
 
 Block and panel definitions can provide reusable settings components. The
 host settings shell is owned by `@sqlrooms/documents`, while feature packages
@@ -301,7 +304,7 @@ blockDocuments.appendBlocks(blockDocumentArtifactId, [
     blockType: 'pivot',
     blockInstanceId: 'pivot-instance-1',
     ownership: 'owned',
-    title: 'Embedded Pivot Table',
+    caption: 'Pivot table',
   },
 ]);
 ```
@@ -342,11 +345,10 @@ reference appears, and `onDeleteOwnedStatefulBlock` to clean it up when an owned
 block is removed from a document or when its owning block document is deleted.
 Blocks with `ownership: 'shared'` or `ownership: 'external'` are not cleaned up
 by the documents slice.
-Hosts can also pass `onRenameOwnedStatefulBlock` to synchronize block `title`
-changes into the backing feature state. Captions stay local to the blocks
-document. Stateful block renderers receive `onTitleChange` and
-`onCaptionChange` callbacks when a writable document lets the embedded surface
-edit its own block metadata.
+Captions stay local to the block document. Backing instance names are changed
+through the owning feature's UI or commands, not by editing a block attribute.
+Stateful block renderers receive `onCaptionChange` when a writable document
+lets the embedded surface edit the document-local caption.
 
 The editor normalizes pasted or duplicated owned stateful blocks by assigning
 fresh top-level block IDs and fresh `blockInstanceId` values when a duplicate
@@ -427,7 +429,7 @@ Block mutation command results include the full refreshed document data plus
 focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
 `blockTypes`, and `affectedBlocks`. Chart and stateful block creation also
 return follow-up IDs such as `tableName`, `blockInstanceId`,
-`statefulBlockType`, and chosen `title` or `caption` values.
+`statefulBlockType`, the seed `instanceTitle`, and chosen `caption` values.
 
 Structured block payloads may include an optional `intent` string. Use it for
 the durable natural-language purpose of an agent- or command-created block,

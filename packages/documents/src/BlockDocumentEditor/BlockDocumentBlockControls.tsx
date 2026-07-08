@@ -577,7 +577,6 @@ function buildStatefulBlockMenuItems(
             blockType: blockType.blockType,
             blockInstanceId: id,
             ownership: 'owned',
-            title: label,
             caption: '',
             ...(blockType.resizableHeight
               ? {height: blockType.defaultHeight ?? 560}
