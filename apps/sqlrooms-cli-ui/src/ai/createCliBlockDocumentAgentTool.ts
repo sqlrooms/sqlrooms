@@ -11,6 +11,8 @@ import {
   resolveChartTypes,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
+import type {MosaicDashboardPanelConfig} from '@sqlrooms/mosaic';
+import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
 import type {
   BlockDocumentAiAdapter,
   BlockDocumentMoveBlockAiAdapter,
@@ -317,6 +319,8 @@ type ExecutableTool = Tool & {
   execute?: (input: unknown, options?: unknown) => unknown;
 };
 
+const MAX_TARGET_MAP_STATE_CHARS = 12_000;
+
 function getTargetBlockInstructions(
   targetBlock: BlockDocumentAgentInput['targetBlock'],
 ): string | undefined {
@@ -330,7 +334,7 @@ function getTargetBlockInstructions(
 Do not list blocks, discover alternate blocks, create replacement blocks, or modify another worksheet block. Route directly by blockType:
 - dashboard: call ${KnownBlockDocumentTools.embedded_dashboard_agent}; dashboardId is pre-bound to blockInstanceId.
 - html-app: call ${KnownBlockDocumentTools.embedded_html_app_agent}; appId is pre-bound to blockInstanceId.
-- map: call ${KnownBlockDocumentTools.create_block_document_map_block}; mapId is pre-bound to blockInstanceId.
+- map: call ${KnownBlockDocumentTools.create_block_document_map_block}; mapId is pre-bound to blockInstanceId. Use the existing map panel state in the prompt as the edit base and preserve datasets/layers unless the user asks to change them.
 - chart: call the worksheet chart tool that satisfies the request; it is configured to update blockId ${targetBlock.blockId} in place.`;
 }
 
@@ -408,6 +412,7 @@ function selectTargetBlockTools(
 function targetBlockPrompt(
   intent: string,
   targetBlock: BlockDocumentAgentInput['targetBlock'],
+  targetContext?: string,
 ): string {
   if (!targetBlock) return intent;
 
@@ -415,8 +420,58 @@ function targetBlockPrompt(
 - blockId: ${targetBlock.blockId}
 - blockType: ${targetBlock.blockType}
 - blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
+${targetContext ? `\n${targetContext}` : ''}
 
 User request: ${intent}`;
+}
+
+function findTargetMapPanel(
+  state: RoomState,
+  targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
+): MosaicDashboardPanelConfig | undefined {
+  if (targetBlock.blockType !== 'map' || !targetBlock.blockInstanceId) {
+    return undefined;
+  }
+
+  return state.mosaicDashboard
+    .getDashboard(targetBlock.blockInstanceId)
+    ?.panels.find((panel) => panel.type === DECK_MAP_DASHBOARD_PANEL_TYPE);
+}
+
+function formatTargetMapState(
+  state: RoomState,
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
+): string | undefined {
+  if (!targetBlock || targetBlock.blockType !== 'map') {
+    return undefined;
+  }
+
+  const panel = findTargetMapPanel(state, targetBlock);
+  if (!panel) {
+    return 'Existing map panel state: no map panel config was found for this block. Avoid inventing datasets or layers; ask for more information if the requested edit depends on missing map state.';
+  }
+
+  const stateJson = JSON.stringify(
+    {
+      panelId: panel.id,
+      title: panel.title,
+      type: panel.type,
+      config: panel.config,
+    },
+    null,
+    2,
+  );
+
+  const serializedState =
+    stateJson.length > MAX_TARGET_MAP_STATE_CHARS
+      ? `${stateJson.slice(0, MAX_TARGET_MAP_STATE_CHARS)}\n...truncated`
+      : stateJson;
+
+  return `Existing map panel state:
+\`\`\`json
+${serializedState}
+\`\`\`
+Use this state as the starting point for the map edit. Preserve existing datasets, layers, view state, legends, interactions, and styling unless the user explicitly asks to change them.`;
 }
 
 /**
@@ -566,7 +621,11 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt: targetBlockPrompt(intent, targetBlock),
+          prompt: targetBlockPrompt(
+            intent,
+            targetBlock,
+            formatTargetMapState(store.getState(), targetBlock),
+          ),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
