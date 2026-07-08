@@ -193,8 +193,12 @@ export function DeckMapBlockRenderer({
       return;
     }
 
-    ensureDashboard(mapId, title ?? 'Embedded Map', 'grid');
-  }, [ensureDashboard, mapId, title]);
+    ensureDashboard(
+      mapId,
+      dashboard ? undefined : (title ?? 'Embedded Map'),
+      'grid',
+    );
+  }, [dashboard, ensureDashboard, mapId, title]);
 
   useEffect(() => {
     if (!mapId || !dashboard) {

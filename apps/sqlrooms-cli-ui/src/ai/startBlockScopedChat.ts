@@ -29,16 +29,13 @@ export async function startBlockScopedChat({
 
   const state = useRoomStore.getState();
   const contextItemId = blockContextItemId(target);
-  const matchingSessionId = findAiSessionForArtifactWithContextItem({
-    sessions: state.ai.config.sessions,
+  const runningSessionId = findAiSessionForArtifactWithContextItem({
+    sessions: state.ai.config.sessions.filter((session) => session.isRunning),
     aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
     artifactId,
     contextItemId,
     includeRunning: true,
   });
-  const runningSessionId = state.ai.config.sessions.find(
-    (session) => session.id === matchingSessionId && session.isRunning,
-  )?.id;
 
   if (runningSessionId) {
     toast.error('An AI chat is already running for this block');

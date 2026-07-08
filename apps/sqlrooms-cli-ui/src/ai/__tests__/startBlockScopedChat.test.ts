@@ -25,7 +25,23 @@ const target: BlockAiTarget = {
 };
 const contextItemId = blockContextItemId(target);
 
-function createState({isRunning}: {isRunning: boolean}) {
+function createState({
+  sessions = [
+    {
+      id: 'session-1',
+      isRunning: false,
+      lastOpenedAt: 1,
+      draftContextItemIds: [contextItemId],
+    },
+  ],
+}: {
+  sessions?: Array<{
+    id: string;
+    isRunning: boolean;
+    lastOpenedAt: number;
+    draftContextItemIds: string[];
+  }>;
+} = {}) {
   return {
     artifacts: {
       config: {
@@ -42,20 +58,14 @@ function createState({isRunning}: {isRunning: boolean}) {
       config: {
         aiSessionArtifacts: {
           'session-1': 'worksheet-1',
+          'session-2': 'worksheet-1',
         },
       },
       createArtifactScopedSession: jest.fn(() => 'new-session'),
     },
     ai: {
       config: {
-        sessions: [
-          {
-            id: 'session-1',
-            isRunning,
-            lastOpenedAt: 1,
-            draftContextItemIds: [contextItemId],
-          },
-        ],
+        sessions,
       },
       switchSession: jest.fn(),
       getSessionDraftContextItemIds: jest.fn(() => [contextItemId]),
@@ -72,7 +82,7 @@ describe('startBlockScopedChat', () => {
   });
 
   it('reuses a finished block session for follow-up prompts', async () => {
-    mockState = createState({isRunning: false});
+    mockState = createState();
     const revealAssistant = jest.fn();
 
     await startBlockScopedChat({
@@ -99,7 +109,49 @@ describe('startBlockScopedChat', () => {
   });
 
   it('blocks only while the matching block session is running', async () => {
-    mockState = createState({isRunning: true});
+    mockState = createState({
+      sessions: [
+        {
+          id: 'session-1',
+          isRunning: true,
+          lastOpenedAt: 1,
+          draftContextItemIds: [contextItemId],
+        },
+      ],
+    });
+    const revealAssistant = jest.fn();
+
+    await startBlockScopedChat({
+      target,
+      prompt: 'Make the chart blue',
+      revealAssistant,
+    });
+
+    expect(toastError).toHaveBeenCalledWith(
+      'An AI chat is already running for this block',
+    );
+    expect(mockState.ai.switchSession).toHaveBeenCalledWith('session-1');
+    expect(revealAssistant).not.toHaveBeenCalled();
+    expect(mockState.ai.startAnalysisWhenReady).not.toHaveBeenCalled();
+  });
+
+  it('blocks when an older matching session is running and a newer match is finished', async () => {
+    mockState = createState({
+      sessions: [
+        {
+          id: 'session-1',
+          isRunning: true,
+          lastOpenedAt: 1,
+          draftContextItemIds: [contextItemId],
+        },
+        {
+          id: 'session-2',
+          isRunning: false,
+          lastOpenedAt: 2,
+          draftContextItemIds: [contextItemId],
+        },
+      ],
+    });
     const revealAssistant = jest.fn();
 
     await startBlockScopedChat({
