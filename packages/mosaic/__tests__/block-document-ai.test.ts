@@ -63,7 +63,7 @@ describe('Mosaic block-document AI tools', () => {
       setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
       getBlocks: () => [
-        {
+        blockDocumentBlockToNode({
           type: 'chart',
           id: 'chart-block-1',
           tableName: 'earthquakes',
@@ -72,7 +72,7 @@ describe('Mosaic block-document AI tools', () => {
             chartType: 'histogram',
             settings: {field: 'magnitude'},
           },
-        },
+        }),
       ],
       addBlock,
       updateBlock,
