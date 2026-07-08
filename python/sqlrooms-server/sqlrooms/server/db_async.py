@@ -3,6 +3,7 @@ import concurrent.futures
 import logging
 import os
 import threading
+import time
 import uuid
 from typing import Callable, Optional, Any, Dict, Tuple, List
 
@@ -18,11 +19,17 @@ EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 4
 GLOBAL_CON: Optional[duckdb.DuckDBPyConnection] = None
 DATABASE_PATH: Optional[str] = None
 
-# Track active queries for cancellation: query_id -> (Future, cursor)
+# Track active queries for cancellation: query_id -> (Future, cursor, cancellation event)
 active_queries: Dict[
-    str, Tuple[concurrent.futures.Future, duckdb.DuckDBPyConnection]
+    str, Tuple[concurrent.futures.Future, duckdb.DuckDBPyConnection, threading.Event]
 ] = {}
 active_queries_lock = threading.Lock()
+
+# Cancel messages can arrive before the event loop has started the query task that
+# registers the query. Keep those requests briefly so the later task can still
+# produce a terminal cancellation outcome instead of silently running.
+PENDING_CANCELLATION_TTL_SECONDS = 30.0
+pending_cancellations: Dict[str, float] = {}
 
 # Shutdown state flag
 SHUTTING_DOWN: bool = False
@@ -42,11 +49,18 @@ def generate_query_id() -> str:
 
 
 def register_query(
-    query_id: str, future: concurrent.futures.Future, cursor: duckdb.DuckDBPyConnection
+    query_id: str,
+    future: concurrent.futures.Future,
+    cursor: duckdb.DuckDBPyConnection,
+    cancel_event: Optional[threading.Event] = None,
 ) -> None:
     """Register an in-flight query for cancellation tracking."""
+    cancel_event = cancel_event or threading.Event()
     with active_queries_lock:
-        active_queries[query_id] = (future, cursor)
+        _prune_pending_cancellations_locked()
+        active_queries[query_id] = (future, cursor, cancel_event)
+        if pending_cancellations.pop(query_id, None) is not None:
+            cancel_event.set()
 
 
 def unregister_query(query_id: str) -> None:
@@ -55,27 +69,43 @@ def unregister_query(query_id: str) -> None:
         active_queries.pop(query_id, None)
 
 
+def _prune_pending_cancellations_locked() -> None:
+    """Remove stale pre-registration cancellation requests."""
+    now = time.monotonic()
+    expired = [
+        query_id
+        for query_id, requested_at in pending_cancellations.items()
+        if now - requested_at > PENDING_CANCELLATION_TTL_SECONDS
+    ]
+    for query_id in expired:
+        pending_cancellations.pop(query_id, None)
+
+
 def cancel_query(query_id: str) -> bool:
     """Interrupt a running DuckDB query by id. Returns True if found and signaled."""
     with active_queries_lock:
+        _prune_pending_cancellations_locked()
         entry = active_queries.get(query_id)
-        if entry:
-            future, con = entry
-            try:
-                if hasattr(con, "interrupt"):
-                    con.interrupt()
-                else:
-                    duckdb.interrupt(con)
-            except Exception as e:
-                logger.error(f"Error interrupting query {query_id}: {e}")
-            return True
-        return False
+        if not entry:
+            pending_cancellations[query_id] = time.monotonic()
+            return False
+        _future, con, cancel_event = entry
+        cancel_event.set()
+    try:
+        if hasattr(con, "interrupt"):
+            con.interrupt()
+        else:
+            duckdb.interrupt(con)
+    except Exception as e:
+        logger.error(f"Error interrupting query {query_id}: {e}")
+    return True
 
 
 def cancel_all_queries() -> None:
     """Cancel and close all active queries. Used on shutdown or reconnection."""
     with active_queries_lock:
-        for query_id, (future, cursor) in list(active_queries.items()):
+        for query_id, (future, cursor, cancel_event) in list(active_queries.items()):
+            cancel_event.set()
             try:
                 cursor.close()
             except Exception as e:
@@ -84,6 +114,7 @@ def cancel_all_queries() -> None:
                 future.cancel()
                 logger.info(f"Cancelled query {query_id}")
         active_queries.clear()
+        pending_cancellations.clear()
 
 
 def init_global_connection(
@@ -180,9 +211,14 @@ async def run_db_task(
     if GLOBAL_CON is None:
         raise RuntimeError("Global DuckDB connection not initialized")
     cursor: duckdb.DuckDBPyConnection = GLOBAL_CON.cursor()
+    start_event = threading.Event()
+    cancel_event = threading.Event()
 
     def _runner(cur: duckdb.DuckDBPyConnection):
         try:
+            start_event.wait()
+            if cancel_event.is_set():
+                raise concurrent.futures.CancelledError()
             return execute_with_cursor(cur)
         except duckdb.InterruptException as ie:
             raise concurrent.futures.CancelledError() from ie
@@ -202,10 +238,13 @@ async def run_db_task(
         except Exception:
             pass
         raise RuntimeError("Executor is shut down") from e
-    register_query(qid, future, cursor)
+    register_query(qid, future, cursor, cancel_event)
+    start_event.set()
     try:
         return await asyncio.wrap_future(future)
-    except asyncio.CancelledError:
+    except asyncio.CancelledError as exc:
+        if cancel_event.is_set():
+            raise concurrent.futures.CancelledError() from exc
         cancel_query(qid)
         raise
     finally:
