@@ -10,6 +10,10 @@ export const DECK_MAP_BLOCK_TYPE = 'map';
 export const DECK_MAP_BLOCK_DEFAULT_TITLE = 'Embedded Map';
 export const DECK_MAP_BLOCK_DEFAULT_HEIGHT = 560;
 
+/**
+ * Options for configuring Deck map block document registration. Hosts pass
+ * these to `createDeckMapBlockDocumentType` / `createDeckMapBlockDocumentCommandType`.
+ */
 export type DeckMapBlockDocumentRegistrationOptions<TState> = {
   /** Product label for the map block (defaults to "Map"). */
   label?: string;
@@ -17,8 +21,11 @@ export type DeckMapBlockDocumentRegistrationOptions<TState> = {
   description?: string;
   /** Default caption/title used when ensuring state. */
   defaultTitle?: string;
+  /** Default height in pixels for the map block. */
   defaultHeight?: number;
+  /** Minimum resizable height in pixels. */
   minHeight?: number;
+  /** Maximum resizable height in pixels. */
   maxHeight?: number;
   /**
    * Called after Deck map state is ensured. Hosts can add product-specific

@@ -69,6 +69,7 @@ describe('normalizeDeckMapPointConfig', () => {
 
   it('skips datasets that already have transformSql or sqlQuery', () => {
     const config = {
+      spec: {layers: []},
       datasets: {
         places: {
           source: {

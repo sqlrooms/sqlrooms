@@ -409,6 +409,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
               blockDocumentId,
               blockId,
               caption,
+              height,
             }) => {
               await invokeRequiredCommand(
                 state,
@@ -417,6 +418,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                   blockDocumentId,
                   blockId,
                   caption,
+                  height,
                 },
               );
             },
