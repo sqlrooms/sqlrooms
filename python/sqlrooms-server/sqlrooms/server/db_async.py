@@ -25,10 +25,11 @@ active_queries: Dict[
 ] = {}
 active_queries_lock = threading.Lock()
 
-# Cancel messages can arrive before the event loop has started the query task that
-# registers the query. Keep those requests briefly so the later task can still
-# produce a terminal cancellation outcome instead of silently running.
+# Cancel messages can arrive after a query is scheduled but before the event loop
+# has started the task that registers it. Track only that scheduling gap so a
+# late cancel cannot poison a future query that reuses the same client query id.
 PENDING_CANCELLATION_TTL_SECONDS = 30.0
+scheduled_queries: Dict[str, float] = {}
 pending_cancellations: Dict[str, float] = {}
 
 # Shutdown state flag
@@ -48,6 +49,19 @@ def generate_query_id() -> str:
     return str(uuid.uuid4())
 
 
+def mark_query_scheduled(query_id: str) -> None:
+    """Mark a query id as accepted for scheduling but not yet registered."""
+    with active_queries_lock:
+        _prune_cancellation_state_locked()
+        scheduled_queries[query_id] = time.monotonic()
+
+
+def unmark_query_scheduled(query_id: str) -> None:
+    """Remove a query id from scheduling-gap tracking."""
+    with active_queries_lock:
+        scheduled_queries.pop(query_id, None)
+
+
 def register_query(
     query_id: str,
     future: concurrent.futures.Future,
@@ -57,7 +71,8 @@ def register_query(
     """Register an in-flight query for cancellation tracking."""
     cancel_event = cancel_event or threading.Event()
     with active_queries_lock:
-        _prune_pending_cancellations_locked()
+        _prune_cancellation_state_locked()
+        scheduled_queries.pop(query_id, None)
         active_queries[query_id] = (future, cursor, cancel_event)
         if pending_cancellations.pop(query_id, None) is not None:
             cancel_event.set()
@@ -69,25 +84,33 @@ def unregister_query(query_id: str) -> None:
         active_queries.pop(query_id, None)
 
 
-def _prune_pending_cancellations_locked() -> None:
-    """Remove stale pre-registration cancellation requests."""
+def _prune_cancellation_state_locked() -> None:
+    """Remove stale scheduling-gap cancellation state."""
     now = time.monotonic()
-    expired = [
+    expired_pending = [
         query_id
         for query_id, requested_at in pending_cancellations.items()
         if now - requested_at > PENDING_CANCELLATION_TTL_SECONDS
     ]
-    for query_id in expired:
+    for query_id in expired_pending:
         pending_cancellations.pop(query_id, None)
+    expired_scheduled = [
+        query_id
+        for query_id, scheduled_at in scheduled_queries.items()
+        if now - scheduled_at > PENDING_CANCELLATION_TTL_SECONDS
+    ]
+    for query_id in expired_scheduled:
+        scheduled_queries.pop(query_id, None)
 
 
 def cancel_query(query_id: str) -> bool:
     """Interrupt a running DuckDB query by id. Returns True if found and signaled."""
     with active_queries_lock:
-        _prune_pending_cancellations_locked()
+        _prune_cancellation_state_locked()
         entry = active_queries.get(query_id)
         if not entry:
-            pending_cancellations[query_id] = time.monotonic()
+            if query_id in scheduled_queries:
+                pending_cancellations[query_id] = time.monotonic()
             return False
         _future, con, cancel_event = entry
         cancel_event.set()
@@ -114,6 +137,7 @@ def cancel_all_queries() -> None:
                 future.cancel()
                 logger.info(f"Cancelled query {query_id}")
         active_queries.clear()
+        scheduled_queries.clear()
         pending_cancellations.clear()
 
 
@@ -238,8 +262,14 @@ async def run_db_task(
         except Exception:
             pass
         raise RuntimeError("Executor is shut down") from e
-    register_query(qid, future, cursor, cancel_event)
-    start_event.set()
+    try:
+        try:
+            register_query(qid, future, cursor, cancel_event)
+        except Exception:
+            cancel_event.set()
+            raise
+    finally:
+        start_event.set()
     try:
         return await asyncio.wrap_future(future)
     except asyncio.CancelledError as exc:
