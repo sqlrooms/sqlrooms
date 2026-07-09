@@ -373,7 +373,12 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             findMapBlock: (docId, mapId) => {
               const block = findStatefulBlock(state, docId, mapId, 'map');
               return block?.blockInstanceId
-                ? {blockId: block.id, mapId: block.blockInstanceId}
+                ? {
+                    blockId: block.id,
+                    mapId: block.blockInstanceId,
+                    caption:
+                      'caption' in block ? block.caption : undefined,
+                  }
                 : undefined;
             },
             findMapPanel: (mapId, panelId) =>
@@ -462,7 +467,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             mapId: params.mapId,
             panelId: params.panelId,
             tableName: params.tableName,
-            title: params.title || 'Map',
+            title: params.title,
             intent: params.intent,
             artifactLabel: 'block document',
             missingMapBlockBehavior: 'throw',

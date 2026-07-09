@@ -20,11 +20,11 @@ export type CreateOrUpdateDeckMapBlockHost = {
   findMapBlock: (
     blockDocumentId: string,
     mapId: string,
-  ) => {blockId: string; mapId: string} | undefined;
+  ) => {blockId: string; mapId: string; caption?: string} | undefined;
   findMapPanel: (
     mapId: string,
     panelId?: string,
-  ) => {id: string; config?: unknown} | undefined;
+  ) => {id: string; title?: string; config?: unknown} | undefined;
   createMapBlock: (options: {
     blockDocumentId: string;
     mapId: string;
@@ -41,7 +41,11 @@ export type CreateOrUpdateDeckMapBlockHost = {
     height?: number;
   }) => void | Promise<void>;
   ensureMapState: (mapId: string, title: string) => void;
-  ensureDashboard: (mapId: string, title: string) => void;
+  /**
+   * Ensure the backing mosaic dashboard exists. Pass `undefined` title to
+   * avoid renaming an existing dashboard (title-less updates).
+   */
+  ensureDashboard: (mapId: string, title?: string) => void;
   setSelectedTable?: (
     mapId: string,
     tableIdentity: string,
@@ -96,6 +100,12 @@ export type CreateOrUpdateDeckMapBlockParams = {
    * - `'create'`: create a new map block (FSQ AI tool behavior)
    */
   missingMapBlockBehavior?: 'throw' | 'create';
+  /**
+   * When `panelId` is provided but no matching panel exists:
+   * - `'throw'` (default): fail, matching CLI command behavior
+   * - `'create'`: ignore the stale id and add a new panel (FSQ AI tool behavior)
+   */
+  missingPanelBehavior?: 'throw' | 'create';
 };
 
 export type CreateOrUpdateDeckMapBlockResult = {
@@ -148,8 +158,9 @@ export async function createOrUpdateDeckMapBlock(
     throw new Error('mapId is required when creating a map block');
   }
 
+  const missingPanelBehavior = params.missingPanelBehavior ?? 'throw';
   const existingPanel = host.findMapPanel(mapId, params.panelId);
-  if (params.panelId && !existingPanel) {
+  if (params.panelId && !existingPanel && missingPanelBehavior === 'throw') {
     throw new Error(`Map panel ${params.panelId} was not found`);
   }
 
@@ -186,9 +197,17 @@ export async function createOrUpdateDeckMapBlock(
   }
   const tableIdentity = table?.tableIdentity;
 
-  const title = params.title?.trim() || 'Map';
+  // Preserve existing caption/panel title on title-less updates (CLI Ask AI edits).
+  const title =
+    params.title?.trim() ||
+    existingMapBlock?.caption ||
+    existingPanel?.title ||
+    'Map';
   const caption = params.caption ?? title;
   const created = !existingMapBlock;
+  // Only rename the dashboard when creating or when the caller set an explicit title.
+  const hasExplicitTitle = Boolean(params.title?.trim());
+  const dashboardTitle = hasExplicitTitle || created ? title : undefined;
 
   let blockId: string;
   let resolvedMapId: string;
@@ -197,7 +216,7 @@ export async function createOrUpdateDeckMapBlock(
     blockId = existingMapBlock.blockId;
     resolvedMapId = existingMapBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
-    host.ensureDashboard(resolvedMapId, title);
+    host.ensureDashboard(resolvedMapId, dashboardTitle);
     await host.updateBlockMetadata({
       blockDocumentId: params.blockDocumentId,
       blockId,
@@ -217,9 +236,8 @@ export async function createOrUpdateDeckMapBlock(
     blockId = createdBlock.blockId;
     resolvedMapId = createdBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
-    host.ensureDashboard(resolvedMapId, title);
+    host.ensureDashboard(resolvedMapId, dashboardTitle);
   }
-
   if (tableIdentity && host.setSelectedTable) {
     await host.setSelectedTable(resolvedMapId, tableIdentity);
   }
