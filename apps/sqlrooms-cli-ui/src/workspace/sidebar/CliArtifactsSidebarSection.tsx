@@ -41,6 +41,8 @@ import {FormEvent, useEffect, useRef, useState} from 'react';
 import {useRoomStore} from '../../store';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
 
+const CLI_SIDEBAR_COMMAND_ITEM_CLASS = 'cli-sidebar-command-item';
+
 export function CliArtifactsSidebarSection() {
   const artifactTabs = useCliArtifactSidebarTabs();
   const openArtifactChooser = useRoomStore(
@@ -168,7 +170,7 @@ export function CliArtifactsSidebarSection() {
         className="w-80 p-0"
         align="start"
         side="right"
-        sideOffset={8}
+        sideOffset={10}
       >
         <Command>
           <CommandInput placeholder="Search workspace items..." />
@@ -181,6 +183,8 @@ export function CliArtifactsSidebarSection() {
                   const Icon = type?.icon ?? FileStackIcon;
                   return (
                     <CommandItem
+                      className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
+                      data-active={artifact.id === artifactTabs.selectedTabId}
                       key={artifact.id}
                       value={`${artifact.name} ${artifact.id}`}
                       onSelect={() => {
@@ -203,6 +207,7 @@ export function CliArtifactsSidebarSection() {
             <CommandSeparator />
             <CommandGroup>
               <CommandItem
+                className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
                 value="new"
                 onSelect={() => {
                   openArtifactChooser(true);
@@ -210,7 +215,7 @@ export function CliArtifactsSidebarSection() {
                 }}
               >
                 <Plus className="h-4 w-4" aria-hidden />
-                New
+                Create new
               </CommandItem>
             </CommandGroup>
           </CommandList>
