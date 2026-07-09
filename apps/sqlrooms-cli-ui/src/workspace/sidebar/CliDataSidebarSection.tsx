@@ -54,6 +54,7 @@ import {
 const acceptedDataFileExtensions = Object.values(LOCAL_DATA_ACCEPTED_FORMATS)
   .flat()
   .join(',');
+const CLI_SIDEBAR_COMMAND_ITEM_CLASS = 'cli-sidebar-command-item';
 
 export function CliDataSidebarSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -206,7 +207,7 @@ export function CliDataSidebarSection() {
             className="w-80 p-0"
             align="start"
             side="right"
-            sideOffset={8}
+            sideOffset={10}
           >
             <Command>
               <CommandInput placeholder="Search tables..." />
@@ -216,6 +217,7 @@ export function CliDataSidebarSection() {
                   <CommandGroup heading="Tables">
                     {tables.map((table) => (
                       <CommandItem
+                        className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
                         key={getTableIdentity(table.table)}
                         value={`${getTableIdentity(table.table)} ${formatTableMeta(table)}`}
                         onSelect={() => {
@@ -236,6 +238,7 @@ export function CliDataSidebarSection() {
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
+                    className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
                     value="add data import file"
                     onSelect={() => {
                       addData();

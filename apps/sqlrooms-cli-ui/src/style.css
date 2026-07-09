@@ -12,6 +12,24 @@
   height: 100vh;
 }
 
+.cli-sidebar-command-item[data-selected='true'] {
+  background: transparent !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.cli-sidebar-command-item:hover,
+.cli-sidebar-command-item[data-selected='true']:hover {
+  background: hsl(var(--sidebar-accent)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+}
+
+.cli-sidebar-command-item[data-active='true'],
+.cli-sidebar-command-item[data-active='true'][data-selected='true'],
+.cli-sidebar-command-item[data-active='true']:hover {
+  background: hsl(var(--sidebar-accent)) !important;
+  color: hsl(var(--sidebar-accent-foreground)) !important;
+}
+
 /* Hide print-only elements in normal view */
 .print-only {
   display: none;
