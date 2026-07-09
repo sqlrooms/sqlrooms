@@ -52,10 +52,12 @@ export {getDeckMapDataPolicy} from './mapDataPolicy';
 export {
   createDeckMapDashboardConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
+  createDeckMapPointTransformSql,
   findDeckMapLongitudeLatitudeColumns,
   findGeometryColumn,
   findLongitudeLatitudeColumns,
   normalizeDeckMapFillColor,
+  normalizeDeckMapPointConfig,
   quoteDeckMapSqlIdentifier,
   quoteDeckMapSqlTableReference,
   regenerateMapConfigForTable,
@@ -65,6 +67,25 @@ export type {
   DeckMapFillColor,
   DeckMapTableReference,
 } from './mapConfigUtils';
+export {
+  getFirstDatasetSourceTableName,
+  hasSqlOnlyDatasetSource,
+} from './datasetSourceUtils';
+export type {DeckMapDatasetSourceConfig} from './datasetSourceUtils';
+export {
+  createOrUpdateDeckMapBlock,
+  type CreateOrUpdateDeckMapBlockHost,
+  type CreateOrUpdateDeckMapBlockParams,
+  type CreateOrUpdateDeckMapBlockResult,
+} from './createOrUpdateDeckMapBlock';
+export {
+  DECK_MAP_BLOCK_DEFAULT_HEIGHT,
+  DECK_MAP_BLOCK_DEFAULT_TITLE,
+  DECK_MAP_BLOCK_TYPE,
+  createDeckMapBlockDocumentCommandType,
+  createDeckMapBlockDocumentType,
+  type DeckMapBlockDocumentRegistrationOptions,
+} from './blockDocumentRegistration';
 export type {
   DeckMapConfigMode,
   DeckMapDashboardFitToDataConfig,

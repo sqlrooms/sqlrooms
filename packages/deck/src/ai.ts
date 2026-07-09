@@ -20,7 +20,13 @@ import {
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
+import {
+  getFirstDatasetSourceTableName,
+  hasSqlOnlyDatasetSource,
+} from './datasetSourceUtils';
 import {quoteDeckMapSqlIdentifier} from './mapConfigUtils';
+
+export {getFirstDatasetSourceTableName, hasSqlOnlyDatasetSource};
 
 export const DECK_MAP_AI_INSTRUCTIONS = `
 Deck map tools:
@@ -368,23 +374,6 @@ export function createDeckMapPanelFromNativeConfig(
     title: params.title || 'Map',
     ...cloneConfig(params.config),
   });
-}
-
-function getFirstDatasetSourceTableName(
-  config: DeckMapDashboardConfigToolConfig,
-): string | undefined {
-  if (!config.datasets || typeof config.datasets !== 'object') {
-    return undefined;
-  }
-
-  return Object.values(config.datasets)
-    .map(
-      (dataset) =>
-        (dataset as Record<string, unknown>).source as
-          | {tableName?: string}
-          | undefined,
-    )
-    .find((source) => source?.tableName)?.tableName;
 }
 
 export function createDeckMapConfigTool(): Tool {
