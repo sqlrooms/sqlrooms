@@ -231,6 +231,86 @@ The block primitive reuses the dashboard map panel runtime internally, while
 leaving each host surface free to adapt its own block/document semantics around
 it.
 
+`createDeckMapBlockDocumentType(...)` and
+`createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
+metadata for block-document hosts. They register a `map` stateful block with
+resizable height, scroll-modifier behavior, map settings, and owned state
+creation wired through `ensureDeckMapBlockState(...)`:
+
+```ts
+import {
+  createDeckMapBlockDocumentCommandType,
+  createDeckMapBlockDocumentType,
+} from '@sqlrooms/deck';
+
+const mapBlockType = createDeckMapBlockDocumentType({
+  getState: () => roomStore.getState(),
+  defaultTitle: 'Embedded Map',
+});
+
+const mapCommandType = createDeckMapBlockDocumentCommandType({
+  defaultTitle: 'Embedded Map',
+});
+```
+
+Hosts still own renderer registration, deletion cleanup, and product-specific
+side effects. Use `afterEnsureState` for app-local metadata updates that should
+run after the backing map dashboard is created.
+
+`createOrUpdateDeckMapBlock(...)` is the shared create/update orchestrator for
+commands and AI tools that write map blocks. The helper keeps package code free
+of app stores by accepting a host callback adapter:
+
+```ts
+import {createOrUpdateDeckMapBlock} from '@sqlrooms/deck';
+
+const result = await createOrUpdateDeckMapBlock(
+  {
+    ensureBlockDocument,
+    findMapBlock,
+    findMapPanel,
+    createMapBlock,
+    updateBlockMetadata,
+    ensureMapState,
+    ensureDashboard,
+    setSelectedTable,
+    addOrUpdateMapPanel,
+    findTable,
+    prepareConfig,
+  },
+  {
+    blockDocumentId,
+    mapId,
+    config,
+    tableName,
+    title,
+    intent,
+  },
+);
+```
+
+On create, callers must provide either `mapId` or `createMapId`. On update, the
+default behavior is intentionally strict: missing map blocks, missing panels,
+and SQL-only dataset sources without a resolvable `tableName` throw so command
+paths do not silently retarget stale IDs. AI repair flows that need softer
+behavior can opt into `missingMapBlockBehavior: 'create'` or
+`missingPanelBehavior: 'create'`.
+
+Title handling is conservative for Ask AI edits: when `title` is omitted,
+`createOrUpdateDeckMapBlock(...)` preserves the existing block caption or panel
+title and calls `ensureDashboard(mapId, undefined)` so existing map/dashboard
+names are not overwritten. Passing an explicit `title` updates the durable map
+title and uses it as the default block caption.
+
+Map authoring helpers such as `normalizeDeckMapPointConfig(...)`,
+`normalizeDeckMapFillColor(...)`, `regenerateMapConfigForTable(...)`, and
+dataset-source helpers such as `getFirstDatasetSourceTableName(...)` are
+exported so hosts can normalize AI-authored configs before calling
+`createOrUpdateDeckMapBlock(...)`. `normalizeDeckMapPointConfig(...)` only adds
+the standard lon/lat point transform to table-backed datasets that do not
+already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`;
+native geometry, polygon, line, and pre-transformed datasets are preserved.
+
 ## Core Concepts
 
 ### `DeckJsonMap`

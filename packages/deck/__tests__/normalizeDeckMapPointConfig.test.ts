@@ -87,4 +87,36 @@ describe('normalizeDeckMapPointConfig', () => {
       }),
     ).toBe(config);
   });
+
+  it('preserves datasets with an explicit geometry column', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'places',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      fitToData: {dataset: 'places', geometryColumn: 'geom'},
+    };
+
+    expect(
+      normalizeDeckMapPointConfig({
+        config,
+        resolveTable: () => ({
+          ...placesTable,
+          columns: [...placesTable.columns, {name: 'geom', type: 'BLOB'}],
+        }),
+      }),
+    ).toBe(config);
+  });
 });

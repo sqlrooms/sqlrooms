@@ -1,42 +1,25 @@
-import {startBlockScopedChat} from '../src/startBlockScopedChat';
+import {jest} from '@jest/globals';
 import type {StartBlockScopedChatActions} from '../src/startBlockScopedChat';
 
 const toastError = jest.fn();
 
-jest.mock('@sqlrooms/ui', () => ({
+jest.unstable_mockModule('@sqlrooms/ui', () => ({
   toast: {
     error: (...args: unknown[]) => toastError(...args),
   },
 }));
 
-jest.mock('@sqlrooms/artifacts/ai', () => ({
-  findAiSessionForArtifactWithContextItem: jest.fn(
-    ({
-      sessions,
-      includeRunning,
-      contextItemId,
-    }: {
-      sessions: Array<{
-        id: string;
-        isRunning?: boolean;
-        draftContextItemIds?: string[];
-      }>;
-      includeRunning?: boolean;
-      contextItemId: string;
-    }) => {
-      const match = sessions.find((session) => {
-        if (!includeRunning && session.isRunning) return false;
-        return session.draftContextItemIds?.includes(contextItemId);
-      });
-      return match?.id;
-    },
-  ),
-}));
+const {startBlockScopedChat} = await import('../src/startBlockScopedChat');
 
 function createActions(
   overrides: Partial<StartBlockScopedChatActions> = {},
 ): StartBlockScopedChatActions {
   const draftIds = new Map<string, string[]>();
+  const setSessionDraftContextItemIds = jest.fn(
+    (sessionId: string, ids: string[]) => {
+      draftIds.set(sessionId, ids);
+    },
+  );
   return {
     getArtifact: () => ({type: 'block-document'}),
     getCurrentArtifactId: () => 'doc-1',
@@ -46,9 +29,7 @@ function createActions(
     createArtifactScopedSession: () => 'session-1',
     switchSession: jest.fn(),
     getSessionDraftContextItemIds: (sessionId) => draftIds.get(sessionId),
-    setSessionDraftContextItemIds: (sessionId, ids) => {
-      draftIds.set(sessionId, ids);
-    },
+    setSessionDraftContextItemIds,
     setPrompt: jest.fn(),
     startAnalysisWhenReady: jest.fn(async () => true),
     ...overrides,
@@ -122,8 +103,11 @@ describe('startBlockScopedChat', () => {
       getAiSessionArtifacts: () => ({
         'finished-session': 'doc-1',
       }),
+      getSessionDraftContextItemIds: (sessionId) =>
+        sessionId === 'finished-session' ? [contextItemId] : undefined,
       createArtifactScopedSession: jest.fn(() => 'should-not-create'),
     });
+    const revealAssistant = jest.fn();
 
     await startBlockScopedChat({
       target: {
@@ -132,7 +116,7 @@ describe('startBlockScopedChat', () => {
         blockType: 'map',
       },
       prompt: 'recolor these points',
-      revealAssistant: jest.fn(),
+      revealAssistant,
       actions,
       isValidBlockDocumentArtifact: (artifact) =>
         artifact.type === 'block-document',
@@ -141,6 +125,8 @@ describe('startBlockScopedChat', () => {
     expect(toastError).not.toHaveBeenCalled();
     expect(actions.switchSession).toHaveBeenCalledWith('finished-session');
     expect(actions.createArtifactScopedSession).not.toHaveBeenCalled();
+    expect(actions.setSessionDraftContextItemIds).not.toHaveBeenCalled();
+    expect(revealAssistant).toHaveBeenCalled();
     expect(actions.setPrompt).toHaveBeenCalledWith(
       'finished-session',
       'recolor these points',
@@ -166,6 +152,7 @@ describe('startBlockScopedChat', () => {
       }),
       createArtifactScopedSession: jest.fn(() => 'should-not-create'),
     });
+    const revealAssistant = jest.fn();
 
     await startBlockScopedChat({
       target: {
@@ -174,7 +161,7 @@ describe('startBlockScopedChat', () => {
         blockType: 'map',
       },
       prompt: 'recolor these points',
-      revealAssistant: jest.fn(),
+      revealAssistant,
       actions,
       isValidBlockDocumentArtifact: (artifact) =>
         artifact.type === 'block-document',
@@ -184,6 +171,8 @@ describe('startBlockScopedChat', () => {
       'An AI chat is already running for this block',
     );
     expect(actions.switchSession).toHaveBeenCalledWith('running-session');
+    expect(revealAssistant).not.toHaveBeenCalled();
+    expect(actions.setPrompt).not.toHaveBeenCalled();
     expect(actions.startAnalysisWhenReady).not.toHaveBeenCalled();
   });
 });

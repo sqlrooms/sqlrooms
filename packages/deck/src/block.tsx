@@ -41,7 +41,11 @@ function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
 }
 
 class DeckMapBlockErrorBoundary extends Component<
-  {children: ReactNode; onError?: (error: Error) => void},
+  {
+    children: ReactNode;
+    onError?: (error: Error) => void;
+    onRenderSuccess?: () => void;
+  },
   {error?: Error}
 > {
   state: {error?: Error} = {};
@@ -55,6 +59,12 @@ class DeckMapBlockErrorBoundary extends Component<
       componentStack: errorInfo.componentStack,
     });
     this.props.onError?.(error);
+  }
+
+  componentDidMount() {
+    if (!this.state.error) {
+      this.props.onRenderSuccess?.();
+    }
   }
 
   render() {
@@ -295,14 +305,13 @@ export function DeckMapBlockRenderer({
     panel?.id ?? 'no-panel',
     panel?.config ? JSON.stringify(panel.config) : 'no-config',
   ].join(':');
-  // Clear stale render issues when the panel/config changes so retries aren't
-  // reported as still broken after a successful remount.
-  useEffect(() => {
+  const handleMapRenderSuccess = useCallback(() => {
     if (!mapId || !panel) {
       return;
     }
+
     clearPanelIssue(mapId, panel.id);
-  }, [clearPanelIssue, mapBoundaryKey, mapId, panel]);
+  }, [clearPanelIssue, mapId, panel]);
   const handleMapRenderError = useCallback(
     (error: Error) => {
       if (!mapId || !panel) {
@@ -380,6 +389,7 @@ export function DeckMapBlockRenderer({
           <DeckMapBlockErrorBoundary
             key={mapBoundaryKey}
             onError={handleMapRenderError}
+            onRenderSuccess={handleMapRenderSuccess}
           >
             <MapPanel {...rendererProps} />
           </DeckMapBlockErrorBoundary>

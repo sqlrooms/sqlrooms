@@ -607,7 +607,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
       try {
         if (
           targetBlock &&
-          ['dashboard', 'html-app', 'map'].includes(targetBlock.blockType) &&
+          STATEFUL_TARGET_BLOCK_TYPES.has(targetBlock.blockType) &&
           !targetBlock.blockInstanceId
         ) {
           throw new Error(

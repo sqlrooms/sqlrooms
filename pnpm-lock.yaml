@@ -3331,6 +3331,9 @@ importers:
         specifier: ^5.0.8
         version: 5.0.13(@types/react@19.2.7)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
+      '@jest/globals':
+        specifier: ^30.3.0
+        version: 30.4.1
       loro-crdt:
         specifier: ^1.10.3
         version: 1.12.1

@@ -333,7 +333,13 @@ export function normalizeDeckMapPointConfig<
       : undefined;
     const tableName =
       typeof source?.tableName === 'string' ? source.tableName : undefined;
-    if (!tableName || source?.sqlQuery || source?.transformSql) {
+    if (
+      !tableName ||
+      source?.sqlQuery ||
+      source?.transformSql ||
+      (typeof dataset.geometryColumn === 'string' &&
+        dataset.geometryColumn.trim())
+    ) {
       continue;
     }
 
