@@ -15,6 +15,7 @@ import {
 import {
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockTypes,
 } from '../../BlockDocumentStatefulBlockRendererContext';
@@ -141,10 +142,11 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const blockType = optionalString(attrs.blockType) ?? '';
   const blockInstanceId = optionalString(attrs.blockInstanceId) ?? blockId;
   const ownership = optionalString(attrs.ownership);
-  const title = optionalString(attrs.title);
   const caption = optionalString(attrs.caption);
+  const tableName = optionalString(attrs.tableName);
   const height = optionalNumber(attrs.height);
   const Renderer = useBlockDocumentStatefulBlockRenderer(blockType);
+  const renderBlockHeaderActions = useBlockDocumentRenderBlockHeaderActions();
   const blockTypes = useBlockDocumentStatefulBlockTypes();
   const blockTypeConfig = blockTypes.find(
     (candidate) => candidate.blockType === blockType,
@@ -163,6 +165,25 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const [resizingHeight, setResizingHeight] = useState<number | null>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
   const resolvedHeight = resizingHeight ?? persistedHeight;
+  const blockHeaderActions = useMemo(
+    () =>
+      !readOnly && renderBlockHeaderActions
+        ? renderBlockHeaderActions({
+            blockDocumentId: documentId,
+            blockId,
+            blockType,
+            blockInstanceId,
+          })
+        : null,
+    [
+      blockId,
+      blockInstanceId,
+      blockType,
+      documentId,
+      readOnly,
+      renderBlockHeaderActions,
+    ],
+  );
 
   const wrapperStyle = useMemo(
     () => (resolvedHeight ? {height: resolvedHeight} : undefined),
@@ -193,7 +214,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       scrollHintTargetRef.current = null;
       hideScrollHintTimeoutRef.current = undefined;
     }, SCROLL_HINT_HIDE_DELAY_MS);
-  }, []);
+  }, [setShowScrollHint]);
 
   const hideScrollHint = useCallback(() => {
     setShowScrollHint(false);
@@ -202,7 +223,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       window.clearTimeout(hideScrollHintTimeoutRef.current);
       hideScrollHintTimeoutRef.current = undefined;
     }
-  }, []);
+  }, [setShowScrollHint]);
 
   const handleWheelCapture = useCallback(
     (event: WheelEvent) => {
@@ -331,15 +352,18 @@ export const BlockDocumentStatefulBlockNodeView: FC<
     window.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleTitleChange = useCallback((nextTitle: string | undefined) => {
-    if (readOnlyRef.current) return;
-    updateAttributesRef.current({title: nextTitle || undefined});
-  }, []);
-
   const handleCaptionChange = useCallback((nextCaption: string | undefined) => {
     if (readOnlyRef.current) return;
     updateAttributesRef.current({caption: nextCaption});
   }, []);
+
+  const handleTableNameChange = useCallback(
+    (nextTableName: string | undefined) => {
+      if (readOnlyRef.current) return;
+      updateAttributesRef.current({tableName: nextTableName || undefined});
+    },
+    [],
+  );
 
   const handleClick = useCallback(() => {
     // Select this node when clicked
@@ -376,13 +400,14 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             blockType={blockType}
             blockInstanceId={blockInstanceId}
             ownership={ownership}
-            title={title}
             caption={caption}
+            tableName={tableName}
             height={resolvedHeight}
+            headerActions={blockHeaderActions}
             selected={selected}
             readOnly={readOnly}
-            onTitleChange={handleTitleChange}
             onCaptionChange={handleCaptionChange}
+            onTableNameChange={handleTableNameChange}
           />
         ) : (
           <div className="p-4">

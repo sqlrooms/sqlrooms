@@ -228,6 +228,7 @@ export type HtmlAppBlockProps<
 > = Partial<StatefulBlockRenderProps<TRoomState>> & {
   appId?: string;
   className?: string;
+  headerActions?: ReactNode;
   queryTimeoutMs?: number;
   maxRows?: number;
 };
@@ -621,7 +622,8 @@ function applyExistingHtmlAppRevision(
     entryHtmlPath: revision.entryHtmlPath,
     requestedCapabilities:
       revision.requestedCapabilities ?? app.requestedCapabilities,
-    grantedCapabilities: revision.grantedCapabilities ?? app.grantedCapabilities,
+    grantedCapabilities:
+      revision.grantedCapabilities ?? app.grantedCapabilities,
     dependencies: revision.dependencies,
     diagnostics: [],
     activeRevisionId: revision.id,
@@ -661,6 +663,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
   appId,
   title,
   className,
+  headerActions,
   queryTimeoutMs = DEFAULT_QUERY_TIMEOUT_MS,
   maxRows = DEFAULT_MAX_ROWS,
 }) => {
@@ -816,6 +819,7 @@ export const HtmlAppBlock: FC<HtmlAppBlockProps> = ({
         >
           <HistoryIcon className="h-4 w-4" />
         </IconButton>
+        {headerActions}
       </div>
       <div className="flex min-h-0 flex-1">
         <div className="relative min-w-0 flex-1">

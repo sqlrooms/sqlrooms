@@ -159,6 +159,7 @@ In the SQLRooms CLI app, a Worksheet is a block document artifact. When the user
 When the user's primary context artifact is a worksheet or dashboard and they ask to add, update, or create a visualization, chart, or dashboard surface, mutate that artifact through the appropriate agent tool instead of creating a separate artifact, chat-only chart, or markdown image.
 
 - Use ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} when the primary artifact is a worksheet, or when the user explicitly asks to create/edit a top-level worksheet artifact.
+- If run context contains a kind:"block" item, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} with blockDocumentId from that item and targetBlock = {blockId, blockType, blockInstanceId}. The user is asking about that exact worksheet block; do not retarget another block.
 - For dashboard artifacts, call dashboard_agent.
 - Use the standalone chart and chart_image_for_markdown tools only when the user wants an inline chat visualization or no target artifact is available.
 `;
@@ -182,7 +183,6 @@ const BLOCK_DOCUMENT_OPTIONS = {
   commandNamespace: 'block-document',
   commandGroup: 'Worksheet',
   defaultTitle: 'Worksheet',
-  blockDocumentAgentToolName: CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
 } as const;
 
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -1056,22 +1056,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             blockInstanceId,
             blockType,
             getState,
-            title,
           }) => {
             if (!isStatefulBlockArtifactType(blockType)) {
               console.warn('Unknown stateful block type on create', {
                 blockType,
                 blockInstanceId,
-                title,
               });
               return;
             }
             const config = getStatefulBlockArtifactConfig(blockType);
-            config.ensureState(
-              getState(),
-              blockInstanceId,
-              title ?? config.embeddedTitle,
-            );
+            config.ensureState(getState(), blockInstanceId);
           },
           onDeleteOwnedStatefulBlock: ({
             blockInstanceId,
@@ -1087,25 +1081,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             }
             const config = getStatefulBlockArtifactConfig(blockType);
             config.deleteState(getState(), blockInstanceId);
-          },
-          onRenameOwnedStatefulBlock: ({
-            blockInstanceId,
-            blockType,
-            getState,
-            title,
-          }) => {
-            if (!isStatefulBlockArtifactType(blockType)) {
-              console.warn('Unknown stateful block type on rename', {
-                blockType,
-                blockInstanceId,
-                title,
-              });
-              return;
-            }
-            const config = getStatefulBlockArtifactConfig(blockType);
-            if (config.renameState) {
-              config.renameState(getState(), blockInstanceId, title);
-            }
           },
         })(set, get, store),
 
@@ -1169,7 +1144,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ]
                 .filter(Boolean)
                 .join('\n\n'),
-            getRunContext: (sessionId) => getRunContext(store, sessionId),
+            getRunContext: (sessionId) =>
+              getRunContext(store, sessionId, {experimentalEnabled}),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             onChatFinish: artifactChatHandoff.onChatFinish,

@@ -31,11 +31,10 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     ensureState: (
       state: RoomState,
       artifactId: string,
-      title: string,
+      title?: string,
       options?: BlockDocumentStatefulBlockCreateNodeOptions,
     ) => void;
     deleteState: (state: RoomState, artifactId: string) => void;
-    renameState?: (state: RoomState, artifactId: string, title: string) => void;
   };
 
 export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
@@ -59,9 +58,6 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     deleteState: (state, artifactId) => {
       state.mosaicDashboard.removeDashboard(artifactId);
     },
-    renameState: (state, artifactId, title) => {
-      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
-    },
   },
   pivot: {
     artifactType: 'pivot',
@@ -71,13 +67,12 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedTitle: 'Embedded Pivot Table',
     embeddedDescription: 'Embedded pivot table',
     ensureState: (state, artifactId, title) => {
-      state.pivot.ensurePivot(artifactId, {title});
+      state.pivot.ensurePivot(artifactId, {
+        ...(title ? {title} : {}),
+      });
     },
     deleteState: (state, artifactId) => {
       state.pivot.removePivot(artifactId);
-    },
-    renameState: (state, artifactId, title) => {
-      state.pivot.renamePivot(artifactId, title);
     },
   },
   'data-table': {
@@ -117,9 +112,6 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     deleteState: (state, artifactId) => {
       state.mosaicDashboard.removeDashboard(artifactId);
     },
-    renameState: (state, artifactId, title) => {
-      state.mosaicDashboard.ensureDashboard(artifactId, title, 'grid');
-    },
   },
   document: {
     artifactType: 'document',
@@ -144,15 +136,12 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedDescription: 'Embedded SQL query editor and result table',
     ensureState: (state, artifactId, title, options) => {
       state.sqlEditor.ensureQuery(artifactId, {
-        name: title,
+        ...(title ? {name: title} : {}),
         query: options?.initialText,
       });
     },
     deleteState: (state, artifactId) => {
       state.sqlEditor.removeQuery(artifactId);
-    },
-    renameState: (state, artifactId, title) => {
-      state.sqlEditor.renameQuery(artifactId, title);
     },
   },
   'html-app': {
@@ -168,16 +157,13 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     maxHeight: 1600,
     ensureState: (state, artifactId, title) => {
       state.htmlApps.ensureApp(artifactId, {
-        title,
+        ...(title ? {title} : {}),
         requestedCapabilities: ['query'],
         grantedCapabilities: ['query'],
       });
     },
     deleteState: (state, artifactId) => {
       state.htmlApps.removeApp(artifactId);
-    },
-    renameState: (state, artifactId, title) => {
-      state.htmlApps.renameApp(artifactId, title);
     },
   },
   python: {
@@ -189,15 +175,12 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedDescription: 'Python analysis block with visible code and outputs',
     ensureState: (state, artifactId, title, options) => {
       state.python.ensureBlock(artifactId, {
-        title,
+        ...(title ? {title} : {}),
         code: options?.initialText,
       });
     },
     deleteState: (state, artifactId) => {
       state.python.removeBlock(artifactId);
-    },
-    renameState: (state, artifactId, title) => {
-      state.python.renameBlock(artifactId, title);
     },
   },
 } as const satisfies Record<string, StatefulBlockArtifactConfig>;
@@ -221,7 +204,10 @@ export function getStatefulBlockArtifactConfig(
   return STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
 }
 
-function getEnabledStatefulBlockArtifactTypes(experimentalEnabled: boolean) {
+/** Returns stateful block artifact types enabled for the current feature mode. */
+export function getEnabledStatefulBlockArtifactTypes(
+  experimentalEnabled: boolean,
+) {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
     return config.stability === 'stable' || experimentalEnabled;
@@ -259,7 +245,6 @@ export function createStatefulBlockTypes({
               blockType: config.artifactType,
               blockInstanceId: blockId,
               ownership: 'owned',
-              title: config.embeddedTitle,
               caption: '',
               ...(config.resizableHeight
                 ? {height: config.defaultHeight ?? 560}

@@ -1,5 +1,6 @@
 import {
   BlockDocumentStatefulBlockBlock,
+  blockDocumentNodeToBlock,
   createDefaultBlockDocumentBlockId,
 } from '@sqlrooms/documents';
 import {toast} from '@sqlrooms/ui';
@@ -50,23 +51,26 @@ function ensureImportWorksheetForTable(tableName: string) {
   const existingBlocks =
     nextState.blockDocuments.config.artifacts[worksheetArtifactId]?.content
       .content ?? [];
-  const hasDataTableExplorer = existingBlocks.some(
-    (block) =>
-      block.type === 'statefulBlock' &&
+  const hasDataTableExplorer = existingBlocks.some((node) => {
+    const block = blockDocumentNodeToBlock(node);
+    return (
+      block?.type === 'statefulBlock' &&
       block.blockType === 'data-table' &&
-      block.title === tableName,
-  );
+      block.tableName === tableName
+    );
+  });
 
   if (hasDataTableExplorer) {
     return;
   }
 
+  const blockId = createDefaultBlockDocumentBlockId();
   const block: BlockDocumentStatefulBlockBlock = {
     type: 'statefulBlock',
-    id: createDefaultBlockDocumentBlockId(),
-    blockInstanceId: createDefaultBlockDocumentBlockId(),
+    id: blockId,
+    blockInstanceId: blockId,
     blockType: 'data-table',
-    title: tableName,
+    tableName,
     caption: `${tableName} profile`,
     intent: `Initial profile for imported table ${tableName}`,
   };

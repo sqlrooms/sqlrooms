@@ -16,8 +16,10 @@ export {
 export {PivotEditor} from './PivotEditor';
 export {PivotView} from './PivotView';
 export {
+  PivotBlock,
   createPivotBlockDefinition,
   type CreatePivotBlockDefinitionOptions,
+  type PivotBlockProps,
   type PivotBlockRenderProps,
 } from './PivotBlock';
 export {PivotResults} from './PivotResults';

@@ -231,7 +231,7 @@ describe('block document commands', () => {
       statefulBlockType: 'dashboard',
       blockInstanceId: 'dashboard-block',
       ownership: 'owned',
-      title: 'Regional Dashboard',
+      instanceTitle: 'Regional Dashboard',
       caption: 'Regions',
     });
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
@@ -242,7 +242,6 @@ describe('block document commands', () => {
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-block',
         ownership: 'owned',
-        title: 'Regional Dashboard',
         caption: 'Regions',
       },
     ]);

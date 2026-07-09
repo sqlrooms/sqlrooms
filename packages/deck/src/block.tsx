@@ -10,7 +10,14 @@ import {useBlockSettingsStore} from '@sqlrooms/documents';
 import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {MapIcon, SlidersVerticalIcon} from 'lucide-react';
 import {Button} from '@sqlrooms/ui';
-import {useCallback, useEffect, useMemo} from 'react';
+import {
+  Component,
+  useCallback,
+  useEffect,
+  useMemo,
+  type ErrorInfo,
+  type ReactNode,
+} from 'react';
 import {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
@@ -33,6 +40,43 @@ function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
   });
 }
 
+class DeckMapBlockErrorBoundary extends Component<
+  {children: ReactNode; onError?: (error: Error) => void},
+  {error?: Error}
+> {
+  state: {error?: Error} = {};
+
+  static getDerivedStateFromError(error: Error) {
+    return {error};
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[DeckMapBlockErrorBoundary] Error rendering map:', error, {
+      componentStack: errorInfo.componentStack,
+    });
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="text-muted-foreground flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">
+          <div className="max-w-md">
+            <div className="text-foreground font-medium">
+              Map failed to render
+            </div>
+            <div className="mt-1 font-mono text-xs break-words">
+              {this.state.error.message}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 /**
  * Ensures persisted map block state exists for an embeddable map surface.
  * If a geospatial table is available, the block is seeded with a starter map.
@@ -40,7 +84,7 @@ function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
 export function ensureDeckMapBlockState(
   state: MosaicDashboardStoreState,
   mapId: string,
-  title: string,
+  title?: string,
 ) {
   state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
 
@@ -97,6 +141,8 @@ export type DeckMapBlockRendererProps = {
   selected?: boolean;
   /** Whether the block is read-only. */
   readOnly?: boolean;
+  /** Optional actions rendered in the map header before the settings button. */
+  headerActions?: ReactNode;
 };
 
 /**
@@ -109,6 +155,7 @@ export function DeckMapBlockRenderer({
   onCaptionChange,
   selected,
   readOnly,
+  headerActions,
 }: DeckMapBlockRendererProps) {
   const dashboard = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.config.dashboardsById[mapId],
@@ -127,6 +174,9 @@ export function DeckMapBlockRenderer({
   const updatePanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.updatePanel,
   );
+  const reportPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.reportPanelIssue,
+  );
   const requestOpenSettingsPanel = useBlockSettingsStore(
     (state) => state.blockSettings.requestOpenSettingsPanel,
   );
@@ -143,8 +193,12 @@ export function DeckMapBlockRenderer({
       return;
     }
 
-    ensureDashboard(mapId, title ?? 'Embedded Map', 'grid');
-  }, [ensureDashboard, mapId, title]);
+    ensureDashboard(
+      mapId,
+      dashboard ? undefined : (title ?? 'Embedded Map'),
+      'grid',
+    );
+  }, [dashboard, ensureDashboard, mapId, title]);
 
   useEffect(() => {
     if (!mapId || !dashboard) {
@@ -233,6 +287,27 @@ export function DeckMapBlockRenderer({
 
     requestOpenSettingsPanel();
   }, [isSettingsShown, requestCloseSettingsPanel, requestOpenSettingsPanel]);
+  const mapBoundaryKey = [
+    mapId || 'no-map',
+    panel?.id ?? 'no-panel',
+    panel?.config ? JSON.stringify(panel.config) : 'no-config',
+  ].join(':');
+  const handleMapRenderError = useCallback(
+    (error: Error) => {
+      if (!mapId || !panel) {
+        return;
+      }
+
+      reportPanelIssue(mapId, panel.id, {
+        kind: 'render-error',
+        panelId: panel.id,
+        chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
+        message: error.message,
+        recoverable: true,
+      });
+    },
+    [mapId, panel, reportPanelIssue],
+  );
 
   if (!dashboard || !panel) {
     return (
@@ -272,6 +347,7 @@ export function DeckMapBlockRenderer({
           />
         </div>
         <div className="flex items-center gap-0.5">
+          {headerActions}
           {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
           <Button
             type="button"
@@ -290,7 +366,12 @@ export function DeckMapBlockRenderer({
       </div>
       <div className="min-h-0 flex-1">
         {hasDatasets ? (
-          <MapPanel {...rendererProps} />
+          <DeckMapBlockErrorBoundary
+            key={mapBoundaryKey}
+            onError={handleMapRenderError}
+          >
+            <MapPanel {...rendererProps} />
+          </DeckMapBlockErrorBoundary>
         ) : (
           <DataTableSelectorEmptyState
             onChange={handleTableChange}

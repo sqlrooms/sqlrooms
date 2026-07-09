@@ -17,8 +17,8 @@ export const BlockDocumentStatefulBlockNode = Node.create({
       blockType: {default: null},
       blockInstanceId: {default: null},
       ownership: {default: 'owned'},
-      title: {default: null},
       caption: {default: null},
+      tableName: {default: null},
       height: {default: null},
     };
   },

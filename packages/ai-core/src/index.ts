@@ -71,6 +71,10 @@ export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
 export {QueryControls} from './components/QueryControls';
+export {
+  BlockAiPromptPopover,
+  type BlockAiPromptPopoverProps,
+} from './components/BlockAiPromptPopover';
 export {DeleteSessionDialog} from './components/session/DeleteSessionDialog';
 export {SessionActions} from './components/session/SessionActions';
 export {SessionDropdown} from './components/session/SessionDropdown';
@@ -86,13 +90,19 @@ export {
   AiSliceConfig,
   AiSessionForkOrigin,
   AnalysisSessionSchema,
+  BlockAiRunContextItemSchema,
   ChatSessionSchema,
+  createBlockContextItem,
   createDefaultAiConfig,
   getAiRunContextPrimaryItem,
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,

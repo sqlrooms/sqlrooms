@@ -5,16 +5,18 @@ import type {
   ChartToolsOptions,
 } from '@sqlrooms/mosaic/ai';
 import {
-  AiAgentError,
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   calculateAgentResultMetadata,
   createChartToolsInstructions,
   resolveChartTypes,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
-import type {
-  BlockDocumentAiAdapter,
-  BlockDocumentMoveBlockAiAdapter,
+import type {MosaicDashboardPanelConfig} from '@sqlrooms/mosaic';
+import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import {
+  blockDocumentNodeToBlock,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
 } from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import {
@@ -25,6 +27,10 @@ import {
   KnownBlockDocumentTools,
   CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME,
 } from './constants';
+import {
+  formatMapBlockRuntimeIssues,
+  getMapBlockRuntimeIssues,
+} from './getMapBlockRuntimeIssues';
 
 const AgentIntentSchemaFields = {
   intent: z
@@ -295,6 +301,16 @@ const BlockDocumentAgentInputSchema = z.object({
   blockDocumentId: z
     .string()
     .describe('Target block document artifact ID where blocks will be added.'),
+  targetBlock: z
+    .object({
+      blockId: z.string(),
+      blockType: z.string(),
+      blockInstanceId: z.string().optional(),
+    })
+    .optional()
+    .describe(
+      'Optional exact worksheet block to update. When provided, operate only on this block.',
+    ),
   maxSteps: z
     .number()
     .optional()
@@ -302,9 +318,219 @@ const BlockDocumentAgentInputSchema = z.object({
     .describe('Maximum exploration steps (default: 20, range: 5-50)'),
 });
 
-type BlockDocumentAgentInputSchema = z.infer<
-  typeof BlockDocumentAgentInputSchema
->;
+type BlockDocumentAgentInput = z.infer<typeof BlockDocumentAgentInputSchema>;
+
+type ExecutableTool = Tool & {
+  execute?: (input: unknown, options?: unknown) => unknown;
+};
+
+const MAX_TARGET_MAP_STATE_CHARS = 12_000;
+const STATEFUL_TARGET_BLOCK_TYPES = new Set(['dashboard', 'html-app', 'map']);
+
+function getTargetBlockInstructions(
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
+): string | undefined {
+  if (!targetBlock) return undefined;
+
+  return `A targetBlock was provided. Operate ONLY on this worksheet block:
+- blockId: ${targetBlock.blockId}
+- blockType: ${targetBlock.blockType}
+- blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
+
+Do not list blocks, discover alternate blocks, create replacement blocks, or modify another worksheet block. Route directly by blockType:
+- dashboard: call ${KnownBlockDocumentTools.embedded_dashboard_agent}; dashboardId is pre-bound to blockInstanceId.
+- html-app: call ${KnownBlockDocumentTools.embedded_html_app_agent}; appId is pre-bound to blockInstanceId.
+- map: call ${KnownBlockDocumentTools.create_block_document_map_block}; mapId is pre-bound to blockInstanceId. Use the existing map panel state in the prompt as the edit base, repair any provided runtime issues in place, and preserve datasets/layers unless the user asks to change them.
+- chart: call the worksheet chart tool that satisfies the request; it is configured to update blockId ${targetBlock.blockId} in place.`;
+}
+
+function bindTargetToolInputField({
+  targetTool,
+  fieldName,
+  fieldValue,
+}: {
+  targetTool: Tool | undefined;
+  fieldName: string;
+  fieldValue: string;
+}): Tool | undefined {
+  if (!targetTool) return undefined;
+
+  const execute = (targetTool as ExecutableTool).execute;
+  if (!execute) return targetTool;
+
+  return {
+    ...targetTool,
+    execute: (input: unknown, toolOptions?: unknown) => {
+      const boundInput =
+        input && typeof input === 'object' && !Array.isArray(input)
+          ? {...input, [fieldName]: fieldValue}
+          : {[fieldName]: fieldValue};
+
+      return execute(boundInput, toolOptions);
+    },
+  } as Tool;
+}
+
+function selectTargetBlockTools(
+  tools: Record<string, Tool>,
+  targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
+): Record<string, Tool | undefined> {
+  switch (targetBlock.blockType) {
+    case 'dashboard':
+      return {
+        [KnownBlockDocumentTools.embedded_dashboard_agent]:
+          bindTargetToolInputField({
+            targetTool: tools[KnownBlockDocumentTools.embedded_dashboard_agent],
+            fieldName: 'dashboardId',
+            fieldValue: targetBlock.blockInstanceId ?? '',
+          }),
+      };
+    case 'html-app':
+      return {
+        [KnownBlockDocumentTools.embedded_html_app_agent]:
+          bindTargetToolInputField({
+            targetTool: tools[KnownBlockDocumentTools.embedded_html_app_agent],
+            fieldName: 'appId',
+            fieldValue: targetBlock.blockInstanceId ?? '',
+          }),
+      };
+    case 'map':
+      return {
+        [KnownBlockDocumentTools.create_block_document_map_block]:
+          bindTargetToolInputField({
+            targetTool:
+              tools[KnownBlockDocumentTools.create_block_document_map_block],
+            fieldName: 'mapId',
+            fieldValue: targetBlock.blockInstanceId ?? '',
+          }),
+      };
+    case 'chart':
+      return Object.fromEntries(
+        Object.entries(tools).filter(([toolName]) =>
+          toolName.startsWith(BLOCK_DOCUMENT_CHART_TOOL_PREFIX),
+        ),
+      );
+    default:
+      return {};
+  }
+}
+
+function validateTargetBlock(
+  blockDocumentAdapter: BlockDocumentAiAdapter,
+  blockDocumentId: string,
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
+) {
+  if (!targetBlock || !STATEFUL_TARGET_BLOCK_TYPES.has(targetBlock.blockType)) {
+    return;
+  }
+
+  if (!targetBlock.blockInstanceId) {
+    throw new Error(
+      `${targetBlock.blockType} block ${targetBlock.blockId} is missing blockInstanceId.`,
+    );
+  }
+
+  const existingBlock = blockDocumentAdapter
+    .getBlocks(blockDocumentId)
+    ?.map((node) => blockDocumentNodeToBlock(node))
+    .find((block) => block?.id === targetBlock.blockId);
+
+  if (!existingBlock) {
+    throw new Error(
+      `Target block ${targetBlock.blockId} was not found in worksheet ${blockDocumentId}.`,
+    );
+  }
+
+  if (existingBlock.type !== 'statefulBlock') {
+    throw new Error(
+      `Target block ${targetBlock.blockId} is a ${existingBlock.type} block, not a ${targetBlock.blockType} stateful block.`,
+    );
+  }
+
+  if (existingBlock.blockType !== targetBlock.blockType) {
+    throw new Error(
+      `Target block ${targetBlock.blockId} is a ${existingBlock.blockType} block, not a ${targetBlock.blockType} block.`,
+    );
+  }
+
+  if (existingBlock.blockInstanceId !== targetBlock.blockInstanceId) {
+    throw new Error(
+      `Target block ${targetBlock.blockId} instance id does not match the current worksheet block.`,
+    );
+  }
+}
+
+function targetBlockPrompt(
+  store: CreateCliBlockDocumentAgentToolOptions['store'],
+  intent: string,
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
+  targetContext?: string,
+): string {
+  if (!targetBlock) return intent;
+
+  const runtimeIssues =
+    targetBlock.blockType === 'map' && targetBlock.blockInstanceId
+      ? getMapBlockRuntimeIssues(store.getState(), targetBlock.blockInstanceId)
+      : [];
+
+  return `Target worksheet block:
+- blockId: ${targetBlock.blockId}
+- blockType: ${targetBlock.blockType}
+- blockInstanceId: ${targetBlock.blockInstanceId ?? 'none'}
+${targetContext ? `\n${targetContext}` : ''}
+${runtimeIssues.length > 0 ? `\nCurrent map runtime issues:\n${formatMapBlockRuntimeIssues(runtimeIssues)}` : ''}
+
+User request: ${intent}`;
+}
+
+function findTargetMapPanel(
+  state: RoomState,
+  targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
+): MosaicDashboardPanelConfig | undefined {
+  if (targetBlock.blockType !== 'map' || !targetBlock.blockInstanceId) {
+    return undefined;
+  }
+
+  return state.mosaicDashboard
+    .getDashboard(targetBlock.blockInstanceId)
+    ?.panels.find((panel) => panel.type === DECK_MAP_DASHBOARD_PANEL_TYPE);
+}
+
+function formatTargetMapState(
+  state: RoomState,
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
+): string | undefined {
+  if (!targetBlock || targetBlock.blockType !== 'map') {
+    return undefined;
+  }
+
+  const panel = findTargetMapPanel(state, targetBlock);
+  if (!panel) {
+    return 'Existing map panel state: no map panel config was found for this block. Avoid inventing datasets or layers; ask for more information if the requested edit depends on missing map state.';
+  }
+
+  const stateJson = JSON.stringify(
+    {
+      panelId: panel.id,
+      title: panel.title,
+      type: panel.type,
+      config: panel.config,
+    },
+    null,
+    2,
+  );
+
+  const serializedState =
+    stateJson.length > MAX_TARGET_MAP_STATE_CHARS
+      ? `${stateJson.slice(0, MAX_TARGET_MAP_STATE_CHARS)}\n...truncated`
+      : stateJson;
+
+  return `Existing map panel state:
+\`\`\`json
+${serializedState}
+\`\`\`
+Use this state as the starting point for the map edit. Preserve existing datasets, layers, view state, legends, interactions, and styling unless the user explicitly asks to change them.`;
+}
 
 /**
  * Creates the CLI block-document artifact agent tool.
@@ -344,7 +570,7 @@ IF user requests a MAP in a worksheet:
 ${
   mapBlocksEnabled
     ? `1. For a new map, call ${KnownBlockDocumentTools.create_block_document_map_block} directly
-2. For an existing map, call ${KnownBlockDocumentTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to create_block_document_map_block`
+2. For an existing map, call ${KnownBlockDocumentTools.list_blocks} and pass statefulBlock.blockInstanceId as mapId to ${KnownBlockDocumentTools.create_block_document_map_block}`
     : `1. Call ${KnownBlockDocumentTools.list_blocks} to find an existing dashboard block
 2. Reuse an existing dashboardId if available, otherwise call ${KnownBlockDocumentTools.add_dashboard_block}
 3. Call ${KnownBlockDocumentTools.embedded_dashboard_agent} with an intent to add a map panel`
@@ -375,38 +601,68 @@ ${htmlAppBlocksEnabled ? '- App requests in worksheets: "create an app", "make a
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
     inputSchema: BlockDocumentAgentInputSchema,
     execute: async (params, toolOptions): Promise<BlockDocumentAgentResult> => {
-      const {blockDocumentId, maxSteps} = params;
+      const {blockDocumentId, maxSteps, targetBlock} = params;
       const {intent} = params;
 
       try {
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         blockDocumentAdapter.setCurrentBlockDocument(blockDocumentId);
+        validateTargetBlock(blockDocumentAdapter, blockDocumentId, targetBlock);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
+        const blockDocumentTools = createCliBlockDocumentAiTools({
+          databaseAdapter,
+          blockDocumentAdapter,
+          blockDocumentId,
+          targetBlockId:
+            targetBlock?.blockType === 'chart'
+              ? targetBlock.blockId
+              : undefined,
+          getState: () => store.getState(),
+          chartToolsOptions,
+          dashboardAgentTool,
+          extraTools,
+          htmlAppBlocksEnabled,
+          createDashboardBlock,
+          createDataTableExplorerBlock,
+          createHtmlAppBlock,
+          addDashboardBlock,
+          addDataTableExplorerBlock,
+          addHtmlAppBlock,
+        });
+        const targetTools = targetBlock
+          ? selectTargetBlockTools(blockDocumentTools, targetBlock)
+          : undefined;
+        const availableTargetTools = targetTools
+          ? Object.fromEntries(
+              Object.entries(targetTools).filter(([, targetTool]) =>
+                Boolean(targetTool),
+              ),
+            )
+          : undefined;
+
+        if (
+          targetBlock &&
+          Object.keys(availableTargetTools ?? {}).length === 0
+        ) {
+          return {
+            success: false,
+            finalOutput: `Worksheet ${targetBlock.blockType} block edits are not supported by the available tools.`,
+            blockDocumentId,
+            error: `No target-block tool available for ${targetBlock.blockType}.`,
+          };
+        }
 
         const agent = new ToolLoopAgent({
           model: options.getModel({state: store.getState()}),
           tools: {
-            ...createCliBlockDocumentAiTools({
-              databaseAdapter,
-              blockDocumentAdapter,
-              blockDocumentId,
-              chartToolsOptions,
-              dashboardAgentTool,
-              extraTools,
-              htmlAppBlocksEnabled,
-              createDashboardBlock,
-              createDataTableExplorerBlock,
-              createHtmlAppBlock,
-              addDashboardBlock,
-              addDataTableExplorerBlock,
-              addHtmlAppBlock,
-            }),
+            ...(availableTargetTools ?? blockDocumentTools),
             ...dataTools,
           },
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getBlockDocumentAgentInstructions(options),
+            getTargetBlockInstructions(targetBlock),
             options.additionalInstructions,
           ]
             .filter(Boolean)
@@ -415,7 +671,12 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         const result = await options.runSubAgent({
           agent,
-          prompt: intent,
+          prompt: targetBlockPrompt(
+            store,
+            intent,
+            targetBlock,
+            formatTargetMapState(store.getState(), targetBlock),
+          ),
           store,
           parentToolCallId: toolOptions?.toolCallId || '',
           abortSignal: toolOptions?.abortSignal,
@@ -428,7 +689,11 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         return {
           success: true,
-          finalOutput: result.finalOutput || 'Worksheet created successfully.',
+          finalOutput:
+            result.finalOutput ||
+            (targetBlock
+              ? 'Worksheet block updated successfully.'
+              : 'Worksheet created successfully.'),
           blockDocumentId,
           metadata,
         };
@@ -437,9 +702,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           error instanceof Error ? error.message : String(error);
 
         const friendlyMessage =
-          error instanceof AiAgentError
-            ? errorMessage
-            : 'Worksheet update failed.';
+          error instanceof Error ? errorMessage : 'Worksheet update failed.';
 
         return {
           success: false,

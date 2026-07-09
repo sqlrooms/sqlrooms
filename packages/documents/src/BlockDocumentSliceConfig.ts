@@ -172,8 +172,15 @@ export const BlockDocumentStatefulBlockBlock = z.object({
   blockType: z.string(),
   blockInstanceId: z.string(),
   ownership: z.enum(['owned', 'shared', 'external']).optional(),
-  title: z.string().optional(),
+  /** User-facing label shown for the block in the document flow. */
   caption: z.string().optional(),
+  /**
+   * Table identity this block reads from, for block types that bind to a single
+   * table (currently `data-table`). Resolved via `db.findTable`, same as the
+   * `chart` block's `tableName`. Other block types leave this unset and keep
+   * their data binding inside their own backing state.
+   */
+  tableName: z.string().optional(),
   height: z.number().optional(),
 });
 
@@ -209,7 +216,8 @@ function textFromNode(node: BlockDocumentNode | undefined): string {
   return node.content.map((child) => textFromNode(child)).join('');
 }
 
-function nodeId(node: BlockDocumentNode): string {
+/** Returns the document-local id attribute for a block document node, if present. */
+export function blockDocumentNodeId(node: BlockDocumentNode): string {
   const id = node.attrs?.id;
   return typeof id === 'string' ? id : '';
 }
@@ -321,8 +329,10 @@ export function blockDocumentBlockToNode(
           ...(block.ownership !== undefined
             ? {ownership: block.ownership}
             : {}),
-          ...(block.title !== undefined ? {title: block.title} : {}),
           ...(block.caption !== undefined ? {caption: block.caption} : {}),
+          ...(block.tableName !== undefined
+            ? {tableName: block.tableName}
+            : {}),
           ...(block.height !== undefined ? {height: block.height} : {}),
         },
       };
@@ -332,7 +342,7 @@ export function blockDocumentBlockToNode(
 export function blockDocumentNodeToBlock(
   node: BlockDocumentNode,
 ): BlockDocumentBlock | undefined {
-  const id = nodeId(node);
+  const id = blockDocumentNodeId(node);
   if (!id) return undefined;
   const intent = optionalString(node.attrs?.intent);
 
@@ -409,8 +419,8 @@ export function blockDocumentNodeToBlock(
         blockType: node.attrs?.blockType,
         blockInstanceId: node.attrs?.blockInstanceId,
         ownership: node.attrs?.ownership,
-        title: optionalString(node.attrs?.title),
         caption: optionalString(node.attrs?.caption),
+        tableName: optionalString(node.attrs?.tableName),
         height: optionalNumber(node.attrs?.height),
       });
       return result.success ? result.data : undefined;

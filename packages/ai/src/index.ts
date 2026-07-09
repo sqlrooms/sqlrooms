@@ -192,6 +192,10 @@ export {PromptSuggestions} from '@sqlrooms/ai-core';
 export {ModelSelector} from '@sqlrooms/ai-core';
 export {SessionControls} from '@sqlrooms/ai-core';
 export {QueryControls} from '@sqlrooms/ai-core';
+export {
+  BlockAiPromptPopover,
+  type BlockAiPromptPopoverProps,
+} from '@sqlrooms/ai-core';
 export {DeleteSessionDialog} from '@sqlrooms/ai-core';
 export {SessionActions} from '@sqlrooms/ai-core';
 export {SessionDropdown} from '@sqlrooms/ai-core';
@@ -236,6 +240,8 @@ export {
   AiSliceConfig,
   AiSessionForkOrigin,
   ChatSessionSchema,
+  createBlockContextItem,
+  BlockAiRunContextItemSchema,
   createDefaultAiConfig,
   AiSettingsSliceConfig,
   AnalysisSessionSchema,
@@ -245,7 +251,11 @@ export {
   getAiRunContextItems,
   setAiRunContextPrimaryItem,
 } from '@sqlrooms/ai-config';
-export type {AiRunContext, AiRunContextItem} from '@sqlrooms/ai-config';
+export type {
+  AiRunContext,
+  AiRunContextItem,
+  BlockAiRunContextItem,
+} from '@sqlrooms/ai-config';
 export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic

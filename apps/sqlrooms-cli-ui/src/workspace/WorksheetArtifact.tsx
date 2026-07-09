@@ -1,3 +1,4 @@
+import {BlockAiPromptPopover} from '@sqlrooms/ai';
 import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
@@ -6,6 +7,7 @@ import {
   BlockDocumentStatefulBlockRendererProvider,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  type BlockDocumentBlockHeaderActionsRenderContext,
   type Editor,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
@@ -14,11 +16,18 @@ import {
   ChartBlockSettings,
   DataTableBlockRenderer,
 } from '@sqlrooms/mosaic';
+import {Button} from '@sqlrooms/ui';
+import {SparklesIcon} from 'lucide-react';
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
+import {startBlockScopedChat} from '../ai/startBlockScopedChat';
+import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
+  getEnabledStatefulBlockArtifactTypes,
+  getStatefulBlockArtifactConfig,
+  isStatefulBlockArtifactType,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
@@ -40,10 +49,10 @@ const WorksheetDataTableBlockRenderer: FC<
 > = (props) => {
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
 
-  const handleTitleChange = useCallback(
-    (title: string | undefined) => {
-      if (props.onTitleChange) {
-        props.onTitleChange(title);
+  const handleTableNameChange = useCallback(
+    (tableName: string | undefined) => {
+      if (props.onTableNameChange) {
+        props.onTableNameChange(tableName);
         return;
       }
 
@@ -53,8 +62,8 @@ const WorksheetDataTableBlockRenderer: FC<
         blockType: props.blockType,
         blockInstanceId: props.blockInstanceId,
         ownership: normalizeStatefulBlockOwnership(props.ownership),
-        title: title || undefined,
         caption: props.caption,
+        tableName: tableName || undefined,
         height: props.height,
       });
     },
@@ -65,58 +74,81 @@ const WorksheetDataTableBlockRenderer: FC<
       props.caption,
       props.documentId,
       props.height,
-      props.onTitleChange,
+      props.onTableNameChange,
       props.ownership,
       updateBlock,
     ],
   );
 
   return (
-    <DataTableBlockRenderer {...props} onTitleChange={handleTitleChange} />
+    <DataTableBlockRenderer
+      {...props}
+      onTableNameChange={handleTableNameChange}
+    />
   );
 };
 
 const WorksheetHtmlAppBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = (props) => (
-  <HtmlAppBlock
-    blockId={props.blockInstanceId}
-    title={props.title}
-    className="bg-background h-full min-h-80"
-  />
-);
+> = (props) => {
+  const appTitle = useRoomStore((state) =>
+    props.blockInstanceId
+      ? state.htmlApps.config.appsById[props.blockInstanceId]?.title
+      : undefined,
+  );
+  return (
+    <HtmlAppBlock
+      blockId={props.blockInstanceId}
+      title={appTitle}
+      className="bg-background h-full min-h-80"
+      headerActions={props.headerActions}
+    />
+  );
+};
 
 const WorksheetPythonBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
-> = (props) => (
-  <PythonBlock
-    artifactId={props.documentId}
-    blockId={props.blockInstanceId}
-    blockType={props.blockType}
-    title={props.title}
-    readOnly={props.readOnly}
-    compact
-  />
-);
+> = (props) => {
+  const pythonTitle = useRoomStore((state) =>
+    props.blockInstanceId
+      ? state.python.config.blocks[props.blockInstanceId]?.title
+      : undefined,
+  );
+  return (
+    <PythonBlock
+      artifactId={props.documentId}
+      blockId={props.blockInstanceId}
+      blockType={props.blockType}
+      title={pythonTitle}
+      readOnly={props.readOnly}
+      compact
+    />
+  );
+};
 
 const ExperimentalStatefulBlockPlaceholder: FC<
   BlockDocumentStatefulBlockRendererProps
-> = (props) => (
-  <div className="bg-muted/20 flex h-full min-h-40 items-center justify-center p-4 text-center">
-    <div className="bg-background max-w-md rounded-md border p-4">
-      <div className="text-sm font-medium">
-        {props.title || 'Experimental block'}
-      </div>
-      <p className="text-muted-foreground mt-2 text-sm">
-        This block uses an experimental SQLRooms surface. Reopen this project
-        with --experimental to view and edit it.
-      </p>
-      <div className="text-muted-foreground mt-3 text-xs">
-        Block type: {props.blockType}
+> = (props) => {
+  const label = isStatefulBlockArtifactType(props.blockType)
+    ? getStatefulBlockArtifactConfig(props.blockType).label
+    : undefined;
+  return (
+    <div className="bg-muted/20 flex h-full min-h-40 items-center justify-center p-4 text-center">
+      <div className="bg-background max-w-md rounded-md border p-4">
+        <div className="text-sm font-medium">
+          {props.caption || label || 'Experimental block'}
+        </div>
+        <p className="text-muted-foreground mt-2 text-sm">
+          This block uses an experimental SQLRooms surface. Reopen this project
+          with --experimental to view and edit it.
+        </p>
+        <div className="text-muted-foreground mt-3 text-xs">
+          Block type: {props.blockType}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   dashboard: WorksheetDashboardBlockRenderer,
@@ -131,6 +163,14 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer
 >;
+
+const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
+const ENABLED_WORKSHEET_AI_BLOCK_TYPES = new Set<string>([
+  'chart',
+  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
+    WORKSHEET_AI_BLOCK_TYPES.has(type),
+  ),
+]);
 
 function createWorksheetStatefulBlockRenderers(
   includeExperimental: boolean,
@@ -160,6 +200,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const renameArtifact = useRoomStore(
     (state) => state.artifacts.renameArtifact,
   );
+  const setLayoutCollapsed = useRoomStore((state) => state.layout.setCollapsed);
   const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
@@ -188,6 +229,55 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [artifactId, renameArtifact],
   );
 
+  const revealAssistant = useCallback(() => {
+    setLayoutCollapsed('assistant-sidebar', false);
+  }, [setLayoutCollapsed]);
+
+  const renderBlockHeaderActions = useCallback(
+    ({
+      blockDocumentId,
+      blockId,
+      blockType,
+      blockInstanceId,
+    }: BlockDocumentBlockHeaderActionsRenderContext) => {
+      if (!ENABLED_WORKSHEET_AI_BLOCK_TYPES.has(blockType)) {
+        return null;
+      }
+
+      return (
+        <BlockAiPromptPopover
+          label="Ask AI"
+          placeholder="Ask AI to edit this block..."
+          trigger={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              aria-label="Ask AI"
+              title="Ask AI"
+            >
+              <SparklesIcon className="h-3.5 w-3.5" aria-hidden />
+            </Button>
+          }
+          onSubmit={(prompt) =>
+            void startBlockScopedChat({
+              target: {
+                blockDocumentId,
+                blockId,
+                blockType,
+                blockInstanceId,
+              },
+              prompt,
+              revealAssistant,
+            })
+          }
+        />
+      );
+    },
+    [revealAssistant],
+  );
+
   if (!artifact || artifact.type !== 'worksheet') {
     return null;
   }
@@ -196,10 +286,12 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     <BlockDocumentChartRendererProvider
       renderer={ChartBlockRenderer}
       settings={ChartBlockSettings}
+      renderBlockHeaderActions={renderBlockHeaderActions}
     >
       <BlockDocumentStatefulBlockRendererProvider
         renderers={statefulBlockRenderers}
         blockTypes={statefulBlockTypes}
+        renderBlockHeaderActions={renderBlockHeaderActions}
       >
         <BlockSettingsPanelLayout editor={editor} documentId={artifactId}>
           <BlockDocumentArtifact

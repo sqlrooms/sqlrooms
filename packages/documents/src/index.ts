@@ -28,6 +28,7 @@ export {
   BlockDocumentTodoBlock,
   blockDocumentBlockToNode,
   blockDocumentContentToBlocks,
+  blockDocumentNodeId,
   blockDocumentNodeToBlock,
   createEmptyBlockDocumentContent,
   type BlockDocumentBlock as BlockDocumentBlockType,
@@ -42,7 +43,6 @@ export {
   createDefaultBlockDocumentsConfig,
   type BlockDocumentOwnedStatefulBlockCreateContext,
   type BlockDocumentOwnedStatefulBlockDeleteContext,
-  type BlockDocumentOwnedStatefulBlockRenameContext,
   type BlockDocumentOwnedStatefulBlockReference,
   type BlockDocumentMutationMetadata,
   type BlockDocumentMutationOrigin,
@@ -57,6 +57,7 @@ export {
 } from './BlockDocumentFeatureSlices';
 export {
   BlockDocumentChartRendererProvider,
+  useBlockDocumentChartRenderBlockHeaderActions,
   useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
@@ -64,7 +65,14 @@ export {
   type BlockDocumentChartRendererProviderProps,
 } from './BlockDocumentChartRendererContext';
 export {
+  type BlockDocumentBlockHeaderActionsRenderContext,
+  type BlockDocumentBlockHeaderActionsRenderer,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentChartHeaderActionsRenderer,
+  type BlockDocumentBlockHeaderActionsRenderer as BlockDocumentStatefulBlockHeaderActionsRenderer,
+} from './BlockDocumentBlockHeaderActions';
+export {
   BlockDocumentStatefulBlockRendererProvider,
+  useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockSettings,
   useBlockDocumentStatefulBlockTypes,
@@ -75,6 +83,12 @@ export {
   type BlockDocumentStatefulBlockRenderers,
   type BlockDocumentStatefulBlockType,
 } from './BlockDocumentStatefulBlockRendererContext';
+export {
+  blockContextItemId,
+  defaultBlockTitle,
+  parseBlockContextItemId,
+  type BlockAiTarget,
+} from './BlockAiTarget';
 export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
@@ -117,6 +131,7 @@ export {
 } from './createAddBlockDocumentTextBlockTool';
 export {
   createListBlockDocumentBlocksTool,
+  type BlockDocumentBlockSummaryAugmenter,
   type CreateListBlockDocumentBlocksToolOptions,
 } from './createListBlockDocumentBlocksTool';
 export {

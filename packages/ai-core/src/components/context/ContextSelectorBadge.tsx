@@ -37,7 +37,6 @@ export const ContextSelectorBadge: FC<ContextSelectorBadgeProps> = ({
     runningItems,
     renderBadgeLabel,
     removeItem,
-    makeMain,
     reorderItems,
   } = useContextSelectorContext();
 
@@ -106,12 +105,10 @@ export const ContextSelectorBadge: FC<ContextSelectorBadgeProps> = ({
             items={selectedItems.map((item) => item.id)}
             strategy={horizontalListSortingStrategy}
           >
-            {selectedItems.map((item, index) => (
+            {selectedItems.map((item) => (
               <ContextSelectorSortableChip
                 key={item.id}
                 item={item}
-                main={index === 0}
-                onMakeMain={makeMain}
                 onRemove={removeItem}
               />
             ))}

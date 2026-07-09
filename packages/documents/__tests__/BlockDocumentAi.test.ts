@@ -151,7 +151,7 @@ describe('block document AI helpers', () => {
           id: 'block-2',
           blockType: 'html-app',
           blockInstanceId: 'html-app-1',
-          title: 'Country Explorer',
+          caption: 'Country Explorer',
         }),
       ],
       addBlock: (_blockDocumentId, block) => block.id,
@@ -182,7 +182,7 @@ describe('block document AI helpers', () => {
           blockId: 'block-2',
           index: 1,
           type: 'statefulBlock',
-          title: 'Country Explorer',
+          caption: 'Country Explorer',
           statefulBlock: {
             blockType: 'html-app',
             blockInstanceId: 'html-app-1',
@@ -192,6 +192,61 @@ describe('block document AI helpers', () => {
     });
     expect(result.blocks[0]).not.toHaveProperty('dashboardId');
     expect(result.blocks[1]).not.toHaveProperty('htmlAppId');
+  });
+
+  it('allows hosts to augment block summaries with runtime metadata', async () => {
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [
+        blockDocumentBlockToNode({
+          type: 'statefulBlock',
+          id: 'block-1',
+          blockType: 'map',
+          blockInstanceId: 'map-1',
+        }),
+      ],
+      addBlock: (_blockDocumentId, block) => block.id,
+    };
+
+    const tool = createListBlockDocumentBlocksTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+      augmentBlockSummary: ({block}) =>
+        block.type === 'statefulBlock' && block.blockType === 'map'
+          ? {
+              runtimeIssues: [
+                {
+                  kind: 'render-error',
+                  message: 'Layer failed to render',
+                },
+              ],
+            }
+          : undefined,
+    });
+
+    const result = await (tool as any).execute({});
+
+    expect(result).toEqual({
+      success: true,
+      blocks: [
+        {
+          blockId: 'block-1',
+          index: 0,
+          type: 'statefulBlock',
+          statefulBlock: {
+            blockType: 'map',
+            blockInstanceId: 'map-1',
+          },
+          runtimeIssues: [
+            {
+              kind: 'render-error',
+              message: 'Layer failed to render',
+            },
+          ],
+        },
+      ],
+    });
   });
 
   it('moves a top-level block through the block document adapter', async () => {

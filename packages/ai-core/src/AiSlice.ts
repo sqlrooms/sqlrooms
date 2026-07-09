@@ -165,6 +165,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    startAnalysisWhenReady: (sessionId: string) => Promise<boolean>;
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
@@ -1332,6 +1333,26 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sendMessage({text: promptText});
         },
 
+        startAnalysisWhenReady: async (sessionId: string) => {
+          const maxAttempts = 50; // 50 * 20ms = 1 second max
+
+          for (let attempts = 0; attempts < maxAttempts; attempts++) {
+            const sendMessage = get().ai.getChatSendMessage(sessionId);
+            if (sendMessage) {
+              await get().ai.startAnalysis(sessionId);
+              return true;
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
+
+          console.error(
+            'Timeout waiting for chat provider to register for session:',
+            sessionId,
+          );
+          return false;
+        },
+
         /**
          * Start a new session with a prompt and automatically begin analysis
          */
@@ -1350,35 +1371,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           get().ai.setPrompt(session.id, prompt);
 
           // Wait for SessionChatProvider to mount and register sendMessage
-          const waitForChatReadyAndStart = async (): Promise<void> => {
-            const maxAttempts = 50; // 50 * 20ms = 1 second max
-            let attempts = 0;
-
-            const checkAndStart = async () => {
-              const sendMessage = get().ai.getChatSendMessage(session.id);
-              if (sendMessage) {
-                // Chat provider is ready, start analysis
-                await get().ai.startAnalysis(session.id);
-                return;
-              }
-
-              attempts++;
-              if (attempts >= maxAttempts) {
-                console.error(
-                  'Timeout waiting for chat provider to register for session:',
-                  session.id,
-                );
-                return;
-              }
-
-              // Poll again after a short delay
-              setTimeout(checkAndStart, 20);
-            };
-
-            await checkAndStart();
-          };
-
-          void waitForChatReadyAndStart();
+          void get()
+            .ai.startAnalysisWhenReady(session.id)
+            .catch((error) => {
+              console.error('Failed to start analysis for new session:', error);
+            });
         },
 
         cancelAnalysis: (sessionId: string) => {

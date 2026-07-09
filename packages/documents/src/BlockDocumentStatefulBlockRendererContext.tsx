@@ -4,8 +4,10 @@ import {
   useMemo,
   type FC,
   type PropsWithChildren,
+  type ReactNode,
 } from 'react';
 import type {BlockSettingsComponent} from './block-settings/types';
+import type {BlockDocumentBlockHeaderActionsRenderer} from './BlockDocumentBlockHeaderActions';
 
 export type BlockDocumentStatefulBlockRendererProps = {
   documentId: string;
@@ -13,13 +15,17 @@ export type BlockDocumentStatefulBlockRendererProps = {
   blockType: string;
   blockInstanceId: string;
   ownership?: string;
-  title?: string;
+  /** User-facing label shown for the block in the document flow. */
   caption?: string;
+  /** Table identity this block reads from (for table-bound types like `data-table`). */
+  tableName?: string;
   height?: number;
+  /** Actions rendered by the block document host in the block's header. */
+  headerActions?: ReactNode;
   selected?: boolean;
   readOnly?: boolean;
-  onTitleChange?: (title: string | undefined) => void;
   onCaptionChange?: (caption: string | undefined) => void;
+  onTableNameChange?: (tableName: string | undefined) => void;
 };
 
 export type BlockDocumentStatefulBlockRenderer =
@@ -45,6 +51,8 @@ export type BlockDocumentStatefulBlockType = {
   requireScrollModifier?: boolean;
   scrollHintLabel?: string;
   settings?: BlockSettingsComponent;
+  /** True when the renderer places host header actions in its own header. */
+  hasOwnHeaderActions?: boolean;
   createNode?: (
     blockId: string,
     options?: BlockDocumentStatefulBlockCreateNodeOptions,
@@ -54,6 +62,8 @@ export type BlockDocumentStatefulBlockType = {
 type BlockDocumentStatefulBlockRendererContextValue = {
   renderers: BlockDocumentStatefulBlockRenderers;
   blockTypes: BlockDocumentStatefulBlockType[];
+  /** Host renderer for per-block header actions, such as Ask AI. */
+  renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
 };
 
 const BlockDocumentStatefulBlockRendererContext =
@@ -66,11 +76,13 @@ export type BlockDocumentStatefulBlockRendererProviderProps =
   PropsWithChildren<{
     renderers?: BlockDocumentStatefulBlockRenderers;
     blockTypes?: BlockDocumentStatefulBlockType[];
+    /** Provides host-rendered header actions to stateful block renderers. */
+    renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
   }>;
 
 export const BlockDocumentStatefulBlockRendererProvider: FC<
   BlockDocumentStatefulBlockRendererProviderProps
-> = ({renderers = {}, blockTypes, children}) => {
+> = ({renderers = {}, blockTypes, renderBlockHeaderActions, children}) => {
   const supportedBlockTypes = useMemo(
     () =>
       blockTypes ??
@@ -83,8 +95,9 @@ export const BlockDocumentStatefulBlockRendererProvider: FC<
     () => ({
       renderers,
       blockTypes: supportedBlockTypes,
+      renderBlockHeaderActions,
     }),
-    [renderers, supportedBlockTypes],
+    [renderers, supportedBlockTypes, renderBlockHeaderActions],
   );
 
   return (
@@ -102,6 +115,12 @@ export function useBlockDocumentStatefulBlockRenderer(blockType: string) {
 
 export function useBlockDocumentStatefulBlockTypes() {
   return useContext(BlockDocumentStatefulBlockRendererContext).blockTypes;
+}
+
+/** Returns the host-provided renderer for block header actions, when configured. */
+export function useBlockDocumentRenderBlockHeaderActions() {
+  return useContext(BlockDocumentStatefulBlockRendererContext)
+    .renderBlockHeaderActions;
 }
 
 export function useBlockDocumentStatefulBlockSettings(blockType: string) {

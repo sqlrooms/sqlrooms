@@ -1,6 +1,7 @@
 import {
   PropsWithChildren,
   ReactElement,
+  ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -16,6 +17,7 @@ import {
 import {MOSAIC_DASHBOARD_CHART_PANEL_TYPE} from './dashboard-types';
 import {
   createMosaicDashboardChartPanelConfig,
+  type MosaicDashboardLayoutType,
   useStoreWithMosaicDashboard,
 } from './MosaicDashboardSlice';
 import {MosaicDashboardToolbar} from './toolbar/MosaicDashboardToolbar';
@@ -27,12 +29,20 @@ import {ScrollArea} from '@sqlrooms/ui';
 
 export type MosaicDashboardRootProps = PropsWithChildren<{
   dashboardId: string;
+  /** Title used when this dashboard needs to be created during render. */
+  defaultTitle?: string;
+  /** Layout used when this dashboard needs to be created during render. */
+  defaultLayoutType?: MosaicDashboardLayoutType;
   readOnly?: boolean;
+  headerActions?: ReactNode;
 }>;
 
 export function MosaicDashboardRoot({
   children,
   dashboardId,
+  defaultTitle,
+  defaultLayoutType,
+  headerActions,
   readOnly,
 }: MosaicDashboardRootProps) {
   const ensureDashboard = useStoreWithMosaicDashboard(
@@ -64,8 +74,8 @@ export function MosaicDashboardRoot({
   );
 
   useEffect(() => {
-    ensureDashboard(dashboardId);
-  }, [dashboardId, ensureDashboard]);
+    ensureDashboard(dashboardId, defaultTitle, defaultLayoutType);
+  }, [dashboardId, defaultLayoutType, defaultTitle, ensureDashboard]);
 
   const handleCreateChart = useCallback(
     (title: string, config: ChartConfig) => {
@@ -91,6 +101,7 @@ export function MosaicDashboardRoot({
     () => ({
       dashboardId,
       readOnly,
+      headerActions,
       builderOpen,
       canCreateChart: Boolean(
         selectedTableInfo &&
@@ -105,6 +116,7 @@ export function MosaicDashboardRoot({
     [
       dashboardId,
       readOnly,
+      headerActions,
       builderOpen,
       selectedTableInfo,
       panelRenderers,
@@ -134,6 +146,12 @@ export function MosaicDashboardRoot({
 
 export type MosaicDashboardProps = {
   dashboardId: string;
+  /** Title used when this dashboard needs to be created during render. */
+  defaultTitle?: string;
+  /** Layout used when this dashboard needs to be created during render. */
+  defaultLayoutType?: MosaicDashboardLayoutType;
+  /** Actions rendered at the end of the dashboard toolbar. */
+  headerActions?: ReactNode;
   /** Whether to enable selection of the entire dashboard */
   selectable?: boolean;
   /** Whether settings for this dashboard should avoid mutating state. */
@@ -142,6 +160,9 @@ export type MosaicDashboardProps = {
 
 function MosaicDashboardComponent({
   dashboardId,
+  defaultTitle,
+  defaultLayoutType,
+  headerActions,
   selectable = false,
   readOnly,
 }: MosaicDashboardProps): ReactElement {
@@ -166,7 +187,13 @@ function MosaicDashboardComponent({
   );
 
   return (
-    <MosaicDashboardRoot dashboardId={dashboardId} readOnly={readOnly}>
+    <MosaicDashboardRoot
+      dashboardId={dashboardId}
+      defaultTitle={defaultTitle}
+      defaultLayoutType={defaultLayoutType}
+      headerActions={headerActions}
+      readOnly={readOnly}
+    >
       {selectable ? (
         <SelectablePanelWrapper
           dashboardId={dashboardId}

@@ -4,8 +4,10 @@ import {
   useMemo,
   type FC,
   type PropsWithChildren,
+  type ReactNode,
 } from 'react';
 import type {BlockSettingsComponent} from './block-settings/types';
+import type {BlockDocumentBlockHeaderActionsRenderer} from './BlockDocumentBlockHeaderActions';
 
 export type BlockDocumentChartRendererProps = {
   documentId: string;
@@ -20,6 +22,8 @@ export type BlockDocumentChartRendererProps = {
   onTableNameChange?: (tableName: string) => void;
   onConfigChange?: (config: unknown) => void;
   onCaptionChange?: (caption: string | undefined) => void;
+  /** Optional host-provided actions rendered in the chart block header. */
+  headerActions?: ReactNode;
 };
 
 export type BlockDocumentChartRenderer = FC<BlockDocumentChartRendererProps>;
@@ -27,6 +31,7 @@ export type BlockDocumentChartRenderer = FC<BlockDocumentChartRendererProps>;
 type BlockDocumentChartRendererContextValue = {
   renderer?: BlockDocumentChartRenderer;
   settings?: BlockSettingsComponent;
+  renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
 };
 
 const BlockDocumentChartRendererContext =
@@ -36,15 +41,16 @@ const BlockDocumentChartRendererContext =
 export type BlockDocumentChartRendererProviderProps = PropsWithChildren<{
   renderer?: BlockDocumentChartRenderer;
   settings?: BlockSettingsComponent;
+  renderBlockHeaderActions?: BlockDocumentBlockHeaderActionsRenderer;
 }>;
 
 /** Provides the chart renderer used by block document chart node views. */
 export const BlockDocumentChartRendererProvider: FC<
   BlockDocumentChartRendererProviderProps
-> = ({renderer, settings, children}) => {
+> = ({renderer, settings, renderBlockHeaderActions, children}) => {
   const contextValue = useMemo(
-    () => ({renderer, settings}),
-    [renderer, settings],
+    () => ({renderer, settings, renderBlockHeaderActions}),
+    [renderer, settings, renderBlockHeaderActions],
   );
 
   return (
@@ -60,4 +66,8 @@ export function useBlockDocumentChartRenderer() {
 
 export function useBlockDocumentChartSettings() {
   return useContext(BlockDocumentChartRendererContext).settings;
+}
+
+export function useBlockDocumentChartRenderBlockHeaderActions() {
+  return useContext(BlockDocumentChartRendererContext).renderBlockHeaderActions;
 }

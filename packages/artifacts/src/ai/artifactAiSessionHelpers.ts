@@ -1,4 +1,8 @@
-import {AiRunContextItem, ChatSessionSchema} from '@sqlrooms/ai-config';
+import {
+  AiRunContextItem,
+  ChatSessionSchema,
+  getAiRunContextItems,
+} from '@sqlrooms/ai-config';
 import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
 
 /**
@@ -9,6 +13,12 @@ export type ArtifactAiSession = Pick<
   'id' | 'isRunning' | 'lastOpenedAt'
 > &
   Partial<Pick<ChatSessionSchema, 'prompt' | 'uiMessages'>>;
+
+/**
+ * AI session fields needed to match artifact-owned sessions by a context item.
+ */
+export type ArtifactAiSessionWithContext = ArtifactAiSession &
+  Partial<Pick<ChatSessionSchema, 'draftContextItemIds' | 'runContext'>>;
 
 /**
  * AI session fields required to prove that a session has no draft text or
@@ -90,6 +100,20 @@ export type EmptyArtifactAiSessionsForArtifactOptions = Omit<
 };
 
 /**
+ * Input for selecting an artifact-owned session that already references a
+ * specific context item.
+ */
+export type ArtifactAiSessionsWithContextForArtifactOptions = Omit<
+  ArtifactAiSessionsForArtifactOptions,
+  'sessions'
+> & {
+  sessions: ArtifactAiSessionWithContext[];
+  contextItemId: string;
+  /** Include currently running sessions in the search. Defaults to false. */
+  includeRunning?: boolean;
+};
+
+/**
  * Returns AI session ids explicitly owned by `artifactId`, preserving the input
  * session order.
  */
@@ -127,6 +151,52 @@ export function getLatestAiSessionIdForArtifact({
         artifactId,
       }),
     )
+    .sort((a, b) => {
+      const aTime = a.lastOpenedAt ?? 0;
+      const bTime = b.lastOpenedAt ?? 0;
+      return bTime - aTime;
+    })[0]?.id;
+}
+
+function sessionHasContextItem(
+  session: ArtifactAiSessionWithContext,
+  contextItemId: string,
+): boolean {
+  if (session.draftContextItemIds?.includes(contextItemId)) {
+    return true;
+  }
+
+  return getAiRunContextItems(session.runContext).some(
+    (item) => item.id === contextItemId,
+  );
+}
+
+/**
+ * Returns the latest artifact-owned AI session whose draft or last run context
+ * contains a specific context item.
+ */
+export function findAiSessionForArtifactWithContextItem({
+  sessions,
+  aiSessionArtifacts,
+  artifactId,
+  contextItemId,
+  includeRunning = false,
+}: ArtifactAiSessionsWithContextForArtifactOptions): string | undefined {
+  if (!artifactId) return undefined;
+  return sessions
+    .filter((session) => {
+      if (!includeRunning && session.isRunning) return false;
+      if (
+        !isAiSessionVisibleForArtifact({
+          aiSessionArtifacts,
+          sessionId: session.id,
+          artifactId,
+        })
+      ) {
+        return false;
+      }
+      return sessionHasContextItem(session, contextItemId);
+    })
     .sort((a, b) => {
       const aTime = a.lastOpenedAt ?? 0;
       const bTime = b.lastOpenedAt ?? 0;

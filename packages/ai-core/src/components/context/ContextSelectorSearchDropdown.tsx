@@ -21,7 +21,9 @@ export const ContextSelectorSearchDropdown: FC<
   ContextSelectorSearchDropdownProps
 > = ({
   className,
-  align = 'end',
+  align = 'start',
+  side = 'top',
+  avoidCollisions = false,
   searchPlaceholder = 'Search context...',
   emptyLabel = 'No context item found.',
 }) => {
@@ -35,15 +37,10 @@ export const ContextSelectorSearchDropdown: FC<
     [runningContextIds],
   );
 
-  const availableItems = useMemo(
-    () => items.filter((item) => !selectedIdSet.has(item.id)),
-    [items, selectedIdSet],
-  );
-
   // Group by kind automatically
   const groupedItems = useMemo(() => {
     const groups: Record<string, ContextSelectorItem[]> = {};
-    for (const item of availableItems) {
+    for (const item of items) {
       const groupKey = item.kind;
       if (!groups[groupKey]) {
         groups[groupKey] = [];
@@ -51,12 +48,17 @@ export const ContextSelectorSearchDropdown: FC<
       groups[groupKey].push(item);
     }
     return groups;
-  }, [availableItems]);
+  }, [items]);
 
   const hasMultipleKinds = Object.keys(groupedItems).length > 1;
 
   return (
-    <PopoverContent align={align} className={cn('w-72 p-0', className)}>
+    <PopoverContent
+      align={align}
+      side={side}
+      avoidCollisions={avoidCollisions}
+      className={cn('w-72 p-0', className)}
+    >
       <Command>
         <CommandInput placeholder={searchPlaceholder} />
         <CommandList>
@@ -73,6 +75,7 @@ export const ContextSelectorSearchDropdown: FC<
                       <ContextSelectorItemComponent
                         key={item.id}
                         item={item}
+                        selected={selectedIdSet.has(item.id)}
                         running={runningIdSet.has(item.id)}
                         onSelect={() => {
                           toggleItem(item.id);
@@ -86,10 +89,11 @@ export const ContextSelectorSearchDropdown: FC<
             </>
           ) : (
             <CommandGroup>
-              {availableItems.map((item) => (
+              {items.map((item) => (
                 <ContextSelectorItemComponent
                   key={item.id}
                   item={item}
+                  selected={selectedIdSet.has(item.id)}
                   running={runningIdSet.has(item.id)}
                   onSelect={() => {
                     toggleItem(item.id);

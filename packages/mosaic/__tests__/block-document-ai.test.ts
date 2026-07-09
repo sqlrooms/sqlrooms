@@ -2,13 +2,16 @@ import {jest} from '@jest/globals';
 import {
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   createAddMosaicDashboardBlockTool,
+  createBlockDocumentChartTools,
   createBlockDocumentDataTableExplorerTool,
   type DatabaseAiAdapter,
 } from '../src/ai';
-import type {
-  BlockDocumentAiAdapter,
-  BlockDocumentBlock,
-  BlockDocumentStatefulBlockBlock,
+import {
+  blockDocumentBlockToNode,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentBlock,
+  type BlockDocumentChartBlock,
+  type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {makeQualifiedTableName} from '@sqlrooms/db';
 
@@ -22,6 +25,10 @@ describe('Mosaic block-document AI tools', () => {
           schema: 'main',
           table: String(tableName),
         }),
+        columns: [
+          {name: 'Depth', type: 'DOUBLE'},
+          {name: 'magnitude', type: 'DOUBLE'},
+        ],
       }),
     };
   }
@@ -45,6 +52,167 @@ describe('Mosaic block-document AI tools', () => {
     expect(BLOCK_DOCUMENT_CHART_TOOL_PREFIX).toBe(
       'create_block_document_chart_',
     );
+  });
+
+  it('updates a chart block when a block-document chart tool receives panelId', async () => {
+    const updateBlock = jest.fn();
+    const addBlock = jest.fn((_blockDocumentId, block: BlockDocumentBlock) => {
+      return block.id;
+    });
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [
+        blockDocumentBlockToNode({
+          type: 'chart',
+          id: 'chart-block-1',
+          tableName: 'earthquakes',
+          caption: 'Magnitude histogram',
+          config: {
+            chartType: 'histogram',
+            settings: {field: 'magnitude'},
+          },
+        }),
+      ],
+      addBlock,
+      updateBlock,
+    };
+
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter: createMockDatabaseAdapter(),
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (
+      tools.create_block_document_chart_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'chart-block-1',
+      title: 'Depth histogram',
+      settings: {field: 'Depth'},
+      reasoning: 'Update the existing worksheet chart block.',
+    });
+
+    expect(result.success).toBe(true);
+    expect(addBlock).not.toHaveBeenCalled();
+    expect(updateBlock).toHaveBeenCalledWith('document-1', 'chart-block-1', {
+      type: 'chart',
+      id: 'chart-block-1',
+      tableName: '"main"."earthquakes"',
+      caption: 'Depth histogram',
+      config: {
+        chartType: 'histogram',
+        settings: {field: 'Depth'},
+      },
+    });
+  });
+
+  it('returns an error when panelId references a missing chart block', async () => {
+    const updateBlock = jest.fn();
+    const addBlock = jest.fn((_blockDocumentId, block: BlockDocumentBlock) => {
+      return block.id;
+    });
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [],
+      addBlock,
+      updateBlock,
+    };
+
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter: createMockDatabaseAdapter(),
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+    });
+
+    const result = await (
+      tools.create_block_document_chart_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      panelId: 'missing-chart-block',
+      title: 'Depth histogram',
+      settings: {field: 'Depth'},
+      reasoning: 'Update the existing worksheet chart block.',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errorMessage).toContain(
+      'Chart block "missing-chart-block" was not found.',
+    );
+    expect(addBlock).not.toHaveBeenCalled();
+    expect(updateBlock).not.toHaveBeenCalled();
+  });
+
+  it('preserves chart selection groups when editing a target chart block', async () => {
+    const existingBlock: BlockDocumentChartBlock = {
+      type: 'chart',
+      id: 'chart-block-1',
+      tableName: 'earthquakes',
+      caption: 'Magnitude Distribution',
+      selectionGroupId: 'linked-overview',
+      config: {
+        chartType: 'histogram',
+        settings: {field: 'magnitude'},
+      },
+    };
+    const updatedBlocks: BlockDocumentBlock[] = [];
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: () => [blockDocumentBlockToNode(existingBlock)],
+      addBlock: jest.fn((_blockDocumentId, block) => block.id),
+      updateBlock: jest.fn((_blockDocumentId, _blockId, block) => {
+        updatedBlocks.push(block);
+      }),
+    };
+    const databaseAdapter: DatabaseAiAdapter = {
+      getTables: () => [],
+      findTable: (tableName) => ({
+        tableName: String(tableName),
+        table: makeQualifiedTableName({
+          schema: 'main',
+          table: String(tableName),
+        }),
+        columns: [{name: 'magnitude', type: 'DOUBLE'}],
+      }),
+    };
+    const tools = createBlockDocumentChartTools({
+      databaseAdapter,
+      blockDocumentAdapter,
+      blockDocumentId: 'document-1',
+      targetBlockId: existingBlock.id,
+    });
+
+    const result = await (
+      tools[`${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}histogram`] as any
+    ).execute({
+      tableName: 'earthquakes',
+      settings: {field: 'magnitude'},
+      title: 'Updated Magnitude Distribution',
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+      }),
+    );
+    expect(blockDocumentAdapter.updateBlock).toHaveBeenCalledWith(
+      'document-1',
+      existingBlock.id,
+      expect.objectContaining({
+        type: 'chart',
+        id: existingBlock.id,
+        caption: 'Updated Magnitude Distribution',
+        selectionGroupId: 'linked-overview',
+      }),
+    );
+    expect(updatedBlocks).toEqual([
+      expect.objectContaining({
+        selectionGroupId: 'linked-overview',
+      }),
+    ]);
   });
 
   it('adds Mosaic dashboard blocks through a host callback', async () => {

@@ -8,7 +8,7 @@ import {DeckMapBlockRenderer} from '@sqlrooms/deck';
  * Map blocks use TipTap's native node selection (no custom SelectablePanelWrapper).
  *
  * @param props - Stateful block renderer props, including the map block instance
- * ID, block type, title, and caption from the worksheet document.
+ * ID, block type, and caption from the worksheet document.
  * @returns The configured Deck map block renderer, or an unsupported block message.
  */
 export const WorksheetMapBlockRenderer: FC<
@@ -16,10 +16,10 @@ export const WorksheetMapBlockRenderer: FC<
 > = ({
   blockInstanceId,
   blockType,
-  title,
   caption,
   selected,
   readOnly,
+  headerActions,
   onCaptionChange,
 }) => {
   if (!blockInstanceId || blockType !== 'map') {
@@ -33,9 +33,9 @@ export const WorksheetMapBlockRenderer: FC<
   return (
     <DeckMapBlockRenderer
       mapId={blockInstanceId}
-      title={title}
       caption={caption}
       selected={selected}
+      headerActions={headerActions}
       onCaptionChange={onCaptionChange}
       readOnly={readOnly}
     />
