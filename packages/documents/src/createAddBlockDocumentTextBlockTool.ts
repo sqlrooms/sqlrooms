@@ -16,7 +16,9 @@ const AddBlockDocumentTextBlockParameters = z.object({
   text: z
     .string()
     .optional()
-    .describe('Text content for heading and paragraph blocks.'),
+    .describe(
+      'Plain text content for heading and paragraph blocks. Do not use markdown formatting like **bold** or _italic_.',
+    ),
   level: z
     .union([z.literal(1), z.literal(2), z.literal(3)])
     .optional()
@@ -25,7 +27,9 @@ const AddBlockDocumentTextBlockParameters = z.object({
   items: z
     .array(z.string())
     .optional()
-    .describe('List items. Only used for list blocks.'),
+    .describe(
+      'Plain text list items (one per item). Do not use markdown bullets (-, *) or formatting (**bold**, _italic_) - provide plain text only.',
+    ),
   ordered: z
     .boolean()
     .optional()
@@ -108,6 +112,11 @@ export function createAddBlockDocumentTextBlockTool({
   >({
     description: `Add a text block to the block document.
 Use this to add context, summaries, or explanations alongside other blocks.
+
+IMPORTANT: Provide PLAIN TEXT only - do not use markdown formatting.
+- For lists: use the items array, not markdown bullets (-, *)
+- For emphasis: use plain text, not **bold** or _italic_
+- The block structure itself provides formatting
 
 Block types:
 - heading: Section title (level 1-3)
