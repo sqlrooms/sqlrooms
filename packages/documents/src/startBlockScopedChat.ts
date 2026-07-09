@@ -87,8 +87,10 @@ export async function startBlockScopedChat({
   const sessions = actions.getAiSessions();
   const aiSessionArtifacts = actions.getAiSessionArtifacts();
 
+  // Only running sessions block a new Ask AI turn. Finished sessions for the
+  // same block should be reused below, not treated as "already running".
   const runningSessionId = findAiSessionForArtifactWithContextItem({
-    sessions,
+    sessions: sessions.filter((session) => session.isRunning),
     aiSessionArtifacts,
     artifactId,
     contextItemId,

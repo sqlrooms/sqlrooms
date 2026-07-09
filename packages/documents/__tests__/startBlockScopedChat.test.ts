@@ -107,4 +107,83 @@ describe('startBlockScopedChat', () => {
     expect(toastError).toHaveBeenCalled();
     expect(actions.startAnalysisWhenReady).not.toHaveBeenCalled();
   });
+
+  it('reuses a finished session instead of treating it as already running', async () => {
+    const contextItemId = 'block:doc-1:block-1';
+    const actions = createActions({
+      getAiSessions: () => [
+        {
+          id: 'finished-session',
+          isRunning: false,
+          lastOpenedAt: 2,
+          draftContextItemIds: [contextItemId],
+        },
+      ],
+      getAiSessionArtifacts: () => ({
+        'finished-session': 'doc-1',
+      }),
+      createArtifactScopedSession: jest.fn(() => 'should-not-create'),
+    });
+
+    await startBlockScopedChat({
+      target: {
+        blockDocumentId: 'doc-1',
+        blockId: 'block-1',
+        blockType: 'map',
+      },
+      prompt: 'recolor these points',
+      revealAssistant: jest.fn(),
+      actions,
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
+    });
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(actions.switchSession).toHaveBeenCalledWith('finished-session');
+    expect(actions.createArtifactScopedSession).not.toHaveBeenCalled();
+    expect(actions.setPrompt).toHaveBeenCalledWith(
+      'finished-session',
+      'recolor these points',
+    );
+    expect(actions.startAnalysisWhenReady).toHaveBeenCalledWith(
+      'finished-session',
+    );
+  });
+
+  it('blocks when a matching session is already running', async () => {
+    const contextItemId = 'block:doc-1:block-1';
+    const actions = createActions({
+      getAiSessions: () => [
+        {
+          id: 'running-session',
+          isRunning: true,
+          lastOpenedAt: 2,
+          draftContextItemIds: [contextItemId],
+        },
+      ],
+      getAiSessionArtifacts: () => ({
+        'running-session': 'doc-1',
+      }),
+      createArtifactScopedSession: jest.fn(() => 'should-not-create'),
+    });
+
+    await startBlockScopedChat({
+      target: {
+        blockDocumentId: 'doc-1',
+        blockId: 'block-1',
+        blockType: 'map',
+      },
+      prompt: 'recolor these points',
+      revealAssistant: jest.fn(),
+      actions,
+      isValidBlockDocumentArtifact: (artifact) =>
+        artifact.type === 'block-document',
+    });
+
+    expect(toastError).toHaveBeenCalledWith(
+      'An AI chat is already running for this block',
+    );
+    expect(actions.switchSession).toHaveBeenCalledWith('running-session');
+    expect(actions.startAnalysisWhenReady).not.toHaveBeenCalled();
+  });
 });
