@@ -101,14 +101,19 @@ describe('createOrUpdateDeckMapBlock', () => {
     });
   });
 
-  it('preserves existing caption/title on title-less updates', async () => {
+  it('preserves the existing caption as the title on title-less updates', async () => {
     const ensureDashboard = jest.fn();
+    const ensureMapState = jest.fn();
     const updateBlockMetadata = jest.fn(async () => {});
-    const host = createHost({ensureDashboard, updateBlockMetadata});
+    const host = createHost({
+      ensureDashboard,
+      ensureMapState,
+      updateBlockMetadata,
+    });
     host.blocks.set('map-1', {
       blockId: 'block-map-1',
       mapId: 'map-1',
-      caption: 'Sales Map',
+      caption: 'Sales by region',
     });
     host.panels.set('map-1', {
       id: 'panel-1',
@@ -125,15 +130,77 @@ describe('createOrUpdateDeckMapBlock', () => {
 
     expect(result).toMatchObject({
       created: false,
-      message: 'Updated block document map block "Sales Map".',
+      message: 'Updated block document map block "Sales by region".',
     });
-    expect(ensureDashboard).toHaveBeenCalledWith('map-1', undefined);
+    expect(ensureMapState).toHaveBeenCalledWith('map-1', 'Sales by region');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Sales by region');
     expect(updateBlockMetadata).toHaveBeenCalledWith(
       expect.objectContaining({
         blockId: 'block-map-1',
-        caption: 'Sales Map',
+        caption: 'Sales by region',
       }),
     );
+  });
+
+  it('uses an explicit caption as the title on update', async () => {
+    const ensureDashboard = jest.fn();
+    const ensureMapState = jest.fn();
+    const updateBlockMetadata = jest.fn(async () => {});
+    const host = createHost({
+      ensureDashboard,
+      ensureMapState,
+      updateBlockMetadata,
+    });
+    host.blocks.set('map-1', {
+      blockId: 'block-map-1',
+      mapId: 'map-1',
+      caption: 'Old caption',
+    });
+
+    await createOrUpdateDeckMapBlock(host, {
+      blockDocumentId: 'doc-1',
+      mapId: 'map-1',
+      config: basicConfig,
+      caption: 'New caption',
+    });
+
+    expect(ensureMapState).toHaveBeenCalledWith('map-1', 'New caption');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'New caption');
+    expect(updateBlockMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({caption: 'New caption'}),
+    );
+  });
+
+  it('uses the Map caption and title defaults when creating', async () => {
+    const ensureDashboard = jest.fn();
+    const ensureMapState = jest.fn();
+    const createMapBlock = jest.fn(
+      async (
+        options: Parameters<
+          CreateOrUpdateDeckMapBlockHost['createMapBlock']
+        >[0],
+      ) => ({
+        blockId: `block-${options.mapId}`,
+        mapId: options.mapId,
+      }),
+    );
+    const host = createHost({
+      createMapBlock,
+      ensureDashboard,
+      ensureMapState,
+    });
+
+    await createOrUpdateDeckMapBlock(host, {
+      blockDocumentId: 'doc-1',
+      config: basicConfig,
+      createMapId: () => 'map-1',
+    });
+
+    expect(createMapBlock).toHaveBeenCalledWith(
+      expect.objectContaining({title: 'Map', caption: 'Map'}),
+    );
+    expect(ensureMapState).toHaveBeenCalledWith('map-1', 'Map');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Map');
   });
 
   it('throws when mapId is missing and behavior is throw', async () => {

@@ -17,6 +17,7 @@ type DeckMapPanel = ReturnType<typeof createDeckMapPanelFromNativeConfig>;
  */
 export type CreateOrUpdateDeckMapBlockHost = {
   ensureBlockDocument: (blockDocumentId: string) => void;
+  /** Find an existing map block, including its user-facing caption. */
   findMapBlock: (
     blockDocumentId: string,
     mapId: string,
@@ -41,11 +42,7 @@ export type CreateOrUpdateDeckMapBlockHost = {
     height?: number;
   }) => void | Promise<void>;
   ensureMapState: (mapId: string, title: string) => void;
-  /**
-   * Ensure the backing mosaic dashboard exists. Pass `undefined` title to
-   * avoid renaming an existing dashboard (title-less updates).
-   */
-  ensureDashboard: (mapId: string, title?: string) => void;
+  ensureDashboard: (mapId: string, title: string) => void;
   setSelectedTable?: (
     mapId: string,
     tableIdentity: string,
@@ -197,17 +194,13 @@ export async function createOrUpdateDeckMapBlock(
   }
   const tableIdentity = table?.tableIdentity;
 
-  // Preserve existing caption/panel title on title-less updates (CLI Ask AI edits).
-  const title =
-    params.title?.trim() ||
-    existingMapBlock?.caption ||
-    existingPanel?.title ||
-    'Map';
-  const caption = params.caption ?? title;
+  // The block caption is the user-facing map label and therefore the source
+  // of truth for title-less updates.
+  const existingCaption = existingMapBlock?.caption?.trim() || undefined;
+  const caption =
+    params.caption ?? existingCaption ?? params.title?.trim() ?? 'Map';
+  const title = params.title?.trim() || caption;
   const created = !existingMapBlock;
-  // Only rename the dashboard when creating or when the caller set an explicit title.
-  const hasExplicitTitle = Boolean(params.title?.trim());
-  const dashboardTitle = hasExplicitTitle || created ? title : undefined;
 
   let blockId: string;
   let resolvedMapId: string;
@@ -216,7 +209,7 @@ export async function createOrUpdateDeckMapBlock(
     blockId = existingMapBlock.blockId;
     resolvedMapId = existingMapBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
-    host.ensureDashboard(resolvedMapId, dashboardTitle);
+    host.ensureDashboard(resolvedMapId, title);
     await host.updateBlockMetadata({
       blockDocumentId: params.blockDocumentId,
       blockId,
@@ -236,7 +229,7 @@ export async function createOrUpdateDeckMapBlock(
     blockId = createdBlock.blockId;
     resolvedMapId = createdBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
-    host.ensureDashboard(resolvedMapId, dashboardTitle);
+    host.ensureDashboard(resolvedMapId, title);
   }
   if (tableIdentity && host.setSelectedTable) {
     await host.setSelectedTable(resolvedMapId, tableIdentity);
