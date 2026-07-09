@@ -84,7 +84,7 @@ class DeckMapBlockErrorBoundary extends Component<
 export function ensureDeckMapBlockState(
   state: MosaicDashboardStoreState,
   mapId: string,
-  title: string,
+  title?: string,
 ) {
   state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
 
@@ -177,6 +177,9 @@ export function DeckMapBlockRenderer({
   const reportPanelIssue = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.reportPanelIssue,
   );
+  const clearPanelIssue = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.clearPanelIssue,
+  );
   const requestOpenSettingsPanel = useBlockSettingsStore(
     (state) => state.blockSettings.requestOpenSettingsPanel,
   );
@@ -193,8 +196,12 @@ export function DeckMapBlockRenderer({
       return;
     }
 
-    ensureDashboard(mapId, title ?? 'Embedded Map', 'grid');
-  }, [ensureDashboard, mapId, title]);
+    ensureDashboard(
+      mapId,
+      dashboard ? undefined : (title ?? 'Embedded Map'),
+      'grid',
+    );
+  }, [dashboard, ensureDashboard, mapId, title]);
 
   useEffect(() => {
     if (!mapId || !dashboard) {
@@ -288,6 +295,14 @@ export function DeckMapBlockRenderer({
     panel?.id ?? 'no-panel',
     panel?.config ? JSON.stringify(panel.config) : 'no-config',
   ].join(':');
+  // Clear stale render issues when the panel/config changes so retries aren't
+  // reported as still broken after a successful remount.
+  useEffect(() => {
+    if (!mapId || !panel) {
+      return;
+    }
+    clearPanelIssue(mapId, panel.id);
+  }, [clearPanelIssue, mapBoundaryKey, mapId, panel]);
   const handleMapRenderError = useCallback(
     (error: Error) => {
       if (!mapId || !panel) {

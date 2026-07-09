@@ -31,7 +31,7 @@ export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
     ensureState: (
       state: RoomState,
       artifactId: string,
-      title: string,
+      title?: string,
       options?: BlockDocumentStatefulBlockCreateNodeOptions,
     ) => void;
     deleteState: (state: RoomState, artifactId: string) => void;
@@ -67,7 +67,9 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedTitle: 'Embedded Pivot Table',
     embeddedDescription: 'Embedded pivot table',
     ensureState: (state, artifactId, title) => {
-      state.pivot.ensurePivot(artifactId, {title});
+      state.pivot.ensurePivot(artifactId, {
+        ...(title ? {title} : {}),
+      });
     },
     deleteState: (state, artifactId) => {
       state.pivot.removePivot(artifactId);
@@ -134,7 +136,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedDescription: 'Embedded SQL query editor and result table',
     ensureState: (state, artifactId, title, options) => {
       state.sqlEditor.ensureQuery(artifactId, {
-        name: title,
+        ...(title ? {name: title} : {}),
         query: options?.initialText,
       });
     },
@@ -155,7 +157,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     maxHeight: 1600,
     ensureState: (state, artifactId, title) => {
       state.htmlApps.ensureApp(artifactId, {
-        title,
+        ...(title ? {title} : {}),
         requestedCapabilities: ['query'],
         grantedCapabilities: ['query'],
       });
@@ -173,7 +175,7 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     embeddedDescription: 'Python analysis block with visible code and outputs',
     ensureState: (state, artifactId, title, options) => {
       state.python.ensureBlock(artifactId, {
-        title,
+        ...(title ? {title} : {}),
         code: options?.initialText,
       });
     },
@@ -202,7 +204,10 @@ export function getStatefulBlockArtifactConfig(
   return STATEFUL_BLOCK_ARTIFACT_CONFIGS[artifactType];
 }
 
-function getEnabledStatefulBlockArtifactTypes(experimentalEnabled: boolean) {
+/** Returns stateful block artifact types enabled for the current feature mode. */
+export function getEnabledStatefulBlockArtifactTypes(
+  experimentalEnabled: boolean,
+) {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
     return config.stability === 'stable' || experimentalEnabled;

@@ -69,6 +69,7 @@ const BlockDocumentUpdateBlockMetadataInput = BlockDocumentIdInput.extend({
 
 export const BlockDocumentMapBlockToolParameters =
   DeckMapDashboardToolParameters.extend({
+    title: z.string().optional().describe('Map title.'),
     blockDocumentId: z.string().describe('Target block document artifact ID.'),
     mapId: z
       .string()

@@ -1,9 +1,11 @@
 import {jest} from '@jest/globals';
 import {tool, type ToolLoopAgent} from 'ai';
-import type {
-  BlockDocumentAiAdapter,
-  BlockDocumentMoveBlockAiAdapter,
-  BlockDocumentStatefulBlockBlock,
+import {
+  blockDocumentBlockToNode,
+  type BlockDocumentNode,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
+  type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
 import {
@@ -19,12 +21,13 @@ import {KnownBlockDocumentTools} from '../constants';
 import type {RoomState} from '../../store-types';
 
 describe('createCliBlockDocumentAgentTool', () => {
-  function createBlockDocumentAdapter(): BlockDocumentAiAdapter &
-    BlockDocumentMoveBlockAiAdapter {
+  function createBlockDocumentAdapter(
+    blocks: BlockDocumentNode[] = [],
+  ): BlockDocumentAiAdapter & BlockDocumentMoveBlockAiAdapter {
     return {
       setCurrentBlockDocument: () => {},
       ensureBlockDocument: () => {},
-      getBlocks: () => [],
+      getBlocks: () => blocks,
       addBlock: (_blockDocumentId, block) => block.id,
       moveBlock: () => true,
       updateBlock: () => {},
@@ -157,6 +160,11 @@ describe('createCliBlockDocumentAgentTool', () => {
       let capturedPrompt = '';
       const options = createOptions({
         ...(mapStore ? {store: mapStore} : {}),
+        blockDocumentAdapter: createBlockDocumentAdapter([
+          blockDocumentBlockToNode(
+            createStatefulBlock(blockType, 'target-instance-1'),
+          ),
+        ]),
         htmlAppBlocksEnabled: true,
         mapBlocksEnabled: true,
         dashboardAgentTool:
@@ -269,12 +277,15 @@ describe('createCliBlockDocumentAgentTool', () => {
     const runSubAgent = jest.fn(async () => ({}));
     const result = await executeAgentTool(
       createOptions({
+        blockDocumentAdapter: createBlockDocumentAdapter([
+          blockDocumentBlockToNode(createStatefulBlock('html-app', 'app-1')),
+        ]),
         htmlAppBlocksEnabled: false,
         runSubAgent,
       }),
       {
         targetBlock: {
-          blockId: 'app-block-1',
+          blockId: 'html-app-block',
           blockType: 'html-app',
           blockInstanceId: 'app-1',
         },
@@ -298,6 +309,87 @@ describe('createCliBlockDocumentAgentTool', () => {
     expect(result.finalOutput).toBe(
       'dashboard block dashboard-block-1 is missing blockInstanceId.',
     );
+  });
+
+  it('fails stateful target edits when the block id is stale', async () => {
+    const runSubAgent = jest.fn(async () => ({}));
+    const result = await executeAgentTool(
+      createOptions({
+        blockDocumentAdapter: createBlockDocumentAdapter([
+          blockDocumentBlockToNode(
+            createStatefulBlock('dashboard', 'target-instance-1'),
+          ),
+        ]),
+        runSubAgent,
+      }),
+      {
+        targetBlock: {
+          blockId: 'missing-block',
+          blockType: 'dashboard',
+          blockInstanceId: 'target-instance-1',
+        },
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(
+      'Target block missing-block was not found in worksheet worksheet-1.',
+    );
+    expect(runSubAgent).not.toHaveBeenCalled();
+  });
+
+  it('fails stateful target edits when the block type changed', async () => {
+    const runSubAgent = jest.fn(async () => ({}));
+    const result = await executeAgentTool(
+      createOptions({
+        blockDocumentAdapter: createBlockDocumentAdapter([
+          blockDocumentBlockToNode(
+            createStatefulBlock('map', 'target-instance-1'),
+          ),
+        ]),
+        runSubAgent,
+      }),
+      {
+        targetBlock: {
+          blockId: 'map-block',
+          blockType: 'dashboard',
+          blockInstanceId: 'target-instance-1',
+        },
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(
+      'Target block map-block is a map block, not a dashboard block.',
+    );
+    expect(runSubAgent).not.toHaveBeenCalled();
+  });
+
+  it('fails stateful target edits when the backing instance id changed', async () => {
+    const runSubAgent = jest.fn(async () => ({}));
+    const result = await executeAgentTool(
+      createOptions({
+        blockDocumentAdapter: createBlockDocumentAdapter([
+          blockDocumentBlockToNode(
+            createStatefulBlock('dashboard', 'current-instance-1'),
+          ),
+        ]),
+        runSubAgent,
+      }),
+      {
+        targetBlock: {
+          blockId: 'dashboard-block',
+          blockType: 'dashboard',
+          blockInstanceId: 'stale-instance-1',
+        },
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(
+      'Target block dashboard-block instance id does not match the current worksheet block.',
+    );
+    expect(runSubAgent).not.toHaveBeenCalled();
   });
 
   it('keeps the create-flow fallback message when no target block is provided', async () => {

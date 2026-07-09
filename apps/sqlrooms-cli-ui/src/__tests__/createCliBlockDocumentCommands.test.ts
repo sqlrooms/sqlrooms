@@ -227,6 +227,68 @@ describe('createCliBlockDocumentCommands', () => {
     );
   });
 
+  it('preserves existing map titles when updating map config without a title', async () => {
+    const {state, invokeCommand, blocks} = createState();
+    blocks[0] = {
+      ...blocks[0],
+      caption: 'Earthquake Explorer',
+    };
+    state.mosaicDashboard.getDashboard.mockReturnValue({
+      panels: [
+        {
+          id: 'map-panel-1',
+          type: DECK_MAP_DASHBOARD_PANEL_TYPE,
+          title: 'Earthquake Explorer',
+          config: {},
+        },
+      ],
+    });
+
+    const result = await getCommand('block-document.add-map-block').execute(
+      createCommandContext(state),
+      {
+        blockDocumentId: 'worksheet-1',
+        mapId: 'map-1',
+        reasoning: 'change colors',
+        config: {
+          spec: {},
+          datasets: {
+            earthquakes: {source: {tableName: 'earthquakes'}},
+          },
+        },
+      },
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      message: 'Updated block document map block "Earthquake Explorer".',
+    });
+    expect(state.mosaicDashboard.ensureDashboard).toHaveBeenCalledWith(
+      'map-1',
+      undefined,
+      'grid',
+    );
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'dashboard.update-panel',
+      expect.objectContaining({
+        dashboardId: 'map-1',
+        panelId: 'map-panel-1',
+        patch: expect.objectContaining({
+          title: 'Earthquake Explorer',
+        }),
+      }),
+      {surface: 'ai', actor: 'block-document-command'},
+    );
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'block-document.update-block-metadata',
+      expect.objectContaining({
+        blockId: 'block-1',
+        caption: 'Earthquake Explorer',
+      }),
+      {surface: 'ai', actor: 'block-document-command'},
+    );
+  });
+
   it('updates block document block metadata through the block document slice', async () => {
     const {state, updateBlock} = createState();
 

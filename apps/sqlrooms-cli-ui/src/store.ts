@@ -1065,7 +1065,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               return;
             }
             const config = getStatefulBlockArtifactConfig(blockType);
-            config.ensureState(getState(), blockInstanceId, config.embeddedTitle);
+            config.ensureState(
+              getState(),
+              blockInstanceId,
+              config.embeddedTitle,
+            );
           },
           onDeleteOwnedStatefulBlock: ({
             blockInstanceId,
@@ -1144,7 +1148,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               ]
                 .filter(Boolean)
                 .join('\n\n'),
-            getRunContext: (sessionId) => getRunContext(store, sessionId),
+            getRunContext: (sessionId) =>
+              getRunContext(store, sessionId, {experimentalEnabled}),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             onChatFinish: artifactChatHandoff.onChatFinish,

@@ -20,6 +20,7 @@ import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
 import {CLI_AI_BLOCK_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 import {
+  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
@@ -94,6 +95,7 @@ function resolveCliBlockLabel(blockType: string): string | undefined {
 function resolveBlockContextItem(
   itemId: string,
   state: RoomState,
+  enabledCliBlockContextTypes: ReadonlySet<string>,
 ): AiRunContextItem | undefined {
   const parsedId = parseBlockContextItemId(itemId);
   if (!parsedId) return undefined;
@@ -126,7 +128,7 @@ function resolveBlockContextItem(
           }
         : undefined;
 
-  if (!target || !CLI_BLOCK_CONTEXT_TYPES.has(target.blockType)) {
+  if (!target || !enabledCliBlockContextTypes.has(target.blockType)) {
     return undefined;
   }
 
@@ -150,8 +152,13 @@ function resolveContextItem(
   state: RoomState,
   artifactsById: Record<string, ArtifactMetadataType>,
   tablesByQualifiedName: Map<string, TableInfo>,
+  enabledCliBlockContextTypes: ReadonlySet<string>,
 ): AiRunContextItem | undefined {
-  const blockItem = resolveBlockContextItem(itemId, state);
+  const blockItem = resolveBlockContextItem(
+    itemId,
+    state,
+    enabledCliBlockContextTypes,
+  );
   if (blockItem) {
     return blockItem;
   }
@@ -174,6 +181,11 @@ function resolveContextItem(
 export function getRunContext(
   store: StoreApi<RoomState>,
   sessionId: string,
+  {
+    experimentalEnabled = false,
+  }: {
+    experimentalEnabled?: boolean;
+  } = {},
 ): AiRunContext | undefined {
   const state = store.getState();
   const {artifactsById} = state.artifacts.config;
@@ -182,6 +194,12 @@ export function getRunContext(
     (candidate) => candidate.id === sessionId,
   );
   const tablesByQualifiedName = buildTablesMap(tables);
+  const enabledCliBlockContextTypes = new Set<string>([
+    'chart',
+    ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter(
+      (type) => CLI_BLOCK_CONTEXT_TYPES.has(type),
+    ),
+  ]);
 
   if (
     session?.draftContextItemIds === undefined &&
@@ -194,7 +212,13 @@ export function getRunContext(
   const explicitContextItemIds = session?.draftContextItemIds ?? [];
   const extraItems = Array.from(new Set(explicitContextItemIds))
     .map((itemId) =>
-      resolveContextItem(itemId, state, artifactsById, tablesByQualifiedName),
+      resolveContextItem(
+        itemId,
+        state,
+        artifactsById,
+        tablesByQualifiedName,
+        enabledCliBlockContextTypes,
+      ),
     )
     .filter(Boolean) as AiRunContextItem[];
   const items = getOwningArtifactRunContextItems({
