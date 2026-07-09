@@ -164,18 +164,6 @@ export function CliDataSidebarSection() {
     <>
       {state === 'expanded' ? (
         <div className="flex h-full min-h-0 flex-col gap-3">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                className="text-primary hover:text-primary border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent h-10 justify-center border"
-                onClick={addData}
-                type="button"
-              >
-                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
-                <span>Add data</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
           <div className="flex min-h-0 flex-1 flex-col py-1 pr-0 pl-0">
             <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
@@ -190,6 +178,18 @@ export function CliDataSidebarSection() {
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
+          <SidebarMenu className="shrink-0">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="text-primary hover:text-primary border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent h-10 justify-center border"
+                onClick={addData}
+                type="button"
+              >
+                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
+                <span>Add data</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </div>
       ) : (
         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
