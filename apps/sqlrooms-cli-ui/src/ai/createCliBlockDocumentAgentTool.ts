@@ -13,9 +13,10 @@ import {
 } from '@sqlrooms/mosaic/ai';
 import type {MosaicDashboardPanelConfig} from '@sqlrooms/mosaic';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
-import type {
-  BlockDocumentAiAdapter,
-  BlockDocumentMoveBlockAiAdapter,
+import {
+  blockDocumentNodeToBlock,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
 } from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import {
@@ -324,6 +325,7 @@ type ExecutableTool = Tool & {
 };
 
 const MAX_TARGET_MAP_STATE_CHARS = 12_000;
+const STATEFUL_TARGET_BLOCK_TYPES = new Set(['dashboard', 'html-app', 'map']);
 
 function getTargetBlockInstructions(
   targetBlock: BlockDocumentAgentInput['targetBlock'],
@@ -410,6 +412,51 @@ function selectTargetBlockTools(
       );
     default:
       return {};
+  }
+}
+
+function validateTargetBlock(
+  blockDocumentAdapter: BlockDocumentAiAdapter,
+  blockDocumentId: string,
+  targetBlock: BlockDocumentAgentInput['targetBlock'],
+) {
+  if (!targetBlock || !STATEFUL_TARGET_BLOCK_TYPES.has(targetBlock.blockType)) {
+    return;
+  }
+
+  if (!targetBlock.blockInstanceId) {
+    throw new Error(
+      `${targetBlock.blockType} block ${targetBlock.blockId} is missing blockInstanceId.`,
+    );
+  }
+
+  const existingBlock = blockDocumentAdapter
+    .getBlocks(blockDocumentId)
+    ?.map((node) => blockDocumentNodeToBlock(node))
+    .find((block) => block?.id === targetBlock.blockId);
+
+  if (!existingBlock) {
+    throw new Error(
+      `Target block ${targetBlock.blockId} was not found in worksheet ${blockDocumentId}.`,
+    );
+  }
+
+  if (existingBlock.type !== 'statefulBlock') {
+    throw new Error(
+      `Target block ${targetBlock.blockId} is a ${existingBlock.type} block, not a ${targetBlock.blockType} stateful block.`,
+    );
+  }
+
+  if (existingBlock.blockType !== targetBlock.blockType) {
+    throw new Error(
+      `Target block ${targetBlock.blockId} is a ${existingBlock.blockType} block, not a ${targetBlock.blockType} block.`,
+    );
+  }
+
+  if (existingBlock.blockInstanceId !== targetBlock.blockInstanceId) {
+    throw new Error(
+      `Target block ${targetBlock.blockId} instance id does not match the current worksheet block.`,
+    );
   }
 }
 
@@ -570,6 +617,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
 
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         blockDocumentAdapter.setCurrentBlockDocument(blockDocumentId);
+        validateTargetBlock(blockDocumentAdapter, blockDocumentId, targetBlock);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
         const blockDocumentTools = createCliBlockDocumentAiTools({

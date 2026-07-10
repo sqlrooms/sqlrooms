@@ -25,6 +25,7 @@ import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {experimentalEnabled, useRoomStore} from '../store';
 import {
   createStatefulBlockTypes,
+  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
   type StatefulBlockArtifactType,
@@ -164,6 +165,12 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
 >;
 
 const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
+const ENABLED_WORKSHEET_AI_BLOCK_TYPES = new Set<string>([
+  'chart',
+  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
+    WORKSHEET_AI_BLOCK_TYPES.has(type),
+  ),
+]);
 
 function createWorksheetStatefulBlockRenderers(
   includeExperimental: boolean,
@@ -233,7 +240,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
       blockType,
       blockInstanceId,
     }: BlockDocumentBlockHeaderActionsRenderContext) => {
-      if (!WORKSHEET_AI_BLOCK_TYPES.has(blockType)) {
+      if (!ENABLED_WORKSHEET_AI_BLOCK_TYPES.has(blockType)) {
         return null;
       }
 

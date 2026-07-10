@@ -23,7 +23,6 @@ export const WorksheetDashboardBlockRenderer: FC<
       <div className="min-h-0 flex-1">
         <MosaicDashboard
           dashboardId={blockInstanceId}
-          defaultTitle="Embedded Dashboard"
           defaultLayoutType="grid"
           headerActions={headerActions}
           selectable

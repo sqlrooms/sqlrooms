@@ -30,7 +30,7 @@ export async function startBlockScopedChat({
   const state = useRoomStore.getState();
   const contextItemId = blockContextItemId(target);
   const runningSessionId = findAiSessionForArtifactWithContextItem({
-    sessions: state.ai.config.sessions,
+    sessions: state.ai.config.sessions.filter((session) => session.isRunning),
     aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
     artifactId,
     contextItemId,
