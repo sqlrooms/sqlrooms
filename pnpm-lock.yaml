@@ -3167,6 +3167,9 @@ importers:
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
