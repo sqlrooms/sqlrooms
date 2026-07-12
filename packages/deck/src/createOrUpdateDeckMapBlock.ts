@@ -205,8 +205,8 @@ export async function createOrUpdateDeckMapBlock(
   const existingPanelTitle = existingPanel?.title?.trim() || undefined;
   const caption =
     params.caption ??
-    existingCaption ??
     params.title?.trim() ??
+    existingCaption ??
     existingPanelTitle ??
     'Map';
   const title = params.title?.trim() || caption;

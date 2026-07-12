@@ -83,8 +83,13 @@ describe('createOrUpdateDeckMapBlock', () => {
 
   it('updates an existing map block', async () => {
     const ensureDashboard = jest.fn();
-    const host = createHost({ensureDashboard});
-    host.blocks.set('map-1', {blockId: 'block-map-1', mapId: 'map-1'});
+    const updateBlockMetadata = jest.fn(async () => {});
+    const host = createHost({ensureDashboard, updateBlockMetadata});
+    host.blocks.set('map-1', {
+      blockId: 'block-map-1',
+      mapId: 'map-1',
+      caption: 'Previous title',
+    });
     host.panels.set('map-1', {id: 'panel-1', config: {}});
 
     const result = await createOrUpdateDeckMapBlock(host, {
@@ -101,6 +106,10 @@ describe('createOrUpdateDeckMapBlock', () => {
       created: false,
     });
     expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Updated');
+    expect(updateBlockMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({caption: 'Updated'}),
+    );
+    expect(host.panels.get('map-1')?.title).toBe('Updated');
   });
 
   it('preserves the existing caption as the title on title-less updates', async () => {
