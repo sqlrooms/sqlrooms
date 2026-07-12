@@ -195,10 +195,16 @@ export async function createOrUpdateDeckMapBlock(
   const tableIdentity = table?.tableIdentity;
 
   // The block caption is the user-facing map label and therefore the source
-  // of truth for title-less updates.
+  // of truth for title-less updates. UI-created blocks may have an empty
+  // caption, so preserve the existing panel title before falling back to Map.
   const existingCaption = existingMapBlock?.caption?.trim() || undefined;
+  const existingPanelTitle = existingPanel?.title?.trim() || undefined;
   const caption =
-    params.caption ?? existingCaption ?? params.title?.trim() ?? 'Map';
+    params.caption ??
+    existingCaption ??
+    params.title?.trim() ??
+    existingPanelTitle ??
+    'Map';
   const title = params.title?.trim() || caption;
   const created = !existingMapBlock;
 
@@ -210,13 +216,6 @@ export async function createOrUpdateDeckMapBlock(
     resolvedMapId = existingMapBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
     host.ensureDashboard(resolvedMapId, title);
-    await host.updateBlockMetadata({
-      blockDocumentId: params.blockDocumentId,
-      blockId,
-      caption,
-      intent: params.intent,
-      height: params.height,
-    });
   } else {
     const createdBlock = await host.createMapBlock({
       blockDocumentId: params.blockDocumentId,
@@ -248,6 +247,18 @@ export async function createOrUpdateDeckMapBlock(
     panel,
     existingPanelId,
   });
+
+  // Persist metadata only after the panel write succeeds so failed updates do
+  // not leave the block caption, intent, or height out of sync with the map.
+  if (existingMapBlock) {
+    await host.updateBlockMetadata({
+      blockDocumentId: params.blockDocumentId,
+      blockId,
+      caption,
+      intent: params.intent,
+      height: params.height,
+    });
+  }
 
   return {
     blockDocumentId: params.blockDocumentId,

@@ -142,6 +142,73 @@ describe('createOrUpdateDeckMapBlock', () => {
     );
   });
 
+  it('preserves the panel title when a title-less update has an empty block caption', async () => {
+    const ensureDashboard = jest.fn();
+    const ensureMapState = jest.fn();
+    const updateBlockMetadata = jest.fn(async () => {});
+    const host = createHost({
+      ensureDashboard,
+      ensureMapState,
+      updateBlockMetadata,
+    });
+    host.blocks.set('map-1', {
+      blockId: 'block-map-1',
+      mapId: 'map-1',
+      caption: '',
+    });
+    host.panels.set('map-1', {
+      id: 'panel-1',
+      title: 'Earthquakes map',
+      config: {},
+    });
+
+    const result = await createOrUpdateDeckMapBlock(host, {
+      blockDocumentId: 'doc-1',
+      mapId: 'map-1',
+      config: basicConfig,
+    });
+
+    expect(result.message).toBe(
+      'Updated block document map block "Earthquakes map".',
+    );
+    expect(ensureMapState).toHaveBeenCalledWith('map-1', 'Earthquakes map');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Earthquakes map');
+    expect(updateBlockMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({caption: 'Earthquakes map'}),
+    );
+    expect(host.panels.get('map-1')?.title).toBe('Earthquakes map');
+  });
+
+  it('does not persist metadata when an existing panel update fails', async () => {
+    const updateBlockMetadata = jest.fn(async () => {});
+    const addOrUpdateMapPanel = jest.fn(async () => {
+      throw new Error('panel update failed');
+    });
+    const host = createHost({updateBlockMetadata, addOrUpdateMapPanel});
+    host.blocks.set('map-1', {
+      blockId: 'block-map-1',
+      mapId: 'map-1',
+      caption: 'Original title',
+    });
+    host.panels.set('map-1', {
+      id: 'panel-1',
+      title: 'Original title',
+      config: {},
+    });
+
+    await expect(
+      createOrUpdateDeckMapBlock(host, {
+        blockDocumentId: 'doc-1',
+        mapId: 'map-1',
+        config: basicConfig,
+        title: 'New title',
+        height: 720,
+      }),
+    ).rejects.toThrow('panel update failed');
+
+    expect(updateBlockMetadata).not.toHaveBeenCalled();
+  });
+
   it('uses an explicit caption as the title on update', async () => {
     const ensureDashboard = jest.fn();
     const ensureMapState = jest.fn();
