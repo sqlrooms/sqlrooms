@@ -82,7 +82,8 @@ describe('createOrUpdateDeckMapBlock', () => {
   });
 
   it('updates an existing map block', async () => {
-    const host = createHost();
+    const ensureDashboard = jest.fn();
+    const host = createHost({ensureDashboard});
     host.blocks.set('map-1', {blockId: 'block-map-1', mapId: 'map-1'});
     host.panels.set('map-1', {id: 'panel-1', config: {}});
 
@@ -99,6 +100,7 @@ describe('createOrUpdateDeckMapBlock', () => {
       panelId: 'panel-1',
       created: false,
     });
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Updated');
   });
 
   it('preserves the existing caption as the title on title-less updates', async () => {
@@ -133,7 +135,7 @@ describe('createOrUpdateDeckMapBlock', () => {
       message: 'Updated block document map block "Sales by region".',
     });
     expect(ensureMapState).toHaveBeenCalledWith('map-1', 'Sales by region');
-    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Sales by region');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', undefined);
     expect(updateBlockMetadata).toHaveBeenCalledWith(
       expect.objectContaining({
         blockId: 'block-map-1',
@@ -172,7 +174,7 @@ describe('createOrUpdateDeckMapBlock', () => {
       'Updated block document map block "Earthquakes map".',
     );
     expect(ensureMapState).toHaveBeenCalledWith('map-1', 'Earthquakes map');
-    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'Earthquakes map');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', undefined);
     expect(updateBlockMetadata).toHaveBeenCalledWith(
       expect.objectContaining({caption: 'Earthquakes map'}),
     );
@@ -232,7 +234,7 @@ describe('createOrUpdateDeckMapBlock', () => {
     });
 
     expect(ensureMapState).toHaveBeenCalledWith('map-1', 'New caption');
-    expect(ensureDashboard).toHaveBeenCalledWith('map-1', 'New caption');
+    expect(ensureDashboard).toHaveBeenCalledWith('map-1', undefined);
     expect(updateBlockMetadata).toHaveBeenCalledWith(
       expect.objectContaining({caption: 'New caption'}),
     );

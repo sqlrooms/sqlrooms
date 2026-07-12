@@ -42,7 +42,11 @@ export type CreateOrUpdateDeckMapBlockHost = {
     height?: number;
   }) => void | Promise<void>;
   ensureMapState: (mapId: string, title: string) => void;
-  ensureDashboard: (mapId: string, title: string) => void;
+  /**
+   * Ensure the backing mosaic dashboard exists. Pass `undefined` title to
+   * avoid renaming an existing dashboard during title-less updates.
+   */
+  ensureDashboard: (mapId: string, title?: string) => void;
   setSelectedTable?: (
     mapId: string,
     tableIdentity: string,
@@ -207,6 +211,8 @@ export async function createOrUpdateDeckMapBlock(
     'Map';
   const title = params.title?.trim() || caption;
   const created = !existingMapBlock;
+  const hasExplicitTitle = Boolean(params.title?.trim());
+  const dashboardTitle = created || hasExplicitTitle ? title : undefined;
 
   let blockId: string;
   let resolvedMapId: string;
@@ -215,7 +221,7 @@ export async function createOrUpdateDeckMapBlock(
     blockId = existingMapBlock.blockId;
     resolvedMapId = existingMapBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
-    host.ensureDashboard(resolvedMapId, title);
+    host.ensureDashboard(resolvedMapId, dashboardTitle);
   } else {
     const createdBlock = await host.createMapBlock({
       blockDocumentId: params.blockDocumentId,
@@ -228,7 +234,7 @@ export async function createOrUpdateDeckMapBlock(
     blockId = createdBlock.blockId;
     resolvedMapId = createdBlock.mapId;
     host.ensureMapState(resolvedMapId, title);
-    host.ensureDashboard(resolvedMapId, title);
+    host.ensureDashboard(resolvedMapId, dashboardTitle);
   }
   if (tableIdentity && host.setSelectedTable) {
     await host.setSelectedTable(resolvedMapId, tableIdentity);
