@@ -11,8 +11,7 @@ import {
   resolveChartTypes,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
-import type {MosaicDashboardPanelConfig} from '@sqlrooms/mosaic';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import type {DeckMapEntry} from '@sqlrooms/deck';
 import {
   blockDocumentNodeToBlock,
   type BlockDocumentAiAdapter,
@@ -483,17 +482,15 @@ ${runtimeIssues.length > 0 ? `\nCurrent map runtime issues:\n${formatMapBlockRun
 User request: ${intent}`;
 }
 
-function findTargetMapPanel(
+function findTargetMap(
   state: RoomState,
   targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
-): MosaicDashboardPanelConfig | undefined {
+): DeckMapEntry | undefined {
   if (targetBlock.blockType !== 'map' || !targetBlock.blockInstanceId) {
     return undefined;
   }
 
-  return state.mosaicDashboard
-    .getDashboard(targetBlock.blockInstanceId)
-    ?.panels.find((panel) => panel.type === DECK_MAP_DASHBOARD_PANEL_TYPE);
+  return state.deckMaps.getMap(targetBlock.blockInstanceId);
 }
 
 function formatTargetMapState(
@@ -504,17 +501,17 @@ function formatTargetMapState(
     return undefined;
   }
 
-  const panel = findTargetMapPanel(state, targetBlock);
-  if (!panel) {
-    return 'Existing map panel state: no map panel config was found for this block. Avoid inventing datasets or layers; ask for more information if the requested edit depends on missing map state.';
+  const map = findTargetMap(state, targetBlock);
+  if (!map) {
+    return 'Existing map resource state: no map config was found for this block. Avoid inventing datasets or layers; ask for more information if the requested edit depends on missing map state.';
   }
 
   const stateJson = JSON.stringify(
     {
-      panelId: panel.id,
-      title: panel.title,
-      type: panel.type,
-      config: panel.config,
+      mapId: map.id,
+      title: map.title,
+      selectedTable: map.selectedTable,
+      config: map.config,
     },
     null,
     2,
@@ -525,7 +522,7 @@ function formatTargetMapState(
       ? `${stateJson.slice(0, MAX_TARGET_MAP_STATE_CHARS)}\n...truncated`
       : stateJson;
 
-  return `Existing map panel state:
+  return `Existing map resource state:
 \`\`\`json
 ${serializedState}
 \`\`\`

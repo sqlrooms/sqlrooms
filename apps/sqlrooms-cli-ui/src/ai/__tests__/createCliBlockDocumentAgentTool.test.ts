@@ -7,7 +7,7 @@ import {
   type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
+import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck/mosaic';
 import {
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   type DatabaseAiAdapter,

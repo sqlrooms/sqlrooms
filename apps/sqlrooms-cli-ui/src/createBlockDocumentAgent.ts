@@ -7,7 +7,7 @@ import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createCliBlockDocumentAiAdapter} from './createCliBlockDocumentAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
-import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
+import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck/mosaic';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
 import {
@@ -55,7 +55,6 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           | {
               mapId?: string;
               blockId?: string;
-              panelId?: string;
             }
           | undefined;
 
@@ -63,7 +62,6 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           success: true,
           mapId: data?.mapId,
           blockId: data?.blockId,
-          panelId: data?.panelId,
           message: result.message,
         };
       } catch (error) {

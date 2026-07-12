@@ -1,4 +1,3 @@
-import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   getRawSqlTableReference,
   makeQualifiedTableName,
@@ -9,7 +8,8 @@ import {
 import {
   createDeckMapDashboardPanelConfig,
   type DeckMapDashboardPanelConfig,
-} from './dashboardConfig';
+  type DeckMapConfig,
+} from './mapConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
 
@@ -428,7 +428,7 @@ export function normalizeDeckMapFillColor(
   return [...DEFAULT_FILL_COLOR];
 }
 
-export function createDeckMapDashboardConfigForTable(options: {
+export function createDeckMapConfigForTable(options: {
   tableName: string;
   columns: DeckMapConfigColumn[];
   tableReference?: DeckMapTableReference;
@@ -440,7 +440,7 @@ export function createDeckMapDashboardConfigForTable(options: {
   pointRadius?: number;
   fillColor?: DeckMapFillColor;
   mapStyle?: string;
-}): DeckMapDashboardPanelConfig {
+}): DeckMapConfig {
   const datasetId = options.tableName;
   const explicitGeometryColumn = options.geometryColumn?.trim() || undefined;
   const detectedCoordinates =
@@ -558,6 +558,8 @@ export function createDeckMapDashboardConfigForTable(options: {
   };
 }
 
+export const createDeckMapDashboardConfigForTable = createDeckMapConfigForTable;
+
 export function createDeckMapDashboardPanelConfigForTable(options: {
   title?: string;
   tableName: string;
@@ -574,12 +576,12 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
 }) {
   return createDeckMapDashboardPanelConfig({
     title: options.title,
-    ...createDeckMapDashboardConfigForTable(options),
+    ...createDeckMapConfigForTable(options),
   });
 }
 
 export function regenerateMapConfigForTable(
-  panel: MosaicDashboardPanelConfigType,
+  panel: {config: Record<string, unknown>},
   table: DataTable,
   longitudeColumn?: string,
   latitudeColumn?: string,
@@ -593,7 +595,7 @@ export function regenerateMapConfigForTable(
   }
 
   const existingConfig = panel.config as DeckMapDashboardPanelConfig;
-  const nextConfig = createDeckMapDashboardConfigForTable({
+  const nextConfig = createDeckMapConfigForTable({
     tableName: table.tableName,
     columns: table.columns,
     tableReference: table.table,

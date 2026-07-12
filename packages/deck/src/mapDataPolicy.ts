@@ -1,17 +1,22 @@
-import type {ChartDataPolicy} from '@sqlrooms/mosaic';
 import {
   DEFAULT_DECK_MAP_MAX_DATA_POINTS,
-  type DeckMapDashboardPanelConfig,
+  type DeckMapConfig,
   type DeckMapDataPolicyOverride,
-} from './dashboardConfig';
+} from './mapConfig';
+
+export type DeckMapDataPolicy = {
+  disabled?: boolean;
+  maxRows: number;
+  reason: string;
+};
 
 const DEFAULT_DECK_MAP_DATA_POLICY_REASON =
   'Map panels render source rows as interactive deck.gl features. Filter, aggregate, or switch to a smaller source query before rendering this map.';
 
 function applyDeckMapDataPolicyOverride(
-  basePolicy: ChartDataPolicy,
+  basePolicy: DeckMapDataPolicy,
   override: DeckMapDataPolicyOverride | undefined,
-): ChartDataPolicy {
+): DeckMapDataPolicy {
   if (!override) {
     return basePolicy;
   }
@@ -29,8 +34,8 @@ function applyDeckMapDataPolicyOverride(
 }
 
 export function getDeckMapDataPolicy(
-  config: DeckMapDashboardPanelConfig | null | undefined,
-): ChartDataPolicy {
+  config: DeckMapConfig | null | undefined,
+): DeckMapDataPolicy {
   return applyDeckMapDataPolicyOverride(
     {
       maxRows: DEFAULT_DECK_MAP_MAX_DATA_POINTS,

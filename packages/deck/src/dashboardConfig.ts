@@ -9,101 +9,25 @@ import {
   parseQualifiedSqlIdentifier,
   quoteParsedRawSqlTableReference,
 } from '@sqlrooms/duckdb';
-import {createId} from '@paralleldrive/cuid2';
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
 import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
-import type {
-  DeckJsonMapProps,
-  DeckSqlDatasetInput,
-  DeckTableDatasetInput,
-} from './types';
-
-export const DECK_MAP_DASHBOARD_PANEL_TYPE = 'deck-json-map';
-export const DEFAULT_DECK_MAP_MAX_DATA_POINTS = 100_000;
-
-export type DeckMapDataPolicyOverride = {
-  disabled?: boolean;
-  maxRows?: number;
-  reason?: string;
-};
-
-export type DeckMapDashboardDatasetConfig = Omit<
-  DeckSqlDatasetInput,
-  'sqlQuery'
-> & {
-  source?: DeckMapDashboardDatasetSource;
-};
-
-/** Dashboard map source that is either a pinned SQL query or table-backed data. */
-export type DeckMapDashboardDatasetSource =
-  | Pick<DeckSqlDatasetInput, 'sqlQuery'>
-  | Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'>;
-
-/** Returns true when a dashboard map source is a literal pinned SQL query. */
-export function isDeckMapDashboardSqlDatasetSource(
-  source: DeckMapDashboardDatasetSource | undefined,
-): source is Pick<DeckSqlDatasetInput, 'sqlQuery'> {
-  return Boolean(source && 'sqlQuery' in source);
-}
-
-/** Returns true when a dashboard map source is backed by a structured table. */
-export function isDeckMapDashboardTableDatasetSource(
-  source: DeckMapDashboardDatasetSource | undefined,
-): source is Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'> {
-  return Boolean(source && 'tableName' in source);
-}
-
-export type DeckMapDashboardInteractionConfig = {
-  type: 'point-radius-brush';
-  dataset: string;
-  longitudeColumn: string;
-  latitudeColumn: string;
-  radiusMeters?: number;
-  event?: 'hover' | 'click';
-};
-
-export type DeckMapDashboardFitToDataConfig = {
-  dataset: string;
-  longitudeColumn?: string;
-  latitudeColumn?: string;
-  /** Geometry column name (WKB) for computing bounds from geometry directly. */
-  geometryColumn?: string;
-  /** H3 hex index column for computing bounds from H3 cells. */
-  h3Column?: string;
-  padding?: number;
-  maxZoom?: number;
-};
-
-/**
- * Determines how the AI authored the map config and what UI editing is available.
- * - `'basic'` — AI produced a minimal config using only properties the UI
- *   configurator understands. The settings panel is enabled for user tweaks.
- * - `'custom'` — AI produced a rich, free-form config that may use any deck.gl
- *   props beyond what the UI configurator can represent. The settings panel is
- *   disabled; users should edit the raw JSON instead.
- *
- * When absent, the config is treated as `'basic'` (settings panel enabled).
- */
-export type DeckMapConfigMode = 'basic' | 'custom';
-
-export type DeckMapDashboardPanelConfig = {
-  spec: DeckJsonMapProps['spec'];
-  datasets: Record<string, DeckMapDashboardDatasetConfig>;
-  configMode?: DeckMapConfigMode;
-  mapStyle?: string;
-  mapProps?: Record<string, unknown>;
-  showLegends?: boolean;
-  interaction?: DeckMapDashboardInteractionConfig;
-  fitToData?: DeckMapDashboardFitToDataConfig;
-  dataPolicy?: DeckMapDataPolicyOverride;
-  settingsOpen?: boolean;
-};
-
-export type CreateDeckMapDashboardPanelConfigOptions =
-  DeckMapDashboardPanelConfig & {
-    title?: string;
-  };
+import {
+  isDeckMapDashboardSqlDatasetSource,
+  isDeckMapDashboardTableDatasetSource,
+  type DeckMapDashboardDatasetConfig,
+  type DeckMapDashboardDatasetSource,
+  type DeckMapDashboardFitToDataConfig,
+  type DeckMapDashboardPanelConfig,
+} from './mapConfig';
+export {
+  asDeckJsonMapConfig,
+  createDeckMapDashboardPanelConfig,
+  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  DEFAULT_DECK_MAP_MAX_DATA_POINTS,
+} from './mapConfig';
+export type {DeckJsonMapProps} from './types';
+import type {DeckJsonMapProps} from './types';
 
 export type DeckMapDashboardDatasetClientState = {
   arrowTable?: ArrowTable;
@@ -112,33 +36,6 @@ export type DeckMapDashboardDatasetClientState = {
   client: unknown;
   isSampled?: boolean;
 };
-
-export function asDeckJsonMapConfig(
-  config: Record<string, unknown>,
-): DeckMapDashboardPanelConfig | null {
-  if (
-    !config.spec ||
-    !config.datasets ||
-    typeof config.datasets !== 'object' ||
-    Array.isArray(config.datasets)
-  ) {
-    return null;
-  }
-
-  return config as DeckMapDashboardPanelConfig;
-}
-
-export function createDeckMapDashboardPanelConfig(
-  options: CreateDeckMapDashboardPanelConfigOptions,
-): any {
-  const {title, ...config} = options;
-  return {
-    id: createId(),
-    type: DECK_MAP_DASHBOARD_PANEL_TYPE,
-    title: title ?? 'Map',
-    config: JSON.parse(JSON.stringify(config)) as Record<string, unknown>,
-  };
-}
 
 export function resolveDeckMapDashboardDatasetSource(options: {
   dashboard: MosaicDashboardEntryType;

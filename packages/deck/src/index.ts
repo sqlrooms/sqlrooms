@@ -5,52 +5,25 @@
 
 export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
-export {
-  DECK_MAP_AI_INSTRUCTIONS,
-  createDashboardAgentToolWithDeckMaps,
-  createDashboardWithDeckMapAiTools,
-  createDeckMapAiTools,
-  createDeckMapDashboardAiTools,
-  createDeckMapDashboardTool,
-  createDeckMapConfigTool,
-  createDeckMapPanelFromNativeConfig,
-  DeckMapDashboardConfigParameter,
-  DeckMapConfigToolParameters,
-  DeckMapDashboardToolParameters,
-  getDashboardWithDeckMapAiInstructions,
-} from './ai';
-export type {
-  DeckMapConfigToolParams,
-  DeckMapDashboardConfigToolConfig,
-  DeckMapDashboardToolParams,
-} from './ai';
-export {
-  deckMapDashboardAddPanelAction,
-  deckMapDashboardPanelRenderer,
-} from './dashboard';
 export {DeckMapBlockSettings} from './BlockMapSettings';
-export {DeckMapDashboardSettings} from './DashboardMapSettings';
-export {MapSettingsPanel} from './MapSettings';
 export {
   DeckMapBlockRenderer,
-  ensureDeckMapBlockState,
+  ensureDeckMapResourceState,
   type DeckMapBlockRendererProps,
 } from './block';
-export {createDeckMapDashboardSliceOptions} from './dashboardIntegration';
 export {
   asDeckJsonMapConfig,
-  createDeckMapDashboardDatasetQuery,
-  createDeckMapDashboardDatasets,
+  createEmptyDeckMapConfig,
   createDeckMapDashboardPanelConfig,
   DEFAULT_DECK_MAP_MAX_DATA_POINTS,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   isDeckMapDashboardSqlDatasetSource,
   isDeckMapDashboardTableDatasetSource,
-  resolveDeckMapDashboardDatasetSource,
-} from './dashboardConfig';
+} from './mapConfig';
 export {getDeckMapDataPolicy} from './mapDataPolicy';
 export {
   createDeckMapDashboardConfigForTable,
+  createDeckMapConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
   createDeckMapPointTransformSql,
   findDeckMapLongitudeLatitudeColumns,
@@ -73,11 +46,33 @@ export {
 } from './datasetSourceUtils';
 export type {DeckMapDatasetSourceConfig} from './datasetSourceUtils';
 export {
-  createOrUpdateDeckMapBlock,
-  type CreateOrUpdateDeckMapBlockHost,
-  type CreateOrUpdateDeckMapBlockParams,
-  type CreateOrUpdateDeckMapBlockResult,
-} from './createOrUpdateDeckMapBlock';
+  DeckMapResourceConfigParameter,
+  DeckMapResourceToolParameters,
+} from './mapAiConfig';
+export {
+  createOrUpdateDeckMapResource,
+  type CreateOrUpdateDeckMapResourceHost,
+  type CreateOrUpdateDeckMapResourceParams,
+  type CreateOrUpdateDeckMapResourceResult,
+} from './createOrUpdateDeckMapResource';
+export {
+  DeckMapEntrySchema,
+  DeckMapsSliceConfig,
+  createDeckMapsSlice,
+  useStoreWithDeckMaps,
+} from './DeckMapsSlice';
+export type {
+  DeckMapEntry,
+  DeckMapRuntimeIssue,
+  DeckMapRuntimeIssueReporter,
+  DeckMapsSliceState,
+} from './DeckMapsSlice';
+export {
+  DeckMapSurface,
+  directDeckMapDataAdapter,
+  type DeckMapDataAdapter,
+  type DeckMapSurfaceProps,
+} from './DeckMapSurface';
 export {
   DECK_MAP_BLOCK_DEFAULT_HEIGHT,
   DECK_MAP_BLOCK_DEFAULT_TITLE,
@@ -90,12 +85,16 @@ export type {
   DeckMapConfigMode,
   DeckMapDashboardFitToDataConfig,
   CreateDeckMapDashboardPanelConfigOptions,
-  DeckMapDashboardDatasetClientState,
   DeckMapDashboardDatasetConfig,
   DeckMapDataPolicyOverride,
   DeckMapDashboardInteractionConfig,
   DeckMapDashboardPanelConfig,
-} from './dashboardConfig';
+  DeckMapConfig,
+  DeckMapDatasetConfig,
+  DeckMapDatasetSource,
+  DeckMapFitToDataConfig,
+  DeckMapInteractionConfig,
+} from './mapConfig';
 export {DeckJsonMap} from './DeckJsonMap';
 export {
   ColorScaleFunction,
