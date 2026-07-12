@@ -195,7 +195,7 @@ export async function createOrUpdateDeckMapBlock(
 
   if (
     requireTableNameForSqlOnlyUpdate &&
-    params.mapId &&
+    existingMapBlock &&
     !tableName &&
     hasSqlOnlyDatasetSource(params.config)
   ) {
@@ -205,7 +205,7 @@ export async function createOrUpdateDeckMapBlock(
   }
 
   const table = tableName ? host.findTable(tableName) : undefined;
-  if (requestedTableName && !table) {
+  if (tableName && !table) {
     throw new Error(`Table "${tableName}" was not found.`);
   }
   const tableIdentity = table?.tableIdentity;

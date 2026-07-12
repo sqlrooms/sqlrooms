@@ -293,6 +293,52 @@ describe('createOrUpdateDeckMapBlock', () => {
     ).rejects.toThrow(/was not found/);
   });
 
+  it('treats a stale mapId in create mode as a create for SQL-only sources', async () => {
+    const host = createHost();
+    const result = await createOrUpdateDeckMapBlock(host, {
+      blockDocumentId: 'doc-1',
+      mapId: 'stale-map',
+      config: {
+        configMode: 'basic',
+        spec: {layers: []},
+        datasets: {
+          places: {source: {sqlQuery: 'SELECT * FROM places'}},
+        },
+      } as DeckMapDashboardConfigToolConfig,
+      missingMapBlockBehavior: 'create',
+      createMapId: () => 'replacement-map',
+    });
+
+    expect(result).toMatchObject({
+      created: true,
+      mapId: 'replacement-map',
+    });
+  });
+
+  it('validates table names introduced by prepareConfig', async () => {
+    const host = createHost({
+      prepareConfig: () => ({
+        configMode: 'basic',
+        spec: {layers: []},
+        datasets: {
+          missing: {source: {tableName: 'missing'}},
+        },
+      }),
+    });
+
+    await expect(
+      createOrUpdateDeckMapBlock(host, {
+        blockDocumentId: 'doc-1',
+        config: {
+          configMode: 'basic',
+          spec: {layers: []},
+          datasets: {},
+        } as DeckMapDashboardConfigToolConfig,
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow('Table "missing" was not found.');
+  });
+
   it('creates a panel for a stale panelId when missingPanelBehavior is create', async () => {
     const host = createHost();
     host.blocks.set('map-1', {blockId: 'block-map-1', mapId: 'map-1'});
