@@ -295,8 +295,8 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
 
 /**
  * Post-normalizes an existing Deck map config so table-backed lon/lat datasets
- * without `transformSql` / `sqlQuery` get a WKB point transform, geometry
- * column bindings, and `fitToData.geometryColumn` alignment.
+ * without `transformSql`, `sqlQuery`, or a native geometry column get a WKB
+ * point transform, geometry bindings, and `fitToData.geometryColumn` alignment.
  *
  * Prefer this for AI/tool configs that arrive without a transform. Fresh configs
  * from {@link createDeckMapDashboardConfigForTable} already include the transform;
@@ -344,6 +344,9 @@ export function normalizeDeckMapPointConfig<
     }
 
     const table = resolveTable(tableName);
+    if (findGeometryColumn(table)) {
+      continue;
+    }
     const coordinateColumns = findLongitudeLatitudeColumns(table);
     if (!coordinateColumns) {
       continue;

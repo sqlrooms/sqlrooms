@@ -257,9 +257,10 @@ Hosts still own renderer registration, deletion cleanup, and product-specific
 side effects. Use `afterEnsureState` for app-local metadata updates that should
 run after the backing map dashboard is created.
 
-`createOrUpdateDeckMapBlock(...)` is the shared create/update orchestrator for
-commands and AI tools that write map blocks. The helper keeps package code free
-of app stores by accepting a host callback adapter:
+`createOrUpdateDeckMapBlock(...)` is transitional worksheet-map orchestration
+for commands and AI tools that write the current Mosaic-dashboard-backed map
+blocks. It keeps package code free of app stores by accepting a host callback
+adapter:
 
 ```ts
 import {createOrUpdateDeckMapBlock} from '@sqlrooms/deck';
@@ -289,6 +290,15 @@ const result = await createOrUpdateDeckMapBlock(
 );
 ```
 
+This callback interface is not a stable general-purpose Deck map abstraction.
+Its dashboard/panel callbacks and `panelId` result reflect the current storage
+representation. The immediate Deck Map Resource Decoupling follow-up will
+replace it with canonical `deckMaps`, a resource-native
+`createOrUpdateDeckMapResource(...)`, and a Mosaic adapter; the resource API
+will not expose dashboard or panel concepts. That replacement should preserve
+the validation, title-preservation, and metadata-after-map-write guarantees
+documented below.
+
 On create, callers must provide either `mapId` or `createMapId`. On update, the
 default behavior is intentionally strict: missing map blocks, missing panels,
 and SQL-only dataset sources without a resolvable `tableName` throw so command
@@ -308,8 +318,9 @@ dataset-source helpers such as `getFirstDatasetSourceTableName(...)` are
 exported so hosts can normalize AI-authored configs before calling
 `createOrUpdateDeckMapBlock(...)`. `normalizeDeckMapPointConfig(...)` only adds
 the standard lon/lat point transform to table-backed datasets that do not
-already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`;
-native geometry, polygon, line, and pre-transformed datasets are preserved.
+already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
+and whose resolved table does not expose a native geometry column; native
+geometry, polygon, line, and pre-transformed datasets are preserved.
 
 ## Core Concepts
 

@@ -305,6 +305,10 @@ export function DeckMapBlockRenderer({
     panel?.id ?? 'no-panel',
     panel?.config ? JSON.stringify(panel.config) : 'no-config',
   ].join(':');
+  const mapConfig = panel?.config as
+    | {datasets?: Record<string, unknown>}
+    | undefined;
+  const hasDatasets = Object.keys(mapConfig?.datasets ?? {}).length > 0;
   const handleMapRenderSuccess = useCallback(() => {
     if (!mapId || !panel) {
       return;
@@ -312,6 +316,15 @@ export function DeckMapBlockRenderer({
 
     clearPanelIssue(mapId, panel.id);
   }, [clearPanelIssue, mapId, panel]);
+  // The no-dataset state intentionally bypasses the error boundary, so treat
+  // reaching it as a successful recovery from any prior render error.
+  useEffect(() => {
+    if (!mapId || !panel || hasDatasets) {
+      return;
+    }
+
+    clearPanelIssue(mapId, panel.id);
+  }, [clearPanelIssue, hasDatasets, mapId, panel]);
   const handleMapRenderError = useCallback(
     (error: Error) => {
       if (!mapId || !panel) {
@@ -351,9 +364,6 @@ export function DeckMapBlockRenderer({
     panel,
     selectionName: getMosaicDashboardSelectionName(mapId),
   };
-  const mapConfig = panel.config as {datasets?: Record<string, unknown>};
-  const hasDatasets = Object.keys(mapConfig.datasets ?? {}).length > 0;
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">

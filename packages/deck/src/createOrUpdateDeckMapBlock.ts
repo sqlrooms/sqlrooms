@@ -12,8 +12,13 @@ import {
 type DeckMapPanel = ReturnType<typeof createDeckMapPanelFromNativeConfig>;
 
 /**
- * Host callbacks for creating or updating a Deck map block inside a block
- * document. Apps adapt direct store mutations or command dispatch into this bag.
+ * Transitional host callbacks for the current Mosaic-dashboard-backed
+ * worksheet-map representation. Apps adapt direct store mutations or command
+ * dispatch into this bag.
+ *
+ * The dashboard/panel callbacks, `panelId`, and dashboard ownership implied by
+ * this shape are implementation details of the current representation, not the
+ * long-term Deck map resource API.
  */
 export type CreateOrUpdateDeckMapBlockHost = {
   ensureBlockDocument: (blockDocumentId: string) => void;
@@ -120,8 +125,15 @@ export type CreateOrUpdateDeckMapBlockResult = {
 };
 
 /**
- * Shared create/update orchestration for Deck map blocks in block documents.
- * Hosts wrap this as an AI tool or command and supply mutation callbacks.
+ * Orchestrates create/update behavior for the current Mosaic-dashboard-backed
+ * worksheet-map representation. Hosts wrap this as an AI tool or command and
+ * supply the transitional dashboard/panel mutation callbacks above.
+ *
+ * Consumers should not treat `panelId` or dashboard ownership as the long-term
+ * Deck map resource contract. The resource-native replacement should retain
+ * this helper's behavioral guarantees: strict target/table validation,
+ * title-preserving updates, and persisting block metadata only after the map
+ * write succeeds.
  */
 export async function createOrUpdateDeckMapBlock(
   host: CreateOrUpdateDeckMapBlockHost,

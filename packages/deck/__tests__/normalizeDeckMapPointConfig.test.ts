@@ -119,4 +119,33 @@ describe('normalizeDeckMapPointConfig', () => {
       }),
     ).toBe(config);
   });
+
+  it('preserves datasets when the table has an inferred geometry column', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'places',
+            _sqlroomsBinding: {dataset: 'places'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+        },
+      },
+    };
+
+    expect(
+      normalizeDeckMapPointConfig({
+        config,
+        resolveTable: () => ({
+          ...placesTable,
+          columns: [...placesTable.columns, {name: 'geom', type: 'GEOMETRY'}],
+        }),
+      }),
+    ).toBe(config);
+  });
 });
