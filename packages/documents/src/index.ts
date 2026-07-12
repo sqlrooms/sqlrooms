@@ -90,6 +90,12 @@ export {
   type BlockAiTarget,
 } from './BlockAiTarget';
 export {
+  startBlockScopedChat,
+  type StartBlockScopedChatActions,
+  type StartBlockScopedChatArtifact,
+  type StartBlockScopedChatOptions,
+} from './startBlockScopedChat';
+export {
   createDefaultDocumentsConfig,
   createDocumentsSlice,
   type CreateDocumentsSliceProps,

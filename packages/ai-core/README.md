@@ -216,6 +216,7 @@ state.ai.devtools.clearAgentSnapshots();
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
 - Chat UI: `Chat`, `ChatMessagesContainer`, `ChatTurnView`, `MessageContent`, `ModelSelector`, `QueryControls`, `PromptSuggestions`
+- Block Ask AI: `BlockAiPromptPopover`, `createAskAiBlockHeaderAction`, `AskAiBlockHeaderActionRenderContext`, `CreateAskAiBlockHeaderActionOptions`
 - Devtools subexport: `@sqlrooms/ai-core/devtools`
 - Legacy/compat components: `AnalysisResultsContainer`, `AnalysisResult`, `AnalysisAnswer`, `ErrorMessage`
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`

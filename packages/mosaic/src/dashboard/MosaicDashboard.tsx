@@ -51,6 +51,9 @@ export function MosaicDashboardRoot({
   const addPanel = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.addPanel,
   );
+  const dashboard = useStoreWithMosaicDashboard(
+    (state) => state.mosaicDashboard.config.dashboardsById[dashboardId],
+  );
 
   const chartTypes = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.chartTypes,
@@ -73,9 +76,20 @@ export function MosaicDashboardRoot({
     [selectedTableInfo],
   );
 
+  // Only pass defaultTitle when creating; ensureDashboard renames when title differs.
   useEffect(() => {
-    ensureDashboard(dashboardId, defaultTitle, defaultLayoutType);
-  }, [dashboardId, defaultLayoutType, defaultTitle, ensureDashboard]);
+    ensureDashboard(
+      dashboardId,
+      dashboard ? undefined : defaultTitle,
+      defaultLayoutType,
+    );
+  }, [
+    dashboard,
+    dashboardId,
+    defaultLayoutType,
+    defaultTitle,
+    ensureDashboard,
+  ]);
 
   const handleCreateChart = useCallback(
     (title: string, config: ChartConfig) => {

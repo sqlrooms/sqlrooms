@@ -3,9 +3,9 @@ import {tool, type ToolLoopAgent} from 'ai';
 import {
   blockDocumentBlockToNode,
   type BlockDocumentNode,
-  BlockDocumentAiAdapter,
-  BlockDocumentMoveBlockAiAdapter,
-  BlockDocumentStatefulBlockBlock,
+  type BlockDocumentAiAdapter,
+  type BlockDocumentMoveBlockAiAdapter,
+  type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
 import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck';
 import {

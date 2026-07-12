@@ -1065,6 +1065,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               return;
             }
             const config = getStatefulBlockArtifactConfig(blockType);
+            // Do not pass embeddedTitle here: create-stateful-block already
+            // called ensureState with the command-provided title. Re-running
+            // with the generic embedded title would overwrite it.
             config.ensureState(getState(), blockInstanceId);
           },
           onDeleteOwnedStatefulBlock: ({

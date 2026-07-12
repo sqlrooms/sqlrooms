@@ -605,6 +605,16 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
       const {intent} = params;
 
       try {
+        if (
+          targetBlock &&
+          STATEFUL_TARGET_BLOCK_TYPES.has(targetBlock.blockType) &&
+          !targetBlock.blockInstanceId
+        ) {
+          throw new Error(
+            `${targetBlock.blockType} block ${targetBlock.blockId} is missing blockInstanceId.`,
+          );
+        }
+
         blockDocumentAdapter.ensureBlockDocument(blockDocumentId);
         blockDocumentAdapter.setCurrentBlockDocument(blockDocumentId);
         validateTargetBlock(blockDocumentAdapter, blockDocumentId, targetBlock);

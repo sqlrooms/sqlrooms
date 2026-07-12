@@ -189,6 +189,72 @@ Hosts with persisted compatibility artifact types can pass
 `isBlockDocumentArtifact` without adding that product vocabulary to the shared
 adapter API.
 
+### Block-Scoped Ask AI
+
+`startBlockScopedChat(...)` opens or reuses an artifact-scoped AI session for a
+specific block in a block document. It is exported from `@sqlrooms/documents`
+so hosts can wire Ask AI buttons, block header actions, or context menus
+without duplicating session-selection rules.
+
+The helper intentionally depends on a small action adapter instead of importing
+a room store. Hosts provide artifact validation, session ownership, prompt
+updates, and assistant visibility through `StartBlockScopedChatActions`:
+
+```ts
+import {
+  startBlockScopedChat,
+  type StartBlockScopedChatActions,
+} from '@sqlrooms/documents';
+
+const actions: StartBlockScopedChatActions = {
+  getArtifact: (artifactId) =>
+    store.getState().artifacts.getArtifact(artifactId),
+  getCurrentArtifactId: () => store.getState().artifacts.currentArtifactId,
+  setCurrentArtifact: (artifactId) =>
+    store.getState().artifacts.setCurrentArtifact(artifactId),
+  getAiSessions: () => store.getState().ai.config.sessions,
+  getAiSessionArtifacts: () => store.getState().artifactAi.sessionArtifacts,
+  createArtifactScopedSession: () =>
+    store.getState().artifactAi.createArtifactScopedSession(),
+  switchSession: (sessionId) => store.getState().ai.switchSession(sessionId),
+  getSessionDraftContextItemIds: (sessionId) =>
+    store.getState().ai.getSessionDraftContextItemIds(sessionId),
+  setSessionDraftContextItemIds: (sessionId, ids) =>
+    store.getState().ai.setSessionDraftContextItemIds(sessionId, ids),
+  setPrompt: (sessionId, prompt) =>
+    store.getState().ai.setPrompt(sessionId, prompt),
+  startAnalysisWhenReady: (sessionId) =>
+    store.getState().ai.startAnalysisWhenReady(sessionId),
+};
+
+await startBlockScopedChat({
+  target: {
+    blockDocumentId,
+    blockId,
+    blockType: 'map',
+    blockInstanceId: mapId,
+  },
+  prompt: 'Repair this map',
+  revealAssistant: () => setAssistantOpen(true),
+  actions,
+  isValidBlockDocumentArtifact: (artifact) =>
+    artifact.type === 'block-document',
+});
+```
+
+`isValidBlockDocumentArtifact` is required because hosts may use
+product-specific artifact type names or compatibility aliases. The helper
+validates the target artifact before mutating UI state, switches to the target
+artifact when needed, and derives the block context item with
+`blockContextItemId(...)` unless `contextItemId` is provided.
+
+Only running sessions for the same artifact and context item block a new Ask AI
+turn. Finished sessions that already contain the block context are reused,
+their prompt is replaced, and their draft context is left untouched if it
+already includes the block item. When a matching running session exists, the
+helper switches to it, shows a toast, and returns without revealing the
+assistant, changing the prompt, or starting another analysis.
+
 The slice can create block documents, replace the Tiptap JSON body, and
 append/insert/update/remove/reorder top-level blocks. Supported block DTOs
 include headings, paragraphs, lists, todos, images, chart images,
