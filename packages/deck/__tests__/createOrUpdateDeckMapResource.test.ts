@@ -67,6 +67,30 @@ describe('createOrUpdateDeckMapResource', () => {
     );
   });
 
+  test('ignores a blank saved caption when preserving the resource title', async () => {
+    const h = host({
+      findMapBlock: jest.fn(() => ({
+        blockId: 'block-1',
+        mapId: 'map-1',
+        caption: '   ',
+      })),
+      findMap: jest.fn(() => ({id: 'map-1', title: 'Saved title', config})),
+    });
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'worksheet-1',
+      mapId: 'map-1',
+      config,
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({title: 'Saved title'}),
+    );
+    expect(h.updateBlockMetadata).toHaveBeenCalledWith(
+      expect.objectContaining({caption: 'Saved title'}),
+    );
+  });
+
   test('updates metadata only after the map write succeeds', async () => {
     const order: string[] = [];
     const h = host({

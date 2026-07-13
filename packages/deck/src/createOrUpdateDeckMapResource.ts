@@ -122,10 +122,10 @@ export async function createOrUpdateDeckMapResource(
     throw new Error(`Table "${tableName}" was not found.`);
 
   const caption =
-    params.caption ??
-    params.title?.trim() ??
-    existingBlock?.caption?.trim() ??
-    existingMap?.title?.trim() ??
+    params.caption?.trim() ||
+    params.title?.trim() ||
+    existingBlock?.caption?.trim() ||
+    existingMap?.title?.trim() ||
     'Map';
   const title = params.title?.trim() || caption;
   const created = !existingBlock;

@@ -322,10 +322,10 @@ silently retarget stale IDs. AI create flows can opt into
 `missingMapBlockBehavior: 'create'`.
 
 Title handling is conservative for Ask AI edits: when `title` is omitted,
-`createOrUpdateDeckMapResource(...)` preserves the existing block caption or
-resource title. Passing an explicit `title` updates the durable map title and
-uses it as the default block caption. Block metadata is written only after the
-map write succeeds.
+`createOrUpdateDeckMapResource(...)` preserves the existing non-blank block
+caption or resource title. Passing an explicit `title` updates the durable map
+title and uses it as the default block caption. Block metadata is written only
+after the map write succeeds.
 
 Map authoring helpers such as `normalizeDeckMapPointConfig(...)`,
 `normalizeDeckMapFillColor(...)`, `regenerateMapConfigForTable(...)`, and
