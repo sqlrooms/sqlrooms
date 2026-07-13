@@ -259,6 +259,9 @@ Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
 only a matching issue kind; omit `kind` when the map state should clear any
 stale issue. Replacing a map config clears its prior render issue, while data
 issues remain until the corresponding dataset recovery is reported.
+Direct worksheet maps automatically fit the configured dataset when the map or
+its source first becomes ready; the header action remains available for manual
+refitting.
 
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration

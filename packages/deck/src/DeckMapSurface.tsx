@@ -181,6 +181,7 @@ export function DeckMapSurface({
     container,
     deckMapRef,
     requestVersion: fitRequestVersion,
+    autoFit: true,
     onError: handleFitError,
   });
 
