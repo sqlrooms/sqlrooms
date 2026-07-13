@@ -1,14 +1,38 @@
 import {z} from 'zod';
+import type {DeckMapConfig} from './mapConfig';
 
-const DeckMapDatasetSource = z.looseObject({
-  tableName: z.string().optional(),
-  transformSql: z.string().optional(),
-  sqlQuery: z.string().optional(),
-});
+const DeckMapDatasetSource = z.union([
+  z.looseObject({
+    sqlQuery: z.string(),
+  }),
+  z.looseObject({
+    tableName: z.string(),
+    transformSql: z.string().optional(),
+  }),
+]);
 const DeckMapDatasetConfig = z.looseObject({
   source: DeckMapDatasetSource.optional(),
   geometryColumn: z.string().optional(),
   geometryEncodingHint: z.enum(['geoarrow', 'wkb', 'wkt']).optional(),
+});
+
+const DeckMapInteractionConfig = z.looseObject({
+  type: z.literal('point-radius-brush'),
+  dataset: z.string(),
+  longitudeColumn: z.string(),
+  latitudeColumn: z.string(),
+  radiusMeters: z.number().optional(),
+  event: z.enum(['hover', 'click']).optional(),
+});
+
+const DeckMapFitToDataConfig = z.looseObject({
+  dataset: z.string(),
+  longitudeColumn: z.string().optional(),
+  latitudeColumn: z.string().optional(),
+  geometryColumn: z.string().optional(),
+  h3Column: z.string().optional(),
+  padding: z.number().optional(),
+  maxZoom: z.number().optional(),
 });
 
 export const DeckMapResourceConfigParameter = z.looseObject({
@@ -18,8 +42,8 @@ export const DeckMapResourceConfigParameter = z.looseObject({
   mapStyle: z.string().optional(),
   mapProps: z.record(z.string(), z.unknown()).optional(),
   showLegends: z.boolean().optional(),
-  interaction: z.record(z.string(), z.unknown()).optional(),
-  fitToData: z.record(z.string(), z.unknown()).optional(),
+  interaction: DeckMapInteractionConfig.optional(),
+  fitToData: DeckMapFitToDataConfig.optional(),
   dataPolicy: z
     .looseObject({
       disabled: z.boolean().optional(),
@@ -28,7 +52,7 @@ export const DeckMapResourceConfigParameter = z.looseObject({
     })
     .optional(),
   settingsOpen: z.boolean().optional(),
-});
+}) satisfies z.ZodType<DeckMapConfig>;
 
 export const DeckMapResourceToolParameters = z.object({
   title: z.string().optional().default('Map'),
