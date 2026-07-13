@@ -116,6 +116,12 @@ export function createDeckMapsSlice(props?: {
             const map = draft.deckMaps.config.mapsById[id];
             if (!map) throw new Error(`Deck map ${id} was not found`);
             Object.assign(map, patch, {id});
+            if (
+              patch.config &&
+              Object.keys(patch.config.datasets).length === 0
+            ) {
+              delete draft.deckMaps.runtime.issuesByMapId[id];
+            }
           }),
         ),
       setSelectedTable: (id, tableName) =>

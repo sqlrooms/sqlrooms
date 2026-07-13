@@ -26,4 +26,25 @@ describe('DeckMapsSlice', () => {
     expect(store.getState().deckMaps.config.mapsById).toEqual({});
     expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
   });
+
+  test('clears a stale runtime issue when a map becomes empty', () => {
+    const store = createStore<any>(createDeckMapsSlice() as any);
+    store.getState().deckMaps.ensureMap('map-1', {
+      config: {
+        spec: {layers: []},
+        datasets: {places: {source: {tableName: 'places'}}},
+      },
+    });
+    store.getState().deckMaps.reportMapIssue('map-1', {
+      kind: 'sql-error',
+      message: 'bad query',
+      recoverable: true,
+    });
+
+    store.getState().deckMaps.updateMap('map-1', {
+      config: {spec: {layers: []}, datasets: {}},
+    });
+
+    expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
+  });
 });

@@ -40,6 +40,11 @@ export type DeckMapDataAdapter = {
 export const directDeckMapDataAdapter: DeckMapDataAdapter = {
   resolveDatasets: ({map}) => {
     const resolved: Record<string, DeckDatasetInput> = {};
+    // A top-level selected table is only an unambiguous override when the map
+    // has one table-backed dataset. Multi-source maps retain authored tables.
+    const tableDatasetCount = Object.values(map.config.datasets).filter(
+      (dataset) => isDeckMapTableDatasetSource(dataset.source),
+    ).length;
     for (const [datasetId, dataset] of Object.entries(map.config.datasets)) {
       const {source, ...datasetConfig} = dataset;
       if (isDeckMapSqlDatasetSource(source)) {
@@ -52,7 +57,10 @@ export const directDeckMapDataAdapter: DeckMapDataAdapter = {
       if (isDeckMapTableDatasetSource(source)) {
         resolved[datasetId] = {
           ...datasetConfig,
-          tableName: map.selectedTable ?? source.tableName,
+          tableName:
+            tableDatasetCount === 1
+              ? (map.selectedTable ?? source.tableName)
+              : source.tableName,
           transformSql: source.transformSql,
         };
       }
@@ -120,9 +128,7 @@ export function DeckMapSurface({
   );
   const fitSource = useMemo(
     () =>
-      fitToData
-        ? getDeckMapDatasetSource(datasets[fitToData.dataset])
-        : null,
+      fitToData ? getDeckMapDatasetSource(datasets[fitToData.dataset]) : null,
     [datasets, fitToData],
   );
   const handleFitError = useCallback(
