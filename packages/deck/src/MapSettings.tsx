@@ -1,5 +1,9 @@
 import {FC, useCallback, useMemo, useState} from 'react';
-import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
+import {
+  getTableIdentity,
+  resolveTableReference,
+  type DataTable,
+} from '@sqlrooms/duckdb';
 import {
   binnedNumericSchemes,
   categoricalSchemes,
@@ -147,7 +151,9 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
 
   const selectedDataTable = useMemo(
     () =>
-      tables.find((table) => getTableIdentity(table.table) === selectedTable),
+      selectedTable
+        ? resolveTableReference(tables, selectedTable).table
+        : undefined,
     [selectedTable, tables],
   );
 
@@ -184,11 +190,9 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     : undefined;
   const fallbackTable = useMemo(
     () =>
-      tables.find(
-        (table) =>
-          getTableIdentity(table.table) === fallbackTableName ||
-          table.tableName === fallbackTableName,
-      ),
+      fallbackTableName
+        ? resolveTableReference(tables, fallbackTableName).table
+        : undefined,
     [fallbackTableName, tables],
   );
   const sourceDataTable = selectedDataTable ?? fallbackTable;
