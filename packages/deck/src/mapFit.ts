@@ -5,12 +5,7 @@ import {
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import type {Table as ArrowTable} from 'apache-arrow';
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type RefObject,
-} from 'react';
+import {useEffect, useMemo, useState, type RefObject} from 'react';
 import {
   DeckTableDatasetInvalidTableNameError,
   createDeckTableDatasetSql,
@@ -50,7 +45,10 @@ export function resolveDeckMapFitToData(
   const geometryColumn = fitToData.geometryColumn ?? dataset?.geometryColumn;
   if (geometryColumn) return {...fitToData, geometryColumn};
 
-  if (config.interaction?.longitudeColumn && config.interaction.latitudeColumn) {
+  if (
+    config.interaction?.longitudeColumn &&
+    config.interaction.latitudeColumn
+  ) {
     return {
       ...fitToData,
       longitudeColumn: config.interaction.longitudeColumn,
@@ -310,10 +308,12 @@ export function useDeckMapFitController(options: {
   const [fitState, setFitState] = useState<DeckMapFitState>(() =>
     createInitialFitState(fitKey, requestVersion),
   );
+  // A source change resets auto-fit state, but must not mark a newer manual
+  // request as handled before the effect observes it.
   const activeFitState =
     fitState.key === fitKey
       ? fitState
-      : createInitialFitState(fitKey, requestVersion);
+      : createInitialFitState(fitKey, fitState.handledRequestVersion);
 
   useEffect(() => {
     if (!container) return;

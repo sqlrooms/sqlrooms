@@ -241,9 +241,9 @@ UI is available:
   settings panel can represent (layer type, color scale, radius, geometry
   bindings). The UI settings panel is enabled for user tweaks.
 - **`'custom'`** — the config may use any deck.gl JSON props, including those not
-  representable in the UI configurator. Embeddable document map blocks keep the
-  basic settings controls disabled so dataset or layer edits cannot rewrite the
-  authored config.
+  representable in the UI configurator. Dashboard and document map settings keep
+  the basic controls disabled so dataset or layer edits cannot rewrite the authored
+  config.
 
 AI tools set this field automatically based on request complexity.
 
