@@ -39,11 +39,13 @@ describe('Deck map settings controls', () => {
       readFileSync(join(packageRoot!, 'src', fileName), 'utf8');
     const panelSource = readSource('MapSettings.tsx');
     const worksheetAdapterSource = readSource('BlockMapSettings.tsx');
+    const worksheetSurfaceSource = readSource('DeckMapSurface.tsx');
     const dashboardAdapterSource = readSource('DashboardMapSettings.tsx');
 
     expect(panelSource).not.toContain('@sqlrooms/mosaic');
     expect(worksheetAdapterSource).not.toContain('@sqlrooms/mosaic');
     expect(worksheetAdapterSource).toContain('<DeckMapSettingsPanel');
+    expect(worksheetSurfaceSource).toContain('autoFit: true');
     expect(dashboardAdapterSource).toContain('<DeckMapSettingsPanel');
   });
 });
