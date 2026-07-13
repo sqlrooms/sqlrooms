@@ -15,6 +15,7 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
+import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -131,6 +132,22 @@ export function DeckMapSurface({
     () => dataAdapter.resolveDatasets({mapId, map}),
     [dataAdapter, map, mapId],
   );
+  const configIssues = useMemo(
+    () => getDeckMapResourceConfigIssues(map.config, {allowEmpty: true}),
+    [map.config],
+  );
+  useEffect(() => {
+    if (configIssues.length > 0) {
+      onReportIssue({
+        kind: 'config-error',
+        message: `${configIssues[0]!.path}: ${configIssues[0]!.message}`,
+        recoverable: true,
+        details: {issues: configIssues},
+      });
+    } else {
+      onClearIssue('config-error');
+    }
+  }, [configIssues, onClearIssue, onReportIssue]);
   const handleDatasetStates = useCallback(
     (states: Record<string, PreparedDeckDatasetState>) => {
       const failure = Object.values(states).find(
@@ -154,8 +171,10 @@ export function DeckMapSurface({
     [onClearIssue, onReportIssue],
   );
   useEffect(() => {
-    if (Object.keys(datasets).length === 0) onClearIssue();
-  }, [datasets, onClearIssue]);
+    if (configIssues.length === 0 && Object.keys(datasets).length === 0) {
+      onClearIssue();
+    }
+  }, [configIssues, datasets, onClearIssue]);
   const fitToData = useMemo(
     () => resolveDeckMapFitToData(map.config),
     [map.config],
@@ -184,6 +203,13 @@ export function DeckMapSurface({
     onError: handleFitError,
   });
 
+  if (configIssues.length > 0) {
+    return (
+      <div className="text-destructive flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">
+        {`Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}`}
+      </div>
+    );
+  }
   if (Object.keys(datasets).length === 0) {
     return (
       <div className="text-muted-foreground flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">

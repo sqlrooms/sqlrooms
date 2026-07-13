@@ -11,7 +11,10 @@ import {
   resolveChartTypes,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
-import type {DeckMapResource} from '@sqlrooms/deck';
+import {
+  getDeckMapResourceAiInstructions,
+  type DeckMapResource,
+} from '@sqlrooms/deck';
 import {
   blockDocumentNodeToBlock,
   type BlockDocumentAiAdapter,
@@ -669,6 +672,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
             options.instructions ?? getBlockDocumentAgentInstructions(options),
+            mapBlocksEnabled ? getDeckMapResourceAiInstructions() : undefined,
             getTargetBlockInstructions(targetBlock),
             options.additionalInstructions,
           ]

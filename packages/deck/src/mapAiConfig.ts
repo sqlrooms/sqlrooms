@@ -11,7 +11,9 @@ const DeckMapDatasetSource = z.union([
   }),
 ]);
 const DeckMapDatasetConfig = z.looseObject({
-  source: DeckMapDatasetSource.optional(),
+  source: DeckMapDatasetSource.optional().describe(
+    'Dataset source. Required for new maps; may be omitted only by a sparse update patch that retains an existing source.',
+  ),
   geometryColumn: z.string().optional(),
   geometryEncodingHint: z.enum(['geoarrow', 'wkb', 'wkt']).optional(),
 });
@@ -38,7 +40,11 @@ const DeckMapFitToDataConfig = z.looseObject({
 /** Validates the portable Deck map config accepted from commands and AI tools. */
 export const DeckMapResourceConfigParameter = z.looseObject({
   spec: z.union([z.string(), z.record(z.string(), z.unknown())]),
-  datasets: z.record(z.string(), DeckMapDatasetConfig),
+  datasets: z
+    .record(z.string(), DeckMapDatasetConfig)
+    .describe(
+      'Resource datasets keyed by id. Every dataset in a new map must define source.tableName or source.sqlQuery.',
+    ),
   configMode: z.enum(['basic', 'custom']).optional(),
   mapStyle: z.string().optional(),
   mapProps: z.record(z.string(), z.unknown()).optional(),

@@ -4,6 +4,7 @@ import {
   getFirstDatasetSourceTableName,
   hasSqlOnlyDatasetSource,
 } from './datasetSourceUtils';
+import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
 
 /**
  * Host callbacks used to coordinate a durable Deck map resource with its block
@@ -101,6 +102,7 @@ export async function createOrUpdateDeckMapResource(
         tableName: requestedTable,
       })
     : params.config;
+  assertDeckMapResourceConfig(preparedConfig);
   const tableName =
     requestedTable ?? getFirstDatasetSourceTableName(preparedConfig);
   if (

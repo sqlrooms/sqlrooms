@@ -6,7 +6,14 @@ import {
 import type {DeckMapConfig} from '../src/mapConfig';
 
 const config: DeckMapConfig = {
-  spec: {layers: []},
+  spec: {
+    layers: [
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        _sqlroomsBinding: {dataset: 'places'},
+      },
+    ],
+  },
   datasets: {places: {source: {tableName: 'places'}}},
 };
 
@@ -26,6 +33,41 @@ function host(overrides: Partial<CreateOrUpdateDeckMapResourceHost> = {}) {
 }
 
 describe('createOrUpdateDeckMapResource', () => {
+  test('rejects a non-resource dataset config before creating durable state', async () => {
+    const h = host();
+    const invalidConfig = {
+      configMode: 'custom',
+      datasets: {
+        coffee_shops: {
+          geometryColumn: 'geom',
+          sql: 'SELECT name, geom FROM coffee_shops_nyc',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoJsonLayer',
+            data: '@@#coffee_shops',
+          },
+        ],
+      },
+    } as unknown as DeckMapConfig;
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'worksheet-1',
+        config: invalidConfig,
+        tableName: 'coffee_shops_nyc',
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'datasets.coffee_shops.source: must define source.tableName or source.sqlQuery; top-level sql is not supported',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
   test('creates a durable map and returns no panel identity', async () => {
     const h = host();
     const result = await createOrUpdateDeckMapResource(h, {

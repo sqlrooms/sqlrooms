@@ -54,6 +54,15 @@ export {
   DeckMapResourceToolParameters,
 } from './mapAiConfig';
 export {
+  DeckMapResourceConfigError,
+  assertDeckMapResourceConfig,
+  getDeckMapResourceAiInstructions,
+  getDeckMapResourceConfigIssues,
+  mergeDeckMapResourceConfigPatch,
+  type DeckMapResourceConfigIssue,
+  type DeckMapResourceConfigValidationOptions,
+} from './mapResourceAuthoring';
+export {
   createOrUpdateDeckMapResource,
   type CreateOrUpdateDeckMapResourceHost,
   type CreateOrUpdateDeckMapResourceParams,

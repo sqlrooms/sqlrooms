@@ -6,6 +6,7 @@ import {getTableIdentity} from '@sqlrooms/duckdb';
 import {
   createOrUpdateDeckMapResource,
   DeckMapResourceToolParameters,
+  mergeDeckMapResourceConfigPatch,
   normalizeDeckMapPointConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
@@ -421,9 +422,12 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                 ? {tableIdentity: getTableIdentity(table.table)}
                 : undefined;
             },
-            prepareConfig: ({config}) =>
+            prepareConfig: ({config, existingMapConfig}) =>
               normalizeDeckMapPointConfig({
-                config,
+                config: mergeDeckMapResourceConfigPatch(
+                  existingMapConfig,
+                  config,
+                ),
                 resolveTable: (tableName) => state.db.findTable(tableName),
               }),
           },

@@ -260,6 +260,14 @@ only a matching issue kind; omit `kind` when the map state should clear any
 stale issue. Replacing a map config clears its prior render issue, while data
 issues remain until the corresponding dataset recovery is reported.
 
+Hosts that expose direct worksheet-map AI capability should include
+`getDeckMapResourceAiInstructions()` in the responsible agent and tool
+instructions. `createOrUpdateDeckMapResource(...)` validates the fully merged
+resource before any durable block or map write: each dataset needs a
+`source.tableName` or `source.sqlQuery`, and each layer needs an explicit
+`_sqlroomsBinding.dataset`. Use `mergeDeckMapResourceConfigPatch(...)` in host
+preparation so sparse updates retain durable dataset sources and layers.
+
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
 metadata for block-document hosts. They register a `map` stateful block with

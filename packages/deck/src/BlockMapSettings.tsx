@@ -11,6 +11,7 @@ import {useCallback, useMemo} from 'react';
 import {useStoreWithDeckMaps} from './DeckMapsSlice';
 import {DeckMapSettingsPanel} from './MapSettings';
 import {regenerateMapConfigForTable} from './mapConfigUtils';
+import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
 
 export function DeckMapBlockSettings({
   blockId,
@@ -44,6 +45,11 @@ export function DeckMapBlockSettings({
           )
         : undefined,
     [artifact, blockId],
+  );
+  const configIssues = useMemo(
+    () =>
+      map ? getDeckMapResourceConfigIssues(map.config, {allowEmpty: true}) : [],
+    [map],
   );
 
   const handleTitleChange = useCallback(
@@ -80,7 +86,7 @@ export function DeckMapBlockSettings({
       </div>
     );
 
-  if (map.config.configMode === 'custom') {
+  if (configIssues.length > 0 || map.config.configMode === 'custom') {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
@@ -98,8 +104,9 @@ export function DeckMapBlockSettings({
           ) : null}
         </div>
         <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
-          This custom map configuration cannot be safely edited with the basic
-          settings controls.
+          {configIssues.length > 0
+            ? `Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}`
+            : 'This custom map configuration cannot be safely edited with the basic settings controls.'}
         </div>
       </div>
     );

@@ -8,6 +8,7 @@ import type {RoomState} from './store-types';
 import {createCliBlockDocumentAiAdapter} from './createCliBlockDocumentAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck/mosaic';
+import {getDeckMapResourceAiInstructions} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
 import {
@@ -33,7 +34,9 @@ function createBlockDocumentMapBlockTool(
   return tool({
     description: `Create or update a direct worksheet map block from a native Deck JSON map config.
 
-Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.`,
+Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.
+
+${getDeckMapResourceAiInstructions()}`,
     inputSchema: BlockDocumentMapBlockToolInput,
     execute: async (params) => {
       try {
