@@ -9,10 +9,12 @@ import {
 } from 'react';
 import {DeckJsonMap} from './DeckJsonMap';
 import type {DeckMapEntry, DeckMapRuntimeIssue} from './DeckMapsSlice';
+import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
 } from './mapConfig';
+import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -23,6 +25,33 @@ import type {
   DeckJsonMapHandle,
   PreparedDeckDatasetState,
 } from './types';
+
+function sampleDatasetSql(sql: string, maxRows: number) {
+  const sourceSql = sql.trim().replace(/(?:\s*;+\s*)+$/, '');
+  return `SELECT * FROM (${sourceSql}) USING SAMPLE ${maxRows} ROWS`;
+}
+
+function applyDataPolicy(
+  input: DeckDatasetInput,
+  policy: DeckMapDataPolicy,
+): DeckDatasetInput {
+  if (policy.disabled) return input;
+  const maxRows = Math.max(1, Math.floor(policy.maxRows));
+  if ('sqlQuery' in input) {
+    return {...input, sqlQuery: sampleDatasetSql(input.sqlQuery, maxRows)};
+  }
+  if ('tableName' in input) {
+    return {
+      ...input,
+      transformSql: sampleDatasetSql(
+        input.transformSql ??
+          `SELECT * FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+        maxRows,
+      ),
+    };
+  }
+  return input;
+}
 
 /**
  * Host-neutral data boundary for Deck map resources. Worksheet maps use the
@@ -40,6 +69,7 @@ export type DeckMapDataAdapter = {
 export const directDeckMapDataAdapter: DeckMapDataAdapter = {
   resolveDatasets: ({map}) => {
     const resolved: Record<string, DeckDatasetInput> = {};
+    const dataPolicy = getDeckMapDataPolicy(map.config);
     // A top-level selected table is only an unambiguous override when the map
     // has one table-backed dataset. Multi-source maps retain authored tables.
     const tableDatasetCount = Object.values(map.config.datasets).filter(
@@ -48,21 +78,24 @@ export const directDeckMapDataAdapter: DeckMapDataAdapter = {
     for (const [datasetId, dataset] of Object.entries(map.config.datasets)) {
       const {source, ...datasetConfig} = dataset;
       if (isDeckMapSqlDatasetSource(source)) {
-        resolved[datasetId] = {
-          ...datasetConfig,
-          sqlQuery: source.sqlQuery,
-        };
+        resolved[datasetId] = applyDataPolicy(
+          {...datasetConfig, sqlQuery: source.sqlQuery},
+          dataPolicy,
+        );
         continue;
       }
       if (isDeckMapTableDatasetSource(source)) {
-        resolved[datasetId] = {
-          ...datasetConfig,
-          tableName:
-            tableDatasetCount === 1
-              ? (map.selectedTable ?? source.tableName)
-              : source.tableName,
-          transformSql: source.transformSql,
-        };
+        resolved[datasetId] = applyDataPolicy(
+          {
+            ...datasetConfig,
+            tableName:
+              tableDatasetCount === 1
+                ? (map.selectedTable ?? source.tableName)
+                : source.tableName,
+            transformSql: source.transformSql,
+          },
+          dataPolicy,
+        );
       }
     }
     return resolved;

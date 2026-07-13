@@ -106,6 +106,18 @@ describe('createCliBlockDocumentCommands', () => {
     expect(result).toMatchObject({success: true, data: {mapId: 'map-1'}});
     expect((result as any).data).not.toHaveProperty('panelId');
     expect(mapsById['map-1'].title).toBe('Earthquake Explorer');
+    expect(mapsById['map-1'].config.datasets.earthquakes).toMatchObject({
+      geometryColumn: '__sqlrooms_geom',
+      geometryEncodingHint: 'wkb',
+      source: {
+        tableName: 'earthquakes',
+        transformSql: expect.stringContaining('ST_AsWKB'),
+      },
+    });
+    expect(mapsById['map-1'].config.fitToData).toMatchObject({
+      dataset: 'earthquakes',
+      geometryColumn: '__sqlrooms_geom',
+    });
     expect(state.mosaicDashboard.ensureDashboard).not.toHaveBeenCalled();
     expect(
       invokeCommand.mock.calls.some(([id]) =>

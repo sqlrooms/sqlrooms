@@ -23,13 +23,17 @@ describe('directDeckMapDataAdapter', () => {
         },
       },
     });
-    expect(datasets).toEqual({
-      places: {
-        tableName: 'main.current_places',
-        transformSql: 'SELECT * FROM __sqlrooms_source',
-        geometryColumn: 'geom',
-      },
+    expect(datasets.places).toMatchObject({
+      tableName: 'main.current_places',
+      geometryColumn: 'geom',
     });
+    expect('transformSql' in datasets.places!).toBe(true);
+    expect((datasets.places as {transformSql: string}).transformSql).toContain(
+      'SELECT * FROM __sqlrooms_source',
+    );
+    expect((datasets.places as {transformSql: string}).transformSql).toContain(
+      'USING SAMPLE 100000 ROWS',
+    );
   });
 
   test('preserves authored tables for maps with multiple table datasets', () => {
@@ -54,12 +58,52 @@ describe('directDeckMapDataAdapter', () => {
       },
     });
 
-    expect(datasets).toEqual({
-      places: {tableName: 'main.places', transformSql: undefined},
-      regions: {
-        tableName: 'main.regions',
-        transformSql: 'SELECT * FROM __sqlrooms_source',
+    expect(datasets.places).toMatchObject({tableName: 'main.places'});
+    expect(datasets.regions).toMatchObject({tableName: 'main.regions'});
+    expect((datasets.places as {transformSql: string}).transformSql).toContain(
+      'USING SAMPLE 100000 ROWS',
+    );
+    expect((datasets.regions as {transformSql: string}).transformSql).toContain(
+      'SELECT * FROM __sqlrooms_source',
+    );
+  });
+
+  test('applies a custom row limit to direct SQL datasets', () => {
+    const datasets = directDeckMapDataAdapter.resolveDatasets({
+      mapId: 'map-1',
+      map: {
+        id: 'map-1',
+        title: 'Places',
+        config: {
+          spec: {layers: []},
+          datasets: {places: {source: {sqlQuery: 'SELECT * FROM places;'}}},
+          dataPolicy: {maxRows: 250},
+        },
       },
+    });
+
+    expect((datasets.places as {sqlQuery: string}).sqlQuery).toBe(
+      'SELECT * FROM (SELECT * FROM places) USING SAMPLE 250 ROWS',
+    );
+  });
+
+  test('preserves direct dataset queries when the row policy is disabled', () => {
+    const datasets = directDeckMapDataAdapter.resolveDatasets({
+      mapId: 'map-1',
+      map: {
+        id: 'map-1',
+        title: 'Places',
+        config: {
+          spec: {layers: []},
+          datasets: {places: {source: {tableName: 'main.places'}}},
+          dataPolicy: {disabled: true},
+        },
+      },
+    });
+
+    expect(datasets.places).toEqual({
+      tableName: 'main.places',
+      transformSql: undefined,
     });
   });
 });

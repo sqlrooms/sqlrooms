@@ -6,6 +6,7 @@ import {getTableIdentity} from '@sqlrooms/duckdb';
 import {
   createOrUpdateDeckMapResource,
   DeckMapResourceToolParameters,
+  normalizeDeckMapPointConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -420,6 +421,11 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                 ? {tableIdentity: getTableIdentity(table.table)}
                 : undefined;
             },
+            prepareConfig: ({config}) =>
+              normalizeDeckMapPointConfig({
+                config,
+                resolveTable: (tableName) => state.db.findTable(tableName),
+              }),
           },
           {
             blockDocumentId: params.blockDocumentId,

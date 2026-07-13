@@ -5,6 +5,8 @@ import {
   type BlockSettingsComponentProps,
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
+import {Button} from '@sqlrooms/ui';
+import {XIcon} from 'lucide-react';
 import {useCallback, useMemo} from 'react';
 import {useStoreWithDeckMaps} from './DeckMapsSlice';
 import {DeckMapSettingsPanel} from './MapSettings';
@@ -81,6 +83,32 @@ export function DeckMapBlockSettings({
         Map settings not available
       </div>
     );
+
+  if (map.config.configMode === 'custom') {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
+          <span>Map settings</span>
+          {onClose ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+        </div>
+        <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
+          This custom map configuration cannot be safely edited with the basic
+          settings controls.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DeckMapSettingsPanel
       title={block?.caption ?? map.title}
