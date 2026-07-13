@@ -4,6 +4,7 @@ import {
   normalizeDeckMapPointConfig,
   regenerateMapConfigForTable,
 } from '../src/mapConfigUtils';
+import {createEmptyDeckMapConfig} from '../src/mapConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from '../src/datasets/tableDatasetSql';
 
 const placesTable = {
@@ -152,6 +153,29 @@ describe('normalizeDeckMapPointConfig', () => {
 });
 
 describe('regenerateMapConfigForTable', () => {
+  it('seeds a generated layer when a table is selected for an empty map', () => {
+    const config = createEmptyDeckMapConfig();
+    const table: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'places'}),
+      tableName: 'places',
+      schema: 'main',
+      isView: false,
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    };
+
+    const next = regenerateMapConfigForTable({config}, table);
+
+    expect(Object.keys(next.datasets)).toEqual(['places']);
+    expect(next.spec.layers).toHaveLength(1);
+    expect(next.spec.layers[0]).toMatchObject({
+      '@@type': 'GeoArrowScatterplotLayer',
+      _sqlroomsBinding: {dataset: 'places'},
+    });
+  });
+
   it('returns the existing config for a non-geospatial table', () => {
     const config = {
       spec: {layers: []},

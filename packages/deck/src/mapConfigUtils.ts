@@ -618,8 +618,9 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
 /**
  * Regenerates a map's dataset source and fit configuration for a table while
  * preserving an existing single dataset ID so retained layer bindings remain
- * valid. Returns the existing config unchanged when the table has no supported
- * geospatial columns or when multiple datasets make the target ambiguous.
+ * valid. Empty maps adopt the generated dataset and layer spec. Returns the
+ * existing config unchanged when the table has no supported geospatial columns
+ * or when multiple datasets make the target ambiguous.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
@@ -647,6 +648,13 @@ export function regenerateMapConfigForTable(
     latitudeColumn,
   });
   const nextDataset = Object.values(nextConfig.datasets)[0];
+
+  if (
+    existingDatasetIds.length === 0 &&
+    existingConfig.spec.layers.length === 0
+  ) {
+    return nextConfig;
+  }
 
   if (existingDatasetIds.length === 1 && nextDataset) {
     const datasetId = existingDatasetIds[0]!;
