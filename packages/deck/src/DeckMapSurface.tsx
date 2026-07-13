@@ -112,7 +112,8 @@ export type DeckMapSurfaceProps = {
   fitRequestVersion?: number;
   onUpdateMap: (patch: Partial<DeckMapEntry>) => void;
   onReportIssue: (issue: Omit<DeckMapRuntimeIssue, 'mapId'>) => void;
-  onClearIssue: () => void;
+  /** Clears the current issue when its kind matches, or all issues when omitted. */
+  onClearIssue: (kind?: DeckMapRuntimeIssue['kind']) => void;
   dataAdapter?: DeckMapDataAdapter;
 };
 
@@ -147,7 +148,7 @@ export function DeckMapSurface({
       } else if (
         Object.values(states).every((state) => state.status === 'ready')
       ) {
-        onClearIssue();
+        onClearIssue('sql-error');
       }
     },
     [onClearIssue, onReportIssue],

@@ -264,7 +264,7 @@ export function DeckMapBlockRenderer({
               selected={selected}
               onUpdateMap={(patch) => updateMap(mapId, patch)}
               onReportIssue={(issue) => reportMapIssue(mapId, issue)}
-              onClearIssue={() => clearMapIssue(mapId)}
+              onClearIssue={(kind) => clearMapIssue(mapId, kind)}
               fitRequestVersion={fitRequestVersion}
               dataAdapter={dataAdapter}
             />

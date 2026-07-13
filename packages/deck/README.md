@@ -255,6 +255,10 @@ as durable resources without creating a dashboard. Compose
 `ensureDeckMapResourceState(...)` for a durable map id, and render it with
 `DeckMapBlockRenderer`.
 
+Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
+only a matching issue kind; omit `kind` when the map state should clear any
+stale issue.
+
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
 metadata for block-document hosts. They register a `map` stateful block with

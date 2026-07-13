@@ -47,4 +47,21 @@ describe('DeckMapsSlice', () => {
 
     expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
   });
+
+  test('clears only a matching runtime issue kind when requested', () => {
+    const store = createStore<any>(createDeckMapsSlice() as any);
+    store.getState().deckMaps.reportMapIssue('map-1', {
+      kind: 'render-error',
+      message: 'invalid layer',
+      recoverable: true,
+    });
+
+    store.getState().deckMaps.clearMapIssue('map-1', 'sql-error');
+    expect(
+      store.getState().deckMaps.runtime.issuesByMapId['map-1'],
+    ).toMatchObject({kind: 'render-error'});
+
+    store.getState().deckMaps.clearMapIssue('map-1', 'render-error');
+    expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
+  });
 });

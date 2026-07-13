@@ -80,7 +80,8 @@ export type DeckMapsSliceState = {
       id: string,
       issue: Omit<DeckMapRuntimeIssue, 'mapId'>,
     ) => void;
-    clearMapIssue: (id: string) => void;
+    /** Clears the current issue when its kind matches, or unconditionally when omitted. */
+    clearMapIssue: (id: string, kind?: DeckMapRuntimeIssue['kind']) => void;
   };
 };
 
@@ -150,10 +151,13 @@ export function createDeckMapsSlice(props?: {
             draft.deckMaps.runtime.issuesByMapId[id] = {...issue, mapId: id};
           }),
         ),
-      clearMapIssue: (id) =>
+      clearMapIssue: (id, kind) =>
         set((state) =>
           produce(state, (draft) => {
-            delete draft.deckMaps.runtime.issuesByMapId[id];
+            const issue = draft.deckMaps.runtime.issuesByMapId[id];
+            if (!kind || issue?.kind === kind) {
+              delete draft.deckMaps.runtime.issuesByMapId[id];
+            }
           }),
         ),
     },
