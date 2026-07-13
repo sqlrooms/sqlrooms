@@ -341,7 +341,8 @@ When regenerating a map with one existing dataset, its dataset ID is retained
 and geometry bindings are refreshed so custom layers continue to address the
 same dataset after a table switch. Non-geospatial tables and multi-dataset maps
 return the existing config unchanged so callers can keep the current selection
-when a safe target cannot be inferred.
+when a safe target cannot be inferred. Maps without datasets adopt the generated
+dataset and layer spec after a valid table is selected.
 
 ## Core Concepts
 

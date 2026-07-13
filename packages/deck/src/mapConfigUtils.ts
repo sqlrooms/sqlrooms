@@ -649,10 +649,7 @@ export function regenerateMapConfigForTable(
   });
   const nextDataset = Object.values(nextConfig.datasets)[0];
 
-  if (
-    existingDatasetIds.length === 0 &&
-    existingConfig.spec.layers.length === 0
-  ) {
+  if (existingDatasetIds.length === 0) {
     return nextConfig;
   }
 

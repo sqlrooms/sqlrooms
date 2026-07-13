@@ -176,6 +176,29 @@ describe('regenerateMapConfigForTable', () => {
     });
   });
 
+  it('seeds a generated layer when an empty map stores a string spec', () => {
+    const config = {spec: JSON.stringify({layers: []}), datasets: {}};
+    const table: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'places'}),
+      tableName: 'places',
+      schema: 'main',
+      isView: false,
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    };
+
+    const next = regenerateMapConfigForTable({config}, table);
+
+    expect(Object.keys(next.datasets)).toEqual(['places']);
+    expect(next.spec).toMatchObject({
+      layers: [
+        expect.objectContaining({_sqlroomsBinding: {dataset: 'places'}}),
+      ],
+    });
+  });
+
   it('returns the existing config for a non-geospatial table', () => {
     const config = {
       spec: {layers: []},
