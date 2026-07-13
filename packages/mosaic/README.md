@@ -473,7 +473,15 @@ database adapter.
 Mutation callbacks may return promises, so hosts can route dashboard table and
 panel writes through room commands such as `dashboard.set-selected-table`,
 `dashboard.add-panel`, `dashboard.update-panel`, and `dashboard.remove-panel`
-while preserving the reusable Mosaic AI surface.
+while preserving the reusable Mosaic AI surface. These commands reject unknown
+dashboard IDs instead of implicitly creating dashboard state.
+
+`createDashboardAgentTool` also accepts an optional `authorizeDashboard`
+callback. Use it when a host needs to enforce product-specific ownership before
+the agent mutates an existing dashboard, for example to prove that an embedded
+dashboard belongs to the captured block document. The callback receives the
+resolved `dashboardId` and current store state. It runs once before the agent
+starts and again immediately before every table or panel mutation.
 
 ```ts
 import {

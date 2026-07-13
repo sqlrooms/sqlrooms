@@ -166,10 +166,26 @@ IMPORTANT: IF primary artefact in run context is a dashboard, prioritize using t
       const {dashboardId, maxSteps} = params;
       const {intent} = params;
 
-      const dashboardAdapter = createDashboardAiAdapter(store, dashboardId);
-
       try {
         const state = store.getState();
+        if (!state.mosaicDashboard.getDashboard(dashboardId)) {
+          throw new AiAgentError(`Dashboard "${dashboardId}" was not found.`);
+        }
+        if (options.authorizeDashboard) {
+          try {
+            await options.authorizeDashboard({dashboardId, state});
+          } catch (error) {
+            throw new AiAgentError(
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        }
+
+        const dashboardAdapter = createDashboardAiAdapter(
+          store,
+          dashboardId,
+          options.authorizeDashboard,
+        );
         const tableName =
           params.tableName ?? dashboardAdapter.getSelectedTable?.();
 

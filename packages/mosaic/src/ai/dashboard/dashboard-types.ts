@@ -53,6 +53,12 @@ export type ExtraDashboardAiToolsFactory = (
   params: ExtraDashboardAiToolsParams,
 ) => Record<string, Tool>;
 
+/** Host authorization for a dashboard target using the latest store state. */
+export type AuthorizeDashboard<TState> = (params: {
+  dashboardId: string;
+  state: TState;
+}) => void | Promise<void>;
+
 /**
  * Options for creating a dashboard agent tool.
  * Extends base agent options with dashboard-specific database adapter and optional extra tools.
@@ -60,6 +66,14 @@ export type ExtraDashboardAiToolsFactory = (
 export type CreateDashboardAgentToolOptions<TState> =
   BaseAgentToolOptions<TState> & {
     databaseAdapter: DatabaseAiAdapter;
+    /**
+     * Optional host authorization for a resolved dashboard target.
+     *
+     * Hosts can use this to enforce product-specific ownership constraints,
+     * such as requiring the dashboard to belong to a captured block document.
+     * The callback runs before the dashboard agent performs any mutation.
+     */
+    authorizeDashboard?: AuthorizeDashboard<TState>;
     /**
      * Host-provided dashboard tools keyed by their registered tool name.
      * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools
