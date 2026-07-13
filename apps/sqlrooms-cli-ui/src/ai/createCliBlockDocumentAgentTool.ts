@@ -11,7 +11,7 @@ import {
   resolveChartTypes,
   type DatabaseAiAdapter,
 } from '@sqlrooms/mosaic/ai';
-import type {DeckMapEntry} from '@sqlrooms/deck';
+import type {DeckMapResource} from '@sqlrooms/deck';
 import {
   blockDocumentNodeToBlock,
   type BlockDocumentAiAdapter,
@@ -485,7 +485,7 @@ User request: ${intent}`;
 function findTargetMap(
   state: RoomState,
   targetBlock: NonNullable<BlockDocumentAgentInput['targetBlock']>,
-): DeckMapEntry | undefined {
+): DeckMapResource | undefined {
   if (targetBlock.blockType !== 'map' || !targetBlock.blockInstanceId) {
     return undefined;
   }

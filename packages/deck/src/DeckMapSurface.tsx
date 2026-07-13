@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import {DeckJsonMap} from './DeckJsonMap';
-import type {DeckMapEntry, DeckMapRuntimeIssue} from './DeckMapsSlice';
+import type {DeckMapResource, DeckMapRuntimeIssue} from './DeckMapsSlice';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import {
   isDeckMapSqlDatasetSource,
@@ -61,7 +61,7 @@ function applyDataPolicy(
 export type DeckMapDataAdapter = {
   resolveDatasets: (options: {
     mapId: string;
-    map: DeckMapEntry;
+    map: DeckMapResource;
   }) => Record<string, DeckDatasetInput>;
   getTableColumns?: (tableName: string) => DataTable['columns'] | undefined;
 };
@@ -104,13 +104,13 @@ export const directDeckMapDataAdapter: DeckMapDataAdapter = {
 
 export type DeckMapSurfaceProps = {
   mapId: string;
-  map: DeckMapEntry;
+  map: DeckMapResource;
   readOnly?: boolean;
   selected?: boolean;
   caption?: string;
   headerActions?: ReactNode;
   fitRequestVersion?: number;
-  onUpdateMap: (patch: Partial<DeckMapEntry>) => void;
+  onUpdateMap: (patch: Partial<DeckMapResource>) => void;
   onReportIssue: (issue: Omit<DeckMapRuntimeIssue, 'mapId'>) => void;
   /** Clears the current issue when its kind matches, or all issues when omitted. */
   onClearIssue: (kind?: DeckMapRuntimeIssue['kind']) => void;

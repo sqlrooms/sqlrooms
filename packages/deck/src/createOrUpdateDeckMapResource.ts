@@ -1,4 +1,4 @@
-import type {DeckMapEntry} from './DeckMapsSlice';
+import type {DeckMapResource} from './DeckMapsSlice';
 import type {DeckMapConfig} from './mapConfig';
 import {
   getFirstDatasetSourceTableName,
@@ -15,7 +15,7 @@ export type CreateOrUpdateDeckMapResourceHost = {
     blockDocumentId: string,
     mapId: string,
   ) => {blockId: string; mapId: string; caption?: string} | undefined;
-  findMap: (mapId: string) => DeckMapEntry | undefined;
+  findMap: (mapId: string) => DeckMapResource | undefined;
   createMapBlock: (options: {
     blockDocumentId: string;
     mapId: string;

@@ -22,7 +22,7 @@ const DeckMapConfigSchema = z.object({
 });
 
 /** Runtime schema for a durable Deck map resource entry. */
-export const DeckMapEntrySchema = z.object({
+export const DeckMapResourceSchema = z.object({
   id: z.string(),
   title: z.string(),
   selectedTable: z.string().optional(),
@@ -30,8 +30,8 @@ export const DeckMapEntrySchema = z.object({
 });
 
 /** A durable Deck map resource stored in the room configuration. */
-export type DeckMapEntry = Omit<
-  z.infer<typeof DeckMapEntrySchema>,
+export type DeckMapResource = Omit<
+  z.infer<typeof DeckMapResourceSchema>,
   'config'
 > & {
   config: DeckMapConfig;
@@ -39,12 +39,12 @@ export type DeckMapEntry = Omit<
 
 /** Persistence schema for the Deck maps slice configuration. */
 export const DeckMapsSliceConfig = z.object({
-  mapsById: z.record(z.string(), DeckMapEntrySchema).default({}),
+  mapsById: z.record(z.string(), DeckMapResourceSchema).default({}),
 });
 
 /** Persisted Deck map resources indexed by their stable resource ids. */
 export type DeckMapsSliceConfig = {
-  mapsById: Record<string, DeckMapEntry>;
+  mapsById: Record<string, DeckMapResource>;
 };
 
 /** Ephemeral rendering or data issue associated with one Deck map resource. */
@@ -73,8 +73,8 @@ export type DeckMapsSliceState = {
       options?: {title?: string; config?: DeckMapConfig},
     ) => void;
     removeMap: (id: string) => void;
-    getMap: (id: string) => DeckMapEntry | undefined;
-    updateMap: (id: string, patch: Partial<DeckMapEntry>) => void;
+    getMap: (id: string) => DeckMapResource | undefined;
+    updateMap: (id: string, patch: Partial<DeckMapResource>) => void;
     setSelectedTable: (id: string, tableName?: string) => void;
     reportMapIssue: (
       id: string,

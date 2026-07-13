@@ -60,13 +60,13 @@ export {
   type CreateOrUpdateDeckMapResourceResult,
 } from './createOrUpdateDeckMapResource';
 export {
-  DeckMapEntrySchema,
+  DeckMapResourceSchema,
   DeckMapsSliceConfig,
   createDeckMapsSlice,
   useStoreWithDeckMaps,
 } from './DeckMapsSlice';
 export type {
-  DeckMapEntry,
+  DeckMapResource,
   DeckMapRuntimeIssue,
   DeckMapRuntimeIssueReporter,
   DeckMapsSliceState,
