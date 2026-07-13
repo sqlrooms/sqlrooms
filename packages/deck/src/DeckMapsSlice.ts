@@ -129,11 +129,14 @@ export function createDeckMapsSlice(props?: {
             const map = draft.deckMaps.config.mapsById[id];
             if (!map) throw new Error(`Deck map ${id} was not found`);
             Object.assign(map, patch, {id});
-            if (
-              patch.config &&
-              Object.keys(patch.config.datasets).length === 0
-            ) {
-              delete draft.deckMaps.runtime.issuesByMapId[id];
+            if (patch.config) {
+              const issue = draft.deckMaps.runtime.issuesByMapId[id];
+              if (
+                Object.keys(patch.config.datasets).length === 0 ||
+                issue?.kind === 'render-error'
+              ) {
+                delete draft.deckMaps.runtime.issuesByMapId[id];
+              }
             }
           }),
         ),

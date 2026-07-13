@@ -583,7 +583,8 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
 /**
  * Regenerates a map's dataset source and fit configuration for a table while
  * preserving an existing single dataset ID so retained layer bindings remain
- * valid.
+ * valid. Returns the existing config unchanged when the table has no supported
+ * geospatial columns.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},

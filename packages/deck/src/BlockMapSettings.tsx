@@ -25,9 +25,6 @@ export function DeckMapBlockSettings({
   );
   const tables = useStoreWithDeckMaps((state) => state.db.tables);
   const updateMap = useStoreWithDeckMaps((state) => state.deckMaps.updateMap);
-  const setSelectedTable = useStoreWithDeckMaps(
-    (state) => state.deckMaps.setSelectedTable,
-  );
   const artifact = useStoreWithBlockDocuments((state) =>
     dashboardId
       ? state.blockDocuments.config.artifacts[dashboardId]
@@ -66,15 +63,14 @@ export function DeckMapBlockSettings({
   const handleTableChange = useCallback(
     (table: DataTable) => {
       if (readOnly || !map) return;
-      setSelectedTable(mapId, getTableIdentity(table.table));
+      const config = regenerateMapConfigForTable({config: map.config}, table);
+      if (config === map.config) return;
       updateMap(mapId, {
-        config: regenerateMapConfigForTable(
-          {config: map.config},
-          table,
-        ) as typeof map.config,
+        selectedTable: getTableIdentity(table.table),
+        config: config as typeof map.config,
       });
     },
-    [map, mapId, readOnly, setSelectedTable, updateMap],
+    [map, mapId, readOnly, updateMap],
   );
 
   if (!map)

@@ -152,6 +152,22 @@ describe('normalizeDeckMapPointConfig', () => {
 });
 
 describe('regenerateMapConfigForTable', () => {
+  it('returns the existing config for a non-geospatial table', () => {
+    const config = {
+      spec: {layers: []},
+      datasets: {places: {source: {tableName: 'places'}}},
+    };
+    const table: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'people'}),
+      tableName: 'people',
+      schema: 'main',
+      isView: false,
+      columns: [{name: 'name', type: 'VARCHAR'}],
+    };
+
+    expect(regenerateMapConfigForTable({config}, table)).toBe(config);
+  });
+
   it('preserves a single dataset id used by retained layer bindings', () => {
     const config = {
       spec: {

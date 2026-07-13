@@ -48,6 +48,46 @@ describe('DeckMapsSlice', () => {
     expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
   });
 
+  test('clears a stale render issue when the map config is replaced', () => {
+    const store = createStore<any>(createDeckMapsSlice() as any);
+    store.getState().deckMaps.ensureMap('map-1');
+    store.getState().deckMaps.reportMapIssue('map-1', {
+      kind: 'render-error',
+      message: 'invalid layer',
+      recoverable: true,
+    });
+
+    store.getState().deckMaps.updateMap('map-1', {
+      config: {
+        spec: {layers: []},
+        datasets: {places: {source: {tableName: 'places'}}},
+      },
+    });
+
+    expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
+  });
+
+  test('keeps SQL issues until dataset recovery is reported', () => {
+    const store = createStore<any>(createDeckMapsSlice() as any);
+    store.getState().deckMaps.ensureMap('map-1');
+    store.getState().deckMaps.reportMapIssue('map-1', {
+      kind: 'sql-error',
+      message: 'bad query',
+      recoverable: true,
+    });
+
+    store.getState().deckMaps.updateMap('map-1', {
+      config: {
+        spec: {layers: []},
+        datasets: {places: {source: {tableName: 'places'}}},
+      },
+    });
+
+    expect(
+      store.getState().deckMaps.runtime.issuesByMapId['map-1'],
+    ).toMatchObject({kind: 'sql-error'});
+  });
+
   test('clears only a matching runtime issue kind when requested', () => {
     const store = createStore<any>(createDeckMapsSlice() as any);
     store.getState().deckMaps.reportMapIssue('map-1', {

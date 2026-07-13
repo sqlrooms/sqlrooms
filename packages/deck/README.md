@@ -257,7 +257,8 @@ as durable resources without creating a dashboard. Compose
 
 Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
 only a matching issue kind; omit `kind` when the map state should clear any
-stale issue.
+stale issue. Replacing a map config clears its prior render issue, while data
+issues remain until the corresponding dataset recovery is reported.
 
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
@@ -337,7 +338,8 @@ and whose resolved table does not expose a native geometry column; native
 geometry, polygon, line, and pre-transformed datasets are preserved.
 When regenerating a map with one existing dataset, its dataset ID is retained
 so custom layer bindings continue to address the same dataset after a table
-switch.
+switch. Non-geospatial tables return the existing config unchanged so callers
+can keep the current table selection.
 
 ## Core Concepts
 
