@@ -1,0 +1,4 @@
+id: admin-boundaries
+version: 0.1.0
+name: admin-boundaries
+description: Fetch administrative boundary geometries (city, county, state, country, continent, US zipcode, DMA) from Overture Maps and other sources, saving results to DuckDB tables for visualization.

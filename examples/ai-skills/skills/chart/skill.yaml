@@ -1,0 +1,4 @@
+id: chart
+version: 0.1.0
+name: chart
+description: Create Vega-Lite chart visualizations from SQL query results. Covers chart type selection, spec construction, and best practices for data visualization.
