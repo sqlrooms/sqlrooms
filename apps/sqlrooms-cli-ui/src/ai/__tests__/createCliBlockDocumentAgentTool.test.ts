@@ -7,7 +7,6 @@ import {
   type BlockDocumentMoveBlockAiAdapter,
   type BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
-import {DECK_MAP_DASHBOARD_PANEL_TYPE} from '@sqlrooms/deck/mosaic';
 import {
   BLOCK_DOCUMENT_CHART_TOOL_PREFIX,
   type DatabaseAiAdapter,
@@ -124,34 +123,29 @@ describe('createCliBlockDocumentAgentTool', () => {
           ? {
               getState: () =>
                 ({
-                  mosaicDashboard: {
-                    getDashboard: () => ({
-                      panels: [
-                        {
-                          id: 'map-panel-1',
-                          type: DECK_MAP_DASHBOARD_PANEL_TYPE,
-                          title: 'Existing Map',
-                          config: {
-                            datasets: {
-                              earthquakes: {
-                                tableName: 'earthquakes',
-                              },
-                            },
-                            spec: {
-                              layers: [
-                                {
-                                  '@@type': 'ScatterplotLayer',
-                                  id: 'quakes-layer',
-                                  data: 'earthquakes',
-                                },
-                              ],
-                            },
-                            mapStyle: 'light',
+                  deckMaps: {
+                    runtime: {issuesByMapId: {}},
+                    getMap: () => ({
+                      id: 'target-instance-1',
+                      title: 'Existing Map',
+                      config: {
+                        datasets: {
+                          earthquakes: {
+                            source: {tableName: 'earthquakes'},
                           },
                         },
-                      ],
+                        spec: {
+                          layers: [
+                            {
+                              '@@type': 'ScatterplotLayer',
+                              id: 'quakes-layer',
+                              data: 'earthquakes',
+                            },
+                          ],
+                        },
+                        mapStyle: 'light',
+                      },
                     }),
-                    getPanelIssue: () => undefined,
                   },
                 }) as unknown as RoomState,
             }
@@ -233,7 +227,7 @@ describe('createCliBlockDocumentAgentTool', () => {
       expect(capturedPrompt).toContain(`blockType: ${blockType}`);
       expect(capturedPrompt).toContain('blockInstanceId: target-instance-1');
       if (blockType === 'map') {
-        expect(capturedPrompt).toContain('Existing map panel state');
+        expect(capturedPrompt).toContain('Existing map resource state');
         expect(capturedPrompt).toContain('Existing Map');
         expect(capturedPrompt).toContain('earthquakes');
         expect(capturedPrompt).toContain('quakes-layer');

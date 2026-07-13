@@ -43,7 +43,11 @@ function setup() {
       return {
         success: true,
         commandId: id,
-        data: {blockId: 'map-block', blockInstanceId: input.blockInstanceId},
+        data: {
+          blockId: `${input.blockType}-block`,
+          blockInstanceId:
+            input.blockInstanceId ?? `${input.blockType}-instance`,
+        },
       };
     }
     return {success: true, commandId: id, data: input};
