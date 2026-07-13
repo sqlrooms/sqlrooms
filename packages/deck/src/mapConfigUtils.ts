@@ -19,6 +19,41 @@ const GEOMETRY_COLUMN_NAMES = ['geometry', 'geom'];
 const DEFAULT_GEOMETRY_COLUMN = '__sqlrooms_geom';
 const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function updateDeckMapGeometryColumnBindings(
+  config: DeckMapDashboardPanelConfig,
+  datasetId: string,
+  geometryColumn: string | undefined,
+) {
+  if (!geometryColumn || !isRecord(config.spec)) return config;
+  const layers = config.spec.layers;
+  if (!Array.isArray(layers)) return config;
+
+  let changed = false;
+  const nextLayers = layers.map((layer) => {
+    if (!isRecord(layer) || !isRecord(layer._sqlroomsBinding)) return layer;
+    const binding = layer._sqlroomsBinding;
+    if (
+      binding.dataset !== datasetId ||
+      typeof binding.geometryColumn !== 'string'
+    ) {
+      return layer;
+    }
+    changed = true;
+    return {
+      ...layer,
+      _sqlroomsBinding: {...binding, geometryColumn},
+    };
+  });
+
+  return changed
+    ? {...config, spec: {...config.spec, layers: nextLayers}}
+    : config;
+}
+
 export type DeckMapConfigColumn = {name: string; type?: string};
 export type DeckMapTableReference =
   | string
@@ -584,7 +619,7 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
  * Regenerates a map's dataset source and fit configuration for a table while
  * preserving an existing single dataset ID so retained layer bindings remain
  * valid. Returns the existing config unchanged when the table has no supported
- * geospatial columns.
+ * geospatial columns or when multiple datasets make the target ambiguous.
  */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
@@ -601,6 +636,9 @@ export function regenerateMapConfigForTable(
   }
 
   const existingConfig = panel.config as DeckMapDashboardPanelConfig;
+  const existingDatasetIds = Object.keys(existingConfig.datasets ?? {});
+  if (existingDatasetIds.length > 1) return panel.config;
+
   const nextConfig = createDeckMapConfigForTable({
     tableName: table.tableName,
     columns: table.columns,
@@ -608,18 +646,21 @@ export function regenerateMapConfigForTable(
     longitudeColumn,
     latitudeColumn,
   });
-  const existingDatasetIds = Object.keys(existingConfig.datasets ?? {});
   const nextDataset = Object.values(nextConfig.datasets)[0];
 
   if (existingDatasetIds.length === 1 && nextDataset) {
     const datasetId = existingDatasetIds[0]!;
-    return {
-      ...existingConfig,
-      datasets: {[datasetId]: nextDataset},
-      fitToData: nextConfig.fitToData
-        ? {...nextConfig.fitToData, dataset: datasetId}
-        : existingConfig.fitToData,
-    };
+    return updateDeckMapGeometryColumnBindings(
+      {
+        ...existingConfig,
+        datasets: {[datasetId]: nextDataset},
+        fitToData: nextConfig.fitToData
+          ? {...nextConfig.fitToData, dataset: datasetId}
+          : existingConfig.fitToData,
+      },
+      datasetId,
+      nextDataset.geometryColumn,
+    );
   }
 
   // Preserve existing layer spec (layer types, styling, bindings) — only

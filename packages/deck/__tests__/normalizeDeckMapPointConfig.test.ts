@@ -168,6 +168,33 @@ describe('regenerateMapConfigForTable', () => {
     expect(regenerateMapConfigForTable({config}, table)).toBe(config);
   });
 
+  it('returns the existing config when multiple datasets make the target ambiguous', () => {
+    const config = {
+      spec: {
+        layers: [
+          {_sqlroomsBinding: {dataset: 'places'}},
+          {_sqlroomsBinding: {dataset: 'regions'}},
+        ],
+      },
+      datasets: {
+        places: {source: {tableName: 'places'}},
+        regions: {source: {tableName: 'regions'}},
+      },
+    };
+    const table: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'new_places'}),
+      tableName: 'new_places',
+      schema: 'main',
+      isView: false,
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    };
+
+    expect(regenerateMapConfigForTable({config}, table)).toBe(config);
+  });
+
   it('preserves a single dataset id used by retained layer bindings', () => {
     const config = {
       spec: {
@@ -210,5 +237,41 @@ describe('regenerateMapConfigForTable', () => {
     });
     expect(next.fitToData?.dataset).toBe('places');
     expect(next.spec).toBe(config.spec);
+  });
+
+  it('refreshes retained geometry bindings for the selected table', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'old_places'},
+          geometryColumn: 'geom',
+        },
+      },
+      fitToData: {dataset: 'places', geometryColumn: 'geom'},
+    };
+    const nextTable: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'new_places'}),
+      tableName: 'new_places',
+      schema: 'main',
+      isView: false,
+      columns: [{name: 'geometry', type: 'GEOMETRY'}],
+    };
+
+    const next = regenerateMapConfigForTable({config}, nextTable);
+
+    expect(next.datasets.places?.geometryColumn).toBe('geometry');
+    expect(next.fitToData?.geometryColumn).toBe('geometry');
+    expect(next.spec.layers[0]._sqlroomsBinding).toMatchObject({
+      dataset: 'places',
+      geometryColumn: 'geometry',
+    });
   });
 });

@@ -338,9 +338,10 @@ already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
 and whose resolved table does not expose a native geometry column; native
 geometry, polygon, line, and pre-transformed datasets are preserved.
 When regenerating a map with one existing dataset, its dataset ID is retained
-so custom layer bindings continue to address the same dataset after a table
-switch. Non-geospatial tables return the existing config unchanged so callers
-can keep the current table selection.
+and geometry bindings are refreshed so custom layers continue to address the
+same dataset after a table switch. Non-geospatial tables and multi-dataset maps
+return the existing config unchanged so callers can keep the current selection
+when a safe target cannot be inferred.
 
 ## Core Concepts
 
