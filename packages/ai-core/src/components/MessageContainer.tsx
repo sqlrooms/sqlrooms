@@ -1,5 +1,5 @@
-import {Badge, cn} from '@sqlrooms/ui';
-import {XCircleIcon} from 'lucide-react';
+import { Badge, cn } from '@sqlrooms/ui';
+import { XCircleIcon } from 'lucide-react';
 
 type MessageContainerProps = {
   className?: string;
@@ -30,7 +30,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
       className={cn(
         'group relative w-full min-w-0 py-2 text-xs',
         className,
-        type === 'error' && 'border-destructive rounded-md border py-4',
+        type === 'error' && 'border-destructive rounded-md border py-4 px-4',
         // borderColor,
         // isSuccess ? borderColor : 'border-red-500',
       )}
