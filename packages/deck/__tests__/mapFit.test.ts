@@ -1,14 +1,14 @@
 import {describe, expect, test} from '@jest/globals';
 import {
-  createResourceMapBoundsQuery,
-  getResourceMapDatasetSource,
-  resolveResourceMapFitToData,
-} from '../src/resourceMapFit';
+  createDeckMapBoundsQuery,
+  getDeckMapDatasetSource,
+  resolveDeckMapFitToData,
+} from '../src/mapFit';
 
-describe('resource map fit', () => {
-  test('resolves geometry metadata without Mosaic dashboard state', () => {
+describe('Deck map fit core', () => {
+  test('resolves geometry metadata without host state', () => {
     expect(
-      resolveResourceMapFitToData({
+      resolveDeckMapFitToData({
         spec: {layers: []},
         datasets: {
           earthquakes: {
@@ -21,13 +21,13 @@ describe('resource map fit', () => {
     ).toEqual({dataset: 'earthquakes', geometryColumn: 'geom'});
   });
 
-  test('builds bounds SQL from a resource-native table dataset', () => {
-    const source = getResourceMapDatasetSource({
+  test('builds bounds SQL from a host-resolved table dataset', () => {
+    const source = getDeckMapDatasetSource({
       tableName: 'earthquakes',
       transformSql: 'SELECT * FROM __sqlrooms_source',
     });
     expect(source).not.toBeNull();
-    const query = createResourceMapBoundsQuery({
+    const query = createDeckMapBoundsQuery({
       source: source!,
       fitToData: {
         dataset: 'earthquakes',

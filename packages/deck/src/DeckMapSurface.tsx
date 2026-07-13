@@ -1,9 +1,10 @@
-import {type DataTable, useStoreWithDuckDb} from '@sqlrooms/duckdb';
+import type {DataTable} from '@sqlrooms/duckdb';
 import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import {DeckJsonMap} from './DeckJsonMap';
@@ -13,12 +14,10 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {
-  createResourceMapBoundsQuery,
-  fitResourceMapView,
-  getResourceMapDatasetSource,
-  readResourceMapBounds,
-  resolveResourceMapFitToData,
-} from './resourceMapFit';
+  getDeckMapDatasetSource,
+  resolveDeckMapFitToData,
+  useDeckMapFitController,
+} from './mapFit';
 import type {
   DeckDatasetInput,
   DeckJsonMapHandle,
@@ -84,10 +83,8 @@ export function DeckMapSurface({
   fitRequestVersion = 0,
   dataAdapter = directDeckMapDataAdapter,
 }: DeckMapSurfaceProps) {
-  const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const deckMapRef = useRef<DeckJsonMapHandle>(null);
-  const handledFitRequestRef = useRef(fitRequestVersion);
   const datasets = useMemo(
     () => dataAdapter.resolveDatasets({mapId, map}),
     [dataAdapter, map, mapId],
@@ -117,73 +114,35 @@ export function DeckMapSurface({
   useEffect(() => {
     if (Object.keys(datasets).length === 0) onClearIssue();
   }, [datasets, onClearIssue]);
-
-  useEffect(() => {
-    if (
-      fitRequestVersion <= 0 ||
-      fitRequestVersion <= handledFitRequestRef.current
-    ) {
-      return;
-    }
-    handledFitRequestRef.current = fitRequestVersion;
-
-    const fitToData = resolveResourceMapFitToData(map.config);
-    const dataset = fitToData ? datasets[fitToData.dataset] : undefined;
-    const source = getResourceMapDatasetSource(dataset);
-    const container = containerRef.current;
-    if (!fitToData || !source || !container) return;
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        if (fitToData.h3Column) {
-          try {
-            await executeSql('INSTALL h3 FROM community');
-          } catch {
-            // The extension may already be installed.
-          }
-          await executeSql('LOAD h3');
-        }
-        const query = createResourceMapBoundsQuery({source, fitToData});
-        if (!query) return;
-        const handle = await executeSql(query);
-        const result = handle ? await handle : null;
-        if (cancelled || !result) return;
-        const bounds = readResourceMapBounds(result);
-        if (!bounds) return;
-        deckMapRef.current?.jumpTo(
-          fitResourceMapView({
-            bounds,
-            width: container.clientWidth,
-            height: container.clientHeight,
-            padding: fitToData.padding,
-            maxZoom: fitToData.maxZoom,
-          }),
-        );
-      } catch (error) {
-        if (!cancelled) {
-          onReportIssue({
-            kind: 'sql-error',
-            message:
-              error instanceof Error
-                ? error.message
-                : 'Unable to fit map view to data.',
-            recoverable: true,
-          });
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    datasets,
-    executeSql,
-    fitRequestVersion,
-    map.config,
-    onReportIssue,
-  ]);
+  const fitToData = useMemo(
+    () => resolveDeckMapFitToData(map.config),
+    [map.config],
+  );
+  const fitSource = useMemo(
+    () =>
+      fitToData
+        ? getDeckMapDatasetSource(datasets[fitToData.dataset])
+        : null,
+    [datasets, fitToData],
+  );
+  const handleFitError = useCallback(
+    (error: Error) =>
+      onReportIssue({
+        kind: 'sql-error',
+        message: error.message,
+        recoverable: true,
+      }),
+    [onReportIssue],
+  );
+  useDeckMapFitController({
+    scopeId: mapId,
+    fitToData,
+    source: fitSource,
+    container,
+    deckMapRef,
+    requestVersion: fitRequestVersion,
+    onError: handleFitError,
+  });
 
   if (Object.keys(datasets).length === 0) {
     return (
@@ -193,7 +152,7 @@ export function DeckMapSurface({
     );
   }
   return (
-    <div ref={containerRef} className="h-full min-h-[320px]">
+    <div ref={setContainer} className="h-full min-h-[320px]">
       <DeckJsonMap
         ref={deckMapRef}
         spec={map.config.spec}

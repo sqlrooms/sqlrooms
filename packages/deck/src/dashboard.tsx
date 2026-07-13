@@ -477,9 +477,8 @@ function DeckMapDashboardRenderer({
     () => getSelection(selectionName, 'crossfilter'),
     [getSelection, selectionName],
   );
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const deckMapRef = useRef<DeckJsonMapHandle>(null);
-  const [containerSize, setContainerSize] = useState({width: 0, height: 0});
   const [sampledDismissed, setSampledDismissed] = useState(false);
 
   const {
@@ -490,31 +489,11 @@ function DeckMapDashboardRenderer({
     handleRenderingError,
   } = useDeckMapDatasets({dashboardId, panel});
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      setContainerSize({
-        width: container.clientWidth,
-        height: container.clientHeight,
-      });
-    };
-
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [issue]);
-
   const {fitToData} = useDeckMapFitToBounds({
     panelId: panel.id,
     dashboard,
     panel,
-    containerSize,
+    container,
     deckMapRef,
   });
 
@@ -607,7 +586,7 @@ function DeckMapDashboardRenderer({
           }}
         />
       ) : (
-        <div ref={containerRef} className="relative h-full w-full">
+        <div ref={setContainer} className="relative h-full w-full">
           {Object.values(datasetStates).some((s) => s.isSampled) &&
             !sampledDismissed && (
               <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">
