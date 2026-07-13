@@ -88,11 +88,7 @@ export async function createOrUpdateDeckMapResource(
       `${artifactLabel} map block ${params.mapId} was not found in ${params.blockDocumentId}`,
     );
   }
-  const mapId =
-    existingBlock?.mapId ??
-    (missingBehavior === 'create'
-      ? params.createMapId?.()
-      : (params.mapId ?? params.createMapId?.()));
+  const mapId = existingBlock?.mapId ?? params.mapId ?? params.createMapId?.();
   if (!mapId) throw new Error('mapId is required when creating a map block');
 
   const existingMap = host.findMap(mapId);

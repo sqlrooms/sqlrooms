@@ -319,7 +319,8 @@ On create, callers must provide either `mapId` or `createMapId`. On update, the
 default behavior is intentionally strict: missing map blocks and SQL-only
 dataset sources without a resolvable `tableName` throw so command paths do not
 silently retarget stale IDs. AI create flows can opt into
-`missingMapBlockBehavior: 'create'`.
+`missingMapBlockBehavior: 'create'`; a supplied `mapId` is retained, with
+`createMapId` used only as its fallback.
 
 Title handling is conservative for Ask AI edits: when `title` is omitted,
 `createOrUpdateDeckMapResource(...)` preserves the existing non-blank block

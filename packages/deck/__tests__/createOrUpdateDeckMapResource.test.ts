@@ -48,6 +48,38 @@ describe('createOrUpdateDeckMapResource', () => {
     });
   });
 
+  test('uses a requested map id when create mode recovers a missing block', async () => {
+    const h = host();
+    const createMapId = jest.fn(() => 'generated-map');
+
+    const result = await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'worksheet-1',
+      config,
+      mapId: 'requested-map',
+      missingMapBlockBehavior: 'create',
+      createMapId,
+    });
+
+    expect(result.mapId).toBe('requested-map');
+    expect(h.createMapBlock).toHaveBeenCalledWith(
+      expect.objectContaining({mapId: 'requested-map'}),
+    );
+    expect(createMapId).not.toHaveBeenCalled();
+  });
+
+  test('generates a map id in create mode when none is requested', async () => {
+    const h = host();
+
+    const result = await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'worksheet-1',
+      config,
+      missingMapBlockBehavior: 'create',
+      createMapId: () => 'generated-map',
+    });
+
+    expect(result.mapId).toBe('generated-map');
+  });
+
   test('preserves a meaningful caption before the resource title', async () => {
     const h = host({
       findMapBlock: jest.fn(() => ({
