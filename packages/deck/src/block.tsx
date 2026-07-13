@@ -29,13 +29,34 @@ import {
 
 type DeckMapResourceState = DeckMapsSliceState & DuckDbSliceState;
 
+type DeckMapResourceErrorBoundaryProps = {
+  children: ReactNode;
+  onError: (error: Error) => void;
+  resetKey: unknown;
+};
+
+type DeckMapResourceErrorBoundaryState = {
+  error?: Error;
+  resetKey: unknown;
+};
+
 class DeckMapResourceErrorBoundary extends Component<
-  {children: ReactNode; onError: (error: Error) => void},
-  {error?: Error}
+  DeckMapResourceErrorBoundaryProps,
+  DeckMapResourceErrorBoundaryState
 > {
-  state: {error?: Error} = {};
+  state: DeckMapResourceErrorBoundaryState = {
+    resetKey: this.props.resetKey,
+  };
   static getDerivedStateFromError(error: Error) {
     return {error};
+  }
+  static getDerivedStateFromProps(
+    props: DeckMapResourceErrorBoundaryProps,
+    state: DeckMapResourceErrorBoundaryState,
+  ) {
+    return Object.is(props.resetKey, state.resetKey)
+      ? null
+      : {error: undefined, resetKey: props.resetKey};
   }
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error(
@@ -227,7 +248,7 @@ export function DeckMapBlockRenderer({
       <div className="min-h-0 flex-1">
         {hasDatasets ? (
           <DeckMapResourceErrorBoundary
-            key={JSON.stringify(map.config)}
+            resetKey={map.config}
             onError={(error) =>
               reportMapIssue(mapId, {
                 kind: 'render-error',

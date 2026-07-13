@@ -22,12 +22,14 @@ export type DeckMapDatasetConfig = Omit<DeckSqlDatasetInput, 'sqlQuery'> & {
   source?: DeckMapDatasetSource;
 };
 
+/** Returns whether a map dataset source is a pinned literal SQL query. */
 export function isDeckMapSqlDatasetSource(
   source: DeckMapDatasetSource | undefined,
 ): source is Pick<DeckSqlDatasetInput, 'sqlQuery'> {
   return Boolean(source && 'sqlQuery' in source);
 }
 
+/** Returns whether a map dataset source is backed by a named table. */
 export function isDeckMapTableDatasetSource(
   source: DeckMapDatasetSource | undefined,
 ): source is Pick<DeckTableDatasetInput, 'tableName' | 'transformSql'> {
@@ -69,6 +71,7 @@ export type DeckMapConfig = {
   settingsOpen?: boolean;
 };
 
+/** Creates the portable empty configuration used for a new Deck map. */
 export function createEmptyDeckMapConfig(): DeckMapConfig {
   return {
     spec: {
@@ -106,6 +109,10 @@ export function createDeckMapDashboardPanelConfig(
   };
 }
 
+/**
+ * Returns a record as a Deck map config when it has the required top-level
+ * spec and dataset registry, otherwise returns `null`.
+ */
 export function asDeckJsonMapConfig(
   config: Record<string, unknown>,
 ): DeckMapConfig | null {

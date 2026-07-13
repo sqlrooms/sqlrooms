@@ -7,7 +7,10 @@ import {
   type PropsWithChildren,
 } from 'react';
 
+/** A MapLibre-compatible style accepted by the Deck map renderer. */
 export type DeckMapStyle = NonNullable<MapProps['mapStyle']>;
+
+/** Optional host-provided basemap defaults keyed by resolved UI theme. */
 export type DeckMapDefaultStyles = Partial<Record<ResolvedTheme, DeckMapStyle>>;
 
 const DeckMapDefaultStylesContext = createContext<
@@ -26,10 +29,15 @@ export const DeckMapDefaultStylesProvider: FC<
   </DeckMapDefaultStylesContext.Provider>
 );
 
+/** Returns theme-aware host map defaults from the nearest provider, if any. */
 export function useDeckMapDefaultStyles() {
   return useContext(DeckMapDefaultStylesContext);
 }
 
+/**
+ * Resolves the effective map style from explicit config, map props, host
+ * defaults, and finally the package fallback for the active theme.
+ */
 export function resolveDeckMapStyle(options: {
   mapStyle?: string;
   mapPropsMapStyle?: MapProps['mapStyle'];

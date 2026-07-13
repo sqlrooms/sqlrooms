@@ -21,6 +21,7 @@ const DeckMapConfigSchema = z.object({
   settingsOpen: z.boolean().optional(),
 });
 
+/** Runtime schema for a durable Deck map resource entry. */
 export const DeckMapEntrySchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -28,6 +29,7 @@ export const DeckMapEntrySchema = z.object({
   config: DeckMapConfigSchema,
 });
 
+/** A durable Deck map resource stored in the room configuration. */
 export type DeckMapEntry = Omit<
   z.infer<typeof DeckMapEntrySchema>,
   'config'
@@ -35,13 +37,17 @@ export type DeckMapEntry = Omit<
   config: DeckMapConfig;
 };
 
+/** Persistence schema for the Deck maps slice configuration. */
 export const DeckMapsSliceConfig = z.object({
   mapsById: z.record(z.string(), DeckMapEntrySchema).default({}),
 });
+
+/** Persisted Deck map resources indexed by their stable resource ids. */
 export type DeckMapsSliceConfig = {
   mapsById: Record<string, DeckMapEntry>;
 };
 
+/** Ephemeral rendering or data issue associated with one Deck map resource. */
 export type DeckMapRuntimeIssue = {
   kind: 'sql-error' | 'render-error' | 'data-policy-error' | 'config-error';
   mapId: string;
@@ -50,11 +56,13 @@ export type DeckMapRuntimeIssue = {
   details?: Record<string, unknown>;
 };
 
+/** Callback pair for reporting and clearing ephemeral Deck map issues. */
 export type DeckMapRuntimeIssueReporter = {
   reportIssue: (issue: DeckMapRuntimeIssue) => void;
   clearIssue: () => void;
 };
 
+/** Room-store state and actions for durable maps and ephemeral runtime issues. */
 export type DeckMapsSliceState = {
   deckMaps: {
     config: DeckMapsSliceConfig;
@@ -76,6 +84,10 @@ export type DeckMapsSliceState = {
   };
 };
 
+/**
+ * Creates the room-store slice that owns durable Deck map resources and their
+ * instance-scoped runtime issues.
+ */
 export function createDeckMapsSlice(props?: {
   config?: Partial<DeckMapsSliceConfig>;
 }) {
@@ -148,6 +160,7 @@ export function createDeckMapsSlice(props?: {
   }));
 }
 
+/** Selects Deck map and DuckDB state from the current room store. */
 export function useStoreWithDeckMaps<T>(
   selector: (state: DeckMapsSliceState & DuckDbSliceState) => T,
 ): T {

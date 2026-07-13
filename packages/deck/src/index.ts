@@ -24,7 +24,7 @@ export {
   isDeckMapDashboardSqlDatasetSource,
   isDeckMapDashboardTableDatasetSource,
 } from './mapConfig';
-export {getDeckMapDataPolicy} from './mapDataPolicy';
+export {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
 export {
   createDeckMapDashboardConfigForTable,
   createDeckMapConfigForTable,

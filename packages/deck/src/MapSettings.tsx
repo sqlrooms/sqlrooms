@@ -1011,16 +1011,19 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                   <Field label="Latitude column" required>
                     <ColumnSelector.Numeric
                       value={mapConfig.fitToData?.latitudeColumn}
-                      onChange={(latitudeColumn) =>
+                      onChange={(latitudeColumn) => {
+                        const longitudeColumn =
+                          mapConfig.fitToData?.longitudeColumn;
+                        if (!longitudeColumn) return;
                         applyConfig(
                           regenerateMapConfigForTable(
                             {config: mapConfig},
                             sourceDataTable,
-                            mapConfig.fitToData?.longitudeColumn,
+                            longitudeColumn,
                             latitudeColumn,
                           ) as DeckMapConfig,
-                        )
-                      }
+                        );
+                      }}
                       disabled={readOnly}
                     />
                   </Field>

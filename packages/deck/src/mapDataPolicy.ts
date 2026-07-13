@@ -4,6 +4,7 @@ import {
   type DeckMapDataPolicyOverride,
 } from './mapConfig';
 
+/** Resolved runtime row-limit policy applied when loading map datasets. */
 export type DeckMapDataPolicy = {
   disabled?: boolean;
   maxRows: number;

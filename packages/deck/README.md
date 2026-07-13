@@ -18,6 +18,9 @@ worksheet resources and Mosaic panels only adapt their respective stores to
 that contract. Layer, binding, style, extrusion, and code-view controls therefore
 stay consistent without putting Mosaic APIs in the worksheet settings path.
 
+Use `getDeckMapDataPolicy(...)` to resolve a map config into the exported
+`DeckMapDataPolicy` runtime row-limit policy.
+
 Worksheet maps deliberately use independent selection semantics. Their direct
 data adapter executes each configured SQL/table dataset through the room's
 DuckDB connector and neither reads nor publishes Mosaic selections. This drops

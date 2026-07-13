@@ -5,6 +5,10 @@ import {
   hasSqlOnlyDatasetSource,
 } from './datasetSourceUtils';
 
+/**
+ * Host callbacks used to coordinate a durable Deck map resource with its block
+ * document container, table registry, and optional config preparation.
+ */
 export type CreateOrUpdateDeckMapResourceHost = {
   ensureBlockDocument: (blockDocumentId: string) => void;
   findMapBlock: (
@@ -42,6 +46,7 @@ export type CreateOrUpdateDeckMapResourceHost = {
   }) => DeckMapConfig | Promise<DeckMapConfig>;
 };
 
+/** Input for creating or updating a Deck map resource and its owning block. */
 export type CreateOrUpdateDeckMapResourceParams = {
   blockDocumentId: string;
   config: DeckMapConfig;
@@ -57,6 +62,7 @@ export type CreateOrUpdateDeckMapResourceParams = {
   missingMapBlockBehavior?: 'throw' | 'create';
 };
 
+/** Result identities and resolved table selection from a map resource write. */
 export type CreateOrUpdateDeckMapResourceResult = {
   blockDocumentId: string;
   blockId: string;

@@ -35,6 +35,7 @@ const DeckMapFitToDataConfig = z.looseObject({
   maxZoom: z.number().optional(),
 });
 
+/** Validates the portable Deck map config accepted from commands and AI tools. */
 export const DeckMapResourceConfigParameter = z.looseObject({
   spec: z.union([z.string(), z.record(z.string(), z.unknown())]),
   datasets: z.record(z.string(), DeckMapDatasetConfig),
@@ -54,6 +55,7 @@ export const DeckMapResourceConfigParameter = z.looseObject({
   settingsOpen: z.boolean().optional(),
 }) satisfies z.ZodType<DeckMapConfig>;
 
+/** Validates inputs for an AI or command invocation that writes a map resource. */
 export const DeckMapResourceToolParameters = z.object({
   title: z.string().optional().default('Map'),
   config: DeckMapResourceConfigParameter,
