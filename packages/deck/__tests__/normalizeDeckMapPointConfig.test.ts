@@ -1,7 +1,8 @@
-import type {DataTable} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
+  regenerateMapConfigForTable,
 } from '../src/mapConfigUtils';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from '../src/datasets/tableDatasetSql';
 
@@ -147,5 +148,51 @@ describe('normalizeDeckMapPointConfig', () => {
         }),
       }),
     ).toBe(config);
+  });
+});
+
+describe('regenerateMapConfigForTable', () => {
+  it('preserves a single dataset id used by retained layer bindings', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'places-layer',
+            _sqlroomsBinding: {dataset: 'places'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'old_places'},
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    };
+    const nextTable: DataTable = {
+      table: makeQualifiedTableName({schema: 'main', table: 'new_places'}),
+      tableName: 'new_places',
+      schema: 'main',
+      isView: false,
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+    };
+
+    const next = regenerateMapConfigForTable({config}, nextTable);
+
+    expect(Object.keys(next.datasets)).toEqual(['places']);
+    expect(next.datasets.places?.source).toMatchObject({
+      tableName: '"main"."new_places"',
+    });
+    expect(next.fitToData?.dataset).toBe('places');
+    expect(next.spec).toBe(config.spec);
   });
 });

@@ -335,6 +335,9 @@ the standard lon/lat point transform to table-backed datasets that do not
 already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
 and whose resolved table does not expose a native geometry column; native
 geometry, polygon, line, and pre-transformed datasets are preserved.
+When regenerating a map with one existing dataset, its dataset ID is retained
+so custom layer bindings continue to address the same dataset after a table
+switch.
 
 ## Core Concepts
 

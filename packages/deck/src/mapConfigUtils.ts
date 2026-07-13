@@ -580,6 +580,11 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
   });
 }
 
+/**
+ * Regenerates a map's dataset source and fit configuration for a table while
+ * preserving an existing single dataset ID so retained layer bindings remain
+ * valid.
+ */
 export function regenerateMapConfigForTable(
   panel: {config: Record<string, unknown>},
   table: DataTable,
@@ -602,6 +607,19 @@ export function regenerateMapConfigForTable(
     longitudeColumn,
     latitudeColumn,
   });
+  const existingDatasetIds = Object.keys(existingConfig.datasets ?? {});
+  const nextDataset = Object.values(nextConfig.datasets)[0];
+
+  if (existingDatasetIds.length === 1 && nextDataset) {
+    const datasetId = existingDatasetIds[0]!;
+    return {
+      ...existingConfig,
+      datasets: {[datasetId]: nextDataset},
+      fitToData: nextConfig.fitToData
+        ? {...nextConfig.fitToData, dataset: datasetId}
+        : existingConfig.fitToData,
+    };
+  }
 
   // Preserve existing layer spec (layer types, styling, bindings) — only
   // update the dataset source and fitToData so the data re-fetches with the
