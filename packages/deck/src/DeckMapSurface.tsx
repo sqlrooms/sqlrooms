@@ -25,14 +25,17 @@ export const directDeckMapDataAdapter: DeckMapDataAdapter = {
   resolveDatasets: ({map}) => {
     const resolved: Record<string, DeckDatasetInput> = {};
     for (const [datasetId, dataset] of Object.entries(map.config.datasets)) {
-      const source = dataset.source;
+      const {source, ...datasetConfig} = dataset;
       if (isDeckMapSqlDatasetSource(source)) {
-        resolved[datasetId] = {...dataset, sqlQuery: source.sqlQuery};
+        resolved[datasetId] = {
+          ...datasetConfig,
+          sqlQuery: source.sqlQuery,
+        };
         continue;
       }
       if (isDeckMapTableDatasetSource(source)) {
         resolved[datasetId] = {
-          ...dataset,
+          ...datasetConfig,
           tableName: map.selectedTable ?? source.tableName,
           transformSql: source.transformSql,
         };

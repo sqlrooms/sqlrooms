@@ -25,6 +25,16 @@ export {
   createDeckMapDashboardPanelConfig,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   DEFAULT_DECK_MAP_MAX_DATA_POINTS,
+  isDeckMapDashboardSqlDatasetSource,
+  isDeckMapDashboardTableDatasetSource,
+} from './mapConfig';
+export type {
+  CreateDeckMapDashboardPanelConfigOptions,
+  DeckMapDashboardDatasetConfig,
+  DeckMapDashboardDatasetSource,
+  DeckMapDashboardFitToDataConfig,
+  DeckMapDashboardInteractionConfig,
+  DeckMapDashboardPanelConfig,
 } from './mapConfig';
 export type {DeckJsonMapProps} from './types';
 import type {DeckJsonMapProps} from './types';
