@@ -23,6 +23,6 @@ export {
   deckMapDashboardPanelRenderer,
 } from './dashboard';
 export {DeckMapDashboardSettings} from './DashboardMapSettings';
-export {MapSettingsPanel} from './MapSettings';
+export {DeckMapSettingsPanel} from './MapSettings';
 export {createDeckMapDashboardSliceOptions} from './dashboardIntegration';
 export * from './dashboardConfig';

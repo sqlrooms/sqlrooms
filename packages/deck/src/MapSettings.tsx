@@ -1,16 +1,5 @@
 import {FC, useCallback, useMemo, useState} from 'react';
-import {
-  CodeViewToggleButton,
-  Field,
-  ColumnSelector,
-  ColumnsProvider,
-  MosaicCodeViewerPanel,
-  useStoreWithMosaicDashboard,
-  DataTableSelector,
-  useTablesWithColumns,
-} from '@sqlrooms/mosaic';
-import {getTableIdentity, useDataTable, type DataTable} from '@sqlrooms/duckdb';
-import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {
   binnedNumericSchemes,
   categoricalSchemes,
@@ -31,12 +20,7 @@ import {
   SettingsPanelHeader,
   Switch,
 } from '@sqlrooms/ui';
-import {LatitudeSelector} from './LatitudeSelector';
-import {LongitudeSelector} from './LongitudeSelector';
-import {
-  isDeckMapDashboardTableDatasetSource,
-  type DeckMapDashboardPanelConfig,
-} from './dashboardConfig';
+import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
@@ -63,6 +47,15 @@ import {
   usesTripsSettings,
   usesExtrusionSettings,
 } from './mapLayerConfigUtils';
+import {
+  DeckMapCodeViewerPanel,
+  DeckMapCodeViewToggleButton,
+  DeckMapColumnSelector as ColumnSelector,
+  DeckMapColumnsProvider as ColumnsProvider,
+  DeckMapSettingsField as Field,
+  DeckMapTableSelector as DataTableSelector,
+} from './MapSettingsControls';
+import {regenerateMapConfigForTable} from './mapConfigUtils';
 import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
 
 const HEATMAP_COLOR_STEPS = 6;
@@ -111,12 +104,15 @@ function detectHeatmapScheme(colorRange: unknown): string {
   return 'Viridis';
 }
 
-interface MapSettingsPanelProps {
-  dashboardId: string;
-  panel: MosaicDashboardPanelConfigType;
+export interface DeckMapSettingsPanelProps {
+  title: string;
+  selectedTable?: string;
+  config: DeckMapConfig;
+  tables: DataTable[];
   onClose?: () => void;
-  onTableChange?: (table: DataTable) => void;
-  onTitleChange?: (title: string) => void;
+  onTableChange: (table: DataTable) => void;
+  onTitleChange: (title: string) => void;
+  onConfigChange: (config: DeckMapConfig) => void;
   readOnly?: boolean;
 }
 
@@ -133,12 +129,15 @@ function getSchemeOptions(type: ColorScaleConfig['type']) {
   return binnedNumericSchemes;
 }
 
-export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
-  dashboardId,
-  panel,
+export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
+  title,
+  selectedTable,
+  config,
+  tables,
   onClose,
   onTableChange,
   onTitleChange,
+  onConfigChange,
   readOnly,
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
@@ -146,38 +145,24 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
     useState<DeckMapLayerColorAccessor>('getFillColor');
   const [viewMode, setViewMode] = useState<'settings' | 'code'>('settings');
 
-  const dashboardSelectedTable = useStoreWithMosaicDashboard(
-    (state) =>
-      state.mosaicDashboard.config.dashboardsById[dashboardId]?.selectedTable,
+  const selectedDataTable = useMemo(
+    () =>
+      tables.find((table) => getTableIdentity(table.table) === selectedTable),
+    [selectedTable, tables],
   );
-
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
-  );
-
-  const setSelectedTable = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.setSelectedTable,
-  );
-
-  const tables = useTablesWithColumns();
-  const selectedDataTable = useDataTable(dashboardSelectedTable);
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
       if (readOnly) return;
-      if (onTableChange) {
-        onTableChange(table);
-      } else {
-        setSelectedTable(dashboardId, getTableIdentity(table.table));
-      }
+      onTableChange(table);
     },
-    [dashboardId, onTableChange, readOnly, setSelectedTable],
+    [onTableChange, readOnly],
   );
 
-  const mapConfig = panel.config as DeckMapDashboardPanelConfig;
+  const mapConfig = config;
   const serializedMapConfig = useMemo(
-    () => JSON.stringify(panel.config, null, 2),
-    [panel.config],
+    () => JSON.stringify(config, null, 2),
+    [config],
   );
   const showCode = viewMode === 'code';
   const layers = getDeckMapLayerRecords(mapConfig);
@@ -192,12 +177,20 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   // output. Coordinate selectors edit the source transform, while render
   // bindings such as geometry/color/elevation target output columns.
   const activeLayerDatasetSource = activeLayerDataset?.source;
-  const fallbackTableName = isDeckMapDashboardTableDatasetSource(
+  const fallbackTableName = isDeckMapTableDatasetSource(
     activeLayerDatasetSource,
   )
     ? activeLayerDatasetSource.tableName
     : undefined;
-  const fallbackTable = useDataTable(fallbackTableName);
+  const fallbackTable = useMemo(
+    () =>
+      tables.find(
+        (table) =>
+          getTableIdentity(table.table) === fallbackTableName ||
+          table.tableName === fallbackTableName,
+      ),
+    [fallbackTableName, tables],
+  );
   const sourceDataTable = selectedDataTable ?? fallbackTable;
   const sourceColumns = sourceDataTable?.columns ?? EMPTY_COLUMNS;
   const resolvedActiveLayerDatasetSource = useMemo(() => {
@@ -206,7 +199,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
         ? {tableName: getTableIdentity(selectedDataTable.table)}
         : undefined;
     }
-    if (!isDeckMapDashboardTableDatasetSource(activeLayerDatasetSource)) {
+    if (!isDeckMapTableDatasetSource(activeLayerDatasetSource)) {
       return activeLayerDatasetSource;
     }
 
@@ -258,13 +251,11 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   const firstColumnName = dataOutputColumns[0]?.name;
 
   const applyConfig = useCallback(
-    (config: DeckMapDashboardPanelConfig) => {
+    (nextConfig: DeckMapConfig) => {
       if (readOnly) return;
-      updatePanel(dashboardId, panel.id, {
-        config: {...config, settingsOpen: mapConfig.settingsOpen} as any,
-      });
+      onConfigChange(nextConfig);
     },
-    [dashboardId, mapConfig.settingsOpen, panel.id, readOnly, updatePanel],
+    [onConfigChange, readOnly],
   );
 
   const updateColorScale = (patch: {
@@ -300,9 +291,10 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <SettingsPanelHeader
+        title="Map settings"
         className="shrink-0 p-2"
         actions={
-          <CodeViewToggleButton
+          <DeckMapCodeViewToggleButton
             label={showCode ? 'Show settings' : 'View code'}
             selected={showCode}
             onClick={() =>
@@ -317,7 +309,7 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
       />
 
       {showCode ? (
-        <MosaicCodeViewerPanel
+        <DeckMapCodeViewerPanel
           value={serializedMapConfig}
           copyTooltipLabel="Copy map config"
         />
@@ -326,8 +318,8 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
           <div className="flex flex-col gap-2 p-2 pt-0">
             <Field label="Title">
               <input
-                value={panel.title}
-                onChange={(e) => onTitleChange?.(e.target.value)}
+                value={title}
+                onChange={(e) => onTitleChange(e.target.value)}
                 placeholder="Map title"
                 disabled={readOnly}
                 className="border-input placeholder:text-muted-foreground focus-visible:ring-ring h-8 w-full rounded-md border bg-transparent px-3 py-2 text-xs font-medium shadow-sm outline-hidden transition-colors focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50"
@@ -339,7 +331,6 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
                 onChange={handleTableChange}
                 tables={tables}
                 value={selectedDataTable}
-                className="w-full"
                 disabled={readOnly}
               />
             </Field>
@@ -1014,19 +1005,38 @@ export const MapSettingsPanel: FC<MapSettingsPanelProps> = ({
               !showArcColumnSetting && (
                 <ColumnsProvider columns={sourceColumns}>
                   <Field label="Latitude column" required>
-                    <LatitudeSelector
-                      dashboardId={dashboardId}
-                      panel={panel}
-                      currentTable={sourceDataTable}
-                      readOnly={readOnly}
+                    <ColumnSelector.Numeric
+                      value={mapConfig.fitToData?.latitudeColumn}
+                      onChange={(latitudeColumn) =>
+                        applyConfig(
+                          regenerateMapConfigForTable(
+                            {config: mapConfig},
+                            sourceDataTable,
+                            mapConfig.fitToData?.longitudeColumn,
+                            latitudeColumn,
+                          ) as DeckMapConfig,
+                        )
+                      }
+                      disabled={readOnly}
                     />
                   </Field>
                   <Field label="Longitude column" required>
-                    <LongitudeSelector
-                      dashboardId={dashboardId}
-                      panel={panel}
-                      currentTable={sourceDataTable}
-                      readOnly={readOnly}
+                    <ColumnSelector.Numeric
+                      value={mapConfig.fitToData?.longitudeColumn}
+                      onChange={(longitudeColumn) => {
+                        const latitudeColumn =
+                          mapConfig.fitToData?.latitudeColumn;
+                        if (!latitudeColumn) return;
+                        applyConfig(
+                          regenerateMapConfigForTable(
+                            {config: mapConfig},
+                            sourceDataTable,
+                            longitudeColumn,
+                            latitudeColumn,
+                          ) as DeckMapConfig,
+                        );
+                      }}
+                      disabled={readOnly}
                     />
                   </Field>
                 </ColumnsProvider>

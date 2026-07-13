@@ -1,19 +1,14 @@
-import {getTableIdentity} from '@sqlrooms/duckdb';
+import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
 import {
   blockDocumentContentToBlocks,
   type BlockDocumentStatefulBlockBlock,
   type BlockSettingsComponentProps,
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
-import {Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
-import {useMemo} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStoreWithDeckMaps} from './DeckMapsSlice';
-import {
-  createDeckMapConfigForTable,
-  findGeometryColumn,
-  findLongitudeLatitudeColumns,
-} from './mapConfigUtils';
+import {DeckMapSettingsPanel} from './MapSettings';
+import {regenerateMapConfigForTable} from './mapConfigUtils';
 
 export function DeckMapBlockSettings({
   blockId,
@@ -52,6 +47,34 @@ export function DeckMapBlockSettings({
     [artifact, blockId],
   );
 
+  const handleTitleChange = useCallback(
+    (title: string) => {
+      if (readOnly) return;
+      updateMap(mapId, {title});
+      if (dashboardId && block) {
+        updateBlock(dashboardId, blockId, {
+          ...block,
+          caption: title || undefined,
+        });
+      }
+    },
+    [block, blockId, dashboardId, mapId, readOnly, updateBlock, updateMap],
+  );
+
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      if (readOnly || !map) return;
+      setSelectedTable(mapId, getTableIdentity(table.table));
+      updateMap(mapId, {
+        config: regenerateMapConfigForTable(
+          {config: map.config},
+          table,
+        ) as typeof map.config,
+      });
+    },
+    [map, mapId, readOnly, setSelectedTable, updateMap],
+  );
+
   if (!map)
     return (
       <div className="text-muted-foreground p-4 text-sm">
@@ -59,81 +82,16 @@ export function DeckMapBlockSettings({
       </div>
     );
   return (
-    <div className="flex h-full flex-col gap-4 p-3">
-      <div className="flex items-center justify-between text-xs font-medium">
-        <span>Map settings</span>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5"
-            onClick={onClose}
-          >
-            <XIcon className="h-3.5 w-3.5" />
-          </Button>
-        )}
-      </div>
-      <label className="space-y-1 text-xs">
-        <span>Title</span>
-        <input
-          className="border-border bg-background w-full rounded border px-2 py-1.5 text-sm"
-          value={block?.caption ?? map.title}
-          readOnly={readOnly}
-          onChange={(event) => {
-            const title = event.target.value;
-            updateMap(mapId, {title});
-            if (dashboardId && block)
-              updateBlock(dashboardId, blockId, {
-                ...block,
-                caption: title || undefined,
-              });
-          }}
-        />
-      </label>
-      <label className="space-y-1 text-xs">
-        <span>Table</span>
-        <select
-          className="border-border bg-background w-full rounded border px-2 py-1.5 text-sm"
-          value={map.selectedTable ?? ''}
-          disabled={readOnly}
-          onChange={(event) => {
-            const table = tables.find(
-              (candidate) =>
-                getTableIdentity(candidate.table) === event.target.value,
-            );
-            if (!table) return;
-            setSelectedTable(mapId, getTableIdentity(table.table));
-            if (
-              findLongitudeLatitudeColumns(table) ||
-              findGeometryColumn(table)
-            ) {
-              updateMap(mapId, {
-                config: createDeckMapConfigForTable({
-                  tableName: table.tableName,
-                  columns: table.columns,
-                  tableReference: table.table,
-                }),
-              });
-            }
-          }}
-        >
-          <option value="">Select a table</option>
-          {tables.map((table) => (
-            <option
-              key={getTableIdentity(table.table)}
-              value={getTableIdentity(table.table)}
-            >
-              {table.tableName}
-            </option>
-          ))}
-        </select>
-      </label>
-      {map.config.configMode === 'custom' && (
-        <p className="text-muted-foreground text-xs">
-          This AI-authored map uses custom configuration. Edit it through the
-          map tool.
-        </p>
-      )}
-    </div>
+    <DeckMapSettingsPanel
+      title={block?.caption ?? map.title}
+      selectedTable={map.selectedTable}
+      config={map.config}
+      tables={tables.filter((table) => table.columns.length > 0)}
+      onClose={onClose}
+      onTitleChange={handleTitleChange}
+      onTableChange={handleTableChange}
+      onConfigChange={(config) => updateMap(mapId, {config})}
+      readOnly={readOnly}
+    />
   );
 }

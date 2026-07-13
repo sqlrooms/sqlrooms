@@ -7,6 +7,10 @@ export {ColorScaleLegend} from '@sqlrooms/color-scales';
 export {createDeckJsonSpecFromDatasets} from './createDeckJsonSpecFromDatasets';
 export {DeckMapBlockSettings} from './BlockMapSettings';
 export {
+  DeckMapSettingsPanel,
+  type DeckMapSettingsPanelProps,
+} from './MapSettings';
+export {
   DeckMapBlockRenderer,
   ensureDeckMapResourceState,
   type DeckMapBlockRendererProps,

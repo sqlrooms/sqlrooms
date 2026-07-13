@@ -12,6 +12,12 @@ Mosaic dashboard panel support is opt-in through `@sqlrooms/deck/mosaic`.
 Dashboard panels keep their panel storage, query clients, cross-filter
 selection, and issue translation inside that adapter boundary.
 
+`DeckMapSettingsPanel` is the shared host-neutral editor for both surfaces. It
+receives a map config, selected table, available tables, and edit callbacks;
+worksheet resources and Mosaic panels only adapt their respective stores to
+that contract. Layer, binding, style, extrusion, and code-view controls therefore
+stay consistent without putting Mosaic APIs in the worksheet settings path.
+
 Worksheet maps deliberately use independent selection semantics. Their direct
 data adapter executes each configured SQL/table dataset through the room's
 DuckDB connector and neither reads nor publishes Mosaic selections. This drops
@@ -232,8 +238,9 @@ UI is available:
   settings panel can represent (layer type, color scale, radius, geometry
   bindings). The UI settings panel is enabled for user tweaks.
 - **`'custom'`** — the config may use any deck.gl JSON props, including those not
-  representable in the UI configurator. The settings panel is disabled and shows
-  a message directing users to the JSON editor instead.
+  representable in the UI configurator. The shared settings panel exposes the
+  fields it can safely recognize and preserves unsupported properties; its code
+  view shows the complete authored config.
 
 AI tools set this field automatically based on request complexity.
 

@@ -1,5 +1,5 @@
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
-import type {DeckMapDashboardPanelConfig} from './dashboardConfig';
+import type {DeckMapConfig} from './mapConfig';
 import type {DeckAutoLayerType} from './types';
 import {isColorScaleFunction} from './json/layerConfig';
 
@@ -104,13 +104,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function getObjectSpec(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
 ): Record<string, unknown> | undefined {
   return isRecord(config.spec) ? config.spec : undefined;
 }
 
 export function getDeckMapLayerRecords(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
 ): DeckMapLayerRecord[] {
   const layers = getObjectSpec(config)?.layers;
   return Array.isArray(layers) ? layers.filter(isRecord) : [];
@@ -199,10 +199,10 @@ export function getDeckMapColorAccessorOptions(
 }
 
 export function updateDeckMapLayer(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   updater: (layer: DeckMapLayerRecord) => DeckMapLayerRecord,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   const spec = getObjectSpec(config);
   if (!spec || !Array.isArray(spec.layers)) {
     return config;
@@ -225,10 +225,10 @@ export function updateDeckMapLayer(
 }
 
 export function setDeckMapLayerType(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   layerType: string,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => {
     const nextLayer: DeckMapLayerRecord = {
       ...layer,
@@ -248,10 +248,10 @@ export function setDeckMapLayerType(
 }
 
 export function setDeckMapLayerGeometryColumn(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   geometryColumn: string,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   const layer = getDeckMapLayerRecords(config)[layerIndex];
   const datasetId = getDeckMapLayerDatasetId(layer);
   if (!datasetId || !config.datasets?.[datasetId]) {
@@ -288,10 +288,10 @@ export function setDeckMapLayerGeometryColumn(
 }
 
 export function setDeckMapLayerHexagonColumn(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   hexagonColumn: string,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
     getHexagon: `@@=${hexagonColumn}`,
@@ -303,7 +303,7 @@ export function setDeckMapLayerHexagonColumn(
 }
 
 export function setDeckMapLayerArcColumns(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   columns: {
     sourceGeometryColumn?: string;
@@ -313,7 +313,7 @@ export function setDeckMapLayerArcColumns(
     targetLatitudeColumn?: string;
     targetLongitudeColumn?: string;
   },
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
     _sqlroomsBinding: {
@@ -324,10 +324,10 @@ export function setDeckMapLayerArcColumns(
 }
 
 export function setDeckMapLayerTimestampColumn(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   timestampColumn: string,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
     _sqlroomsBinding: {
@@ -348,11 +348,11 @@ export function getDeckMapLayerColorScale(
 }
 
 export function setDeckMapLayerColorScale(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   accessor: DeckMapLayerColorAccessor,
   colorScale: DeckMapLayerColorScaleFunction,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
     [accessor]: colorScale,
@@ -364,10 +364,10 @@ const DEFAULT_LAYER_FILL_COLOR: [number, number, number, number] = [
 ];
 
 export function clearDeckMapLayerColorScale(
-  config: DeckMapDashboardPanelConfig,
+  config: DeckMapConfig,
   layerIndex: number,
   accessor: DeckMapLayerColorAccessor,
-): DeckMapDashboardPanelConfig {
+): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => {
     const nextLayer = {...layer};
     if (accessor === 'getFillColor') {

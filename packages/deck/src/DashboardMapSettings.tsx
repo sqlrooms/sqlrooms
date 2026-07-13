@@ -4,15 +4,15 @@ import {
   ConfirmDatasetChangeDialog,
   useConfirmDatasetChange,
   useStoreWithMosaicDashboard,
+  useTablesWithColumns,
 } from '@sqlrooms/mosaic';
-import {Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
-import {MapSettingsPanel} from './MapSettings';
+import {DeckMapSettingsPanel} from './MapSettings';
 import {
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
+import type {DeckMapConfig} from './mapConfig';
 
 /**
  * Settings adapter for a Deck map panel inside a Mosaic dashboard.
@@ -32,6 +32,7 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
   const setSelectedTable = useStoreWithMosaicDashboard(
     (state) => state.mosaicDashboard.setSelectedTable,
   );
+  const tables = useTablesWithColumns();
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
@@ -55,6 +56,16 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
     [dashboardId, blockId, readOnly, updatePanel],
   );
 
+  const handleConfigChange = useCallback(
+    (config: DeckMapConfig) => {
+      if (readOnly || !dashboardId) return;
+      updatePanel(dashboardId, blockId, {
+        config: config as unknown as Record<string, unknown>,
+      });
+    },
+    [blockId, dashboardId, readOnly, updatePanel],
+  );
+
   const {handleChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
     useConfirmDatasetChange(handleTableChange);
 
@@ -76,45 +87,17 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
     );
   }
 
-  const isCustomMode =
-    (panel.config as DeckMapDashboardPanelConfig)?.configMode === 'custom';
-
-  if (isCustomMode) {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
-          <span>Map settings</span>
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
-        <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
-          <p>
-            This map uses a custom AI-generated configuration.
-            <br />
-            Use the JSON editor to make changes.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-      <MapSettingsPanel
-        dashboardId={dashboard.id}
-        panel={panel}
+      <DeckMapSettingsPanel
+        title={panel.title}
+        selectedTable={dashboard.selectedTable}
+        config={panel.config as DeckMapDashboardPanelConfig}
+        tables={tables}
         onClose={onClose}
         onTableChange={handleChangeRequest}
         onTitleChange={handleTitleChange}
+        onConfigChange={handleConfigChange}
         readOnly={readOnly}
       />
       <ConfirmDatasetChangeDialog
