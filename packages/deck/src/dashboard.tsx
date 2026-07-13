@@ -412,23 +412,33 @@ function DeckMapDashboardHeaderActions({
 }: MosaicDashboardPanelRendererProps) {
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
+  const fitViewLabel = canFitView
+    ? 'Fit map view to data'
+    : 'Fit view unavailable for this map';
 
   return (
     <div className="flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        title={
-          canFitView
-            ? 'Fit map view to data'
-            : 'Fit view unavailable for this map'
-        }
-        disabled={!canFitView}
-        onClick={() => emitDeckMapDashboardFitRequest(panel.id)}
-      >
-        <FocusIcon className="h-3.5 w-3.5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="inline-flex"
+            tabIndex={canFitView ? undefined : 0}
+            aria-label={canFitView ? undefined : fitViewLabel}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              aria-label={fitViewLabel}
+              disabled={!canFitView}
+              onClick={() => emitDeckMapDashboardFitRequest(panel.id)}
+            >
+              <FocusIcon className="h-3.5 w-3.5" />
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{fitViewLabel}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

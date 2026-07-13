@@ -101,6 +101,13 @@ export type {
 } from './mapConfig';
 export {DeckJsonMap} from './DeckJsonMap';
 export {
+  DeckMapDefaultStylesProvider,
+  resolveDeckMapStyle,
+  useDeckMapDefaultStyles,
+  type DeckMapDefaultStyles,
+  type DeckMapStyle,
+} from './DeckMapDefaultStylesProvider';
+export {
   ColorScaleFunction,
   GeometryEncodingHint as DeckGeometryEncodingHint,
   DeckJsonMapLayerSpec,

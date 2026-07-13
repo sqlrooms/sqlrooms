@@ -4,12 +4,13 @@ import {
   type DuckDbSliceState,
 } from '@sqlrooms/duckdb';
 import {useBlockSettingsStore} from '@sqlrooms/documents';
-import {Button} from '@sqlrooms/ui';
-import {MapIcon, SlidersVerticalIcon} from 'lucide-react';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {FocusIcon, MapIcon, SlidersVerticalIcon} from 'lucide-react';
 import {
   Component,
   useCallback,
   useEffect,
+  useState,
   type ErrorInfo,
   type ReactNode,
 } from 'react';
@@ -129,6 +130,7 @@ export function DeckMapBlockRenderer({
     (state) => state.blockSettings.runtime.isSettingsPanelOpen,
   );
   const isSettingsShown = Boolean(selected && isSettingsPanelOpen);
+  const [fitRequestVersion, setFitRequestVersion] = useState(0);
 
   useEffect(() => {
     if (mapId && !map) ensureMap(mapId, {title: title ?? 'Embedded Map'});
@@ -161,6 +163,10 @@ export function DeckMapBlockRenderer({
     );
   }
   const hasDatasets = Object.keys(map.config.datasets).length > 0;
+  const canFitView = Boolean(map.config.fitToData && hasDatasets);
+  const fitViewLabel = canFitView
+    ? 'Fit map view to data'
+    : 'Fit view unavailable for this map';
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
@@ -177,7 +183,28 @@ export function DeckMapBlockRenderer({
           />
         </div>
         <div className="flex items-center gap-0.5">
-          {headerActions}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="inline-flex"
+                tabIndex={canFitView ? undefined : 0}
+                aria-label={canFitView ? undefined : fitViewLabel}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label={fitViewLabel}
+                  disabled={!canFitView}
+                  onClick={() => setFitRequestVersion((version) => version + 1)}
+                >
+                  <FocusIcon className="h-3.5 w-3.5" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{fitViewLabel}</TooltipContent>
+          </Tooltip>
           <Button
             type="button"
             variant={isSettingsShown ? 'secondary' : 'ghost'}
@@ -194,6 +221,7 @@ export function DeckMapBlockRenderer({
           >
             <SlidersVerticalIcon className="h-3.5 w-3.5" />
           </Button>
+          {headerActions}
         </div>
       </div>
       <div className="min-h-0 flex-1">
@@ -216,6 +244,7 @@ export function DeckMapBlockRenderer({
               onUpdateMap={(patch) => updateMap(mapId, patch)}
               onReportIssue={(issue) => reportMapIssue(mapId, issue)}
               onClearIssue={() => clearMapIssue(mapId)}
+              fitRequestVersion={fitRequestVersion}
               dataAdapter={dataAdapter}
             />
           </DeckMapResourceErrorBoundary>

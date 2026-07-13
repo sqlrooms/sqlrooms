@@ -16,6 +16,10 @@ import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
+import {
+  resolveDeckMapStyle,
+  useDeckMapDefaultStyles,
+} from './DeckMapDefaultStylesProvider';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
@@ -540,11 +544,17 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     );
 
     const {resolvedTheme} = useTheme();
+    const hostDefaultMapStyles = useDeckMapDefaultStyles();
 
     const mergedMapProps = {
       ...extraMapProps,
-      mapStyle:
-        mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLES[resolvedTheme],
+      mapStyle: resolveDeckMapStyle({
+        mapStyle,
+        mapPropsMapStyle: mapProps?.mapStyle,
+        hostDefaultStyles: hostDefaultMapStyles,
+        resolvedTheme,
+        fallbackStyles: DEFAULT_MAP_STYLES,
+      }),
     };
     const legends = useMemo(
       () =>
