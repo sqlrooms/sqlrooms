@@ -64,43 +64,54 @@ export type DeckMapDataAdapter = {
     mapId: string;
     map: DeckMapResource;
   }) => Record<string, DeckDatasetInput>;
+  /** Resolves an unsampled dataset input for fit-to-data bounds queries. */
+  resolveFitDataset?: (options: {
+    mapId: string;
+    map: DeckMapResource;
+    datasetId: string;
+  }) => DeckDatasetInput | undefined;
   getTableColumns?: (tableName: string) => DataTable['columns'] | undefined;
 };
 
-export const directDeckMapDataAdapter: DeckMapDataAdapter = {
-  resolveDatasets: ({map}) => {
-    const resolved: Record<string, DeckDatasetInput> = {};
-    const dataPolicy = getDeckMapDataPolicy(map.config);
-    // A top-level selected table is only an unambiguous override when the map
-    // has one table-backed dataset. Multi-source maps retain authored tables.
-    const tableDatasetCount = Object.values(map.config.datasets).filter(
-      (dataset) => isDeckMapTableDatasetSource(dataset.source),
-    ).length;
-    for (const [datasetId, dataset] of Object.entries(map.config.datasets)) {
-      const {source, ...datasetConfig} = dataset;
-      if (isDeckMapSqlDatasetSource(source)) {
-        resolved[datasetId] = applyDataPolicy(
-          {...datasetConfig, sqlQuery: source.sqlQuery},
-          dataPolicy,
-        );
-        continue;
-      }
-      if (isDeckMapTableDatasetSource(source)) {
-        resolved[datasetId] = applyDataPolicy(
-          {
-            ...datasetConfig,
-            tableName:
-              tableDatasetCount === 1
-                ? (map.selectedTable ?? source.tableName)
-                : source.tableName,
-            transformSql: source.transformSql,
-          },
-          dataPolicy,
-        );
-      }
+function resolveDirectDeckMapDatasets(
+  map: DeckMapResource,
+  dataPolicy?: DeckMapDataPolicy,
+) {
+  const resolved: Record<string, DeckDatasetInput> = {};
+  // A top-level selected table is only an unambiguous override when the map
+  // has one table-backed dataset. Multi-source maps retain authored tables.
+  const tableDatasetCount = Object.values(map.config.datasets).filter(
+    (dataset) => isDeckMapTableDatasetSource(dataset.source),
+  ).length;
+  for (const [datasetId, dataset] of Object.entries(map.config.datasets)) {
+    const {source, ...datasetConfig} = dataset;
+    let input: DeckDatasetInput | undefined;
+    if (isDeckMapSqlDatasetSource(source)) {
+      input = {...datasetConfig, sqlQuery: source.sqlQuery};
+    } else if (isDeckMapTableDatasetSource(source)) {
+      input = {
+        ...datasetConfig,
+        tableName:
+          tableDatasetCount === 1
+            ? (map.selectedTable ?? source.tableName)
+            : source.tableName,
+        transformSql: source.transformSql,
+      };
     }
-    return resolved;
-  },
+    if (input) {
+      resolved[datasetId] = dataPolicy
+        ? applyDataPolicy(input, dataPolicy)
+        : input;
+    }
+  }
+  return resolved;
+}
+
+export const directDeckMapDataAdapter: DeckMapDataAdapter = {
+  resolveDatasets: ({map}) =>
+    resolveDirectDeckMapDatasets(map, getDeckMapDataPolicy(map.config)),
+  resolveFitDataset: ({map, datasetId}) =>
+    resolveDirectDeckMapDatasets(map)[datasetId],
 };
 
 export type DeckMapSurfaceProps = {
@@ -179,11 +190,16 @@ export function DeckMapSurface({
     () => resolveDeckMapFitToData(map.config),
     [map.config],
   );
-  const fitSource = useMemo(
-    () =>
-      fitToData ? getDeckMapDatasetSource(datasets[fitToData.dataset]) : null,
-    [datasets, fitToData],
-  );
+  const fitSource = useMemo(() => {
+    if (!fitToData) return null;
+    const fitDataset =
+      dataAdapter.resolveFitDataset?.({
+        mapId,
+        map,
+        datasetId: fitToData.dataset,
+      }) ?? datasets[fitToData.dataset];
+    return getDeckMapDatasetSource(fitDataset);
+  }, [dataAdapter, datasets, fitToData, map, mapId]);
   const handleFitError = useCallback(
     (error: Error) =>
       onReportIssue({

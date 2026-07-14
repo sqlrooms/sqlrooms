@@ -25,6 +25,10 @@ Worksheet map runtime issues distinguish dataset SQL failures (`sql-error`)
 from fit-to-data bounds failures (`fit-error`), so each issue is cleared only
 after its corresponding operation recovers.
 
+`DeckMapDataAdapter.resolveFitDataset` can provide an unsampled source for
+fit-to-data bounds queries. The direct adapter uses the authored source for
+bounds while applying the configured row-limit policy only to rendered rows.
+
 Worksheet maps deliberately use independent selection semantics. Their direct
 data adapter executes each configured SQL/table dataset through the room's
 DuckDB connector and neither reads nor publishes Mosaic selections. This drops
