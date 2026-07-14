@@ -1,4 +1,3 @@
-import {describe, it, expect} from 'vitest';
 import {
   blockDocumentBlockToNode,
   blockDocumentNodeToBlock,
@@ -116,8 +115,8 @@ describe('BlockDocument rich text support', () => {
 
       expect(node.type).toBe('bulletList');
       expect(node.content).toHaveLength(2);
-      expect(node.content?.[0].type).toBe('listItem');
-      expect(node.content?.[0].content?.[0].content?.[0]).toEqual({
+      expect(node.content?.[0]?.type).toBe('listItem');
+      expect(node.content?.[0]?.content?.[0]?.content?.[0]).toEqual({
         type: 'text',
         text: 'First item',
         marks: [{type: 'bold'}],
