@@ -38,7 +38,7 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FormEvent, useEffect, useRef, useState} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
 
 export function CliArtifactsSidebarSection() {

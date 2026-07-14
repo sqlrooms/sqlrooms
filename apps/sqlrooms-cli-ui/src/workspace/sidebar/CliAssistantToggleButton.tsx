@@ -1,7 +1,7 @@
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {SparklesIcon} from 'lucide-react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 
 export function CliAssistantToggleButton() {
   const showArtifactChooser = useRoomStore(

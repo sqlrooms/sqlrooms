@@ -9,7 +9,7 @@ import {
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useState} from 'react';
-import {useRoomStore} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
 import {AssistantContextSelector} from './AssistantContextSelector';
 import {
   isDefaultAssistantSessionName,
@@ -31,6 +31,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   beforeCreateSessionAction,
   debugPanel,
 }) => {
+  const roomStore = useCliRoomStoreApi();
   const currentSessionId = useRoomStore(
     (s) => s.ai.getCurrentSession()?.id || null,
   );
@@ -139,8 +140,7 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
                 filterSession={filterSession}
                 emptyLabel="No chats for this item yet"
                 onSelectChat={(sessionId) => {
-                  const switchSession =
-                    useRoomStore.getState().ai.switchSession;
+                  const switchSession = roomStore.getState().ai.switchSession;
                   switchSession(sessionId);
                   setShowHistory(false);
                 }}

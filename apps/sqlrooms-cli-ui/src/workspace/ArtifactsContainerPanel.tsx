@@ -16,7 +16,7 @@ import {
   type ReactNode,
 } from 'react';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
 
 type CliArtifactWorkspaceActions = UseArtifactWorkspaceResult;
 

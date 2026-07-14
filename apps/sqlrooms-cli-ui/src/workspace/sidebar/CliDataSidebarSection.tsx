@@ -45,7 +45,7 @@ import {
 } from '@sqlrooms/ui';
 import {ArrowUpFromLine, Database, Table2, Trash2Icon} from 'lucide-react';
 import {useCallback, useRef, useState, type ChangeEvent} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 import {
   LOCAL_DATA_ACCEPTED_FORMATS,
   useLocalFileLoader,
