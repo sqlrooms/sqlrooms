@@ -217,6 +217,34 @@ describe('normalizeDeckMapPointConfig', () => {
 });
 
 describe('regenerateMapConfigForTable', () => {
+  it('infers the counterpart when the first coordinate is selected', () => {
+    const config = createEmptyDeckMapConfig();
+    const table = {
+      ...placesTable,
+      columns: [
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'northing', type: 'DOUBLE'},
+      ],
+    } as DataTable;
+
+    const next = regenerateMapConfigForTable(
+      {config},
+      table,
+      undefined,
+      'northing',
+    );
+
+    expect(next.fitToData).toMatchObject({
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'northing',
+    });
+    expect(Object.values(next.datasets)[0]?.source).toMatchObject({
+      transformSql: expect.stringContaining(
+        'ST_Point("longitude", "northing")',
+      ),
+    });
+  });
+
   it('seeds a generated layer when a table is selected for an empty map', () => {
     const config = createEmptyDeckMapConfig();
     const table: DataTable = {

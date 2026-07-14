@@ -75,15 +75,27 @@ function findColumnByName(
     ?.name;
 }
 
+function resolveDeckMapCoordinateColumnNames(options: {
+  columns: DeckMapConfigColumn[];
+  longitudeColumn?: string;
+  latitudeColumn?: string;
+}) {
+  const longitudeColumn =
+    options.longitudeColumn ||
+    findColumnByName(options.columns, LONGITUDE_COLUMN_NAMES);
+  const latitudeColumn =
+    options.latitudeColumn ||
+    findColumnByName(options.columns, LATITUDE_COLUMN_NAMES);
+  return longitudeColumn && latitudeColumn
+    ? {longitudeColumn, latitudeColumn}
+    : null;
+}
+
 export function findDeckMapLongitudeLatitudeColumns(
   columns?: DeckMapConfigColumn[],
 ) {
   if (!columns) return null;
-  const longitudeColumn = findColumnByName(columns, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn = findColumnByName(columns, LATITUDE_COLUMN_NAMES);
-  return longitudeColumn && latitudeColumn
-    ? {longitudeColumn, latitudeColumn}
-    : null;
+  return resolveDeckMapCoordinateColumnNames({columns});
 }
 
 export function findLongitudeLatitudeColumns(table?: DataTable) {
@@ -638,11 +650,12 @@ export function regenerateMapConfigForTable(
   longitudeColumn?: string,
   latitudeColumn?: string,
 ) {
-  if (
-    !(longitudeColumn && latitudeColumn) &&
-    !findLongitudeLatitudeColumns(table) &&
-    !findGeometryColumn(table)
-  ) {
+  const coordinateColumns = resolveDeckMapCoordinateColumnNames({
+    columns: table.columns,
+    longitudeColumn,
+    latitudeColumn,
+  });
+  if (!coordinateColumns && !findGeometryColumn(table)) {
     return panel.config;
   }
 
@@ -654,8 +667,8 @@ export function regenerateMapConfigForTable(
     tableName: table.tableName,
     columns: table.columns,
     tableReference: table.table,
-    longitudeColumn,
-    latitudeColumn,
+    longitudeColumn: coordinateColumns?.longitudeColumn,
+    latitudeColumn: coordinateColumns?.latitudeColumn,
   });
   const nextDataset = Object.values(nextConfig.datasets)[0];
 
