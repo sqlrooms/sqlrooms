@@ -75,11 +75,18 @@ const BlockDocumentTextBlockBase = {
   intent: z.string().optional(),
 };
 
+const RichTextContent = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val ? [{type: 'text', text: val}] : [];
+  }
+  return val;
+}, z.array(BlockDocumentNode).describe('Array of text nodes with optional formatting marks. Plain strings are auto-converted. Example: [{type: "text", text: "Bold text", marks: [{type: "bold"}]}, {type: "text", text: " and regular"}]'));
+
 export const BlockDocumentHeadingBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('heading'),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  text: z.array(BlockDocumentNode),
+  text: RichTextContent,
 });
 
 /**
@@ -93,7 +100,7 @@ export type BlockDocumentHeadingBlock = z.infer<
 export const BlockDocumentParagraphBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('paragraph'),
-  text: z.array(BlockDocumentNode),
+  text: RichTextContent,
 });
 
 /**
@@ -108,7 +115,7 @@ export const BlockDocumentListBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('list'),
   ordered: z.boolean().optional(),
-  items: z.array(z.array(BlockDocumentNode)),
+  items: z.array(RichTextContent),
 });
 
 /**
@@ -121,7 +128,7 @@ export const BlockDocumentTodoBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('todo'),
   checked: z.boolean(),
-  text: z.array(BlockDocumentNode),
+  text: RichTextContent,
 });
 
 /**
@@ -210,15 +217,6 @@ export const BlockDocumentBlock = z.discriminatedUnion('type', [
  * Union of all block types that can appear in a block document.
  */
 export type BlockDocumentBlock = z.infer<typeof BlockDocumentBlock>;
-
-function textContent(text: string): TextContent | undefined {
-  return text ? [{type: 'text', text}] : undefined;
-}
-
-function textFromNode(node: BlockDocumentNode | undefined): string {
-  if (!node?.content) return node?.text ?? '';
-  return node.content.map((child) => textFromNode(child)).join('');
-}
 
 /** Returns the document-local id attribute for a block document node, if present. */
 export function blockDocumentNodeId(node: BlockDocumentNode): string {

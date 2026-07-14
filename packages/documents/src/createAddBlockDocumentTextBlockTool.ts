@@ -10,27 +10,42 @@ import {
 } from './BlockDocumentSliceConfig';
 import {createDefaultBlockDocumentBlockId} from './BlockDocumentEditor/BlockDocumentEditorContext';
 
+const TextMark = z.object({
+  type: z
+    .enum(['bold', 'italic', 'code', 'link', 'strike'])
+    .describe('Mark type: bold, italic, code, link, or strike'),
+  attrs: z.record(z.string(), z.unknown()).optional(),
+});
+
+const TextNode = z.object({
+  type: z.literal('text'),
+  text: z.string(),
+  marks: z.array(TextMark).optional(),
+});
+
+const RichTextContent = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    return val ? [{type: 'text', text: val}] : [];
+  }
+  return val;
+}, z.array(TextNode).describe('Array of text nodes with optional formatting marks. Plain strings are auto-converted. Example: [{type: "text", text: "Bold text", marks: [{type: "bold"}]}, {type: "text", text: " and regular"}]'));
+
 const AddBlockDocumentTextBlockParameters = z.object({
   type: z
     .enum(['heading', 'paragraph', 'list'])
     .describe('Type of text block to create'),
-  text: z
-    .array(BlockDocumentNode)
-    .optional()
-    .describe(
-      'Rich text content for heading and paragraph blocks. Array of text nodes with optional marks (bold, italic, code). Example: [{type: "text", text: "Bold text", marks: [{type: "bold"}]}, {type: "text", text: " and regular"}]',
-    ),
+  text: RichTextContent.optional().describe(
+    'Rich text content for heading and paragraph blocks.',
+  ),
   level: z
     .union([z.literal(1), z.literal(2), z.literal(3)])
     .optional()
     .default(2)
     .describe('Heading level from 1 to 3. Only used for heading blocks.'),
   items: z
-    .array(z.array(BlockDocumentNode))
+    .array(RichTextContent)
     .optional()
-    .describe(
-      'List items as arrays of rich text nodes. Each item supports marks like bold, italic, code. Example: [[{type: "text", text: "Bold item", marks: [{type: "bold"}]}]]',
-    ),
+    .describe('List items as arrays of rich text nodes or plain strings.'),
   ordered: z
     .boolean()
     .optional()
