@@ -79,11 +79,12 @@ export const BlockDocumentHeadingBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('heading'),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  text: z.string(),
+  text: z.array(BlockDocumentNode),
 });
 
 /**
  * A heading block in a block document with level 1, 2, or 3.
+ * Content is an array of BlockDocumentNodes supporting rich text with marks like bold, italic, etc.
  */
 export type BlockDocumentHeadingBlock = z.infer<
   typeof BlockDocumentHeadingBlock
@@ -92,11 +93,12 @@ export type BlockDocumentHeadingBlock = z.infer<
 export const BlockDocumentParagraphBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('paragraph'),
-  text: z.string(),
+  text: z.array(BlockDocumentNode),
 });
 
 /**
- * A paragraph block in a block document containing plain text.
+ * A paragraph block in a block document containing rich text.
+ * Content is an array of BlockDocumentNodes supporting marks like bold, italic, code, etc.
  */
 export type BlockDocumentParagraphBlock = z.infer<
   typeof BlockDocumentParagraphBlock
@@ -106,11 +108,12 @@ export const BlockDocumentListBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('list'),
   ordered: z.boolean().optional(),
-  items: z.array(z.string()),
+  items: z.array(z.array(BlockDocumentNode)),
 });
 
 /**
- * A bullet or ordered list block containing an array of text items.
+ * A bullet or ordered list block containing an array of rich text items.
+ * Each item is an array of BlockDocumentNodes (text nodes with optional marks like bold, italic, etc.).
  */
 export type BlockDocumentListBlock = z.infer<typeof BlockDocumentListBlock>;
 
@@ -118,11 +121,12 @@ export const BlockDocumentTodoBlock = z.object({
   ...BlockDocumentTextBlockBase,
   type: z.literal('todo'),
   checked: z.boolean(),
-  text: z.string(),
+  text: z.array(BlockDocumentNode),
 });
 
 /**
- * A todo/task item block with a checked state and text description.
+ * A todo/task item block with a checked state and rich text description.
+ * Content is an array of BlockDocumentNodes supporting marks like bold, italic, etc.
  */
 export type BlockDocumentTodoBlock = z.infer<typeof BlockDocumentTodoBlock>;
 
@@ -249,13 +253,13 @@ export function blockDocumentBlockToNode(
       return {
         type: 'heading',
         attrs: {...baseAttrs, level: block.level},
-        content: textContent(block.text),
+        content: block.text.length > 0 ? block.text : undefined,
       };
     case 'paragraph':
       return {
         type: 'paragraph',
         attrs: baseAttrs,
-        content: textContent(block.text),
+        content: block.text.length > 0 ? block.text : undefined,
       };
     case 'list':
       return {
@@ -266,7 +270,7 @@ export function blockDocumentBlockToNode(
           content: [
             {
               type: 'paragraph',
-              content: textContent(item),
+              content: item.length > 0 ? item : undefined,
             },
           ],
         })),
@@ -282,7 +286,7 @@ export function blockDocumentBlockToNode(
             content: [
               {
                 type: 'paragraph',
-                content: textContent(block.text),
+                content: block.text.length > 0 ? block.text : undefined,
               },
             ],
           },
@@ -354,11 +358,11 @@ export function blockDocumentNodeToBlock(
         intent,
         type: 'heading',
         level: level === 1 || level === 2 || level === 3 ? level : 1,
-        text: textFromNode(node),
+        text: node.content ?? [],
       });
     }
     case 'paragraph':
-      return {id, intent, type: 'paragraph', text: textFromNode(node)};
+      return {id, intent, type: 'paragraph', text: node.content ?? []};
     case 'bulletList':
     case 'orderedList':
       return {
@@ -367,7 +371,7 @@ export function blockDocumentNodeToBlock(
         type: 'list',
         ordered: node.type === 'orderedList' ? true : undefined,
         items:
-          node.content?.map((item) => textFromNode(item.content?.[0])) ?? [],
+          node.content?.map((item) => item.content?.[0]?.content ?? []) ?? [],
       };
     case 'taskList': {
       const item = node.content?.[0];
@@ -376,7 +380,7 @@ export function blockDocumentNodeToBlock(
         intent,
         type: 'todo',
         checked: Boolean(item?.attrs?.checked),
-        text: textFromNode(item?.content?.[0]),
+        text: item?.content?.[0]?.content ?? [],
       };
     }
     case 'blockDocumentImage': {

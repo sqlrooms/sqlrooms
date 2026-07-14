@@ -3,6 +3,7 @@ import {z} from 'zod';
 import type {BlockDocumentAiAdapter} from './BlockDocumentAi';
 import {
   type BlockDocumentBlock,
+  BlockDocumentNode,
   type BlockDocumentHeadingBlock,
   type BlockDocumentListBlock,
   type BlockDocumentParagraphBlock,
@@ -14,18 +15,22 @@ const AddBlockDocumentTextBlockParameters = z.object({
     .enum(['heading', 'paragraph', 'list'])
     .describe('Type of text block to create'),
   text: z
-    .string()
+    .array(BlockDocumentNode)
     .optional()
-    .describe('Text content for heading and paragraph blocks.'),
+    .describe(
+      'Rich text content for heading and paragraph blocks. Array of text nodes with optional marks (bold, italic, code). Example: [{type: "text", text: "Bold text", marks: [{type: "bold"}]}, {type: "text", text: " and regular"}]',
+    ),
   level: z
     .union([z.literal(1), z.literal(2), z.literal(3)])
     .optional()
     .default(2)
     .describe('Heading level from 1 to 3. Only used for heading blocks.'),
   items: z
-    .array(z.string())
+    .array(z.array(BlockDocumentNode))
     .optional()
-    .describe('List items. Only used for list blocks.'),
+    .describe(
+      'List items as arrays of rich text nodes. Each item supports marks like bold, italic, code. Example: [[{type: "text", text: "Bold item", marks: [{type: "bold"}]}]]',
+    ),
   ordered: z
     .boolean()
     .optional()
@@ -65,7 +70,7 @@ export function createBlockDocumentTextBlock(
         type: 'heading',
         id: blockId,
         level: params.level || 2,
-        text: params.text || '',
+        text: params.text || [],
       } satisfies BlockDocumentHeadingBlock;
 
     case 'list':
@@ -80,7 +85,7 @@ export function createBlockDocumentTextBlock(
       return {
         type: 'paragraph',
         id: blockId,
-        text: params.text || '',
+        text: params.text || [],
       } satisfies BlockDocumentParagraphBlock;
   }
 }
@@ -112,7 +117,14 @@ Use this to add context, summaries, or explanations alongside other blocks.
 Block types:
 - heading: Section title (level 1-3)
 - paragraph: Regular text content
-- list: Bullet or numbered list of items`,
+- list: Bullet or numbered list of items
+
+Text content supports rich formatting via marks:
+- bold: {type: "text", text: "content", marks: [{type: "bold"}]}
+- italic: {type: "text", text: "content", marks: [{type: "italic"}]}
+- code: {type: "text", text: "content", marks: [{type: "code"}]}
+- plain: {type: "text", text: "content"}
+- combined: {type: "text", text: "content", marks: [{type: "bold"}, {type: "italic"}]}`,
     inputSchema: AddBlockDocumentTextBlockToolInput,
     execute: async (params) => {
       try {
