@@ -101,6 +101,46 @@ describe('Deck map resource authoring contract', () => {
     expect(getDeckMapResourceConfigIssues(next)).toEqual([]);
   });
 
+  test('replaces omitted layers only when explicitly requested', () => {
+    const retainedLayer = {
+      '@@type': 'GeoArrowScatterplotLayer',
+      id: 'places',
+      _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+    };
+    const existingConfig: DeckMapConfig = {
+      ...validConfig,
+      spec: {
+        layers: [
+          retainedLayer,
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'stale-heatmap',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+    };
+    const patch: DeckMapConfig = {
+      spec: {layers: [retainedLayer]},
+      datasets: {},
+    };
+
+    expect(
+      (
+        mergeDeckMapResourceConfigPatch(existingConfig, patch).spec as {
+          layers: unknown[];
+        }
+      ).layers,
+    ).toHaveLength(2);
+    expect(
+      (
+        mergeDeckMapResourceConfigPatch(existingConfig, patch, {
+          replaceLayers: true,
+        }).spec as {layers: unknown[]}
+      ).layers,
+    ).toEqual([retainedLayer]);
+  });
+
   test('keeps the reusable instructions aligned with durable invariants', () => {
     const instructions = getDeckMapResourceAiInstructions();
 

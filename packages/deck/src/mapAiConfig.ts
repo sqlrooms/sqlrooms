@@ -66,5 +66,11 @@ export const DeckMapResourceToolParameters = z.object({
   title: z.string().optional().default('Map'),
   config: DeckMapResourceConfigParameter,
   tableName: z.string().optional(),
+  replaceLayers: z
+    .boolean()
+    .optional()
+    .describe(
+      'Set true when config.spec.layers is the complete desired list and omitted existing layers should be removed.',
+    ),
   reasoning: z.string(),
 });

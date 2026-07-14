@@ -274,6 +274,9 @@ resource before any durable block or map write: each dataset needs a
 `source.tableName` or `source.sqlQuery`, and each layer needs an explicit
 `_sqlroomsBinding.dataset`. Use `mergeDeckMapResourceConfigPatch(...)` in host
 preparation so sparse updates retain durable dataset sources and layers.
+Pass `{replaceLayers: true}` when the incoming `spec.layers` array is the
+complete desired list and omitted existing layers should be removed; the
+default remains additive for sparse layer updates.
 
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration

@@ -35,7 +35,25 @@ function setup() {
     'map-1': {
       id: 'map-1',
       title: 'Earthquake Explorer',
-      config: {spec: {}, datasets: {}},
+      config: {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              id: 'earthquakes',
+              _sqlroomsBinding: {dataset: 'earthquakes'},
+            },
+            {
+              '@@type': 'GeoArrowHeatmapLayer',
+              id: 'stale-heatmap',
+              _sqlroomsBinding: {dataset: 'earthquakes'},
+            },
+          ],
+        },
+        datasets: {
+          earthquakes: {source: {tableName: 'earthquakes'}},
+        },
+      },
     },
   };
   const invokeCommand = jest.fn(async (id: string, input: any) => {
@@ -97,6 +115,7 @@ describe('createCliBlockDocumentCommands', () => {
         blockDocumentId: 'worksheet-1',
         mapId: 'map-1',
         reasoning: 'change colors',
+        replaceLayers: true,
         config: {
           spec: {
             layers: [
@@ -116,6 +135,7 @@ describe('createCliBlockDocumentCommands', () => {
     expect(result).toMatchObject({success: true, data: {mapId: 'map-1'}});
     expect((result as any).data).not.toHaveProperty('panelId');
     expect(mapsById['map-1'].title).toBe('Earthquake Explorer');
+    expect(mapsById['map-1'].config.spec.layers).toHaveLength(1);
     expect(mapsById['map-1'].config.datasets.earthquakes).toMatchObject({
       geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',
