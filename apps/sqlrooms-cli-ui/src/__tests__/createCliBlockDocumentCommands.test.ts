@@ -98,7 +98,17 @@ describe('createCliBlockDocumentCommands', () => {
         mapId: 'map-1',
         reasoning: 'change colors',
         config: {
-          spec: {layers: []},
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {
+                  dataset: 'earthquakes',
+                  geometryColumn: '__sqlrooms_geom',
+                },
+              },
+            ],
+          },
           datasets: {earthquakes: {source: {tableName: 'earthquakes'}}},
         },
       },
