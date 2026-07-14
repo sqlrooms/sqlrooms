@@ -368,17 +368,27 @@ export function normalizeDeckMapPointConfig<
       : undefined;
     const tableName =
       typeof source?.tableName === 'string' ? source.tableName : undefined;
+    const configuredGeometryColumn =
+      typeof dataset.geometryColumn === 'string'
+        ? dataset.geometryColumn.trim()
+        : undefined;
     if (
       !tableName ||
       source?.sqlQuery ||
       source?.transformSql ||
-      (typeof dataset.geometryColumn === 'string' &&
-        dataset.geometryColumn.trim())
+      (configuredGeometryColumn &&
+        configuredGeometryColumn !== DEFAULT_GEOMETRY_COLUMN)
     ) {
       continue;
     }
 
     const table = resolveTable(tableName);
+    if (
+      configuredGeometryColumn === DEFAULT_GEOMETRY_COLUMN &&
+      table?.columns.some((column) => column.name === configuredGeometryColumn)
+    ) {
+      continue;
+    }
     if (findGeometryColumn(table)) {
       continue;
     }

@@ -69,6 +69,70 @@ describe('normalizeDeckMapPointConfig', () => {
     });
   });
 
+  it('repairs a generated geometry alias that is missing from the table', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'places',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              geometryColumn: '__sqlrooms_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+      fitToData: {dataset: 'places', geometryColumn: '__sqlrooms_geom'},
+    };
+
+    const next = normalizeDeckMapPointConfig({
+      config,
+      resolveTable: () => placesTable,
+    });
+
+    expect(next.datasets.places).toMatchObject({
+      geometryColumn: '__sqlrooms_geom',
+      geometryEncodingHint: 'wkb',
+      source: {
+        tableName: 'places',
+        transformSql: expect.stringContaining('ST_AsWKB'),
+      },
+    });
+  });
+
+  it('preserves a generated geometry alias that exists in the table', () => {
+    const config = {
+      spec: {layers: []},
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: '__sqlrooms_geom',
+          geometryEncodingHint: 'wkb' as const,
+        },
+      },
+    };
+
+    expect(
+      normalizeDeckMapPointConfig({
+        config,
+        resolveTable: () => ({
+          ...placesTable,
+          columns: [
+            ...placesTable.columns,
+            {name: '__sqlrooms_geom', type: 'BLOB'},
+          ],
+        }),
+      }),
+    ).toBe(config);
+  });
+
   it('skips datasets that already have transformSql or sqlQuery', () => {
     const config = {
       spec: {layers: []},
