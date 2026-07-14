@@ -1,7 +1,7 @@
 import {getRunningAiSessionCountsByArtifact} from '@sqlrooms/artifacts/ai';
 import {useCallback, useMemo} from 'react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 
 export function useCliArtifactSidebarTabs() {
   const artifactsConfig = useRoomStore((state) => state.artifacts.config);

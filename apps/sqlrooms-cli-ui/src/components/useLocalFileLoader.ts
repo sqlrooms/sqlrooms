@@ -6,7 +6,7 @@ import {
 import {toast} from '@sqlrooms/ui';
 import {convertToUniqueColumnOrTableName} from '@sqlrooms/utils';
 import {useCallback} from 'react';
-import {useRoomStore} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
 import type {RoomState} from '../store-types';
 
 export const LOCAL_DATA_ACCEPTED_FORMATS = {
@@ -35,8 +35,11 @@ function getCurrentOrFirstWorksheetArtifactId(
   );
 }
 
-function ensureImportWorksheetForTable(tableName: string) {
-  const state = useRoomStore.getState();
+function ensureImportWorksheetForTable(
+  getState: () => RoomState,
+  tableName: string,
+) {
+  const state = getState();
   const worksheetArtifactId =
     getCurrentOrFirstWorksheetArtifactId(state) ??
     state.artifacts.createArtifact({
@@ -47,7 +50,7 @@ function ensureImportWorksheetForTable(tableName: string) {
   state.artifacts.setCurrentArtifact(worksheetArtifactId);
   state.blockDocuments.ensureBlockDocument(worksheetArtifactId);
 
-  const nextState = useRoomStore.getState();
+  const nextState = getState();
   const existingBlocks =
     nextState.blockDocuments.config.artifacts[worksheetArtifactId]?.content
       .content ?? [];
@@ -79,6 +82,7 @@ function ensureImportWorksheetForTable(tableName: string) {
 }
 
 export function useLocalFileLoader() {
+  const roomStore = useCliRoomStoreApi();
   const connector = useRoomStore((state) => state.db.connector);
   const refreshTableSchemas = useRoomStore(
     (state) => state.db.refreshTableSchemas,
@@ -118,7 +122,7 @@ export function useLocalFileLoader() {
         return;
       }
       for (const {tableName} of createdTables) {
-        ensureImportWorksheetForTable(tableName);
+        ensureImportWorksheetForTable(roomStore.getState, tableName);
       }
       for (const {fileName, tableName} of createdTables) {
         toast.success('Table created', {
@@ -126,6 +130,6 @@ export function useLocalFileLoader() {
         });
       }
     },
-    [connector, refreshTableSchemas],
+    [connector, refreshTableSchemas, roomStore],
   );
 }
