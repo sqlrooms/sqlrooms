@@ -21,7 +21,8 @@ import {
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
-import {experimentalEnabled, useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
+import {experimentalEnabled} from '../runtimeEnvironment';
 import {isContextArtifactType} from './assistantUtils';
 import {
   getEnabledStatefulBlockArtifactTypes,

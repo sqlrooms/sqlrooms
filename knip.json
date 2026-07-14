@@ -25,7 +25,7 @@
         "vitepress-plugin-mermaid",
         "typescript-language-server"
       ],
-      "ignoreBinaries": ["madge", "uv"]
+      "ignoreBinaries": ["uv"]
     },
     "packages/*": {
       "entry": ["src/index.{ts,tsx}"]

@@ -23,7 +23,9 @@ import {
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
-import {experimentalEnabled, useRoomStore, type RoomState} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
+import {experimentalEnabled} from '../runtimeEnvironment';
+import type {RoomState} from '../store-types';
 import {
   createStatefulBlockTypes,
   getEnabledStatefulBlockArtifactTypes,
@@ -221,6 +223,7 @@ function createWorksheetStatefulBlockRenderers(
 }
 
 export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
+  const roomStore = useCliRoomStoreApi();
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
@@ -243,10 +246,10 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const statefulBlockTypes = useMemo(
     () =>
       createStatefulBlockTypes({
-        getState: useRoomStore.getState,
+        getState: roomStore.getState,
         experimentalEnabled,
       }),
-    [],
+    [roomStore],
   );
   const statefulBlockRenderers = useMemo(
     () => createWorksheetStatefulBlockRenderers(experimentalEnabled),
@@ -287,7 +290,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
             },
             prompt,
             revealAssistant,
-            actions: createStartBlockScopedChatActions(useRoomStore.getState),
+            actions: createStartBlockScopedChatActions(roomStore.getState),
             isValidBlockDocumentArtifact: (candidate) =>
               candidate.type === 'worksheet',
             artifactLabel: 'worksheet',
