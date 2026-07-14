@@ -207,7 +207,7 @@ export function getStatefulBlockArtifactConfig(
 /** Returns stateful block artifact types enabled for the current feature mode. */
 export function getEnabledStatefulBlockArtifactTypes(
   experimentalEnabled: boolean,
-) {
+): StatefulBlockArtifactType[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
     return config.stability === 'stable' || experimentalEnabled;

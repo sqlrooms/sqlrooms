@@ -30,12 +30,16 @@ import {
 } from '../statefulBlockArtifactConfigs';
 
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
-const ENABLED_CLI_BLOCK_CONTEXT_TYPES = new Set<string>([
-  'chart',
-  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
-    CLI_BLOCK_CONTEXT_TYPES.has(type),
-  ),
-]);
+
+function isEnabledCliBlockType(blockType: string): boolean {
+  if (blockType === 'chart') return true;
+  if (!isStatefulBlockArtifactType(blockType)) return false;
+  return (
+    getEnabledStatefulBlockArtifactTypes(experimentalEnabled).includes(
+      blockType,
+    ) && CLI_BLOCK_CONTEXT_TYPES.has(blockType)
+  );
+}
 
 function hasTableIdentity(
   tableIds: ReadonlySet<TableIdentity>,
@@ -77,7 +81,7 @@ function blockTargetFromNode(
 
   if (
     block.type === 'statefulBlock' &&
-    ENABLED_CLI_BLOCK_CONTEXT_TYPES.has(block.blockType)
+    isEnabledCliBlockType(block.blockType)
   ) {
     return {
       blockDocumentId,
@@ -280,7 +284,7 @@ export function useValidatedSelectedIds(): string[] {
           return (
             block?.type === 'chart' ||
             (block?.type === 'statefulBlock' &&
-              ENABLED_CLI_BLOCK_CONTEXT_TYPES.has(block.blockType))
+              isEnabledCliBlockType(block.blockType))
           );
         });
       }
