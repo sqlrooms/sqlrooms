@@ -20,7 +20,7 @@
     "build:examples": "turbo build --filter=./examples/*",
     "build:examples:ci": "turbo build --filter=./examples/* --concurrency=5",
     "check:typedoc-links": "node scripts/check-typedoc-links.mjs",
-    "check-circular-deps": "npx madge  --exclude \"dist\" --circular packages/*/src/index.ts",
+    "check-circular-deps": "npx madge --extensions ts,tsx --exclude dist --circular packages/*/src/index.ts apps/sqlrooms-cli-ui/src",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo && shx rm -rf examples/**/node_modules/.vite",
     "cli:publish": "node scripts/publish-sqlrooms-cli.mjs publish",
     "cli:publish:dry": "node scripts/publish-sqlrooms-cli.mjs publish --dry-run",
