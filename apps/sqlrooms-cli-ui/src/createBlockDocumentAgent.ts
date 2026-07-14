@@ -121,6 +121,7 @@ export function blockDocumentAgentTool(
             (block) =>
               block.type === 'statefulBlock' &&
               block.blockType === 'dashboard' &&
+              (block.ownership ?? 'owned') === 'owned' &&
               block.blockInstanceId === dashboardId,
           );
 
