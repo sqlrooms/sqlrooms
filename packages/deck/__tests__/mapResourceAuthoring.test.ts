@@ -141,6 +141,41 @@ describe('Deck map resource authoring contract', () => {
     ).toEqual([retainedLayer]);
   });
 
+  test('replaces omitted datasets only when explicitly requested', () => {
+    const existingConfig: DeckMapConfig = {
+      ...validConfig,
+      datasets: {
+        ...validConfig.datasets,
+        stale: {source: {tableName: 'missing_table'}},
+      },
+    };
+    const patch: DeckMapConfig = {
+      spec: {layers: []},
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'new_geom',
+        },
+      },
+    };
+
+    expect(
+      Object.keys(
+        mergeDeckMapResourceConfigPatch(existingConfig, patch).datasets,
+      ),
+    ).toEqual(['places', 'stale']);
+    expect(
+      mergeDeckMapResourceConfigPatch(existingConfig, patch, {
+        replaceDatasets: true,
+      }).datasets,
+    ).toEqual({
+      places: {
+        source: {tableName: 'places'},
+        geometryColumn: 'new_geom',
+      },
+    });
+  });
+
   test('keeps the reusable instructions aligned with durable invariants', () => {
     const instructions = getDeckMapResourceAiInstructions();
 

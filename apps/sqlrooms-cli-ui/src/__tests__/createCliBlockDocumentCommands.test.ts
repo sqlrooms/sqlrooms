@@ -46,12 +46,13 @@ function setup() {
             {
               '@@type': 'GeoArrowHeatmapLayer',
               id: 'stale-heatmap',
-              _sqlroomsBinding: {dataset: 'earthquakes'},
+              _sqlroomsBinding: {dataset: 'stale'},
             },
           ],
         },
         datasets: {
           earthquakes: {source: {tableName: 'earthquakes'}},
+          stale: {source: {tableName: 'missing_table'}},
         },
       },
     },
@@ -116,6 +117,7 @@ describe('createCliBlockDocumentCommands', () => {
         mapId: 'map-1',
         reasoning: 'change colors',
         replaceLayers: true,
+        replaceDatasets: true,
         config: {
           spec: {
             layers: [
@@ -136,6 +138,9 @@ describe('createCliBlockDocumentCommands', () => {
     expect((result as any).data).not.toHaveProperty('panelId');
     expect(mapsById['map-1'].title).toBe('Earthquake Explorer');
     expect(mapsById['map-1'].config.spec.layers).toHaveLength(1);
+    expect(Object.keys(mapsById['map-1'].config.datasets)).toEqual([
+      'earthquakes',
+    ]);
     expect(mapsById['map-1'].config.datasets.earthquakes).toMatchObject({
       geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',

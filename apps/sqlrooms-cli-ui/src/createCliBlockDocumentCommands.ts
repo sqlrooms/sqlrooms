@@ -422,12 +422,17 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                 ? {tableIdentity: getTableIdentity(table.table)}
                 : undefined;
             },
-            prepareConfig: ({config, existingMapConfig, replaceLayers}) =>
+            prepareConfig: ({
+              config,
+              existingMapConfig,
+              replaceLayers,
+              replaceDatasets,
+            }) =>
               normalizeDeckMapPointConfig({
                 config: mergeDeckMapResourceConfigPatch(
                   existingMapConfig,
                   config,
-                  {replaceLayers},
+                  {replaceLayers, replaceDatasets},
                 ),
                 resolveTable: (tableName) => state.db.findTable(tableName),
               }),
@@ -440,6 +445,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             title: params.title,
             intent: params.intent,
             replaceLayers: params.replaceLayers,
+            replaceDatasets: params.replaceDatasets,
             artifactLabel: 'block document',
             missingMapBlockBehavior: 'throw',
             createMapId: () => createDefaultBlockDocumentBlockId(),

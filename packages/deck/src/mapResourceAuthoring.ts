@@ -19,6 +19,8 @@ export type DeckMapResourceConfigValidationOptions = {
 export type DeckMapResourceConfigMergeOptions = {
   /** Treat an incoming `spec.layers` array as the complete replacement list. */
   replaceLayers?: boolean;
+  /** Treat incoming `datasets` as the complete replacement registry. */
+  replaceDatasets?: boolean;
 };
 
 /** Error raised before an invalid map resource can be durably written. */
@@ -130,7 +132,9 @@ function mergeSpecPatch(
 function mergeDatasetRegistry(
   existingDatasets: DeckMapConfig['datasets'],
   incomingDatasets: DeckMapConfig['datasets'],
+  replaceDatasets: boolean,
 ): DeckMapConfig['datasets'] {
+  if (replaceDatasets) return incomingDatasets;
   if (!hasEntries(incomingDatasets)) return existingDatasets;
   const datasets = {...existingDatasets};
   for (const [datasetId, incomingDataset] of Object.entries(incomingDatasets)) {
@@ -163,6 +167,7 @@ export function mergeDeckMapResourceConfigPatch(
     datasets: mergeDatasetRegistry(
       existingConfig.datasets,
       incomingConfig.datasets,
+      options.replaceDatasets === true,
     ),
     mapProps: mergeOptionalRecord(
       existingConfig.mapProps,
@@ -342,7 +347,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
-- To remove existing layers, set replaceLayers to true and send the complete desired spec.layers list. Omit it for additive sparse layer updates.
+- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates.
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 
 Minimal table-backed point map shape:

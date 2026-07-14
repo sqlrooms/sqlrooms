@@ -281,6 +281,9 @@ preparation so sparse updates retain durable dataset sources and layers.
 Pass `{replaceLayers: true}` when the incoming `spec.layers` array is the
 complete desired list and omitted existing layers should be removed; the
 default remains additive for sparse layer updates.
+Pass `{replaceDatasets: true}` when the incoming `datasets` object is the
+complete desired registry and omitted existing datasets should be removed; use
+both flags when replacing a complete multi-dataset layer set.
 
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
