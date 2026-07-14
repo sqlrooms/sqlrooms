@@ -187,11 +187,15 @@ export function DeckMapSurface({
   const handleFitError = useCallback(
     (error: Error) =>
       onReportIssue({
-        kind: 'sql-error',
+        kind: 'fit-error',
         message: error.message,
         recoverable: true,
       }),
     [onReportIssue],
+  );
+  const handleFitSuccess = useCallback(
+    () => onClearIssue('fit-error'),
+    [onClearIssue],
   );
   useDeckMapFitController({
     scopeId: mapId,
@@ -201,6 +205,7 @@ export function DeckMapSurface({
     deckMapRef,
     requestVersion: fitRequestVersion,
     autoFit: true,
+    onSuccess: handleFitSuccess,
     onError: handleFitError,
   });
 

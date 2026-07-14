@@ -277,7 +277,7 @@ function createInitialFitState(key: string, requestVersion: number) {
  * responsible only for resolving their dataset source and request version.
  *
  * @param options - Map identity, resolved fit inputs, view refs, request state,
- * and optional error reporting callback.
+ * and optional success and error callbacks.
  */
 export function useDeckMapFitController(options: {
   scopeId: string;
@@ -287,6 +287,7 @@ export function useDeckMapFitController(options: {
   deckMapRef: RefObject<DeckJsonMapHandle | null>;
   requestVersion: number;
   autoFit?: boolean;
+  onSuccess?: () => void;
   onError?: (error: Error) => void;
 }) {
   const {
@@ -297,6 +298,7 @@ export function useDeckMapFitController(options: {
     deckMapRef,
     requestVersion,
     autoFit = false,
+    onSuccess,
     onError,
   } = options;
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
@@ -363,6 +365,7 @@ export function useDeckMapFitController(options: {
         const query = createDeckMapBoundsQuery({source, fitToData});
         if (!query) {
           markHandled();
+          onSuccess?.();
           return;
         }
         const handle = await executeSql(query);
@@ -381,6 +384,7 @@ export function useDeckMapFitController(options: {
           );
         }
         markHandled();
+        onSuccess?.();
       } catch (error) {
         if (cancelled) return;
         const fitError =
@@ -406,6 +410,7 @@ export function useDeckMapFitController(options: {
     fitKey,
     fitToData,
     onError,
+    onSuccess,
     requestVersion,
     source,
   ]);

@@ -21,6 +21,10 @@ stay consistent without putting Mosaic APIs in the worksheet settings path.
 Use `getDeckMapDataPolicy(...)` to resolve a map config into the exported
 `DeckMapDataPolicy` runtime row-limit policy.
 
+Worksheet map runtime issues distinguish dataset SQL failures (`sql-error`)
+from fit-to-data bounds failures (`fit-error`), so each issue is cleared only
+after its corresponding operation recovers.
+
 Worksheet maps deliberately use independent selection semantics. Their direct
 data adapter executes each configured SQL/table dataset through the room's
 DuckDB connector and neither reads nor publishes Mosaic selections. This drops

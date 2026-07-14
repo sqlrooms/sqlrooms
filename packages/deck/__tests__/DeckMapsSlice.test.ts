@@ -88,20 +88,20 @@ describe('DeckMapsSlice', () => {
     ).toMatchObject({kind: 'sql-error'});
   });
 
-  test('clears only a matching runtime issue kind when requested', () => {
+  test('keeps fit failures when dataset SQL recovery is reported', () => {
     const store = createStore<any>(createDeckMapsSlice() as any);
     store.getState().deckMaps.reportMapIssue('map-1', {
-      kind: 'render-error',
-      message: 'invalid layer',
+      kind: 'fit-error',
+      message: 'missing longitude column',
       recoverable: true,
     });
 
     store.getState().deckMaps.clearMapIssue('map-1', 'sql-error');
     expect(
       store.getState().deckMaps.runtime.issuesByMapId['map-1'],
-    ).toMatchObject({kind: 'render-error'});
+    ).toMatchObject({kind: 'fit-error'});
 
-    store.getState().deckMaps.clearMapIssue('map-1', 'render-error');
+    store.getState().deckMaps.clearMapIssue('map-1', 'fit-error');
     expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
   });
 });

@@ -49,7 +49,12 @@ export type DeckMapsSliceConfig = {
 
 /** Ephemeral rendering or data issue associated with one Deck map resource. */
 export type DeckMapRuntimeIssue = {
-  kind: 'sql-error' | 'render-error' | 'data-policy-error' | 'config-error';
+  kind:
+    | 'sql-error'
+    | 'fit-error'
+    | 'render-error'
+    | 'data-policy-error'
+    | 'config-error';
   mapId: string;
   message: string;
   recoverable: boolean;
