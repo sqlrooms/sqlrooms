@@ -39,4 +39,19 @@ describe('Deck map fit core', () => {
     expect(query).toContain('"longitude"');
     expect(query).toContain('"latitude"');
   });
+
+  test('strips trailing semicolons from SQL dataset bounds queries', () => {
+    const query = createDeckMapBoundsQuery({
+      source: {sqlQuery: ' SELECT * FROM earthquakes; ;  '},
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    });
+
+    expect(query).toContain(
+      'FROM (SELECT * FROM earthquakes) AS "__sqlrooms_dashboard_map_source"',
+    );
+  });
 });

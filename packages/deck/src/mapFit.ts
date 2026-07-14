@@ -115,7 +115,7 @@ export function createDeckMapBoundsQuery(options: {
   const {source, fitToData} = options;
   if (!fitToData.dataset) return null;
   const baseSourceSql = isDeckMapSqlDatasetSource(source)
-    ? `SELECT * FROM (${source.sqlQuery}) AS "__sqlrooms_dashboard_map_source"`
+    ? `SELECT * FROM (${source.sqlQuery.trim().replace(/(?:\s*;+\s*)+$/, '')}) AS "__sqlrooms_dashboard_map_source"`
     : createDeckMapBoundsTableSourceSql(source);
 
   if (fitToData.h3Column) {
