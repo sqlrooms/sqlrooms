@@ -135,6 +135,9 @@ type DashboardAgentInputSchema = z.infer<typeof DashboardAgentInputSchema>;
  * @param options.databaseAdapter - Adapter for database operations and queries
  * @param options.chartToolsOptions - Optional chart configuration and type restrictions
  * @param options.extraTools - Optional factory for additional custom tools (e.g., map panels)
+ * @param options.authorizeDashboard - Optional host authorization checked at
+ * agent entry and again before every dashboard mutation. A denial fails the
+ * operation and never causes implicit selection of another dashboard.
  * @returns Tool instance that orchestrates multi-turn dashboard creation via a ToolLoopAgent
  */
 export function createDashboardAgentTool<

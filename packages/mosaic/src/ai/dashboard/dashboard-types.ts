@@ -53,7 +53,14 @@ export type ExtraDashboardAiToolsFactory = (
   params: ExtraDashboardAiToolsParams,
 ) => Record<string, Tool>;
 
-/** Host authorization for a dashboard target using the latest store state. */
+/**
+ * Authorizes mutation of a specific dashboard using the latest store state.
+ *
+ * The dashboard target is fixed by the caller. Throw (or reject) to deny the
+ * mutation; the dashboard agent and adapter do not select an alternative
+ * dashboard. Callers may surface the failure or explicitly establish a new
+ * valid target in a separate operation.
+ */
 export type AuthorizeDashboard<TState> = (params: {
   dashboardId: string;
   state: TState;
@@ -71,7 +78,10 @@ export type CreateDashboardAgentToolOptions<TState> =
      *
      * Hosts can use this to enforce product-specific ownership constraints,
      * such as requiring the dashboard to belong to a captured block document.
-     * The callback runs before the dashboard agent performs any mutation.
+     * The callback runs once when the dashboard agent starts and again with
+     * fresh state immediately before every adapter mutation. Throwing or
+     * rejecting blocks the operation; it does not make the agent retarget a
+     * different dashboard.
      */
     authorizeDashboard?: AuthorizeDashboard<TState>;
     /**

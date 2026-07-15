@@ -30,6 +30,15 @@ function assertCommandSuccess(result: RoomCommandResult, commandId: string) {
   }
 }
 
+/**
+ * Revalidates the fixed dashboard target immediately before an AI write.
+ *
+ * This closes the gap between the dashboard agent's entry-time authorization
+ * and later mutations in a multi-step run. It rejects deleted dashboards and
+ * delegates host-specific ownership checks to `authorizeDashboard` using the
+ * latest state. A denial is propagated to the caller; this function never
+ * searches for or switches to another dashboard.
+ */
 async function authorizeDashboardMutation<
   TState extends MosaicDashboardStoreState,
 >(
@@ -51,6 +60,8 @@ async function authorizeDashboardMutation<
  * @template TState - Store state type extending MosaicDashboardStoreState
  * @param store - Zustand store instance with dashboard management capabilities
  * @param dashboardId - ID of the dashboard to scope adapter operations to
+ * @param authorizeDashboard - Optional host authorization re-run before each
+ * mutation. Throwing or rejecting blocks that mutation without retargeting.
  * @returns Dashboard adapter instance with panel and table management methods
  */
 export function createDashboardAiAdapter<
