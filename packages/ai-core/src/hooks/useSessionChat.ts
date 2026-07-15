@@ -8,6 +8,13 @@ import {
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import {fixIncompleteToolCalls} from '../utils';
+import {getChatActiveStatus} from '../components/ChatActiveStatus';
+import {
+  createIdleStreamTimeoutError,
+  createToolTimeoutError,
+  getConfiguredTimeoutMs,
+  getPendingClientToolTimeouts,
+} from '../timeouts';
 
 export type {AddToolOutput} from '../types';
 
@@ -75,6 +82,9 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const setAddToolApprovalResponse = useStoreWithAi(
     (s) => s.ai.setAddToolApprovalResponse,
   );
+  const setIsRunning = useStoreWithAi((s) => s.ai.setIsRunning);
+  const tools = useStoreWithAi((s) => s.ai.tools);
+  const timeouts = useStoreWithAi((s) => s.ai.timeouts);
 
   // Get per-session abort controller
   const getAbortController = useStoreWithAi((s) => s.ai.getAbortController);
@@ -111,6 +121,12 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);
   const latestMessagesRef = useRef<UIMessage[]>(initialMessages);
+  const clientToolTimeoutsRef = useRef(
+    new Map<
+      string,
+      {timeoutId: ReturnType<typeof setTimeout>; timeoutMs: number}
+    >(),
+  );
 
   const {
     messages,
@@ -142,6 +158,81 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     onError: (error) =>
       onChatError?.(sessionId, error, latestMessagesRef.current),
   });
+
+  // Fail no-execute tools that never provide client-side output. Executable
+  // tools are timed out in the local agent transport instead.
+  useEffect(() => {
+    const pending = currentSession?.isRunning
+      ? getPendingClientToolTimeouts(messages as UIMessage[], tools, timeouts)
+      : [];
+    const pendingIds = new Set(pending.map(({toolCallId}) => toolCallId));
+
+    for (const [toolCallId, entry] of clientToolTimeoutsRef.current) {
+      if (!pendingIds.has(toolCallId)) {
+        clearTimeout(entry.timeoutId);
+        clientToolTimeoutsRef.current.delete(toolCallId);
+      }
+    }
+
+    for (const {toolCallId, toolName, timeoutMs} of pending) {
+      const existing = clientToolTimeoutsRef.current.get(toolCallId);
+      if (existing?.timeoutMs === timeoutMs) continue;
+      if (existing) clearTimeout(existing.timeoutId);
+
+      const timeoutId = setTimeout(() => {
+        clientToolTimeoutsRef.current.delete(toolCallId);
+        addToolOutput({
+          tool: toolName,
+          toolCallId,
+          state: 'output-error',
+          errorText: createToolTimeoutError(toolName, timeoutMs).message,
+        });
+      }, timeoutMs);
+      clientToolTimeoutsRef.current.set(toolCallId, {timeoutId, timeoutMs});
+    }
+  }, [addToolOutput, currentSession?.isRunning, messages, timeouts, tools]);
+
+  useEffect(
+    () => () => {
+      for (const {timeoutId} of clientToolTimeoutsRef.current.values()) {
+        clearTimeout(timeoutId);
+      }
+      clientToolTimeoutsRef.current.clear();
+    },
+    [],
+  );
+
+  // Treat UI message updates as observable stream progress. This cannot tell
+  // a silent-but-healthy operation from a stuck one, so the watchdog is opt-in.
+  useEffect(() => {
+    const timeoutMs = getConfiguredTimeoutMs(timeouts.idleStreamMs);
+    const isWaitingForApproval =
+      getChatActiveStatus(messages as UIMessage[]).kind === 'approval';
+    if (
+      !currentSession?.isRunning ||
+      timeoutMs == null ||
+      isWaitingForApproval
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      const controller = getAbortController(sessionId);
+      if (!controller || controller.signal.aborted) return;
+      controller.abort(createIdleStreamTimeoutError(timeoutMs));
+      stop();
+      setIsRunning(sessionId, false);
+    }, timeoutMs);
+    return () => clearTimeout(timeoutId);
+  }, [
+    currentSession?.isRunning,
+    getAbortController,
+    messages,
+    sessionId,
+    setIsRunning,
+    stop,
+    timeouts.idleStreamMs,
+  ]);
 
   // If user aborts mid-stream, stop the local chat stream immediately
   useEffect(() => {

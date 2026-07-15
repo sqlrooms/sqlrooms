@@ -49,24 +49,28 @@ export function mergeAbortSignals(
   // which would otherwise accumulate one listener per request if requests usually complete normally.
   //
   // Node >=22 and modern browsers support this.
-  // We intentionally use an `any` cast to keep compatibility with older TS lib typings.
-  // const anyFn = (AbortSignal as unknown as {any?: (signals: AbortSignal[]) => AbortSignal})
-  //   .any;
-  // if (typeof anyFn === 'function') {
-  //   return anyFn(present);
-  // }
+  // Keep compatibility with older TS lib typings while using the native
+  // implementation wherever the runtime supports it.
+  const anyFn = (
+    AbortSignal as unknown as {
+      any?: (signals: AbortSignal[]) => AbortSignal;
+    }
+  ).any;
+  if (typeof anyFn === 'function') {
+    return anyFn(present);
+  }
 
   const controller = new AbortController();
-  const abort = () => {
-    if (!controller.signal.aborted) controller.abort();
+  const abort = (signal: AbortSignal) => {
+    if (!controller.signal.aborted) controller.abort(signal.reason);
   };
 
   for (const s of present) {
     if (s.aborted) {
-      abort();
+      abort(s);
       break;
     }
-    s.addEventListener(ABORT_EVENT, abort, {once: true});
+    s.addEventListener(ABORT_EVENT, () => abort(s), {once: true});
   }
 
   return controller.signal;
@@ -464,9 +468,13 @@ export function shouldEndAnalysis(messages: UIMessage[]): boolean {
  * after the user stops a tool call mid-stream.
  *
  * @param messages - The messages to validate and complete
+ * @param incompleteToolError - Error text for synthesized tool results
  * @returns Cleaned messages with completed tool-call/result pairs
  */
-export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
+export function fixIncompleteToolCalls(
+  messages: UIMessage[],
+  incompleteToolError: string = TOOL_CALL_CANCELLED,
+): UIMessage[] {
   return messages.map((message) => {
     if (message.role !== 'assistant' || !message.parts) {
       return message;
@@ -556,7 +564,7 @@ export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
         state: 'output-error' as const,
         input: undefined,
         rawInput: toolPart.rawInput ?? toolPart.input,
-        errorText: TOOL_CALL_CANCELLED,
+        errorText: incompleteToolError,
         providerExecuted: false,
       };
 

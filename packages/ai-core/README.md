@@ -101,6 +101,38 @@ for app-owned follow-up behavior, such as forking a completed chat into a new
 workspace target, while keeping the generic AI slice unaware of app-specific
 state.
 
+### Optional timeout safety limits
+
+Chat and tool timeouts are disabled by default. Apps can opt into a generous
+run limit, an idle-stream watchdog, and tool execution limits through
+`createAiSlice`. Timeout options are runtime behavior and are not persisted in
+workspace configuration.
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  timeouts: {
+    runMs: 30 * 60_000,
+    idleStreamMs: 5 * 60_000,
+    toolExecutionMs: 5 * 60_000,
+    tools: {
+      query: undefined, // Allow long-running queries.
+      fetchMetadata: 30_000,
+    },
+  },
+});
+```
+
+`runMs` covers the complete multi-step run. `idleStreamMs` resets when the UI
+receives observable message progress and pauses while waiting for tool
+approval. A silent operation that is still working is indistinguishable from a
+stalled operation, so idle timeouts should remain conservative. Tool timeouts
+abort the signal passed to the tool and fail its pending call; tools should
+honor `abortSignal` to stop their underlying work promptly. Local executable
+tools and no-execute tools awaiting client output are covered; remote endpoints
+remain responsible for enforcing timeouts around tools they execute server-side.
+
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's
 `uiMessages` through the selected message or chat turn, inherits the source

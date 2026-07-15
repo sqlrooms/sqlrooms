@@ -42,6 +42,12 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
+import {
+  ChatTimeoutError,
+  createToolTimeoutError,
+  getToolExecutionTimeoutMs,
+  type AiTimeoutOptions,
+} from './timeouts';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -212,6 +218,7 @@ export type ChatTransportConfig = {
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;
+  timeouts?: AiTimeoutOptions;
 };
 
 function getSessionById(
@@ -230,6 +237,7 @@ export function withRunContextTools(
     state: AiSliceStateForTransport;
     getAiRunContext?: () => AiRunContext | undefined;
     setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+    timeouts?: AiTimeoutOptions;
   },
 ): ToolSet {
   return Object.fromEntries(
@@ -254,19 +262,51 @@ export function withRunContextTools(
             if (toolCallId && args.sessionId) {
               args.state.ai.setToolCallSession(toolCallId, args.sessionId);
             }
-            return originalExecute(
-              input as never,
-              {
-                ...options,
-                sessionId: args.sessionId,
-                aiRunContext: args.getAiRunContext
-                  ? args.getAiRunContext()
-                  : args.aiRunContext,
-                getAiRunContext: args.getAiRunContext,
-                setAiRunContext: args.setAiRunContext,
-                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
-              } as never,
-            );
+            const timeoutMs = getToolExecutionTimeoutMs(args.timeouts, name);
+            const timeoutController =
+              timeoutMs == null ? undefined : new AbortController();
+            const incomingAbortSignal = options?.abortSignal as
+              | AbortSignal
+              | undefined;
+            const abortSignal = mergeAbortSignals([
+              incomingAbortSignal,
+              timeoutController?.signal,
+            ]);
+            const executionOptions = {
+              ...options,
+              abortSignal,
+              sessionId: args.sessionId,
+              aiRunContext: args.getAiRunContext
+                ? args.getAiRunContext()
+                : args.aiRunContext,
+              getAiRunContext: args.getAiRunContext,
+              setAiRunContext: args.setAiRunContext,
+              setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+            } as never;
+
+            if (timeoutMs == null || !timeoutController) {
+              return originalExecute(input as never, executionOptions);
+            }
+
+            let timeoutId: ReturnType<typeof setTimeout> | undefined;
+            const timeoutError = createToolTimeoutError(name, timeoutMs);
+            const timeoutPromise = new Promise<never>((_resolve, reject) => {
+              timeoutId = setTimeout(() => {
+                timeoutController.abort(timeoutError);
+                reject(timeoutError);
+              }, timeoutMs);
+            });
+
+            try {
+              return await Promise.race([
+                Promise.resolve(
+                  originalExecute(input as never, executionOptions),
+                ),
+                timeoutPromise,
+              ]);
+            } finally {
+              if (timeoutId) clearTimeout(timeoutId);
+            }
           },
         },
       ];
@@ -340,6 +380,7 @@ export function createLocalChatTransportFactory({
   headers,
   getInstructions,
   getCustomModel,
+  timeouts,
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -404,6 +445,7 @@ export function createLocalChatTransportFactory({
         setPrimaryRunContextItem: (item) => {
           setAiRunContext(setAiRunContextPrimaryItem(aiRunContext, item));
         },
+        timeouts,
       });
 
       // get system instructions dynamically at request time to ensure fresh table schema
@@ -636,7 +678,15 @@ export function createChatHandlers({
             (getSessionById(store, sessionId)?.uiMessages as UIMessage[]) || [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
-          const completedMessages = fixIncompleteToolCalls(sourceMessages);
+          const abortReason = abortController?.signal.reason;
+          const abortMessage =
+            abortReason instanceof ChatTimeoutError
+              ? abortReason.message
+              : TOOL_CALL_CANCELLED;
+          const completedMessages = fixIncompleteToolCalls(
+            sourceMessages,
+            abortMessage,
+          );
 
           // Enrich cancelled agent tool calls with progress snapshots so the
           // LLM can see what sub-agents accomplished before the abort.
@@ -652,7 +702,7 @@ export function createChatHandlers({
             .slice(-1)[0];
           if (cancelledUserMessage) {
             setChatRequestErrorMessage(cancelledUserMessage, {
-              error: TOOL_CALL_CANCELLED,
+              error: abortMessage,
             });
           }
           state.ai.setSessionUiMessages(sessionId, completedMessages);
@@ -718,7 +768,12 @@ export function createChatHandlers({
     ) => {
       try {
         consumeSessionTokenUsage(sessionId);
-        let errMsg = getErrorMessageForDisplay(error);
+        const timeoutReason = store.getState().ai.getAbortController(sessionId)
+          ?.signal.reason;
+        let errMsg =
+          timeoutReason instanceof ChatTimeoutError
+            ? timeoutReason.message
+            : getErrorMessageForDisplay(error);
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }

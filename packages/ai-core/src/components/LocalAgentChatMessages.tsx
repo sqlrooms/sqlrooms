@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import type {AgentToolCall} from '../types';
 import {isDynamicToolPart, isToolPart} from '../utils';
-import {AiThinkingDots} from './AiThinkingDots';
+import {ChatActiveStatus} from './ChatActiveStatus';
 import {useToolRenderBehavior} from './FlatAgentRenderer';
 import {useChatRuntime} from './ChatRuntimeContext';
 
@@ -36,7 +36,7 @@ export const LocalAgentChatMessages: FC<LocalAgentChatMessagesProps> = ({
             <LocalAgentMessageView key={message.id} message={message} />
           ))}
           {runtime.isStreaming && (
-            <AiThinkingDots className="text-muted-foreground px-1" />
+            <ChatActiveStatus messages={runtime.messages} className="px-1" />
           )}
           <div className="h-4 w-full shrink-0" />
         </div>
