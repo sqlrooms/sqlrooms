@@ -4,9 +4,10 @@ import {
 } from '@sqlrooms/documents';
 import {getTableIdentity} from '@sqlrooms/duckdb';
 import {
-  createOrUpdateDeckMapBlock,
-  DeckMapDashboardToolParameters,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
+  createOrUpdateDeckMapResource,
+  DeckMapResourceToolParameters,
+  mergeDeckMapResourceConfigPatch,
+  normalizeDeckMapPointConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -68,7 +69,7 @@ const BlockDocumentUpdateBlockMetadataInput = BlockDocumentIdInput.extend({
 });
 
 export const BlockDocumentMapBlockToolParameters =
-  DeckMapDashboardToolParameters.extend({
+  DeckMapResourceToolParameters.extend({
     title: z.string().optional().describe('Map title.'),
     blockDocumentId: z.string().describe('Target block document artifact ID.'),
     mapId: z
@@ -150,21 +151,6 @@ function findStatefulBlock(
         candidate.blockInstanceId === blockInstanceId
       );
     });
-}
-
-function findMapPanel(state: RoomState, mapId: string, panelId?: string) {
-  const dashboard = state.mosaicDashboard.getDashboard(mapId);
-  if (panelId) {
-    return dashboard?.panels.find(
-      (candidate: {id?: string; type?: string}) =>
-        candidate.id === panelId &&
-        candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-    );
-  }
-  return dashboard?.panels.find(
-    (candidate: {type?: string}) =>
-      candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-  );
 }
 
 export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
@@ -366,7 +352,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         const state = getState();
         resolveBlockDocumentArtifact(state, params.blockDocumentId);
 
-        const result = await createOrUpdateDeckMapBlock(
+        const result = await createOrUpdateDeckMapResource(
           {
             ensureBlockDocument: (id) =>
               state.blockDocuments.ensureBlockDocument(id),
@@ -376,13 +362,11 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                 ? {
                     blockId: block.id,
                     mapId: block.blockInstanceId,
-                    caption:
-                      'caption' in block ? block.caption : undefined,
+                    caption: 'caption' in block ? block.caption : undefined,
                   }
                 : undefined;
             },
-            findMapPanel: (mapId, panelId) =>
-              findMapPanel(state, mapId, panelId),
+            findMap: (mapId) => state.deckMaps.getMap(mapId),
             createMapBlock: async ({
               blockDocumentId,
               mapId,
@@ -427,32 +411,10 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                 },
               );
             },
-            ensureMapState: () => {
-              // create-stateful-block / ensureDashboard handle map state.
-            },
-            ensureDashboard: (mapId, title) => {
-              state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
-            },
-            setSelectedTable: async (mapId, tableIdentity) => {
-              await invokeRequiredCommand(
-                state,
-                DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID,
-                {dashboardId: mapId, tableName: tableIdentity},
-              );
-            },
-            addOrUpdateMapPanel: async ({mapId, panel, existingPanelId}) => {
-              if (existingPanelId) {
-                await invokeRequiredCommand(state, 'dashboard.update-panel', {
-                  dashboardId: mapId,
-                  panelId: existingPanelId,
-                  patch: {title: panel.title, config: panel.config},
-                });
-              } else {
-                await invokeRequiredCommand(state, 'dashboard.add-panel', {
-                  dashboardId: mapId,
-                  panel,
-                });
-              }
+            ensureMap: (mapId, title) =>
+              state.deckMaps.ensureMap(mapId, {title}),
+            writeMap: ({mapId, title, config, selectedTable}) => {
+              state.deckMaps.updateMap(mapId, {title, config, selectedTable});
             },
             findTable: (tableName) => {
               const table = state.db.findTable(tableName);
@@ -460,15 +422,30 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
                 ? {tableIdentity: getTableIdentity(table.table)}
                 : undefined;
             },
+            prepareConfig: ({
+              config,
+              existingMapConfig,
+              replaceLayers,
+              replaceDatasets,
+            }) =>
+              normalizeDeckMapPointConfig({
+                config: mergeDeckMapResourceConfigPatch(
+                  existingMapConfig,
+                  config,
+                  {replaceLayers, replaceDatasets},
+                ),
+                resolveTable: (tableName) => state.db.findTable(tableName),
+              }),
           },
           {
             blockDocumentId: params.blockDocumentId,
             config: params.config,
             mapId: params.mapId,
-            panelId: params.panelId,
             tableName: params.tableName,
             title: params.title,
             intent: params.intent,
+            replaceLayers: params.replaceLayers,
+            replaceDatasets: params.replaceDatasets,
             artifactLabel: 'block document',
             missingMapBlockBehavior: 'throw',
             createMapId: () => createDefaultBlockDocumentBlockId(),
@@ -483,7 +460,6 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             blockDocumentId: result.blockDocumentId,
             blockId: result.blockId,
             mapId: result.mapId,
-            panelId: result.panelId,
             selectedTable: result.selectedTable,
           },
         };

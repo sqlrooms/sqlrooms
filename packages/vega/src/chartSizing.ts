@@ -28,12 +28,14 @@ const MAX_MEANINGFUL_CATEGORY_COUNT = Math.ceil(
 
 type JsonObject = Record<string, unknown>;
 
+/** Returns a JSON object value while excluding arrays and primitives. */
 function asObject(value: unknown): JsonObject | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as JsonObject)
     : undefined;
 }
 
+/** Extracts the Vega-Lite mark type from string and object mark definitions. */
 function getMarkType(spec: JsonObject): string | undefined {
   if (typeof spec.mark === 'string') {
     return spec.mark;
@@ -41,6 +43,7 @@ function getMarkType(spec: JsonObject): string | undefined {
   return asObject(spec.mark)?.type as string | undefined;
 }
 
+/** Finds the discrete y field of a horizontal bar unit in a nested spec. */
 function getHorizontalBarCategoryField(
   spec: JsonObject,
   inheritedEncoding: JsonObject = {},
@@ -76,6 +79,7 @@ function getHorizontalBarCategoryField(
     : undefined;
 }
 
+/** Counts distinct non-null field values up to the height saturation point. */
 function countDistinctValues(table: arrow.Table, field: string): number {
   const vector = table.getChild(field);
   if (!vector) return 0;

@@ -23,7 +23,8 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
+import {createDeckMapsSlice, DeckMapsSliceConfig} from '@sqlrooms/deck';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck/mosaic';
 import {
   arrowTableToJson,
   createDefaultLoadTableSchemasFilter,
@@ -640,6 +641,7 @@ const sliceConfigSchemas = {
   appProject: AppBuilderProjectConfigSchema,
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
+  deckMaps: DeckMapsSliceConfig,
   pivot: PivotSliceConfig,
   python: PythonSliceConfig,
 } as const;
@@ -998,6 +1000,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             schema: MOSAIC_PREAGG_SCHEMA_REF,
           },
         })(set, get, store),
+
+        ...createDeckMapsSlice()(set, get, store),
 
         ...createDashboardFeatureSlices(
           experimentalEnabled

@@ -1,163 +1,121 @@
 import {
-  BlockCaptionEditor,
-  DataTableSelectorEmptyState,
-  getMosaicDashboardSelectionName,
-  type MosaicDashboardStoreState,
-  useTablesWithColumns,
-  useStoreWithMosaicDashboard,
-} from '@sqlrooms/mosaic';
+  getTableIdentity,
+  type DataTable,
+  type DuckDbSliceState,
+} from '@sqlrooms/duckdb';
 import {useBlockSettingsStore} from '@sqlrooms/documents';
-import {getTableIdentity, type DataTable} from '@sqlrooms/duckdb';
-import {MapIcon, SlidersVerticalIcon} from 'lucide-react';
-import {Button} from '@sqlrooms/ui';
+import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {FocusIcon, MapIcon, SlidersVerticalIcon} from 'lucide-react';
 import {
   Component,
   useCallback,
   useEffect,
-  useMemo,
+  useState,
   type ErrorInfo,
   type ReactNode,
 } from 'react';
 import {
-  createDeckMapDashboardPanelConfig,
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-} from './dashboardConfig';
-import {deckMapDashboardPanelRenderer} from './dashboard';
+  DeckMapSurface,
+  directDeckMapDataAdapter,
+  type DeckMapDataAdapter,
+} from './DeckMapSurface';
+import {type DeckMapsSliceState, useStoreWithDeckMaps} from './DeckMapsSlice';
+import {createEmptyDeckMapConfig} from './mapConfig';
 import {
-  createDeckMapDashboardPanelConfigForTable,
+  createDeckMapConfigForTable,
   findGeometryColumn,
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
 
-function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
-  return createDeckMapDashboardPanelConfig({
-    title,
-    spec: {
-      initialViewState: {longitude: 0, latitude: 20, zoom: 1.5},
-      layers: [],
-    },
-    datasets: {},
-  });
-}
+type DeckMapResourceState = DeckMapsSliceState & DuckDbSliceState;
 
-class DeckMapBlockErrorBoundary extends Component<
-  {
-    children: ReactNode;
-    onError?: (error: Error) => void;
-    onRenderSuccess?: () => void;
-  },
-  {error?: Error}
+type DeckMapResourceErrorBoundaryProps = {
+  children: ReactNode;
+  onError: (error: Error) => void;
+  resetKey: unknown;
+};
+
+type DeckMapResourceErrorBoundaryState = {
+  error?: Error;
+  resetKey: unknown;
+};
+
+class DeckMapResourceErrorBoundary extends Component<
+  DeckMapResourceErrorBoundaryProps,
+  DeckMapResourceErrorBoundaryState
 > {
-  state: {error?: Error} = {};
-
+  state: DeckMapResourceErrorBoundaryState = {
+    resetKey: this.props.resetKey,
+  };
   static getDerivedStateFromError(error: Error) {
     return {error};
   }
-
+  static getDerivedStateFromProps(
+    props: DeckMapResourceErrorBoundaryProps,
+    state: DeckMapResourceErrorBoundaryState,
+  ) {
+    return Object.is(props.resetKey, state.resetKey)
+      ? null
+      : {error: undefined, resetKey: props.resetKey};
+  }
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[DeckMapBlockErrorBoundary] Error rendering map:', error, {
-      componentStack: errorInfo.componentStack,
-    });
-    this.props.onError?.(error);
+    console.error(
+      '[DeckMapResourceErrorBoundary] Map render failed',
+      error,
+      errorInfo,
+    );
+    this.props.onError(error);
   }
-
-  componentDidMount() {
-    if (!this.state.error) {
-      this.props.onRenderSuccess?.();
-    }
-  }
-
   render() {
     if (this.state.error) {
       return (
         <div className="text-muted-foreground flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">
-          <div className="max-w-md">
-            <div className="text-foreground font-medium">
-              Map failed to render
-            </div>
-            <div className="mt-1 font-mono text-xs break-words">
-              {this.state.error.message}
-            </div>
-          </div>
+          Map failed to render: {this.state.error.message}
         </div>
       );
     }
-
     return this.props.children;
   }
 }
 
-/**
- * Ensures persisted map block state exists for an embeddable map surface.
- * If a geospatial table is available, the block is seeded with a starter map.
- */
-export function ensureDeckMapBlockState(
-  state: MosaicDashboardStoreState,
+/** Ensures a first-class map resource, optionally seeded from geospatial data. */
+export function ensureDeckMapResourceState(
+  state: DeckMapResourceState,
   mapId: string,
   title?: string,
 ) {
-  state.mosaicDashboard.ensureDashboard(mapId, title, 'grid');
-
-  const dashboard = state.mosaicDashboard.getDashboard(mapId);
-  if (
-    !dashboard ||
-    dashboard.panels.some(
-      (panel) => panel.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-    )
-  ) {
-    return;
-  }
-
+  if (state.deckMaps.getMap(mapId)) return;
   const table = state.db.tables.find(
     (candidate) =>
       Boolean(findLongitudeLatitudeColumns(candidate)) ||
       Boolean(findGeometryColumn(candidate)),
   );
-
-  if (table) {
-    state.mosaicDashboard.setSelectedTable(
-      mapId,
-      getTableIdentity(table.table),
-    );
-    state.mosaicDashboard.addPanel(
-      mapId,
-      createDeckMapDashboardPanelConfigForTable({
-        title: `${table.tableName} map`,
-        tableName: table.tableName,
-        columns: table.columns,
-        tableReference: table.table,
-      }),
-    );
-    return;
-  }
-
-  state.mosaicDashboard.addPanel(
-    mapId,
-    createEmptyDeckMapDashboardPanelConfig(title),
-  );
+  state.deckMaps.ensureMap(mapId, {
+    title: title ?? 'Map',
+    config: table
+      ? createDeckMapConfigForTable({
+          tableName: table.tableName,
+          columns: table.columns,
+          tableReference: table.table,
+        })
+      : createEmptyDeckMapConfig(),
+  });
+  if (table)
+    state.deckMaps.setSelectedTable(mapId, getTableIdentity(table.table));
 }
 
-/** Props for rendering an embeddable Deck map block. */
 export type DeckMapBlockRendererProps = {
-  /** Durable map block id used to store backing Mosaic dashboard state. */
   mapId: string;
-  /** Display title used when initializing empty map state. */
   title?: string;
-  /** Optional header text that overrides the title when rendering. */
   caption?: string;
-  /** Callback when caption changes. */
   onCaptionChange?: (caption: string | undefined) => void;
-  /** Whether the containing document block is selected. */
   selected?: boolean;
-  /** Whether the block is read-only. */
   readOnly?: boolean;
-  /** Optional actions rendered in the map header before the settings button. */
   headerActions?: ReactNode;
+  dataAdapter?: DeckMapDataAdapter;
 };
 
-/**
- * Renders an embeddable Deck map block backed by SQLRooms map panel state.
- */
+/** Mosaic-free worksheet map renderer backed only by `deckMaps`. */
 export function DeckMapBlockRenderer({
   mapId,
   title,
@@ -166,29 +124,22 @@ export function DeckMapBlockRenderer({
   selected,
   readOnly,
   headerActions,
+  dataAdapter = directDeckMapDataAdapter,
 }: DeckMapBlockRendererProps) {
-  const dashboard = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.config.dashboardsById[mapId],
+  const map = useStoreWithDeckMaps(
+    (state) => state.deckMaps.config.mapsById[mapId],
   );
-  const tables = useStoreWithMosaicDashboard((state) => state.db.tables);
-  const tablesWithColumns = useTablesWithColumns();
-  const ensureDashboard = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.ensureDashboard,
+  const tables = useStoreWithDeckMaps((state) => state.db.tables);
+  const ensureMap = useStoreWithDeckMaps((state) => state.deckMaps.ensureMap);
+  const updateMap = useStoreWithDeckMaps((state) => state.deckMaps.updateMap);
+  const setSelectedTable = useStoreWithDeckMaps(
+    (state) => state.deckMaps.setSelectedTable,
   );
-  const setSelectedTable = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.setSelectedTable,
+  const reportMapIssue = useStoreWithDeckMaps(
+    (state) => state.deckMaps.reportMapIssue,
   );
-  const addPanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.addPanel,
-  );
-  const updatePanel = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.updatePanel,
-  );
-  const reportPanelIssue = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.reportPanelIssue,
-  );
-  const clearPanelIssue = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.clearPanelIssue,
+  const clearMapIssue = useStoreWithDeckMaps(
+    (state) => state.deckMaps.clearMapIssue,
   );
   const requestOpenSettingsPanel = useBlockSettingsStore(
     (state) => state.blockSettings.requestOpenSettingsPanel,
@@ -200,215 +151,149 @@ export function DeckMapBlockRenderer({
     (state) => state.blockSettings.runtime.isSettingsPanelOpen,
   );
   const isSettingsShown = Boolean(selected && isSettingsPanelOpen);
+  const [fitRequestVersion, setFitRequestVersion] = useState(0);
 
   useEffect(() => {
-    if (!mapId) {
-      return;
-    }
-
-    ensureDashboard(
-      mapId,
-      dashboard ? undefined : (title ?? 'Embedded Map'),
-      'grid',
-    );
-  }, [dashboard, ensureDashboard, mapId, title]);
-
-  useEffect(() => {
-    if (!mapId || !dashboard) {
-      return;
-    }
-    if (
-      dashboard.panels.some(
-        (panel) => panel.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-      )
-    ) {
-      return;
-    }
-
-    const table = tables.find(
-      (candidate) =>
-        Boolean(findLongitudeLatitudeColumns(candidate)) ||
-        Boolean(findGeometryColumn(candidate)),
-    );
-
-    if (table) {
-      setSelectedTable(mapId, getTableIdentity(table.table));
-      addPanel(
-        mapId,
-        createDeckMapDashboardPanelConfigForTable({
-          title: `${table.tableName} map`,
-          tableName: table.tableName,
-          columns: table.columns,
-          tableReference: table.table,
-        }),
-      );
-      return;
-    }
-
-    addPanel(
-      mapId,
-      createEmptyDeckMapDashboardPanelConfig(title ?? 'Embedded Map'),
-    );
-  }, [addPanel, dashboard, mapId, setSelectedTable, tables, title]);
-
-  const panel = useMemo(
-    () =>
-      dashboard?.panels.find(
-        (candidate) => candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-      ),
-    [dashboard?.panels],
-  );
-  const selectedTable = useMemo(
-    () =>
-      tablesWithColumns.find(
-        (table) => getTableIdentity(table.table) === dashboard?.selectedTable,
-      ),
-    [dashboard?.selectedTable, tablesWithColumns],
-  );
+    if (mapId && !map) ensureMap(mapId, {title: title ?? 'Embedded Map'});
+  }, [ensureMap, map, mapId, title]);
 
   const handleTableChange = useCallback(
     (table: DataTable) => {
-      if (!mapId || !panel) {
-        return;
-      }
-
       setSelectedTable(mapId, getTableIdentity(table.table));
-      const hasGeospatialColumns =
+      const hasGeo =
         Boolean(findLongitudeLatitudeColumns(table)) ||
         Boolean(findGeometryColumn(table));
-      const nextPanel = hasGeospatialColumns
-        ? createDeckMapDashboardPanelConfigForTable({
-            title: `${table.tableName} map`,
-            tableName: table.tableName,
-            columns: table.columns,
-            tableReference: table.table,
-          })
-        : createEmptyDeckMapDashboardPanelConfig(title ?? 'Embedded Map');
-      updatePanel(mapId, panel.id, {
-        title: nextPanel.title,
-        type: nextPanel.type,
-        config: nextPanel.config,
+      updateMap(mapId, {
+        config: hasGeo
+          ? createDeckMapConfigForTable({
+              tableName: table.tableName,
+              columns: table.columns,
+              tableReference: table.table,
+            })
+          : createEmptyDeckMapConfig(),
       });
     },
-    [mapId, panel, setSelectedTable, title, updatePanel],
-  );
-  const handleSettingsClick = useCallback(() => {
-    if (isSettingsShown) {
-      requestCloseSettingsPanel();
-      return;
-    }
-
-    requestOpenSettingsPanel();
-  }, [isSettingsShown, requestCloseSettingsPanel, requestOpenSettingsPanel]);
-  const mapBoundaryKey = [
-    mapId || 'no-map',
-    panel?.id ?? 'no-panel',
-    panel?.config ? JSON.stringify(panel.config) : 'no-config',
-  ].join(':');
-  const mapConfig = panel?.config as
-    | {datasets?: Record<string, unknown>}
-    | undefined;
-  const hasDatasets = Object.keys(mapConfig?.datasets ?? {}).length > 0;
-  const handleMapRenderSuccess = useCallback(() => {
-    if (!mapId || !panel) {
-      return;
-    }
-
-    clearPanelIssue(mapId, panel.id);
-  }, [clearPanelIssue, mapId, panel]);
-  // The no-dataset state intentionally bypasses the error boundary, so treat
-  // reaching it as a successful recovery from any prior render error.
-  useEffect(() => {
-    if (!mapId || !panel || hasDatasets) {
-      return;
-    }
-
-    clearPanelIssue(mapId, panel.id);
-  }, [clearPanelIssue, hasDatasets, mapId, panel]);
-  const handleMapRenderError = useCallback(
-    (error: Error) => {
-      if (!mapId || !panel) {
-        return;
-      }
-
-      reportPanelIssue(mapId, panel.id, {
-        kind: 'render-error',
-        panelId: panel.id,
-        chartType: DECK_MAP_DASHBOARD_PANEL_TYPE,
-        message: error.message,
-        recoverable: true,
-      });
-    },
-    [mapId, panel, reportPanelIssue],
+    [mapId, setSelectedTable, updateMap],
   );
 
-  if (!dashboard || !panel) {
+  if (!map) {
     return (
-      <div className="bg-muted/10 flex h-full min-h-[320px] flex-col">
-        <div className="border-border flex shrink-0 items-center gap-2 border-b px-3 py-2 text-sm font-medium">
-          <MapIcon className="h-4 w-4" />
-          <span>{title || 'Embedded Map'}</span>
-        </div>
-        <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center p-4 text-center text-sm">
-          Preparing map...
-        </div>
+      <div className="text-muted-foreground flex h-full min-h-[320px] items-center justify-center">
+        Preparing map...
       </div>
     );
   }
-
-  const HeaderActions = deckMapDashboardPanelRenderer.headerActions;
-  const MapPanel = deckMapDashboardPanelRenderer.component;
-  const rendererProps = {
-    dashboardId: mapId,
-    dashboard,
-    panel,
-    selectionName: getMosaicDashboardSelectionName(mapId),
-  };
+  const hasDatasets = Object.keys(map.config.datasets).length > 0;
+  const canFitView = Boolean(map.config.fitToData && hasDatasets);
+  const fitViewLabel = canFitView
+    ? 'Fit map view to data'
+    : 'Fit view unavailable for this map';
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <MapIcon className="h-4 w-4 shrink-0" />
-          <BlockCaptionEditor
-            value={caption ?? panel.title ?? ''}
-            placeholder={dashboard.selectedTable || title || 'Map caption'}
-            isReadOnly={readOnly}
-            onChange={(value: string) => onCaptionChange?.(value || undefined)}
+          <input
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            value={caption ?? map.title}
+            readOnly={readOnly}
+            placeholder={map.selectedTable ?? title ?? 'Map caption'}
+            onChange={(event) =>
+              onCaptionChange?.(event.target.value || undefined)
+            }
           />
         </div>
         <div className="flex items-center gap-0.5">
-          {headerActions}
-          {HeaderActions ? <HeaderActions {...rendererProps} /> : null}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="inline-flex"
+                tabIndex={canFitView ? undefined : 0}
+                aria-label={canFitView ? undefined : fitViewLabel}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label={fitViewLabel}
+                  disabled={!canFitView}
+                  onClick={() => setFitRequestVersion((version) => version + 1)}
+                >
+                  <FocusIcon className="h-3.5 w-3.5" />
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>{fitViewLabel}</TooltipContent>
+          </Tooltip>
           <Button
             type="button"
             variant={isSettingsShown ? 'secondary' : 'ghost'}
             size="icon"
-            className="h-6 w-6 shrink-0"
+            className="h-6 w-6"
             aria-label={
               isSettingsShown ? 'Close map settings' : 'Open map settings'
             }
-            aria-pressed={isSettingsShown}
-            onClick={handleSettingsClick}
+            onClick={() =>
+              isSettingsShown
+                ? requestCloseSettingsPanel()
+                : requestOpenSettingsPanel()
+            }
           >
-            <SlidersVerticalIcon className="h-3.5 w-3.5" aria-hidden />
+            <SlidersVerticalIcon className="h-3.5 w-3.5" />
           </Button>
+          {headerActions}
         </div>
       </div>
       <div className="min-h-0 flex-1">
         {hasDatasets ? (
-          <DeckMapBlockErrorBoundary
-            key={mapBoundaryKey}
-            onError={handleMapRenderError}
-            onRenderSuccess={handleMapRenderSuccess}
+          <DeckMapResourceErrorBoundary
+            resetKey={map.config}
+            onError={(error) =>
+              reportMapIssue(mapId, {
+                kind: 'render-error',
+                message: error.message,
+                recoverable: true,
+              })
+            }
           >
-            <MapPanel {...rendererProps} />
-          </DeckMapBlockErrorBoundary>
+            <DeckMapSurface
+              mapId={mapId}
+              map={map}
+              readOnly={readOnly}
+              selected={selected}
+              onUpdateMap={(patch) => updateMap(mapId, patch)}
+              onReportIssue={(issue) => reportMapIssue(mapId, issue)}
+              onClearIssue={(kind) => clearMapIssue(mapId, kind)}
+              fitRequestVersion={fitRequestVersion}
+              dataAdapter={dataAdapter}
+            />
+          </DeckMapResourceErrorBoundary>
         ) : (
-          <DataTableSelectorEmptyState
-            onChange={handleTableChange}
-            tables={tablesWithColumns}
-            value={selectedTable}
-          />
+          <div className="flex h-full min-h-[320px] items-center justify-center p-4">
+            <select
+              className="border-border bg-background rounded border px-3 py-2 text-sm"
+              value={map.selectedTable ?? ''}
+              disabled={readOnly}
+              onChange={(event) => {
+                const table = tables.find(
+                  (candidate) =>
+                    getTableIdentity(candidate.table) === event.target.value,
+                );
+                if (table) handleTableChange(table);
+              }}
+            >
+              <option value="">Select a table</option>
+              {tables.map((table) => (
+                <option
+                  key={getTableIdentity(table.table)}
+                  value={getTableIdentity(table.table)}
+                >
+                  {table.tableName}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
     </div>

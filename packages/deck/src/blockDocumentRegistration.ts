@@ -2,9 +2,10 @@ import type {
   BlockDocumentStatefulBlockCommandType,
   BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
-import type {MosaicDashboardStoreState} from '@sqlrooms/mosaic';
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
+import type {DeckMapsSliceState} from './DeckMapsSlice';
 import {DeckMapBlockSettings} from './BlockMapSettings';
-import {ensureDeckMapBlockState} from './block';
+import {ensureDeckMapResourceState} from './block';
 
 export const DECK_MAP_BLOCK_TYPE = 'map';
 export const DECK_MAP_BLOCK_DEFAULT_TITLE = 'Embedded Map';
@@ -43,7 +44,7 @@ export type DeckMapBlockDocumentRegistrationOptions<TState> = {
  * block. Hosts still own renderer maps, delete handlers, and product labels.
  */
 export function createDeckMapBlockDocumentType<
-  TState extends MosaicDashboardStoreState,
+  TState extends DeckMapsSliceState & DuckDbSliceState,
 >(
   options: DeckMapBlockDocumentRegistrationOptions<TState> & {
     getState: () => TState;
@@ -74,7 +75,7 @@ export function createDeckMapBlockDocumentType<
     hasOwnHeaderActions: true,
     createNode: (blockId) => {
       const state = getState();
-      ensureDeckMapBlockState(state, blockId, defaultTitle);
+      ensureDeckMapResourceState(state, blockId, defaultTitle);
       afterEnsureState?.({
         state,
         blockInstanceId: blockId,
@@ -100,7 +101,7 @@ export function createDeckMapBlockDocumentType<
  * Builds the shared command-type registration for a Deck map stateful block.
  */
 export function createDeckMapBlockDocumentCommandType<
-  TState extends MosaicDashboardStoreState,
+  TState extends DeckMapsSliceState & DuckDbSliceState,
 >(
   options: DeckMapBlockDocumentRegistrationOptions<TState> = {},
 ): BlockDocumentStatefulBlockCommandType<TState> {
@@ -120,7 +121,7 @@ export function createDeckMapBlockDocumentCommandType<
     defaultHeight,
     ensureState: ({state, blockInstanceId, title}) => {
       const resolvedTitle = title ?? defaultTitle;
-      ensureDeckMapBlockState(state, blockInstanceId, resolvedTitle);
+      ensureDeckMapResourceState(state, blockInstanceId, resolvedTitle);
       afterEnsureState?.({
         state,
         blockInstanceId,
