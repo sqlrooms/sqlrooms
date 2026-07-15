@@ -218,6 +218,7 @@ export type ChatTransportConfig = {
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;
+  /** Optional timeout safety limits; all limits are disabled when omitted. */
   timeouts?: AiTimeoutOptions;
 };
 
@@ -231,6 +232,10 @@ function getSessionById(
     .ai.config.sessions.find((s: ChatSessionSchema) => s.id === sessionId);
 }
 
+/**
+ * Adds SQLRooms run context to executable tools and enforces any configured
+ * per-tool execution timeout while preserving upstream cancellation signals.
+ */
 export function withRunContextTools(
   tools: ToolSet,
   args: AiToolExecutionContext & {

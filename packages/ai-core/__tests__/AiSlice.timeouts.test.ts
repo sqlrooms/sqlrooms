@@ -20,19 +20,6 @@ describe('AiSlice run timeout', () => {
       })(set, get, api),
     );
     const sessionId = store.getState().ai.getCurrentSession()!.id;
-    store.getState().ai.setPrompt(sessionId, 'hello');
-    store.getState().ai.setChatSendMessage(sessionId, sendMessage);
-    store.getState().ai.setChatStop(sessionId, stop);
-
-    await store.getState().ai.startAnalysis(sessionId);
-    await jest.advanceTimersByTimeAsync(1_000);
-
-    const controller = store.getState().ai.getAbortController(sessionId);
-    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
-    expect(stop).toHaveBeenCalledTimes(1);
-    expect(controller?.signal.reason).toBeInstanceOf(ChatTimeoutError);
-    expect(store.getState().ai.getIsRunning(sessionId)).toBe(false);
-
     const messages: UIMessage[] = [
       {
         id: 'user-1',
@@ -52,10 +39,36 @@ describe('AiSlice run timeout', () => {
         ],
       },
     ];
+    store.getState().ai.setSessionUiMessages(sessionId, messages);
+    store.getState().ai.setPrompt(sessionId, 'hello');
+    store.getState().ai.setChatSendMessage(sessionId, sendMessage);
+    store.getState().ai.setChatStop(sessionId, stop);
+
+    await store.getState().ai.startAnalysis(sessionId);
+    await jest.advanceTimersByTimeAsync(1_000);
+
+    const controller = store.getState().ai.getAbortController(sessionId);
+    expect(sendMessage).toHaveBeenCalledWith({text: 'hello'});
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(controller?.signal.reason).toBeInstanceOf(ChatTimeoutError);
+    expect(store.getState().ai.getIsRunning(sessionId)).toBe(false);
+
+    // The run timeout persists the failure even if useChat is paused on a
+    // client tool and never invokes a transport callback.
+    let saved = store.getState().ai.getCurrentSession()!
+      .uiMessages as UIMessage[];
+    expect(getChatRequestErrorMessage(saved[0])).toEqual({
+      error: 'Chat run timed out after 1s',
+    });
+    expect(saved[1]?.parts[0]).toMatchObject({
+      state: 'output-error',
+      errorText: 'Chat run timed out after 1s',
+    });
+
+    // A later callback remains consistent with the persisted timeout reason.
     store.getState().ai.onChatFinish({sessionId, messages});
 
-    const saved = store.getState().ai.getCurrentSession()!
-      .uiMessages as UIMessage[];
+    saved = store.getState().ai.getCurrentSession()!.uiMessages as UIMessage[];
     expect(getChatRequestErrorMessage(saved[0])).toEqual({
       error: 'Chat run timed out after 1s',
     });

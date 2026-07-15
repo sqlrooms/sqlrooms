@@ -1,5 +1,8 @@
 import type {UIMessage} from 'ai';
-import {getChatActiveStatus} from '../src/components/ChatActiveStatus';
+import {
+  getChatActiveStatus,
+  hasPendingToolApproval,
+} from '../src/components/ChatActiveStatus';
 
 describe('getChatActiveStatus', () => {
   it('distinguishes the initial model wait from continued analysis', () => {
@@ -15,6 +18,31 @@ describe('getChatActiveStatus', () => {
         message('assistant', [{type: 'text', text: 'Working on it'}]),
       ]),
     ).toMatchObject({label: 'Continuing analysis…', kind: 'model'});
+  });
+
+  it('treats reasoning content as visible progress', () => {
+    expect(
+      getChatActiveStatus([
+        message('user', [{type: 'text', text: 'think'}]),
+        message('assistant', [
+          {type: 'reasoning', reasoning: 'Considering options'},
+        ] as UIMessage['parts']),
+      ]),
+    ).toMatchObject({label: 'Continuing analysis…', kind: 'model'});
+  });
+
+  it('handles legacy messages without parts', () => {
+    const legacyAssistant = {
+      id: 'legacy-assistant',
+      role: 'assistant',
+    } as UIMessage;
+
+    expect(
+      getChatActiveStatus([
+        message('user', [{type: 'text', text: 'hello'}]),
+        legacyAssistant,
+      ]),
+    ).toMatchObject({label: 'Waiting for model…', kind: 'model'});
   });
 
   it('describes the latest pending tool with useful fallbacks', () => {
@@ -73,6 +101,29 @@ describe('getChatActiveStatus', () => {
         ]),
       ]),
     ).toMatchObject({label: 'Waiting for approval…', kind: 'approval'});
+  });
+
+  it('detects any pending approval among parallel tool calls', () => {
+    const messages = [
+      message('user', [{type: 'text', text: 'do both'}]),
+      message('assistant', [
+        {
+          type: 'tool-deleteItem',
+          toolCallId: 'approval-tool',
+          state: 'approval-requested',
+          input: {},
+        },
+        {
+          type: 'tool-query',
+          toolCallId: 'active-tool',
+          state: 'input-available',
+          input: {},
+        },
+      ]),
+    ];
+
+    expect(getChatActiveStatus(messages).kind).toBe('tool');
+    expect(hasPendingToolApproval(messages)).toBe(true);
   });
 
   it('ignores incomplete tools from earlier turns', () => {

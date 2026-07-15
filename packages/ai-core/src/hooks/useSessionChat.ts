@@ -8,11 +8,12 @@ import {
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import {fixIncompleteToolCalls} from '../utils';
-import {getChatActiveStatus} from '../components/ChatActiveStatus';
+import {hasPendingToolApproval} from '../components/ChatActiveStatus';
 import {
   createIdleStreamTimeoutError,
   createToolTimeoutError,
   getConfiguredTimeoutMs,
+  getPendingClientToolCalls,
   getPendingClientToolTimeouts,
 } from '../timeouts';
 
@@ -206,12 +207,15 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   // a silent-but-healthy operation from a stuck one, so the watchdog is opt-in.
   useEffect(() => {
     const timeoutMs = getConfiguredTimeoutMs(timeouts.idleStreamMs);
-    const isWaitingForApproval =
-      getChatActiveStatus(messages as UIMessage[]).kind === 'approval';
+    const uiMessages = messages as UIMessage[];
+    const isWaitingForApproval = hasPendingToolApproval(uiMessages);
+    const isWaitingForClientTool =
+      getPendingClientToolCalls(uiMessages, tools).length > 0;
     if (
       !currentSession?.isRunning ||
       timeoutMs == null ||
-      isWaitingForApproval
+      isWaitingForApproval ||
+      isWaitingForClientTool
     ) {
       return;
     }
@@ -232,6 +236,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     setIsRunning,
     stop,
     timeouts.idleStreamMs,
+    tools,
   ]);
 
   // If user aborts mid-stream, stop the local chat stream immediately

@@ -53,9 +53,14 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
-import {normalizeAiConfig, ToolAbortError} from './utils';
+import {
+  fixIncompleteToolCalls,
+  normalizeAiConfig,
+  ToolAbortError,
+} from './utils';
 import {
   getAnalysisResultsFromUiMessages,
+  setChatRequestErrorMessage,
   uiMessagesHaveChatRequestError,
 } from './chatTurns';
 import {
@@ -1348,9 +1353,44 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               ) {
                 return;
               }
-              abortController.abort(createRunTimeoutError(runTimeoutMs));
+              const timeoutError = createRunTimeoutError(runTimeoutMs);
+              abortController.abort(timeoutError);
+
+              // A no-execute client tool can pause useChat without an active
+              // stream, so transport callbacks are not guaranteed to run.
+              // Persist the same timeout result immediately; a later callback
+              // remains safe because the abort controller keeps the reason.
+              const currentMessages =
+                (get().ai.config.sessions.find(
+                  (candidate) => candidate.id === sessionId,
+                )?.uiMessages as UIMessage[] | undefined) ?? [];
+              const completedMessages = fixIncompleteToolCalls(
+                structuredClone(currentMessages),
+                timeoutError.message,
+              );
+              const lastUserMessage = completedMessages
+                .filter((message) => message.role === 'user')
+                .at(-1);
+              if (lastUserMessage) {
+                setChatRequestErrorMessage(lastUserMessage, {
+                  error: timeoutError.message,
+                });
+              }
+
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft) => {
+                  const timedOutSession = draft.ai.config.sessions.find(
+                    (candidate) => candidate.id === sessionId,
+                  );
+                  if (!timedOutSession) return;
+                  timedOutSession.uiMessages =
+                    completedMessages as ChatSessionSchema['uiMessages'];
+                  timedOutSession.messagesRevision =
+                    (timedOutSession.messagesRevision || 0) + 1;
+                  timedOutSession.isRunning = false;
+                }),
+              );
               get().ai.getChatStop(sessionId)?.();
-              get().ai.setIsRunning(sessionId, false);
             }, runTimeoutMs);
             sessionRunTimeouts.set(sessionId, timeoutId);
             abortController.signal.addEventListener(

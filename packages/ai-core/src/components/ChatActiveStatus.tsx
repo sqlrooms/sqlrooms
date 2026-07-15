@@ -9,6 +9,7 @@ import {useToolRenderBehavior} from './FlatAgentRenderer';
 
 type AnyUIMessagePart = UIMessagePart<any, any>;
 
+/** User-facing description of the chat run's current active step. */
 export type ChatActiveStatusInfo = {
   key: string;
   label: string;
@@ -45,7 +46,8 @@ export function getChatActiveStatus(
 
   const isContinuing = currentTurnMessages.some(
     (message) =>
-      message.role === 'assistant' && message.parts.some(hasVisibleProgress),
+      message.role === 'assistant' &&
+      (message.parts?.some(hasVisibleProgress) ?? false),
   );
 
   return isContinuing
@@ -61,6 +63,7 @@ export function getChatActiveStatus(
       };
 }
 
+/** Displays the current chat activity and elapsed time for that step. */
 export const ChatActiveStatus: FC<{
   messages: UIMessage[] | undefined;
   className?: string;
@@ -125,12 +128,9 @@ function findLastActiveTool(messages: UIMessage[]): AgentToolCall | undefined {
   ) {
     const message = messages[messageIndex];
     if (message?.role !== 'assistant') continue;
-    for (
-      let partIndex = message.parts.length - 1;
-      partIndex >= 0;
-      partIndex--
-    ) {
-      const toolCall = partToActiveToolCall(message.parts[partIndex]);
+    const parts = message.parts ?? [];
+    for (let partIndex = parts.length - 1; partIndex >= 0; partIndex--) {
+      const toolCall = partToActiveToolCall(parts[partIndex]);
       if (toolCall) return toolCall;
     }
   }
@@ -173,8 +173,11 @@ function isToolPart(part: AnyUIMessagePart): boolean {
 }
 
 function hasVisibleProgress(part: AnyUIMessagePart): boolean {
-  if (part.type === 'text' || part.type === 'reasoning') {
+  if (part.type === 'text') {
     return Boolean((part as {text?: string}).text?.trim());
+  }
+  if (part.type === 'reasoning') {
+    return Boolean((part as {reasoning?: string}).reasoning?.trim());
   }
   if (isToolPart(part)) {
     const state = (part as {state?: string}).state;
@@ -186,6 +189,21 @@ function hasVisibleProgress(part: AnyUIMessagePart): boolean {
     );
   }
   return false;
+}
+
+/** Returns whether any tool in the current turn is awaiting approval. */
+export function hasPendingToolApproval(
+  messages: UIMessage[] | undefined,
+): boolean {
+  return getCurrentTurnMessages(messages).some(
+    (message) =>
+      message.role === 'assistant' &&
+      (message.parts ?? []).some(
+        (part) =>
+          isToolPart(part) &&
+          (part as {state?: string}).state === 'approval-requested',
+      ),
+  );
 }
 
 function getActiveToolLabel(

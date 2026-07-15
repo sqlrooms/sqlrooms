@@ -3,6 +3,7 @@ import type {UIMessage} from 'ai';
 import {withRunContextTools} from '../src/chatTransport';
 import {
   ChatTimeoutError,
+  getPendingClientToolCalls,
   getPendingClientToolTimeouts,
   getToolExecutionTimeoutMs,
 } from '../src/timeouts';
@@ -59,6 +60,12 @@ describe('AI timeouts', () => {
         ],
       },
     ];
+
+    expect(
+      getPendingClientToolCalls(messages, {
+        serverQuery: {execute: async () => ({})},
+      }),
+    ).toEqual([{toolName: 'clientChart', toolCallId: 'client-1'}]);
 
     expect(
       getPendingClientToolTimeouts(
