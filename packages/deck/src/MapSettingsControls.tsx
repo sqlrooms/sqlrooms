@@ -2,6 +2,7 @@ import {
   getTableDisplayName,
   getTableIdentity,
   isColumnCategorical,
+  isColumnGeometry,
   isColumnNumeric,
   isColumnQuantitative,
   type DataTable,
@@ -41,7 +42,8 @@ export type DeckMapColumnKind =
   | 'all'
   | 'numeric'
   | 'quantitative'
-  | 'categorical';
+  | 'categorical'
+  | 'geometry';
 
 export function filterDeckMapColumns(
   columns: TableColumn[],
@@ -52,6 +54,7 @@ export function filterDeckMapColumns(
     if (!column.type) return false;
     if (kind === 'numeric') return isColumnNumeric(column.type);
     if (kind === 'quantitative') return isColumnQuantitative(column.type);
+    if (kind === 'geometry') return isColumnGeometry(column.type);
     return isColumnCategorical(column.type);
   });
 }
@@ -135,6 +138,9 @@ export const DeckMapColumnSelector = Object.assign(DeckMapColumnSelectorRoot, {
   ),
   Categorical: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
     <DeckMapColumnSelectorRoot {...props} kind="categorical" />
+  ),
+  Geometry: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
+    <DeckMapColumnSelectorRoot {...props} kind="geometry" />
   ),
 });
 

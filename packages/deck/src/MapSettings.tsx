@@ -61,6 +61,7 @@ import {
 } from './MapSettingsControls';
 import {regenerateMapConfigForTable} from './mapConfigUtils';
 import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
+import {MapGeometrySettings} from './MapGeometrySettings';
 
 const HEATMAP_COLOR_STEPS = 6;
 const EMPTY_COLUMNS: DataTable['columns'] = [];
@@ -764,7 +765,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
             {outputColumns.length > 0 && showGeometryColumnSetting && (
               <ColumnsProvider columns={outputColumns}>
                 <Field label="Geometry column" required>
-                  <ColumnSelector
+                  <ColumnSelector.Geometry
                     value={activeLayerDataset?.geometryColumn}
                     onChange={(geometryColumn) =>
                       applyConfig(
@@ -809,7 +810,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
             {outputColumns.length > 0 && showArcColumnSetting && (
               <ColumnsProvider columns={outputColumns}>
                 <Field label="Source geometry" required>
-                  <ColumnSelector
+                  <ColumnSelector.Geometry
                     value={
                       (activeLayer?._sqlroomsBinding as Record<string, unknown>)
                         ?.sourceGeometryColumn as string | undefined
@@ -826,7 +827,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                   />
                 </Field>
                 <Field label="Target geometry" required>
-                  <ColumnSelector
+                  <ColumnSelector.Geometry
                     value={
                       (activeLayer?._sqlroomsBinding as Record<string, unknown>)
                         ?.targetGeometryColumn as string | undefined
@@ -1007,44 +1008,17 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
               !showGeometryColumnSetting &&
               !showH3ColumnSetting &&
               !showArcColumnSetting && (
-                <ColumnsProvider columns={sourceColumns}>
-                  <Field label="Latitude column" required>
-                    <ColumnSelector.Numeric
-                      value={mapConfig.fitToData?.latitudeColumn}
-                      onChange={(latitudeColumn) => {
-                        const longitudeColumn =
-                          mapConfig.fitToData?.longitudeColumn;
-                        applyConfig(
-                          regenerateMapConfigForTable(
-                            {config: mapConfig},
-                            sourceDataTable,
-                            longitudeColumn,
-                            latitudeColumn,
-                          ) as DeckMapConfig,
-                        );
-                      }}
-                      disabled={readOnly}
-                    />
-                  </Field>
-                  <Field label="Longitude column" required>
-                    <ColumnSelector.Numeric
-                      value={mapConfig.fitToData?.longitudeColumn}
-                      onChange={(longitudeColumn) => {
-                        const latitudeColumn =
-                          mapConfig.fitToData?.latitudeColumn;
-                        applyConfig(
-                          regenerateMapConfigForTable(
-                            {config: mapConfig},
-                            sourceDataTable,
-                            longitudeColumn,
-                            latitudeColumn,
-                          ) as DeckMapConfig,
-                        );
-                      }}
-                      disabled={readOnly}
-                    />
-                  </Field>
-                </ColumnsProvider>
+                <MapGeometrySettings
+                  mapConfig={mapConfig}
+                  activeLayerIndex={activeLayerIndex}
+                  activeLayerDatasetId={activeLayerDatasetId}
+                  activeLayerDataset={activeLayerDataset}
+                  sourceDataTable={sourceDataTable}
+                  sourceColumns={sourceColumns}
+                  outputColumns={outputColumns}
+                  onConfigChange={applyConfig}
+                  readOnly={readOnly}
+                />
               )}
           </div>
         </ScrollArea>

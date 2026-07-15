@@ -157,6 +157,11 @@ export function isColumnCategorical(column: ColumnTypeLike): boolean {
   return category === 'string' || category === 'binary';
 }
 
+/** Returns true when a DuckDB column type is a geometry type. */
+export function isColumnGeometry(column: ColumnTypeLike): boolean {
+  return getColumnTypeCategory(column) === 'geometry';
+}
+
 /** Maps a semantic category to the narrow DuckDB-ish type selectors already accept. */
 export function columnTypeCategoryToSelectorType(
   category: ColumnTypeCategory,

@@ -90,6 +90,7 @@ export {
   getTableIdentity,
   getUnqualifiedSqlIdentifier,
   isColumnCategorical,
+  isColumnGeometry,
   isColumnNumeric,
   isColumnQuantitative,
   isColumnTemporal,

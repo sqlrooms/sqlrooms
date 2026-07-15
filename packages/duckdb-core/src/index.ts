@@ -65,6 +65,7 @@ export {
   getDuckDbTypeCategory,
   getArrowColumnTypeCategory,
   isColumnCategorical,
+  isColumnGeometry,
   isColumnNumeric,
   isColumnQuantitative,
   isColumnTemporal,

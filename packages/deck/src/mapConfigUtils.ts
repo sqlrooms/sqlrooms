@@ -683,7 +683,16 @@ export function regenerateMapConfigForTable(
         ...existingConfig,
         datasets: {[datasetId]: nextDataset},
         fitToData: nextConfig.fitToData
-          ? {...nextConfig.fitToData, dataset: datasetId}
+          ? {
+              ...nextConfig.fitToData,
+              dataset: datasetId,
+              ...(existingConfig.fitToData?.padding !== undefined && {
+                padding: existingConfig.fitToData.padding,
+              }),
+              ...(existingConfig.fitToData?.maxZoom !== undefined && {
+                maxZoom: existingConfig.fitToData.maxZoom,
+              }),
+            }
           : existingConfig.fitToData,
       },
       datasetId,
@@ -697,6 +706,16 @@ export function regenerateMapConfigForTable(
   return {
     ...existingConfig,
     datasets: nextConfig.datasets,
-    fitToData: nextConfig.fitToData ?? existingConfig.fitToData,
+    fitToData: nextConfig.fitToData
+      ? {
+          ...nextConfig.fitToData,
+          ...(existingConfig.fitToData?.padding !== undefined && {
+            padding: existingConfig.fitToData.padding,
+          }),
+          ...(existingConfig.fitToData?.maxZoom !== undefined && {
+            maxZoom: existingConfig.fitToData.maxZoom,
+          }),
+        }
+      : existingConfig.fitToData,
   };
 }
