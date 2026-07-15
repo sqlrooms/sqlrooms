@@ -16,6 +16,10 @@ import {forwardRef} from 'react';
 import Map, {useControl} from 'react-map-gl/maplibre';
 import {ZodError} from 'zod';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
+import {
+  resolveDeckMapStyle,
+  useDeckMapDefaultStyles,
+} from './DeckMapDefaultStylesProvider';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
@@ -540,11 +544,17 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     );
 
     const {resolvedTheme} = useTheme();
+    const hostDefaultMapStyles = useDeckMapDefaultStyles();
 
     const mergedMapProps = {
       ...extraMapProps,
-      mapStyle:
-        mapStyle ?? mapProps?.mapStyle ?? DEFAULT_MAP_STYLES[resolvedTheme],
+      mapStyle: resolveDeckMapStyle({
+        mapStyle,
+        mapPropsMapStyle: mapProps?.mapStyle,
+        hostDefaultStyles: hostDefaultMapStyles,
+        resolvedTheme,
+        fallbackStyles: DEFAULT_MAP_STYLES,
+      }),
     };
     const legends = useMemo(
       () =>
@@ -560,7 +570,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
 
     return (
       <div className={cn('relative h-full w-full', className)}>
-        {hasRenderingError && !onRenderingError ? (
+        {hasRenderingError ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
             <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
               {`Map couldn't be rendered. Check the console for details.`}
