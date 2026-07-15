@@ -7,12 +7,14 @@ import type {ContextSelectorItem} from './types';
 
 type ContextSelectorSortableChipProps = {
   item: ContextSelectorItem;
+  main: boolean;
+  onMakeMain: (itemId: string) => void;
   onRemove: (itemId: string) => void;
 };
 
 export const ContextSelectorSortableChip: FC<
   ContextSelectorSortableChipProps
-> = ({item, onRemove}) => {
+> = ({item, main, onMakeMain, onRemove}) => {
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
     useSortable({id: item.id});
 
@@ -32,7 +34,7 @@ export const ContextSelectorSortableChip: FC<
       }}
     >
       <UiBadge
-        variant="secondary"
+        variant={main ? 'default' : 'secondary'}
         className="h-6 max-w-36 min-w-0 gap-1 px-1.5 text-[11px]"
       >
         <button
@@ -44,12 +46,17 @@ export const ContextSelectorSortableChip: FC<
         >
           <GripVerticalIcon className="h-2.5 w-2.5" />
         </button>
-        <span className="flex min-w-0 items-center gap-1">
+        <button
+          type="button"
+          className="flex min-w-0 items-center gap-1"
+          onClick={() => onMakeMain(item.id)}
+          aria-label={`Make ${item.title} the main context item`}
+        >
           <span className="shrink-0">
             <ContextSelectorItemIcon item={item} className="h-3 w-3" />
           </span>
           <span className="truncate">{item.title}</span>
-        </span>
+        </button>
         <button
           type="button"
           className="ml-0.5 shrink-0 opacity-70 hover:opacity-100"
