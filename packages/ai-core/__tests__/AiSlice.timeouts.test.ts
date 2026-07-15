@@ -87,4 +87,62 @@ describe('AiSlice run timeout', () => {
       store.getState().ai.getAbortController(sessionId)?.signal.aborted,
     ).toBe(false);
   });
+
+  it('preserves the timeout reason when onChatError completes a pending tool', () => {
+    const store = createStore<AiSliceState>((set, get, api) =>
+      createAiSlice({tools: {} as any, getInstructions: () => 'test'})(
+        set,
+        get,
+        api,
+      ),
+    );
+    const sessionId = store.getState().ai.getCurrentSession()!.id;
+    const controller = new AbortController();
+    controller.abort(
+      new ChatTimeoutError(
+        'idle-stream',
+        2_000,
+        'No model or tool progress received for 2s',
+      ),
+    );
+    store.getState().ai.setAbortController(sessionId, controller);
+
+    const messages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-query',
+            toolCallId: 'tool-1',
+            state: 'input-available',
+            input: {sql: 'select 1'},
+          },
+        ],
+      },
+    ];
+
+    store
+      .getState()
+      .ai.onChatError(
+        sessionId,
+        new Error('The operation was aborted'),
+        messages,
+      );
+
+    const saved = store.getState().ai.getCurrentSession()!
+      .uiMessages as UIMessage[];
+    expect(getChatRequestErrorMessage(saved[0])).toEqual({
+      error: 'No model or tool progress received for 2s',
+    });
+    expect(saved[1]?.parts[0]).toMatchObject({
+      state: 'output-error',
+      errorText: 'No model or tool progress received for 2s',
+    });
+  });
 });

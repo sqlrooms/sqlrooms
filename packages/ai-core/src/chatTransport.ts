@@ -802,7 +802,10 @@ export function createChatHandlers({
                 sessionMessages: existingMessages,
                 fallbackMessages,
               });
-              const completedMessages = fixIncompleteToolCalls(sourceMessages);
+              const completedMessages = fixIncompleteToolCalls(
+                sourceMessages,
+                errMsg,
+              );
               writeToolTimingsToMetadata(completedMessages, toolTimings);
 
               const lastUserMessage = completedMessages
