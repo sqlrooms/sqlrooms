@@ -69,7 +69,7 @@ Deck map tools:
 - Create maps with a SINGLE layer unless the user explicitly asks for multiple layers. If you think multiple layers would better serve the user's request, ask the user for confirmation before adding them.
 - IMPORTANT: Browsers limit the number of active WebGL contexts (typically 8–16 per page). Each map panel uses one context. Do NOT create more than 4–5 map panels in a single dashboard — exceeding the limit causes older maps to lose their rendering context and show errors. If the user asks for many datasets, prefer combining compatible layers into fewer maps rather than creating one map per dataset.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
-- BASEMAPS: Do NOT use Mapbox basemap styles (mapbox://styles/...) — they require a Mapbox access token which is not available. The map uses CARTO basemaps by default (positron for light, dark-matter for dark theme) which work without any token. If you need to set a custom mapStyle, use free tile providers like CARTO (https://basemaps.cartocdn.com/gl/...) or other token-free MapLibre-compatible style URLs.
+- BASEMAPS: Omit mapStyle unless the user explicitly requests a custom basemap. Maps inherit the host application's theme-aware basemap when available, with a token-free fallback. Do NOT use Mapbox styles (mapbox://styles/...) because a Mapbox access token may not be available. For an explicitly requested custom basemap, use a token-free MapLibre-compatible style URL.
 `;
 
 function createDeckMapDashboardExtraTools(
