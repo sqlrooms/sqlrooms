@@ -64,6 +64,23 @@ describe('getCategoryAwareVegaChartHeight', () => {
     ).toBe(312);
   });
 
+  it('supports count bars with inferred channel types', () => {
+    const categories = Array.from({length: 12}, (_, index) => `C${index}`);
+
+    expect(
+      getCategoryAwareVegaChartHeight({
+        spec: {
+          mark: 'bar',
+          encoding: {
+            x: {aggregate: 'count'},
+            y: {field: 'category'},
+          },
+        },
+        arrowTable: tableWithCategories(categories),
+      }),
+    ).toBe(312);
+  });
+
   it('keeps aspect-ratio sizing for small categorical charts', () => {
     const categories = Array.from({length: 11}, (_, index) => `C${index}`);
 

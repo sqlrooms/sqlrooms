@@ -1,11 +1,6 @@
 import {ToolErrorMessage} from '@sqlrooms/ai-core';
 import {arrowTableToJson} from '@sqlrooms/duckdb';
-import {
-  AspectRatio,
-  cn,
-  useAspectRatioDimensions,
-  useTheme,
-} from '@sqlrooms/ui';
+import {cn, useAspectRatioDimensions, useTheme} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -163,22 +158,10 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
             />
           ) : (
             specWithData &&
-            data &&
-            (height === 'auto' ? (
-              <AspectRatio
-                ref={containerRef}
-                ratio={aspectRatio}
-                className="overflow-visible"
-              >
-                <div
-                  ref={ref}
-                  className="h-full w-full [&_svg]:overflow-visible"
-                />
-              </AspectRatio>
-            ) : (
+            data && (
               <div
                 ref={containerRef}
-                style={{height}}
+                style={height === 'auto' ? {aspectRatio} : {height}}
                 className="w-full overflow-visible"
               >
                 <div
@@ -186,7 +169,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
                   className="h-full w-full [&_svg]:overflow-visible"
                 />
               </div>
-            ))
+            )
           )}
         </div>
         {children}
