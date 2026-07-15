@@ -1,7 +1,7 @@
 import {
   findAiSessionForArtifactWithContextItem,
   type ArtifactAiSessionOwnership,
-  type ArtifactAiSessionWithContext,
+  type ArtifactAiSessionWithContent,
 } from '@sqlrooms/artifacts/ai';
 import {toast} from '@sqlrooms/ui';
 import {blockContextItemId, type BlockAiTarget} from './BlockAiTarget';
@@ -23,7 +23,7 @@ export type StartBlockScopedChatActions = {
   getArtifact: (artifactId: string) => StartBlockScopedChatArtifact | undefined;
   getCurrentArtifactId: () => string | undefined;
   setCurrentArtifact: (artifactId: string) => void;
-  getAiSessions: () => ArtifactAiSessionWithContext[];
+  getAiSessions: () => ArtifactAiSessionWithContent[];
   getAiSessionArtifacts: () => ArtifactAiSessionOwnership;
   createArtifactScopedSession: () => string | undefined;
   switchSession: (sessionId: string) => void;

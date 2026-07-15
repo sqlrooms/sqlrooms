@@ -46,7 +46,7 @@ describe('block document AI helpers', () => {
     const result = await (tool as any).execute({
       reasoning: 'Add a short summary.',
       type: 'paragraph',
-      text: 'A compact summary.',
+      text: [{type: 'text', text: 'A compact summary.'}],
     });
 
     expect(result).toEqual({
@@ -59,7 +59,7 @@ describe('block document AI helpers', () => {
       expect.objectContaining({
         id: result.blockId,
         type: 'paragraph',
-        text: 'A compact summary.',
+        text: [{type: 'text', text: 'A compact summary.'}],
       }),
     ]);
   });
@@ -86,7 +86,7 @@ describe('block document AI helpers', () => {
     const result = await (tool as any).execute({
       reasoning: 'Add a short summary.',
       type: 'paragraph',
-      text: 'A compact summary.',
+      text: [{type: 'text', text: 'A compact summary.'}],
     });
 
     expect(result).toEqual({
@@ -117,7 +117,7 @@ describe('block document AI helpers', () => {
       reasoning: 'Add a short heading.',
       type: 'heading',
       level: 2,
-      text: 'Summary',
+      text: [{type: 'text', text: 'Summary'}],
     });
 
     expect(result).toEqual({
@@ -128,7 +128,7 @@ describe('block document AI helpers', () => {
     expect(addedBlocks).toEqual([
       expect.objectContaining({
         type: 'heading',
-        text: 'Summary',
+        text: [{type: 'text', text: 'Summary'}],
       }),
     ]);
   });

@@ -168,12 +168,17 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
 >;
 
 const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
-const ENABLED_WORKSHEET_AI_BLOCK_TYPES = new Set<string>([
-  'chart',
-  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
-    WORKSHEET_AI_BLOCK_TYPES.has(type),
-  ),
-]);
+
+function getEnabledWorksheetAiBlockTypes(
+  includeExperimental: boolean,
+): Set<string> {
+  return new Set<string>([
+    'chart',
+    ...getEnabledStatefulBlockArtifactTypes(includeExperimental).filter(
+      (type) => WORKSHEET_AI_BLOCK_TYPES.has(type),
+    ),
+  ]);
+}
 
 function createStartBlockScopedChatActions(
   getState: () => RoomState,
@@ -251,6 +256,11 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [],
   );
 
+  const enabledWorksheetAiBlockTypes = useMemo(
+    () => getEnabledWorksheetAiBlockTypes(experimentalEnabled),
+    [],
+  );
+
   const handleTitleChange = useCallback(
     (title: string) => {
       renameArtifact(artifactId, title);
@@ -266,7 +276,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     () =>
       createAskAiBlockHeaderAction({
         supportsAiEditing: (blockType) =>
-          ENABLED_WORKSHEET_AI_BLOCK_TYPES.has(blockType),
+          enabledWorksheetAiBlockTypes.has(blockType),
         onSubmit: (
           ctx: AskAiBlockHeaderActionRenderContext,
           prompt: string,
@@ -287,7 +297,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
           });
         },
       }),
-    [revealAssistant, roomStore],
+    [revealAssistant, enabledWorksheetAiBlockTypes],
   );
 
   if (!artifact || artifact.type !== 'worksheet') {

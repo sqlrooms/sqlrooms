@@ -67,7 +67,14 @@ describe('block document commands', () => {
       .getState()
       .commands.invokeCommand('block-document.create', {
         title: 'Findings',
-        blocks: [{id: 'heading', type: 'heading', level: 1, text: 'Findings'}],
+        blocks: [
+          {
+            id: 'heading',
+            type: 'heading',
+            level: 1,
+            text: [{type: 'text', text: 'Findings'}],
+          },
+        ],
       });
 
     expect(createResult.success).toBe(true);
@@ -78,7 +85,12 @@ describe('block document commands', () => {
       title: 'Findings',
     });
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
-      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Findings'}],
+      },
     ]);
 
     const listResult = await store
@@ -100,7 +112,14 @@ describe('block document commands', () => {
     expect(getResult.data).toMatchObject({
       artifactId,
       title: 'Findings',
-      blocks: [{id: 'heading', type: 'heading', level: 1, text: 'Findings'}],
+      blocks: [
+        {
+          id: 'heading',
+          type: 'heading',
+          level: 1,
+          text: [{type: 'text', text: 'Findings'}],
+        },
+      ],
       assets: [],
       updatedAt: 101,
     });
@@ -117,7 +136,9 @@ describe('block document commands', () => {
       .getState()
       .commands.invokeCommand('block-document.append-blocks', {
         artifactId,
-        blocks: [{id: 'p1', type: 'paragraph', text: 'First'}],
+        blocks: [
+          {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'First'}]},
+        ],
       });
     expect(appendResult.data).toMatchObject({
       artifactId,
@@ -125,21 +146,34 @@ describe('block document commands', () => {
       blockType: 'paragraph',
       blockIds: ['p1'],
       blockTypes: ['paragraph'],
-      affectedBlocks: [{id: 'p1', type: 'paragraph', text: 'First'}],
+      affectedBlocks: [
+        {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'First'}]},
+      ],
     });
     await store
       .getState()
       .commands.invokeCommand('block-document.insert-blocks', {
         artifactId,
         index: 0,
-        blocks: [{id: 'h1', type: 'heading', level: 2, text: 'Overview'}],
+        blocks: [
+          {
+            id: 'h1',
+            type: 'heading',
+            level: 2,
+            text: [{type: 'text', text: 'Overview'}],
+          },
+        ],
       });
     const updateResult = await store
       .getState()
       .commands.invokeCommand('block-document.update-block', {
         artifactId,
         blockId: 'p1',
-        block: {id: 'ignored', type: 'paragraph', text: 'Updated'},
+        block: {
+          id: 'ignored',
+          type: 'paragraph',
+          text: [{type: 'text', text: 'Updated'}],
+        },
       });
     expect(updateResult.data).toMatchObject({
       artifactId,
@@ -147,7 +181,9 @@ describe('block document commands', () => {
       blockType: 'paragraph',
       blockIds: ['p1'],
       blockTypes: ['paragraph'],
-      affectedBlocks: [{id: 'p1', type: 'paragraph', text: 'Updated'}],
+      affectedBlocks: [
+        {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'Updated'}]},
+      ],
     });
     await store.getState().commands.invokeCommand('block-document.move-block', {
       artifactId,
@@ -162,7 +198,7 @@ describe('block document commands', () => {
       });
 
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
-      {id: 'p1', type: 'paragraph', text: 'Updated'},
+      {id: 'p1', type: 'paragraph', text: [{type: 'text', text: 'Updated'}]},
     ]);
   });
 
