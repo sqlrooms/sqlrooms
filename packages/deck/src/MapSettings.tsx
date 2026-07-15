@@ -1014,7 +1014,6 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                       onChange={(latitudeColumn) => {
                         const longitudeColumn =
                           mapConfig.fitToData?.longitudeColumn;
-                        if (!longitudeColumn) return;
                         applyConfig(
                           regenerateMapConfigForTable(
                             {config: mapConfig},
@@ -1033,7 +1032,6 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                       onChange={(longitudeColumn) => {
                         const latitudeColumn =
                           mapConfig.fitToData?.latitudeColumn;
-                        if (!latitudeColumn) return;
                         applyConfig(
                           regenerateMapConfigForTable(
                             {config: mapConfig},

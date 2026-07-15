@@ -59,6 +59,7 @@ export {
   getDeckMapResourceAiInstructions,
   getDeckMapResourceConfigIssues,
   mergeDeckMapResourceConfigPatch,
+  type DeckMapResourceConfigMergeOptions,
   type DeckMapResourceConfigIssue,
   type DeckMapResourceConfigValidationOptions,
 } from './mapResourceAuthoring';

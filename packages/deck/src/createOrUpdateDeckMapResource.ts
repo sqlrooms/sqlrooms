@@ -44,6 +44,8 @@ export type CreateOrUpdateDeckMapResourceHost = {
     config: DeckMapConfig;
     existingMapConfig?: DeckMapConfig;
     tableName?: string;
+    replaceLayers?: boolean;
+    replaceDatasets?: boolean;
   }) => DeckMapConfig | Promise<DeckMapConfig>;
 };
 
@@ -57,6 +59,10 @@ export type CreateOrUpdateDeckMapResourceParams = {
   caption?: string;
   intent?: string;
   height?: number;
+  /** Treat `config.spec.layers` as the complete replacement layer list. */
+  replaceLayers?: boolean;
+  /** Treat `config.datasets` as the complete replacement dataset registry. */
+  replaceDatasets?: boolean;
   requireTableNameForSqlOnlyUpdate?: boolean;
   artifactLabel?: string;
   createMapId?: () => string;
@@ -100,6 +106,8 @@ export async function createOrUpdateDeckMapResource(
         config: params.config,
         existingMapConfig: existingMap?.config,
         tableName: requestedTable,
+        replaceLayers: params.replaceLayers,
+        replaceDatasets: params.replaceDatasets,
       })
     : params.config;
   assertDeckMapResourceConfig(preparedConfig);

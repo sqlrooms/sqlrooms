@@ -15,6 +15,14 @@ export type DeckMapResourceConfigValidationOptions = {
   allowEmpty?: boolean;
 };
 
+/** Controls how an incoming map config patch is merged with durable state. */
+export type DeckMapResourceConfigMergeOptions = {
+  /** Treat an incoming `spec.layers` array as the complete replacement list. */
+  replaceLayers?: boolean;
+  /** Treat incoming `datasets` as the complete replacement registry. */
+  replaceDatasets?: boolean;
+};
+
 /** Error raised before an invalid map resource can be durably written. */
 export class DeckMapResourceConfigError extends Error {
   readonly issues: DeckMapResourceConfigIssue[];
@@ -94,7 +102,11 @@ function mergeLayerPatches(
   return nextLayers;
 }
 
-function mergeSpecPatch(existingSpec: unknown, incomingSpec: unknown) {
+function mergeSpecPatch(
+  existingSpec: unknown,
+  incomingSpec: unknown,
+  options: DeckMapResourceConfigMergeOptions,
+) {
   if (typeof incomingSpec === 'string') return incomingSpec;
   const existing = isRecord(existingSpec) ? existingSpec : undefined;
   const incoming = isRecord(incomingSpec) ? incomingSpec : undefined;
@@ -106,7 +118,10 @@ function mergeSpecPatch(existingSpec: unknown, incomingSpec: unknown) {
   const incomingLayers = Array.isArray(incoming?.layers)
     ? incoming.layers
     : undefined;
-  const layers = mergeLayerPatches(existingLayers, incomingLayers);
+  const layers =
+    options.replaceLayers && incomingLayers !== undefined
+      ? incomingLayers
+      : mergeLayerPatches(existingLayers, incomingLayers);
   return {
     ...(existing ?? {}),
     ...(incoming ?? {}),
@@ -117,7 +132,9 @@ function mergeSpecPatch(existingSpec: unknown, incomingSpec: unknown) {
 function mergeDatasetRegistry(
   existingDatasets: DeckMapConfig['datasets'],
   incomingDatasets: DeckMapConfig['datasets'],
+  replaceDatasets: boolean,
 ): DeckMapConfig['datasets'] {
+  if (replaceDatasets) return incomingDatasets;
   if (!hasEntries(incomingDatasets)) return existingDatasets;
   const datasets = {...existingDatasets};
   for (const [datasetId, incomingDataset] of Object.entries(incomingDatasets)) {
@@ -140,15 +157,17 @@ function mergeDatasetRegistry(
 export function mergeDeckMapResourceConfigPatch(
   existingConfig: DeckMapConfig | undefined,
   incomingConfig: DeckMapConfig,
+  options: DeckMapResourceConfigMergeOptions = {},
 ): DeckMapConfig {
   if (!existingConfig) return incomingConfig;
   return {
     ...existingConfig,
     ...incomingConfig,
-    spec: mergeSpecPatch(existingConfig.spec, incomingConfig.spec),
+    spec: mergeSpecPatch(existingConfig.spec, incomingConfig.spec, options),
     datasets: mergeDatasetRegistry(
       existingConfig.datasets,
       incomingConfig.datasets,
+      options.replaceDatasets === true,
     ),
     mapProps: mergeOptionalRecord(
       existingConfig.mapProps,
@@ -328,6 +347,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
+- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates.
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 
 Minimal table-backed point map shape:

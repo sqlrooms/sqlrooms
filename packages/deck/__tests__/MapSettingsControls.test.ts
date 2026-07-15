@@ -46,6 +46,8 @@ describe('Deck map settings controls', () => {
     expect(worksheetAdapterSource).not.toContain('@sqlrooms/mosaic');
     expect(worksheetAdapterSource).toContain('<DeckMapSettingsPanel');
     expect(worksheetSurfaceSource).toContain('autoFit: true');
+    expect(worksheetSurfaceSource).toContain("kind: 'fit-error'");
+    expect(worksheetSurfaceSource).toContain("onClearIssue('fit-error')");
     expect(dashboardAdapterSource).toContain('<DeckMapSettingsPanel');
   });
 });

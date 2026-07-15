@@ -1,6 +1,6 @@
 import {CHAT_CONTEXT_SELECTOR_SLOT, Chat} from '@sqlrooms/ai';
 import {FC, useCallback} from 'react';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
 import {
   useContextSelectorItems,
   useRunningContextIds,

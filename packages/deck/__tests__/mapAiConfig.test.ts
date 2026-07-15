@@ -1,5 +1,8 @@
 import {describe, expect, test} from '@jest/globals';
-import {DeckMapResourceConfigParameter} from '../src/mapAiConfig';
+import {
+  DeckMapResourceConfigParameter,
+  DeckMapResourceToolParameters,
+} from '../src/mapAiConfig';
 
 describe('DeckMapResourceConfigParameter', () => {
   test('accepts table-backed and SQL dataset sources', () => {
@@ -28,5 +31,22 @@ describe('DeckMapResourceConfigParameter', () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  test('accepts explicit layer and dataset replacement requests', () => {
+    const result = DeckMapResourceToolParameters.safeParse({
+      title: 'Places',
+      reasoning: 'Remove a broken layer',
+      replaceLayers: true,
+      replaceDatasets: true,
+      config: {
+        spec: {layers: []},
+        datasets: {},
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.replaceLayers).toBe(true);
+    expect(result.data?.replaceDatasets).toBe(true);
   });
 });

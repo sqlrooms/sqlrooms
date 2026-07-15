@@ -9,7 +9,7 @@ import {Button} from '@sqlrooms/ui';
 import {WebContainer} from '@sqlrooms/webcontainer';
 import type {FileSystemTree} from '@webcontainer/api';
 import React from 'react';
-import {useRoomStore} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
 
 const TEMPLATE_OPTIONS = [
   {id: 'mosaic-dashboard', label: 'Mosaic dashboard (cross-filtering)'},
@@ -23,6 +23,7 @@ function deriveAppName(intent: string): string {
 }
 
 export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
+  const roomStore = useCliRoomStoreApi();
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const appState = useRoomStore(
     (s) => s.appProject.config.appsByArtifactId[artifactId],
@@ -56,7 +57,7 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
         query: (request) =>
           executeReadonlyQuery({
             request,
-            getState: useRoomStore.getState,
+            getState: roomStore.getState,
             timeoutMs: 15_000,
             maxRows: 10_000,
           }),
@@ -67,7 +68,7 @@ export const AppBuilderArtifact: RoomPanelComponent = ({panelId, meta}) => {
         }
       },
     });
-  }, []);
+  }, [roomStore]);
 
   React.useEffect(() => {
     return () => {

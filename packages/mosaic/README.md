@@ -235,6 +235,14 @@ aggregate a numeric `valueField` per category:
 - `leftMargin`: optional manual left margin in pixels. When omitted, SQLRooms
   derives a bounded left margin from chart metadata.
 
+Choose the metric from the source-table grain. Use `"count"` for raw rows where
+each row is an observation and category values repeat. Use `"aggregate"` for a
+summarized table that already has a numeric measure, such as one row per
+category with a `venue_count` column. The AI chart tool requires this choice
+in its guidance, while tolerating omitted optional fields for model-provider
+compatibility. When `metric` is omitted, a provided `valueField` implies
+`"aggregate"`; otherwise the backwards-compatible default is `"count"`.
+
 Count plots cap the visible categories instead of folding the hidden tail into
 `Others` so the generated vgplot spec continues to cross-filter against the
 source table without pre-aggregating the rendered values.
