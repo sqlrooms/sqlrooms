@@ -51,6 +51,12 @@ describe('AI timeouts', () => {
             input: {},
           },
           {
+            type: 'tool-remoteOnly',
+            toolCallId: 'remote-1',
+            state: 'input-available',
+            input: {},
+          },
+          {
             type: 'tool-complete',
             toolCallId: 'complete-1',
             state: 'output-available',
@@ -63,6 +69,7 @@ describe('AI timeouts', () => {
 
     expect(
       getPendingClientToolCalls(messages, {
+        clientChart: {},
         serverQuery: {execute: async () => ({})},
       }),
     ).toEqual([{toolName: 'clientChart', toolCallId: 'client-1'}]);
@@ -70,7 +77,10 @@ describe('AI timeouts', () => {
     expect(
       getPendingClientToolTimeouts(
         messages,
-        {serverQuery: {execute: async () => ({})}},
+        {
+          clientChart: {},
+          serverQuery: {execute: async () => ({})},
+        },
         {toolExecutionMs: 1_000},
       ),
     ).toEqual([
@@ -89,7 +99,17 @@ describe('AI timeouts', () => {
             options: {abortSignal?: AbortSignal},
           ) => {
             receivedSignal = options.abortSignal;
-            return await new Promise<never>(() => undefined);
+            return await new Promise<never>((_resolve, reject) => {
+              options.abortSignal?.addEventListener(
+                'abort',
+                () => {
+                  const abortError = new Error('The operation was aborted');
+                  abortError.name = 'AbortError';
+                  reject(abortError);
+                },
+                {once: true},
+              );
+            });
           },
         },
       } as any,

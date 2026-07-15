@@ -136,7 +136,12 @@ export function getPendingClientToolCalls(
 
   const pending: PendingClientToolCall[] = [];
   for (const [toolCallId, part] of latestParts) {
-    if (part.state !== 'input-available' || tools[part.toolName]?.execute) {
+    const registeredTool = tools[part.toolName];
+    if (
+      part.state !== 'input-available' ||
+      !registeredTool ||
+      registeredTool.execute
+    ) {
       continue;
     }
     pending.push({toolCallId, toolName: part.toolName});

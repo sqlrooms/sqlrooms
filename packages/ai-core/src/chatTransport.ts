@@ -297,8 +297,8 @@ export function withRunContextTools(
             const timeoutError = createToolTimeoutError(name, timeoutMs);
             const timeoutPromise = new Promise<never>((_resolve, reject) => {
               timeoutId = setTimeout(() => {
-                timeoutController.abort(timeoutError);
                 reject(timeoutError);
+                timeoutController.abort(timeoutError);
               }, timeoutMs);
             });
 
