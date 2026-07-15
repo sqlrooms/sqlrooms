@@ -4,7 +4,8 @@ import {
   type MosaicDashboardBlockRenderProps,
 } from '@sqlrooms/mosaic';
 import {FC, useEffect} from 'react';
-import {useRoomStore, type RoomState} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
+import type {RoomState} from '../../store-types';
 
 export const DashboardArtifact: FC<
   MosaicDashboardBlockRenderProps<RoomState>
