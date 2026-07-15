@@ -136,7 +136,8 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     containerRef,
     width,
     height,
-    aspectRatio: height === 'auto' ? aspectRatio : undefined,
+    aspectRatio:
+      height === 'auto' || width !== 'auto' ? aspectRatio : undefined,
   });
   const changeDimensions = useCallback(
     (width: number, height: number) => {
