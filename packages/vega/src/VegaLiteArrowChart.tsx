@@ -136,7 +136,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     containerRef,
     width,
     height,
-    aspectRatio,
+    aspectRatio: height === 'auto' ? aspectRatio : undefined,
   });
   const changeDimensions = useCallback(
     (width: number, height: number) => {
@@ -150,10 +150,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
 
   return (
     <VegaChartContextProvider value={{embed}}>
-      <div
-        ref={containerRef}
-        className={cn('relative flex h-full w-full flex-col gap-2', className)}
-      >
+      <div className={cn('relative flex w-full flex-col gap-2', className)}>
         <div className="peer relative">
           {displayError ? (
             <ToolErrorMessage
@@ -165,15 +162,30 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
             />
           ) : (
             specWithData &&
-            data && (
+            data &&
+            (height === 'auto' ? (
               <AspectRatio
+                ref={containerRef}
                 ratio={aspectRatio}
                 className="overflow-visible"
-                asChild
               >
-                <div ref={ref} className="[&_svg]:overflow-visible" />
+                <div
+                  ref={ref}
+                  className="h-full w-full [&_svg]:overflow-visible"
+                />
               </AspectRatio>
-            )
+            ) : (
+              <div
+                ref={containerRef}
+                style={{height}}
+                className="w-full overflow-visible"
+              >
+                <div
+                  ref={ref}
+                  className="h-full w-full [&_svg]:overflow-visible"
+                />
+              </div>
+            ))
           )}
         </div>
         {children}
