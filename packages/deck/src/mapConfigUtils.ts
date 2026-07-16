@@ -1,4 +1,3 @@
-import type {MosaicDashboardPanelConfigType} from '@sqlrooms/mosaic';
 import {
   getRawSqlTableReference,
   makeQualifiedTableName,
@@ -9,7 +8,8 @@ import {
 import {
   createDeckMapDashboardPanelConfig,
   type DeckMapDashboardPanelConfig,
-} from './dashboardConfig';
+  type DeckMapConfig,
+} from './mapConfig';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import type {GeometryEncodingHint} from './prepare/types';
 
@@ -18,6 +18,41 @@ const LATITUDE_COLUMN_NAMES = ['latitude', 'lat', 'y'];
 const GEOMETRY_COLUMN_NAMES = ['geometry', 'geom'];
 const DEFAULT_GEOMETRY_COLUMN = '__sqlrooms_geom';
 const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function updateDeckMapGeometryColumnBindings(
+  config: DeckMapDashboardPanelConfig,
+  datasetId: string,
+  geometryColumn: string | undefined,
+) {
+  if (!geometryColumn || !isRecord(config.spec)) return config;
+  const layers = config.spec.layers;
+  if (!Array.isArray(layers)) return config;
+
+  let changed = false;
+  const nextLayers = layers.map((layer) => {
+    if (!isRecord(layer) || !isRecord(layer._sqlroomsBinding)) return layer;
+    const binding = layer._sqlroomsBinding;
+    if (
+      binding.dataset !== datasetId ||
+      typeof binding.geometryColumn !== 'string'
+    ) {
+      return layer;
+    }
+    changed = true;
+    return {
+      ...layer,
+      _sqlroomsBinding: {...binding, geometryColumn},
+    };
+  });
+
+  return changed
+    ? {...config, spec: {...config.spec, layers: nextLayers}}
+    : config;
+}
 
 export type DeckMapConfigColumn = {name: string; type?: string};
 export type DeckMapTableReference =
@@ -40,15 +75,27 @@ function findColumnByName(
     ?.name;
 }
 
+function resolveDeckMapCoordinateColumnNames(options: {
+  columns: DeckMapConfigColumn[];
+  longitudeColumn?: string;
+  latitudeColumn?: string;
+}) {
+  const longitudeColumn =
+    options.longitudeColumn ||
+    findColumnByName(options.columns, LONGITUDE_COLUMN_NAMES);
+  const latitudeColumn =
+    options.latitudeColumn ||
+    findColumnByName(options.columns, LATITUDE_COLUMN_NAMES);
+  return longitudeColumn && latitudeColumn
+    ? {longitudeColumn, latitudeColumn}
+    : null;
+}
+
 export function findDeckMapLongitudeLatitudeColumns(
   columns?: DeckMapConfigColumn[],
 ) {
   if (!columns) return null;
-  const longitudeColumn = findColumnByName(columns, LONGITUDE_COLUMN_NAMES);
-  const latitudeColumn = findColumnByName(columns, LATITUDE_COLUMN_NAMES);
-  return longitudeColumn && latitudeColumn
-    ? {longitudeColumn, latitudeColumn}
-    : null;
+  return resolveDeckMapCoordinateColumnNames({columns});
 }
 
 export function findLongitudeLatitudeColumns(table?: DataTable) {
@@ -199,7 +246,11 @@ function createDeckMapPointSourceSql(options: {
   ].join(' ');
 }
 
-function createDeckMapPointTransformSql(options: {
+/**
+ * Builds the standard lon/lat → WKB point transform SQL used by Deck map
+ * datasets that follow the selected table via {@link DECK_TABLE_DATASET_SOURCE_RELATION}.
+ */
+export function createDeckMapPointTransformSql(options: {
   longitudeColumn: string;
   latitudeColumn: string;
   geometryColumn: string;
@@ -214,6 +265,214 @@ function createDeckMapPointTransformSql(options: {
   ].join(' ');
 }
 
+const DECK_MAP_POINT_LAYER_TYPES = new Set([
+  'GeoArrowScatterplotLayer',
+  'GeoArrowHeatmapLayer',
+  'GeoArrowColumnLayer',
+]);
+
+function isDeckMapConfigRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function deckMapLayerTargetsDataset(options: {
+  layer: Record<string, unknown>;
+  datasetId: string;
+  datasetIds: string[];
+}) {
+  const binding = isDeckMapConfigRecord(options.layer._sqlroomsBinding)
+    ? options.layer._sqlroomsBinding
+    : undefined;
+  const boundDataset = binding?.dataset;
+
+  if (typeof boundDataset === 'string') {
+    return boundDataset === options.datasetId;
+  }
+
+  return options.datasetIds.length === 1 && options.layer.data === undefined;
+}
+
+function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
+  layers: T;
+  datasetId: string;
+  datasetIds: string[];
+  geometryColumn: string;
+}): T {
+  let changed = false;
+  const layers = options.layers.map((layer) => {
+    if (!isDeckMapConfigRecord(layer)) {
+      return layer;
+    }
+
+    const layerType = layer['@@type'];
+    if (
+      typeof layerType !== 'string' ||
+      !DECK_MAP_POINT_LAYER_TYPES.has(layerType) ||
+      !deckMapLayerTargetsDataset({
+        layer,
+        datasetId: options.datasetId,
+        datasetIds: options.datasetIds,
+      })
+    ) {
+      return layer;
+    }
+
+    changed = true;
+    const binding = isDeckMapConfigRecord(layer._sqlroomsBinding)
+      ? layer._sqlroomsBinding
+      : {};
+
+    return {
+      ...layer,
+      _sqlroomsBinding: {
+        ...binding,
+        dataset:
+          typeof binding.dataset === 'string'
+            ? binding.dataset
+            : options.datasetId,
+        geometryColumn: options.geometryColumn,
+      },
+    };
+  });
+
+  return (changed ? layers : options.layers) as T;
+}
+
+/**
+ * Post-normalizes an existing Deck map config so table-backed lon/lat datasets
+ * without `transformSql`, `sqlQuery`, or a native geometry column get a WKB
+ * point transform, geometry bindings, and `fitToData.geometryColumn` alignment.
+ *
+ * Prefer this for AI/tool configs that arrive without a transform. Fresh configs
+ * from {@link createDeckMapDashboardConfigForTable} already include the transform;
+ * this helper patches in place without rebuilding layers.
+ */
+export function normalizeDeckMapPointConfig<
+  T extends DeckMapDashboardPanelConfig,
+>(options: {
+  config: T;
+  resolveTable: (tableName: string) => DataTable | undefined;
+}): T {
+  const {config, resolveTable} = options;
+  const datasets = isDeckMapConfigRecord(config.datasets)
+    ? config.datasets
+    : undefined;
+  if (!datasets) {
+    return config;
+  }
+
+  const datasetIds = Object.keys(datasets);
+  let nextDatasets = datasets;
+  let nextSpec = config.spec;
+  let nextFitToData = config.fitToData;
+  let changed = false;
+
+  for (const [datasetId, datasetValue] of Object.entries(datasets)) {
+    if (!isDeckMapConfigRecord(datasetValue)) {
+      continue;
+    }
+    const dataset = datasetValue;
+
+    const source = isDeckMapConfigRecord(dataset.source as unknown)
+      ? (dataset.source as Record<string, unknown>)
+      : undefined;
+    const tableName =
+      typeof source?.tableName === 'string' ? source.tableName : undefined;
+    const configuredGeometryColumn =
+      typeof dataset.geometryColumn === 'string'
+        ? dataset.geometryColumn.trim()
+        : undefined;
+    if (
+      !tableName ||
+      source?.sqlQuery ||
+      source?.transformSql ||
+      (configuredGeometryColumn &&
+        configuredGeometryColumn !== DEFAULT_GEOMETRY_COLUMN)
+    ) {
+      continue;
+    }
+
+    const table = resolveTable(tableName);
+    if (
+      configuredGeometryColumn === DEFAULT_GEOMETRY_COLUMN &&
+      table?.columns.some((column) => column.name === configuredGeometryColumn)
+    ) {
+      continue;
+    }
+    if (findGeometryColumn(table)) {
+      continue;
+    }
+    const coordinateColumns = findLongitudeLatitudeColumns(table);
+    if (!coordinateColumns) {
+      continue;
+    }
+
+    const geometryColumn = DEFAULT_GEOMETRY_COLUMN;
+
+    nextDatasets = {
+      ...nextDatasets,
+      [datasetId]: {
+        ...dataset,
+        source: {
+          ...source,
+          tableName,
+          transformSql: createDeckMapPointTransformSql({
+            ...coordinateColumns,
+            geometryColumn,
+          }),
+        },
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    };
+
+    if (
+      isDeckMapConfigRecord(nextSpec) &&
+      Array.isArray(nextSpec.layers) &&
+      nextSpec.layers.length > 0
+    ) {
+      nextSpec = {
+        ...nextSpec,
+        layers: normalizeDeckMapPointLayers({
+          layers: nextSpec.layers,
+          datasetId,
+          datasetIds,
+          geometryColumn,
+        }),
+      };
+    }
+
+    nextFitToData =
+      isDeckMapConfigRecord(nextFitToData) &&
+      nextFitToData.dataset === datasetId
+        ? {
+            ...nextFitToData,
+            geometryColumn,
+          }
+        : (nextFitToData ?? {
+            dataset: datasetId,
+            geometryColumn,
+            padding: 40,
+            maxZoom: 12,
+          });
+
+    changed = true;
+  }
+
+  if (!changed) {
+    return config;
+  }
+
+  return {
+    ...config,
+    spec: nextSpec,
+    datasets: nextDatasets,
+    fitToData: nextFitToData,
+  } as T;
+}
+
 export function normalizeDeckMapFillColor(
   fillColor?: number[],
 ): DeckMapFillColor {
@@ -226,7 +485,7 @@ export function normalizeDeckMapFillColor(
   return [...DEFAULT_FILL_COLOR];
 }
 
-export function createDeckMapDashboardConfigForTable(options: {
+export function createDeckMapConfigForTable(options: {
   tableName: string;
   columns: DeckMapConfigColumn[];
   tableReference?: DeckMapTableReference;
@@ -238,7 +497,7 @@ export function createDeckMapDashboardConfigForTable(options: {
   pointRadius?: number;
   fillColor?: DeckMapFillColor;
   mapStyle?: string;
-}): DeckMapDashboardPanelConfig {
+}): DeckMapConfig {
   const datasetId = options.tableName;
   const explicitGeometryColumn = options.geometryColumn?.trim() || undefined;
   const detectedCoordinates =
@@ -356,6 +615,8 @@ export function createDeckMapDashboardConfigForTable(options: {
   };
 }
 
+export const createDeckMapDashboardConfigForTable = createDeckMapConfigForTable;
+
 export function createDeckMapDashboardPanelConfigForTable(options: {
   title?: string;
   tableName: string;
@@ -372,32 +633,63 @@ export function createDeckMapDashboardPanelConfigForTable(options: {
 }) {
   return createDeckMapDashboardPanelConfig({
     title: options.title,
-    ...createDeckMapDashboardConfigForTable(options),
+    ...createDeckMapConfigForTable(options),
   });
 }
 
+/**
+ * Regenerates a map's dataset source and fit configuration for a table while
+ * preserving an existing single dataset ID so retained layer bindings remain
+ * valid. Empty maps adopt the generated dataset and layer spec. Returns the
+ * existing config unchanged when the table has no supported geospatial columns
+ * or when multiple datasets make the target ambiguous.
+ */
 export function regenerateMapConfigForTable(
-  panel: MosaicDashboardPanelConfigType,
+  panel: {config: Record<string, unknown>},
   table: DataTable,
   longitudeColumn?: string,
   latitudeColumn?: string,
 ) {
-  if (
-    !(longitudeColumn && latitudeColumn) &&
-    !findLongitudeLatitudeColumns(table) &&
-    !findGeometryColumn(table)
-  ) {
+  const coordinateColumns = resolveDeckMapCoordinateColumnNames({
+    columns: table.columns,
+    longitudeColumn,
+    latitudeColumn,
+  });
+  if (!coordinateColumns && !findGeometryColumn(table)) {
     return panel.config;
   }
 
   const existingConfig = panel.config as DeckMapDashboardPanelConfig;
-  const nextConfig = createDeckMapDashboardConfigForTable({
+  const existingDatasetIds = Object.keys(existingConfig.datasets ?? {});
+  if (existingDatasetIds.length > 1) return panel.config;
+
+  const nextConfig = createDeckMapConfigForTable({
     tableName: table.tableName,
     columns: table.columns,
     tableReference: table.table,
-    longitudeColumn,
-    latitudeColumn,
+    longitudeColumn: coordinateColumns?.longitudeColumn,
+    latitudeColumn: coordinateColumns?.latitudeColumn,
   });
+  const nextDataset = Object.values(nextConfig.datasets)[0];
+
+  if (existingDatasetIds.length === 0) {
+    return nextConfig;
+  }
+
+  if (existingDatasetIds.length === 1 && nextDataset) {
+    const datasetId = existingDatasetIds[0]!;
+    return updateDeckMapGeometryColumnBindings(
+      {
+        ...existingConfig,
+        datasets: {[datasetId]: nextDataset},
+        fitToData: nextConfig.fitToData
+          ? {...nextConfig.fitToData, dataset: datasetId}
+          : existingConfig.fitToData,
+      },
+      datasetId,
+      nextDataset.geometryColumn,
+    );
+  }
 
   // Preserve existing layer spec (layer types, styling, bindings) — only
   // update the dataset source and fitToData so the data re-fetches with the

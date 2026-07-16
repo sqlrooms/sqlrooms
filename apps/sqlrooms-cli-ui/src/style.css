@@ -31,6 +31,8 @@
   color: hsl(var(--popover-foreground)) !important;
 }
 
+.cli-sidebar-command[data-keyboard-navigation='true']
+  .cli-sidebar-command-item[data-selected='true'],
 .cli-sidebar-command-item:hover,
 .cli-sidebar-command-item[data-selected='true']:hover {
   background: hsl(var(--sidebar-accent)) !important;

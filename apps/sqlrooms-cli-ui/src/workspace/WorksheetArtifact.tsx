@@ -1,14 +1,18 @@
-import {BlockAiPromptPopover} from '@sqlrooms/ai';
+import {
+  createAskAiBlockHeaderAction,
+  type AskAiBlockHeaderActionRenderContext,
+} from '@sqlrooms/ai';
 import {HtmlAppBlock} from '@sqlrooms/app-runtime';
 import {
   BlockDocumentChartRendererProvider,
   BlockDocumentArtifact,
   BlockSettingsPanelLayout,
   BlockDocumentStatefulBlockRendererProvider,
+  startBlockScopedChat,
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
-  type BlockDocumentBlockHeaderActionsRenderContext,
   type Editor,
+  type StartBlockScopedChatActions,
 } from '@sqlrooms/documents';
 import type {RoomPanelComponent} from '@sqlrooms/layout';
 import {
@@ -16,13 +20,12 @@ import {
   ChartBlockSettings,
   DataTableBlockRenderer,
 } from '@sqlrooms/mosaic';
-import {Button} from '@sqlrooms/ui';
-import {SparklesIcon} from 'lucide-react';
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
-import {startBlockScopedChat} from '../ai/startBlockScopedChat';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
-import {experimentalEnabled, useRoomStore} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
+import {experimentalEnabled} from '../runtimeEnvironment';
+import type {RoomState} from '../store-types';
 import {
   createStatefulBlockTypes,
   getEnabledStatefulBlockArtifactTypes,
@@ -165,12 +168,42 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
 >;
 
 const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
-const ENABLED_WORKSHEET_AI_BLOCK_TYPES = new Set<string>([
-  'chart',
-  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
-    WORKSHEET_AI_BLOCK_TYPES.has(type),
-  ),
-]);
+
+function getEnabledWorksheetAiBlockTypes(
+  includeExperimental: boolean,
+): Set<string> {
+  return new Set<string>([
+    'chart',
+    ...getEnabledStatefulBlockArtifactTypes(includeExperimental).filter(
+      (type) => WORKSHEET_AI_BLOCK_TYPES.has(type),
+    ),
+  ]);
+}
+
+function createStartBlockScopedChatActions(
+  getState: () => RoomState,
+): StartBlockScopedChatActions {
+  return {
+    getArtifact: (artifactId) => getState().artifacts.getArtifact(artifactId),
+    getCurrentArtifactId: () => getState().artifacts.config.currentArtifactId,
+    setCurrentArtifact: (artifactId) =>
+      getState().artifacts.setCurrentArtifact(artifactId),
+    getAiSessions: () => getState().ai.config.sessions,
+    getAiSessionArtifacts: () =>
+      getState().artifactAi.config.aiSessionArtifacts,
+    createArtifactScopedSession: () =>
+      getState().artifactAi.createArtifactScopedSession(),
+    switchSession: (sessionId) => getState().ai.switchSession(sessionId),
+    getSessionDraftContextItemIds: (sessionId) =>
+      getState().ai.getSessionDraftContextItemIds(sessionId),
+    setSessionDraftContextItemIds: (sessionId, ids) =>
+      getState().ai.setSessionDraftContextItemIds(sessionId, ids),
+    setPrompt: (sessionId, prompt) =>
+      getState().ai.setPrompt(sessionId, prompt),
+    startAnalysisWhenReady: (sessionId) =>
+      getState().ai.startAnalysisWhenReady(sessionId),
+  };
+}
 
 function createWorksheetStatefulBlockRenderers(
   includeExperimental: boolean,
@@ -190,6 +223,7 @@ function createWorksheetStatefulBlockRenderers(
 }
 
 export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
+  const roomStore = useCliRoomStoreApi();
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
@@ -212,13 +246,18 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const statefulBlockTypes = useMemo(
     () =>
       createStatefulBlockTypes({
-        getState: useRoomStore.getState,
+        getState: roomStore.getState,
         experimentalEnabled,
       }),
-    [],
+    [roomStore],
   );
   const statefulBlockRenderers = useMemo(
     () => createWorksheetStatefulBlockRenderers(experimentalEnabled),
+    [],
+  );
+
+  const enabledWorksheetAiBlockTypes = useMemo(
+    () => getEnabledWorksheetAiBlockTypes(experimentalEnabled),
     [],
   );
 
@@ -233,49 +272,32 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     setLayoutCollapsed('assistant-sidebar', false);
   }, [setLayoutCollapsed]);
 
-  const renderBlockHeaderActions = useCallback(
-    ({
-      blockDocumentId,
-      blockId,
-      blockType,
-      blockInstanceId,
-    }: BlockDocumentBlockHeaderActionsRenderContext) => {
-      if (!ENABLED_WORKSHEET_AI_BLOCK_TYPES.has(blockType)) {
-        return null;
-      }
-
-      return (
-        <BlockAiPromptPopover
-          label="Ask AI"
-          placeholder="Ask AI to edit this block..."
-          trigger={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0"
-              aria-label="Ask AI"
-              title="Ask AI"
-            >
-              <SparklesIcon className="h-3.5 w-3.5" aria-hidden />
-            </Button>
-          }
-          onSubmit={(prompt) =>
-            void startBlockScopedChat({
-              target: {
-                blockDocumentId,
-                blockId,
-                blockType,
-                blockInstanceId,
-              },
-              prompt,
-              revealAssistant,
-            })
-          }
-        />
-      );
-    },
-    [revealAssistant],
+  const renderBlockHeaderActions = useMemo(
+    () =>
+      createAskAiBlockHeaderAction({
+        supportsAiEditing: (blockType) =>
+          enabledWorksheetAiBlockTypes.has(blockType),
+        onSubmit: (
+          ctx: AskAiBlockHeaderActionRenderContext,
+          prompt: string,
+        ) => {
+          void startBlockScopedChat({
+            target: {
+              blockDocumentId: ctx.blockDocumentId,
+              blockId: ctx.blockId,
+              blockType: ctx.blockType,
+              blockInstanceId: ctx.blockInstanceId,
+            },
+            prompt,
+            revealAssistant,
+            actions: createStartBlockScopedChatActions(roomStore.getState),
+            isValidBlockDocumentArtifact: (candidate) =>
+              candidate.type === 'worksheet',
+            artifactLabel: 'worksheet',
+          });
+        },
+      }),
+    [revealAssistant, enabledWorksheetAiBlockTypes],
   );
 
   if (!artifact || artifact.type !== 'worksheet') {

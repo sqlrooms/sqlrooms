@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {getVisibleSessionContextItemIds} from '@sqlrooms/ai';
 import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
 
 const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 

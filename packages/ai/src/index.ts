@@ -195,6 +195,9 @@ export {QueryControls} from '@sqlrooms/ai-core';
 export {
   BlockAiPromptPopover,
   type BlockAiPromptPopoverProps,
+  createAskAiBlockHeaderAction,
+  type AskAiBlockHeaderActionRenderContext,
+  type CreateAskAiBlockHeaderActionOptions,
 } from '@sqlrooms/ai-core';
 export {DeleteSessionDialog} from '@sqlrooms/ai-core';
 export {SessionActions} from '@sqlrooms/ai-core';

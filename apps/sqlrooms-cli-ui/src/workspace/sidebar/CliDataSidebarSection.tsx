@@ -45,16 +45,19 @@ import {
 } from '@sqlrooms/ui';
 import {ArrowUpFromLine, Database, Table2, Trash2Icon} from 'lucide-react';
 import {useCallback, useRef, useState, type ChangeEvent} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 import {
   LOCAL_DATA_ACCEPTED_FORMATS,
   useLocalFileLoader,
 } from '../../components/useLocalFileLoader';
+import {
+  CLI_SIDEBAR_COMMAND_CLASS,
+  CLI_SIDEBAR_COMMAND_ITEM_CLASS,
+} from './constants';
 
 const acceptedDataFileExtensions = Object.values(LOCAL_DATA_ACCEPTED_FORMATS)
   .flat()
   .join(',');
-const CLI_SIDEBAR_COMMAND_ITEM_CLASS = 'cli-sidebar-command-item';
 
 export function CliDataSidebarSection() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -65,6 +68,7 @@ export function CliDataSidebarSection() {
   const dropTable = useRoomStore((state) => state.db.dropTable);
   const {state} = useSidebar();
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [previewTable, setPreviewTable] = useState<DataTable | undefined>();
   const [deleteTable, setDeleteTable] = useState<TableNodeObject | null>(null);
   const [isDeletingTable, setIsDeletingTable] = useState(false);
@@ -192,7 +196,13 @@ export function CliDataSidebarSection() {
           </SidebarMenu>
         </div>
       ) : (
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <Popover
+          open={popoverOpen}
+          onOpenChange={(open) => {
+            setPopoverOpen(open);
+            setIsKeyboardNavigating(false);
+          }}
+        >
           <PopoverTrigger asChild>
             <SidebarMenuButton
               className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
@@ -209,7 +219,16 @@ export function CliDataSidebarSection() {
             side="right"
             sideOffset={10}
           >
-            <Command>
+            <Command
+              className={CLI_SIDEBAR_COMMAND_CLASS}
+              data-keyboard-navigation={isKeyboardNavigating}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  setIsKeyboardNavigating(true);
+                }
+              }}
+              onPointerMove={() => setIsKeyboardNavigating(false)}
+            >
               <CommandInput placeholder="Search tables..." />
               <CommandList className="max-h-none overflow-hidden">
                 <CommandEmpty>No tables found.</CommandEmpty>

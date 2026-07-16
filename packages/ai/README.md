@@ -129,6 +129,30 @@ function AiPanel() {
 }
 ```
 
+## Block-scoped Ask AI actions
+
+`createAskAiBlockHeaderAction(...)` builds a block-header actions renderer for
+hosts that expose Ask AI on selected block types. The host controls the
+`supportsAiEditing` policy and owns the submit flow; `onSubmit` receives the
+block-document target context plus the submitted prompt. Pass the returned
+renderer to the block-document chart/stateful renderer providers.
+
+```tsx
+import {createAskAiBlockHeaderAction} from '@sqlrooms/ai';
+
+const renderBlockHeaderActions = createAskAiBlockHeaderAction({
+  supportsAiEditing: (blockType) => ['chart', 'map'].includes(blockType),
+  onSubmit: (target, prompt) => {
+    void openBlockScopedChat({target, prompt});
+  },
+});
+```
+
+`BlockAiPromptPopover` is also re-exported for hosts that need a custom trigger
+or placement. The public integration types are
+`AskAiBlockHeaderActionRenderContext`, `CreateAskAiBlockHeaderActionOptions`,
+and `BlockAiPromptPopoverProps`.
+
 ## Generate Chat Titles
 
 `generateSessionTitle` turns a session's early user messages into a concise title

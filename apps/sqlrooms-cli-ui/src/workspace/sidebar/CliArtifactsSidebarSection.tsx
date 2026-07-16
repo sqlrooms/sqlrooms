@@ -38,10 +38,12 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FormEvent, useEffect, useRef, useState} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
+import {
+  CLI_SIDEBAR_COMMAND_CLASS,
+  CLI_SIDEBAR_COMMAND_ITEM_CLASS,
+} from './constants';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
-
-const CLI_SIDEBAR_COMMAND_ITEM_CLASS = 'cli-sidebar-command-item';
 
 export function CliArtifactsSidebarSection() {
   const artifactTabs = useCliArtifactSidebarTabs();
@@ -50,6 +52,7 @@ export function CliArtifactsSidebarSection() {
   );
   const {state} = useSidebar();
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [renameArtifact, setRenameArtifact] = useState<{
     id: string;
     name: string;
@@ -155,7 +158,13 @@ export function CliArtifactsSidebarSection() {
   }
 
   return (
-    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+    <Popover
+      open={popoverOpen}
+      onOpenChange={(open) => {
+        setPopoverOpen(open);
+        setIsKeyboardNavigating(false);
+      }}
+    >
       <PopoverTrigger asChild>
         <SidebarMenuButton
           className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
@@ -172,7 +181,16 @@ export function CliArtifactsSidebarSection() {
         side="right"
         sideOffset={10}
       >
-        <Command>
+        <Command
+          className={CLI_SIDEBAR_COMMAND_CLASS}
+          data-keyboard-navigation={isKeyboardNavigating}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              setIsKeyboardNavigating(true);
+            }
+          }}
+          onPointerMove={() => setIsKeyboardNavigating(false)}
+        >
           <CommandInput placeholder="Search workspace items..." />
           <CommandList className="max-h-none overflow-hidden">
             <CommandEmpty>No matching items.</CommandEmpty>

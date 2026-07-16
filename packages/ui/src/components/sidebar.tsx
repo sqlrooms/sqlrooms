@@ -511,13 +511,13 @@ const SidebarMenuButton = React.forwardRef<
 
     const button = (
       <Comp
+        {...props}
         ref={ref}
         data-slot="sidebar-menu-button"
         data-sidebar="menu-button"
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({variant, size}), className)}
-        {...props}
       />
     );
 

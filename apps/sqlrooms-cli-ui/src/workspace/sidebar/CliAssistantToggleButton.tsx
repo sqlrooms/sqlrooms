@@ -7,7 +7,7 @@ import {
 } from '@sqlrooms/ui';
 import {SparklesIcon} from 'lucide-react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 
 export function CliAssistantToggleButton() {
   const {state} = useSidebar();
@@ -41,7 +41,7 @@ export function CliAssistantToggleButton() {
           size={state === 'expanded' ? 'default' : 'lg'}
           className="text-muted-foreground hover:text-foreground data-[active=true]:border-sidebar-border data-[active=true]:bg-sidebar-accent/50 data-[active=true]:text-primary data-[active=true]:hover:bg-sidebar-accent group-data-[state=expanded]:h-10 group-data-[state=expanded]:justify-center group-data-[state=expanded]:gap-2 group-data-[state=expanded]:border"
           onClick={() => toggleCollapsed('assistant-sidebar')}
-          data-active={!isAssistantCollapsed}
+          isActive={!isAssistantCollapsed}
           aria-label="Toggle AI Agent"
           aria-pressed={!isAssistantCollapsed}
         >

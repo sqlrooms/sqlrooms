@@ -13,7 +13,7 @@ import {
 } from '@sqlrooms/ui';
 import {Plus, Trash2Icon} from 'lucide-react';
 import {useCallback, useState} from 'react';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
 import {CliSidebarToggleButton} from './sidebar';
 
 export function CliWorkspaceTopbar() {

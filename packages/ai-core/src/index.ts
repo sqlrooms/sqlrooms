@@ -75,6 +75,11 @@ export {
   BlockAiPromptPopover,
   type BlockAiPromptPopoverProps,
 } from './components/BlockAiPromptPopover';
+export {
+  createAskAiBlockHeaderAction,
+  type AskAiBlockHeaderActionRenderContext,
+  type CreateAskAiBlockHeaderActionOptions,
+} from './components/createAskAiBlockHeaderAction';
 export {DeleteSessionDialog} from './components/session/DeleteSessionDialog';
 export {SessionActions} from './components/session/SessionActions';
 export {SessionDropdown} from './components/session/SessionDropdown';
