@@ -232,6 +232,7 @@ describe('createDashboardAiTools', () => {
 describe('createDashboardAgentTool', () => {
   it('uses the dashboard selected table when tableName is omitted', async () => {
     const setSelectedTable = jest.fn();
+    const authorizeDashboard = jest.fn();
     const runSubAgent = jest.fn(async () => ({
       finalOutput: 'done',
       agentToolCalls: [],
@@ -276,6 +277,7 @@ describe('createDashboardAgentTool', () => {
       },
       getModel: () => ({}) as any,
       runSubAgent,
+      authorizeDashboard,
     });
 
     const result = await (tool as any).execute({
@@ -294,6 +296,181 @@ describe('createDashboardAgentTool', () => {
       '"main"."earthquakes"',
     );
     expect(runSubAgent).toHaveBeenCalledTimes(1);
+    expect(authorizeDashboard).toHaveBeenCalledWith({
+      dashboardId: 'dashboard-1',
+      state: expect.objectContaining({
+        mosaicDashboard: expect.any(Object),
+      }),
+    });
+    expect(authorizeDashboard).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-authorizes a dashboard before mutations after the subagent starts', async () => {
+    let ownedByCapturedWorksheet = true;
+    let lateToolResult: any;
+    const setSelectedTable = jest.fn();
+    const addPanel = jest.fn(() => 'panel-1');
+    const authorizeDashboard = jest.fn(() => {
+      if (!ownedByCapturedWorksheet) {
+        throw new Error('Dashboard does not belong to the captured worksheet.');
+      }
+    });
+    const dashboard = {
+      id: 'dashboard-1',
+      title: 'Dashboard',
+      layoutType: 'grid',
+      selectedTable: 'earthquakes',
+      panels: [],
+      layout: null,
+      updatedAt: 0,
+    };
+    const state = {
+      mosaicDashboard: {
+        getDashboard: () => dashboard,
+        setSelectedTable,
+        addPanel,
+        updatePanel: jest.fn(),
+        removePanel: jest.fn(),
+        getPanelIssue: jest.fn(),
+      },
+    };
+    const store = {getState: () => state};
+    const runSubAgent = jest.fn(async ({agent}: any) => {
+      ownedByCapturedWorksheet = false;
+      lateToolResult = await agent.tools[
+        KnownDashboardTools.create_dashboard_panel_data_table_explorer
+      ].execute({
+        reasoning: 'show the table',
+        title: 'Data Table',
+      });
+      return {finalOutput: 'done', agentToolCalls: []};
+    });
+    const tool = createDashboardAgentTool({
+      store: store as any,
+      databaseAdapter: {
+        getTables: () => [],
+        findTable: (tableName) =>
+          tableName === 'earthquakes'
+            ? ({
+                tableName: 'earthquakes',
+                table: makeQualifiedTableName({
+                  schema: 'main',
+                  table: 'earthquakes',
+                }),
+                columns: [],
+              } as any)
+            : undefined,
+      },
+      getModel: () => ({}) as any,
+      runSubAgent,
+      authorizeDashboard,
+    });
+
+    const result = await (tool as any).execute({
+      dashboardId: 'dashboard-1',
+      intent: 'add a data table',
+      reasoning: 'user asked to update the dashboard',
+    });
+
+    expect(result.success).toBe(true);
+    expect(lateToolResult).toMatchObject({
+      llmResult: {
+        success: false,
+        errorMessage: 'Dashboard does not belong to the captured worksheet.',
+      },
+    });
+    expect(setSelectedTable).toHaveBeenCalledTimes(1);
+    expect(addPanel).not.toHaveBeenCalled();
+    expect(authorizeDashboard).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects a missing dashboard before running the subagent', async () => {
+    const setSelectedTable = jest.fn();
+    const runSubAgent = jest.fn();
+    const store = {
+      getState: () => ({
+        mosaicDashboard: {
+          getDashboard: () => undefined,
+          setSelectedTable,
+          addPanel: jest.fn(),
+          updatePanel: jest.fn(),
+          removePanel: jest.fn(),
+          getPanelIssue: jest.fn(),
+        },
+      }),
+    };
+    const tool = createDashboardAgentTool({
+      store: store as any,
+      databaseAdapter: {getTables: () => [], findTable: () => undefined},
+      getModel: () => ({}) as any,
+      runSubAgent,
+    });
+
+    const result = await (tool as any).execute({
+      dashboardId: 'missing-dashboard',
+      tableName: 'earthquakes',
+      intent: 'add a histogram',
+      reasoning: 'user asked to update the dashboard',
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      dashboardId: 'missing-dashboard',
+      finalOutput: 'Dashboard "missing-dashboard" was not found.',
+    });
+    expect(setSelectedTable).not.toHaveBeenCalled();
+    expect(runSubAgent).not.toHaveBeenCalled();
+  });
+
+  it('honors host dashboard authorization before mutation', async () => {
+    const setSelectedTable = jest.fn();
+    const runSubAgent = jest.fn();
+    const dashboard = {
+      id: 'dashboard-1',
+      title: 'Dashboard',
+      layoutType: 'grid',
+      selectedTable: 'earthquakes',
+      panels: [],
+      layout: null,
+      updatedAt: 0,
+    };
+    const store = {
+      getState: () => ({
+        mosaicDashboard: {
+          getDashboard: () => dashboard,
+          setSelectedTable,
+          addPanel: jest.fn(),
+          updatePanel: jest.fn(),
+          removePanel: jest.fn(),
+          getPanelIssue: jest.fn(),
+        },
+      }),
+    };
+    const authorizeDashboard = jest.fn(() => {
+      throw new Error('Dashboard does not belong to the captured worksheet.');
+    });
+    const tool = createDashboardAgentTool({
+      store: store as any,
+      databaseAdapter: {getTables: () => [], findTable: () => undefined},
+      getModel: () => ({}) as any,
+      runSubAgent,
+      authorizeDashboard,
+    });
+
+    const result = await (tool as any).execute({
+      dashboardId: 'dashboard-1',
+      intent: 'add a histogram',
+      reasoning: 'user asked to update the dashboard',
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      dashboardId: 'dashboard-1',
+      finalOutput: 'Dashboard does not belong to the captured worksheet.',
+    });
+    expect(authorizeDashboard).toHaveBeenCalledTimes(1);
+    expect(setSelectedTable).not.toHaveBeenCalled();
+    expect(runSubAgent).not.toHaveBeenCalled();
   });
 });
 
@@ -357,5 +534,38 @@ describe('createDashboardAiAdapter', () => {
       {dashboardId: 'dashboard-1', panel},
       {surface: 'ai', actor: 'dashboard-ai-adapter'},
     );
+  });
+
+  it('does not let direct adapter fallbacks create missing dashboards', async () => {
+    const setSelectedTable = jest.fn();
+    const addPanel = jest.fn(() => 'panel-1');
+    const store = {
+      getState: () => ({
+        mosaicDashboard: {
+          getDashboard: () => undefined,
+          setSelectedTable,
+          addPanel,
+          updatePanel: jest.fn(),
+          removePanel: jest.fn(),
+          getPanelIssue: jest.fn(),
+        },
+      }),
+    };
+    const adapter = createDashboardAiAdapter(store as any, 'missing-dashboard');
+    const panel = {
+      id: 'panel-1',
+      type: MOSAIC_DASHBOARD_CHART_PANEL_TYPE,
+      title: 'Chart',
+      config: {chartType: 'histogram', settings: {field: 'magnitude'}},
+    };
+
+    await expect(adapter.setSelectedTable('earthquakes')).rejects.toThrow(
+      'Unknown dashboard "missing-dashboard".',
+    );
+    await expect(adapter.addPanel(panel)).rejects.toThrow(
+      'Unknown dashboard "missing-dashboard".',
+    );
+    expect(setSelectedTable).not.toHaveBeenCalled();
+    expect(addPanel).not.toHaveBeenCalled();
   });
 });

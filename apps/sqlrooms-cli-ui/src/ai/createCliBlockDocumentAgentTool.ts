@@ -54,7 +54,7 @@ export type CreateCliBlockDocumentAgentToolOptions =
     blockDocumentAdapter: BlockDocumentAiAdapter &
       BlockDocumentMoveBlockAiAdapter;
     databaseAdapter: DatabaseAiAdapter;
-    dashboardAgentTool: Tool;
+    dashboardAgentTool: Tool | ((blockDocumentId: string) => Tool);
     chartToolsOptions?: ChartToolsOptions;
     htmlAppBlocksEnabled?: boolean;
     mapBlocksEnabled?: boolean;
@@ -620,6 +620,10 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
         validateTargetBlock(blockDocumentAdapter, blockDocumentId, targetBlock);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
+        const embeddedDashboardAgentTool =
+          typeof dashboardAgentTool === 'function'
+            ? dashboardAgentTool(blockDocumentId)
+            : dashboardAgentTool;
         const blockDocumentTools = createCliBlockDocumentAiTools({
           databaseAdapter,
           blockDocumentAdapter,
@@ -630,7 +634,7 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
               : undefined,
           getState: () => store.getState(),
           chartToolsOptions,
-          dashboardAgentTool,
+          dashboardAgentTool: embeddedDashboardAgentTool,
           extraTools,
           htmlAppBlocksEnabled,
           createDashboardBlock,
