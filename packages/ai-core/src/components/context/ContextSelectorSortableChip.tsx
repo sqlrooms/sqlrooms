@@ -45,7 +45,8 @@ export const ContextSelectorSortableChip: FC<
         {main ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span
+              <button
+                type="button"
                 className="flex min-w-0 items-center gap-1"
                 aria-label={`${item.title} is the primary context item`}
               >
@@ -53,7 +54,7 @@ export const ContextSelectorSortableChip: FC<
                   <ContextSelectorItemIcon item={item} className="h-3 w-3" />
                 </span>
                 <span className="truncate">{item.title}</span>
-              </span>
+              </button>
             </TooltipTrigger>
             <TooltipContent side="top" className="text-xs">
               Primary context
