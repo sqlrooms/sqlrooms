@@ -50,6 +50,10 @@ import {
   LOCAL_DATA_ACCEPTED_FORMATS,
   useLocalFileLoader,
 } from '../../components/useLocalFileLoader';
+import {
+  CLI_SIDEBAR_COMMAND_CLASS,
+  CLI_SIDEBAR_COMMAND_ITEM_CLASS,
+} from './constants';
 
 const acceptedDataFileExtensions = Object.values(LOCAL_DATA_ACCEPTED_FORMATS)
   .flat()
@@ -64,6 +68,7 @@ export function CliDataSidebarSection() {
   const dropTable = useRoomStore((state) => state.db.dropTable);
   const {state} = useSidebar();
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [previewTable, setPreviewTable] = useState<DataTable | undefined>();
   const [deleteTable, setDeleteTable] = useState<TableNodeObject | null>(null);
   const [isDeletingTable, setIsDeletingTable] = useState(false);
@@ -163,18 +168,6 @@ export function CliDataSidebarSection() {
     <>
       {state === 'expanded' ? (
         <div className="flex h-full min-h-0 flex-col gap-3">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                className="text-primary hover:text-primary border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent h-10 justify-center border"
-                onClick={addData}
-                type="button"
-              >
-                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
-                <span>Add data</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
           <div className="flex min-h-0 flex-1 flex-col py-1 pr-0 pl-0">
             <SchemaExplorer.Header title="Data">
               <SchemaExplorer.RefreshButton />
@@ -189,9 +182,27 @@ export function CliDataSidebarSection() {
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
           </div>
+          <SidebarMenu className="shrink-0">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="text-primary hover:text-primary border-sidebar-border bg-sidebar-accent/50 hover:bg-sidebar-accent h-10 justify-center border"
+                onClick={addData}
+                type="button"
+              >
+                <ArrowUpFromLine className="h-4 w-4" aria-hidden />
+                <span>Add data</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </div>
       ) : (
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <Popover
+          open={popoverOpen}
+          onOpenChange={(open) => {
+            setPopoverOpen(open);
+            setIsKeyboardNavigating(false);
+          }}
+        >
           <PopoverTrigger asChild>
             <SidebarMenuButton
               className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
@@ -206,9 +217,18 @@ export function CliDataSidebarSection() {
             className="w-80 p-0"
             align="start"
             side="right"
-            sideOffset={8}
+            sideOffset={10}
           >
-            <Command>
+            <Command
+              className={CLI_SIDEBAR_COMMAND_CLASS}
+              data-keyboard-navigation={isKeyboardNavigating}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  setIsKeyboardNavigating(true);
+                }
+              }}
+              onPointerMove={() => setIsKeyboardNavigating(false)}
+            >
               <CommandInput placeholder="Search tables..." />
               <CommandList className="max-h-none overflow-hidden">
                 <CommandEmpty>No tables found.</CommandEmpty>
@@ -216,6 +236,7 @@ export function CliDataSidebarSection() {
                   <CommandGroup heading="Tables">
                     {tables.map((table) => (
                       <CommandItem
+                        className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
                         key={getTableIdentity(table.table)}
                         value={`${getTableIdentity(table.table)} ${formatTableMeta(table)}`}
                         onSelect={() => {
@@ -236,6 +257,7 @@ export function CliDataSidebarSection() {
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem
+                    className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
                     value="add data import file"
                     onSelect={() => {
                       addData();
