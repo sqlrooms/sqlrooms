@@ -551,18 +551,35 @@ export function createSqlEditorSlice({
 
         abortQueryById: (queryId) => {
           const currentResult = get().sqlEditor.queryResultsById[queryId];
-          if (currentResult?.status === 'loading' && currentResult.controller) {
-            currentResult.controller.abort();
+          if (currentResult?.status !== 'loading') {
+            return;
           }
+          // Fire the abort signal (best-effort server-side/underlying cancel)…
+          currentResult.controller?.abort();
 
-          set((state) =>
-            produce(state, (draft) => {
-              const result = draft.sqlEditor.queryResultsById[queryId];
-              if (result?.status === 'loading') {
-                result.isBeingAborted = true;
-              }
-            }),
-          );
+          // …then transition to `aborted` IMMEDIATELY rather than waiting for the
+          // query promise to reject. The underlying connector may not reject
+          // promptly (e.g. an abort swallowed during a pre-flight parse query, or
+          // a blocked backend fetch), which would otherwise leave the UI stuck on
+          // "Stopping" indefinitely. The finalize `set()` in runQueryById only
+          // writes its result while status === 'loading', so this state change
+          // makes any late settle a no-op — no overwrite, no race.
+          const startedAt = currentResult.startedAt;
+          const now = Date.now();
+          set((state) => ({
+            ...state,
+            sqlEditor: {
+              ...state.sqlEditor,
+              queryResultsById: {
+                ...state.sqlEditor.queryResultsById,
+                [queryId]: {
+                  status: 'aborted',
+                  durationMs: startedAt ? now - startedAt : undefined,
+                  completedAt: now,
+                },
+              },
+            },
+          }));
         },
 
         clearQueryResult: (queryId) => {
