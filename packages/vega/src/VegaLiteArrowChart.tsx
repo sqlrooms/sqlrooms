@@ -57,16 +57,19 @@ export function makeDefaultVegaLiteOptions(
   };
 }
 
-const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
-  className,
-  aspectRatio = 16 / 9,
-  spec,
-  arrowTable,
-  options: propsOptions,
-  width = 'auto',
-  height = 'auto',
-  children,
-}) => {
+const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = (props) => {
+  const {
+    className,
+    spec,
+    arrowTable,
+    options: propsOptions,
+    width = 'auto',
+    height = 'auto',
+    children,
+  } = props;
+  const aspectRatio = Object.hasOwn(props, 'aspectRatio')
+    ? props.aspectRatio
+    : 16 / 9;
   const {theme} = useTheme();
 
   const options = useMemo(
@@ -147,7 +150,12 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   return (
     <VegaChartContextProvider value={{embed}}>
       <div className={cn('relative flex w-full flex-col gap-2', className)}>
-        <div className="peer relative">
+        <div
+          className={cn(
+            'peer relative',
+            height === 'auto' && aspectRatio === undefined && 'h-full',
+          )}
+        >
           {displayError ? (
             <ToolErrorMessage
               error={displayError}
@@ -161,8 +169,19 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
             data && (
               <div
                 ref={containerRef}
-                style={height === 'auto' ? {aspectRatio} : {height}}
-                className="w-full overflow-visible"
+                style={{
+                  ...(height === 'auto' && aspectRatio !== undefined
+                    ? {aspectRatio}
+                    : height !== 'auto'
+                      ? {height}
+                      : {}),
+                  ...(width !== 'auto' ? {width} : {}),
+                }}
+                className={cn(
+                  'overflow-visible',
+                  width === 'auto' && 'w-full',
+                  height === 'auto' && aspectRatio === undefined && 'h-full',
+                )}
               >
                 <div
                   ref={ref}
