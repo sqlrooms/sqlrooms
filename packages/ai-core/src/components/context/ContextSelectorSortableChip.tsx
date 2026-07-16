@@ -42,28 +42,49 @@ export const ContextSelectorSortableChip: FC<
         variant={main ? 'default' : 'secondary'}
         className="h-6 max-w-36 min-w-0 gap-1 px-1.5 text-[11px]"
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="text-muted-foreground/80 hover:text-foreground shrink-0 cursor-grab active:cursor-grabbing"
-              aria-label={`Drag ${item.title} to reorder context`}
-              {...attributes}
-              {...listeners}
-            >
-              <GripVerticalIcon className="h-2.5 w-2.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="text-xs">
-            Drag to the front to make primary
-          </TooltipContent>
-        </Tooltip>
-        <span className="flex min-w-0 items-center gap-1">
-          <span className="shrink-0">
-            <ContextSelectorItemIcon item={item} className="h-3 w-3" />
-          </span>
-          <span className="truncate">{item.title}</span>
-        </span>
+        {main ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="flex min-w-0 items-center gap-1"
+                aria-label={`${item.title} is the primary context item`}
+              >
+                <span className="shrink-0">
+                  <ContextSelectorItemIcon item={item} className="h-3 w-3" />
+                </span>
+                <span className="truncate">{item.title}</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Primary context
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="text-muted-foreground/80 hover:text-foreground shrink-0 cursor-grab active:cursor-grabbing"
+                  aria-label={`Drag ${item.title} to reorder context`}
+                  {...attributes}
+                  {...listeners}
+                >
+                  <GripVerticalIcon className="h-2.5 w-2.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                Drag to the front to make primary
+              </TooltipContent>
+            </Tooltip>
+            <span className="flex min-w-0 items-center gap-1">
+              <span className="shrink-0">
+                <ContextSelectorItemIcon item={item} className="h-3 w-3" />
+              </span>
+              <span className="truncate">{item.title}</span>
+            </span>
+          </>
+        )}
         <button
           type="button"
           className="ml-0.5 shrink-0 opacity-70 hover:opacity-100"
