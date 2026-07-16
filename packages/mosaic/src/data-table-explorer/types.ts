@@ -61,15 +61,41 @@ export type DataTableExplorerUnsupportedSummary =
     label: string;
   };
 
+/**
+ * Summary state for columns whose summary was disabled via
+ * {@link DataTableExplorerOptions.getColumnKind}. No summary clients are
+ * connected for these columns.
+ */
+export type DataTableExplorerNoneSummary = DataTableExplorerSummaryStatus & {
+  kind: 'none';
+};
+
 export type DataTableExplorerSummaryState =
   | DataTableExplorerCategorySummary
   | DataTableExplorerHistogramSummary
+  | DataTableExplorerNoneSummary
   | DataTableExplorerUnsupportedSummary;
 
 export type DataTableExplorerColumnKind =
   | 'category'
   | 'histogram'
+  | 'none'
   | 'unsupported';
+
+/**
+ * Per-column summary-kind override returned by
+ * {@link DataTableExplorerOptions.getColumnKind}.
+ *
+ * - `'auto'` keeps the default Arrow-type-driven behavior.
+ * - `'none'` shows the column without a summary or filter interactions.
+ * - `'category'` / `'histogram'` force a specific summary; incompatible
+ *   requests (e.g. a histogram on a string column) fall back to `'auto'`.
+ */
+export type DataTableExplorerColumnKindOverride =
+  | 'auto'
+  | 'category'
+  | 'histogram'
+  | 'none';
 
 export type DataTableExplorerColumnState = {
   field: Field;
@@ -91,6 +117,17 @@ export type DataTableExplorerSqlTableReference = MosaicSqlTableReference;
 export type DataTableExplorerOptions = {
   categoryLimit?: number;
   columns?: string[];
+  /**
+   * Resolves the summary kind for each column. Return `'auto'` (or omit the
+   * option) to keep the default Arrow-type-driven behavior. Return `'none'`
+   * to show a column without a summary — its summary clients are not created,
+   * so no summary queries run and the column does not participate in
+   * cross-filtering.
+   *
+   * Pass a stable function (e.g. via `useCallback`); the resolved kinds are
+   * value-memoized, so an inline lambda works but must stay pure.
+   */
+  getColumnKind?: (field: Field) => DataTableExplorerColumnKindOverride;
   initialSorting?: DataTableExplorerSorting;
   pageSize?: number;
   selection?: Selection;
