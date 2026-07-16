@@ -38,26 +38,40 @@ export type EnsureSqlQueryOptions = {
   select?: boolean;
 };
 
+/**
+ * Lifecycle state and output of a single SQL query execution, keyed by query id
+ * in the editor slice.
+ *
+ * - `loading` results may gain an {@link QueryResult.isWrite | isWrite}
+ *   classification once the statement has been parsed.
+ * - `aborted` results may carry a {@link QueryResult.warning | warning} when
+ *   the connector cannot guarantee the statement was stopped server-side.
+ */
 export type QueryResult =
   | {
       status: 'loading';
       isBeingAborted?: boolean;
       controller: AbortController;
       startedAt?: number;
-      // Whether the running statement is a write (non-SELECT). Stamped once the
-      // statement has been parsed (see runQueryById). Undefined until known.
-      // Used by abortQueryById to decide whether cancelling needs a warning:
-      // aborting a read is harmless, but the underlying cancel is best-effort,
-      // so a write may still complete on the backend after the UI reports it
-      // aborted.
+      /**
+       * Whether the running statement is a write (non-SELECT or multi-statement).
+       * Stamped once the statement has been parsed (see `runQueryById`);
+       * `undefined` until then. `abortQueryById` reads this to decide whether
+       * cancelling needs a warning: aborting a read is harmless, but the
+       * underlying cancel is best-effort, so a write may still complete on the
+       * backend after the UI reports it aborted.
+       */
       isWrite?: boolean;
     }
   | {
       status: 'aborted';
       durationMs?: number;
       completedAt?: number;
-      // Set when a write was aborted but the connector can't guarantee it was
-      // actually stopped server-side — surfaced to the user in the result pane.
+      /**
+       * User-facing warning shown in the result pane when a write (or a
+       * statement of not-yet-known type) was aborted but the connector cannot
+       * guarantee it was actually stopped server-side. Absent for reads.
+       */
       warning?: string;
     }
   | {status: 'error'; error: string; durationMs?: number; completedAt?: number}
