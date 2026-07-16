@@ -2,9 +2,9 @@ import {useDataTable} from '@sqlrooms/duckdb';
 import {
   DataTableExplorer,
   type DataTableExplorerColumnKindOverride,
+  type DataTableExplorerOptions,
 } from '@sqlrooms/mosaic';
 import {cn} from '@sqlrooms/ui';
-import type {Field} from 'apache-arrow';
 import {FC, useMemo} from 'react';
 import {useRoomStore} from '../../store';
 
@@ -20,9 +20,9 @@ const COLUMN_KIND_OVERRIDES: Record<
   Longitude: 'none',
 };
 
-function getColumnKind(field: Field): DataTableExplorerColumnKindOverride {
-  return COLUMN_KIND_OVERRIDES[field.name] ?? 'auto';
-}
+const getColumnKind: NonNullable<DataTableExplorerOptions['getColumnKind']> = (
+  field,
+) => COLUMN_KIND_OVERRIDES[field.name] ?? 'auto';
 
 type EarthquakeProfilerProps = {className?: string};
 
