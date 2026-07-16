@@ -44,8 +44,22 @@ export type QueryResult =
       isBeingAborted?: boolean;
       controller: AbortController;
       startedAt?: number;
+      // Whether the running statement is a write (non-SELECT). Stamped once the
+      // statement has been parsed (see runQueryById). Undefined until known.
+      // Used by abortQueryById to decide whether cancelling needs a warning:
+      // aborting a read is harmless, but the underlying cancel is best-effort,
+      // so a write may still complete on the backend after the UI reports it
+      // aborted.
+      isWrite?: boolean;
     }
-  | {status: 'aborted'; durationMs?: number; completedAt?: number}
+  | {
+      status: 'aborted';
+      durationMs?: number;
+      completedAt?: number;
+      // Set when a write was aborted but the connector can't guarantee it was
+      // actually stopped server-side — surfaced to the user in the result pane.
+      warning?: string;
+    }
   | {status: 'error'; error: string; durationMs?: number; completedAt?: number}
   | {
       status: 'success';
@@ -566,6 +580,20 @@ export function createSqlEditorSlice({
           // makes any late settle a no-op — no overwrite, no race.
           const startedAt = currentResult.startedAt;
           const now = Date.now();
+          // Cancellation is best-effort: controller.abort() signals the
+          // connector, but not every connector can actually stop an in-flight
+          // statement server-side. Aborting a read is harmless (a late result
+          // is simply discarded), but a write (INSERT/CREATE/DROP/…) may still
+          // complete on the backend after we report it aborted. Warn only in
+          // that case — reads cancel silently, so we don't nag the user. If the
+          // statement type isn't known yet (parsed asynchronously), isWrite is
+          // undefined and we warn conservatively.
+          const mayStillBeWriting = currentResult.isWrite !== false;
+          const warning = mayStillBeWriting
+            ? 'Cancellation requested. The statement may be a write and could ' +
+              'still complete on the server — this connector cannot guarantee ' +
+              'it was stopped.'
+            : undefined;
           set((state) => ({
             ...state,
             sqlEditor: {
@@ -576,6 +604,7 @@ export function createSqlEditorSlice({
                   status: 'aborted',
                   durationMs: startedAt ? now - startedAt : undefined,
                   completedAt: now,
+                  ...(warning ? {warning} : {}),
                 },
               },
             },
@@ -654,6 +683,24 @@ export function createSqlEditorSlice({
             }
 
             const isValidSelectQuery = !parsedLastStatement.error;
+
+            // Stamp read/write onto the loading result now that we've parsed the
+            // statement. abortQueryById reads this to decide whether cancelling
+            // needs a "may still be running" warning (writes) or is silent
+            // (reads). A multi-statement query is treated as a write. Guard on
+            // the controller so we don't clobber a result the user already
+            // aborted/re-ran in the brief window before parsing finished.
+            {
+              const isWrite = !isValidSelectQuery || hasMultipleStatements;
+              set((state) =>
+                produce(state, (draft) => {
+                  const r = draft.sqlEditor.queryResultsById[queryId];
+                  if (r?.status === 'loading' && r.controller === queryController) {
+                    r.isWrite = isWrite;
+                  }
+                }),
+              );
+            }
 
             if (isValidSelectQuery) {
               // Add limit to the last statement

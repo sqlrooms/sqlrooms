@@ -173,6 +173,11 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
     return (
       <div className="p-5 font-mono text-xs leading-tight text-red-500">
         Query was aborted
+        {queryResult.warning && (
+          <div className="text-muted-foreground mt-2">
+            {queryResult.warning}
+          </div>
+        )}
       </div>
     );
   }
