@@ -83,9 +83,12 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const setAddToolApprovalResponse = useStoreWithAi(
     (s) => s.ai.setAddToolApprovalResponse,
   );
-  const setIsRunning = useStoreWithAi((s) => s.ai.setIsRunning);
+  const persistTimedOutSession = useStoreWithAi(
+    (s) => s.ai.persistTimedOutSession,
+  );
   const tools = useStoreWithAi((s) => s.ai.tools);
   const timeouts = useStoreWithAi((s) => s.ai.timeouts);
+  const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
 
   // Get per-session abort controller
   const getAbortController = useStoreWithAi((s) => s.ai.getAbortController);
@@ -206,6 +209,8 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   // Treat UI message updates as observable stream progress. This cannot tell
   // a silent-but-healthy operation from a stuck one, so the watchdog is opt-in.
   useEffect(() => {
+    // Re-arm the watchdog whenever a nested agent reports observable progress.
+    void agentProgress;
     const timeoutMs = getConfiguredTimeoutMs(timeouts.idleStreamMs);
     const uiMessages = messages as UIMessage[];
     const isWaitingForApproval = hasPendingToolApproval(uiMessages);
@@ -223,17 +228,23 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     const timeoutId = setTimeout(() => {
       const controller = getAbortController(sessionId);
       if (!controller || controller.signal.aborted) return;
-      controller.abort(createIdleStreamTimeoutError(timeoutMs));
+      const timeoutError = createIdleStreamTimeoutError(timeoutMs);
+      controller.abort(timeoutError);
+      persistTimedOutSession(
+        sessionId,
+        latestMessagesRef.current,
+        timeoutError.message,
+      );
       stop();
-      setIsRunning(sessionId, false);
     }, timeoutMs);
     return () => clearTimeout(timeoutId);
   }, [
+    agentProgress,
     currentSession?.isRunning,
     getAbortController,
     messages,
+    persistTimedOutSession,
     sessionId,
-    setIsRunning,
     stop,
     timeouts.idleStreamMs,
     tools,

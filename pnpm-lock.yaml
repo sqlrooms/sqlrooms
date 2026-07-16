@@ -3158,24 +3158,21 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
-      '@sqlrooms/mosaic':
+      '@sqlrooms/room-store':
         specifier: workspace:*
-        version: link:../mosaic
+        version: link:../room-store
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
-      '@uwdata/mosaic-core':
-        specifier: ^0.21.0
-        version: 0.21.1
-      '@uwdata/mosaic-sql':
-        specifier: ^0.21.0
-        version: 0.21.1
       ai:
         specifier: ^6.0.177
         version: 6.0.177(zod@4.1.13)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -3201,12 +3198,21 @@ importers:
       '@jest/globals':
         specifier: ^30.3.0
         version: 30.4.1
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../mosaic
       '@types/geojson':
         specifier: ^7946.0.16
         version: 7946.0.16
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@uwdata/mosaic-core':
+        specifier: ^0.21.0
+        version: 0.21.1
+      '@uwdata/mosaic-sql':
+        specifier: ^0.21.0
+        version: 0.21.1
       jest:
         specifier: ^30.1.3
         version: 30.4.2(@types/node@24.12.4)

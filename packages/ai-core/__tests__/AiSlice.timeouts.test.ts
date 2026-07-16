@@ -36,6 +36,13 @@ describe('AiSlice run timeout', () => {
             state: 'input-available',
             input: {sql: 'select 1'},
           },
+          {
+            type: 'tool-deleteItem',
+            toolCallId: 'tool-approval',
+            state: 'approval-requested',
+            input: {id: 'item-1'},
+            approval: {id: 'approval-1'},
+          },
         ],
       },
     ];
@@ -64,6 +71,10 @@ describe('AiSlice run timeout', () => {
       state: 'output-error',
       errorText: 'Chat run timed out after 1s',
     });
+    expect(saved[1]?.parts[1]).toMatchObject({
+      state: 'output-error',
+      errorText: 'Chat run timed out after 1s',
+    });
 
     // A later callback remains consistent with the persisted timeout reason.
     store.getState().ai.onChatFinish({sessionId, messages});
@@ -73,6 +84,10 @@ describe('AiSlice run timeout', () => {
       error: 'Chat run timed out after 1s',
     });
     expect(saved[1]?.parts[0]).toMatchObject({
+      state: 'output-error',
+      errorText: 'Chat run timed out after 1s',
+    });
+    expect(saved[1]?.parts[1]).toMatchObject({
       state: 'output-error',
       errorText: 'Chat run timed out after 1s',
     });
@@ -99,6 +114,59 @@ describe('AiSlice run timeout', () => {
     expect(
       store.getState().ai.getAbortController(sessionId)?.signal.aborted,
     ).toBe(false);
+  });
+
+  it('persists an idle timeout before a background chat can unmount', () => {
+    const store = createStore<AiSliceState>((set, get, api) =>
+      createAiSlice({tools: {} as any, getInstructions: () => 'test'})(
+        set,
+        get,
+        api,
+      ),
+    );
+    const session = store.getState().ai.getCurrentSession()!;
+    const messages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-query',
+            toolCallId: 'tool-1',
+            state: 'input-available',
+            input: {sql: 'select 1'},
+          },
+        ],
+      },
+    ];
+    store.getState().ai.setIsRunning(session.id, true);
+
+    store
+      .getState()
+      .ai.persistTimedOutSession(
+        session.id,
+        messages,
+        'No model or tool progress received for 2s',
+      );
+
+    const savedSession = store.getState().ai.getCurrentSession()!;
+    const saved = savedSession.uiMessages as UIMessage[];
+    expect(savedSession.isRunning).toBe(false);
+    expect(savedSession.messagesRevision).toBe(
+      (session.messagesRevision || 0) + 1,
+    );
+    expect(getChatRequestErrorMessage(saved[0])).toEqual({
+      error: 'No model or tool progress received for 2s',
+    });
+    expect(saved[1]?.parts[0]).toMatchObject({
+      state: 'output-error',
+      errorText: 'No model or tool progress received for 2s',
+    });
   });
 
   it('preserves the timeout reason when onChatError completes a pending tool', () => {

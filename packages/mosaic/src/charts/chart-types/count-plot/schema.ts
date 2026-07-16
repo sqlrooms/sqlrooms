@@ -21,14 +21,16 @@ export const CountPlotChartSettings = z.object({
   field: z
     .string()
     .optional()
-    .describe('Categorical column to count frequency of values'),
+    .describe('Categorical column used to group the horizontal bars'),
   metric: CountPlotMetric.optional()
     .default('count')
-    .describe('Use row count or aggregate a numeric value column per category'),
+    .describe(
+      'Use row count for repeated raw observations or aggregate for an existing numeric measure',
+    ),
   valueField: z
     .string()
     .optional()
-    .describe('Numeric column to aggregate when metric is aggregate'),
+    .describe('Numeric measure column to aggregate when metric is aggregate'),
   aggregate: AggregateFunction.optional()
     .default('sum')
     .describe('Aggregation function for valueField'),

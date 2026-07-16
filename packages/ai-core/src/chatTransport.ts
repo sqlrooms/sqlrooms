@@ -377,6 +377,57 @@ function toMessageTokenUsage(
   };
 }
 
+function extractProviderErrorMessage(
+  error: unknown,
+  seen = new Set<unknown>(),
+): string | undefined {
+  if (typeof error === 'string') {
+    const trimmed = error.trim();
+    if (!trimmed.startsWith('{')) return undefined;
+    try {
+      return extractProviderErrorMessage(JSON.parse(trimmed), seen);
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (!error || typeof error !== 'object' || seen.has(error)) {
+    return undefined;
+  }
+  seen.add(error);
+
+  const record = error as Record<string, unknown>;
+  const providerError = record.error;
+  if (providerError && typeof providerError === 'object') {
+    const providerRecord = providerError as Record<string, unknown>;
+    if (typeof providerRecord.message === 'string') {
+      return providerRecord.message;
+    }
+  }
+
+  const commonFields = [
+    record.data,
+    record.responseBody,
+    record.body,
+    record.response,
+    record.cause,
+  ];
+  for (const field of commonFields) {
+    const message = extractProviderErrorMessage(field, seen);
+    if (message) return message;
+  }
+
+  return undefined;
+}
+
+export function getChatErrorMessageForDisplay(error: unknown): string {
+  const providerMessage = extractProviderErrorMessage(error);
+  if (providerMessage) return providerMessage;
+
+  const message = getErrorMessageForDisplay(error);
+  return message && message.trim().length > 0 ? message : 'Unknown error';
+}
+
 export function createLocalChatTransportFactory({
   sessionId,
   store,
@@ -494,6 +545,7 @@ export function createLocalChatTransportFactory({
           Object.keys(tools),
         ),
         abortSignal,
+        onError: getChatErrorMessageForDisplay,
         messageMetadata: ({part}: {part: TextStreamPart<ToolSet>}) => {
           if (part.type === 'finish-step') {
             const u = part.usage;
@@ -691,6 +743,7 @@ export function createChatHandlers({
           const completedMessages = fixIncompleteToolCalls(
             sourceMessages,
             abortMessage,
+            {completeApprovalRequests: abortReason instanceof ChatTimeoutError},
           );
 
           // Enrich cancelled agent tool calls with progress snapshots so the
@@ -775,13 +828,10 @@ export function createChatHandlers({
         consumeSessionTokenUsage(sessionId);
         const timeoutReason = store.getState().ai.getAbortController(sessionId)
           ?.signal.reason;
-        let errMsg =
+        const errMsg =
           timeoutReason instanceof ChatTimeoutError
             ? timeoutReason.message
-            : getErrorMessageForDisplay(error);
-        if (!errMsg || errMsg.trim().length === 0) {
-          errMsg = 'Unknown error';
-        }
+            : getChatErrorMessageForDisplay(error);
 
         // Detect API key errors (401/403 or common error messages)
         const isApiKeyError = isAuthenticationError(error, errMsg);
@@ -810,6 +860,10 @@ export function createChatHandlers({
               const completedMessages = fixIncompleteToolCalls(
                 sourceMessages,
                 errMsg,
+                {
+                  completeApprovalRequests:
+                    timeoutReason instanceof ChatTimeoutError,
+                },
               );
               writeToolTimingsToMetadata(completedMessages, toolTimings);
 

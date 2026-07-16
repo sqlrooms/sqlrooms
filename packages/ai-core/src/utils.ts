@@ -469,11 +469,13 @@ export function shouldEndAnalysis(messages: UIMessage[]): boolean {
  *
  * @param messages - The messages to validate and complete
  * @param incompleteToolError - Error text for synthesized tool results
+ * @param options - Completion behavior for states normally kept interactive
  * @returns Cleaned messages with completed tool-call/result pairs
  */
 export function fixIncompleteToolCalls(
   messages: UIMessage[],
   incompleteToolError: string = TOOL_CALL_CANCELLED,
+  options: {completeApprovalRequests?: boolean} = {},
 ): UIMessage[] {
   return messages.map((message) => {
     if (message.role !== 'assistant' || !message.parts) {
@@ -524,7 +526,8 @@ export function fixIncompleteToolCalls(
       const toolPart = current as ToolPart & {rawInput?: unknown};
       const isCompleted =
         toolPart.state?.startsWith('output') ||
-        toolPart.state === 'approval-requested' ||
+        (toolPart.state === 'approval-requested' &&
+          !options.completeApprovalRequests) ||
         toolPart.state === 'approval-responded';
       if (isCompleted) {
         // `output-error` parts can carry an `input` that does NOT satisfy the

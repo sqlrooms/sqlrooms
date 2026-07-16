@@ -2,6 +2,40 @@ Deck.gl integration for SQLRooms with JSON-driven map specs, dataset registry
 binding, DuckDB-backed or in-memory Arrow datasets, and GeoArrow-first geometry
 preparation.
 
+## Map resources and dashboard adapters
+
+Worksheet maps are first-class `deckMaps` resources. The root package export
+contains the resource slice, renderer, settings, direct DuckDB data adapter,
+and resource orchestration APIs. It does not require Mosaic.
+
+Mosaic dashboard panel support is opt-in through `@sqlrooms/deck/mosaic`.
+Dashboard panels keep their panel storage, query clients, cross-filter
+selection, and issue translation inside that adapter boundary.
+
+`DeckMapSettingsPanel` is the shared host-neutral editor for both surfaces. It
+receives a map config, selected table, available tables, and edit callbacks;
+worksheet resources and Mosaic panels only adapt their respective stores to
+that contract. Layer, binding, style, extrusion, and code-view controls therefore
+stay consistent without putting Mosaic APIs in the worksheet settings path.
+
+Use `getDeckMapDataPolicy(...)` to resolve a map config into the exported
+`DeckMapDataPolicy` runtime row-limit policy.
+
+Worksheet map runtime issues distinguish dataset SQL failures (`sql-error`)
+from fit-to-data bounds failures (`fit-error`), so each issue is cleared only
+after its corresponding operation recovers.
+
+`DeckMapDataAdapter.resolveFitDataset` can provide an unsampled source for
+fit-to-data bounds queries. The direct adapter uses the authored source for
+bounds while applying the configured row-limit policy only to rendered rows.
+
+Worksheet maps deliberately use independent selection semantics. Their direct
+data adapter executes each configured SQL/table dataset through the room's
+DuckDB connector and neither reads nor publishes Mosaic selections. This drops
+the old incidental intra-map cross-filtering between datasets; a future
+host-neutral selection adapter can add that behavior without changing map
+resource ownership.
+
 ## Installation
 
 ```bash
@@ -215,27 +249,47 @@ UI is available:
   settings panel can represent (layer type, color scale, radius, geometry
   bindings). The UI settings panel is enabled for user tweaks.
 - **`'custom'`** — the config may use any deck.gl JSON props, including those not
-  representable in the UI configurator. The settings panel is disabled and shows
-  a message directing users to the JSON editor instead.
+  representable in the UI configurator. Dashboard and document map settings keep
+  the basic controls disabled so dataset or layer edits cannot rewrite the authored
+  config.
 
 AI tools set this field automatically based on request complexity.
 
 ## Embeddable Map Blocks
 
 Host applications that expose document-like block surfaces can render maps
-without first creating a visible dashboard. Use `ensureDeckMapBlockState(...)`
-to initialize persisted map state for a durable block id, then render it with
+as durable resources without creating a dashboard. Compose
+`createDeckMapsSlice()` into the room store, call
+`ensureDeckMapResourceState(...)` for a durable map id, and render it with
 `DeckMapBlockRenderer`.
 
-The block primitive reuses the dashboard map panel runtime internally, while
-leaving each host surface free to adapt its own block/document semantics around
-it.
+Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
+only a matching issue kind; omit `kind` when the map state should clear any
+stale issue. Replacing a map config clears its prior render issue, while data
+issues remain until the corresponding dataset recovery is reported.
+Direct worksheet maps automatically fit the configured dataset when the map or
+its source first becomes ready; the header action remains available for manual
+refitting.
+
+Hosts that expose direct worksheet-map AI capability should include
+`getDeckMapResourceAiInstructions()` in the responsible agent and tool
+instructions. `createOrUpdateDeckMapResource(...)` validates the fully merged
+resource before any durable block or map write: each dataset needs a
+`source.tableName` or `source.sqlQuery`, and each layer needs an explicit
+`_sqlroomsBinding.dataset`. Use `mergeDeckMapResourceConfigPatch(...)` in host
+preparation so sparse updates retain durable dataset sources and layers.
+Pass `{replaceLayers: true}` when the incoming `spec.layers` array is the
+complete desired list and omitted existing layers should be removed; the
+default remains additive for sparse layer updates.
+Pass `{replaceDatasets: true}` when the incoming `datasets` object is the
+complete desired registry and omitted existing datasets should be removed; use
+both flags when replacing a complete multi-dataset layer set.
 
 `createDeckMapBlockDocumentType(...)` and
 `createDeckMapBlockDocumentCommandType(...)` provide the reusable registration
 metadata for block-document hosts. They register a `map` stateful block with
 resizable height, scroll-modifier behavior, map settings, and owned state
-creation wired through `ensureDeckMapBlockState(...)`:
+creation wired through `ensureDeckMapResourceState(...)`:
 
 ```ts
 import {
@@ -254,28 +308,24 @@ const mapCommandType = createDeckMapBlockDocumentCommandType({
 ```
 
 Hosts still own renderer registration, deletion cleanup, and product-specific
-side effects. Use `afterEnsureState` for app-local metadata updates that should
-run after the backing map dashboard is created.
+side effects. Use `afterEnsureState` for app-local metadata updates after the
+map resource is created.
 
-`createOrUpdateDeckMapBlock(...)` is transitional worksheet-map orchestration
-for commands and AI tools that write the current Mosaic-dashboard-backed map
-blocks. It keeps package code free of app stores by accepting a host callback
-adapter:
+`createOrUpdateDeckMapResource(...)` is the durable orchestration helper for
+commands and AI tools. It uses only resource and block callbacks:
 
 ```ts
-import {createOrUpdateDeckMapBlock} from '@sqlrooms/deck';
+import {createOrUpdateDeckMapResource} from '@sqlrooms/deck';
 
-const result = await createOrUpdateDeckMapBlock(
+const result = await createOrUpdateDeckMapResource(
   {
     ensureBlockDocument,
     findMapBlock,
-    findMapPanel,
+    findMap,
     createMapBlock,
     updateBlockMetadata,
-    ensureMapState,
-    ensureDashboard,
-    setSelectedTable,
-    addOrUpdateMapPanel,
+    ensureMap,
+    writeMap,
     findTable,
     prepareConfig,
   },
@@ -290,37 +340,34 @@ const result = await createOrUpdateDeckMapBlock(
 );
 ```
 
-This callback interface is not a stable general-purpose Deck map abstraction.
-Its dashboard/panel callbacks and `panelId` result reflect the current storage
-representation. The immediate Deck Map Resource Decoupling follow-up will
-replace it with canonical `deckMaps`, a resource-native
-`createOrUpdateDeckMapResource(...)`, and a Mosaic adapter; the resource API
-will not expose dashboard or panel concepts. That replacement should preserve
-the validation, title-preservation, and metadata-after-map-write guarantees
-documented below.
-
 On create, callers must provide either `mapId` or `createMapId`. On update, the
-default behavior is intentionally strict: missing map blocks, missing panels,
-and SQL-only dataset sources without a resolvable `tableName` throw so command
-paths do not silently retarget stale IDs. AI repair flows that need softer
-behavior can opt into `missingMapBlockBehavior: 'create'` or
-`missingPanelBehavior: 'create'`.
+default behavior is intentionally strict: missing map blocks and SQL-only
+dataset sources without a resolvable `tableName` throw so command paths do not
+silently retarget stale IDs. AI create flows can opt into
+`missingMapBlockBehavior: 'create'`; a supplied `mapId` is retained, with
+`createMapId` used only as its fallback.
 
 Title handling is conservative for Ask AI edits: when `title` is omitted,
-`createOrUpdateDeckMapBlock(...)` preserves the existing block caption or panel
-title and calls `ensureDashboard(mapId, undefined)` so existing map/dashboard
-names are not overwritten. Passing an explicit `title` updates the durable map
-title and uses it as the default block caption.
+`createOrUpdateDeckMapResource(...)` preserves the existing non-blank block
+caption or resource title. Passing an explicit `title` updates the durable map
+title and uses it as the default block caption. Block metadata is written only
+after the map write succeeds.
 
 Map authoring helpers such as `normalizeDeckMapPointConfig(...)`,
 `normalizeDeckMapFillColor(...)`, `regenerateMapConfigForTable(...)`, and
 dataset-source helpers such as `getFirstDatasetSourceTableName(...)` are
 exported so hosts can normalize AI-authored configs before calling
-`createOrUpdateDeckMapBlock(...)`. `normalizeDeckMapPointConfig(...)` only adds
+`createOrUpdateDeckMapResource(...)`. `normalizeDeckMapPointConfig(...)` only adds
 the standard lon/lat point transform to table-backed datasets that do not
 already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
 and whose resolved table does not expose a native geometry column; native
 geometry, polygon, line, and pre-transformed datasets are preserved.
+When regenerating a map with one existing dataset, its dataset ID is retained
+and geometry bindings are refreshed so custom layers continue to address the
+same dataset after a table switch. Non-geospatial tables and multi-dataset maps
+return the existing config unchanged so callers can keep the current selection
+when a safe target cannot be inferred. Maps without datasets adopt the generated
+dataset and layer spec after a valid table is selected.
 
 ## Core Concepts
 
