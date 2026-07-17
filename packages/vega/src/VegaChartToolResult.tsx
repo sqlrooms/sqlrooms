@@ -12,6 +12,7 @@ import type {
 import {VegaEditAction} from './VegaEditAction';
 import {VegaExportAction} from './VegaExportAction';
 import {VegaLiteArrowChart} from './VegaLiteArrowChart';
+import type {VegaChartHeight, VegaChartHeightResolver} from './chartSizing';
 
 export type VegaChartToolResultProps = ToolRendererProps<
   VegaChartToolOutput,
@@ -24,6 +25,21 @@ export type VegaChartToolResultProps = ToolRendererProps<
    * @default 'both'
    */
   editorMode?: EditorMode;
+  /**
+   * Width-to-height ratio used when no fixed or automatic height is selected.
+   * @default 16/9
+   */
+  aspectRatio?: number;
+  /**
+   * Fixed outer chart height, or `'auto'` to opt into category-aware sizing.
+   * Automatic sizing falls back to the aspect ratio for ordinary charts.
+   */
+  height?: VegaChartHeight;
+  /**
+   * Optional application-specific height policy. Returning `'auto'` applies
+   * the built-in category-aware sizing policy.
+   */
+  getHeight?: VegaChartHeightResolver;
 };
 
 /**
@@ -36,6 +52,9 @@ export function VegaChartToolResult({
   output,
   options,
   editorMode = 'both',
+  aspectRatio = 16 / 9,
+  height,
+  getHeight,
 }: VegaChartToolResultProps): ReactNode {
   const sqlQuery = output?.sqlQuery ?? '';
   const vegaLiteSpec = output?.vegaLiteSpec as VisualizationSpec | null;
@@ -56,7 +75,12 @@ export function VegaChartToolResult({
         editable={false}
       >
         <div className="relative max-w-full overflow-x-auto">
-          <VegaChartDisplay aspectRatio={16 / 9} className="pt-2">
+          <VegaChartDisplay
+            aspectRatio={aspectRatio}
+            height={height}
+            getHeight={getHeight}
+            className="pt-2"
+          >
             <VegaLiteArrowChart.Actions className="right-3">
               <VegaExportAction />
               <VegaEditAction editorMode={editorMode} />
