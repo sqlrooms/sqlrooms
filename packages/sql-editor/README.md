@@ -107,6 +107,36 @@ ensureQuery('query-1', {name: 'Top Airports', query: 'SELECT * FROM airports'});
 await runQueryById('query-1');
 ```
 
+### Cancelling queries
+
+`abortQueryById(queryId)` (or `abortCurrentQuery()`) cancels a running query.
+The result transitions to `status: 'aborted'` **immediately** — it does not
+wait for the underlying query promise to settle — so the UI never gets stuck
+while a slow/blocked connector unwinds.
+
+Cancellation is **best-effort**: `AbortController.abort()` signals the
+connector, but not every connector can actually stop an in-flight statement
+server-side. This is reflected on the `QueryResult`:
+
+- While running, a `loading` result is stamped with `isWrite` once the
+  statement is parsed (`true` for a non-`SELECT` or multi-statement query).
+- On cancel, an `aborted` result carries a `warning` string **only for writes**
+  (or a statement whose type isn't known yet): the statement may still complete
+  on the backend even though the UI reports it aborted. Reads are aborted
+  silently (a late result is simply discarded), so no warning is shown.
+
+`QueryResultPanel` renders the `warning` beneath the "Query was aborted"
+message.
+
+For true server-side cancellation, honor the **`AbortSignal`** inside your
+connector's `executeQueryInternal(sql, signal)`: the SQL editor cancels by
+aborting the signal passed to `connector.query(sql, {signal})`, so a connector
+must watch `signal` (e.g. abort the in-flight request and/or interrupt the
+backend statement) to actually stop the work. Note that `cancelQueryInternal`
+is **not** invoked on this path — it only runs via `QueryHandle.cancel()`, which
+the editor does not use — so implementing `cancelQueryInternal` alone will not
+stop editor-initiated queries.
+
 ## Single Query UI
 
 `SqlQuery` is a compound component for rearranging and styling a single query
