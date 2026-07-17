@@ -197,11 +197,12 @@ const ParentSummaryLine: React.FC<{
     return null;
   }
 
-  return (
-    <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
-      {reasoning}
-    </div>
-  );
+  // return (
+  //   <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
+  //     {reasoning}
+  //   </div>
+  // );
+  return null;
 };
 
 // ---------------------------------------------------------------------------
