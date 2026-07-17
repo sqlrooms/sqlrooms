@@ -126,8 +126,16 @@ server-side. This is reflected on the `QueryResult`:
   silently (a late result is simply discarded), so no warning is shown.
 
 `QueryResultPanel` renders the `warning` beneath the "Query was aborted"
-message. For connectors that support true server-side cancellation, implement
-`cancelQueryInternal` so the statement is actually stopped.
+message.
+
+For true server-side cancellation, honor the **`AbortSignal`** inside your
+connector's `executeQueryInternal(sql, signal)`: the SQL editor cancels by
+aborting the signal passed to `connector.query(sql, {signal})`, so a connector
+must watch `signal` (e.g. abort the in-flight request and/or interrupt the
+backend statement) to actually stop the work. Note that `cancelQueryInternal`
+is **not** invoked on this path — it only runs via `QueryHandle.cancel()`, which
+the editor does not use — so implementing `cancelQueryInternal` alone will not
+stop editor-initiated queries.
 
 ## Single Query UI
 
