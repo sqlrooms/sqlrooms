@@ -152,8 +152,10 @@ async def handle_query_ws(send, cache, query):
     except Exception as e:
         logger.exception("Error executing query")
         send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
-    total = round((time.time() - start) * 1_000)
-    logger.debug(f"DONE. Query took {total} ms.")
+    finally:
+        db_async.unmark_query_scheduled(query_id)
+        total = round((time.time() - start) * 1_000)
+        logger.debug(f"DONE. Query took {total} ms.")
 
 
 async def handle_upload_arrow_ws(ws, header: dict, payload: bytes):
@@ -404,7 +406,15 @@ def server(
                     app.publish(channel, payload, opcode)
                     return True
 
-                asyncio.create_task(handle_query_ws(_send_to_conn, cache, query))
+                query = dict(query)
+                query_id = query.get("queryId") or db_async.generate_query_id()
+                query["queryId"] = query_id
+                db_async.mark_query_scheduled(query_id)
+                try:
+                    asyncio.create_task(handle_query_ws(_send_to_conn, cache, query))
+                except Exception:
+                    db_async.unmark_query_scheduled(query_id)
+                    raise
             except Exception as e:
                 logger.exception("Failed to schedule query task")
                 ws.send({"type": "error", "error": str(e)}, OpCode.TEXT)
