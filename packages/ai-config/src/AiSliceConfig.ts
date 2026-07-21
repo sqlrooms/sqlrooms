@@ -26,24 +26,11 @@ export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 export function createDefaultAiConfig(
   props?: Partial<AiSliceConfig>,
 ): AiSliceConfig {
-  const defaultSessionId = createId();
+  // Don't create default session - let it be created when user sends first message
   return {
-    sessions: [
-      {
-        id: defaultSessionId,
-        name: 'Untitled',
-        modelProvider: 'openai',
-        model: 'gpt-4.1',
-        createdAt: new Date(),
-        uiMessages: [],
-        messagesRevision: 0,
-        prompt: '',
-        isRunning: false,
-        lastOpenedAt: Date.now(),
-      },
-    ],
-    currentSessionId: defaultSessionId,
-    openSessionTabs: [defaultSessionId],
+    sessions: [],
+    currentSessionId: undefined,
+    openSessionTabs: [],
     sessionForks: {},
     ...props,
   };

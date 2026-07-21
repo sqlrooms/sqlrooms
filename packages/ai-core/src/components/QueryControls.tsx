@@ -26,7 +26,12 @@ type QueryControlsProps = PropsWithChildren<{
   placeholder?: string;
   /** Actions rendered in the composer's top row, right-aligned next to context controls. */
   topActions?: ReactNode;
-  onRun?: () => void;
+  /**
+   * Called before creating a session and running analysis.
+   * Return false to prevent session creation (useful for custom session management).
+   * Receives the prompt text as parameter.
+   */
+  onRun?: (prompt?: string) => void | false;
   onCancel?: () => void;
   contextDropTarget?: {
     id: string;
@@ -128,12 +133,15 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     () => (aiSettingsConfig ? extractModelsFromSettings(aiSettingsConfig) : []),
     [aiSettingsConfig],
   );
-  const hasSelectedModel = aiSettingsConfig
-    ? settingsModels.some(
-        (candidate) =>
-          candidate.provider === modelProvider && candidate.value === model,
-      )
-    : Boolean(modelProvider && model);
+  // If no session exists, assume default model will be used (session created on first message)
+  const hasSelectedModel = !currentSession
+    ? true
+    : aiSettingsConfig
+      ? settingsModels.some(
+          (candidate) =>
+            candidate.provider === modelProvider && candidate.value === model,
+        )
+      : Boolean(modelProvider && model);
 
   // Extract special composer controls from children
   const {inlineApiKeyInput, contextSelectors, otherChildren} =
@@ -151,10 +159,16 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     sessionId ? s.ai.getIsRunning(sessionId) : false,
   );
   const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
-  const prompt = useStoreWithAi((s) =>
+
+  // Local draft prompt state when no session exists
+  const [draftPrompt, setDraftPrompt] = useState('');
+  const storedPrompt = useStoreWithAi((s) =>
     sessionId ? s.ai.getPrompt(sessionId) : '',
   );
+  const prompt = sessionId ? storedPrompt : draftPrompt;
+
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
+  const createSession = useStoreWithAi((s) => s.ai.createSession);
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
 
@@ -179,11 +193,28 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         if (
           !isSummarizing &&
           !isRunning &&
-          sessionId &&
           hasSelectedModel &&
           prompt.trim().length
         ) {
-          runAnalysis(sessionId);
+          // Call onRun BEFORE creating session (allows host to create artifacts, etc.)
+          const shouldContinue = onRun?.(prompt);
+
+          // If onRun returns false, skip session creation and analysis
+          if (shouldContinue === false) {
+            return;
+          }
+
+          // Create session if it doesn't exist
+          let activeSessionId = sessionId;
+          if (!activeSessionId) {
+            activeSessionId = createSession();
+            setPrompt(activeSessionId, prompt);
+            setDraftPrompt(''); // Clear draft
+            // Wait for next tick to allow transport initialization
+            setTimeout(() => runAnalysis(activeSessionId!), 0);
+          } else {
+            runAnalysis(activeSessionId);
+          }
         }
       }
     },
@@ -194,23 +225,52 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       hasSelectedModel,
       prompt,
       runAnalysis,
+      createSession,
+      setPrompt,
     ],
   );
 
-  const canStart = Boolean(
-    sessionId && hasSelectedModel && prompt.trim().length,
-  );
+  const canStart = Boolean(hasSelectedModel && prompt.trim().length);
 
   const handleClickRunOrCancel = useCallback(() => {
-    if (!sessionId) return;
     if (isRunning) {
+      if (!sessionId) return;
       cancelAnalysis(sessionId);
       onCancel?.();
     } else {
-      runAnalysis(sessionId);
-      onRun?.();
+      // Call onRun BEFORE creating session (allows host to create artifacts, etc.)
+      const shouldContinue = onRun?.(prompt);
+
+      // If onRun returns false, skip session creation and analysis
+      if (shouldContinue === false) {
+        return;
+      }
+
+      // Create session if it doesn't exist
+      let activeSessionId = sessionId;
+      if (!activeSessionId) {
+        activeSessionId = createSession();
+        setPrompt(activeSessionId, prompt);
+        setDraftPrompt(''); // Clear draft
+        // Wait for next tick to allow transport initialization
+        setTimeout(() => {
+          runAnalysis(activeSessionId!);
+        }, 0);
+      } else {
+        runAnalysis(activeSessionId);
+      }
     }
-  }, [sessionId, isRunning, cancelAnalysis, onCancel, runAnalysis, onRun]);
+  }, [
+    sessionId,
+    isRunning,
+    cancelAnalysis,
+    onCancel,
+    runAnalysis,
+    onRun,
+    createSession,
+    setPrompt,
+    prompt,
+  ]);
 
   // Render the API key input mode
   if (showApiKeyInput && inlineApiKeyInput) {
@@ -275,8 +335,12 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                 value={prompt}
                 disabled={isSummarizing}
                 onChange={(e) => {
+                  const value = e.target.value;
                   if (sessionId) {
-                    setPrompt(sessionId, e.target.value);
+                    setPrompt(sessionId, value);
+                  } else {
+                    // No session yet - store in local state until user submits
+                    setDraftPrompt(value);
                   }
                 }}
                 onKeyDown={handleKeyDown}
@@ -288,7 +352,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
               <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
                 <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
                   <div className="min-w-0 flex-1 overflow-hidden">
-                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex [scrollbar-width:none] flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                       {otherChildren}
                     </div>
                   </div>
@@ -484,7 +548,7 @@ const InlineApiKeyInputRenderer: React.FC<{
       <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
         <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex [scrollbar-width:none] flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {children}
             </div>
           </div>
