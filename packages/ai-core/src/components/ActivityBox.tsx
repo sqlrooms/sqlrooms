@@ -72,11 +72,11 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
 };
 
 /**
- * Streamlined Simple Mode box. Collapsed, it shows a single clickable line —
- * the run summary (`summaryLabel`, e.g. "Worked with 3 tools") once the run is
- * complete, otherwise the latest activity (`latestActivity`). Clicking anywhere
- * expands the full activity log. No expand/collapse chevron buttons are
- * rendered, keeping the box compact.
+ * Streamlined Simple Mode box. Once a run is complete, the collapsed state is a
+ * plain borderless summary line (`summaryLabel`, e.g. "Worked with 3 tools").
+ * While running or expanded it uses a bordered box showing the latest activity
+ * (`latestActivity`) or the full log. Clicking anywhere toggles expansion; no
+ * expand/collapse chevron buttons are rendered.
  */
 const SimpleActivityBox: React.FC<{
   children: React.ReactNode;
@@ -96,11 +96,27 @@ const SimpleActivityBox: React.FC<{
     if (el) el.scrollTop = el.scrollHeight;
   });
 
-  const collapsedContent = summaryLabel ? (
-    <span>{summaryLabel}</span>
-  ) : (
-    (latestActivity ?? children)
-  );
+  // When the run is complete and collapsed, the summary ("Worked with N tools")
+  // is shown as a plain borderless line — no box is needed. The bordered box is
+  // only used while showing live activity or when expanded.
+  const showSummaryLine = !expanded && !!summaryLabel;
+
+  if (showSummaryLine) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className={cn(
+          'text-muted-foreground hover:text-foreground flex w-full min-w-0 cursor-pointer items-center py-0.5 text-xs break-words transition-colors',
+          className,
+        )}
+      >
+        {summaryLabel}
+      </button>
+    );
+  }
+
+  const collapsedContent = latestActivity ?? children;
 
   return (
     <div
