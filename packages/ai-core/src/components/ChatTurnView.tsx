@@ -38,7 +38,7 @@ import {
 } from './ChatSearch';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {ExpandableContent} from './ExpandableContent';
-import {OrchestratorToolLogLine} from './FlatAgentRenderer';
+import {OrchestratorToolLogLine, useSimpleMode} from './FlatAgentRenderer';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {ToolPartRenderer} from './ToolPartRenderer';
 
@@ -230,6 +230,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   const hoistableSet = useMemo(() => new Set(excludeList), [excludeList]);
 
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
+  const simpleMode = useSimpleMode();
   const currentSessionId = useStoreWithAi(
     (s) => s.ai.config.currentSessionId ?? '',
   );
@@ -337,11 +338,22 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
                 allToolsDone && isCompleted
                   ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
                   : undefined;
+              const latestPart = seg.parts[seg.parts.length - 1];
               return (
                 <React.Fragment key={`tg-${segIdx}`}>
                   <ActivityBox
                     isRunning={anyPending}
                     summaryLabel={summaryLabel}
+                    simpleMode={simpleMode}
+                    latestActivity={
+                      latestPart ? (
+                        <OrchestratorToolLogLine
+                          part={latestPart.part}
+                          toolCallId={latestPart.part.toolCallId}
+                          searchBlockId={`${searchBlockPrefix}:tool:${latestPart.index}`}
+                        />
+                      ) : undefined
+                    }
                   >
                     {seg.parts.map((p) => {
                       const toolName = getToolName(p.part);

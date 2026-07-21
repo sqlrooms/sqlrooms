@@ -9,6 +9,7 @@ import {
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
+  SimpleModeProvider,
 } from './FlatAgentRenderer';
 import {InlineApiKeyInput} from './InlineApiKeyInput';
 import {LocalAgentChatComposer} from './LocalAgentChatComposer';
@@ -27,6 +28,17 @@ import {ChatSearch, ChatSearchProvider} from './ChatSearch';
 import {ContextSelector} from './context/ContextSelector';
 import {ChatHeader} from './ChatHeader';
 import {ChatHistoryView} from './ChatHistoryView';
+import {useStoreWithAi} from '../AiSlice';
+
+/**
+ * Reads the current Simple Mode flag from the room store and provides it to the
+ * agent renderer tree. Kept as a thin wrapper so `Chat.Root` remains the single
+ * place that mounts all chat-tree contexts.
+ */
+const StoreSimpleModeProvider: FC<PropsWithChildren> = ({children}) => {
+  const simpleMode = useStoreWithAi((s) => s.ai.simpleMode);
+  return <SimpleModeProvider value={simpleMode}>{children}</SimpleModeProvider>;
+};
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;
@@ -58,12 +70,14 @@ const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
  */
 const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
-    <SessionChatRuntimeProvider>
-      <ChatSearchProvider>
-        <SessionChatManager />
-        {children}
-      </ChatSearchProvider>
-    </SessionChatRuntimeProvider>
+    <StoreSimpleModeProvider>
+      <SessionChatRuntimeProvider>
+        <ChatSearchProvider>
+          <SessionChatManager />
+          {children}
+        </ChatSearchProvider>
+      </SessionChatRuntimeProvider>
+    </StoreSimpleModeProvider>
   </ToolRenderBehaviorProvider>
 );
 
@@ -73,9 +87,11 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
   ...props
 }) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
-    <LocalAgentChatRuntimeProvider {...props}>
-      {children}
-    </LocalAgentChatRuntimeProvider>
+    <StoreSimpleModeProvider>
+      <LocalAgentChatRuntimeProvider {...props}>
+        {children}
+      </LocalAgentChatRuntimeProvider>
+    </StoreSimpleModeProvider>
   </ToolRenderBehaviorProvider>
 );
 

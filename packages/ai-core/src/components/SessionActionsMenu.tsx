@@ -1,6 +1,7 @@
 import {
   Button,
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -9,7 +10,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
-import {MoreVertical, PencilIcon, TrashIcon} from 'lucide-react';
+import {MoreVertical, PencilIcon, SparklesIcon, TrashIcon} from 'lucide-react';
+import {useStoreWithAi} from '../AiSlice';
 
 type SessionActionsMenuProps = {
   onRename?: () => void;
@@ -20,6 +22,8 @@ export const SessionActionsMenu: React.FC<SessionActionsMenuProps> = ({
   onRename,
   onDelete,
 }) => {
+  const simpleMode = useStoreWithAi((s) => s.ai.simpleMode);
+  const setSimpleMode = useStoreWithAi((s) => s.ai.setSimpleMode);
   return (
     <DropdownMenu>
       <Tooltip>
@@ -38,6 +42,15 @@ export const SessionActionsMenu: React.FC<SessionActionsMenuProps> = ({
         <TooltipContent>Session actions</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end">
+        <DropdownMenuCheckboxItem
+          checked={simpleMode}
+          onCheckedChange={(checked) => setSimpleMode(!!checked)}
+          onSelect={(e) => e.preventDefault()}
+        >
+          <SparklesIcon className="mr-2 h-4 w-4" />
+          Simple mode
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuSeparator />
         {onRename ? (
           <>
             <DropdownMenuItem onClick={onRename}>

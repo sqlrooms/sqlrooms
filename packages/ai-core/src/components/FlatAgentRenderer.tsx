@@ -31,6 +31,24 @@ function useShowToolCallDetails() {
 }
 
 // ---------------------------------------------------------------------------
+// Context for "Simple Mode" — streamlined agent response rendering
+// ---------------------------------------------------------------------------
+
+/**
+ * When `true`, agent responses are rendered in a streamlined form: parent
+ * reasoning summary lines are hidden and the activity box collapses to the
+ * latest tool-call reasoning until the user clicks to expand the full log.
+ * Defaults to `true`.
+ */
+const SimpleModeContext = createContext(true);
+
+export const SimpleModeProvider = SimpleModeContext.Provider;
+
+export function useSimpleMode() {
+  return useContext(SimpleModeContext);
+}
+
+// ---------------------------------------------------------------------------
 // Context for host-app-provided tool rendering behavior
 // ---------------------------------------------------------------------------
 
@@ -187,22 +205,23 @@ const ParentSummaryLine: React.FC<{
   completedAt?: number;
   toolCall?: AgentToolCall;
 }> = ({toolCall}) => {
+  const simpleMode = useSimpleMode();
   const inputObj =
     toolCall?.input && typeof toolCall.input === 'object'
       ? (toolCall.input as Record<string, unknown>)
       : undefined;
   const reasoning = inputObj?.reasoning as string | undefined;
 
-  if (!reasoning) {
+  // In Simple Mode the parent reasoning is hidden to reduce visual noise.
+  if (simpleMode || !reasoning) {
     return null;
   }
 
-  // return (
-  //   <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
-  //     {reasoning}
-  //   </div>
-  // );
-  return null;
+  return (
+    <div className="min-w-0 py-1 text-xs leading-4 break-words whitespace-normal italic">
+      {reasoning}
+    </div>
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -431,6 +450,7 @@ const FlatSegmentList: React.FC<{
   isPassthroughTool,
   isAgentComplete,
 }) => {
+  const simpleMode = useSimpleMode();
   return (
     <>
       {segments.map((seg, idx) => {
@@ -446,9 +466,20 @@ const FlatSegmentList: React.FC<{
               ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
               : undefined;
 
+          const latestTool = seg.tools[seg.tools.length - 1];
+
           return (
             <React.Fragment key={`tg-${idx}`}>
-              <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
+              <ActivityBox
+                isRunning={anyPending}
+                summaryLabel={summaryLabel}
+                simpleMode={simpleMode}
+                latestActivity={
+                  latestTool ? (
+                    <ActivityLogLine toolCall={latestTool} />
+                  ) : undefined
+                }
+              >
                 {seg.tools.map((tc) => {
                   const isHoisted =
                     hoistableSet.has(tc.toolName) &&

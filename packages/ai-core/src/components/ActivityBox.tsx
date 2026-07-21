@@ -18,6 +18,17 @@ type ActivityBoxProps = {
    * box is always shown regardless of this prop.
    */
   summaryLabel?: string;
+  /**
+   * When true, render the streamlined "Simple Mode" box: collapsed to a single
+   * line (`latestActivity`) that the user can click anywhere to expand into the
+   * full activity log. No expand/collapse chevron buttons are shown.
+   */
+  simpleMode?: boolean;
+  /**
+   * The single line shown while collapsed in Simple Mode — typically the latest
+   * tool call's reasoning. Ignored when `simpleMode` is false.
+   */
+  latestActivity?: React.ReactNode;
 };
 
 /**
@@ -27,6 +38,108 @@ type ActivityBoxProps = {
  * expands to full height; a collapse button returns to the capped view.
  */
 export const ActivityBox: React.FC<ActivityBoxProps> = ({
+  children,
+  maxCollapsedHeight = DEFAULT_MAX_HEIGHT,
+  isRunning = false,
+  className,
+  summaryLabel,
+  simpleMode = false,
+  latestActivity,
+}) => {
+  if (simpleMode) {
+    return (
+      <SimpleActivityBox
+        isRunning={isRunning}
+        className={className}
+        latestActivity={latestActivity}
+      >
+        {children}
+      </SimpleActivityBox>
+    );
+  }
+
+  return (
+    <ClassicActivityBox
+      maxCollapsedHeight={maxCollapsedHeight}
+      isRunning={isRunning}
+      className={className}
+      summaryLabel={summaryLabel}
+    >
+      {children}
+    </ClassicActivityBox>
+  );
+};
+
+/**
+ * Streamlined Simple Mode box. Collapsed, it shows a single clickable line
+ * (`latestActivity`); clicking anywhere expands the full activity log. No
+ * expand/collapse chevron buttons are rendered, keeping the box compact.
+ */
+const SimpleActivityBox: React.FC<{
+  children: React.ReactNode;
+  isRunning: boolean;
+  className?: string;
+  latestActivity?: React.ReactNode;
+}> = ({children, isRunning, className, latestActivity}) => {
+  const [expanded, setExpanded] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to the bottom while running and expanded so the latest activity
+  // stays visible.
+  useEffect(() => {
+    if (!isRunning || !expanded) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  });
+
+  const collapsedContent = latestActivity ?? children;
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      onClick={() => setExpanded((v) => !v)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setExpanded((v) => !v);
+        }
+      }}
+      className={cn(
+        'border-border/50 hover:border-border min-w-0 cursor-pointer overflow-hidden rounded-md border transition-colors',
+        className,
+      )}
+    >
+      {expanded ? (
+        <div
+          ref={scrollRef}
+          className="text-muted-foreground max-h-64 w-full min-w-0 overflow-y-auto p-2.5 text-xs break-words hyphens-auto"
+        >
+          {children}
+        </div>
+      ) : (
+        <div className="text-muted-foreground w-full min-w-0 overflow-hidden p-2 text-xs break-words hyphens-auto">
+          {collapsedContent}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * A fixed-height container that auto-scrolls to the latest content while
+ * running. The user cannot scroll the content manually. When content overflows
+ * the collapsed height, a gradient fade and expand button appear. Clicking
+ * expands to full height; a collapse button returns to the capped view.
+ */
+const ClassicActivityBox: React.FC<{
+  children: React.ReactNode;
+  maxCollapsedHeight: number;
+  isRunning: boolean;
+  className?: string;
+  summaryLabel?: string;
+}> = ({
   children,
   maxCollapsedHeight = DEFAULT_MAX_HEIGHT,
   isRunning = false,

@@ -157,6 +157,8 @@ export {
   FlatAgentRenderer,
   OrchestratorToolLogLine,
   ShowToolCallDetailsProvider,
+  SimpleModeProvider,
+  useSimpleMode,
 } from './components/FlatAgentRenderer';
 export type {
   ToolRenderBehavior,

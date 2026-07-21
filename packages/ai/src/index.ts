@@ -207,6 +207,7 @@ export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ShowToolCallDetailsProvider} from '@sqlrooms/ai-core';
+export {SimpleModeProvider, useSimpleMode} from '@sqlrooms/ai-core';
 export type {
   ForkSessionFromMessageArgs,
   ToolRenderBehavior,

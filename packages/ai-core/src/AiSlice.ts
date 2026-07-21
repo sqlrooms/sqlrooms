@@ -77,6 +77,13 @@ export type AiSliceState = {
     destroy?: () => Promise<void>;
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
+    /**
+     * When true, agent responses are rendered in a streamlined "Simple Mode":
+     * parent reasoning lines are hidden and the activity box collapses to the
+     * latest tool-call reasoning until the user clicks to expand the full log.
+     * Defaults to `true`.
+     */
+    simpleMode: boolean;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
     tools: StoredToolSet;
@@ -84,6 +91,8 @@ export type AiSliceState = {
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
+    /** Toggle streamlined "Simple Mode" rendering of agent responses. */
+    setSimpleMode: (simpleMode: boolean) => void;
     /** Set API key error flag for a provider */
     setApiKeyError: (provider: string, hasError: boolean) => void;
     /** Check if there's an API key error for the current provider */
@@ -496,6 +505,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
         config: baseConfig,
         promptSuggestionsVisible: true,
+        simpleMode: true,
         apiKeyErrors: {},
         tools,
         toolRenderers: params.toolRenderers ?? {},
@@ -727,6 +737,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               draft.ai.promptSuggestionsVisible = visible;
+            }),
+          );
+        },
+
+        setSimpleMode: (simpleMode: boolean) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.simpleMode = simpleMode;
             }),
           );
         },
