@@ -116,6 +116,13 @@ const SimpleActivityBox: React.FC<{
     );
   }
 
+  // Once the run is complete, the activity box is hidden entirely (unless the
+  // user has explicitly expanded it). Live activity is only shown while the
+  // agent is actively running.
+  if (!isRunning && !expanded) {
+    return null;
+  }
+
   const collapsedContent = latestActivity ?? children;
 
   return (
@@ -242,9 +249,16 @@ const ClassicActivityBox: React.FC<{
   }, [expanded, overflows, updateScrollFlags]);
 
   const showOverlay = overflows && !expanded;
-  const showBox = isRunning || !summaryLabel || visible;
+  // Without a summary label there is no affordance to re-open the box, so a
+  // completed run hides entirely; the box is only shown while running. With a
+  // summary label, the label toggles visibility as before.
+  const showBox = summaryLabel ? isRunning || visible : isRunning;
 
   if (!showBox) {
+    // No summary label means nothing to click to re-open — hide completely.
+    if (!summaryLabel) {
+      return null;
+    }
     return (
       <button
         onClick={() => setExpandedForLabel(summaryLabel ?? null)}

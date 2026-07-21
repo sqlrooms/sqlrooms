@@ -332,12 +332,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
                   s !== 'output-denied'
                 );
               });
-              const toolCount = seg.parts.length;
-              const allToolsDone = !anyPending && toolCount > 0;
-              const summaryLabel =
-                allToolsDone && isCompleted
-                  ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
-                  : undefined;
+              // The "Worked with N tools" summary line is intentionally hidden
+              // from users; a completed tool group collapses to nothing.
+              const summaryLabel = undefined;
               const latestPart = seg.parts[seg.parts.length - 1];
               return (
                 <React.Fragment key={`tg-${segIdx}`}>
