@@ -1,9 +1,16 @@
-import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {
+  SidebarMenuButton,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useSidebar,
+} from '@sqlrooms/ui';
 import {SparklesIcon} from 'lucide-react';
 import {CLI_ARTIFACT_TYPES, type CliArtifactType} from '../../artifactTypeIds';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
 
 export function CliAssistantToggleButton() {
+  const {state} = useSidebar();
   const showArtifactChooser = useRoomStore(
     (state) => state.workspaceUi.showArtifactChooser,
   );
@@ -29,19 +36,20 @@ export function CliAssistantToggleButton() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
+        <SidebarMenuButton
           type="button"
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground size-9"
+          size={state === 'expanded' ? 'default' : 'lg'}
+          className="text-muted-foreground hover:text-foreground data-[active=true]:border-sidebar-border data-[active=true]:bg-sidebar-accent/50 data-[active=true]:text-primary data-[active=true]:hover:bg-sidebar-accent group-data-[state=expanded]:h-10 group-data-[state=expanded]:justify-center group-data-[state=expanded]:gap-2 group-data-[state=expanded]:border"
           onClick={() => toggleCollapsed('assistant-sidebar')}
-          data-active={!isAssistantCollapsed}
+          isActive={!isAssistantCollapsed}
+          aria-label="Toggle AI Agent"
+          aria-pressed={!isAssistantCollapsed}
         >
           <SparklesIcon className="h-4 w-4" />
-          <span className="sr-only">AI Assistant</span>
-        </Button>
+          <span className="group-data-[collapsible=icon]:hidden">AI Agent</span>
+        </SidebarMenuButton>
       </TooltipTrigger>
-      <TooltipContent>AI Assistant</TooltipContent>
+      <TooltipContent side="right">Toggle AI Agent</TooltipContent>
     </Tooltip>
   );
 }

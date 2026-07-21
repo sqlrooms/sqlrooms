@@ -7,7 +7,8 @@ import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 import {createCliBlockDocumentAiAdapter} from './createCliBlockDocumentAiAdapter';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
-import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
+import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck/mosaic';
+import {getDeckMapResourceAiInstructions} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
 import {
@@ -33,7 +34,9 @@ function createBlockDocumentMapBlockTool(
   return tool({
     description: `Create or update a direct worksheet map block from a native Deck JSON map config.
 
-Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.`,
+Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.
+
+${getDeckMapResourceAiInstructions()}`,
     inputSchema: BlockDocumentMapBlockToolInput,
     execute: async (params) => {
       try {
@@ -55,7 +58,6 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           | {
               mapId?: string;
               blockId?: string;
-              panelId?: string;
             }
           | undefined;
 
@@ -63,7 +65,6 @@ Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, 
           success: true,
           mapId: data?.mapId,
           blockId: data?.blockId,
-          panelId: data?.panelId,
           message: result.message,
         };
       } catch (error) {
@@ -107,14 +108,30 @@ export function blockDocumentAgentTool(
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
   };
 
-  const dashboardAgentTool = (
-    experimentalEnabled
+  const dashboardAgentTool = (blockDocumentId: string) =>
+    (experimentalEnabled
       ? createDashboardAgentToolWithDeckMaps
-      : createDashboardAgentTool
-  )({
-    ...baseOptions,
-    databaseAdapter,
-  });
+      : createDashboardAgentTool)({
+      ...baseOptions,
+      databaseAdapter,
+      authorizeDashboard: ({dashboardId, state}) => {
+        const ownsDashboard = state.blockDocuments
+          .getBlocks(blockDocumentId)
+          .some(
+            (block) =>
+              block.type === 'statefulBlock' &&
+              block.blockType === 'dashboard' &&
+              (block.ownership ?? 'owned') === 'owned' &&
+              block.blockInstanceId === dashboardId,
+          );
+
+        if (!ownsDashboard) {
+          throw new Error(
+            `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+          );
+        }
+      },
+    });
 
   const blockDocumentAgentOptions: CreateCliBlockDocumentAgentToolOptions = {
     ...baseOptions,

@@ -3,7 +3,7 @@ import {
   type BlockDocumentStatefulBlockRendererProps,
 } from '@sqlrooms/documents';
 import {useEffect} from 'react';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../roomStoreHooks';
 
 export const WorksheetMarkdownDocumentBlockRenderer = ({
   blockInstanceId,

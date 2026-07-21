@@ -4,7 +4,7 @@ import type {
   BlockDocumentStatefulBlockCommandType,
   BlockDocumentStatefulBlockType,
 } from '@sqlrooms/documents';
-import {DeckMapBlockSettings, ensureDeckMapBlockState} from '@sqlrooms/deck';
+import {DeckMapBlockSettings, ensureDeckMapResourceState} from '@sqlrooms/deck';
 import {
   DataTableBlockSettings,
   MosaicDashboardSettings,
@@ -107,10 +107,10 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
     scrollHintLabel: 'this map',
     settings: DeckMapBlockSettings,
     ensureState: (state, artifactId, title) => {
-      ensureDeckMapBlockState(state, artifactId, title);
+      ensureDeckMapResourceState(state, artifactId, title);
     },
     deleteState: (state, artifactId) => {
-      state.mosaicDashboard.removeDashboard(artifactId);
+      state.deckMaps.removeMap(artifactId);
     },
   },
   document: {
@@ -207,7 +207,7 @@ export function getStatefulBlockArtifactConfig(
 /** Returns stateful block artifact types enabled for the current feature mode. */
 export function getEnabledStatefulBlockArtifactTypes(
   experimentalEnabled: boolean,
-) {
+): StatefulBlockArtifactType[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
     return config.stability === 'stable' || experimentalEnabled;

@@ -1,6 +1,6 @@
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {createDefaultAiTools, streamSubAgent} from '@sqlrooms/ai';
-import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck';
+import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck/mosaic';
 import {
   createDashboardAgentTool,
   type CreateDashboardAgentToolOptions,

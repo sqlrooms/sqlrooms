@@ -412,23 +412,33 @@ function DeckMapDashboardHeaderActions({
 }: MosaicDashboardPanelRendererProps) {
   const mapConfig = asDeckJsonMapConfig(panel.config);
   const canFitView = Boolean(mapConfig?.fitToData);
+  const fitViewLabel = canFitView
+    ? 'Fit map view to data'
+    : 'Fit view unavailable for this map';
 
   return (
     <div className="flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        title={
-          canFitView
-            ? 'Fit map view to data'
-            : 'Fit view unavailable for this map'
-        }
-        disabled={!canFitView}
-        onClick={() => emitDeckMapDashboardFitRequest(panel.id)}
-      >
-        <FocusIcon className="h-3.5 w-3.5" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className="inline-flex"
+            tabIndex={canFitView ? undefined : 0}
+            aria-label={canFitView ? undefined : fitViewLabel}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              aria-label={fitViewLabel}
+              disabled={!canFitView}
+              onClick={() => emitDeckMapDashboardFitRequest(panel.id)}
+            >
+              <FocusIcon className="h-3.5 w-3.5" />
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{fitViewLabel}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
@@ -467,9 +477,8 @@ function DeckMapDashboardRenderer({
     () => getSelection(selectionName, 'crossfilter'),
     [getSelection, selectionName],
   );
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
   const deckMapRef = useRef<DeckJsonMapHandle>(null);
-  const [containerSize, setContainerSize] = useState({width: 0, height: 0});
   const [sampledDismissed, setSampledDismissed] = useState(false);
 
   const {
@@ -480,31 +489,11 @@ function DeckMapDashboardRenderer({
     handleRenderingError,
   } = useDeckMapDatasets({dashboardId, panel});
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      setContainerSize({
-        width: container.clientWidth,
-        height: container.clientHeight,
-      });
-    };
-
-    updateSize();
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [issue]);
-
   const {fitToData} = useDeckMapFitToBounds({
     panelId: panel.id,
     dashboard,
     panel,
-    containerSize,
+    container,
     deckMapRef,
   });
 
@@ -597,7 +586,7 @@ function DeckMapDashboardRenderer({
           }}
         />
       ) : (
-        <div ref={containerRef} className="relative h-full w-full">
+        <div ref={setContainer} className="relative h-full w-full">
           {Object.values(datasetStates).some((s) => s.isSampled) &&
             !sampledDismissed && (
               <div className="bg-background/80 text-muted-foreground absolute top-2 left-2 z-10 flex items-center gap-1.5 rounded px-2 py-1 text-xs shadow">

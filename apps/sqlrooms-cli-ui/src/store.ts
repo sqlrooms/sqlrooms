@@ -23,11 +23,11 @@ import {
   createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
-import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck';
+import {createDeckMapsSlice, DeckMapsSliceConfig} from '@sqlrooms/deck';
+import {createDeckMapDashboardSliceOptions} from '@sqlrooms/deck/mosaic';
 import {
   arrowTableToJson,
   createDefaultLoadTableSchemasFilter,
-  createWebSocketDuckDbConnector,
   defaultLoadSchemaCatalogFilter,
   escapeVal,
   makeQualifiedTableName,
@@ -104,7 +104,6 @@ import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
 import {createArtifactChatHandoffController} from './artifactChatHandoff';
 import {createCliArtifactTypes} from './artifactTypes';
-import {addCliDatabaseInitializationDiagnostics} from './cliDatabaseInitialization';
 import {blockDocumentAgentTool} from './createBlockDocumentAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
 import {formatRunContextInstructions} from './context/formatRunContextInstructions';
@@ -119,7 +118,16 @@ import {
 } from './createHtmlAppRevisionCommands';
 import {getDefaultScaffoldTree} from './helpers';
 import {createLayout, migrateCliLayoutConfig} from './layout';
-import {fetchRuntimeConfig, type RuntimeConfig} from './runtimeConfig';
+import {
+  cliDuckDbConnector as connector,
+  MOSAIC_PREAGG_SCHEMA_REF,
+} from './duckDbRuntime';
+import type {RuntimeConfig} from './runtimeConfig';
+import {
+  aiDevtoolsEnabled,
+  experimentalEnabled,
+  runtimeConfig,
+} from './runtimeEnvironment';
 import {
   createDuckDbPersistStorage,
   saveAiSettingsToServer,
@@ -185,10 +193,6 @@ const BLOCK_DOCUMENT_OPTIONS = {
   defaultTitle: 'Worksheet',
 } as const;
 
-export const runtimeConfig = await fetchRuntimeConfig();
-export const aiDevtoolsEnabled =
-  import.meta.env.DEV || Boolean(runtimeConfig.aiDevtools);
-export const experimentalEnabled = Boolean(runtimeConfig.experimentalEnabled);
 const cliArtifactTypes = createCliArtifactTypes({experimentalEnabled});
 const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
@@ -202,9 +206,6 @@ const defaultModelFromProvider =
   runtimeAiProviders[defaultProviderFromConfig]?.models?.[0]?.modelName;
 const defaultModelFromConfig =
   runtimeConfig.llmModel || defaultModelFromProvider || 'gpt-4o-mini';
-const MOSAIC_PREAGG_DATABASE = '__sqlrooms_mosaic_cache';
-const MOSAIC_PREAGG_SCHEMA = 'mosaic';
-const MOSAIC_PREAGG_SCHEMA_REF = `${MOSAIC_PREAGG_DATABASE}.${MOSAIC_PREAGG_SCHEMA}`;
 const CLI_PYTHON_EXECUTION_TIMEOUT_MS = 120_000;
 const CRDT_STORAGE_KEY = [
   'sqlrooms-cli',
@@ -274,26 +275,6 @@ function createDisabledCrdtState(): CrdtSliceState {
     },
   };
 }
-
-const runtimeWsUrl = runtimeConfig.wsUrl || 'ws://localhost:4000';
-const connector = createWebSocketDuckDbConnector({
-  wsUrl: runtimeWsUrl,
-  authToken: runtimeConfig.wsAuthToken,
-  initializationQuery: [
-    'INSTALL spatial',
-    'LOAD spatial',
-    `ATTACH IF NOT EXISTS ':memory:' AS ${MOSAIC_PREAGG_DATABASE}`,
-    `CREATE SCHEMA IF NOT EXISTS ${MOSAIC_PREAGG_SCHEMA_REF}`,
-  ].join('; '),
-});
-addCliDatabaseInitializationDiagnostics(connector, {
-  runtimeConfig,
-  wsUrl: runtimeWsUrl,
-  authToken: runtimeConfig.wsAuthToken,
-});
-
-export const cliDuckDbWsUrl = runtimeWsUrl;
-export const cliDuckDbConnector = connector;
 
 const baseLoadFile = connector.loadFile.bind(connector);
 connector.loadFile = async (file, desiredTableName, options) => {
@@ -660,6 +641,7 @@ const sliceConfigSchemas = {
   appProject: AppBuilderProjectConfigSchema,
   artifactAi: ArtifactAiConfigSchema,
   mosaicDashboard: MosaicDashboardSliceConfig,
+  deckMaps: DeckMapsSliceConfig,
   pivot: PivotSliceConfig,
   python: PythonSliceConfig,
 } as const;
@@ -1018,6 +1000,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             schema: MOSAIC_PREAGG_SCHEMA_REF,
           },
         })(set, get, store),
+
+        ...createDeckMapsSlice()(set, get, store),
 
         ...createDashboardFeatureSlices(
           experimentalEnabled

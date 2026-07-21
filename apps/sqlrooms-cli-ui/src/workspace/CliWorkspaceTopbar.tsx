@@ -13,8 +13,8 @@ import {
 } from '@sqlrooms/ui';
 import {Plus, Trash2Icon} from 'lucide-react';
 import {useCallback, useState} from 'react';
-import {useRoomStore} from '../store';
-import {CliAssistantToggleButton, CliSidebarToggleButton} from './sidebar';
+import {useRoomStore} from '../roomStoreHooks';
+import {CliSidebarToggleButton} from './sidebar';
 
 export function CliWorkspaceTopbar() {
   const roomTitle = useRoomStore((state) => state.room.config.title);
@@ -72,7 +72,6 @@ export function CliWorkspaceTopbar() {
     <header className="border-border bg-background/95 grid h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b px-3">
       <div className="flex min-w-0 items-center gap-1.5">
         <CliSidebarToggleButton />
-        <CliAssistantToggleButton />
       </div>
       <div className="flex max-w-[min(48rem,58vw)] min-w-0 items-center justify-center gap-1 text-center">
         <EditableText

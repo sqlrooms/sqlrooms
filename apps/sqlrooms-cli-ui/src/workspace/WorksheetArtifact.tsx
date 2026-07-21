@@ -23,7 +23,9 @@ import {
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
-import {experimentalEnabled, useRoomStore, type RoomState} from '../store';
+import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
+import {experimentalEnabled} from '../runtimeEnvironment';
+import type {RoomState} from '../store-types';
 import {
   createStatefulBlockTypes,
   getEnabledStatefulBlockArtifactTypes,
@@ -166,12 +168,17 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
 >;
 
 const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
-const ENABLED_WORKSHEET_AI_BLOCK_TYPES = new Set<string>([
-  'chart',
-  ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter((type) =>
-    WORKSHEET_AI_BLOCK_TYPES.has(type),
-  ),
-]);
+
+function getEnabledWorksheetAiBlockTypes(
+  includeExperimental: boolean,
+): Set<string> {
+  return new Set<string>([
+    'chart',
+    ...getEnabledStatefulBlockArtifactTypes(includeExperimental).filter(
+      (type) => WORKSHEET_AI_BLOCK_TYPES.has(type),
+    ),
+  ]);
+}
 
 function createStartBlockScopedChatActions(
   getState: () => RoomState,
@@ -216,6 +223,7 @@ function createWorksheetStatefulBlockRenderers(
 }
 
 export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
+  const roomStore = useCliRoomStoreApi();
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const artifact = useRoomStore((state) =>
     state.artifacts.getArtifact(artifactId),
@@ -238,13 +246,18 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const statefulBlockTypes = useMemo(
     () =>
       createStatefulBlockTypes({
-        getState: useRoomStore.getState,
+        getState: roomStore.getState,
         experimentalEnabled,
       }),
-    [],
+    [roomStore],
   );
   const statefulBlockRenderers = useMemo(
     () => createWorksheetStatefulBlockRenderers(experimentalEnabled),
+    [],
+  );
+
+  const enabledWorksheetAiBlockTypes = useMemo(
+    () => getEnabledWorksheetAiBlockTypes(experimentalEnabled),
     [],
   );
 
@@ -263,7 +276,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     () =>
       createAskAiBlockHeaderAction({
         supportsAiEditing: (blockType) =>
-          ENABLED_WORKSHEET_AI_BLOCK_TYPES.has(blockType),
+          enabledWorksheetAiBlockTypes.has(blockType),
         onSubmit: (
           ctx: AskAiBlockHeaderActionRenderContext,
           prompt: string,
@@ -277,14 +290,14 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
             },
             prompt,
             revealAssistant,
-            actions: createStartBlockScopedChatActions(useRoomStore.getState),
+            actions: createStartBlockScopedChatActions(roomStore.getState),
             isValidBlockDocumentArtifact: (candidate) =>
               candidate.type === 'worksheet',
             artifactLabel: 'worksheet',
           });
         },
       }),
-    [revealAssistant],
+    [revealAssistant, enabledWorksheetAiBlockTypes],
   );
 
   if (!artifact || artifact.type !== 'worksheet') {

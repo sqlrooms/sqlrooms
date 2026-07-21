@@ -38,7 +38,11 @@ import {
   Trash2Icon,
 } from 'lucide-react';
 import {FormEvent, useEffect, useRef, useState} from 'react';
-import {useRoomStore} from '../../store';
+import {useRoomStore} from '../../roomStoreHooks';
+import {
+  CLI_SIDEBAR_COMMAND_CLASS,
+  CLI_SIDEBAR_COMMAND_ITEM_CLASS,
+} from './constants';
 import {useCliArtifactSidebarTabs} from './useCliArtifactSidebarTabs';
 
 export function CliArtifactsSidebarSection() {
@@ -48,6 +52,7 @@ export function CliArtifactsSidebarSection() {
   );
   const {state} = useSidebar();
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
   const [renameArtifact, setRenameArtifact] = useState<{
     id: string;
     name: string;
@@ -153,7 +158,13 @@ export function CliArtifactsSidebarSection() {
   }
 
   return (
-    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+    <Popover
+      open={popoverOpen}
+      onOpenChange={(open) => {
+        setPopoverOpen(open);
+        setIsKeyboardNavigating(false);
+      }}
+    >
       <PopoverTrigger asChild>
         <SidebarMenuButton
           className="hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent"
@@ -168,9 +179,18 @@ export function CliArtifactsSidebarSection() {
         className="w-80 p-0"
         align="start"
         side="right"
-        sideOffset={8}
+        sideOffset={10}
       >
-        <Command>
+        <Command
+          className={CLI_SIDEBAR_COMMAND_CLASS}
+          data-keyboard-navigation={isKeyboardNavigating}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              setIsKeyboardNavigating(true);
+            }
+          }}
+          onPointerMove={() => setIsKeyboardNavigating(false)}
+        >
           <CommandInput placeholder="Search workspace items..." />
           <CommandList className="max-h-none overflow-hidden">
             <CommandEmpty>No matching items.</CommandEmpty>
@@ -181,6 +201,8 @@ export function CliArtifactsSidebarSection() {
                   const Icon = type?.icon ?? FileStackIcon;
                   return (
                     <CommandItem
+                      className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
+                      data-active={artifact.id === artifactTabs.selectedTabId}
                       key={artifact.id}
                       value={`${artifact.name} ${artifact.id}`}
                       onSelect={() => {
@@ -203,6 +225,7 @@ export function CliArtifactsSidebarSection() {
             <CommandSeparator />
             <CommandGroup>
               <CommandItem
+                className={CLI_SIDEBAR_COMMAND_ITEM_CLASS}
                 value="new"
                 onSelect={() => {
                   openArtifactChooser(true);
@@ -210,7 +233,7 @@ export function CliArtifactsSidebarSection() {
                 }}
               >
                 <Plus className="h-4 w-4" aria-hidden />
-                New
+                Create new
               </CommandItem>
             </CommandGroup>
           </CommandList>

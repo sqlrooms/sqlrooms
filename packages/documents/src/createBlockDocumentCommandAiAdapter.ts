@@ -10,6 +10,8 @@ import type {BlockDocumentsSliceState} from './BlockDocumentsSlice';
 
 export const BLOCK_DOCUMENT_APPEND_BLOCKS_COMMAND_ID =
   'block-document.append-blocks';
+export const BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID =
+  'block-document.update-block';
 export const BLOCK_DOCUMENT_MOVE_BLOCK_COMMAND_ID = 'block-document.move-block';
 
 export const BLOCK_DOCUMENT_AGENT_ACTOR = 'block-document-agent';
@@ -110,6 +112,31 @@ export function createBlockDocumentCommandAiAdapter<
       }
 
       return blockIdFromAppendResult(result.data, block);
+    },
+
+    updateBlock: async (artifactId, blockId, block) => {
+      ensureBlockDocument(artifactId);
+
+      const result = await store.getState().commands.invokeCommand(
+        BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID,
+        {
+          artifactId,
+          blockId,
+          block,
+        },
+        {
+          surface: 'ai',
+          actor: BLOCK_DOCUMENT_AGENT_ACTOR,
+        },
+      );
+
+      if (!result.success) {
+        throw new Error(
+          result.error ??
+            result.message ??
+            `Failed to execute ${BLOCK_DOCUMENT_UPDATE_BLOCK_COMMAND_ID}`,
+        );
+      }
     },
 
     moveBlock: async (artifactId, blockId, toIndex) => {

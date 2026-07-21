@@ -5,106 +5,93 @@ import {
   type BlockSettingsComponentProps,
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
-import {useStoreWithMosaicDashboard} from '@sqlrooms/mosaic';
 import {Button} from '@sqlrooms/ui';
 import {XIcon} from 'lucide-react';
-import {type FC, useCallback, useMemo} from 'react';
-import {
-  DECK_MAP_DASHBOARD_PANEL_TYPE,
-  type DeckMapDashboardPanelConfig,
-} from './dashboardConfig';
-import {MapSettingsPanel} from './MapSettings';
+import {useCallback, useMemo} from 'react';
+import {useStoreWithDeckMaps} from './DeckMapsSlice';
+import {DeckMapSettingsPanel} from './MapSettings';
+import {regenerateMapConfigForTable} from './mapConfigUtils';
+import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
 
-function useMapBlock(
-  documentId: string | undefined,
-  blockId: string | undefined,
-): BlockDocumentStatefulBlockBlock | undefined {
-  const artifact = useStoreWithBlockDocuments((state) =>
-    documentId ? state.blockDocuments.config.artifacts[documentId] : undefined,
-  );
-
-  return useMemo(() => {
-    if (!artifact || !documentId || !blockId) return undefined;
-
-    return blockDocumentContentToBlocks(artifact.content).find(
-      (block): block is BlockDocumentStatefulBlockBlock =>
-        block.id === blockId &&
-        block.type === 'statefulBlock' &&
-        block.blockType === 'map',
-    );
-  }, [artifact, documentId, blockId]);
-}
-
-/**
- * Settings adapter for an embeddable Deck map block inside a block document.
- */
-export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
+export function DeckMapBlockSettings({
   blockId,
   dashboardId,
   blockInstanceId,
   onClose,
   readOnly,
-}) => {
+}: BlockSettingsComponentProps) {
   const mapId = blockInstanceId ?? blockId;
-  const mapBlock = useMapBlock(dashboardId, blockId);
-  const dashboard = useStoreWithMosaicDashboard((state) =>
-    state.mosaicDashboard.getDashboard(mapId),
+  const map = useStoreWithDeckMaps(
+    (state) => state.deckMaps.config.mapsById[mapId],
+  );
+  const tables = useStoreWithDeckMaps((state) => state.db.tables);
+  const updateMap = useStoreWithDeckMaps((state) => state.deckMaps.updateMap);
+  const artifact = useStoreWithBlockDocuments((state) =>
+    dashboardId
+      ? state.blockDocuments.config.artifacts[dashboardId]
+      : undefined,
   );
   const updateBlock = useStoreWithBlockDocuments(
     (state) => state.blockDocuments.updateBlock,
   );
-  const setSelectedTable = useStoreWithMosaicDashboard(
-    (state) => state.mosaicDashboard.setSelectedTable,
-  );
-
-  const panel = useMemo(
+  const block = useMemo(
     () =>
-      dashboard?.panels.find(
-        (candidate) => candidate.type === DECK_MAP_DASHBOARD_PANEL_TYPE,
-      ),
-    [dashboard?.panels],
+      artifact
+        ? blockDocumentContentToBlocks(artifact.content).find(
+            (candidate): candidate is BlockDocumentStatefulBlockBlock =>
+              candidate.id === blockId &&
+              candidate.type === 'statefulBlock' &&
+              candidate.blockType === 'map',
+          )
+        : undefined,
+    [artifact, blockId],
   );
-
-  const handleTableChange = useCallback(
-    (table: DataTable) => {
-      if (readOnly) return;
-      setSelectedTable(mapId, getTableIdentity(table.table));
-    },
-    [mapId, readOnly, setSelectedTable],
+  const configIssues = useMemo(
+    () =>
+      map ? getDeckMapResourceConfigIssues(map.config, {allowEmpty: true}) : [],
+    [map],
   );
 
   const handleTitleChange = useCallback(
     (title: string) => {
       if (readOnly) return;
-      if (dashboardId && mapBlock) {
+      updateMap(mapId, {title});
+      if (dashboardId && block) {
         updateBlock(dashboardId, blockId, {
-          ...mapBlock,
+          ...block,
           caption: title || undefined,
         });
       }
     },
-    [dashboardId, blockId, mapBlock, readOnly, updateBlock],
+    [block, blockId, dashboardId, mapId, readOnly, updateBlock, updateMap],
   );
 
-  if (!dashboard || !panel) {
+  const handleTableChange = useCallback(
+    (table: DataTable) => {
+      if (readOnly || !map) return;
+      const config = regenerateMapConfigForTable({config: map.config}, table);
+      if (config === map.config) return;
+      updateMap(mapId, {
+        selectedTable: getTableIdentity(table.table),
+        config: config as typeof map.config,
+      });
+    },
+    [map, mapId, readOnly, updateMap],
+  );
+
+  if (!map)
     return (
-      <div className="flex h-full items-center justify-center p-4">
-        <p className="text-muted-foreground text-sm">
-          Map settings not available
-        </p>
+      <div className="text-muted-foreground p-4 text-sm">
+        Map settings not available
       </div>
     );
-  }
 
-  const isCustomMode =
-    (panel.config as DeckMapDashboardPanelConfig)?.configMode === 'custom';
-
-  if (isCustomMode) {
+  if (configIssues.length > 0 || map.config.configMode === 'custom') {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
           <span>Map settings</span>
-          {onClose && (
+          {onClose ? (
             <Button
               variant="ghost"
               size="icon"
@@ -114,32 +101,28 @@ export const DeckMapBlockSettings: FC<BlockSettingsComponentProps> = ({
             >
               <XIcon className="h-3.5 w-3.5" />
             </Button>
-          )}
+          ) : null}
         </div>
         <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
-          <p>
-            This map uses a custom AI-generated configuration.
-            <br />
-            Use the JSON editor to make changes.
-          </p>
+          {configIssues.length > 0
+            ? `Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}`
+            : 'This custom map configuration cannot be safely edited with the basic settings controls.'}
         </div>
       </div>
     );
   }
 
-  const panelWithCaption = {
-    ...panel,
-    title: mapBlock?.caption ?? panel.title,
-  };
-
   return (
-    <MapSettingsPanel
-      dashboardId={mapId}
-      panel={panelWithCaption}
+    <DeckMapSettingsPanel
+      title={block?.caption ?? map.title}
+      selectedTable={map.selectedTable}
+      config={map.config}
+      tables={tables.filter((table) => table.columns.length > 0)}
       onClose={onClose}
-      onTableChange={handleTableChange}
       onTitleChange={handleTitleChange}
+      onTableChange={handleTableChange}
+      onConfigChange={(config) => updateMap(mapId, {config})}
       readOnly={readOnly}
     />
   );
-};
+}
