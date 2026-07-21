@@ -173,7 +173,7 @@ export type AiSliceState = {
       name?: string,
       modelProvider?: string,
       model?: string,
-    ) => void;
+    ) => string;
     forkSessionFromMessage: (
       args: ForkSessionFromMessageArgs,
     ) => string | undefined;
@@ -907,6 +907,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               draft.ai.config.openSessionTabs.push(newSessionId);
             }),
           );
+          return newSessionId;
         },
 
         forkSessionFromMessage: (args) => {

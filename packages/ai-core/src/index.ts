@@ -46,6 +46,10 @@ export type {
 } from './hooks/useGenerateSessionTitle';
 export {Chat, type LocalAgentChatRootProps} from './components/Chat';
 export {
+  LocalAgentChatRuntimeProvider,
+  SessionChatRuntimeProvider,
+} from './components/ChatRuntimeContext';
+export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
