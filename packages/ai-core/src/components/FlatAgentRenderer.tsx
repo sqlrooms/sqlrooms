@@ -448,6 +448,7 @@ const FlatSegmentList: React.FC<{
   hoistableSet,
   toolRenderers,
   isPassthroughTool,
+  isAgentComplete,
 }) => {
   const simpleMode = useSimpleMode();
   return (
@@ -458,16 +459,20 @@ const FlatSegmentList: React.FC<{
             (t) => t.state === 'pending' || t.state === 'approval-requested',
           );
 
+          const toolCount = seg.tools.length;
+          const allToolsDone = !anyPending && toolCount > 0;
+          const summaryLabel =
+            allToolsDone && isAgentComplete
+              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+              : undefined;
+
           const latestTool = seg.tools[seg.tools.length - 1];
 
           return (
             <React.Fragment key={`tg-${idx}`}>
               <ActivityBox
                 isRunning={anyPending}
-                // The "Worked with N tools" summary line is intentionally
-                // hidden from users; a completed tool group collapses to
-                // nothing rather than showing a summary.
-                summaryLabel={undefined}
+                summaryLabel={summaryLabel}
                 simpleMode={simpleMode}
                 latestActivity={
                   latestTool ? (
