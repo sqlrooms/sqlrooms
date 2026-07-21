@@ -21,6 +21,7 @@ import {
   createDiscoverSkillTool,
   createRunSkillTool,
   createExecuteApiTool,
+  ExecuteApiToolRenderer,
 } from './skills';
 import {BUNDLED_SKILLS} from './skills/bundledSkills';
 
@@ -92,7 +93,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                   .join('\n')
               : '(none loaded yet)';
 
-          return `You are an AI data analysis assistant with access to skills for mapping, charting, and geographic data.
+          return `You are an AI data analysis assistant with access to skills for charting data.
 
 Available DuckDB tables:
 ${tableList}
@@ -101,7 +102,7 @@ You have two tools:
 - discoverSkill: List available skills with their descriptions.
 - runSkill: Execute a skill by name. The skill runs as a sub-agent with its own tools.
 
-When the user asks for a visualization (map, chart) or geographic data (boundaries), discover the appropriate skill and run it.
+When the user asks for a chart or other data visualization, discover the appropriate skill and run it.
 ${buildSkillsPrompt()}`;
         },
 
@@ -125,7 +126,13 @@ ${buildSkillsPrompt()}`;
           ),
         },
 
-        toolRenderers: {},
+        toolRenderers: {
+          // `executeApi` runs inside skill sub-agents (see createRunSkillTool).
+          // Registering its renderer here — and hoisting the `executeApi` name
+          // in MainView — promotes charts created by `createChart` out of the
+          // nested activity log and renders them at the conversation level.
+          executeApi: ExecuteApiToolRenderer,
+        },
       })(set, get, store),
     }),
   ),

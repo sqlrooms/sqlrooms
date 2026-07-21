@@ -4,6 +4,13 @@ import {Button, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
 
+/**
+ * Tool names whose renderers are promoted out of the nested skill-agent
+ * activity log and rendered at the top level of the conversation. `executeApi`
+ * carries the `createChart` chart payload (see ExecuteApiToolRenderer).
+ */
+const HOISTED_RENDERERS = ['executeApi'];
+
 export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
@@ -40,10 +47,13 @@ export const MainView: React.FC = () => {
         ) : (
           <>
             <div className="grow overflow-auto">
-              <Chat.Messages key={currentSessionId} />
+              <Chat.Messages
+                key={currentSessionId}
+                hoistedRenderers={HOISTED_RENDERERS}
+              />
             </div>
 
-            <Chat.Composer placeholder="Try: 'Create a chart of earthquake magnitudes' or 'Get the boundary of California'">
+            <Chat.Composer placeholder="Try: 'Create a chart of earthquake magnitudes'">
               <Chat.InlineApiKeyInput
                 onSaveApiKey={(provider, apiKey) => {
                   updateProvider(provider, {apiKey});

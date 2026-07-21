@@ -1,4 +1,0 @@
-id: map-visualization
-version: 0.1.0
-name: map-visualization
-description: Create and configure Kepler.gl map layers from data tables. Supports point, arc, geojson, cluster, heatmap, H3, and trip layer types with color customization.

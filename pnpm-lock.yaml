@@ -703,6 +703,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@sqlrooms/vega':
+        specifier: workspace:*
+        version: link:../../packages/vega
       ai:
         specifier: ^6.0.154
         version: 6.0.177(zod@4.1.13)

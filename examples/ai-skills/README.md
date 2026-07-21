@@ -1,6 +1,6 @@
 # AI Skills Example
 
-A browser-only SQLRooms example demonstrating the **file-based skills** system: an AI agent that discovers and executes skills defined as Markdown documents, backed by real in-browser DuckDB queries, with map and chart capabilities.
+A browser-only SQLRooms example demonstrating the **file-based skills** system: an AI agent that discovers and executes skills defined as Markdown documents, backed by real in-browser DuckDB queries, with chart capabilities.
 
 ## Architecture
 
@@ -9,7 +9,7 @@ User chat
   └── AI agent (discoverSkill + runSkill tools)
         └── runSkill (orchestrator sub-agent)
               ├── runSkillAgent (leaf sub-agent)
-              │     └── executeApi (data.query / map.create-layer / createChart)
+              │     └── executeApi (data.query / createChart)
               ├── loadSkill (read skill instructions)
               └── readFile (read reference docs)
 ```
@@ -17,7 +17,7 @@ User chat
 The skills engine uses a two-level sub-agent pattern:
 
 1. **Orchestrator** — plans which skills to run and in what order, delegates execution to leaf agents.
-2. **Leaf** — follows the skill's step-by-step instructions, calling `executeApi` to run DuckDB queries, create map layers, and generate charts.
+2. **Leaf** — follows the skill's step-by-step instructions, calling `executeApi` to run DuckDB queries and generate charts.
 
 Skills are defined as Markdown files (`SKILL.md`) in the `skills/` directory, bundled at build time into TypeScript, and served via a `BundledSkillStorage`.
 
@@ -26,8 +26,6 @@ Skills are defined as Markdown files (`SKILL.md`) in the `skills/` directory, bu
 | Skill | Description |
 |-------|-------------|
 | `chart` | Create Vega-Lite chart visualizations from SQL query results |
-| `map-visualization` | Create Kepler.gl map layers from tables with geographic data |
-| `admin-boundaries` | Fetch administrative boundary geometries from Overture Maps |
 
 ## Running
 
@@ -57,7 +55,8 @@ At build time, `scripts/generate-skills.ts` walks the `skills/` directory, parse
 - `scripts/generate-skills.ts` — Build-time skill bundler
 - `src/skills/skillStorage.ts` — `BundledSkillStorage` implementing the `SkillStorage` interface
 - `src/skills/runSkillTool.ts` — Orchestrator/leaf sub-agent pattern
-- `src/skills/executeApiTool.ts` — Browser-side command execution (DuckDB, map, chart)
+- `src/skills/executeApiTool.ts` — Browser-side command execution (DuckDB, chart)
+- `src/skills/executeApiToolRenderer.tsx` — Renders `createChart` output as a Vega-Lite chart (`@sqlrooms/vega`), hoisted to the conversation via `hoistedRenderers` in `MainView`
 - `src/store.ts` — Zustand store wiring all slices together
 
 ## Adding a New Skill

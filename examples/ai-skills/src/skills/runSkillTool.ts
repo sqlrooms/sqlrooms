@@ -41,7 +41,7 @@ Tools available:
 - runSkillAgent: Delegate execution of any skill to an isolated sub-agent. The sub-agent follows the skill instructions autonomously and returns only the result.
 - loadSkill: Load another skill's full instructions into your context.
 - readFile: Read a reference document from a skill directory.
-- executeApi: Execute application commands (data.query, map.create-layer, createChart, etc.).
+- executeApi: Execute application commands (data.query, createChart, etc.).
 
 Local tables currently available in DuckDB:
 ${localTables}
@@ -74,13 +74,22 @@ Use loadSkill to load another skill's instructions when the current skill refere
 IMPORTANT: executeApi takes a "call" field that must be a JSON OBJECT (not a string). Always pass call as a native object:
   call: { apiName: "executeCommand", args: { commandId: "data.query", input: { sqlQuery: "SELECT ..." } } }
 
-Well-known executeCommand commandIds:
-  - "data.query": Run a DuckDB SQL query. input: { sqlQuery, saveToTable?, numFirstRowsToLLM? }. Returns { numRows, tableName?, firstRows? }.
-  - "map.create-layer": Create a Kepler.gl map layer. input: { tableName, layerType, layerName?, colorBy?, colorType?, colorMap?, simpleColor?, centerMap? }. Returns { details, layerId, mapId }.
-  - "map.add-time-filter": Add time animation. input: { tableName, dateTimeColumn, interval?, mapId? }.
-  - "data.classify": Classify a column for color mapping. input: { datasetName, variableName, method, k? }. Returns { breaks? } or { uniqueValues? }.
+Well-known executeApi calls:
+  - executeCommand + { commandId: "data.query", input: { sqlQuery, saveToTable?, numFirstRowsToLLM? } }: Run a DuckDB SQL query. Returns { numRows, tableName?, firstRows? }.
+  - createChart + { sqlQuery, vegaLiteSpec, reasoning? }: Validate AND RENDER a Vega-Lite chart. sqlQuery supplies the data; vegaLiteSpec is a STRINGIFIED Vega-Lite spec with the "data" field OMITTED. Returns { details }.
 
-When you are done, provide a concise summary of what was accomplished (tables created, row counts, etc.).
+CRITICAL — to display any chart you MUST call executeApi with apiName "createChart". This is the ONLY way a chart is rendered to the user.
+  - Do NOT write the Vega-Lite spec into your text answer as JSON — that renders nothing.
+  - Do NOT put "data", "datasets", or inline "values" in vegaLiteSpec — the sqlQuery supplies the data at render time.
+  - Example:
+      call: { apiName: "createChart", args: {
+        sqlQuery: "SELECT MagType, COUNT(*) AS cnt FROM sample_locations GROUP BY MagType",
+        vegaLiteSpec: "{\\"mark\\":\\"bar\\",\\"encoding\\":{\\"x\\":{\\"field\\":\\"MagType\\",\\"type\\":\\"nominal\\"},\\"y\\":{\\"field\\":\\"cnt\\",\\"type\\":\\"quantitative\\"}},\\"width\\":\\"container\\"}",
+        reasoning: "Bar chart of earthquake counts by MagType"
+      } }
+  FALSIFIABLE CHECK: if the skill's goal was a chart and you did not make a successful createChart call, you erred — call createChart before finishing.
+
+When you are done, provide a concise summary of what was accomplished (tables created, row counts, charts created). Do NOT paste the full Vega-Lite spec into the summary.
 
 Local tables currently available in DuckDB:
 ${localTables}
