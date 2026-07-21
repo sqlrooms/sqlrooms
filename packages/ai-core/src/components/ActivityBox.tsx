@@ -52,6 +52,7 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
         isRunning={isRunning}
         className={className}
         latestActivity={latestActivity}
+        summaryLabel={summaryLabel}
       >
         {children}
       </SimpleActivityBox>
@@ -71,16 +72,19 @@ export const ActivityBox: React.FC<ActivityBoxProps> = ({
 };
 
 /**
- * Streamlined Simple Mode box. Collapsed, it shows a single clickable line
- * (`latestActivity`); clicking anywhere expands the full activity log. No
- * expand/collapse chevron buttons are rendered, keeping the box compact.
+ * Streamlined Simple Mode box. Collapsed, it shows a single clickable line —
+ * the run summary (`summaryLabel`, e.g. "Worked with 3 tools") once the run is
+ * complete, otherwise the latest activity (`latestActivity`). Clicking anywhere
+ * expands the full activity log. No expand/collapse chevron buttons are
+ * rendered, keeping the box compact.
  */
 const SimpleActivityBox: React.FC<{
   children: React.ReactNode;
   isRunning: boolean;
   className?: string;
   latestActivity?: React.ReactNode;
-}> = ({children, isRunning, className, latestActivity}) => {
+  summaryLabel?: string;
+}> = ({children, isRunning, className, latestActivity, summaryLabel}) => {
   const [expanded, setExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +96,11 @@ const SimpleActivityBox: React.FC<{
     if (el) el.scrollTop = el.scrollHeight;
   });
 
-  const collapsedContent = latestActivity ?? children;
+  const collapsedContent = summaryLabel ? (
+    <span>{summaryLabel}</span>
+  ) : (
+    (latestActivity ?? children)
+  );
 
   return (
     <div
