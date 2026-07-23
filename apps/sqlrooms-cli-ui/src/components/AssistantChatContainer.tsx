@@ -40,8 +40,8 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
     (s) => s.artifacts.config.currentArtifactId,
   );
   const sessions = useRoomStore((s) => s.ai.config.sessions);
-  const aiSessionArtifacts = useRoomStore(
-    (s) => s.artifactAi.config.aiSessionArtifacts,
+  const sessionArtifactLinks = useRoomStore(
+    (s) => s.artifactAi.config.sessionArtifactLinks,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
@@ -67,12 +67,12 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   const filterSession = useCallback(
     (session: (typeof sessions)[number]) =>
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        session.id,
-        currentArtifactId,
-      ),
-    [aiSessionArtifacts, currentArtifactId],
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks,
+        sessionId: session.id,
+        artifactId: currentArtifactId,
+      }),
+    [sessionArtifactLinks, currentArtifactId],
   );
 
   const historyIsRunning = useMemo(() => {
@@ -83,13 +83,13 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
       (session) =>
         session.isRunning &&
         session.id !== currentSession?.id &&
-        isAiSessionVisibleForArtifact(
-          aiSessionArtifacts,
-          session.id,
-          currentArtifactId,
-        ),
+        isAiSessionVisibleForArtifact({
+          sessionArtifactLinks,
+          sessionId: session.id,
+          artifactId: currentArtifactId,
+        }),
     );
-  }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
+  }, [sessionArtifactLinks, currentArtifactId, currentSession, sessions]);
 
   const messagesPane = (
     <div className="print-container h-full min-h-0 grow overflow-hidden">

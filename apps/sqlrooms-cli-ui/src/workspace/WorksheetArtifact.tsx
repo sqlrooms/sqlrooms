@@ -189,8 +189,15 @@ function createStartBlockScopedChatActions(
     setCurrentArtifact: (artifactId) =>
       getState().artifacts.setCurrentArtifact(artifactId),
     getAiSessions: () => getState().ai.config.sessions,
-    getAiSessionArtifacts: () =>
-      getState().artifactAi.config.aiSessionArtifacts,
+    getAiSessionArtifacts: () => {
+      // Convert new format to old format for compatibility
+      const links = getState().artifactAi.config.sessionArtifactLinks;
+      const result: Record<string, string> = {};
+      for (const link of links) {
+        result[link.sessionId] = link.artifactId;
+      }
+      return result;
+    },
     createArtifactScopedSession: () =>
       getState().artifactAi.createArtifactScopedSession(),
     switchSession: (sessionId) => getState().ai.switchSession(sessionId),

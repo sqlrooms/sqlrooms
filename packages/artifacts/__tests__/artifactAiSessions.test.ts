@@ -138,38 +138,53 @@ describe('artifact AI session helpers', () => {
     createSession('session-b', 2, true),
     createSession('session-unowned', 4, true),
   ];
-  const aiSessionArtifacts = {
-    'session-a-old': 'artifact-a',
-    'session-a-new': 'artifact-a',
-    'session-b': 'artifact-b',
-  };
+  const sessionArtifactLinks = [
+    {
+      sessionId: 'session-a-old',
+      artifactId: 'artifact-a',
+      createdAt: 1000,
+      linkType: 'created' as const,
+    },
+    {
+      sessionId: 'session-a-new',
+      artifactId: 'artifact-a',
+      createdAt: 3000,
+      linkType: 'attached' as const,
+    },
+    {
+      sessionId: 'session-b',
+      artifactId: 'artifact-b',
+      createdAt: 2000,
+      linkType: 'created' as const,
+    },
+  ];
 
   it('filters and selects only explicitly artifact-owned sessions', () => {
     expect(
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        'session-a-new',
-        'artifact-a',
-      ),
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks,
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-a',
+      }),
     ).toBe(true);
     expect(
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        'session-unowned',
-        'artifact-a',
-      ),
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks,
+        sessionId: 'session-unowned',
+        artifactId: 'artifact-a',
+      }),
     ).toBe(false);
     expect(
       getAiSessionIdsForArtifact({
         sessions,
-        aiSessionArtifacts,
+        sessionArtifactLinks,
         artifactId: 'artifact-a',
       }),
     ).toEqual(['session-a-old', 'session-a-new']);
     expect(
       getLatestAiSessionIdForArtifact({
         sessions,
-        aiSessionArtifacts,
+        sessionArtifactLinks,
         artifactId: 'artifact-a',
       }),
     ).toBe('session-a-new');
@@ -184,12 +199,32 @@ describe('artifact AI session helpers', () => {
           createSession('empty-newer', 2),
           createSession('running-empty', 4, true),
         ],
-        aiSessionArtifacts: {
-          'empty-older': 'artifact-a',
-          'non-empty-newer': 'artifact-a',
-          'empty-newer': 'artifact-a',
-          'running-empty': 'artifact-a',
-        },
+        sessionArtifactLinks: [
+          {
+            sessionId: 'empty-older',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'non-empty-newer',
+            artifactId: 'artifact-a',
+            createdAt: 3000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'empty-newer',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'running-empty',
+            artifactId: 'artifact-a',
+            createdAt: 4000,
+            linkType: 'attached',
+          },
+        ],
         artifactId: 'artifact-a',
       }),
     ).toBe('empty-newer');
@@ -212,11 +247,26 @@ describe('artifact AI session helpers', () => {
             draftContextItemIds: ['block:worksheet:block-a'],
           },
         ],
-        aiSessionArtifacts: {
-          'older-draft-match': 'artifact-a',
-          'newer-draft-match': 'artifact-a',
-          'other-artifact-match': 'artifact-b',
-        },
+        sessionArtifactLinks: [
+          {
+            sessionId: 'older-draft-match',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'newer-draft-match',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'other-artifact-match',
+            artifactId: 'artifact-b',
+            createdAt: 3000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -241,7 +291,14 @@ describe('artifact AI session helpers', () => {
             },
           },
         ],
-        aiSessionArtifacts: {'run-match': 'artifact-a'},
+        sessionArtifactLinks: [
+          {
+            sessionId: 'run-match',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -253,11 +310,19 @@ describe('artifact AI session helpers', () => {
       ...createSession('running-match', 3, true),
       draftContextItemIds: ['block:worksheet:block-a'],
     };
+    const testLinks = [
+      {
+        sessionId: 'running-match',
+        artifactId: 'artifact-a',
+        createdAt: 3000,
+        linkType: 'created' as const,
+      },
+    ];
 
     expect(
       findAiSessionForArtifactWithContextItem({
         sessions: [matchingRunningSession],
-        aiSessionArtifacts: {'running-match': 'artifact-a'},
+        sessionArtifactLinks: testLinks,
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -266,7 +331,7 @@ describe('artifact AI session helpers', () => {
     expect(
       findAiSessionForArtifactWithContextItem({
         sessions: [matchingRunningSession],
-        aiSessionArtifacts: {'running-match': 'artifact-a'},
+        sessionArtifactLinks: testLinks,
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
         includeRunning: true,
@@ -283,7 +348,14 @@ describe('artifact AI session helpers', () => {
             draftContextItemIds: ['block:worksheet:block-b'],
           },
         ],
-        aiSessionArtifacts: {'no-match': 'artifact-a'},
+        sessionArtifactLinks: [
+          {
+            sessionId: 'no-match',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -297,10 +369,20 @@ describe('artifact AI session helpers', () => {
           createSession('empty-older', 1),
           createSession('empty-newer', 2),
         ],
-        aiSessionArtifacts: {
-          'empty-older': 'artifact-a',
-          'empty-newer': 'artifact-a',
-        },
+        sessionArtifactLinks: [
+          {
+            sessionId: 'empty-older',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'empty-newer',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+        ],
         artifactId: 'artifact-a',
         excludeSessionIds: ['empty-newer'],
       }),
@@ -317,7 +399,14 @@ describe('artifact AI session helpers', () => {
             lastOpenedAt: 1,
           } as any,
         ],
-        aiSessionArtifacts: {'summary-only': 'artifact-a'},
+        sessionArtifactLinks: [
+          {
+            sessionId: 'summary-only',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
       }),
     ).toBeUndefined();
@@ -325,13 +414,13 @@ describe('artifact AI session helpers', () => {
 
   it('groups and counts running sessions by artifact', () => {
     expect(
-      getAiSessionGroupsByArtifact({sessions, aiSessionArtifacts}),
+      getAiSessionGroupsByArtifact({sessions, sessionArtifactLinks}),
     ).toEqual({
       'artifact-a': ['session-a-old', 'session-a-new'],
       'artifact-b': ['session-b'],
     });
     expect(
-      getRunningAiSessionCountsByArtifact({sessions, aiSessionArtifacts}),
+      getRunningAiSessionCountsByArtifact({sessions, sessionArtifactLinks}),
     ).toEqual({
       'artifact-a': 1,
       'artifact-b': 1,
@@ -341,25 +430,51 @@ describe('artifact AI session helpers', () => {
   it('removes mappings for deleted sessions and artifacts', () => {
     expect(
       cleanupAiSessionArtifacts({
-        aiSessionArtifacts: {
-          ...aiSessionArtifacts,
-          'deleted-session': 'artifact-a',
-          'session-a-new': 'deleted-artifact',
-        },
+        sessionArtifactLinks: [
+          ...sessionArtifactLinks,
+          {
+            sessionId: 'deleted-session',
+            artifactId: 'artifact-a',
+            createdAt: 5000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'session-a-new',
+            artifactId: 'deleted-artifact',
+            createdAt: 6000,
+            linkType: 'attached',
+          },
+        ],
         sessions,
         artifactIds: ['artifact-a', 'artifact-b'],
       }),
-    ).toEqual({
-      'session-a-old': 'artifact-a',
-      'session-b': 'artifact-b',
-    });
+    ).toEqual([
+      {
+        sessionId: 'session-a-old',
+        artifactId: 'artifact-a',
+        createdAt: 1000,
+        linkType: 'created',
+      },
+      {
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-a',
+        createdAt: 3000,
+        linkType: 'attached',
+      },
+      {
+        sessionId: 'session-b',
+        artifactId: 'artifact-b',
+        createdAt: 2000,
+        linkType: 'created',
+      },
+    ]);
   });
 
   it('prepends the owning artifact to run context items', () => {
     expect(
       getOwningArtifactRunContextItems({
         sessionId: 'session-a-new',
-        aiSessionArtifacts,
+        sessionArtifactLinks,
         artifactsById: {
           'artifact-a': {
             id: 'artifact-a',
@@ -415,10 +530,20 @@ describe('createArtifactAiSlice', () => {
           {...createSession('used-session', 2), prompt: 'hello'},
         ];
         draft.ai.config.currentSessionId = 'used-session';
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'empty-session': 'artifact-a',
-          'used-session': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'empty-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'used-session',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+        ];
       }),
     );
 
@@ -442,9 +567,14 @@ describe('createArtifactAiSlice', () => {
       produce(store.getState(), (draft: TestRoomState) => {
         draft.ai.config.sessions = [createSession('current-empty', 1)];
         draft.ai.config.currentSessionId = 'current-empty';
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'current-empty': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'current-empty',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
@@ -464,9 +594,14 @@ describe('createArtifactAiSlice', () => {
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
         draft.ai.config.sessions = [createSession('empty-session', 1)];
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'empty-session': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'empty-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
@@ -507,9 +642,14 @@ describe('createArtifactAiSlice', () => {
             sourceSessionId: 'source-session',
           },
         };
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'source-session': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'source-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
@@ -531,10 +671,20 @@ describe('createArtifactAiSlice', () => {
           createSession('owned-newer', 5),
         ];
         draft.ai.config.currentSessionId = 'unowned-newer';
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'owned-older': 'artifact-a',
-          'owned-newer': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'owned-older',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'owned-newer',
+            artifactId: 'artifact-a',
+            createdAt: 5000,
+            linkType: 'attached',
+          },
+        ];
       }),
     );
 
@@ -562,18 +712,91 @@ describe('createArtifactAiSlice', () => {
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
         draft.ai.config.sessions = [createSession('session-a', 1)];
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'session-a': 'artifact-a',
-          'deleted-session': 'artifact-a',
-          'session-b': 'deleted-artifact',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-a',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'deleted-session',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'session-b',
+            artifactId: 'deleted-artifact',
+            createdAt: 3000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
     store.getState().artifactAi.cleanupSessionArtifacts();
 
-    expect(store.getState().artifactAi.config.aiSessionArtifacts).toEqual({
-      'session-a': 'artifact-a',
-    });
+    expect(store.getState().artifactAi.config.sessionArtifactLinks).toEqual([
+      {
+        sessionId: 'session-a',
+        artifactId: 'artifact-a',
+        createdAt: 1000,
+        linkType: 'created',
+      },
+    ]);
+  });
+});
+
+import {ArtifactSessionLinkSchema} from '../src';
+
+describe('ArtifactSessionLink types', () => {
+  it('should validate a valid created link', () => {
+    const link = {
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      createdAt: Date.now(),
+      linkType: 'created' as const,
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(link);
+    }
+  });
+
+  it('should validate a valid attached link', () => {
+    const link = {
+      sessionId: 'session-2',
+      artifactId: 'artifact-2',
+      createdAt: Date.now(),
+      linkType: 'attached' as const,
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject invalid linkType', () => {
+    const link = {
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      createdAt: Date.now(),
+      linkType: 'invalid',
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject missing required fields', () => {
+    const link = {
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(false);
   });
 });
