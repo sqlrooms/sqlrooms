@@ -181,6 +181,7 @@ export type AiSliceState = {
       sessionId: string,
     ) => AiSessionForkOrigin | undefined;
     switchSession: (sessionId: string) => void;
+    resetCurrentSession: () => void;
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
@@ -965,6 +966,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (session) {
                 session.lastOpenedAt = now;
               }
+            }),
+          );
+        },
+
+        /**
+         * Reset the current session (set currentSessionId to undefined)
+         */
+        resetCurrentSession: () => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.config.currentSessionId = undefined;
             }),
           );
         },

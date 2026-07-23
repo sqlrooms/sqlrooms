@@ -137,7 +137,7 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
   const currentSessionId = useRoomStore((s) => s.ai.getCurrentSession()?.id);
   const owningArtifactId = useRoomStore((s) =>
     currentSessionId
-      ? s.artifactAi.config.aiSessionArtifacts[currentSessionId]
+      ? s.artifactAi.getLatestArtifactForSession(currentSessionId)
       : undefined,
   );
 
@@ -254,7 +254,7 @@ export function useValidatedSelectedIds(): string[] {
   const blockDocuments = useRoomStore((s) => s.blockDocuments.config.artifacts);
   const owningArtifactId = useRoomStore((s) =>
     currentSession
-      ? s.artifactAi.config.aiSessionArtifacts[currentSession.id]
+      ? s.artifactAi.getLatestArtifactForSession(currentSession.id)
       : undefined,
   );
   const tables = useContextTables();
