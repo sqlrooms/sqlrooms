@@ -3,7 +3,10 @@ import {
   ChatSessionSchema,
   getAiRunContextItems,
 } from '@sqlrooms/ai-config';
-import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
+import type {
+  ArtifactMetadata,
+  ArtifactSessionLink,
+} from '../ArtifactsSliceConfig';
 
 /**
  * Minimal AI session fields needed by artifact ownership helpers.
@@ -42,15 +45,23 @@ export type ArtifactAiSessionFilterOptions = {
 };
 
 /**
- * Returns true only when the session is explicitly owned by the artifact.
+ * Returns true only when the session is explicitly linked to the artifact.
  *
  * Missing ownership is treated as unowned, not as visible everywhere.
+ *
+ * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
 export function isAiSessionVisibleForArtifact({
   aiSessionArtifacts,
+  sessionArtifactLinks,
   sessionId,
   artifactId,
-}: ArtifactAiSessionFilterOptions): boolean;
+}: {
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+  sessionId: string;
+  artifactId: string | undefined;
+}): boolean;
 export function isAiSessionVisibleForArtifact(
   aiSessionArtifacts: ArtifactAiSessionOwnership,
   sessionId: string,
@@ -58,22 +69,49 @@ export function isAiSessionVisibleForArtifact(
 ): boolean;
 export function isAiSessionVisibleForArtifact(
   optionsOrAiSessionArtifacts:
-    | ArtifactAiSessionFilterOptions
+    | {
+        aiSessionArtifacts?: ArtifactAiSessionOwnership;
+        sessionArtifactLinks?: ArtifactSessionLink[];
+        sessionId: string;
+        artifactId: string | undefined;
+      }
     | ArtifactAiSessionOwnership,
   sessionId?: string,
   artifactId?: string,
 ): boolean {
-  const options =
-    typeof sessionId === 'string'
-      ? {
-          aiSessionArtifacts:
-            optionsOrAiSessionArtifacts as ArtifactAiSessionOwnership,
-          sessionId,
-          artifactId,
-        }
-      : (optionsOrAiSessionArtifacts as ArtifactAiSessionFilterOptions);
+  // Handle old-style function call
+  if (typeof sessionId === 'string') {
+    const aiSessionArtifacts =
+      optionsOrAiSessionArtifacts as ArtifactAiSessionOwnership;
+    if (!artifactId) return false;
+    return aiSessionArtifacts[sessionId] === artifactId;
+  }
+
+  // Handle new-style options object
+  const options = optionsOrAiSessionArtifacts as {
+    aiSessionArtifacts?: ArtifactAiSessionOwnership;
+    sessionArtifactLinks?: ArtifactSessionLink[];
+    sessionId: string;
+    artifactId: string | undefined;
+  };
+
   if (!options.artifactId) return false;
-  return options.aiSessionArtifacts[options.sessionId] === options.artifactId;
+
+  // Try new format first
+  if (options.sessionArtifactLinks) {
+    return options.sessionArtifactLinks.some(
+      (link) =>
+        link.sessionId === options.sessionId &&
+        link.artifactId === options.artifactId,
+    );
+  }
+
+  // Fall back to old format
+  if (options.aiSessionArtifacts) {
+    return options.aiSessionArtifacts[options.sessionId] === options.artifactId;
+  }
+
+  return false;
 }
 
 /**
@@ -81,7 +119,8 @@ export function isAiSessionVisibleForArtifact(
  */
 export type ArtifactAiSessionsForArtifactOptions = {
   sessions: ArtifactAiSession[];
-  aiSessionArtifacts: ArtifactAiSessionOwnership;
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
   artifactId: string | undefined;
   /** Session ids to ignore when selecting a session. */
   excludeSessionIds?: Iterable<string>;
@@ -114,19 +153,28 @@ export type ArtifactAiSessionsWithContextForArtifactOptions = Omit<
 };
 
 /**
- * Returns AI session ids explicitly owned by `artifactId`, preserving the input
+ * Returns AI session ids explicitly linked to `artifactId`, preserving the input
  * session order.
+ *
+ * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
 export function getAiSessionIdsForArtifact({
   sessions,
   aiSessionArtifacts,
+  sessionArtifactLinks,
   artifactId,
-}: ArtifactAiSessionsForArtifactOptions): string[] {
+}: {
+  sessions: ArtifactAiSession[];
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+  artifactId: string | undefined;
+}): string[] {
   if (!artifactId) return [];
   return sessions
     .filter((session) =>
       isAiSessionVisibleForArtifact({
         aiSessionArtifacts,
+        sessionArtifactLinks,
         sessionId: session.id,
         artifactId,
       }),
@@ -135,27 +183,45 @@ export function getAiSessionIdsForArtifact({
 }
 
 /**
- * Returns the most recently opened AI session explicitly owned by `artifactId`.
+ * Returns the most recently opened AI session explicitly linked to `artifactId`.
+ *
+ * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
 export function getLatestAiSessionIdForArtifact({
   sessions,
   aiSessionArtifacts,
+  sessionArtifactLinks,
   artifactId,
-}: ArtifactAiSessionsForArtifactOptions): string | undefined {
+}: {
+  sessions: ArtifactAiSession[];
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+  artifactId: string | undefined;
+}): string | undefined {
   if (!artifactId) return undefined;
+
+  // Get all linked session IDs
+  let linkedSessionIds: Set<string>;
+  if (sessionArtifactLinks) {
+    linkedSessionIds = new Set(
+      sessionArtifactLinks
+        .filter((link) => link.artifactId === artifactId)
+        .map((link) => link.sessionId),
+    );
+  } else if (aiSessionArtifacts) {
+    linkedSessionIds = new Set(
+      Object.entries(aiSessionArtifacts)
+        .filter(([, artId]) => artId === artifactId)
+        .map(([sessId]) => sessId),
+    );
+  } else {
+    return undefined;
+  }
+
+  // Sort by session.lastOpenedAt (not link.createdAt)
   return sessions
-    .filter((session) =>
-      isAiSessionVisibleForArtifact({
-        aiSessionArtifacts,
-        sessionId: session.id,
-        artifactId,
-      }),
-    )
-    .sort((a, b) => {
-      const aTime = a.lastOpenedAt ?? 0;
-      const bTime = b.lastOpenedAt ?? 0;
-      return bTime - aTime;
-    })[0]?.id;
+    .filter((session) => linkedSessionIds.has(session.id))
+    .sort((a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0))[0]?.id;
 }
 
 function sessionHasContextItem(
@@ -178,6 +244,7 @@ function sessionHasContextItem(
 export function findAiSessionForArtifactWithContextItem({
   sessions,
   aiSessionArtifacts,
+  sessionArtifactLinks,
   artifactId,
   contextItemId,
   includeRunning = false,
@@ -189,6 +256,7 @@ export function findAiSessionForArtifactWithContextItem({
       if (
         !isAiSessionVisibleForArtifact({
           aiSessionArtifacts,
+          sessionArtifactLinks,
           sessionId: session.id,
           artifactId,
         })
@@ -221,9 +289,16 @@ export function findAiSessionForArtifactWithContextItem({
 export function getEmptyAiSessionIdForArtifact({
   sessions,
   aiSessionArtifacts,
+  sessionArtifactLinks,
   artifactId,
   excludeSessionIds,
-}: EmptyArtifactAiSessionsForArtifactOptions): string | undefined {
+}: {
+  sessions: ArtifactAiSessionWithContent[];
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+  artifactId: string | undefined;
+  excludeSessionIds?: Iterable<string>;
+}): string | undefined {
   if (!artifactId) return undefined;
   const excludedSessionIds = new Set(excludeSessionIds);
   return sessions
@@ -232,6 +307,7 @@ export function getEmptyAiSessionIdForArtifact({
       if (
         !isAiSessionVisibleForArtifact({
           aiSessionArtifacts,
+          sessionArtifactLinks,
           sessionId: session.id,
           artifactId,
         })
@@ -262,38 +338,77 @@ export type ArtifactAiSessionGroupsOptions = {
 };
 
 /**
- * Groups explicitly owned AI session ids by artifact id.
+ * Groups explicitly linked AI session ids by artifact id.
+ *
+ * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
 export function getAiSessionGroupsByArtifact({
   sessions,
   aiSessionArtifacts,
-}: ArtifactAiSessionGroupsOptions): Record<string, string[]> {
+  sessionArtifactLinks,
+}: {
+  sessions?: ArtifactAiSession[];
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+}): Record<string, string[]> {
   const groups: Record<string, string[]> = {};
-  for (const session of sessions) {
-    const artifactId = aiSessionArtifacts[session.id];
-    if (!artifactId) continue;
-    if (!groups[artifactId]) {
-      groups[artifactId] = [];
+
+  if (sessionArtifactLinks) {
+    for (const link of sessionArtifactLinks) {
+      const item = groups[link.artifactId] ?? [];
+
+      item.push(link.sessionId);
+
+      groups[link.artifactId] = item;
     }
-    groups[artifactId].push(session.id);
+  } else if (aiSessionArtifacts && sessions) {
+    for (const session of sessions) {
+      const artifactId = aiSessionArtifacts[session.id];
+      if (!artifactId) continue;
+      if (!groups[artifactId]) {
+        groups[artifactId] = [];
+      }
+      groups[artifactId].push(session.id);
+    }
   }
+
   return groups;
 }
 
 /**
  * Counts running AI sessions per owning artifact.
+ *
+ * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
 export function getRunningAiSessionCountsByArtifact({
   sessions,
   aiSessionArtifacts,
-}: ArtifactAiSessionGroupsOptions): Record<string, number> {
+  sessionArtifactLinks,
+}: {
+  sessions: ArtifactAiSession[];
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+}): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const session of sessions) {
-    if (!session.isRunning) continue;
-    const artifactId = aiSessionArtifacts[session.id];
-    if (!artifactId) continue;
-    counts[artifactId] = (counts[artifactId] ?? 0) + 1;
+  const runningSessions = new Set(
+    sessions.filter((s) => s.isRunning).map((s) => s.id),
+  );
+
+  if (sessionArtifactLinks) {
+    for (const link of sessionArtifactLinks) {
+      if (runningSessions.has(link.sessionId)) {
+        counts[link.artifactId] = (counts[link.artifactId] ?? 0) + 1;
+      }
+    }
+  } else if (aiSessionArtifacts) {
+    for (const session of sessions) {
+      if (!session.isRunning) continue;
+      const artifactId = aiSessionArtifacts[session.id];
+      if (!artifactId) continue;
+      counts[artifactId] = (counts[artifactId] ?? 0) + 1;
+    }
   }
+
   return counts;
 }
 
@@ -307,22 +422,42 @@ export type CleanupAiSessionArtifactsOptions = {
 };
 
 /**
- * Returns a cleaned ownership map containing only entries whose session and
+ * Returns a cleaned ownership structure containing only entries whose session and
  * artifact still exist.
+ *
+ * Supports both old format (returning Record) and new format (returning array).
  */
 export function cleanupAiSessionArtifacts({
   aiSessionArtifacts,
+  sessionArtifactLinks,
   sessions,
   artifactIds,
-}: CleanupAiSessionArtifactsOptions): ArtifactAiSessionOwnership {
+}: {
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
+  sessions: ArtifactAiSession[];
+  artifactIds: Iterable<string>;
+}): ArtifactAiSessionOwnership | ArtifactSessionLink[] {
   const sessionIds = new Set(sessions.map((session) => session.id));
   const artifactIdSet = new Set(artifactIds);
-  return Object.fromEntries(
-    Object.entries(aiSessionArtifacts).filter(
-      ([sessionId, artifactId]) =>
-        sessionIds.has(sessionId) && artifactIdSet.has(artifactId),
-    ),
-  );
+
+  if (sessionArtifactLinks) {
+    return sessionArtifactLinks.filter(
+      (link) =>
+        sessionIds.has(link.sessionId) && artifactIdSet.has(link.artifactId),
+    );
+  }
+
+  if (aiSessionArtifacts) {
+    return Object.fromEntries(
+      Object.entries(aiSessionArtifacts).filter(
+        ([sessionId, artifactId]) =>
+          sessionIds.has(sessionId) && artifactIdSet.has(artifactId),
+      ),
+    );
+  }
+
+  return [];
 }
 
 function createArtifactContextItem(
@@ -341,7 +476,8 @@ function createArtifactContextItem(
  */
 export type GetOwningArtifactRunContextItemsOptions = {
   sessionId: string;
-  aiSessionArtifacts: ArtifactAiSessionOwnership;
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
   artifactsById: Record<string, ArtifactMetadata>;
   /** Explicit context items selected by the user or host app. */
   extraItems?: AiRunContextItem[];
@@ -354,15 +490,28 @@ export type GetOwningArtifactRunContextItemsOptions = {
  *
  * Extra items are deduplicated by id. If the session has no valid supported
  * owning artifact, the extra items are returned unchanged.
+ *
+ * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
 export function getOwningArtifactRunContextItems({
   sessionId,
   aiSessionArtifacts,
+  sessionArtifactLinks,
   artifactsById,
   extraItems = [],
   isSupportedArtifactType,
 }: GetOwningArtifactRunContextItemsOptions): AiRunContextItem[] {
-  const owningArtifactId = aiSessionArtifacts[sessionId];
+  // Try new format first
+  let owningArtifactId: string | undefined;
+  if (sessionArtifactLinks) {
+    owningArtifactId = getLatestArtifactIdForAiSession({
+      sessionArtifactLinks,
+      sessionId,
+    });
+  } else if (aiSessionArtifacts) {
+    owningArtifactId = aiSessionArtifacts[sessionId];
+  }
+
   const owningArtifact = owningArtifactId
     ? artifactsById[owningArtifactId]
     : undefined;
@@ -382,4 +531,53 @@ export function getOwningArtifactRunContextItems({
   return Array.from(
     new Map(items.map((item) => [item.id, item] as const)).values(),
   );
+}
+
+/**
+ * Returns all artifact IDs associated with a given AI session.
+ * Preserves order by createdAt (oldest first).
+ */
+export function getArtifactIdsForAiSession({
+  sessionArtifactLinks,
+  sessionId,
+}: {
+  sessionArtifactLinks: ArtifactSessionLink[];
+  sessionId: string;
+}): string[] {
+  return sessionArtifactLinks
+    .filter((link) => link.sessionId === sessionId)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((link) => link.artifactId);
+}
+
+/**
+ * Returns the most recently linked artifact for a given AI session.
+ * Returns undefined if session has no artifacts.
+ */
+export function getLatestArtifactIdForAiSession({
+  sessionArtifactLinks,
+  sessionId,
+}: {
+  sessionArtifactLinks: ArtifactSessionLink[];
+  sessionId: string;
+}): string | undefined {
+  return sessionArtifactLinks
+    .filter((link) => link.sessionId === sessionId)
+    .sort((a, b) => b.createdAt - a.createdAt)[0]?.artifactId;
+}
+
+/**
+ * Returns the session that created this artifact (linkType: 'created').
+ * Returns undefined if artifact was not created by any session.
+ */
+export function getCreatorSessionIdForArtifact({
+  sessionArtifactLinks,
+  artifactId,
+}: {
+  sessionArtifactLinks: ArtifactSessionLink[];
+  artifactId: string;
+}): string | undefined {
+  return sessionArtifactLinks.find(
+    (link) => link.artifactId === artifactId && link.linkType === 'created',
+  )?.sessionId;
 }

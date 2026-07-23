@@ -223,7 +223,7 @@ export function getRunContext(
     .filter(Boolean) as AiRunContextItem[];
   const items = getOwningArtifactRunContextItems({
     sessionId,
-    aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
+    sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
     artifactsById,
     extraItems,
     isSupportedArtifactType: (artifactType) =>
