@@ -27,7 +27,7 @@ overrides:
   typescript: 5.9.3
   uuid: 11.1.1
   vite@<=6.4.1: 6.4.2
-  ws@>=8.0.0 <8.20.1: 8.20.1
+  ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 
 patchedDependencies:
@@ -3459,31 +3459,31 @@ importers:
         version: 6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@kepler.gl/actions':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(8243121f28788ee63b9a710c20d87294)
+        version: 3.3.0-alpha.0(21578c593456eab535210249cd0192d8)
       '@kepler.gl/components':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(bf6a6415e277dbf1f025be2f1e5cc337)
+        version: 3.3.0-alpha.0(dd885a3d639aebbd6052ae566f6f39ee)
       '@kepler.gl/constants':
         specifier: 3.3.0-alpha.0
         version: 3.3.0-alpha.0
       '@kepler.gl/duckdb':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(2372bcb5acf6a43eae651a5b34753934)
+        version: 3.3.0-alpha.0(35ba2210d28169d61ef5e924baaddb33)
       '@kepler.gl/layers':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(7b43554b893d9babf66f4a2b08327d8b)
+        version: 3.3.0-alpha.0(c7ef72e5576b92603529dfc23a319324)
       '@kepler.gl/localization':
         specifier: 3.3.0-alpha.0
         version: 3.3.0-alpha.0(typescript@5.9.3)
       '@kepler.gl/processors':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
+        version: 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
       '@kepler.gl/reducers':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(2372bcb5acf6a43eae651a5b34753934)
+        version: 3.3.0-alpha.0(35ba2210d28169d61ef5e924baaddb33)
       '@kepler.gl/schemas':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(c5e44002554f34aa35129559cab4db52)
+        version: 3.3.0-alpha.0(fd2fc8a7db34ddba31ef13acaa3ee829)
       '@kepler.gl/styles':
         specifier: 3.3.0-alpha.0
         version: 3.3.0-alpha.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -13081,12 +13081,12 @@ packages:
   isomorphic-ws@4.0.1:
     resolution: {integrity: sha512-BhBvN2MBpWTaSHdWRb/bwdZJ1WaehQ2L1KngkCkfLUGF0mAWAT1sQUQacEmQ0jXkFw/czDXPNQSL5u2/Krsz1w==}
     peerDependencies:
-      ws: 8.20.1
+      ws: 8.21.0
 
   isomorphic-ws@5.0.0:
     resolution: {integrity: sha512-muId7Zzn9ywDsyXgTIafTry2sV3nySZeUDe6YedVd1Hvuuep5AsIlqK+XefWpYTyJG5e503F2xIuT2lcU6rCSw==}
     peerDependencies:
-      ws: 8.20.1
+      ws: 8.21.0
 
   istanbul-lib-coverage@3.2.2:
     resolution: {integrity: sha512-O8dpsF+r0WV/8MNRKfnmrtCWhuKjxrq2w+jpzBL5UZKTi2LeVWnWOmWRxFlesJONmc+wLAGvKQZEOanko0LFTg==}
@@ -17126,8 +17126,8 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.20.1:
-    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
+  ws@8.21.0:
+    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -20248,13 +20248,13 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@kepler.gl/actions@3.3.0-alpha.0(8243121f28788ee63b9a710c20d87294)':
+  '@kepler.gl/actions@3.3.0-alpha.0(21578c593456eab535210249cd0192d8)':
     dependencies:
       '@deck.gl/core': 9.3.2
       '@kepler.gl/cloud-providers': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
-      '@kepler.gl/layers': 3.3.0-alpha.0(7b43554b893d9babf66f4a2b08327d8b)
-      '@kepler.gl/processors': 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
+      '@kepler.gl/layers': 3.3.0-alpha.0(c7ef72e5576b92603529dfc23a319324)
+      '@kepler.gl/processors': 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
       '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
@@ -20310,7 +20310,7 @@ snapshots:
       h3-js: 3.7.2
       type-analyzer: 0.4.0
 
-  '@kepler.gl/components@3.3.0-alpha.0(bf6a6415e277dbf1f025be2f1e5cc337)':
+  '@kepler.gl/components@3.3.0-alpha.0(dd885a3d639aebbd6052ae566f6f39ee)':
     dependencies:
       '@deck.gl-community/editable-layers': 9.2.8(35750d7589353ace1a30b3b15c99d31b)
       '@deck.gl/core': 9.3.2
@@ -20322,16 +20322,16 @@ snapshots:
       '@dnd-kit/utilities': 3.2.2(react@19.2.1)
       '@emotion/is-prop-valid': 1.4.0
       '@floating-ui/react': 0.25.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@kepler.gl/actions': 3.3.0-alpha.0(8243121f28788ee63b9a710c20d87294)
+      '@kepler.gl/actions': 3.3.0-alpha.0(21578c593456eab535210249cd0192d8)
       '@kepler.gl/cloud-providers': 3.3.0-alpha.0
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/effects': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
-      '@kepler.gl/layers': 3.3.0-alpha.0(7b43554b893d9babf66f4a2b08327d8b)
+      '@kepler.gl/layers': 3.3.0-alpha.0(c7ef72e5576b92603529dfc23a319324)
       '@kepler.gl/localization': 3.3.0-alpha.0(typescript@5.9.3)
-      '@kepler.gl/processors': 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
-      '@kepler.gl/reducers': 3.3.0-alpha.0(2372bcb5acf6a43eae651a5b34753934)
-      '@kepler.gl/schemas': 3.3.0-alpha.0(c5e44002554f34aa35129559cab4db52)
+      '@kepler.gl/processors': 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
+      '@kepler.gl/reducers': 3.3.0-alpha.0(35ba2210d28169d61ef5e924baaddb33)
+      '@kepler.gl/schemas': 3.3.0-alpha.0(fd2fc8a7db34ddba31ef13acaa3ee829)
       '@kepler.gl/styles': 3.3.0-alpha.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
@@ -20492,12 +20492,12 @@ snapshots:
       - '@luma.gl/shadertools'
       - react-dom
 
-  '@kepler.gl/duckdb@3.3.0-alpha.0(2372bcb5acf6a43eae651a5b34753934)':
+  '@kepler.gl/duckdb@3.3.0-alpha.0(35ba2210d28169d61ef5e924baaddb33)':
     dependencies:
       '@duckdb/duckdb-wasm': 1.32.0
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
-      '@kepler.gl/processors': 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
+      '@kepler.gl/processors': 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
       '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
@@ -20552,7 +20552,7 @@ snapshots:
       - '@loaders.gl/core'
       - react-dom
 
-  '@kepler.gl/layers@3.3.0-alpha.0(7b43554b893d9babf66f4a2b08327d8b)':
+  '@kepler.gl/layers@3.3.0-alpha.0(c7ef72e5576b92603529dfc23a319324)':
     dependencies:
       '@deck.gl-community/editable-layers': 9.2.8(35750d7589353ace1a30b3b15c99d31b)
       '@deck.gl/core': 9.3.2
@@ -20575,7 +20575,7 @@ snapshots:
       '@loaders.gl/gltf': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/i3s': 4.3.4(@loaders.gl/core@4.4.1)
       '@loaders.gl/mvt': 4.4.1(@loaders.gl/core@4.4.1)
-      '@loaders.gl/parquet': 4.4.1(@loaders.gl/core@4.4.1)(apache-arrow@17.0.0)(ws@8.20.1)
+      '@loaders.gl/parquet': 4.4.1(@loaders.gl/core@4.4.1)(apache-arrow@17.0.0)(ws@8.21.0)
       '@loaders.gl/pmtiles': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
       '@loaders.gl/wkt': 4.4.1(@loaders.gl/core@4.4.1)
@@ -20633,12 +20633,12 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@kepler.gl/processors@3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)':
+  '@kepler.gl/processors@3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)':
     dependencies:
       '@deck.gl-community/editable-layers': 9.2.8(35750d7589353ace1a30b3b15c99d31b)
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
-      '@kepler.gl/schemas': 3.3.0-alpha.0(c5e44002554f34aa35129559cab4db52)
+      '@kepler.gl/schemas': 3.3.0-alpha.0(fd2fc8a7db34ddba31ef13acaa3ee829)
       '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
@@ -20648,7 +20648,7 @@ snapshots:
       '@loaders.gl/gis': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/json': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
-      '@loaders.gl/parquet': 4.4.1(@loaders.gl/core@4.4.1)(apache-arrow@17.0.0)(ws@8.20.1)
+      '@loaders.gl/parquet': 4.4.1(@loaders.gl/core@4.4.1)(apache-arrow@17.0.0)(ws@8.21.0)
       '@loaders.gl/schema': 4.4.1
       '@loaders.gl/wkt': 4.4.1(@loaders.gl/core@4.4.1)
       '@mapbox/geojson-normalize': 0.0.1
@@ -20682,21 +20682,21 @@ snapshots:
       - utf-8-validate
       - ws
 
-  '@kepler.gl/reducers@3.3.0-alpha.0(2372bcb5acf6a43eae651a5b34753934)':
+  '@kepler.gl/reducers@3.3.0-alpha.0(35ba2210d28169d61ef5e924baaddb33)':
     dependencies:
-      '@kepler.gl/actions': 3.3.0-alpha.0(8243121f28788ee63b9a710c20d87294)
+      '@kepler.gl/actions': 3.3.0-alpha.0(21578c593456eab535210249cd0192d8)
       '@kepler.gl/cloud-providers': 3.3.0-alpha.0
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/deckgl-arrow-layers': 3.3.0-alpha.0(ce384245f5c9fb6d7ff5e96cffd57511)
       '@kepler.gl/deckgl-layers': 3.3.0-alpha.0(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))
       '@kepler.gl/effects': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
-      '@kepler.gl/layers': 3.3.0-alpha.0(7b43554b893d9babf66f4a2b08327d8b)
+      '@kepler.gl/layers': 3.3.0-alpha.0(c7ef72e5576b92603529dfc23a319324)
       '@kepler.gl/localization': 3.3.0-alpha.0(typescript@5.9.3)
-      '@kepler.gl/processors': 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
-      '@kepler.gl/schemas': 3.3.0-alpha.0(c5e44002554f34aa35129559cab4db52)
+      '@kepler.gl/processors': 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
+      '@kepler.gl/schemas': 3.3.0-alpha.0(fd2fc8a7db34ddba31ef13acaa3ee829)
       '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
-      '@kepler.gl/tasks': 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
+      '@kepler.gl/tasks': 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
@@ -20747,11 +20747,11 @@ snapshots:
       - utf-8-validate
       - ws
 
-  '@kepler.gl/schemas@3.3.0-alpha.0(c5e44002554f34aa35129559cab4db52)':
+  '@kepler.gl/schemas@3.3.0-alpha.0(fd2fc8a7db34ddba31ef13acaa3ee829)':
     dependencies:
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
-      '@kepler.gl/layers': 3.3.0-alpha.0(7b43554b893d9babf66f4a2b08327d8b)
+      '@kepler.gl/layers': 3.3.0-alpha.0(c7ef72e5576b92603529dfc23a319324)
       '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
@@ -20816,9 +20816,9 @@ snapshots:
       - react-dom
       - react-test-renderer
 
-  '@kepler.gl/tasks@3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)':
+  '@kepler.gl/tasks@3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)':
     dependencies:
-      '@kepler.gl/processors': 3.3.0-alpha.0(4092ca5836587fba49e9e83ead97bb24)
+      '@kepler.gl/processors': 3.3.0-alpha.0(ce8949a9e91178c37dd28d7551026dd3)
       react-palm: 3.3.11(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
     transitivePeerDependencies:
       - '@deck.gl-community/layers'
@@ -21356,7 +21356,7 @@ snapshots:
       '@probe.gl/stats': 4.1.1
       pbf: 3.3.0
 
-  '@loaders.gl/parquet@4.4.1(@loaders.gl/core@4.4.1)(apache-arrow@17.0.0)(ws@8.20.1)':
+  '@loaders.gl/parquet@4.4.1(@loaders.gl/core@4.4.1)(apache-arrow@17.0.0)(ws@8.21.0)':
     dependencies:
       '@loaders.gl/arrow': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/bson': 4.4.1(@loaders.gl/core@4.4.1)
@@ -21374,7 +21374,7 @@ snapshots:
       brotli: 1.3.3
       ieee754: 1.2.1
       int53: 0.2.4
-      isomorphic-ws: 5.0.0(ws@8.20.1)
+      isomorphic-ws: 5.0.0(ws@8.21.0)
       lz4js: 0.2.0
       node-int64: 0.4.0
       object-stream: 0.0.1
@@ -28084,9 +28084,9 @@ snapshots:
     dependencies:
       ws: 5.2.4
 
-  isomorphic-ws@5.0.0(ws@8.20.1):
+  isomorphic-ws@5.0.0(ws@8.21.0):
     dependencies:
-      ws: 8.20.1
+      ws: 8.21.0
 
   istanbul-lib-coverage@3.2.2: {}
 
@@ -28496,7 +28496,7 @@ snapshots:
       whatwg-encoding: 3.1.1
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.2.0
-      ws: 8.20.1
+      ws: 8.21.0
       xml-name-validator: 5.0.0
     transitivePeerDependencies:
       - bufferutil
@@ -30429,7 +30429,7 @@ snapshots:
 
   pyodide@0.28.3:
     dependencies:
-      ws: 8.20.1
+      ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -33285,7 +33285,7 @@ snapshots:
     dependencies:
       async-limiter: 1.0.1
 
-  ws@8.20.1: {}
+  ws@8.21.0: {}
 
   xml-name-validator@5.0.0: {}
 
