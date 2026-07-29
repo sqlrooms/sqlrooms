@@ -16,6 +16,7 @@ import {
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
   UIMessage,
@@ -185,6 +186,8 @@ export type AiSliceState = {
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
+    togglePinSession: (sessionId: string) => void;
+    isPinnedSession: (sessionId: string) => boolean;
     getCurrentSession: () => ChatSessionSchema | undefined;
     getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
     setSessionRunContext: (
@@ -877,10 +880,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
           const newSessionId = createId();
 
-          // Generate a default name if none is provided
+          // Generate a unique name if none is provided
           let sessionName = name;
           if (!sessionName) {
-            sessionName = 'Untitled';
+            const existingNames = get().ai.config.sessions.map(
+              (s: ChatSessionSchema) => s.name,
+            );
+            sessionName = generateUniqueName('Chat', existingNames, ' ');
           }
 
           set((state) =>
@@ -1067,6 +1073,33 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+        },
+
+        /**
+         * Toggle pin status for a session
+         */
+        togglePinSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.ai.config.pinnedSessionIds) {
+                draft.ai.config.pinnedSessionIds = [];
+              }
+              const index = draft.ai.config.pinnedSessionIds.indexOf(sessionId);
+              if (index === -1) {
+                draft.ai.config.pinnedSessionIds.push(sessionId);
+              } else {
+                draft.ai.config.pinnedSessionIds.splice(index, 1);
+              }
+            }),
+          );
+        },
+
+        /**
+         * Check if a session is pinned
+         */
+        isPinnedSession: (sessionId: string) => {
+          const pinnedIds = get().ai.config.pinnedSessionIds ?? [];
+          return pinnedIds.includes(sessionId);
         },
 
         /**
