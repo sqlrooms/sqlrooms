@@ -26,7 +26,6 @@ import {
 } from '../ArtifactsSliceConfig';
 import {
   cleanupAiSessionArtifacts,
-  getEmptyAiSessionIdForArtifact,
   getLatestAiSessionIdForArtifact,
   getArtifactIdsForAiSession,
   getLatestArtifactIdForAiSession,
@@ -563,28 +562,6 @@ export function createArtifactAiSlice<
             !get().artifacts.config.artifactsById[currentArtifactId]
           ) {
             return undefined;
-          }
-
-          const hasExplicitSessionOptions = Boolean(
-            name || modelProvider || model,
-          );
-          if (!hasExplicitSessionOptions) {
-            const currentSessionId = get().ai.config.currentSessionId;
-            const emptySessionId = getEmptyAiSessionIdForArtifact({
-              sessions: get().ai.config.sessions,
-              sessionArtifactLinks:
-                get().artifactAi.config.sessionArtifactLinks,
-              artifactId: currentArtifactId,
-              excludeSessionIds: currentSessionId
-                ? [currentSessionId]
-                : undefined,
-            });
-            if (emptySessionId) {
-              if (currentSessionId !== emptySessionId) {
-                get().ai.switchSession(emptySessionId);
-              }
-              return emptySessionId;
-            }
           }
 
           artifactAiSyncSuspended = true;
