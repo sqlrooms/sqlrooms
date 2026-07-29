@@ -41,6 +41,8 @@ import {
  */
 export const ArtifactAiConfig = z.object({
   sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).default([]),
+  /** IDs of pinned artifacts */
+  pinnedArtifactIds: z.array(z.string()).optional(),
 });
 export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
 export const ArtifactAiConfigSchema = ArtifactAiConfig;
@@ -70,6 +72,8 @@ export type ArtifactAiSliceState = {
     getSessionIdsForArtifact: (artifactId: string) => string[];
     getLatestArtifactForSession: (sessionId: string) => string | undefined;
     getCreatorSessionForArtifact: (artifactId: string) => string | undefined;
+    togglePinArtifact: (artifactId: string) => void;
+    isPinnedArtifact: (artifactId: string) => boolean;
 
     // === EXISTING METHODS (deprecated) ===
     setSessionArtifact: (sessionId: string, artifactId: string) => void;
@@ -86,6 +90,21 @@ export type ArtifactAiSliceState = {
     selectLatestSessionForArtifact: (artifactId?: string) => void;
     cleanupSessionArtifacts: () => void;
     syncCurrentArtifactAiSession: () => void;
+    /**
+     * Suspend or resume the current-artifact/current-session auto-sync.
+     *
+     * Use this to wrap bulk, non-atomic state updates (e.g. project
+     * hydration, where the artifact config, AI sessions, and
+     * `sessionArtifactLinks` are restored in separate `set()` calls). While
+     * suspended, the auto-sync subscription becomes a no-op so it cannot
+     * observe a partially-restored state and clobber the restored selection.
+     *
+     * Resuming (`suspended === false`) re-baselines the internal
+     * previous-artifact/previous-session pointers to the current selection so
+     * the next genuine change is measured against the fully-settled state
+     * rather than a stale/undefined baseline.
+     */
+    setSyncSuspended: (suspended: boolean) => void;
   };
 };
 
@@ -260,9 +279,14 @@ export function createArtifactAiSlice<
         const artifactChanged = previousArtifactId !== currentArtifactId;
         const sessionChanged = previousSessionId !== currentSessionId;
 
-        // Update previous values
-        previousArtifactId = currentArtifactId;
-        previousSessionId = currentSessionId;
+        // Note: the previous-artifact/previous-session baseline is NOT updated
+        // here. This function mutates currentArtifactId/currentSessionId itself
+        // (P1/P2/selectLatestSessionForArtifact), and the re-entrant
+        // subscription fire that would observe those mutations is guarded out.
+        // Updating the baseline to the *entry* values would therefore leave it
+        // stale (pointing at pre-mutation values), so the next genuine change
+        // could be misclassified as "unchanged". Instead we reconcile the
+        // baseline against the actual post-sync state in `finally`.
 
         // Get current session's artifact
         const currentSessionArtifactId = currentSessionId
@@ -285,8 +309,19 @@ export function createArtifactAiSlice<
         // Priority 1: Session changed -> switch to session's artifact (or clear if session has no artifact)
         if (sessionChanged && currentSessionId && currentSessionExists) {
           if (currentSessionArtifactId) {
-            // Session has artifact - switch to it
+            // Check if current artifact is also linked to this session
+            const isCurrentArtifactLinked =
+              currentArtifactId &&
+              state.artifacts.config.artifactsById[currentArtifactId] &&
+              state.artifactAi.config.sessionArtifactLinks.some(
+                (link) =>
+                  link.sessionId === currentSessionId &&
+                  link.artifactId === currentArtifactId,
+              );
+
+            // Only switch artifact if current artifact is not linked to this session
             if (
+              !isCurrentArtifactLinked &&
               currentSessionArtifactId !== currentArtifactId &&
               state.artifacts.config.artifactsById[currentSessionArtifactId]
             ) {
@@ -318,6 +353,12 @@ export function createArtifactAiSlice<
         // Default to artifact -> session sync
         get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
       } finally {
+        // Reconcile the change-detection baseline against the ACTUAL state
+        // left behind by this run (including any mutation this sync made).
+        // Keeps `sessionChanged`/`artifactChanged` accurate on the next run.
+        const finalState = get();
+        previousArtifactId = finalState.artifacts.config.currentArtifactId;
+        previousSessionId = finalState.ai.config.currentSessionId;
         artifactAiSyncing = false;
       }
     };
@@ -430,6 +471,28 @@ export function createArtifactAiSlice<
             sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
             artifactId,
           });
+        },
+
+        togglePinArtifact: (artifactId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.artifactAi.config.pinnedArtifactIds) {
+                draft.artifactAi.config.pinnedArtifactIds = [];
+              }
+              const index =
+                draft.artifactAi.config.pinnedArtifactIds.indexOf(artifactId);
+              if (index === -1) {
+                draft.artifactAi.config.pinnedArtifactIds.push(artifactId);
+              } else {
+                draft.artifactAi.config.pinnedArtifactIds.splice(index, 1);
+              }
+            }),
+          );
+        },
+
+        isPinnedArtifact: (artifactId) => {
+          const pinnedIds = get().artifactAi.config.pinnedArtifactIds ?? [];
+          return pinnedIds.includes(artifactId);
         },
 
         // === INITIALIZATION ===
@@ -563,6 +626,16 @@ export function createArtifactAiSlice<
         },
         cleanupSessionArtifacts,
         syncCurrentArtifactAiSession,
+        setSyncSuspended: (suspended) => {
+          artifactAiSyncSuspended = suspended;
+          if (!suspended) {
+            // Re-baseline so the next genuine change is measured against the
+            // fully-settled selection rather than a stale/undefined baseline.
+            const state = get();
+            previousArtifactId = state.artifacts.config.currentArtifactId;
+            previousSessionId = state.ai.config.currentSessionId;
+          }
+        },
       },
     };
   });

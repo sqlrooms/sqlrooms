@@ -1,6 +1,5 @@
 import {z} from 'zod';
 import {ChatSessionSchema} from './schema/ChatSessionSchema';
-import {createId} from '@paralleldrive/cuid2';
 
 export const AiSessionForkOrigin = z.object({
   sourceSessionId: z.string(),
@@ -20,6 +19,8 @@ export const AiSliceConfig = z.object({
   openSessionTabs: z.array(z.string()).optional(),
   /** targetSessionId -> fork provenance */
   sessionForks: z.record(z.string(), AiSessionForkOrigin).default({}),
+  /** IDs of pinned sessions */
+  pinnedSessionIds: z.array(z.string()).optional(),
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
@@ -32,6 +33,7 @@ export function createDefaultAiConfig(
     currentSessionId: undefined,
     openSessionTabs: [],
     sessionForks: {},
+    pinnedSessionIds: [],
     ...props,
   };
 }

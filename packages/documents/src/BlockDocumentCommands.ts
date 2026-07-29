@@ -322,19 +322,37 @@ export function createBlockDocumentCommands<
       inputSchema: BlockDocumentCreateInput,
       inputDescription: 'Optional title, initial blocks, and select flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'low'},
-      execute: ({getState}, input) => {
+      execute: (context, input) => {
         const {
           title,
           blocks = [],
           select = true,
         } = (input as z.infer<typeof BlockDocumentCreateInput> | undefined) ??
         {};
-        const state = getState();
+        const state = context.getState();
         const previousArtifactId = state.artifacts.config.currentArtifactId;
         const artifactId = state.artifacts.createArtifact({
           type: artifactType,
           title: title ?? defaultTitle,
         });
+
+        // Create session-artifact link if created by AI
+        const aiSessionId = context.invocation.metadata?.aiSessionId;
+        if (typeof aiSessionId === 'string' && 'artifactAi' in state) {
+          const artifactAiState = state.artifactAi as {
+            addSessionArtifactLink: (
+              sessionId: string,
+              artifactId: string,
+              linkType: 'created' | 'referenced',
+            ) => void;
+          };
+          artifactAiState.addSessionArtifactLink(
+            aiSessionId,
+            artifactId,
+            'created',
+          );
+        }
+
         state.blockDocuments.ensureBlockDocument(artifactId);
         if (blocks.length) {
           state.blockDocuments.setContent(artifactId, {
