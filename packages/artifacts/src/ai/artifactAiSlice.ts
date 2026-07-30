@@ -305,39 +305,67 @@ export function createArtifactAiSlice<
           return;
         }
 
-        // Priority 1: Session changed -> switch to session's artifact (or clear if session has no artifact)
-        if (sessionChanged && currentSessionId && currentSessionExists) {
-          if (currentSessionArtifactId) {
-            // Check if current artifact is also linked to this session
-            const isCurrentArtifactLinked =
-              currentArtifactId &&
-              state.artifacts.config.artifactsById[currentArtifactId] &&
-              state.artifactAi.config.sessionArtifactLinks.some(
-                (link) =>
-                  link.sessionId === currentSessionId &&
-                  link.artifactId === currentArtifactId,
-              );
+        // Priority 1: Session changed -> align the artifact with the new session
+        if (sessionChanged) {
+          if (currentSessionId && currentSessionExists) {
+            if (currentSessionArtifactId) {
+              // Check if current artifact is also linked to this session
+              const isCurrentArtifactLinked =
+                currentArtifactId &&
+                state.artifacts.config.artifactsById[currentArtifactId] &&
+                state.artifactAi.config.sessionArtifactLinks.some(
+                  (link) =>
+                    link.sessionId === currentSessionId &&
+                    link.artifactId === currentArtifactId,
+                );
 
-            // Only switch artifact if current artifact is not linked to this session
-            if (
-              !isCurrentArtifactLinked &&
-              currentSessionArtifactId !== currentArtifactId &&
-              state.artifacts.config.artifactsById[currentSessionArtifactId]
-            ) {
+              // Only switch artifact if current artifact is not linked to this session
+              if (
+                !isCurrentArtifactLinked &&
+                currentSessionArtifactId !== currentArtifactId &&
+                state.artifacts.config.artifactsById[currentSessionArtifactId]
+              ) {
+                set((stateToUpdate) =>
+                  produce(stateToUpdate, (draft: TRoomState) => {
+                    draft.artifacts.config.currentArtifactId =
+                      currentSessionArtifactId;
+                  }),
+                );
+              }
+            } else if (currentArtifactId) {
+              // Session has no artifact - clear current artifact
               set((stateToUpdate) =>
                 produce(stateToUpdate, (draft: TRoomState) => {
-                  draft.artifacts.config.currentArtifactId =
-                    currentSessionArtifactId;
+                  draft.artifacts.config.currentArtifactId = undefined;
                 }),
               );
             }
-          } else if (currentArtifactId) {
-            // Session has no artifact - clear current artifact
-            set((stateToUpdate) =>
-              produce(stateToUpdate, (draft: TRoomState) => {
-                draft.artifacts.config.currentArtifactId = undefined;
-              }),
-            );
+            return;
+          }
+
+          // The current session was removed (e.g. the owning chat was
+          // deleted) and no session is selected. Follow the current artifact
+          // to another of its sessions if one remains; otherwise clear the
+          // artifact selection so the UI returns to the start screen instead
+          // of stranding a selected artifact with no chat.
+          if (currentArtifactId) {
+            const remainingSessionId = getLatestAiSessionIdForArtifact({
+              sessions: state.ai.config.sessions,
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              artifactId: currentArtifactId,
+            });
+            if (remainingSessionId) {
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            } else {
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
           }
           return;
         }

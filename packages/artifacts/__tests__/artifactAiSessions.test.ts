@@ -693,6 +693,99 @@ describe('createArtifactAiSlice', () => {
     expect(store.getState().ai.config.currentSessionId).toBe('owned-newer');
   });
 
+  it('clears the current artifact when its owning chat is deleted', () => {
+    const store = createTestStore();
+
+    // Artifact-a is selected together with its only owning session.
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [createSession('session-1', 1)];
+        draft.ai.config.currentSessionId = 'session-1';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-1',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
+      }),
+    );
+
+    // Baseline the change-detection against the aligned state.
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+
+    // Delete the only chat, mirroring ai.deleteSession removing the last
+    // session: the session disappears and currentSessionId becomes undefined.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [];
+        draft.ai.config.currentSessionId = undefined;
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(
+      store.getState().artifacts.config.currentArtifactId,
+    ).toBeUndefined();
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+  });
+
+  it('follows the artifact to a remaining session when the current session is removed', () => {
+    const store = createTestStore();
+
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-current', 2),
+          createSession('session-other', 1),
+        ];
+        draft.ai.config.currentSessionId = 'session-current';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-current',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-other',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+
+    // The current session is removed while the artifact still has another
+    // session. The artifact stays selected and we follow it to that session.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [createSession('session-other', 1)];
+        draft.ai.config.currentSessionId = undefined;
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBe('session-other');
+  });
+
   it('clears the current session when the current artifact has no owned sessions', () => {
     const store = createTestStore();
     store.setState(
