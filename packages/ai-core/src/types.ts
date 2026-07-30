@@ -328,6 +328,26 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
   approvalId?: string;
 };
 
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+/**
+ * Component type inferred from a tool or from explicit output/input.
+ * Tuple-wrapped so a union tool type does not distribute into a bare
+ * `FunctionComponent` union that drops {@link ToolRendererShouldHoist}.
+ * `any` is treated as an explicit output type so registries stay writable.
+ */
+type ToolRendererComponent<TToolOrOutput, TInput> =
+  IsAny<TToolOrOutput> extends true
+    ? ComponentType<ToolRendererProps<any, any>>
+    : [TToolOrOutput] extends [Tool]
+      ? ComponentType<
+          ToolRendererProps<
+            InferToolOutput<Extract<TToolOrOutput, Tool>>,
+            InferToolInput<Extract<TToolOrOutput, Tool>>
+          >
+        >
+      : ComponentType<ToolRendererProps<TToolOrOutput, TInput>>;
+
 /**
  * A React component that renders the result of a tool call.
  *
@@ -335,18 +355,29 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
  * ToolRenderer<ReturnType<typeof myTool>>    // infers output/input from Tool
  * ToolRenderer<MyOutput, MyInput>            // explicit output/input
  * ```
+ *
+ * Dispatcher tools that only sometimes produce UI (e.g. `executeApi`) may
+ * attach an optional static `shouldHoist` predicate. When it returns false,
+ * ChatTurnView keeps the call in the activity timeline and does not emit an
+ * empty hoisted slot in the turn body.
  */
 export type ToolRenderer<
   TToolOrOutput = unknown,
   TInput = unknown,
-> = TToolOrOutput extends Tool
-  ? ComponentType<
-      ToolRendererProps<
-        InferToolOutput<TToolOrOutput>,
-        InferToolInput<TToolOrOutput>
-      >
-    >
-  : ComponentType<ToolRendererProps<TToolOrOutput, TInput>>;
+> = ToolRendererComponent<TToolOrOutput, TInput> & {
+  shouldHoist?: ToolRendererShouldHoist;
+};
+
+/**
+ * Optional static predicate on a {@link ToolRenderer}. Return false when this
+ * particular call has no visible UI so it is not collected into the hoisted
+ * turn-body slot list.
+ */
+export type ToolRendererShouldHoist = (args: {
+  output: unknown;
+  input: unknown;
+  state: string;
+}) => boolean;
 
 /** Registry mapping tool names to their renderer components. */
 export type ToolRendererRegistry = Record<string, ToolRenderer<any>>;

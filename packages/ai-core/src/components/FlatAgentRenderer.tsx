@@ -13,9 +13,13 @@ import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 import {isDynamicToolPart, isToolPart} from '../utils';
+import {useChatNestedActivityMode} from './ChatRenderingContext';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
-import {type HoistableToolCall} from './collectHoistableRenderers';
+import {
+  toolRendererAllowsHoist,
+  type HoistableToolCall,
+} from './collectHoistableRenderers';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
 // ---------------------------------------------------------------------------
@@ -90,6 +94,28 @@ type ToolGroupSegment = {
 
 type FlatSegment = AgentSegment | ToolGroupSegment;
 
+function stripTrailingEllipsis(text: string): string {
+  return text.replace(/(?:\s*(?:\.\.\.|…))+\s*$/u, '').trimEnd();
+}
+
+function isToolNameHoisted(
+  toolName: string,
+  toolCall: Pick<AgentToolCall, 'output' | 'input' | 'state'>,
+  hoistableSet: ReadonlySet<string>,
+  toolRenderers: Record<string, unknown>,
+): boolean {
+  const renderer = toolRenderers[toolName];
+  return (
+    hoistableSet.has(toolName) &&
+    typeof renderer === 'function' &&
+    toolRendererAllowsHoist(renderer as never, {
+      output: toolCall.output,
+      input: toolCall.input,
+      state: toolCall.state,
+    })
+  );
+}
+
 // ---------------------------------------------------------------------------
 // ActivityLogLine — compact single-line entry inside an ActivityBox (leaf only)
 // ---------------------------------------------------------------------------
@@ -109,10 +135,12 @@ const ActivityLogLine: React.FC<{
       : undefined;
   const reasoning = inputObj?.reasoning as string | undefined;
 
-  const label =
+  const rawLabel =
     reasoning ??
     (getActivityLabel ? getActivityLabel(toolCall) : undefined) ??
     (isPending ? 'Thinking...' : toolCall.toolName);
+  const label =
+    typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
 
   return (
     <div
@@ -304,7 +332,12 @@ const ToolCallDetailHover: React.FC<{
 // HoistedRenderer — renders a single hoisted tool component
 // ---------------------------------------------------------------------------
 
-const HoistedRenderer: React.FC<{
+/**
+ * Renders a single hoisted tool component outside the activity timeline.
+ * Exported so turn recipes can place turn-level hoisted UI between response
+ * text and summary text.
+ */
+export const HoistedToolCallRenderer: React.FC<{
   item: HoistableToolCall;
 }> = ({item}) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
@@ -422,6 +455,8 @@ const FlatSegmentList: React.FC<{
   toolRenderers: Record<string, unknown>;
   isPassthroughTool?: (tc: AgentToolCall) => boolean;
   isAgentComplete?: boolean;
+  /** When true, omit nested ActivityBoxes and local hoisted UI. */
+  embedInParentActivity?: boolean;
 }> = ({
   segments,
   agentProgress,
@@ -429,6 +464,7 @@ const FlatSegmentList: React.FC<{
   toolRenderers,
   isPassthroughTool,
   isAgentComplete,
+  embedInParentActivity = false,
 }) => {
   return (
     <>
@@ -445,43 +481,56 @@ const FlatSegmentList: React.FC<{
               ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
               : undefined;
 
+          const logLines = seg.tools.map((tc) => {
+            const isHoisted = isToolNameHoisted(
+              tc.toolName,
+              tc,
+              hoistableSet,
+              toolRenderers,
+            );
+            const hasInlineRenderer =
+              !isHoisted && typeof toolRenderers[tc.toolName] === 'function';
+            return (
+              <React.Fragment key={tc.toolCallId}>
+                <ActivityLogLine toolCall={tc} />
+                {hasInlineRenderer && (
+                  <HoistedToolCallRenderer
+                    item={{
+                      toolCallId: tc.toolCallId,
+                      toolName: tc.toolName,
+                      output: tc.output,
+                      input: tc.input,
+                      errorText: tc.errorText,
+                      state: tc.state,
+                      approvalId: tc.approvalId,
+                    }}
+                  />
+                )}
+              </React.Fragment>
+            );
+          });
+
+          if (embedInParentActivity) {
+            return (
+              <React.Fragment key={`tg-${idx}`}>{logLines}</React.Fragment>
+            );
+          }
+
           return (
             <React.Fragment key={`tg-${idx}`}>
               <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
-                {seg.tools.map((tc) => {
-                  const isHoisted =
-                    hoistableSet.has(tc.toolName) &&
-                    typeof toolRenderers[tc.toolName] === 'function';
-                  const hasNonHoistedRenderer =
-                    !isHoisted &&
-                    typeof toolRenderers[tc.toolName] === 'function';
-                  return (
-                    <React.Fragment key={tc.toolCallId}>
-                      <ActivityLogLine toolCall={tc} />
-                      {hasNonHoistedRenderer && (
-                        <HoistedRenderer
-                          item={{
-                            toolCallId: tc.toolCallId,
-                            toolName: tc.toolName,
-                            output: tc.output,
-                            input: tc.input,
-                            errorText: tc.errorText,
-                            state: tc.state,
-                            approvalId: tc.approvalId,
-                          }}
-                        />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+                {logLines}
               </ActivityBox>
               {seg.tools.map((tc) => {
-                const isHoisted =
-                  hoistableSet.has(tc.toolName) &&
-                  typeof toolRenderers[tc.toolName] === 'function';
+                const isHoisted = isToolNameHoisted(
+                  tc.toolName,
+                  tc,
+                  hoistableSet,
+                  toolRenderers,
+                );
                 if (!isHoisted) return null;
                 return (
-                  <HoistedRenderer
+                  <HoistedToolCallRenderer
                     key={`hoisted-${tc.toolCallId}`}
                     item={{
                       toolCallId: tc.toolCallId,
@@ -527,6 +576,7 @@ const FlatSegmentList: React.FC<{
               toolRenderers={toolRenderers}
               isPassthroughTool={isPassthroughTool}
               isAgentComplete={isComplete}
+              embedInParentActivity={embedInParentActivity}
             />
           </React.Fragment>
         );
@@ -600,10 +650,12 @@ const OrchestratorLogLineInner: React.FC<{
       : undefined;
   const reasoning = inputObj?.reasoning as string | undefined;
 
-  const label =
+  const rawLabel =
     reasoning ??
     (getActivityLabel ? getActivityLabel(toolCall) : undefined) ??
     (isPending ? 'Thinking...' : toolCall.toolName);
+  const label =
+    typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
 
   return (
     <div
@@ -669,7 +721,9 @@ export const FlatAgentRenderer: React.FC<{
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
   const hoistedRendererNames = useHoistedRenderers();
+  const nestedActivityMode = useChatNestedActivityMode();
   const {isPassthroughTool} = useToolRenderBehavior();
+  const embedInParentActivity = nestedActivityMode === 'embed';
 
   const displayCalls = agentProgress[toolCallId] ?? agentToolCalls;
 
@@ -720,6 +774,7 @@ export const FlatAgentRenderer: React.FC<{
         toolRenderers={toolRenderers}
         isPassthroughTool={isPassthroughTool}
         isAgentComplete={!!isComplete}
+        embedInParentActivity={embedInParentActivity}
       />
     </div>
   );

@@ -90,6 +90,234 @@ export function AiPanel() {
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
 
+### Customizable chat presentation
+
+SQLRooms owns the **semantic model** for each turn (activity, status, reasoning,
+outputs, timing, nesting, chronological grouping, hoist eligibility). Host apps
+optionally own **presentation** (layout, disclosure, labels, styling, visibility)
+through `Chat.Rendering`.
+
+Most apps keep the polished default recipe and only need `<Chat.Messages />`.
+Missing slots always inherit SQLRooms defaults; nested providers merge rather
+than replace the parent recipe.
+
+#### How `<Chat.Messages />` uses the slots
+
+`<Chat.Messages />` is the session list surface: it derives chat turns from the
+current session's `uiMessages` and renders one `ChatTurnView` per turn. It does
+**not** own chrome for prompts, reasoning, tools, or answers.
+
+Each `ChatTurnView` builds the turn's semantic model (what happened, in what
+order, what is hoistable / running / completed), then asks the nearest
+`Chat.Rendering` recipe to present it. The recipe is a map of slot components:
+
+| Slot | Role |
+| --- | --- |
+| `Turn` | Full turn layout recipe — decides regional order and which leaf slots to mount |
+| `Prompt` | User prompt chrome for the turn |
+| `Activity` | Collapsible / status chrome around in-progress work |
+| `Reasoning` | Model thinking / reasoning disclosure |
+| `ToolActivity` | One tool (or nested agent) line inside Activity |
+| `TextOutput` | Assistant text / markdown answer regions |
+| `HoistedOutput` | Rich tool UI lifted out of the activity stream |
+| `Actions` | Per-turn actions (copy, fork, errors) |
+
+Composition looks like this:
+
+```text
+Chat
+└─ Chat.Rendering          ← optional; supplies / merges slot components
+   └─ Chat.Messages        ← lists turns from the session
+      └─ ChatTurnView      ← builds semantic model, then renders Turn
+         └─ Turn           ← layout recipe (default or custom)
+            ├─ Prompt
+            ├─ Activity
+            │  ├─ Reasoning
+            │  └─ ToolActivity
+            ├─ TextOutput
+            ├─ HoistedOutput
+            └─ Actions
+```
+
+So:
+
+- Wrap `<Chat.Messages />` in `<Chat.Rendering>` to change presentation for that
+  subtree (or nest providers to layer overrides).
+- Override leaf slots (`Prompt`, `Reasoning`, …) when you only need different
+  look for those regions; `Turn` keeps deciding where they appear.
+- Override `Turn` when the regional structure itself must change; a custom
+  `Turn` still receives the resolved `components` map and should compose the
+  leaf slots rather than hard-coding every region.
+
+Without a `Chat.Rendering` ancestor, `ChatTurnView` uses the built-in SQLRooms
+defaults for every slot.
+
+#### Override a single slot
+
+Pass a partial `components` map. Only the slots you provide change; everything
+else keeps the SQLRooms (or parent) recipe.
+
+**Activity chrome only** — keep default turn order and prompt/reasoning look:
+
+```tsx
+import {Chat, type ChatActivityProps} from '@sqlrooms/ai-core';
+
+function AppActivity({children, isRunning, summaryLabel}: ChatActivityProps) {
+  return (
+    <section data-running={isRunning}>
+      {summaryLabel ? <header>{summaryLabel}</header> : null}
+      {children}
+    </section>
+  );
+}
+
+export function AiPanel() {
+  return (
+    <Chat>
+      <Chat.Rendering components={{Activity: AppActivity}}>
+        <Chat.Messages />
+      </Chat.Rendering>
+    </Chat>
+  );
+}
+```
+
+**Prompt look only** — restyle the user message bubble without touching turn
+layout or tool activity:
+
+```tsx
+import {Chat, type ChatPromptProps} from '@sqlrooms/ai-core';
+
+function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
+  return (
+    <blockquote data-search-block={searchBlockId} className="border-l-2 pl-3">
+      {prompt}
+    </blockquote>
+  );
+}
+
+<Chat.Rendering components={{Prompt: AppPrompt}}>
+  <Chat.Messages />
+</Chat.Rendering>
+```
+
+**Reasoning look only** — change thinking disclosure while keeping default
+activity boxes and answer rendering:
+
+```tsx
+import {Chat, type ChatReasoningProps} from '@sqlrooms/ai-core';
+
+function AppReasoning({text, isRunning}: ChatReasoningProps) {
+  return (
+    <aside aria-busy={isRunning}>
+      <strong>{isRunning ? 'Thinking…' : 'Thoughts'}</strong>
+      <pre>{text}</pre>
+    </aside>
+  );
+}
+
+<Chat.Rendering components={{Reasoning: AppReasoning}}>
+  <Chat.Messages />
+</Chat.Rendering>
+```
+
+You can combine any of these in one map, e.g.
+`components={{Prompt: AppPrompt, Reasoning: AppReasoning}}`.
+
+#### Fully custom turn layout
+
+Override `Turn` when you need a different regional order or structure (for
+example activity → response → hoisted → summary). Pair with
+`nestedActivityMode="embed"` when nested agents should contribute log lines
+into the parent Activity instead of creating their own boxes. The turn recipe
+receives a resolved `components` map so you can still compose the default (or
+overridden) leaf slots (`Prompt`, `Activity`, `Reasoning`, …) instead of
+reimplementing every region:
+
+```tsx
+import {
+  Chat,
+  type ChatTurnSlotProps,
+} from '@sqlrooms/ai-core';
+
+function AppChatTurn({
+  model,
+  prompt,
+  isCompleted,
+  searchBlockPrefix,
+  responseText,
+  summaryText,
+  components,
+  // …other ChatTurnSlotProps as needed
+}: ChatTurnSlotProps) {
+  const {Prompt, Activity, Reasoning, TextOutput, ToolActivity, Actions} =
+    components;
+
+  return (
+    <article>
+      <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
+
+      {model.activity.length > 0 && (
+        <Activity
+          isRunning={model.isActivityRunning}
+          isCompleted={isCompleted}
+          toolCount={model.leafToolCount}
+        >
+          {model.activity.map((item) =>
+            item.kind === 'reasoning' ? (
+              <Reasoning
+                key={`reasoning-${item.index}`}
+                text={item.text}
+                isRunning={!isCompleted}
+                searchBlockId={`${searchBlockPrefix}:reasoning:${item.index}`}
+              />
+            ) : (
+              <ToolActivity
+                key={`tool-${item.part.toolCallId}`}
+                part={item.part}
+                index={item.index}
+                isAgent={item.isAgent}
+                isHoisted={item.isHoisted}
+                searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
+              />
+            ),
+          )}
+        </Activity>
+      )}
+
+      {[...responseText, ...summaryText].map((item) => (
+        <TextOutput
+          key={`text-${item.index}`}
+          text={item.text}
+          index={item.index}
+          isAnswer={false}
+          searchBlockId={`${searchBlockPrefix}:text:${item.index}`}
+        />
+      ))}
+
+      <Actions
+        hasTextContent={responseText.length + summaryText.length > 0}
+        allTextContent={[...responseText, ...summaryText]
+          .map((item) => item.text)
+          .join('\n')}
+        canFork={false}
+      />
+    </article>
+  );
+}
+
+<Chat.Rendering
+  nestedActivityMode="embed"
+  components={{Turn: AppChatTurn, Prompt: AppPrompt, Reasoning: AppReasoning}}
+>
+  <Chat.Messages />
+</Chat.Rendering>
+```
+
+Pair a custom `Turn` with leaf-slot overrides as needed. Prefer keeping the
+default turn (or a host-owned turn recipe) and swapping only the slots that
+must differ, unless the regional order itself has to change.
+
 `Chat.Header` and `Chat.History` can delegate session creation to the host app
 with `onCreateSession`. `Chat.History` also accepts `filterSession` and
 `emptyLabel` so apps can present scoped histories without changing the generic
