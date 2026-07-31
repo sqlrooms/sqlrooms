@@ -7,6 +7,7 @@ import {
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
 import {
+  bindDefaultChatRenderingComponents,
   ChatRendering,
   type ChatRenderingProps,
 } from './ChatRenderingContext';
@@ -31,8 +32,11 @@ import {ChatSearch, ChatSearchProvider} from './ChatSearch';
 import {ContextSelector} from './context/ContextSelector';
 import {ChatHeader} from './ChatHeader';
 import {ChatHistoryView} from './ChatHistoryView';
-// Ensure SQLRooms default presentation slots are bound for Chat.Rendering.
-import './defaultChatRendering';
+import {defaultChatRenderingComponents} from './defaultChatRendering';
+
+// Keep initialization explicit: ai-core is marked sideEffects:false, so a
+// side-effect-only import can be removed from production bundles.
+bindDefaultChatRenderingComponents(defaultChatRenderingComponents);
 
 type RootProps = PropsWithChildren<{
   toolRenderBehavior?: ToolRenderBehavior;

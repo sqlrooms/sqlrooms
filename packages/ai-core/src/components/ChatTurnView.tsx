@@ -19,7 +19,10 @@ import {
   getToolName,
   splitTextAroundHoists,
 } from './buildChatTurnModel';
-import {useChatRenderingComponents} from './ChatRenderingContext';
+import {
+  bindDefaultChatRenderingComponents,
+  useChatRenderingComponents,
+} from './ChatRenderingContext';
 import {
   markdownToPlainText,
   normalizeChatSearchQuery,
@@ -30,8 +33,11 @@ import {
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
-// Bind SQLRooms default slot components on first ChatTurnView import.
-import './defaultChatRendering';
+import {defaultChatRenderingComponents} from './defaultChatRendering';
+
+// Keep initialization explicit: ai-core is marked sideEffects:false, so a
+// side-effect-only import can be removed from production bundles.
+bindDefaultChatRenderingComponents(defaultChatRenderingComponents);
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */

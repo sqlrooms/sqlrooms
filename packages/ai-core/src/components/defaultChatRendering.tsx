@@ -12,7 +12,6 @@ import {TOOL_CALL_CANCELLED} from '../constants';
 import {isReasoningPart, isTextPart} from '../utils';
 import {ActivityBox} from './ActivityBox';
 import {
-  bindDefaultChatRenderingComponents,
   type ChatActionsProps,
   type ChatActivityProps,
   type ChatHoistedOutputProps,
@@ -88,7 +87,7 @@ export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
       <span className="text-muted-foreground/70 text-[11px] font-normal group-open:hidden">
         show
       </span>
-      <span className="text-muted-foreground/70 text-[11px] font-normal hidden group-open:inline">
+      <span className="text-muted-foreground/70 hidden text-[11px] font-normal group-open:inline">
         hide
       </span>
     </summary>
@@ -230,24 +229,15 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({
   components,
 }) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
-  const {
-    Prompt,
-    Activity,
-    Reasoning,
-    TextOutput,
-    ToolActivity,
-    Actions,
-  } = components;
+  const {Prompt, Activity, Reasoning, TextOutput, ToolActivity, Actions} =
+    components;
 
   const lastTextIndex = model.textItems.at(-1)?.index;
 
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-md text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
-        <Prompt
-          prompt={prompt}
-          searchBlockId={`${searchBlockPrefix}:prompt`}
-        />
+        <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
       </div>
       <div className="flex w-full flex-col gap-2">
         {model.segments.map((seg, segIdx) => {
@@ -385,5 +375,3 @@ export const defaultChatRenderingComponents: ChatRenderingComponents = {
   HoistedOutput: DefaultChatHoistedOutput,
   Actions: DefaultChatActions,
 };
-
-bindDefaultChatRenderingComponents(defaultChatRenderingComponents);
