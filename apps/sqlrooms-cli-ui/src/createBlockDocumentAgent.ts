@@ -108,14 +108,30 @@ export function blockDocumentAgentTool(
       streamSubAgent(agent, prompt, store, parentToolCallId, abortSignal),
   };
 
-  const dashboardAgentTool = (
-    experimentalEnabled
+  const dashboardAgentTool = (blockDocumentId: string) =>
+    (experimentalEnabled
       ? createDashboardAgentToolWithDeckMaps
-      : createDashboardAgentTool
-  )({
-    ...baseOptions,
-    databaseAdapter,
-  });
+      : createDashboardAgentTool)({
+      ...baseOptions,
+      databaseAdapter,
+      authorizeDashboard: ({dashboardId, state}) => {
+        const ownsDashboard = state.blockDocuments
+          .getBlocks(blockDocumentId)
+          .some(
+            (block) =>
+              block.type === 'statefulBlock' &&
+              block.blockType === 'dashboard' &&
+              (block.ownership ?? 'owned') === 'owned' &&
+              block.blockInstanceId === dashboardId,
+          );
+
+        if (!ownsDashboard) {
+          throw new Error(
+            `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+          );
+        }
+      },
+    });
 
   const blockDocumentAgentOptions: CreateCliBlockDocumentAgentToolOptions = {
     ...baseOptions,
