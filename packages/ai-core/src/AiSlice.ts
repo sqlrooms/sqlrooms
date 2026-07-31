@@ -1183,30 +1183,33 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         getApiKeyFromSettings: () => {
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
-          if (currentSession) {
-            // First try the getApiKey function if provided
-            const apiKeyFromFunction = getApiKey?.(
-              currentSession.modelProvider || 'openai',
-            );
-            if (apiKeyFromFunction) {
-              return apiKeyFromFunction;
-            }
 
-            // Fall back to settings
-            if (hasAiSettingsConfig(store)) {
-              if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.apiKey || '';
-              } else {
-                const provider =
-                  store.aiSettings.config.providers?.[
-                    currentSession.modelProvider
-                  ];
-                return provider?.apiKey || '';
-              }
+          // First try the getApiKey function if provided. This must not depend
+          // on a current chat session: chat-free flows (e.g. in-place block
+          // edits) resolve a key without ever selecting a session. Use the
+          // session's provider when there is one, otherwise the default.
+          const apiKeyFromFunction = getApiKey?.(
+            currentSession?.modelProvider || defaultProvider,
+          );
+          if (apiKeyFromFunction) {
+            return apiKeyFromFunction;
+          }
+
+          // Fall back to settings, which need a current session to know which
+          // provider/custom model to read the key from.
+          if (currentSession && hasAiSettingsConfig(store)) {
+            if (currentSession.modelProvider === 'custom') {
+              const customModel = store.aiSettings.config.customModels.find(
+                (m: {modelName: string}) =>
+                  m.modelName === currentSession.model,
+              );
+              return customModel?.apiKey || '';
+            } else {
+              const provider =
+                store.aiSettings.config.providers?.[
+                  currentSession.modelProvider
+                ];
+              return provider?.apiKey || '';
             }
           }
           return '';

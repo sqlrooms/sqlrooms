@@ -843,6 +843,31 @@ describe('AiSlice model selection', () => {
     );
   });
 
+  it('resolves API key/base URL from callbacks without a current session', () => {
+    // Chat-free flows (e.g. in-place block edits) never select a session, yet
+    // must still resolve a key. The getApiKey/getBaseUrl callbacks do not
+    // depend on a session, so they must be consulted even when none exists.
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        getApiKey: (provider) => `key-for-${provider}`,
+        getBaseUrl: () => 'https://virtual.example/v1',
+        config: {
+          sessions: [],
+        },
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+    expect(store.getState().ai.getApiKeyFromSettings()).toBe('key-for-openai');
+    expect(store.getState().ai.getBaseUrlFromSettings()).toBe(
+      'https://virtual.example/v1',
+    );
+  });
+
   it('inherits current provider and model when creating a new session', () => {
     const store = createTestStore();
 
