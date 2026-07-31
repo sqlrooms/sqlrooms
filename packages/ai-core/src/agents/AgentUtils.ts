@@ -368,6 +368,15 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       for await (const chunk of stream) {
         throwIfAborted();
 
+        // A stream-level error (e.g. an API 401 / provider failure) is delivered
+        // as an `error` chunk rather than a thrown exception, because the AI SDK
+        // routes it through `streamText`'s `onError`. Surface it as a thrown
+        // error so callers can react (revert, show a retry) instead of silently
+        // treating the run as a successful no-op.
+        if (chunk.type === 'error') {
+          throw new Error(chunk.errorText || 'The AI request failed.');
+        }
+
         if (chunk.type === 'text-delta') {
           finalText += chunk.delta;
         }
