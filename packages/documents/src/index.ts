@@ -58,11 +58,14 @@ export {
 export {
   BlockDocumentChartRendererProvider,
   useBlockDocumentChartRenderBlockHeaderActions,
+  useBlockDocumentChartGetBlockFrameClassName,
   useBlockDocumentChartSettings,
   useBlockDocumentChartRenderer,
   type BlockDocumentChartRenderer,
   type BlockDocumentChartRendererProps,
   type BlockDocumentChartRendererProviderProps,
+  type BlockDocumentBlockFrameContext,
+  type BlockDocumentBlockFrameClassNameGetter,
 } from './BlockDocumentChartRendererContext';
 export {
   type BlockDocumentBlockHeaderActionsRenderContext,

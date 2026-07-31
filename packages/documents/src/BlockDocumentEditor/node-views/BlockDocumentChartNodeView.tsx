@@ -12,6 +12,7 @@ import {
 import {
   type BlockDocumentChartRenderer,
   type BlockDocumentChartRendererProps,
+  useBlockDocumentChartGetBlockFrameClassName,
   useBlockDocumentChartRenderBlockHeaderActions,
   useBlockDocumentChartRenderer,
 } from '../../BlockDocumentChartRendererContext';
@@ -47,6 +48,7 @@ export const BlockDocumentChartNodeView: FC<
   const Renderer = useBlockDocumentChartRenderer();
   const renderBlockHeaderActions =
     useBlockDocumentChartRenderBlockHeaderActions();
+  const getBlockFrameClassName = useBlockDocumentChartGetBlockFrameClassName();
   const updateAttributesRef = useRef(updateAttributes);
   const readOnlyRef = useRef(readOnly);
   const attrs = unknownRecord(node.attrs);
@@ -66,6 +68,12 @@ export const BlockDocumentChartNodeView: FC<
         : null,
     [blockId, documentId, readOnly, renderBlockHeaderActions],
   );
+  const blockFrameClassName = getBlockFrameClassName?.({
+    blockDocumentId: documentId,
+    blockId,
+    blockType: 'chart',
+    selected,
+  });
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
@@ -104,6 +112,7 @@ export const BlockDocumentChartNodeView: FC<
       className={cn(
         'not-prose bg-background relative my-4 rounded-md border',
         selected && 'outline-primary rounded-none outline outline-2',
+        blockFrameClassName,
       )}
       contentEditable={false}
       data-block-document-widget-node-view=""
