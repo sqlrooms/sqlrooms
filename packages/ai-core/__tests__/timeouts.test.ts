@@ -7,6 +7,7 @@ import {
   getPendingClientToolTimeouts,
   getSessionAgentProgressSignal,
   getToolExecutionTimeoutMs,
+  hasPendingSessionSubAgentApproval,
 } from '../src/timeouts';
 import {mergeAbortSignals} from '../src/utils';
 
@@ -107,23 +108,31 @@ describe('AI timeouts', () => {
             state: 'input-available',
             input: {},
           },
+          {
+            type: 'tool-serverSearch',
+            toolCallId: 'server-1',
+            state: 'input-available',
+            input: {},
+          },
         ],
       },
     ];
+    const tools = {
+      hybridWeather: {execute: async () => ({})},
+      serverSearch: {execute: async () => ({})},
+    };
 
     expect(
-      getPendingClientToolCalls(
-        messages,
-        {hybridWeather: {execute: async () => ({})}},
-        {includeExecutableTools: true},
-      ),
+      getPendingClientToolCalls(messages, tools, {
+        executableClientToolNames: ['hybridWeather'],
+      }),
     ).toEqual([{toolName: 'hybridWeather', toolCallId: 'hybrid-1'}]);
     expect(
       getPendingClientToolTimeouts(
         messages,
-        {hybridWeather: {execute: async () => ({})}},
+        tools,
         {toolExecutionMs: 1_000},
-        {includeExecutableTools: true},
+        {executableClientToolNames: ['hybridWeather']},
       ),
     ).toEqual([
       {toolName: 'hybridWeather', toolCallId: 'hybrid-1', timeoutMs: 1_000},
@@ -190,6 +199,57 @@ describe('AI timeouts', () => {
         ],
       }),
     ).not.toBe(initialSignal);
+  });
+
+  it('finds only nested approvals reachable from the session', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent',
+            toolCallId: 'session-root',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+    ];
+    const agentProgress = {
+      'session-root': [
+        {
+          toolCallId: 'nested-approval',
+          toolName: 'deleteItem',
+          state: 'approval-requested' as const,
+          approvalId: 'approval-1',
+        },
+      ],
+    };
+    const resolve = jest.fn();
+
+    expect(
+      hasPendingSessionSubAgentApproval(messages, agentProgress, {
+        'approval-1': {
+          toolCallId: 'nested-approval',
+          approvalId: 'approval-1',
+          toolName: 'deleteItem',
+          input: {},
+          resolve,
+        },
+      }),
+    ).toBe(true);
+    expect(
+      hasPendingSessionSubAgentApproval(messages, agentProgress, {
+        'approval-other': {
+          toolCallId: 'other-session-tool',
+          approvalId: 'approval-other',
+          toolName: 'deleteItem',
+          input: {},
+          resolve,
+        },
+      }),
+    ).toBe(false);
   });
 
   it('aborts and rejects executable tools at their configured limit', async () => {

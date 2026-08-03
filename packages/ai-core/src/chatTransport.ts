@@ -54,7 +54,7 @@ import {
  * survive serialization. Mutates `messages` in place — callers should pass
  * cloned messages (e.g., from `fixIncompleteToolCalls`).
  */
-function writeToolTimingsToMetadata(
+export function writeToolTimingsToMetadata(
   messages: UIMessage[],
   allTimings: Record<string, ToolTimingEntry>,
 ): void {
@@ -121,7 +121,7 @@ function enrichMessagesWithAbortSnapshots(
   }
 }
 
-function writeAgentDebugStateToSession(
+export function writeAgentDebugStateToSession(
   session: ChatSessionSchema,
   state: AiSliceStateForTransport,
 ): void {

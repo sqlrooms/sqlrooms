@@ -145,6 +145,18 @@ describe('AiSlice run timeout', () => {
       },
     ];
     store.getState().ai.setIsRunning(session.id, true);
+    store.getState().ai.setToolTiming('tool-1', {
+      startedAt: 100,
+      completedAt: 200,
+    });
+    store.getState().ai.updateAgentProgress('tool-1', [
+      {
+        toolCallId: 'nested-query',
+        toolName: 'query',
+        state: 'success',
+        output: {rows: 1},
+      },
+    ]);
 
     store
       .getState()
@@ -166,6 +178,21 @@ describe('AiSlice run timeout', () => {
     expect(saved[1]?.parts[0]).toMatchObject({
       state: 'output-error',
       errorText: 'No model or tool progress received for 2s',
+    });
+    expect(saved[1]?.metadata).toMatchObject({
+      toolTimings: {
+        'tool-1': {startedAt: 100, completedAt: 200},
+      },
+    });
+    expect(savedSession.agentProgress).toEqual({
+      'tool-1': [
+        {
+          toolCallId: 'nested-query',
+          toolName: 'query',
+          state: 'success',
+          output: {rows: 1},
+        },
+      ],
     });
   });
 

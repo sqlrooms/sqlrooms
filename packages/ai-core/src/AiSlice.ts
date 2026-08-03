@@ -28,6 +28,8 @@ import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
+  writeAgentDebugStateToSession,
+  writeToolTimingsToMetadata,
 } from './chatTransport';
 import {
   ANALYSIS_CANCELLED,
@@ -91,6 +93,8 @@ export type AiSliceState = {
     apiKeyErrors: Record<string, boolean>;
     tools: StoredToolSet;
     toolRenderers: ToolRendererRegistry;
+    /** Executable local tools that await browser output with remote chat. */
+    remoteClientToolNames: string[];
     /** Opt-in timeout policy for chat runs and tool execution. */
     timeouts: AiTimeoutOptions;
     getProviderOptions?: GetProviderOptions;
@@ -301,6 +305,12 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   /** Optional headers to send with remote endpoint */
   chatHeaders?: Record<string, string>;
   /**
+   * Locally executable tools whose remote definitions omit `execute` and wait
+   * for browser-provided output. Used to distinguish hybrid client tools from
+   * tools that the remote endpoint executes server-side.
+   */
+  remoteClientToolNames?: ReadonlyArray<Extract<keyof TTools, string>>;
+  /**
    * Called after a non-aborted chat turn has been persisted and fully ended.
    *
    * Host apps can use this to compose AI turns with app-level behavior such as
@@ -333,6 +343,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
+    remoteClientToolNames = [],
     getRunContext,
     formatRunContextInstructions,
   } = params;
@@ -528,6 +539,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         apiKeyErrors: {},
         tools,
         toolRenderers: params.toolRenderers ?? {},
+        remoteClientToolNames: [...remoteClientToolNames],
         timeouts,
         getProviderOptions,
 
@@ -1158,6 +1170,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             });
           }
 
+          const currentState = get();
+          writeToolTimingsToMetadata(
+            completedMessages,
+            currentState.ai.getToolTimings(),
+          );
+
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
@@ -1166,6 +1184,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (!session) return;
               session.uiMessages =
                 completedMessages as ChatSessionSchema['uiMessages'];
+              writeAgentDebugStateToSession(session, currentState);
               session.messagesRevision = (session.messagesRevision || 0) + 1;
               session.isRunning = false;
             }),

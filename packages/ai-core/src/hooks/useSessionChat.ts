@@ -16,6 +16,7 @@ import {
   getPendingClientToolCalls,
   getPendingClientToolTimeouts,
   getSessionAgentProgressSignal,
+  hasPendingSessionSubAgentApproval,
 } from '../timeouts';
 
 export type {AddToolOutput} from '../types';
@@ -89,8 +90,14 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     (s) => s.ai.persistTimedOutSession,
   );
   const tools = useStoreWithAi((s) => s.ai.tools);
+  const remoteClientToolNames = useStoreWithAi(
+    (s) => s.ai.remoteClientToolNames,
+  );
   const timeouts = useStoreWithAi((s) => s.ai.timeouts);
   const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
+  const pendingSubAgentApprovals = useStoreWithAi(
+    (s) => s.ai.pendingSubAgentApprovals,
+  );
 
   // Get per-session abort controller
   const getAbortController = useStoreWithAi((s) => s.ai.getAbortController);
@@ -168,13 +175,24 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     () => getSessionAgentProgressSignal(messages as UIMessage[], agentProgress),
     [agentProgress, messages],
   );
+  const isWaitingForSubAgentApproval = useMemo(
+    () =>
+      hasPendingSessionSubAgentApproval(
+        messages as UIMessage[],
+        agentProgress,
+        pendingSubAgentApprovals,
+      ),
+    [agentProgress, messages, pendingSubAgentApprovals],
+  );
 
   // Fail tools that never provide expected client-side output. Local executable
   // tools are timed out in the local agent transport instead.
   useEffect(() => {
     const pending = currentSession?.isRunning
       ? getPendingClientToolTimeouts(messages as UIMessage[], tools, timeouts, {
-          includeExecutableTools: usesRemoteTransport,
+          executableClientToolNames: usesRemoteTransport
+            ? remoteClientToolNames
+            : undefined,
         })
       : [];
     const pendingIds = new Set(pending.map(({toolCallId}) => toolCallId));
@@ -206,6 +224,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     addToolOutput,
     currentSession?.isRunning,
     messages,
+    remoteClientToolNames,
     timeouts,
     tools,
     usesRemoteTransport,
@@ -231,12 +250,15 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     const isWaitingForApproval = hasPendingToolApproval(uiMessages);
     const isWaitingForClientTool =
       getPendingClientToolCalls(uiMessages, tools, {
-        includeExecutableTools: usesRemoteTransport,
+        executableClientToolNames: usesRemoteTransport
+          ? remoteClientToolNames
+          : undefined,
       }).length > 0;
     if (
       !currentSession?.isRunning ||
       timeoutMs == null ||
       isWaitingForApproval ||
+      isWaitingForSubAgentApproval ||
       isWaitingForClientTool
     ) {
       return;
@@ -258,8 +280,10 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   }, [
     currentSession?.isRunning,
     getAbortController,
+    isWaitingForSubAgentApproval,
     messages,
     persistTimedOutSession,
+    remoteClientToolNames,
     sessionAgentProgressSignal,
     sessionId,
     stop,

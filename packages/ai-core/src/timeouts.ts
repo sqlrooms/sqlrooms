@@ -1,5 +1,9 @@
 import type {UIMessage} from 'ai';
-import type {AgentToolCall, StoredToolSet} from './types';
+import type {
+  AgentToolCall,
+  PendingSubAgentApproval,
+  StoredToolSet,
+} from './types';
 
 /** Opt-in timeout limits for chat runs and tool execution. */
 export type AiTimeoutOptions = {
@@ -104,8 +108,8 @@ export type PendingClientToolTimeout = PendingClientToolCall & {
 
 /** Controls how pending client-output tool calls are detected. */
 export type PendingClientToolCallOptions = {
-  /** Treat registered executable tools as client tools for remote transports. */
-  includeExecutableTools?: boolean;
+  /** Registered executable tools that explicitly await client-side output. */
+  executableClientToolNames?: readonly string[];
 };
 
 /** Finds registered tools that are waiting for client-side output. */
@@ -147,7 +151,8 @@ export function getPendingClientToolCalls(
     if (
       part.state !== 'input-available' ||
       !registeredTool ||
-      (registeredTool.execute && !options.includeExecutableTools)
+      (registeredTool.execute &&
+        !options.executableClientToolNames?.includes(part.toolName))
     ) {
       continue;
     }
@@ -179,6 +184,39 @@ export function getSessionAgentProgressSignal(
   messages: UIMessage[],
   agentProgress: Record<string, AgentToolCall[]>,
 ): string {
+  const reachableToolCallIds = getReachableAgentToolCallIds(
+    messages,
+    agentProgress,
+  );
+
+  return JSON.stringify(
+    Object.entries(agentProgress)
+      .filter(([parentToolCallId]) =>
+        reachableToolCallIds.has(parentToolCallId),
+      )
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+/** Returns whether this session has a nested tool awaiting user approval. */
+export function hasPendingSessionSubAgentApproval(
+  messages: UIMessage[],
+  agentProgress: Record<string, AgentToolCall[]>,
+  pendingApprovals: Record<string, PendingSubAgentApproval>,
+): boolean {
+  const reachableToolCallIds = getReachableAgentToolCallIds(
+    messages,
+    agentProgress,
+  );
+  return Object.values(pendingApprovals).some((approval) =>
+    reachableToolCallIds.has(approval.toolCallId),
+  );
+}
+
+function getReachableAgentToolCallIds(
+  messages: UIMessage[],
+  agentProgress: Record<string, AgentToolCall[]>,
+): Set<string> {
   const reachableToolCallIds = new Set<string>();
 
   for (const message of messages) {
@@ -203,13 +241,7 @@ export function getSessionAgentProgressSignal(
     }
   }
 
-  return JSON.stringify(
-    Object.entries(agentProgress)
-      .filter(([parentToolCallId]) =>
-        reachableToolCallIds.has(parentToolCallId),
-      )
-      .sort(([left], [right]) => left.localeCompare(right)),
-  );
+  return reachableToolCallIds;
 }
 
 function addAgentToolCallIds(

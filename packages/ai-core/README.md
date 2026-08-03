@@ -112,6 +112,8 @@ workspace configuration.
 createAiSlice({
   tools,
   getInstructions,
+  // Hybrid tools that omit `execute` on the configured remote endpoint.
+  remoteClientToolNames: ['weather'],
   timeouts: {
     runMs: 30 * 60_000,
     idleStreamMs: 5 * 60_000,
@@ -131,8 +133,9 @@ stalled operation, so idle timeouts should remain conservative. Tool timeouts
 abort the signal passed to the tool and fail its pending call; tools should
 honor `abortSignal` to stop their underlying work promptly. Local executable
 tools and registered tools awaiting client output are covered, including hybrid
-client tools whose remote definition omits `execute`. Remote endpoints remain
-responsible for enforcing timeouts around tools they execute server-side.
+client tools named by `remoteClientToolNames` whose remote definition omits
+`execute`. Remote endpoints remain responsible for enforcing timeouts around
+tools they execute server-side.
 
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's
