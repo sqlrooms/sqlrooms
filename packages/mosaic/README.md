@@ -191,6 +191,45 @@ function EarthquakeExplorer() {
 }
 ```
 
+#### Per-column summary kinds
+
+By default each column's summary is derived from its Arrow type: numeric and
+datetime columns get a brushable histogram, other supported types get category
+buckets. Pass `getColumnKind` to override this per column:
+
+```tsx
+<DataTableExplorer
+  tableName={dataTable.table}
+  selection={brush}
+  getColumnKind={(field) => {
+    // Visible and sortable, but no summary and no cross-filtering.
+    if (field.name === 'Latitude' || field.name === 'Longitude') return 'none';
+    // Force category buckets for a low-cardinality numeric code column.
+    if (field.name === 'StatusCode') return 'category';
+    return 'auto';
+  }}
+>
+```
+
+The resolver returns `'auto' | 'category' | 'histogram' | 'none'`:
+
+- `'auto'` keeps the type-driven default.
+- `'none'` shows the column without a summary. Its summary Mosaic clients are
+  never created, so no summary queries run and the column does not
+  participate in cross-filtering. The column stays sortable.
+- `'category'` / `'histogram'` force a specific summary. Requests the column
+  type cannot support (e.g. a histogram on a string column) fall back to the
+  type-driven default rather than producing broken queries.
+
+Resolved kinds are value-memoized internally, so an inline resolver function
+is safe as long as it is pure.
+
+For fully custom headers built on `useDataTableExplorer`, the default summary
+cells are exported as `DataTableExplorerSummaryCell`,
+`DataTableExplorerHistogramSummaryCell`, and
+`DataTableExplorerCategorySummaryCell`, and the kind resolution logic as
+`resolveDataTableExplorerColumnKind`.
+
 ### Code View Primitives
 
 Use `MosaicCodeViewerPanel` with `CodeViewToggleButton` for settings panels
