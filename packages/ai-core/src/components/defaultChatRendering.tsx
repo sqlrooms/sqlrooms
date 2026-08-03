@@ -14,14 +14,17 @@ import {ActivityBox} from './ActivityBox';
 import {HighlightedChatSearchText} from './ChatSearch';
 import type {
   ChatActionsProps,
+  ChatActivityItem,
   ChatActivityProps,
   ChatHoistedOutputProps,
+  ChatOutputItem,
   ChatPromptProps,
   ChatReasoningProps,
   ChatRenderingComponents,
+  ChatTextItem,
   ChatTextOutputProps,
   ChatToolActivityProps,
-  ChatTurnRegions,
+  ChatTurnPresentation,
   ChatTurnSlotProps,
 } from './ChatRenderingTypes';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
@@ -32,7 +35,11 @@ import {
 } from './FlatAgentRenderer';
 import {MessageContent} from './MessageContent';
 import {ToolPartRenderer} from './ToolPartRenderer';
-import type {ChatTurnModel, ChatTurnTextItem} from './buildChatTurnModel';
+import {
+  getToolName,
+  type ChatTurnModel,
+  type ChatTurnTextItem,
+} from './buildChatTurnModel';
 
 export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
@@ -147,8 +154,7 @@ export const DefaultChatHoistedOutput: React.FC<ChatHoistedOutputProps> = ({
 }) => <HoistedToolCallRenderer item={item} />;
 
 export const DefaultChatActions: React.FC<ChatActionsProps> = ({
-  hasTextContent,
-  allTextContent,
+  copyText,
   canFork,
   onFork,
   errorMessage,
@@ -162,11 +168,11 @@ export const DefaultChatActions: React.FC<ChatActionsProps> = ({
       ) : (
         <ErrorMessage errorMessage={errorMessage} />
       ))}
-    {(hasTextContent || canFork) && (
+    {(copyText || canFork) && (
       <div className="flex justify-start gap-1">
-        {hasTextContent && (
+        {copyText && (
           <CopyButton
-            text={allTextContent}
+            text={copyText}
             tooltipLabel="Copy message"
             className="border-muted border"
           />
@@ -193,7 +199,8 @@ export const DefaultChatActions: React.FC<ChatActionsProps> = ({
   </>
 );
 
-type CreateChatTurnRegionsOptions = {
+type CreateChatTurnPresentationOptions = {
+  turnId: string;
   model: ChatTurnModel;
   prompt: string;
   isCompleted: boolean;
@@ -202,8 +209,7 @@ type CreateChatTurnRegionsOptions = {
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
   canFork: boolean;
   onFork?: () => void;
-  allTextContent: string;
-  hasTextContent: boolean;
+  copyText?: string;
   errorMessage?: string;
   activitySummaryLabel?: string;
   computationTimeMs?: number;
@@ -213,8 +219,9 @@ type CreateChatTurnRegionsOptions = {
   components: ChatRenderingComponents;
 };
 
-/** Builds the data-bound regions consumed by a turn layout recipe. */
-export function createChatTurnRegions({
+/** Builds semantic turn data with pre-wired rendering components. */
+export function createChatTurnPresentation({
+  turnId,
   model,
   prompt,
   isCompleted,
@@ -223,8 +230,7 @@ export function createChatTurnRegions({
   ErrorMessageComponent,
   canFork,
   onFork,
-  allTextContent,
-  hasTextContent,
+  copyText,
   errorMessage,
   activitySummaryLabel,
   computationTimeMs,
@@ -232,7 +238,7 @@ export function createChatTurnRegions({
   responseText,
   summaryText,
   components,
-}: CreateChatTurnRegionsOptions): ChatTurnRegions {
+}: CreateChatTurnPresentationOptions): ChatTurnPresentation {
   const {
     Prompt,
     Activity,
@@ -242,16 +248,83 @@ export function createChatTurnRegions({
     HoistedOutput,
     Actions,
   } = components;
-  const hoistedById = new Map(
-    model.hoisted.map((item) => [item.toolCallId, item]),
-  );
-  const lastTextIndex = model.textItems.at(-1)?.index;
-
-  const PromptRegion = () => (
+  const PromptContent = () => (
     <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
   );
 
-  const TimelineRegion = () => (
+  const activityItems: ChatActivityItem[] = model.activity.map((item) => {
+    if (item.kind === 'reasoning') {
+      const Content = () => (
+        <Reasoning
+          text={item.text}
+          isRunning={!isCompleted}
+          searchBlockId={`${searchBlockPrefix}:reasoning:${item.index}`}
+        />
+      );
+      return {
+        id: `reasoning-${item.index}`,
+        kind: 'reasoning',
+        text: item.text,
+        Content,
+      };
+    }
+
+    const Content = () => (
+      <ToolActivity
+        part={item.part}
+        index={item.index}
+        isAgent={item.isAgent}
+        isHoisted={item.isHoisted}
+        searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
+      />
+    );
+    return {
+      id: item.part.toolCallId,
+      kind: 'tool',
+      toolName: getToolName(item.part) ?? 'tool',
+      state: item.state,
+      isAgent: item.isAgent,
+      isHoisted: item.isHoisted,
+      Content,
+    };
+  });
+  const activityByIndex = new Map(
+    model.activity.map((item, index) => [item.index, activityItems[index]]),
+  );
+
+  const response = createTextItems(
+    responseText,
+    summaryText.length === 0,
+    TextOutput,
+    searchBlockPrefix,
+    customMarkdownComponents,
+  );
+  const summary = createTextItems(
+    summaryText,
+    true,
+    TextOutput,
+    searchBlockPrefix,
+    customMarkdownComponents,
+  );
+  const textByIndex = new Map(
+    [...response.items, ...summary.items].map((item) => [
+      Number(item.id.slice('text-'.length)),
+      item,
+    ]),
+  );
+
+  const outputItems: ChatOutputItem[] = model.hoisted.map((item) => {
+    const Content = () => <HoistedOutput item={item} />;
+    return {
+      id: item.toolCallId,
+      toolName: item.toolName,
+      state: item.state,
+      Content,
+    };
+  });
+  const outputById = new Map(outputItems.map((item) => [item.id, item]));
+
+  const TimelineContent = () => (
     <>
       {model.segments.map((segment, segmentIndex) => {
         if (segment.kind === 'tool-group') {
@@ -273,77 +346,59 @@ export function createChatTurnRegions({
                   toolCount={toolCount}
                   summaryLabel={summaryLabel}
                 >
-                  {segment.parts.map(({part, index}) => (
-                    <ToolActivity
-                      key={`tool-${part.toolCallId}`}
-                      part={part}
-                      index={index}
-                      isAgent={false}
-                      isHoisted={hoistedById.has(part.toolCallId)}
-                      searchBlockId={`${searchBlockPrefix}:tool:${index}`}
-                    />
-                  ))}
+                  {segment.parts.map(({part, index}) => {
+                    const item = activityByIndex.get(index);
+                    if (!item) return null;
+                    const Content = item.Content;
+                    return <Content key={`tool-${part.toolCallId}`} />;
+                  })}
                 </Activity>
               </div>
               {segment.parts.map(({part}) => {
-                const item = hoistedById.get(part.toolCallId);
-                return item ? (
+                const item = outputById.get(part.toolCallId);
+                if (!item) return null;
+                const Content = item.Content;
+                return (
                   <div
                     key={`hoisted-${part.toolCallId}`}
                     className="empty:hidden"
                     data-testid="chat-turn-hoisted"
                     data-tool-call-id={part.toolCallId}
                   >
-                    <HoistedOutput item={item} />
+                    <Content />
                   </div>
-                ) : null;
+                );
               })}
             </React.Fragment>
           );
         }
 
         if (segment.kind === 'agent-tool') {
-          return (
-            <ToolActivity
-              key={`tool-${segment.part.toolCallId}`}
-              part={segment.part}
-              index={segment.index}
-              isAgent
-              isHoisted={false}
-              searchBlockId={`${searchBlockPrefix}:tool:${segment.index}`}
-            />
-          );
+          const item = activityByIndex.get(segment.index);
+          if (!item) return null;
+          const Content = item.Content;
+          return <Content key={`tool-${segment.part.toolCallId}`} />;
         }
 
         const {part, index} = segment;
         if (isTextPart(part)) {
-          return (
-            <TextOutput
-              key={`text-${index}`}
-              text={part.text}
-              index={index}
-              isAnswer={index === lastTextIndex}
-              searchBlockId={`${searchBlockPrefix}:text:${index}`}
-              customMarkdownComponents={customMarkdownComponents}
-            />
-          );
+          const item = textByIndex.get(index);
+          if (!item) return null;
+          const Content = item.Content;
+          return <Content key={`text-${index}`} />;
         }
         if (isReasoningPart(part) && part.text.trim()) {
-          return (
-            <Reasoning
-              key={`reasoning-${index}`}
-              text={part.text}
-              isRunning={!isCompleted}
-              searchBlockId={`${searchBlockPrefix}:reasoning:${index}`}
-            />
-          );
+          const item = activityByIndex.get(index);
+          if (!item) return null;
+          const Content = item.Content;
+          return <Content key={`reasoning-${index}`} />;
         }
         return null;
       })}
     </>
   );
 
-  const ActivityRegion = () =>
+  const ActivityContent = () =>
     model.activity.length > 0 ? (
       <Activity
         isRunning={model.isActivityRunning}
@@ -353,64 +408,22 @@ export function createChatTurnRegions({
         computationTimeMs={computationTimeMs}
         computationTimeLabel={computationTimeLabel}
       >
-        {model.activity.map((item) =>
-          item.kind === 'reasoning' ? (
-            <Reasoning
-              key={`reasoning-${item.index}`}
-              text={item.text}
-              isRunning={!isCompleted}
-              searchBlockId={`${searchBlockPrefix}:reasoning:${item.index}`}
-            />
-          ) : (
-            <ToolActivity
-              key={`tool-${item.part.toolCallId}`}
-              part={item.part}
-              index={item.index}
-              isAgent={item.isAgent}
-              isHoisted={item.isHoisted}
-              searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
-            />
-          ),
-        )}
+        {activityItems.map((item) => {
+          const Content = item.Content;
+          return <Content key={item.id} />;
+        })}
       </Activity>
     ) : null;
 
-  const ResponseRegion = () => (
-    <>
-      {renderTextItems(
-        responseText,
-        summaryText.length === 0,
-        TextOutput,
-        searchBlockPrefix,
-        customMarkdownComponents,
-      )}
-    </>
-  );
+  const ResponseContent = () => <>{renderItems(response.items)}</>;
 
-  const HoistedOutputsRegion = () => (
-    <>
-      {model.hoisted.map((item) => (
-        <HoistedOutput key={item.toolCallId} item={item} />
-      ))}
-    </>
-  );
+  const HoistedOutputsContent = () => <>{renderItems(outputItems)}</>;
 
-  const SummaryRegion = () => (
-    <>
-      {renderTextItems(
-        summaryText,
-        true,
-        TextOutput,
-        searchBlockPrefix,
-        customMarkdownComponents,
-      )}
-    </>
-  );
+  const SummaryContent = () => <>{renderItems(summary.items)}</>;
 
-  const ActionsRegion = () => (
+  const ActionsContent = () => (
     <Actions
-      hasTextContent={hasTextContent}
-      allTextContent={allTextContent}
+      copyText={copyText}
       canFork={canFork}
       onFork={onFork}
       errorMessage={errorMessage}
@@ -419,13 +432,29 @@ export function createChatTurnRegions({
   );
 
   return {
-    Prompt: PromptRegion,
-    Timeline: TimelineRegion,
-    Activity: ActivityRegion,
-    Response: ResponseRegion,
-    HoistedOutputs: HoistedOutputsRegion,
-    Summary: SummaryRegion,
-    Actions: ActionsRegion,
+    id: turnId,
+    isCompleted,
+    prompt: {text: prompt, Content: PromptContent},
+    activity: {
+      isRunning: model.isActivityRunning,
+      toolCount: model.leafToolCount,
+      computationTimeMs,
+      items: activityItems,
+      Content: ActivityContent,
+    },
+    response: {items: response.items, Content: ResponseContent},
+    hoistedOutputs: {
+      items: outputItems,
+      Content: HoistedOutputsContent,
+    },
+    summary: {items: summary.items, Content: SummaryContent},
+    actions: {
+      canCopy: copyText !== undefined,
+      canFork,
+      errorMessage,
+      Content: ActionsContent,
+    },
+    timeline: {Content: TimelineContent},
   };
 }
 
@@ -437,29 +466,45 @@ function isToolPartPending(state: string): boolean {
   );
 }
 
-function renderTextItems(
+function createTextItems(
   items: ChatTurnTextItem[],
   markLastAsAnswer: boolean,
   TextOutput: ChatRenderingComponents['TextOutput'],
   searchBlockPrefix: string,
   customMarkdownComponents?: Partial<Components>,
-): React.ReactNode {
+): {items: ChatTextItem[]} {
   const lastIndex = items.at(-1)?.index;
-  return items.map((item) => (
-    <TextOutput
-      key={`text-${item.index}`}
-      text={item.text}
-      index={item.index}
-      isAnswer={markLastAsAnswer && item.index === lastIndex}
-      searchBlockId={`${searchBlockPrefix}:text:${item.index}`}
-      customMarkdownComponents={customMarkdownComponents}
-    />
-  ));
+  return {
+    items: items.map((item) => {
+      const isAnswer = markLastAsAnswer && item.index === lastIndex;
+      const Content = () => (
+        <TextOutput
+          text={item.text}
+          index={item.index}
+          isAnswer={isAnswer}
+          searchBlockId={`${searchBlockPrefix}:text:${item.index}`}
+          customMarkdownComponents={customMarkdownComponents}
+        />
+      );
+      return {id: `text-${item.index}`, text: item.text, isAnswer, Content};
+    }),
+  };
+}
+
+function renderItems(
+  items: readonly {id: string; Content: React.ElementType}[],
+): React.ReactNode {
+  return items.map((item) => {
+    const Content = item.Content;
+    return <Content key={item.id} />;
+  });
 }
 
 /** SQLRooms default source-order turn layout. */
-export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({regions}) => {
-  const {Prompt, Timeline, Actions} = regions;
+export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
+  const Prompt = turn.prompt.Content;
+  const Timeline = turn.timeline.Content;
+  const Actions = turn.actions.Content;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-md text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">

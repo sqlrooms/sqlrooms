@@ -30,7 +30,7 @@ import {
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
-import {createChatTurnRegions} from './defaultChatRendering';
+import {createChatTurnPresentation} from './defaultChatRendering';
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
@@ -83,7 +83,8 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       isTextPart(part) || isReasoningPart(part) ? [part.text] : [],
     )
     .join('\n\n');
-  const hasTextContent = allTextContent.trim().length > 0;
+  const copyText =
+    allTextContent.trim().length > 0 ? allTextContent : undefined;
 
   const excludeList = useMemo(() => userTools ?? [], [userTools]);
   const hoistableSet = useMemo(() => new Set(excludeList), [excludeList]);
@@ -226,9 +227,10 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     ],
   );
 
-  const regions = useMemo(
+  const turnPresentation = useMemo(
     () =>
-      createChatTurnRegions({
+      createChatTurnPresentation({
+        turnId,
         model,
         prompt,
         isCompleted,
@@ -237,8 +239,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         ErrorMessageComponent,
         canFork,
         onFork,
-        allTextContent,
-        hasTextContent,
+        copyText,
         errorMessage: errorMessage?.error,
         activitySummaryLabel,
         computationTimeMs,
@@ -248,6 +249,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         components,
       }),
     [
+      turnId,
       model,
       prompt,
       isCompleted,
@@ -256,8 +258,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       ErrorMessageComponent,
       canFork,
       onFork,
-      allTextContent,
-      hasTextContent,
+      copyText,
       errorMessage?.error,
       activitySummaryLabel,
       computationTimeMs,
@@ -268,42 +269,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     ],
   );
 
-  const turnPresentation = useMemo(
-    () => ({
-      id: turnId,
-      isCompleted,
-      hasPrompt: prompt.length > 0,
-      hasActivity: model.activity.length > 0,
-      hasResponse: responseText.length > 0,
-      hasSummary: summaryText.length > 0,
-      hoistedOutputCount: model.hoisted.length,
-      activity: {
-        isRunning: model.isActivityRunning,
-        toolCount: model.leafToolCount,
-        summaryLabel: activitySummaryLabel,
-        computationTimeMs,
-        computationTimeLabel,
-      },
-    }),
-    [
-      turnId,
-      isCompleted,
-      prompt.length,
-      model.activity.length,
-      model.hoisted.length,
-      model.isActivityRunning,
-      model.leafToolCount,
-      responseText.length,
-      summaryText.length,
-      activitySummaryLabel,
-      computationTimeMs,
-      computationTimeLabel,
-    ],
-  );
-
   return (
     <HoistedRenderersProvider value={excludeList}>
-      <Turn turn={turnPresentation} regions={regions} />
+      <Turn turn={turnPresentation} />
     </HoistedRenderersProvider>
   );
 };

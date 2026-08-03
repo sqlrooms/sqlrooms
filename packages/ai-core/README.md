@@ -228,15 +228,20 @@ You can combine any of these in one map, e.g.
 Override `Turn` when you need a different regional order or structure (for
 example activity → response → hoisted → summary). Pair with
 `nestedActivityMode="embed"` when nested agents should contribute log lines
-into the parent Activity instead of creating their own boxes. SQLRooms binds
-the semantic data to each region before invoking the turn recipe:
+into the parent Activity instead of creating their own boxes. Each region
+exposes semantic data and a pre-wired `Content` component, so custom layouts
+can inspect status and items without rebuilding search, tool, or hoist wiring:
 
 ```tsx
 import {Chat, type ChatTurnSlotProps} from '@sqlrooms/ai-core';
 
-function AppChatTurn({turn, regions}: ChatTurnSlotProps) {
-  const {Prompt, Activity, Response, HoistedOutputs, Summary, Actions} =
-    regions;
+function AppChatTurn({turn}: ChatTurnSlotProps) {
+  const Prompt = turn.prompt.Content;
+  const Activity = turn.activity.Content;
+  const Response = turn.response.Content;
+  const HoistedOutputs = turn.hoistedOutputs.Content;
+  const Summary = turn.summary.Content;
+  const Actions = turn.actions.Content;
 
   return (
     <article data-turn-id={turn.id} aria-busy={!turn.isCompleted}>
@@ -256,6 +261,25 @@ function AppChatTurn({turn, regions}: ChatTurnSlotProps) {
 >
   <Chat.Messages />
 </Chat.Rendering>;
+```
+
+For finer composition, iterate semantic items and render their pre-wired leaf
+components. Tool items expose state, agent, and hoist metadata:
+
+```tsx
+function AppActivity({turn}: ChatTurnSlotProps) {
+  return turn.activity.items.map((item) => {
+    const Content = item.Content;
+    return (
+      <section
+        key={item.id}
+        data-state={item.kind === 'tool' ? item.state : undefined}
+      >
+        <Content />
+      </section>
+    );
+  });
+}
 ```
 
 Pair a custom `Turn` with leaf-slot overrides as needed. Prefer keeping the

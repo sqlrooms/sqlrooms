@@ -291,12 +291,27 @@ describe('ChatTurnView layout', () => {
     cleanup(container, root);
   });
 
-  it('lets a custom Turn reorder pre-wired regions', () => {
-    const CustomTurn = ({turn, regions}: ChatTurnSlotProps) => {
-      const {Prompt, Activity, Response, HoistedOutputs, Summary, Actions} =
-        regions;
+  it('lets a custom Turn inspect semantics and reorder pre-wired regions', () => {
+    const CustomTurn = ({turn}: ChatTurnSlotProps) => {
+      const Prompt = turn.prompt.Content;
+      const Activity = turn.activity.Content;
+      const Response = turn.response.Content;
+      const HoistedOutputs = turn.hoistedOutputs.Content;
+      const Summary = turn.summary.Content;
+      const Actions = turn.actions.Content;
       return (
-        <article data-testid="custom-turn" data-turn-id={turn.id}>
+        <article
+          data-testid="custom-turn"
+          data-turn-id={turn.id}
+          data-tool-count={turn.activity.toolCount}
+          data-activity-kinds={turn.activity.items
+            .map((item) => item.kind)
+            .join(',')}
+          data-tool-states={turn.activity.items
+            .filter((item) => item.kind === 'tool')
+            .map((item) => item.state)
+            .join(',')}
+        >
           <Prompt />
           <Activity />
           <Response />
@@ -321,6 +336,11 @@ describe('ChatTurnView layout', () => {
 
     const customTurn = container.querySelector('[data-testid="custom-turn"]');
     expect(customTurn?.getAttribute('data-turn-id')).toBe('user-1');
+    expect(customTurn?.getAttribute('data-tool-count')).toBe('2');
+    expect(customTurn?.getAttribute('data-activity-kinds')).toBe('tool,tool');
+    expect(customTurn?.getAttribute('data-tool-states')).toBe(
+      'success,success',
+    );
     const text = customTurn?.textContent ?? '';
     expect(text.indexOf('Listing datasets')).toBeLessThan(
       text.indexOf('Response intro'),
