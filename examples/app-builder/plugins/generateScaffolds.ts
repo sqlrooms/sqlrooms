@@ -184,7 +184,7 @@ if (
   // @ts-ignore
   require.main === module
 ) {
-  const repoRoot = path.resolve(__dirname, '..');
+  const repoRoot = path.resolve(import.meta.dirname, '..');
   const exampleRoot = path.resolve(repoRoot, '..', 'examples', 'app-builder');
   const scaffoldsRoot = path.join(exampleRoot, 'app-scaffolds');
   const output = path.join(scaffoldsRoot, 'scaffolds.generated.json');

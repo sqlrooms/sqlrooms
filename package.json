@@ -99,13 +99,13 @@
     "typedoc-vitepress-theme": "1.1.2",
     "typescript": "5.9.3",
     "typescript-language-server": "^5.1.3",
-    "vitepress": "^1.6.4",
-    "vitepress-plugin-llms": "^1.8.0",
+    "vitepress": "2.0.0-alpha.19",
+    "vitepress-plugin-llms": "^1.13.4",
     "vitepress-plugin-mermaid": "^2.0.17"
   },
   "packageManager": "pnpm@11.1.2",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.12"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

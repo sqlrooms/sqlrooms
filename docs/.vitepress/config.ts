@@ -2,7 +2,7 @@ import {createRequire} from 'node:module';
 import {defineConfig} from 'vitepress';
 import {withMermaid} from 'vitepress-plugin-mermaid';
 import llmstxt from 'vitepress-plugin-llms';
-import {apiSidebarConfig} from './gen-api-sidebar';
+import {apiSidebarConfig} from './gen-api-sidebar.ts';
 
 const SITE_URL = 'https://sqlrooms.org';
 const require = createRequire(import.meta.url);
