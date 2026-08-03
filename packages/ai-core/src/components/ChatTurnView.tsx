@@ -32,6 +32,7 @@ import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
 import {createChatTurnPresentation} from './defaultChatRendering';
+import {useChatTurnContentBinder} from './useChatTurnContentBinder';
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
@@ -236,6 +237,8 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     ],
   );
 
+  const bindContent = useChatTurnContentBinder();
+
   const turnPresentation = useMemo(
     () =>
       createChatTurnPresentation({
@@ -256,8 +259,10 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         responseText,
         summaryText,
         components,
+        bindContent,
       }),
     [
+      bindContent,
       turnId,
       model,
       prompt,

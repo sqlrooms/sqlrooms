@@ -40,6 +40,7 @@ import {
   type ChatTurnModel,
   type ChatTurnTextItem,
 } from './buildChatTurnModel';
+import type {ChatTurnContentBinder} from './useChatTurnContentBinder';
 
 export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
@@ -217,6 +218,11 @@ type CreateChatTurnPresentationOptions = {
   responseText: ChatTurnTextItem[];
   summaryText: ChatTurnTextItem[];
   components: ChatRenderingComponents;
+  /**
+   * Binds each pre-wired component to a stable identity so rebuilding the
+   * presentation re-renders rich output instead of remounting it.
+   */
+  bindContent: ChatTurnContentBinder;
 };
 
 /** Builds semantic turn data with pre-wired rendering components. */
@@ -238,6 +244,7 @@ export function createChatTurnPresentation({
   responseText,
   summaryText,
   components,
+  bindContent,
 }: CreateChatTurnPresentationOptions): ChatTurnPresentation {
   const {
     Prompt,
@@ -248,28 +255,29 @@ export function createChatTurnPresentation({
     HoistedOutput,
     Actions,
   } = components;
-  const PromptContent = () => (
+  const PromptContent = bindContent('prompt', () => (
     <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
-  );
+  ));
 
   const activityItems: ChatActivityItem[] = model.activity.map((item) => {
     if (item.kind === 'reasoning') {
-      const Content = () => (
+      const id = `reasoning-${item.index}`;
+      const Content = bindContent(`activity:${id}`, () => (
         <Reasoning
           text={item.text}
           isRunning={!isCompleted}
           searchBlockId={`${searchBlockPrefix}:reasoning:${item.index}`}
         />
-      );
+      ));
       return {
-        id: `reasoning-${item.index}`,
+        id,
         kind: 'reasoning',
         text: item.text,
         Content,
       };
     }
 
-    const Content = () => (
+    const Content = bindContent(`activity:${item.part.toolCallId}`, () => (
       <ToolActivity
         part={item.part}
         index={item.index}
@@ -277,7 +285,7 @@ export function createChatTurnPresentation({
         isHoisted={item.isHoisted}
         searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
       />
-    );
+    ));
     return {
       id: item.part.toolCallId,
       kind: 'tool',
@@ -297,6 +305,7 @@ export function createChatTurnPresentation({
     summaryText.length === 0,
     TextOutput,
     searchBlockPrefix,
+    bindContent,
     customMarkdownComponents,
   );
   const summary = createTextItems(
@@ -304,6 +313,7 @@ export function createChatTurnPresentation({
     true,
     TextOutput,
     searchBlockPrefix,
+    bindContent,
     customMarkdownComponents,
   );
   const textByIndex = new Map(
@@ -314,7 +324,9 @@ export function createChatTurnPresentation({
   );
 
   const outputItems: ChatOutputItem[] = model.hoisted.map((item) => {
-    const Content = () => <HoistedOutput item={item} />;
+    const Content = bindContent(`output:${item.toolCallId}`, () => (
+      <HoistedOutput item={item} />
+    ));
     return {
       id: item.toolCallId,
       toolName: item.toolName,
@@ -324,7 +336,7 @@ export function createChatTurnPresentation({
   });
   const outputById = new Map(outputItems.map((item) => [item.id, item]));
 
-  const TimelineContent = () => (
+  const TimelineContent = bindContent('timeline', () => (
     <>
       {model.segments.map((segment, segmentIndex) => {
         if (segment.kind === 'tool-group') {
@@ -396,9 +408,9 @@ export function createChatTurnPresentation({
         return null;
       })}
     </>
-  );
+  ));
 
-  const ActivityContent = () =>
+  const ActivityContent = bindContent('activity', () =>
     model.activity.length > 0 ? (
       <Activity
         isRunning={model.isActivityRunning}
@@ -413,15 +425,22 @@ export function createChatTurnPresentation({
           return <Content key={item.id} />;
         })}
       </Activity>
-    ) : null;
+    ) : null,
+  );
 
-  const ResponseContent = () => <>{renderItems(response.items)}</>;
+  const ResponseContent = bindContent('response', () => (
+    <>{renderItems(response.items)}</>
+  ));
 
-  const HoistedOutputsContent = () => <>{renderItems(outputItems)}</>;
+  const HoistedOutputsContent = bindContent('hoistedOutputs', () => (
+    <>{renderItems(outputItems)}</>
+  ));
 
-  const SummaryContent = () => <>{renderItems(summary.items)}</>;
+  const SummaryContent = bindContent('summary', () => (
+    <>{renderItems(summary.items)}</>
+  ));
 
-  const ActionsContent = () => (
+  const ActionsContent = bindContent('actions', () => (
     <Actions
       copyText={copyText}
       canFork={canFork}
@@ -429,7 +448,7 @@ export function createChatTurnPresentation({
       errorMessage={errorMessage}
       ErrorMessageComponent={ErrorMessageComponent}
     />
-  );
+  ));
 
   return {
     id: turnId,
@@ -471,13 +490,15 @@ function createTextItems(
   markLastAsAnswer: boolean,
   TextOutput: ChatRenderingComponents['TextOutput'],
   searchBlockPrefix: string,
+  bindContent: ChatTurnContentBinder,
   customMarkdownComponents?: Partial<Components>,
 ): {items: ChatTextItem[]} {
   const lastIndex = items.at(-1)?.index;
   return {
     items: items.map((item) => {
       const isAnswer = markLastAsAnswer && item.index === lastIndex;
-      const Content = () => (
+      const id = `text-${item.index}`;
+      const Content = bindContent(id, () => (
         <TextOutput
           text={item.text}
           index={item.index}
@@ -485,8 +506,8 @@ function createTextItems(
           searchBlockId={`${searchBlockPrefix}:text:${item.index}`}
           customMarkdownComponents={customMarkdownComponents}
         />
-      );
-      return {id: `text-${item.index}`, text: item.text, isAnswer, Content};
+      ));
+      return {id, text: item.text, isAnswer, Content};
     }),
   };
 }
