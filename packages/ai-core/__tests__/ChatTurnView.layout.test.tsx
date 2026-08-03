@@ -13,6 +13,10 @@ import type {UIMessage} from 'ai';
 import type {AiSliceState} from '../src/AiSlice';
 import type {ChatTurn} from '../src/chatTurns';
 import type {ChatActivityProps} from '../src/components/ChatRenderingContext';
+import type {
+  ChatHoistedOutputProps,
+  ChatTurnSlotProps,
+} from '../src/components/ChatRenderingContext';
 
 class ResizeObserverStub {
   observe() {}
@@ -64,16 +68,13 @@ jest.unstable_mockModule('../src/components/FlatAgentRenderer', () => ({
     item,
   }: {
     item: {toolCallId: string; toolName: string};
-  }) => (
-    <div data-testid={`${item.toolName}-renderer`}>{item.toolCallId}</div>
-  ),
+  }) => <div data-testid={`${item.toolName}-renderer`}>{item.toolCallId}</div>,
 }));
 
 const {ChatTurnView} = await import('../src/components/ChatTurnView');
 const {ChatRendering} = await import('../src/components/ChatRenderingContext');
-const {DefaultChatActivity} = await import(
-  '../src/components/defaultChatRendering'
-);
+const {DefaultChatActivity} =
+  await import('../src/components/defaultChatRendering');
 
 function createTurn(parts: UIMessage['parts']): ChatTurn {
   return {
@@ -201,7 +202,9 @@ describe('ChatTurnView layout', () => {
     expect(activityPos).toBeLessThan(summaryPos);
 
     // Default recipe has no Spatial activity product chrome.
-    expect(container.querySelector('[data-testid="spatial-agent-thoughts"]')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="spatial-agent-thoughts"]'),
+    ).toBeNull();
 
     cleanup(container, root);
   });
@@ -261,6 +264,89 @@ describe('ChatTurnView layout', () => {
     expect(
       container.querySelectorAll('[data-testid="outer-activity"]'),
     ).toHaveLength(0);
+
+    cleanup(container, root);
+  });
+
+  it('routes hoisted output through a partial slot override', () => {
+    const CustomHoistedOutput = ({item}: ChatHoistedOutputProps) => (
+      <div data-testid="custom-hoisted-output">{item.toolCallId}</div>
+    );
+
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      wrapping: (children) => (
+        <ChatRendering components={{HoistedOutput: CustomHoistedOutput}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(
+      Array.from(
+        container.querySelectorAll('[data-testid="custom-hoisted-output"]'),
+      ).map((element) => element.textContent),
+    ).toEqual(['list-1', 'chart-1']);
+
+    cleanup(container, root);
+  });
+
+  it('lets a custom Turn inspect semantics and reorder pre-wired regions', () => {
+    const CustomTurn = ({turn}: ChatTurnSlotProps) => {
+      const Prompt = turn.prompt.Content;
+      const Activity = turn.activity.Content;
+      const Response = turn.response.Content;
+      const HoistedOutputs = turn.hoistedOutputs.Content;
+      const Summary = turn.summary.Content;
+      const Actions = turn.actions.Content;
+      return (
+        <article
+          data-testid="custom-turn"
+          data-turn-id={turn.id}
+          data-tool-count={turn.activity.toolCount}
+          data-activity-kinds={turn.activity.items
+            .map((item) => item.kind)
+            .join(',')}
+          data-tool-states={turn.activity.items
+            .filter((item) => item.kind === 'tool')
+            .map((item) => item.state)
+            .join(',')}
+        >
+          <Prompt />
+          <Activity />
+          <Response />
+          <HoistedOutputs />
+          <Summary />
+          <Actions />
+        </article>
+      );
+    };
+
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      wrapping: (children) => (
+        <ChatRendering
+          nestedActivityMode="embed"
+          components={{Turn: CustomTurn}}
+        >
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    const customTurn = container.querySelector('[data-testid="custom-turn"]');
+    expect(customTurn?.getAttribute('data-turn-id')).toBe('user-1');
+    expect(customTurn?.getAttribute('data-tool-count')).toBe('2');
+    expect(customTurn?.getAttribute('data-activity-kinds')).toBe('tool,tool');
+    expect(customTurn?.getAttribute('data-tool-states')).toBe(
+      'success,success',
+    );
+    const text = customTurn?.textContent ?? '';
+    expect(text.indexOf('Listing datasets')).toBeLessThan(
+      text.indexOf('Response intro'),
+    );
+    expect(text.indexOf('Response intro')).toBeLessThan(text.indexOf('list-1'));
+    expect(text.indexOf('list-1')).toBeLessThan(text.indexOf('Final summary'));
 
     cleanup(container, root);
   });

@@ -1,4 +1,4 @@
-import type {ComponentType} from 'react';
+import type {ComponentType, ExoticComponent} from 'react';
 import type {
   AiRunContext,
   AiRunContextItem,
@@ -330,6 +330,10 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
+type RenderableComponent<TProps> =
+  | ComponentType<TProps>
+  | ExoticComponent<TProps>;
+
 /**
  * Component type inferred from a tool or from explicit output/input.
  * Tuple-wrapped so a union tool type does not distribute into a bare
@@ -338,15 +342,15 @@ type IsAny<T> = 0 extends 1 & T ? true : false;
  */
 type ToolRendererComponent<TToolOrOutput, TInput> =
   IsAny<TToolOrOutput> extends true
-    ? ComponentType<ToolRendererProps<any, any>>
+    ? RenderableComponent<ToolRendererProps<any, any>>
     : [TToolOrOutput] extends [Tool]
-      ? ComponentType<
+      ? RenderableComponent<
           ToolRendererProps<
             InferToolOutput<Extract<TToolOrOutput, Tool>>,
             InferToolInput<Extract<TToolOrOutput, Tool>>
           >
         >
-      : ComponentType<ToolRendererProps<TToolOrOutput, TInput>>;
+      : RenderableComponent<ToolRendererProps<TToolOrOutput, TInput>>;
 
 /**
  * A React component that renders the result of a tool call.
@@ -376,7 +380,8 @@ export type ToolRenderer<
 export type ToolRendererShouldHoist = (args: {
   output: unknown;
   input: unknown;
-  state: string;
+  /** Normalized tool-call state shared by top-level and nested calls. */
+  state: AgentToolCall['state'];
 }) => boolean;
 
 /** Registry mapping tool names to their renderer components. */

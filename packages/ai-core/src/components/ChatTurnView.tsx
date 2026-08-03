@@ -6,6 +6,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import type {ChatTurn} from '../chatTurns';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
+import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import type {AgentToolCall} from '../types';
 import {
   isDynamicToolPart,
@@ -19,10 +20,7 @@ import {
   getToolName,
   splitTextAroundHoists,
 } from './buildChatTurnModel';
-import {
-  bindDefaultChatRenderingComponents,
-  useChatRenderingComponents,
-} from './ChatRenderingContext';
+import {useChatRenderingComponents} from './ChatRenderingContext';
 import {
   markdownToPlainText,
   normalizeChatSearchQuery,
@@ -33,11 +31,8 @@ import {
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
-import {defaultChatRenderingComponents} from './defaultChatRendering';
-
-// Keep initialization explicit: ai-core is marked sideEffects:false, so a
-// side-effect-only import can be removed from production bundles.
-bindDefaultChatRenderingComponents(defaultChatRenderingComponents);
+import {createChatTurnPresentation} from './defaultChatRendering';
+import {useChatTurnContentBinder} from './useChatTurnContentBinder';
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
@@ -46,6 +41,14 @@ export type ChatTurnViewProps = {
   customMarkdownComponents?: Partial<Components>;
   hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
+};
+
+const HoistedToolTimingRecorder: React.FC<{
+  toolCallId: string;
+  isComplete: boolean;
+}> = ({toolCallId, isComplete}) => {
+  useToolTimingRecorder(toolCallId, isComplete);
+  return null;
 };
 
 export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
@@ -90,7 +93,8 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       isTextPart(part) || isReasoningPart(part) ? [part.text] : [],
     )
     .join('\n\n');
-  const hasTextContent = allTextContent.trim().length > 0;
+  const copyText =
+    allTextContent.trim().length > 0 ? allTextContent : undefined;
 
   const excludeList = useMemo(() => userTools ?? [], [userTools]);
   const hoistableSet = useMemo(() => new Set(excludeList), [excludeList]);
@@ -204,47 +208,93 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       ? `Computation Time: ${formatShortDuration(computationTimeMs)}`
       : undefined;
 
-  const onFork = canFork
-    ? () => {
-        forkSessionFromMessage({
-          sourceSessionId: currentSessionId,
-          sourceMessageId: forkSourceMessage.id,
-          sourceTurnId: chatTurn.id,
-          ...(forkSourceMessageIndex !== undefined &&
-          forkSourceMessageIndex >= 0
-            ? {sourceMessageIndex: forkSourceMessageIndex}
-            : {}),
-          ...(analysisResult?.id
-            ? {legacySourceAnalysisResultId: analysisResult.id}
-            : {}),
-        });
-      }
-    : undefined;
+  const onFork = useMemo(
+    () =>
+      canFork
+        ? () => {
+            forkSessionFromMessage({
+              sourceSessionId: currentSessionId,
+              sourceMessageId: forkSourceMessage.id,
+              sourceTurnId: chatTurn.id,
+              ...(forkSourceMessageIndex !== undefined &&
+              forkSourceMessageIndex >= 0
+                ? {sourceMessageIndex: forkSourceMessageIndex}
+                : {}),
+              ...(analysisResult?.id
+                ? {legacySourceAnalysisResultId: analysisResult.id}
+                : {}),
+            });
+          }
+        : undefined,
+    [
+      analysisResult,
+      canFork,
+      chatTurn,
+      currentSessionId,
+      forkSessionFromMessage,
+      forkSourceMessage,
+      forkSourceMessageIndex,
+    ],
+  );
+
+  const bindContent = useChatTurnContentBinder();
+
+  const turnPresentation = useMemo(
+    () =>
+      createChatTurnPresentation({
+        turnId,
+        model,
+        prompt,
+        isCompleted,
+        searchBlockPrefix,
+        customMarkdownComponents,
+        ErrorMessageComponent,
+        canFork,
+        onFork,
+        copyText,
+        errorMessage: errorMessage?.error,
+        activitySummaryLabel,
+        computationTimeMs,
+        computationTimeLabel,
+        responseText,
+        summaryText,
+        components,
+        bindContent,
+      }),
+    [
+      bindContent,
+      turnId,
+      model,
+      prompt,
+      isCompleted,
+      searchBlockPrefix,
+      customMarkdownComponents,
+      ErrorMessageComponent,
+      canFork,
+      onFork,
+      copyText,
+      errorMessage?.error,
+      activitySummaryLabel,
+      computationTimeMs,
+      computationTimeLabel,
+      responseText,
+      summaryText,
+      components,
+    ],
+  );
 
   return (
     <HoistedRenderersProvider value={excludeList}>
-      <Turn
-        chatTurn={chatTurn}
-        model={model}
-        prompt={prompt}
-        turnId={turnId}
-        isCompleted={isCompleted}
-        searchBlockPrefix={searchBlockPrefix}
-        hoistableToolNames={hoistableSet}
-        customMarkdownComponents={customMarkdownComponents}
-        ErrorMessageComponent={ErrorMessageComponent}
-        canFork={canFork}
-        onFork={onFork}
-        allTextContent={allTextContent}
-        hasTextContent={hasTextContent}
-        errorMessage={errorMessage?.error}
-        activitySummaryLabel={activitySummaryLabel}
-        computationTimeMs={computationTimeMs}
-        computationTimeLabel={computationTimeLabel}
-        responseText={responseText}
-        summaryText={summaryText}
-        components={components}
-      />
+      {model.activity.map((item) =>
+        item.kind === 'tool' && item.isHoisted ? (
+          <HoistedToolTimingRecorder
+            key={item.part.toolCallId}
+            toolCallId={item.part.toolCallId}
+            isComplete={item.state === 'success' || item.state === 'error'}
+          />
+        ) : null,
+      )}
+      <Turn turn={turnPresentation} />
     </HoistedRenderersProvider>
   );
 };

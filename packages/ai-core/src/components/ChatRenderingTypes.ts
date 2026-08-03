@@ -1,0 +1,207 @@
+import type {
+  ComponentType,
+  ExoticComponent,
+  PropsWithChildren,
+  ReactNode,
+} from 'react';
+import type {Components} from 'react-markdown';
+import type {AgentToolCall} from '../types';
+import type {ErrorMessageComponentProps} from './ErrorMessage';
+import type {ToolPartWithId} from './buildChatTurnModel';
+import type {HoistableToolCall} from './collectHoistableRenderers';
+
+type ChatComponentType<TProps = object> =
+  | ComponentType<TProps>
+  | ExoticComponent<TProps>;
+
+/** How nested agent activity is composed into turn-level activity. */
+export type ChatNestedActivityMode = 'own-boxes' | 'embed';
+
+/** Props for the user-prompt presentation slot. */
+export type ChatPromptProps = {
+  prompt: string;
+  searchBlockId: string;
+};
+
+/** Props for activity chrome around reasoning and tool activity. */
+export type ChatActivityProps = {
+  children: ReactNode;
+  isRunning: boolean;
+  isCompleted: boolean;
+  toolCount: number;
+  /** Presentation-ready summary, e.g. "Worked with 4 tools". */
+  summaryLabel?: string;
+  /** Aggregated tool runtime in milliseconds, when available. */
+  computationTimeMs?: number;
+  /** Presentation-ready timing label, e.g. "Computation Time: 12.4 s". */
+  computationTimeLabel?: string;
+  className?: string;
+};
+
+/** Props for a reasoning disclosure slot. */
+export type ChatReasoningProps = {
+  text: string;
+  isRunning: boolean;
+  searchBlockId: string;
+};
+
+/** Props for an assistant text-output slot. */
+export type ChatTextOutputProps = {
+  text: string;
+  index: number;
+  isAnswer: boolean;
+  searchBlockId: string;
+  customMarkdownComponents?: Partial<Components>;
+};
+
+/** Props for one tool or nested-agent activity slot. */
+export type ChatToolActivityProps = {
+  part: ToolPartWithId;
+  index: number;
+  isAgent: boolean;
+  /** True when this call's rich UI is rendered in a hoisted region. */
+  isHoisted: boolean;
+  searchBlockId: string;
+};
+
+/** Props for one rich tool output in a hoisted region. */
+export type ChatHoistedOutputProps = {
+  item: HoistableToolCall;
+};
+
+/** Props for turn-level actions and error presentation. */
+export type ChatActionsProps = {
+  /** Text copied by the default action UI. Omitted when there is no text. */
+  copyText?: string;
+  canFork: boolean;
+  onFork?: () => void;
+  errorMessage?: string;
+  ErrorMessageComponent?: ChatComponentType<ErrorMessageComponentProps>;
+};
+
+/** Normalized state exposed for tool activity presentation. */
+export type ChatToolState = AgentToolCall['state'];
+
+/** Prompt semantics plus its pre-wired rendering component. */
+export type ChatPromptRegion = {
+  text: string;
+  Content: ChatComponentType;
+};
+
+/** One semantic activity item with pre-wired leaf rendering. */
+export type ChatActivityItem =
+  | {
+      id: string;
+      kind: 'reasoning';
+      text: string;
+      Content: ChatComponentType;
+    }
+  | {
+      id: string;
+      kind: 'tool';
+      toolName: string;
+      state: ChatToolState;
+      isAgent: boolean;
+      isHoisted: boolean;
+      Content: ChatComponentType;
+    };
+
+/** Activity semantics plus aggregated pre-wired rendering. */
+export type ChatActivityRegion = {
+  isRunning: boolean;
+  toolCount: number;
+  computationTimeMs?: number;
+  items: readonly ChatActivityItem[];
+  Content: ChatComponentType;
+};
+
+/** One assistant text item with pre-wired markdown rendering. */
+export type ChatTextItem = {
+  id: string;
+  text: string;
+  isAnswer: boolean;
+  Content: ChatComponentType;
+};
+
+/** A response or summary text region. */
+export type ChatTextRegion = {
+  items: readonly ChatTextItem[];
+  Content: ChatComponentType;
+};
+
+/** One hoisted tool output with pre-wired rich rendering. */
+export type ChatOutputItem = {
+  id: string;
+  toolName: string;
+  state: ChatToolState;
+  Content: ChatComponentType;
+};
+
+/** Hoisted tool outputs for a turn. */
+export type ChatOutputRegion = {
+  items: readonly ChatOutputItem[];
+  Content: ChatComponentType;
+};
+
+/** Action capabilities plus the pre-wired action UI. */
+export type ChatActionsRegion = {
+  canCopy: boolean;
+  canFork: boolean;
+  errorMessage?: string;
+  Content: ChatComponentType;
+};
+
+/** SQLRooms' pre-wired source-order body. */
+export type ChatTimelineRegion = {
+  Content: ChatComponentType;
+};
+
+/**
+ * Semantic data and pre-wired rendering for one turn. Custom layouts may use
+ * either level without rebuilding search ids, slot props, or hoist decisions.
+ */
+export type ChatTurnPresentation = {
+  id: string;
+  isCompleted: boolean;
+  prompt: ChatPromptRegion;
+  activity: ChatActivityRegion;
+  response: ChatTextRegion;
+  hoistedOutputs: ChatOutputRegion;
+  summary: ChatTextRegion;
+  actions: ChatActionsRegion;
+  timeline: ChatTimelineRegion;
+};
+
+/** Props for a full turn layout recipe. */
+export type ChatTurnSlotProps = {
+  turn: ChatTurnPresentation;
+};
+
+/** Component slots that define a chat presentation recipe. */
+export type ChatRenderingComponents = {
+  Turn: ChatComponentType<ChatTurnSlotProps>;
+  Prompt: ChatComponentType<ChatPromptProps>;
+  Activity: ChatComponentType<ChatActivityProps>;
+  Reasoning: ChatComponentType<ChatReasoningProps>;
+  TextOutput: ChatComponentType<ChatTextOutputProps>;
+  ToolActivity: ChatComponentType<ChatToolActivityProps>;
+  HoistedOutput: ChatComponentType<ChatHoistedOutputProps>;
+  Actions: ChatComponentType<ChatActionsProps>;
+};
+
+/** Resolved chat rendering recipe stored in context. */
+export type ChatRenderingValue = {
+  components: ChatRenderingComponents;
+  nestedActivityMode: ChatNestedActivityMode;
+};
+
+/** Props for {@link ChatRendering}. */
+export type ChatRenderingProps = PropsWithChildren<{
+  /**
+   * Partial presentation overrides. Missing slots inherit SQLRooms defaults
+   * or the nearest parent recipe.
+   */
+  components?: Partial<ChatRenderingComponents>;
+  /** Controls whether nested agents own activity boxes or embed in the turn. */
+  nestedActivityMode?: ChatNestedActivityMode;
+}>;

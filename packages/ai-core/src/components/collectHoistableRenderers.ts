@@ -24,9 +24,13 @@ export type HoistableToolCall = {
  */
 export function toolRendererAllowsHoist(
   renderer: ToolRenderer<any> | undefined,
-  args: {output: unknown; input: unknown; state: string},
+  args: {
+    output: unknown;
+    input: unknown;
+    state: AgentToolCall['state'];
+  },
 ): boolean {
-  if (!renderer || typeof renderer !== 'function') return false;
+  if (!renderer) return false;
   const shouldHoist = renderer.shouldHoist;
   if (typeof shouldHoist !== 'function') return true;
   return shouldHoist(args);

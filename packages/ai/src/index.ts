@@ -217,6 +217,17 @@ export type {
   ChatRenderingComponents,
   ChatNestedActivityMode,
   ChatTurnSlotProps,
+  ChatTurnPresentation,
+  ChatPromptRegion,
+  ChatActivityRegion,
+  ChatActivityItem,
+  ChatTextRegion,
+  ChatTextItem,
+  ChatOutputRegion,
+  ChatOutputItem,
+  ChatActionsRegion,
+  ChatTimelineRegion,
+  ChatToolState,
   ChatPromptProps,
   ChatActivityProps,
   ChatReasoningProps,
@@ -239,6 +250,7 @@ export {
   buildChatTurnModel,
   buildChatTurnRenderPlan,
   HoistedToolCallRenderer,
+  defaultChatRenderingComponents,
 } from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
 export {

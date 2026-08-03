@@ -10,10 +10,13 @@ import {
 } from '@sqlrooms/ui';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
-import type {AgentToolCall} from '../types';
+import type {AgentToolCall, ToolRendererRegistry} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 import {isDynamicToolPart, isToolPart} from '../utils';
-import {useChatNestedActivityMode} from './ChatRenderingContext';
+import {
+  useOptionalChatRendering,
+  useResolvedChatNestedActivityMode,
+} from './ChatRenderingContextBase';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
 import {
@@ -102,13 +105,12 @@ function isToolNameHoisted(
   toolName: string,
   toolCall: Pick<AgentToolCall, 'output' | 'input' | 'state'>,
   hoistableSet: ReadonlySet<string>,
-  toolRenderers: Record<string, unknown>,
+  toolRenderers: ToolRendererRegistry,
 ): boolean {
   const renderer = toolRenderers[toolName];
   return (
     hoistableSet.has(toolName) &&
-    typeof renderer === 'function' &&
-    toolRendererAllowsHoist(renderer as never, {
+    toolRendererAllowsHoist(renderer, {
       output: toolCall.output,
       input: toolCall.input,
       state: toolCall.state,
@@ -343,7 +345,7 @@ export const HoistedToolCallRenderer: React.FC<{
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const ToolComponent = toolRenderers[item.toolName];
 
-  if (!ToolComponent || typeof ToolComponent !== 'function') return null;
+  if (!ToolComponent) return null;
 
   const isApproval = item.state === 'approval-requested';
   if (item.state !== 'success' && !isApproval) return null;
@@ -452,7 +454,7 @@ const FlatSegmentList: React.FC<{
   segments: FlatSegment[];
   agentProgress: Record<string, AgentToolCall[]>;
   hoistableSet: ReadonlySet<string>;
-  toolRenderers: Record<string, unknown>;
+  toolRenderers: ToolRendererRegistry;
   isPassthroughTool?: (tc: AgentToolCall) => boolean;
   isAgentComplete?: boolean;
   /** When true, omit nested ActivityBoxes and local hoisted UI. */
@@ -466,6 +468,9 @@ const FlatSegmentList: React.FC<{
   isAgentComplete,
   embedInParentActivity = false,
 }) => {
+  const rendering = useOptionalChatRendering();
+  const HoistedOutput =
+    rendering?.components.HoistedOutput ?? HoistedToolCallRenderer;
   return (
     <>
       {segments.map((seg, idx) => {
@@ -489,7 +494,7 @@ const FlatSegmentList: React.FC<{
               toolRenderers,
             );
             const hasInlineRenderer =
-              !isHoisted && typeof toolRenderers[tc.toolName] === 'function';
+              !isHoisted && !!toolRenderers[tc.toolName];
             return (
               <React.Fragment key={tc.toolCallId}>
                 <ActivityLogLine toolCall={tc} />
@@ -530,7 +535,7 @@ const FlatSegmentList: React.FC<{
                 );
                 if (!isHoisted) return null;
                 return (
-                  <HoistedToolCallRenderer
+                  <HoistedOutput
                     key={`hoisted-${tc.toolCallId}`}
                     item={{
                       toolCallId: tc.toolCallId,
@@ -721,7 +726,7 @@ export const FlatAgentRenderer: React.FC<{
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
   const hoistedRendererNames = useHoistedRenderers();
-  const nestedActivityMode = useChatNestedActivityMode();
+  const nestedActivityMode = useResolvedChatNestedActivityMode();
   const {isPassthroughTool} = useToolRenderBehavior();
   const embedInParentActivity = nestedActivityMode === 'embed';
 

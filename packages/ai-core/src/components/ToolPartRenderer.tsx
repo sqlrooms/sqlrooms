@@ -145,7 +145,7 @@ export const ToolPartRenderer = ({
   ) {
     return (
       <div>
-        {ToolComponent && typeof ToolComponent === 'function' && (
+        {ToolComponent && (
           <ToolComponent
             output={output}
             input={input}
@@ -188,9 +188,7 @@ export const ToolPartRenderer = ({
               errorText={errorText}
             />
           ) : hideToolCallInfo ? (
-            ToolComponent &&
-            typeof ToolComponent === 'function' &&
-            state === 'output-available' ? (
+            ToolComponent && state === 'output-available' ? (
               <ToolComponent
                 output={output}
                 input={input}

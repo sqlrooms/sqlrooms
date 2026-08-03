@@ -111,16 +111,16 @@ Each `ChatTurnView` builds the turn's semantic model (what happened, in what
 order, what is hoistable / running / completed), then asks the nearest
 `Chat.Rendering` recipe to present it. The recipe is a map of slot components:
 
-| Slot | Role |
-| --- | --- |
-| `Turn` | Full turn layout recipe — decides regional order and which leaf slots to mount |
-| `Prompt` | User prompt chrome for the turn |
-| `Activity` | Collapsible / status chrome around in-progress work |
-| `Reasoning` | Model thinking / reasoning disclosure |
-| `ToolActivity` | One tool (or nested agent) line inside Activity |
-| `TextOutput` | Assistant text / markdown answer regions |
-| `HoistedOutput` | Rich tool UI lifted out of the activity stream |
-| `Actions` | Per-turn actions (copy, fork, errors) |
+| Slot            | Role                                                          |
+| --------------- | ------------------------------------------------------------- |
+| `Turn`          | Full turn layout recipe — composes pre-wired semantic regions |
+| `Prompt`        | User prompt chrome for the turn                               |
+| `Activity`      | Collapsible / status chrome around in-progress work           |
+| `Reasoning`     | Model thinking / reasoning disclosure                         |
+| `ToolActivity`  | One tool (or nested agent) line inside Activity               |
+| `TextOutput`    | Assistant text / markdown answer regions                      |
+| `HoistedOutput` | Rich tool UI lifted out of the activity stream                |
+| `Actions`       | Per-turn actions (copy, fork, errors)                         |
 
 Composition looks like this:
 
@@ -129,13 +129,12 @@ Chat
 └─ Chat.Rendering          ← optional; supplies / merges slot components
    └─ Chat.Messages        ← lists turns from the session
       └─ ChatTurnView      ← builds semantic model, then renders Turn
-         └─ Turn           ← layout recipe (default or custom)
+         └─ Turn           ← composes pre-wired regions
             ├─ Prompt
-            ├─ Activity
-            │  ├─ Reasoning
-            │  └─ ToolActivity
-            ├─ TextOutput
-            ├─ HoistedOutput
+            ├─ Timeline    ← default source-order body
+            ├─ Activity    ← aggregated activity for custom layouts
+            ├─ Response / Summary
+            ├─ HoistedOutputs
             └─ Actions
 ```
 
@@ -145,9 +144,9 @@ So:
   subtree (or nest providers to layer overrides).
 - Override leaf slots (`Prompt`, `Reasoning`, …) when you only need different
   look for those regions; `Turn` keeps deciding where they appear.
-- Override `Turn` when the regional structure itself must change; a custom
-  `Turn` still receives the resolved `components` map and should compose the
-  leaf slots rather than hard-coding every region.
+- Override `Turn` when the regional structure itself must change. It receives
+  pre-wired region components, so it can reorder or omit regions without
+  rebuilding search ids, tool classification, or leaf-slot props.
 
 Without a `Chat.Rendering` ancestor, `ChatTurnView` uses the built-in SQLRooms
 defaults for every slot.
@@ -198,7 +197,7 @@ function AppPrompt({prompt, searchBlockId}: ChatPromptProps) {
 
 <Chat.Rendering components={{Prompt: AppPrompt}}>
   <Chat.Messages />
-</Chat.Rendering>
+</Chat.Rendering>;
 ```
 
 **Reasoning look only** — change thinking disclosure while keeping default
@@ -218,7 +217,7 @@ function AppReasoning({text, isRunning}: ChatReasoningProps) {
 
 <Chat.Rendering components={{Reasoning: AppReasoning}}>
   <Chat.Messages />
-</Chat.Rendering>
+</Chat.Rendering>;
 ```
 
 You can combine any of these in one map, e.g.
@@ -229,79 +228,29 @@ You can combine any of these in one map, e.g.
 Override `Turn` when you need a different regional order or structure (for
 example activity → response → hoisted → summary). Pair with
 `nestedActivityMode="embed"` when nested agents should contribute log lines
-into the parent Activity instead of creating their own boxes. The turn recipe
-receives a resolved `components` map so you can still compose the default (or
-overridden) leaf slots (`Prompt`, `Activity`, `Reasoning`, …) instead of
-reimplementing every region:
+into the parent Activity instead of creating their own boxes. Each region
+exposes semantic data and a pre-wired `Content` component, so custom layouts
+can inspect status and items without rebuilding search, tool, or hoist wiring:
 
 ```tsx
-import {
-  Chat,
-  type ChatTurnSlotProps,
-} from '@sqlrooms/ai-core';
+import {Chat, type ChatTurnSlotProps} from '@sqlrooms/ai-core';
 
-function AppChatTurn({
-  model,
-  prompt,
-  isCompleted,
-  searchBlockPrefix,
-  responseText,
-  summaryText,
-  components,
-  // …other ChatTurnSlotProps as needed
-}: ChatTurnSlotProps) {
-  const {Prompt, Activity, Reasoning, TextOutput, ToolActivity, Actions} =
-    components;
+function AppChatTurn({turn}: ChatTurnSlotProps) {
+  const Prompt = turn.prompt.Content;
+  const Activity = turn.activity.Content;
+  const Response = turn.response.Content;
+  const HoistedOutputs = turn.hoistedOutputs.Content;
+  const Summary = turn.summary.Content;
+  const Actions = turn.actions.Content;
 
   return (
-    <article>
-      <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
-
-      {model.activity.length > 0 && (
-        <Activity
-          isRunning={model.isActivityRunning}
-          isCompleted={isCompleted}
-          toolCount={model.leafToolCount}
-        >
-          {model.activity.map((item) =>
-            item.kind === 'reasoning' ? (
-              <Reasoning
-                key={`reasoning-${item.index}`}
-                text={item.text}
-                isRunning={!isCompleted}
-                searchBlockId={`${searchBlockPrefix}:reasoning:${item.index}`}
-              />
-            ) : (
-              <ToolActivity
-                key={`tool-${item.part.toolCallId}`}
-                part={item.part}
-                index={item.index}
-                isAgent={item.isAgent}
-                isHoisted={item.isHoisted}
-                searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
-              />
-            ),
-          )}
-        </Activity>
-      )}
-
-      {[...responseText, ...summaryText].map((item) => (
-        <TextOutput
-          key={`text-${item.index}`}
-          text={item.text}
-          index={item.index}
-          isAnswer={false}
-          searchBlockId={`${searchBlockPrefix}:text:${item.index}`}
-        />
-      ))}
-
-      <Actions
-        hasTextContent={responseText.length + summaryText.length > 0}
-        allTextContent={[...responseText, ...summaryText]
-          .map((item) => item.text)
-          .join('\n')}
-        canFork={false}
-      />
+    <article data-turn-id={turn.id} aria-busy={!turn.isCompleted}>
+      <Prompt />
+      <Activity />
+      <Response />
+      <HoistedOutputs />
+      <Summary />
+      <Actions />
     </article>
   );
 }
@@ -311,7 +260,26 @@ function AppChatTurn({
   components={{Turn: AppChatTurn, Prompt: AppPrompt, Reasoning: AppReasoning}}
 >
   <Chat.Messages />
-</Chat.Rendering>
+</Chat.Rendering>;
+```
+
+For finer composition, iterate semantic items and render their pre-wired leaf
+components. Tool items expose state, agent, and hoist metadata:
+
+```tsx
+function AppActivity({turn}: ChatTurnSlotProps) {
+  return turn.activity.items.map((item) => {
+    const Content = item.Content;
+    return (
+      <section
+        key={item.id}
+        data-state={item.kind === 'tool' ? item.state : undefined}
+      >
+        <Content />
+      </section>
+    );
+  });
+}
 ```
 
 Pair a custom `Turn` with leaf-slot overrides as needed. Prefer keeping the
