@@ -242,7 +242,9 @@ describe('Chat.Search', () => {
 
     function SearchConsumer() {
       useChatSearch();
-      consumerRenderCount += 1;
+      React.useEffect(() => {
+        consumerRenderCount += 1;
+      });
       return null;
     }
 
