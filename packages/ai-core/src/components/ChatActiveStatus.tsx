@@ -177,7 +177,7 @@ function hasVisibleProgress(part: AnyUIMessagePart): boolean {
     return Boolean((part as {text?: string}).text?.trim());
   }
   if (part.type === 'reasoning') {
-    return Boolean((part as {reasoning?: string}).reasoning?.trim());
+    return Boolean((part as {text?: string}).text?.trim());
   }
   if (isToolPart(part)) {
     const state = (part as {state?: string}).state;

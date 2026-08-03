@@ -15,6 +15,7 @@ import {
   getConfiguredTimeoutMs,
   getPendingClientToolCalls,
   getPendingClientToolTimeouts,
+  getSessionAgentProgressSignal,
 } from '../timeouts';
 
 export type {AddToolOutput} from '../types';
@@ -72,6 +73,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   );
   const endPoint = useStoreWithAi((s) => s.ai.chatEndPoint);
   const headers = useStoreWithAi((s) => s.ai.chatHeaders);
+  const usesRemoteTransport = (endPoint || '').trim().length > 0;
 
   // Get chat handlers
   const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
@@ -162,12 +164,18 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     onError: (error) =>
       onChatError?.(sessionId, error, latestMessagesRef.current),
   });
+  const sessionAgentProgressSignal = useMemo(
+    () => getSessionAgentProgressSignal(messages as UIMessage[], agentProgress),
+    [agentProgress, messages],
+  );
 
-  // Fail no-execute tools that never provide client-side output. Executable
+  // Fail tools that never provide expected client-side output. Local executable
   // tools are timed out in the local agent transport instead.
   useEffect(() => {
     const pending = currentSession?.isRunning
-      ? getPendingClientToolTimeouts(messages as UIMessage[], tools, timeouts)
+      ? getPendingClientToolTimeouts(messages as UIMessage[], tools, timeouts, {
+          includeExecutableTools: usesRemoteTransport,
+        })
       : [];
     const pendingIds = new Set(pending.map(({toolCallId}) => toolCallId));
 
@@ -194,7 +202,14 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
       }, timeoutMs);
       clientToolTimeoutsRef.current.set(toolCallId, {timeoutId, timeoutMs});
     }
-  }, [addToolOutput, currentSession?.isRunning, messages, timeouts, tools]);
+  }, [
+    addToolOutput,
+    currentSession?.isRunning,
+    messages,
+    timeouts,
+    tools,
+    usesRemoteTransport,
+  ]);
 
   useEffect(
     () => () => {
@@ -210,12 +225,14 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   // a silent-but-healthy operation from a stuck one, so the watchdog is opt-in.
   useEffect(() => {
     // Re-arm the watchdog whenever a nested agent reports observable progress.
-    void agentProgress;
+    void sessionAgentProgressSignal;
     const timeoutMs = getConfiguredTimeoutMs(timeouts.idleStreamMs);
     const uiMessages = messages as UIMessage[];
     const isWaitingForApproval = hasPendingToolApproval(uiMessages);
     const isWaitingForClientTool =
-      getPendingClientToolCalls(uiMessages, tools).length > 0;
+      getPendingClientToolCalls(uiMessages, tools, {
+        includeExecutableTools: usesRemoteTransport,
+      }).length > 0;
     if (
       !currentSession?.isRunning ||
       timeoutMs == null ||
@@ -239,15 +256,16 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     }, timeoutMs);
     return () => clearTimeout(timeoutId);
   }, [
-    agentProgress,
     currentSession?.isRunning,
     getAbortController,
     messages,
     persistTimedOutSession,
+    sessionAgentProgressSignal,
     sessionId,
     stop,
     timeouts.idleStreamMs,
     tools,
+    usesRemoteTransport,
   ]);
 
   // If user aborts mid-stream, stop the local chat stream immediately

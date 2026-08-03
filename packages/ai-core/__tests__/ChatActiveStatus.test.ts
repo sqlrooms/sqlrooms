@@ -25,7 +25,7 @@ describe('getChatActiveStatus', () => {
       getChatActiveStatus([
         message('user', [{type: 'text', text: 'think'}]),
         message('assistant', [
-          {type: 'reasoning', reasoning: 'Considering options'},
+          {type: 'reasoning', text: 'Considering options'},
         ] as UIMessage['parts']),
       ]),
     ).toMatchObject({label: 'Continuing analysis…', kind: 'model'});

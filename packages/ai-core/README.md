@@ -130,8 +130,9 @@ approval. A silent operation that is still working is indistinguishable from a
 stalled operation, so idle timeouts should remain conservative. Tool timeouts
 abort the signal passed to the tool and fail its pending call; tools should
 honor `abortSignal` to stop their underlying work promptly. Local executable
-tools and no-execute tools awaiting client output are covered; remote endpoints
-remain responsible for enforcing timeouts around tools they execute server-side.
+tools and registered tools awaiting client output are covered, including hybrid
+client tools whose remote definition omits `execute`. Remote endpoints remain
+responsible for enforcing timeouts around tools they execute server-side.
 
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's

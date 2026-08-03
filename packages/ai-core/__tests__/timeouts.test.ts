@@ -5,6 +5,7 @@ import {
   ChatTimeoutError,
   getPendingClientToolCalls,
   getPendingClientToolTimeouts,
+  getSessionAgentProgressSignal,
   getToolExecutionTimeoutMs,
 } from '../src/timeouts';
 import {mergeAbortSignals} from '../src/utils';
@@ -86,6 +87,109 @@ describe('AI timeouts', () => {
     ).toEqual([
       {toolName: 'clientChart', toolCallId: 'client-1', timeoutMs: 1_000},
     ]);
+  });
+
+  it('includes registered executable client tools for remote transports', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-hybridWeather',
+            toolCallId: 'hybrid-1',
+            state: 'input-available',
+            input: {},
+          },
+          {
+            type: 'tool-remoteOnly',
+            toolCallId: 'remote-1',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+    ];
+
+    expect(
+      getPendingClientToolCalls(
+        messages,
+        {hybridWeather: {execute: async () => ({})}},
+        {includeExecutableTools: true},
+      ),
+    ).toEqual([{toolName: 'hybridWeather', toolCallId: 'hybrid-1'}]);
+    expect(
+      getPendingClientToolTimeouts(
+        messages,
+        {hybridWeather: {execute: async () => ({})}},
+        {toolExecutionMs: 1_000},
+        {includeExecutableTools: true},
+      ),
+    ).toEqual([
+      {toolName: 'hybridWeather', toolCallId: 'hybrid-1', timeoutMs: 1_000},
+    ]);
+  });
+
+  it('scopes agent progress signals to tool calls reachable from the session', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent',
+            toolCallId: 'session-root',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+    ];
+    const relevantProgress = {
+      'session-root': [
+        {
+          toolCallId: 'nested-agent',
+          toolName: 'agent-researcher',
+          state: 'pending' as const,
+        },
+      ],
+      'nested-agent': [
+        {
+          toolCallId: 'nested-query',
+          toolName: 'query',
+          state: 'pending' as const,
+        },
+      ],
+    };
+    const initialSignal = getSessionAgentProgressSignal(messages, {
+      ...relevantProgress,
+      'other-session': [],
+    });
+
+    expect(
+      getSessionAgentProgressSignal(messages, {
+        ...relevantProgress,
+        'other-session': [
+          {
+            toolCallId: 'unrelated-query',
+            toolName: 'query',
+            state: 'success',
+          },
+        ],
+      }),
+    ).toBe(initialSignal);
+    expect(
+      getSessionAgentProgressSignal(messages, {
+        ...relevantProgress,
+        'nested-agent': [
+          {
+            toolCallId: 'nested-query',
+            toolName: 'query',
+            state: 'success',
+          },
+        ],
+      }),
+    ).not.toBe(initialSignal);
   });
 
   it('aborts and rejects executable tools at their configured limit', async () => {

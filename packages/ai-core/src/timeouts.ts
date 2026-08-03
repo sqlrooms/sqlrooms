@@ -1,5 +1,5 @@
 import type {UIMessage} from 'ai';
-import type {StoredToolSet} from './types';
+import type {AgentToolCall, StoredToolSet} from './types';
 
 /** Opt-in timeout limits for chat runs and tool execution. */
 export type AiTimeoutOptions = {
@@ -102,10 +102,17 @@ export type PendingClientToolTimeout = PendingClientToolCall & {
   timeoutMs: number;
 };
 
-/** Finds no-execute tools that are waiting for client-side output. */
+/** Controls how pending client-output tool calls are detected. */
+export type PendingClientToolCallOptions = {
+  /** Treat registered executable tools as client tools for remote transports. */
+  includeExecutableTools?: boolean;
+};
+
+/** Finds registered tools that are waiting for client-side output. */
 export function getPendingClientToolCalls(
   messages: UIMessage[],
   tools: StoredToolSet,
+  options: PendingClientToolCallOptions = {},
 ): PendingClientToolCall[] {
   const latestParts = new Map<
     string,
@@ -140,7 +147,7 @@ export function getPendingClientToolCalls(
     if (
       part.state !== 'input-available' ||
       !registeredTool ||
-      registeredTool.execute
+      (registeredTool.execute && !options.includeExecutableTools)
     ) {
       continue;
     }
@@ -154,11 +161,74 @@ export function getPendingClientToolTimeouts(
   messages: UIMessage[],
   tools: StoredToolSet,
   options: AiTimeoutOptions | undefined,
+  clientToolOptions: PendingClientToolCallOptions = {},
 ): PendingClientToolTimeout[] {
-  return getPendingClientToolCalls(messages, tools).flatMap((pending) => {
-    const timeoutMs = getToolExecutionTimeoutMs(options, pending.toolName);
-    return timeoutMs == null ? [] : [{...pending, timeoutMs}];
-  });
+  return getPendingClientToolCalls(messages, tools, clientToolOptions).flatMap(
+    (pending) => {
+      const timeoutMs = getToolExecutionTimeoutMs(options, pending.toolName);
+      return timeoutMs == null ? [] : [{...pending, timeoutMs}];
+    },
+  );
+}
+
+/**
+ * Returns a stable signal for agent progress reachable from the given messages.
+ * Progress owned by other sessions does not affect the result.
+ */
+export function getSessionAgentProgressSignal(
+  messages: UIMessage[],
+  agentProgress: Record<string, AgentToolCall[]>,
+): string {
+  const reachableToolCallIds = new Set<string>();
+
+  for (const message of messages) {
+    for (const part of message.parts ?? []) {
+      const toolCallId = (part as {toolCallId?: unknown}).toolCallId;
+      if (typeof toolCallId === 'string') {
+        reachableToolCallIds.add(toolCallId);
+      }
+    }
+  }
+
+  let foundReachableProgress = true;
+  while (foundReachableProgress) {
+    foundReachableProgress = false;
+    for (const [parentToolCallId, toolCalls] of Object.entries(agentProgress)) {
+      if (!reachableToolCallIds.has(parentToolCallId)) continue;
+      for (const toolCall of toolCalls) {
+        foundReachableProgress =
+          addAgentToolCallIds(reachableToolCallIds, toolCall) ||
+          foundReachableProgress;
+      }
+    }
+  }
+
+  return JSON.stringify(
+    Object.entries(agentProgress)
+      .filter(([parentToolCallId]) =>
+        reachableToolCallIds.has(parentToolCallId),
+      )
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+function addAgentToolCallIds(
+  toolCallIds: Set<string>,
+  toolCall: AgentToolCall,
+): boolean {
+  let foundNewToolCall = false;
+
+  if (!toolCallIds.has(toolCall.toolCallId)) {
+    toolCallIds.add(toolCall.toolCallId);
+    foundNewToolCall = true;
+  }
+
+  for (const nestedCall of toolCall.agentToolCalls ?? []) {
+    foundNewToolCall =
+      addAgentToolCallIds(toolCallIds, nestedCall) || foundNewToolCall;
+  }
+
+  return foundNewToolCall;
 }
 
 function formatTimeoutDuration(timeoutMs: number): string {
