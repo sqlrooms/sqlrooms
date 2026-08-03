@@ -3,13 +3,13 @@
  */
 import {TransformStream} from 'node:stream/web';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
+import React from 'react';
 import type {AgentToolCall, ToolRendererRegistry} from '../src/types';
 
 Object.assign(globalThis, {TransformStream});
 
-const {buildChatTurnRenderPlan} = await import(
-  '../src/components/buildChatTurnRenderPlan'
-);
+const {buildChatTurnRenderPlan} =
+  await import('../src/components/buildChatTurnRenderPlan');
 
 const chartRenderer = () => null;
 const listRenderer = () => null;
@@ -156,9 +156,7 @@ describe('buildChatTurnRenderPlan', () => {
     ]);
     expect(plan.leafToolCount).toBe(3);
     expect(plan.responseText.map((t) => t.text)).toEqual(['I will analyze']);
-    expect(plan.summaryText.map((t) => t.text)).toEqual([
-      'Summary after map',
-    ]);
+    expect(plan.summaryText.map((t) => t.text)).toEqual(['Summary after map']);
   });
 
   it('uses live agentProgress over persisted nested calls', () => {
@@ -513,5 +511,40 @@ describe('buildChatTurnRenderPlan', () => {
     });
 
     expect(plan.hoisted.map((h) => h.toolCallId)).toEqual(['chart-1']);
+  });
+
+  it('supports memoized tool renderers and normalizes shouldHoist state', () => {
+    const states: string[] = [];
+    const memoizedRenderer = Object.assign(
+      React.memo(function MemoizedRenderer() {
+        return null;
+      }),
+      {
+        shouldHoist: ({state}: {state: string}) => {
+          states.push(state);
+          return state === 'success';
+        },
+      },
+    );
+    const renderers: ToolRendererRegistry = {
+      ...toolRenderers,
+      memoized: memoizedRenderer,
+    };
+
+    const plan = buildChatTurnRenderPlan({
+      parts: [
+        toolPart('memoized', {
+          toolCallId: 'memoized-1',
+          state: 'output-available',
+          output: {ok: true},
+        }),
+      ],
+      agentProgress: {},
+      toolRenderers: renderers,
+      hoistableToolNames: new Set(['memoized']),
+    });
+
+    expect(plan.hoisted.map((item) => item.toolCallId)).toEqual(['memoized-1']);
+    expect(states).toEqual(['success']);
   });
 });

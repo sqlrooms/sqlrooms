@@ -19,10 +19,7 @@ import {
   getToolName,
   splitTextAroundHoists,
 } from './buildChatTurnModel';
-import {
-  bindDefaultChatRenderingComponents,
-  useChatRenderingComponents,
-} from './ChatRenderingContext';
+import {useChatRenderingComponents} from './ChatRenderingContext';
 import {
   markdownToPlainText,
   normalizeChatSearchQuery,
@@ -33,11 +30,7 @@ import {
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {HoistedRenderersProvider} from './HoistedRenderersContext';
 import {processMessageContent} from './MessageContent';
-import {defaultChatRenderingComponents} from './defaultChatRendering';
-
-// Keep initialization explicit: ai-core is marked sideEffects:false, so a
-// side-effect-only import can be removed from production bundles.
-bindDefaultChatRenderingComponents(defaultChatRenderingComponents);
+import {createChatTurnRegions} from './defaultChatRendering';
 
 export type ChatTurnViewProps = {
   /** @deprecated Prefer `chatTurn`; this accepts the legacy derived result shape. */
@@ -204,47 +197,113 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       ? `Computation Time: ${formatShortDuration(computationTimeMs)}`
       : undefined;
 
-  const onFork = canFork
-    ? () => {
-        forkSessionFromMessage({
-          sourceSessionId: currentSessionId,
-          sourceMessageId: forkSourceMessage.id,
-          sourceTurnId: chatTurn.id,
-          ...(forkSourceMessageIndex !== undefined &&
-          forkSourceMessageIndex >= 0
-            ? {sourceMessageIndex: forkSourceMessageIndex}
-            : {}),
-          ...(analysisResult?.id
-            ? {legacySourceAnalysisResultId: analysisResult.id}
-            : {}),
-        });
-      }
-    : undefined;
+  const onFork = useMemo(
+    () =>
+      canFork
+        ? () => {
+            forkSessionFromMessage({
+              sourceSessionId: currentSessionId,
+              sourceMessageId: forkSourceMessage.id,
+              sourceTurnId: chatTurn.id,
+              ...(forkSourceMessageIndex !== undefined &&
+              forkSourceMessageIndex >= 0
+                ? {sourceMessageIndex: forkSourceMessageIndex}
+                : {}),
+              ...(analysisResult?.id
+                ? {legacySourceAnalysisResultId: analysisResult.id}
+                : {}),
+            });
+          }
+        : undefined,
+    [
+      analysisResult,
+      canFork,
+      chatTurn,
+      currentSessionId,
+      forkSessionFromMessage,
+      forkSourceMessage,
+      forkSourceMessageIndex,
+    ],
+  );
+
+  const regions = useMemo(
+    () =>
+      createChatTurnRegions({
+        model,
+        prompt,
+        isCompleted,
+        searchBlockPrefix,
+        customMarkdownComponents,
+        ErrorMessageComponent,
+        canFork,
+        onFork,
+        allTextContent,
+        hasTextContent,
+        errorMessage: errorMessage?.error,
+        activitySummaryLabel,
+        computationTimeMs,
+        computationTimeLabel,
+        responseText,
+        summaryText,
+        components,
+      }),
+    [
+      model,
+      prompt,
+      isCompleted,
+      searchBlockPrefix,
+      customMarkdownComponents,
+      ErrorMessageComponent,
+      canFork,
+      onFork,
+      allTextContent,
+      hasTextContent,
+      errorMessage?.error,
+      activitySummaryLabel,
+      computationTimeMs,
+      computationTimeLabel,
+      responseText,
+      summaryText,
+      components,
+    ],
+  );
+
+  const turnPresentation = useMemo(
+    () => ({
+      id: turnId,
+      isCompleted,
+      hasPrompt: prompt.length > 0,
+      hasActivity: model.activity.length > 0,
+      hasResponse: responseText.length > 0,
+      hasSummary: summaryText.length > 0,
+      hoistedOutputCount: model.hoisted.length,
+      activity: {
+        isRunning: model.isActivityRunning,
+        toolCount: model.leafToolCount,
+        summaryLabel: activitySummaryLabel,
+        computationTimeMs,
+        computationTimeLabel,
+      },
+    }),
+    [
+      turnId,
+      isCompleted,
+      prompt.length,
+      model.activity.length,
+      model.hoisted.length,
+      model.isActivityRunning,
+      model.leafToolCount,
+      responseText.length,
+      summaryText.length,
+      activitySummaryLabel,
+      computationTimeMs,
+      computationTimeLabel,
+    ],
+  );
 
   return (
     <HoistedRenderersProvider value={excludeList}>
-      <Turn
-        chatTurn={chatTurn}
-        model={model}
-        prompt={prompt}
-        turnId={turnId}
-        isCompleted={isCompleted}
-        searchBlockPrefix={searchBlockPrefix}
-        hoistableToolNames={hoistableSet}
-        customMarkdownComponents={customMarkdownComponents}
-        ErrorMessageComponent={ErrorMessageComponent}
-        canFork={canFork}
-        onFork={onFork}
-        allTextContent={allTextContent}
-        hasTextContent={hasTextContent}
-        errorMessage={errorMessage?.error}
-        activitySummaryLabel={activitySummaryLabel}
-        computationTimeMs={computationTimeMs}
-        computationTimeLabel={computationTimeLabel}
-        responseText={responseText}
-        summaryText={summaryText}
-        components={components}
-      />
+      <Turn turn={turnPresentation} regions={regions} />
     </HoistedRenderersProvider>
   );
 };

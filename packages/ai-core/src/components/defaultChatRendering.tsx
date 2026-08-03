@@ -7,23 +7,24 @@ import {
 } from '@sqlrooms/ui';
 import {SplitIcon, SquareTerminalIcon} from 'lucide-react';
 import React from 'react';
-import {useStoreWithAi} from '../AiSlice';
+import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
 import {isReasoningPart, isTextPart} from '../utils';
 import {ActivityBox} from './ActivityBox';
-import {
-  type ChatActionsProps,
-  type ChatActivityProps,
-  type ChatHoistedOutputProps,
-  type ChatPromptProps,
-  type ChatReasoningProps,
-  type ChatRenderingComponents,
-  type ChatTextOutputProps,
-  type ChatToolActivityProps,
-  type ChatTurnSlotProps,
-} from './ChatRenderingContext';
 import {HighlightedChatSearchText} from './ChatSearch';
-import {ErrorMessage} from './ErrorMessage';
+import type {
+  ChatActionsProps,
+  ChatActivityProps,
+  ChatHoistedOutputProps,
+  ChatPromptProps,
+  ChatReasoningProps,
+  ChatRenderingComponents,
+  ChatTextOutputProps,
+  ChatToolActivityProps,
+  ChatTurnRegions,
+  ChatTurnSlotProps,
+} from './ChatRenderingTypes';
+import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {ExpandableContent} from './ExpandableContent';
 import {
   HoistedToolCallRenderer,
@@ -31,8 +32,7 @@ import {
 } from './FlatAgentRenderer';
 import {MessageContent} from './MessageContent';
 import {ToolPartRenderer} from './ToolPartRenderer';
-import {getToolName} from './buildChatTurnModel';
-import {toolRendererAllowsHoist} from './collectHoistableRenderers';
+import type {ChatTurnModel, ChatTurnTextItem} from './buildChatTurnModel';
 
 export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
@@ -57,24 +57,27 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   </div>
 );
 
-/**
- * SQLRooms default activity chrome: collapsible summary + capped scroll box.
- * Product-specific wording/chrome belongs in app recipes.
- */
+/** SQLRooms default collapsible activity chrome. */
 export const DefaultChatActivity: React.FC<ChatActivityProps> = ({
   children,
   isRunning,
   summaryLabel,
+  computationTimeLabel,
   className,
-}) => (
-  <ActivityBox
-    isRunning={isRunning}
-    summaryLabel={summaryLabel}
-    className={className}
-  >
-    {children}
-  </ActivityBox>
-);
+}) => {
+  const combinedSummaryLabel = [summaryLabel, computationTimeLabel]
+    .filter(Boolean)
+    .join(' · ');
+  return (
+    <ActivityBox
+      isRunning={isRunning}
+      summaryLabel={combinedSummaryLabel || undefined}
+      className={className}
+    >
+      {children}
+    </ActivityBox>
+  );
+};
 
 export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
   text,
@@ -190,35 +193,32 @@ export const DefaultChatActions: React.FC<ChatActionsProps> = ({
   </>
 );
 
-function isPartHoisted(
-  part: ChatToolActivityProps['part'],
-  hoistableToolNames: ReadonlySet<string>,
-  toolRenderers: Record<string, unknown>,
-): boolean {
-  const toolName = getToolName(part);
-  if (!toolName || !hoistableToolNames.has(toolName)) return false;
-  const renderer = toolRenderers[toolName];
-  if (typeof renderer !== 'function') return false;
-  return toolRendererAllowsHoist(renderer as never, {
-    output:
-      part.state === 'output-available'
-        ? (part as {output?: unknown}).output
-        : undefined,
-    input: part.input,
-    state: part.state,
-  });
-}
+type CreateChatTurnRegionsOptions = {
+  model: ChatTurnModel;
+  prompt: string;
+  isCompleted: boolean;
+  searchBlockPrefix: string;
+  customMarkdownComponents?: Partial<Components>;
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
+  canFork: boolean;
+  onFork?: () => void;
+  allTextContent: string;
+  hasTextContent: boolean;
+  errorMessage?: string;
+  activitySummaryLabel?: string;
+  computationTimeMs?: number;
+  computationTimeLabel?: string;
+  responseText: ChatTurnTextItem[];
+  summaryText: ChatTurnTextItem[];
+  components: ChatRenderingComponents;
+};
 
-/**
- * SQLRooms default turn recipe: interleaved prompt → segments (tool groups /
- * agents / text / reasoning) with local ActivityBoxes and near-source hoists.
- */
-export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({
+/** Builds the data-bound regions consumed by a turn layout recipe. */
+export function createChatTurnRegions({
   model,
   prompt,
   isCompleted,
   searchBlockPrefix,
-  hoistableToolNames,
   customMarkdownComponents,
   ErrorMessageComponent,
   canFork,
@@ -226,152 +226,262 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({
   allTextContent,
   hasTextContent,
   errorMessage,
+  activitySummaryLabel,
+  computationTimeMs,
+  computationTimeLabel,
+  responseText,
+  summaryText,
   components,
-}) => {
-  const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
-  const {Prompt, Activity, Reasoning, TextOutput, ToolActivity, Actions} =
-    components;
-
+}: CreateChatTurnRegionsOptions): ChatTurnRegions {
+  const {
+    Prompt,
+    Activity,
+    Reasoning,
+    TextOutput,
+    ToolActivity,
+    HoistedOutput,
+    Actions,
+  } = components;
+  const hoistedById = new Map(
+    model.hoisted.map((item) => [item.toolCallId, item]),
+  );
   const lastTextIndex = model.textItems.at(-1)?.index;
 
+  const PromptRegion = () => (
+    <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
+  );
+
+  const TimelineRegion = () => (
+    <>
+      {model.segments.map((segment, segmentIndex) => {
+        if (segment.kind === 'tool-group') {
+          const anyPending = segment.parts.some(({part}) =>
+            isToolPartPending(part.state),
+          );
+          const toolCount = segment.parts.length;
+          const summaryLabel =
+            !anyPending && toolCount > 0 && isCompleted
+              ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
+              : undefined;
+
+          return (
+            <React.Fragment key={`tool-group-${segmentIndex}`}>
+              <div data-testid="chat-turn-activity">
+                <Activity
+                  isRunning={anyPending}
+                  isCompleted={isCompleted}
+                  toolCount={toolCount}
+                  summaryLabel={summaryLabel}
+                >
+                  {segment.parts.map(({part, index}) => (
+                    <ToolActivity
+                      key={`tool-${part.toolCallId}`}
+                      part={part}
+                      index={index}
+                      isAgent={false}
+                      isHoisted={hoistedById.has(part.toolCallId)}
+                      searchBlockId={`${searchBlockPrefix}:tool:${index}`}
+                    />
+                  ))}
+                </Activity>
+              </div>
+              {segment.parts.map(({part}) => {
+                const item = hoistedById.get(part.toolCallId);
+                return item ? (
+                  <div
+                    key={`hoisted-${part.toolCallId}`}
+                    className="empty:hidden"
+                    data-testid="chat-turn-hoisted"
+                    data-tool-call-id={part.toolCallId}
+                  >
+                    <HoistedOutput item={item} />
+                  </div>
+                ) : null;
+              })}
+            </React.Fragment>
+          );
+        }
+
+        if (segment.kind === 'agent-tool') {
+          return (
+            <ToolActivity
+              key={`tool-${segment.part.toolCallId}`}
+              part={segment.part}
+              index={segment.index}
+              isAgent
+              isHoisted={false}
+              searchBlockId={`${searchBlockPrefix}:tool:${segment.index}`}
+            />
+          );
+        }
+
+        const {part, index} = segment;
+        if (isTextPart(part)) {
+          return (
+            <TextOutput
+              key={`text-${index}`}
+              text={part.text}
+              index={index}
+              isAnswer={index === lastTextIndex}
+              searchBlockId={`${searchBlockPrefix}:text:${index}`}
+              customMarkdownComponents={customMarkdownComponents}
+            />
+          );
+        }
+        if (isReasoningPart(part) && part.text.trim()) {
+          return (
+            <Reasoning
+              key={`reasoning-${index}`}
+              text={part.text}
+              isRunning={!isCompleted}
+              searchBlockId={`${searchBlockPrefix}:reasoning:${index}`}
+            />
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+
+  const ActivityRegion = () =>
+    model.activity.length > 0 ? (
+      <Activity
+        isRunning={model.isActivityRunning}
+        isCompleted={isCompleted}
+        toolCount={model.leafToolCount}
+        summaryLabel={activitySummaryLabel}
+        computationTimeMs={computationTimeMs}
+        computationTimeLabel={computationTimeLabel}
+      >
+        {model.activity.map((item) =>
+          item.kind === 'reasoning' ? (
+            <Reasoning
+              key={`reasoning-${item.index}`}
+              text={item.text}
+              isRunning={!isCompleted}
+              searchBlockId={`${searchBlockPrefix}:reasoning:${item.index}`}
+            />
+          ) : (
+            <ToolActivity
+              key={`tool-${item.part.toolCallId}`}
+              part={item.part}
+              index={item.index}
+              isAgent={item.isAgent}
+              isHoisted={item.isHoisted}
+              searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
+            />
+          ),
+        )}
+      </Activity>
+    ) : null;
+
+  const ResponseRegion = () => (
+    <>
+      {renderTextItems(
+        responseText,
+        summaryText.length === 0,
+        TextOutput,
+        searchBlockPrefix,
+        customMarkdownComponents,
+      )}
+    </>
+  );
+
+  const HoistedOutputsRegion = () => (
+    <>
+      {model.hoisted.map((item) => (
+        <HoistedOutput key={item.toolCallId} item={item} />
+      ))}
+    </>
+  );
+
+  const SummaryRegion = () => (
+    <>
+      {renderTextItems(
+        summaryText,
+        true,
+        TextOutput,
+        searchBlockPrefix,
+        customMarkdownComponents,
+      )}
+    </>
+  );
+
+  const ActionsRegion = () => (
+    <Actions
+      hasTextContent={hasTextContent}
+      allTextContent={allTextContent}
+      canFork={canFork}
+      onFork={onFork}
+      errorMessage={errorMessage}
+      ErrorMessageComponent={ErrorMessageComponent}
+    />
+  );
+
+  return {
+    Prompt: PromptRegion,
+    Timeline: TimelineRegion,
+    Activity: ActivityRegion,
+    Response: ResponseRegion,
+    HoistedOutputs: HoistedOutputsRegion,
+    Summary: SummaryRegion,
+    Actions: ActionsRegion,
+  };
+}
+
+function isToolPartPending(state: string): boolean {
+  return (
+    state !== 'output-available' &&
+    state !== 'output-error' &&
+    state !== 'output-denied'
+  );
+}
+
+function renderTextItems(
+  items: ChatTurnTextItem[],
+  markLastAsAnswer: boolean,
+  TextOutput: ChatRenderingComponents['TextOutput'],
+  searchBlockPrefix: string,
+  customMarkdownComponents?: Partial<Components>,
+): React.ReactNode {
+  const lastIndex = items.at(-1)?.index;
+  return items.map((item) => (
+    <TextOutput
+      key={`text-${item.index}`}
+      text={item.text}
+      index={item.index}
+      isAnswer={markLastAsAnswer && item.index === lastIndex}
+      searchBlockId={`${searchBlockPrefix}:text:${item.index}`}
+      customMarkdownComponents={customMarkdownComponents}
+    />
+  ));
+}
+
+/** SQLRooms default source-order turn layout. */
+export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({regions}) => {
+  const {Prompt, Timeline, Actions} = regions;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-md text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
-        <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
+        <Prompt />
       </div>
       <div className="flex w-full flex-col gap-2">
-        {model.segments.map((seg, segIdx) => {
-          if (seg.kind === 'tool-group') {
-            const anyPending = seg.parts.some((p) => {
-              const s = (p.part as Record<string, unknown>).state as string;
-              return (
-                s !== 'output-available' &&
-                s !== 'output-error' &&
-                s !== 'output-denied'
-              );
-            });
-            const toolCount = seg.parts.length;
-            const allToolsDone = !anyPending && toolCount > 0;
-            const summaryLabel =
-              allToolsDone && isCompleted
-                ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
-                : undefined;
-
-            return (
-              <React.Fragment key={`tg-${segIdx}`}>
-                <div data-testid="chat-turn-activity">
-                  <Activity
-                    isRunning={anyPending}
-                    isCompleted={isCompleted}
-                    toolCount={toolCount}
-                    summaryLabel={summaryLabel}
-                  >
-                    {seg.parts.map((p) => (
-                      <ToolActivity
-                        key={`tool-${p.part.toolCallId}`}
-                        part={p.part}
-                        index={p.index}
-                        isAgent={false}
-                        isHoisted={isPartHoisted(
-                          p.part,
-                          hoistableToolNames,
-                          toolRenderers,
-                        )}
-                        searchBlockId={`${searchBlockPrefix}:tool:${p.index}`}
-                      />
-                    ))}
-                  </Activity>
-                </div>
-                {seg.parts.map((p) => {
-                  if (
-                    !isPartHoisted(p.part, hoistableToolNames, toolRenderers)
-                  ) {
-                    return null;
-                  }
-                  // Match the pre-customization default: hoist via ToolPartRenderer
-                  // next to the tool-group (not a chronological turn-body region).
-                  return (
-                    <div
-                      key={`hoisted-${p.part.toolCallId}`}
-                      className="empty:hidden"
-                      data-testid="chat-turn-hoisted"
-                      data-tool-call-id={p.part.toolCallId}
-                    >
-                      <ToolPartRenderer
-                        part={p.part}
-                        toolCallId={p.part.toolCallId}
-                        hideToolCallInfo
-                      />
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            );
-          }
-
-          if (seg.kind === 'agent-tool') {
-            return (
-              <ToolActivity
-                key={`tool-${seg.part.toolCallId}`}
-                part={seg.part}
-                index={seg.index}
-                isAgent
-                isHoisted={false}
-                searchBlockId={`${searchBlockPrefix}:tool:${seg.index}`}
-              />
-            );
-          }
-
-          const {part, index} = seg;
-
-          if (isTextPart(part)) {
-            return (
-              <TextOutput
-                key={`text-${index}`}
-                text={part.text}
-                index={index}
-                isAnswer={index === lastTextIndex}
-                searchBlockId={`${searchBlockPrefix}:text:${index}`}
-                customMarkdownComponents={customMarkdownComponents}
-              />
-            );
-          }
-
-          if (isReasoningPart(part)) {
-            if (!part.text.trim()) return null;
-            return (
-              <Reasoning
-                key={`reasoning-${index}`}
-                text={part.text}
-                isRunning={!isCompleted}
-                searchBlockId={`${searchBlockPrefix}:reasoning:${index}`}
-              />
-            );
-          }
-
-          return null;
-        })}
-
-        <Actions
-          hasTextContent={hasTextContent}
-          allTextContent={allTextContent}
-          canFork={canFork}
-          onFork={onFork}
-          errorMessage={errorMessage}
-          ErrorMessageComponent={ErrorMessageComponent}
-        />
+        <Timeline />
+        <Actions />
       </div>
     </div>
   );
 };
 
-export const defaultChatRenderingComponents: ChatRenderingComponents = {
-  Turn: DefaultChatTurn,
-  Prompt: DefaultChatPrompt,
-  Activity: DefaultChatActivity,
-  Reasoning: DefaultChatReasoning,
-  TextOutput: DefaultChatTextOutput,
-  ToolActivity: DefaultChatToolActivity,
-  HoistedOutput: DefaultChatHoistedOutput,
-  Actions: DefaultChatActions,
-};
+/** Built-in SQLRooms rendering recipe. */
+export const defaultChatRenderingComponents: Readonly<ChatRenderingComponents> =
+  Object.freeze({
+    Turn: DefaultChatTurn,
+    Prompt: DefaultChatPrompt,
+    Activity: DefaultChatActivity,
+    Reasoning: DefaultChatReasoning,
+    TextOutput: DefaultChatTextOutput,
+    ToolActivity: DefaultChatToolActivity,
+    HoistedOutput: DefaultChatHoistedOutput,
+    Actions: DefaultChatActions,
+  });

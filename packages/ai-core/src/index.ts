@@ -45,19 +45,14 @@ export type {
   UseGenerateSessionTitleOptions,
 } from './hooks/useGenerateSessionTitle';
 export {Chat, type LocalAgentChatRootProps} from './components/Chat';
-export {
-  ChatRendering,
-  useChatRendering,
-  useChatRenderingComponents,
-  useChatNestedActivityMode,
-  mergeChatRenderingComponents,
-} from './components/ChatRenderingContext';
+export {ChatRendering} from './components/ChatRenderingContext';
 export type {
   ChatRenderingProps,
   ChatRenderingComponents,
-  ChatRenderingValue,
   ChatNestedActivityMode,
   ChatTurnSlotProps,
+  ChatTurnPresentation,
+  ChatTurnRegions,
   ChatPromptProps,
   ChatActivityProps,
   ChatReasoningProps,
@@ -66,17 +61,7 @@ export type {
   ChatHoistedOutputProps,
   ChatActionsProps,
 } from './components/ChatRenderingContext';
-export {
-  DefaultChatTurn,
-  DefaultChatPrompt,
-  DefaultChatActivity,
-  DefaultChatReasoning,
-  DefaultChatTextOutput,
-  DefaultChatToolActivity,
-  DefaultChatHoistedOutput,
-  DefaultChatActions,
-  defaultChatRenderingComponents,
-} from './components/defaultChatRendering';
+export {defaultChatRenderingComponents} from './components/defaultChatRendering';
 export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
@@ -186,10 +171,8 @@ export type {
 } from './types';
 export {ExpandableContent} from './components/ExpandableContent';
 export {ActivityBox} from './components/ActivityBox';
-export type {ActivityBoxProps} from './components/ActivityBox';
 export {
   FlatAgentRenderer,
-  HoistedToolCallRenderer,
   OrchestratorToolLogLine,
   ShowToolCallDetailsProvider,
 } from './components/FlatAgentRenderer';
@@ -198,28 +181,8 @@ export type {
   ToolStructureBehavior,
   ToolDisplayBehavior,
 } from './components/FlatAgentRenderer';
-export {
-  collectHoistableRenderers,
-  toolRendererAllowsHoist,
-} from './components/collectHoistableRenderers';
+export {collectHoistableRenderers} from './components/collectHoistableRenderers';
 export type {HoistableToolCall} from './components/collectHoistableRenderers';
-export {
-  buildChatTurnModel,
-  splitTextAroundHoists,
-  computeComputationTimeMs,
-  getToolName,
-  isAgentToolPart,
-} from './components/buildChatTurnModel';
-export type {
-  ChatTurnModel,
-  ChatTurnActivityItem,
-  ChatTurnTextItem,
-  ChatTurnSegment,
-  ToolPartWithId,
-} from './components/buildChatTurnModel';
-/** @deprecated Prefer {@link buildChatTurnModel}. Chronological presentation adapter. */
-export {buildChatTurnRenderPlan} from './components/buildChatTurnRenderPlan';
-export type {ChatTurnRenderPlan} from './components/buildChatTurnRenderPlan';
 export {ContextUsageIndicator} from './components/ContextUsageIndicator';
 export {
   HoistedRenderersProvider,
