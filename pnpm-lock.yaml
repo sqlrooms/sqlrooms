@@ -13,7 +13,7 @@ overrides:
   apache-arrow: 17.0.0
   d3-color: 3.1.0
   d3-sankey: 0.12.3
-  dompurify: 3.4.6
+  dompurify: 3.4.12
   fast-xml-parser: 5.8.0
   hoek: npm:@hapi/hoek@11.0.7
   lodash: 4.18.1
@@ -11810,8 +11810,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@3.4.6:
-    resolution: {integrity: sha512-+7gzEI8trIIQkVCvQ3ucGtNfH3nOmDgVTzc62rAAOlMxLth78pwpPoZCPc7CyRzAQF89MqcfPdEWkDwnjgqktg==}
+  dompurify@3.4.12:
+    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
@@ -18965,7 +18965,7 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
       d3-zoom: 3.0.0
-      dompurify: 3.4.6
+      dompurify: 3.4.12
       gl-bench: 1.0.42
       gl-matrix: 3.4.4
       random: 4.1.0
@@ -26590,7 +26590,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@3.4.6:
+  dompurify@3.4.12:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -29314,7 +29314,7 @@ snapshots:
       d3-sankey: 0.12.3
       dagre-d3-es: 7.0.14
       dayjs: 1.11.20
-      dompurify: 3.4.6
+      dompurify: 3.4.12
       es-toolkit: 1.47.0
       katex: 0.16.47
       khroma: 2.1.0
@@ -29647,7 +29647,7 @@ snapshots:
 
   monaco-editor@0.55.1:
     dependencies:
-      dompurify: 3.4.6
+      dompurify: 3.4.12
       marked: 14.0.0
 
   moo@0.5.3: {}
