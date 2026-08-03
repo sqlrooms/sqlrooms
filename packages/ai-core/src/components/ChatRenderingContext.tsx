@@ -3,14 +3,17 @@ import {defaultChatRenderingComponents} from './defaultChatRendering';
 import {
   ChatRenderingContext,
   useOptionalChatRendering,
+  useResolvedChatNestedActivityMode,
 } from './ChatRenderingContextBase';
 import type {
+  ChatNestedActivityMode,
   ChatRenderingComponents,
   ChatRenderingProps,
   ChatRenderingValue,
 } from './ChatRenderingTypes';
 
-function mergeChatRenderingComponents(
+/** Merge a partial chat recipe over an already resolved recipe. */
+export function mergeChatRenderingComponents(
   base: ChatRenderingComponents,
   overrides?: Partial<ChatRenderingComponents>,
 ): ChatRenderingComponents {
@@ -73,6 +76,11 @@ export function useChatRenderingComponents(): ChatRenderingComponents {
   return (
     useOptionalChatRendering()?.components ?? defaultChatRenderingComponents
   );
+}
+
+/** Return the nested activity mode for the nearest chat rendering recipe. */
+export function useChatNestedActivityMode(): ChatNestedActivityMode {
+  return useResolvedChatNestedActivityMode();
 }
 
 export type {

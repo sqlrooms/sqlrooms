@@ -235,11 +235,21 @@ export type {
   ChatToolActivityProps,
   ChatHoistedOutputProps,
   ChatActionsProps,
+  ChatTurnModel,
+  ChatTurnActivityItem,
+  ChatTurnTextItem,
+  ChatTurnRenderPlan,
   ToolRendererShouldHoist,
 } from '@sqlrooms/ai-core';
 export {
   Chat,
   ChatRendering,
+  DefaultChatTurn,
+  DefaultChatActivity,
+  ActivityBox,
+  buildChatTurnModel,
+  buildChatTurnRenderPlan,
+  HoistedToolCallRenderer,
   defaultChatRenderingComponents,
 } from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';

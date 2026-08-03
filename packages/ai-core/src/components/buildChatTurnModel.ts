@@ -99,7 +99,7 @@ export function isAgentToolPart(
 export function mapUiToolStateToAgentState(
   state: string,
 ): AgentToolCall['state'] {
-  if (state === 'output-available' || state === 'approval-responded') {
+  if (state === 'output-available') {
     return 'success';
   }
   if (state === 'output-error' || state === 'output-denied') {
@@ -179,9 +179,7 @@ function hoistableFromToolPart(
       ? (part as {errorText?: string}).errorText
       : undefined;
   const approvalId =
-    part.state === 'approval-requested' &&
-    'approval' in part &&
-    part.approval
+    part.state === 'approval-requested' && 'approval' in part && part.approval
       ? part.approval.id
       : undefined;
 
@@ -272,7 +270,6 @@ function canHoistToolPart(
   return (
     hoistableToolNames.has(toolName) &&
     (part.state === 'output-available' ||
-      part.state === 'approval-responded' ||
       part.state === 'approval-requested') &&
     toolRendererAllowsHoist(toolRenderers[toolName], {
       output:
@@ -412,9 +409,10 @@ export function buildChatTurnModel(options: {
  * Split text around the first hoist-producing call for chronological recipes.
  * When nothing is hoistable, all text stays in `responseText`.
  */
-export function splitTextAroundHoists(
-  model: ChatTurnModel,
-): {responseText: ChatTurnTextItem[]; summaryText: ChatTurnTextItem[]} {
+export function splitTextAroundHoists(model: ChatTurnModel): {
+  responseText: ChatTurnTextItem[];
+  summaryText: ChatTurnTextItem[];
+} {
   const {textItems, hoisted, firstHoistPartIndex} = model;
   if (hoisted.length === 0 || firstHoistPartIndex === null) {
     return {responseText: textItems, summaryText: []};
@@ -442,7 +440,9 @@ export function computeComputationTimeMs(
     const timing = toolTimings[id];
     if (timing?.startedAt == null) continue;
     earliest =
-      earliest == null ? timing.startedAt : Math.min(earliest, timing.startedAt);
+      earliest == null
+        ? timing.startedAt
+        : Math.min(earliest, timing.startedAt);
     const end = timing.completedAt ?? timing.startedAt;
     latest = latest == null ? end : Math.max(latest, end);
   }

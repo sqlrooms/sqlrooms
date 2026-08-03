@@ -354,6 +354,29 @@ describe('buildChatTurnRenderPlan', () => {
     ]);
   });
 
+  it('keeps approval-responded tools pending and inline', () => {
+    const plan = buildChatTurnRenderPlan({
+      parts: [
+        toolPart('chart', {
+          toolCallId: 'c1',
+          state: 'approval-responded',
+          input: {},
+        }),
+      ],
+      agentProgress: {},
+      toolRenderers,
+      hoistableToolNames: hoistable,
+    });
+
+    expect(plan.activity[0]).toMatchObject({
+      kind: 'tool',
+      state: 'pending',
+      isHoisted: false,
+    });
+    expect(plan.isActivityRunning).toBe(true);
+    expect(plan.hoisted).toEqual([]);
+  });
+
   it('does not hoist nested pending tools from agent calls', () => {
     const nested: AgentToolCall[] = [
       {

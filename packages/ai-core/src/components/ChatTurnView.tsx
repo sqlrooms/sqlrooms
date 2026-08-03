@@ -6,6 +6,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import type {ChatTurn} from '../chatTurns';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
+import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import type {AgentToolCall} from '../types';
 import {
   isDynamicToolPart,
@@ -39,6 +40,14 @@ export type ChatTurnViewProps = {
   customMarkdownComponents?: Partial<Components>;
   hoistedRenderers?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
+};
+
+const HoistedToolTimingRecorder: React.FC<{
+  toolCallId: string;
+  isComplete: boolean;
+}> = ({toolCallId, isComplete}) => {
+  useToolTimingRecorder(toolCallId, isComplete);
+  return null;
 };
 
 export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
@@ -271,6 +280,15 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
 
   return (
     <HoistedRenderersProvider value={excludeList}>
+      {model.activity.map((item) =>
+        item.kind === 'tool' && item.isHoisted ? (
+          <HoistedToolTimingRecorder
+            key={item.part.toolCallId}
+            toolCallId={item.part.toolCallId}
+            isComplete={item.state === 'success' || item.state === 'error'}
+          />
+        ) : null,
+      )}
       <Turn turn={turnPresentation} />
     </HoistedRenderersProvider>
   );

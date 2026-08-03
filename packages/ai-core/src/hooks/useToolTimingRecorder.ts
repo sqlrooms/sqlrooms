@@ -9,11 +9,10 @@ import {useStoreWithAi} from '../AiSlice';
  * - On first render with a given toolCallId that is not yet complete,
  *   records `startedAt`.
  * - When `isComplete` transitions from false to true, records `completedAt`.
- * - Skips recording entirely if an entry already exists in the store
- *   (e.g. rehydrated from persisted data).
- * - Skips recording if the tool is already complete on first render
- *   (old project loaded from disk with no timing data — recording
- *   now would produce a misleading zero-duration entry).
+ * - Preserves an existing start timestamp and fills in its completion when a
+ *   completed renderer replaces the pending renderer (for example on hoist).
+ * - Skips recording if the tool is already complete on first render and no
+ *   start timestamp exists (an old project loaded without timing metadata).
  */
 export function useToolTimingRecorder(
   toolCallId: string | undefined,
@@ -47,7 +46,13 @@ export function useToolTimingRecorder(
     if (!toolCallId || !isComplete || recordedCompleteRef.current) return;
     if (existingTiming?.completedAt != null) return;
     // Same guard: if the tool was already complete on first render, skip.
-    if (initialCompleteRef.current && !startedAtRef.current) return;
+    if (
+      initialCompleteRef.current &&
+      !startedAtRef.current &&
+      existingTiming?.startedAt == null
+    ) {
+      return;
+    }
 
     recordedCompleteRef.current = true;
     const startedAt =
