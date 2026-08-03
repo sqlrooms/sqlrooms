@@ -342,6 +342,13 @@ describe('ChatTurnView layout', () => {
       'success,success',
     );
     const text = customTurn?.textContent ?? '';
+    // Assert presence before comparing positions: indexOf returns -1 for
+    // missing text, which would otherwise make the ordering assertions pass
+    // even if a piece of content disappeared from the custom turn.
+    const markers = ['Listing datasets', 'Response intro', 'list-1', 'Final summary'] as const;
+    for (const marker of markers) {
+      expect(text.indexOf(marker)).toBeGreaterThanOrEqual(0);
+    }
     expect(text.indexOf('Listing datasets')).toBeLessThan(
       text.indexOf('Response intro'),
     );

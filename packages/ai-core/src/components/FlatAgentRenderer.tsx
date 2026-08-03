@@ -515,9 +515,40 @@ const FlatSegmentList: React.FC<{
             );
           });
 
-          if (embedInParentActivity) {
+          const hoistedOutputs = seg.tools.map((tc) => {
+            const isHoisted = isToolNameHoisted(
+              tc.toolName,
+              tc,
+              hoistableSet,
+              toolRenderers,
+            );
+            if (!isHoisted) return null;
             return (
-              <React.Fragment key={`tg-${idx}`}>{logLines}</React.Fragment>
+              <HoistedOutput
+                key={`hoisted-${tc.toolCallId}`}
+                item={{
+                  toolCallId: tc.toolCallId,
+                  toolName: tc.toolName,
+                  output: tc.output,
+                  input: tc.input,
+                  errorText: tc.errorText,
+                  state: tc.state,
+                  approvalId: tc.approvalId,
+                }}
+              />
+            );
+          });
+
+          if (embedInParentActivity) {
+            // Embed mode: the host already wraps nested activity in its own
+            // ActivityBox, so we only emit the log lines here. Hoisted
+            // outputs are still rendered so rich nested chart/map results
+            // remain visible when the default Turn places the timeline.
+            return (
+              <React.Fragment key={`tg-${idx}`}>
+                {logLines}
+                {hoistedOutputs}
+              </React.Fragment>
             );
           }
 
@@ -526,29 +557,7 @@ const FlatSegmentList: React.FC<{
               <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
                 {logLines}
               </ActivityBox>
-              {seg.tools.map((tc) => {
-                const isHoisted = isToolNameHoisted(
-                  tc.toolName,
-                  tc,
-                  hoistableSet,
-                  toolRenderers,
-                );
-                if (!isHoisted) return null;
-                return (
-                  <HoistedOutput
-                    key={`hoisted-${tc.toolCallId}`}
-                    item={{
-                      toolCallId: tc.toolCallId,
-                      toolName: tc.toolName,
-                      output: tc.output,
-                      input: tc.input,
-                      errorText: tc.errorText,
-                      state: tc.state,
-                      approvalId: tc.approvalId,
-                    }}
-                  />
-                );
-              })}
+              {hoistedOutputs}
             </React.Fragment>
           );
         }

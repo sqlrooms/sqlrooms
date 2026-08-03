@@ -4,7 +4,8 @@
 import {jest} from '@jest/globals';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 import {TransformStream} from 'node:stream/web';
-import React, {act} from 'react';
+import React from 'react';
+import {act} from 'react-dom/test-utils';
 import {createRoot} from 'react-dom/client';
 import {createStore} from 'zustand';
 import type {AiSliceState} from '../src/AiSlice';

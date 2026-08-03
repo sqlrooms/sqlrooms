@@ -22,6 +22,7 @@ import {
 } from './buildChatTurnModel';
 import {useChatRenderingComponents} from './ChatRenderingContext';
 import {
+  EMPTY_CHAT_SEARCH_BLOCKS,
   markdownToPlainText,
   normalizeChatSearchQuery,
   useOptionalChatSearch,
@@ -138,7 +139,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
     !!search && normalizeChatSearchQuery(search.query).length > 0;
 
   const searchBlocks = useMemo<ChatSearchBlock[]>(() => {
-    if (!hasActiveQuery) return [];
+    // Stable empty reference when search is idle — a fresh [] on every
+    // model.textItems identity change (streaming) re-triggers registration.
+    if (!hasActiveQuery) return EMPTY_CHAT_SEARCH_BLOCKS;
     const blocks: ChatSearchBlock[] = [
       {
         id: `${searchBlockPrefix}:prompt`,
