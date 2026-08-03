@@ -5,6 +5,7 @@ import type {
   ReactNode,
 } from 'react';
 import type {Components} from 'react-markdown';
+import type {AgentToolCall} from '../types';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import type {ToolPartWithId} from './buildChatTurnModel';
 import type {HoistableToolCall} from './collectHoistableRenderers';
@@ -70,56 +71,110 @@ export type ChatHoistedOutputProps = {
 
 /** Props for turn-level actions and error presentation. */
 export type ChatActionsProps = {
-  hasTextContent: boolean;
-  allTextContent: string;
+  /** Text copied by the default action UI. Omitted when there is no text. */
+  copyText?: string;
   canFork: boolean;
   onFork?: () => void;
   errorMessage?: string;
   ErrorMessageComponent?: ChatComponentType<ErrorMessageComponentProps>;
 };
 
+/** Normalized state exposed for tool activity presentation. */
+export type ChatToolState = AgentToolCall['state'];
+
+/** Prompt semantics plus its pre-wired rendering component. */
+export type ChatPromptRegion = {
+  text: string;
+  Content: ChatComponentType;
+};
+
+/** One semantic activity item with pre-wired leaf rendering. */
+export type ChatActivityItem =
+  | {
+      id: string;
+      kind: 'reasoning';
+      text: string;
+      Content: ChatComponentType;
+    }
+  | {
+      id: string;
+      kind: 'tool';
+      toolName: string;
+      state: ChatToolState;
+      isAgent: boolean;
+      isHoisted: boolean;
+      Content: ChatComponentType;
+    };
+
+/** Activity semantics plus aggregated pre-wired rendering. */
+export type ChatActivityRegion = {
+  isRunning: boolean;
+  toolCount: number;
+  computationTimeMs?: number;
+  items: readonly ChatActivityItem[];
+  Content: ChatComponentType;
+};
+
+/** One assistant text item with pre-wired markdown rendering. */
+export type ChatTextItem = {
+  id: string;
+  text: string;
+  isAnswer: boolean;
+  Content: ChatComponentType;
+};
+
+/** A response or summary text region. */
+export type ChatTextRegion = {
+  items: readonly ChatTextItem[];
+  Content: ChatComponentType;
+};
+
+/** One hoisted tool output with pre-wired rich rendering. */
+export type ChatOutputItem = {
+  id: string;
+  toolName: string;
+  state: ChatToolState;
+  Content: ChatComponentType;
+};
+
+/** Hoisted tool outputs for a turn. */
+export type ChatOutputRegion = {
+  items: readonly ChatOutputItem[];
+  Content: ChatComponentType;
+};
+
+/** Action capabilities plus the pre-wired action UI. */
+export type ChatActionsRegion = {
+  canCopy: boolean;
+  canFork: boolean;
+  errorMessage?: string;
+  Content: ChatComponentType;
+};
+
+/** SQLRooms' pre-wired source-order body. */
+export type ChatTimelineRegion = {
+  Content: ChatComponentType;
+};
+
 /**
- * Small, presentation-oriented summary available to a custom turn layout.
- * Detailed rendering data stays owned by SQLRooms and is exposed through the
- * pre-wired {@link ChatTurnRegions}.
+ * Semantic data and pre-wired rendering for one turn. Custom layouts may use
+ * either level without rebuilding search ids, slot props, or hoist decisions.
  */
 export type ChatTurnPresentation = {
   id: string;
   isCompleted: boolean;
-  hasPrompt: boolean;
-  hasActivity: boolean;
-  hasResponse: boolean;
-  hasSummary: boolean;
-  hoistedOutputCount: number;
-  activity: {
-    isRunning: boolean;
-    toolCount: number;
-    summaryLabel?: string;
-    computationTimeMs?: number;
-    computationTimeLabel?: string;
-  };
-};
-
-/**
- * Pre-wired turn regions. A custom `Turn` may reorder or omit these components
- * without rebuilding slot props, search ids, or hoisting decisions.
- */
-export type ChatTurnRegions = {
-  Prompt: ChatComponentType;
-  /** SQLRooms' source-order body used by the default turn recipe. */
-  Timeline: ChatComponentType;
-  /** Aggregated reasoning and tool activity for custom regional layouts. */
-  Activity: ChatComponentType;
-  Response: ChatComponentType;
-  HoistedOutputs: ChatComponentType;
-  Summary: ChatComponentType;
-  Actions: ChatComponentType;
+  prompt: ChatPromptRegion;
+  activity: ChatActivityRegion;
+  response: ChatTextRegion;
+  hoistedOutputs: ChatOutputRegion;
+  summary: ChatTextRegion;
+  actions: ChatActionsRegion;
+  timeline: ChatTimelineRegion;
 };
 
 /** Props for a full turn layout recipe. */
 export type ChatTurnSlotProps = {
   turn: ChatTurnPresentation;
-  regions: ChatTurnRegions;
 };
 
 /** Component slots that define a chat presentation recipe. */

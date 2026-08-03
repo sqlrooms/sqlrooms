@@ -25,6 +25,7 @@ export type ChatTurnActivityItem =
       kind: 'tool';
       index: number;
       part: ToolPartWithId;
+      state: AgentToolCall['state'];
       isAgent: boolean;
       /** True when this top-level tool is collected into the hoisted region. */
       isHoisted: boolean;
@@ -388,6 +389,7 @@ export function buildChatTurnModel(options: {
       kind: 'tool',
       index: i,
       part: toolPart,
+      state: mapUiToolStateToAgentState(toolPart.state),
       isAgent,
       isHoisted,
     });
