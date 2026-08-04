@@ -3,6 +3,46 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.10](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.9...v0.29.0-rc.10) (2026-08-04)
+
+### Bug Fixes
+
+* block settings: isSettingsPanelOpen false by default ([#791](https://github.com/sqlrooms/sqlrooms/issues/791)) ([d455194](https://github.com/sqlrooms/sqlrooms/commit/d45519454dff4e72f23cf8d231f15d9f99c1d6ce))
+* **cli:** navigate artifact on fork source links ([#786](https://github.com/sqlrooms/sqlrooms/issues/786)) ([0c571ca](https://github.com/sqlrooms/sqlrooms/commit/0c571ca33586d1588a2ea156c564ca16df4f3282))
+* **cli:** remove UI store cycles ([#811](https://github.com/sqlrooms/sqlrooms/issues/811)) ([d1eac98](https://github.com/sqlrooms/sqlrooms/commit/d1eac98bcb28450de16bcad4cea592b4f8ed1a83))
+* **deck:** compile all color scale properties on a layer ([#781](https://github.com/sqlrooms/sqlrooms/issues/781)) ([70af2a8](https://github.com/sqlrooms/sqlrooms/commit/70af2a8d268e3d18a8205b18dead75e5da3fcf6a))
+* **deck:** improve map layer settings and color scale behavior ([#789](https://github.com/sqlrooms/sqlrooms/issues/789)) ([73a25d9](https://github.com/sqlrooms/sqlrooms/commit/73a25d986398f4c913470e62e21e655475237209))
+* **deck:** pass custom num rows; detect missing columns fix ([#793](https://github.com/sqlrooms/sqlrooms/issues/793)) ([b56e8b5](https://github.com/sqlrooms/sqlrooms/commit/b56e8b588361dc6daf61f9f62eebc2c2568b3f42))
+* **deck:** resolve generated map selector columns ([#783](https://github.com/sqlrooms/sqlrooms/issues/783)) ([ba5178e](https://github.com/sqlrooms/sqlrooms/commit/ba5178ef96408eeddefea45a4e6ba93ada810b00))
+* **documents:** flip slash menu near viewport edge ([#794](https://github.com/sqlrooms/sqlrooms/issues/794)) ([6619fd0](https://github.com/sqlrooms/sqlrooms/commit/6619fd0bb68513f463ed8c661e689324921da547))
+* enforce table reference boundaries ([#782](https://github.com/sqlrooms/sqlrooms/issues/782)) ([c5693e1](https://github.com/sqlrooms/sqlrooms/commit/c5693e151cb8a6516b58686234d86ce9aaf8a1f5))
+* focus nearest text block from document background ([#788](https://github.com/sqlrooms/sqlrooms/issues/788)) ([aa39f4a](https://github.com/sqlrooms/sqlrooms/commit/aa39f4af18f82260625a964e8a04ce2c87e09e21))
+* preserve provider error messages through the agent UI stream ([#812](https://github.com/sqlrooms/sqlrooms/issues/812)) ([c94605a](https://github.com/sqlrooms/sqlrooms/commit/c94605ae6e2a6e2a007021a04ca17bf69c9d3c22))
+* remove left padding from chat messages ([#808](https://github.com/sqlrooms/sqlrooms/issues/808)) ([5c66a3c](https://github.com/sqlrooms/sqlrooms/commit/5c66a3c131030590b71094c17978c36f461a2d95))
+* rollback chat context badge selector ([#816](https://github.com/sqlrooms/sqlrooms/issues/816)) ([82c7563](https://github.com/sqlrooms/sqlrooms/commit/82c7563aec695e8b3bec369f1b74ebadb5da9d4d))
+* use block document vocabulary in packages ([#779](https://github.com/sqlrooms/sqlrooms/issues/779)) ([e332281](https://github.com/sqlrooms/sqlrooms/commit/e3322819d43f62797314862c770fc65d9c017abc))
+* Use qualified table names in the SQL editor example ([#833](https://github.com/sqlrooms/sqlrooms/issues/833)) ([72c4a13](https://github.com/sqlrooms/sqlrooms/commit/72c4a13a00c1d93df740750e7838e93f59fd45c9))
+
+### Features
+
+* add "Ask AI on a block" popover for block-document blocks ([#798](https://github.com/sqlrooms/sqlrooms/issues/798)) ([1f748a6](https://github.com/sqlrooms/sqlrooms/commit/1f748a6b698437676d168ba2d8417136b22bb113))
+* clean up table reference type boundaries ([#775](https://github.com/sqlrooms/sqlrooms/issues/775)) ([3864f8f](https://github.com/sqlrooms/sqlrooms/commit/3864f8f2e78f23b69c62ec92d3798b4ff04a7c6c))
+* **cli:** adapt worksheet internals to block documents ([#780](https://github.com/sqlrooms/sqlrooms/issues/780)) ([ae147e9](https://github.com/sqlrooms/sqlrooms/commit/ae147e9c0a5781cf9946c0db00aead7407ecc8e5))
+* **deck:** add configMode for AI map generation ([#777](https://github.com/sqlrooms/sqlrooms/issues/777)) ([79d0064](https://github.com/sqlrooms/sqlrooms/commit/79d0064efbdb1a112d64574127f123a1cb2032eb))
+* **deck:** add table dataset transforms ([#778](https://github.com/sqlrooms/sqlrooms/issues/778)) ([c6ad8a7](https://github.com/sqlrooms/sqlrooms/commit/c6ad8a7eabf3cf25e3c5dba3118e99987c71dfcb))
+* decouple worksheet Deck map resources ([#806](https://github.com/sqlrooms/sqlrooms/issues/806)) ([bd69eb9](https://github.com/sqlrooms/sqlrooms/commit/bd69eb9bed2d5cddfe1afa0656d92671622ab181))
+* **documents:** add block reorder AI tool ([#790](https://github.com/sqlrooms/sqlrooms/issues/790)) ([45b4135](https://github.com/sqlrooms/sqlrooms/commit/45b4135b1e2acbf39c78a632def9024df8eb79c5))
+* extract reusable CLI package primitives ([#784](https://github.com/sqlrooms/sqlrooms/issues/784)) ([3997caf](https://github.com/sqlrooms/sqlrooms/commit/3997cafae27afd258406a7bd71e741d68f55c8c2))
+* Improve sidebar dropdown states ([#804](https://github.com/sqlrooms/sqlrooms/issues/804)) ([fe38148](https://github.com/sqlrooms/sqlrooms/commit/fe38148054c09df94a9f507748a898c95d1c0a9d))
+* **mosaic:** add count plot metric controls ([#787](https://github.com/sqlrooms/sqlrooms/issues/787)) ([8d98933](https://github.com/sqlrooms/sqlrooms/commit/8d9893342a11dbff8de152f56809a8e440235487))
+* move settings to side panel ([#771](https://github.com/sqlrooms/sqlrooms/issues/771)) ([2e98eba](https://github.com/sqlrooms/sqlrooms/commit/2e98eba938722ff451b45306319099274ea8b312))
+* share block-document Ask AI and Deck map helpers across hosts ([#805](https://github.com/sqlrooms/sqlrooms/issues/805)) ([10eaa68](https://github.com/sqlrooms/sqlrooms/commit/10eaa687c4a24dc53ba086e89b15bdbae2dd41be))
+* share schema type category helpers ([#792](https://github.com/sqlrooms/sqlrooms/issues/792)) ([19007f9](https://github.com/sqlrooms/sqlrooms/commit/19007f99975ce5b1bfa5c77b465a5b5aeb0a7fc9))
+* support rich text generation via AI ([#810](https://github.com/sqlrooms/sqlrooms/issues/810)) ([a573fa0](https://github.com/sqlrooms/sqlrooms/commit/a573fa0badeffa2253b773560cff64682e7b452f))
+* update SQLRooms branding assets to SVG ([#776](https://github.com/sqlrooms/sqlrooms/issues/776)) ([6d44c9c](https://github.com/sqlrooms/sqlrooms/commit/6d44c9cf70003fad2985d449a2a4d37fa9657d62))
+* upgrade ai package ([#800](https://github.com/sqlrooms/sqlrooms/issues/800)) ([f1578be](https://github.com/sqlrooms/sqlrooms/commit/f1578bee643c6f26d1624e963dd50f6d5c00ac23))
+* Validate visualization mutation targets ([#807](https://github.com/sqlrooms/sqlrooms/issues/807)) ([3a60baa](https://github.com/sqlrooms/sqlrooms/commit/3a60baad82edd713f1e5e3d6a3004242fcfb033c))
+
 # [0.29.0-rc.9](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.8...v0.29.0-rc.9) (2026-06-29)
 
 ### Bug Fixes
