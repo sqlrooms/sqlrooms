@@ -24,7 +24,6 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@paralleldrive/cuid2": "^3.0.0",
     "zod": "^4.1.8"
   },
   "devDependencies": {
