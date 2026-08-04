@@ -23,7 +23,6 @@ export default function scaffoldsPlugin(): Plugin {
 
   return {
     name: 'sqlrooms-scaffolds',
-    apply: 'serve',
     async buildStart() {
       await runGenerate();
     },

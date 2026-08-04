@@ -1,6 +1,5 @@
 import {createRequire} from 'node:module';
 import {defineConfig} from 'vitepress';
-import {withMermaid} from 'vitepress-plugin-mermaid';
 import llmstxt from 'vitepress-plugin-llms';
 import {apiSidebarConfig} from './gen-api-sidebar.ts';
 
@@ -65,6 +64,23 @@ const PACKAGE_CATEGORIES = {
 
 // https://vitepress.dev/reference/site-config
 const config = defineConfig({
+  markdown: {
+    config(md) {
+      const defaultFence = md.renderer.rules.fence;
+
+      md.renderer.rules.fence = (tokens, index, options, env, self) => {
+        const token = tokens[index];
+        if (token.info.trim() === 'mermaid') {
+          const encoded = encodeURIComponent(token.content);
+          return `<MermaidDiagram encoded="${encoded}" />`;
+        }
+
+        return defaultFence
+          ? defaultFence(tokens, index, options, env, self)
+          : self.renderToken(tokens, index, options);
+      };
+    },
+  },
   vite: {
     resolve: {
       alias: [
@@ -352,4 +368,4 @@ Canonical package combos:
   },
 });
 
-export default withMermaid(config);
+export default config;
