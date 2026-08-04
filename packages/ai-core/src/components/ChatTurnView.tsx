@@ -21,6 +21,7 @@ import {
   splitTextAroundHoists,
 } from './buildChatTurnModel';
 import {useChatRenderingComponents} from './ChatRenderingContext';
+import {useChatRenderingOverrides} from './ChatRenderingContextBase';
 import {
   EMPTY_CHAT_SEARCH_BLOCKS,
   markdownToPlainText,
@@ -41,6 +42,7 @@ export type ChatTurnViewProps = {
   chatTurn?: ChatTurn;
   customMarkdownComponents?: Partial<Components>;
   hoistedRenderers?: string[];
+  /** @deprecated Prefer the `Chat.Rendering` `Error` slot. */
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
 
@@ -60,6 +62,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   ErrorMessageComponent,
 }) => {
   const components = useChatRenderingComponents();
+  const isErrorSlotOverridden = useChatRenderingOverrides().has('Error');
   const {Turn} = components;
 
   const uiMessages = useStoreWithAi(
@@ -251,7 +254,9 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
         isCompleted,
         searchBlockPrefix,
         customMarkdownComponents,
-        ErrorMessageComponent,
+        ErrorMessageComponent: isErrorSlotOverridden
+          ? undefined
+          : ErrorMessageComponent,
         canFork,
         onFork,
         copyText,
@@ -273,6 +278,7 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
       searchBlockPrefix,
       customMarkdownComponents,
       ErrorMessageComponent,
+      isErrorSlotOverridden,
       canFork,
       onFork,
       copyText,

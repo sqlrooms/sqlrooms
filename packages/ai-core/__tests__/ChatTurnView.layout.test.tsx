@@ -13,6 +13,7 @@ import type {UIMessage} from 'ai';
 import type {AiSliceState} from '../src/AiSlice';
 import type {ChatTurn} from '../src/chatTurns';
 import {TOOL_CALL_CANCELLED} from '../src/constants';
+import type {AgentToolCall} from '../src/types';
 import type {ChatActivityProps} from '../src/components/ChatRenderingContext';
 import type {
   ChatActionsProps,
@@ -22,6 +23,7 @@ import type {
   ChatTurnSlotProps,
 } from '../src/components/ChatRenderingContext';
 import {useRenderNestedHoistedOutputs} from '../src/components/NestedHoistedOutputsContext';
+import type {ErrorMessageComponentProps} from '../src/components/ErrorMessage';
 
 class ResizeObserverStub {
   observe() {}
@@ -131,6 +133,8 @@ function renderTurn(options: {
   wrapping?: (children: React.ReactNode) => React.ReactNode;
   isCompleted?: boolean;
   errorMessage?: string;
+  agentProgress?: Record<string, AgentToolCall[]>;
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -152,7 +156,7 @@ function renderTurn(options: {
     listH3HubDatasets: () => null,
   };
   const toolTimings = {};
-  const agentProgress = {};
+  const agentProgress = options.agentProgress ?? {};
 
   const forkSessionFromMessage = jest.fn();
   const setToolTiming = jest.fn();
@@ -178,6 +182,7 @@ function renderTurn(options: {
         <ChatTurnView
           chatTurn={createTurn(options.parts, options)}
           hoistedRenderers={['chart', 'listH3HubDatasets']}
+          ErrorMessageComponent={options.ErrorMessageComponent}
         />
       </TooltipProvider>
     </RoomStateProvider>
@@ -433,6 +438,47 @@ describe('ChatTurnView layout', () => {
     cleanup(container, root);
   });
 
+  it('passes live agent children to a ToolActivity override', () => {
+    const renderedToolActivity: ChatToolActivityProps[] = [];
+    const CustomToolActivity: React.FC<ChatToolActivityProps> = (props) => {
+      renderedToolActivity.push(props);
+      return null;
+    };
+    const staleCall: AgentToolCall = {
+      toolCallId: 'stale-1',
+      toolName: 'stale-tool',
+      state: 'success',
+    };
+    const liveCall: AgentToolCall = {
+      toolCallId: 'live-1',
+      toolName: 'live-tool',
+      state: 'pending',
+    };
+    const {container, root} = renderTurn({
+      parts: [
+        {
+          type: 'tool-agent-research',
+          toolCallId: 'agent-1',
+          state: 'output-available',
+          input: {},
+          output: {agentToolCalls: [staleCall]},
+        } as UIMessage['parts'][number],
+      ],
+      agentProgress: {'agent-1': [liveCall]},
+      wrapping: (children) => (
+        <ChatRendering components={{ToolActivity: CustomToolActivity}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(renderedToolActivity.at(-1)?.toolCall.agentToolCalls).toEqual([
+      liveCall,
+    ]);
+
+    cleanup(container, root);
+  });
+
   it('marks reasoning-only incomplete activity as running', () => {
     const CustomActivity = ({children, isRunning}: ChatActivityProps) => (
       <div data-testid="custom-activity" data-running={isRunning}>
@@ -573,6 +619,49 @@ describe('ChatTurnView layout', () => {
         .querySelector('[data-testid="custom-actions"]')
         ?.getAttribute('data-action-keys'),
     ).toBe('copy');
+
+    cleanup(container, root);
+  });
+
+  it('prefers an explicit Error slot over the legacy error component', () => {
+    const LegacyError = ({errorMessage}: ErrorMessageComponentProps) => (
+      <div data-testid="legacy-error">{errorMessage}</div>
+    );
+    const CustomError = ({message}: ChatErrorProps) => (
+      <div data-testid="custom-error">{message}</div>
+    );
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      errorMessage: 'Request failed',
+      ErrorMessageComponent: LegacyError,
+      wrapping: (children) => (
+        <ChatRendering components={{Error: CustomError}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(container.querySelector('[data-testid="legacy-error"]')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="custom-error"]')?.textContent,
+    ).toBe('Request failed');
+
+    cleanup(container, root);
+  });
+
+  it('keeps the legacy error component when Error is not overridden', () => {
+    const LegacyError = ({errorMessage}: ErrorMessageComponentProps) => (
+      <div data-testid="legacy-error">{errorMessage}</div>
+    );
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      errorMessage: 'Request failed',
+      ErrorMessageComponent: LegacyError,
+    });
+
+    expect(
+      container.querySelector('[data-testid="legacy-error"]')?.textContent,
+    ).toBe('Request failed');
 
     cleanup(container, root);
   });

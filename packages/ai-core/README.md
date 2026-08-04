@@ -247,6 +247,8 @@ function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
 
 The same recipe also applies inside nested agents. Similarly, an `Activity`
 override controls their activity chrome when `nestedActivityMode="own-boxes"`.
+For agent rows, `toolCall.agentToolCalls` follows live agent progress and then
+the persisted final output, so the same renderer works during streaming.
 
 **Action controls** — compose available operations without recreating their
 behavior. Optional `copy` and `fork` objects are capabilities: omitting one

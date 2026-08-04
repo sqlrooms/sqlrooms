@@ -1,6 +1,7 @@
 import {createContext, useContext} from 'react';
 import type {
   ChatNestedActivityMode,
+  ChatRenderingComponents,
   ChatRenderingValue,
 } from './ChatRenderingTypes';
 
@@ -13,9 +14,23 @@ export const ChatRenderingContext = createContext<ChatRenderingValue | null>(
   null,
 );
 
+const EMPTY_CHAT_RENDERING_OVERRIDES = new Set<keyof ChatRenderingComponents>();
+
+/** Context tracking slots explicitly overridden by rendering providers. */
+export const ChatRenderingOverridesContext = createContext<
+  ReadonlySet<keyof ChatRenderingComponents>
+>(EMPTY_CHAT_RENDERING_OVERRIDES);
+
 /** Return the nearest rendering recipe, or null when no provider is present. */
 export function useOptionalChatRendering(): ChatRenderingValue | null {
   return useContext(ChatRenderingContext);
+}
+
+/** Return the rendering slots explicitly overridden in the current subtree. */
+export function useChatRenderingOverrides(): ReadonlySet<
+  keyof ChatRenderingComponents
+> {
+  return useContext(ChatRenderingOverridesContext);
 }
 
 /** Return the resolved nested activity mode, including the default fallback. */

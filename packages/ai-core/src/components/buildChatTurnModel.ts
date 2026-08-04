@@ -27,6 +27,8 @@ export type ChatTurnActivityItem =
       part: ToolPartWithId;
       state: AgentToolCall['state'];
       isAgent: boolean;
+      /** Live or persisted child calls when this tool represents an agent. */
+      agentToolCalls?: AgentToolCall[];
       /** True when this top-level tool is collected into the hoisted region. */
       isHoisted: boolean;
     };
@@ -127,7 +129,7 @@ function getAgentNestedCalls(
   agentProgress: Record<string, AgentToolCall[]>,
 ): AgentToolCall[] {
   const fromProgress = agentProgress[part.toolCallId];
-  if (fromProgress?.length) return fromProgress;
+  if (fromProgress !== undefined) return fromProgress;
   const output = part.state === 'output-available' ? part.output : undefined;
   const agentOutput = output as {agentToolCalls?: AgentToolCall[]} | undefined;
   return agentOutput?.agentToolCalls ?? [];
@@ -353,8 +355,12 @@ export function buildChatTurnModel(options: {
 
     let isHoisted = false;
 
-    if (isAgent) {
-      const nested = getAgentNestedCalls(toolPart, agentProgress);
+    const agentToolCalls = isAgent
+      ? getAgentNestedCalls(toolPart, agentProgress)
+      : undefined;
+
+    if (agentToolCalls) {
+      const nested = agentToolCalls;
       leafToolCount += countLeafToolsWithProgress(nested, agentProgress);
       if (areAnyNestedPending(nested, agentProgress)) {
         isActivityRunning = true;
@@ -391,6 +397,7 @@ export function buildChatTurnModel(options: {
       part: toolPart,
       state: mapUiToolStateToAgentState(toolPart.state),
       isAgent,
+      agentToolCalls,
       isHoisted,
     });
   }

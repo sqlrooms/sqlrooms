@@ -2,7 +2,9 @@ import {useMemo, type FC} from 'react';
 import {defaultChatRenderingComponents} from './defaultChatRendering';
 import {
   ChatRenderingContext,
+  ChatRenderingOverridesContext,
   DEFAULT_CHAT_NESTED_ACTIVITY_MODE,
+  useChatRenderingOverrides,
   useOptionalChatRendering,
   useResolvedChatNestedActivityMode,
 } from './ChatRenderingContextBase';
@@ -49,6 +51,7 @@ export const ChatRendering: FC<ChatRenderingProps> = ({
   nestedActivityMode,
 }) => {
   const parent = useOptionalChatRendering();
+  const parentOverrides = useChatRenderingOverrides();
   const value = useMemo<ChatRenderingValue>(() => {
     const baseComponents = parent?.components ?? defaultChatRenderingComponents;
     return {
@@ -59,11 +62,23 @@ export const ChatRendering: FC<ChatRenderingProps> = ({
         DEFAULT_CHAT_NESTED_ACTIVITY_MODE,
     };
   }, [parent, components, nestedActivityMode]);
+  const overriddenComponents = useMemo(() => {
+    if (!components) return parentOverrides;
+    const result = new Set(parentOverrides);
+    for (const [name, component] of Object.entries(components)) {
+      if (component) {
+        result.add(name as keyof ChatRenderingComponents);
+      }
+    }
+    return result;
+  }, [parentOverrides, components]);
 
   return (
-    <ChatRenderingContext.Provider value={value}>
-      {children}
-    </ChatRenderingContext.Provider>
+    <ChatRenderingOverridesContext.Provider value={overriddenComponents}>
+      <ChatRenderingContext.Provider value={value}>
+        {children}
+      </ChatRenderingContext.Provider>
+    </ChatRenderingOverridesContext.Provider>
   );
 };
 

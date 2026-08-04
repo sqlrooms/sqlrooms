@@ -325,13 +325,7 @@ export function createChatTurnPresentation({
         item.part.state === 'approval-requested'
           ? item.part.approval.id
           : undefined,
-      agentToolCalls:
-        item.part.state === 'output-available' &&
-        item.part.output &&
-        typeof item.part.output === 'object' &&
-        'agentToolCalls' in item.part.output
-          ? (item.part.output.agentToolCalls as AgentToolCall[] | undefined)
-          : undefined,
+      agentToolCalls: item.agentToolCalls,
     };
     const renderToolActivity = () => (
       <ToolActivity
