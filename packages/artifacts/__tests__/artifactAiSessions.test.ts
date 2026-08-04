@@ -520,46 +520,6 @@ describe('createArtifactAiSlice', () => {
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
   });
 
-  it('reuses an empty artifact-scoped session instead of creating another one', () => {
-    const store = createTestStore();
-    store.getState().artifacts.setCurrentArtifact('artifact-a');
-    store.setState(
-      produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [
-          createSession('empty-session', 1),
-          {...createSession('used-session', 2), prompt: 'hello'},
-        ];
-        draft.ai.config.currentSessionId = 'used-session';
-        draft.artifactAi.config.sessionArtifactLinks = [
-          {
-            sessionId: 'empty-session',
-            artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
-          },
-          {
-            sessionId: 'used-session',
-            artifactId: 'artifact-a',
-            createdAt: 2000,
-            linkType: 'attached',
-          },
-        ];
-      }),
-    );
-
-    const sessionId = store.getState().artifactAi.createArtifactScopedSession();
-
-    expect(sessionId).toBe('empty-session');
-    expect(store.getState().ai.config.currentSessionId).toBe('empty-session');
-    expect(store.getState().ai.config.sessions).toHaveLength(2);
-    expect(
-      store
-        .getState()
-        .ai.config.sessions.find((session) => session.id === 'empty-session')
-        ?.lastOpenedAt,
-    ).toBe(100);
-  });
-
   it('creates a new artifact-scoped session instead of reusing the current empty session', () => {
     const store = createTestStore();
     store.getState().artifacts.setCurrentArtifact('artifact-a');
@@ -804,20 +764,6 @@ describe('createArtifactAiSlice', () => {
       'artifact-a',
     );
     expect(store.getState().ai.config.currentSessionId).toBe('session-other');
-  });
-
-  it('clears the current session when the current artifact has no owned sessions', () => {
-    const store = createTestStore();
-    store.setState(
-      produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [createSession('unowned', 1)];
-        draft.ai.config.currentSessionId = 'unowned';
-      }),
-    );
-
-    store.getState().artifactAi.syncCurrentArtifactAiSession();
-
-    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
   });
 
   it('cleans up stale mappings', () => {

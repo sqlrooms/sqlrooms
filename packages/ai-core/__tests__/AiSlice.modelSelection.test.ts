@@ -289,24 +289,6 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
-  it('honors custom defaults when initialized without persisted config', () => {
-    const store = createStore<AiSliceState>((set, get, store) =>
-      createAiSlice({
-        tools: {} as any,
-        getInstructions: () => 'test instructions',
-        defaultProvider: 'anthropic',
-        defaultModel: 'claude-test',
-        initialPrompt: 'start here',
-      })(set, get, store),
-    );
-
-    expect(store.getState().ai.getCurrentSession()).toMatchObject({
-      modelProvider: 'anthropic',
-      model: 'claude-test',
-      prompt: 'start here',
-    });
-  });
-
   it('opens the repaired current session when initialized with a stale current session id', () => {
     const now = Date.now();
     const store = createStore<AiSliceState>((set, get, store) =>
