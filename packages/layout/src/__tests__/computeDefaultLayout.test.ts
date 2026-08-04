@@ -1,5 +1,5 @@
 import type {LayoutNode} from '@sqlrooms/layout-config';
-import {computeDefaultLayout} from '../node-renderers/split-node-renderer/SplitLayoutPanelGroup';
+import {computeDefaultLayout} from '../node-renderers/split-node-renderer/computeDefaultLayout';
 
 function panel(
   id: string,
