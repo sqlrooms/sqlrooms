@@ -56,12 +56,17 @@ export type ChatTextOutputProps = {
 
 /** Props for one tool or nested-agent activity slot. */
 export type ChatToolActivityProps = {
-  part: ToolPartWithId;
-  index: number;
+  /** Normalized tool-call semantics, available for top-level and nested calls. */
+  toolCall: AgentToolCall;
+  /** Original AI SDK part when this activity came from the turn message. */
+  part?: ToolPartWithId;
+  /** Source-message index; absent for calls nested inside an agent. */
+  index?: number;
   isAgent: boolean;
   /** True when this call's rich UI is rendered in a hoisted region. */
   isHoisted: boolean;
-  searchBlockId: string;
+  /** Registered search block; absent for nested activity. */
+  searchBlockId?: string;
 };
 
 /** Props for one rich tool output in a hoisted region. */

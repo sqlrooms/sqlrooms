@@ -42,6 +42,8 @@ jest.unstable_mockModule('../src/components/ToolPartRenderer', () => ({
 const mountCounts = new Map<string, number>();
 
 jest.unstable_mockModule('../src/components/FlatAgentRenderer', () => ({
+  AgentToolActivityLogLine: () => <div data-testid="agent-tool-log" />,
+  AgentToolSummaryLine: () => <div data-testid="agent-tool-summary" />,
   OrchestratorToolLogLine: () => <div data-testid="orchestrator-log" />,
   HoistedToolCallRenderer: ({item}: {item: {toolCallId: string}}) => {
     React.useEffect(() => {

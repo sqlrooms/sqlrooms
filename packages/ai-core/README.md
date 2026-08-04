@@ -225,6 +225,29 @@ function AppReasoning({text, isRunning}: ChatReasoningProps) {
 You can combine any of these in one map, e.g.
 `components={{Prompt: AppPrompt, Reasoning: AppReasoning}}`.
 
+**Tool activity** — customize top-level and nested tool or agent rows through
+one normalized contract. `toolCall` is always present; `part` is only present
+when the activity originated from a top-level AI SDK message part:
+
+```tsx
+import {Chat, type ChatToolActivityProps} from '@sqlrooms/ai-core';
+
+function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
+  return (
+    <div data-state={toolCall.state}>
+      {isAgent ? 'Agent' : 'Tool'}: {toolCall.toolName}
+    </div>
+  );
+}
+
+<Chat.Rendering components={{ToolActivity: AppToolActivity}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+The same recipe also applies inside nested agents. Similarly, an `Activity`
+override controls their activity chrome when `nestedActivityMode="own-boxes"`.
+
 **Action controls** — compose available operations without recreating their
 behavior. Optional `copy` and `fork` objects are capabilities: omitting one
 hides it, while its `Content` keeps the built-in control wired correctly:

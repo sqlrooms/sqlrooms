@@ -106,7 +106,8 @@ function stripTrailingEllipsis(text: string): string {
 // ActivityLogLine — compact single-line entry inside an ActivityBox (leaf only)
 // ---------------------------------------------------------------------------
 
-const ActivityLogLine: React.FC<{
+/** SQLRooms' built-in presentation for a normalized nested tool call. */
+export const AgentToolActivityLogLine: React.FC<{
   toolCall: AgentToolCall;
 }> = ({toolCall}) => {
   const showDetails = useShowToolCallDetails();
@@ -193,7 +194,8 @@ const LogLineElapsed: React.FC<{
 // ParentSummaryLine — summary line for an agent
 // ---------------------------------------------------------------------------
 
-const ParentSummaryLine: React.FC<{
+/** SQLRooms' built-in presentation for a normalized nested agent call. */
+export const AgentToolSummaryLine: React.FC<{
   toolCallId: string;
   toolName: string;
   isComplete: boolean;
@@ -453,6 +455,8 @@ const FlatSegmentList: React.FC<{
   embedInParentActivity = false,
 }) => {
   const rendering = useOptionalChatRendering();
+  const Activity = rendering?.components.Activity;
+  const ToolActivity = rendering?.components.ToolActivity;
   const HoistedOutput =
     rendering?.components.HoistedOutput ?? HoistedToolCallRenderer;
   const renderNestedHoistedOutputs = useRenderNestedHoistedOutputs();
@@ -481,7 +485,15 @@ const FlatSegmentList: React.FC<{
               !isHoisted && !!toolRenderers[tc.toolName];
             return (
               <React.Fragment key={tc.toolCallId}>
-                <ActivityLogLine toolCall={tc} />
+                {ToolActivity ? (
+                  <ToolActivity
+                    toolCall={tc}
+                    isAgent={false}
+                    isHoisted={isHoisted}
+                  />
+                ) : (
+                  <AgentToolActivityLogLine toolCall={tc} />
+                )}
                 {hasInlineRenderer && (
                   <HoistedToolCallRenderer
                     item={{
@@ -535,11 +547,24 @@ const FlatSegmentList: React.FC<{
             );
           }
 
+          const activityContent = Activity ? (
+            <Activity
+              isRunning={anyPending}
+              isCompleted={allToolsDone}
+              toolCount={toolCount}
+              summaryLabel={summaryLabel}
+            >
+              {logLines}
+            </Activity>
+          ) : (
+            <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
+              {logLines}
+            </ActivityBox>
+          );
+
           return (
             <React.Fragment key={`tg-${idx}`}>
-              <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
-                {logLines}
-              </ActivityBox>
+              {activityContent}
               {renderNestedHoistedOutputs ? hoistedOutputs : null}
             </React.Fragment>
           );
@@ -558,14 +583,18 @@ const FlatSegmentList: React.FC<{
 
         return (
           <React.Fragment key={toolCall.toolCallId}>
-            <ParentSummaryLine
-              toolCallId={toolCall.toolCallId}
-              toolName={toolCall.toolName}
-              isComplete={isComplete}
-              startedAt={toolCall.startedAt}
-              completedAt={toolCall.completedAt}
-              toolCall={toolCall}
-            />
+            {ToolActivity ? (
+              <ToolActivity toolCall={toolCall} isAgent isHoisted={false} />
+            ) : (
+              <AgentToolSummaryLine
+                toolCallId={toolCall.toolCallId}
+                toolName={toolCall.toolName}
+                isComplete={isComplete}
+                startedAt={toolCall.startedAt}
+                completedAt={toolCall.completedAt}
+                toolCall={toolCall}
+              />
+            )}
             <FlatSegmentList
               segments={childSegments}
               agentProgress={agentProgress}
@@ -756,7 +785,7 @@ export const FlatAgentRenderer: React.FC<{
   return (
     <div className="mt-1 flex w-full min-w-0 flex-col gap-1.5 overflow-hidden text-[0.9em]">
       {parentToolName && !hideParentSummary && (
-        <ParentSummaryLine
+        <AgentToolSummaryLine
           toolCallId={toolCallId}
           toolName={parentToolName}
           isComplete={!!isComplete}

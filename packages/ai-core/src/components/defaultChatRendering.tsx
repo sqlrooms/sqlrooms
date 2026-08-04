@@ -9,6 +9,7 @@ import {SplitIcon, SquareTerminalIcon} from 'lucide-react';
 import React from 'react';
 import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
+import type {AgentToolCall} from '../types';
 import {isReasoningPart, isTextPart} from '../utils';
 import {ActivityBox} from './ActivityBox';
 import {HighlightedChatSearchText} from './ChatSearch';
@@ -31,6 +32,8 @@ import type {
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {ExpandableContent} from './ExpandableContent';
 import {
+  AgentToolActivityLogLine,
+  AgentToolSummaryLine,
   HoistedToolCallRenderer,
   OrchestratorToolLogLine,
 } from './FlatAgentRenderer';
@@ -39,6 +42,7 @@ import {RenderNestedHoistedOutputsProvider} from './NestedHoistedOutputsContext'
 import {ToolPartRenderer} from './ToolPartRenderer';
 import {
   getToolName,
+  mapUiToolStateToAgentState,
   type ChatTurnModel,
   type ChatTurnTextItem,
 } from './buildChatTurnModel';
@@ -129,11 +133,27 @@ export const DefaultChatTextOutput: React.FC<ChatTextOutputProps> = ({
 
 /** SQLRooms default tool and nested-agent activity presentation. */
 export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
+  toolCall,
   part,
   isAgent,
   isHoisted,
   searchBlockId,
 }) => {
+  if (!part) {
+    return isAgent ? (
+      <AgentToolSummaryLine
+        toolCallId={toolCall.toolCallId}
+        toolName={toolCall.toolName}
+        isComplete={toolCall.state === 'success' || toolCall.state === 'error'}
+        startedAt={toolCall.startedAt}
+        completedAt={toolCall.completedAt}
+        toolCall={toolCall}
+      />
+    ) : (
+      <AgentToolActivityLogLine toolCall={toolCall} />
+    );
+  }
+
   if (isAgent) {
     return <ToolPartRenderer part={part} toolCallId={part.toolCallId} />;
   }
@@ -292,8 +312,30 @@ export function createChatTurnPresentation({
       };
     }
 
+    const toolCall: AgentToolCall = {
+      toolCallId: item.part.toolCallId,
+      toolName: getToolName(item.part) ?? 'tool',
+      input: item.part.input,
+      output:
+        item.part.state === 'output-available' ? item.part.output : undefined,
+      errorText:
+        item.part.state === 'output-error' ? item.part.errorText : undefined,
+      state: mapUiToolStateToAgentState(item.part.state),
+      approvalId:
+        item.part.state === 'approval-requested'
+          ? item.part.approval.id
+          : undefined,
+      agentToolCalls:
+        item.part.state === 'output-available' &&
+        item.part.output &&
+        typeof item.part.output === 'object' &&
+        'agentToolCalls' in item.part.output
+          ? (item.part.output.agentToolCalls as AgentToolCall[] | undefined)
+          : undefined,
+    };
     const renderToolActivity = () => (
       <ToolActivity
+        toolCall={toolCall}
         part={item.part}
         index={item.index}
         isAgent={item.isAgent}

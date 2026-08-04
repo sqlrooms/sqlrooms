@@ -73,6 +73,12 @@ jest.unstable_mockModule('../src/components/ToolPartRenderer', () => ({
 }));
 
 jest.unstable_mockModule('../src/components/FlatAgentRenderer', () => ({
+  AgentToolActivityLogLine: ({toolCall}: {toolCall: {toolName: string}}) => (
+    <div data-testid="agent-tool-log">{toolCall.toolName}</div>
+  ),
+  AgentToolSummaryLine: ({toolCall}: {toolCall: {toolName: string}}) => (
+    <div data-testid="agent-tool-summary">{toolCall.toolName}</div>
+  ),
   OrchestratorToolLogLine: ({
     part,
   }: {
@@ -387,7 +393,11 @@ describe('ChatTurnView layout', () => {
   });
 
   it('records timing independently of ToolActivity rendering', () => {
-    const HiddenToolActivity: React.FC<ChatToolActivityProps> = () => null;
+    const renderedToolActivity: ChatToolActivityProps[] = [];
+    const HiddenToolActivity: React.FC<ChatToolActivityProps> = (props) => {
+      renderedToolActivity.push(props);
+      return null;
+    };
     const {container, root, setToolTiming} = renderTurn({
       parts: [
         {
@@ -406,6 +416,18 @@ describe('ChatTurnView layout', () => {
 
     expect(setToolTiming).toHaveBeenCalledWith('plain-1', {
       startedAt: expect.any(Number),
+    });
+    expect(renderedToolActivity[0]).toMatchObject({
+      toolCall: {
+        toolCallId: 'plain-1',
+        toolName: 'plain',
+        input: {},
+        state: 'pending',
+      },
+      part: {toolCallId: 'plain-1'},
+      index: 0,
+      isAgent: false,
+      isHoisted: false,
     });
 
     cleanup(container, root);
