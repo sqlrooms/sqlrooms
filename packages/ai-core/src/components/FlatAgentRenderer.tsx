@@ -20,9 +20,10 @@ import {
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
 import {
-  toolRendererAllowsHoist,
+  canHoistAgentToolCall,
   type HoistableToolCall,
 } from './collectHoistableRenderers';
+import {useRenderNestedHoistedOutputs} from './NestedHoistedOutputsContext';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
 // ---------------------------------------------------------------------------
@@ -99,23 +100,6 @@ type FlatSegment = AgentSegment | ToolGroupSegment;
 
 function stripTrailingEllipsis(text: string): string {
   return text.replace(/(?:\s*(?:\.\.\.|…))+\s*$/u, '').trimEnd();
-}
-
-function isToolNameHoisted(
-  toolName: string,
-  toolCall: Pick<AgentToolCall, 'output' | 'input' | 'state'>,
-  hoistableSet: ReadonlySet<string>,
-  toolRenderers: ToolRendererRegistry,
-): boolean {
-  const renderer = toolRenderers[toolName];
-  return (
-    hoistableSet.has(toolName) &&
-    toolRendererAllowsHoist(renderer, {
-      output: toolCall.output,
-      input: toolCall.input,
-      state: toolCall.state,
-    })
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -457,7 +441,7 @@ const FlatSegmentList: React.FC<{
   toolRenderers: ToolRendererRegistry;
   isPassthroughTool?: (tc: AgentToolCall) => boolean;
   isAgentComplete?: boolean;
-  /** When true, omit nested ActivityBoxes and local hoisted UI. */
+  /** When true, omit nested ActivityBoxes. */
   embedInParentActivity?: boolean;
 }> = ({
   segments,
@@ -471,6 +455,7 @@ const FlatSegmentList: React.FC<{
   const rendering = useOptionalChatRendering();
   const HoistedOutput =
     rendering?.components.HoistedOutput ?? HoistedToolCallRenderer;
+  const renderNestedHoistedOutputs = useRenderNestedHoistedOutputs();
   return (
     <>
       {segments.map((seg, idx) => {
@@ -487,11 +472,10 @@ const FlatSegmentList: React.FC<{
               : undefined;
 
           const logLines = seg.tools.map((tc) => {
-            const isHoisted = isToolNameHoisted(
-              tc.toolName,
+            const isHoisted = canHoistAgentToolCall(
               tc,
-              hoistableSet,
               toolRenderers,
+              hoistableSet,
             );
             const hasInlineRenderer =
               !isHoisted && !!toolRenderers[tc.toolName];
@@ -516,11 +500,10 @@ const FlatSegmentList: React.FC<{
           });
 
           const hoistedOutputs = seg.tools.map((tc) => {
-            const isHoisted = isToolNameHoisted(
-              tc.toolName,
+            const isHoisted = canHoistAgentToolCall(
               tc,
-              hoistableSet,
               toolRenderers,
+              hoistableSet,
             );
             if (!isHoisted) return null;
             return (
@@ -547,7 +530,7 @@ const FlatSegmentList: React.FC<{
             return (
               <React.Fragment key={`tg-${idx}`}>
                 {logLines}
-                {hoistedOutputs}
+                {renderNestedHoistedOutputs ? hoistedOutputs : null}
               </React.Fragment>
             );
           }
@@ -557,7 +540,7 @@ const FlatSegmentList: React.FC<{
               <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
                 {logLines}
               </ActivityBox>
-              {hoistedOutputs}
+              {renderNestedHoistedOutputs ? hoistedOutputs : null}
             </React.Fragment>
           );
         }

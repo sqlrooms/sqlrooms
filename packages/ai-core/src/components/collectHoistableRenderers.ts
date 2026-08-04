@@ -37,6 +37,26 @@ export function toolRendererAllowsHoist(
 }
 
 /**
+ * Whether a normalized agent tool call can render in a hoisted-output region.
+ * Pending and failed calls remain activity-only, matching the turn model.
+ */
+export function canHoistAgentToolCall(
+  toolCall: Pick<AgentToolCall, 'toolName' | 'output' | 'input' | 'state'>,
+  toolRenderers: ToolRendererRegistry,
+  hoistableToolNames: ReadonlySet<string>,
+): boolean {
+  return (
+    hoistableToolNames.has(toolCall.toolName) &&
+    (toolCall.state === 'success' || toolCall.state === 'approval-requested') &&
+    toolRendererAllowsHoist(toolRenderers[toolCall.toolName], {
+      output: toolCall.output,
+      input: toolCall.input,
+      state: toolCall.state,
+    })
+  );
+}
+
+/**
  * Recursively walk an AgentToolCall tree and collect every tool call that
  * has a registered renderer AND is in the explicit hoistable set.
  * Results are returned in depth-first order so they appear in the natural
@@ -69,19 +89,7 @@ export function collectHoistableRenderers(
         const nestedCalls =
           agentProgress[tc.toolCallId] ?? tc.agentToolCalls ?? [];
         visit(nestedCalls);
-      } else if (
-        hoistableToolNames.has(tc.toolName) &&
-        // Match HoistedToolCallRenderer's gate: only success / approval
-        // states produce output. Pending/error states return null, so
-        // collecting them would emit empty wrapper divs (and add spurious
-        // gap spacing) for every in-progress or failed nested tool.
-        (tc.state === 'success' || tc.state === 'approval-requested') &&
-        toolRendererAllowsHoist(toolRenderers[tc.toolName], {
-          output: tc.output,
-          input: tc.input,
-          state: tc.state,
-        })
-      ) {
+      } else if (canHoistAgentToolCall(tc, toolRenderers, hoistableToolNames)) {
         if (seen.has(tc.toolCallId)) continue;
         seen.add(tc.toolCallId);
         result.push({

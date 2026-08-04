@@ -18,8 +18,10 @@ import type {
   ChatActionsProps,
   ChatErrorProps,
   ChatHoistedOutputProps,
+  ChatToolActivityProps,
   ChatTurnSlotProps,
 } from '../src/components/ChatRenderingContext';
+import {useRenderNestedHoistedOutputs} from '../src/components/NestedHoistedOutputsContext';
 
 class ResizeObserverStub {
   observe() {}
@@ -48,13 +50,26 @@ jest.unstable_mockModule('../src/components/ToolPartRenderer', () => ({
     part,
     toolCallId,
   }: {
-    part: {toolCallId?: string};
+    part: {
+      toolCallId?: string;
+      output?: {agentToolCalls?: Array<{toolCallId: string}>};
+    };
     toolCallId: string;
-  }) => (
-    <div data-testid="tool-part-renderer" data-tool-call-id={toolCallId}>
-      agent:{part.toolCallId ?? toolCallId}
-    </div>
-  ),
+  }) => {
+    const renderNestedHoistedOutputs = useRenderNestedHoistedOutputs();
+    return (
+      <div data-testid="tool-part-renderer" data-tool-call-id={toolCallId}>
+        agent:{part.toolCallId ?? toolCallId}
+        {renderNestedHoistedOutputs
+          ? part.output?.agentToolCalls?.map((call) => (
+              <div key={call.toolCallId} data-testid="nested-local-hoist">
+                {call.toolCallId}
+              </div>
+            ))
+          : null}
+      </div>
+    );
+  },
 }));
 
 jest.unstable_mockModule('../src/components/FlatAgentRenderer', () => ({
@@ -134,6 +149,7 @@ function renderTurn(options: {
   const agentProgress = {};
 
   const forkSessionFromMessage = jest.fn();
+  const setToolTiming = jest.fn();
   const store = createStore<AiSliceState>(() => ({
     ai: {
       config: {
@@ -145,7 +161,7 @@ function renderTurn(options: {
       agentProgress,
       toolRenderers,
       toolTimings,
-      setToolTiming: jest.fn(),
+      setToolTiming,
       tools: {},
     } as unknown as AiSliceState['ai'],
   }));
@@ -165,7 +181,7 @@ function renderTurn(options: {
     root.render(options.wrapping ? options.wrapping(tree) : tree);
   });
 
-  return {container, root, forkSessionFromMessage};
+  return {container, root, forkSessionFromMessage, setToolTiming};
 }
 
 function cleanup(container: HTMLElement, root: Root) {
@@ -190,6 +206,26 @@ const sampleParts: UIMessage['parts'] = [
     output: {spec: {}},
   } as UIMessage['parts'][number],
   {type: 'text', text: 'Final summary'},
+];
+
+const nestedAgentParts: UIMessage['parts'] = [
+  {
+    type: 'tool-agent-research',
+    toolCallId: 'agent-1',
+    state: 'output-available',
+    input: {reasoning: 'Researching'},
+    output: {
+      agentToolCalls: [
+        {
+          toolCallId: 'nested-chart-1',
+          toolName: 'chart',
+          state: 'success',
+          input: {},
+          output: {spec: {}},
+        },
+      ],
+    },
+  } as UIMessage['parts'][number],
 ];
 
 describe('ChatTurnView layout', () => {
@@ -299,6 +335,121 @@ describe('ChatTurnView layout', () => {
         container.querySelectorAll('[data-testid="custom-hoisted-output"]'),
       ).map((element) => element.textContent),
     ).toEqual(['list-1', 'chart-1']);
+
+    cleanup(container, root);
+  });
+
+  it('keeps nested hoists in the default source-order timeline', () => {
+    const {container, root} = renderTurn({parts: nestedAgentParts});
+
+    expect(
+      container.querySelectorAll('[data-testid="nested-local-hoist"]'),
+    ).toHaveLength(1);
+    expect(
+      container.querySelectorAll('[data-testid="chart-renderer"]'),
+    ).toHaveLength(0);
+
+    cleanup(container, root);
+  });
+
+  it('renders nested hoists once in a decomposed custom turn', () => {
+    const CustomTurn = ({turn}: ChatTurnSlotProps) => {
+      const Activity = turn.activity.Content;
+      const HoistedOutputs = turn.hoistedOutputs.Content;
+      return (
+        <article>
+          <Activity />
+          <HoistedOutputs />
+        </article>
+      );
+    };
+
+    const {container, root} = renderTurn({
+      parts: nestedAgentParts,
+      wrapping: (children) => (
+        <ChatRendering
+          nestedActivityMode="embed"
+          components={{Turn: CustomTurn}}
+        >
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(
+      container.querySelectorAll('[data-testid="nested-local-hoist"]'),
+    ).toHaveLength(0);
+    expect(
+      container.querySelectorAll('[data-testid="chart-renderer"]'),
+    ).toHaveLength(1);
+
+    cleanup(container, root);
+  });
+
+  it('records timing independently of ToolActivity rendering', () => {
+    const HiddenToolActivity: React.FC<ChatToolActivityProps> = () => null;
+    const {container, root, setToolTiming} = renderTurn({
+      parts: [
+        {
+          type: 'tool-plain',
+          toolCallId: 'plain-1',
+          state: 'input-available',
+          input: {},
+        } as UIMessage['parts'][number],
+      ],
+      wrapping: (children) => (
+        <ChatRendering components={{ToolActivity: HiddenToolActivity}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(setToolTiming).toHaveBeenCalledWith('plain-1', {
+      startedAt: expect.any(Number),
+    });
+
+    cleanup(container, root);
+  });
+
+  it('marks reasoning-only incomplete activity as running', () => {
+    const CustomActivity = ({children, isRunning}: ChatActivityProps) => (
+      <div data-testid="custom-activity" data-running={isRunning}>
+        {children}
+      </div>
+    );
+    const CustomTurn = ({turn}: ChatTurnSlotProps) => {
+      const Activity = turn.activity.Content;
+      return (
+        <article
+          data-testid="custom-turn"
+          data-running={turn.activity.isRunning}
+        >
+          <Activity />
+        </article>
+      );
+    };
+    const {container, root} = renderTurn({
+      parts: [{type: 'reasoning', text: 'Still thinking'}],
+      isCompleted: false,
+      wrapping: (children) => (
+        <ChatRendering
+          components={{Turn: CustomTurn, Activity: CustomActivity}}
+        >
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(
+      container
+        .querySelector('[data-testid="custom-turn"]')
+        ?.getAttribute('data-running'),
+    ).toBe('true');
+    expect(
+      container
+        .querySelector('[data-testid="custom-activity"]')
+        ?.getAttribute('data-running'),
+    ).toBe('true');
 
     cleanup(container, root);
   });

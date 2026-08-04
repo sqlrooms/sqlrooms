@@ -2,6 +2,7 @@ import {useMemo, type FC} from 'react';
 import {defaultChatRenderingComponents} from './defaultChatRendering';
 import {
   ChatRenderingContext,
+  DEFAULT_CHAT_NESTED_ACTIVITY_MODE,
   useOptionalChatRendering,
   useResolvedChatNestedActivityMode,
 } from './ChatRenderingContextBase';
@@ -53,7 +54,9 @@ export const ChatRendering: FC<ChatRenderingProps> = ({
     return {
       components: mergeChatRenderingComponents(baseComponents, components),
       nestedActivityMode:
-        nestedActivityMode ?? parent?.nestedActivityMode ?? 'own-boxes',
+        nestedActivityMode ??
+        parent?.nestedActivityMode ??
+        DEFAULT_CHAT_NESTED_ACTIVITY_MODE,
     };
   }, [parent, components, nestedActivityMode]);
 
@@ -64,15 +67,17 @@ export const ChatRendering: FC<ChatRenderingProps> = ({
   );
 };
 
+const defaultChatRenderingValue: ChatRenderingValue = {
+  components: defaultChatRenderingComponents,
+  nestedActivityMode: DEFAULT_CHAT_NESTED_ACTIVITY_MODE,
+};
+
+/** Return the nearest resolved chat recipe or the stable built-in recipe. */
 export function useChatRendering(): ChatRenderingValue {
-  return (
-    useOptionalChatRendering() ?? {
-      components: defaultChatRenderingComponents,
-      nestedActivityMode: 'own-boxes',
-    }
-  );
+  return useOptionalChatRendering() ?? defaultChatRenderingValue;
 }
 
+/** Return the component slots from the nearest resolved chat recipe. */
 export function useChatRenderingComponents(): ChatRenderingComponents {
   return (
     useOptionalChatRendering()?.components ?? defaultChatRenderingComponents
@@ -85,6 +90,7 @@ export function useChatNestedActivityMode(): ChatNestedActivityMode {
 }
 
 export type {
+  ChatComponentType,
   ChatActionsProps,
   ChatActionsRegion,
   ChatActivityItem,

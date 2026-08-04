@@ -19,7 +19,51 @@ const {useToolTimingRecorder} =
   await import('../src/hooks/useToolTimingRecorder');
 
 describe('useToolTimingRecorder', () => {
-  it('records completion when a completed renderer replaces a pending one', () => {
+  it('records completion after observing the tool pending', () => {
+    const setToolTiming = jest.fn();
+    const store = createStore<AiSliceState>(() => ({
+      ai: {
+        toolTimings: {},
+        setToolTiming,
+      } as unknown as AiSliceState['ai'],
+    }));
+    const container = document.createElement('div');
+    const root = createRoot(container);
+
+    const Harness = ({isComplete}: {isComplete: boolean}) => {
+      useToolTimingRecorder('tool-1', isComplete);
+      return null;
+    };
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <Harness isComplete={false} />
+        </RoomStateProvider>,
+      );
+    });
+
+    const startedAt = setToolTiming.mock.calls[0]?.[1]?.startedAt;
+    expect(startedAt).toEqual(expect.any(Number));
+    setToolTiming.mockClear();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <Harness isComplete />
+        </RoomStateProvider>,
+      );
+    });
+
+    expect(setToolTiming).toHaveBeenCalledWith('tool-1', {
+      startedAt,
+      completedAt: expect.any(Number),
+    });
+
+    act(() => root.unmount());
+  });
+
+  it('does not complete a persisted timing on an initially complete mount', () => {
     const setToolTiming = jest.fn();
     const store = createStore<AiSliceState>(() => ({
       ai: {
@@ -43,10 +87,7 @@ describe('useToolTimingRecorder', () => {
       );
     });
 
-    expect(setToolTiming).toHaveBeenCalledWith('tool-1', {
-      startedAt: 100,
-      completedAt: expect.any(Number),
-    });
+    expect(setToolTiming).not.toHaveBeenCalled();
 
     act(() => root.unmount());
   });

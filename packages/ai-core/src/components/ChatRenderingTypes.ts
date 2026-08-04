@@ -9,7 +9,8 @@ import type {AgentToolCall} from '../types';
 import type {ToolPartWithId} from './buildChatTurnModel';
 import type {HoistableToolCall} from './collectHoistableRenderers';
 
-type ChatComponentType<TProps = object> =
+/** Any React component type accepted by a chat rendering slot. */
+export type ChatComponentType<TProps = object> =
   | ComponentType<TProps>
   | ExoticComponent<TProps>;
 

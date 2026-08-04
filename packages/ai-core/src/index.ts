@@ -53,6 +53,7 @@ export {
   mergeChatRenderingComponents,
 } from './components/ChatRenderingContext';
 export type {
+  ChatComponentType,
   ChatRenderingProps,
   ChatRenderingComponents,
   ChatRenderingValue,

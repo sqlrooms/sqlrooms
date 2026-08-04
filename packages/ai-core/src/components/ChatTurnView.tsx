@@ -44,7 +44,7 @@ export type ChatTurnViewProps = {
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
 
-const HoistedToolTimingRecorder: React.FC<{
+const ToolTimingRecorder: React.FC<{
   toolCallId: string;
   isComplete: boolean;
 }> = ({toolCallId, isComplete}) => {
@@ -289,8 +289,8 @@ export const ChatTurnView: React.FC<ChatTurnViewProps> = ({
   return (
     <HoistedRenderersProvider value={excludeList}>
       {model.activity.map((item) =>
-        item.kind === 'tool' && item.isHoisted ? (
-          <HoistedToolTimingRecorder
+        item.kind === 'tool' ? (
+          <ToolTimingRecorder
             key={item.part.toolCallId}
             toolCallId={item.part.toolCallId}
             isComplete={item.state === 'success' || item.state === 'error'}

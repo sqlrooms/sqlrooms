@@ -35,6 +35,7 @@ import {
   OrchestratorToolLogLine,
 } from './FlatAgentRenderer';
 import {MessageContent} from './MessageContent';
+import {RenderNestedHoistedOutputsProvider} from './NestedHoistedOutputsContext';
 import {ToolPartRenderer} from './ToolPartRenderer';
 import {
   getToolName,
@@ -43,6 +44,7 @@ import {
 } from './buildChatTurnModel';
 import type {ChatTurnContentBinder} from './useChatTurnContentBinder';
 
+/** SQLRooms default user-prompt presentation. */
 export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
   searchBlockId,
@@ -88,6 +90,7 @@ export const DefaultChatActivity: React.FC<ChatActivityProps> = ({
   );
 };
 
+/** SQLRooms default reasoning disclosure. */
 export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
   text,
   isRunning,
@@ -109,6 +112,7 @@ export const DefaultChatReasoning: React.FC<ChatReasoningProps> = ({
   </details>
 );
 
+/** SQLRooms default assistant markdown presentation. */
 export const DefaultChatTextOutput: React.FC<ChatTextOutputProps> = ({
   text,
   isAnswer,
@@ -123,6 +127,7 @@ export const DefaultChatTextOutput: React.FC<ChatTextOutputProps> = ({
   />
 );
 
+/** SQLRooms default tool and nested-agent activity presentation. */
 export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
   part,
   isAgent,
@@ -151,6 +156,7 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
   );
 };
 
+/** SQLRooms default rich hoisted-output presentation. */
 export const DefaultChatHoistedOutput: React.FC<ChatHoistedOutputProps> = ({
   item,
 }) => <HoistedToolCallRenderer item={item} />;
@@ -262,6 +268,12 @@ export function createChatTurnPresentation({
     <Prompt prompt={prompt} searchBlockId={`${searchBlockPrefix}:prompt`} />
   ));
 
+  const isActivityRunning =
+    model.isActivityRunning ||
+    (!isCompleted && model.activity.some((item) => item.kind === 'reasoning'));
+
+  const timelineAgentContentByIndex = new Map<number, React.ElementType>();
+
   const activityItems: ChatActivityItem[] = model.activity.map((item) => {
     if (item.kind === 'reasoning') {
       const id = `reasoning-${item.index}`;
@@ -280,7 +292,7 @@ export function createChatTurnPresentation({
       };
     }
 
-    const Content = bindContent(`activity:${item.part.toolCallId}`, () => (
+    const renderToolActivity = () => (
       <ToolActivity
         part={item.part}
         index={item.index}
@@ -288,7 +300,22 @@ export function createChatTurnPresentation({
         isHoisted={item.isHoisted}
         searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
       />
+    );
+    const Content = bindContent(`activity:${item.part.toolCallId}`, () => (
+      <RenderNestedHoistedOutputsProvider value={false}>
+        {renderToolActivity()}
+      </RenderNestedHoistedOutputsProvider>
     ));
+    if (item.isAgent) {
+      timelineAgentContentByIndex.set(
+        item.index,
+        bindContent(`timeline:agent:${item.part.toolCallId}`, () => (
+          <RenderNestedHoistedOutputsProvider value>
+            {renderToolActivity()}
+          </RenderNestedHoistedOutputsProvider>
+        )),
+      );
+    }
     return {
       id: item.part.toolCallId,
       kind: 'tool',
@@ -389,9 +416,8 @@ export function createChatTurnPresentation({
         }
 
         if (segment.kind === 'agent-tool') {
-          const item = activityByIndex.get(segment.index);
-          if (!item) return null;
-          const Content = item.Content;
+          const Content = timelineAgentContentByIndex.get(segment.index);
+          if (!Content) return null;
           return <Content key={`tool-${segment.part.toolCallId}`} />;
         }
 
@@ -416,7 +442,7 @@ export function createChatTurnPresentation({
   const ActivityContent = bindContent('activity', () =>
     model.activity.length > 0 ? (
       <Activity
-        isRunning={model.isActivityRunning}
+        isRunning={isActivityRunning}
         isCompleted={isCompleted}
         toolCount={model.leafToolCount}
         summaryLabel={activitySummaryLabel}
@@ -489,7 +515,7 @@ export function createChatTurnPresentation({
     isCompleted,
     prompt: {text: prompt, Content: PromptContent},
     activity: {
-      isRunning: model.isActivityRunning,
+      isRunning: isActivityRunning,
       toolCount: model.leafToolCount,
       computationTimeMs,
       items: activityItems,

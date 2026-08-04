@@ -120,7 +120,8 @@ order, what is hoistable / running / completed), then asks the nearest
 | `ToolActivity`  | One tool (or nested agent) line inside Activity               |
 | `TextOutput`    | Assistant text / markdown answer regions                      |
 | `HoistedOutput` | Rich tool UI lifted out of the activity stream                |
-| `Actions`       | Per-turn actions (copy, fork, errors)                         |
+| `Error`         | Turn-level error feedback                                     |
+| `Actions`       | Available per-turn operations such as copy and fork           |
 
 Composition looks like this:
 
@@ -135,6 +136,7 @@ Chat
             ├─ Activity    ← aggregated activity for custom layouts
             ├─ Response / Summary
             ├─ HoistedOutputs
+            ├─ Error
             └─ Actions
 ```
 
@@ -301,6 +303,11 @@ function AppChatTurn({turn}: ChatTurnSlotProps) {
 Errors are deliberately separate from actions in the turn model. The default
 layout keeps them adjacent, but a custom `Turn` may place or omit each region
 independently.
+
+Activity and hoisted-output regions are also disjoint: nested agent activity
+contains status/log presentation, while nested rich outputs are rendered once
+through `turn.hoistedOutputs` in decomposed layouts. The pre-wired `Timeline`
+keeps owning both when the default source-order layout is used.
 
 For finer composition, iterate semantic items and render their pre-wired leaf
 components. Tool items expose state, agent, and hoist metadata:

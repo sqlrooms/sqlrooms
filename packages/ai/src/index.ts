@@ -213,6 +213,7 @@ export type {
   ToolStructureBehavior,
   ToolDisplayBehavior,
   LocalAgentChatRootProps,
+  ChatComponentType,
   ChatRenderingProps,
   ChatRenderingComponents,
   ChatNestedActivityMode,

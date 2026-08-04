@@ -4,6 +4,7 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 
 const DEFAULT_MAX_HEIGHT = 100;
 
+/** Props for the collapsible SQLRooms activity container. */
 export type ActivityBoxProps = {
   children: React.ReactNode;
   /** Max collapsed height in px. Defaults to 100. */

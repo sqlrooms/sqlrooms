@@ -2,7 +2,6 @@ import React from 'react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../types';
-import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {FlatAgentRenderer} from './FlatAgentRenderer';
 import {ToolResult} from './tools/ToolResult';
@@ -91,14 +90,6 @@ export const ToolPartRenderer = ({
   const tools = useStoreWithAi((s) => s.ai.tools);
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
-
-  const isComplete =
-    isToolPart(part) || isDynamicToolPart(part)
-      ? part.state === 'output-available' ||
-        part.state === 'output-error' ||
-        part.state === 'output-denied'
-      : false;
-  useToolTimingRecorder(toolCallId, isComplete);
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 

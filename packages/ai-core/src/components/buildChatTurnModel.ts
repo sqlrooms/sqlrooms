@@ -73,12 +73,14 @@ export type ChatTurnModel = {
   suppressedIndices: ReadonlySet<number>;
 };
 
+/** Return the normalized tool name for a static or dynamic UI tool part. */
 export function getToolName(part: UIMessagePart): string | undefined {
   if (isDynamicToolPart(part)) return part.toolName;
   if (isToolPart(part)) return part.type.replace(/^tool-/, '') || undefined;
   return undefined;
 }
 
+/** Whether a UI tool part represents an agent with nested tool activity. */
 export function isAgentToolPart(
   part: UIMessagePart,
   agentProgress: Record<string, AgentToolCall[] | unknown[]>,
@@ -96,6 +98,7 @@ export function isAgentToolPart(
   return false;
 }
 
+/** Normalize an AI SDK UI tool state to SQLRooms' agent tool state. */
 export function mapUiToolStateToAgentState(
   state: string,
 ): AgentToolCall['state'] {
@@ -430,6 +433,7 @@ export function splitTextAroundHoists(model: ChatTurnModel): {
   return {responseText, summaryText};
 }
 
+/** Compute the enclosing duration of the supplied recorded tool calls. */
 export function computeComputationTimeMs(
   toolCallIds: Iterable<string>,
   toolTimings: Record<string, {startedAt?: number; completedAt?: number}>,
