@@ -627,6 +627,28 @@ describe('createArtifactAiSlice', () => {
     );
   });
 
+  it('does not revert the artifact after creating a scoped session then selecting another artifact', () => {
+    const store = createTestStore();
+
+    // Select artifact A and start an artifact-scoped chat on it. This creates
+    // a new session and makes it current under a suspended sync.
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    const sessionId = store.getState().artifactAi.createArtifactScopedSession();
+    expect(sessionId).toBe('session-1');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+
+    // User now selects a different artifact B. The subscription-driven sync
+    // must treat this as an artifact change, not a phantom session change.
+    store.getState().artifacts.setCurrentArtifact('artifact-b');
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    // Bug: with a stale baseline the sync misreads session-1 as "just changed"
+    // (Priority 1) and reverts the selection back to artifact-a.
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-b',
+    );
+  });
+
   it('inherits artifact ownership for forked sessions', () => {
     const store = createTestStore();
     store.getState().artifacts.setCurrentArtifact('artifact-a');
@@ -730,9 +752,7 @@ describe('createArtifactAiSlice', () => {
 
     store.getState().artifactAi.syncCurrentArtifactAiSession();
 
-    expect(
-      store.getState().artifacts.config.currentArtifactId,
-    ).toBeUndefined();
+    expect(store.getState().artifacts.config.currentArtifactId).toBeUndefined();
     expect(store.getState().ai.config.currentSessionId).toBeUndefined();
   });
 
