@@ -22,7 +22,6 @@
         "mermaid",
         "remove",
         "vitepress-plugin-llms",
-        "vitepress-plugin-mermaid",
         "typescript-language-server"
       ],
       "ignoreBinaries": ["uv"]

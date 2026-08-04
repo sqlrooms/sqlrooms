@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import {globSync} from 'glob';
 
 // Type for sidebar items based on the structure we've seen
@@ -48,7 +48,7 @@ function generateApiDocs(docsDir: string): NonNullable<SidebarItem['items']> {
 }
 
 // Generate the API docs and sidebar
-const docsDir = path.resolve(__dirname, '..');
+const docsDir = path.resolve(import.meta.dirname, '..');
 const apiSidebar = generateApiDocs(docsDir);
 
 // Export the sidebar for use in config.ts
