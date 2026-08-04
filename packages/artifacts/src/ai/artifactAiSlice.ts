@@ -592,7 +592,7 @@ export function createArtifactAiSlice<
             return undefined;
           }
 
-          artifactAiSyncSuspended = true;
+          get().artifactAi.setSyncSuspended(true);
           try {
             get().ai.createSession(name, modelProvider, model);
             const sessionId = get().ai.getCurrentSession()?.id;
@@ -604,7 +604,13 @@ export function createArtifactAiSlice<
             );
             return sessionId;
           } finally {
-            artifactAiSyncSuspended = false;
+            // Use setSyncSuspended(false) rather than clearing the flag
+            // directly so the change-detection baseline is re-anchored to the
+            // freshly created session. Otherwise previousSessionId would still
+            // point at the pre-creation session and the following
+            // selectLatestSessionForArtifact would be misread as a session
+            // change and could revert the artifact selection.
+            get().artifactAi.setSyncSuspended(false);
             get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
           }
         },

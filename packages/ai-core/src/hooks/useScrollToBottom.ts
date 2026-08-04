@@ -6,6 +6,28 @@ interface ScrollToBottomResult {
 }
 
 /**
+ * Options for {@link useScrollToBottom}.
+ *
+ * @template T - The type of HTMLElement for the scrollable container.
+ */
+export interface UseScrollToBottomOptions<T extends HTMLElement | null> {
+  /**
+   * The data to observe. Can be an array of items or a single item.
+   * When the data changes, the hook will scroll to the bottom of the container.
+   */
+  dataToObserve: unknown;
+  /** Reference to the scrollable container element. */
+  containerRef: RefObject<T | null>;
+  /** @deprecated No longer used. The hook now scrolls the container directly. */
+  endRef?: RefObject<T | null>;
+  /**
+   * Whether to scroll to bottom on initial load.
+   * @default false
+   */
+  scrollOnInitialLoad?: boolean;
+}
+
+/**
  * Only show button and auto-scroll if we're scrolled up more
  * than {AT_BOTTOM_TOLERANCE}px from the bottom.
  */
@@ -72,27 +94,13 @@ const AT_BOTTOM_TOLERANCE = 100;
  * ```
  */
 export function useScrollToBottom<T extends HTMLElement | null>({
-  /**
-   * The data to observe. Can be an array of items or a single item.
-   * When the data changes, the hook will scroll to the bottom of the container.
-   */
   dataToObserve,
-  containerRef,
   // endRef kept in signature for backward compatibility but no longer used
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   endRef: _endRef,
-  /**
-   * Whether to scroll to bottom on initial load.
-   * @default false
-   */
+  containerRef,
   scrollOnInitialLoad = false,
-}: {
-  dataToObserve: unknown;
-  containerRef: RefObject<T | null>;
-  /** @deprecated No longer used. The hook now scrolls the container directly. */
-  endRef?: RefObject<T | null>;
-  scrollOnInitialLoad?: boolean;
-}): ScrollToBottomResult {
+}: UseScrollToBottomOptions<T>): ScrollToBottomResult {
   const [showScrollButton, setShowButton] = useState(false);
 
   // Track if user was at bottom before content changes
@@ -113,36 +121,34 @@ export function useScrollToBottom<T extends HTMLElement | null>({
   }, []);
 
   // Use refs for functions to keep them stable and avoid dependency cycles
-  const updateScrollStateRef = useRef<() => void>();
-  const doScrollToBottomRef = useRef<() => void>();
+  const updateScrollStateRef = useRef<(() => void) | undefined>(undefined);
+  const doScrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
-  updateScrollStateRef.current = () => {
-    const container = containerRef.current;
-    if (!container) return;
+  // Keep the ref-held functions up to date without assigning to refs during
+  // render (which violates the react-hooks/refs rule). These functions are only
+  // ever invoked asynchronously (rAF, setTimeout, event handlers), so updating
+  // them in an effect that runs on every render is safe.
+  useEffect(() => {
+    updateScrollStateRef.current = () => {
+      const container = containerRef.current;
+      if (!container) return;
 
-    const isAtBottom = checkIfAtBottom(container);
-    wasAtBottomRef.current = isAtBottom;
+      const isAtBottom = checkIfAtBottom(container);
+      wasAtBottomRef.current = isAtBottom;
 
-    // Use functional update to avoid dependency on showScrollButton
-    setShowButton((current) => {
-      const next = !isAtBottom;
-      return current === next ? current : next;
-    });
-  };
+      // Use functional update to avoid dependency on showScrollButton
+      setShowButton((current) => {
+        const next = !isAtBottom;
+        return current === next ? current : next;
+      });
+    };
 
-  doScrollToBottomRef.current = () => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.scrollTop = container.scrollHeight;
-  };
-
-  const updateScrollState = useCallback(() => {
-    updateScrollStateRef.current?.();
-  }, []);
-
-  const doScrollToBottom = useCallback(() => {
-    doScrollToBottomRef.current?.();
-  }, []);
+    doScrollToBottomRef.current = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      container.scrollTop = container.scrollHeight;
+    };
+  });
 
   // Handle new content being added (triggered by dataToObserve changes)
   useEffect(() => {
