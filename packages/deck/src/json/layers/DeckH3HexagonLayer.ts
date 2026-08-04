@@ -113,7 +113,7 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
         // Arrow Vector → row accessor (H3 layer uses row-based iteration)
         const vec = propValue;
         layerProps[propName] = (
-          d: Record<string, unknown>,
+          _d: Record<string, unknown>,
           {index}: {index: number},
         ) => {
           return vec.get(index);
