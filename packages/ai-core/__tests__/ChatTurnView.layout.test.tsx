@@ -12,8 +12,11 @@ import {jest} from '@jest/globals';
 import type {UIMessage} from 'ai';
 import type {AiSliceState} from '../src/AiSlice';
 import type {ChatTurn} from '../src/chatTurns';
+import {TOOL_CALL_CANCELLED} from '../src/constants';
 import type {ChatActivityProps} from '../src/components/ChatRenderingContext';
 import type {
+  ChatActionsProps,
+  ChatErrorProps,
   ChatHoistedOutputProps,
   ChatTurnSlotProps,
 } from '../src/components/ChatRenderingContext';
@@ -76,7 +79,10 @@ const {ChatRendering} = await import('../src/components/ChatRenderingContext');
 const {DefaultChatActivity} =
   await import('../src/components/defaultChatRendering');
 
-function createTurn(parts: UIMessage['parts']): ChatTurn {
+function createTurn(
+  parts: UIMessage['parts'],
+  options: {isCompleted?: boolean; errorMessage?: string} = {},
+): ChatTurn {
   return {
     id: 'user-1',
     prompt: 'Show datasets and a chart',
@@ -92,13 +98,18 @@ function createTurn(parts: UIMessage['parts']): ChatTurn {
         parts,
       },
     ],
-    isCompleted: false,
+    isCompleted: options.isCompleted ?? false,
+    ...(options.errorMessage
+      ? {errorMessage: {error: options.errorMessage}}
+      : {}),
   };
 }
 
 function renderTurn(options: {
   parts: UIMessage['parts'];
   wrapping?: (children: React.ReactNode) => React.ReactNode;
+  isCompleted?: boolean;
+  errorMessage?: string;
 }) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -122,6 +133,7 @@ function renderTurn(options: {
   const toolTimings = {};
   const agentProgress = {};
 
+  const forkSessionFromMessage = jest.fn();
   const store = createStore<AiSliceState>(() => ({
     ai: {
       config: {
@@ -129,7 +141,7 @@ function renderTurn(options: {
         sessions: [session],
       },
       getCurrentSession: () => session,
-      forkSessionFromMessage: jest.fn(),
+      forkSessionFromMessage,
       agentProgress,
       toolRenderers,
       toolTimings,
@@ -142,7 +154,7 @@ function renderTurn(options: {
     <RoomStateProvider roomStore={store}>
       <TooltipProvider>
         <ChatTurnView
-          chatTurn={createTurn(options.parts)}
+          chatTurn={createTurn(options.parts, options)}
           hoistedRenderers={['chart', 'listH3HubDatasets']}
         />
       </TooltipProvider>
@@ -153,7 +165,7 @@ function renderTurn(options: {
     root.render(options.wrapping ? options.wrapping(tree) : tree);
   });
 
-  return {container, root};
+  return {container, root, forkSessionFromMessage};
 }
 
 function cleanup(container: HTMLElement, root: Root) {
@@ -291,6 +303,126 @@ describe('ChatTurnView layout', () => {
     cleanup(container, root);
   });
 
+  it('lets an Actions override hide Fork while keeping pre-wired Copy', () => {
+    const CustomActions = ({copy}: ChatActionsProps) => {
+      const Copy = copy?.Content;
+      return (
+        <div data-testid="custom-actions">
+          {Copy && <Copy />}
+          <button type="button">Custom action</button>
+        </div>
+      );
+    };
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      isCompleted: true,
+      wrapping: (children) => (
+        <ChatRendering components={{Actions: CustomActions}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(
+      container.querySelector('[data-testid="custom-actions"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[aria-label="Copy message"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[aria-label="Fork chat from this message"]'),
+    ).toBeNull();
+    expect(container.textContent).toContain('Custom action');
+
+    cleanup(container, root);
+  });
+
+  it('lets an Actions override replace Fork visuals without rebuilding behavior', () => {
+    const CustomActions = ({fork}: ChatActionsProps) =>
+      fork ? (
+        <button type="button" data-testid="custom-fork" onClick={fork.run}>
+          Branch here
+        </button>
+      ) : null;
+    const {container, root, forkSessionFromMessage} = renderTurn({
+      parts: sampleParts,
+      isCompleted: true,
+      wrapping: (children) => (
+        <ChatRendering components={{Actions: CustomActions}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    act(() => {
+      (
+        container.querySelector('[data-testid="custom-fork"]') as HTMLElement
+      ).click();
+    });
+    expect(forkSessionFromMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceSessionId: 'session-1',
+        sourceMessageId: 'assistant-1',
+        sourceTurnId: 'user-1',
+      }),
+    );
+
+    cleanup(container, root);
+  });
+
+  it('routes turn errors through a region separate from Actions', () => {
+    const CustomError = ({message}: ChatErrorProps) => (
+      <div data-testid="custom-error">Error: {message}</div>
+    );
+    const CustomActions = (props: ChatActionsProps) => (
+      <div
+        data-testid="custom-actions"
+        data-action-keys={Object.keys(props).sort().join(',')}
+      />
+    );
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      errorMessage: 'Request failed',
+      wrapping: (children) => (
+        <ChatRendering
+          components={{Error: CustomError, Actions: CustomActions}}
+        >
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(
+      container.querySelector('[data-testid="custom-error"]')?.textContent,
+    ).toBe('Error: Request failed');
+    expect(
+      container
+        .querySelector('[data-testid="custom-actions"]')
+        ?.getAttribute('data-action-keys'),
+    ).toBe('copy');
+
+    cleanup(container, root);
+  });
+
+  it('does not expose cancellation as a turn error region', () => {
+    const CustomError = ({message}: ChatErrorProps) => (
+      <div data-testid="custom-error">{message}</div>
+    );
+    const {container, root} = renderTurn({
+      parts: sampleParts,
+      errorMessage: TOOL_CALL_CANCELLED,
+      wrapping: (children) => (
+        <ChatRendering components={{Error: CustomError}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(container.querySelector('[data-testid="custom-error"]')).toBeNull();
+
+    cleanup(container, root);
+  });
+
   it('lets a custom Turn inspect semantics and reorder pre-wired regions', () => {
     const CustomTurn = ({turn}: ChatTurnSlotProps) => {
       const Prompt = turn.prompt.Content;
@@ -298,6 +430,7 @@ describe('ChatTurnView layout', () => {
       const Response = turn.response.Content;
       const HoistedOutputs = turn.hoistedOutputs.Content;
       const Summary = turn.summary.Content;
+      const Error = turn.error?.Content;
       const Actions = turn.actions.Content;
       return (
         <article
@@ -317,6 +450,7 @@ describe('ChatTurnView layout', () => {
           <Response />
           <HoistedOutputs />
           <Summary />
+          {Error && <Error />}
           <Actions />
         </article>
       );
@@ -345,7 +479,12 @@ describe('ChatTurnView layout', () => {
     // Assert presence before comparing positions: indexOf returns -1 for
     // missing text, which would otherwise make the ordering assertions pass
     // even if a piece of content disappeared from the custom turn.
-    const markers = ['Listing datasets', 'Response intro', 'list-1', 'Final summary'] as const;
+    const markers = [
+      'Listing datasets',
+      'Response intro',
+      'list-1',
+      'Final summary',
+    ] as const;
     for (const marker of markers) {
       expect(text.indexOf(marker)).toBeGreaterThanOrEqual(0);
     }

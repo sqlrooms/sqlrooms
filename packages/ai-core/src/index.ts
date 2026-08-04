@@ -66,6 +66,9 @@ export type {
   ChatTextItem,
   ChatOutputRegion,
   ChatOutputItem,
+  ChatCopyAction,
+  ChatForkAction,
+  ChatErrorRegion,
   ChatActionsRegion,
   ChatTimelineRegion,
   ChatToolState,
@@ -75,6 +78,7 @@ export type {
   ChatTextOutputProps,
   ChatToolActivityProps,
   ChatHoistedOutputProps,
+  ChatErrorProps,
   ChatActionsProps,
 } from './components/ChatRenderingContext';
 export {
@@ -85,6 +89,7 @@ export {
   DefaultChatTextOutput,
   DefaultChatToolActivity,
   DefaultChatHoistedOutput,
+  DefaultChatError,
   DefaultChatActions,
   defaultChatRenderingComponents,
 } from './components/defaultChatRendering';

@@ -223,6 +223,39 @@ function AppReasoning({text, isRunning}: ChatReasoningProps) {
 You can combine any of these in one map, e.g.
 `components={{Prompt: AppPrompt, Reasoning: AppReasoning}}`.
 
+**Action controls** — compose available operations without recreating their
+behavior. Optional `copy` and `fork` objects are capabilities: omitting one
+hides it, while its `Content` keeps the built-in control wired correctly:
+
+```tsx
+import {Chat, type ChatActionsProps} from '@sqlrooms/ai-core';
+
+function AppActions({copy}: ChatActionsProps) {
+  const Copy = copy?.Content;
+  return (
+    <div className="flex gap-1">
+      {Copy && <Copy />}
+      <MyCustomButton />
+    </div>
+  );
+}
+
+<Chat.Rendering components={{Actions: AppActions}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+Apps can replace a control's visuals while preserving its behavior:
+
+```tsx
+function AppActions({fork}: ChatActionsProps) {
+  return fork ? <MyForkButton onClick={fork.run} /> : null;
+}
+```
+
+An absent capability cannot be enabled accidentally: `fork` is only present
+when the turn can actually be forked.
+
 #### Fully custom turn layout
 
 Override `Turn` when you need a different regional order or structure (for
@@ -241,6 +274,7 @@ function AppChatTurn({turn}: ChatTurnSlotProps) {
   const Response = turn.response.Content;
   const HoistedOutputs = turn.hoistedOutputs.Content;
   const Summary = turn.summary.Content;
+  const Error = turn.error?.Content;
   const Actions = turn.actions.Content;
 
   return (
@@ -250,6 +284,7 @@ function AppChatTurn({turn}: ChatTurnSlotProps) {
       <Response />
       <HoistedOutputs />
       <Summary />
+      {Error && <Error />}
       <Actions />
     </article>
   );
@@ -262,6 +297,10 @@ function AppChatTurn({turn}: ChatTurnSlotProps) {
   <Chat.Messages />
 </Chat.Rendering>;
 ```
+
+Errors are deliberately separate from actions in the turn model. The default
+layout keeps them adjacent, but a custom `Turn` may place or omit each region
+independently.
 
 For finer composition, iterate semantic items and render their pre-wired leaf
 components. Tool items expose state, agent, and hoist metadata:

@@ -6,7 +6,6 @@ import type {
 } from 'react';
 import type {Components} from 'react-markdown';
 import type {AgentToolCall} from '../types';
-import type {ErrorMessageComponentProps} from './ErrorMessage';
 import type {ToolPartWithId} from './buildChatTurnModel';
 import type {HoistableToolCall} from './collectHoistableRenderers';
 
@@ -69,14 +68,27 @@ export type ChatHoistedOutputProps = {
   item: HoistableToolCall;
 };
 
-/** Props for turn-level actions and error presentation. */
+/** Props for turn error presentation. */
+export type ChatErrorProps = {
+  message: string;
+};
+
+/** Copy capability with its pre-wired default control. */
+export type ChatCopyAction = {
+  text: string;
+  Content: ChatComponentType;
+};
+
+/** Fork capability with its pre-wired default control. */
+export type ChatForkAction = {
+  run: () => void;
+  Content: ChatComponentType;
+};
+
+/** Available turn actions passed to an action layout recipe. */
 export type ChatActionsProps = {
-  /** Text copied by the default action UI. Omitted when there is no text. */
-  copyText?: string;
-  canFork: boolean;
-  onFork?: () => void;
-  errorMessage?: string;
-  ErrorMessageComponent?: ChatComponentType<ErrorMessageComponentProps>;
+  copy?: ChatCopyAction;
+  fork?: ChatForkAction;
 };
 
 /** Normalized state exposed for tool activity presentation. */
@@ -143,11 +155,14 @@ export type ChatOutputRegion = {
   Content: ChatComponentType;
 };
 
-/** Action capabilities plus the pre-wired action UI. */
-export type ChatActionsRegion = {
-  canCopy: boolean;
-  canFork: boolean;
-  errorMessage?: string;
+/** Available actions plus the pre-wired default action row. */
+export type ChatActionsRegion = ChatActionsProps & {
+  Content: ChatComponentType;
+};
+
+/** Turn error state plus its pre-wired presentation. */
+export type ChatErrorRegion = {
+  message: string;
   Content: ChatComponentType;
 };
 
@@ -168,6 +183,7 @@ export type ChatTurnPresentation = {
   response: ChatTextRegion;
   hoistedOutputs: ChatOutputRegion;
   summary: ChatTextRegion;
+  error?: ChatErrorRegion;
   actions: ChatActionsRegion;
   timeline: ChatTimelineRegion;
 };
@@ -186,6 +202,7 @@ export type ChatRenderingComponents = {
   TextOutput: ChatComponentType<ChatTextOutputProps>;
   ToolActivity: ChatComponentType<ChatToolActivityProps>;
   HoistedOutput: ChatComponentType<ChatHoistedOutputProps>;
+  Error: ChatComponentType<ChatErrorProps>;
   Actions: ChatComponentType<ChatActionsProps>;
 };
 

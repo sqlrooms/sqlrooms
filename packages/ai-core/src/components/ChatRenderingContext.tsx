@@ -26,6 +26,7 @@ export function mergeChatRenderingComponents(
     TextOutput: overrides.TextOutput ?? base.TextOutput,
     ToolActivity: overrides.ToolActivity ?? base.ToolActivity,
     HoistedOutput: overrides.HoistedOutput ?? base.HoistedOutput,
+    Error: overrides.Error ?? base.Error,
     Actions: overrides.Actions ?? base.Actions,
   };
 }
@@ -90,6 +91,10 @@ export type {
   ChatActivityProps,
   ChatActivityRegion,
   ChatHoistedOutputProps,
+  ChatCopyAction,
+  ChatErrorProps,
+  ChatErrorRegion,
+  ChatForkAction,
   ChatNestedActivityMode,
   ChatOutputItem,
   ChatOutputRegion,

@@ -16,6 +16,7 @@ import type {
   ChatActionsProps,
   ChatActivityItem,
   ChatActivityProps,
+  ChatErrorProps,
   ChatHoistedOutputProps,
   ChatOutputItem,
   ChatPromptProps,
@@ -154,51 +155,52 @@ export const DefaultChatHoistedOutput: React.FC<ChatHoistedOutputProps> = ({
   item,
 }) => <HoistedToolCallRenderer item={item} />;
 
-export const DefaultChatActions: React.FC<ChatActionsProps> = ({
-  copyText,
-  canFork,
-  onFork,
-  errorMessage,
-  ErrorMessageComponent,
-}) => (
-  <>
-    {errorMessage &&
-      !errorMessage.startsWith(TOOL_CALL_CANCELLED) &&
-      (ErrorMessageComponent ? (
-        <ErrorMessageComponent errorMessage={errorMessage} />
-      ) : (
-        <ErrorMessage errorMessage={errorMessage} />
-      ))}
-    {(copyText || canFork) && (
-      <div className="flex justify-start gap-1">
-        {copyText && (
-          <CopyButton
-            text={copyText}
-            tooltipLabel="Copy message"
-            className="border-muted border"
-          />
-        )}
-        {canFork && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="border-muted text-muted-foreground hover:text-foreground h-8 w-8 border"
-                aria-label="Fork chat from this message"
-                onClick={onFork}
-              >
-                <SplitIcon className="h-4 w-4 rotate-90" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Fork</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    )}
-  </>
+/** SQLRooms default turn error presentation. */
+export const DefaultChatError: React.FC<ChatErrorProps> = ({message}) => (
+  <ErrorMessage errorMessage={message} />
 );
+
+const DefaultChatCopyAction: React.FC<{text: string}> = ({text}) => (
+  <CopyButton
+    text={text}
+    tooltipLabel="Copy message"
+    className="border-muted border"
+  />
+);
+
+const DefaultChatForkAction: React.FC<{run: () => void}> = ({run}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="border-muted text-muted-foreground hover:text-foreground h-8 w-8 border"
+        aria-label="Fork chat from this message"
+        onClick={run}
+      >
+        <SplitIcon className="h-4 w-4 rotate-90" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Fork</TooltipContent>
+  </Tooltip>
+);
+
+/** SQLRooms default action-row layout. */
+export const DefaultChatActions: React.FC<ChatActionsProps> = ({
+  copy,
+  fork,
+}) => {
+  if (!copy && !fork) return null;
+  const Copy = copy?.Content;
+  const Fork = fork?.Content;
+  return (
+    <div className="flex justify-start gap-1">
+      {Copy && <Copy />}
+      {Fork && <Fork />}
+    </div>
+  );
+};
 
 type CreateChatTurnPresentationOptions = {
   turnId: string;
@@ -253,6 +255,7 @@ export function createChatTurnPresentation({
     TextOutput,
     ToolActivity,
     HoistedOutput,
+    Error,
     Actions,
   } = components;
   const PromptContent = bindContent('prompt', () => (
@@ -440,14 +443,45 @@ export function createChatTurnPresentation({
     <>{renderItems(summary.items)}</>
   ));
 
+  const copy = copyText
+    ? {
+        text: copyText,
+        Content: bindContent('action:copy', () => (
+          <DefaultChatCopyAction text={copyText} />
+        )),
+      }
+    : undefined;
+  const fork =
+    canFork && onFork
+      ? {
+          run: onFork,
+          Content: bindContent('action:fork', () => (
+            <DefaultChatForkAction run={onFork} />
+          )),
+        }
+      : undefined;
+  const visibleErrorMessage =
+    errorMessage && !errorMessage.startsWith(TOOL_CALL_CANCELLED)
+      ? errorMessage
+      : undefined;
+  const error = visibleErrorMessage
+    ? {
+        message: visibleErrorMessage,
+        Content: bindContent('error', () =>
+          ErrorMessageComponent ? (
+            <ErrorMessageComponent errorMessage={visibleErrorMessage} />
+          ) : (
+            <Error message={visibleErrorMessage} />
+          ),
+        ),
+      }
+    : undefined;
+  const actionProps: ChatActionsProps = {
+    ...(copy ? {copy} : {}),
+    ...(fork ? {fork} : {}),
+  };
   const ActionsContent = bindContent('actions', () => (
-    <Actions
-      copyText={copyText}
-      canFork={canFork}
-      onFork={onFork}
-      errorMessage={errorMessage}
-      ErrorMessageComponent={ErrorMessageComponent}
-    />
+    <Actions {...actionProps} />
   ));
 
   return {
@@ -467,12 +501,8 @@ export function createChatTurnPresentation({
       Content: HoistedOutputsContent,
     },
     summary: {items: summary.items, Content: SummaryContent},
-    actions: {
-      canCopy: copyText !== undefined,
-      canFork,
-      errorMessage,
-      Content: ActionsContent,
-    },
+    ...(error ? {error} : {}),
+    actions: {...actionProps, Content: ActionsContent},
     timeline: {Content: TimelineContent},
   };
 }
@@ -525,6 +555,7 @@ function renderItems(
 export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
   const Prompt = turn.prompt.Content;
   const Timeline = turn.timeline.Content;
+  const Error = turn.error?.Content;
   const Actions = turn.actions.Content;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
@@ -533,6 +564,7 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
       </div>
       <div className="flex w-full flex-col gap-2">
         <Timeline />
+        {Error && <Error />}
         <Actions />
       </div>
     </div>
@@ -549,5 +581,6 @@ export const defaultChatRenderingComponents: Readonly<ChatRenderingComponents> =
     TextOutput: DefaultChatTextOutput,
     ToolActivity: DefaultChatToolActivity,
     HoistedOutput: DefaultChatHoistedOutput,
+    Error: DefaultChatError,
     Actions: DefaultChatActions,
   });
