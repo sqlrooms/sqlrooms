@@ -2476,9 +2476,6 @@ importers:
 
   packages/ai-config:
     dependencies:
-      '@paralleldrive/cuid2':
-        specifier: ^3.0.0
-        version: 3.3.0
       zod:
         specifier: 4.1.13
         version: 4.1.13
