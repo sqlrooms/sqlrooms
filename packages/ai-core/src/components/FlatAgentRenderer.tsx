@@ -574,6 +574,10 @@ const FlatSegmentList: React.FC<{
         const {toolCall, nestedCalls} = seg;
         const isComplete =
           toolCall.state === 'success' || toolCall.state === 'error';
+        const presentedToolCall =
+          toolCall.agentToolCalls === nestedCalls
+            ? toolCall
+            : {...toolCall, agentToolCalls: nestedCalls};
 
         const childSegments = buildFlatSegments(
           nestedCalls,
@@ -584,7 +588,11 @@ const FlatSegmentList: React.FC<{
         return (
           <React.Fragment key={toolCall.toolCallId}>
             {ToolActivity ? (
-              <ToolActivity toolCall={toolCall} isAgent isHoisted={false} />
+              <ToolActivity
+                toolCall={presentedToolCall}
+                isAgent
+                isHoisted={false}
+              />
             ) : (
               <AgentToolSummaryLine
                 toolCallId={toolCall.toolCallId}
@@ -592,7 +600,7 @@ const FlatSegmentList: React.FC<{
                 isComplete={isComplete}
                 startedAt={toolCall.startedAt}
                 completedAt={toolCall.completedAt}
-                toolCall={toolCall}
+                toolCall={presentedToolCall}
               />
             )}
             <FlatSegmentList

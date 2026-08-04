@@ -63,11 +63,17 @@ describe('FlatAgentRenderer chat rendering slots', () => {
         ],
       },
     ];
+    const liveCall: AgentToolCall = {
+      toolCallId: 'live-query-1',
+      toolName: 'live-query',
+      input: {reasoning: 'Running the latest query'},
+      state: 'pending',
+    };
     const store = createStore<AiSliceState>(() => ({
       ai: {
         tools: {},
         toolRenderers: {},
-        agentProgress: {},
+        agentProgress: {'agent-1': [liveCall]},
         toolTimings: {},
         setToolTiming: jest.fn(),
       } as unknown as AiSliceState['ai'],
@@ -107,7 +113,7 @@ describe('FlatAgentRenderer chat rendering slots', () => {
     ).toEqual([
       ['inspect', 'false'],
       ['agent-research', 'true'],
-      ['query', 'false'],
+      ['live-query', 'false'],
     ]);
     expect(
       activityProps.map(({toolCount, isCompleted}) => ({
@@ -116,9 +122,12 @@ describe('FlatAgentRenderer chat rendering slots', () => {
       })),
     ).toEqual([
       {toolCount: 1, isCompleted: true},
-      {toolCount: 1, isCompleted: true},
+      {toolCount: 1, isCompleted: false},
     ]);
     expect(toolActivityProps.every(({part}) => part === undefined)).toBe(true);
+    expect(
+      toolActivityProps.find(({isAgent}) => isAgent)?.toolCall.agentToolCalls,
+    ).toEqual([liveCall]);
 
     act(() => root.unmount());
   });

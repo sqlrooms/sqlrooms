@@ -129,6 +129,51 @@ function AiPanel() {
 }
 ```
 
+### Customize chat presentation
+
+`Chat.Rendering` accepts a partial set of presentation slots. Unspecified slots
+keep the SQLRooms defaults, so an app can replace one region or row without
+reimplementing the rest of the chat. `ToolActivity` is used for top-level and
+nested tool rows; recursive agent progress remains pre-wired when that row is
+customized.
+
+```tsx
+import {
+  Chat,
+  type ChatActivityProps,
+  type ChatToolActivityProps,
+} from '@sqlrooms/ai';
+
+function AppActivity({children, isRunning}: ChatActivityProps) {
+  return <section aria-busy={isRunning}>{children}</section>;
+}
+
+function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
+  return (
+    <div>
+      {isAgent ? 'Agent' : 'Tool'}: {toolCall.toolName}
+    </div>
+  );
+}
+
+function AiMessages() {
+  return (
+    <Chat.Rendering
+      components={{
+        Activity: AppActivity,
+        ToolActivity: AppToolActivity,
+      }}
+    >
+      <Chat.Messages />
+    </Chat.Rendering>
+  );
+}
+```
+
+Use the `Turn` slot for a custom overall layout. Its semantic regions expose
+pre-wired `Content` components, while activity items and action capabilities
+remain available for deeper composition.
+
 ## Block-scoped Ask AI actions
 
 `createAskAiBlockHeaderAction(...)` builds a block-header actions renderer for

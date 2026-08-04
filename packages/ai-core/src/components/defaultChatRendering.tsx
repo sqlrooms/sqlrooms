@@ -155,7 +155,17 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
   }
 
   if (isAgent) {
-    return <ToolPartRenderer part={part} toolCallId={part.toolCallId} />;
+    if (!toolCall.agentToolCalls?.length) return null;
+    return (
+      <AgentToolSummaryLine
+        toolCallId={toolCall.toolCallId}
+        toolName={toolCall.toolName}
+        isComplete={toolCall.state === 'success' || toolCall.state === 'error'}
+        startedAt={toolCall.startedAt}
+        completedAt={toolCall.completedAt}
+        toolCall={toolCall}
+      />
+    );
   }
 
   return (
@@ -328,14 +338,23 @@ export function createChatTurnPresentation({
       agentToolCalls: item.agentToolCalls,
     };
     const renderToolActivity = () => (
-      <ToolActivity
-        toolCall={toolCall}
-        part={item.part}
-        index={item.index}
-        isAgent={item.isAgent}
-        isHoisted={item.isHoisted}
-        searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
-      />
+      <>
+        <ToolActivity
+          toolCall={toolCall}
+          part={item.part}
+          index={item.index}
+          isAgent={item.isAgent}
+          isHoisted={item.isHoisted}
+          searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
+        />
+        {item.isAgent && (
+          <ToolPartRenderer
+            part={item.part}
+            toolCallId={item.part.toolCallId}
+            hideAgentSummary
+          />
+        )}
+      </>
     );
     const Content = bindContent(`activity:${item.part.toolCallId}`, () => (
       <RenderNestedHoistedOutputsProvider value={false}>

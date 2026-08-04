@@ -498,7 +498,7 @@ describe('ChatTurnView layout', () => {
     const renderedToolActivity: ChatToolActivityProps[] = [];
     const CustomToolActivity: React.FC<ChatToolActivityProps> = (props) => {
       renderedToolActivity.push(props);
-      return null;
+      return <div data-testid="custom-agent-row" />;
     };
     const staleCall: AgentToolCall = {
       toolCallId: 'stale-1',
@@ -531,6 +531,12 @@ describe('ChatTurnView layout', () => {
     expect(renderedToolActivity.at(-1)?.toolCall.agentToolCalls).toEqual([
       liveCall,
     ]);
+    expect(
+      container.querySelector('[data-testid="custom-agent-row"]'),
+    ).not.toBe(null);
+    expect(
+      container.querySelector('[data-testid="tool-part-renderer"]'),
+    ).not.toBe(null);
 
     cleanup(container, root);
   });
