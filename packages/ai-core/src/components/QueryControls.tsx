@@ -352,7 +352,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
               <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
                 <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
                   <div className="min-w-0 flex-1 overflow-hidden">
-                    <div className="flex [scrollbar-width:none] flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {otherChildren}
                     </div>
                   </div>
@@ -472,8 +472,11 @@ const InlineApiKeyInputRenderer: React.FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
 
+  // Use the resolved selection (not the current session's) so first-time key
+  // entry works before any session exists: with lazy session creation there is
+  // no current session yet, but a provider is still known from the default.
   const modelProvider = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.modelProvider,
+    (s) => s.ai.getSelectedModel().modelProvider,
   );
   const setApiKeyError = useStoreWithAi((s) => s.ai.setApiKeyError);
 
@@ -548,7 +551,7 @@ const InlineApiKeyInputRenderer: React.FC<{
       <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
         <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="flex [scrollbar-width:none] flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {children}
             </div>
           </div>
