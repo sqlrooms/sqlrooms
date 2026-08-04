@@ -643,6 +643,46 @@ describe('createArtifactAiSlice', () => {
     expect(store.getState().ai.config.currentSessionId).toBe('target-session');
   });
 
+  it('inherits all artifacts for a fork of a multi-artifact session', () => {
+    const store = createTestStore();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('target-session', 2),
+          createSession('source-session', 1),
+        ];
+        draft.ai.config.currentSessionId = 'target-session';
+        draft.ai.config.sessionForks = {
+          'target-session': {
+            sourceSessionId: 'source-session',
+          },
+        };
+        // The source session is linked to two different artifacts.
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'source-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'source-session',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    // The fork must inherit BOTH artifacts, not just the first link.
+    expect(
+      store.getState().artifactAi.getArtifactIdsForSession('target-session'),
+    ).toEqual(expect.arrayContaining(['artifact-a', 'artifact-b']));
+  });
+
   it('selects the latest mapped session and ignores unowned sessions', () => {
     const store = createTestStore();
     store.setState(

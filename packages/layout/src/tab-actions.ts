@@ -200,7 +200,7 @@ export function createTabActions<S extends LayoutStateShape>(
               : isLayoutNodeKey(found.node)
                 ? 'node is a tab key, not a collapsible panel'
                 : 'node is not collapsible';
-             
+
             console.warn(
               `[layout] setCollapsed("${id}", ${collapsed}) ignored: ${reason}.`,
             );

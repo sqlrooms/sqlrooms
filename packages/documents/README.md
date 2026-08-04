@@ -213,7 +213,8 @@ const actions: StartBlockScopedChatActions = {
   setCurrentArtifact: (artifactId) =>
     store.getState().artifacts.setCurrentArtifact(artifactId),
   getAiSessions: () => store.getState().ai.config.sessions,
-  getAiSessionArtifacts: () => store.getState().artifactAi.sessionArtifacts,
+  getSessionArtifactLinks: () =>
+    store.getState().artifactAi.config.sessionArtifactLinks,
   createArtifactScopedSession: () =>
     store.getState().artifactAi.createArtifactScopedSession(),
   switchSession: (sessionId) => store.getState().ai.switchSession(sessionId),
