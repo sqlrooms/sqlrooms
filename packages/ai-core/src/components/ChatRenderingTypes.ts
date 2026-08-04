@@ -49,6 +49,7 @@ export type ChatReasoningProps = {
 export type ChatTextOutputProps = {
   text: string;
   index: number;
+  /** True only when this text is the final source-order message part. */
   isAnswer: boolean;
   searchBlockId: string;
   customMarkdownComponents?: Partial<Components>;

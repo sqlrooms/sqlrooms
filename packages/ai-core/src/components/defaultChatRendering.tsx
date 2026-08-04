@@ -368,7 +368,7 @@ export function createChatTurnPresentation({
 
   const response = createTextItems(
     responseText,
-    summaryText.length === 0,
+    model.answerTextIndex,
     TextOutput,
     searchBlockPrefix,
     bindContent,
@@ -376,7 +376,7 @@ export function createChatTurnPresentation({
   );
   const summary = createTextItems(
     summaryText,
-    true,
+    model.answerTextIndex,
     TextOutput,
     searchBlockPrefix,
     bindContent,
@@ -579,16 +579,15 @@ function isToolPartPending(state: string): boolean {
 
 function createTextItems(
   items: ChatTurnTextItem[],
-  markLastAsAnswer: boolean,
+  answerTextIndex: number | null,
   TextOutput: ChatRenderingComponents['TextOutput'],
   searchBlockPrefix: string,
   bindContent: ChatTurnContentBinder,
   customMarkdownComponents?: Partial<Components>,
 ): {items: ChatTextItem[]} {
-  const lastIndex = items.at(-1)?.index;
   return {
     items: items.map((item) => {
-      const isAnswer = markLastAsAnswer && item.index === lastIndex;
+      const isAnswer = item.index === answerTextIndex;
       const id = `text-${item.index}`;
       const Content = bindContent(id, () => (
         <TextOutput

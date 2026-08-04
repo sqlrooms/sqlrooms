@@ -60,6 +60,8 @@ export type ChatTurnModel = {
   activity: ChatTurnActivityItem[];
   /** Non-suppressed text parts in source order. */
   textItems: ChatTurnTextItem[];
+  /** Source index of the answer text when the final message part is text. */
+  answerTextIndex: number | null;
   /** Interleaved segments for the default SQLRooms recipe. */
   segments: ChatTurnSegment[];
   /** Hoisted tool renderers in execution order (deduped by toolCallId). */
@@ -405,6 +407,9 @@ export function buildChatTurnModel(options: {
   return {
     activity,
     textItems,
+    answerTextIndex: textItems.some((item) => item.index === parts.length - 1)
+      ? parts.length - 1
+      : null,
     segments: groupPartsIntoSegments(parts, suppressedIndices, agentProgress),
     hoisted: dedupeHoisted(hoisted),
     firstHoistPartIndex,

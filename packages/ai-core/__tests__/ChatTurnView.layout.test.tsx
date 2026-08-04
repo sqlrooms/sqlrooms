@@ -19,6 +19,7 @@ import type {
   ChatActionsProps,
   ChatErrorProps,
   ChatHoistedOutputProps,
+  ChatTextOutputProps,
   ChatToolActivityProps,
   ChatTurnSlotProps,
 } from '../src/components/ChatRenderingContext';
@@ -436,6 +437,61 @@ describe('ChatTurnView layout', () => {
     });
 
     cleanup(container, root);
+  });
+
+  it('only marks text as an answer when it is the final source part', () => {
+    const renderedText: ChatTextOutputProps[] = [];
+    const CustomTextOutput: React.FC<ChatTextOutputProps> = (props) => {
+      renderedText.push(props);
+      return <div>{props.text}</div>;
+    };
+    const preTool = renderTurn({
+      parts: [
+        {type: 'text', text: 'I will query the data'},
+        {
+          type: 'tool-query',
+          toolCallId: 'query-1',
+          state: 'input-available',
+          input: {},
+        } as UIMessage['parts'][number],
+      ],
+      wrapping: (children) => (
+        <ChatRendering components={{TextOutput: CustomTextOutput}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(renderedText.at(-1)).toMatchObject({
+      text: 'I will query the data',
+      isAnswer: false,
+    });
+    cleanup(preTool.container, preTool.root);
+
+    renderedText.length = 0;
+    const finalText = renderTurn({
+      parts: [
+        {
+          type: 'tool-query',
+          toolCallId: 'query-1',
+          state: 'output-available',
+          input: {},
+          output: {},
+        } as UIMessage['parts'][number],
+        {type: 'text', text: 'The query is complete'},
+      ],
+      wrapping: (children) => (
+        <ChatRendering components={{TextOutput: CustomTextOutput}}>
+          {children}
+        </ChatRendering>
+      ),
+    });
+
+    expect(renderedText.at(-1)).toMatchObject({
+      text: 'The query is complete',
+      isAnswer: true,
+    });
+    cleanup(finalText.container, finalText.root);
   });
 
   it('passes live agent children to a ToolActivity override', () => {

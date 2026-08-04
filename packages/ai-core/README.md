@@ -225,6 +225,9 @@ function AppReasoning({text, isRunning}: ChatReasoningProps) {
 You can combine any of these in one map, e.g.
 `components={{Prompt: AppPrompt, Reasoning: AppReasoning}}`.
 
+`TextOutput` receives `isAnswer=true` only for text that is the final message
+part. Planning text followed by tool activity remains regular response text.
+
 **Tool activity** — customize top-level and nested tool or agent rows through
 one normalized contract. `toolCall` is always present; `part` is only present
 when the activity originated from a top-level AI SDK message part:
