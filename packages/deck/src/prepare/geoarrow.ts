@@ -33,7 +33,7 @@ function pointToGeometry(value: unknown) {
 }
 
 function multiPointToGeometry(value: unknown) {
-  const coordinates = [];
+  const coordinates: number[][] = [];
   for (let index = 0; index < itemLength(value); index++) {
     const point = itemAt(value, index);
     if (point) {
@@ -44,7 +44,7 @@ function multiPointToGeometry(value: unknown) {
 }
 
 function lineStringToGeometry(value: unknown) {
-  const coordinates = [];
+  const coordinates: number[][] = [];
   for (let index = 0; index < itemLength(value); index++) {
     const point = itemAt(value, index);
     if (point) {
@@ -55,7 +55,7 @@ function lineStringToGeometry(value: unknown) {
 }
 
 function multiLineStringToGeometry(value: unknown) {
-  const coordinates = [];
+  const coordinates: number[][][] = [];
   for (let index = 0; index < itemLength(value); index++) {
     const lineString = itemAt(value, index);
     if (lineString) {
@@ -66,7 +66,7 @@ function multiLineStringToGeometry(value: unknown) {
 }
 
 function polygonToGeometry(value: unknown) {
-  const coordinates = [];
+  const coordinates: number[][][] = [];
   for (let ringIndex = 0; ringIndex < itemLength(value); ringIndex++) {
     const ring = itemAt(value, ringIndex);
     if (ring) {
@@ -77,7 +77,7 @@ function polygonToGeometry(value: unknown) {
 }
 
 function multiPolygonToGeometry(value: unknown) {
-  const coordinates = [];
+  const coordinates: number[][][][] = [];
   for (let polygonIndex = 0; polygonIndex < itemLength(value); polygonIndex++) {
     const polygon = itemAt(value, polygonIndex);
     if (polygon) {
