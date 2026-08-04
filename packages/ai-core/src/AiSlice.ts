@@ -170,6 +170,13 @@ export type AiSliceState = {
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
+    /**
+     * Resolve the model/provider that would be used right now: the current
+     * session's selection when a session exists, otherwise the default that a
+     * lazily created session would receive. Useful before any session exists,
+     * e.g. to know which provider a first-time API key belongs to.
+     */
+    getSelectedModel: () => {modelProvider: string; model: string};
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -807,6 +814,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 currentSession.model = model;
               }
             }),
+          );
+        },
+
+        getSelectedModel: () => {
+          const currentSession = get().ai.getCurrentSession();
+          return getResolvedModelSelection(
+            currentSession?.modelProvider,
+            currentSession?.model,
           );
         },
 
