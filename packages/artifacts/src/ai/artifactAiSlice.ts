@@ -224,7 +224,7 @@ export function createArtifactAiSlice<
         state.ai.config.sessionForks ?? {},
       ).flatMap(([targetSessionId, forkOrigin]) => {
         if (!sessionIds.has(targetSessionId)) return [];
-        // Check if target already has a link
+        // Seed ownership only once: skip if the fork already has any link.
         if (
           state.artifactAi.config.sessionArtifactLinks.some(
             (link) => link.sessionId === targetSessionId,
@@ -232,14 +232,21 @@ export function createArtifactAiSlice<
         ) {
           return [];
         }
-        // Find source artifact from links
-        const sourceLink = state.artifactAi.config.sessionArtifactLinks.find(
-          (link) => link.sessionId === forkOrigin.sourceSessionId,
-        );
-        if (!sourceLink) return [];
-        if (!state.artifacts.config.artifactsById[sourceLink.artifactId])
-          return [];
-        return [[targetSessionId, sourceLink.artifactId] as const];
+        // Inherit EVERY distinct artifact the source session owns, not just the
+        // first one. A session can be linked to multiple artifacts, so using
+        // `find` here would drop all but the first link on the fork.
+        const sourceArtifactIds = [
+          ...new Set(
+            state.artifactAi.config.sessionArtifactLinks
+              .filter((link) => link.sessionId === forkOrigin.sourceSessionId)
+              .map((link) => link.artifactId),
+          ),
+        ];
+        return sourceArtifactIds
+          .filter((artifactId) =>
+            Boolean(state.artifacts.config.artifactsById[artifactId]),
+          )
+          .map((artifactId) => [targetSessionId, artifactId] as const);
       });
 
       if (inheritedEntries.length === 0) return;

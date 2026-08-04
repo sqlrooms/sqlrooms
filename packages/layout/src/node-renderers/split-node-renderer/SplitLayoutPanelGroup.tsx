@@ -76,14 +76,35 @@ function parsePercentSize(
 }
 
 /**
+ * Whether a node `defaultSize` carries an explicit pixel intent (a raw number
+ * or a `px` string). Such sizes cannot be represented in the group-level,
+ * percentage-only RRP `Layout`, so a group containing one must not emit a
+ * `defaultLayout` (see {@link computeDefaultLayout}).
+ */
+function isPixelSize(size: string | number | undefined): boolean {
+  if (typeof size === 'number') {
+    return true; // numeric == pixels in this codebase
+  }
+  return typeof size === 'string' && size.trim().endsWith('px');
+}
+
+/**
  * Derive the group's initial RRP `Layout` ({panelId → percentage}) from the
  * declared node sizes and collapsed flags. Collapsed nodes get 0; the rest fill
- * the remaining space proportionally to their `defaultSize` (unknown/pixel
- * sizes share evenly). This makes RRP paint the correct (already-collapsed)
- * layout on the very first frame instead of flashing the uncollapsed sizes and
- * then imperatively collapsing after mount.
+ * the remaining space proportionally to their `defaultSize` (unset sizes share
+ * evenly). This makes RRP paint the correct (already-collapsed) layout on the
+ * very first frame instead of flashing the uncollapsed sizes and then
+ * imperatively collapsing after mount.
+ *
+ * Returns `undefined` (so RRP honours each panel's own `defaultSize`) when a
+ * VISIBLE panel declares a pixel size: the group `Layout` is percentage-only,
+ * so emitting it would silently rewrite e.g. a 250px sidebar to a percentage.
+ * A pixel panel that is currently collapsed is not "visible", so groups still
+ * get their anti-flash layout while such a panel stays collapsed.
  */
-function computeDefaultLayout(children: LayoutNode[]): Layout | undefined {
+export function computeDefaultLayout(
+  children: LayoutNode[],
+): Layout | undefined {
   if (children.length === 0) {
     return undefined;
   }
@@ -91,15 +112,21 @@ function computeDefaultLayout(children: LayoutNode[]): Layout | undefined {
   const entries = children.map((child) => {
     const id = getLayoutNodeId(child);
     const collapsed = isCollapsed(child);
-    const percent = isLayoutNodeKey(child)
-      ? undefined
-      : parsePercentSize(child.defaultSize);
-    return {id, collapsed, percent};
+    const isKey = isLayoutNodeKey(child);
+    const percent = isKey ? undefined : parsePercentSize(child.defaultSize);
+    const pixel = isKey ? false : isPixelSize(child.defaultSize);
+    return {id, collapsed, percent, pixel};
   });
 
   const visible = entries.filter((entry) => !entry.collapsed);
   if (visible.length === 0) {
     // Degenerate: everything collapsed. Let RRP fall back to per-panel sizing.
+    return undefined;
+  }
+
+  // A visible pixel-sized panel cannot be faithfully encoded as a percentage.
+  // Defer entirely to per-panel `defaultSize` rather than distort it.
+  if (visible.some((entry) => entry.pixel)) {
     return undefined;
   }
 
@@ -175,7 +202,6 @@ export const SplitLayoutPanelGroup: FC<PropsWithChildren> = ({children}) => {
 
   const handleLayoutChanged = useCallback(
     (layout: Layout, meta: LayoutChangedMeta) => {
-      console.log('Layout changed:', layout, meta);
       // Only persist genuine user-driven resizes. Programmatic collapse/expand,
       // initial mount, constraint recompute and default-size changes all report
       // `isUserInteraction === false` — writing those back into the config would
