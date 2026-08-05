@@ -282,10 +282,19 @@ export interface AiStateForTransport {
   readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
   clearAbortSnapshots?: () => void;
   getFullInstructions: (sessionId?: string) => string;
-  /** Get API key from settings for the current session's provider */
-  getApiKeyFromSettings: () => string;
-  /** Get base URL from settings for the current session's provider */
-  getBaseUrlFromSettings: () => string | undefined;
+  /**
+   * Get API key from settings. Defaults to the current session's provider;
+   * pass `provider`/`model` to resolve the key for a specific outbound provider.
+   */
+  getApiKeyFromSettings: (provider?: string, model?: string) => string;
+  /**
+   * Get base URL from settings. Defaults to the current session's provider;
+   * pass `provider`/`model` to resolve the URL for a specific outbound provider.
+   */
+  getBaseUrlFromSettings: (
+    provider?: string,
+    model?: string,
+  ) => string | undefined;
   /** Set API key error flag for a provider */
   setApiKeyError: (provider: string, hasError: boolean) => void;
   /** Get the maximum number of agent steps from settings */
