@@ -850,6 +850,42 @@ describe('AiSlice model selection', () => {
     );
   });
 
+  it('resolves the default provider key from settings without a current session', () => {
+    // Lazy session creation: Chat.Composer may read the API key before any
+    // session exists. Stores that configure keys via aiSettings (not a
+    // getApiKey callback) must still surface the saved default-provider key so
+    // the inline API-key prompt does not appear for users who already have one.
+    const settingsConfig: AiSettingsSliceConfig = {
+      providers: {
+        openai: {
+          baseUrl: 'https://api.openai.com/v1',
+          apiKey: 'openai-key',
+          models: [{modelName: 'shared-model'}],
+        },
+      },
+      customModels: [],
+      modelParameters: {maxSteps: 50, additionalInstruction: ''},
+    };
+
+    const store = createStore<TestStoreState>((set, get, store) => ({
+      ...createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        config: {
+          sessions: [],
+        },
+      })(set, get, store),
+      aiSettings: {
+        config: settingsConfig,
+      },
+    }));
+
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+    expect(store.getState().ai.getApiKeyFromSettings()).toBe('openai-key');
+  });
+
   it('inherits current provider and model when creating a new session', () => {
     const store = createTestStore();
 
