@@ -435,6 +435,9 @@ describe('ChatTurnView layout', () => {
       isAgent: false,
       isHoisted: false,
     });
+    expect(
+      container.querySelector('[data-testid="tool-part-renderer"]'),
+    ).not.toBe(null);
 
     cleanup(container, root);
   });

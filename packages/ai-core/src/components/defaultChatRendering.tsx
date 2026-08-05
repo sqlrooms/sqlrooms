@@ -136,7 +136,6 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
   toolCall,
   part,
   isAgent,
-  isHoisted,
   searchBlockId,
 }) => {
   if (!part) {
@@ -169,20 +168,11 @@ export const DefaultChatToolActivity: React.FC<ChatToolActivityProps> = ({
   }
 
   return (
-    <>
-      <OrchestratorToolLogLine
-        part={part}
-        toolCallId={part.toolCallId}
-        searchBlockId={searchBlockId}
-      />
-      {!isHoisted && (
-        <ToolPartRenderer
-          part={part}
-          toolCallId={part.toolCallId}
-          hideToolCallInfo
-        />
-      )}
-    </>
+    <OrchestratorToolLogLine
+      part={part}
+      toolCallId={part.toolCallId}
+      searchBlockId={searchBlockId}
+    />
   );
 };
 
@@ -347,13 +337,19 @@ export function createChatTurnPresentation({
           isHoisted={item.isHoisted}
           searchBlockId={`${searchBlockPrefix}:tool:${item.index}`}
         />
-        {item.isAgent && (
+        {item.isAgent ? (
           <ToolPartRenderer
             part={item.part}
             toolCallId={item.part.toolCallId}
             hideAgentSummary
           />
-        )}
+        ) : !item.isHoisted ? (
+          <ToolPartRenderer
+            part={item.part}
+            toolCallId={item.part.toolCallId}
+            hideToolCallInfo
+          />
+        ) : null}
       </>
     );
     const Content = bindContent(`activity:${item.part.toolCallId}`, () => (

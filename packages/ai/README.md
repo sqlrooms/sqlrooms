@@ -134,8 +134,8 @@ function AiPanel() {
 `Chat.Rendering` accepts a partial set of presentation slots. Unspecified slots
 keep the SQLRooms defaults, so an app can replace one region or row without
 reimplementing the rest of the chat. `ToolActivity` is used for top-level and
-nested tool rows; recursive agent progress remains pre-wired when that row is
-customized.
+nested tool rows; recursive agent progress and non-hoisted rich tool content
+remain pre-wired when that row is customized.
 
 ```tsx
 import {

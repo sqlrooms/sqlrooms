@@ -550,7 +550,7 @@ const FlatSegmentList: React.FC<{
           const activityContent = Activity ? (
             <Activity
               isRunning={anyPending}
-              isCompleted={allToolsDone}
+              isCompleted={allToolsDone && isAgentComplete === true}
               toolCount={toolCount}
               summaryLabel={summaryLabel}
             >

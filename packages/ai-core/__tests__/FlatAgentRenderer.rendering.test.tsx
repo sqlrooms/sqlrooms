@@ -131,4 +131,51 @@ describe('FlatAgentRenderer chat rendering slots', () => {
 
     act(() => root.unmount());
   });
+
+  it('keeps a completed child group incomplete while its parent is running', () => {
+    const activityProps: ChatActivityProps[] = [];
+    const CustomActivity: React.FC<ChatActivityProps> = (props) => {
+      activityProps.push(props);
+      return <section>{props.children}</section>;
+    };
+    const completedCall: AgentToolCall = {
+      toolCallId: 'query-1',
+      toolName: 'query',
+      state: 'success',
+    };
+    const store = createStore<AiSliceState>(() => ({
+      ai: {
+        tools: {},
+        toolRenderers: {},
+        agentProgress: {},
+        toolTimings: {},
+        setToolTiming: jest.fn(),
+      } as unknown as AiSliceState['ai'],
+    }));
+    const container = document.createElement('div');
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatRendering components={{Activity: CustomActivity}}>
+            <FlatAgentRenderer
+              toolCallId="root-agent"
+              agentToolCalls={[completedCall]}
+              isComplete={false}
+            />
+          </ChatRendering>
+        </RoomStateProvider>,
+      );
+    });
+
+    expect(activityProps).toHaveLength(1);
+    expect(activityProps[0]).toMatchObject({
+      isRunning: false,
+      isCompleted: false,
+      toolCount: 1,
+    });
+
+    act(() => root.unmount());
+  });
 });
