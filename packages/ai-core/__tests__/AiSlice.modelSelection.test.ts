@@ -846,6 +846,22 @@ describe('AiSlice model selection', () => {
     );
   });
 
+  it('resolves key/base URL for an explicit provider, not the session provider', () => {
+    const store = createTestStore();
+
+    // The current session is on openai; a one-shot call targeting anthropic
+    // must resolve anthropic's key/base URL, never openai's.
+    expect(store.getState().ai.getCurrentSession()?.modelProvider).toBe(
+      'openai',
+    );
+    expect(store.getState().ai.getApiKeyFromSettings('anthropic')).toBe(
+      'anthropic-key',
+    );
+    expect(store.getState().ai.getBaseUrlFromSettings('anthropic')).toBe(
+      'https://api.anthropic.com',
+    );
+  });
+
   it('resolves API key/base URL from callbacks without a current session', () => {
     // Chat-free flows (e.g. in-place block edits) never select a session, yet
     // must still resolve a key. The getApiKey/getBaseUrl callbacks do not
