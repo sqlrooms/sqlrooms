@@ -170,6 +170,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const runAnalysisWhenReady = useStoreWithAi(
+    (s) => s.ai.startAnalysisWhenReady,
+  );
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
 
   useEffect(() => {
@@ -210,8 +213,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             activeSessionId = createSession();
             setPrompt(activeSessionId, prompt);
             setDraftPrompt(''); // Clear draft
-            // Wait for next tick to allow transport initialization
-            setTimeout(() => runAnalysis(activeSessionId!), 0);
+            // The SessionChatProvider for the new session mounts and registers
+            // sendMessage in a passive effect, so poll until it is ready rather
+            // than assuming it exists on the next tick.
+            runAnalysisWhenReady(activeSessionId);
           } else {
             runAnalysis(activeSessionId);
           }
@@ -224,7 +229,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       sessionId,
       hasSelectedModel,
       prompt,
+      onRun,
       runAnalysis,
+      runAnalysisWhenReady,
       createSession,
       setPrompt,
     ],
@@ -252,10 +259,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         activeSessionId = createSession();
         setPrompt(activeSessionId, prompt);
         setDraftPrompt(''); // Clear draft
-        // Wait for next tick to allow transport initialization
-        setTimeout(() => {
-          runAnalysis(activeSessionId!);
-        }, 0);
+        // The SessionChatProvider for the new session mounts and registers
+        // sendMessage in a passive effect, so poll until it is ready rather
+        // than assuming it exists on the next tick.
+        void runAnalysisWhenReady(activeSessionId);
       } else {
         runAnalysis(activeSessionId);
       }
@@ -266,6 +273,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     cancelAnalysis,
     onCancel,
     runAnalysis,
+    runAnalysisWhenReady,
     onRun,
     createSession,
     setPrompt,

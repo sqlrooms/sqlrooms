@@ -483,6 +483,14 @@ export type GetOwningArtifactRunContextItemsOptions = {
   extraItems?: AiRunContextItem[];
   /** Optional artifact-type allow-list predicate for implicit ownership. */
   isSupportedArtifactType?: (artifactType: string) => boolean;
+  /**
+   * Artifact the run is being initiated from (for example the currently
+   * selected artifact). When the session is linked to this artifact it is used
+   * as the primary owning artifact instead of the most recently linked one, so
+   * asking AI from an older linked artifact directs the run at that artifact.
+   * Ignored when the session is not linked to it.
+   */
+  preferredArtifactId?: string;
 };
 
 /**
@@ -490,6 +498,10 @@ export type GetOwningArtifactRunContextItemsOptions = {
  *
  * Extra items are deduplicated by id. If the session has no valid supported
  * owning artifact, the extra items are returned unchanged.
+ *
+ * When `preferredArtifactId` is provided and the session is linked to it, that
+ * artifact becomes the primary run context. Otherwise the most recently linked
+ * artifact is used.
  *
  * Supports both old format (aiSessionArtifacts) and new format (sessionArtifactLinks).
  */
@@ -500,14 +512,24 @@ export function getOwningArtifactRunContextItems({
   artifactsById,
   extraItems = [],
   isSupportedArtifactType,
+  preferredArtifactId,
 }: GetOwningArtifactRunContextItemsOptions): AiRunContextItem[] {
   // Try new format first
   let owningArtifactId: string | undefined;
   if (sessionArtifactLinks) {
-    owningArtifactId = getLatestArtifactIdForAiSession({
-      sessionArtifactLinks,
-      sessionId,
-    });
+    const preferredIsLinked =
+      preferredArtifactId !== undefined &&
+      sessionArtifactLinks.some(
+        (link) =>
+          link.sessionId === sessionId &&
+          link.artifactId === preferredArtifactId,
+      );
+    owningArtifactId = preferredIsLinked
+      ? preferredArtifactId
+      : getLatestArtifactIdForAiSession({
+          sessionArtifactLinks,
+          sessionId,
+        });
   } else if (aiSessionArtifacts) {
     owningArtifactId = aiSessionArtifacts[sessionId];
   }
