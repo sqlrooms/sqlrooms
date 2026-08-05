@@ -10,7 +10,10 @@ import type {PluggableList} from 'unified';
 import {
   createChatSearchRehypePlugin,
   useOptionalChatSearch,
+  type ChatSearchMatch,
 } from './ChatSearch';
+
+const EMPTY_SEARCH_MATCHES: ChatSearchMatch[] = [];
 import {markdownSanitizeSchema} from './markdown-sanitize';
 import {markdownTableComponent} from './markdown-utils';
 import {MessageContainer} from './MessageContainer';
@@ -141,6 +144,8 @@ export const MessageContent = React.memo(function MessageContent(
 ) {
   const {content, isAnswer, searchBlockId, customMarkdownComponents} = props;
   const search = useOptionalChatSearch();
+  const getMatchesForBlock = search?.getMatchesForBlock;
+  const activeMatchId = search?.activeMatchId;
   const [expandedThink, setExpandedThink] = useState<Set<number>>(new Set());
   const toggleThinkExpansion = useCallback((index: number) => {
     setExpandedThink((prev) => {
@@ -160,10 +165,14 @@ export const MessageContent = React.memo(function MessageContent(
     [content],
   );
 
+  // Depend on the stable callback, not the whole search context object — the
+  // context value is rebuilt whenever any match/query field changes.
   const searchMatches = useMemo(
     () =>
-      searchBlockId ? (search?.getMatchesForBlock(searchBlockId) ?? []) : [],
-    [search, searchBlockId],
+      searchBlockId && getMatchesForBlock
+        ? getMatchesForBlock(searchBlockId)
+        : EMPTY_SEARCH_MATCHES,
+    [getMatchesForBlock, searchBlockId],
   );
   const rehypePlugins = useMemo<PluggableList>(() => {
     const plugins: PluggableList = [
@@ -175,12 +184,12 @@ export const MessageContent = React.memo(function MessageContent(
         createChatSearchRehypePlugin({
           blockId: searchBlockId,
           matches: searchMatches,
-          activeMatchId: search?.activeMatchId,
+          activeMatchId,
         }),
       );
     }
     return plugins;
-  }, [search?.activeMatchId, searchBlockId, searchMatches]);
+  }, [activeMatchId, searchBlockId, searchMatches]);
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(

@@ -9,11 +9,9 @@ import {useStoreWithAi} from '../AiSlice';
  * - On first render with a given toolCallId that is not yet complete,
  *   records `startedAt`.
  * - When `isComplete` transitions from false to true, records `completedAt`.
- * - Skips recording entirely if an entry already exists in the store
- *   (e.g. rehydrated from persisted data).
- * - Skips recording if the tool is already complete on first render
- *   (old project loaded from disk with no timing data — recording
- *   now would produce a misleading zero-duration entry).
+ * - Records completion only after this mounted recorder observed the tool
+ *   pending, so rehydrated timings never include an offline/reload gap.
+ * - Skips recording if the tool is already complete on first render.
  */
 export function useToolTimingRecorder(
   toolCallId: string | undefined,
@@ -26,28 +24,23 @@ export function useToolTimingRecorder(
 
   const startedAtRef = useRef<number | undefined>(undefined);
   const recordedCompleteRef = useRef(false);
-  // Track the initial isComplete value to distinguish between reloaded
-  // (already-complete) tools and tools that complete during this session.
-  const initialCompleteRef = useRef(isComplete);
+  const observedPendingRef = useRef(!isComplete);
 
   useEffect(() => {
-    if (!toolCallId) return;
+    if (!toolCallId || isComplete) return;
+    observedPendingRef.current = true;
     if (existingTiming) return;
-    // Already complete on mount — this is a reload of an old project
-    // without persisted timing. Skip to avoid a misleading 0s entry.
-    if (initialCompleteRef.current) return;
 
     if (startedAtRef.current == null) {
       startedAtRef.current = Date.now();
       setToolTiming(toolCallId, {startedAt: startedAtRef.current});
     }
-  }, [toolCallId, existingTiming, setToolTiming]);
+  }, [toolCallId, isComplete, existingTiming, setToolTiming]);
 
   useEffect(() => {
     if (!toolCallId || !isComplete || recordedCompleteRef.current) return;
     if (existingTiming?.completedAt != null) return;
-    // Same guard: if the tool was already complete on first render, skip.
-    if (initialCompleteRef.current && !startedAtRef.current) return;
+    if (!observedPendingRef.current) return;
 
     recordedCompleteRef.current = true;
     const startedAt =
