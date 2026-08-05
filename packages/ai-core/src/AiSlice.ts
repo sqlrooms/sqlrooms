@@ -177,6 +177,13 @@ export type AiSliceState = {
      * e.g. to know which provider a first-time API key belongs to.
      */
     getSelectedModel: () => {modelProvider: string; model: string};
+    /**
+     * Create a new chat session, make it the current session, and open it in a
+     * tab. When `modelProvider`/`model` are omitted the current selection (or
+     * configured defaults) are used.
+     *
+     * @returns The id of the newly created session.
+     */
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -189,11 +196,22 @@ export type AiSliceState = {
       sessionId: string,
     ) => AiSessionForkOrigin | undefined;
     switchSession: (sessionId: string) => void;
+    /**
+     * Clear the current session selection (sets `currentSessionId` to
+     * `undefined`) without deleting any session, returning the UI to the
+     * start/new-chat state. A fresh session is created lazily on the next
+     * message.
+     */
     resetCurrentSession: () => void;
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
+    /**
+     * Toggle the pinned state of a session. Pinning an unknown session id is a
+     * no-op; unpinning is always allowed (also used to drop stale ids).
+     */
     togglePinSession: (sessionId: string) => void;
+    /** @returns `true` when the session is currently pinned. */
     isPinnedSession: (sessionId: string) => boolean;
     getCurrentSession: () => ChatSessionSchema | undefined;
     getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
@@ -1059,6 +1077,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (sessionIndex !== -1) {
                 draft.ai.config.sessions.splice(sessionIndex, 1);
                 delete draft.ai.config.sessionForks[sessionId];
+                if (draft.ai.config.pinnedSessionIds) {
+                  draft.ai.config.pinnedSessionIds =
+                    draft.ai.config.pinnedSessionIds.filter(
+                      (id) => id !== sessionId,
+                    );
+                }
                 if (draft.ai.config.openSessionTabs) {
                   draft.ai.config.openSessionTabs =
                     draft.ai.config.openSessionTabs.filter(
@@ -1101,7 +1125,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
               const index = draft.ai.config.pinnedSessionIds.indexOf(sessionId);
               if (index === -1) {
-                draft.ai.config.pinnedSessionIds.push(sessionId);
+                // Only pin sessions that exist; ignore unknown ids so stale
+                // references are not persisted.
+                const sessionExists = draft.ai.config.sessions.some(
+                  (s: ChatSessionSchema) => s.id === sessionId,
+                );
+                if (sessionExists) {
+                  draft.ai.config.pinnedSessionIds.push(sessionId);
+                }
               } else {
                 draft.ai.config.pinnedSessionIds.splice(index, 1);
               }

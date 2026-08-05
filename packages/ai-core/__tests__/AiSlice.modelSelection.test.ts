@@ -348,6 +348,27 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
+  it('does not pin sessions that do not exist', () => {
+    const store = createTestStore();
+
+    store.getState().ai.togglePinSession('missing-session');
+
+    expect(store.getState().ai.isPinnedSession('missing-session')).toBe(false);
+    expect(store.getState().ai.config.pinnedSessionIds ?? []).toEqual([]);
+  });
+
+  it('removes a session id from pinnedSessionIds when the session is deleted', () => {
+    const store = createTestStore();
+
+    store.getState().ai.togglePinSession('session-1');
+    expect(store.getState().ai.isPinnedSession('session-1')).toBe(true);
+
+    store.getState().ai.deleteSession('session-1');
+
+    expect(store.getState().ai.isPinnedSession('session-1')).toBe(false);
+    expect(store.getState().ai.config.pinnedSessionIds ?? []).toEqual([]);
+  });
+
   it('returns stable derived analysis results for unchanged UI messages', () => {
     const store = createTestStore();
     const messages: UIMessage[] = [

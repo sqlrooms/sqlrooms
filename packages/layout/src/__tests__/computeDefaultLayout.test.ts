@@ -17,6 +17,14 @@ describe('computeDefaultLayout', () => {
     expect(layout).toEqual({a: 30, b: 70});
   });
 
+  it('zeroes a collapsed percentage panel and normalizes the visible one to 100', () => {
+    const layout = computeDefaultLayout([
+      panel('a', {defaultSize: '70%', collapsed: true}),
+      panel('b', {defaultSize: '30%'}),
+    ]);
+    expect(layout).toEqual({a: 0, b: 100});
+  });
+
   it('distributes unset sizes evenly', () => {
     const layout = computeDefaultLayout([panel('a'), panel('b')]);
     expect(layout).toEqual({a: 50, b: 50});

@@ -233,6 +233,21 @@ export function createBlockDocumentCommandIds(
   );
 }
 
+/**
+ * Builds the set of room commands (list, get, create, append-blocks, …) for a
+ * block-document artifact type. Commands are namespaced by `commandNamespace`
+ * and labelled with `artifactLabel`, so a host can register more than one
+ * block-document family (for example worksheets and generic documents).
+ *
+ * When the `create` command is invoked from an AI session (its invocation
+ * metadata carries an `aiSessionId`), the newly created artifact is linked to
+ * that session so the session is associated with the artifact it just created.
+ *
+ * @param options - Artifact type, labels, namespace, and supported stateful
+ * block types. All fields are optional and default to generic block-document
+ * values.
+ * @returns The list of {@link RoomCommand}s to register with the host store.
+ */
 export function createBlockDocumentCommands<
   TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
 >({
@@ -336,14 +351,15 @@ export function createBlockDocumentCommands<
           title: title ?? defaultTitle,
         });
 
-        // Create session-artifact link if created by AI
+        // Link the invoking AI session to the artifact it just created, so the
+        // session is associated with (and resolves to) the new artifact.
         const aiSessionId = context.invocation.metadata?.aiSessionId;
         if (typeof aiSessionId === 'string' && 'artifactAi' in state) {
           const artifactAiState = state.artifactAi as {
             addSessionArtifactLink: (
               sessionId: string,
               artifactId: string,
-              linkType: 'created' | 'referenced',
+              linkType: 'created' | 'attached',
             ) => void;
           };
           artifactAiState.addSessionArtifactLink(

@@ -107,6 +107,11 @@ export function useBlockDocumentChartRenderBlockHeaderActions() {
   return useContext(BlockDocumentChartRendererContext).renderBlockHeaderActions;
 }
 
+/**
+ * Returns the host-provided {@link BlockDocumentBlockFrameClassNameGetter} from
+ * the chart renderer context, or `undefined` when the host has not configured
+ * one. Callers should treat `undefined` as "no extra frame classes".
+ */
 export function useBlockDocumentChartGetBlockFrameClassName() {
   return useContext(BlockDocumentChartRendererContext).getBlockFrameClassName;
 }
