@@ -955,6 +955,112 @@ describe('createArtifactAiSlice', () => {
   });
 });
 
+describe('artifactAi link and pin mutations', () => {
+  it('adds, queries, and removes session-artifact links', () => {
+    const store = createTestStore();
+    const {artifactAi} = store.getState();
+
+    expect(artifactAi.hasSessionArtifactLink('s1', 'artifact-a')).toBe(false);
+
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+
+    expect(
+      store.getState().artifactAi.hasSessionArtifactLink('s1', 'artifact-a'),
+    ).toBe(true);
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-a',
+      'artifact-b',
+    ]);
+    expect(
+      store.getState().artifactAi.getSessionIdsForArtifact('artifact-a'),
+    ).toEqual(['s1', 's2']);
+
+    store.getState().artifactAi.removeSessionArtifactLink('s1', 'artifact-a');
+    expect(
+      store.getState().artifactAi.hasSessionArtifactLink('s1', 'artifact-a'),
+    ).toBe(false);
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-b',
+    ]);
+  });
+
+  it('does not duplicate an existing link', () => {
+    const store = createTestStore();
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'attached');
+
+    expect(
+      store
+        .getState()
+        .artifactAi.config.sessionArtifactLinks.filter(
+          (link) => link.sessionId === 's1' && link.artifactId === 'artifact-a',
+        ),
+    ).toHaveLength(1);
+  });
+
+  it('removes all links for a session', () => {
+    const store = createTestStore();
+    const {artifactAi} = store.getState();
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+
+    store.getState().artifactAi.removeAllLinksForSession('s1');
+
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual(
+      [],
+    );
+    expect(
+      store.getState().artifactAi.getSessionIdsForArtifact('artifact-a'),
+    ).toEqual(['s2']);
+  });
+
+  it('removes all links for an artifact', () => {
+    const store = createTestStore();
+    const {artifactAi} = store.getState();
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+
+    store.getState().artifactAi.removeAllLinksForArtifact('artifact-a');
+
+    expect(
+      store.getState().artifactAi.getSessionIdsForArtifact('artifact-a'),
+    ).toEqual([]);
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-b',
+    ]);
+  });
+
+  it('toggles and persists pinned artifacts', () => {
+    const store = createTestStore();
+
+    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
+      false,
+    );
+
+    store.getState().artifactAi.togglePinArtifact('artifact-a');
+    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
+      true,
+    );
+    expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([
+      'artifact-a',
+    ]);
+
+    store.getState().artifactAi.togglePinArtifact('artifact-a');
+    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
+      false,
+    );
+    expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([]);
+  });
+});
+
 import {ArtifactSessionLinkSchema} from '../src';
 
 describe('ArtifactSessionLink types', () => {

@@ -162,9 +162,14 @@ export function useScrollToBottom<T extends HTMLElement | null>({
       (!isInitialLoadRef.current || scrollOnInitialLoad);
 
     if (shouldScroll) {
-      // Use rAF to scroll after React has committed DOM updates
+      // Use rAF to scroll after React has committed DOM updates. Re-check the
+      // at-bottom state inside the frame: the scroll listener may have run
+      // between scheduling and flushing (e.g. the user scrolled up during a
+      // streaming update), and we must not yank them back to the bottom.
       requestAnimationFrame(() => {
-        doScrollToBottomRef.current?.();
+        if (wasAtBottomRef.current) {
+          doScrollToBottomRef.current?.();
+        }
         updateScrollStateRef.current?.();
       });
     } else {
@@ -192,7 +197,11 @@ export function useScrollToBottom<T extends HTMLElement | null>({
 
       if (newHeight > prevHeight && wasAtBottomRef.current) {
         requestAnimationFrame(() => {
-          doScrollToBottomRef.current?.();
+          // Re-check: a user scroll may have landed between scheduling and
+          // flushing this frame, which must cancel the queued auto-scroll.
+          if (wasAtBottomRef.current) {
+            doScrollToBottomRef.current?.();
+          }
           updateScrollStateRef.current?.();
         });
       } else {

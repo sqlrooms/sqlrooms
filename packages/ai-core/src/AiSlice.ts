@@ -232,8 +232,22 @@ export type AiSliceState = {
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolRenderer: (toolName: string) => ToolRenderer | undefined;
-    getApiKeyFromSettings: () => string;
-    getBaseUrlFromSettings: () => string | undefined;
+    /**
+     * Resolve the API key for the outbound provider. When `provider`/`model`
+     * are omitted the current session's provider (or the default) is used;
+     * callers targeting a specific provider (e.g. one-shot `sendPrompt`) must
+     * pass it so the key matches the endpoint the request is sent to.
+     */
+    getApiKeyFromSettings: (provider?: string, model?: string) => string;
+    /**
+     * Resolve the base URL for the outbound provider. See
+     * {@link AiSliceState.ai.getApiKeyFromSettings} for the `provider`/`model`
+     * override semantics.
+     */
+    getBaseUrlFromSettings: (
+      provider?: string,
+      model?: string,
+    ) => string | undefined;
     getMaxStepsFromSettings: () => number;
     getFullInstructions: (sessionId?: string) => string;
     getLocalChatTransport: (
@@ -1199,66 +1213,69 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return get().ai.toolRenderers[toolName];
         },
 
-        getBaseUrlFromSettings: () => {
+        getBaseUrlFromSettings: (providerOverride, modelOverride) => {
           // First try the getBaseUrl function if provided
           const baseUrlFromFunction = getBaseUrl?.();
           if (baseUrlFromFunction) {
             return baseUrlFromFunction;
           }
 
-          // Fall back to settings
+          // Fall back to settings. Resolve against the requested provider/model
+          // when given, otherwise the current session's.
           const store = get();
           if (hasAiSettingsConfig(store)) {
             const currentSession = getCurrentSessionFromState(store);
-            if (currentSession) {
-              if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.baseUrl;
-              }
-              const provider =
-                store.aiSettings.config.providers[currentSession.modelProvider];
-              return provider?.baseUrl;
+            const provider = providerOverride ?? currentSession?.modelProvider;
+            const model = modelOverride ?? currentSession?.model;
+            if (!provider) {
+              return undefined;
             }
+            if (provider === 'custom') {
+              const customModel = store.aiSettings.config.customModels.find(
+                (m: {modelName: string}) => m.modelName === model,
+              );
+              return customModel?.baseUrl;
+            }
+            return store.aiSettings.config.providers[provider]?.baseUrl;
           }
           return undefined;
         },
 
-        getApiKeyFromSettings: () => {
+        getApiKeyFromSettings: (providerOverride, modelOverride) => {
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
 
+          // Resolve the outbound provider/model. Callers targeting a specific
+          // provider (one-shot sendPrompt) pass it so the key matches the
+          // endpoint; otherwise use the session's provider, then the default.
+          const provider =
+            providerOverride ||
+            currentSession?.modelProvider ||
+            defaultProvider;
+          const model = modelOverride ?? currentSession?.model;
+
           // First try the getApiKey function if provided. This must not depend
           // on a current chat session: chat-free flows (e.g. in-place block
-          // edits) resolve a key without ever selecting a session. Use the
-          // session's provider when there is one, otherwise the default.
-          const apiKeyFromFunction = getApiKey?.(
-            currentSession?.modelProvider || defaultProvider,
-          );
+          // edits) resolve a key without ever selecting a session.
+          const apiKeyFromFunction = getApiKey?.(provider);
           if (apiKeyFromFunction) {
             return apiKeyFromFunction;
           }
 
-          // Fall back to settings. When a session exists, use its
-          // provider/custom model. With lazy session creation the key may be
-          // read before any session exists (e.g. the composer's inline API-key
-          // prompt); in that case read the default provider's key so users who
-          // already saved one are not asked to re-enter it.
+          // Fall back to settings for the resolved provider. With lazy session
+          // creation the key may be read before any session exists (e.g. the
+          // composer's inline API-key prompt); the default provider is used then
+          // so users who already saved a key are not asked to re-enter it.
           if (hasAiSettingsConfig(store)) {
-            if (currentSession?.modelProvider === 'custom') {
+            if (provider === 'custom') {
               const customModel = store.aiSettings.config.customModels.find(
-                (m: {modelName: string}) =>
-                  m.modelName === currentSession.model,
+                (m: {modelName: string}) => m.modelName === model,
               );
               return customModel?.apiKey || '';
             } else {
-              const provider =
-                store.aiSettings.config.providers?.[
-                  currentSession?.modelProvider || defaultProvider
-                ];
-              return provider?.apiKey || '';
+              return (
+                store.aiSettings.config.providers?.[provider]?.apiKey || ''
+              );
             }
           }
           return '';
@@ -1345,7 +1362,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
-          const baseURL = baseUrl ?? state.ai.getBaseUrlFromSettings() ?? '';
+          // Resolve the key/base URL for the SAME provider the request targets,
+          // so an explicit provider/base URL never receives another provider's
+          // credential.
+          const baseURL =
+            baseUrl ?? state.ai.getBaseUrlFromSettings(provider, modelId) ?? '';
           const tools = state.ai.tools;
 
           const toolsWithoutExecute = Object.fromEntries(
@@ -1353,7 +1374,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
 
           const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(),
+            apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
             name: provider,
             baseURL,
             includeUsage: true,
