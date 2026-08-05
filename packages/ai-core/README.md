@@ -133,6 +133,25 @@ message and composer components stay under the same `Chat` compound API.
 </Chat.LocalAgentRoot>
 ```
 
+## Chat runtime providers
+
+`Chat.Root` and `Chat.LocalAgentRoot` render one of two runtime providers that
+the `Chat` message and composer components read via `useChatRuntime()`:
+
+- `SessionChatRuntimeProvider` — the default. Selects the **session** runtime, so
+  the UI is driven by the session-backed AI slice (`Chat.Root` wraps this).
+- `LocalAgentChatRuntimeProvider` — selects the **local-agent** runtime, driving
+  the same UI from a pre-constructed `ToolLoopAgent` with its own local message
+  state (`Chat.LocalAgentRoot` wraps this). It takes the same props as
+  `Chat.LocalAgentRoot` (`agent`, `initialMessages`, `initialSuggestions`,
+  `onMessagesChange`).
+
+The two are mutually exclusive modes, not layers: a `Chat` subtree is wrapped by
+exactly one of them. Most apps use `Chat.Root` / `Chat.LocalAgentRoot` and never
+touch these directly; they are exported for advanced setups that compose the
+runtime themselves. Both must wrap the `Chat` components that call
+`useChatRuntime()`; used outside a provider, the runtime defaults to session mode.
+
 ## Chat search
 
 `Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation

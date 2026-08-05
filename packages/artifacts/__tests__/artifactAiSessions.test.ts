@@ -427,6 +427,26 @@ describe('artifact AI session helpers', () => {
     });
   });
 
+  it('drops links to sessions that no longer exist when grouping', () => {
+    expect(
+      getAiSessionGroupsByArtifact({
+        sessions,
+        sessionArtifactLinks: [
+          ...sessionArtifactLinks,
+          {
+            sessionId: 'deleted-session',
+            artifactId: 'artifact-a',
+            createdAt: 5000,
+            linkType: 'attached' as const,
+          },
+        ],
+      }),
+    ).toEqual({
+      'artifact-a': ['session-a-old', 'session-a-new'],
+      'artifact-b': ['session-b'],
+    });
+  });
+
   it('removes mappings for deleted sessions and artifacts', () => {
     expect(
       cleanupAiSessionArtifacts({
@@ -868,9 +888,14 @@ describe('createArtifactAiSlice', () => {
 
     // The current session is removed while the artifact still has another
     // session. The artifact stays selected and we follow it to that session.
+    // A newer, unlinked session remains too: sync must follow the artifact's
+    // linked session, not simply pick the most recent remaining session.
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [createSession('session-other', 1)];
+        draft.ai.config.sessions = [
+          createSession('session-unowned', 3),
+          createSession('session-other', 1),
+        ];
         draft.ai.config.currentSessionId = undefined;
       }),
     );
@@ -887,7 +912,13 @@ describe('createArtifactAiSlice', () => {
     const store = createTestStore();
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [createSession('session-a', 1)];
+        // Both session-a and session-b exist, so the deleted-artifact link below
+        // can only be removed because its artifact is gone (isolating artifact
+        // cleanup from session cleanup, which the deleted-session link covers).
+        draft.ai.config.sessions = [
+          createSession('session-a', 1),
+          createSession('session-b', 2),
+        ];
         draft.artifactAi.config.sessionArtifactLinks = [
           {
             sessionId: 'session-a',
@@ -966,13 +997,23 @@ describe('ArtifactSessionLink types', () => {
     expect(result.success).toBe(false);
   });
 
-  it('should reject missing required fields', () => {
-    const link = {
+  it('should reject a link missing each required field independently', () => {
+    const validLink = {
       sessionId: 'session-1',
       artifactId: 'artifact-1',
+      createdAt: 1000,
+      linkType: 'created' as const,
     };
 
-    const result = ArtifactSessionLinkSchema.safeParse(link);
-    expect(result.success).toBe(false);
+    for (const field of [
+      'sessionId',
+      'artifactId',
+      'createdAt',
+      'linkType',
+    ] as const) {
+      const {[field]: _omitted, ...link} = validLink;
+      const result = ArtifactSessionLinkSchema.safeParse(link);
+      expect(result.success).toBe(false);
+    }
   });
 });

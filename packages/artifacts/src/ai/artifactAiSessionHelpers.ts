@@ -354,7 +354,16 @@ export function getAiSessionGroupsByArtifact({
   const groups: Record<string, string[]> = {};
 
   if (sessionArtifactLinks) {
+    // When the caller passes `sessions`, drop links pointing at sessions that no
+    // longer exist. A stale link to a deleted session would otherwise surface a
+    // phantom session id in the group. When `sessions` is omitted, all links are
+    // kept (the caller has opted out of existence filtering).
+    const knownSessionIds = sessions
+      ? new Set(sessions.map((session) => session.id))
+      : undefined;
     for (const link of sessionArtifactLinks) {
+      if (knownSessionIds && !knownSessionIds.has(link.sessionId)) continue;
+
       const item = groups[link.artifactId] ?? [];
 
       item.push(link.sessionId);
