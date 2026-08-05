@@ -1210,10 +1210,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             return apiKeyFromFunction;
           }
 
-          // Fall back to settings, which need a current session to know which
-          // provider/custom model to read the key from.
-          if (currentSession && hasAiSettingsConfig(store)) {
-            if (currentSession.modelProvider === 'custom') {
+          // Fall back to settings. When a session exists, use its
+          // provider/custom model. With lazy session creation the key may be
+          // read before any session exists (e.g. the composer's inline API-key
+          // prompt); in that case read the default provider's key so users who
+          // already saved one are not asked to re-enter it.
+          if (hasAiSettingsConfig(store)) {
+            if (currentSession?.modelProvider === 'custom') {
               const customModel = store.aiSettings.config.customModels.find(
                 (m: {modelName: string}) =>
                   m.modelName === currentSession.model,
@@ -1222,7 +1225,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             } else {
               const provider =
                 store.aiSettings.config.providers?.[
-                  currentSession.modelProvider
+                  currentSession?.modelProvider || defaultProvider
                 ];
               return provider?.apiKey || '';
             }
