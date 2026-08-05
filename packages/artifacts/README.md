@@ -204,11 +204,21 @@ const store = createRoomStore<RoomState>(
 );
 ```
 
-The slice stores:
+The slice stores a list of links between sessions and artifacts:
 
 ```ts
-aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
+sessionArtifactLinks: ArtifactSessionLink[];
 ```
+
+The link types are exported from `@sqlrooms/artifacts`:
+
+- `ArtifactSessionLink` — a single link: `{sessionId, artifactId, createdAt, linkType}`.
+  `createdAt` is a Unix timestamp in milliseconds.
+- `ArtifactSessionLinkType` — `'created' | 'attached'`. `'created'` records that
+  the session created the artifact; `'attached'` records that it references/works
+  in the artifact. A session may hold links to multiple artifacts.
+- `ArtifactSessionLinkSchema` — the Zod schema used to validate a link (for
+  example when persisting `ArtifactAiConfigSchema`).
 
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
 artifact-scoped assistant. For default session creation, it reuses the most

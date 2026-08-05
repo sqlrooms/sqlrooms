@@ -24,6 +24,18 @@ export const AiSliceConfig = z.object({
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
+/**
+ * Creates the default AI slice configuration.
+ *
+ * The default config intentionally contains no chat session: the first session
+ * is created lazily when the user sends their first message, so an empty
+ * workspace does not show a stray session. `currentSessionId` is therefore
+ * `undefined` and all session collections start empty.
+ *
+ * @param props - Optional overrides merged on top of the generated defaults.
+ * Any provided field replaces the corresponding default.
+ * @returns A fully-populated {@link AiSliceConfig}.
+ */
 export function createDefaultAiConfig(
   props?: Partial<AiSliceConfig>,
 ): AiSliceConfig {
