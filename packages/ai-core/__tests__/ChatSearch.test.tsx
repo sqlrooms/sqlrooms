@@ -43,13 +43,16 @@ const blocks: ChatSearchBlock[] = [
 ];
 
 function createTestStore(sessionId = 'session-1') {
-  return createStore<AiSliceState>(() => ({
-    ai: {
-      config: {
-        currentSessionId: sessionId,
-      },
-    },
-  })) as any;
+  return createStore<AiSliceState>(
+    () =>
+      ({
+        ai: {
+          config: {
+            currentSessionId: sessionId,
+          },
+        },
+      }) as unknown as AiSliceState,
+  ) as any;
 }
 
 function BlockRegistrar({
@@ -60,6 +63,25 @@ function BlockRegistrar({
   blocks: ChatSearchBlock[];
 }) {
   useRegisterChatSearchBlocks(groupId, blocks);
+  return null;
+}
+
+// Mirrors ChatTurnView: search blocks are only built while a query is active,
+// so the registered blocks transition from [] to real content after the user types.
+function QueryAwareBlockRegistrar({
+  groupId = 'group',
+  blocks,
+}: {
+  groupId?: string;
+  blocks: ChatSearchBlock[];
+}) {
+  const {query} = useChatSearch();
+  const hasQuery = query.trim().length > 0;
+  const activeBlocks = React.useMemo(
+    () => (hasQuery ? blocks : []),
+    [hasQuery, blocks],
+  );
+  useRegisterChatSearchBlocks(groupId, activeBlocks);
   return null;
 }
 
@@ -200,6 +222,31 @@ describe('chat search helpers', () => {
 });
 
 describe('Chat.Search', () => {
+  it('reports matches when blocks are registered after the query is entered', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <QueryAwareBlockRegistrar blocks={blocks} />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    setDesignQuery();
+    expect(container.textContent).toContain('1/2');
+
+    cleanup(container, root);
+  });
+
   it('renders match counts and wraps next/previous navigation', () => {
     const {container, root} = renderSearchUi();
 

@@ -288,8 +288,7 @@ export function useRegisterChatSearchBlocks(
     if (!registerBlocks || !unregisterBlocks) return;
     registerBlocks(groupId, blocks);
     return () => unregisterBlocks(groupId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, registerBlocks, unregisterBlocks]);
+  }, [groupId, blocks, registerBlocks, unregisterBlocks]);
 }
 
 type ChatSearchProps = {
