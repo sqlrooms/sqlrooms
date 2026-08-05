@@ -228,6 +228,10 @@ export function getRunContext(
     extraItems,
     isSupportedArtifactType: (artifactType) =>
       SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(artifactType),
+    // Prefer the artifact the run is initiated from over the most recently
+    // linked one, so asking AI from an older linked artifact directs the run
+    // at that artifact.
+    preferredArtifactId: state.artifacts.config.currentArtifactId,
   });
 
   if (items.length === 0) {

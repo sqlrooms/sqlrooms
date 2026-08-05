@@ -504,6 +504,83 @@ describe('artifact AI session helpers', () => {
       }).map((item) => item.id),
     ).toEqual(['artifact-a', 'artifact-b']);
   });
+
+  it('prefers the target artifact over the most recently linked one', () => {
+    // session-a-new is linked to artifact-a (createdAt 3000). Add a newer link
+    // to artifact-b so the "latest" artifact is artifact-b.
+    const multiLinks = [
+      ...sessionArtifactLinks,
+      {
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-b',
+        createdAt: 4000,
+        linkType: 'attached' as const,
+      },
+    ];
+    const artifactsById = {
+      'artifact-a': {
+        id: 'artifact-a',
+        type: 'dashboard',
+        title: 'Dashboard A',
+      },
+      'artifact-b': {
+        id: 'artifact-b',
+        type: 'block-document',
+        title: 'Block Document B',
+      },
+    };
+
+    // Without a preferred artifact the latest link (artifact-b) wins.
+    expect(
+      getOwningArtifactRunContextItems({
+        sessionId: 'session-a-new',
+        sessionArtifactLinks: multiLinks,
+        artifactsById,
+      }).map((item) => item.id),
+    ).toEqual(['artifact-b']);
+
+    // Asking from artifact-a should direct the run at artifact-a even though it
+    // is not the most recently linked artifact.
+    expect(
+      getOwningArtifactRunContextItems({
+        sessionId: 'session-a-new',
+        sessionArtifactLinks: multiLinks,
+        artifactsById,
+        preferredArtifactId: 'artifact-a',
+      }).map((item) => item.id),
+    ).toEqual(['artifact-a']);
+  });
+
+  it('ignores a preferred artifact not linked to the session', () => {
+    const multiLinks = [
+      ...sessionArtifactLinks,
+      {
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-b',
+        createdAt: 4000,
+        linkType: 'attached' as const,
+      },
+    ];
+    const artifactsById = {
+      'artifact-a': {id: 'artifact-a', type: 'dashboard', title: 'Dashboard A'},
+      'artifact-b': {
+        id: 'artifact-b',
+        type: 'block-document',
+        title: 'Block Document B',
+      },
+    };
+
+    // 'artifact-b' is linked, but 'unlinked-artifact' is not part of the
+    // session, so it falls back to the latest linked artifact (artifact-b).
+    expect(
+      getOwningArtifactRunContextItems({
+        sessionId: 'session-a-new',
+        sessionArtifactLinks: multiLinks,
+        artifactsById,
+        preferredArtifactId: 'unlinked-artifact',
+      }).map((item) => item.id),
+    ).toEqual(['artifact-b']);
+  });
 });
 
 describe('createArtifactAiSlice', () => {

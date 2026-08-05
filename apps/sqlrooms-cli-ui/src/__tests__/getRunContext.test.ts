@@ -131,3 +131,72 @@ describe('getRunContext', () => {
     ).toEqual(['chart', 'dashboard', 'html-app', 'map']);
   });
 });
+
+function createMultiArtifactStore(currentArtifactId: string | undefined) {
+  const state = {
+    artifacts: {
+      config: {
+        currentArtifactId,
+        artifactsById: {
+          'worksheet-old': {
+            id: 'worksheet-old',
+            type: 'worksheet',
+            title: 'Older Worksheet',
+          },
+          'worksheet-new': {
+            id: 'worksheet-new',
+            type: 'worksheet',
+            title: 'Newer Worksheet',
+          },
+        },
+      },
+    },
+    artifactAi: {
+      config: {
+        // session-1 is linked to worksheet-old first, then worksheet-new later,
+        // so the most recently linked artifact is worksheet-new.
+        sessionArtifactLinks: [
+          {
+            sessionId: 'session-1',
+            artifactId: 'worksheet-old',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-1',
+            artifactId: 'worksheet-new',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+        ],
+      },
+    },
+    ai: {
+      config: {
+        sessions: [{id: 'session-1', draftContextItemIds: []}],
+      },
+    },
+    blockDocuments: {config: {artifacts: {}}},
+    db: {tables: []},
+  } as unknown as RoomState;
+
+  return {getState: () => state} as StoreApi<RoomState>;
+}
+
+describe('getRunContext primary artifact selection', () => {
+  it('directs the run at the currently selected artifact, not the latest link', () => {
+    const store = createMultiArtifactStore('worksheet-old');
+
+    expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
+      'worksheet-old',
+    );
+  });
+
+  it('falls back to the most recently linked artifact when none is selected', () => {
+    const store = createMultiArtifactStore(undefined);
+
+    expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
+      'worksheet-new',
+    );
+  });
+});
