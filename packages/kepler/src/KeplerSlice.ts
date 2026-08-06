@@ -178,8 +178,16 @@ function createDefaultMapKeplerState(
 export function createDefaultKeplerConfig(
   props?: Partial<KeplerSliceConfig>,
 ): KeplerSliceConfig {
+  const mapId = createId();
   const config: KeplerSliceConfig = {
-    maps: [],
+    maps: [
+      {
+        id: mapId,
+        name: 'Untitled Map',
+        config: undefined,
+        lastOpenedAt: Date.now(),
+      },
+    ],
     ...props,
   };
   return KeplerSliceConfig.parse(config);

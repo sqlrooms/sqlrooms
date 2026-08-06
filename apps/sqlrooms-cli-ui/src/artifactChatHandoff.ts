@@ -95,9 +95,17 @@ export function createArtifactChatHandoffController(
     const sourceSessionId = getInvocationAiSessionId(
       context.invocation.metadata,
     );
-    const sourceArtifactId = sourceSessionId
-      ? context.getState().artifactAi.getSessionArtifactId(sourceSessionId)
-      : undefined;
+    const sourceState = context.getState();
+    const currentArtifactId = sourceState.artifacts.config.currentArtifactId;
+    const sourceArtifactId =
+      sourceSessionId &&
+      currentArtifactId &&
+      sourceState.artifactAi.hasSessionArtifactLink(
+        sourceSessionId,
+        currentArtifactId,
+      )
+        ? currentArtifactId
+        : undefined;
 
     const result = await next();
     if (
@@ -164,8 +172,10 @@ export function createArtifactChatHandoffController(
     );
     if (!targetArtifact) return;
     if (
-      state.artifactAi.getSessionArtifactId(handoff.sourceSessionId) !==
-      handoff.sourceArtifactId
+      !state.artifactAi.hasSessionArtifactLink(
+        handoff.sourceSessionId,
+        handoff.sourceArtifactId,
+      )
     ) {
       return;
     }
