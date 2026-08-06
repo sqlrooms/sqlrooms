@@ -23,7 +23,10 @@ import {
   getOwningArtifactRunContextItems,
   getRunningAiSessionCountsByArtifact,
   isAiSessionVisibleForArtifact,
+  type ArtifactAiSessionFilterOptions,
+  type ArtifactAiSessionGroupsOptions,
   type ArtifactAiSliceState,
+  type CleanupAiSessionArtifactsOptions,
 } from '../src/ai';
 
 type TestRoomState = BaseRoomStoreState &
@@ -160,6 +163,32 @@ describe('artifact AI session helpers', () => {
       linkType: 'created' as const,
     },
   ];
+
+  it('exposes link-aware option types for public helpers', () => {
+    const filterOptions: ArtifactAiSessionFilterOptions = {
+      sessionArtifactLinks,
+      sessionId: 'session-a-new',
+      artifactId: 'artifact-a',
+    };
+    const groupsOptions: ArtifactAiSessionGroupsOptions = {
+      sessions,
+      sessionArtifactLinks,
+    };
+    const cleanupOptions: CleanupAiSessionArtifactsOptions = {
+      sessions,
+      sessionArtifactLinks,
+      artifactIds: ['artifact-a', 'artifact-b'],
+    };
+
+    expect(isAiSessionVisibleForArtifact(filterOptions)).toBe(true);
+    expect(getAiSessionGroupsByArtifact(groupsOptions)).toEqual({
+      'artifact-a': ['session-a-old', 'session-a-new'],
+      'artifact-b': ['session-b'],
+    });
+    expect(cleanupAiSessionArtifacts(cleanupOptions)).toEqual(
+      sessionArtifactLinks,
+    );
+  });
 
   it('filters and selects only explicitly artifact-owned sessions', () => {
     expect(
