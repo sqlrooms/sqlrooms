@@ -1,0 +1,486 @@
+// Inlined to keep this module free of workspace-package imports so it can be
+// imported directly by unit tests without ESM transform issues.
+const DECK_TABLE_DATASET_SOURCE_RELATION = '__sqlrooms_source';
+function quoteDeckMapSqlIdentifier(identifier: string) {
+  return `"${identifier.replace(/"/g, '""')}"`;
+}
+
+// Minimal structural type that covers both AiMapConfig
+// and DeckMapConfig — all the passes only access these loose fields.
+type AiMapConfig = {
+  configMode?: string;
+  spec?: unknown;
+  datasets?: Record<string, unknown>;
+  fitToData?: unknown;
+  [key: string]: unknown;
+};
+
+const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
+const DEFAULT_AI_POINT_RADIUS = 4;
+const DEFAULT_AI_LINE_WIDTH = 2;
+const DEFAULT_AI_HEATMAP_RADIUS_PIXELS = 30; // matches deck.gl default
+const DEFAULT_AI_COLUMN_RADIUS_METERS = 50; // city-scale default
+/** Sky-blue default fill — matches the UI builder's DEFAULT_FILL_COLOR. */
+const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
+
+/**
+ * Strips string-expression getRadius/getWidth from basic-mode layer configs.
+ * String expressions bypass pixel-mode clamping:
+ * - getRadius on GeoArrowScatterplotLayer produces enormous uncontrollable points.
+ * - getWidth on GeoArrowPathLayer/ArcLayer/TripsLayer produces enormous lines.
+ * The UI sliders only work with numeric values.
+ */
+function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
+  if (config.configMode === 'custom') return config;
+  const spec = config.spec as Record<string, unknown> | undefined;
+  if (!spec || !Array.isArray(spec.layers)) return config;
+
+  let changed = false;
+  const layers = spec.layers.map((layer: unknown) => {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) {
+      return layer;
+    }
+    const l = layer as Record<string, unknown>;
+
+    if (
+      l['@@type'] === 'GeoArrowScatterplotLayer' &&
+      typeof l.getRadius === 'string'
+    ) {
+      changed = true;
+      const next = {...l};
+      delete next.radiusScale;
+      next.getRadius = DEFAULT_AI_POINT_RADIUS;
+      next.radiusUnits = 'pixels';
+      if (typeof next.radiusMinPixels !== 'number') {
+        next.radiusMinPixels = DEFAULT_AI_POINT_RADIUS;
+      }
+      delete next.radiusMaxPixels;
+      return next;
+    }
+
+    if (
+      l['@@type'] === 'GeoArrowScatterplotLayer' &&
+      typeof l.getRadius === 'number' &&
+      l.getRadius <= 0
+    ) {
+      changed = true;
+      return {...l, getRadius: DEFAULT_AI_POINT_RADIUS};
+    }
+
+    const LINE_LAYER_TYPES = new Set([
+      'GeoArrowPathLayer',
+      'GeoArrowArcLayer',
+      'GeoArrowTripsLayer',
+    ]);
+    if (
+      typeof l['@@type'] === 'string' &&
+      LINE_LAYER_TYPES.has(l['@@type']) &&
+      typeof l.getWidth === 'string'
+    ) {
+      changed = true;
+      const next = {...l};
+      delete next.widthScale;
+      next.getWidth = DEFAULT_AI_LINE_WIDTH;
+      next.widthUnits = 'pixels';
+      if (typeof next.widthMinPixels !== 'number') {
+        next.widthMinPixels = DEFAULT_AI_LINE_WIDTH;
+      }
+      delete next.widthMaxPixels;
+      return next;
+    }
+
+    // Enforce widthUnits: "pixels" when getWidth is numeric but widthUnits is
+    // absent or set to meters. Meter-based widths scale with zoom and produce
+    // wildly different visual thicknesses at different zoom levels.
+    if (
+      typeof l['@@type'] === 'string' &&
+      LINE_LAYER_TYPES.has(l['@@type']) &&
+      typeof l.getWidth === 'number' &&
+      l.widthUnits !== 'pixels'
+    ) {
+      changed = true;
+      return {...l, widthUnits: 'pixels'};
+    }
+
+    // Clamp heatmap radiusPixels: string expressions or zero/negative values
+    // produce an invisible or broken heatmap.
+    if (l['@@type'] === 'GeoArrowHeatmapLayer') {
+      const rp = l.radiusPixels;
+      if (typeof rp === 'string' || (typeof rp === 'number' && rp <= 0)) {
+        changed = true;
+        return {...l, radiusPixels: DEFAULT_AI_HEATMAP_RADIUS_PIXELS};
+      }
+    }
+
+    // Clamp column radius (meters): string expressions or zero/negative values
+    // produce invisible columns.
+    if (l['@@type'] === 'GeoArrowColumnLayer') {
+      const r = l.radius;
+      if (typeof r === 'string' || (typeof r === 'number' && r <= 0)) {
+        changed = true;
+        return {...l, radius: DEFAULT_AI_COLUMN_RADIUS_METERS};
+      }
+    }
+
+    // Strip string getElevation in basic mode. String accessors bypass the UI
+    // elevation slider. Reset to 0 (flat, non-extruded) and clear elevationScale
+    // so the layer is at least visible; the user can re-enable extrusion via UI.
+    const ELEVATION_LAYER_TYPES = new Set([
+      'GeoArrowPolygonLayer',
+      'GeoArrowSolidPolygonLayer',
+      'GeoArrowColumnLayer',
+      'GeoArrowH3HexagonLayer',
+    ]);
+    if (
+      typeof l['@@type'] === 'string' &&
+      ELEVATION_LAYER_TYPES.has(l['@@type']) &&
+      typeof l.getElevation === 'string'
+    ) {
+      changed = true;
+      const next = {...l};
+      next.getElevation = 0;
+      delete next.elevationScale;
+      return next;
+    }
+
+    return layer;
+  });
+
+  if (!changed) return config;
+  return {...config, spec: {...spec, layers} as typeof spec};
+}
+
+/** Maps common AI layer class name mistakes to the correct GeoArrow class names. */
+const LAYER_CLASS_ALIASES: Record<string, string> = {
+  ScatterplotLayer: 'GeoArrowScatterplotLayer',
+  HeatmapLayer: 'GeoArrowHeatmapLayer',
+  ColumnLayer: 'GeoArrowColumnLayer',
+  PathLayer: 'GeoArrowPathLayer',
+  PolygonLayer: 'GeoArrowPolygonLayer',
+  SolidPolygonLayer: 'GeoArrowSolidPolygonLayer',
+  ArcLayer: 'GeoArrowArcLayer',
+  TripsLayer: 'GeoArrowTripsLayer',
+  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
+};
+
+const COLOR_ACCESSOR_PROPS = [
+  'getFillColor',
+  'getLineColor',
+  'getColor',
+  'getSourceColor',
+  'getTargetColor',
+] as const;
+
+/**
+ * Fixes common AI layer mistakes:
+ * 1. Plain deck.gl class names without the GeoArrow prefix.
+ * 2. Color accessors using wrong syntax: {"@@type":"ColorScale","column":"..."} instead
+ *    of {"@@function":"colorScale","field":"..."}.
+ * 3. Missing _sqlroomsBinding.dataset when there is exactly one dataset in the config
+ *    (unambiguous — inject it automatically).
+ * 4. colorRange on GeoArrowHeatmapLayer (owned by the UI scheme selector).
+ * 5. Missing getFillColor on filled layers (deck.gl defaults to opaque black).
+ */
+function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
+  const spec = config.spec as Record<string, unknown> | undefined;
+  if (!spec || !Array.isArray(spec.layers)) return config;
+
+  // Collect the single dataset id if and only if there is exactly one.
+  const datasetIds = config.datasets ? Object.keys(config.datasets) : [];
+  const soloDatasetId = datasetIds.length === 1 ? datasetIds[0] : undefined;
+
+  let changed = false;
+  const layers = spec.layers.map((layer: unknown) => {
+    if (!layer || typeof layer !== 'object' || Array.isArray(layer)) {
+      return layer;
+    }
+    let l = layer as Record<string, unknown>;
+    let layerChanged = false;
+
+    // Fix layer class name alias
+    const rawType = l['@@type'];
+    if (typeof rawType === 'string' && LAYER_CLASS_ALIASES[rawType]) {
+      l = {...l, '@@type': LAYER_CLASS_ALIASES[rawType]};
+      layerChanged = true;
+    }
+
+    // Fix color accessor syntax: {"@@type":"ColorScale","column":"X"} → {"@@function":"colorScale","field":"X"}
+    for (const prop of COLOR_ACCESSOR_PROPS) {
+      const value = l[prop];
+      if (
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        (value as Record<string, unknown>)['@@type'] === 'ColorScale' &&
+        !('@@function' in (value as Record<string, unknown>))
+      ) {
+        const v = value as Record<string, unknown>;
+        const field =
+          typeof v.column === 'string'
+            ? v.column
+            : typeof v.field === 'string'
+              ? v.field
+              : undefined;
+        if (field) {
+          const {column: _col, '@@type': _t, ...rest} = v;
+          l = {
+            ...l,
+            [prop]: {
+              '@@function': 'colorScale',
+              field,
+              type: typeof rest.type === 'string' ? rest.type : 'sequential',
+              scheme: typeof rest.scheme === 'string' ? rest.scheme : 'Viridis',
+              domain: 'auto',
+              ...('legend' in rest ? {legend: rest.legend} : {}),
+            },
+          };
+          layerChanged = true;
+        } else {
+          // Can't repair — remove the broken accessor to avoid a parse failure
+          const {[prop]: _removed, ...rest} = l;
+          l = rest;
+          layerChanged = true;
+        }
+      }
+    }
+
+    // Auto-inject or fix _sqlroomsBinding.dataset when there is exactly one
+    // dataset in the config (the intent is unambiguous):
+    // - Layer has no binding / missing dataset → inject it.
+    // - Layer references a dataset ID that doesn't exist in config.datasets
+    //   (AI typo or stale name) → replace it with the real ID.
+    if (soloDatasetId) {
+      const binding = l._sqlroomsBinding as Record<string, unknown> | undefined;
+      const boundId =
+        binding && typeof binding.dataset === 'string' && binding.dataset.trim()
+          ? binding.dataset.trim()
+          : undefined;
+      const needsBinding =
+        !boundId ||
+        !(config.datasets && boundId in (config.datasets as object));
+      if (needsBinding) {
+        l = {
+          ...l,
+          _sqlroomsBinding: {...(binding ?? {}), dataset: soloDatasetId},
+        };
+        layerChanged = true;
+      }
+    }
+
+    // Strip colorRange from heatmap layers. The UI scheme selector owns that
+    // array; hand-crafted RGB values bypass it and produce incorrect coloring.
+    if (l['@@type'] === 'GeoArrowHeatmapLayer' && 'colorRange' in l) {
+      const {colorRange: _cr, ...rest} = l;
+      l = rest;
+      layerChanged = true;
+    }
+
+    // Inject default getFillColor for scatterplot/polygon layers that omit it
+    // entirely. Without it deck.gl falls back to opaque black [0,0,0,255].
+    // Mirror the same sky-blue default used by the UI builder.
+    const layerType = l['@@type'];
+    const needsFillDefault =
+      typeof layerType === 'string' &&
+      (layerType === 'GeoArrowScatterplotLayer' ||
+        layerType === 'GeoArrowPolygonLayer' ||
+        layerType === 'GeoArrowSolidPolygonLayer') &&
+      !l.getFillColor;
+    if (needsFillDefault) {
+      l = {...l, getFillColor: [...DEFAULT_FILL_COLOR]};
+      layerChanged = true;
+    }
+
+    // Prevent invisible scatterplot points: if filled is explicitly false but
+    // stroked is also absent/false, the layer renders nothing. Reset filled.
+    if (
+      l['@@type'] === 'GeoArrowScatterplotLayer' &&
+      l.filled === false &&
+      !l.stroked
+    ) {
+      l = {...l, filled: true};
+      layerChanged = true;
+    }
+
+    if (layerChanged) changed = true;
+    return layerChanged ? l : layer;
+  });
+
+  if (!changed) return config;
+  return {...config, spec: {...spec, layers} as typeof spec};
+}
+
+/**
+ * Splits a (possibly quoted) SQL table reference on dots that are not inside
+ * double-quoted identifiers, e.g.:
+ *   "sqlrooms-cli"."main"."tbl"  →  ['"sqlrooms-cli"', '"main"', '"tbl"']
+ *   catalog.schema.table         →  ['catalog', 'schema', 'table']
+ */
+function splitTableRef(ref: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (const ch of ref) {
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      current += ch;
+    } else if (ch === '.' && !inQuotes) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+  return parts;
+}
+
+/**
+ * Strips the catalog prefix from dataset tableName values.
+ * DuckDB's catalog prefix (e.g. "sqlrooms-cli.main.my_table") is not valid
+ * inside dataset SQL — only the bare name or schema-qualified name is.
+ */
+function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
+  const datasets = config.datasets;
+  if (!datasets || typeof datasets !== 'object') return config;
+
+  let changed = false;
+  const nextDatasets: Record<string, unknown> = {};
+
+  for (const [id, dataset] of Object.entries(datasets)) {
+    const d = dataset as Record<string, unknown> | undefined;
+    const source = d?.source as Record<string, unknown> | undefined;
+    const tableName = source?.tableName;
+
+    if (typeof tableName === 'string') {
+      const parts = splitTableRef(tableName);
+      if (parts.length >= 3) {
+        const stripped = parts.slice(1).join('.');
+        nextDatasets[id] = {
+          ...d,
+          source: {...source, tableName: stripped},
+        };
+        changed = true;
+        continue;
+      }
+    }
+    nextDatasets[id] = dataset;
+  }
+
+  if (!changed) return config;
+  return {...config, datasets: nextDatasets as typeof config.datasets};
+}
+
+/**
+ * Normalizes an AI-generated map config to ensure dataset sources produce
+ * the expected geometry column when fitToData specifies coordinate columns
+ * but the dataset only uses a tableName without a transformSql.
+ */
+function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
+  const datasets = config.datasets;
+  let fitToData = config.fitToData as
+    | Record<string, unknown>
+    | null
+    | undefined;
+
+  // Fix common AI mistake: fitToData wrapped as { datasetId: { dataset, ... } }
+  // instead of the expected flat { dataset, longitudeColumn, ... }.
+  if (fitToData && !fitToData.dataset && typeof fitToData === 'object') {
+    const keys = Object.keys(fitToData);
+    if (keys.length === 1) {
+      const nested = fitToData[keys[0]!] as Record<string, unknown> | undefined;
+      if (nested && typeof nested === 'object' && nested.dataset) {
+        fitToData = nested;
+        config = {...config, fitToData: fitToData as any};
+      }
+    }
+  }
+
+  if (!datasets || typeof datasets !== 'object' || !fitToData) {
+    return config;
+  }
+
+  const lonCol = fitToData.longitudeColumn as string | undefined;
+  const latCol = fitToData.latitudeColumn as string | undefined;
+  if (!lonCol || !latCol) {
+    return config;
+  }
+
+  const targetDatasetId = fitToData.dataset as string | undefined;
+  if (!targetDatasetId) {
+    return config;
+  }
+
+  const targetDataset = datasets[targetDatasetId] as
+    | Record<string, unknown>
+    | undefined;
+  if (!targetDataset) {
+    return config;
+  }
+
+  const source = targetDataset.source as
+    | {tableName?: string; transformSql?: string; sqlQuery?: string}
+    | undefined;
+
+  // Always normalize when using tableName without transformSql and fitToData
+  // provides coordinate columns — the geometry must be computed from them.
+  if (!source?.tableName || source.sqlQuery || source.transformSql) {
+    return config;
+  }
+
+  const geometryColumn =
+    (targetDataset.geometryColumn as string | undefined) ||
+    DEFAULT_AI_GEOMETRY_COLUMN;
+
+  const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
+  const quotedLat = quoteDeckMapSqlIdentifier(latCol);
+  const quotedGeom = quoteDeckMapSqlIdentifier(geometryColumn);
+  const transformSql = [
+    `SELECT *, ST_AsWKB(ST_Point(${quotedLon}, ${quotedLat})) AS ${quotedGeom}`,
+    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    `WHERE ${quotedLon} IS NOT NULL AND ${quotedLat} IS NOT NULL`,
+  ].join(' ');
+
+  return {
+    ...config,
+    datasets: {
+      ...datasets,
+      [targetDatasetId]: {
+        ...targetDataset,
+        source: {tableName: source.tableName, transformSql},
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+  };
+}
+
+/**
+ * Applies all AI-output normalization passes to a map config in one step.
+ *
+ * Safe to call on any surface — worksheet, dashboard, or block document. Each
+ * pass is idempotent and leaves already-correct configs unchanged:
+ * - layer class aliases (ScatterplotLayer → GeoArrowScatterplotLayer, etc.)
+ * - color accessor syntax (@@type: ColorScale → @@function: colorScale, column → field)
+ * - string/zero getRadius in basic-mode scatterplot layers → numeric default
+ * - string/zero getWidth in basic-mode line layers → numeric default + pixels units
+ * - string/zero radiusPixels on heatmap layers → default
+ * - string/zero radius on column layers → default meters
+ * - string getElevation in basic mode → 0 (flat)
+ * - missing or wrong _sqlroomsBinding.dataset when only one dataset → auto-inject
+ * - colorRange on GeoArrowHeatmapLayer → stripped
+ * - missing getFillColor on scatterplot/polygon layers → default sky-blue
+ * - filled:false with no stroke on scatterplot → reset to filled:true
+ * - catalog prefix stripped from dataset tableName values
+ * - fitToData coordinate-column → transformSql injection when transformSql is absent
+ */
+export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
+  config: T,
+): T {
+  return normalizeAiMapConfigRadius(
+    normalizeAiMapConfigLayers(
+      normalizeAiMapConfigDatasetSources(
+        normalizeAiMapConfig(config as unknown as AiMapConfig),
+      ),
+    ),
+  ) as unknown as T;
+}

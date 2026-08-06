@@ -7,7 +7,9 @@ import {
   createOrUpdateDeckMapResource,
   DeckMapResourceToolParameters,
   mergeDeckMapResourceConfigPatch,
+  normalizeAiDeckMapConfig,
   normalizeDeckMapPointConfig,
+  type DeckMapConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -431,7 +433,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
               normalizeDeckMapPointConfig({
                 config: mergeDeckMapResourceConfigPatch(
                   existingMapConfig,
-                  config,
+                  normalizeAiDeckMapConfig(config as any) as DeckMapConfig,
                   {replaceLayers, replaceDatasets},
                 ),
                 resolveTable: (tableName) => state.db.findTable(tableName),

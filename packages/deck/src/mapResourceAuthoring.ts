@@ -1,5 +1,5 @@
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
-import type {DeckMapConfig} from './mapConfig';
+import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
@@ -129,6 +129,24 @@ function mergeSpecPatch(
   };
 }
 
+/**
+ * Returns true when the existing source is a pinned sqlQuery and the incoming
+ * source would downgrade it to a bare tableName (no transformSql). In that
+ * case the merge should keep the existing source, because a bare tableName
+ * lookup omits the geometry-producing SQL that the existing source contains.
+ */
+function isSourceDowngrade(
+  existingSource: DeckMapDatasetSource | undefined,
+  incomingSource: DeckMapDatasetSource | undefined,
+): boolean {
+  if (!existingSource || !incomingSource) return false;
+  const existingIsSqlQuery = isDeckMapSqlDatasetSource(existingSource);
+  const incomingIsBareTableName =
+    isDeckMapTableDatasetSource(incomingSource) &&
+    !('transformSql' in incomingSource && incomingSource.transformSql);
+  return existingIsSqlQuery && incomingIsBareTableName;
+}
+
 function mergeDatasetRegistry(
   existingDatasets: DeckMapConfig['datasets'],
   incomingDatasets: DeckMapConfig['datasets'],
@@ -139,13 +157,21 @@ function mergeDatasetRegistry(
   const datasets = {...existingDatasets};
   for (const [datasetId, incomingDataset] of Object.entries(incomingDatasets)) {
     const existingDataset = existingDatasets[datasetId];
-    datasets[datasetId] = existingDataset
-      ? {
-          ...existingDataset,
-          ...incomingDataset,
-          source: incomingDataset.source ?? existingDataset.source,
-        }
-      : incomingDataset;
+    if (!existingDataset) {
+      datasets[datasetId] = incomingDataset;
+      continue;
+    }
+    const resolvedSource = isSourceDowngrade(
+      existingDataset.source,
+      incomingDataset.source,
+    )
+      ? existingDataset.source
+      : (incomingDataset.source ?? existingDataset.source);
+    datasets[datasetId] = {
+      ...existingDataset,
+      ...incomingDataset,
+      source: resolvedSource,
+    };
   }
   return datasets;
 }
@@ -303,14 +329,27 @@ export function getDeckMapResourceConfigIssues(
           message: `references unknown dataset "${boundDataset}"`,
         });
       }
-      return;
+    } else {
+      issues.push({
+        path: `spec.layers.${index}._sqlroomsBinding.dataset`,
+        message:
+          'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
+      });
     }
 
-    issues.push({
-      path: `spec.layers.${index}._sqlroomsBinding.dataset`,
-      message:
-        'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
-    });
+    if (layerType === 'GeoArrowH3HexagonLayer') {
+      const getHexagon = layer.getHexagon;
+      const hasGetHexagon =
+        (typeof getHexagon === 'string' && getHexagon.trim().length > 0) ||
+        (typeof getHexagon === 'object' && getHexagon !== null);
+      if (!hasGetHexagon) {
+        issues.push({
+          path: `spec.layers.${index}.getHexagon`,
+          message:
+            'GeoArrowH3HexagonLayer requires getHexagon set to the H3 index column, e.g. "@@=h3_column_name"',
+        });
+      }
+    }
   });
 
   const fitDataset = config.fitToData?.dataset;
@@ -346,7 +385,9 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
 - Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.
+- For data-driven color use getFillColor (or getColor/getSourceColor/getTargetColor for arc layers) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Prefer a colorScale over a flat fill whenever the table has a meaningful numeric or categorical column to color by. Use "quantile" for skewed numeric distributions, "sequential" for roughly uniform ones, "categorical" for string/enum columns.
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
+- When updating only visual properties (color scale, scheme, radius, width, elevation scale, visibility, opacity), OMIT the datasets field from the patch entirely. Do NOT re-send a simplified dataset source — sending source.tableName without transformSql or sqlQuery will overwrite the existing geometry-producing SQL and cause a render crash. Only include datasets in an update when intentionally changing a data source or adding/removing a dataset.
 - To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates.
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 

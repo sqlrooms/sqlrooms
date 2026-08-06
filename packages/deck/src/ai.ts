@@ -37,7 +37,7 @@ Deck map tools:
   - "basic" (default): Use for straightforward requests — single layer, standard color scale, simple geometry binding. Stick ONLY to properties that the UI configurator supports: layer @@type, visibility, color scale (@@function colorScale), point radius (numeric getRadius with radiusUnits), line width (numeric getWidth with widthUnits), geometry/H3/arc column bindings, extrusion with a single elevation column. Do NOT use string accessors (@@= expressions), custom extensions, multiple layers, or advanced deck.gl props in basic mode. The user can fine-tune these maps through the settings panel.
   - "custom": Use when the request demands creative, complex, or advanced visualization — multiple layers, data-driven accessors (@@= expressions), custom color arrays, advanced deck.gl props (opacity, transitions, material, highlightColor, etc.), layer extensions, or any props not representable in the UI configurator. The UI settings panel will be disabled for custom configs; users edit via the JSON editor instead.
   - Decision rule: If the map can be fully expressed with a single layer + basic color scale + simple numeric radius/width, use "basic". Otherwise use "custom".
-- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer.
+- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer. CRITICAL: Always use the full GeoArrow-prefixed class name (e.g. "GeoArrowScatterplotLayer", NOT "ScatterplotLayer"). Plain deck.gl class names without the GeoArrow prefix are not registered and will fail validation.
 - LAYER SELECTION: Choose the layer type based on the geometry type in the data.
   IMPORTANT: Only create a layer if the table contains data suitable for that layer type, or if you can transform the data into the required format with transformSql or a standalone sqlQuery. Do NOT create a layer if the data is clearly incompatible (e.g. do not create a path layer from point-only data without aggregation, do not create a polygon layer from point coordinates, do not create an arc layer without origin-destination pairs).
   - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer (Point layer), GeoArrowHeatmapLayer, GeoArrowColumnLayer. Requires rows with individual point positions — either separate longitude/latitude numeric columns, or a point geometry column. Each row represents one point on the map.
@@ -49,7 +49,7 @@ Deck map tools:
   - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Requires a column containing H3 string indices. Bind to dataset with _sqlroomsBinding.dataset. Set "getHexagon": "@@=h3_column_name" where h3_column_name is the column containing H3 string indices. Always include "fitToData": {"dataset": "datasetId"} so the map can zoom to the data extent. Do NOT use unless the table has an H3 index column. DuckDB H3 extension functions: h3_cell_to_lat(index), h3_cell_to_lng(index), h3_cell_to_latlng(index). Do NOT use h3_latlng(), h3_to_lat(), or other non-existent function names.
 - CRITICAL: The transformSql and sqlQuery fields must contain ONLY a single SELECT statement. NEVER put INSTALL, LOAD, CREATE, or other DDL/meta-commands in dataset SQL — they will fail because dataset SQL is wrapped in a subquery at runtime. Extensions like h3 and spatial are pre-loaded at startup.
   - GeoJSON files typically contain polygon or multipolygon features (boundaries, buildings, parcels); use GeoArrowPolygonLayer for these. If a GeoJSON file contains point features, use GeoArrowScatterplotLayer (Point layer) instead.
-- RADIUS AND WIDTH: For GeoArrowScatterplotLayer (Point layer) use getRadius with radiusUnits: "pixels" (typically 2–6 pixels); large radii cause overdraw and rendering lag, especially with many points. For GeoArrowColumnLayer use the "radius" property (NOT getRadius) — it sets column radius in meters; typical values are 20–200 for city-scale data or smaller for dense datasets. Do NOT use getRadius or radiusUnits on column layers. For GeoArrowArcLayer, GeoArrowPathLayer, and GeoArrowTripsLayer use getWidth with widthUnits: "pixels" (typically 1–3 pixels).
+- RADIUS AND WIDTH: For GeoArrowScatterplotLayer (Point layer) use getRadius with radiusUnits: "pixels" (typically 2–6 pixels); large radii cause overdraw and rendering lag, especially with many points. CRITICAL: getRadius MUST be a plain number (e.g. 4). NEVER set getRadius to a string expression such as "field * 500" — string expressions bypass radiusMinPixels/radiusMaxPixels clamping when radiusUnits is "pixels", producing enormous points that cannot be fixed by the UI slider. If you want data-driven radius (size by attribute), use "@@=columnName" in configMode "custom" only, and set radiusUnits to the default (meters) so radiusMaxPixels acts as a cap. For GeoArrowColumnLayer use the "radius" property (NOT getRadius) — it sets column radius in meters; typical values are 20–200 for city-scale data or smaller for dense datasets. Do NOT use getRadius or radiusUnits on column layers. For GeoArrowArcLayer, GeoArrowPathLayer, and GeoArrowTripsLayer use getWidth with widthUnits: "pixels" (typically 1–3 pixels).
 - HEATMAP: For GeoArrowHeatmapLayer, do NOT set colorRange manually. The UI provides a scheme selector that generates the correct color array. If you set colorRange to hand-picked RGB arrays, it will be out of sync with the scheme selector shown in the UI. Just omit colorRange entirely and let the default apply — users can change the scheme through the map settings panel.
 - ARC vs LINE: GeoArrowArcLayer renders curved 3D arcs by default. If the user asks for "lines" or "straight connections" between origin-destination pairs (not arcs), set "getHeight": 0 on the layer to render flat straight lines. Use arcs for flight routes or connections where the curve adds clarity; use flat lines for direct relationships, edges, or when the user explicitly requests lines.
 - ELEVATION: For extruded layers, getElevation with @@function "scale" passes the raw field value as meters. Use elevationScale on the layer to multiply values to a useful visual height. For example, if the field is "floors" (1-10), set elevationScale to 3 (meters per floor). Do NOT use negative values for elevation. Avoid using diverging scales for elevation. IMPORTANT: Keep elevation moderate — if extruded polygons or H3 hexagons are too tall, users can't see the tops when zoomed in. Prefer elevationScale values that produce heights of a few hundred meters at most for city-scale data. A good rule of thumb: the maximum elevation (field max × elevationScale) should not exceed ~500m for typical zoom levels.
@@ -63,12 +63,14 @@ Deck map tools:
 - IMPORTANT: When providing fitToData, it MUST be a flat object (NOT nested by dataset ID). Include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For H3 hexagon layers, just specify the dataset: "fitToData": {"dataset": "datasetId"} — the H3 column is auto-detected from the layer binding. For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}. NEVER nest fitToData as {"datasetId": {...}} — always use a flat object with "dataset" as a string field.
 - IMPORTANT: For GeoJSON or spatial files that already have a native geometry column (e.g. "geometry", "geom"), use the table directly with source.tableName (no sqlQuery needed), set the dataset's geometryColumn to "geom", set geometryEncodingHint to "wkb", and use fitToData with geometryColumn: {"dataset": "datasetId", "geometryColumn": "geom"}.
 - IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use source.tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Use "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"} to zoom to the data extent.
-- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. Valid schemes: for "categorical" type use one of Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. For "sequential" use Viridis, Inferno, Magma, Plasma, Turbo, Blues, Greens, Oranges, Reds, Purples, etc. For "diverging" use RdBu, Spectral, RdYlGn, BrBG, PiYG, etc. IMPORTANT: The colorScale "field" must reference a column that exists in the FINAL query output (after any GROUP BY aggregation). Do not reference columns that are lost during aggregation.
+- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. CRITICAL: The key is "@@function" (not "@@type") and the column name goes in "field" (not "column"). Using "@@type":"ColorScale" or "column" instead of "field" is wrong syntax that will fail. Valid schemes: for "categorical" type use one of Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. For "sequential" use Viridis, Inferno, Magma, Plasma, Turbo, Blues, Greens, Oranges, Reds, Purples, etc. For "diverging" use RdBu, Spectral, RdYlGn, BrBG, PiYG, etc. IMPORTANT: The colorScale "field" must reference a column that exists in the FINAL query output (after any GROUP BY aggregation). Do not reference columns that are lost during aggregation.
+- COLOR SCALE PREFERENCE: Always prefer data-driven color over a flat fill color when the table has a column that meaningfully varies per feature. Apply a colorScale to getFillColor (or getColor/getSourceColor/getTargetColor for arc layers) whenever there is a suitable column: numeric columns (magnitude, value, count, score, temperature, price, population, etc.) → sequential or quantile scheme; categorical/string columns (type, category, status, etc.) → categorical scheme. Only use a flat getFillColor when the table has no columns that add insight through color, or when the user explicitly requests a single color. When coloring by a numeric column, prefer "quantile" type for skewed distributions and "sequential" for roughly uniform ones.
 - IMPORTANT: Enabling a color scale means adding a {"@@function":"colorScale", ...} accessor to a compatible layer color property. The top-level showLegends field only controls whether already-defined color scale legends are visible; showLegends by itself does NOT create or enable data-driven color.
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
 - Create maps with a SINGLE layer unless the user explicitly asks for multiple layers. If you think multiple layers would better serve the user's request, ask the user for confirmation before adding them.
 - IMPORTANT: Browsers limit the number of active WebGL contexts (typically 8–16 per page). Each map panel uses one context. Do NOT create more than 4–5 map panels in a single dashboard — exceeding the limit causes older maps to lose their rendering context and show errors. If the user asks for many datasets, prefer combining compatible layers into fewer maps rather than creating one map per dataset.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
+- IMPORTANT: When updating an existing map to change only visual properties (color scale, color scheme, layer visibility, radius, width, elevation scale, opacity, etc.), OMIT the config.datasets field entirely from the patch. Do NOT re-send dataset sources you did not change — sending a simplified source (e.g. bare source.tableName) will overwrite the existing source and destroy geometry-producing SQL such as ST_AsWKB transforms. Only include config.datasets in an update when you are intentionally changing a dataset source or adding/removing datasets. The merge preserves existing dataset sources when the datasets key is absent.
 - BASEMAPS: Omit mapStyle unless the user explicitly requests a custom basemap. Maps inherit the host application's theme-aware basemap when available, with a token-free fallback. Do NOT use Mapbox styles (mapbox://styles/...) because a Mapbox access token may not be available. For an explicitly requested custom basemap, use a token-free MapLibre-compatible style URL.
 `;
 
@@ -268,98 +270,13 @@ export type DeckMapDashboardToolParams = z.infer<
   typeof DeckMapDashboardToolParameters
 >;
 
-const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
-
-/**
- * Normalizes an AI-generated map config to ensure dataset sources produce
- * the expected geometry column when fitToData specifies coordinate columns
- * but the dataset only uses a tableName without a transformSql.
- */
-function normalizeAiMapConfig(
-  config: DeckMapDashboardConfigToolConfig,
-): DeckMapDashboardConfigToolConfig {
-  const datasets = config.datasets;
-  let fitToData = config.fitToData as
-    | Record<string, unknown>
-    | null
-    | undefined;
-
-  // Fix common AI mistake: fitToData wrapped as { datasetId: { dataset, ... } }
-  // instead of the expected flat { dataset, longitudeColumn, ... }.
-  if (fitToData && !fitToData.dataset && typeof fitToData === 'object') {
-    const keys = Object.keys(fitToData);
-    if (keys.length === 1) {
-      const nested = fitToData[keys[0]!] as Record<string, unknown> | undefined;
-      if (nested && typeof nested === 'object' && nested.dataset) {
-        fitToData = nested;
-        config = {...config, fitToData: fitToData as any};
-      }
-    }
-  }
-
-  if (!datasets || typeof datasets !== 'object' || !fitToData) {
-    return config;
-  }
-
-  const lonCol = fitToData.longitudeColumn as string | undefined;
-  const latCol = fitToData.latitudeColumn as string | undefined;
-  if (!lonCol || !latCol) {
-    return config;
-  }
-
-  const targetDatasetId = fitToData.dataset as string | undefined;
-  if (!targetDatasetId) {
-    return config;
-  }
-
-  const targetDataset = datasets[targetDatasetId] as
-    | Record<string, unknown>
-    | undefined;
-  if (!targetDataset) {
-    return config;
-  }
-
-  const source = targetDataset.source as
-    | {tableName?: string; transformSql?: string; sqlQuery?: string}
-    | undefined;
-
-  // Always normalize when using tableName without transformSql and fitToData
-  // provides coordinate columns — the geometry must be computed from them.
-  if (!source?.tableName || source.sqlQuery || source.transformSql) {
-    return config;
-  }
-
-  const geometryColumn =
-    (targetDataset.geometryColumn as string | undefined) ||
-    DEFAULT_AI_GEOMETRY_COLUMN;
-
-  const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
-  const quotedLat = quoteDeckMapSqlIdentifier(latCol);
-  const quotedGeom = quoteDeckMapSqlIdentifier(geometryColumn);
-  const transformSql = [
-    `SELECT *, ST_AsWKB(ST_Point(${quotedLon}, ${quotedLat})) AS ${quotedGeom}`,
-    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
-    `WHERE ${quotedLon} IS NOT NULL AND ${quotedLat} IS NOT NULL`,
-  ].join(' ');
-
-  return {
-    ...config,
-    datasets: {
-      ...datasets,
-      [targetDatasetId]: {
-        ...targetDataset,
-        source: {tableName: source.tableName, transformSql},
-        geometryColumn,
-        geometryEncodingHint: 'wkb',
-      },
-    },
-  };
-}
+export {normalizeAiDeckMapConfig} from './aiNormalize';
+import {normalizeAiDeckMapConfig} from './aiNormalize';
 
 function cloneConfig(
   config: DeckMapDashboardConfigToolConfig,
 ): DeckMapDashboardPanelConfig {
-  const normalized = normalizeAiMapConfig(config);
+  const normalized = normalizeAiDeckMapConfig(config);
   return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
 }
 

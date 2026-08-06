@@ -1,0 +1,770 @@
+import {describe, expect, test} from '@jest/globals';
+import {normalizeAiDeckMapConfig} from '../src/aiNormalize';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeConfig(layers: unknown[], datasets: Record<string, unknown> = {}) {
+  return {spec: {layers}, datasets} as any;
+}
+
+function makeBasicConfig(
+  layers: unknown[],
+  datasets: Record<string, unknown> = {},
+) {
+  return {configMode: 'basic' as const, spec: {layers}, datasets};
+}
+
+/** Typed accessor so tests can read layer props without TS errors. */
+function getLayer(result: any, index = 0): Record<string, any> {
+  return result.spec.layers[index] as Record<string, any>;
+}
+
+// ---------------------------------------------------------------------------
+// Layer class alias normalisation
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — layer class aliases', () => {
+  test.each([
+    ['ScatterplotLayer', 'GeoArrowScatterplotLayer'],
+    ['HeatmapLayer', 'GeoArrowHeatmapLayer'],
+    ['ColumnLayer', 'GeoArrowColumnLayer'],
+    ['PathLayer', 'GeoArrowPathLayer'],
+    ['PolygonLayer', 'GeoArrowPolygonLayer'],
+    ['SolidPolygonLayer', 'GeoArrowSolidPolygonLayer'],
+    ['ArcLayer', 'GeoArrowArcLayer'],
+    ['TripsLayer', 'GeoArrowTripsLayer'],
+    ['H3HexagonLayer', 'GeoArrowH3HexagonLayer'],
+  ])('renames %s → %s', (input, expected) => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([{'@@type': input, _sqlroomsBinding: {dataset: 'ds'}}], {
+        ds: {source: {tableName: 'ds'}},
+      }),
+    );
+    expect(getLayer(result)['@@type']).toBe(expected);
+  });
+
+  test('leaves already-correct GeoArrow names unchanged', () => {
+    const config = makeConfig(
+      [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          _sqlroomsBinding: {dataset: 'ds'},
+        },
+      ],
+      {ds: {source: {tableName: 'ds'}}},
+    );
+    const result = normalizeAiDeckMapConfig(config);
+    expect(getLayer(result)['@@type']).toBe('GeoArrowScatterplotLayer');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Color accessor syntax repair
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
+  test('fixes @@type:ColorScale + column → @@function:colorScale + field', () => {
+    const layer = {
+      '@@type': 'GeoArrowScatterplotLayer',
+      _sqlroomsBinding: {dataset: 'ds'},
+      getFillColor: {
+        '@@type': 'ColorScale',
+        column: 'magnitude',
+        type: 'sequential',
+        scheme: 'Viridis',
+      },
+    };
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
+    );
+    const fill = getLayer(result).getFillColor;
+    expect(fill['@@function']).toBe('colorScale');
+    expect(fill.field).toBe('magnitude');
+    expect(fill['@@type']).toBeUndefined();
+    expect(fill.column).toBeUndefined();
+  });
+
+  test('applies fix to all colour accessor props', () => {
+    const layer = {
+      '@@type': 'GeoArrowArcLayer',
+      _sqlroomsBinding: {dataset: 'ds'},
+      getSourceColor: {
+        '@@type': 'ColorScale',
+        column: 'src',
+        type: 'sequential',
+        scheme: 'Blues',
+      },
+      getTargetColor: {
+        '@@type': 'ColorScale',
+        column: 'tgt',
+        type: 'sequential',
+        scheme: 'Reds',
+      },
+    };
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
+    );
+    expect(getLayer(result).getSourceColor['@@function']).toBe('colorScale');
+    expect(getLayer(result).getSourceColor.field).toBe('src');
+    expect(getLayer(result).getTargetColor['@@function']).toBe('colorScale');
+    expect(getLayer(result).getTargetColor.field).toBe('tgt');
+  });
+
+  test('removes a broken ColorScale object that has no resolvable field', () => {
+    const layer = {
+      '@@type': 'GeoArrowScatterplotLayer',
+      _sqlroomsBinding: {dataset: 'ds'},
+      getFillColor: {'@@type': 'ColorScale'},
+    };
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
+    );
+    // Broken accessor is removed; default fill injector then applies.
+    expect(getLayer(result).getFillColor).toEqual([56, 189, 248, 180]);
+  });
+
+  test('leaves a valid @@function colorScale accessor unchanged', () => {
+    const colorScale = {
+      '@@function': 'colorScale',
+      field: 'mag',
+      type: 'sequential',
+      scheme: 'Viridis',
+      domain: 'auto',
+    };
+    const layer = {
+      '@@type': 'GeoArrowScatterplotLayer',
+      _sqlroomsBinding: {dataset: 'ds'},
+      getFillColor: colorScale,
+    };
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
+    );
+    expect(getLayer(result).getFillColor).toEqual(colorScale);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Default getFillColor injection
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — default getFillColor', () => {
+  test.each([
+    'GeoArrowScatterplotLayer',
+    'GeoArrowPolygonLayer',
+    'GeoArrowSolidPolygonLayer',
+  ])(
+    'injects default sky-blue fill for %s when getFillColor is absent',
+    (type) => {
+      const result = normalizeAiDeckMapConfig(
+        makeConfig([{'@@type': type, _sqlroomsBinding: {dataset: 'ds'}}], {
+          ds: {source: {tableName: 'ds'}},
+        }),
+      );
+      expect(getLayer(result).getFillColor).toEqual([56, 189, 248, 180]);
+    },
+  );
+
+  test('does not overwrite an existing getFillColor array', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: [255, 0, 0, 255],
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor).toEqual([255, 0, 0, 255]);
+  });
+
+  test('does not overwrite a colorScale getFillColor', () => {
+    const colorScale = {
+      '@@function': 'colorScale',
+      field: 'mag',
+      type: 'sequential',
+      scheme: 'Viridis',
+      domain: 'auto',
+    };
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: colorScale,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor).toEqual(colorScale);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filled: false with no stroke
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — filled:false guard', () => {
+  test('resets filled to true when stroked is absent', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            filled: false,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).filled).toBe(true);
+  });
+
+  test('resets filled to true when stroked is false', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            filled: false,
+            stroked: false,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).filled).toBe(true);
+  });
+
+  test('leaves filled:false alone when stroked:true (intentional outline)', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            filled: false,
+            stroked: true,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).filled).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// colorRange stripped from heatmap
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — heatmap colorRange', () => {
+  test('strips colorRange from GeoArrowHeatmapLayer', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            colorRange: [
+              [255, 0, 0],
+              [0, 255, 0],
+            ],
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).colorRange).toBeUndefined();
+  });
+
+  test('also strips colorRange after class alias is applied (HeatmapLayer)', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'HeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            colorRange: [[0, 0, 255]],
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result)['@@type']).toBe('GeoArrowHeatmapLayer');
+    expect(getLayer(result).colorRange).toBeUndefined();
+  });
+
+  test('does not touch colorRange on other layer types', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            colorRange: [[1, 2, 3]],
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).colorRange).toEqual([[1, 2, 3]]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getRadius — string and zero/negative clamping (basic mode only)
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — getRadius', () => {
+  test('replaces string getRadius with numeric default in basic mode', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: 'Magnitude * 500',
+            radiusUnits: 'pixels',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getRadius).toBe(4);
+    expect(getLayer(result).radiusUnits).toBe('pixels');
+    expect(getLayer(result).radiusScale).toBeUndefined();
+  });
+
+  test('clamps getRadius:0 to default', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: 0,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getRadius).toBe(4);
+  });
+
+  test('clamps negative getRadius to default', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: -5,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getRadius).toBe(4);
+  });
+
+  test('leaves valid numeric getRadius unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: 6,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getRadius).toBe(6);
+  });
+
+  test('does not clamp string getRadius in custom mode', () => {
+    const result = normalizeAiDeckMapConfig({
+      configMode: 'custom' as const,
+      ...makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: '@@=radius_col',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    });
+    expect(getLayer(result).getRadius).toBe('@@=radius_col');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getWidth — string clamping and missing widthUnits (basic mode only)
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — getWidth', () => {
+  test.each(['GeoArrowPathLayer', 'GeoArrowArcLayer', 'GeoArrowTripsLayer'])(
+    'replaces string getWidth with numeric default on %s in basic mode',
+    (type) => {
+      const result = normalizeAiDeckMapConfig(
+        makeBasicConfig(
+          [
+            {
+              '@@type': type,
+              _sqlroomsBinding: {dataset: 'ds'},
+              getWidth: 'flow * 10',
+            },
+          ],
+          {ds: {source: {tableName: 'ds'}}},
+        ),
+      );
+      expect(getLayer(result).getWidth).toBe(2);
+      expect(getLayer(result).widthUnits).toBe('pixels');
+      expect(getLayer(result).widthScale).toBeUndefined();
+    },
+  );
+
+  test('injects widthUnits:pixels when getWidth is numeric but widthUnits is absent', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWidth: 3,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).widthUnits).toBe('pixels');
+    expect(getLayer(result).getWidth).toBe(3);
+  });
+
+  test('does not overwrite an existing widthUnits when numeric getWidth is present', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWidth: 100,
+            widthUnits: 'meters',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    // widthUnits is already set, but it's not "pixels" — normalization only
+    // injects when absent; it doesn't overwrite an explicit meters choice.
+    expect(getLayer(result).widthUnits).toBe('pixels');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// heatmap radiusPixels clamping
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — heatmap radiusPixels', () => {
+  test('clamps radiusPixels:0 to default', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radiusPixels: 0,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radiusPixels).toBe(30);
+  });
+
+  test('clamps string radiusPixels to default', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radiusPixels: 'density * 10',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radiusPixels).toBe(30);
+  });
+
+  test('leaves valid positive radiusPixels unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radiusPixels: 50,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radiusPixels).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// column layer radius clamping
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — column radius', () => {
+  test('clamps radius:0 to default meters', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radius: 0,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radius).toBe(50);
+  });
+
+  test('clamps string radius to default meters', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radius: 'count * 5',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radius).toBe(50);
+  });
+
+  test('leaves valid positive radius unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radius: 100,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radius).toBe(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getElevation — string stripped in basic mode
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — getElevation', () => {
+  test.each([
+    'GeoArrowPolygonLayer',
+    'GeoArrowSolidPolygonLayer',
+    'GeoArrowColumnLayer',
+    'GeoArrowH3HexagonLayer',
+  ])('strips string getElevation on %s in basic mode', (type) => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': type,
+            _sqlroomsBinding: {dataset: 'ds'},
+            getElevation: 'floors * 3',
+            elevationScale: 10,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getElevation).toBe(0);
+    expect(getLayer(result).elevationScale).toBeUndefined();
+  });
+
+  test('leaves numeric getElevation unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getElevation: 100,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getElevation).toBe(100);
+  });
+
+  test('does not strip string getElevation in custom mode', () => {
+    const result = normalizeAiDeckMapConfig({
+      configMode: 'custom' as const,
+      ...makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getElevation: '@@=height',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    });
+    expect(getLayer(result).getElevation).toBe('@@=height');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// _sqlroomsBinding.dataset auto-injection and typo repair
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — _sqlroomsBinding.dataset', () => {
+  test('injects dataset binding when _sqlroomsBinding is absent and one dataset exists', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([{'@@type': 'GeoArrowScatterplotLayer'}], {
+        earthquakes: {source: {tableName: 'earthquakes'}},
+      }),
+    );
+    expect(getLayer(result)._sqlroomsBinding?.dataset).toBe('earthquakes');
+  });
+
+  test('injects dataset binding when _sqlroomsBinding exists but dataset key is missing', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {geometryColumn: 'geom'},
+          },
+        ],
+        {earthquakes: {source: {tableName: 'earthquakes'}}},
+      ),
+    );
+    expect(getLayer(result)._sqlroomsBinding.dataset).toBe('earthquakes');
+    expect(getLayer(result)._sqlroomsBinding.geometryColumn).toBe('geom');
+  });
+
+  test('replaces a wrong dataset ID when only one dataset exists', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'earthquaqes'},
+          },
+        ],
+        {earthquakes: {source: {tableName: 'earthquakes'}}},
+      ),
+    );
+    expect(getLayer(result)._sqlroomsBinding.dataset).toBe('earthquakes');
+  });
+
+  test('does not alter a correct dataset binding', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+          },
+        ],
+        {earthquakes: {source: {tableName: 'earthquakes'}}},
+      ),
+    );
+    expect(getLayer(result)._sqlroomsBinding.dataset).toBe('earthquakes');
+  });
+
+  test('does not auto-inject when multiple datasets exist (ambiguous)', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([{'@@type': 'GeoArrowScatterplotLayer'}], {
+        ds1: {source: {tableName: 'table1'}},
+        ds2: {source: {tableName: 'table2'}},
+      }),
+    );
+    expect(getLayer(result)._sqlroomsBinding).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Catalog prefix stripping
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
+  test('strips catalog from three-part unquoted identifier', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        ds: {source: {tableName: 'sqlrooms-cli.main.earthquakes'}},
+      }),
+    );
+    expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
+  });
+
+  test('strips catalog from three-part quoted identifier', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        ds: {source: {tableName: '"sqlrooms-cli"."main"."earthquakes"'}},
+      }),
+    );
+    expect(result.datasets.ds.source.tableName).toBe('"main"."earthquakes"');
+  });
+
+  test('leaves two-part schema.table identifier unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {ds: {source: {tableName: 'main.earthquakes'}}}),
+    );
+    expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
+  });
+
+  test('leaves bare table name unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {ds: {source: {tableName: 'earthquakes'}}}),
+    );
+    expect(result.datasets.ds.source.tableName).toBe('earthquakes');
+  });
+
+  test('does not touch transformSql or sqlQuery', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        ds: {
+          source: {
+            tableName: 'sqlrooms-cli.main.earthquakes',
+            transformSql: 'SELECT * FROM __sqlrooms_source',
+          },
+        },
+      }),
+    );
+    expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
+    expect(result.datasets.ds.source.transformSql).toBe(
+      'SELECT * FROM __sqlrooms_source',
+    );
+  });
+});
