@@ -14,7 +14,7 @@
     "@duckdb/duckdb-wasm": "1.32.0"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.32",
+    "@ai-sdk/openai": "^3.0.90",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-rag": "workspace:*",

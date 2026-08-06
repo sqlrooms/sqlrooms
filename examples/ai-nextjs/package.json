@@ -9,7 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^1.0.18",
+    "@ai-sdk/openai-compatible": "^2.0.63",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
