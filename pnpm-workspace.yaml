@@ -6,6 +6,10 @@ packages:
   - 'apps/*'
   - 'python/*'
 overrides:
+  # First same-major releases that fix provider-utils SSRF (CVE-2026-8768).
+  # GHSA-866g-f22w-33x8 remains accepted on 3.x until an upstream backport exists.
+  '@ai-sdk/provider-utils@>=3.0.0 <4.0.0': 3.0.26
+  '@ai-sdk/provider-utils@>=4.0.0 <5.0.0': 4.0.29
   '@babel/core@<=7.29.0': 7.29.7
   '@duckdb/duckdb-wasm': 1.32.0
   '@loaders.gl/wms': 4.4.2
@@ -51,7 +55,6 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 patchedDependencies:
-  '@ai-sdk/provider-utils@4.0.41': patches/@ai-sdk__provider-utils@4.0.41.patch
   sigstore@4.1.1: patches/sigstore@4.1.0.patch
 allowBuilds:
   '@mongodb-js/zstd': false
@@ -62,6 +65,8 @@ allowBuilds:
   sharp: false
   unrs-resolver: true
 minimumReleaseAgeExclude:
+  - '@ai-sdk/provider-utils@3.0.26'
+  - '@ai-sdk/provider-utils@4.0.29'
   - '@babel/core@7.29.7'
   - '@sigstore/core@3.2.1'
   - brace-expansion@1.1.18

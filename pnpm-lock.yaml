@@ -5,6 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@ai-sdk/provider-utils@>=3.0.0 <4.0.0': 3.0.26
+  '@ai-sdk/provider-utils@>=4.0.0 <5.0.0': 4.0.29
   '@babel/core@<=7.29.0': 7.29.7
   '@duckdb/duckdb-wasm': 1.32.0
   '@loaders.gl/wms': 4.4.2
@@ -51,7 +53,6 @@ overrides:
   zod: 4.1.13
 
 patchedDependencies:
-  '@ai-sdk/provider-utils@4.0.41': d675cd3eebf16e6416a52752975ba070a95f10e49f368e69b3bf0389cc7627ff
   sigstore@4.1.1: 72ba6f3df587a050af679bdcd9c835c92bb45b80b91bd9f33351d2d92f69eb29
 
 importers:
@@ -182,8 +183,8 @@ importers:
   apps/sqlrooms-cli-ui:
     dependencies:
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.63
-        version: 2.0.63(zod@4.1.13)
+        specifier: ^1.0.22
+        version: 1.0.47(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
@@ -403,8 +404,8 @@ importers:
   examples/ai-agent:
     dependencies:
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.63
-        version: 2.0.63(zod@4.1.13)
+        specifier: ^1.0.22
+        version: 1.0.47(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
@@ -555,8 +556,8 @@ importers:
   examples/ai-nextjs:
     dependencies:
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.63
-        version: 2.0.63(zod@4.1.13)
+        specifier: ^1.0.18
+        version: 1.0.47(zod@4.1.13)
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
@@ -616,8 +617,8 @@ importers:
   examples/ai-rag:
     dependencies:
       '@ai-sdk/openai':
-        specifier: ^3.0.90
-        version: 3.0.90(zod@4.1.13)
+        specifier: ^2.0.32
+        version: 2.0.117(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
@@ -698,8 +699,8 @@ importers:
   examples/ai-subagents:
     dependencies:
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.63
-        version: 2.0.63(zod@4.1.13)
+        specifier: ^1.0.22
+        version: 1.0.47(zod@4.1.13)
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
@@ -2501,8 +2502,8 @@ importers:
   packages/ai-core:
     dependencies:
       '@ai-sdk/openai-compatible':
-        specifier: ^2.0.63
-        version: 2.0.63(zod@4.1.13)
+        specifier: ^1.0.18
+        version: 1.0.47(zod@4.1.13)
       '@ai-sdk/react':
         specifier: ^3.0.118
         version: 3.0.179(react@19.2.1)(zod@4.1.13)
@@ -4666,36 +4667,36 @@ packages:
     peerDependencies:
       zod: 4.1.13
 
-  '@ai-sdk/openai-compatible@2.0.63':
-    resolution: {integrity: sha512-EmrD7iRboidulu6yHfMiMhd6RQSw8KrIWhNLK8vl5brQZbIjXkyhUU+FULZM3P4m46Vatzx8u3vX1w/qmFUmqA==}
+  '@ai-sdk/openai-compatible@1.0.47':
+    resolution: {integrity: sha512-6Esz5WZmm1YckHEHUtDurGEjoTbEI1CkcfUkL2Fu1rngWhrnW98hhaj3bnjuqwkG4U1SNwVEIfucMS3ZGADEiQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
 
-  '@ai-sdk/openai@3.0.90':
-    resolution: {integrity: sha512-GIucFshCN7JZwTDur25PsnLEMRUFfAKuLaA9TP9fzGxPC2Zxzl94tvat93ZdZLURkKOrDukU0E4fj73tKDWjTA==}
+  '@ai-sdk/openai@2.0.117':
+    resolution: {integrity: sha512-fqr2OwpegPlS58NUAat4+6cAOR/x1askt5dXKY1rCjDyhHJYxm2OZM9fZnG9I717ny4uRSp2mhsMio2uthA0Pg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
 
-  '@ai-sdk/provider-utils@4.0.27':
-    resolution: {integrity: sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==}
+  '@ai-sdk/provider-utils@3.0.26':
+    resolution: {integrity: sha512-dNciNI4knep6z3cqDNng7yORCcBnEDBHZYj8rJLcLn9pLzEtNVkf6WLg9HR6AnVDDRxHsUeGAEqyF8M+FAtRgg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
 
-  '@ai-sdk/provider-utils@4.0.41':
-    resolution: {integrity: sha512-I7hhjfw01yEI8NkuAsT8Mv6xbWFr/lqLXMdaJQ2zWfXEpxog1eT7skDcv1+RY29/+5btzH8wD+vVvy48bk9oNQ==}
+  '@ai-sdk/provider-utils@4.0.29':
+    resolution: {integrity: sha512-uhukHaCBvqkwBHkT8C2PrnqKTCoLn3pdHXqtcR9I8ErH+flbzgW4o7VHSNIup9LRu+WBvZIZDQLsx6rwl2tiOA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.13
+
+  '@ai-sdk/provider@2.0.3':
+    resolution: {integrity: sha512-h88OPkavHTiN9tMn2l5awAznGB0lXzjcLhgR1/rvjB2zlLprsNxbM2tt6OJsHUxduLC3klq0/eqaSf6fX5XVww==}
+    engines: {node: '>=18'}
 
   '@ai-sdk/provider@3.0.10':
     resolution: {integrity: sha512-Q3BZ27qfpYqnCYGvE3vt+Qi6LGOF9R5Nmzn+9JoM1lCRsD9mYaIhfJLkSunN48nfGXJ6n+XNV0J/XVpqGQl7Dw==}
-    engines: {node: '>=18'}
-
-  '@ai-sdk/provider@3.0.14':
-    resolution: {integrity: sha512-5X1k57JBJ4H7H1QjX7CnJYAB1I19r/trVZTMcSms7/kLNZ8RaU4Nt2agcwZzv82Hfx6Q7/TOLU7agAKeFfc8cA==}
     engines: {node: '>=18'}
 
   '@ai-sdk/react@3.0.179':
@@ -16888,48 +16889,47 @@ snapshots:
   '@ai-sdk/gateway@3.0.112(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
-      '@ai-sdk/provider-utils': 4.0.27(zod@4.1.13)
+      '@ai-sdk/provider-utils': 4.0.29(zod@4.1.13)
       '@vercel/oidc': 3.2.0
       zod: 4.1.13
 
-  '@ai-sdk/openai-compatible@2.0.63(zod@4.1.13)':
+  '@ai-sdk/openai-compatible@1.0.47(zod@4.1.13)':
     dependencies:
-      '@ai-sdk/provider': 3.0.14
-      '@ai-sdk/provider-utils': 4.0.41(patch_hash=d675cd3eebf16e6416a52752975ba070a95f10e49f368e69b3bf0389cc7627ff)(zod@4.1.13)
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.26(zod@4.1.13)
       zod: 4.1.13
 
-  '@ai-sdk/openai@3.0.90(zod@4.1.13)':
+  '@ai-sdk/openai@2.0.117(zod@4.1.13)':
     dependencies:
-      '@ai-sdk/provider': 3.0.14
-      '@ai-sdk/provider-utils': 4.0.41(patch_hash=d675cd3eebf16e6416a52752975ba070a95f10e49f368e69b3bf0389cc7627ff)(zod@4.1.13)
+      '@ai-sdk/provider': 2.0.3
+      '@ai-sdk/provider-utils': 3.0.26(zod@4.1.13)
       zod: 4.1.13
 
-  '@ai-sdk/provider-utils@4.0.27(zod@4.1.13)':
+  '@ai-sdk/provider-utils@3.0.26(zod@4.1.13)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.3
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.8
+      zod: 4.1.13
+
+  '@ai-sdk/provider-utils@4.0.29(zod@4.1.13)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.8
       zod: 4.1.13
 
-  '@ai-sdk/provider-utils@4.0.41(patch_hash=d675cd3eebf16e6416a52752975ba070a95f10e49f368e69b3bf0389cc7627ff)(zod@4.1.13)':
+  '@ai-sdk/provider@2.0.3':
     dependencies:
-      '@ai-sdk/provider': 3.0.14
-      '@standard-schema/spec': 1.1.0
-      eventsource-parser: 3.0.8
-      undici: 6.28.0
-      zod: 4.1.13
+      json-schema: 0.4.0
 
   '@ai-sdk/provider@3.0.10':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/provider@3.0.14':
-    dependencies:
-      json-schema: 0.4.0
-
   '@ai-sdk/react@3.0.179(react@19.2.1)(zod@4.1.13)':
     dependencies:
-      '@ai-sdk/provider-utils': 4.0.27(zod@4.1.13)
+      '@ai-sdk/provider-utils': 4.0.29(zod@4.1.13)
       ai: 6.0.177(zod@4.1.13)
       react: 19.2.1
       swr: 2.4.1(react@19.2.1)
@@ -24476,7 +24476,7 @@ snapshots:
     dependencies:
       '@ai-sdk/gateway': 3.0.112(zod@4.1.13)
       '@ai-sdk/provider': 3.0.10
-      '@ai-sdk/provider-utils': 4.0.27(zod@4.1.13)
+      '@ai-sdk/provider-utils': 4.0.29(zod@4.1.13)
       '@opentelemetry/api': 1.9.0
       zod: 4.1.13
 

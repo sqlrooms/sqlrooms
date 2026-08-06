@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^2.0.63",
+    "@ai-sdk/openai-compatible": "^1.0.22",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/app-runtime": "workspace:*",
     "@sqlrooms/artifacts": "workspace:*",
