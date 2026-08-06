@@ -64,7 +64,7 @@ function createSession(
   };
 }
 
-function createTestStore() {
+function createTestStore({autoSync = false}: {autoSync?: boolean} = {}) {
   const artifactTypes = defineArtifactTypes({
     dashboard: {
       label: 'Dashboard',
@@ -118,7 +118,7 @@ function createTestStore() {
         );
       },
     },
-    ...createArtifactAiSlice({autoSync: false})(set, get, storeApi),
+    ...createArtifactAiSlice({autoSync})(set, get, storeApi),
   }));
 
   store.getState().artifacts.ensureArtifact('artifact-a', {
@@ -715,6 +715,34 @@ describe('createArtifactAiSlice', () => {
     );
   });
 
+  it('anchors auto-sync to the selection that exists at initialization', async () => {
+    const store = createTestStore({autoSync: true});
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifacts.config.currentArtifactId = 'artifact-a';
+        draft.ai.config.sessions = [createSession('session-a', 1)];
+        draft.ai.config.currentSessionId = 'session-a';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-a',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
+      }),
+    );
+    await store.getState().artifactAi.initialize();
+
+    store.getState().artifacts.setCurrentArtifact('artifact-b');
+
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-b',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+    await store.getState().artifactAi.destroy();
+  });
+
   it('inherits artifact ownership for forked sessions', () => {
     const store = createTestStore();
     store.getState().artifacts.setCurrentArtifact('artifact-a');
@@ -786,7 +814,7 @@ describe('createArtifactAiSlice', () => {
     // The fork must inherit BOTH artifacts, not just the first link.
     expect(
       store.getState().artifactAi.getArtifactIdsForSession('target-session'),
-    ).toEqual(expect.arrayContaining(['artifact-a', 'artifact-b']));
+    ).toEqual(['artifact-a', 'artifact-b']);
     expect(
       store.getState().artifactAi.getLatestArtifactForSession('target-session'),
     ).toBe('artifact-b');

@@ -1,5 +1,9 @@
 import {StoreApi} from 'zustand';
 
+export type HmrStoreApi<RS = any> = StoreApi<RS> & {
+  devtools?: {cleanup: () => void};
+};
+
 /**
  * Dev-only: HMR store preservation utilities.
  * These are isolated and tree-shakable in production builds.
@@ -28,8 +32,11 @@ import {StoreApi} from 'zustand';
  *  - The store initialization only happens once, not on every hot reload
  *
  */
+/** Whether development-only instrumentation should be enabled. */
+export const IS_DEV = process.env.NODE_ENV === 'development';
+
 export const DEV_HMR = (() => {
-  if (process.env.NODE_ENV === 'production') {
+  if (!IS_DEV) {
     return null;
   }
 
@@ -38,15 +45,15 @@ export const DEV_HMR = (() => {
     typeof window !== 'undefined'
       ? ((window as any).__SQLROOMS_STORE_REGISTRY__ ??= new Map<
           string,
-          StoreApi<any>
+          HmrStoreApi
         >())
-      : new Map<string, StoreApi<any>>();
+      : new Map<string, HmrStoreApi>();
   let idCounter = 0;
 
   return {
     nextId: () => `store_${idCounter++}`,
     get: (id: string) => registry.get(id),
-    set: (id: string, store: StoreApi<any>) => registry.set(id, store),
+    set: (id: string, store: HmrStoreApi) => registry.set(id, store),
     delete: (id: string) => registry.delete(id),
   };
 })();

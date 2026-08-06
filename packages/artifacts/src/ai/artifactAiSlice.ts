@@ -564,7 +564,10 @@ export function createArtifactAiSlice<
         // === INITIALIZATION ===
         initialize: async () => {
           if (!autoSync || unsubscribe) return;
-          let previousSnapshot = getArtifactAiSyncSnapshot(get());
+          const initialState = get();
+          previousArtifactId = initialState.artifacts.config.currentArtifactId;
+          previousSessionId = initialState.ai.config.currentSessionId;
+          let previousSnapshot = getArtifactAiSyncSnapshot(initialState);
           unsubscribe = (store as StoreApi<TRoomState>).subscribe((state) => {
             const nextSnapshot = getArtifactAiSyncSnapshot(state);
             if (isSameArtifactAiSyncSnapshot(previousSnapshot, nextSnapshot)) {

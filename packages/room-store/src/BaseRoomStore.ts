@@ -1,7 +1,7 @@
 import {produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 import {devtools} from 'zustand/middleware';
-import {DEV_HMR} from './hmr';
+import {DEV_HMR, IS_DEV} from './hmr';
 
 // Re-export for convenience
 export type {StateCreator};
@@ -165,6 +165,7 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
         if (currentStoreKey && currentStoreKey !== storeKey) {
           const previousStore = DEV_HMR.get(currentStoreKey);
           if (previousStore) {
+            previousStore.devtools?.cleanup();
             const state = previousStore.getState();
             if (isRoomSliceWithDestroy(state.room)) {
               state.room.destroy().catch((error: unknown) => {
@@ -185,10 +186,9 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
 
       store = createStore(
         devtools(stateCreatorFactory(...factoryArgs), {
-          name: 'RoomStore',
-          // DEV_HMR is null in production builds, matching the dev-only gate
-          // used throughout this module.
-          enabled: Boolean(DEV_HMR),
+          name: storeKey ? `RoomStore:${storeKey}` : 'RoomStore',
+          // Tests and production should not require the browser extension.
+          enabled: IS_DEV,
         }),
       );
 
