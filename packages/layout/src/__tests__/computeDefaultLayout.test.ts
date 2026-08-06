@@ -57,4 +57,30 @@ describe('computeDefaultLayout', () => {
     ]);
     expect(layout).toEqual({sidebar: 0, main: 100});
   });
+
+  it('does not replace a non-zero collapsed size with zero', () => {
+    const layout = computeDefaultLayout([
+      panel('sidebar', {
+        defaultSize: '30%',
+        collapsed: true,
+        collapsedSize: 44,
+      }),
+      panel('main', {defaultSize: '70%'}),
+    ]);
+
+    expect(layout).toBeUndefined();
+  });
+
+  it('can encode an explicitly zero collapsed size', () => {
+    const layout = computeDefaultLayout([
+      panel('sidebar', {
+        defaultSize: '30%',
+        collapsed: true,
+        collapsedSize: '0px',
+      }),
+      panel('main', {defaultSize: '70%'}),
+    ]);
+
+    expect(layout).toEqual({sidebar: 0, main: 100});
+  });
 });

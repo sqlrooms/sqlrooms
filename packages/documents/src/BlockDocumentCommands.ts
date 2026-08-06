@@ -351,24 +351,6 @@ export function createBlockDocumentCommands<
           title: title ?? defaultTitle,
         });
 
-        // Link the invoking AI session to the artifact it just created, so the
-        // session is associated with (and resolves to) the new artifact.
-        const aiSessionId = context.invocation.metadata?.aiSessionId;
-        if (typeof aiSessionId === 'string' && 'artifactAi' in state) {
-          const artifactAiState = state.artifactAi as {
-            addSessionArtifactLink: (
-              sessionId: string,
-              artifactId: string,
-              linkType: 'created' | 'attached',
-            ) => void;
-          };
-          artifactAiState.addSessionArtifactLink(
-            aiSessionId,
-            artifactId,
-            'created',
-          );
-        }
-
         state.blockDocuments.ensureBlockDocument(artifactId);
         if (blocks.length) {
           state.blockDocuments.setContent(artifactId, {

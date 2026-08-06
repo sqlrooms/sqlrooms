@@ -111,6 +111,7 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
+  const setDraftPrompt = useStoreWithAi((s) => s.ai.setDraftPrompt);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleClick = useCallback(() => {
@@ -120,6 +121,8 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
     } else if (currentSession?.id) {
       // Default behavior: set prompt in current session
       setPrompt(currentSession.id, text);
+    } else {
+      setDraftPrompt(text);
     }
     // Scroll the clicked item into view
     buttonRef.current?.scrollIntoView({
@@ -127,7 +130,7 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
       block: 'nearest',
       inline: 'nearest',
     });
-  }, [text, setPrompt, currentSession, onClick]);
+  }, [text, setPrompt, setDraftPrompt, currentSession, onClick]);
 
   return (
     <div className="shrink-0 snap-start">

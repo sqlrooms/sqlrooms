@@ -160,8 +160,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   );
   const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
 
-  // Local draft prompt state when no session exists
-  const [draftPrompt, setDraftPrompt] = useState('');
+  const draftPrompt = useStoreWithAi((s) => s.ai.draftPrompt);
+  const setDraftPrompt = useStoreWithAi((s) => s.ai.setDraftPrompt);
   const storedPrompt = useStoreWithAi((s) =>
     sessionId ? s.ai.getPrompt(sessionId) : '',
   );
@@ -234,6 +234,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       runAnalysisWhenReady,
       createSession,
       setPrompt,
+      setDraftPrompt,
     ],
   );
 
@@ -277,6 +278,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     onRun,
     createSession,
     setPrompt,
+    setDraftPrompt,
     prompt,
   ]);
 
@@ -347,7 +349,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   if (sessionId) {
                     setPrompt(sessionId, value);
                   } else {
-                    // No session yet - store in local state until user submits
+                    // No session yet - keep the draft in the shared AI slice so
+                    // suggestions and alternate composer surfaces stay aligned.
                     setDraftPrompt(value);
                   }
                 }}

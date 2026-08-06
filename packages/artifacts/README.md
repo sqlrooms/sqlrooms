@@ -221,12 +221,9 @@ The link types are exported from `@sqlrooms/artifacts`:
   example when persisting `ArtifactAiConfigSchema`).
 
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
-artifact-scoped assistant. For default session creation, it reuses the most
-recently opened other empty, non-running session for the current artifact before
-creating a new one. This avoids duplicate blank drafts in history while still
-letting the selected empty draft start a separate chat when the host UI exposes
-a New session action. Calls that provide an explicit `name`, `modelProvider`, or
-`model` always create a fresh session so those options are preserved.
+artifact-scoped assistant. It creates a fresh session and attaches it to the
+current artifact; use `linkType: 'created'` only when the session itself creates
+the artifact.
 `artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
 with `artifacts.config.currentArtifactId`. Sessions without explicit artifact

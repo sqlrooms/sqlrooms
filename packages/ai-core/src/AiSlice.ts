@@ -78,6 +78,8 @@ export type AiSliceState = {
     destroy?: () => Promise<void>;
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
+    /** Transient composer prompt used before the first session is created. */
+    draftPrompt: string;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
     tools: StoredToolSet;
@@ -85,6 +87,8 @@ export type AiSliceState = {
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
+    /** Update the transient composer prompt used when no session is active. */
+    setDraftPrompt: (prompt: string) => void;
     /** Set API key error flag for a provider */
     setApiKeyError: (provider: string, hasError: boolean) => void;
     /** Check if there's an API key error for the current provider */
@@ -539,6 +543,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
         config: baseConfig,
         promptSuggestionsVisible: true,
+        draftPrompt: baseConfig.sessions.length === 0 ? initialPrompt : '',
         apiKeyErrors: {},
         tools,
         toolRenderers: params.toolRenderers ?? {},
@@ -774,6 +779,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
         },
 
+        setDraftPrompt: (prompt: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.draftPrompt = prompt;
+            }),
+          );
+        },
+
         setApiKeyError: (provider: string, hasError: boolean) => {
           set((state) =>
             produce(state, (draft) => {
@@ -921,6 +934,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           model?: string,
         ) => {
           const currentSession = get().ai.getCurrentSession();
+          const firstSessionPrompt = currentSession ? '' : get().ai.draftPrompt;
           const modelSelection = getResolvedModelSelection(
             modelProvider || currentSession?.modelProvider,
             model || currentSession?.model,
@@ -948,12 +962,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 createdAt: new Date(),
                 uiMessages: [],
                 messagesRevision: 0,
-                prompt: '',
+                prompt: firstSessionPrompt,
                 draftContextItemIds: undefined,
                 isRunning: false,
                 lastOpenedAt: now,
               });
               draft.ai.config.currentSessionId = newSessionId;
+              draft.ai.draftPrompt = '';
               // Add new session to open tabs
               if (!draft.ai.config.openSessionTabs) {
                 draft.ai.config.openSessionTabs = [];
@@ -1220,16 +1235,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             return baseUrlFromFunction;
           }
 
-          // Fall back to settings. Resolve against the requested provider/model
-          // when given, otherwise the current session's.
+          // Fall back to settings. Resolve the same provider/model a newly
+          // created session would use when no current session exists.
           const store = get();
           if (hasAiSettingsConfig(store)) {
             const currentSession = getCurrentSessionFromState(store);
-            const provider = providerOverride ?? currentSession?.modelProvider;
-            const model = modelOverride ?? currentSession?.model;
-            if (!provider) {
-              return undefined;
-            }
+            const selection = getResolvedModelSelection(
+              providerOverride ?? currentSession?.modelProvider,
+              modelOverride ?? currentSession?.model,
+            );
+            const provider = providerOverride ?? selection.modelProvider;
+            const model = modelOverride ?? selection.model;
             if (provider === 'custom') {
               const customModel = store.aiSettings.config.customModels.find(
                 (m: {modelName: string}) => m.modelName === model,
@@ -1244,15 +1260,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         getApiKeyFromSettings: (providerOverride, modelOverride) => {
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
-
-          // Resolve the outbound provider/model. Callers targeting a specific
-          // provider (one-shot sendPrompt) pass it so the key matches the
-          // endpoint; otherwise use the session's provider, then the default.
-          const provider =
-            providerOverride ||
-            currentSession?.modelProvider ||
-            defaultProvider;
-          const model = modelOverride ?? currentSession?.model;
+          const selection = getResolvedModelSelection(
+            providerOverride ?? currentSession?.modelProvider,
+            modelOverride ?? currentSession?.model,
+          );
+          // Explicit provider overrides remain authoritative for one-shot
+          // calls, while the model falls back to the resolved session default.
+          const provider = providerOverride ?? selection.modelProvider;
+          const model = modelOverride ?? selection.model;
 
           // First try the getApiKey function if provided. This must not depend
           // on a current chat session: chat-free flows (e.g. in-place block

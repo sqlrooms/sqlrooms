@@ -6,6 +6,7 @@ import {
 import {
   createBlockContextItem,
   getRunContextItemIds,
+  setAiRunContextPrimaryItem,
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai';
@@ -206,6 +207,25 @@ export function getRunContext(
     session?.runContext &&
     getRunContextItemIds(session.runContext).length > 0
   ) {
+    const currentArtifactId = state.artifacts.config.currentArtifactId;
+    const currentArtifact = currentArtifactId
+      ? artifactsById[currentArtifactId]
+      : undefined;
+    const currentArtifactIsLinked = Boolean(
+      currentArtifact &&
+      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type) &&
+      state.artifactAi.config.sessionArtifactLinks.some(
+        (link) =>
+          link.sessionId === sessionId && link.artifactId === currentArtifactId,
+      ),
+    );
+
+    if (currentArtifact && currentArtifactIsLinked) {
+      return setAiRunContextPrimaryItem(
+        session.runContext,
+        createArtifactContextItem(currentArtifact),
+      );
+    }
     return session.runContext;
   }
 
