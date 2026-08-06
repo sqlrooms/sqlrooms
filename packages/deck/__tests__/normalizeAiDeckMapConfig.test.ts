@@ -1,5 +1,8 @@
 import {describe, expect, test} from '@jest/globals';
-import {normalizeAiDeckMapConfig} from '../src/aiNormalize';
+import {
+  normalizeAiDeckMapConfig,
+  validateAndFixColorScaleFields,
+} from '../src/aiNormalize';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -142,6 +145,96 @@ describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
       makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
     );
     expect(getLayer(result).getFillColor).toEqual(colorScale);
+  });
+
+  test('fixes lowercase scheme name to correct casing (e.g. "blues" → "Blues")', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'Magnitude',
+              type: 'sequential',
+              scheme: 'blues',
+              domain: 'auto',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor.scheme).toBe('Blues');
+  });
+
+  test('fixes mixed-case scheme name (e.g. "viridis" → "Viridis")', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'value',
+              type: 'sequential',
+              scheme: 'VIRIDIS',
+              domain: 'auto',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor.scheme).toBe('Viridis');
+  });
+
+  test('leaves unknown scheme names unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'value',
+              type: 'sequential',
+              scheme: 'CustomScheme',
+              domain: 'auto',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor.scheme).toBe('CustomScheme');
+  });
+
+  test('fixes scheme casing on non-fill color props (getLineColor, getColor)', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getColor: {
+              '@@function': 'colorScale',
+              field: 'speed',
+              type: 'sequential',
+              scheme: 'reds',
+              domain: 'auto',
+            },
+            getWidth: 2,
+            widthUnits: 'pixels',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getColor.scheme).toBe('Reds');
   });
 });
 
@@ -765,6 +858,209 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
     expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
     expect(result.datasets.ds.source.transformSql).toBe(
       'SELECT * FROM __sqlrooms_source',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validateAndFixColorScaleFields
+// ---------------------------------------------------------------------------
+
+const VALIDATE_COLUMNS = [
+  {name: 'Magnitude', type: 'FLOAT'},
+  {name: 'Depth', type: 'FLOAT'},
+  {name: 'EventID', type: 'VARCHAR'},
+];
+
+function makeValidateConfig(field: string) {
+  return {
+    spec: {
+      layers: [
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          _sqlroomsBinding: {dataset: 'quakes'},
+          getFillColor: {
+            '@@function': 'colorScale',
+            field,
+            type: 'sequential',
+            scheme: 'Viridis',
+            domain: 'auto',
+          },
+        },
+      ],
+    },
+    datasets: {
+      quakes: {source: {tableName: 'earthquakes'}},
+    },
+  };
+}
+
+function resolveTable(tableName: string) {
+  if (tableName === 'earthquakes') return {columns: VALIDATE_COLUMNS};
+  return undefined;
+}
+
+describe('validateAndFixColorScaleFields', () => {
+  test('leaves correct field name unchanged', () => {
+    const config = makeValidateConfig('Magnitude');
+    const result = validateAndFixColorScaleFields(config, resolveTable);
+    expect((result.spec.layers[0].getFillColor as any).field).toBe('Magnitude');
+  });
+
+  test('reports wrong casing as an error (magnitude instead of Magnitude)', () => {
+    const config = makeValidateConfig('magnitude');
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /colorScale field "magnitude" has wrong casing — use "Magnitude"/,
+    );
+  });
+
+  test('throws with helpful message for unknown abbreviation "mag"', () => {
+    const config = makeValidateConfig('mag');
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /colorScale field "mag" is not a column in dataset "quakes"/,
+    );
+  });
+
+  test('error message lists available columns', () => {
+    const config = makeValidateConfig('mag');
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /Available columns: Magnitude, Depth, EventID/,
+    );
+  });
+
+  test('skips datasets with transformSql (output schema is unknown)', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'quakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'mag',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {
+        quakes: {
+          source: {
+            tableName: 'earthquakes',
+            transformSql:
+              'SELECT *, ST_Point(lon, lat) as geom FROM __sqlrooms_source',
+          },
+        },
+      },
+    };
+    expect(() =>
+      validateAndFixColorScaleFields(config, resolveTable),
+    ).not.toThrow();
+  });
+
+  test('skips datasets with sqlQuery', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'quakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'mag',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {quakes: {source: {sqlQuery: 'SELECT * FROM earthquakes'}}},
+    };
+    expect(() =>
+      validateAndFixColorScaleFields(config, resolveTable),
+    ).not.toThrow();
+  });
+
+  test('skips non-colorScale accessors (flat array color)', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'quakes'},
+            getFillColor: [255, 0, 0, 180],
+          },
+        ],
+      },
+      datasets: {quakes: {source: {tableName: 'earthquakes'}}},
+    };
+    expect(() =>
+      validateAndFixColorScaleFields(config, resolveTable),
+    ).not.toThrow();
+  });
+
+  test('reports wrong casing for lowercase-named columns too (Speed vs speed)', () => {
+    const lowercaseColumns = [
+      {name: 'speed', type: 'FLOAT'},
+      {name: 'category', type: 'VARCHAR'},
+    ];
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'Speed',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {ds: {source: {tableName: 'my_table'}}},
+    };
+    expect(() =>
+      validateAndFixColorScaleFields(config, (t) =>
+        t === 'my_table' ? {columns: lowercaseColumns} : undefined,
+      ),
+    ).toThrow(/colorScale field "Speed" has wrong casing — use "speed"/);
+  });
+
+  test('rejects an unknown field even when actual columns are lowercase', () => {
+    const lowercaseColumns = [
+      {name: 'speed', type: 'FLOAT'},
+      {name: 'category', type: 'VARCHAR'},
+    ];
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'spd',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {ds: {source: {tableName: 'my_table'}}},
+    };
+    expect(() =>
+      validateAndFixColorScaleFields(config, (t) =>
+        t === 'my_table' ? {columns: lowercaseColumns} : undefined,
+      ),
+    ).toThrow(
+      /colorScale field "spd" is not a column.*Available columns: speed, category/,
     );
   });
 });
