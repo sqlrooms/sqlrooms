@@ -340,13 +340,35 @@ export function getDeckMapResourceConfigIssues(
     if (layerType === 'GeoArrowH3HexagonLayer') {
       const getHexagon = layer.getHexagon;
       const hasGetHexagon =
-        (typeof getHexagon === 'string' && getHexagon.trim().length > 0) ||
-        (typeof getHexagon === 'object' && getHexagon !== null);
+        typeof getHexagon === 'string' && getHexagon.trim().length > 0;
       if (!hasGetHexagon) {
         issues.push({
           path: `spec.layers.${index}.getHexagon`,
           message:
-            'GeoArrowH3HexagonLayer requires getHexagon set to the H3 index column, e.g. "@@=h3_column_name"',
+            'GeoArrowH3HexagonLayer requires getHexagon set to the H3 index column as a string accessor, e.g. "@@=h3_column_name"',
+        });
+      }
+    }
+
+    if (layerType === 'GeoArrowArcLayer') {
+      const hasSource =
+        typeof binding?.sourceGeometryColumn === 'string' &&
+        (binding.sourceGeometryColumn as string).trim().length > 0;
+      const hasTarget =
+        typeof binding?.targetGeometryColumn === 'string' &&
+        (binding.targetGeometryColumn as string).trim().length > 0;
+      if (!hasSource) {
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.sourceGeometryColumn`,
+          message:
+            'GeoArrowArcLayer requires _sqlroomsBinding.sourceGeometryColumn set to the source geometry column name',
+        });
+      }
+      if (!hasTarget) {
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.targetGeometryColumn`,
+          message:
+            'GeoArrowArcLayer requires _sqlroomsBinding.targetGeometryColumn set to the target geometry column name',
         });
       }
     }
@@ -381,6 +403,8 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
 - Bind every layer to a dataset with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable resource binding.
 - Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer.
+- For GeoArrowH3HexagonLayer, set getHexagon to a plain attribute accessor string such as "@@=hex_id". CRITICAL: Do NOT use {"@@function":"columnAccessor","column":"..."} or any object syntax — only a string accessor like "@@=column_name" is valid. Object syntax silently renders nothing.
+- For GeoArrowArcLayer, set _sqlroomsBinding.sourceGeometryColumn and _sqlroomsBinding.targetGeometryColumn to the WKB geometry column names produced by transformSql. CRITICAL: do NOT set getSourcePosition or getTargetPosition on the layer — geometry is bound exclusively through _sqlroomsBinding. The transformSql MUST wrap ST_Point() with ST_AsWKB(), e.g. ST_AsWKB(ST_Point(lon, lat)) AS geom. Bare ST_Point() without ST_AsWKB() produces an internal DuckDB type that cannot be decoded. Set dataset.geometryEncodingHint to "wkb".
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
 - Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
@@ -388,7 +412,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - For data-driven color use getFillColor (or getColor/getSourceColor/getTargetColor for arc layers) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Prefer a colorScale over a flat fill whenever the table has a meaningful numeric or categorical column to color by. Use "quantile" for skewed numeric distributions, "sequential" for roughly uniform ones, "categorical" for string/enum columns. Use EXACT scheme names (case-sensitive) — sequential: Blues, BuGn, BuPu, Cividis, GnBu, Greens, Inferno, Magma, OrRd, Oranges, Plasma, PuBu, PuBuGn, PuRd, Purples, RdPu, Reds, Turbo, Viridis, YlGn, YlGnBu, YlOrBr, YlOrRd. Diverging: BrBG, PRGn, PiYG, PuOr, RdBu, RdGy, RdYlBu, RdYlGn, Spectral. Categorical: Accent, Dark2, Paired, Pastel1, Set1, Set2, Set3, Tableau10, Category10. Do NOT invent names like "bluepurple".
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
 - When updating only visual properties (color scale, scheme, radius, width, elevation scale, visibility, opacity), OMIT the datasets field from the patch entirely. Do NOT re-send a simplified dataset source — sending source.tableName without transformSql or sqlQuery will overwrite the existing geometry-producing SQL and cause a render crash. Only include datasets in an update when intentionally changing a data source or adding/removing a dataset.
-- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates.
+- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates. IMPORTANT: When the user asks to "switch", "change", or "replace" a layer type (e.g. from ScatterplotLayer to HeatmapLayer), set replaceLayers: true and send only the new layer — do NOT keep the old layer with visible: false. Hiding the old layer is not the same as replacing it and leaves dead config behind.
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 
 Minimal table-backed point map shape:

@@ -1,5 +1,6 @@
 import {
   createDeckMapLayerColorScale,
+  getDeckMapColorAccessorOptions,
   getDeckMapLayerColorScale,
   getDeckMapLayerRecords,
   setDeckMapLayerGeometryColumn,
@@ -80,5 +81,36 @@ describe('mapLayerConfigUtils', () => {
     expect(usesGeometryColumnSetting('GeoArrowSolidPolygonLayer')).toBe(true);
     expect(usesGeometryColumnSetting('GeoJsonLayer')).toBe(true);
     expect(usesGeometryColumnSetting('GeoArrowScatterplotLayer')).toBe(false);
+  });
+});
+
+describe('getDeckMapColorAccessorOptions', () => {
+  test('ColumnLayer exposes only getFillColor', () => {
+    const opts = getDeckMapColorAccessorOptions('GeoArrowColumnLayer');
+    expect(opts.map((o) => o.value)).toEqual(['getFillColor']);
+  });
+
+  test('HeatmapLayer exposes no color accessors', () => {
+    expect(getDeckMapColorAccessorOptions('GeoArrowHeatmapLayer')).toHaveLength(
+      0,
+    );
+  });
+
+  test('ScatterplotLayer exposes getFillColor and getLineColor', () => {
+    const opts = getDeckMapColorAccessorOptions('GeoArrowScatterplotLayer');
+    expect(opts.map((o) => o.value)).toEqual(['getFillColor', 'getLineColor']);
+  });
+
+  test('PathLayer exposes only getColor', () => {
+    const opts = getDeckMapColorAccessorOptions('GeoArrowPathLayer');
+    expect(opts.map((o) => o.value)).toEqual(['getColor']);
+  });
+
+  test('ArcLayer exposes getSourceColor and getTargetColor', () => {
+    const opts = getDeckMapColorAccessorOptions('GeoArrowArcLayer');
+    expect(opts.map((o) => o.value)).toEqual([
+      'getSourceColor',
+      'getTargetColor',
+    ]);
   });
 });

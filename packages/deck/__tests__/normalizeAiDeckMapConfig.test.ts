@@ -28,6 +28,75 @@ function getLayer(result: any, index = 0): Record<string, any> {
 // Layer class alias normalisation
 // ---------------------------------------------------------------------------
 
+describe('normalizeAiDeckMapConfig — shadow layer removal (type switch)', () => {
+  test('removes the hidden scatterplot when a visible heatmap was added (point→heatmap switch)', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'pts',
+            _sqlroomsBinding: {dataset: 'ds'},
+            visible: false,
+          },
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'heat',
+            _sqlroomsBinding: {dataset: 'ds'},
+            visible: true,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(result.spec.layers).toHaveLength(1);
+    expect(getLayer(result)['@@type']).toBe('GeoArrowHeatmapLayer');
+  });
+
+  test('keeps both layers when they are the same @@type', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'a',
+            _sqlroomsBinding: {dataset: 'ds'},
+            visible: false,
+          },
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'b',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(result.spec.layers).toHaveLength(2);
+  });
+
+  test('keeps all layers when all are visible', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'a',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'b',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(result.spec.layers).toHaveLength(2);
+  });
+});
+
 describe('normalizeAiDeckMapConfig — layer class aliases', () => {
   test.each([
     ['ScatterplotLayer', 'GeoArrowScatterplotLayer'],
@@ -414,6 +483,159 @@ describe('normalizeAiDeckMapConfig — heatmap colorRange', () => {
 });
 
 // ---------------------------------------------------------------------------
+// heatmap getWeight invalid accessor
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — heatmap getWeight', () => {
+  test('converts {"@@function":"getNumericColumn","field":"Magnitude"} to "@@=Magnitude"', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWeight: {'@@function': 'getNumericColumn', field: 'Magnitude'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getWeight).toBe('@@=Magnitude');
+  });
+
+  test('converts object with "column" key to "@@=column"', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWeight: {'@@function': 'fieldAccessor', column: 'Depth'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getWeight).toBe('@@=Depth');
+  });
+
+  test('removes unresolvable object accessor, leaving getWeight absent', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWeight: {'@@function': 'unknown'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getWeight).toBeUndefined();
+  });
+
+  test('leaves a valid "@@=Column" string accessor unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWeight: '@@=Magnitude',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getWeight).toBe('@@=Magnitude');
+  });
+
+  test('leaves a numeric getWeight unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWeight: 1,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getWeight).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// H3 getHexagon invalid accessor
+// ---------------------------------------------------------------------------
+describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
+  test('rewrites columnAccessor object to @@= string using column', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getHexagon: {'@@function': 'columnAccessor', column: 'hex_id'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getHexagon).toBe('@@=hex_id');
+  });
+
+  test('rewrites object with field key to @@= string', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getHexagon: {'@@function': 'getColumn', field: 'h3index'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getHexagon).toBe('@@=h3index');
+  });
+
+  test('removes unresolvable object accessor, leaving getHexagon absent', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getHexagon: {'@@function': 'unknown'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getHexagon).toBeUndefined();
+  });
+
+  test('leaves a valid string accessor unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getHexagon: '@@=hex_id',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getHexagon).toBe('@@=hex_id');
+  });
+});
 // getRadius — string and zero/negative clamping (basic mode only)
 // ---------------------------------------------------------------------------
 

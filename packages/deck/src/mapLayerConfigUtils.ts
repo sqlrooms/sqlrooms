@@ -17,7 +17,7 @@ export type DeckMapLayerColorAccessor =
   | 'getTargetColor';
 
 export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
-  value: DeckAutoLayerType | 'GeoArrowSolidPolygonLayer';
+  value: DeckAutoLayerType;
   label: string;
 }> = [
   {value: 'GeoArrowScatterplotLayer', label: 'Point'},
@@ -25,7 +25,6 @@ export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
   {value: 'GeoArrowColumnLayer', label: 'Column'},
   {value: 'GeoArrowPathLayer', label: 'Path'},
   {value: 'GeoArrowPolygonLayer', label: 'Polygon'},
-  {value: 'GeoArrowSolidPolygonLayer', label: 'Solid polygon'},
   {value: 'GeoArrowArcLayer', label: 'Arc'},
   {value: 'GeoArrowTripsLayer', label: 'Trips'},
   {value: 'GeoArrowH3HexagonLayer', label: 'H3 hexagon'},
@@ -190,6 +189,12 @@ export function getDeckMapColorAccessorOptions(
 
   if (layerType === 'GeoArrowHeatmapLayer') {
     return [];
+  }
+
+  if (layerType === 'GeoArrowColumnLayer') {
+    return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
+      (option) => option.value === 'getFillColor',
+    );
   }
 
   return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
