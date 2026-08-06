@@ -22,6 +22,7 @@ import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
 import {
   getLatestArtifactIdForAiSession,
+  isAiSessionVisibleForArtifact,
   type ArtifactSessionLink,
 } from '@sqlrooms/artifacts/ai';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
@@ -44,10 +45,11 @@ function getOwningArtifactId(
   if (!sessionId) return undefined;
   if (
     currentArtifactId &&
-    sessionArtifactLinks.some(
-      (link) =>
-        link.sessionId === sessionId && link.artifactId === currentArtifactId,
-    )
+    isAiSessionVisibleForArtifact({
+      sessionArtifactLinks,
+      sessionId,
+      artifactId: currentArtifactId,
+    })
   ) {
     return currentArtifactId;
   }

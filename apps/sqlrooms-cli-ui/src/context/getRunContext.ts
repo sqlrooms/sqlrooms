@@ -11,7 +11,10 @@ import {
   type AiRunContextItem,
 } from '@sqlrooms/ai';
 import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
-import {getOwningArtifactRunContextItems} from '@sqlrooms/artifacts/ai';
+import {
+  getOwningArtifactRunContextItems,
+  isAiSessionVisibleForArtifact,
+} from '@sqlrooms/artifacts/ai';
 import {
   blockDocumentNodeToBlock,
   defaultBlockTitle,
@@ -214,10 +217,11 @@ export function getRunContext(
     const currentArtifactIsLinked = Boolean(
       currentArtifact &&
       SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type) &&
-      state.artifactAi.config.sessionArtifactLinks.some(
-        (link) =>
-          link.sessionId === sessionId && link.artifactId === currentArtifactId,
-      ),
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
+        sessionId,
+        artifactId: currentArtifactId,
+      }),
     );
 
     if (currentArtifact && currentArtifactIsLinked) {

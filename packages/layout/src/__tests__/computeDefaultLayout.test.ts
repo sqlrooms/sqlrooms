@@ -17,6 +17,14 @@ describe('computeDefaultLayout', () => {
     expect(layout).toEqual({a: 30, b: 70});
   });
 
+  it('treats unitless numeric strings as percentages', () => {
+    const layout = computeDefaultLayout([
+      panel('a', {defaultSize: '30'}),
+      panel('b', {defaultSize: '70'}),
+    ]);
+    expect(layout).toEqual({a: 30, b: 70});
+  });
+
   it('zeroes a collapsed percentage panel and normalizes the visible one to 100', () => {
     const layout = computeDefaultLayout([
       panel('a', {defaultSize: '70%', collapsed: true}),
@@ -47,6 +55,17 @@ describe('computeDefaultLayout', () => {
     ]);
     expect(layout).toBeUndefined();
   });
+
+  it.each(['20rem', '12em', '50vh', '25vw'])(
+    'does not emit a layout when a visible panel uses %s',
+    (defaultSize) => {
+      const layout = computeDefaultLayout([
+        panel('sidebar', {defaultSize}),
+        panel('main'),
+      ]);
+      expect(layout).toBeUndefined();
+    },
+  );
 
   it('still emits an anti-flash layout when the pixel panel is collapsed', () => {
     // The pixel panel is collapsed, so it is not "visible" and cannot be

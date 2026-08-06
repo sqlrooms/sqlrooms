@@ -1374,9 +1374,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             throw new ToolAbortError(TOOL_CALL_CANCELLED);
           }
 
+          const selectedModel = state.ai.getSelectedModel();
           const provider =
-            modelProvider || currentSession?.modelProvider || defaultProvider;
-          const modelId = modelName || currentSession?.model || defaultModel;
+            modelProvider ??
+            currentSession?.modelProvider ??
+            selectedModel.modelProvider;
+          const modelId =
+            modelName ?? currentSession?.model ?? selectedModel.model;
           // Resolve the key/base URL for the SAME provider the request targets,
           // so an explicit provider/base URL never receives another provider's
           // credential.

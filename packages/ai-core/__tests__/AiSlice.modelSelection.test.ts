@@ -840,6 +840,76 @@ describe('AiSlice model selection', () => {
     expect(session?.model).toBe('claude-sonnet-4.5');
   });
 
+  it('uses the first available model for a chat-free prompt with no valid default', async () => {
+    const settingsConfig: AiSettingsSliceConfig = {
+      providers: {
+        anthropic: {
+          baseUrl: 'https://api.anthropic.example/v1',
+          apiKey: 'anthropic-key',
+          models: [{modelName: 'claude-sonnet-4.5'}],
+        },
+      },
+      customModels: [],
+      modelParameters: {maxSteps: 50, additionalInstruction: ''},
+    };
+    const store = createStore<TestStoreState>((set, get, store) => ({
+      ...createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'missing-model',
+        getAvailableModels: () => [
+          {provider: 'anthropic', value: 'claude-sonnet-4.5'},
+        ],
+        config: {sessions: []},
+      })(set, get, store),
+      aiSettings: {config: settingsConfig},
+    }));
+    const previousFetch = globalThis.fetch;
+    const fetchMock = jest.fn<typeof fetch>(
+      async () =>
+        new Response(
+          JSON.stringify({
+            id: 'chatcmpl-test',
+            object: 'chat.completion',
+            created: 0,
+            model: 'claude-sonnet-4.5',
+            choices: [
+              {
+                index: 0,
+                message: {role: 'assistant', content: 'fallback response'},
+                finish_reason: 'stop',
+              },
+            ],
+            usage: {
+              prompt_tokens: 1,
+              completion_tokens: 1,
+              total_tokens: 2,
+            },
+          }),
+          {status: 200, headers: {'content-type': 'application/json'}},
+        ),
+    );
+    globalThis.fetch = fetchMock;
+
+    try {
+      await expect(store.getState().ai.sendPrompt('hello')).resolves.toBe(
+        'fallback response',
+      );
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [request, init] = fetchMock.mock.calls[0] ?? [];
+      expect(String(request)).toBe(
+        'https://api.anthropic.example/v1/chat/completions',
+      );
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        model: 'claude-sonnet-4.5',
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
   it('switches provider without ambiguity when model names are identical', () => {
     const store = createTestStore();
 
