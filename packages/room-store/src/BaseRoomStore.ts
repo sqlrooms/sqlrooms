@@ -1,5 +1,6 @@
 import {produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
+import {devtools} from 'zustand/middleware';
 import {DEV_HMR} from './hmr';
 
 // Re-export for convenience
@@ -182,7 +183,14 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
         }
       }
 
-      store = createStore(stateCreatorFactory(...factoryArgs));
+      store = createStore(
+        devtools(stateCreatorFactory(...factoryArgs), {
+          name: 'RoomStore',
+          // DEV_HMR is null in production builds, matching the dev-only gate
+          // used throughout this module.
+          enabled: Boolean(DEV_HMR),
+        }),
+      );
 
       // Dev-only: Register store for HMR preservation
       if (DEV_HMR && currentStoreKey) {
