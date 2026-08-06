@@ -8,9 +8,9 @@ import {isCollapsed} from '../utils';
 
 /**
  * Parse a node `defaultSize` into a percentage number, or `undefined` when it
- * is not expressed as a percentage (e.g. pixels or unset). Pixel/unset sizes
- * cannot be converted without measuring the container, so they are treated as
- * "unknown" and distributed evenly by {@link computeDefaultLayout}.
+ * is not expressed as a percentage. Explicit `%` values and unitless numeric
+ * strings use the percentage semantics of react-resizable-panels. Pixel and
+ * other CSS-unit sizes cannot be converted without measuring the container.
  */
 export function parsePercentSize(
   size: string | number | undefined,
@@ -18,24 +18,33 @@ export function parsePercentSize(
   if (typeof size === 'number') {
     return undefined; // numeric == pixels in this codebase
   }
-  if (typeof size === 'string' && size.trim().endsWith('%')) {
-    const value = Number.parseFloat(size);
+  if (typeof size === 'string') {
+    const normalized = size.trim();
+    if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(normalized)) {
+      return undefined;
+    }
+    const value = Number.parseFloat(normalized);
     return Number.isFinite(value) ? value : undefined;
   }
   return undefined;
 }
 
 /**
- * Whether a node `defaultSize` carries an explicit pixel intent (a raw number
- * or a `px` string). Such sizes cannot be represented in the group-level,
- * percentage-only RRP `Layout`, so a group containing one must not emit a
- * `defaultLayout` (see {@link computeDefaultLayout}).
+ * Whether a node `defaultSize` carries an explicit non-percentage size intent.
+ * Such sizes cannot be represented in the group-level percentage-only RRP
+ * `Layout`, so a group containing one must not emit a `defaultLayout`.
  */
-export function isPixelSize(size: string | number | undefined): boolean {
+export function isExplicitNonPercentSize(
+  size: string | number | undefined,
+): boolean {
   if (typeof size === 'number') {
     return true; // numeric == pixels in this codebase
   }
-  return typeof size === 'string' && size.trim().endsWith('px');
+  return (
+    typeof size === 'string' &&
+    size.trim().length > 0 &&
+    parsePercentSize(size) === undefined
+  );
 }
 
 /** Whether a declared size is meaningfully different from zero. */
@@ -55,12 +64,12 @@ export function isNonZeroSize(size: string | number | undefined): boolean {
  * uncollapsed sizes and then imperatively collapsing after mount.
  *
  * Returns `undefined` (so RRP honours each panel's own `defaultSize`) when a
- * VISIBLE panel declares a pixel size: the group `Layout` is percentage-only,
- * so emitting it would silently rewrite e.g. a 250px sidebar to a percentage.
- * A pixel panel that is currently collapsed is not "visible", so groups still
- * get their anti-flash layout while such a panel stays collapsed. A non-zero
- * `collapsedSize` also returns `undefined`, because encoding it as zero would
- * discard the declared collapsed width.
+ * visible panel declares an explicit non-percentage size: the group `Layout`
+ * is percentage-only, so emitting it would silently rewrite e.g. a 250px or
+ * 20rem sidebar to a percentage. A panel that is currently collapsed is not
+ * visible, so groups still get their anti-flash layout while it stays
+ * collapsed. A non-zero `collapsedSize` also returns `undefined`, because
+ * encoding it as zero would discard the declared collapsed width.
  */
 export function computeDefaultLayout(
   children: LayoutNode[],
@@ -74,9 +83,11 @@ export function computeDefaultLayout(
     const collapsed = isCollapsed(child);
     const isKey = isLayoutNodeKey(child);
     const percent = isKey ? undefined : parsePercentSize(child.defaultSize);
-    const pixel = isKey ? false : isPixelSize(child.defaultSize);
+    const explicitNonPercentSize = isKey
+      ? false
+      : isExplicitNonPercentSize(child.defaultSize);
     const collapsedSize = isKey ? undefined : child.collapsedSize;
-    return {id, collapsed, percent, pixel, collapsedSize};
+    return {id, collapsed, percent, explicitNonPercentSize, collapsedSize};
   });
 
   if (
@@ -93,9 +104,9 @@ export function computeDefaultLayout(
     return undefined;
   }
 
-  // A visible pixel-sized panel cannot be faithfully encoded as a percentage.
+  // A visible explicitly-sized panel cannot be faithfully encoded as a percentage.
   // Defer entirely to per-panel `defaultSize` rather than distort it.
-  if (visible.some((entry) => entry.pixel)) {
+  if (visible.some((entry) => entry.explicitNonPercentSize)) {
     return undefined;
   }
 

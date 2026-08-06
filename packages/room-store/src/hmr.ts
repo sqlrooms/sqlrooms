@@ -1,5 +1,11 @@
 import {StoreApi} from 'zustand';
 
+/**
+ * Store API retained by the development HMR registry.
+ *
+ * Stores created with Zustand DevTools expose `devtools.cleanup`; callers that
+ * replace a retained store must invoke it to release the old connection.
+ */
 export type HmrStoreApi<RS = any> = StoreApi<RS> & {
   devtools?: {cleanup: () => void};
 };

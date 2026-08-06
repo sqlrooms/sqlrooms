@@ -1,4 +1,5 @@
 import {expect, it, jest} from '@jest/globals';
+import type {ForkSessionFromMessageArgs} from '@sqlrooms/ai';
 import type {
   RegisteredRoomCommand,
   RoomCommandExecutionContext,
@@ -16,7 +17,9 @@ it('hands off from the current linked artifact of a multi-artifact session', asy
     `${sourceSessionId}:${sourceArtifactId}`,
     `${sourceSessionId}:${targetArtifactId}`,
   ]);
-  const forkSessionFromMessage = jest.fn(() => 'target-session');
+  const forkSessionFromMessage = jest.fn(
+    (_args: ForkSessionFromMessageArgs) => 'target-session',
+  );
   const setSessionArtifact = jest.fn();
   const setSessionRunContext = jest.fn();
   const selectLatestSessionForArtifact = jest.fn();

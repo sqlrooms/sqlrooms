@@ -239,10 +239,6 @@ export function createBlockDocumentCommandIds(
  * and labelled with `artifactLabel`, so a host can register more than one
  * block-document family (for example worksheets and generic documents).
  *
- * When the `create` command is invoked from an AI session (its invocation
- * metadata carries an `aiSessionId`), the newly created artifact is linked to
- * that session so the session is associated with the artifact it just created.
- *
  * @param options - Artifact type, labels, namespace, and supported stateful
  * block types. All fields are optional and default to generic block-document
  * values.
