@@ -9,6 +9,7 @@ import {
   mergeDeckMapResourceConfigPatch,
   normalizeAiDeckMapConfig,
   normalizeDeckMapPointConfig,
+  validateAndFixColorScaleFields,
   type DeckMapConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
@@ -429,15 +430,21 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
               existingMapConfig,
               replaceLayers,
               replaceDatasets,
-            }) =>
-              normalizeDeckMapPointConfig({
-                config: mergeDeckMapResourceConfigPatch(
-                  existingMapConfig,
-                  normalizeAiDeckMapConfig(config as any) as DeckMapConfig,
-                  {replaceLayers, replaceDatasets},
-                ),
+            }) => {
+              const merged = mergeDeckMapResourceConfigPatch(
+                existingMapConfig,
+                normalizeAiDeckMapConfig(config as any) as DeckMapConfig,
+                {replaceLayers, replaceDatasets},
+              );
+              const validated = validateAndFixColorScaleFields(
+                merged,
+                (tableName: string) => state.db.findTable(tableName),
+              );
+              return normalizeDeckMapPointConfig({
+                config: validated,
                 resolveTable: (tableName) => state.db.findTable(tableName),
-              }),
+              });
+            },
           },
           {
             blockDocumentId: params.blockDocumentId,

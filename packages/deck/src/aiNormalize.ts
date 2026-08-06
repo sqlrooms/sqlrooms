@@ -1,9 +1,70 @@
-// Inlined to keep this module free of workspace-package imports so it can be
-// imported directly by unit tests without ESM transform issues.
+// Inlined to keep this module free of heavy workspace-package imports
+// (e.g. @sqlrooms/duckdb, @sqlrooms/mosaic) that would break Jest.
+// The list below must be kept in sync with packages/color-scales/src/colorSchemeNames.ts.
 const DECK_TABLE_DATASET_SOURCE_RELATION = '__sqlrooms_source';
 function quoteDeckMapSqlIdentifier(identifier: string) {
   return `"${identifier.replace(/"/g, '""')}"`;
 }
+
+const ALL_KNOWN_SCHEMES = [
+  // sequential
+  'Blues',
+  'BuGn',
+  'BuPu',
+  'Cividis',
+  'Cool',
+  'CubehelixDefault',
+  'GnBu',
+  'Greens',
+  'Greys',
+  'Inferno',
+  'Magma',
+  'OrRd',
+  'Oranges',
+  'Plasma',
+  'PuBu',
+  'PuBuGn',
+  'PuRd',
+  'Purples',
+  'RdPu',
+  'Reds',
+  'Turbo',
+  'Viridis',
+  'Warm',
+  'YlGn',
+  'YlGnBu',
+  'YlOrBr',
+  'YlOrRd',
+  'Rainbow',
+  'Sinebow',
+  // diverging
+  'BrBG',
+  'PRGn',
+  'PiYG',
+  'PuOr',
+  'RdBu',
+  'RdGy',
+  'RdYlBu',
+  'RdYlGn',
+  'Spectral',
+  // categorical
+  'Accent',
+  'Dark2',
+  'Paired',
+  'Pastel1',
+  'Pastel2',
+  'Set1',
+  'Set2',
+  'Set3',
+  'Tableau10',
+  'Observable10',
+  'Category10',
+] as const;
+
+/** Lower-cased name → canonical casing, e.g. "blues" → "Blues". */
+const SCHEME_NAME_BY_LOWER = new Map(
+  ALL_KNOWN_SCHEMES.map((s) => [s.toLowerCase(), s]),
+);
 
 // Minimal structural type that covers both AiMapConfig
 // and DeckMapConfig — all the passes only access these loose fields.
@@ -240,6 +301,30 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
           const {[prop]: _removed, ...rest} = l;
           l = rest;
           layerChanged = true;
+        }
+      }
+    }
+
+    // Normalise color accessor scheme names: AI often sends wrong casing
+    // (e.g. "blues", "viridis"). Do a case-insensitive lookup and replace with
+    // the canonical name so the color-scale renderer can find the interpolator.
+    for (const prop of COLOR_ACCESSOR_PROPS) {
+      const value = l[prop];
+      if (
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        '@@function' in (value as Record<string, unknown>) &&
+        (value as Record<string, unknown>)['@@function'] === 'colorScale'
+      ) {
+        const v = value as Record<string, unknown>;
+        const rawScheme = v.scheme;
+        if (typeof rawScheme === 'string') {
+          const canonical = SCHEME_NAME_BY_LOWER.get(rawScheme.toLowerCase());
+          if (canonical && canonical !== rawScheme) {
+            l = {...l, [prop]: {...v, scheme: canonical}};
+            layerChanged = true;
+          }
         }
       }
     }
@@ -483,4 +568,106 @@ export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
       ),
     ),
   ) as unknown as T;
+}
+
+const COLOR_SCALE_ACCESSOR_PROPS = [
+  'getFillColor',
+  'getLineColor',
+  'getColor',
+  'getSourceColor',
+  'getTargetColor',
+] as const;
+
+/**
+ * Walks the merged map config and validates every colorScale `field` against
+ * the source table's actual column list (when available via `resolveTable`).
+ *
+ * Only simple `tableName`-backed datasets (no `transformSql` / `sqlQuery`)
+ * have a known column list at write time. SQL-derived datasets are skipped.
+ *
+ * Outcomes:
+ * - Correct field name → no change.
+ * - Wrong casing (e.g. "magnitude" → "Magnitude") → fixed silently.
+ * - Unknown field (e.g. "mag" when the column is "Magnitude") → throws with
+ *   a message listing the available columns so the AI can retry correctly.
+ */
+export function validateAndFixColorScaleFields<
+  T extends {spec?: unknown; datasets?: Record<string, unknown>},
+>(
+  config: T,
+  resolveTable: (tableName: string) => {columns?: {name: string}[]} | undefined,
+): T {
+  const spec = config.spec;
+  if (!spec || typeof spec === 'string') return config;
+  const layers = Array.isArray((spec as Record<string, unknown>).layers)
+    ? ((spec as Record<string, unknown>).layers as Record<string, unknown>[])
+    : [];
+
+  const columnsByDataset = new Map<string, Map<string, string>>();
+  for (const [datasetId, dataset] of Object.entries(config.datasets ?? {})) {
+    const source = (dataset as Record<string, unknown>)?.source as
+      | Record<string, unknown>
+      | undefined;
+    if (!source) continue;
+    const tableName =
+      typeof source.tableName === 'string' ? source.tableName : undefined;
+    const hasTransform =
+      typeof source.transformSql === 'string' ||
+      typeof source.sqlQuery === 'string';
+    if (!tableName || hasTransform) continue;
+
+    const table = resolveTable(tableName);
+    if (!table?.columns?.length) continue;
+
+    const byLower = new Map<string, string>();
+    for (const col of table.columns) {
+      byLower.set(col.name.toLowerCase(), col.name);
+    }
+    columnsByDataset.set(datasetId, byLower);
+  }
+
+  if (columnsByDataset.size === 0) return config;
+
+  const errors: string[] = [];
+  for (const [i, layer] of layers.entries()) {
+    const binding = layer._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    const datasetId =
+      typeof binding?.dataset === 'string' ? binding.dataset : undefined;
+    const colMap = datasetId ? columnsByDataset.get(datasetId) : undefined;
+    if (!colMap) continue;
+
+    for (const prop of COLOR_SCALE_ACCESSOR_PROPS) {
+      const accessor = layer[prop];
+      if (!accessor || typeof accessor !== 'object' || Array.isArray(accessor))
+        continue;
+      const acc = accessor as Record<string, unknown>;
+      if (acc['@@function'] !== 'colorScale') continue;
+      const field = acc.field;
+      if (typeof field !== 'string') continue;
+
+      const canonical = colMap.get(field.toLowerCase());
+      if (canonical === field) {
+        // Exact match — correct as-is.
+        continue;
+      }
+      if (canonical !== undefined) {
+        errors.push(
+          `spec.layers.${i}.${prop}: colorScale field "${field}" has wrong casing — use "${canonical}"`,
+        );
+      } else {
+        const available = [...colMap.values()].join(', ');
+        errors.push(
+          `spec.layers.${i}.${prop}: colorScale field "${field}" is not a column in dataset "${datasetId}". Available columns: ${available}`,
+        );
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join('; '));
+  }
+
+  return config;
 }
