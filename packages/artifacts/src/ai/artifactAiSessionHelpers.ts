@@ -39,7 +39,8 @@ export type ArtifactAiSessionOwnership = Record<string, string>;
  * Input for checking whether a session belongs to a given artifact.
  */
 export type ArtifactAiSessionFilterOptions = {
-  aiSessionArtifacts: ArtifactAiSessionOwnership;
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
   sessionId: string;
   artifactId: string | undefined;
 };
@@ -56,12 +57,7 @@ export function isAiSessionVisibleForArtifact({
   sessionArtifactLinks,
   sessionId,
   artifactId,
-}: {
-  aiSessionArtifacts?: ArtifactAiSessionOwnership;
-  sessionArtifactLinks?: ArtifactSessionLink[];
-  sessionId: string;
-  artifactId: string | undefined;
-}): boolean;
+}: ArtifactAiSessionFilterOptions): boolean;
 export function isAiSessionVisibleForArtifact(
   aiSessionArtifacts: ArtifactAiSessionOwnership,
   sessionId: string,
@@ -69,12 +65,7 @@ export function isAiSessionVisibleForArtifact(
 ): boolean;
 export function isAiSessionVisibleForArtifact(
   optionsOrAiSessionArtifacts:
-    | {
-        aiSessionArtifacts?: ArtifactAiSessionOwnership;
-        sessionArtifactLinks?: ArtifactSessionLink[];
-        sessionId: string;
-        artifactId: string | undefined;
-      }
+    | ArtifactAiSessionFilterOptions
     | ArtifactAiSessionOwnership,
   sessionId?: string,
   artifactId?: string,
@@ -88,12 +79,7 @@ export function isAiSessionVisibleForArtifact(
   }
 
   // Handle new-style options object
-  const options = optionsOrAiSessionArtifacts as {
-    aiSessionArtifacts?: ArtifactAiSessionOwnership;
-    sessionArtifactLinks?: ArtifactSessionLink[];
-    sessionId: string;
-    artifactId: string | undefined;
-  };
+  const options = optionsOrAiSessionArtifacts as ArtifactAiSessionFilterOptions;
 
   if (!options.artifactId) return false;
 
@@ -333,8 +319,9 @@ export function getEmptyAiSessionIdForArtifact({
  * Shared input for helpers that derive artifact-level session summaries.
  */
 export type ArtifactAiSessionGroupsOptions = {
-  sessions: ArtifactAiSession[];
-  aiSessionArtifacts: ArtifactAiSessionOwnership;
+  sessions?: ArtifactAiSession[];
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
 };
 
 /**
@@ -346,11 +333,7 @@ export function getAiSessionGroupsByArtifact({
   sessions,
   aiSessionArtifacts,
   sessionArtifactLinks,
-}: {
-  sessions?: ArtifactAiSession[];
-  aiSessionArtifacts?: ArtifactAiSessionOwnership;
-  sessionArtifactLinks?: ArtifactSessionLink[];
-}): Record<string, string[]> {
+}: ArtifactAiSessionGroupsOptions): Record<string, string[]> {
   const groups: Record<string, string[]> = {};
 
   if (sessionArtifactLinks) {
@@ -425,7 +408,8 @@ export function getRunningAiSessionCountsByArtifact({
  * Input for removing stale artifact AI ownership entries.
  */
 export type CleanupAiSessionArtifactsOptions = {
-  aiSessionArtifacts: ArtifactAiSessionOwnership;
+  aiSessionArtifacts?: ArtifactAiSessionOwnership;
+  sessionArtifactLinks?: ArtifactSessionLink[];
   sessions: ArtifactAiSession[];
   artifactIds: Iterable<string>;
 };
@@ -441,12 +425,9 @@ export function cleanupAiSessionArtifacts({
   sessionArtifactLinks,
   sessions,
   artifactIds,
-}: {
-  aiSessionArtifacts?: ArtifactAiSessionOwnership;
-  sessionArtifactLinks?: ArtifactSessionLink[];
-  sessions: ArtifactAiSession[];
-  artifactIds: Iterable<string>;
-}): ArtifactAiSessionOwnership | ArtifactSessionLink[] {
+}: CleanupAiSessionArtifactsOptions):
+  | ArtifactAiSessionOwnership
+  | ArtifactSessionLink[] {
   const sessionIds = new Set(sessions.map((session) => session.id));
   const artifactIdSet = new Set(artifactIds);
 
