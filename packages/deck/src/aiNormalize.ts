@@ -360,6 +360,110 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       layerChanged = true;
     }
 
+    // Fix invalid getWeight on GeoArrowHeatmapLayer. The AI sometimes generates
+    // {"@@function":"getNumericColumn","field":"..."} which is not a real accessor.
+    // The correct form is a deck.gl attribute string "@@=ColumnName".
+    if (l['@@type'] === 'GeoArrowHeatmapLayer') {
+      const gw = l.getWeight;
+      if (
+        gw &&
+        typeof gw === 'object' &&
+        !Array.isArray(gw) &&
+        '@@function' in (gw as Record<string, unknown>) &&
+        (gw as Record<string, unknown>)['@@function'] !== 'colorScale'
+      ) {
+        // Extract the field name from common AI patterns and convert to @@= accessor.
+        const field =
+          (gw as Record<string, unknown>).field ??
+          (gw as Record<string, unknown>).column;
+        if (typeof field === 'string' && field.trim()) {
+          l = {...l, getWeight: `@@=${field}`};
+          layerChanged = true;
+        } else {
+          // Unknown object accessor — remove it so the heatmap renders unweighted
+          // rather than failing silently.
+          const {getWeight: _gw, ...rest} = l;
+          l = rest;
+          layerChanged = true;
+        }
+      }
+    }
+
+    // Fix invalid getHexagon on GeoArrowH3HexagonLayer. The AI sometimes
+    // generates {"@@function":"columnAccessor","column":"..."} which is not a
+    // real accessor. The correct form is a deck.gl attribute string "@@=column".
+    if (l['@@type'] === 'GeoArrowH3HexagonLayer') {
+      const gh = l.getHexagon;
+      if (
+        gh &&
+        typeof gh === 'object' &&
+        !Array.isArray(gh) &&
+        '@@function' in (gh as Record<string, unknown>) &&
+        (gh as Record<string, unknown>)['@@function'] !== 'colorScale'
+      ) {
+        const field =
+          (gh as Record<string, unknown>).field ??
+          (gh as Record<string, unknown>).column;
+        if (typeof field === 'string' && field.trim()) {
+          l = {...l, getHexagon: `@@=${field}`};
+          layerChanged = true;
+        } else {
+          // Can't recover — remove so validation gives a clear error message.
+          const {getHexagon: _gh, ...rest} = l;
+          l = rest;
+          layerChanged = true;
+        }
+      }
+    }
+
+    // Fix GeoArrowArcLayer: the AI sometimes places geometry columns as
+    // getSourcePosition/getTargetPosition string accessors ("@@=col") instead
+    // of in _sqlroomsBinding.sourceGeometryColumn / targetGeometryColumn.
+    // Lift them into the binding so the GeoArrow pipeline can find them.
+    if (l['@@type'] === 'GeoArrowArcLayer') {
+      const binding =
+        l._sqlroomsBinding &&
+        typeof l._sqlroomsBinding === 'object' &&
+        !Array.isArray(l._sqlroomsBinding)
+          ? (l._sqlroomsBinding as Record<string, unknown>)
+          : undefined;
+
+      const extractCol = (accessor: unknown): string | undefined => {
+        if (typeof accessor === 'string') {
+          const m = accessor.match(/^@@=(.+)$/);
+          return m ? m[1]!.trim() : undefined;
+        }
+        if (
+          accessor &&
+          typeof accessor === 'object' &&
+          !Array.isArray(accessor)
+        ) {
+          const a = accessor as Record<string, unknown>;
+          const col = a.column ?? a.field;
+          return typeof col === 'string' ? col.trim() : undefined;
+        }
+        return undefined;
+      };
+
+      const srcCol = extractCol(l.getSourcePosition);
+      const tgtCol = extractCol(l.getTargetPosition);
+
+      const missingSrc =
+        !binding?.sourceGeometryColumn && typeof srcCol === 'string' && srcCol;
+      const missingTgt =
+        !binding?.targetGeometryColumn && typeof tgtCol === 'string' && tgtCol;
+
+      if (missingSrc || missingTgt) {
+        const newBinding: Record<string, unknown> = {...(binding ?? {})};
+        if (missingSrc) newBinding.sourceGeometryColumn = srcCol;
+        if (missingTgt) newBinding.targetGeometryColumn = tgtCol;
+        // Remove the (now redundant) string accessor props from the layer.
+        const {getSourcePosition: _sp, getTargetPosition: _tp, ...rest} = l;
+        l = {...rest, _sqlroomsBinding: newBinding};
+        layerChanged = true;
+      }
+    }
+
     // Inject default getFillColor for scatterplot/polygon layers that omit it
     // entirely. Without it deck.gl falls back to opaque black [0,0,0,255].
     // Mirror the same sky-blue default used by the UI builder.
@@ -389,6 +493,37 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     if (layerChanged) changed = true;
     return layerChanged ? l : layer;
   });
+
+  // Remove layers that the AI hid with visible:false when other layers of a
+  // different @@type are visible. This is the "type switch shadow" pattern:
+  // instead of replacing the old layer, the AI adds a new one and hides the old.
+  const visibleLayers = layers.filter(
+    (l) =>
+      typeof l === 'object' &&
+      l !== null &&
+      (l as Record<string, unknown>).visible !== false,
+  );
+  const hiddenWithDifferentType = layers.filter((l) => {
+    if (typeof l !== 'object' || l === null) return false;
+    const lr = l as Record<string, unknown>;
+    if (lr.visible !== false) return false;
+    const hiddenType = lr['@@type'];
+    return visibleLayers.some(
+      (v) =>
+        typeof v === 'object' &&
+        v !== null &&
+        (v as Record<string, unknown>)['@@type'] !== hiddenType,
+    );
+  });
+  if (hiddenWithDifferentType.length > 0) {
+    const filteredLayers = layers.filter(
+      (l) => !hiddenWithDifferentType.includes(l),
+    );
+    return {
+      ...config,
+      spec: {...spec, layers: filteredLayers} as typeof spec,
+    };
+  }
 
   if (!changed) return config;
   return {...config, spec: {...spec, layers} as typeof spec};
@@ -428,6 +563,23 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
   const datasets = config.datasets;
   if (!datasets || typeof datasets !== 'object') return config;
 
+  // Collect geometry column names used by arc layers so we can check their
+  // transformSql and ensure geometryEncodingHint is set to "wkb".
+  const arcGeomCols = new Set<string>();
+  const spec = config.spec as Record<string, unknown> | undefined;
+  if (spec && Array.isArray(spec.layers)) {
+    for (const layer of spec.layers) {
+      if (!layer || typeof layer !== 'object') continue;
+      const l = layer as Record<string, unknown>;
+      if (l['@@type'] !== 'GeoArrowArcLayer') continue;
+      const binding = l._sqlroomsBinding as Record<string, unknown> | undefined;
+      if (typeof binding?.sourceGeometryColumn === 'string')
+        arcGeomCols.add(binding.sourceGeometryColumn);
+      if (typeof binding?.targetGeometryColumn === 'string')
+        arcGeomCols.add(binding.targetGeometryColumn);
+    }
+  }
+
   let changed = false;
   const nextDatasets: Record<string, unknown> = {};
 
@@ -436,19 +588,66 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     const source = d?.source as Record<string, unknown> | undefined;
     const tableName = source?.tableName;
 
+    let next = d;
+
     if (typeof tableName === 'string') {
       const parts = splitTableRef(tableName);
       if (parts.length >= 3) {
         const stripped = parts.slice(1).join('.');
-        nextDatasets[id] = {
-          ...d,
-          source: {...source, tableName: stripped},
-        };
+        next = {...next, source: {...source, tableName: stripped}};
         changed = true;
-        continue;
       }
     }
-    nextDatasets[id] = dataset;
+
+    // Fix missing geometryEncodingHint for arc datasets.
+    // If the transformSql defines arc geometry columns (detected above) using
+    // ST_Point/ST_AsWKB/etc., the dataset must declare geometryEncodingHint:
+    // "wkb" so the decoder knows how to read the geometry.
+    const transformSql = (next?.source as Record<string, unknown> | undefined)
+      ?.transformSql as string | undefined;
+    if (arcGeomCols.size > 0 && transformSql && !next?.geometryEncodingHint) {
+      // Only inject when the transformSql references at least one of the
+      // arc geometry columns — avoids touching unrelated datasets.
+      const mentionsArcCol = [...arcGeomCols].some((col) =>
+        transformSql.includes(col),
+      );
+      if (mentionsArcCol) {
+        next = {...next, geometryEncodingHint: 'wkb'};
+        changed = true;
+      }
+    }
+
+    // Fix transformSql that uses bare ST_Point() instead of ST_AsWKB(ST_Point()).
+    // This is the most common mistake for arc layers: the AI omits ST_AsWKB().
+    if (transformSql && arcGeomCols.size > 0) {
+      // Replace "ST_Point(...) AS col" → "ST_AsWKB(ST_Point(...)) AS col"
+      // only for the arc geometry columns. Uses a conservative regex that
+      // matches the alias at the end and avoids double-wrapping.
+      let fixedSql = transformSql;
+      for (const col of arcGeomCols) {
+        // Match: ST_Point(<args>) as col  (case-insensitive, optional quotes)
+        // Not already wrapped with ST_AsWKB.
+        fixedSql = fixedSql.replace(
+          new RegExp(
+            `(?<!ST_AsWKB\\()(ST_Point\\([^)]+\\))\\s+[Aa][Ss]\\s+"?${col}"?`,
+            'g',
+          ),
+          `ST_AsWKB($1) AS "${col}"`,
+        );
+      }
+      if (fixedSql !== transformSql) {
+        next = {
+          ...next,
+          source: {
+            ...(next?.source as Record<string, unknown>),
+            transformSql: fixedSql,
+          },
+        };
+        changed = true;
+      }
+    }
+
+    nextDatasets[id] = next ?? dataset;
   }
 
   if (!changed) return config;
@@ -553,6 +752,10 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - string getElevation in basic mode → 0 (flat)
  * - missing or wrong _sqlroomsBinding.dataset when only one dataset → auto-inject
  * - colorRange on GeoArrowHeatmapLayer → stripped
+ * - invalid getWeight object accessor on GeoArrowHeatmapLayer → converted to "@@=field" string
+ * - invalid getHexagon object accessor on GeoArrowH3HexagonLayer → converted to "@@=column" string
+ * - GeoArrowArcLayer getSourcePosition/getTargetPosition string accessors → lifted into _sqlroomsBinding
+ * - GeoArrowArcLayer dataset: missing ST_AsWKB wrapping on ST_Point → added; missing geometryEncodingHint → injected
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values

@@ -450,7 +450,7 @@ describe('extractColorScaleLegends', () => {
     };
   }
 
-  it('returns a legend for each color scale property on a layer', () => {
+  it('returns only one legend per layer, preferring getFillColor over getLineColor', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -480,10 +480,10 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(2);
+    expect(legends).toHaveLength(1);
   });
 
-  it('uses the correct legend title for each accessor', () => {
+  it('uses the legend title from getFillColor when both fill and line have color scales', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -515,12 +515,11 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(2);
+    expect(legends).toHaveLength(1);
     expect(legends[0]!.title).toBe('Fill Legend');
-    expect(legends[1]!.title).toBe('Line Legend');
   });
 
-  it('skips a failing color scale without blocking others', () => {
+  it('falls back to getLineColor legend when getFillColor field is invalid', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
