@@ -289,6 +289,26 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
+  it('carries the initial prompt through the lazy first-session boundary', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        initialPrompt: 'Start with this question',
+        config: {sessions: []},
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.draftPrompt).toBe('Start with this question');
+
+    store.getState().ai.createSession();
+
+    expect(store.getState().ai.getCurrentSession()?.prompt).toBe(
+      'Start with this question',
+    );
+    expect(store.getState().ai.draftPrompt).toBe('');
+  });
+
   it('opens the repaired current session when initialized with a stale current session id', () => {
     const now = Date.now();
     const store = createStore<AiSliceState>((set, get, store) =>
@@ -921,6 +941,40 @@ describe('AiSlice model selection', () => {
 
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
     expect(store.getState().ai.getApiKeyFromSettings()).toBe('openai-key');
+  });
+
+  it('resolves a custom default model from settings without a current session', () => {
+    const settingsConfig: AiSettingsSliceConfig = {
+      providers: {},
+      customModels: [
+        {
+          modelName: 'private-model',
+          apiKey: 'private-key',
+          baseUrl: 'https://models.example/v1',
+        },
+      ],
+      modelParameters: {maxSteps: 50, additionalInstruction: ''},
+    };
+
+    const store = createStore<TestStoreState>((set, get, store) => ({
+      ...createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'custom',
+        defaultModel: 'private-model',
+        getAvailableModels: () => [
+          {provider: 'custom', value: 'private-model'},
+        ],
+        config: {sessions: []},
+      })(set, get, store),
+      aiSettings: {config: settingsConfig},
+    }));
+
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+    expect(store.getState().ai.getApiKeyFromSettings()).toBe('private-key');
+    expect(store.getState().ai.getBaseUrlFromSettings()).toBe(
+      'https://models.example/v1',
+    );
   });
 
   it('inherits current provider and model when creating a new session', () => {

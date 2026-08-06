@@ -47,7 +47,7 @@ function createMockStore() {
     },
     artifactAi: {
       config: {
-        aiSessionArtifacts: {},
+        sessionArtifactLinks: [],
       },
     },
     ai: {
@@ -132,7 +132,10 @@ describe('getRunContext', () => {
   });
 });
 
-function createMultiArtifactStore(currentArtifactId: string | undefined) {
+function createMultiArtifactStore(
+  currentArtifactId: string | undefined,
+  sessionOverrides: Record<string, unknown> = {},
+) {
   const state = {
     artifacts: {
       config: {
@@ -173,7 +176,9 @@ function createMultiArtifactStore(currentArtifactId: string | undefined) {
     },
     ai: {
       config: {
-        sessions: [{id: 'session-1', draftContextItemIds: []}],
+        sessions: [
+          {id: 'session-1', draftContextItemIds: [], ...sessionOverrides},
+        ],
       },
     },
     blockDocuments: {config: {artifacts: {}}},
@@ -198,5 +203,34 @@ describe('getRunContext primary artifact selection', () => {
     expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
       'worksheet-new',
     );
+  });
+
+  it('updates a cached run context when invoked from another linked artifact', () => {
+    const store = createMultiArtifactStore('worksheet-old', {
+      draftContextItemIds: undefined,
+      runContext: {
+        items: [
+          {
+            kind: 'artifact',
+            id: 'worksheet-new',
+            type: 'worksheet',
+            title: 'Newer Worksheet',
+          },
+        ],
+        primaryItemId: 'worksheet-new',
+        primaryItemKind: 'artifact',
+        capturedAt: 1000,
+      },
+    });
+
+    expect(getRunContext(store, 'session-1')).toMatchObject({
+      primaryItemId: 'worksheet-old',
+      primaryItemKind: 'artifact',
+      capturedAt: 1000,
+      items: [
+        {kind: 'artifact', id: 'worksheet-old'},
+        {kind: 'artifact', id: 'worksheet-new'},
+      ],
+    });
   });
 });

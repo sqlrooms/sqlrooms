@@ -87,6 +87,10 @@ export function AiPanel() {
 }
 ```
 
+When no chat session exists, the composer and prompt suggestions share the
+transient `ai.draftPrompt` value. `ai.setDraftPrompt()` can populate that draft,
+and the first `ai.createSession()` transfers it to the new session.
+
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
 

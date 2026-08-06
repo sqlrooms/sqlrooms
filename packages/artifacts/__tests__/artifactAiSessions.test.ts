@@ -6,12 +6,14 @@ import {
 import {produce} from 'immer';
 import {createStore} from 'zustand';
 import {
+  ArtifactSessionLinkSchema,
   createArtifactsSlice,
   defineArtifactTypes,
   type ArtifactsSliceState,
 } from '../src';
 import {
   cleanupAiSessionArtifacts,
+  ArtifactAiConfigSchema,
   createArtifactAiSlice,
   findAiSessionForArtifactWithContextItem,
   getAiSessionGroupsByArtifact,
@@ -615,6 +617,13 @@ describe('createArtifactAiSlice', () => {
       'artifact-a',
     );
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    expect(
+      store
+        .getState()
+        .artifactAi.config.sessionArtifactLinks.find(
+          (link) => link.sessionId === 'session-1',
+        )?.linkType,
+    ).toBe('attached');
   });
 
   it('creates a new artifact-scoped session instead of reusing the current empty session', () => {
@@ -778,6 +787,64 @@ describe('createArtifactAiSlice', () => {
     expect(
       store.getState().artifactAi.getArtifactIdsForSession('target-session'),
     ).toEqual(expect.arrayContaining(['artifact-a', 'artifact-b']));
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('target-session'),
+    ).toBe('artifact-b');
+    expect(
+      store
+        .getState()
+        .artifactAi.config.sessionArtifactLinks.filter(
+          (link) => link.sessionId === 'target-session',
+        )
+        .map((link) => link.createdAt),
+    ).toEqual([1000, 2000]);
+  });
+
+  it('keeps a session selected while the current artifact is any of its links', () => {
+    const store = createTestStore();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifacts.config.currentArtifactId = 'artifact-a';
+        draft.ai.config.sessions = [
+          createSession('current-session', 1),
+          createSession('other-session', 2),
+        ];
+        draft.ai.config.currentSessionId = 'current-session';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'current-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'current-session',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'other-session',
+            artifactId: 'artifact-a',
+            createdAt: 3000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [...draft.ai.config.sessions];
+      }),
+    );
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(store.getState().ai.config.currentSessionId).toBe('current-session');
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
   });
 
   it('selects the latest mapped session and ignores unowned sessions', () => {
@@ -1004,6 +1071,48 @@ describe('artifactAi link and pin mutations', () => {
     ).toHaveLength(1);
   });
 
+  it('promotes attached provenance to created without changing link order', () => {
+    const store = createTestStore();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 's1',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+
+    expect(store.getState().artifactAi.config.sessionArtifactLinks).toEqual([
+      {
+        sessionId: 's1',
+        artifactId: 'artifact-a',
+        createdAt: 1000,
+        linkType: 'created',
+      },
+    ]);
+  });
+
+  it('preserves replacement semantics in the legacy setSessionArtifact API', () => {
+    const store = createTestStore();
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+
+    store.getState().artifactAi.setSessionArtifact('s1', 'artifact-b');
+
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-b',
+    ]);
+  });
+
   it('removes all links for a session', () => {
     const store = createTestStore();
     const {artifactAi} = store.getState();
@@ -1061,7 +1170,47 @@ describe('artifactAi link and pin mutations', () => {
   });
 });
 
-import {ArtifactSessionLinkSchema} from '../src';
+describe('ArtifactAiConfigSchema', () => {
+  it('migrates persisted one-to-one ownership to session-artifact links', () => {
+    expect(
+      ArtifactAiConfigSchema.parse({
+        aiSessionArtifacts: {'session-1': 'artifact-a'},
+      }),
+    ).toEqual({
+      sessionArtifactLinks: [
+        {
+          sessionId: 'session-1',
+          artifactId: 'artifact-a',
+          createdAt: 0,
+          linkType: 'attached',
+        },
+      ],
+    });
+  });
+
+  it('prefers the current link format when both formats are persisted', () => {
+    expect(
+      ArtifactAiConfigSchema.parse({
+        sessionArtifactLinks: [
+          {
+            sessionId: 'session-2',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'created',
+          },
+        ],
+        aiSessionArtifacts: {'session-1': 'artifact-a'},
+      }).sessionArtifactLinks,
+    ).toEqual([
+      {
+        sessionId: 'session-2',
+        artifactId: 'artifact-b',
+        createdAt: 2000,
+        linkType: 'created',
+      },
+    ]);
+  });
+});
 
 describe('ArtifactSessionLink types', () => {
   it('should validate a valid created link', () => {

@@ -3,8 +3,7 @@
  * with `@sqlrooms/ai`.
  *
  * The generic AI session schema intentionally does not know about artifacts.
- * This module keeps artifact ownership as a small companion slice keyed by
- * `sessionId -> artifactId`.
+ * This module keeps artifact relationships in a small companion slice.
  *
  * @packageDocumentation
  */
@@ -38,11 +37,29 @@ import {
  * `sessionArtifactLinks` is an array of links between sessions and artifacts,
  * each with metadata (createdAt, linkType).
  */
-export const ArtifactAiConfig = z.object({
-  sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).default([]),
-  /** IDs of pinned artifacts */
-  pinnedArtifactIds: z.array(z.string()).optional(),
-});
+export const ArtifactAiConfig = z
+  .object({
+    sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).optional(),
+    /** Legacy one-to-one session ownership, migrated on parse. */
+    aiSessionArtifacts: z.record(z.string(), z.string()).optional(),
+    /** IDs of pinned artifacts */
+    pinnedArtifactIds: z.array(z.string()).optional(),
+  })
+  .transform(
+    ({sessionArtifactLinks, aiSessionArtifacts, pinnedArtifactIds}) => ({
+      sessionArtifactLinks:
+        sessionArtifactLinks ??
+        Object.entries(aiSessionArtifacts ?? {}).map(
+          ([sessionId, artifactId]) => ({
+            sessionId,
+            artifactId,
+            createdAt: 0,
+            linkType: 'attached' as const,
+          }),
+        ),
+      ...(pinnedArtifactIds === undefined ? {} : {pinnedArtifactIds}),
+    }),
+  );
 export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
 export const ArtifactAiConfigSchema = ArtifactAiConfig;
 
@@ -232,32 +249,39 @@ export function createArtifactAiSlice<
         ) {
           return [];
         }
-        // Inherit EVERY distinct artifact the source session owns, not just the
-        // first one. A session can be linked to multiple artifacts, so using
-        // `find` here would drop all but the first link on the fork.
-        const sourceArtifactIds = [
-          ...new Set(
-            state.artifactAi.config.sessionArtifactLinks
-              .filter((link) => link.sessionId === forkOrigin.sourceSessionId)
-              .map((link) => link.artifactId),
-          ),
-        ];
-        return sourceArtifactIds
-          .filter((artifactId) =>
-            Boolean(state.artifacts.config.artifactsById[artifactId]),
+        const seenArtifactIds = new Set<string>();
+        return state.artifactAi.config.sessionArtifactLinks
+          .filter(
+            (link) =>
+              link.sessionId === forkOrigin.sourceSessionId &&
+              Boolean(state.artifacts.config.artifactsById[link.artifactId]) &&
+              !seenArtifactIds.has(link.artifactId),
           )
-          .map((artifactId) => [targetSessionId, artifactId] as const);
+          .map((link) => {
+            seenArtifactIds.add(link.artifactId);
+            return {
+              targetSessionId,
+              artifactId: link.artifactId,
+              createdAt: link.createdAt,
+            };
+          });
       });
 
       if (inheritedEntries.length === 0) return;
 
       set((stateToUpdate) =>
         produce(stateToUpdate, (draft: TRoomState) => {
-          for (const [targetSessionId, artifactId] of inheritedEntries) {
+          for (const {
+            targetSessionId,
+            artifactId,
+            createdAt,
+          } of inheritedEntries) {
             draft.artifactAi.config.sessionArtifactLinks.push({
               sessionId: targetSessionId,
               artifactId,
-              createdAt: Date.now(),
+              // Preserve source ordering so the fork resolves to the same
+              // primary artifact even when several links are inherited.
+              createdAt,
               linkType: 'attached',
             });
           }
@@ -302,12 +326,23 @@ export function createArtifactAiSlice<
               sessionId: currentSessionId,
             })
           : undefined;
+        const isCurrentArtifactLinked = Boolean(
+          currentSessionId &&
+          currentArtifactId &&
+          state.artifacts.config.artifactsById[currentArtifactId] &&
+          state.artifactAi.config.sessionArtifactLinks.some(
+            (link) =>
+              link.sessionId === currentSessionId &&
+              link.artifactId === currentArtifactId,
+          ),
+        );
 
-        // Already in sync - nothing to do
+        // A many-to-many session is in sync with any of its linked artifacts,
+        // not only the most recently linked one.
         if (
           currentSessionId &&
           currentSessionExists &&
-          currentSessionArtifactId === currentArtifactId
+          isCurrentArtifactLinked
         ) {
           return;
         }
@@ -316,16 +351,6 @@ export function createArtifactAiSlice<
         if (sessionChanged) {
           if (currentSessionId && currentSessionExists) {
             if (currentSessionArtifactId) {
-              // Check if current artifact is also linked to this session
-              const isCurrentArtifactLinked =
-                currentArtifactId &&
-                state.artifacts.config.artifactsById[currentArtifactId] &&
-                state.artifactAi.config.sessionArtifactLinks.some(
-                  (link) =>
-                    link.sessionId === currentSessionId &&
-                    link.artifactId === currentArtifactId,
-                );
-
               // Only switch artifact if current artifact is not linked to this session
               if (
                 !isCurrentArtifactLinked &&
@@ -428,6 +453,13 @@ export function createArtifactAiSlice<
                   createdAt: Date.now(),
                   linkType,
                 });
+              } else if (
+                existingLink.linkType === 'attached' &&
+                linkType === 'created'
+              ) {
+                // Creation is durable provenance. Promote an existing link
+                // without changing its ordering timestamp; never downgrade it.
+                existingLink.linkType = 'created';
               }
             }),
           );
@@ -551,10 +583,20 @@ export function createArtifactAiSlice<
           console.warn(
             'setSessionArtifact is deprecated, use addSessionArtifactLink',
           );
-          get().artifactAi.addSessionArtifactLink(
-            sessionId,
-            artifactId,
-            'attached',
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks = [
+                ...draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) => link.sessionId !== sessionId,
+                ),
+                {
+                  sessionId,
+                  artifactId,
+                  createdAt: Date.now(),
+                  linkType: 'attached',
+                },
+              ];
+            }),
           );
         },
         clearSessionArtifact: (sessionId) => {
@@ -607,7 +649,7 @@ export function createArtifactAiSlice<
             get().artifactAi.addSessionArtifactLink(
               sessionId,
               currentArtifactId,
-              'created',
+              'attached',
             );
             return sessionId;
           } finally {

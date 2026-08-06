@@ -6,6 +6,7 @@ import {
 } from 'react-resizable-panels';
 import {useLayoutRendererContext} from '../../LayoutRendererContext';
 import {LayoutNodeSize} from '@sqlrooms/layout-config';
+import {restoreExpandedPanelSize} from './restoreExpandedPanelSize';
 
 /**
  * Ensures react-resizable-panels snaps between collapsed and expanded
@@ -63,11 +64,7 @@ export const CollapsiblePanelWrapper: FC<
       // `minSize` and trips RRP's auto-collapse, hiding it. `resize()` un-
       // collapses to an explicit, bounded width in one step (and `defaultSize`
       // also carries the last user-set width, see SplitLayoutPanelGroup).
-      if (defaultSize != null) {
-        handle.resize(defaultSize);
-      } else {
-        handle.expand();
-      }
+      restoreExpandedPanelSize(handle, defaultSize);
     }
     // `defaultSize` is intentionally omitted: we only re-apply it on the
     // collapsed → expanded transition, driven by `collapsed`.

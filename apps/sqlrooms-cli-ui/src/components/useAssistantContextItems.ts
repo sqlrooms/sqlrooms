@@ -20,6 +20,10 @@ import {
 } from '@sqlrooms/documents';
 import {useMemo} from 'react';
 import type {ArtifactMetadata} from '@sqlrooms/artifacts';
+import {
+  getLatestArtifactIdForAiSession,
+  type ArtifactSessionLink,
+} from '@sqlrooms/artifacts/ai';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../roomStoreHooks';
 import {experimentalEnabled} from '../runtimeEnvironment';
@@ -31,6 +35,27 @@ import {
 } from '../statefulBlockArtifactConfigs';
 
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
+
+function getOwningArtifactId(
+  sessionId: string | undefined,
+  currentArtifactId: string | undefined,
+  sessionArtifactLinks: ArtifactSessionLink[],
+): string | undefined {
+  if (!sessionId) return undefined;
+  if (
+    currentArtifactId &&
+    sessionArtifactLinks.some(
+      (link) =>
+        link.sessionId === sessionId && link.artifactId === currentArtifactId,
+    )
+  ) {
+    return currentArtifactId;
+  }
+  return getLatestArtifactIdForAiSession({
+    sessionId,
+    sessionArtifactLinks,
+  });
+}
 
 function isEnabledCliBlockType(blockType: string): boolean {
   if (blockType === 'chart') return true;
@@ -135,10 +160,17 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
   const blockDocuments = useRoomStore((s) => s.blockDocuments.config.artifacts);
   const runContext = useRoomStore((s) => s.ai.getCurrentSession()?.runContext);
   const currentSessionId = useRoomStore((s) => s.ai.getCurrentSession()?.id);
-  const owningArtifactId = useRoomStore((s) =>
-    currentSessionId
-      ? s.artifactAi.getLatestArtifactForSession(currentSessionId)
-      : undefined,
+  const sessionArtifactLinks = useRoomStore(
+    (s) => s.artifactAi.config.sessionArtifactLinks,
+  );
+  const owningArtifactId = useMemo(
+    () =>
+      getOwningArtifactId(
+        currentSessionId,
+        currentArtifactId,
+        sessionArtifactLinks,
+      ),
+    [currentSessionId, currentArtifactId, sessionArtifactLinks],
   );
 
   return useMemo<ContextSelectorItem[]>(() => {
@@ -250,12 +282,22 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
  */
 export function useValidatedSelectedIds(): string[] {
   const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+  const currentArtifactId = useRoomStore(
+    (s) => s.artifacts.config.currentArtifactId,
+  );
   const artifactsById = useRoomStore((s) => s.artifacts.config.artifactsById);
   const blockDocuments = useRoomStore((s) => s.blockDocuments.config.artifacts);
-  const owningArtifactId = useRoomStore((s) =>
-    currentSession
-      ? s.artifactAi.getLatestArtifactForSession(currentSession.id)
-      : undefined,
+  const sessionArtifactLinks = useRoomStore(
+    (s) => s.artifactAi.config.sessionArtifactLinks,
+  );
+  const owningArtifactId = useMemo(
+    () =>
+      getOwningArtifactId(
+        currentSession?.id,
+        currentArtifactId,
+        sessionArtifactLinks,
+      ),
+    [currentSession?.id, currentArtifactId, sessionArtifactLinks],
   );
   const tables = useContextTables();
 
