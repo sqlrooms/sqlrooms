@@ -548,15 +548,18 @@ export function createArtifactAiSlice<
         togglePinArtifact: (artifactId) => {
           set((state) =>
             produce(state, (draft) => {
-              if (!draft.artifactAi.config.pinnedArtifactIds) {
-                draft.artifactAi.config.pinnedArtifactIds = [];
-              }
-              const index =
-                draft.artifactAi.config.pinnedArtifactIds.indexOf(artifactId);
+              const pinnedArtifactIds =
+                draft.artifactAi.config.pinnedArtifactIds;
+              const index = pinnedArtifactIds?.indexOf(artifactId) ?? -1;
               if (index === -1) {
-                draft.artifactAi.config.pinnedArtifactIds.push(artifactId);
+                if (!draft.artifacts.config.artifactsById[artifactId]) return;
+                if (!pinnedArtifactIds) {
+                  draft.artifactAi.config.pinnedArtifactIds = [artifactId];
+                } else {
+                  pinnedArtifactIds.push(artifactId);
+                }
               } else {
-                draft.artifactAi.config.pinnedArtifactIds.splice(index, 1);
+                pinnedArtifactIds?.splice(index, 1);
               }
             }),
           );

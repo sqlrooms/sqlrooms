@@ -92,16 +92,22 @@ export type LocalAgentPromptSuggestionItemProps = {
   text: string;
   className?: string;
   icon?: ReactNode;
+  /**
+   * Called instead of setting the local-agent prompt when the item is clicked.
+   */
+  onClick?: (text: string) => void;
 };
 
 export const LocalAgentPromptSuggestionItem: FC<
   LocalAgentPromptSuggestionItemProps
-> = ({text, className, icon}) => {
+> = ({text, className, icon, onClick}) => {
   const runtime = useChatRuntime();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleClick = useCallback(() => {
-    if (runtime.mode === 'local-agent') {
+    if (onClick) {
+      onClick(text);
+    } else if (runtime.mode === 'local-agent') {
       runtime.setPrompt(text);
     }
     buttonRef.current?.scrollIntoView({
@@ -109,7 +115,7 @@ export const LocalAgentPromptSuggestionItem: FC<
       block: 'nearest',
       inline: 'nearest',
     });
-  }, [runtime, text]);
+  }, [onClick, runtime, text]);
 
   return (
     <div className="shrink-0 snap-start">
