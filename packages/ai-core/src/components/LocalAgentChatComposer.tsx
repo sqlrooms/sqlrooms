@@ -11,7 +11,8 @@ export type LocalAgentChatComposerProps = {
   placeholder?: string;
   /** Actions rendered in the composer's top row, right-aligned above the prompt. */
   topActions?: ReactNode;
-  onRun?: () => void;
+  /** Called before sending. Return false to cancel the prompt. */
+  onRun?: (prompt?: string) => void | false;
   onCancel?: () => void;
   children?: ReactNode;
 };
@@ -34,8 +35,8 @@ export const LocalAgentChatComposer: FC<LocalAgentChatComposerProps> = ({
 
   const handleSend = useCallback(() => {
     if (runtime.mode !== 'local-agent') return;
+    if (onRun?.(runtime.prompt) === false) return;
     runtime.sendPrompt();
-    onRun?.();
   }, [onRun, runtime]);
 
   const handleStop = useCallback(() => {

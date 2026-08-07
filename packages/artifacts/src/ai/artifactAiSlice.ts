@@ -279,6 +279,12 @@ export function createArtifactAiSlice<
         const currentSessionExists = state.ai.config.sessions.some(
           (session) => session.id === currentSessionId,
         );
+        const previousSessionWasRemoved = Boolean(
+          previousSessionId &&
+          !state.ai.config.sessions.some(
+            (session) => session.id === previousSessionId,
+          ),
+        );
 
         // Detect what changed
         const artifactChanged = previousArtifactId !== currentArtifactId;
@@ -324,6 +330,31 @@ export function createArtifactAiSlice<
 
         // Priority 1: Session changed -> align the artifact with the new session
         if (sessionChanged) {
+          // `ai.deleteSession()` selects the first remaining global session.
+          // Treat that fallback as part of deletion, not as an explicit user
+          // session switch: keep following the selected artifact when it has
+          // another linked chat.
+          if (previousSessionWasRemoved && currentArtifactId) {
+            const remainingSessionId = getLatestAiSessionIdForArtifact({
+              sessions: state.ai.config.sessions,
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              artifactId: currentArtifactId,
+            });
+            if (remainingSessionId) {
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            } else {
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+            return;
+          }
+
           if (currentSessionId && currentSessionExists) {
             if (currentSessionArtifactId) {
               // Only switch artifact if current artifact is not linked to this session
