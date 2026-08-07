@@ -39,6 +39,12 @@ export type CreateRoomStoreOptions = {
    * Provide a project-specific key to force recreation when it changes.
    */
   storeKey?: string;
+  /**
+   * Whether to connect the store to the Redux DevTools extension.
+   * Defaults to `false`. Set to `true` to enable it (only takes effect in
+   * development; production never connects the extension).
+   */
+  devtools?: boolean;
 };
 
 type CreateRoomStoreArgs<TFactory extends (...args: any[]) => any> = [
@@ -145,7 +151,11 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
     function isCreateRoomStoreOptions(
       value: unknown,
     ): value is CreateRoomStoreOptions {
-      return typeof value === 'object' && value !== null && 'storeKey' in value;
+      return (
+        typeof value === 'object' &&
+        value !== null &&
+        ('storeKey' in value || 'devtools' in value)
+      );
     }
 
     function createRoomStore(
@@ -187,8 +197,18 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
       store = createStore(
         devtools(stateCreatorFactory(...factoryArgs), {
           name: storeKey ? `RoomStore:${storeKey}` : 'RoomStore',
-          // Tests and production should not require the browser extension.
-          enabled: IS_DEV,
+          // Off by default; opt in via the `devtools` option. Tests and
+          // production should not require the browser extension.
+          enabled: IS_DEV && (options?.devtools ?? false),
+          // The Redux DevTools extension JSON.stringifies the whole state on
+          // every action. Loaded data (e.g. integer columns) can contain BigInt
+          // values, which JSON.stringify cannot serialize, throwing
+          // "Do not know how to serialize a BigInt" inside setState. Convert
+          // BigInt to a string so DevTools serialization stays safe.
+          serialize: {
+            replacer: (_key: string, value: unknown) =>
+              typeof value === 'bigint' ? value.toString() : value,
+          },
         }),
       );
 
