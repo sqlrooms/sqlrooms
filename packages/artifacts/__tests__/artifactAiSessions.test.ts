@@ -772,6 +772,39 @@ describe('createArtifactAiSlice', () => {
     await store.getState().artifactAi.destroy();
   });
 
+  it('keeps an unlinked chat session selected when sync runs without a current artifact', async () => {
+    const store = createTestStore({autoSync: true});
+    await store.getState().artifactAi.initialize();
+
+    // Welcome-screen / "New Chat" path: create a chat that is not linked to
+    // any artifact and make it current. Activation is a side effect of
+    // createSession setting currentSessionId.
+    store.getState().ai.createSession('Chat 1');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+
+    // A later, unrelated ai.config change (submitting a prompt calls
+    // setPrompt right after creation; the sidebar produces similar updates)
+    // triggers another sync pass. That pass sees neither a session nor an
+    // artifact change and falls through to the reconciliation fallback.
+    // Before the fix the fallback called selectLatestSessionForArtifact(undefined),
+    // which cleared currentSessionId and dropped the UI back to the start
+    // screen (so the created chat "never activated" and startAnalysisWhenReady
+    // timed out waiting for its chat provider to mount).
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        const session = draft.ai.config.sessions.find(
+          (candidate) => candidate.id === 'session-1',
+        );
+        if (session) {
+          session.prompt = 'How many pizza places are in San Francisco?';
+        }
+      }),
+    );
+
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    await store.getState().artifactAi.destroy();
+  });
+
   it('inherits artifact ownership for forked sessions', () => {
     const store = createTestStore();
     store.getState().artifacts.setCurrentArtifact('artifact-a');
