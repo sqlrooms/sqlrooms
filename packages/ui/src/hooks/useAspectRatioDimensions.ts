@@ -64,11 +64,11 @@ export function useAspectRatioDimensions({
     });
 
   return useMemo(() => {
-    if (!aspectRatio) {
-      return {width: containerWidth, height: containerHeight};
-    }
     if (width !== 'auto' && height !== 'auto') {
       return {width, height};
+    }
+    if (!aspectRatio) {
+      return {width: containerWidth, height: containerHeight};
     }
     if (width !== 'auto') {
       return {width, height: width / aspectRatio};
