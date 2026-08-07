@@ -459,6 +459,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         return {modelProvider: candidateProvider!, model: candidateModel!};
       }
 
+      // A provider-only request is authoritative even when it omits the model.
+      // Select that provider's first available model instead of silently
+      // reverting to the default provider/model pair.
+      if (candidateProvider) {
+        const firstProviderModel = availableModels.find(
+          (candidate) => candidate.provider === candidateProvider,
+        );
+        if (firstProviderModel) {
+          return {
+            modelProvider: firstProviderModel.provider,
+            model: firstProviderModel.value,
+          };
+        }
+      }
+
       if (modelIsAvailable(defaultProvider, defaultModel)) {
         return {modelProvider: defaultProvider, model: defaultModel};
       }
@@ -936,8 +951,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const currentSession = get().ai.getCurrentSession();
           const firstSessionPrompt = currentSession ? '' : get().ai.draftPrompt;
           const modelSelection = getResolvedModelSelection(
-            modelProvider || currentSession?.modelProvider,
-            model || currentSession?.model,
+            modelProvider ?? currentSession?.modelProvider,
+            model ??
+              (modelProvider === undefined ? currentSession?.model : undefined),
           );
           const newSessionId = createId();
 

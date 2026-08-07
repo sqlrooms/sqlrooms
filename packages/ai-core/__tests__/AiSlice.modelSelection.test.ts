@@ -840,6 +840,28 @@ describe('AiSlice model selection', () => {
     expect(session?.model).toBe('claude-sonnet-4.5');
   });
 
+  it('uses the requested provider when creating a session without a model', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'gpt-4.1',
+        getAvailableModels: () => [
+          {provider: 'openai', value: 'gpt-4.1'},
+          {provider: 'anthropic', value: 'claude-sonnet-4.5'},
+        ],
+        config: {sessions: []},
+      })(set, get, store),
+    );
+
+    store.getState().ai.createSession(undefined, 'anthropic');
+
+    const session = store.getState().ai.getCurrentSession();
+    expect(session?.modelProvider).toBe('anthropic');
+    expect(session?.model).toBe('claude-sonnet-4.5');
+  });
+
   it('uses the first available model for a chat-free prompt with no valid default', async () => {
     const settingsConfig: AiSettingsSliceConfig = {
       providers: {

@@ -1,4 +1,8 @@
-import type {RoomCommandMiddleware} from '@sqlrooms/room-shell';
+import type {
+  RoomCommandExecuteOutput,
+  RoomCommandMiddleware,
+  RoomCommandResult,
+} from '@sqlrooms/room-shell';
 import type {RoomState} from './store-types';
 
 function getInvokingAiSessionId(metadata?: Record<string, unknown>) {
@@ -12,13 +16,27 @@ function getResultArtifactId(data: unknown) {
   return typeof artifactId === 'string' ? artifactId : undefined;
 }
 
+function isRoomCommandResult(
+  result: RoomCommandExecuteOutput,
+): result is RoomCommandResult {
+  return Boolean(
+    result &&
+    typeof result === 'object' &&
+    'success' in result &&
+    typeof result.success === 'boolean' &&
+    'commandId' in result &&
+    typeof result.commandId === 'string',
+  );
+}
+
 /**
  * Keeps an AI-invoked artifact change in the same chat by associating the
  * invoking session with the command's selected artifact.
  *
- * The command must return `data.artifactId`, and that artifact must be current
- * when the command completes. Newly created artifacts receive a `created`
- * link; existing artifacts receive an `attached` link.
+ * The command must return an `artifactId`, either as raw command data or as
+ * normalized `result.data`, and that artifact must be current when the command
+ * completes. Newly created artifacts receive a `created` link; existing
+ * artifacts receive an `attached` link.
  */
 export const artifactChatAssociationMiddleware: RoomCommandMiddleware<
   RoomState
@@ -35,9 +53,11 @@ export const artifactChatAssociationMiddleware: RoomCommandMiddleware<
   );
 
   const result = await next();
-  if (!result.success) return result;
+  if (isRoomCommandResult(result) && !result.success) return result;
 
-  const artifactId = getResultArtifactId(result.data);
+  const artifactId = getResultArtifactId(
+    isRoomCommandResult(result) ? result.data : result,
+  );
   const state = context.getState();
   if (
     !artifactId ||
