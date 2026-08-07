@@ -392,8 +392,12 @@ export function getDeckMapResourceConfigIssues(
           | {transformSql?: string; sqlQuery?: string}
           | undefined;
         const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
+        // ST_MakeLine(ST_Point(...) ORDER BY ...) is invalid: ORDER BY is only
+        // legal inside LIST. Use a pattern that tolerates nested ST_Point(...).
         const hasBadMakeLineOrderBy =
-          /\bST_MakeLine\s*\(\s*(?!LIST\s*\()[^)]*\bORDER\s+BY\b/i.test(sql);
+          /\bST_MakeLine\s*\(\s*(?!LIST\s*\()ST_Point\s*\([^)]*\)\s+ORDER\s+BY\b/i.test(
+            sql,
+          );
         if (hasBadMakeLineOrderBy) {
           issues.push({
             path: `datasets.${boundDataset}.source`,
