@@ -1085,6 +1085,54 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ST_MakeLine ORDER BY → LIST wrap
+// ---------------------------------------------------------------------------
+
+describe('normalizeAiDeckMapConfig — ST_MakeLine LIST wrap', () => {
+  test('wraps ST_MakeLine(ST_Point(...) ORDER BY ...) with LIST', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowTripsLayer',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+        {
+          trips: {
+            source: {
+              tableName: 'nyc_trips_animated',
+              transformSql:
+                'SELECT path_id, ST_AsWKB(ST_MakeLine(ST_Point(lon, lat) ORDER BY waypoint_order)) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM __sqlrooms_source GROUP BY path_id',
+            },
+          },
+        },
+      ),
+    );
+    expect(result.datasets.trips.source.transformSql).toContain(
+      'ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))',
+    );
+    expect(result.datasets.trips.source.transformSql).not.toMatch(
+      /ST_MakeLine\(\s*ST_Point\([^)]*\)\s+ORDER\s+BY/i,
+    );
+  });
+
+  test('leaves already-correct ST_MakeLine(LIST(...)) unchanged', () => {
+    const sql =
+      'SELECT path_id, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom FROM __sqlrooms_source GROUP BY path_id';
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        trips: {source: {tableName: 'trips', transformSql: sql}},
+      }),
+    );
+    expect(result.datasets.trips.source.transformSql).toBe(sql);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // validateAndFixColorScaleFields
 // ---------------------------------------------------------------------------
 

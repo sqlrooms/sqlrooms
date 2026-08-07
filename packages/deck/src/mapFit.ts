@@ -40,6 +40,46 @@ export function resolveDeckMapFitToData(
   const fitToData = config.fitToData;
   if (!fitToData?.dataset) return null;
   if (fitToData.longitudeColumn && fitToData.latitudeColumn) return fitToData;
+  if (fitToData.geometryColumns && fitToData.geometryColumns.length > 0) {
+    return fitToData;
+  }
+
+  const spec =
+    typeof config.spec === 'string'
+      ? undefined
+      : (config.spec as Record<string, unknown>);
+  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+
+  // Arc layers bind two geometry columns. Prefer both over a single
+  // geometryColumn so fit-to-bounds covers source AND target endpoints.
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerRecord = layer as Record<string, unknown>;
+    const binding = layerRecord._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset !== fitToData.dataset) continue;
+
+    if (
+      layerRecord['@@type'] === 'GeoArrowArcLayer' &&
+      typeof binding.sourceGeometryColumn === 'string' &&
+      binding.sourceGeometryColumn.trim() &&
+      typeof binding.targetGeometryColumn === 'string' &&
+      binding.targetGeometryColumn.trim()
+    ) {
+      return {
+        ...fitToData,
+        geometryColumns: [
+          String(binding.sourceGeometryColumn),
+          String(binding.targetGeometryColumn),
+        ],
+      };
+    }
+
+    if (binding.hexagonColumn) {
+      return {...fitToData, h3Column: String(binding.hexagonColumn)};
+    }
+  }
 
   const dataset = config.datasets[fitToData.dataset];
   const geometryColumn = fitToData.geometryColumn ?? dataset?.geometryColumn;
@@ -54,21 +94,6 @@ export function resolveDeckMapFitToData(
       longitudeColumn: config.interaction.longitudeColumn,
       latitudeColumn: config.interaction.latitudeColumn,
     };
-  }
-
-  const spec =
-    typeof config.spec === 'string'
-      ? undefined
-      : (config.spec as Record<string, unknown>);
-  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
-  for (const layer of layers) {
-    if (!layer || typeof layer !== 'object') continue;
-    const binding = (layer as Record<string, unknown>)._sqlroomsBinding as
-      | Record<string, unknown>
-      | undefined;
-    if (binding?.dataset === fitToData.dataset && binding.hexagonColumn) {
-      return {...fitToData, h3Column: String(binding.hexagonColumn)};
-    }
   }
 
   return fitToData;
@@ -131,14 +156,48 @@ export function createDeckMapBoundsQuery(options: {
     `;
   }
 
-  if (fitToData.geometryColumn) {
-    const column = escapeId(fitToData.geometryColumn);
+  const geometryColumns =
+    fitToData.geometryColumns && fitToData.geometryColumns.length > 0
+      ? fitToData.geometryColumns
+      : fitToData.geometryColumn
+        ? [fitToData.geometryColumn]
+        : null;
+
+  if (geometryColumns) {
     const sourceSql = isDeckMapSqlDatasetSource(source)
       ? source.sqlQuery
       : (source.transformSql ?? '');
-    const geometry = sourceSql.toLowerCase().includes('st_aswkb')
-      ? `ST_GeomFromWKB(${column})`
-      : `${column}::GEOMETRY`;
+    const asGeometry = (column: string) =>
+      sourceSql.toLowerCase().includes('st_aswkb')
+        ? `ST_GeomFromWKB(${column})`
+        : `${column}::GEOMETRY`;
+
+    if (geometryColumns.length === 1) {
+      const column = escapeId(geometryColumns[0]!);
+      return `
+      SELECT
+        ST_XMin(extent) AS min_longitude,
+        ST_YMin(extent) AS min_latitude,
+        ST_XMax(extent) AS max_longitude,
+        ST_YMax(extent) AS max_latitude
+      FROM (
+        SELECT ST_Extent_Agg(${asGeometry(column)}) AS extent
+        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
+        WHERE ${column} IS NOT NULL
+      ) AS "__sqlrooms_dashboard_map_extent"
+      WHERE extent IS NOT NULL
+    `;
+    }
+
+    // Multiple geometry columns (e.g. arc source + target): union their
+    // extents so fit-to-bounds covers both endpoints.
+    const unionParts = geometryColumns.map((col, i) => {
+      const column = escapeId(col);
+      return `
+        SELECT ${asGeometry(column)} AS geom
+        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom_${i}"
+        WHERE ${column} IS NOT NULL`;
+    });
     return `
       SELECT
         ST_XMin(extent) AS min_longitude,
@@ -146,9 +205,10 @@ export function createDeckMapBoundsQuery(options: {
         ST_XMax(extent) AS max_longitude,
         ST_YMax(extent) AS max_latitude
       FROM (
-        SELECT ST_Extent_Agg(${geometry}) AS extent
-        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
-        WHERE ${column} IS NOT NULL
+        SELECT ST_Extent_Agg(geom) AS extent
+        FROM (
+          ${unionParts.join('\n        UNION ALL')}
+        ) AS "__sqlrooms_dashboard_map_geoms"
       ) AS "__sqlrooms_dashboard_map_extent"
       WHERE extent IS NOT NULL
     `;

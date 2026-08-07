@@ -372,6 +372,48 @@ export function getDeckMapResourceConfigIssues(
         });
       }
     }
+
+    if (layerType === 'GeoArrowTripsLayer') {
+      const hasTimestampColumn =
+        typeof binding?.timestampColumn === 'string' &&
+        (binding.timestampColumn as string).trim().length > 0;
+      if (!hasTimestampColumn) {
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.timestampColumn`,
+          message:
+            'GeoArrowTripsLayer requires _sqlroomsBinding.timestampColumn set to the timestamps list column, e.g. "timestamps"',
+        });
+      }
+
+      // Waypoint aggregation via LIST(...)/ST_MakeLine must GROUP BY trip id.
+      // Without GROUP BY, all waypoints collapse into one path or the query fails.
+      if (boundDataset && config.datasets[boundDataset]) {
+        const source = config.datasets[boundDataset]?.source as
+          | {transformSql?: string; sqlQuery?: string}
+          | undefined;
+        const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
+        const hasBadMakeLineOrderBy =
+          /\bST_MakeLine\s*\(\s*(?!LIST\s*\()[^)]*\bORDER\s+BY\b/i.test(sql);
+        if (hasBadMakeLineOrderBy) {
+          issues.push({
+            path: `datasets.${boundDataset}.source`,
+            message:
+              'ST_MakeLine is a scalar that takes a LIST of points. Use ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order)) — never ST_MakeLine(ST_Point(...) ORDER BY ...). ORDER BY is only valid inside LIST.',
+          });
+        }
+        const usesListAgg =
+          /\bST_MakeLine\s*\(\s*LIST\s*\(/i.test(sql) ||
+          /\bLIST\s*\([^)]*ORDER\s+BY/i.test(sql);
+        const hasGroupBy = /\bGROUP\s+BY\b/i.test(sql);
+        if (usesListAgg && !hasGroupBy) {
+          issues.push({
+            path: `datasets.${boundDataset}.source`,
+            message:
+              'GeoArrowTripsLayer waypoint aggregation using LIST(...)/ST_MakeLine must include GROUP BY the trip/path/route id column so each trip becomes one linestring. Without GROUP BY, waypoints are not split per trip.',
+          });
+        }
+      }
+    }
   });
 
   const fitDataset = config.fitToData?.dataset;
@@ -405,6 +447,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer.
 - For GeoArrowH3HexagonLayer, set getHexagon to a plain attribute accessor string such as "@@=hex_id". CRITICAL: Do NOT use {"@@function":"columnAccessor","column":"..."} or any object syntax — only a string accessor like "@@=column_name" is valid. Object syntax silently renders nothing.
 - For GeoArrowArcLayer, set _sqlroomsBinding.sourceGeometryColumn and _sqlroomsBinding.targetGeometryColumn to the WKB geometry column names produced by transformSql. CRITICAL: do NOT set getSourcePosition or getTargetPosition on the layer — geometry is bound exclusively through _sqlroomsBinding. The transformSql MUST wrap ST_Point() with ST_AsWKB(), e.g. ST_AsWKB(ST_Point(lon, lat)) AS geom. Bare ST_Point() without ST_AsWKB() produces an internal DuckDB type that cannot be decoded. Set dataset.geometryEncodingHint to "wkb".
+- When the user asks for animated trips / a trips layer, use GeoArrowTripsLayer — never GeoArrowArcLayer. Arcs are static OD links, not animation. CRITICAL: one output row per trip. If the table has multiple waypoint rows per trip (trip_id/path_id + lat/lon + order/time), transformSql MUST use ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY order_col)) with GROUP BY the trip id, and preserve trip-level attributes with ANY_VALUE(col) AS col (e.g. label) so color fields still work. NEVER write ST_MakeLine(ST_Point(...) ORDER BY ...) — ST_MakeLine is a scalar and ORDER BY is only valid inside LIST. For OD-pair tables (one row per trip), synthesize a 2-point LineString plus timestamps list (no GROUP BY). Set geometryColumn to "geom", geometryEncodingHint to "wkb", and _sqlroomsBinding.timestampColumn to "timestamps".
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
 - Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.

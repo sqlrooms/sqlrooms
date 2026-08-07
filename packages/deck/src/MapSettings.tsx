@@ -241,9 +241,15 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const effectiveColorAccessor =
     colorAccessorOptions.find((option) => option.value === colorAccessor)
       ?.value ?? colorAccessorOptions[0]?.value;
-  const pointRadiusPixels =
-    activeLayer?.radiusUnits === 'pixels' &&
-    typeof activeLayer?.getRadius === 'number'
+  const isGeoJsonLayer = activeLayer?.['@@type'] === 'GeoJsonLayer';
+  // GeoJsonLayer uses pointRadius* / getPointRadius; scatterplot uses radius* / getRadius.
+  const pointRadiusPixels = isGeoJsonLayer
+    ? activeLayer?.pointRadiusUnits === 'pixels' &&
+      typeof activeLayer?.getPointRadius === 'number'
+      ? activeLayer.getPointRadius
+      : ((activeLayer?.pointRadiusMinPixels as number | undefined) ?? 2)
+    : activeLayer?.radiusUnits === 'pixels' &&
+        typeof activeLayer?.getRadius === 'number'
       ? activeLayer.getRadius
       : ((activeLayer?.radiusMinPixels as number | undefined) ?? 2);
   const colorScale = effectiveColorAccessor
@@ -706,6 +712,26 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           mapConfig,
                           activeLayerIndex,
                           (layer) => {
+                            if (layer['@@type'] === 'GeoJsonLayer') {
+                              const nextLayer: DeckMapLayerRecord = {
+                                ...layer,
+                                pointRadiusMinPixels: value,
+                                pointRadiusMaxPixels: Math.max(
+                                  value,
+                                  (layer.pointRadiusMaxPixels as
+                                    | number
+                                    | undefined) ?? value,
+                                ),
+                              };
+                              if (
+                                layer.pointRadiusUnits === 'pixels' &&
+                                typeof layer.getPointRadius !== 'string'
+                              ) {
+                                nextLayer.getPointRadius = value;
+                              }
+                              return nextLayer;
+                            }
+
                             const nextLayer: DeckMapLayerRecord = {
                               ...layer,
                               radiusMinPixels: value,

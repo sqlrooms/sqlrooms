@@ -32,6 +32,7 @@ const DeckMapFitToDataConfig = z.looseObject({
   longitudeColumn: z.string().optional(),
   latitudeColumn: z.string().optional(),
   geometryColumn: z.string().optional(),
+  geometryColumns: z.array(z.string()).optional(),
   h3Column: z.string().optional(),
   padding: z.number().optional(),
   maxZoom: z.number().optional(),
