@@ -586,6 +586,7 @@ describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
       ),
     );
     expect(getLayer(result).getHexagon).toBe('@@=hex_id');
+    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('hex_id');
   });
 
   test('rewrites object with field key to @@= string', () => {
@@ -602,6 +603,7 @@ describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
       ),
     );
     expect(getLayer(result).getHexagon).toBe('@@=h3index');
+    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('h3index');
   });
 
   test('removes unresolvable object accessor, leaving getHexagon absent', () => {
@@ -620,20 +622,41 @@ describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
     expect(getLayer(result).getHexagon).toBeUndefined();
   });
 
-  test('leaves a valid string accessor unchanged', () => {
+  test('lifts @@= getHexagon into hexagonColumn and injects fitToData', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
           {
             '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
+            _sqlroomsBinding: {dataset: 'h3_data'},
+            getHexagon: '@@=hex_id',
+          },
+        ],
+        {h3_data: {source: {tableName: 'h3_pentagon'}}},
+      ),
+    );
+    expect(getLayer(result).getHexagon).toBe('@@=hex_id');
+    expect(getLayer(result)._sqlroomsBinding).toEqual({
+      dataset: 'h3_data',
+      hexagonColumn: 'hex_id',
+    });
+    expect(result.fitToData).toEqual({dataset: 'h3_data'});
+  });
+
+  test('does not overwrite an existing hexagonColumn', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'existing'},
             getHexagon: '@@=hex_id',
           },
         ],
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).getHexagon).toBe('@@=hex_id');
+    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('existing');
   });
 });
 // getRadius — string and zero/negative clamping (basic mode only)

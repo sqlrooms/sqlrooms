@@ -99,6 +99,18 @@ const EXTRUDABLE_LAYER_TYPES = new Set([
   'solidpolygonlayer',
 ]);
 
+const STROKE_LAYER_TYPES = new Set([
+  'geoarrowscatterplotlayer',
+  'scatterplotlayer',
+  'geoarrowh3hexagonlayer',
+  'h3hexagonlayer',
+  'geoarrowpolygonlayer',
+  'polygonlayer',
+  'geoarrowsolidpolygonlayer',
+  'solidpolygonlayer',
+  'geojsonlayer',
+]);
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -170,6 +182,30 @@ export function usesExtrusionSettings(layerType: unknown) {
     typeof layerType === 'string' &&
     EXTRUDABLE_LAYER_TYPES.has(layerType.toLowerCase())
   );
+}
+
+export function usesStrokeSetting(layerType: unknown) {
+  return (
+    typeof layerType === 'string' &&
+    STROKE_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
+/**
+ * Deck.gl default for `stroked` when the prop is omitted.
+ * Scatterplot and solid-polygon default to no stroke; polygon / H3 / GeoJSON stroke by default.
+ */
+export function getDeckMapLayerStrokeDefault(layerType: unknown): boolean {
+  if (typeof layerType !== 'string') return false;
+  const type = layerType.toLowerCase();
+  if (
+    type.includes('scatterplot') ||
+    type.includes('solidpolygon') ||
+    type === 'solid polygon'
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function getDeckMapColorAccessorOptions(

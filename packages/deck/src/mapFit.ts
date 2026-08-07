@@ -79,6 +79,18 @@ export function resolveDeckMapFitToData(
     if (binding.hexagonColumn) {
       return {...fitToData, h3Column: String(binding.hexagonColumn)};
     }
+
+    // Fall back to getHexagon: "@@=column" when hexagonColumn was omitted.
+    if (layerRecord['@@type'] === 'GeoArrowH3HexagonLayer') {
+      const getHexagon = layerRecord.getHexagon;
+      if (typeof getHexagon === 'string') {
+        const match = getHexagon.match(/^@@=(.+)$/);
+        const column = match?.[1]?.trim();
+        if (column) {
+          return {...fitToData, h3Column: column};
+        }
+      }
+    }
   }
 
   const dataset = config.datasets[fitToData.dataset];

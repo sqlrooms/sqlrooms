@@ -50,6 +50,8 @@ import {
   usesColumnRadiusSetting,
   usesTripsSettings,
   usesExtrusionSettings,
+  usesStrokeSetting,
+  getDeckMapLayerStrokeDefault,
 } from './mapLayerConfigUtils';
 import {
   DeckMapCodeViewerPanel,
@@ -235,6 +237,16 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   );
   const showTripsSettings = usesTripsSettings(activeLayer?.['@@type']);
   const showExtrusionSettings = usesExtrusionSettings(activeLayer?.['@@type']);
+  const showStrokeSetting = usesStrokeSetting(activeLayer?.['@@type']);
+  const strokeEnabled =
+    typeof activeLayer?.stroked === 'boolean'
+      ? activeLayer.stroked
+      : getDeckMapLayerStrokeDefault(activeLayer?.['@@type']);
+  const strokeWidthPixels =
+    activeLayer?.lineWidthUnits === 'pixels' &&
+    typeof activeLayer?.getLineWidth === 'number'
+      ? activeLayer.getLineWidth
+      : ((activeLayer?.lineWidthMinPixels as number | undefined) ?? 1);
   const colorAccessorOptions = getDeckMapColorAccessorOptions(
     activeLayer?.['@@type'],
   );
@@ -918,6 +930,69 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                   }}
                 />
               </Field>
+            )}
+
+            {showStrokeSetting && (
+              <div className="flex flex-col gap-2 rounded-md border p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium">Stroke</span>
+                  <Switch
+                    checked={strokeEnabled}
+                    onCheckedChange={(checked) =>
+                      applyConfig(
+                        updateDeckMapLayer(
+                          mapConfig,
+                          activeLayerIndex,
+                          (layer) => ({
+                            ...layer,
+                            stroked: checked,
+                          }),
+                        ),
+                      )
+                    }
+                  />
+                </div>
+                {strokeEnabled && (
+                  <Field label={`Stroke width: ${strokeWidthPixels}px`}>
+                    <div className="pt-0.5">
+                      <Slider
+                        min={1}
+                        max={20}
+                        step={1}
+                        value={[strokeWidthPixels]}
+                        onValueChange={(values) => {
+                          const value = values[0] ?? 1;
+                          applyConfig(
+                            updateDeckMapLayer(
+                              mapConfig,
+                              activeLayerIndex,
+                              (layer) => {
+                                const nextLayer: DeckMapLayerRecord = {
+                                  ...layer,
+                                  lineWidthMinPixels: value,
+                                  lineWidthMaxPixels: Math.max(
+                                    value,
+                                    (layer.lineWidthMaxPixels as
+                                      | number
+                                      | undefined) ?? value,
+                                  ),
+                                };
+                                if (
+                                  layer.lineWidthUnits === 'pixels' &&
+                                  typeof layer.getLineWidth !== 'string'
+                                ) {
+                                  nextLayer.getLineWidth = value;
+                                }
+                                return nextLayer;
+                              },
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+                  </Field>
+                )}
+              </div>
             )}
 
             {showExtrusionSettings && (

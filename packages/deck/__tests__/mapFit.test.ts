@@ -77,6 +77,49 @@ describe('Deck map fit core', () => {
     });
   });
 
+  test('resolves H3 hexagonColumn from layer binding for fit-to-bounds', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowH3HexagonLayer',
+              _sqlroomsBinding: {
+                dataset: 'h3_data',
+                hexagonColumn: 'hex_id',
+              },
+              getHexagon: '@@=hex_id',
+            },
+          ],
+        },
+        datasets: {
+          h3_data: {source: {tableName: 'h3_pentagon'}},
+        },
+        fitToData: {dataset: 'h3_data'},
+      }),
+    ).toEqual({dataset: 'h3_data', h3Column: 'hex_id'});
+  });
+
+  test('falls back to getHexagon @@= column when hexagonColumn is missing', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowH3HexagonLayer',
+              _sqlroomsBinding: {dataset: 'h3_data'},
+              getHexagon: '@@=hex_id',
+            },
+          ],
+        },
+        datasets: {
+          h3_data: {source: {tableName: 'h3_pentagon'}},
+        },
+        fitToData: {dataset: 'h3_data'},
+      }),
+    ).toEqual({dataset: 'h3_data', h3Column: 'hex_id'});
+  });
+
   test('builds bounds SQL from a host-resolved table dataset', () => {
     const source = getDeckMapDatasetSource({
       tableName: 'earthquakes',
