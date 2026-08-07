@@ -1,9 +1,12 @@
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
+  deckMapRgbaToHex,
   getDeckMapColorAccessorOptions,
   getDeckMapLayerColorScale,
+  getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
+  setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerColorScale,
   setDeckMapLayerType,
@@ -180,5 +183,52 @@ describe('clearDeckMapLayerColorScale', () => {
     };
     const cleared = clearDeckMapLayerColorScale(pathConfig, 0, 'getColor');
     expect(getDeckMapLayerRecords(cleared)[0]?.getColor).toEqual(defaultColor);
+  });
+
+  test('restores a flat default color for getLineColor (not delete)', () => {
+    const withScale = setDeckMapLayerColorScale(
+      config,
+      0,
+      'getLineColor',
+      createDeckMapLayerColorScale({field: 'mag'}),
+    );
+    const cleared = clearDeckMapLayerColorScale(withScale, 0, 'getLineColor');
+    expect(getDeckMapLayerRecords(cleared)[0]?.getLineColor).toEqual(
+      defaultColor,
+    );
+  });
+});
+
+describe('deck map flat layer color', () => {
+  test('reads and writes a flat RGBA color', () => {
+    const next = setDeckMapLayerFlatColor(
+      config,
+      0,
+      'getFillColor',
+      [255, 0, 128, 200],
+    );
+    expect(
+      getDeckMapLayerFlatColor(getDeckMapLayerRecords(next)[0], 'getFillColor'),
+    ).toEqual([255, 0, 128, 200]);
+  });
+
+  test('returns undefined for colorScale accessors', () => {
+    const withScale = setDeckMapLayerColorScale(
+      config,
+      0,
+      'getFillColor',
+      createDeckMapLayerColorScale({field: 'mag'}),
+    );
+    expect(
+      getDeckMapLayerFlatColor(
+        getDeckMapLayerRecords(withScale)[0],
+        'getFillColor',
+      ),
+    ).toBeUndefined();
+  });
+
+  test('converts RGBA to hex for the color input', () => {
+    expect(deckMapRgbaToHex([56, 189, 248, 180])).toBe('#38bdf8');
+    expect(deckMapRgbaToHex([255, 0, 0])).toBe('#ff0000');
   });
 });

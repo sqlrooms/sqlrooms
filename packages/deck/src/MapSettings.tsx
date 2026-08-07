@@ -29,12 +29,16 @@ import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
   DECK_MAP_COLOR_SCALE_TYPE_OPTIONS,
+  DECK_MAP_DEFAULT_LAYER_COLOR,
   DECK_MAP_LAYER_TYPE_OPTIONS,
+  deckMapRgbaToHex,
   getDeckMapColorAccessorOptions,
   getDeckMapLayerDatasetId,
   getDeckMapLayerColorScale,
+  getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
   setDeckMapLayerColorScale,
+  setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerHexagonColumn,
   setDeckMapLayerArcColumns,
@@ -267,6 +271,12 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const colorScale = effectiveColorAccessor
     ? getDeckMapLayerColorScale(activeLayer, effectiveColorAccessor)
     : undefined;
+  const flatColor =
+    effectiveColorAccessor && !colorScale
+      ? (getDeckMapLayerFlatColor(activeLayer, effectiveColorAccessor) ?? [
+          ...DECK_MAP_DEFAULT_LAYER_COLOR,
+        ])
+      : undefined;
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
@@ -673,6 +683,37 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           </Select>
                         </Field>
                       </>
+                    )}
+
+                    {!colorScale && flatColor && effectiveColorAccessor && (
+                      <Field label="Color">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            aria-label="Layer color"
+                            value={deckMapRgbaToHex(flatColor)}
+                            disabled={readOnly}
+                            className="border-input h-8 w-10 cursor-pointer rounded-md border bg-transparent p-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+                            onChange={(event) => {
+                              const next = parseColorString(
+                                event.target.value,
+                                flatColor[3] ?? 255,
+                              );
+                              applyConfig(
+                                setDeckMapLayerFlatColor(
+                                  mapConfig,
+                                  activeLayerIndex,
+                                  effectiveColorAccessor,
+                                  next,
+                                ),
+                              );
+                            }}
+                          />
+                          <span className="text-muted-foreground font-mono text-xs uppercase">
+                            {deckMapRgbaToHex(flatColor)}
+                          </span>
+                        </div>
+                      </Field>
                     )}
                   </div>
                 )}

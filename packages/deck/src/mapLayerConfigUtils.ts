@@ -405,22 +405,80 @@ const DEFAULT_LAYER_FILL_COLOR: [number, number, number, number] = [
   56, 189, 248, 180,
 ];
 
+/** Default flat RGBA used when a color scale is cleared. */
+export const DECK_MAP_DEFAULT_LAYER_COLOR: readonly [
+  number,
+  number,
+  number,
+  number,
+] = DEFAULT_LAYER_FILL_COLOR;
+
+export function isDeckMapLayerFlatRgbaColor(
+  value: unknown,
+): value is [number, number, number, number?] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 3 &&
+    value.length <= 4 &&
+    value.every(
+      (channel) => typeof channel === 'number' && Number.isFinite(channel),
+    )
+  );
+}
+
+/**
+ * Returns the layer's flat RGBA color for an accessor, or `undefined` when the
+ * accessor is a color scale / missing / not a numeric RGBA array.
+ */
+export function getDeckMapLayerFlatColor(
+  layer: DeckMapLayerRecord | undefined,
+  accessor: DeckMapLayerColorAccessor,
+): [number, number, number, number] | undefined {
+  const value = layer?.[accessor];
+  if (!isDeckMapLayerFlatRgbaColor(value)) return undefined;
+  return [value[0]!, value[1]!, value[2]!, value[3] ?? 255];
+}
+
+export function setDeckMapLayerFlatColor(
+  config: DeckMapConfig,
+  layerIndex: number,
+  accessor: DeckMapLayerColorAccessor,
+  color: readonly [number, number, number, number?],
+): DeckMapConfig {
+  const rgba: [number, number, number, number] = [
+    color[0],
+    color[1],
+    color[2],
+    color[3] ?? 255,
+  ];
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    [accessor]: rgba,
+  }));
+}
+
+/** Convert a deck.gl RGBA array to a `#rrggbb` string for `<input type="color">`. */
+export function deckMapRgbaToHex(
+  color: readonly [number, number, number, number?],
+): string {
+  const toHex = (channel: number) =>
+    Math.max(0, Math.min(255, Math.round(channel)))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex(color[0])}${toHex(color[1])}${toHex(color[2])}`;
+}
+
 export function clearDeckMapLayerColorScale(
   config: DeckMapConfig,
   layerIndex: number,
   accessor: DeckMapLayerColorAccessor,
 ): DeckMapConfig {
-  return updateDeckMapLayer(config, layerIndex, (layer) => {
-    const nextLayer = {...layer};
-    if (accessor === 'getFillColor' || accessor === 'getColor') {
-      // Path/Trips use getColor; Scatterplot/Polygon use getFillColor.
-      // Deleting either leaves deck.gl's black default ([0,0,0,255]).
-      nextLayer[accessor] = [...DEFAULT_LAYER_FILL_COLOR];
-    } else {
-      delete nextLayer[accessor];
-    }
-    return nextLayer;
-  });
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    // Always restore a visible flat color. Deleting the accessor leaves
+    // deck.gl's opaque black default, which looks broken with no picker.
+    [accessor]: [...DEFAULT_LAYER_FILL_COLOR],
+  }));
 }
 
 export function createDeckMapLayerColorScale(options: {
