@@ -1,4 +1,7 @@
-import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
+import {
+  resolveArtifactTargetId,
+  type ArtifactMetadataType,
+} from '@sqlrooms/artifacts';
 import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import {
@@ -302,12 +305,15 @@ export function createBlockDocumentCommands<
       inputSchema: BlockDocumentIdInput,
       inputDescription: `Optional ${labelLower} artifact ID. Defaults to the current ${labelLower}.`,
       metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
-      execute: ({getState}, input) => {
+      execute: ({getState, invocation}, input) => {
         const state = getState();
         const {artifactId: requestedArtifactId} =
           (input as z.infer<typeof BlockDocumentIdInput> | undefined) ?? {};
-        const artifactId =
-          requestedArtifactId ?? state.artifacts.config.currentArtifactId;
+        const artifactId = resolveArtifactTargetId({
+          requestedArtifactId,
+          invocation,
+          currentArtifactId: state.artifacts.config.currentArtifactId,
+        });
         const resolved = resolveBlockDocumentArtifact(
           state,
           artifactId,

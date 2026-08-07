@@ -164,6 +164,13 @@ Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 selection and run-context updates; the app supplies artifact payload readers for
 domain-specific types such as documents or dashboards.
 
+Artifact-aware room commands can use `resolveArtifactTargetId()` to preserve
+the same per-turn target. Its precedence is an explicit command artifact ID,
+then an AI invocation's captured artifact target, then the live current artifact
+for non-AI and compatibility fallback behavior. The helper depends only on room
+command invocation data; it does not require artifact-owned sessions or a
+context-selector UI.
+
 ## Artifact-Owned AI Sessions
 
 `@sqlrooms/artifacts/ai` also provides `createArtifactAiSlice()` for apps that
