@@ -9,8 +9,9 @@ import {isCollapsed} from '../utils';
 /**
  * Parse a node `defaultSize` into a percentage number, or `undefined` when it
  * is not expressed as a percentage. Explicit `%` values and unitless numeric
- * strings use the percentage semantics of react-resizable-panels. Pixel and
- * other CSS-unit sizes cannot be converted without measuring the container.
+ * strings within `0..100` use the percentage semantics of
+ * react-resizable-panels. Pixel, invalid percentage, and other CSS-unit sizes
+ * cannot be converted without measuring the container.
  */
 export function parsePercentSize(
   size: string | number | undefined,
@@ -24,7 +25,9 @@ export function parsePercentSize(
       return undefined;
     }
     const value = Number.parseFloat(normalized);
-    return Number.isFinite(value) ? value : undefined;
+    return Number.isFinite(value) && value >= 0 && value <= 100
+      ? value
+      : undefined;
   }
   return undefined;
 }
@@ -117,6 +120,11 @@ export function computeDefaultLayout(
   const unknownCount = visible.filter(
     (entry) => entry.percent === undefined,
   ).length;
+  if (unknownCount > 0 && knownSum >= 100) {
+    // There is no positive share left for an unsized visible panel. Let RRP
+    // reconcile the individual panel defaults instead of mounting it at zero.
+    return undefined;
+  }
   const remaining = Math.max(0, 100 - knownSum);
   const perUnknown = unknownCount > 0 ? remaining / unknownCount : 0;
 

@@ -1032,6 +1032,63 @@ describe('createArtifactAiSlice', () => {
     expect(store.getState().ai.config.currentSessionId).toBe('session-other');
   });
 
+  it('ignores a global fallback session when deleting the active artifact chat', () => {
+    const store = createTestStore();
+
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-current', 3),
+          createSession('session-b', 2),
+          createSession('session-a-other', 1),
+        ];
+        draft.ai.config.currentSessionId = 'session-current';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-current',
+            artifactId: 'artifact-a',
+            createdAt: 3000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-b',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-a-other',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    // Mirror ai.deleteSession(): it removes the active session and selects
+    // the first remaining global session, which belongs to artifact B here.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-b', 2),
+          createSession('session-a-other', 1),
+        ];
+        draft.ai.config.currentSessionId = 'session-b';
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBe('session-a-other');
+  });
+
   it('cleans up stale mappings', () => {
     const store = createTestStore();
     store.setState(
