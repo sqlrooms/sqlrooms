@@ -59,15 +59,11 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
         title: 'Worksheet B',
       };
       state.artifacts.config.currentArtifactId = targetArtifactId;
-      return {
-        success: true,
-        commandId: 'worksheet.create',
-        data: {artifactId: targetArtifactId},
-      };
+      return {artifactId: targetArtifactId};
     },
   );
 
-  expect(result.success).toBe(true);
+  expect(result).toEqual({artifactId: targetArtifactId});
   expect(addSessionArtifactLink).toHaveBeenCalledWith(
     sourceSessionId,
     targetArtifactId,
@@ -78,22 +74,26 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
 
 it('does not associate an artifact that was created without being selected', async () => {
   const addSessionArtifactLink = jest.fn();
+  const artifactsById: Record<
+    string,
+    {id: string; type: string; title: string}
+  > = {
+    'worksheet-a': {
+      id: 'worksheet-a',
+      type: 'worksheet',
+      title: 'Worksheet A',
+    },
+    'worksheet-b': {
+      id: 'worksheet-b',
+      type: 'worksheet',
+      title: 'Worksheet B',
+    },
+  };
   const state = {
     artifacts: {
       config: {
         currentArtifactId: 'worksheet-a',
-        artifactsById: {
-          'worksheet-a': {
-            id: 'worksheet-a',
-            type: 'worksheet',
-            title: 'Worksheet A',
-          },
-          'worksheet-b': {
-            id: 'worksheet-b',
-            type: 'worksheet',
-            title: 'Worksheet B',
-          },
-        },
+        artifactsById,
       },
       getArtifact: (artifactId: string) =>
         state.artifacts.config.artifactsById[artifactId],
