@@ -392,6 +392,8 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     // Fix invalid getHexagon on GeoArrowH3HexagonLayer. The AI sometimes
     // generates {"@@function":"columnAccessor","column":"..."} which is not a
     // real accessor. The correct form is a deck.gl attribute string "@@=column".
+    // Also lift "@@=column" into _sqlroomsBinding.hexagonColumn so fit-to-bounds
+    // and the H3 binding pipeline can find the column.
     if (l['@@type'] === 'GeoArrowH3HexagonLayer') {
       const gh = l.getHexagon;
       if (
@@ -413,6 +415,34 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
           l = rest;
           layerChanged = true;
         }
+      }
+
+      const hexAccessor = l.getHexagon;
+      let hexColumn: string | undefined;
+      if (typeof hexAccessor === 'string') {
+        const m = hexAccessor.match(/^@@=(.+)$/);
+        hexColumn = m ? m[1]!.trim() : undefined;
+      }
+      const binding =
+        l._sqlroomsBinding &&
+        typeof l._sqlroomsBinding === 'object' &&
+        !Array.isArray(l._sqlroomsBinding)
+          ? (l._sqlroomsBinding as Record<string, unknown>)
+          : undefined;
+      if (
+        hexColumn &&
+        (!binding?.hexagonColumn ||
+          typeof binding.hexagonColumn !== 'string' ||
+          !(binding.hexagonColumn as string).trim())
+      ) {
+        l = {
+          ...l,
+          _sqlroomsBinding: {
+            ...(binding ?? {}),
+            hexagonColumn: hexColumn,
+          },
+        };
+        layerChanged = true;
       }
     }
 
@@ -727,6 +757,34 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     }
   }
 
+  // Inject fitToData when the AI omits it. Without fitToData the fit-to-bounds
+  // button stays disabled and H3/point maps often open fully zoomed out.
+  if (!fitToData?.dataset && datasets && typeof datasets === 'object') {
+    const datasetIds = Object.keys(datasets);
+    let datasetId: string | undefined =
+      datasetIds.length === 1 ? datasetIds[0] : undefined;
+
+    if (!datasetId) {
+      const spec = config.spec as Record<string, unknown> | undefined;
+      const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+      for (const layer of layers) {
+        if (!layer || typeof layer !== 'object') continue;
+        const binding = (layer as Record<string, unknown>)._sqlroomsBinding as
+          | Record<string, unknown>
+          | undefined;
+        if (typeof binding?.dataset === 'string' && binding.dataset.trim()) {
+          datasetId = binding.dataset;
+          break;
+        }
+      }
+    }
+
+    if (datasetId && datasets[datasetId]) {
+      fitToData = {dataset: datasetId};
+      config = {...config, fitToData: fitToData as any};
+    }
+  }
+
   if (!datasets || typeof datasets !== 'object' || !fitToData) {
     return config;
   }
@@ -802,6 +860,8 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - colorRange on GeoArrowHeatmapLayer → stripped
  * - invalid getWeight object accessor on GeoArrowHeatmapLayer → converted to "@@=field" string
  * - invalid getHexagon object accessor on GeoArrowH3HexagonLayer → converted to "@@=column" string
+ * - getHexagon "@@=column" on GeoArrowH3HexagonLayer → lifted into _sqlroomsBinding.hexagonColumn
+ * - missing fitToData → injected from the sole dataset or first layer binding
  * - GeoArrowArcLayer getSourcePosition/getTargetPosition string accessors → lifted into _sqlroomsBinding
  * - GeoArrowArcLayer dataset: missing ST_AsWKB wrapping on ST_Point → added; missing geometryEncodingHint → injected
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
