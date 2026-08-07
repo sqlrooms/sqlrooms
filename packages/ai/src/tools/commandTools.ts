@@ -1,5 +1,9 @@
 import {tool} from 'ai';
 import type {Tool, ToolSet} from 'ai';
+import {
+  getAiRunContextPrimaryItem,
+  type AiRunContext,
+} from '@sqlrooms/ai-config';
 import {hasCommandSliceState} from '@sqlrooms/room-shell';
 import type {
   BaseRoomStoreState,
@@ -189,6 +193,8 @@ export type ExecuteCommandToolLlmResult = {
 
 type CommandToolExecutionContext = {
   sessionId?: string;
+  aiRunContext?: AiRunContext;
+  getAiRunContext?: () => AiRunContext | undefined;
   skillId?: string;
   traceId?: string;
   toolCallId?: string;
@@ -273,6 +279,7 @@ Use this for routine command discovery before calling ${getToolName} for the sel
             params.surface ?? defaultSurface,
             options,
             context,
+            state,
           ),
           includeInvisible: params.includeHidden,
           includeDisabled: params.includeDisabled,
@@ -317,6 +324,7 @@ Call this after ${searchToolName} and before ${executeToolName} when the command
             params.surface ?? defaultSurface,
             options,
             context,
+            state,
           ),
           includeInvisible: params.includeHidden,
           includeDisabled: params.includeDisabled,
@@ -360,6 +368,7 @@ For routine command use, prefer ${searchToolName}, then ${getToolName} for the s
             defaultSurface,
             options,
             context,
+            state,
           ),
           includeInvisible: params.includeInvisible,
           includeDisabled: params.includeDisabled,
@@ -407,6 +416,7 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
               defaultSurface,
               options,
               context,
+              state,
             ),
             includeInvisible: true,
             includeDisabled: true,
@@ -437,7 +447,12 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
         const result = await state.commands.invokeCommand(
           commandId,
           input,
-          createCommandToolInvocationOptions(defaultSurface, options, context),
+          createCommandToolInvocationOptions(
+            defaultSurface,
+            options,
+            context,
+            state,
+          ),
         );
         if (result.success) {
           return {
@@ -477,6 +492,7 @@ function createCommandToolInvocationOptions(
   surface: RoomCommandSurface,
   options: CommandToolsOptions | undefined,
   context: CommandToolExecutionContext | undefined,
+  state: unknown,
 ) {
   const metadata: Record<string, unknown> = {
     ...(options?.defaultMetadata ?? {}),
@@ -492,6 +508,11 @@ function createCommandToolInvocationOptions(
   if (typeof context?.toolCallId === 'string') {
     metadata.toolCallId = context.toolCallId;
   }
+  const primaryArtifactId = getCommandToolPrimaryArtifactId(
+    context,
+    state,
+    metadata,
+  );
   const traceId =
     context?.traceId ?? options?.defaultTraceId ?? context?.toolCallId;
 
@@ -499,8 +520,40 @@ function createCommandToolInvocationOptions(
     surface,
     ...(options?.defaultActor ? {actor: options.defaultActor} : {}),
     ...(traceId ? {traceId} : {}),
+    ...(primaryArtifactId
+      ? {target: {kind: 'artifact', id: primaryArtifactId}}
+      : {}),
     ...(Object.keys(metadata).length > 0 ? {metadata} : {}),
   };
+}
+
+function getCommandToolPrimaryArtifactId(
+  context: CommandToolExecutionContext | undefined,
+  state: unknown,
+  metadata: Record<string, unknown>,
+): string | undefined {
+  const sessionId =
+    context?.sessionId ??
+    (typeof metadata.aiSessionId === 'string'
+      ? metadata.aiSessionId
+      : undefined);
+  const executionRunContext =
+    context?.getAiRunContext?.() ?? context?.aiRunContext;
+  const runContext =
+    executionRunContext ??
+    (sessionId
+      ? (
+          state as {
+            ai?: {
+              getSessionRunContext?: (
+                sessionId: string,
+              ) => AiRunContext | undefined;
+            };
+          }
+        ).ai?.getSessionRunContext?.(sessionId)
+      : undefined);
+  const primaryItem = getAiRunContextPrimaryItem(runContext);
+  return primaryItem?.kind === 'artifact' ? primaryItem.id : undefined;
 }
 
 function rankCommandDescriptors(

@@ -115,6 +115,55 @@ describe('document commands', () => {
     });
   });
 
+  it('keeps an AI command on its captured artifact target', async () => {
+    const store = createTestStore();
+    const artifactA = store.getState().artifacts.createArtifact({
+      type: 'document',
+      title: 'Document A',
+    });
+    store.getState().documents.ensureDocument(artifactA);
+    store.getState().documents.setMarkdown(artifactA, 'Content A');
+    const artifactB = store.getState().artifacts.createArtifact({
+      type: 'document',
+      title: 'Document B',
+    });
+    store.getState().documents.ensureDocument(artifactB);
+    store.getState().documents.setMarkdown(artifactB, 'Content B');
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(artifactB);
+
+    const aiInvocation = {
+      surface: 'ai' as const,
+      target: {kind: 'artifact', id: artifactA},
+    };
+    const capturedResult = await store
+      .getState()
+      .commands.invokeCommand('document.get', {}, aiInvocation);
+    expect(capturedResult.data).toMatchObject({
+      artifactId: artifactA,
+      markdown: 'Content A',
+    });
+
+    const explicitResult = await store
+      .getState()
+      .commands.invokeCommand(
+        'document.get',
+        {artifactId: artifactB},
+        aiInvocation,
+      );
+    expect(explicitResult.data).toMatchObject({
+      artifactId: artifactB,
+      markdown: 'Content B',
+    });
+
+    const paletteResult = await store
+      .getState()
+      .commands.invokeCommand('document.get', {}, {surface: 'palette'});
+    expect(paletteResult.data).toMatchObject({
+      artifactId: artifactB,
+      markdown: 'Content B',
+    });
+  });
+
   it('lists asset counts and returns asset metadata without data', async () => {
     const store = createTestStore();
     const createResult = await store

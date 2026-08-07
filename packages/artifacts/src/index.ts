@@ -48,6 +48,8 @@ export type {
   UseArtifactWorkspaceResult,
 } from './artifactWorkspace';
 
+export {resolveArtifactTargetId} from './artifactTarget';
+
 export {
   ArtifactTabs,
   createArtifactLayoutNode,
