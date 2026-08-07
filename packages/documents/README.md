@@ -305,6 +305,32 @@ does not import Mosaic, pivot, or other feature packages:
 </BlockDocumentChartRendererProvider>
 ```
 
+Hosts can customize a chart block's outer frame with
+`getBlockFrameClassName`. The callback receives the document ID, block ID,
+block type, and current selection state. Its classes are merged after the
+built-in frame classes, which is useful for host-owned states such as an
+in-progress AI edit:
+
+```tsx
+<BlockDocumentChartRendererProvider
+  renderer={MosaicBlockDocumentChartRenderer}
+  getBlockFrameClassName={({blockId, selected}) =>
+    editingBlockIds.has(blockId)
+      ? 'border-amber-500 ring-1 ring-amber-500'
+      : selected
+        ? 'border-primary'
+        : undefined
+  }
+>
+  <BlockDocumentArtifact artifactId={blockDocumentArtifactId} />
+</BlockDocumentChartRendererProvider>
+```
+
+Descendants implementing custom chart node views can read the same optional
+callback with `useBlockDocumentChartGetBlockFrameClassName()`. The getter is a
+plain function rather than a hook; hosts should subscribe to reactive state in
+their provider component and pass a fresh callback when frame styling changes.
+
 Stateful blocks carry document-local label/binding attributes, surfaced to
 renderers via `BlockDocumentStatefulBlockRendererProps`:
 

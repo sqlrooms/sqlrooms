@@ -1269,6 +1269,19 @@ describe('artifactAi link and pin mutations', () => {
     );
     expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([]);
   });
+
+  it('does not pin missing artifacts', () => {
+    const store = createTestStore();
+
+    store.getState().artifactAi.togglePinArtifact('missing-artifact');
+
+    expect(
+      store.getState().artifactAi.isPinnedArtifact('missing-artifact'),
+    ).toBe(false);
+    expect(
+      store.getState().artifactAi.config.pinnedArtifactIds,
+    ).toBeUndefined();
+  });
 });
 
 describe('ArtifactAiConfigSchema', () => {
