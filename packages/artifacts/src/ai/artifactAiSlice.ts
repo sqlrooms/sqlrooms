@@ -622,6 +622,17 @@ export function createArtifactAiSlice<
           }
         },
         selectLatestSessionForArtifact: (artifactId) => {
+          // Without a target artifact there is nothing to align the session
+          // against, so this is a no-op. In particular we must NOT clear the
+          // current session here: an unlinked (artifact-less) chat — such as
+          // the ones the welcome screen and "New Chat" create — is a valid
+          // current selection. Reconciliation passes that reach here with no
+          // current artifact (the P2/fallback branches) would otherwise
+          // deactivate a freshly created or just-selected chat, dropping the
+          // UI back to the start screen.
+          if (!artifactId) {
+            return;
+          }
           const sessionId = getLatestAiSessionIdForArtifact({
             sessions: get().ai.config.sessions,
             sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
