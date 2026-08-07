@@ -75,7 +75,11 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {
+  createVegaChartTool,
+  VegaChartToolResult,
+  type VegaChartToolResultProps,
+} from '@sqlrooms/vega';
 
 // inside your createRoomStore composer
 createAiSlice({
@@ -94,6 +98,40 @@ createAiSlice({
 
 - `editable`: whether users can edit SQL/spec in the chart UI
 - `editorMode`: which editors to render (`'none' | 'sql' | 'vega' | 'both'`)
+
+### AI chart result sizing
+
+`VegaChartToolResult` retains its default 16:9 layout when no sizing props are
+provided. Use `height="auto"` to opt into data-driven sizing for
+category-dense horizontal bar charts:
+
+```tsx
+const CategoryAwareChartResult = (props: VegaChartToolResultProps) => (
+  <VegaChartToolResult {...props} height="auto" />
+);
+
+createAiSlice({
+  toolRenderers: {
+    chart: CategoryAwareChartResult,
+  },
+  tools: {
+    chart: createVegaChartTool(),
+  },
+});
+```
+
+The automatic policy inspects the parsed Vega-Lite encoding and counts distinct
+values in the loaded Arrow data. Horizontal bar charts with at least 12
+categories use `clamp(280, 48 + categoryCount * 22, 800)` pixels; other charts
+continue to use `aspectRatio` (16:9 by default). A numeric `height` fixes the
+outer chart viewport while preserving responsive width. Applications can also
+provide `getHeight={({spec, arrowTable}) => ...}` for a custom sizing policy;
+returning `'auto'` delegates to the built-in category-aware policy.
+
+Sizing is based on rendered data rather than an LLM-provided row count, so it
+stays accurate when SQL results, filters, or the generated spec change. The
+Vega-Lite spec remains responsible for visualization semantics, not React
+layout.
 
 ### LLM invocation / Zod schema fields
 
