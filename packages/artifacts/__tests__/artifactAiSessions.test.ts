@@ -12,7 +12,7 @@ import {
   type ArtifactsSliceState,
 } from '../src';
 import {
-  cleanupAiSessionArtifacts,
+  cleanupSessionArtifactLinks,
   ArtifactAiConfigSchema,
   createArtifactAiSlice,
   findAiSessionForArtifactWithContextItem,
@@ -26,7 +26,7 @@ import {
   type ArtifactAiSessionFilterOptions,
   type ArtifactAiSessionGroupsOptions,
   type ArtifactAiSliceState,
-  type CleanupAiSessionArtifactsOptions,
+  type CleanupSessionArtifactLinksOptions,
 } from '../src/ai';
 
 type TestRoomState = BaseRoomStoreState &
@@ -174,7 +174,7 @@ describe('artifact AI session helpers', () => {
       sessions,
       sessionArtifactLinks,
     };
-    const cleanupOptions: CleanupAiSessionArtifactsOptions = {
+    const cleanupOptions: CleanupSessionArtifactLinksOptions = {
       sessions,
       sessionArtifactLinks,
       artifactIds: ['artifact-a', 'artifact-b'],
@@ -185,7 +185,7 @@ describe('artifact AI session helpers', () => {
       'artifact-a': ['session-a-old', 'session-a-new'],
       'artifact-b': ['session-b'],
     });
-    expect(cleanupAiSessionArtifacts(cleanupOptions)).toEqual(
+    expect(cleanupSessionArtifactLinks(cleanupOptions)).toEqual(
       sessionArtifactLinks,
     );
   });
@@ -480,7 +480,7 @@ describe('artifact AI session helpers', () => {
 
   it('removes mappings for deleted sessions and artifacts', () => {
     expect(
-      cleanupAiSessionArtifacts({
+      cleanupSessionArtifactLinks({
         sessionArtifactLinks: [
           ...sessionArtifactLinks,
           {
@@ -642,9 +642,9 @@ describe('createArtifactAiSlice', () => {
     const sessionId = store.getState().artifactAi.createArtifactScopedSession();
 
     expect(sessionId).toBe('session-1');
-    expect(store.getState().artifactAi.getSessionArtifactId('session-1')).toBe(
-      'artifact-a',
-    );
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('session-1'),
+    ).toBe('artifact-a');
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
     expect(
       store
@@ -678,9 +678,9 @@ describe('createArtifactAiSlice', () => {
     expect(sessionId).toBe('session-2');
     expect(store.getState().ai.config.currentSessionId).toBe('session-2');
     expect(store.getState().ai.config.sessions).toHaveLength(2);
-    expect(store.getState().artifactAi.getSessionArtifactId('session-2')).toBe(
-      'artifact-a',
-    );
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('session-2'),
+    ).toBe('artifact-a');
   });
 
   it('creates a new artifact-scoped session when explicit session options are provided', () => {
@@ -717,9 +717,9 @@ describe('createArtifactAiSlice', () => {
       modelProvider: 'anthropic',
       model: 'claude-sonnet-4',
     });
-    expect(store.getState().artifactAi.getSessionArtifactId('session-2')).toBe(
-      'artifact-a',
-    );
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('session-2'),
+    ).toBe('artifact-a');
   });
 
   it('does not revert the artifact after creating a scoped session then selecting another artifact', () => {
@@ -801,7 +801,7 @@ describe('createArtifactAiSlice', () => {
     store.getState().artifactAi.syncCurrentArtifactAiSession();
 
     expect(
-      store.getState().artifactAi.getSessionArtifactId('target-session'),
+      store.getState().artifactAi.getLatestArtifactForSession('target-session'),
     ).toBe('artifact-a');
     expect(store.getState().ai.config.currentSessionId).toBe('target-session');
   });
@@ -1157,19 +1157,6 @@ describe('artifactAi link and pin mutations', () => {
     ]);
   });
 
-  it('preserves replacement semantics in the legacy setSessionArtifact API', () => {
-    const store = createTestStore();
-    store
-      .getState()
-      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
-
-    store.getState().artifactAi.setSessionArtifact('s1', 'artifact-b');
-
-    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
-      'artifact-b',
-    ]);
-  });
-
   it('removes all links for a session', () => {
     const store = createTestStore();
     const {artifactAi} = store.getState();
@@ -1228,24 +1215,13 @@ describe('artifactAi link and pin mutations', () => {
 });
 
 describe('ArtifactAiConfigSchema', () => {
-  it('migrates persisted one-to-one ownership to session-artifact links', () => {
-    expect(
-      ArtifactAiConfigSchema.parse({
-        aiSessionArtifacts: {'session-1': 'artifact-a'},
-      }),
-    ).toEqual({
-      sessionArtifactLinks: [
-        {
-          sessionId: 'session-1',
-          artifactId: 'artifact-a',
-          createdAt: 0,
-          linkType: 'attached',
-        },
-      ],
+  it('defaults to an empty link list', () => {
+    expect(ArtifactAiConfigSchema.parse({})).toEqual({
+      sessionArtifactLinks: [],
     });
   });
 
-  it('prefers the current link format when both formats are persisted', () => {
+  it('accepts the session-artifact link format', () => {
     expect(
       ArtifactAiConfigSchema.parse({
         sessionArtifactLinks: [
@@ -1256,7 +1232,6 @@ describe('ArtifactAiConfigSchema', () => {
             linkType: 'created',
           },
         ],
-        aiSessionArtifacts: {'session-1': 'artifact-a'},
       }).sessionArtifactLinks,
     ).toEqual([
       {
@@ -1266,6 +1241,19 @@ describe('ArtifactAiConfigSchema', () => {
         linkType: 'created',
       },
     ]);
+  });
+
+  it('rejects removed one-to-one artifact AI fields', () => {
+    expect(
+      ArtifactAiConfigSchema.safeParse({
+        aiSessionArtifacts: {'session-1': 'artifact-a'},
+      }).success,
+    ).toBe(false);
+    expect(
+      ArtifactAiConfigSchema.safeParse({
+        artifactCreators: {'artifact-a': 'session-1'},
+      }).success,
+    ).toBe(false);
   });
 });
 

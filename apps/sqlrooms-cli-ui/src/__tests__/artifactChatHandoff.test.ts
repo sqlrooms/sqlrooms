@@ -20,7 +20,7 @@ it('hands off from the current linked artifact of a multi-artifact session', asy
   const forkSessionFromMessage = jest.fn(
     (_args: ForkSessionFromMessageArgs) => 'target-session',
   );
-  const setSessionArtifact = jest.fn();
+  const addSessionArtifactLink = jest.fn();
   const setSessionRunContext = jest.fn();
   const selectLatestSessionForArtifact = jest.fn();
   const state = {
@@ -38,7 +38,7 @@ it('hands off from the current linked artifact of a multi-artifact session', asy
     artifactAi: {
       hasSessionArtifactLink: (sessionId: string, artifactId: string) =>
         links.has(`${sessionId}:${artifactId}`),
-      setSessionArtifact,
+      addSessionArtifactLink,
       selectLatestSessionForArtifact,
     },
     ai: {
@@ -96,9 +96,10 @@ it('hands off from the current linked artifact of a multi-artifact session', asy
   expect(forkSessionFromMessage).toHaveBeenCalledWith(
     expect.objectContaining({sourceSessionId, sourceMessageId: 'assistant-1'}),
   );
-  expect(setSessionArtifact).toHaveBeenCalledWith(
+  expect(addSessionArtifactLink).toHaveBeenCalledWith(
     'target-session',
     targetArtifactId,
+    'attached',
   );
   expect(setSessionRunContext).toHaveBeenCalled();
   expect(selectLatestSessionForArtifact).toHaveBeenCalledWith(targetArtifactId);

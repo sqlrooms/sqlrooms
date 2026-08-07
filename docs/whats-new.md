@@ -8,6 +8,14 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 ## 0.29.0 (upcoming)
 
+### Many-to-many artifact AI sessions
+
+`@sqlrooms/artifacts` now represents AI session/artifact relationships only as
+`sessionArtifactLinks`, allowing one session to work across multiple artifacts
+while preserving association time and creator provenance. The prerelease-only
+`aiSessionArtifacts` and `artifactCreators` representations were removed; see
+the [upgrade guide](/upgrade-guide#sqlroomsartifacts-artifact-ai-sessions-use-many-to-many-links-breaking).
+
 ### Mosaic profiler primitives
 
 `@sqlrooms/mosaic` now includes composable profiler primitives for building Quake-style cross-filtered data inspectors with per-column summaries, shared Mosaic selections, and paged Arrow row tables.

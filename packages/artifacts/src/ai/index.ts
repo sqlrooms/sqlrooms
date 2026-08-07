@@ -37,7 +37,7 @@ export type {
   RoomStateWithArtifactAi,
 } from './artifactAiSlice';
 export {
-  cleanupAiSessionArtifacts,
+  cleanupSessionArtifactLinks,
   findAiSessionForArtifactWithContextItem,
   getAiSessionGroupsByArtifact,
   getAiSessionIdsForArtifact,
@@ -54,12 +54,11 @@ export type {
   ArtifactAiSession,
   ArtifactAiSessionFilterOptions,
   ArtifactAiSessionGroupsOptions,
-  ArtifactAiSessionOwnership,
   ArtifactAiSessionWithContent,
   ArtifactAiSessionWithContext,
   ArtifactAiSessionsForArtifactOptions,
   ArtifactAiSessionsWithContextForArtifactOptions,
-  CleanupAiSessionArtifactsOptions,
+  CleanupSessionArtifactLinksOptions,
   EmptyArtifactAiSessionsForArtifactOptions,
   GetOwningArtifactRunContextItemsOptions,
 } from './artifactAiSessionHelpers';
