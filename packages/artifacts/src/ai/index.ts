@@ -3,10 +3,6 @@ export {
   createArtifactContextAiTools,
 } from './artifactContextTools';
 export type {
-  ArtifactTargetChange,
-  ArtifactTargetChangeData,
-} from './artifactTargetChange';
-export type {
   ArtifactContextAiTools,
   ArtifactContextArtifactSummary,
   ArtifactContextReadResult,

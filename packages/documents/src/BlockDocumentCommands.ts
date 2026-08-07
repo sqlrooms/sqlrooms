@@ -363,16 +363,6 @@ export function createBlockDocumentCommands<
           message: `Created ${labelLower} artifact "${artifactId}".`,
           data: {
             ...readBlockDocumentData(state, artifactId),
-            artifactTargetChange: {
-              artifactId,
-              artifactType,
-              title:
-                state.artifacts.getArtifact(artifactId)?.title ??
-                title ??
-                defaultTitle,
-              change: 'created',
-              shouldContinueChat: select,
-            },
           },
         };
       },
