@@ -102,6 +102,7 @@ import {
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
+import {artifactChatAssociationMiddleware} from './artifactChatAssociation';
 import {createCliArtifactTypes} from './artifactTypes';
 import {blockDocumentAgentTool} from './createBlockDocumentAgent';
 import {createArtifactContextAiTools} from './context/createArtifactContextAiTools';
@@ -942,6 +943,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           connector,
           config: {title: defaultWorkspaceTitle, dataSources: []},
           layout: createLayout({artifactTypes: cliArtifactTypes, store}),
+          createCommandProps: {
+            // createRoomShellSlice is typed to the base room state, but this
+            // app middleware needs the composed CLI RoomState at runtime.
+            middleware: [artifactChatAssociationMiddleware as any],
+          },
           createDbProps: {
             duckDb: {
               loadTableSchemasFilter: (() => {
