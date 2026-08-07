@@ -199,7 +199,11 @@ export function createArtifactChatHandoffController(
     });
     if (!targetSessionId) return;
 
-    state.artifactAi.setSessionArtifact(targetSessionId, targetArtifact.id);
+    state.artifactAi.addSessionArtifactLink(
+      targetSessionId,
+      targetArtifact.id,
+      'attached',
+    );
     state.ai.setSessionRunContext(
       targetSessionId,
       setAiRunContextPrimaryItem(

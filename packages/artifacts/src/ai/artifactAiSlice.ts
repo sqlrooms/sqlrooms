@@ -19,12 +19,11 @@ import {StoreApi} from 'zustand';
 import {z} from 'zod';
 import type {ArtifactsSliceState} from '../ArtifactsSlice';
 import {
-  ArtifactSessionLink,
   ArtifactSessionLinkSchema,
   type ArtifactSessionLinkType,
 } from '../ArtifactsSliceConfig';
 import {
-  cleanupAiSessionArtifacts,
+  cleanupSessionArtifactLinks,
   getLatestAiSessionIdForArtifact,
   getArtifactIdsForAiSession,
   getLatestArtifactIdForAiSession,
@@ -39,27 +38,11 @@ import {
  */
 export const ArtifactAiConfig = z
   .object({
-    sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).optional(),
-    /** Legacy one-to-one session ownership, migrated on parse. */
-    aiSessionArtifacts: z.record(z.string(), z.string()).optional(),
+    sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).default([]),
     /** IDs of pinned artifacts */
     pinnedArtifactIds: z.array(z.string()).optional(),
   })
-  .transform(
-    ({sessionArtifactLinks, aiSessionArtifacts, pinnedArtifactIds}) => ({
-      sessionArtifactLinks:
-        sessionArtifactLinks ??
-        Object.entries(aiSessionArtifacts ?? {}).map(
-          ([sessionId, artifactId]) => ({
-            sessionId,
-            artifactId,
-            createdAt: 0,
-            linkType: 'attached' as const,
-          }),
-        ),
-      ...(pinnedArtifactIds === undefined ? {} : {pinnedArtifactIds}),
-    }),
-  );
+  .strict();
 export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
 export const ArtifactAiConfigSchema = ArtifactAiConfig;
 
@@ -74,7 +57,6 @@ export type ArtifactAiSliceState = {
     config: ArtifactAiConfig;
     setConfig: (config: z.input<typeof ArtifactAiConfig>) => void;
 
-    // === NEW METHODS ===
     addSessionArtifactLink: (
       sessionId: string,
       artifactId: string,
@@ -91,13 +73,6 @@ export type ArtifactAiSliceState = {
     togglePinArtifact: (artifactId: string) => void;
     isPinnedArtifact: (artifactId: string) => boolean;
 
-    // === EXISTING METHODS (deprecated) ===
-    setSessionArtifact: (sessionId: string, artifactId: string) => void;
-    clearSessionArtifact: (sessionId: string) => void;
-    getSessionArtifactId: (sessionId: string) => string | undefined;
-    setArtifactCreator: (artifactId: string, sessionId: string) => void;
-    getArtifactCreatorSessionId: (artifactId: string) => string | undefined;
-    getCreatedArtifactIds: (sessionId: string) => string[];
     createArtifactScopedSession: (
       name?: string,
       modelProvider?: string,
@@ -211,11 +186,11 @@ export function createArtifactAiSlice<
 
     const cleanupSessionArtifacts = () => {
       const state = get();
-      const cleanedLinks = cleanupAiSessionArtifacts({
+      const cleanedLinks = cleanupSessionArtifactLinks({
         sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
         sessions: state.ai.config.sessions,
         artifactIds: Object.keys(state.artifacts.config.artifactsById),
-      }) as ArtifactSessionLink[];
+      });
 
       const linksChanged =
         cleanedLinks.length !==
@@ -580,60 +555,6 @@ export function createArtifactAiSlice<
         destroy: async () => {
           unsubscribe?.();
           unsubscribe = undefined;
-        },
-        // === DEPRECATED METHODS (for backward compatibility) ===
-        setSessionArtifact: (sessionId, artifactId) => {
-          console.warn(
-            'setSessionArtifact is deprecated, use addSessionArtifactLink',
-          );
-          set((state) =>
-            produce(state, (draft: TRoomState) => {
-              draft.artifactAi.config.sessionArtifactLinks = [
-                ...draft.artifactAi.config.sessionArtifactLinks.filter(
-                  (link) => link.sessionId !== sessionId,
-                ),
-                {
-                  sessionId,
-                  artifactId,
-                  createdAt: Date.now(),
-                  linkType: 'attached',
-                },
-              ];
-            }),
-          );
-        },
-        clearSessionArtifact: (sessionId) => {
-          console.warn(
-            'clearSessionArtifact is deprecated, use removeAllLinksForSession',
-          );
-          get().artifactAi.removeAllLinksForSession(sessionId);
-        },
-        getSessionArtifactId: (sessionId) => {
-          console.warn(
-            'getSessionArtifactId is deprecated, use getLatestArtifactForSession',
-          );
-          return get().artifactAi.getLatestArtifactForSession(sessionId);
-        },
-        setArtifactCreator: (artifactId, sessionId) => {
-          console.warn(
-            'setArtifactCreator is deprecated, use addSessionArtifactLink',
-          );
-          get().artifactAi.addSessionArtifactLink(
-            sessionId,
-            artifactId,
-            'created',
-          );
-        },
-        getArtifactCreatorSessionId: (artifactId) => {
-          return get().artifactAi.getCreatorSessionForArtifact(artifactId);
-        },
-        getCreatedArtifactIds: (sessionId) => {
-          return get()
-            .artifactAi.config.sessionArtifactLinks.filter(
-              (link) =>
-                link.sessionId === sessionId && link.linkType === 'created',
-            )
-            .map((link) => link.artifactId);
         },
         createArtifactScopedSession: (name, modelProvider, model) => {
           const currentArtifactId = get().artifacts.config.currentArtifactId;

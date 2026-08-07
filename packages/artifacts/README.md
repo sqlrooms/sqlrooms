@@ -210,6 +210,11 @@ The slice stores a list of links between sessions and artifacts:
 sessionArtifactLinks: ArtifactSessionLink[];
 ```
 
+`sessionArtifactLinks` is the only supported persisted and runtime
+representation. The prerelease-only `aiSessionArtifacts` and
+`artifactCreators` fields were removed without an automatic migration. Update
+persisted prerelease configs before parsing them with `ArtifactAiConfigSchema`.
+
 The link types are exported from `@sqlrooms/artifacts`:
 
 - `ArtifactSessionLink` — a single link: `{sessionId, artifactId, createdAt, linkType}`.
@@ -219,6 +224,9 @@ The link types are exported from `@sqlrooms/artifacts`:
   in the artifact. A session may hold links to multiple artifacts.
 - `ArtifactSessionLinkSchema` — the Zod schema used to validate a link (for
   example when persisting `ArtifactAiConfigSchema`).
+
+All artifact AI session helpers accept `sessionArtifactLinks`; they do not
+accept a parallel one-to-one ownership map.
 
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
 artifact-scoped assistant. It creates a fresh session and attaches it to the
