@@ -6,7 +6,9 @@ import {
   getPendingClientToolCalls,
   getPendingClientToolTimeouts,
   getSessionAgentProgressSignal,
+  getTimedOutSessionAgentState,
   getToolExecutionTimeoutMs,
+  hasPendingCurrentTurnExecutableToolCall,
   hasPendingSessionSubAgentApproval,
 } from '../src/timeouts';
 import {mergeAbortSignals} from '../src/utils';
@@ -139,6 +141,74 @@ describe('AI timeouts', () => {
     ]);
   });
 
+  it('finds pending executable tools only in the current user turn', () => {
+    const previousTurn: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'first'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-query',
+            toolCallId: 'query-1',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+      {
+        id: 'user-2',
+        role: 'user',
+        parts: [{type: 'text', text: 'second'}],
+      },
+    ];
+    const tools = {query: {execute: async () => ({})}};
+
+    expect(hasPendingCurrentTurnExecutableToolCall(previousTurn, tools)).toBe(
+      false,
+    );
+
+    const currentTurn = [
+      ...previousTurn,
+      {
+        id: 'assistant-2',
+        role: 'assistant' as const,
+        parts: [
+          {
+            type: 'tool-query' as const,
+            toolCallId: 'query-2',
+            state: 'input-available' as const,
+            input: {},
+          },
+        ],
+      },
+    ];
+    expect(hasPendingCurrentTurnExecutableToolCall(currentTurn, tools)).toBe(
+      true,
+    );
+
+    currentTurn.push({
+      id: 'assistant-3',
+      role: 'assistant',
+      parts: [
+        {
+          type: 'tool-query',
+          toolCallId: 'query-2',
+          state: 'output-available',
+          input: {},
+          output: {},
+        },
+      ],
+    });
+    expect(hasPendingCurrentTurnExecutableToolCall(currentTurn, tools)).toBe(
+      false,
+    );
+  });
+
   it('scopes agent progress signals to tool calls reachable from the session', () => {
     const messages: UIMessage[] = [
       {
@@ -250,6 +320,96 @@ describe('AI timeouts', () => {
         },
       }),
     ).toBe(false);
+  });
+
+  it('fails only reachable pending agent work on timeout', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent',
+            toolCallId: 'session-root',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+    ];
+    const resolve = jest.fn();
+    const otherResolve = jest.fn();
+    const result = getTimedOutSessionAgentState(
+      messages,
+      {
+        'session-root': [
+          {
+            toolCallId: 'nested-approval',
+            toolName: 'deleteItem',
+            state: 'approval-requested',
+            approvalId: 'approval-1',
+            agentToolCalls: [
+              {
+                toolCallId: 'deep-query',
+                toolName: 'query',
+                state: 'pending',
+              },
+            ],
+          },
+        ],
+        'other-session': [
+          {
+            toolCallId: 'other-approval',
+            toolName: 'deleteItem',
+            state: 'approval-requested',
+            approvalId: 'approval-other',
+          },
+        ],
+      },
+      {
+        'approval-1': {
+          toolCallId: 'nested-approval',
+          approvalId: 'approval-1',
+          toolName: 'deleteItem',
+          input: {},
+          resolve,
+        },
+        'approval-other': {
+          toolCallId: 'other-approval',
+          approvalId: 'approval-other',
+          toolName: 'deleteItem',
+          input: {},
+          resolve: otherResolve,
+        },
+      },
+      'Chat run timed out after 1s',
+    );
+
+    expect(result.approvalIds).toEqual(['approval-1']);
+    expect(result.agentProgress['session-root']).toEqual([
+      expect.objectContaining({
+        toolCallId: 'nested-approval',
+        state: 'error',
+        errorText: 'Chat run timed out after 1s',
+        approvalId: undefined,
+        completedAt: expect.any(Number),
+        agentToolCalls: [
+          expect.objectContaining({
+            toolCallId: 'deep-query',
+            state: 'error',
+            errorText: 'Chat run timed out after 1s',
+            completedAt: expect.any(Number),
+          }),
+        ],
+      }),
+    ]);
+    expect(result.agentProgress['other-session']).toEqual([
+      expect.objectContaining({
+        toolCallId: 'other-approval',
+        state: 'approval-requested',
+        approvalId: 'approval-other',
+      }),
+    ]);
   });
 
   it('aborts and rejects executable tools at their configured limit', async () => {

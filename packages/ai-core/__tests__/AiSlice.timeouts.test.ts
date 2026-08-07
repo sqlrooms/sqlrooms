@@ -196,6 +196,115 @@ describe('AiSlice run timeout', () => {
     });
   });
 
+  it('fails and releases reachable sub-agent approvals on timeout', () => {
+    const store = createStore<AiSliceState>((set, get, api) =>
+      createAiSlice({tools: {} as any, getInstructions: () => 'test'})(
+        set,
+        get,
+        api,
+      ),
+    );
+    const session = store.getState().ai.getCurrentSession()!;
+    const messages: UIMessage[] = [
+      {
+        id: 'user-1',
+        role: 'user',
+        parts: [{type: 'text', text: 'hello'}],
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent',
+            toolCallId: 'session-root',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+    ];
+    const resolve = jest.fn();
+    const otherResolve = jest.fn();
+    store.getState().ai.updateAgentProgress('session-root', [
+      {
+        toolCallId: 'nested-approval',
+        toolName: 'deleteItem',
+        state: 'approval-requested',
+        approvalId: 'approval-1',
+      },
+      {
+        toolCallId: 'nested-query',
+        toolName: 'query',
+        state: 'pending',
+      },
+    ]);
+    store.getState().ai.updateAgentProgress('other-session', [
+      {
+        toolCallId: 'other-approval',
+        toolName: 'deleteItem',
+        state: 'approval-requested',
+        approvalId: 'approval-other',
+      },
+    ]);
+    store.getState().ai.requestSubAgentApproval({
+      toolCallId: 'nested-approval',
+      approvalId: 'approval-1',
+      toolName: 'deleteItem',
+      input: {},
+      resolve,
+    });
+    store.getState().ai.requestSubAgentApproval({
+      toolCallId: 'other-approval',
+      approvalId: 'approval-other',
+      toolName: 'deleteItem',
+      input: {},
+      resolve: otherResolve,
+    });
+
+    store
+      .getState()
+      .ai.persistTimedOutSession(
+        session.id,
+        messages,
+        'Chat run timed out after 1s',
+      );
+
+    const state = store.getState();
+    const savedSession = state.ai.getCurrentSession()!;
+    expect(resolve).toHaveBeenCalledWith(false);
+    expect(otherResolve).not.toHaveBeenCalled();
+    expect(state.ai.pendingSubAgentApprovals).toEqual({
+      'approval-other': expect.objectContaining({
+        toolCallId: 'other-approval',
+      }),
+    });
+    expect(state.ai.agentProgress['session-root']).toEqual([
+      expect.objectContaining({
+        toolCallId: 'nested-approval',
+        state: 'error',
+        errorText: 'Chat run timed out after 1s',
+        approvalId: undefined,
+        completedAt: expect.any(Number),
+      }),
+      expect.objectContaining({
+        toolCallId: 'nested-query',
+        state: 'error',
+        errorText: 'Chat run timed out after 1s',
+        completedAt: expect.any(Number),
+      }),
+    ]);
+    expect(state.ai.agentProgress['other-session']).toEqual([
+      expect.objectContaining({
+        toolCallId: 'other-approval',
+        state: 'approval-requested',
+      }),
+    ]);
+    expect(savedSession.agentProgress).toEqual({
+      'session-root': state.ai.agentProgress['session-root'],
+    });
+  });
+
   it('preserves the timeout reason when onChatError completes a pending tool', () => {
     const store = createStore<AiSliceState>((set, get, api) =>
       createAiSlice({tools: {} as any, getInstructions: () => 'test'})(

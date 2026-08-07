@@ -16,6 +16,7 @@ import {
   getPendingClientToolCalls,
   getPendingClientToolTimeouts,
   getSessionAgentProgressSignal,
+  hasPendingCurrentTurnExecutableToolCall,
   hasPendingSessionSubAgentApproval,
 } from '../timeouts';
 
@@ -254,12 +255,16 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
           ? remoteClientToolNames
           : undefined,
       }).length > 0;
+    const isRunningLocalTool =
+      !usesRemoteTransport &&
+      hasPendingCurrentTurnExecutableToolCall(uiMessages, tools);
     if (
       !currentSession?.isRunning ||
       timeoutMs == null ||
       isWaitingForApproval ||
       isWaitingForSubAgentApproval ||
-      isWaitingForClientTool
+      isWaitingForClientTool ||
+      isRunningLocalTool
     ) {
       return;
     }

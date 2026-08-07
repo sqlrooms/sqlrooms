@@ -76,6 +76,7 @@ import {z} from 'zod';
 import {
   createRunTimeoutError,
   getConfiguredTimeoutMs,
+  getTimedOutSessionAgentState,
   type AiTimeoutOptions,
 } from './timeouts';
 
@@ -1175,6 +1176,25 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             completedMessages,
             currentState.ai.getToolTimings(),
           );
+          const timedOutAgentState = getTimedOutSessionAgentState(
+            completedMessages,
+            currentState.ai.agentProgress,
+            currentState.ai.pendingSubAgentApprovals,
+            timeoutMessage,
+          );
+
+          for (const approvalId of timedOutAgentState.approvalIds) {
+            pendingApprovalResolvers.get(approvalId)?.(false);
+            pendingApprovalResolvers.delete(approvalId);
+          }
+
+          const stateForPersistence = {
+            ...currentState,
+            ai: {
+              ...currentState.ai,
+              agentProgress: timedOutAgentState.agentProgress,
+            },
+          };
 
           set((state) =>
             produce(state, (draft) => {
@@ -1184,7 +1204,15 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (!session) return;
               session.uiMessages =
                 completedMessages as ChatSessionSchema['uiMessages'];
-              writeAgentDebugStateToSession(session, currentState);
+              for (const [parentToolCallId, toolCalls] of Object.entries(
+                timedOutAgentState.agentProgress,
+              )) {
+                draft.ai.agentProgress[parentToolCallId] = toolCalls;
+              }
+              for (const approvalId of timedOutAgentState.approvalIds) {
+                delete draft.ai.pendingSubAgentApprovals[approvalId];
+              }
+              writeAgentDebugStateToSession(session, stateForPersistence);
               session.messagesRevision = (session.messagesRevision || 0) + 1;
               session.isRunning = false;
             }),

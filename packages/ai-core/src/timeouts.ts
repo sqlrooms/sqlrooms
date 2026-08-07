@@ -112,38 +112,19 @@ export type PendingClientToolCallOptions = {
   executableClientToolNames?: readonly string[];
 };
 
-/** Finds registered tools that are waiting for client-side output. */
+/**
+ * Finds registered tool calls whose latest state is waiting for client output.
+ * Tools without an `execute` function are treated as client tools. Executable
+ * tools are included only when their names appear in
+ * `executableClientToolNames`, which lets remote transports explicitly declare
+ * the executable tools whose output is supplied by the client.
+ */
 export function getPendingClientToolCalls(
   messages: UIMessage[],
   tools: StoredToolSet,
   options: PendingClientToolCallOptions = {},
 ): PendingClientToolCall[] {
-  const latestParts = new Map<
-    string,
-    {toolName: string; state: string | undefined}
-  >();
-
-  for (const message of messages) {
-    if (message.role !== 'assistant') continue;
-    for (const part of message.parts ?? []) {
-      if (part.type !== 'dynamic-tool' && !part.type.startsWith('tool-')) {
-        continue;
-      }
-      const typedPart = part as typeof part & {
-        toolCallId?: string;
-        toolName?: string;
-        state?: string;
-      };
-      if (!typedPart.toolCallId) continue;
-      latestParts.set(typedPart.toolCallId, {
-        toolName:
-          typedPart.type === 'dynamic-tool'
-            ? typedPart.toolName || 'tool'
-            : typedPart.type.replace(/^tool-/, '') || 'tool',
-        state: typedPart.state,
-      });
-    }
-  }
+  const latestParts = getLatestToolParts(messages);
 
   const pending: PendingClientToolCall[] = [];
   for (const [toolCallId, part] of latestParts) {
@@ -159,6 +140,33 @@ export function getPendingClientToolCalls(
     pending.push({toolCallId, toolName: part.toolName});
   }
   return pending;
+}
+
+/**
+ * Returns whether the current user turn has a registered executable tool call
+ * waiting for execution to finish. This is used by local transports so the
+ * per-tool timeout, including an explicitly disabled timeout, remains
+ * authoritative while a tool runs silently.
+ */
+export function hasPendingCurrentTurnExecutableToolCall(
+  messages: UIMessage[],
+  tools: StoredToolSet,
+): boolean {
+  let currentTurnStart = 0;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    if (messages[index]?.role === 'user') {
+      currentTurnStart = index;
+      break;
+    }
+  }
+  const currentTurnMessages = messages.slice(currentTurnStart);
+
+  for (const part of getLatestToolParts(currentTurnMessages).values()) {
+    if (part.state === 'input-available' && tools[part.toolName]?.execute) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Finds pending client tools whose opt-in execution timeout is enabled. */
@@ -177,8 +185,10 @@ export function getPendingClientToolTimeouts(
 }
 
 /**
- * Returns a stable signal for agent progress reachable from the given messages.
- * Progress owned by other sessions does not affect the result.
+ * Serializes only agent progress reachable from tool-call IDs in the given
+ * messages, following nested agent calls recursively. The stable serialization
+ * changes when this session's reachable progress changes but ignores progress
+ * owned exclusively by other sessions.
  */
 export function getSessionAgentProgressSignal(
   messages: UIMessage[],
@@ -196,6 +206,70 @@ export function getSessionAgentProgressSignal(
       )
       .sort(([left], [right]) => left.localeCompare(right)),
   );
+}
+
+/** Agent progress and approval IDs that must be completed on session timeout. */
+export type TimedOutSessionAgentState = {
+  agentProgress: Record<string, AgentToolCall[]>;
+  approvalIds: string[];
+};
+
+/**
+ * Marks pending agent work reachable from a timed-out session as failed and
+ * returns the reachable approval IDs that must be released. Progress and
+ * approvals owned exclusively by other sessions are left unchanged.
+ */
+export function getTimedOutSessionAgentState(
+  messages: UIMessage[],
+  agentProgress: Record<string, AgentToolCall[]>,
+  pendingApprovals: Record<string, PendingSubAgentApproval>,
+  timeoutMessage: string,
+): TimedOutSessionAgentState {
+  const reachableToolCallIds = getReachableAgentToolCallIds(
+    messages,
+    agentProgress,
+  );
+  const approvalIds = new Set<string>();
+  const completedAt = Date.now();
+
+  const completeToolCall = (toolCall: AgentToolCall): AgentToolCall => {
+    const agentToolCalls = toolCall.agentToolCalls?.map(completeToolCall);
+    if (
+      toolCall.state === 'pending' ||
+      toolCall.state === 'approval-requested'
+    ) {
+      if (toolCall.approvalId) approvalIds.add(toolCall.approvalId);
+      return {
+        ...toolCall,
+        state: 'error',
+        errorText: timeoutMessage,
+        approvalId: undefined,
+        completedAt,
+        ...(agentToolCalls ? {agentToolCalls} : {}),
+      };
+    }
+    return agentToolCalls ? {...toolCall, agentToolCalls} : toolCall;
+  };
+
+  const completedAgentProgress = Object.fromEntries(
+    Object.entries(agentProgress).map(([parentToolCallId, toolCalls]) => [
+      parentToolCallId,
+      reachableToolCallIds.has(parentToolCallId)
+        ? toolCalls.map(completeToolCall)
+        : toolCalls,
+    ]),
+  );
+
+  for (const approval of Object.values(pendingApprovals)) {
+    if (reachableToolCallIds.has(approval.toolCallId)) {
+      approvalIds.add(approval.approvalId);
+    }
+  }
+
+  return {
+    agentProgress: completedAgentProgress,
+    approvalIds: [...approvalIds],
+  };
 }
 
 /** Returns whether this session has a nested tool awaiting user approval. */
@@ -261,6 +335,39 @@ function addAgentToolCallIds(
   }
 
   return foundNewToolCall;
+}
+
+function getLatestToolParts(
+  messages: UIMessage[],
+): Map<string, {toolName: string; state: string | undefined}> {
+  const latestParts = new Map<
+    string,
+    {toolName: string; state: string | undefined}
+  >();
+
+  for (const message of messages) {
+    if (message.role !== 'assistant') continue;
+    for (const part of message.parts ?? []) {
+      if (part.type !== 'dynamic-tool' && !part.type.startsWith('tool-')) {
+        continue;
+      }
+      const typedPart = part as typeof part & {
+        toolCallId?: string;
+        toolName?: string;
+        state?: string;
+      };
+      if (!typedPart.toolCallId) continue;
+      latestParts.set(typedPart.toolCallId, {
+        toolName:
+          typedPart.type === 'dynamic-tool'
+            ? typedPart.toolName || 'tool'
+            : typedPart.type.replace(/^tool-/, '') || 'tool',
+        state: typedPart.state,
+      });
+    }
+  }
+
+  return latestParts;
 }
 
 function formatTimeoutDuration(timeoutMs: number): string {
