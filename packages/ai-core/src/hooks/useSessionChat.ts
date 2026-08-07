@@ -8,6 +8,17 @@ import {
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import {fixIncompleteToolCalls} from '../utils';
+import {hasPendingToolApproval} from '../components/ChatActiveStatus';
+import {
+  createIdleStreamTimeoutError,
+  createToolTimeoutError,
+  getConfiguredTimeoutMs,
+  getPendingClientToolCalls,
+  getPendingClientToolTimeouts,
+  getSessionAgentProgressSignal,
+  hasPendingCurrentTurnExecutableToolCall,
+  hasPendingSessionSubAgentApproval,
+} from '../timeouts';
 
 export type {AddToolOutput} from '../types';
 
@@ -64,6 +75,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   );
   const endPoint = useStoreWithAi((s) => s.ai.chatEndPoint);
   const headers = useStoreWithAi((s) => s.ai.chatHeaders);
+  const usesRemoteTransport = (endPoint || '').trim().length > 0;
 
   // Get chat handlers
   const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
@@ -74,6 +86,18 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const setAddToolOutput = useStoreWithAi((s) => s.ai.setAddToolOutput);
   const setAddToolApprovalResponse = useStoreWithAi(
     (s) => s.ai.setAddToolApprovalResponse,
+  );
+  const persistTimedOutSession = useStoreWithAi(
+    (s) => s.ai.persistTimedOutSession,
+  );
+  const tools = useStoreWithAi((s) => s.ai.tools);
+  const remoteClientToolNames = useStoreWithAi(
+    (s) => s.ai.remoteClientToolNames,
+  );
+  const timeouts = useStoreWithAi((s) => s.ai.timeouts);
+  const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
+  const pendingSubAgentApprovals = useStoreWithAi(
+    (s) => s.ai.pendingSubAgentApprovals,
   );
 
   // Get per-session abort controller
@@ -111,6 +135,12 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
   }, [sessionId, messagesRevision]);
   const latestMessagesRef = useRef<UIMessage[]>(initialMessages);
+  const clientToolTimeoutsRef = useRef(
+    new Map<
+      string,
+      {timeoutId: ReturnType<typeof setTimeout>; timeoutMs: number}
+    >(),
+  );
 
   const {
     messages,
@@ -142,6 +172,130 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     onError: (error) =>
       onChatError?.(sessionId, error, latestMessagesRef.current),
   });
+  const sessionAgentProgressSignal = useMemo(
+    () => getSessionAgentProgressSignal(messages as UIMessage[], agentProgress),
+    [agentProgress, messages],
+  );
+  const isWaitingForSubAgentApproval = useMemo(
+    () =>
+      hasPendingSessionSubAgentApproval(
+        messages as UIMessage[],
+        agentProgress,
+        pendingSubAgentApprovals,
+      ),
+    [agentProgress, messages, pendingSubAgentApprovals],
+  );
+
+  // Fail tools that never provide expected client-side output. Local executable
+  // tools are timed out in the local agent transport instead.
+  useEffect(() => {
+    const pending = currentSession?.isRunning
+      ? getPendingClientToolTimeouts(messages as UIMessage[], tools, timeouts, {
+          executableClientToolNames: usesRemoteTransport
+            ? remoteClientToolNames
+            : undefined,
+        })
+      : [];
+    const pendingIds = new Set(pending.map(({toolCallId}) => toolCallId));
+
+    for (const [toolCallId, entry] of clientToolTimeoutsRef.current) {
+      if (!pendingIds.has(toolCallId)) {
+        clearTimeout(entry.timeoutId);
+        clientToolTimeoutsRef.current.delete(toolCallId);
+      }
+    }
+
+    for (const {toolCallId, toolName, timeoutMs} of pending) {
+      const existing = clientToolTimeoutsRef.current.get(toolCallId);
+      if (existing?.timeoutMs === timeoutMs) continue;
+      if (existing) clearTimeout(existing.timeoutId);
+
+      const timeoutId = setTimeout(() => {
+        clientToolTimeoutsRef.current.delete(toolCallId);
+        addToolOutput({
+          tool: toolName,
+          toolCallId,
+          state: 'output-error',
+          errorText: createToolTimeoutError(toolName, timeoutMs).message,
+        });
+      }, timeoutMs);
+      clientToolTimeoutsRef.current.set(toolCallId, {timeoutId, timeoutMs});
+    }
+  }, [
+    addToolOutput,
+    currentSession?.isRunning,
+    messages,
+    remoteClientToolNames,
+    timeouts,
+    tools,
+    usesRemoteTransport,
+  ]);
+
+  useEffect(
+    () => () => {
+      for (const {timeoutId} of clientToolTimeoutsRef.current.values()) {
+        clearTimeout(timeoutId);
+      }
+      clientToolTimeoutsRef.current.clear();
+    },
+    [],
+  );
+
+  // Treat UI message updates as observable stream progress. This cannot tell
+  // a silent-but-healthy operation from a stuck one, so the watchdog is opt-in.
+  useEffect(() => {
+    // Re-arm the watchdog whenever a nested agent reports observable progress.
+    void sessionAgentProgressSignal;
+    const timeoutMs = getConfiguredTimeoutMs(timeouts.idleStreamMs);
+    const uiMessages = messages as UIMessage[];
+    const isWaitingForApproval = hasPendingToolApproval(uiMessages);
+    const isWaitingForClientTool =
+      getPendingClientToolCalls(uiMessages, tools, {
+        executableClientToolNames: usesRemoteTransport
+          ? remoteClientToolNames
+          : undefined,
+      }).length > 0;
+    const isRunningLocalTool =
+      !usesRemoteTransport &&
+      hasPendingCurrentTurnExecutableToolCall(uiMessages, tools);
+    if (
+      !currentSession?.isRunning ||
+      timeoutMs == null ||
+      isWaitingForApproval ||
+      isWaitingForSubAgentApproval ||
+      isWaitingForClientTool ||
+      isRunningLocalTool
+    ) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      const controller = getAbortController(sessionId);
+      if (!controller || controller.signal.aborted) return;
+      const timeoutError = createIdleStreamTimeoutError(timeoutMs);
+      controller.abort(timeoutError);
+      persistTimedOutSession(
+        sessionId,
+        latestMessagesRef.current,
+        timeoutError.message,
+      );
+      stop();
+    }, timeoutMs);
+    return () => clearTimeout(timeoutId);
+  }, [
+    currentSession?.isRunning,
+    getAbortController,
+    isWaitingForSubAgentApproval,
+    messages,
+    persistTimedOutSession,
+    remoteClientToolNames,
+    sessionAgentProgressSignal,
+    sessionId,
+    stop,
+    timeouts.idleStreamMs,
+    tools,
+    usesRemoteTransport,
+  ]);
 
   // If user aborts mid-stream, stop the local chat stream immediately
   useEffect(() => {

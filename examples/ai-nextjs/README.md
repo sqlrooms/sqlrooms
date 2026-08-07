@@ -100,6 +100,8 @@ To add your own tools, modify the `app/lib/tools.ts` file:
 2. **Client-side tools**: Add to `clientTools` array - these execute in the browser
 
 Both tool types are automatically registered with the AI system through the `getServerAiSDKTools()` and `getClientTools()` functions.
+Also list hybrid client-side tool names in `remoteClientToolNames` in
+`app/store.ts` so pending browser output is not confused with server execution.
 
 ### Using Different AI Models
 

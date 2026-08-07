@@ -108,6 +108,34 @@ describe('fixIncompleteToolCalls', () => {
     expect(part.output).toEqual({success: true});
   });
 
+  it('only completes approval requests when explicitly requested', () => {
+    const messages = [
+      assistantMessage([
+        {
+          type: 'tool-deleteItem',
+          toolCallId: 'tooluse_approval',
+          state: 'approval-requested',
+          input: {id: 'item-1'},
+          approval: {id: 'approval-1'},
+        },
+      ]),
+    ];
+
+    expect(
+      (fixIncompleteToolCalls(messages)[0].parts[0] as AnyPart).state,
+    ).toBe('approval-requested');
+
+    const [fixed] = fixIncompleteToolCalls(messages, 'Run timed out', {
+      completeApprovalRequests: true,
+    });
+    expect(fixed.parts[0]).toMatchObject({
+      state: 'output-error',
+      input: undefined,
+      rawInput: {id: 'item-1'},
+      errorText: 'Run timed out',
+    });
+  });
+
   it('handles dynamic-tool parts the same way', () => {
     const messages = [
       assistantMessage([

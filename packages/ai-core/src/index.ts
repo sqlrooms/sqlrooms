@@ -10,6 +10,7 @@ export type {
   AiSliceOptions,
   ForkSessionFromMessageArgs,
 } from './AiSlice';
+export type {AiTimeoutOptions} from './timeouts';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
 /** @deprecated Use `Chat.Messages` instead. */
 export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
