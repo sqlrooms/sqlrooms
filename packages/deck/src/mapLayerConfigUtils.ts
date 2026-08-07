@@ -80,6 +80,7 @@ const TRIPS_LAYER_TYPES = new Set([
 const RADIUS_LAYER_TYPES = new Set([
   'geoarrowscatterplotlayer',
   'scatterplotlayer',
+  'geojsonlayer',
 ]);
 
 const COLUMN_RADIUS_LAYER_TYPES = new Set([
@@ -375,7 +376,9 @@ export function clearDeckMapLayerColorScale(
 ): DeckMapConfig {
   return updateDeckMapLayer(config, layerIndex, (layer) => {
     const nextLayer = {...layer};
-    if (accessor === 'getFillColor') {
+    if (accessor === 'getFillColor' || accessor === 'getColor') {
+      // Path/Trips use getColor; Scatterplot/Polygon use getFillColor.
+      // Deleting either leaves deck.gl's black default ([0,0,0,255]).
       nextLayer[accessor] = [...DEFAULT_LAYER_FILL_COLOR];
     } else {
       delete nextLayer[accessor];

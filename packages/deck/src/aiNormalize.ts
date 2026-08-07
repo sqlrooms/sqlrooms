@@ -605,11 +605,59 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     // "wkb" so the decoder knows how to read the geometry.
     const transformSql = (next?.source as Record<string, unknown> | undefined)
       ?.transformSql as string | undefined;
-    if (arcGeomCols.size > 0 && transformSql && !next?.geometryEncodingHint) {
+    const sqlQuery = (next?.source as Record<string, unknown> | undefined)
+      ?.sqlQuery as string | undefined;
+
+    // Fix ST_MakeLine(ST_Point(...) ORDER BY ...) → ST_MakeLine(LIST(ST_Point(...) ORDER BY ...)).
+    // ST_MakeLine is a scalar that takes a LIST; ORDER BY is only valid inside LIST.
+    // Without this wrap DuckDB errors: "st_makeline is a Scalar Function".
+    const fixMakeLineOrderBy = (sql: string) =>
+      sql.replace(
+        /\bST_MakeLine\s*\(\s*(?!LIST\s*\()(ST_Point\s*\([^)]*\))\s+(ORDER\s+BY\s+[^)]+?)\)/gi,
+        'ST_MakeLine(LIST($1 $2))',
+      );
+
+    if (typeof transformSql === 'string') {
+      const fixed = fixMakeLineOrderBy(transformSql);
+      if (fixed !== transformSql) {
+        next = {
+          ...next,
+          source: {
+            ...(next?.source as Record<string, unknown>),
+            transformSql: fixed,
+          },
+        };
+        changed = true;
+      }
+    }
+    if (typeof sqlQuery === 'string') {
+      const fixed = fixMakeLineOrderBy(sqlQuery);
+      if (fixed !== sqlQuery) {
+        next = {
+          ...next,
+          source: {
+            ...(next?.source as Record<string, unknown>),
+            sqlQuery: fixed,
+          },
+        };
+        changed = true;
+      }
+    }
+
+    // Re-read after possible ST_MakeLine rewrite so later passes see the fixed SQL.
+    const currentTransformSql = (
+      next?.source as Record<string, unknown> | undefined
+    )?.transformSql as string | undefined;
+
+    if (
+      arcGeomCols.size > 0 &&
+      currentTransformSql &&
+      !next?.geometryEncodingHint
+    ) {
       // Only inject when the transformSql references at least one of the
       // arc geometry columns — avoids touching unrelated datasets.
       const mentionsArcCol = [...arcGeomCols].some((col) =>
-        transformSql.includes(col),
+        currentTransformSql.includes(col),
       );
       if (mentionsArcCol) {
         next = {...next, geometryEncodingHint: 'wkb'};
@@ -619,11 +667,11 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
 
     // Fix transformSql that uses bare ST_Point() instead of ST_AsWKB(ST_Point()).
     // This is the most common mistake for arc layers: the AI omits ST_AsWKB().
-    if (transformSql && arcGeomCols.size > 0) {
+    if (currentTransformSql && arcGeomCols.size > 0) {
       // Replace "ST_Point(...) AS col" → "ST_AsWKB(ST_Point(...)) AS col"
       // only for the arc geometry columns. Uses a conservative regex that
       // matches the alias at the end and avoids double-wrapping.
-      let fixedSql = transformSql;
+      let fixedSql = currentTransformSql;
       for (const col of arcGeomCols) {
         // Match: ST_Point(<args>) as col  (case-insensitive, optional quotes)
         // Not already wrapped with ST_AsWKB.
@@ -635,7 +683,7 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
           `ST_AsWKB($1) AS "${col}"`,
         );
       }
-      if (fixedSql !== transformSql) {
+      if (fixedSql !== currentTransformSql) {
         next = {
           ...next,
           source: {
@@ -760,6 +808,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
+ * - ST_MakeLine(ST_Point(...) ORDER BY ...) → ST_MakeLine(LIST(ST_Point(...) ORDER BY ...))
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,

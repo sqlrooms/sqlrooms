@@ -1,4 +1,5 @@
 import {
+  clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
   getDeckMapColorAccessorOptions,
   getDeckMapLayerColorScale,
@@ -7,6 +8,7 @@ import {
   setDeckMapLayerColorScale,
   setDeckMapLayerType,
   usesGeometryColumnSetting,
+  usesRadiusSetting,
 } from '../src/mapLayerConfigUtils';
 
 const config = {
@@ -82,6 +84,13 @@ describe('mapLayerConfigUtils', () => {
     expect(usesGeometryColumnSetting('GeoJsonLayer')).toBe(true);
     expect(usesGeometryColumnSetting('GeoArrowScatterplotLayer')).toBe(false);
   });
+
+  it('detects layer types that should use point radius settings', () => {
+    expect(usesRadiusSetting('GeoArrowScatterplotLayer')).toBe(true);
+    expect(usesRadiusSetting('GeoJsonLayer')).toBe(true);
+    expect(usesRadiusSetting('GeoArrowPathLayer')).toBe(false);
+    expect(usesRadiusSetting('GeoArrowColumnLayer')).toBe(false);
+  });
 });
 
 describe('getDeckMapColorAccessorOptions', () => {
@@ -112,5 +121,40 @@ describe('getDeckMapColorAccessorOptions', () => {
       'getSourceColor',
       'getTargetColor',
     ]);
+  });
+});
+
+describe('clearDeckMapLayerColorScale', () => {
+  const defaultColor = [56, 189, 248, 180];
+
+  test('restores a flat default color for getFillColor', () => {
+    const withScale = setDeckMapLayerColorScale(
+      config,
+      0,
+      'getFillColor',
+      createDeckMapLayerColorScale({field: 'mag'}),
+    );
+    const cleared = clearDeckMapLayerColorScale(withScale, 0, 'getFillColor');
+    expect(getDeckMapLayerRecords(cleared)[0]?.getFillColor).toEqual(
+      defaultColor,
+    );
+  });
+
+  test('restores a flat default color for PathLayer getColor (not black)', () => {
+    const pathConfig = {
+      ...config,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            id: 'paths',
+            _sqlroomsBinding: {dataset: 'places'},
+            getColor: createDeckMapLayerColorScale({field: 'mag'}),
+          },
+        ],
+      },
+    };
+    const cleared = clearDeckMapLayerColorScale(pathConfig, 0, 'getColor');
+    expect(getDeckMapLayerRecords(cleared)[0]?.getColor).toEqual(defaultColor);
   });
 });
