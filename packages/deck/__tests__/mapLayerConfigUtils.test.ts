@@ -10,6 +10,7 @@ import {
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerColorScale,
   setDeckMapLayerType,
+  setDeckMapLayerColumnRadius,
   usesGeometryColumnSetting,
   usesExtrusionSettings,
   usesRadiusSetting,
@@ -46,6 +47,45 @@ describe('mapLayerConfigUtils', () => {
       _sqlroomsBinding: {dataset: 'places'},
     });
     expect(config.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
+  });
+
+  it('forces column radius to meters and strips point radius leftovers', () => {
+    const nextConfig = setDeckMapLayerType(
+      {
+        ...config,
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              id: 'points',
+              _sqlroomsBinding: {dataset: 'places'},
+              getRadius: 5,
+              radiusUnits: 'pixels',
+              radiusMinPixels: 5,
+              radiusMaxPixels: 45,
+            },
+          ],
+        },
+      },
+      0,
+      'GeoArrowColumnLayer',
+    );
+
+    const layer = getDeckMapLayerRecords(nextConfig)[0];
+    expect(layer?.['@@type']).toBe('GeoArrowColumnLayer');
+    expect(layer?.radius).toBe(50);
+    expect(layer?.radiusUnits).toBe('meters');
+    expect(layer?.getRadius).toBeUndefined();
+    expect(layer?.radiusMinPixels).toBeUndefined();
+    expect(layer?.radiusMaxPixels).toBeUndefined();
+  });
+
+  it('writes column radius in meters via setDeckMapLayerColumnRadius', () => {
+    const columnConfig = setDeckMapLayerType(config, 0, 'GeoArrowColumnLayer');
+    const next = setDeckMapLayerColumnRadius(columnConfig, 0, 300);
+    const layer = getDeckMapLayerRecords(next)[0];
+    expect(layer?.radius).toBe(300);
+    expect(layer?.radiusUnits).toBe('meters');
   });
 
   it('stores color scale accessors as native Deck JSON functions', () => {

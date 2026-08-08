@@ -1,6 +1,7 @@
 import {
   FC,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -59,6 +60,7 @@ import {
   setDeckMapLayerArcColumns,
   setDeckMapLayerTimestampColumn,
   setDeckMapLayerType,
+  setDeckMapLayerColumnRadius,
   updateDeckMapLayer,
   type DeckMapLayerColorAccessor,
   type DeckMapLayerRecord,
@@ -1091,8 +1093,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const isHeatmapLayer = activeLayer?.['@@type'] === 'GeoArrowHeatmapLayer';
   const showAppearanceCard = isHeatmapLayer || colorAccessorOptions.length > 0;
   const lineWidthPixels =
-    (activeLayer?.widthMinPixels as number | undefined) ??
-    (showTripsSettings ? 3 : 1);
+    activeLayer?.widthUnits === 'pixels' &&
+    typeof activeLayer?.getWidth === 'number'
+      ? activeLayer.getWidth
+      : ((activeLayer?.widthMinPixels as number | undefined) ??
+        (showTripsSettings ? 3 : 1));
 
   const applyConfig = useCallback(
     (nextConfig: DeckMapConfig) => {
@@ -1101,6 +1106,81 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     },
     [onConfigChange, readOnly],
   );
+
+  // Heal Column layers that still carry scatterplot/heatmap radius units.
+  // Otherwise the UI says "Nm" while deck interprets radius as pixels.
+  useEffect(() => {
+    if (!showColumnRadiusSetting || !activeLayer || readOnly) return;
+    const needsHeal =
+      activeLayer.radiusUnits === 'pixels' ||
+      activeLayer.getRadius !== undefined ||
+      activeLayer.radiusMinPixels !== undefined ||
+      activeLayer.radiusMaxPixels !== undefined ||
+      activeLayer.radiusPixels !== undefined;
+    if (!needsHeal) return;
+    const radius =
+      typeof activeLayer.radius === 'number' &&
+      Number.isFinite(activeLayer.radius) &&
+      activeLayer.radius > 0
+        ? activeLayer.radius
+        : 50;
+    applyConfig(
+      setDeckMapLayerColumnRadius(mapConfig, activeLayerIndex, radius),
+    );
+  }, [
+    activeLayer,
+    activeLayerIndex,
+    applyConfig,
+    mapConfig,
+    readOnly,
+    showColumnRadiusSetting,
+  ]);
+
+  // Heal path/arc/trips widths where widthMaxPixels < widthMinPixels. That caps
+  // rendered width below the slider max (e.g. max 10 while the slider goes to 20).
+  useEffect(() => {
+    const isLineWidthLayer =
+      showTripsSettings ||
+      activeLayer?.['@@type'] === 'GeoArrowPathLayer' ||
+      showArcColumnSetting;
+    if (!isLineWidthLayer || !activeLayer || readOnly) return;
+
+    const min =
+      typeof activeLayer.widthMinPixels === 'number'
+        ? activeLayer.widthMinPixels
+        : undefined;
+    const max =
+      typeof activeLayer.widthMaxPixels === 'number'
+        ? activeLayer.widthMaxPixels
+        : undefined;
+    if (min === undefined || max === undefined || max >= min) return;
+
+    const getWidth =
+      typeof activeLayer.getWidth === 'number' ? activeLayer.getWidth : 0;
+    const value = Math.max(min, max, getWidth);
+    applyConfig(
+      updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => {
+        const nextLayer: DeckMapLayerRecord = {
+          ...layer,
+          widthUnits: 'pixels',
+          widthMinPixels: value,
+          widthMaxPixels: value,
+        };
+        if (typeof layer.getWidth !== 'string') {
+          nextLayer.getWidth = value;
+        }
+        return nextLayer;
+      }),
+    );
+  }, [
+    activeLayer,
+    activeLayerIndex,
+    applyConfig,
+    mapConfig,
+    readOnly,
+    showArcColumnSetting,
+    showTripsSettings,
+  ]);
 
   const setStrokeWidth = (value: number) => {
     applyConfig(
@@ -1126,10 +1206,23 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
 
   const setLineWidth = (value: number) => {
     applyConfig(
-      updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
-        ...layer,
-        widthMinPixels: value,
-      })),
+      updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => {
+        const nextLayer: DeckMapLayerRecord = {
+          ...layer,
+          widthUnits: 'pixels',
+          widthMinPixels: value,
+          widthMaxPixels: Math.max(
+            value,
+            (layer.widthMaxPixels as number | undefined) ?? value,
+          ),
+        };
+        // Path/Arc/Trips use getWidth as the stroke width; keep it in sync with
+        // the slider so widthMaxPixels cannot silently clamp above ~10px.
+        if (typeof layer.getWidth !== 'string') {
+          nextLayer.getWidth = value;
+        }
+        return nextLayer;
+      }),
     );
   };
 
@@ -1175,10 +1268,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
 
   const setColumnRadius = (value: number) => {
     applyConfig(
-      updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
-        ...layer,
-        radius: value,
-      })),
+      setDeckMapLayerColumnRadius(mapConfig, activeLayerIndex, value),
     );
   };
 
