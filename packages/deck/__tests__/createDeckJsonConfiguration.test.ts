@@ -300,6 +300,35 @@ describe('createDeckJsonConfiguration', () => {
     );
   });
 
+  it('prefers Vector binding when getHexagon is already a @@= accessor', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowH3HexagonLayer',
+          id: 'h3-hexagons',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+            hexagonColumn: 'h3',
+          },
+          getHexagon: '@@=h3',
+          getFillColor: [56, 189, 248, 161],
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(JSON.stringify(converted.layers[0]?.props.getHexagon)).toBe(
+      JSON.stringify(table.getChild('h3')),
+    );
+  });
+
   it('keeps explicit getFillColor while still compiling getLineColor colorScale', () => {
     const table = createPointTable();
     const converter = createConverter({

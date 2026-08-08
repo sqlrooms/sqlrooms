@@ -124,6 +124,14 @@ function copyArrayLikeIntoTarget(result: unknown) {
   return Array.from(result as ArrayLike<number>);
 }
 
+/** Arrow Int64/Uint64 columns surface as bigint; deck.gl accessors need numbers. */
+function coerceArrowValue(value: unknown): unknown {
+  if (typeof value === 'bigint') {
+    return Number(value);
+  }
+  return value;
+}
+
 export function compileGeoArrowAccessor(
   expression: string,
   table: arrow.Table,
@@ -151,12 +159,14 @@ export function compileGeoArrowAccessor(
   }) => {
     const batch = data.data as arrow.Table | arrow.RecordBatch;
     const args = bindings.map((binding) =>
-      binding.columnName
-        ? batch.getChild(binding.columnName)?.get(index)
-        : undefined,
+      coerceArrowValue(
+        binding.columnName
+          ? batch.getChild(binding.columnName)?.get(index)
+          : undefined,
+      ),
     );
     const result = evaluator(...args, target);
-    return copyArrayLikeIntoTarget(result);
+    return coerceArrowValue(copyArrayLikeIntoTarget(result));
   };
 
   Object.defineProperty(accessor, GEOARROW_COMPILED_ACCESSOR, {

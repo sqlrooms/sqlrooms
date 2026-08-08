@@ -92,7 +92,14 @@ function resolveGeoArrowBindings(options: {
   const boundProps: Record<string, unknown> = {};
 
   for (const binding of compatibility.bindings) {
-    if (props[binding.prop] !== undefined) {
+    const existing = props[binding.prop];
+    // Prefer Arrow Vector binding over a simple `@@=column` accessor.
+    // Compiled accessors can silently yield empty H3 indices; Vectors are
+    // authoritative and also restore missing-column errors.
+    const existingIsSimpleAccessor =
+      typeof existing === 'string' &&
+      /^@@=[A-Za-z_$][\w$]*$/.test(existing.trim());
+    if (existing !== undefined && !existingIsSimpleAccessor) {
       continue;
     }
 
@@ -181,7 +188,11 @@ function resolveGeoArrowBindings(options: {
       continue;
     }
 
-    const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+    const columnName =
+      resolveConfiguredColumn(layerProps, binding.configKey) ??
+      (existingIsSimpleAccessor
+        ? (existing as string).trim().slice(3)
+        : undefined);
     if (!columnName) {
       if (binding.required) {
         throw new Error(

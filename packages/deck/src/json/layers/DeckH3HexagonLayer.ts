@@ -116,7 +116,9 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
           _d: Record<string, unknown>,
           {index}: {index: number},
         ) => {
-          return vec.get(index);
+          const raw = vec.get(index);
+          // Int64 elevation/width columns arrive as bigint; deck.gl needs numbers.
+          return typeof raw === 'bigint' ? Number(raw) : raw;
         };
       } else if (typeof propValue === 'function') {
         // Compiled GeoArrow accessor → wrap with batch context
@@ -126,11 +128,12 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
           objectInfo: {index: number; target?: number[]},
         ) => {
           const {batch, localIndex} = resolveBatchContext(objectInfo.index);
-          return fn({
+          const result = fn({
             index: localIndex,
             data: {data: batch},
             target: objectInfo.target,
           });
+          return typeof result === 'bigint' ? Number(result) : result;
         };
       } else {
         layerProps[propName] = propValue;
