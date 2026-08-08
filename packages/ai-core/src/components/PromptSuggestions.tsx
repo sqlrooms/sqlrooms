@@ -91,6 +91,12 @@ type PromptSuggestionsItemProps = {
   text: string;
   className?: string;
   icon?: React.ReactNode;
+  /**
+   * Optional onClick handler. If provided, it will be called instead of
+   * the default behavior of setting the prompt in the current session.
+   * Useful when there is no active session (e.g., on a start screen).
+   */
+  onClick?: (text: string) => void;
 };
 
 /**
@@ -101,14 +107,22 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
   text,
   className,
   icon,
+  onClick,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
+  const setDraftPrompt = useStoreWithAi((s) => s.ai.setDraftPrompt);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleClick = useCallback(() => {
-    if (currentSession?.id) {
+    if (onClick) {
+      // Use custom onClick if provided
+      onClick(text);
+    } else if (currentSession?.id) {
+      // Default behavior: set prompt in current session
       setPrompt(currentSession.id, text);
+    } else {
+      setDraftPrompt(text);
     }
     // Scroll the clicked item into view
     buttonRef.current?.scrollIntoView({
@@ -116,7 +130,7 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
       block: 'nearest',
       inline: 'nearest',
     });
-  }, [text, setPrompt, currentSession]);
+  }, [text, setPrompt, setDraftPrompt, currentSession, onClick]);
 
   return (
     <div className="shrink-0 snap-start">

@@ -3,8 +3,7 @@
  * with `@sqlrooms/ai`.
  *
  * The generic AI session schema intentionally does not know about artifacts.
- * This module keeps artifact ownership as a small companion slice keyed by
- * `sessionId -> artifactId`.
+ * This module keeps artifact relationships in a small companion slice.
  *
  * @packageDocumentation
  */
@@ -20,20 +19,30 @@ import {StoreApi} from 'zustand';
 import {z} from 'zod';
 import type {ArtifactsSliceState} from '../ArtifactsSlice';
 import {
-  cleanupAiSessionArtifacts,
-  getEmptyAiSessionIdForArtifact,
+  ArtifactSessionLinkSchema,
+  type ArtifactSessionLinkType,
+} from '../ArtifactsSliceConfig';
+import {
+  cleanupSessionArtifactLinks,
   getLatestAiSessionIdForArtifact,
+  getArtifactIdsForAiSession,
+  getLatestArtifactIdForAiSession,
+  getCreatorSessionIdForArtifact,
 } from './artifactAiSessionHelpers';
 
 /**
  * Persisted configuration for artifact-owned AI sessions.
  *
- * `aiSessionArtifacts` maps AI session ids to artifact ids. Sessions without an
- * entry are unowned and are ignored by artifact-scoped helpers.
+ * `sessionArtifactLinks` is an array of links between sessions and artifacts,
+ * each with metadata (createdAt, linkType).
  */
-export const ArtifactAiConfig = z.object({
-  aiSessionArtifacts: z.record(z.string(), z.string()).default({}),
-});
+export const ArtifactAiConfig = z
+  .object({
+    sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).default([]),
+    /** IDs of pinned artifacts */
+    pinnedArtifactIds: z.array(z.string()).optional(),
+  })
+  .strict();
 export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
 export const ArtifactAiConfigSchema = ArtifactAiConfig;
 
@@ -47,9 +56,23 @@ export type ArtifactAiSliceState = {
   artifactAi: SliceFunctions & {
     config: ArtifactAiConfig;
     setConfig: (config: z.input<typeof ArtifactAiConfig>) => void;
-    setSessionArtifact: (sessionId: string, artifactId: string) => void;
-    clearSessionArtifact: (sessionId: string) => void;
-    getSessionArtifactId: (sessionId: string) => string | undefined;
+
+    addSessionArtifactLink: (
+      sessionId: string,
+      artifactId: string,
+      linkType: ArtifactSessionLinkType,
+    ) => void;
+    removeSessionArtifactLink: (sessionId: string, artifactId: string) => void;
+    removeAllLinksForSession: (sessionId: string) => void;
+    removeAllLinksForArtifact: (artifactId: string) => void;
+    hasSessionArtifactLink: (sessionId: string, artifactId: string) => boolean;
+    getArtifactIdsForSession: (sessionId: string) => string[];
+    getSessionIdsForArtifact: (artifactId: string) => string[];
+    getLatestArtifactForSession: (sessionId: string) => string | undefined;
+    getCreatorSessionForArtifact: (artifactId: string) => string | undefined;
+    togglePinArtifact: (artifactId: string) => void;
+    isPinnedArtifact: (artifactId: string) => boolean;
+
     createArtifactScopedSession: (
       name?: string,
       modelProvider?: string,
@@ -58,6 +81,21 @@ export type ArtifactAiSliceState = {
     selectLatestSessionForArtifact: (artifactId?: string) => void;
     cleanupSessionArtifacts: () => void;
     syncCurrentArtifactAiSession: () => void;
+    /**
+     * Suspend or resume the current-artifact/current-session auto-sync.
+     *
+     * Use this to wrap bulk, non-atomic state updates (e.g. project
+     * hydration, where the artifact config, AI sessions, and
+     * `sessionArtifactLinks` are restored in separate `set()` calls). While
+     * suspended, the auto-sync subscription becomes a no-op so it cannot
+     * observe a partially-restored state and clobber the restored selection.
+     *
+     * Resuming (`suspended === false`) re-baselines the internal
+     * previous-artifact/previous-session pointers to the current selection so
+     * the next genuine change is measured against the fully-settled state
+     * rather than a stale/undefined baseline.
+     */
+    setSyncSuspended: (suspended: boolean) => void;
   };
 };
 
@@ -94,7 +132,7 @@ type ArtifactAiSyncSnapshot = {
   currentArtifactId?: string;
   artifactsById: RoomStateWithArtifactAi['artifacts']['config']['artifactsById'];
   aiConfig: ArtifactAiCompatibleAiState['ai']['config'];
-  aiSessionArtifacts: ArtifactAiConfig['aiSessionArtifacts'];
+  sessionArtifactLinks: ArtifactAiConfig['sessionArtifactLinks'];
 };
 
 export type CreateArtifactAiSliceOptions = {
@@ -125,6 +163,8 @@ export function createArtifactAiSlice<
   let artifactAiSyncing = false;
   let artifactAiSyncSuspended = false;
   let unsubscribe: (() => void) | undefined;
+  let previousArtifactId: string | undefined;
+  let previousSessionId: string | undefined;
 
   return createSlice<ArtifactAiSliceState, TRoomState>((set, get, store) => {
     const getArtifactAiSyncSnapshot = (
@@ -133,7 +173,7 @@ export function createArtifactAiSlice<
       currentArtifactId: state.artifacts.config.currentArtifactId,
       artifactsById: state.artifacts.config.artifactsById,
       aiConfig: state.ai.config,
-      aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
+      sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
     });
     const isSameArtifactAiSyncSnapshot = (
       left: ArtifactAiSyncSnapshot,
@@ -142,24 +182,27 @@ export function createArtifactAiSlice<
       left.currentArtifactId === right.currentArtifactId &&
       left.artifactsById === right.artifactsById &&
       left.aiConfig === right.aiConfig &&
-      left.aiSessionArtifacts === right.aiSessionArtifacts;
+      left.sessionArtifactLinks === right.sessionArtifactLinks;
 
     const cleanupSessionArtifacts = () => {
       const state = get();
-      const nextAiSessionArtifacts = cleanupAiSessionArtifacts({
-        aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
+      const cleanedLinks = cleanupSessionArtifactLinks({
+        sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
         sessions: state.ai.config.sessions,
         artifactIds: Object.keys(state.artifacts.config.artifactsById),
       });
-      if (
-        Object.keys(nextAiSessionArtifacts).length ===
-        Object.keys(state.artifactAi.config.aiSessionArtifacts).length
-      ) {
+
+      const linksChanged =
+        cleanedLinks.length !==
+        state.artifactAi.config.sessionArtifactLinks.length;
+
+      if (!linksChanged) {
         return;
       }
+
       set((stateToUpdate) =>
         produce(stateToUpdate, (draft: TRoomState) => {
-          draft.artifactAi.config.aiSessionArtifacts = nextAiSessionArtifacts;
+          draft.artifactAi.config.sessionArtifactLinks = cleanedLinks;
         }),
       );
     };
@@ -173,33 +216,57 @@ export function createArtifactAiSlice<
         state.ai.config.sessionForks ?? {},
       ).flatMap(([targetSessionId, forkOrigin]) => {
         if (!sessionIds.has(targetSessionId)) return [];
-        if (state.artifactAi.config.aiSessionArtifacts[targetSessionId]) {
+        // Seed ownership only once: skip if the fork already has any link.
+        if (
+          state.artifactAi.config.sessionArtifactLinks.some(
+            (link) => link.sessionId === targetSessionId,
+          )
+        ) {
           return [];
         }
-        const sourceArtifactId =
-          state.artifactAi.config.aiSessionArtifacts[
-            forkOrigin.sourceSessionId
-          ];
-        if (!sourceArtifactId) return [];
-        if (!state.artifacts.config.artifactsById[sourceArtifactId]) return [];
-        return [[targetSessionId, sourceArtifactId] as const];
+        const seenArtifactIds = new Set<string>();
+        return state.artifactAi.config.sessionArtifactLinks
+          .filter(
+            (link) =>
+              link.sessionId === forkOrigin.sourceSessionId &&
+              Boolean(state.artifacts.config.artifactsById[link.artifactId]) &&
+              !seenArtifactIds.has(link.artifactId),
+          )
+          .map((link) => {
+            seenArtifactIds.add(link.artifactId);
+            return {
+              targetSessionId,
+              artifactId: link.artifactId,
+              createdAt: link.createdAt,
+            };
+          });
       });
 
       if (inheritedEntries.length === 0) return;
 
       set((stateToUpdate) =>
         produce(stateToUpdate, (draft: TRoomState) => {
-          for (const [targetSessionId, artifactId] of inheritedEntries) {
-            draft.artifactAi.config.aiSessionArtifacts[targetSessionId] =
-              artifactId;
+          for (const {
+            targetSessionId,
+            artifactId,
+            createdAt,
+          } of inheritedEntries) {
+            draft.artifactAi.config.sessionArtifactLinks.push({
+              sessionId: targetSessionId,
+              artifactId,
+              // Preserve source ordering so the fork resolves to the same
+              // primary artifact even when several links are inherited.
+              createdAt,
+              linkType: 'attached',
+            });
           }
         }),
       );
     };
 
-    // Keeps the current AI session aligned with the current artifact, pruning
-    // stale ownership records before selecting the latest session for the
-    // active artifact.
+    // Keeps the current AI session and artifact in sync:
+    // - When artifact changes: switch to the latest session for that artifact
+    // - When session changes: switch to the latest artifact for that session
     const syncCurrentArtifactAiSession = () => {
       if (artifactAiSyncing || artifactAiSyncSuspended) return;
       artifactAiSyncing = true;
@@ -212,21 +279,151 @@ export function createArtifactAiSlice<
         const currentSessionExists = state.ai.config.sessions.some(
           (session) => session.id === currentSessionId,
         );
-        const currentSessionArtifactId = currentSessionId
-          ? state.artifactAi.config.aiSessionArtifacts[currentSessionId]
-          : undefined;
+        const previousSessionWasRemoved = Boolean(
+          previousSessionId &&
+          !state.ai.config.sessions.some(
+            (session) => session.id === previousSessionId,
+          ),
+        );
 
-        if (
+        // Detect what changed
+        const artifactChanged = previousArtifactId !== currentArtifactId;
+        const sessionChanged = previousSessionId !== currentSessionId;
+
+        // Note: the previous-artifact/previous-session baseline is NOT updated
+        // here. This function mutates currentArtifactId/currentSessionId itself
+        // (P1/P2/selectLatestSessionForArtifact), and the re-entrant
+        // subscription fire that would observe those mutations is guarded out.
+        // Updating the baseline to the *entry* values would therefore leave it
+        // stale (pointing at pre-mutation values), so the next genuine change
+        // could be misclassified as "unchanged". Instead we reconcile the
+        // baseline against the actual post-sync state in `finally`.
+
+        // Get current session's artifact
+        const currentSessionArtifactId = currentSessionId
+          ? getLatestArtifactIdForAiSession({
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              sessionId: currentSessionId,
+            })
+          : undefined;
+        const isCurrentArtifactLinked = Boolean(
+          currentSessionId &&
           currentArtifactId &&
+          state.artifacts.config.artifactsById[currentArtifactId] &&
+          state.artifactAi.config.sessionArtifactLinks.some(
+            (link) =>
+              link.sessionId === currentSessionId &&
+              link.artifactId === currentArtifactId,
+          ),
+        );
+
+        // A many-to-many session is in sync with any of its linked artifacts,
+        // not only the most recently linked one.
+        if (
           currentSessionId &&
           currentSessionExists &&
-          currentSessionArtifactId === currentArtifactId
+          isCurrentArtifactLinked
         ) {
           return;
         }
 
+        // Priority 1: Session changed -> align the artifact with the new session
+        if (sessionChanged) {
+          // `ai.deleteSession()` selects the first remaining global session.
+          // Treat that fallback as part of deletion, not as an explicit user
+          // session switch: keep following the selected artifact when it has
+          // another linked chat.
+          if (previousSessionWasRemoved && currentArtifactId) {
+            const remainingSessionId = getLatestAiSessionIdForArtifact({
+              sessions: state.ai.config.sessions,
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              artifactId: currentArtifactId,
+            });
+            if (remainingSessionId) {
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            } else {
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+            return;
+          }
+
+          if (currentSessionId && currentSessionExists) {
+            if (currentSessionArtifactId) {
+              // Only switch artifact if current artifact is not linked to this session
+              if (
+                !isCurrentArtifactLinked &&
+                currentSessionArtifactId !== currentArtifactId &&
+                state.artifacts.config.artifactsById[currentSessionArtifactId]
+              ) {
+                set((stateToUpdate) =>
+                  produce(stateToUpdate, (draft: TRoomState) => {
+                    draft.artifacts.config.currentArtifactId =
+                      currentSessionArtifactId;
+                  }),
+                );
+              }
+            } else if (currentArtifactId) {
+              // Session has no artifact - clear current artifact
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+            return;
+          }
+
+          // The current session was removed (e.g. the owning chat was
+          // deleted) and no session is selected. Follow the current artifact
+          // to another of its sessions if one remains; otherwise clear the
+          // artifact selection so the UI returns to the start screen instead
+          // of stranding a selected artifact with no chat.
+          if (currentArtifactId) {
+            const remainingSessionId = getLatestAiSessionIdForArtifact({
+              sessions: state.ai.config.sessions,
+              sessionArtifactLinks:
+                state.artifactAi.config.sessionArtifactLinks,
+              artifactId: currentArtifactId,
+            });
+            if (remainingSessionId) {
+              get().artifactAi.selectLatestSessionForArtifact(
+                currentArtifactId,
+              );
+            } else {
+              set((stateToUpdate) =>
+                produce(stateToUpdate, (draft: TRoomState) => {
+                  draft.artifacts.config.currentArtifactId = undefined;
+                }),
+              );
+            }
+          }
+          return;
+        }
+
+        // Priority 2: Artifact changed -> switch to artifact's latest session
+        if (artifactChanged) {
+          get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
+          return;
+        }
+
+        // Fallback: something is out of sync but we don't know what changed
+        // Default to artifact -> session sync
         get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
       } finally {
+        // Reconcile the change-detection baseline against the ACTUAL state
+        // left behind by this run (including any mutation this sync made).
+        // Keeps `sessionChanged`/`artifactChanged` accurate on the next run.
+        const finalState = get();
+        previousArtifactId = finalState.artifacts.config.currentArtifactId;
+        previousSessionId = finalState.ai.config.currentSessionId;
         artifactAiSyncing = false;
       }
     };
@@ -242,9 +439,144 @@ export function createArtifactAiSlice<
             }),
           );
         },
+
+        addSessionArtifactLink: (sessionId, artifactId, linkType) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              const links = draft.artifactAi.config.sessionArtifactLinks;
+
+              // Check if link already exists
+              const existingLink = links.find(
+                (link) =>
+                  link.sessionId === sessionId &&
+                  link.artifactId === artifactId,
+              );
+
+              if (!existingLink) {
+                links.push({
+                  sessionId,
+                  artifactId,
+                  createdAt: Date.now(),
+                  linkType,
+                });
+              } else if (
+                existingLink.linkType === 'attached' &&
+                linkType === 'created'
+              ) {
+                // Creation is durable provenance. Promote an existing link
+                // without changing its ordering timestamp; never downgrade it.
+                existingLink.linkType = 'created';
+              }
+            }),
+          );
+        },
+
+        removeSessionArtifactLink: (sessionId, artifactId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks =
+                draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) =>
+                    !(
+                      link.sessionId === sessionId &&
+                      link.artifactId === artifactId
+                    ),
+                );
+            }),
+          );
+        },
+
+        removeAllLinksForSession: (sessionId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks =
+                draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) => link.sessionId !== sessionId,
+                );
+            }),
+          );
+        },
+
+        removeAllLinksForArtifact: (artifactId) => {
+          set((state) =>
+            produce(state, (draft: TRoomState) => {
+              draft.artifactAi.config.sessionArtifactLinks =
+                draft.artifactAi.config.sessionArtifactLinks.filter(
+                  (link) => link.artifactId !== artifactId,
+                );
+            }),
+          );
+        },
+
+        hasSessionArtifactLink: (sessionId, artifactId) => {
+          return get().artifactAi.config.sessionArtifactLinks.some(
+            (link) =>
+              link.sessionId === sessionId && link.artifactId === artifactId,
+          );
+        },
+
+        getArtifactIdsForSession: (sessionId) => {
+          return getArtifactIdsForAiSession({
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
+            sessionId,
+          });
+        },
+
+        getSessionIdsForArtifact: (artifactId) => {
+          return get()
+            .artifactAi.config.sessionArtifactLinks.filter(
+              (link) => link.artifactId === artifactId,
+            )
+            .sort((a, b) => a.createdAt - b.createdAt)
+            .map((link) => link.sessionId);
+        },
+
+        getLatestArtifactForSession: (sessionId) => {
+          return getLatestArtifactIdForAiSession({
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
+            sessionId,
+          });
+        },
+
+        getCreatorSessionForArtifact: (artifactId) => {
+          return getCreatorSessionIdForArtifact({
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
+            artifactId,
+          });
+        },
+
+        togglePinArtifact: (artifactId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const pinnedArtifactIds =
+                draft.artifactAi.config.pinnedArtifactIds;
+              const index = pinnedArtifactIds?.indexOf(artifactId) ?? -1;
+              if (index === -1) {
+                if (!draft.artifacts.config.artifactsById[artifactId]) return;
+                if (!pinnedArtifactIds) {
+                  draft.artifactAi.config.pinnedArtifactIds = [artifactId];
+                } else {
+                  pinnedArtifactIds.push(artifactId);
+                }
+              } else {
+                pinnedArtifactIds?.splice(index, 1);
+              }
+            }),
+          );
+        },
+
+        isPinnedArtifact: (artifactId) => {
+          const pinnedIds = get().artifactAi.config.pinnedArtifactIds ?? [];
+          return pinnedIds.includes(artifactId);
+        },
+
+        // === INITIALIZATION ===
         initialize: async () => {
           if (!autoSync || unsubscribe) return;
-          let previousSnapshot = getArtifactAiSyncSnapshot(get());
+          const initialState = get();
+          previousArtifactId = initialState.artifacts.config.currentArtifactId;
+          previousSessionId = initialState.ai.config.currentSessionId;
+          let previousSnapshot = getArtifactAiSyncSnapshot(initialState);
           unsubscribe = (store as StoreApi<TRoomState>).subscribe((state) => {
             const nextSnapshot = getArtifactAiSyncSnapshot(state);
             if (isSameArtifactAiSyncSnapshot(previousSnapshot, nextSnapshot)) {
@@ -258,23 +590,6 @@ export function createArtifactAiSlice<
           unsubscribe?.();
           unsubscribe = undefined;
         },
-        setSessionArtifact: (sessionId, artifactId) => {
-          set((state) =>
-            produce(state, (draft: TRoomState) => {
-              draft.artifactAi.config.aiSessionArtifacts[sessionId] =
-                artifactId;
-            }),
-          );
-        },
-        clearSessionArtifact: (sessionId) => {
-          set((state) =>
-            produce(state, (draft: TRoomState) => {
-              delete draft.artifactAi.config.aiSessionArtifacts[sessionId];
-            }),
-          );
-        },
-        getSessionArtifactId: (sessionId) =>
-          get().artifactAi.config.aiSessionArtifacts[sessionId],
         createArtifactScopedSession: (name, modelProvider, model) => {
           const currentArtifactId = get().artifacts.config.currentArtifactId;
           if (
@@ -284,43 +599,43 @@ export function createArtifactAiSlice<
             return undefined;
           }
 
-          const hasExplicitSessionOptions = Boolean(
-            name || modelProvider || model,
-          );
-          if (!hasExplicitSessionOptions) {
-            const currentSessionId = get().ai.config.currentSessionId;
-            const emptySessionId = getEmptyAiSessionIdForArtifact({
-              sessions: get().ai.config.sessions,
-              aiSessionArtifacts: get().artifactAi.config.aiSessionArtifacts,
-              artifactId: currentArtifactId,
-              excludeSessionIds: currentSessionId
-                ? [currentSessionId]
-                : undefined,
-            });
-            if (emptySessionId) {
-              if (currentSessionId !== emptySessionId) {
-                get().ai.switchSession(emptySessionId);
-              }
-              return emptySessionId;
-            }
-          }
-
-          artifactAiSyncSuspended = true;
+          get().artifactAi.setSyncSuspended(true);
           try {
             get().ai.createSession(name, modelProvider, model);
             const sessionId = get().ai.getCurrentSession()?.id;
             if (!sessionId) return undefined;
-            get().artifactAi.setSessionArtifact(sessionId, currentArtifactId);
+            get().artifactAi.addSessionArtifactLink(
+              sessionId,
+              currentArtifactId,
+              'attached',
+            );
             return sessionId;
           } finally {
-            artifactAiSyncSuspended = false;
+            // Use setSyncSuspended(false) rather than clearing the flag
+            // directly so the change-detection baseline is re-anchored to the
+            // freshly created session. Otherwise previousSessionId would still
+            // point at the pre-creation session and the following
+            // selectLatestSessionForArtifact would be misread as a session
+            // change and could revert the artifact selection.
+            get().artifactAi.setSyncSuspended(false);
             get().artifactAi.selectLatestSessionForArtifact(currentArtifactId);
           }
         },
         selectLatestSessionForArtifact: (artifactId) => {
+          // Without a target artifact there is nothing to align the session
+          // against, so this is a no-op. In particular we must NOT clear the
+          // current session here: an unlinked (artifact-less) chat — such as
+          // the ones the welcome screen and "New Chat" create — is a valid
+          // current selection. Reconciliation passes that reach here with no
+          // current artifact (the P2/fallback branches) would otherwise
+          // deactivate a freshly created or just-selected chat, dropping the
+          // UI back to the start screen.
+          if (!artifactId) {
+            return;
+          }
           const sessionId = getLatestAiSessionIdForArtifact({
             sessions: get().ai.config.sessions,
-            aiSessionArtifacts: get().artifactAi.config.aiSessionArtifacts,
+            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
             artifactId,
           });
           if (sessionId) {
@@ -340,6 +655,16 @@ export function createArtifactAiSlice<
         },
         cleanupSessionArtifacts,
         syncCurrentArtifactAiSession,
+        setSyncSuspended: (suspended) => {
+          artifactAiSyncSuspended = suspended;
+          if (!suspended) {
+            // Re-baseline so the next genuine change is measured against the
+            // fully-settled selection rather than a stale/undefined baseline.
+            const state = get();
+            previousArtifactId = state.artifacts.config.currentArtifactId;
+            previousSessionId = state.ai.config.currentSessionId;
+          }
+        },
       },
     };
   });

@@ -2476,9 +2476,6 @@ importers:
 
   packages/ai-config:
     dependencies:
-      '@paralleldrive/cuid2':
-        specifier: ^3.0.0
-        version: 3.3.0
       zod:
         specifier: 4.1.13
         version: 4.1.13
@@ -3619,8 +3616,8 @@ importers:
         specifier: ^3.0.5
         version: 3.2.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       react-resizable-panels:
-        specifier: ^4.7.6
-        version: 4.11.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        specifier: ^4.12.1
+        version: 4.12.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       zod:
         specifier: 4.1.13
         version: 4.1.13
@@ -4487,8 +4484,8 @@ importers:
         specifier: ^7.63.0
         version: 7.75.0(react@19.2.1)
       react-resizable-panels:
-        specifier: ^4.7.6
-        version: 4.11.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        specifier: ^4.12.1
+        version: 4.12.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -14827,8 +14824,8 @@ packages:
       react: 19.2.1
       react-dom: 19.2.1
 
-  react-resizable-panels@4.11.0:
-    resolution: {integrity: sha512-LPk/AkFDGkg7SsbOyL93ojrE6E7lhrxxDwnYNjfmnSeI6BE7Sje6dB24PXgZk8DeugdeXNk1LO+ohRqIjhxiLw==}
+  react-resizable-panels@4.12.2:
+    resolution: {integrity: sha512-NwY5LCo4WrxVvDh0xoMML6EMLPONP/8ckKcIdpnojxexoatZdjLiRqLJQjQK5CPkd4SYiB/2M5BVrjZBQtOO7Q==}
     peerDependencies:
       react: 19.2.1
       react-dom: 19.2.1
@@ -30054,7 +30051,7 @@ snapshots:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
 
-  react-resizable-panels@4.11.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+  react-resizable-panels@4.12.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
     dependencies:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)

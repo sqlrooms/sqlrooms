@@ -12,7 +12,7 @@
       },
       "package.json": {
         "file": {
-          "contents": "{\n  \"name\": \"sqlrooms-generated-app\",\n  \"private\": true,\n  \"version\": \"0.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"preview\": \"vite preview --port 5173\"\n  },\n  \"dependencies\": {\n    \"react\": \"^19.0.0\",\n    \"react-dom\": \"^19.0.0\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-react\": \"^5.2.0\",\n    \"vite\": \"^8.2.0\"\n  }\n}\n",
+          "contents": "{\n  \"name\": \"sqlrooms-generated-app\",\n  \"version\": \"0.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"scripts\": {\n    \"build\": \"vite build\",\n    \"dev\": \"vite\",\n    \"preview\": \"vite preview --port 5173\"\n  },\n  \"dependencies\": {\n    \"react\": \"^19.0.0\",\n    \"react-dom\": \"^19.0.0\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-react\": \"^5.2.0\",\n    \"vite\": \"^8.2.0\"\n  }\n}\n",
           "encoding": "utf-8"
         }
       },

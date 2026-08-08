@@ -16,3 +16,28 @@ export const ArtifactsSliceConfig = z.object({
   currentArtifactId: z.string().optional(),
 });
 export type ArtifactsSliceConfig = z.infer<typeof ArtifactsSliceConfig>;
+
+/**
+ * Type of relationship between an AI session and an artifact.
+ */
+export type ArtifactSessionLinkType = 'created' | 'attached';
+
+/**
+ * A link between an AI session and an artifact with metadata.
+ */
+export type ArtifactSessionLink = {
+  sessionId: string;
+  artifactId: string;
+  createdAt: number; // Unix timestamp in milliseconds
+  linkType: ArtifactSessionLinkType;
+};
+
+/**
+ * Zod schema for ArtifactSessionLink validation.
+ */
+export const ArtifactSessionLinkSchema = z.object({
+  sessionId: z.string(),
+  artifactId: z.string(),
+  createdAt: z.number(),
+  linkType: z.enum(['created', 'attached']),
+});

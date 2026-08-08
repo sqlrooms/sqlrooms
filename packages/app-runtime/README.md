@@ -80,7 +80,10 @@ updates:
 
 ```ts
 const commands = createHtmlAppRevisionCommands({
-  resolveCurrentAppId: (state) => state.currentHtmlAppId,
+  resolveCurrentAppId: (state, context) =>
+    context.invocation.target?.kind === 'artifact'
+      ? context.invocation.target.id
+      : state.currentHtmlAppId,
   getHtmlAppIds: (state) => Object.keys(state.htmlApps.config.appsById),
   getHtmlAppState: (state, appId) => state.htmlApps.getApp(appId),
   renameHtmlApp: (state, appId, title) =>

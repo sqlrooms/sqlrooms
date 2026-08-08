@@ -130,13 +130,6 @@ function createArtifactCommand(
         message: `Created ${group.toLowerCase()} artifact "${artifactId}".`,
         data: {
           artifactId,
-          artifactTargetChange: {
-            artifactId,
-            artifactType,
-            title: uniqueTitle,
-            change: 'created',
-            shouldContinueChat: true,
-          },
         },
       };
     },
@@ -181,16 +174,6 @@ function createDashboardCreateArtifactCommand(): RoomCommand<RoomState> {
         message: `Created dashboard artifact "${artifactId}".`,
         data: {
           artifactId,
-          artifactTargetChange: {
-            artifactId,
-            artifactType: 'dashboard',
-            title:
-              state.artifacts.getArtifact(artifactId)?.title ??
-              title ??
-              'Dashboard',
-            change: 'created',
-            shouldContinueChat: true,
-          },
         },
       };
     },
@@ -330,13 +313,6 @@ export function createDashboardCommands({
           message: `Selected artifact "${artifactId}".`,
           data: {
             artifactId,
-            artifactTargetChange: {
-              artifactId,
-              artifactType: artifact.type,
-              title: artifact.title,
-              change: 'selected',
-              shouldContinueChat: true,
-            },
           },
         };
       },

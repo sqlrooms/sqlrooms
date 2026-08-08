@@ -16,6 +16,7 @@ import {
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
   UIMessage,
@@ -77,6 +78,8 @@ export type AiSliceState = {
     destroy?: () => Promise<void>;
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
+    /** Transient composer prompt used before the first session is created. */
+    draftPrompt: string;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
     tools: StoredToolSet;
@@ -84,6 +87,8 @@ export type AiSliceState = {
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
+    /** Update the transient composer prompt used when no session is active. */
+    setDraftPrompt: (prompt: string) => void;
     /** Set API key error flag for a provider */
     setApiKeyError: (provider: string, hasError: boolean) => void;
     /** Check if there's an API key error for the current provider */
@@ -169,11 +174,25 @@ export type AiSliceState = {
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
+    /**
+     * Resolve the model/provider that would be used right now: the current
+     * session's selection when a session exists, otherwise the default that a
+     * lazily created session would receive. Useful before any session exists,
+     * e.g. to know which provider a first-time API key belongs to.
+     */
+    getSelectedModel: () => {modelProvider: string; model: string};
+    /**
+     * Create a new chat session, make it the current session, and open it in a
+     * tab. When `modelProvider`/`model` are omitted the current selection (or
+     * configured defaults) are used.
+     *
+     * @returns The id of the newly created session.
+     */
     createSession: (
       name?: string,
       modelProvider?: string,
       model?: string,
-    ) => void;
+    ) => string;
     forkSessionFromMessage: (
       args: ForkSessionFromMessageArgs,
     ) => string | undefined;
@@ -181,9 +200,23 @@ export type AiSliceState = {
       sessionId: string,
     ) => AiSessionForkOrigin | undefined;
     switchSession: (sessionId: string) => void;
+    /**
+     * Clear the current session selection (sets `currentSessionId` to
+     * `undefined`) without deleting any session, returning the UI to the
+     * start/new-chat state. A fresh session is created lazily on the next
+     * message.
+     */
+    resetCurrentSession: () => void;
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
+    /**
+     * Toggle the pinned state of a session. Pinning an unknown session id is a
+     * no-op; unpinning is always allowed (also used to drop stale ids).
+     */
+    togglePinSession: (sessionId: string) => void;
+    /** @returns `true` when the session is currently pinned. */
+    isPinnedSession: (sessionId: string) => boolean;
     getCurrentSession: () => ChatSessionSchema | undefined;
     getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
     setSessionRunContext: (
@@ -203,8 +236,22 @@ export type AiSliceState = {
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolRenderer: (toolName: string) => ToolRenderer | undefined;
-    getApiKeyFromSettings: () => string;
-    getBaseUrlFromSettings: () => string | undefined;
+    /**
+     * Resolve the API key for the outbound provider. When `provider`/`model`
+     * are omitted the current session's provider (or the default) is used;
+     * callers targeting a specific provider (e.g. one-shot `sendPrompt`) must
+     * pass it so the key matches the endpoint the request is sent to.
+     */
+    getApiKeyFromSettings: (provider?: string, model?: string) => string;
+    /**
+     * Resolve the base URL for the outbound provider. See
+     * {@link AiSliceState.ai.getApiKeyFromSettings} for the `provider`/`model`
+     * override semantics.
+     */
+    getBaseUrlFromSettings: (
+      provider?: string,
+      model?: string,
+    ) => string | undefined;
     getMaxStepsFromSettings: () => number;
     getFullInstructions: (sessionId?: string) => string;
     getLocalChatTransport: (
@@ -412,6 +459,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         return {modelProvider: candidateProvider!, model: candidateModel!};
       }
 
+      // A provider-only request is authoritative even when it omits the model.
+      // Select that provider's first available model instead of silently
+      // reverting to the default provider/model pair.
+      if (candidateProvider) {
+        const firstProviderModel = availableModels.find(
+          (candidate) => candidate.provider === candidateProvider,
+        );
+        if (firstProviderModel) {
+          return {
+            modelProvider: firstProviderModel.provider,
+            model: firstProviderModel.value,
+          };
+        }
+      }
+
       if (modelIsAvailable(defaultProvider, defaultModel)) {
         return {modelProvider: defaultProvider, model: defaultModel};
       }
@@ -496,6 +558,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
         config: baseConfig,
         promptSuggestionsVisible: true,
+        draftPrompt: baseConfig.sessions.length === 0 ? initialPrompt : '',
         apiKeyErrors: {},
         tools,
         toolRenderers: params.toolRenderers ?? {},
@@ -731,6 +794,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
         },
 
+        setDraftPrompt: (prompt: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.draftPrompt = prompt;
+            }),
+          );
+        },
+
         setApiKeyError: (provider: string, hasError: boolean) => {
           set((state) =>
             produce(state, (draft) => {
@@ -806,6 +877,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
         },
 
+        getSelectedModel: () => {
+          const currentSession = get().ai.getCurrentSession();
+          return getResolvedModelSelection(
+            currentSession?.modelProvider,
+            currentSession?.model,
+          );
+        },
+
         /**
          * Get the current active session
          */
@@ -870,16 +949,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           model?: string,
         ) => {
           const currentSession = get().ai.getCurrentSession();
+          const firstSessionPrompt = currentSession ? '' : get().ai.draftPrompt;
           const modelSelection = getResolvedModelSelection(
-            modelProvider || currentSession?.modelProvider,
-            model || currentSession?.model,
+            modelProvider ?? currentSession?.modelProvider,
+            model ??
+              (modelProvider === undefined ? currentSession?.model : undefined),
           );
           const newSessionId = createId();
 
-          // Generate a default name if none is provided
+          // Generate a unique name if none is provided
           let sessionName = name;
           if (!sessionName) {
-            sessionName = 'Untitled';
+            const existingNames = get().ai.config.sessions.map(
+              (s: ChatSessionSchema) => s.name,
+            );
+            sessionName = generateUniqueName('Chat', existingNames, ' ');
           }
 
           set((state) =>
@@ -894,12 +978,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 createdAt: new Date(),
                 uiMessages: [],
                 messagesRevision: 0,
-                prompt: '',
+                prompt: firstSessionPrompt,
                 draftContextItemIds: undefined,
                 isRunning: false,
                 lastOpenedAt: now,
               });
               draft.ai.config.currentSessionId = newSessionId;
+              draft.ai.draftPrompt = '';
               // Add new session to open tabs
               if (!draft.ai.config.openSessionTabs) {
                 draft.ai.config.openSessionTabs = [];
@@ -907,6 +992,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               draft.ai.config.openSessionTabs.push(newSessionId);
             }),
           );
+          return newSessionId;
         },
 
         forkSessionFromMessage: (args) => {
@@ -969,6 +1055,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         /**
+         * Reset the current session (set currentSessionId to undefined)
+         */
+        resetCurrentSession: () => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.config.currentSessionId = undefined;
+            }),
+          );
+        },
+
+        /**
          * Set the list of open session tab IDs
          */
         setOpenSessionTabs: (tabs: string[]) => {
@@ -1025,6 +1122,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (sessionIndex !== -1) {
                 draft.ai.config.sessions.splice(sessionIndex, 1);
                 delete draft.ai.config.sessionForks[sessionId];
+                if (draft.ai.config.pinnedSessionIds) {
+                  draft.ai.config.pinnedSessionIds =
+                    draft.ai.config.pinnedSessionIds.filter(
+                      (id) => id !== sessionId,
+                    );
+                }
                 if (draft.ai.config.openSessionTabs) {
                   draft.ai.config.openSessionTabs =
                     draft.ai.config.openSessionTabs.filter(
@@ -1054,6 +1157,40 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+        },
+
+        /**
+         * Toggle pin status for a session
+         */
+        togglePinSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.ai.config.pinnedSessionIds) {
+                draft.ai.config.pinnedSessionIds = [];
+              }
+              const index = draft.ai.config.pinnedSessionIds.indexOf(sessionId);
+              if (index === -1) {
+                // Only pin sessions that exist; ignore unknown ids so stale
+                // references are not persisted.
+                const sessionExists = draft.ai.config.sessions.some(
+                  (s: ChatSessionSchema) => s.id === sessionId,
+                );
+                if (sessionExists) {
+                  draft.ai.config.pinnedSessionIds.push(sessionId);
+                }
+              } else {
+                draft.ai.config.pinnedSessionIds.splice(index, 1);
+              }
+            }),
+          );
+        },
+
+        /**
+         * Check if a session is pinned
+         */
+        isPinnedSession: (sessionId: string) => {
+          const pinnedIds = get().ai.config.pinnedSessionIds ?? [];
+          return pinnedIds.includes(sessionId);
         },
 
         /**
@@ -1107,60 +1244,69 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return get().ai.toolRenderers[toolName];
         },
 
-        getBaseUrlFromSettings: () => {
+        getBaseUrlFromSettings: (providerOverride, modelOverride) => {
           // First try the getBaseUrl function if provided
           const baseUrlFromFunction = getBaseUrl?.();
           if (baseUrlFromFunction) {
             return baseUrlFromFunction;
           }
 
-          // Fall back to settings
+          // Fall back to settings. Resolve the same provider/model a newly
+          // created session would use when no current session exists.
           const store = get();
           if (hasAiSettingsConfig(store)) {
             const currentSession = getCurrentSessionFromState(store);
-            if (currentSession) {
-              if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.baseUrl;
-              }
-              const provider =
-                store.aiSettings.config.providers[currentSession.modelProvider];
-              return provider?.baseUrl;
+            const selection = getResolvedModelSelection(
+              providerOverride ?? currentSession?.modelProvider,
+              modelOverride ?? currentSession?.model,
+            );
+            const provider = providerOverride ?? selection.modelProvider;
+            const model = modelOverride ?? selection.model;
+            if (provider === 'custom') {
+              const customModel = store.aiSettings.config.customModels.find(
+                (m: {modelName: string}) => m.modelName === model,
+              );
+              return customModel?.baseUrl;
             }
+            return store.aiSettings.config.providers[provider]?.baseUrl;
           }
           return undefined;
         },
 
-        getApiKeyFromSettings: () => {
+        getApiKeyFromSettings: (providerOverride, modelOverride) => {
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
-          if (currentSession) {
-            // First try the getApiKey function if provided
-            const apiKeyFromFunction = getApiKey?.(
-              currentSession.modelProvider || 'openai',
-            );
-            if (apiKeyFromFunction) {
-              return apiKeyFromFunction;
-            }
+          const selection = getResolvedModelSelection(
+            providerOverride ?? currentSession?.modelProvider,
+            modelOverride ?? currentSession?.model,
+          );
+          // Explicit provider overrides remain authoritative for one-shot
+          // calls, while the model falls back to the resolved session default.
+          const provider = providerOverride ?? selection.modelProvider;
+          const model = modelOverride ?? selection.model;
 
-            // Fall back to settings
-            if (hasAiSettingsConfig(store)) {
-              if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.apiKey || '';
-              } else {
-                const provider =
-                  store.aiSettings.config.providers?.[
-                    currentSession.modelProvider
-                  ];
-                return provider?.apiKey || '';
-              }
+          // First try the getApiKey function if provided. This must not depend
+          // on a current chat session: chat-free flows (e.g. in-place block
+          // edits) resolve a key without ever selecting a session.
+          const apiKeyFromFunction = getApiKey?.(provider);
+          if (apiKeyFromFunction) {
+            return apiKeyFromFunction;
+          }
+
+          // Fall back to settings for the resolved provider. With lazy session
+          // creation the key may be read before any session exists (e.g. the
+          // composer's inline API-key prompt); the default provider is used then
+          // so users who already saved a key are not asked to re-enter it.
+          if (hasAiSettingsConfig(store)) {
+            if (provider === 'custom') {
+              const customModel = store.aiSettings.config.customModels.find(
+                (m: {modelName: string}) => m.modelName === model,
+              );
+              return customModel?.apiKey || '';
+            } else {
+              return (
+                store.aiSettings.config.providers?.[provider]?.apiKey || ''
+              );
             }
           }
           return '';
@@ -1244,10 +1390,18 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             throw new ToolAbortError(TOOL_CALL_CANCELLED);
           }
 
+          const selectedModel = state.ai.getSelectedModel();
           const provider =
-            modelProvider || currentSession?.modelProvider || defaultProvider;
-          const modelId = modelName || currentSession?.model || defaultModel;
-          const baseURL = baseUrl ?? state.ai.getBaseUrlFromSettings() ?? '';
+            modelProvider ??
+            currentSession?.modelProvider ??
+            selectedModel.modelProvider;
+          const modelId =
+            modelName ?? currentSession?.model ?? selectedModel.model;
+          // Resolve the key/base URL for the SAME provider the request targets,
+          // so an explicit provider/base URL never receives another provider's
+          // credential.
+          const baseURL =
+            baseUrl ?? state.ai.getBaseUrlFromSettings(provider, modelId) ?? '';
           const tools = state.ai.tools;
 
           const toolsWithoutExecute = Object.fromEntries(
@@ -1255,7 +1409,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
 
           const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(),
+            apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
             name: provider,
             baseURL,
             includeUsage: true,

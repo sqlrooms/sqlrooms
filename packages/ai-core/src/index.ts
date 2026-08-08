@@ -95,6 +95,10 @@ export {
   defaultChatRenderingComponents,
 } from './components/defaultChatRendering';
 export {
+  LocalAgentChatRuntimeProvider,
+  SessionChatRuntimeProvider,
+} from './components/ChatRuntimeContext';
+export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,

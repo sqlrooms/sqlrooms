@@ -289,22 +289,24 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
   });
 
-  it('honors custom defaults when initialized without persisted config', () => {
+  it('carries the initial prompt through the lazy first-session boundary', () => {
     const store = createStore<AiSliceState>((set, get, store) =>
       createAiSlice({
         tools: {} as any,
         getInstructions: () => 'test instructions',
-        defaultProvider: 'anthropic',
-        defaultModel: 'claude-test',
-        initialPrompt: 'start here',
+        initialPrompt: 'Start with this question',
+        config: {sessions: []},
       })(set, get, store),
     );
 
-    expect(store.getState().ai.getCurrentSession()).toMatchObject({
-      modelProvider: 'anthropic',
-      model: 'claude-test',
-      prompt: 'start here',
-    });
+    expect(store.getState().ai.draftPrompt).toBe('Start with this question');
+
+    store.getState().ai.createSession();
+
+    expect(store.getState().ai.getCurrentSession()?.prompt).toBe(
+      'Start with this question',
+    );
+    expect(store.getState().ai.draftPrompt).toBe('');
   });
 
   it('opens the repaired current session when initialized with a stale current session id', () => {
@@ -364,6 +366,27 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.config.currentSessionId).toBeUndefined();
     expect(store.getState().ai.config.openSessionTabs).toEqual([]);
     expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+  });
+
+  it('does not pin sessions that do not exist', () => {
+    const store = createTestStore();
+
+    store.getState().ai.togglePinSession('missing-session');
+
+    expect(store.getState().ai.isPinnedSession('missing-session')).toBe(false);
+    expect(store.getState().ai.config.pinnedSessionIds ?? []).toEqual([]);
+  });
+
+  it('removes a session id from pinnedSessionIds when the session is deleted', () => {
+    const store = createTestStore();
+
+    store.getState().ai.togglePinSession('session-1');
+    expect(store.getState().ai.isPinnedSession('session-1')).toBe(true);
+
+    store.getState().ai.deleteSession('session-1');
+
+    expect(store.getState().ai.isPinnedSession('session-1')).toBe(false);
+    expect(store.getState().ai.config.pinnedSessionIds ?? []).toEqual([]);
   });
 
   it('returns stable derived analysis results for unchanged UI messages', () => {
@@ -817,6 +840,98 @@ describe('AiSlice model selection', () => {
     expect(session?.model).toBe('claude-sonnet-4.5');
   });
 
+  it('uses the requested provider when creating a session without a model', () => {
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'gpt-4.1',
+        getAvailableModels: () => [
+          {provider: 'openai', value: 'gpt-4.1'},
+          {provider: 'anthropic', value: 'claude-sonnet-4.5'},
+        ],
+        config: {sessions: []},
+      })(set, get, store),
+    );
+
+    store.getState().ai.createSession(undefined, 'anthropic');
+
+    const session = store.getState().ai.getCurrentSession();
+    expect(session?.modelProvider).toBe('anthropic');
+    expect(session?.model).toBe('claude-sonnet-4.5');
+  });
+
+  it('uses the first available model for a chat-free prompt with no valid default', async () => {
+    const settingsConfig: AiSettingsSliceConfig = {
+      providers: {
+        anthropic: {
+          baseUrl: 'https://api.anthropic.example/v1',
+          apiKey: 'anthropic-key',
+          models: [{modelName: 'claude-sonnet-4.5'}],
+        },
+      },
+      customModels: [],
+      modelParameters: {maxSteps: 50, additionalInstruction: ''},
+    };
+    const store = createStore<TestStoreState>((set, get, store) => ({
+      ...createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'missing-model',
+        getAvailableModels: () => [
+          {provider: 'anthropic', value: 'claude-sonnet-4.5'},
+        ],
+        config: {sessions: []},
+      })(set, get, store),
+      aiSettings: {config: settingsConfig},
+    }));
+    const previousFetch = globalThis.fetch;
+    const fetchMock = jest.fn<typeof fetch>(
+      async () =>
+        new Response(
+          JSON.stringify({
+            id: 'chatcmpl-test',
+            object: 'chat.completion',
+            created: 0,
+            model: 'claude-sonnet-4.5',
+            choices: [
+              {
+                index: 0,
+                message: {role: 'assistant', content: 'fallback response'},
+                finish_reason: 'stop',
+              },
+            ],
+            usage: {
+              prompt_tokens: 1,
+              completion_tokens: 1,
+              total_tokens: 2,
+            },
+          }),
+          {status: 200, headers: {'content-type': 'application/json'}},
+        ),
+    );
+    globalThis.fetch = fetchMock;
+
+    try {
+      await expect(store.getState().ai.sendPrompt('hello')).resolves.toBe(
+        'fallback response',
+      );
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [request, init] = fetchMock.mock.calls[0] ?? [];
+      expect(String(request)).toBe(
+        'https://api.anthropic.example/v1/chat/completions',
+      );
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        model: 'claude-sonnet-4.5',
+      });
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+  });
+
   it('switches provider without ambiguity when model names are identical', () => {
     const store = createTestStore();
 
@@ -840,6 +955,117 @@ describe('AiSlice model selection', () => {
     expect(store.getState().ai.getApiKeyFromSettings()).toBe('anthropic-key');
     expect(store.getState().ai.getBaseUrlFromSettings()).toBe(
       'https://api.anthropic.com',
+    );
+  });
+
+  it('resolves key/base URL for an explicit provider, not the session provider', () => {
+    const store = createTestStore();
+
+    // The current session is on openai; a one-shot call targeting anthropic
+    // must resolve anthropic's key/base URL, never openai's.
+    expect(store.getState().ai.getCurrentSession()?.modelProvider).toBe(
+      'openai',
+    );
+    expect(store.getState().ai.getApiKeyFromSettings('anthropic')).toBe(
+      'anthropic-key',
+    );
+    expect(store.getState().ai.getBaseUrlFromSettings('anthropic')).toBe(
+      'https://api.anthropic.com',
+    );
+  });
+
+  it('resolves API key/base URL from callbacks without a current session', () => {
+    // Chat-free flows (e.g. in-place block edits) never select a session, yet
+    // must still resolve a key. The getApiKey/getBaseUrl callbacks do not
+    // depend on a session, so they must be consulted even when none exists.
+    const store = createStore<AiSliceState>((set, get, store) =>
+      createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        getApiKey: (provider) => `key-for-${provider}`,
+        getBaseUrl: () => 'https://virtual.example/v1',
+        config: {
+          sessions: [],
+        },
+      })(set, get, store),
+    );
+
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+    expect(store.getState().ai.getApiKeyFromSettings()).toBe('key-for-openai');
+    expect(store.getState().ai.getBaseUrlFromSettings()).toBe(
+      'https://virtual.example/v1',
+    );
+  });
+
+  it('resolves the default provider key from settings without a current session', () => {
+    // Lazy session creation: Chat.Composer may read the API key before any
+    // session exists. Stores that configure keys via aiSettings (not a
+    // getApiKey callback) must still surface the saved default-provider key so
+    // the inline API-key prompt does not appear for users who already have one.
+    const settingsConfig: AiSettingsSliceConfig = {
+      providers: {
+        openai: {
+          baseUrl: 'https://api.openai.com/v1',
+          apiKey: 'openai-key',
+          models: [{modelName: 'shared-model'}],
+        },
+      },
+      customModels: [],
+      modelParameters: {maxSteps: 50, additionalInstruction: ''},
+    };
+
+    const store = createStore<TestStoreState>((set, get, store) => ({
+      ...createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'openai',
+        defaultModel: 'shared-model',
+        config: {
+          sessions: [],
+        },
+      })(set, get, store),
+      aiSettings: {
+        config: settingsConfig,
+      },
+    }));
+
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+    expect(store.getState().ai.getApiKeyFromSettings()).toBe('openai-key');
+  });
+
+  it('resolves a custom default model from settings without a current session', () => {
+    const settingsConfig: AiSettingsSliceConfig = {
+      providers: {},
+      customModels: [
+        {
+          modelName: 'private-model',
+          apiKey: 'private-key',
+          baseUrl: 'https://models.example/v1',
+        },
+      ],
+      modelParameters: {maxSteps: 50, additionalInstruction: ''},
+    };
+
+    const store = createStore<TestStoreState>((set, get, store) => ({
+      ...createAiSlice({
+        tools: {} as any,
+        getInstructions: () => 'test instructions',
+        defaultProvider: 'custom',
+        defaultModel: 'private-model',
+        getAvailableModels: () => [
+          {provider: 'custom', value: 'private-model'},
+        ],
+        config: {sessions: []},
+      })(set, get, store),
+      aiSettings: {config: settingsConfig},
+    }));
+
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+    expect(store.getState().ai.getApiKeyFromSettings()).toBe('private-key');
+    expect(store.getState().ai.getBaseUrlFromSettings()).toBe(
+      'https://models.example/v1',
     );
   });
 
