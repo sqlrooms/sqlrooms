@@ -809,6 +809,29 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
     // injects when absent; it doesn't overwrite an explicit meters choice.
     expect(getLayer(result).widthUnits).toBe('pixels');
   });
+
+  test('fixes inverted widthMaxPixels < widthMinPixels', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getWidth: 5,
+            widthUnits: 'pixels',
+            widthMinPixels: 20,
+            widthMaxPixels: 10,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    const layer = getLayer(result);
+    expect(layer.widthMinPixels).toBe(20);
+    expect(layer.widthMaxPixels).toBe(20);
+    expect(layer.getWidth).toBe(20);
+    expect(layer.widthUnits).toBe('pixels');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -916,6 +939,33 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
       ),
     );
     expect(getLayer(result).radius).toBe(100);
+  });
+
+  test('strips radiusUnits:pixels and point radius leftovers', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radius: 296,
+            radiusUnits: 'pixels',
+            getRadius: 5,
+            radiusMinPixels: 5,
+            radiusMaxPixels: 45,
+            radiusPixels: 63,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    const layer = getLayer(result);
+    expect(layer.radius).toBe(296);
+    expect(layer.radiusUnits).toBe('meters');
+    expect(layer.getRadius).toBeUndefined();
+    expect(layer.radiusMinPixels).toBeUndefined();
+    expect(layer.radiusMaxPixels).toBeUndefined();
+    expect(layer.radiusPixels).toBeUndefined();
   });
 });
 

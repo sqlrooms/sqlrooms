@@ -283,11 +283,59 @@ export function setDeckMapLayerType(
       lt === 'columnlayer' ||
       lt === 'deckcolumnlayer'
     ) {
-      nextLayer.radius ??= 3;
-      nextLayer.elevationScale ??= 1;
+      const radius =
+        typeof nextLayer.radius === 'number' &&
+        Number.isFinite(nextLayer.radius) &&
+        nextLayer.radius > 0
+          ? nextLayer.radius
+          : 50;
+      const withRadius = applyDeckMapColumnRadiusMeters(nextLayer, radius);
+      if (typeof withRadius.elevationScale !== 'number') {
+        withRadius.elevationScale = 1;
+      }
+      return withRadius;
     }
     return nextLayer;
   });
+}
+
+/**
+ * ColumnLayer disk size is controlled by `radius` + `radiusUnits` (default meters).
+ * Point/heatmap leftovers like `radiusUnits: "pixels"` and `getRadius` make the UI
+ * label ("Nm") lie — e.g. radius 300 with pixels spans kilometers on the map.
+ */
+const COLUMN_LAYER_RADIUS_CONFLICT_KEYS = [
+  'getRadius',
+  'radiusMinPixels',
+  'radiusMaxPixels',
+  'radiusPixels',
+] as const;
+
+/** Apply a column radius in meters and strip conflicting point/heatmap radius props. */
+export function applyDeckMapColumnRadiusMeters(
+  layer: DeckMapLayerRecord,
+  radiusMeters: number,
+): DeckMapLayerRecord {
+  const next: DeckMapLayerRecord = {
+    ...layer,
+    radius: radiusMeters,
+    radiusUnits: 'meters',
+  };
+  for (const key of COLUMN_LAYER_RADIUS_CONFLICT_KEYS) {
+    delete next[key];
+  }
+  return next;
+}
+
+/** Set GeoArrowColumnLayer disk radius in meters. */
+export function setDeckMapLayerColumnRadius(
+  config: DeckMapConfig,
+  layerIndex: number,
+  radiusMeters: number,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) =>
+    applyDeckMapColumnRadiusMeters(layer, radiusMeters),
+  );
 }
 
 export function setDeckMapLayerGeometryColumn(

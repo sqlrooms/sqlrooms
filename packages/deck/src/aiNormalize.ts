@@ -163,6 +163,33 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       return {...l, widthUnits: 'pixels'};
     }
 
+    // Fix inverted width clamps (max < min) that silently cap rendered width
+    // below the UI slider range.
+    if (
+      typeof l['@@type'] === 'string' &&
+      LINE_LAYER_TYPES.has(l['@@type']) &&
+      typeof l.widthMinPixels === 'number' &&
+      typeof l.widthMaxPixels === 'number' &&
+      l.widthMaxPixels < l.widthMinPixels
+    ) {
+      changed = true;
+      const value = Math.max(
+        l.widthMinPixels,
+        l.widthMaxPixels,
+        typeof l.getWidth === 'number' ? l.getWidth : 0,
+      );
+      const next = {
+        ...l,
+        widthUnits: 'pixels',
+        widthMinPixels: value,
+        widthMaxPixels: value,
+      };
+      if (typeof l.getWidth !== 'string') {
+        next.getWidth = value;
+      }
+      return next;
+    }
+
     // Clamp heatmap radiusPixels: string expressions or zero/negative values
     // produce an invisible or broken heatmap.
     if (l['@@type'] === 'GeoArrowHeatmapLayer') {
@@ -174,12 +201,30 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
     }
 
     // Clamp column radius (meters): string expressions or zero/negative values
-    // produce invisible columns.
+    // produce invisible columns. Also strip point/heatmap radius leftovers —
+    // radiusUnits:"pixels" makes radius N mean N pixels (city-scale disks).
     if (l['@@type'] === 'GeoArrowColumnLayer') {
       const r = l.radius;
-      if (typeof r === 'string' || (typeof r === 'number' && r <= 0)) {
+      const hasInvalidRadius =
+        typeof r === 'string' || (typeof r === 'number' && r <= 0);
+      const hasPixelUnits = l.radiusUnits === 'pixels';
+      const hasPointRadiusLeak =
+        l.getRadius !== undefined ||
+        l.radiusMinPixels !== undefined ||
+        l.radiusMaxPixels !== undefined ||
+        l.radiusPixels !== undefined;
+      if (hasInvalidRadius || hasPixelUnits || hasPointRadiusLeak) {
         changed = true;
-        return {...l, radius: DEFAULT_AI_COLUMN_RADIUS_METERS};
+        const next: Record<string, unknown> = {...l};
+        if (hasInvalidRadius) {
+          next.radius = DEFAULT_AI_COLUMN_RADIUS_METERS;
+        }
+        next.radiusUnits = 'meters';
+        delete next.getRadius;
+        delete next.radiusMinPixels;
+        delete next.radiusMaxPixels;
+        delete next.radiusPixels;
+        return next;
       }
     }
 
