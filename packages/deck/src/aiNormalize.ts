@@ -178,7 +178,7 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         l.widthMaxPixels,
         typeof l.getWidth === 'number' ? l.getWidth : 0,
       );
-      const next = {
+      const next: Record<string, unknown> = {
         ...l,
         widthUnits: 'pixels',
         widthMinPixels: value,
