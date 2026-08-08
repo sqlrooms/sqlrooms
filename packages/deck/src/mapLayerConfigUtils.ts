@@ -97,6 +97,7 @@ const EXTRUDABLE_LAYER_TYPES = new Set([
   'polygonlayer',
   'geoarrowsolidpolygonlayer',
   'solidpolygonlayer',
+  'geojsonlayer',
 ]);
 
 const STROKE_LAYER_TYPES = new Set([
@@ -412,6 +413,14 @@ export const DECK_MAP_DEFAULT_LAYER_COLOR: readonly [
   number,
   number,
 ] = DEFAULT_LAYER_FILL_COLOR;
+
+/** Default stroke outline when `getLineColor` is unset. */
+export const DECK_MAP_DEFAULT_STROKE_COLOR: readonly [
+  number,
+  number,
+  number,
+  number,
+] = [0, 0, 0, 255];
 
 export function isDeckMapLayerFlatRgbaColor(
   value: unknown,

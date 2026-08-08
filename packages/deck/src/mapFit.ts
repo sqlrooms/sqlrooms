@@ -5,7 +5,7 @@ import {
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import type {Table as ArrowTable} from 'apache-arrow';
-import {useEffect, useMemo, useState, type RefObject} from 'react';
+import {useEffect, useMemo, useRef, useState, type RefObject} from 'react';
 import {
   DeckTableDatasetInvalidTableNameError,
   createDeckTableDatasetSql,
@@ -157,12 +157,14 @@ export function createDeckMapBoundsQuery(options: {
 
   if (fitToData.h3Column) {
     const column = escapeId(fitToData.h3Column);
+    // CAST to VARCHAR so string and integer H3 indexes both work with the
+    // community H3 extension after a cold start / refresh.
     return `
       SELECT
-        MIN(h3_cell_to_lng(${column})) AS min_longitude,
-        MIN(h3_cell_to_lat(${column})) AS min_latitude,
-        MAX(h3_cell_to_lng(${column})) AS max_longitude,
-        MAX(h3_cell_to_lat(${column})) AS max_latitude
+        MIN(h3_cell_to_lng(CAST(${column} AS VARCHAR))) AS min_longitude,
+        MIN(h3_cell_to_lat(CAST(${column} AS VARCHAR))) AS min_latitude,
+        MAX(h3_cell_to_lng(CAST(${column} AS VARCHAR))) AS max_longitude,
+        MAX(h3_cell_to_lat(CAST(${column} AS VARCHAR))) AS max_latitude
       FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_h3"
       WHERE ${column} IS NOT NULL
     `;
@@ -340,6 +342,10 @@ function createInitialFitState(key: string, requestVersion: number) {
   };
 }
 
+/** Retries when H3 extension install/load races or bounds are briefly unavailable. */
+const FIT_MAX_ATTEMPTS = 5;
+const FIT_RETRY_DELAY_MS = 750;
+
 /**
  * Executes host-neutral fit-to-data requests for a Deck map surface.
  *
@@ -375,6 +381,7 @@ export function useDeckMapFitController(options: {
   } = options;
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
   const [containerSize, setContainerSize] = useState({width: 0, height: 0});
+  const [retryNonce, setRetryNonce] = useState(0);
   const fitKey = useMemo(
     () => JSON.stringify({scopeId, fitToData, source}),
     [fitToData, scopeId, source],
@@ -388,6 +395,7 @@ export function useDeckMapFitController(options: {
     fitState.key === fitKey
       ? fitState
       : createInitialFitState(fitKey, fitState.handledRequestVersion);
+  const fitAttemptsRef = useRef({key: '', count: 0});
 
   useEffect(() => {
     if (!container) return;
@@ -404,6 +412,10 @@ export function useDeckMapFitController(options: {
   }, [container]);
 
   useEffect(() => {
+    if (fitAttemptsRef.current.key !== fitKey) {
+      fitAttemptsRef.current = {key: fitKey, count: 0};
+    }
+
     const hasManualRequest =
       requestVersion > activeFitState.handledRequestVersion;
     if (
@@ -417,12 +429,24 @@ export function useDeckMapFitController(options: {
     }
 
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const markHandled = () =>
       setFitState({
         key: fitKey,
         didAutoFit: true,
         handledRequestVersion: requestVersion,
       });
+    const scheduleRetry = (error?: Error) => {
+      fitAttemptsRef.current.count += 1;
+      if (fitAttemptsRef.current.count >= FIT_MAX_ATTEMPTS) {
+        if (error) onError?.(error);
+        markHandled();
+        return;
+      }
+      retryTimer = setTimeout(() => {
+        if (!cancelled) setRetryNonce((value) => value + 1);
+      }, FIT_RETRY_DELAY_MS);
+    };
 
     void (async () => {
       try {
@@ -442,19 +466,35 @@ export function useDeckMapFitController(options: {
         }
         const handle = await executeSql(query);
         const result = handle ? await handle : null;
-        if (cancelled || !result) return;
-        const bounds = readDeckMapBounds(result);
-        if (bounds) {
-          deckMapRef.current?.jumpTo(
-            fitDeckMapView({
-              bounds,
-              width: containerSize.width,
-              height: containerSize.height,
-              padding: fitToData.padding,
-              maxZoom: fitToData.maxZoom,
-            }),
+        if (cancelled) return;
+        if (!result) {
+          scheduleRetry(
+            new Error('Unable to fit map view to data: empty query result.'),
           );
+          return;
         }
+        const bounds = readDeckMapBounds(result);
+        if (!bounds) {
+          // Common on cold start when H3 cells are not readable yet, or the
+          // dataset briefly has no rows. Retry instead of locking world view.
+          scheduleRetry(
+            fitToData.h3Column
+              ? new Error(
+                  'Unable to fit map view to H3 data. Check that the hexagon column contains valid H3 indexes.',
+                )
+              : new Error('Unable to determine map bounds from data.'),
+          );
+          return;
+        }
+        deckMapRef.current?.jumpTo(
+          fitDeckMapView({
+            bounds,
+            width: containerSize.width,
+            height: containerSize.height,
+            padding: fitToData.padding,
+            maxZoom: fitToData.maxZoom,
+          }),
+        );
         markHandled();
         onSuccess?.();
       } catch (error) {
@@ -463,13 +503,13 @@ export function useDeckMapFitController(options: {
           error instanceof Error
             ? error
             : new Error('Unable to fit map view to data.');
-        onError?.(fitError);
-        markHandled();
+        scheduleRetry(fitError);
       }
     })();
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [
     activeFitState.didAutoFit,
@@ -484,6 +524,7 @@ export function useDeckMapFitController(options: {
     onError,
     onSuccess,
     requestVersion,
+    retryNonce,
     source,
   ]);
 }

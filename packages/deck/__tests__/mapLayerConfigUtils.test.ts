@@ -11,6 +11,7 @@ import {
   setDeckMapLayerColorScale,
   setDeckMapLayerType,
   usesGeometryColumnSetting,
+  usesExtrusionSettings,
   usesRadiusSetting,
   usesStrokeSetting,
   getDeckMapLayerStrokeDefault,
@@ -105,6 +106,15 @@ describe('mapLayerConfigUtils', () => {
     expect(usesStrokeSetting('GeoJsonLayer')).toBe(true);
     expect(usesStrokeSetting('GeoArrowPathLayer')).toBe(false);
     expect(usesStrokeSetting('GeoArrowHeatmapLayer')).toBe(false);
+  });
+
+  it('detects layer types that should use extrusion settings', () => {
+    expect(usesExtrusionSettings('GeoArrowH3HexagonLayer')).toBe(true);
+    expect(usesExtrusionSettings('GeoArrowPolygonLayer')).toBe(true);
+    expect(usesExtrusionSettings('GeoArrowColumnLayer')).toBe(true);
+    expect(usesExtrusionSettings('GeoJsonLayer')).toBe(true);
+    expect(usesExtrusionSettings('GeoArrowScatterplotLayer')).toBe(false);
+    expect(usesExtrusionSettings('GeoArrowPathLayer')).toBe(false);
   });
 
   it('returns deck defaults for stroked when omitted', () => {
