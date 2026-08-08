@@ -24,6 +24,9 @@ describe('Deck map settings controls', () => {
     expect(
       filterDeckMapColumns(columns, 'categorical').map((column) => column.name),
     ).toEqual(['name']);
+    expect(
+      filterDeckMapColumns(columns, 'colorable').map((column) => column.name),
+    ).toEqual(['name', 'magnitude', 'observed_at']);
     expect(filterDeckMapColumns(columns, 'all')).toBe(columns);
   });
 

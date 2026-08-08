@@ -83,6 +83,7 @@ import {
   DeckMapTableSelector as DataTableSelector,
   filterDeckMapColumns,
 } from './MapSettingsControls';
+import {isColumnCategorical, isColumnQuantitative} from '@sqlrooms/duckdb';
 import {regenerateMapConfigForTable} from './mapConfigUtils';
 import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
 
@@ -95,17 +96,37 @@ function getColorScaleColumnKind(
   return type === 'categorical' ? 'categorical' : 'quantitative';
 }
 
+/** Pick a color-scale type that matches the selected field's column kind. */
+function resolveColorScaleTypeForField(
+  columns: DataTable['columns'],
+  field: string | undefined,
+  preferredType: ColorScaleConfig['type'],
+): ColorScaleConfig['type'] {
+  if (!field) return preferredType;
+  const column = columns.find((candidate) => candidate.name === field);
+  if (!column?.type) return preferredType;
+  // String/boolean fields only work with categorical scales.
+  if (isColumnCategorical(column.type) && !isColumnQuantitative(column.type)) {
+    return 'categorical';
+  }
+  return preferredType;
+}
+
 /** First column that the color-field selector can show for this scale type. */
 function getDefaultColorScaleField(
   columns: DataTable['columns'],
   type: ColorScaleConfig['type'],
   preferred?: string,
 ): string | undefined {
-  const options = filterDeckMapColumns(columns, getColorScaleColumnKind(type));
-  if (preferred && options.some((column) => column.name === preferred)) {
+  const colorable = filterDeckMapColumns(columns, 'colorable');
+  if (preferred && colorable.some((column) => column.name === preferred)) {
     return preferred;
   }
-  return options[0]?.name;
+  const matchingKind = filterDeckMapColumns(
+    colorable,
+    getColorScaleColumnKind(type),
+  );
+  return matchingKind[0]?.name ?? colorable[0]?.name;
 }
 
 function schemeToColorRange(
@@ -384,11 +405,15 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
     type?: ColorScaleConfig['type'];
     scheme?: ColorScaleScheme;
   }) => {
-    const type = patch.type ?? colorScale?.type ?? 'sequential';
     const preferredField =
       patch.field ??
       colorScale?.field ??
       lastColorScaleFieldsRef.current[accessor];
+    const type = resolveColorScaleTypeForField(
+      columns,
+      preferredField,
+      patch.type ?? colorScale?.type ?? 'sequential',
+    );
     const field = getDefaultColorScaleField(columns, type, preferredField);
     if (!field) return;
 
@@ -397,7 +422,9 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
       patch.scheme ??
       (patch.type && patch.type !== colorScale?.type
         ? undefined
-        : colorScale?.scheme);
+        : type !== colorScale?.type
+          ? undefined
+          : colorScale?.scheme);
 
     applyConfig(
       setDeckMapLayerColorScale(
@@ -507,19 +534,11 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
               {columns.length > 0 ? (
                 <ColumnsProvider columns={columns}>
                   <Field label="Field" required>
-                    {colorScaleType === 'categorical' ? (
-                      <ColumnSelector.Categorical
-                        value={colorScale.field}
-                        onChange={(field) => updateColorScale({field})}
-                        disabled={readOnly}
-                      />
-                    ) : (
-                      <ColumnSelector.Quantitative
-                        value={colorScale.field}
-                        onChange={(field) => updateColorScale({field})}
-                        disabled={readOnly}
-                      />
-                    )}
+                    <ColumnSelector.Colorable
+                      value={colorScale.field}
+                      onChange={(field) => updateColorScale({field})}
+                      disabled={readOnly}
+                    />
                   </Field>
                 </ColumnsProvider>
               ) : null}
@@ -644,12 +663,16 @@ const AppearanceArcColorPanel: FC<{
     type?: ColorScaleConfig['type'];
     scheme?: ColorScaleScheme;
   }) => {
-    const type = patch.type ?? colorScale?.type ?? 'sequential';
     const preferredField =
       patch.field ??
       colorScale?.field ??
       lastColorScaleFieldsRef.current.getSourceColor ??
       lastColorScaleFieldsRef.current.getTargetColor;
+    const type = resolveColorScaleTypeForField(
+      columns,
+      preferredField,
+      patch.type ?? colorScale?.type ?? 'sequential',
+    );
     const field = getDefaultColorScaleField(columns, type, preferredField);
     if (!field) return;
 
@@ -659,7 +682,9 @@ const AppearanceArcColorPanel: FC<{
       patch.scheme ??
       (patch.type && patch.type !== colorScale?.type
         ? undefined
-        : colorScale?.scheme);
+        : type !== colorScale?.type
+          ? undefined
+          : colorScale?.scheme);
     const nextScale = createDeckMapLayerColorScale({
       field,
       type,
@@ -745,19 +770,11 @@ const AppearanceArcColorPanel: FC<{
           {columns.length > 0 ? (
             <ColumnsProvider columns={columns}>
               <Field label="Field" required>
-                {colorScaleType === 'categorical' ? (
-                  <ColumnSelector.Categorical
-                    value={colorScale.field}
-                    onChange={(field) => applySharedColorScale({field})}
-                    disabled={readOnly}
-                  />
-                ) : (
-                  <ColumnSelector.Quantitative
-                    value={colorScale.field}
-                    onChange={(field) => applySharedColorScale({field})}
-                    disabled={readOnly}
-                  />
-                )}
+                <ColumnSelector.Colorable
+                  value={colorScale.field}
+                  onChange={(field) => applySharedColorScale({field})}
+                  disabled={readOnly}
+                />
               </Field>
             </ColumnsProvider>
           ) : null}
@@ -925,7 +942,7 @@ const AppearanceExtrusionPanel: FC<{
           <div className="pt-1.5">
             <Slider
               min={0.01}
-              max={100}
+              max={1000}
               step={0.01}
               value={[(layer?.elevationScale as number | undefined) ?? 1]}
               onValueChange={(values) => {

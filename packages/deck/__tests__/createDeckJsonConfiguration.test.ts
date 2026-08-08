@@ -329,6 +329,69 @@ describe('createDeckJsonConfiguration', () => {
     );
   });
 
+  it('compiles getElevation scale range into a linear accessor', () => {
+    const pointField = new Field(
+      'geom',
+      new FixedSizeList(2, new Field('xy', new Float64())),
+      true,
+      new Map([['ARROW:extension:name', 'geoarrow.point']]),
+    );
+    const table = new Table(
+      new Schema([pointField, new Field('magnitude', new Float64())]),
+      {
+        geom: vectorFromArray(
+          [
+            [7.4386, 46.9511],
+            [8.5417, 47.3769],
+          ],
+          pointField.type,
+        ),
+        magnitude: vectorFromArray([1, 5], new Float64()),
+      },
+    );
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowColumnLayer',
+          id: 'columns',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+            geometryColumn: 'geom',
+          },
+          extruded: true,
+          elevationScale: 100,
+          getElevation: {
+            '@@function': 'scale',
+            field: 'magnitude',
+            type: 'linear',
+            domain: 'auto',
+            range: [0, 200],
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getElevation = converted.layers[0]?.props.getElevation;
+    expect(typeof getElevation).toBe('function');
+
+    const batch = table.batches[0]!;
+    const elev = getElevation as (info: {
+      index: number;
+      data: {data: unknown};
+      target: number[];
+    }) => number;
+
+    expect(elev({index: 0, data: {data: batch}, target: []})).toBeCloseTo(0);
+    expect(elev({index: 1, data: {data: batch}, target: []})).toBeCloseTo(200);
+  });
+
   it('keeps explicit getFillColor while still compiling getLineColor colorScale', () => {
     const table = createPointTable();
     const converter = createConverter({
