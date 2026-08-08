@@ -98,21 +98,26 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
+    // Only show one legend per layer. Try color scales in priority order
+    // (getFillColor first, as COLOR_SCALE_PROP_NAMES is ordered that way) and
+    // use the first one that successfully builds a legend.
+    let added = false;
     for (const {propName, colorScale} of resolvedColorScales) {
-      let resolvedLegend: ResolvedColorLegend | null = null;
       try {
-        resolvedLegend = buildColorScaleLegend({
+        const resolvedLegend = buildColorScaleLegend({
           table: datasetState.prepared.table,
           colorScale,
           title: resolveLegendTitle(layerProps, propName, colorScale.field),
         });
+        if (resolvedLegend) {
+          legends.push(resolvedLegend);
+          added = true;
+          break;
+        }
       } catch {
-        continue;
+        // try next accessor
       }
-
-      if (resolvedLegend) {
-        legends.push(resolvedLegend);
-      }
+      if (added) break;
     }
   }
 

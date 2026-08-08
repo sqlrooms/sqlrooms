@@ -37,21 +37,25 @@ Deck map tools:
   - "basic" (default): Use for straightforward requests — single layer, standard color scale, simple geometry binding. Stick ONLY to properties that the UI configurator supports: layer @@type, visibility, color scale (@@function colorScale), point radius (numeric getRadius with radiusUnits), line width (numeric getWidth with widthUnits), geometry/H3/arc column bindings, extrusion with a single elevation column. Do NOT use string accessors (@@= expressions), custom extensions, multiple layers, or advanced deck.gl props in basic mode. The user can fine-tune these maps through the settings panel.
   - "custom": Use when the request demands creative, complex, or advanced visualization — multiple layers, data-driven accessors (@@= expressions), custom color arrays, advanced deck.gl props (opacity, transitions, material, highlightColor, etc.), layer extensions, or any props not representable in the UI configurator. The UI settings panel will be disabled for custom configs; users edit via the JSON editor instead.
   - Decision rule: If the map can be fully expressed with a single layer + basic color scale + simple numeric radius/width, use "basic". Otherwise use "custom".
-- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer.
+- Author maps with config.spec.layers using Deck JSON layer classes in @@type, such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, or GeoArrowH3HexagonLayer. CRITICAL: Always use the full GeoArrow-prefixed class name (e.g. "GeoArrowScatterplotLayer", NOT "ScatterplotLayer"). Plain deck.gl class names without the GeoArrow prefix are not registered and will fail validation.
 - LAYER SELECTION: Choose the layer type based on the geometry type in the data.
   IMPORTANT: Only create a layer if the table contains data suitable for that layer type, or if you can transform the data into the required format with transformSql or a standalone sqlQuery. Do NOT create a layer if the data is clearly incompatible (e.g. do not create a path layer from point-only data without aggregation, do not create a polygon layer from point coordinates, do not create an arc layer without origin-destination pairs).
   - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer (Point layer), GeoArrowHeatmapLayer, GeoArrowColumnLayer. Requires rows with individual point positions — either separate longitude/latitude numeric columns, or a point geometry column. Each row represents one point on the map.
-  - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer. Requires a geometry column containing polygon or multipolygon WKB/GeoArrow data. Typically loaded from GeoJSON/Shapefile/GeoParquet or produced by spatial queries. Do NOT use for point data.
+  - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer. Requires a geometry column containing polygon or multipolygon WKB/GeoArrow data. Typically loaded from GeoJSON/Shapefile/GeoParquet or produced by spatial queries. Do NOT use for point data.
   - Line data (roads, routes, paths, rivers): GeoArrowPathLayer. CRITICAL: GeoArrowPathLayer requires LineString geometry, NOT individual point rows. If the table has one row per waypoint (indicated by columns like path_id/route_id + order/sequence + lat/lon), you MUST aggregate them with transformSql: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} GROUP BY path_id, label". Set geometryColumn to "geom" and geometryEncodingHint to "wkb". If the table already has a geometry/geom column with linestring data, use it directly with tableName. NEVER pass raw waypoint rows to GeoArrowPathLayer — it will fail.
-  - Animated trip data (routes with timestamps): GeoArrowTripsLayer. Same geometry requirements as GeoArrowPathLayer (LineString), plus a timestamps column. The transformSql MUST aggregate both the geometry and timestamps: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} GROUP BY path_id, label". Set geometryColumn to "geom", geometryEncodingHint to "wkb", and _sqlroomsBinding.timestampColumn to "timestamps". The timestamps column must be a list of numbers (seconds) matching the order of waypoints in the linestring. Also set currentTime on the layer to control animation position. Do NOT use unless the data has or can produce both paths and ordered timestamps.
+  - Animated trip data (routes with timestamps): GeoArrowTripsLayer. CRITICAL: when the user asks for "animated trips", "trip animation", "trips layer", or "moving trips", ALWAYS use GeoArrowTripsLayer — NEVER substitute GeoArrowArcLayer. Arcs are static origin→destination curves and are NOT animated. GeoArrowTripsLayer requires ONE ROW PER TRIP: a LineString geometry plus a timestamps list (same length/order as the linestring vertices). Decide which shape the table has:
+    (1) Waypoint rows (many rows per trip — columns like trip_id/path_id/route_id + lat/lon + order/time): you MUST aggregate with GROUP BY the trip id. Example: "SELECT trip_id, ANY_VALUE(label) AS label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} GROUP BY trip_id". CRITICAL: preserve trip-level attribute columns (label, name, category, type, etc.) with ANY_VALUE(col) AS col so they remain available for color scales and tooltips after aggregation — selecting only the group id + geom + timestamps drops those fields from the UI. CRITICAL: ST_MakeLine is a SCALAR that takes a LIST of points — the ONLY valid form is ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order)). NEVER write ST_MakeLine(ST_Point(lon, lat) ORDER BY waypoint_order) — ORDER BY is only legal inside LIST (an aggregate), and DuckDB will error with "st_makeline is a Scalar Function". Also CRITICAL: LIST(...)/ST_MakeLine over waypoints WITHOUT GROUP BY is wrong — it either collapses all trips into one path or fails. Always GROUP BY the trip/path/route id column.
+    (2) Origin-destination pairs already one row per trip (pickup/dropoff lat/lon): no GROUP BY needed — synthesize a 2-point path per row: "SELECT trip_id, ST_AsWKB(ST_MakeLine([ST_Point(pickup_lon, pickup_lat), ST_Point(dropoff_lon, dropoff_lat)])) AS geom, [0.0, 1.0] AS timestamps FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}" (use actual column names; prefer [0.0, duration] when a duration column exists). Prefer selecting the trip id explicitly rather than SELECT *.
+    In both cases set geometryColumn to "geom", geometryEncodingHint to "wkb", and _sqlroomsBinding.timestampColumn to "timestamps". Animation is handled automatically.
+  - Arc data (origin-destination pairs): GeoArrowArcLayer. Use ONLY when the user asks for arcs, connections, flows, or OD links — NOT when they ask for animated trips. Requires two sets of coordinates per row (source and target). The table must have source_lon/source_lat AND target_lon/target_lat columns (or equivalent). The dataset source MUST use transformSql that creates WKB geometry columns using ST_AsWKB(ST_Point(...)), for example: "SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom, ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}". CRITICAL: always wrap ST_Point() with ST_AsWKB() — bare ST_Point() returns an internal DuckDB geometry type that cannot be decoded. Set the dataset's geometryEncodingHint to "wkb". Set _sqlroomsBinding.sourceGeometryColumn to "source_geom" and _sqlroomsBinding.targetGeometryColumn to "target_geom". CRITICAL: do NOT use getSourcePosition or getTargetPosition on the layer — geometry is bound through _sqlroomsBinding only, string accessors are ignored. To render straight lines instead of arcs, set "getHeight": 0 on the layer. Do NOT use for data with only one set of coordinates per row. When the source data has H3 indices instead of lat/lon, convert H3 to coordinates using h3_cell_to_lng(h3_index) and h3_cell_to_lat(h3_index) (the H3 extension is pre-loaded at startup), for example: "SELECT *, ST_AsWKB(ST_Point(h3_cell_to_lng(source_h3), h3_cell_to_lat(source_h3))) AS source_geom, ST_AsWKB(ST_Point(h3_cell_to_lng(target_h3), h3_cell_to_lat(target_h3))) AS target_geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}". Do NOT use h3_latlng() — it does not exist.
+  - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Requires a column containing H3 string indices. Bind to dataset with _sqlroomsBinding.dataset and set _sqlroomsBinding.hexagonColumn to the H3 index column name. Also set "getHexagon": "@@=h3_column_name" where h3_column_name is the same column. CRITICAL: getHexagon MUST be a plain attribute accessor string like "@@=hex_id". Do NOT use {"@@function":"columnAccessor","column":"..."} or any other object syntax — it is not a valid accessor and will silently render nothing. Always include "fitToData": {"dataset": "datasetId"} so the map can zoom to the data extent (without it, fit-to-bounds stays disabled). Do NOT use unless the table has an H3 index column. DuckDB H3 extension functions: h3_cell_to_lat(index), h3_cell_to_lng(index), h3_cell_to_latlng(index). Do NOT use h3_latlng(), h3_to_lat(), or other non-existent function names.
 - CRITICAL geometryColumn rule: The geometryColumn field (in datasets[id].geometryColumn, _sqlroomsBinding.geometryColumn, and fitToData.geometryColumn) MUST match the exact column alias that produces the WKB geometry in the final query output — typically the "AS geom" alias in ST_AsWKB(...) AS geom. It must NEVER be set to a GROUP BY key, an ID column, or any other non-geometry column. For example, if the transformSql is "SELECT path_id, ST_AsWKB(ST_MakeLine(...)) AS geom ... GROUP BY path_id", geometryColumn must be "geom" (the geometry output), NOT "path_id" (the grouping key). Setting geometryColumn to a non-geometry column will cause the layer to fail silently.
-  - Arc data (origin-destination pairs): GeoArrowArcLayer. Requires two sets of coordinates per row (source and target). The table must have source_lon/source_lat AND target_lon/target_lat columns (or equivalent). The dataset source MUST use transformSql that creates WKB geometry columns from lat/lon, for example: "SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom, ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}". Set sourceGeometryColumn to "source_geom" and targetGeometryColumn to "target_geom". Set geometryEncodingHint to "wkb". To render straight lines instead of arcs, set "getHeight": 0 on the layer. Do NOT use for data with only one set of coordinates per row. When the source data has H3 indices instead of lat/lon, convert H3 to coordinates using h3_cell_to_lng(h3_index) and h3_cell_to_lat(h3_index) (the H3 extension is pre-loaded at startup), for example: "SELECT *, ST_AsWKB(ST_Point(h3_cell_to_lng(source_h3), h3_cell_to_lat(source_h3))) AS source_geom, ST_AsWKB(ST_Point(h3_cell_to_lng(target_h3), h3_cell_to_lat(target_h3))) AS target_geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}". Do NOT use h3_latlng() — it does not exist.
-  - H3 hexagon data (h3 index column): GeoArrowH3HexagonLayer. Requires a column containing H3 string indices. Bind to dataset with _sqlroomsBinding.dataset. Set "getHexagon": "@@=h3_column_name" where h3_column_name is the column containing H3 string indices. Always include "fitToData": {"dataset": "datasetId"} so the map can zoom to the data extent. Do NOT use unless the table has an H3 index column. DuckDB H3 extension functions: h3_cell_to_lat(index), h3_cell_to_lng(index), h3_cell_to_latlng(index). Do NOT use h3_latlng(), h3_to_lat(), or other non-existent function names.
 - CRITICAL: The transformSql and sqlQuery fields must contain ONLY a single SELECT statement. NEVER put INSTALL, LOAD, CREATE, or other DDL/meta-commands in dataset SQL — they will fail because dataset SQL is wrapped in a subquery at runtime. Extensions like h3 and spatial are pre-loaded at startup.
   - GeoJSON files typically contain polygon or multipolygon features (boundaries, buildings, parcels); use GeoArrowPolygonLayer for these. If a GeoJSON file contains point features, use GeoArrowScatterplotLayer (Point layer) instead.
-- RADIUS AND WIDTH: For GeoArrowScatterplotLayer (Point layer) use getRadius with radiusUnits: "pixels" (typically 2–6 pixels); large radii cause overdraw and rendering lag, especially with many points. For GeoArrowColumnLayer use the "radius" property (NOT getRadius) — it sets column radius in meters; typical values are 20–200 for city-scale data or smaller for dense datasets. Do NOT use getRadius or radiusUnits on column layers. For GeoArrowArcLayer, GeoArrowPathLayer, and GeoArrowTripsLayer use getWidth with widthUnits: "pixels" (typically 1–3 pixels).
-- HEATMAP: For GeoArrowHeatmapLayer, do NOT set colorRange manually. The UI provides a scheme selector that generates the correct color array. If you set colorRange to hand-picked RGB arrays, it will be out of sync with the scheme selector shown in the UI. Just omit colorRange entirely and let the default apply — users can change the scheme through the map settings panel.
+- RADIUS AND WIDTH: For GeoArrowScatterplotLayer (Point layer) use getRadius with radiusUnits: "pixels" (typically 2–6 pixels); large radii cause overdraw and rendering lag, especially with many points. CRITICAL: getRadius MUST be a plain number (e.g. 4). NEVER set getRadius to a string expression such as "field * 500" — string expressions bypass radiusMinPixels/radiusMaxPixels clamping when radiusUnits is "pixels", producing enormous points that cannot be fixed by the UI slider. If you want data-driven radius (size by attribute), use "@@=columnName" in configMode "custom" only, and set radiusUnits to the default (meters) so radiusMaxPixels acts as a cap. For GeoArrowColumnLayer use the "radius" property (NOT getRadius) — it sets column radius in meters; typical values are 20–200 for city-scale data or smaller for dense datasets. Do NOT use getRadius or radiusUnits on column layers. For GeoArrowArcLayer, GeoArrowPathLayer, and GeoArrowTripsLayer use getWidth with widthUnits: "pixels" (typically 1–3 pixels).
+- HEATMAP: For GeoArrowHeatmapLayer, do NOT set colorRange manually. The UI provides a scheme selector that generates the correct color array. If you set colorRange to hand-picked RGB arrays, it will be out of sync with the scheme selector shown in the UI. Just omit colorRange entirely and let the default apply — users can change the scheme through the map settings panel. For data-driven weight (density by a numeric column), set getWeight to a deck.gl attribute accessor string: "@@=ColumnName" (e.g. "@@=Magnitude"). Do NOT use {"@@function":"getNumericColumn",...} or any other object syntax for getWeight — that is not a valid accessor and will silently produce an unweighted heatmap.
 - ARC vs LINE: GeoArrowArcLayer renders curved 3D arcs by default. If the user asks for "lines" or "straight connections" between origin-destination pairs (not arcs), set "getHeight": 0 on the layer to render flat straight lines. Use arcs for flight routes or connections where the curve adds clarity; use flat lines for direct relationships, edges, or when the user explicitly requests lines.
+- TRIPS vs ARC: GeoArrowTripsLayer animates movement along a path over time. GeoArrowArcLayer draws a static curved link between two points. If the user says "animated", "trips", "trip layer", or "moving", use GeoArrowTripsLayer. Do NOT use ArcLayer as a substitute for trip animation — even when the table has origin/destination columns.
 - ELEVATION: For extruded layers, getElevation with @@function "scale" passes the raw field value as meters. Use elevationScale on the layer to multiply values to a useful visual height. For example, if the field is "floors" (1-10), set elevationScale to 3 (meters per floor). Do NOT use negative values for elevation. Avoid using diverging scales for elevation. IMPORTANT: Keep elevation moderate — if extruded polygons or H3 hexagons are too tall, users can't see the tops when zoomed in. Prefer elevationScale values that produce heights of a few hundred meters at most for city-scale data. A good rule of thumb: the maximum elevation (field max × elevationScale) should not exceed ~500m for typical zoom levels.
 - Bind layers to datasets with _sqlroomsBinding.dataset and put tableName, tableName+transformSql, or sqlQuery sources in config.datasets.
 - Use source.tableName for direct table-backed datasets. Use source.tableName plus source.transformSql when the map needs generated geometry or aggregation but should still follow the dashboard selected table. transformSql must read from ${DECK_TABLE_DATASET_SOURCE_RELATION}, not from the authored table name.
@@ -63,12 +67,15 @@ Deck map tools:
 - IMPORTANT: When providing fitToData, it MUST be a flat object (NOT nested by dataset ID). Include either longitudeColumn+latitudeColumn (for point data with separate coordinate columns) OR geometryColumn (for data with a WKB geometry column like GeoJSON). For H3 hexagon layers, just specify the dataset: "fitToData": {"dataset": "datasetId"} — the H3 column is auto-detected from the layer binding. For GeoJSON/spatial files with a "geom" column, use: "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"}. For point data use: "fitToData": {"dataset": "datasetId", "longitudeColumn": "lon", "latitudeColumn": "lat"}. NEVER nest fitToData as {"datasetId": {...}} — always use a flat object with "dataset" as a string field.
 - IMPORTANT: For GeoJSON or spatial files that already have a native geometry column (e.g. "geometry", "geom"), use the table directly with source.tableName (no sqlQuery needed), set the dataset's geometryColumn to "geom", set geometryEncodingHint to "wkb", and use fitToData with geometryColumn: {"dataset": "datasetId", "geometryColumn": "geom"}.
 - IMPORTANT: When a GeoJSON file (.geojson) is loaded as a table, DuckDB uses ST_Read to produce a table with a WKB "geom" column and all feature properties as columns. Use source.tableName, set geometryColumn to "geom" and geometryEncodingHint to "wkb". Use "fitToData": {"dataset": "datasetId", "geometryColumn": "geom"} to zoom to the data extent.
-- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. Valid schemes: for "categorical" type use one of Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. For "sequential" use Viridis, Inferno, Magma, Plasma, Turbo, Blues, Greens, Oranges, Reds, Purples, etc. For "diverging" use RdBu, Spectral, RdYlGn, BrBG, PiYG, etc. IMPORTANT: The colorScale "field" must reference a column that exists in the FINAL query output (after any GROUP BY aggregation). Do not reference columns that are lost during aggregation.
+- For data-driven color, use native Deck JSON accessors with {"@@function":"colorScale", "field":"...", "type":"sequential"|"diverging"|"quantize"|"quantile"|"categorical", "scheme":"...", "domain":"auto"} on color properties such as getFillColor, getLineColor, getColor, getSourceColor, or getTargetColor. CRITICAL: The key is "@@function" (not "@@type") and the column name goes in "field" (not "column"). Using "@@type":"ColorScale" or "column" instead of "field" is wrong syntax that will fail. Valid schemes (use EXACT names, they are case-sensitive): sequential — Blues, BuGn, BuPu, Cividis, Cool, CubehelixDefault, GnBu, Greens, Greys, Inferno, Magma, OrRd, Oranges, Plasma, PuBu, PuBuGn, PuRd, Purples, RdPu, Reds, Turbo, Viridis, Warm, YlGn, YlGnBu, YlOrBr, YlOrRd, Rainbow, Sinebow. Diverging — BrBG, PRGn, PiYG, PuOr, RdBu, RdGy, RdYlBu, RdYlGn, Spectral. Categorical — Accent, Dark2, Paired, Pastel1, Pastel2, Set1, Set2, Set3, Tableau10, Observable10, Category10. ONLY use names from these exact lists — do not invent names like "bluepurple" or "blue-purple". IMPORTANT: The colorScale "field" must reference a column that exists in the FINAL query output (after any GROUP BY aggregation). Do not reference columns that are lost during aggregation.
+- COLOR SCALE PREFERENCE: Always prefer data-driven color over a flat fill color when the table has a column that meaningfully varies per feature. Apply a colorScale to getFillColor (or getColor/getSourceColor/getTargetColor for arc layers) whenever there is a suitable column: numeric columns (magnitude, value, count, score, temperature, price, population, etc.) → sequential or quantile scheme; categorical/string columns (type, category, status, etc.) → categorical scheme. Only use a flat getFillColor when the table has no columns that add insight through color, or when the user explicitly requests a single color. When coloring by a numeric column, prefer "quantile" type for skewed distributions and "sequential" for roughly uniform ones. CRITICAL: The "field" value must be the EXACT column name as it appears in the table schema or query output — copy it verbatim, preserving case (e.g. if the column is "Magnitude", use "Magnitude" not "magnitude" or "mag"). Column names in colorScale are case-sensitive.
 - IMPORTANT: Enabling a color scale means adding a {"@@function":"colorScale", ...} accessor to a compatible layer color property. The top-level showLegends field only controls whether already-defined color scale legends are visible; showLegends by itself does NOT create or enable data-driven color.
 - Map panels default to a 100000-row runtime data limit; use config.dataPolicy.maxRows only when the map genuinely needs a panel-specific limit.
 - Create maps with a SINGLE layer unless the user explicitly asks for multiple layers. If you think multiple layers would better serve the user's request, ask the user for confirmation before adding them.
 - IMPORTANT: Browsers limit the number of active WebGL contexts (typically 8–16 per page). Each map panel uses one context. Do NOT create more than 4–5 map panels in a single dashboard — exceeding the limit causes older maps to lose their rendering context and show errors. If the user asks for many datasets, prefer combining compatible layers into fewer maps rather than creating one map per dataset.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
+- IMPORTANT: When updating an existing map to change only visual properties (color scale, color scheme, layer visibility, radius, width, elevation scale, opacity, etc.), OMIT the config.datasets field entirely from the patch. Do NOT re-send dataset sources you did not change — sending a simplified source (e.g. bare source.tableName) will overwrite the existing source and destroy geometry-producing SQL such as ST_AsWKB transforms. Only include config.datasets in an update when you are intentionally changing a dataset source or adding/removing datasets. The merge preserves existing dataset sources when the datasets key is absent.
+- SWITCHING LAYER TYPE: When the user asks to "switch", "change", or "replace" a layer type (e.g. point → heatmap, scatterplot → column), send only the new layer and set replaceLayers: true. Do NOT add the new layer while keeping the old one with visible: false — hiding is not replacing and leaves dead config behind.
 - BASEMAPS: Omit mapStyle unless the user explicitly requests a custom basemap. Maps inherit the host application's theme-aware basemap when available, with a token-free fallback. Do NOT use Mapbox styles (mapbox://styles/...) because a Mapbox access token may not be available. For an explicitly requested custom basemap, use a token-free MapLibre-compatible style URL.
 `;
 
@@ -210,6 +217,12 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
         .string()
         .optional()
         .describe('WKB geometry column name for computing bounds.'),
+      geometryColumns: z
+        .array(z.string())
+        .optional()
+        .describe(
+          'Multiple WKB geometry columns whose extents are combined (e.g. arc source + target). Prefer omitting this — for GeoArrowArcLayer it is inferred from _sqlroomsBinding.',
+        ),
       h3Column: z
         .string()
         .optional()
@@ -219,7 +232,7 @@ export const DeckMapDashboardConfigParameter = z.looseObject({
     })
     .optional()
     .describe(
-      'Fit map view to data bounds. Provide dataset plus either geometryColumn (for WKB geometry) or longitudeColumn+latitudeColumn (for separate coordinate columns). Example: {"dataset": "myDataset", "geometryColumn": "geom"}',
+      'Fit map view to data bounds. Provide dataset plus either geometryColumn (for WKB geometry) or longitudeColumn+latitudeColumn (for separate coordinate columns). For arc layers, just {"dataset": "datasetId"} is enough — source and target geometry columns are inferred from the layer binding. Example: {"dataset": "myDataset", "geometryColumn": "geom"}',
     ),
   dataPolicy: DeckMapDataPolicyConfig.optional().describe(
     'Optional per-map runtime data policy. Maps default to 100000 rows; set maxRows for a panel-specific override or disabled=true to bypass row-count validation.',
@@ -268,98 +281,16 @@ export type DeckMapDashboardToolParams = z.infer<
   typeof DeckMapDashboardToolParameters
 >;
 
-const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
-
-/**
- * Normalizes an AI-generated map config to ensure dataset sources produce
- * the expected geometry column when fitToData specifies coordinate columns
- * but the dataset only uses a tableName without a transformSql.
- */
-function normalizeAiMapConfig(
-  config: DeckMapDashboardConfigToolConfig,
-): DeckMapDashboardConfigToolConfig {
-  const datasets = config.datasets;
-  let fitToData = config.fitToData as
-    | Record<string, unknown>
-    | null
-    | undefined;
-
-  // Fix common AI mistake: fitToData wrapped as { datasetId: { dataset, ... } }
-  // instead of the expected flat { dataset, longitudeColumn, ... }.
-  if (fitToData && !fitToData.dataset && typeof fitToData === 'object') {
-    const keys = Object.keys(fitToData);
-    if (keys.length === 1) {
-      const nested = fitToData[keys[0]!] as Record<string, unknown> | undefined;
-      if (nested && typeof nested === 'object' && nested.dataset) {
-        fitToData = nested;
-        config = {...config, fitToData: fitToData as any};
-      }
-    }
-  }
-
-  if (!datasets || typeof datasets !== 'object' || !fitToData) {
-    return config;
-  }
-
-  const lonCol = fitToData.longitudeColumn as string | undefined;
-  const latCol = fitToData.latitudeColumn as string | undefined;
-  if (!lonCol || !latCol) {
-    return config;
-  }
-
-  const targetDatasetId = fitToData.dataset as string | undefined;
-  if (!targetDatasetId) {
-    return config;
-  }
-
-  const targetDataset = datasets[targetDatasetId] as
-    | Record<string, unknown>
-    | undefined;
-  if (!targetDataset) {
-    return config;
-  }
-
-  const source = targetDataset.source as
-    | {tableName?: string; transformSql?: string; sqlQuery?: string}
-    | undefined;
-
-  // Always normalize when using tableName without transformSql and fitToData
-  // provides coordinate columns — the geometry must be computed from them.
-  if (!source?.tableName || source.sqlQuery || source.transformSql) {
-    return config;
-  }
-
-  const geometryColumn =
-    (targetDataset.geometryColumn as string | undefined) ||
-    DEFAULT_AI_GEOMETRY_COLUMN;
-
-  const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
-  const quotedLat = quoteDeckMapSqlIdentifier(latCol);
-  const quotedGeom = quoteDeckMapSqlIdentifier(geometryColumn);
-  const transformSql = [
-    `SELECT *, ST_AsWKB(ST_Point(${quotedLon}, ${quotedLat})) AS ${quotedGeom}`,
-    `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
-    `WHERE ${quotedLon} IS NOT NULL AND ${quotedLat} IS NOT NULL`,
-  ].join(' ');
-
-  return {
-    ...config,
-    datasets: {
-      ...datasets,
-      [targetDatasetId]: {
-        ...targetDataset,
-        source: {tableName: source.tableName, transformSql},
-        geometryColumn,
-        geometryEncodingHint: 'wkb',
-      },
-    },
-  };
-}
+export {
+  normalizeAiDeckMapConfig,
+  validateAndFixColorScaleFields,
+} from './aiNormalize';
+import {normalizeAiDeckMapConfig} from './aiNormalize';
 
 function cloneConfig(
   config: DeckMapDashboardConfigToolConfig,
 ): DeckMapDashboardPanelConfig {
-  const normalized = normalizeAiMapConfig(config);
+  const normalized = normalizeAiDeckMapConfig(config);
   return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
 }
 

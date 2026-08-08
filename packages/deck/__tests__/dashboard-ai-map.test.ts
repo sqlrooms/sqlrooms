@@ -312,9 +312,13 @@ describe('createDeckMapConfigTool', () => {
     });
 
     expect(result.llmResult.success).toBe(true);
-    expect(result.llmResult.data.config.spec.layers).toEqual(
-      multiLayerConfig.spec.layers,
-    );
+    expect(result.llmResult.data.config.spec.layers).toEqual([
+      {
+        ...multiLayerConfig.spec.layers[0],
+        getFillColor: [56, 189, 248, 180],
+      },
+      multiLayerConfig.spec.layers[1],
+    ]);
   });
 
   it('preserves configMode in the created panel config', async () => {

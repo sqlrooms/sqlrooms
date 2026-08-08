@@ -53,6 +53,7 @@ export {
   DeckMapResourceConfigParameter,
   DeckMapResourceToolParameters,
 } from './mapAiConfig';
+export {normalizeAiDeckMapConfig, validateAndFixColorScaleFields} from './ai';
 export {
   DeckMapResourceConfigError,
   assertDeckMapResourceConfig,
