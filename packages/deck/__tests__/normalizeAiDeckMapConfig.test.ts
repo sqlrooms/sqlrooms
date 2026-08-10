@@ -967,6 +967,45 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
     expect(layer.radiusMaxPixels).toBeUndefined();
     expect(layer.radiusPixels).toBeUndefined();
   });
+
+  test('defaults radius when stripping point leftovers without radius', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: 5,
+            radiusMinPixels: 5,
+            radiusMaxPixels: 45,
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    const layer = getLayer(result);
+    expect(layer.radius).toBe(50);
+    expect(layer.radiusUnits).toBe('meters');
+    expect(layer.getRadius).toBeUndefined();
+    expect(layer.radiusMinPixels).toBeUndefined();
+    expect(layer.radiusMaxPixels).toBeUndefined();
+  });
+
+  test('defaults missing radius on column layer', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).radius).toBe(50);
+    expect(getLayer(result).radiusUnits).toBe('meters');
+  });
 });
 
 // ---------------------------------------------------------------------------

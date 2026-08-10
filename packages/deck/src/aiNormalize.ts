@@ -205,18 +205,21 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
     // radiusUnits:"pixels" makes radius N mean N pixels (city-scale disks).
     if (l['@@type'] === 'GeoArrowColumnLayer') {
       const r = l.radius;
-      const hasInvalidRadius =
-        typeof r === 'string' || (typeof r === 'number' && r <= 0);
+      const needsDefaultRadius =
+        typeof r !== 'number' || !Number.isFinite(r) || r <= 0;
       const hasPixelUnits = l.radiusUnits === 'pixels';
       const hasPointRadiusLeak =
         l.getRadius !== undefined ||
         l.radiusMinPixels !== undefined ||
         l.radiusMaxPixels !== undefined ||
         l.radiusPixels !== undefined;
-      if (hasInvalidRadius || hasPixelUnits || hasPointRadiusLeak) {
+      if (needsDefaultRadius || hasPixelUnits || hasPointRadiusLeak) {
         changed = true;
         const next: Record<string, unknown> = {...l};
-        if (hasInvalidRadius) {
+        // Always ensure an explicit meters radius when repairing this layer.
+        // Stripping getRadius without setting radius leaves deck.gl's default
+        // (1000), which is enormous at city scale.
+        if (needsDefaultRadius) {
           next.radius = DEFAULT_AI_COLUMN_RADIUS_METERS;
         }
         next.radiusUnits = 'meters';
