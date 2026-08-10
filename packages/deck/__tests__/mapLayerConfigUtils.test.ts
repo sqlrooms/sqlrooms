@@ -1,6 +1,7 @@
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
+  DECK_MAP_LAYER_TYPE_OPTIONS,
   deckMapRgbaToHex,
   getDeckMapColorAccessorOptions,
   getDeckMapLayerColorScale,
@@ -38,6 +39,11 @@ const config = {
 };
 
 describe('mapLayerConfigUtils', () => {
+  it('includes GeoArrowSolidPolygonLayer in layer-type options', () => {
+    expect(DECK_MAP_LAYER_TYPE_OPTIONS.map((o) => o.value)).toContain(
+      'GeoArrowSolidPolygonLayer',
+    );
+  });
   it('updates layer type without changing dataset bindings', () => {
     const nextConfig = setDeckMapLayerType(config, 0, 'GeoArrowHeatmapLayer');
 

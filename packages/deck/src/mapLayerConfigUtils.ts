@@ -25,6 +25,7 @@ export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
   {value: 'GeoArrowColumnLayer', label: 'Column'},
   {value: 'GeoArrowPathLayer', label: 'Path'},
   {value: 'GeoArrowPolygonLayer', label: 'Polygon'},
+  {value: 'GeoArrowSolidPolygonLayer', label: 'Solid polygon'},
   {value: 'GeoArrowArcLayer', label: 'Arc'},
   {value: 'GeoArrowTripsLayer', label: 'Trips'},
   {value: 'GeoArrowH3HexagonLayer', label: 'H3 hexagon'},
@@ -205,8 +206,7 @@ export function getDeckMapLayerStrokeDefault(layerType: unknown): boolean {
   if (
     type.includes('scatterplot') ||
     type.includes('solidpolygon') ||
-    type.includes('h3hexagon') ||
-    type === 'solid polygon'
+    type.includes('h3hexagon')
   ) {
     return false;
   }

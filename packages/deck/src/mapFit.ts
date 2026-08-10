@@ -208,14 +208,11 @@ export function createDeckMapBoundsQuery(options: {
     `;
     }
 
-    // Multiple geometry columns (e.g. arc source + target): union their
-    // extents so fit-to-bounds covers both endpoints.
-    const unionParts = geometryColumns.map((col, i) => {
+    // Multiple geometry columns (e.g. arc source + target): unnest all
+    // geometries in one pass so the source is scanned once.
+    const geomExprs = geometryColumns.map((col) => {
       const column = escapeId(col);
-      return `
-        SELECT ${asGeometry(column)} AS geom
-        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom_${i}"
-        WHERE ${column} IS NOT NULL`;
+      return `CASE WHEN ${column} IS NOT NULL THEN ${asGeometry(column)} END`;
     });
     return `
       SELECT
@@ -226,8 +223,10 @@ export function createDeckMapBoundsQuery(options: {
       FROM (
         SELECT ST_Extent_Agg(geom) AS extent
         FROM (
-          ${unionParts.join('\n        UNION ALL')}
+          SELECT UNNEST([${geomExprs.join(', ')}]) AS geom
+          FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
         ) AS "__sqlrooms_dashboard_map_geoms"
+        WHERE geom IS NOT NULL
       ) AS "__sqlrooms_dashboard_map_extent"
       WHERE extent IS NOT NULL
     `;

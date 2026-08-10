@@ -193,7 +193,7 @@ describe('Deck map fit core', () => {
     expect(query).toContain('"latitude"');
   });
 
-  test('builds bounds SQL that unions arc source and target geometries', () => {
+  test('builds bounds SQL that unnests arc source and target geometries in one pass', () => {
     const query = createDeckMapBoundsQuery({
       source: {
         tableName: 'arcs',
@@ -206,10 +206,13 @@ describe('Deck map fit core', () => {
       },
     });
 
-    expect(query).toContain('UNION ALL');
+    expect(query).toContain('UNNEST([');
     expect(query).toContain('"source_geom"');
     expect(query).toContain('"target_geom"');
     expect(query).toContain('ST_GeomFromWKB');
+    expect(query).not.toContain('UNION ALL');
+    // Source subquery should appear once (not once per geometry column).
+    expect(query.match(/__sqlrooms_dashboard_map_geom"/g)).toHaveLength(1);
   });
 
   test('strips trailing semicolons from SQL dataset bounds queries', () => {
