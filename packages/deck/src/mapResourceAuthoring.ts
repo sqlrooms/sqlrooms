@@ -130,21 +130,38 @@ function mergeSpecPatch(
 }
 
 /**
- * Returns true when the existing source is a pinned sqlQuery and the incoming
- * source would downgrade it to a bare tableName (no transformSql). In that
- * case the merge should keep the existing source, because a bare tableName
- * lookup omits the geometry-producing SQL that the existing source contains.
+ * Returns true when the incoming source would strip geometry-producing SQL from
+ * an existing source by replacing it with a bare `tableName`.
+ *
+ * Protects both:
+ * - pinned `sqlQuery` sources
+ * - `tableName` + non-empty `transformSql` sources
+ *
+ * Visual-only AI patches often re-send `{source: {tableName}}` and would
+ * otherwise wipe the SQL that creates WKB/`geom` columns the layers bind to.
  */
 function isSourceDowngrade(
   existingSource: DeckMapDatasetSource | undefined,
   incomingSource: DeckMapDatasetSource | undefined,
 ): boolean {
   if (!existingSource || !incomingSource) return false;
-  const existingIsSqlQuery = isDeckMapSqlDatasetSource(existingSource);
+
   const incomingIsBareTableName =
     isDeckMapTableDatasetSource(incomingSource) &&
-    !('transformSql' in incomingSource && incomingSource.transformSql);
-  return existingIsSqlQuery && incomingIsBareTableName;
+    !(
+      'transformSql' in incomingSource &&
+      typeof incomingSource.transformSql === 'string' &&
+      incomingSource.transformSql.trim().length > 0
+    );
+  if (!incomingIsBareTableName) return false;
+
+  if (isDeckMapSqlDatasetSource(existingSource)) return true;
+
+  return (
+    isDeckMapTableDatasetSource(existingSource) &&
+    typeof existingSource.transformSql === 'string' &&
+    existingSource.transformSql.trim().length > 0
+  );
 }
 
 function mergeDatasetRegistry(

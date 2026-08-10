@@ -101,6 +101,114 @@ describe('Deck map resource authoring contract', () => {
     expect(getDeckMapResourceConfigIssues(next)).toEqual([]);
   });
 
+  test('preserves sqlQuery when a sparse patch sends a bare tableName source', () => {
+    const existingConfig: DeckMapConfig = {
+      ...validConfig,
+      datasets: {
+        places: {
+          source: {
+            sqlQuery:
+              'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM places',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    };
+
+    const next = mergeDeckMapResourceConfigPatch(existingConfig, {
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+        },
+      },
+      spec: {layers: []},
+    });
+
+    expect(next.datasets.places.source).toEqual({
+      sqlQuery: 'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM places',
+    });
+  });
+
+  test('preserves transformSql when a sparse patch sends a bare tableName source', () => {
+    const transformSql =
+      'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source';
+    const existingConfig: DeckMapConfig = {
+      ...validConfig,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql,
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    };
+
+    const next = mergeDeckMapResourceConfigPatch(existingConfig, {
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'places',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: [255, 0, 0, 180],
+          },
+        ],
+      },
+    });
+
+    expect(next.datasets.places.source).toEqual({
+      tableName: 'places',
+      transformSql,
+    });
+    expect(next.datasets.places.geometryColumn).toBe('geom');
+  });
+
+  test('allows an intentional transformSql update when the patch includes it', () => {
+    const existingConfig: DeckMapConfig = {
+      ...validConfig,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+        },
+      },
+    };
+    const nextTransformSql =
+      'SELECT id, ST_AsWKB(ST_Point(x, y)) AS geom FROM __sqlrooms_source';
+
+    const next = mergeDeckMapResourceConfigPatch(existingConfig, {
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql: nextTransformSql,
+          },
+        },
+      },
+      spec: {layers: []},
+    });
+
+    expect(next.datasets.places.source).toEqual({
+      tableName: 'places',
+      transformSql: nextTransformSql,
+    });
+  });
+
   test('replaces omitted layers only when explicitly requested', () => {
     const retainedLayer = {
       '@@type': 'GeoArrowScatterplotLayer',
