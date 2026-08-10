@@ -520,6 +520,43 @@ state.ai.devtools.clearAgentSnapshots();
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
   - `streamSubAgent`
+  - `withRunContextTools`
+
+### Forwarding execution scope into nested agents
+
+Top-level tools receive the invoking turn's `sessionId` and `AiRunContext`
+because the chat transport wraps `state.ai.tools` with `withRunContextTools`.
+Tools handed to a nested `ToolLoopAgent` are not wrapped by the transport, so
+without the same wrapper they execute with no scope and any target resolution
+that defaults to "the current artifact/map" silently follows mutable UI
+selection instead of the artifact captured when the prompt was submitted.
+
+Wrap nested toolsets with the parent's execution options:
+
+```ts
+import {withRunContextTools} from '@sqlrooms/ai-core';
+
+const nestedTool = tool({
+  inputSchema,
+  execute: async (input, options) => {
+    const agent = new ToolLoopAgent({
+      model,
+      instructions,
+      // `options` carries the parent turn's scope; forward it verbatim.
+      tools: withRunContextTools(
+        nestedTools,
+        options as AiToolExecutionContext,
+      ),
+    });
+    return streamSubAgent(agent, prompt, store, options.toolCallId);
+  },
+});
+```
+
+Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
+retarget via `set_primary_context_artifact` is visible to subsequent nested tool
+calls. Parent scope wins over inner options, so a nested agent cannot reassign
+the owning session; fields the parent leaves `undefined` are preserved.
 
 `AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
 `AnalysisResult`, `AnalysisAnswer`, `processAnalysisAnswerContent`, and
