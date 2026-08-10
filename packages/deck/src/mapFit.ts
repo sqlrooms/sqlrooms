@@ -157,14 +157,16 @@ export function createDeckMapBoundsQuery(options: {
 
   if (fitToData.h3Column) {
     const column = escapeId(fitToData.h3Column);
-    // CAST to VARCHAR so string and integer H3 indexes both work with the
-    // community H3 extension after a cold start / refresh.
+    // Pass the column through directly. DuckDB's h3_cell_to_* overloads accept
+    // both VARCHAR hex indexes and BIGINT/UBIGINT cell IDs. Do NOT CAST to
+    // VARCHAR — that turns numeric IDs into decimal text, which is not a valid
+    // H3 string (use h3_h3_to_string only when an explicit hex string is needed).
     return `
       SELECT
-        MIN(h3_cell_to_lng(CAST(${column} AS VARCHAR))) AS min_longitude,
-        MIN(h3_cell_to_lat(CAST(${column} AS VARCHAR))) AS min_latitude,
-        MAX(h3_cell_to_lng(CAST(${column} AS VARCHAR))) AS max_longitude,
-        MAX(h3_cell_to_lat(CAST(${column} AS VARCHAR))) AS max_latitude
+        MIN(h3_cell_to_lng(${column})) AS min_longitude,
+        MIN(h3_cell_to_lat(${column})) AS min_latitude,
+        MAX(h3_cell_to_lng(${column})) AS max_longitude,
+        MAX(h3_cell_to_lat(${column})) AS max_latitude
       FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_h3"
       WHERE ${column} IS NOT NULL
     `;

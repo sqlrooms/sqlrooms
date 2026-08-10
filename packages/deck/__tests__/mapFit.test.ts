@@ -120,7 +120,7 @@ describe('Deck map fit core', () => {
     ).toEqual({dataset: 'h3_data', h3Column: 'hex_id'});
   });
 
-  test('builds H3 bounds SQL with CAST for hexagon column', () => {
+  test('builds H3 bounds SQL without casting the hexagon column', () => {
     const query = createDeckMapBoundsQuery({
       source: {tableName: 'h3_pentagon'},
       fitToData: {
@@ -129,9 +129,9 @@ describe('Deck map fit core', () => {
       },
     });
 
-    expect(query).toContain('h3_cell_to_lng');
-    expect(query).toContain('h3_cell_to_lat');
-    expect(query).toContain('CAST("hex_id" AS VARCHAR)');
+    expect(query).toContain('h3_cell_to_lng("hex_id")');
+    expect(query).toContain('h3_cell_to_lat("hex_id")');
+    expect(query).not.toContain('CAST("hex_id" AS VARCHAR)');
   });
 
   test('builds bounds SQL from a host-resolved table dataset', () => {
