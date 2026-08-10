@@ -290,6 +290,30 @@ function parseSpec(config: DeckMapConfig): {
   };
 }
 
+const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
+  ScatterplotLayer: 'GeoArrowScatterplotLayer',
+  HeatmapLayer: 'GeoArrowHeatmapLayer',
+  ColumnLayer: 'GeoArrowColumnLayer',
+  PathLayer: 'GeoArrowPathLayer',
+  PolygonLayer: 'GeoArrowPolygonLayer',
+  SolidPolygonLayer: 'GeoArrowSolidPolygonLayer',
+  ArcLayer: 'GeoArrowArcLayer',
+  TripsLayer: 'GeoArrowTripsLayer',
+  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
+};
+
+const COLOR_SCALE_ACCESSOR_PROPS = [
+  'getFillColor',
+  'getLineColor',
+  'getColor',
+  'getSourceColor',
+  'getTargetColor',
+] as const;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
 /**
  * Validates the post-merge invariants of a renderable, resource-native map.
  * Patch inputs may be sparse, but the durable result must have supported
@@ -378,6 +402,49 @@ export function getDeckMapResourceConfigIssues(
         path: `spec.layers.${index}.@@type`,
         message: 'must name a Deck JSON layer class',
       });
+    } else {
+      const aliased = DECK_MAP_LAYER_CLASS_ALIASES[layerType];
+      if (aliased) {
+        issues.push({
+          path: `spec.layers.${index}.@@type`,
+          message: `use "${aliased}" — plain "${layerType}" is not a registered Deck JSON layer class`,
+        });
+      }
+    }
+
+    for (const prop of COLOR_SCALE_ACCESSOR_PROPS) {
+      const value = layer[prop];
+      if (!isPlainObject(value)) continue;
+
+      if (
+        value['@@type'] === 'ColorScale' &&
+        value['@@function'] !== 'colorScale'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.${prop}`,
+          message:
+            'use {"@@function":"colorScale","field":"<column>","type":"...","scheme":"...","domain":"auto"} — {"@@type":"ColorScale","column":"..."} is not valid colorScale syntax',
+        });
+        continue;
+      }
+
+      if (value['@@function'] === 'colorScale') {
+        if (typeof value.field !== 'string' || !value.field.trim()) {
+          if (typeof value.column === 'string' && value.column.trim()) {
+            issues.push({
+              path: `spec.layers.${index}.${prop}`,
+              message:
+                'colorScale uses "field" for the column name, not "column" — rename column → field',
+            });
+          } else {
+            issues.push({
+              path: `spec.layers.${index}.${prop}`,
+              message:
+                'colorScale requires a non-empty string "field" with the exact column name',
+            });
+          }
+        }
+      }
     }
 
     const binding =

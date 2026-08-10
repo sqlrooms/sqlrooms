@@ -100,23 +100,26 @@ describe('normalizeAiDeckMapConfig — hidden layers', () => {
 
 describe('normalizeAiDeckMapConfig — layer class aliases', () => {
   test.each([
-    ['ScatterplotLayer', 'GeoArrowScatterplotLayer'],
-    ['HeatmapLayer', 'GeoArrowHeatmapLayer'],
-    ['ColumnLayer', 'GeoArrowColumnLayer'],
-    ['PathLayer', 'GeoArrowPathLayer'],
-    ['PolygonLayer', 'GeoArrowPolygonLayer'],
-    ['SolidPolygonLayer', 'GeoArrowSolidPolygonLayer'],
-    ['ArcLayer', 'GeoArrowArcLayer'],
-    ['TripsLayer', 'GeoArrowTripsLayer'],
-    ['H3HexagonLayer', 'GeoArrowH3HexagonLayer'],
-  ])('renames %s → %s', (input, expected) => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([{'@@type': input, _sqlroomsBinding: {dataset: 'ds'}}], {
-        ds: {source: {tableName: 'ds'}},
-      }),
-    );
-    expect(getLayer(result)['@@type']).toBe(expected);
-  });
+    'ScatterplotLayer',
+    'HeatmapLayer',
+    'ColumnLayer',
+    'PathLayer',
+    'PolygonLayer',
+    'SolidPolygonLayer',
+    'ArcLayer',
+    'TripsLayer',
+    'H3HexagonLayer',
+  ])(
+    'does not silently rewrite unprefixed %s (validator owns this)',
+    (input) => {
+      const result = normalizeAiDeckMapConfig(
+        makeConfig([{'@@type': input, _sqlroomsBinding: {dataset: 'ds'}}], {
+          ds: {source: {tableName: 'ds'}},
+        }),
+      );
+      expect(getLayer(result)['@@type']).toBe(input);
+    },
+  );
 
   test('leaves already-correct GeoArrow names unchanged', () => {
     const config = makeConfig(
@@ -134,11 +137,11 @@ describe('normalizeAiDeckMapConfig — layer class aliases', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Color accessor syntax repair
+// Color accessor syntax (validator-owned; normalize only fixes scheme casing)
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
-  test('fixes @@type:ColorScale + column → @@function:colorScale + field', () => {
+  test('does not rewrite @@type:ColorScale + column (validator owns this)', () => {
     const layer = {
       '@@type': 'GeoArrowScatterplotLayer',
       _sqlroomsBinding: {dataset: 'ds'},
@@ -153,79 +156,12 @@ describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
       makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
     );
     const fill = getLayer(result).getFillColor;
-    expect(fill['@@function']).toBe('colorScale');
-    expect(fill.field).toBe('magnitude');
-    expect(fill['@@type']).toBeUndefined();
-    expect(fill.column).toBeUndefined();
+    expect(fill['@@type']).toBe('ColorScale');
+    expect(fill.column).toBe('magnitude');
+    expect(fill['@@function']).toBeUndefined();
   });
 
-  test('applies fix to all colour accessor props', () => {
-    const layer = {
-      '@@type': 'GeoArrowArcLayer',
-      _sqlroomsBinding: {dataset: 'ds'},
-      getSourceColor: {
-        '@@type': 'ColorScale',
-        column: 'src',
-        type: 'sequential',
-        scheme: 'Blues',
-      },
-      getTargetColor: {
-        '@@type': 'ColorScale',
-        column: 'tgt',
-        type: 'sequential',
-        scheme: 'Reds',
-      },
-    };
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
-    );
-    expect(getLayer(result).getSourceColor['@@function']).toBe('colorScale');
-    expect(getLayer(result).getSourceColor.field).toBe('src');
-    expect(getLayer(result).getTargetColor['@@function']).toBe('colorScale');
-    expect(getLayer(result).getTargetColor.field).toBe('tgt');
-  });
-
-  test('defaults missing scheme from the repaired scale type', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getFillColor: {
-              '@@type': 'ColorScale',
-              column: 'category',
-              type: 'categorical',
-            },
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getFillColor.scheme).toBe('Tableau10');
-  });
-
-  test('defaults missing diverging scheme to RdBu', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getFillColor: {
-              '@@type': 'ColorScale',
-              column: 'delta',
-              type: 'diverging',
-            },
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getFillColor.scheme).toBe('RdBu');
-  });
-
-  test('removes a broken ColorScale object that has no resolvable field', () => {
+  test('does not remove a broken ColorScale object without a field', () => {
     const layer = {
       '@@type': 'GeoArrowScatterplotLayer',
       _sqlroomsBinding: {dataset: 'ds'},
@@ -234,8 +170,7 @@ describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
     );
-    // Broken accessor is removed; default fill injector then applies.
-    expect(getLayer(result).getFillColor).toEqual([56, 189, 248, 180]);
+    expect(getLayer(result).getFillColor).toEqual({'@@type': 'ColorScale'});
   });
 
   test('leaves a valid @@function colorScale accessor unchanged', () => {
@@ -489,7 +424,7 @@ describe('normalizeAiDeckMapConfig — heatmap colorRange', () => {
     expect(getLayer(result).colorRange).toBeUndefined();
   });
 
-  test('also strips colorRange after class alias is applied (HeatmapLayer)', () => {
+  test('does not strip colorRange on unprefixed HeatmapLayer (validator rejects @@type first)', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -502,8 +437,8 @@ describe('normalizeAiDeckMapConfig — heatmap colorRange', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result)['@@type']).toBe('GeoArrowHeatmapLayer');
-    expect(getLayer(result).colorRange).toBeUndefined();
+    expect(getLayer(result)['@@type']).toBe('HeatmapLayer');
+    expect(getLayer(result).colorRange).toEqual([[0, 0, 255]]);
   });
 
   test('does not touch colorRange on other layer types', () => {
@@ -788,7 +723,7 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
     expect(getLayer(result).getRadius).toBe('@@=radius_col');
   });
 
-  test('clamps string getRadius after aliasing unprefixed ScatterplotLayer', () => {
+  test('does not clamp string getRadius on unprefixed ScatterplotLayer (validator rejects @@type first)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -801,8 +736,8 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result)['@@type']).toBe('GeoArrowScatterplotLayer');
-    expect(getLayer(result).getRadius).toBe(4);
+    expect(getLayer(result)['@@type']).toBe('ScatterplotLayer');
+    expect(getLayer(result).getRadius).toBe('mag * 500');
   });
 });
 

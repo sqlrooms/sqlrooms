@@ -553,4 +553,104 @@ describe('Deck map resource authoring contract', () => {
 
     expect(issues).toEqual([]);
   });
+
+  test('rejects unprefixed layer class names with the GeoArrow replacement', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'ScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.@@type',
+          message: expect.stringContaining('GeoArrowScatterplotLayer'),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects ColorScale @@type/column color accessor syntax', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@type': 'ColorScale',
+              column: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringContaining('@@function'),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects colorScale that uses column instead of field', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              column: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringContaining('field'),
+        }),
+      ]),
+    );
+  });
 });

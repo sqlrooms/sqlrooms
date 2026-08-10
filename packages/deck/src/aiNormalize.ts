@@ -12,20 +12,6 @@ const SCHEME_NAME_BY_LOWER = new Map(
   allKnownColorSchemeNames.map((s) => [s.toLowerCase(), s]),
 );
 
-function defaultSchemeForColorScaleType(type: unknown): string {
-  switch (type) {
-    case 'categorical':
-      return 'Tableau10';
-    case 'diverging':
-      return 'RdBu';
-    case 'quantize':
-    case 'quantile':
-      return 'YlOrRd';
-    default:
-      return 'Viridis';
-  }
-}
-
 // Minimal structural type that covers both AiMapConfig
 // and DeckMapConfig — all the passes only access these loose fields.
 type AiMapConfig = {
@@ -224,19 +210,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
   return {...config, spec: {...spec, layers} as typeof spec};
 }
 
-/** Maps common AI layer class name mistakes to the correct GeoArrow class names. */
-const LAYER_CLASS_ALIASES: Record<string, string> = {
-  ScatterplotLayer: 'GeoArrowScatterplotLayer',
-  HeatmapLayer: 'GeoArrowHeatmapLayer',
-  ColumnLayer: 'GeoArrowColumnLayer',
-  PathLayer: 'GeoArrowPathLayer',
-  PolygonLayer: 'GeoArrowPolygonLayer',
-  SolidPolygonLayer: 'GeoArrowSolidPolygonLayer',
-  ArcLayer: 'GeoArrowArcLayer',
-  TripsLayer: 'GeoArrowTripsLayer',
-  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
-};
-
 const COLOR_ACCESSOR_PROPS = [
   'getFillColor',
   'getLineColor',
@@ -246,14 +219,14 @@ const COLOR_ACCESSOR_PROPS = [
 ] as const;
 
 /**
- * Fixes common AI layer mistakes:
- * 1. Plain deck.gl class names without the GeoArrow prefix.
- * 2. Color accessors using wrong syntax: {"@@type":"ColorScale","column":"..."} instead
- *    of {"@@function":"colorScale","field":"..."}.
- * 3. Missing _sqlroomsBinding.dataset when there is exactly one dataset in the config
- *    (unambiguous — inject it automatically).
- * 4. colorRange on GeoArrowHeatmapLayer (owned by the UI scheme selector).
- * 5. Missing getFillColor on filled layers (deck.gl defaults to opaque black).
+ * Fixes common AI layer mistakes that are safe, unambiguous defaults:
+ * 1. Missing _sqlroomsBinding.dataset when there is exactly one dataset
+ * 2. colorRange on GeoArrowHeatmapLayer (owned by the UI scheme selector)
+ * 3. Missing getFillColor on filled layers (deck.gl defaults to opaque black)
+ * 4. Scheme-name casing on valid colorScale accessors
+ *
+ * Wrong layer class names (ScatterplotLayer) and ColorScale @@type/column
+ * syntax are rejected by getDeckMapResourceConfigIssues so the agent can retry.
  */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -270,58 +243,6 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     }
     let l = layer as Record<string, unknown>;
     let layerChanged = false;
-
-    // Fix layer class name alias
-    const rawType = l['@@type'];
-    if (typeof rawType === 'string' && LAYER_CLASS_ALIASES[rawType]) {
-      l = {...l, '@@type': LAYER_CLASS_ALIASES[rawType]};
-      layerChanged = true;
-    }
-
-    // Fix color accessor syntax: {"@@type":"ColorScale","column":"X"} → {"@@function":"colorScale","field":"X"}
-    for (const prop of COLOR_ACCESSOR_PROPS) {
-      const value = l[prop];
-      if (
-        value &&
-        typeof value === 'object' &&
-        !Array.isArray(value) &&
-        (value as Record<string, unknown>)['@@type'] === 'ColorScale' &&
-        !('@@function' in (value as Record<string, unknown>))
-      ) {
-        const v = value as Record<string, unknown>;
-        const field =
-          typeof v.column === 'string'
-            ? v.column
-            : typeof v.field === 'string'
-              ? v.field
-              : undefined;
-        if (field) {
-          const {column: _col, '@@type': _t, ...rest} = v;
-          const scaleType =
-            typeof rest.type === 'string' ? rest.type : 'sequential';
-          l = {
-            ...l,
-            [prop]: {
-              '@@function': 'colorScale',
-              field,
-              type: scaleType,
-              scheme:
-                typeof rest.scheme === 'string'
-                  ? rest.scheme
-                  : defaultSchemeForColorScaleType(scaleType),
-              domain: 'auto',
-              ...('legend' in rest ? {legend: rest.legend} : {}),
-            },
-          };
-          layerChanged = true;
-        } else {
-          // Can't repair — remove the broken accessor to avoid a parse failure
-          const {[prop]: _removed, ...rest} = l;
-          l = rest;
-          layerChanged = true;
-        }
-      }
-    }
 
     // Normalise color accessor scheme names: AI often sends wrong casing
     // (e.g. "blues", "viridis"). Do a case-insensitive lookup and replace with
@@ -769,12 +690,11 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
 }
 
 /**
- * Applies all AI-output normalization passes to a map config in one step.
+ * Applies AI-output normalization passes to a map config in one step.
  *
  * Safe to call on any surface — worksheet, dashboard, or block document. Each
  * pass is idempotent and leaves already-correct configs unchanged:
- * - layer class aliases (ScatterplotLayer → GeoArrowScatterplotLayer, etc.)
- * - color accessor syntax (@@type: ColorScale → @@function: colorScale, column → field)
+ * - scheme-name casing on colorScale accessors (e.g. "blues" → "Blues")
  * - string/zero getRadius in basic-mode scatterplot layers → numeric default
  * - string/zero getWidth in basic-mode line layers → numeric default + pixels units
  * - string/zero radiusPixels on heatmap layers → default
@@ -792,13 +712,13 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
+ *
+ * Not rewritten here (validator + agent retry): unprefixed layer class names and
+ * colorScale {"@@type":"ColorScale","column":"..."} syntax.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
 ): T {
-  // Alias / structural layer fixes first, then basic-mode prop clamps, so
-  // unprefixed class names (ScatterplotLayer) are renamed before getRadius
-  // etc. are inspected.
   return normalizeAiMapConfigRadius(
     normalizeAiMapConfigLayers(
       normalizeAiMapConfigDatasetSources(
