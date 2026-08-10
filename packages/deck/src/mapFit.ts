@@ -414,8 +414,11 @@ export function useDeckMapFitController(options: {
   }, [container]);
 
   useEffect(() => {
-    if (fitAttemptsRef.current.key !== fitKey) {
-      fitAttemptsRef.current = {key: fitKey, count: 0};
+    // Reset retries when the dataset/source changes OR the user clicks Fit again
+    // (requestVersion bumps). Otherwise a exhausted autofit leaves Fit no-oping.
+    const attemptsKey = `${fitKey}:${requestVersion}`;
+    if (fitAttemptsRef.current.key !== attemptsKey) {
+      fitAttemptsRef.current = {key: attemptsKey, count: 0};
     }
 
     const hasManualRequest =
