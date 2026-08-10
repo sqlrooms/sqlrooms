@@ -473,22 +473,28 @@ export function useDeckMapFitController(options: {
         const result = handle ? await handle : null;
         if (cancelled) return;
         if (!result) {
-          scheduleRetry(
+          // Empty handle is usually a closed/cancelled query, not a transient
+          // race — fail once instead of scanning the table repeatedly.
+          onError?.(
             new Error('Unable to fit map view to data: empty query result.'),
           );
+          markHandled();
           return;
         }
         const bounds = readDeckMapBounds(result);
         if (!bounds) {
-          // Common on cold start when H3 cells are not readable yet, or the
-          // dataset briefly has no rows. Retry instead of locking world view.
-          scheduleRetry(
-            fitToData.h3Column
-              ? new Error(
-                  'Unable to fit map view to H3 data. Check that the hexagon column contains valid H3 indexes.',
-                )
-              : new Error('Unable to determine map bounds from data.'),
-          );
+          // Empty / all-NULL geometry is a permanent data state, not a race.
+          // Only H3 cold-start (extension load) is worth a limited retry.
+          if (fitToData.h3Column) {
+            scheduleRetry(
+              new Error(
+                'Unable to fit map view to H3 data. Check that the hexagon column contains valid H3 indexes.',
+              ),
+            );
+            return;
+          }
+          onError?.(new Error('Unable to determine map bounds from data.'));
+          markHandled();
           return;
         }
         deckMapRef.current?.jumpTo(
@@ -508,7 +514,21 @@ export function useDeckMapFitController(options: {
           error instanceof Error
             ? error
             : new Error('Unable to fit map view to data.');
-        scheduleRetry(fitError);
+        // Retry only likely-transient H3 extension load races. Deterministic
+        // SQL errors (bad column, syntax) should fail immediately.
+        const message = fitError.message.toLowerCase();
+        const maybeTransientH3 =
+          Boolean(fitToData.h3Column) &&
+          (message.includes('h3') ||
+            message.includes('extension') ||
+            message.includes('not loaded') ||
+            message.includes('catalog'));
+        if (maybeTransientH3) {
+          scheduleRetry(fitError);
+          return;
+        }
+        onError?.(fitError);
+        markHandled();
       }
     })();
 

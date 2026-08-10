@@ -196,7 +196,8 @@ export function usesStrokeSetting(layerType: unknown) {
 
 /**
  * Deck.gl default for `stroked` when the prop is omitted.
- * Scatterplot and solid-polygon default to no stroke; polygon / H3 / GeoJSON stroke by default.
+ * Scatterplot, solid-polygon, and H3 (ColumnLayer-based) default to no stroke;
+ * polygon / GeoJSON stroke by default.
  */
 export function getDeckMapLayerStrokeDefault(layerType: unknown): boolean {
   if (typeof layerType !== 'string') return false;
@@ -204,6 +205,7 @@ export function getDeckMapLayerStrokeDefault(layerType: unknown): boolean {
   if (
     type.includes('scatterplot') ||
     type.includes('solidpolygon') ||
+    type.includes('h3hexagon') ||
     type === 'solid polygon'
   ) {
     return false;
@@ -532,11 +534,15 @@ export function clearDeckMapLayerColorScale(
   layerIndex: number,
   accessor: DeckMapLayerColorAccessor,
 ): DeckMapConfig {
+  const defaultColor =
+    accessor === 'getLineColor'
+      ? DECK_MAP_DEFAULT_STROKE_COLOR
+      : DEFAULT_LAYER_FILL_COLOR;
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
     // Always restore a visible flat color. Deleting the accessor leaves
     // deck.gl's opaque black default, which looks broken with no picker.
-    [accessor]: [...DEFAULT_LAYER_FILL_COLOR],
+    [accessor]: [...defaultColor],
   }));
 }
 

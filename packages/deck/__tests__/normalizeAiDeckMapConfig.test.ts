@@ -28,8 +28,8 @@ function getLayer(result: any, index = 0): Record<string, any> {
 // Layer class alias normalisation
 // ---------------------------------------------------------------------------
 
-describe('normalizeAiDeckMapConfig — shadow layer removal (type switch)', () => {
-  test('removes the hidden scatterplot when a visible heatmap was added (point→heatmap switch)', () => {
+describe('normalizeAiDeckMapConfig — hidden layers', () => {
+  test('keeps layers with visible:false (legitimate user/AI hide state)', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -49,8 +49,9 @@ describe('normalizeAiDeckMapConfig — shadow layer removal (type switch)', () =
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(result.spec.layers).toHaveLength(1);
-    expect(getLayer(result)['@@type']).toBe('GeoArrowHeatmapLayer');
+    expect(result.spec.layers).toHaveLength(2);
+    expect(getLayer(result, 0).visible).toBe(false);
+    expect(getLayer(result, 1)['@@type']).toBe('GeoArrowHeatmapLayer');
   });
 
   test('keeps both layers when they are the same @@type', () => {
@@ -1197,11 +1198,13 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
 });
 
 // ---------------------------------------------------------------------------
-// ST_MakeLine ORDER BY → LIST wrap
+// ST_MakeLine ORDER BY — no silent SQL rewrite (validator owns this)
 // ---------------------------------------------------------------------------
 
-describe('normalizeAiDeckMapConfig — ST_MakeLine LIST wrap', () => {
-  test('wraps ST_MakeLine(ST_Point(...) ORDER BY ...) with LIST', () => {
+describe('normalizeAiDeckMapConfig — ST_MakeLine left to validator', () => {
+  test('does not rewrite ST_MakeLine(ST_Point(...) ORDER BY ...)', () => {
+    const sql =
+      'SELECT path_id, ST_AsWKB(ST_MakeLine(ST_Point(lon, lat) ORDER BY waypoint_order)) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM __sqlrooms_source GROUP BY path_id';
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -1217,19 +1220,13 @@ describe('normalizeAiDeckMapConfig — ST_MakeLine LIST wrap', () => {
           trips: {
             source: {
               tableName: 'nyc_trips_animated',
-              transformSql:
-                'SELECT path_id, ST_AsWKB(ST_MakeLine(ST_Point(lon, lat) ORDER BY waypoint_order)) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM __sqlrooms_source GROUP BY path_id',
+              transformSql: sql,
             },
           },
         },
       ),
     );
-    expect(result.datasets.trips.source.transformSql).toContain(
-      'ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))',
-    );
-    expect(result.datasets.trips.source.transformSql).not.toMatch(
-      /ST_MakeLine\(\s*ST_Point\([^)]*\)\s+ORDER\s+BY/i,
-    );
+    expect(result.datasets.trips.source.transformSql).toBe(sql);
   });
 
   test('leaves already-correct ST_MakeLine(LIST(...)) unchanged', () => {
@@ -1289,11 +1286,10 @@ describe('validateAndFixColorScaleFields', () => {
     expect((result.spec.layers[0].getFillColor as any).field).toBe('Magnitude');
   });
 
-  test('reports wrong casing as an error (magnitude instead of Magnitude)', () => {
+  test('silently fixes wrong casing (magnitude → Magnitude)', () => {
     const config = makeValidateConfig('magnitude');
-    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
-      /colorScale field "magnitude" has wrong casing — use "Magnitude"/,
-    );
+    const result = validateAndFixColorScaleFields(config, resolveTable);
+    expect((result.spec.layers[0].getFillColor as any).field).toBe('Magnitude');
   });
 
   test('throws with helpful message for unknown abbreviation "mag"', () => {
@@ -1384,7 +1380,7 @@ describe('validateAndFixColorScaleFields', () => {
     ).not.toThrow();
   });
 
-  test('reports wrong casing for lowercase-named columns too (Speed vs speed)', () => {
+  test('silently fixes wrong casing for lowercase-named columns too (Speed → speed)', () => {
     const lowercaseColumns = [
       {name: 'speed', type: 'FLOAT'},
       {name: 'category', type: 'VARCHAR'},
@@ -1407,11 +1403,10 @@ describe('validateAndFixColorScaleFields', () => {
       },
       datasets: {ds: {source: {tableName: 'my_table'}}},
     };
-    expect(() =>
-      validateAndFixColorScaleFields(config, (t) =>
-        t === 'my_table' ? {columns: lowercaseColumns} : undefined,
-      ),
-    ).toThrow(/colorScale field "Speed" has wrong casing — use "speed"/);
+    const result = validateAndFixColorScaleFields(config, (t) =>
+      t === 'my_table' ? {columns: lowercaseColumns} : undefined,
+    );
+    expect((result.spec.layers[0].getFillColor as any).field).toBe('speed');
   });
 
   test('rejects an unknown field even when actual columns are lowercase', () => {

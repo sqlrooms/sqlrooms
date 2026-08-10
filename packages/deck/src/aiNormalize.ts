@@ -1,69 +1,15 @@
-// Inlined to keep this module free of heavy workspace-package imports
+import {allKnownColorSchemeNames} from '@sqlrooms/color-scales/colorSchemeNames';
+
+// Inlined SQL helpers keep this module free of heavy workspace-package imports
 // (e.g. @sqlrooms/duckdb, @sqlrooms/mosaic) that would break Jest.
-// The list below must be kept in sync with packages/color-scales/src/colorSchemeNames.ts.
 const DECK_TABLE_DATASET_SOURCE_RELATION = '__sqlrooms_source';
 function quoteDeckMapSqlIdentifier(identifier: string) {
   return `"${identifier.replace(/"/g, '""')}"`;
 }
 
-const ALL_KNOWN_SCHEMES = [
-  // sequential
-  'Blues',
-  'BuGn',
-  'BuPu',
-  'Cividis',
-  'Cool',
-  'CubehelixDefault',
-  'GnBu',
-  'Greens',
-  'Greys',
-  'Inferno',
-  'Magma',
-  'OrRd',
-  'Oranges',
-  'Plasma',
-  'PuBu',
-  'PuBuGn',
-  'PuRd',
-  'Purples',
-  'RdPu',
-  'Reds',
-  'Turbo',
-  'Viridis',
-  'Warm',
-  'YlGn',
-  'YlGnBu',
-  'YlOrBr',
-  'YlOrRd',
-  'Rainbow',
-  'Sinebow',
-  // diverging
-  'BrBG',
-  'PRGn',
-  'PiYG',
-  'PuOr',
-  'RdBu',
-  'RdGy',
-  'RdYlBu',
-  'RdYlGn',
-  'Spectral',
-  // categorical
-  'Accent',
-  'Dark2',
-  'Paired',
-  'Pastel1',
-  'Pastel2',
-  'Set1',
-  'Set2',
-  'Set3',
-  'Tableau10',
-  'Observable10',
-  'Category10',
-] as const;
-
 /** Lower-cased name → canonical casing, e.g. "blues" → "Blues". */
 const SCHEME_NAME_BY_LOWER = new Map(
-  ALL_KNOWN_SCHEMES.map((s) => [s.toLowerCase(), s]),
+  allKnownColorSchemeNames.map((s) => [s.toLowerCase(), s]),
 );
 
 // Minimal structural type that covers both AiMapConfig
@@ -101,7 +47,7 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
     if (!layer || typeof layer !== 'object' || Array.isArray(layer)) {
       return layer;
     }
-    const l = layer as Record<string, unknown>;
+    let l = layer as Record<string, unknown>;
 
     if (
       l['@@type'] === 'GeoArrowScatterplotLayer' &&
@@ -227,7 +173,9 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         delete next.radiusMinPixels;
         delete next.radiusMaxPixels;
         delete next.radiusPixels;
-        return next;
+        // Fall through so later basic-mode passes (e.g. string getElevation)
+        // still run on the repaired layer.
+        l = next;
       }
     }
 
@@ -252,6 +200,9 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       return next;
     }
 
+    if (changed && l !== layer) {
+      return l;
+    }
     return layer;
   });
 
@@ -535,9 +486,14 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
         const newBinding: Record<string, unknown> = {...(binding ?? {})};
         if (missingSrc) newBinding.sourceGeometryColumn = srcCol;
         if (missingTgt) newBinding.targetGeometryColumn = tgtCol;
-        // Remove the (now redundant) string accessor props from the layer.
-        const {getSourcePosition: _sp, getTargetPosition: _tp, ...rest} = l;
-        l = {...rest, _sqlroomsBinding: newBinding};
+        const next: Record<string, unknown> = {
+          ...l,
+          _sqlroomsBinding: newBinding,
+        };
+        // Only strip accessors that were successfully lifted.
+        if (missingSrc) delete next.getSourcePosition;
+        if (missingTgt) delete next.getTargetPosition;
+        l = next;
         layerChanged = true;
       }
     }
@@ -572,36 +528,9 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     return layerChanged ? l : layer;
   });
 
-  // Remove layers that the AI hid with visible:false when other layers of a
-  // different @@type are visible. This is the "type switch shadow" pattern:
-  // instead of replacing the old layer, the AI adds a new one and hides the old.
-  const visibleLayers = layers.filter(
-    (l) =>
-      typeof l === 'object' &&
-      l !== null &&
-      (l as Record<string, unknown>).visible !== false,
-  );
-  const hiddenWithDifferentType = layers.filter((l) => {
-    if (typeof l !== 'object' || l === null) return false;
-    const lr = l as Record<string, unknown>;
-    if (lr.visible !== false) return false;
-    const hiddenType = lr['@@type'];
-    return visibleLayers.some(
-      (v) =>
-        typeof v === 'object' &&
-        v !== null &&
-        (v as Record<string, unknown>)['@@type'] !== hiddenType,
-    );
-  });
-  if (hiddenWithDifferentType.length > 0) {
-    const filteredLayers = layers.filter(
-      (l) => !hiddenWithDifferentType.includes(l),
-    );
-    return {
-      ...config,
-      spec: {...spec, layers: filteredLayers} as typeof spec,
-    };
-  }
+  // Do not delete layers with visible:false. That is legitimate user state
+  // (settings visibility toggle). Type switches should use replaceLayers:true
+  // (prompt + validator), not silent deletion on normalize.
 
   if (!changed) return config;
   return {...config, spec: {...spec, layers} as typeof spec};
@@ -678,97 +607,25 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     }
 
     // Fix missing geometryEncodingHint for arc datasets.
-    // If the transformSql defines arc geometry columns (detected above) using
-    // ST_Point/ST_AsWKB/etc., the dataset must declare geometryEncodingHint:
-    // "wkb" so the decoder knows how to read the geometry.
+    // If the transformSql defines arc geometry columns (detected above), the
+    // dataset must declare geometryEncodingHint: "wkb" so the decoder knows
+    // how to read the geometry. Do not silently rewrite SQL — validator +
+    // agent retry own ST_AsWKB / ST_MakeLine(LIST(...)) corrections.
     const transformSql = (next?.source as Record<string, unknown> | undefined)
       ?.transformSql as string | undefined;
-    const sqlQuery = (next?.source as Record<string, unknown> | undefined)
-      ?.sqlQuery as string | undefined;
-
-    // Fix ST_MakeLine(ST_Point(...) ORDER BY ...) → ST_MakeLine(LIST(ST_Point(...) ORDER BY ...)).
-    // ST_MakeLine is a scalar that takes a LIST; ORDER BY is only valid inside LIST.
-    // Without this wrap DuckDB errors: "st_makeline is a Scalar Function".
-    const fixMakeLineOrderBy = (sql: string) =>
-      sql.replace(
-        /\bST_MakeLine\s*\(\s*(?!LIST\s*\()(ST_Point\s*\([^)]*\))\s+(ORDER\s+BY\s+[^)]+?)\)/gi,
-        'ST_MakeLine(LIST($1 $2))',
-      );
-
-    if (typeof transformSql === 'string') {
-      const fixed = fixMakeLineOrderBy(transformSql);
-      if (fixed !== transformSql) {
-        next = {
-          ...next,
-          source: {
-            ...(next?.source as Record<string, unknown>),
-            transformSql: fixed,
-          },
-        };
-        changed = true;
-      }
-    }
-    if (typeof sqlQuery === 'string') {
-      const fixed = fixMakeLineOrderBy(sqlQuery);
-      if (fixed !== sqlQuery) {
-        next = {
-          ...next,
-          source: {
-            ...(next?.source as Record<string, unknown>),
-            sqlQuery: fixed,
-          },
-        };
-        changed = true;
-      }
-    }
-
-    // Re-read after possible ST_MakeLine rewrite so later passes see the fixed SQL.
-    const currentTransformSql = (
-      next?.source as Record<string, unknown> | undefined
-    )?.transformSql as string | undefined;
 
     if (
       arcGeomCols.size > 0 &&
-      currentTransformSql &&
+      typeof transformSql === 'string' &&
       !next?.geometryEncodingHint
     ) {
       // Only inject when the transformSql references at least one of the
       // arc geometry columns — avoids touching unrelated datasets.
       const mentionsArcCol = [...arcGeomCols].some((col) =>
-        currentTransformSql.includes(col),
+        transformSql.includes(col),
       );
       if (mentionsArcCol) {
         next = {...next, geometryEncodingHint: 'wkb'};
-        changed = true;
-      }
-    }
-
-    // Fix transformSql that uses bare ST_Point() instead of ST_AsWKB(ST_Point()).
-    // This is the most common mistake for arc layers: the AI omits ST_AsWKB().
-    if (currentTransformSql && arcGeomCols.size > 0) {
-      // Replace "ST_Point(...) AS col" → "ST_AsWKB(ST_Point(...)) AS col"
-      // only for the arc geometry columns. Uses a conservative regex that
-      // matches the alias at the end and avoids double-wrapping.
-      let fixedSql = currentTransformSql;
-      for (const col of arcGeomCols) {
-        // Match: ST_Point(<args>) as col  (case-insensitive, optional quotes)
-        // Not already wrapped with ST_AsWKB.
-        fixedSql = fixedSql.replace(
-          new RegExp(
-            `(?<!ST_AsWKB\\()(ST_Point\\([^)]+\\))\\s+[Aa][Ss]\\s+"?${col}"?`,
-            'g',
-          ),
-          `ST_AsWKB($1) AS "${col}"`,
-        );
-      }
-      if (fixedSql !== currentTransformSql) {
-        next = {
-          ...next,
-          source: {
-            ...(next?.source as Record<string, unknown>),
-            transformSql: fixedSql,
-          },
-        };
         changed = true;
       }
     }
@@ -911,12 +768,11 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - getHexagon "@@=column" on GeoArrowH3HexagonLayer → lifted into _sqlroomsBinding.hexagonColumn
  * - missing fitToData → injected from the sole dataset or first layer binding
  * - GeoArrowArcLayer getSourcePosition/getTargetPosition string accessors → lifted into _sqlroomsBinding
- * - GeoArrowArcLayer dataset: missing ST_AsWKB wrapping on ST_Point → added; missing geometryEncodingHint → injected
+ * - GeoArrowArcLayer dataset: missing geometryEncodingHint → injected when transformSql mentions arc geom cols
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
- * - ST_MakeLine(ST_Point(...) ORDER BY ...) → ST_MakeLine(LIST(ST_Point(...) ORDER BY ...))
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
@@ -989,17 +845,19 @@ export function validateAndFixColorScaleFields<
   if (columnsByDataset.size === 0) return config;
 
   const errors: string[] = [];
-  for (const [i, layer] of layers.entries()) {
+  let changed = false;
+  const nextLayers = layers.map((layer, i) => {
     const binding = layer._sqlroomsBinding as
       | Record<string, unknown>
       | undefined;
     const datasetId =
       typeof binding?.dataset === 'string' ? binding.dataset : undefined;
     const colMap = datasetId ? columnsByDataset.get(datasetId) : undefined;
-    if (!colMap) continue;
+    if (!colMap) return layer;
 
+    let nextLayer: Record<string, unknown> | undefined;
     for (const prop of COLOR_SCALE_ACCESSOR_PROPS) {
-      const accessor = layer[prop];
+      const accessor = (nextLayer ?? layer)[prop];
       if (!accessor || typeof accessor !== 'object' || Array.isArray(accessor))
         continue;
       const acc = accessor as Record<string, unknown>;
@@ -1009,25 +867,35 @@ export function validateAndFixColorScaleFields<
 
       const canonical = colMap.get(field.toLowerCase());
       if (canonical === field) {
-        // Exact match — correct as-is.
         continue;
       }
       if (canonical !== undefined) {
-        errors.push(
-          `spec.layers.${i}.${prop}: colorScale field "${field}" has wrong casing — use "${canonical}"`,
-        );
-      } else {
-        const available = [...colMap.values()].join(', ');
-        errors.push(
-          `spec.layers.${i}.${prop}: colorScale field "${field}" is not a column in dataset "${datasetId}". Available columns: ${available}`,
-        );
+        // Wrong casing is unambiguous and reversible — fix silently.
+        nextLayer = {
+          ...(nextLayer ?? layer),
+          [prop]: {...acc, field: canonical},
+        };
+        changed = true;
+        continue;
       }
+      const available = [...colMap.values()].join(', ');
+      errors.push(
+        `spec.layers.${i}.${prop}: colorScale field "${field}" is not a column in dataset "${datasetId}". Available columns: ${available}`,
+      );
     }
-  }
+    return nextLayer ?? layer;
+  });
 
   if (errors.length > 0) {
     throw new Error(errors.join('; '));
   }
 
-  return config;
+  if (!changed) return config;
+  return {
+    ...config,
+    spec: {
+      ...(spec as Record<string, unknown>),
+      layers: nextLayers,
+    },
+  } as T;
 }

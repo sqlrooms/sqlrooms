@@ -5,20 +5,24 @@
 
 export {ColorScaleLegend} from './ColorScaleLegend';
 export {
+  allKnownColorSchemeNames,
   binnedNumericSchemes,
-  categoricalSchemeColors,
   categoricalSchemes,
-  continuousDivergingInterpolators,
   continuousDivergingSchemes,
-  continuousSequentialInterpolators,
   continuousSequentialSchemes,
-} from './colorSchemes';
+  formatColorSchemePromptLists,
+} from './colorSchemeNames';
 export type {
   BinnedNumericScheme,
   CategoricalScheme,
   ColorScaleScheme,
   ContinuousDivergingScheme,
   ContinuousSequentialScheme,
+} from './colorSchemeNames';
+export {
+  categoricalSchemeColors,
+  continuousDivergingInterpolators,
+  continuousSequentialInterpolators,
 } from './colorSchemes';
 export {ColorLegendConfig, ColorScaleConfig, RGBAColor} from './config';
 export type {

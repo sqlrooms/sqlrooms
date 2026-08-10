@@ -1,3 +1,4 @@
+import {formatColorSchemePromptLists} from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
@@ -44,6 +45,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasEntries(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && Object.keys(value).length > 0;
+}
+
+/**
+ * True when SQL selects a geometry alias from bare `ST_Point(...) AS col`
+ * without wrapping it in `ST_AsWKB(...)`. Nested ST_Point args are tolerated;
+ * ST_Point used only as an argument to ST_MakeLine/LIST (no AS) is ignored.
+ */
+function hasBareStPointGeometryAlias(sql: string): boolean {
+  const re = /\bST_Point\s*\(/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(sql)) !== null) {
+    const start = match.index;
+    const before = sql.slice(0, start).replace(/\s+$/, '');
+    if (/\bST_AsWKB\s*\(\s*$/i.test(before)) {
+      continue;
+    }
+
+    // Walk to the matching close paren so nested ST_Point args are allowed.
+    let depth = 1;
+    let i = start + match[0].length;
+    while (i < sql.length && depth > 0) {
+      const ch = sql[i];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      i += 1;
+    }
+    if (depth !== 0) continue;
+
+    if (/^\s+AS\s+/i.test(sql.slice(i))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function mergeOptionalRecord(
@@ -312,6 +346,22 @@ export function getDeckMapResourceConfigIssues(
             : 'must define source.tableName or source.sqlQuery',
       });
     }
+
+    const sqlParts = [
+      isDeckMapTableDatasetSource(source) ? source.transformSql : undefined,
+      isDeckMapSqlDatasetSource(source) ? source.sqlQuery : undefined,
+    ].filter(
+      (part): part is string =>
+        typeof part === 'string' && part.trim().length > 0,
+    );
+    const sql = sqlParts.join('\n');
+    if (sql && hasBareStPointGeometryAlias(sql)) {
+      issues.push({
+        path: `datasets.${datasetId}.source`,
+        message:
+          'Geometry columns must be produced with ST_AsWKB(ST_Point(...)) AS col — bare ST_Point(...) AS col returns an internal DuckDB geometry type that cannot be decoded. Wrap ST_Point with ST_AsWKB.',
+      });
+    }
   }
 
   if (parsedSpec.layers.length === 0) {
@@ -473,7 +523,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
 - Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.
-- For data-driven color use getFillColor (or getColor/getSourceColor/getTargetColor for arc layers) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Prefer a colorScale over a flat fill whenever the table has a meaningful numeric or categorical column to color by. Use "quantile" for skewed numeric distributions, "sequential" for roughly uniform ones, "categorical" for string/enum columns. Use EXACT scheme names (case-sensitive) — sequential: Blues, BuGn, BuPu, Cividis, GnBu, Greens, Inferno, Magma, OrRd, Oranges, Plasma, PuBu, PuBuGn, PuRd, Purples, RdPu, Reds, Turbo, Viridis, YlGn, YlGnBu, YlOrBr, YlOrRd. Diverging: BrBG, PRGn, PiYG, PuOr, RdBu, RdGy, RdYlBu, RdYlGn, Spectral. Categorical: Accent, Dark2, Paired, Pastel1, Set1, Set2, Set3, Tableau10, Category10. Do NOT invent names like "bluepurple".
+- For data-driven color use getFillColor (or getColor/getSourceColor/getTargetColor for arc layers) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Prefer a colorScale over a flat fill whenever the table has a meaningful numeric or categorical column to color by. Use "quantile" for skewed numeric distributions, "sequential" for roughly uniform ones, "categorical" for string/enum columns. Use EXACT scheme names (case-sensitive) — ${formatColorSchemePromptLists()} Do NOT invent names like "bluepurple".
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
 - When updating only visual properties (color scale, scheme, radius, width, elevation scale, visibility, opacity), OMIT the datasets field from the patch entirely. Do NOT re-send a simplified dataset source — sending source.tableName without transformSql or sqlQuery will overwrite the existing geometry-producing SQL and cause a render crash. Only include datasets in an update when intentionally changing a data source or adding/removing a dataset.
 - To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates. IMPORTANT: When the user asks to "switch", "change", or "replace" a layer type (e.g. from ScatterplotLayer to HeatmapLayer), set replaceLayers: true and send only the new layer — do NOT keep the old layer with visible: false. Hiding the old layer is not the same as replacing it and leaves dead config behind.

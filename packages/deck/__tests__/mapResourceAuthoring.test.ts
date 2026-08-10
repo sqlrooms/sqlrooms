@@ -389,4 +389,126 @@ describe('Deck map resource authoring contract', () => {
 
     expect(issues).toEqual([]);
   });
+
+  test('rejects bare ST_Point(...) AS col without ST_AsWKB', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            id: 'arcs',
+            _sqlroomsBinding: {
+              dataset: 'arcs',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        arcs: {
+          source: {
+            tableName: 'od',
+            transformSql:
+              'SELECT *, ST_Point(source_lon, source_lat) AS source_geom, ST_Point(target_lon, target_lat) AS target_geom FROM __sqlrooms_source',
+          },
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'datasets.arcs.source' &&
+          i.message.includes('ST_AsWKB(ST_Point'),
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects bare ST_Point with nested args as a geometry alias', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql:
+              'SELECT *, ST_Point(h3_cell_to_lng(h), h3_cell_to_lat(h)) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'datasets.places.source' &&
+          i.message.includes('ST_AsWKB(ST_Point'),
+      ),
+    ).toBe(true);
+  });
+
+  test('accepts ST_AsWKB(ST_Point(...)) AS col', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            id: 'arcs',
+            _sqlroomsBinding: {
+              dataset: 'arcs',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        arcs: {
+          source: {
+            tableName: 'od',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(source_lon, source_lat)) AS source_geom, ST_AsWKB(ST_Point(target_lon, target_lat)) AS target_geom FROM __sqlrooms_source',
+          },
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  test('does not flag ST_Point used only inside ST_MakeLine(LIST(...))', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowTripsLayer',
+            id: 'trips',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              geometryColumn: 'geom',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+      },
+      datasets: {
+        trips: {
+          source: {
+            tableName: 'nyc_trips',
+            transformSql:
+              'SELECT trip_id, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY t))) AS geom, LIST(t ORDER BY t) AS timestamps FROM __sqlrooms_source GROUP BY trip_id',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
 });

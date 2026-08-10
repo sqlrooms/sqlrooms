@@ -166,7 +166,7 @@ describe('mapLayerConfigUtils', () => {
       false,
     );
     expect(getDeckMapLayerStrokeDefault('GeoArrowPolygonLayer')).toBe(true);
-    expect(getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer')).toBe(true);
+    expect(getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer')).toBe(false);
     expect(getDeckMapLayerStrokeDefault('GeoJsonLayer')).toBe(true);
   });
 });
@@ -236,7 +236,7 @@ describe('clearDeckMapLayerColorScale', () => {
     expect(getDeckMapLayerRecords(cleared)[0]?.getColor).toEqual(defaultColor);
   });
 
-  test('restores a flat default color for getLineColor (not delete)', () => {
+  test('restores stroke default for getLineColor', () => {
     const withScale = setDeckMapLayerColorScale(
       config,
       0,
@@ -244,9 +244,9 @@ describe('clearDeckMapLayerColorScale', () => {
       createDeckMapLayerColorScale({field: 'mag'}),
     );
     const cleared = clearDeckMapLayerColorScale(withScale, 0, 'getLineColor');
-    expect(getDeckMapLayerRecords(cleared)[0]?.getLineColor).toEqual(
-      defaultColor,
-    );
+    expect(getDeckMapLayerRecords(cleared)[0]?.getLineColor).toEqual([
+      0, 0, 0, 255,
+    ]);
   });
 });
 
