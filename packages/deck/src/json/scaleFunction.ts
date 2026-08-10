@@ -60,7 +60,13 @@ function readNumericDomain(vector: arrow.Vector): [number, number] | null {
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < vector.length; i++) {
-    const v = Number(vector.get(i));
+    // Arrow/SQL NULL must not become 0 via Number(null).
+    if (typeof vector.isValid === 'function' && !vector.isValid(i)) {
+      continue;
+    }
+    const raw = vector.get(i);
+    if (raw == null) continue;
+    const v = Number(raw);
     if (!Number.isFinite(v)) continue;
     if (v < min) min = v;
     if (v > max) max = v;

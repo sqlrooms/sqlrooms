@@ -408,11 +408,14 @@ export function getDeckMapResourceConfigIssues(
       const getHexagon = layer.getHexagon;
       const hasGetHexagon =
         typeof getHexagon === 'string' && getHexagon.trim().length > 0;
-      if (!hasGetHexagon) {
+      const hasHexagonBinding =
+        typeof binding?.hexagonColumn === 'string' &&
+        (binding.hexagonColumn as string).trim().length > 0;
+      if (!hasGetHexagon && !hasHexagonBinding) {
         issues.push({
           path: `spec.layers.${index}.getHexagon`,
           message:
-            'GeoArrowH3HexagonLayer requires getHexagon set to the H3 index column as a string accessor, e.g. "@@=h3_column_name"',
+            'GeoArrowH3HexagonLayer requires getHexagon (e.g. "@@=h3_column_name") or _sqlroomsBinding.hexagonColumn set to the H3 index column',
         });
       }
     }

@@ -185,6 +185,46 @@ describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
     expect(getLayer(result).getTargetColor.field).toBe('tgt');
   });
 
+  test('defaults missing scheme from the repaired scale type', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@type': 'ColorScale',
+              column: 'category',
+              type: 'categorical',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor.scheme).toBe('Tableau10');
+  });
+
+  test('defaults missing diverging scheme to RdBu', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getFillColor: {
+              '@@type': 'ColorScale',
+              column: 'delta',
+              type: 'diverging',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor.scheme).toBe('RdBu');
+  });
+
   test('removes a broken ColorScale object that has no resolvable field', () => {
     const layer = {
       '@@type': 'GeoArrowScatterplotLayer',
@@ -746,6 +786,23 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
       ),
     });
     expect(getLayer(result).getRadius).toBe('@@=radius_col');
+  });
+
+  test('clamps string getRadius after aliasing unprefixed ScatterplotLayer', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'ScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getRadius: 'mag * 500',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result)['@@type']).toBe('GeoArrowScatterplotLayer');
+    expect(getLayer(result).getRadius).toBe(4);
   });
 });
 

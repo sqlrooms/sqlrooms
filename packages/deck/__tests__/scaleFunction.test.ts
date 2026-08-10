@@ -62,4 +62,28 @@ describe('scaleFunction', () => {
     });
     expect(expression).toBe('@@=Math.max(0, floors - 2)');
   });
+
+  test('ignores null values when computing auto domain', () => {
+    const values = vectorFromArray([null, 10, 20], new Float64());
+    const table = new Table(new Schema([new Field('height', new Float64())]), {
+      height: values,
+    });
+
+    const expression = compileLinearScaleExpression(table, {
+      field: 'height',
+      domain: 'auto',
+      range: [0, 100],
+    });
+    expect(expression).toBeDefined();
+
+    const accessor = compileGeoArrowAccessor(expression!.slice(3), table);
+    const batch = table.batches[0]!;
+    // Domain is [10, 20], not [0, 20] from Number(null).
+    expect(accessor({index: 1, data: {data: batch}, target: []})).toBeCloseTo(
+      0,
+    );
+    expect(accessor({index: 2, data: {data: batch}, target: []})).toBeCloseTo(
+      100,
+    );
+  });
 });

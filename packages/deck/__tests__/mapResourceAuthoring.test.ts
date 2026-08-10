@@ -33,6 +33,48 @@ describe('Deck map resource authoring contract', () => {
     expect(() => assertDeckMapResourceConfig(validConfig)).not.toThrow();
   });
 
+  test('accepts H3 layers that bind hexagonColumn without getHexagon', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'hex',
+            _sqlroomsBinding: {dataset: 'hexes', hexagonColumn: 'h3'},
+          },
+        ],
+      },
+      datasets: {
+        hexes: {source: {tableName: 'hexes'}},
+      },
+    });
+    expect(issues).toEqual([]);
+  });
+
+  test('rejects H3 layers missing both getHexagon and hexagonColumn', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'hex',
+            _sqlroomsBinding: {dataset: 'hexes'},
+          },
+        ],
+      },
+      datasets: {
+        hexes: {source: {tableName: 'hexes'}},
+      },
+    });
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getHexagon' &&
+          i.message.includes('hexagonColumn'),
+      ),
+    ).toBe(true);
+  });
+
   test('allows only a truly empty resource while waiting for user configuration', () => {
     const emptyConfig: DeckMapConfig = {spec: {layers: []}, datasets: {}};
 

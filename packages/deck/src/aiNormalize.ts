@@ -12,6 +12,20 @@ const SCHEME_NAME_BY_LOWER = new Map(
   allKnownColorSchemeNames.map((s) => [s.toLowerCase(), s]),
 );
 
+function defaultSchemeForColorScaleType(type: unknown): string {
+  switch (type) {
+    case 'categorical':
+      return 'Tableau10';
+    case 'diverging':
+      return 'RdBu';
+    case 'quantize':
+    case 'quantile':
+      return 'YlOrRd';
+    default:
+      return 'Viridis';
+  }
+}
+
 // Minimal structural type that covers both AiMapConfig
 // and DeckMapConfig — all the passes only access these loose fields.
 type AiMapConfig = {
@@ -283,13 +297,18 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
               : undefined;
         if (field) {
           const {column: _col, '@@type': _t, ...rest} = v;
+          const scaleType =
+            typeof rest.type === 'string' ? rest.type : 'sequential';
           l = {
             ...l,
             [prop]: {
               '@@function': 'colorScale',
               field,
-              type: typeof rest.type === 'string' ? rest.type : 'sequential',
-              scheme: typeof rest.scheme === 'string' ? rest.scheme : 'Viridis',
+              type: scaleType,
+              scheme:
+                typeof rest.scheme === 'string'
+                  ? rest.scheme
+                  : defaultSchemeForColorScaleType(scaleType),
               domain: 'auto',
               ...('legend' in rest ? {legend: rest.legend} : {}),
             },
@@ -777,6 +796,9 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
 ): T {
+  // Alias / structural layer fixes first, then basic-mode prop clamps, so
+  // unprefixed class names (ScatterplotLayer) are renamed before getRadius
+  // etc. are inspected.
   return normalizeAiMapConfigRadius(
     normalizeAiMapConfigLayers(
       normalizeAiMapConfigDatasetSources(
