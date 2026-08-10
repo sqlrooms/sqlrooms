@@ -472,13 +472,6 @@ export function getDeckMapResourceConfigIssues(
     }
 
     if (layerType === 'GeoArrowHeatmapLayer') {
-      if ('colorRange' in layer) {
-        issues.push({
-          path: `spec.layers.${index}.colorRange`,
-          message:
-            'omit colorRange on GeoArrowHeatmapLayer — the UI scheme selector owns the color ramp; hand-crafted RGB arrays are not supported',
-        });
-      }
       const getWeight = layer.getWeight;
       if (isPlainObject(getWeight)) {
         issues.push({

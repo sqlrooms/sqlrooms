@@ -405,24 +405,23 @@ describe('normalizeAiDeckMapConfig — filled:false guard', () => {
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — leaves heatmap/H3/arc accessor mistakes alone', () => {
-  test('does not strip colorRange from GeoArrowHeatmapLayer', () => {
-    const colorRange = [
-      [255, 0, 0],
-      [0, 255, 0],
-    ];
+  test('strips colorRange from GeoArrowHeatmapLayer (AI normalize; UI may set it later)', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
           {
             '@@type': 'GeoArrowHeatmapLayer',
             _sqlroomsBinding: {dataset: 'ds'},
-            colorRange,
+            colorRange: [
+              [255, 0, 0],
+              [0, 255, 0],
+            ],
           },
         ],
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).colorRange).toEqual(colorRange);
+    expect(getLayer(result).colorRange).toBeUndefined();
   });
 
   test('does not rewrite object getWeight on GeoArrowHeatmapLayer', () => {

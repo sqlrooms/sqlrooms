@@ -100,7 +100,7 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
-  test('rejects heatmap colorRange and object getWeight', () => {
+  test('rejects object getWeight on heatmap layers (colorRange is UI-owned, not validated)', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
         layers: [
@@ -121,13 +121,9 @@ describe('Deck map resource authoring contract', () => {
         },
       },
     });
-    expect(
-      issues.some(
-        (i) =>
-          i.path === 'spec.layers.0.colorRange' &&
-          i.message.includes('omit colorRange'),
-      ),
-    ).toBe(true);
+    expect(issues.some((i) => i.path === 'spec.layers.0.colorRange')).toBe(
+      false,
+    );
     expect(
       issues.some(
         (i) =>

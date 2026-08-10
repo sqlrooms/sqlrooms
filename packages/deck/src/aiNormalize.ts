@@ -221,13 +221,14 @@ const COLOR_ACCESSOR_PROPS = [
 /**
  * Fixes common AI layer mistakes that are safe, unambiguous defaults:
  * 1. Missing _sqlroomsBinding.dataset when there is exactly one dataset
- * 2. Missing getFillColor on filled layers (deck.gl defaults to opaque black)
- * 3. Scheme-name casing on valid colorScale accessors
- * 4. Lift getHexagon "@@=column" into hexagonColumn for fit-to-bounds
+ * 2. colorRange on GeoArrowHeatmapLayer (AI hand-craft; UI scheme selector owns it)
+ * 3. Missing getFillColor on filled layers (deck.gl defaults to opaque black)
+ * 4. Scheme-name casing on valid colorScale accessors
+ * 5. Lift getHexagon "@@=column" into hexagonColumn for fit-to-bounds
  *
  * Rejected by getDeckMapResourceConfigIssues (agent retry): unprefixed layer
- * classes, ColorScale @@type/column syntax, heatmap colorRange / object
- * getWeight, object getHexagon, and arc getSourcePosition/getTargetPosition.
+ * classes, ColorScale @@type/column syntax, object getWeight, object
+ * getHexagon, and arc getSourcePosition/getTargetPosition.
  */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -290,6 +291,17 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
         };
         layerChanged = true;
       }
+    }
+
+    // Strip colorRange from heatmap layers on AI normalize. The UI scheme
+    // selector owns that array after the user picks a scheme; hand-crafted AI
+    // RGB values bypass it and produce incorrect coloring. Do not put this in
+    // getDeckMapResourceConfigIssues — persisted UI configs legitimately set
+    // colorRange.
+    if (l['@@type'] === 'GeoArrowHeatmapLayer' && 'colorRange' in l) {
+      const {colorRange: _cr, ...rest} = l;
+      l = rest;
+      layerChanged = true;
     }
 
     // Lift getHexagon "@@=column" into _sqlroomsBinding.hexagonColumn so
@@ -588,6 +600,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - string/zero radius on column layers → default meters
  * - string getElevation in basic mode → 0 (flat)
  * - missing or wrong _sqlroomsBinding.dataset when only one dataset → auto-inject
+ * - colorRange on GeoArrowHeatmapLayer → stripped (UI scheme selector owns it)
  * - getHexagon "@@=column" on GeoArrowH3HexagonLayer → lifted into _sqlroomsBinding.hexagonColumn
  * - missing fitToData → injected from the sole dataset or first layer binding
  * - GeoArrowArcLayer dataset: missing geometryEncodingHint → injected when transformSql mentions arc geom cols
@@ -597,8 +610,8 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
- * colorScale {"@@type":"ColorScale","column":"..."} syntax, heatmap colorRange /
- * object getWeight, object getHexagon, and arc getSourcePosition/getTargetPosition.
+ * colorScale {"@@type":"ColorScale","column":"..."} syntax, object getWeight,
+ * object getHexagon, and arc getSourcePosition/getTargetPosition.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
