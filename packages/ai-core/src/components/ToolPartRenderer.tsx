@@ -2,7 +2,6 @@ import React from 'react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
 import type {AgentToolCall} from '../types';
-import {useToolTimingRecorder} from '../hooks/useToolTimingRecorder';
 import {isDynamicToolPart, isToolPart} from '../utils';
 import {FlatAgentRenderer} from './FlatAgentRenderer';
 import {ToolResult} from './tools/ToolResult';
@@ -27,7 +26,16 @@ const AgentProgressSection: React.FC<{
     | 'approval-responded'
     | 'output-denied';
   errorText?: string;
-}> = ({toolCallId, toolName, output, input, state, errorText}) => {
+  hideParentSummary?: boolean;
+}> = ({
+  toolCallId,
+  toolName,
+  output,
+  input,
+  state,
+  errorText,
+  hideParentSummary,
+}) => {
   const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
 
   const agentOutput = output as {
@@ -52,8 +60,8 @@ const AgentProgressSection: React.FC<{
         agentToolCalls={displayCalls}
         finalOutput={state === 'output-available' ? finalOutput : undefined}
         isComplete={isComplete}
-        parentToolName={toolName}
-        parentInput={input}
+        parentToolName={hideParentSummary ? undefined : toolName}
+        parentInput={hideParentSummary ? undefined : input}
       />
     );
   }
@@ -83,22 +91,17 @@ export const ToolPartRenderer = ({
   part,
   toolCallId,
   hideToolCallInfo,
+  hideAgentSummary,
 }: {
   part: UIMessagePart;
   toolCallId: string;
   hideToolCallInfo?: boolean;
+  /** Omits the parent agent row when a presentation slot renders it. */
+  hideAgentSummary?: boolean;
 }) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const storeProgress = useStoreWithAi((s) => s.ai.agentProgress[toolCallId]);
-
-  const isComplete =
-    isToolPart(part) || isDynamicToolPart(part)
-      ? part.state === 'output-available' ||
-        part.state === 'output-error' ||
-        part.state === 'output-denied'
-      : false;
-  useToolTimingRecorder(toolCallId, isComplete);
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
@@ -145,7 +148,7 @@ export const ToolPartRenderer = ({
   ) {
     return (
       <div>
-        {ToolComponent && typeof ToolComponent === 'function' && (
+        {ToolComponent && (
           <ToolComponent
             output={output}
             input={input}
@@ -186,11 +189,10 @@ export const ToolPartRenderer = ({
               input={input}
               state={state}
               errorText={errorText}
+              hideParentSummary={hideAgentSummary}
             />
           ) : hideToolCallInfo ? (
-            ToolComponent &&
-            typeof ToolComponent === 'function' &&
-            state === 'output-available' ? (
+            ToolComponent && state === 'output-available' ? (
               <ToolComponent
                 output={output}
                 input={input}

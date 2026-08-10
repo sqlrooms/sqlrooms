@@ -61,13 +61,19 @@ function formatTableContextInstructions(
   const tableDetails = tableItems.map((item) => {
     const tableObj = state.db.findTable(item.id);
 
-    const columnCount = tableObj?.columns.length ?? 0;
+    const columns = tableObj?.columns ?? [];
     const rowCount = tableObj?.rowCount;
 
     const typeLabel = item.type === 'view' ? 'view' : 'table';
     const rowInfo =
       rowCount !== undefined ? `, ${rowCount.toLocaleString()} rows` : '';
-    return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columnCount} columns${rowInfo}) → qualified name: ${item.id}`;
+
+    const columnsText =
+      columns.length > 0
+        ? `\n    columns: ${columns.map((c) => `${c.name} (${c.type})`).join(', ')}`
+        : '';
+
+    return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columns.length} columns${rowInfo}) → qualified name: ${item.id}${columnsText}`;
   });
 
   return [
@@ -75,6 +81,7 @@ function formatTableContextInstructions(
     `Current table context (${tableItems.length} ${tableItems.length === 1 ? 'table' : 'tables'}):`,
     ...tableDetails,
     '- Use the qualified names shown above when querying these tables.',
+    '- Use the exact column names shown above (preserving case) in colorScale "field", chart axes, and SQL queries.',
   ];
 }
 

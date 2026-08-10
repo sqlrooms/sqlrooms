@@ -186,4 +186,99 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('Never use data: "@@#datasetId"');
     expect(instructions).not.toContain('Mosaic');
   });
+
+  test('rejects TripsLayer LIST aggregation without GROUP BY', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowTripsLayer',
+            id: 'trips',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              geometryColumn: 'geom',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+      },
+      datasets: {
+        trips: {
+          source: {
+            tableName: 'nyc_trips',
+            transformSql:
+              'SELECT ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY t))) AS geom, LIST(t ORDER BY t) AS timestamps FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues.some((i) => i.message.includes('GROUP BY'))).toBe(true);
+  });
+
+  test('rejects TripsLayer ST_MakeLine(... ORDER BY) without LIST', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowTripsLayer',
+            id: 'trips',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              geometryColumn: 'geom',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+      },
+      datasets: {
+        trips: {
+          source: {
+            tableName: 'nyc_trips_animated',
+            transformSql:
+              'SELECT path_id, ST_AsWKB(ST_MakeLine(ST_Point(lon, lat) ORDER BY waypoint_order)) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM __sqlrooms_source GROUP BY path_id',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues.some((i) => i.message.includes('ST_MakeLine(LIST'))).toBe(
+      true,
+    );
+  });
+
+  test('accepts TripsLayer LIST aggregation with GROUP BY trip id', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowTripsLayer',
+            id: 'trips',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              geometryColumn: 'geom',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+      },
+      datasets: {
+        trips: {
+          source: {
+            tableName: 'nyc_trips',
+            transformSql:
+              'SELECT trip_id, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY t))) AS geom, LIST(t ORDER BY t) AS timestamps FROM __sqlrooms_source GROUP BY trip_id',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
 });

@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
-import scaffoldsPlugin from './plugins/scaffolds';
+import scaffoldsPlugin from './plugins/scaffolds.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const apiProxyTarget =

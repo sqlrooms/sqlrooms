@@ -65,6 +65,32 @@ export type ChatSearchMatch = {
   end: number;
 };
 
+/** Stable empty arrays so inactive search never churns context/effect deps. */
+export const EMPTY_CHAT_SEARCH_BLOCKS: ChatSearchBlock[] = [];
+const EMPTY_SEARCH_MATCHES: ChatSearchMatch[] = [];
+
+function areChatSearchBlocksEqual(
+  a: ChatSearchBlock[] | undefined,
+  b: ChatSearchBlock[],
+): boolean {
+  if (a === b) return true;
+  if (!a || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i];
+    const right = b[i];
+    if (
+      !left ||
+      !right ||
+      left.id !== right.id ||
+      left.resultId !== right.resultId ||
+      left.text !== right.text
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 type ChatSearchContextValue = {
   query: string;
   setQuery: (query: string) => void;
@@ -90,7 +116,7 @@ export function findChatSearchMatches(
   query: string,
 ): ChatSearchMatch[] {
   const normalizedQuery = normalizeChatSearchQuery(query);
-  if (!normalizedQuery) return [];
+  if (!normalizedQuery) return EMPTY_SEARCH_MATCHES;
 
   const matches: ChatSearchMatch[] = [];
   for (const block of blocks) {
@@ -173,10 +199,18 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
 
   const registerBlocks = useCallback(
     (groupId: string, nextBlocks: ChatSearchBlock[]) => {
-      setBlockGroups((current) => ({
-        ...current,
-        [groupId]: nextBlocks,
-      }));
+      setBlockGroups((current) => {
+        // Bail out when content is unchanged so registration effects that
+        // receive a fresh [] / equivalent array do not re-render the provider
+        // (which previously fed max-update-depth loops via ChatTurnView).
+        if (areChatSearchBlocksEqual(current[groupId], nextBlocks)) {
+          return current;
+        }
+        return {
+          ...current,
+          [groupId]: nextBlocks,
+        };
+      });
     },
     [],
   );
@@ -204,7 +238,8 @@ export const ChatSearchProvider: React.FC<PropsWithChildren> = ({children}) => {
   }, [matches]);
 
   const getMatchesForBlock = useCallback(
-    (blockId: string) => matchesByBlock.get(blockId) ?? [],
+    (blockId: string) =>
+      matchesByBlock.get(blockId) ?? EMPTY_SEARCH_MATCHES,
     [matchesByBlock],
   );
 
@@ -284,11 +319,18 @@ export function useRegisterChatSearchBlocks(
   const registerBlocks = search?.registerBlocks;
   const unregisterBlocks = search?.unregisterBlocks;
 
+  // Keep registration updates separate from unmount cleanup. Combining them
+  // in one effect means every `blocks` identity change unregisters then
+  // re-registers (two setStates), amplifying streaming churn.
   useEffect(() => {
-    if (!registerBlocks || !unregisterBlocks) return;
+    if (!registerBlocks) return;
     registerBlocks(groupId, blocks);
+  }, [blocks, groupId, registerBlocks]);
+
+  useEffect(() => {
+    if (!unregisterBlocks) return;
     return () => unregisterBlocks(groupId);
-  }, [groupId, blocks, registerBlocks, unregisterBlocks]);
+  }, [groupId, unregisterBlocks]);
 }
 
 type ChatSearchProps = {
@@ -390,7 +432,7 @@ export function HighlightedChatSearchText({
   blockId: string;
 }) {
   const search = useOptionalChatSearch();
-  const matches = search?.getMatchesForBlock(blockId) ?? [];
+  const matches = search?.getMatchesForBlock(blockId) ?? EMPTY_SEARCH_MATCHES;
   if (matches.length === 0) return <>{text}</>;
 
   const parts: React.ReactNode[] = [];

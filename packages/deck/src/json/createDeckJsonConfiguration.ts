@@ -25,6 +25,11 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
+import {
+  compileLinearScaleExpression,
+  createScaleMarker,
+  isScaleMarker,
+} from './scaleFunction';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -92,7 +97,14 @@ function resolveGeoArrowBindings(options: {
   const boundProps: Record<string, unknown> = {};
 
   for (const binding of compatibility.bindings) {
-    if (props[binding.prop] !== undefined) {
+    const existing = props[binding.prop];
+    // Prefer Arrow Vector binding over a simple `@@=column` accessor.
+    // Compiled accessors can silently yield empty H3 indices; Vectors are
+    // authoritative and also restore missing-column errors.
+    const existingIsSimpleAccessor =
+      typeof existing === 'string' &&
+      /^@@=[A-Za-z_$][\w$]*$/.test(existing.trim());
+    if (existing !== undefined && !existingIsSimpleAccessor) {
       continue;
     }
 
@@ -181,7 +193,11 @@ function resolveGeoArrowBindings(options: {
       continue;
     }
 
-    const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+    const columnName =
+      resolveConfiguredColumn(layerProps, binding.configKey) ??
+      (existingIsSimpleAccessor
+        ? (existing as string).trim().slice(3)
+        : undefined);
     if (!columnName) {
       if (binding.required) {
         throw new Error(
@@ -216,11 +232,7 @@ export function createDeckJsonConfiguration(
     constants: DEFAULT_DECK_JSON_CONSTANTS,
     functions: {
       colorScale: (props: ColorScaleConfig) => createColorScaleMarker(props),
-      scale: (props: Record<string, unknown>) => {
-        const field = typeof props.field === 'string' ? props.field : undefined;
-        if (!field) return undefined;
-        return `@@=${field}`;
-      },
+      scale: (props: Record<string, unknown>) => createScaleMarker(props),
     },
     // We preserve raw `@@=` strings here because `@deck.gl/json` would otherwise
     // eagerly compile them into row-based accessors before `preProcessClassProps`
@@ -297,10 +309,18 @@ export function createDeckJsonConfiguration(
         ...boundProps,
       };
 
-      // Normalize getElevation: subtract column minimum so the lowest
-      // feature sits at ground level and differences are clearly visible.
+      // Compile getElevation:
+      // - scale markers (UI/AI `@@function: scale` with domain/range) → linear map
+      // - plain `@@=field` → subtract column min so the lowest feature is at ground
       const rawElev = nextProps.getElevation;
-      if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
+      if (isScaleMarker(rawElev)) {
+        const expression = compileLinearScaleExpression(table, rawElev);
+        if (expression) {
+          nextProps.getElevation = expression;
+        } else {
+          nextProps.getElevation = `@@=${rawElev.field}`;
+        }
+      } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
         const elevField = rawElev.slice(3).trim();
         const elevVector = table.getChild(elevField);
         if (elevVector) {

@@ -1,5 +1,5 @@
 import {useState, type FC} from 'react';
-import {type DataTable} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {SqlCodeMirrorEditor, SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {type EditorType} from './EditorTypeSwitch';
 
@@ -19,11 +19,7 @@ LIMIT 10;`;
 // Example table schemas for SQL autocomplete
 const tableSchemas: DataTable[] = [
   {
-    table: {
-      table: 'users',
-      toFullString: () => 'users',
-      toString: () => 'users',
-    },
+    table: makeQualifiedTableName({table: 'users'}),
     isView: false,
     schema: 'main',
     tableName: 'users',
@@ -37,11 +33,7 @@ const tableSchemas: DataTable[] = [
     ],
   },
   {
-    table: {
-      table: 'orders',
-      toFullString: () => 'orders',
-      toString: () => 'orders',
-    },
+    table: makeQualifiedTableName({table: 'orders'}),
     isView: false,
     schema: 'main',
     tableName: 'orders',

@@ -279,4 +279,69 @@ describe('Chat.Search', () => {
 
     cleanup(container, root);
   });
+
+  it('does not loop when turns re-register equivalent empty blocks', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+    let consumerRenderCount = 0;
+
+    function SearchConsumer() {
+      useChatSearch();
+      React.useEffect(() => {
+        consumerRenderCount += 1;
+      });
+      return null;
+    }
+
+    function FreshEmptyRegistrar({nonce}: {nonce: number}) {
+      // Fresh [] each render — mirrors ChatTurnView when searchBlocks memo
+      // invalidates and returns a new empty array on every streamed token.
+      void nonce;
+      useRegisterChatSearchBlocks('turn-1', []);
+      useRegisterChatSearchBlocks('turn-2', []);
+      return <SearchConsumer />;
+    }
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <FreshEmptyRegistrar nonce={0} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    const afterMount = consumerRenderCount;
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <FreshEmptyRegistrar nonce={1} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <FreshEmptyRegistrar nonce={2} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    // Without equality bailout, each fresh [] registration setStates the
+    // provider, re-renders the registrar with another fresh [], and exceeds
+    // React's max update depth. Keep consumer renders bounded.
+    expect(consumerRenderCount).toBeLessThan(afterMount + 10);
+    expect(consumerRenderCount).toBeLessThan(50);
+
+    cleanup(container, root);
+  });
 });
