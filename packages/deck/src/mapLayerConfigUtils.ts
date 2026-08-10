@@ -88,6 +88,9 @@ const COLUMN_RADIUS_LAYER_TYPES = new Set([
   'columnlayer',
 ]);
 
+// GeoJsonLayer is intentionally omitted: elevation/scale compile only runs on
+// the geoarrow path in createDeckJsonConfiguration. Offering extrusion UI for
+// GeoJSON would set getElevation markers that never compile into accessors.
 const EXTRUDABLE_LAYER_TYPES = new Set([
   'geoarrowh3hexagonlayer',
   'h3hexagonlayer',
@@ -97,7 +100,6 @@ const EXTRUDABLE_LAYER_TYPES = new Set([
   'polygonlayer',
   'geoarrowsolidpolygonlayer',
   'solidpolygonlayer',
-  'geojsonlayer',
 ]);
 
 const STROKE_LAYER_TYPES = new Set([
