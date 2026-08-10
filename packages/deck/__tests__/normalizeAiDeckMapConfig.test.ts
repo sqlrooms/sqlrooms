@@ -1363,7 +1363,7 @@ describe('validateAndFixColorScaleFields', () => {
     );
   });
 
-  test('skips datasets with transformSql (output schema is unknown)', () => {
+  test('still validates tableName+transformSql against base table columns', () => {
     const config = {
       spec: {
         layers: [
@@ -1390,12 +1390,43 @@ describe('validateAndFixColorScaleFields', () => {
         },
       },
     };
-    expect(() =>
-      validateAndFixColorScaleFields(config, resolveTable),
-    ).not.toThrow();
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /colorScale field "mag" is not a column/,
+    );
   });
 
-  test('skips datasets with sqlQuery', () => {
+  test('silently fixes casing even when transformSql is present', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'quakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {
+        quakes: {
+          source: {
+            tableName: 'earthquakes',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM __sqlrooms_source',
+          },
+        },
+      },
+    };
+    const result = validateAndFixColorScaleFields(config, resolveTable);
+    expect((result.spec.layers[0].getFillColor as any).field).toBe('Magnitude');
+  });
+
+  test('skips pure sqlQuery sources without tableName', () => {
     const config = {
       spec: {
         layers: [

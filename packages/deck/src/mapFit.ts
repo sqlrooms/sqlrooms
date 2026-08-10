@@ -55,6 +55,9 @@ export function resolveDeckMapFitToData(
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;
+    // Hidden layers must not drive fit — e.g. a stale/hidden H3 overlay would
+    // otherwise win over visible point lon/lat interaction columns.
+    if (layerRecord.visible === false) continue;
     const binding = layerRecord._sqlroomsBinding as
       | Record<string, unknown>
       | undefined;

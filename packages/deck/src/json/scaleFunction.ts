@@ -80,6 +80,9 @@ function readNumericDomain(vector: arrow.Vector): [number, number] | null {
  *
  * - With `range`: map domain → range (UI extrusion: typically `[0, 200]` meters).
  * - Without `range`: legacy behavior — raw field minus domain minimum.
+ *
+ * Returns `undefined` when the field is not a JS identifier (spaces, dashes,
+ * etc.). Use {@link compileLinearScaleAccessor} for those columns.
  */
 export function compileLinearScaleExpression(
   table: arrow.Table,
@@ -115,4 +118,50 @@ export function compileLinearScaleExpression(
   // Clamp to range after linear map. Field values are coerced from bigint in
   // compileGeoArrowAccessor.
   return `@@=Math.max(${lo}, Math.min(${hi}, ${r0} + (${field} - ${d0}) / ${span} * ${r1 - r0}))`;
+}
+
+/**
+ * Compiled elevation accessor that supports any Arrow column name, including
+ * non-JS-identifiers such as `"Median Income"`.
+ */
+export function compileLinearScaleAccessor(
+  table: arrow.Table,
+  scale: LinearScaleConfig,
+):
+  | ((info: {index: number; data: {data: unknown}; target: number[]}) => number)
+  | undefined {
+  const field = scale.field.trim();
+  if (!field) return undefined;
+
+  const vector = table.getChild(field);
+  if (!vector) return undefined;
+
+  const domain =
+    scale.domain === 'auto' || scale.domain === undefined
+      ? readNumericDomain(vector)
+      : scale.domain;
+  if (!domain) return undefined;
+
+  const [d0, d1] = domain;
+  const range = scale.range;
+
+  return ({index, data}) => {
+    const batch = data.data as arrow.Table | arrow.RecordBatch;
+    const child = batch.getChild?.(field) ?? vector;
+    const raw = child?.get(index);
+    if (raw == null) return 0;
+    const v = Number(raw);
+    if (!Number.isFinite(v)) return 0;
+
+    if (!range) {
+      return Math.max(0, v - d0);
+    }
+
+    const [r0, r1] = range;
+    const span = d1 - d0;
+    if (span === 0) return r0;
+    const lo = Math.min(r0, r1);
+    const hi = Math.max(r0, r1);
+    return Math.max(lo, Math.min(hi, r0 + ((v - d0) / span) * (r1 - r0)));
+  };
 }

@@ -120,6 +120,46 @@ describe('Deck map fit core', () => {
     ).toEqual({dataset: 'h3_data', h3Column: 'hex_id'});
   });
 
+  test('ignores hidden H3 layers when resolving fit columns', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowH3HexagonLayer',
+              visible: false,
+              _sqlroomsBinding: {
+                dataset: 'points',
+                hexagonColumn: 'hex_id',
+              },
+            },
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {
+                dataset: 'points',
+                geometryColumn: 'geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          points: {
+            source: {tableName: 'earthquakes'},
+            geometryColumn: 'geom',
+          },
+        },
+        interaction: {
+          longitudeColumn: 'Longitude',
+          latitudeColumn: 'Latitude',
+        },
+        fitToData: {dataset: 'points'},
+      }),
+    ).toEqual({
+      dataset: 'points',
+      geometryColumn: 'geom',
+    });
+  });
+
   test('builds H3 bounds SQL without casting the hexagon column', () => {
     const query = createDeckMapBoundsQuery({
       source: {tableName: 'h3_pentagon'},

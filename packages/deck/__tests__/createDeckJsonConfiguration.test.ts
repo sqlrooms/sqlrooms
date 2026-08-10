@@ -542,7 +542,7 @@ describe('extractColorScaleLegends', () => {
     };
   }
 
-  it('returns only one legend per layer, preferring getFillColor over getLineColor', () => {
+  it('preserves distinct legends for fill and line color scales', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -572,10 +572,16 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(1);
+    expect(legends).toHaveLength(2);
+    expect(legends.map((l) => l.title)).toEqual(['magnitude', 'magnitude']);
+    expect(legends[0]).toMatchObject({type: 'continuous'});
+    expect(legends[1]).toMatchObject({type: 'continuous'});
+    expect((legends[0] as {gradient: string}).gradient).not.toBe(
+      (legends[1] as {gradient: string}).gradient,
+    );
   });
 
-  it('uses the legend title from getFillColor when both fill and line have color scales', () => {
+  it('keeps both fill and line legends when titles differ', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -607,8 +613,44 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
+    expect(legends).toHaveLength(2);
+    expect(legends.map((l) => l.title)).toEqual(['Fill Legend', 'Line Legend']);
+  });
+
+  it('dedupes identical color-scale legends on the same layer', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              legend: {title: 'Magnitude'},
+            },
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              legend: {title: 'Magnitude'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
     expect(legends).toHaveLength(1);
-    expect(legends[0]!.title).toBe('Fill Legend');
+    expect(legends[0]!.title).toBe('Magnitude');
   });
 
   it('falls back to getLineColor legend when getFillColor field is invalid', () => {
@@ -642,5 +684,7 @@ describe('extractColorScaleLegends', () => {
     });
 
     expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('magnitude');
+    expect(legends[0]).toMatchObject({type: 'continuous'});
   });
 });

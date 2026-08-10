@@ -26,6 +26,7 @@ import {
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
 import {
+  compileLinearScaleAccessor,
   compileLinearScaleExpression,
   createScaleMarker,
   isScaleMarker,
@@ -318,7 +319,11 @@ export function createDeckJsonConfiguration(
         if (expression) {
           nextProps.getElevation = expression;
         } else {
-          nextProps.getElevation = `@@=${rawElev.field}`;
+          // Non-JS-identifier fields (spaces, dashes) cannot use @@= expressions.
+          const accessor = compileLinearScaleAccessor(table, rawElev);
+          if (accessor) {
+            nextProps.getElevation = accessor;
+          }
         }
       } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
         const elevField = rawElev.slice(3).trim();
@@ -326,11 +331,29 @@ export function createDeckJsonConfiguration(
         if (elevVector) {
           let min = Infinity;
           for (let i = 0; i < elevVector.length; i++) {
-            const v = Number(elevVector.get(i));
+            if (
+              typeof elevVector.isValid === 'function' &&
+              !elevVector.isValid(i)
+            ) {
+              continue;
+            }
+            const raw = elevVector.get(i);
+            if (raw == null) continue;
+            const v = Number(raw);
             if (Number.isFinite(v) && v < min) min = v;
           }
-          if (Number.isFinite(min) && min !== 0) {
-            nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+          if (Number.isFinite(min)) {
+            if (/^[A-Za-z_$][\w$]*$/.test(elevField)) {
+              if (min !== 0) {
+                nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+              }
+            } else {
+              const accessor = compileLinearScaleAccessor(table, {
+                field: elevField,
+                domain: [min, min],
+              });
+              if (accessor) nextProps.getElevation = accessor;
+            }
           }
         }
       }

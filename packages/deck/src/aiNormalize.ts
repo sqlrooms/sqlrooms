@@ -820,8 +820,10 @@ const COLOR_SCALE_ACCESSOR_PROPS = [
  * Walks the merged map config and validates every colorScale `field` against
  * the source table's actual column list (when available via `resolveTable`).
  *
- * Only simple `tableName`-backed datasets (no `transformSql` / `sqlQuery`)
- * have a known column list at write time. SQL-derived datasets are skipped.
+ * Datasets with a `tableName` are validated against that table's columns, even
+ * when `transformSql` / `sqlQuery` is also present (common lon/lat → WKB
+ * transforms keep base columns via `SELECT *`). Pure `sqlQuery`-only sources
+ * without `tableName` are skipped because their output schema is unknown.
  *
  * Outcomes:
  * - Correct field name → no change.
@@ -849,10 +851,11 @@ export function validateAndFixColorScaleFields<
     if (!source) continue;
     const tableName =
       typeof source.tableName === 'string' ? source.tableName : undefined;
-    const hasTransform =
-      typeof source.transformSql === 'string' ||
-      typeof source.sqlQuery === 'string';
-    if (!tableName || hasTransform) continue;
+    // Validate against the base table whenever tableName is known — even if
+    // transformSql/sqlQuery is present. Common point transforms are SELECT *
+    // plus geometry, so colorScale fields still come from the source table.
+    // Pure sqlQuery-only datasets (no tableName) are skipped.
+    if (!tableName) continue;
 
     const table = resolveTable(tableName);
     if (!table?.columns?.length) continue;

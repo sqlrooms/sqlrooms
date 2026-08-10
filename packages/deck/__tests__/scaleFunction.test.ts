@@ -1,6 +1,7 @@
 import {describe, expect, test} from '@jest/globals';
 import {Field, Float64, Schema, Table, vectorFromArray} from 'apache-arrow';
 import {
+  compileLinearScaleAccessor,
   compileLinearScaleExpression,
   createScaleMarker,
 } from '../src/json/scaleFunction';
@@ -84,6 +85,37 @@ describe('scaleFunction', () => {
     );
     expect(accessor({index: 2, data: {data: batch}, target: []})).toBeCloseTo(
       100,
+    );
+  });
+
+  test('does not emit @@= expressions for non-JS-identifier fields', () => {
+    const table = new Table(
+      new Schema([new Field('Median Income', new Float64())]),
+      {
+        'Median Income': vectorFromArray([40_000, 80_000], new Float64()),
+      },
+    );
+
+    expect(
+      compileLinearScaleExpression(table, {
+        field: 'Median Income',
+        domain: 'auto',
+        range: [0, 200],
+      }),
+    ).toBeUndefined();
+
+    const accessor = compileLinearScaleAccessor(table, {
+      field: 'Median Income',
+      domain: 'auto',
+      range: [0, 200],
+    });
+    expect(accessor).toBeDefined();
+    const batch = table.batches[0]!;
+    expect(accessor!({index: 0, data: {data: batch}, target: []})).toBeCloseTo(
+      0,
+    );
+    expect(accessor!({index: 1, data: {data: batch}, target: []})).toBeCloseTo(
+      200,
     );
   });
 });

@@ -98,26 +98,37 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    // Only show one legend per layer. Try color scales in priority order
-    // (getFillColor first, as COLOR_SCALE_PROP_NAMES is ordered that way) and
-    // use the first one that successfully builds a legend.
-    let added = false;
+    // Show a legend for each distinct color-scale accessor on the layer
+    // (fill + stroke, or arc source/target). Skip duplicates that resolve to
+    // the same title/type/scheme/field.
+    const seenLegendKeys = new Set<string>();
     for (const {propName, colorScale} of resolvedColorScales) {
       try {
+        const title = resolveLegendTitle(
+          layerProps,
+          propName,
+          colorScale.field,
+        );
+        const key = [
+          title,
+          colorScale.type,
+          String(colorScale.scheme ?? ''),
+          colorScale.field,
+        ].join('\0');
+        if (seenLegendKeys.has(key)) continue;
+
         const resolvedLegend = buildColorScaleLegend({
           table: datasetState.prepared.table,
           colorScale,
-          title: resolveLegendTitle(layerProps, propName, colorScale.field),
+          title,
         });
         if (resolvedLegend) {
+          seenLegendKeys.add(key);
           legends.push(resolvedLegend);
-          added = true;
-          break;
         }
       } catch {
         // try next accessor
       }
-      if (added) break;
     }
   }
 
