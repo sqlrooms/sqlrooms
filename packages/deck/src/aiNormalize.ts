@@ -221,12 +221,13 @@ const COLOR_ACCESSOR_PROPS = [
 /**
  * Fixes common AI layer mistakes that are safe, unambiguous defaults:
  * 1. Missing _sqlroomsBinding.dataset when there is exactly one dataset
- * 2. colorRange on GeoArrowHeatmapLayer (owned by the UI scheme selector)
- * 3. Missing getFillColor on filled layers (deck.gl defaults to opaque black)
- * 4. Scheme-name casing on valid colorScale accessors
+ * 2. Missing getFillColor on filled layers (deck.gl defaults to opaque black)
+ * 3. Scheme-name casing on valid colorScale accessors
+ * 4. Lift getHexagon "@@=column" into hexagonColumn for fit-to-bounds
  *
- * Wrong layer class names (ScatterplotLayer) and ColorScale @@type/column
- * syntax are rejected by getDeckMapResourceConfigIssues so the agent can retry.
+ * Rejected by getDeckMapResourceConfigIssues (agent retry): unprefixed layer
+ * classes, ColorScale @@type/column syntax, heatmap colorRange / object
+ * getWeight, object getHexagon, and arc getSourcePosition/getTargetPosition.
  */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -291,71 +292,10 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // Strip colorRange from heatmap layers. The UI scheme selector owns that
-    // array; hand-crafted RGB values bypass it and produce incorrect coloring.
-    if (l['@@type'] === 'GeoArrowHeatmapLayer' && 'colorRange' in l) {
-      const {colorRange: _cr, ...rest} = l;
-      l = rest;
-      layerChanged = true;
-    }
-
-    // Fix invalid getWeight on GeoArrowHeatmapLayer. The AI sometimes generates
-    // {"@@function":"getNumericColumn","field":"..."} which is not a real accessor.
-    // The correct form is a deck.gl attribute string "@@=ColumnName".
-    if (l['@@type'] === 'GeoArrowHeatmapLayer') {
-      const gw = l.getWeight;
-      if (
-        gw &&
-        typeof gw === 'object' &&
-        !Array.isArray(gw) &&
-        '@@function' in (gw as Record<string, unknown>) &&
-        (gw as Record<string, unknown>)['@@function'] !== 'colorScale'
-      ) {
-        // Extract the field name from common AI patterns and convert to @@= accessor.
-        const field =
-          (gw as Record<string, unknown>).field ??
-          (gw as Record<string, unknown>).column;
-        if (typeof field === 'string' && field.trim()) {
-          l = {...l, getWeight: `@@=${field}`};
-          layerChanged = true;
-        } else {
-          // Unknown object accessor — remove it so the heatmap renders unweighted
-          // rather than failing silently.
-          const {getWeight: _gw, ...rest} = l;
-          l = rest;
-          layerChanged = true;
-        }
-      }
-    }
-
-    // Fix invalid getHexagon on GeoArrowH3HexagonLayer. The AI sometimes
-    // generates {"@@function":"columnAccessor","column":"..."} which is not a
-    // real accessor. The correct form is a deck.gl attribute string "@@=column".
-    // Also lift "@@=column" into _sqlroomsBinding.hexagonColumn so fit-to-bounds
-    // and the H3 binding pipeline can find the column.
+    // Lift getHexagon "@@=column" into _sqlroomsBinding.hexagonColumn so
+    // fit-to-bounds can find the column. Object getHexagon syntax is rejected
+    // by getDeckMapResourceConfigIssues.
     if (l['@@type'] === 'GeoArrowH3HexagonLayer') {
-      const gh = l.getHexagon;
-      if (
-        gh &&
-        typeof gh === 'object' &&
-        !Array.isArray(gh) &&
-        '@@function' in (gh as Record<string, unknown>) &&
-        (gh as Record<string, unknown>)['@@function'] !== 'colorScale'
-      ) {
-        const field =
-          (gh as Record<string, unknown>).field ??
-          (gh as Record<string, unknown>).column;
-        if (typeof field === 'string' && field.trim()) {
-          l = {...l, getHexagon: `@@=${field}`};
-          layerChanged = true;
-        } else {
-          // Can't recover — remove so validation gives a clear error message.
-          const {getHexagon: _gh, ...rest} = l;
-          l = rest;
-          layerChanged = true;
-        }
-      }
-
       const hexAccessor = l.getHexagon;
       let hexColumn: string | undefined;
       if (typeof hexAccessor === 'string') {
@@ -381,59 +321,6 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
             hexagonColumn: hexColumn,
           },
         };
-        layerChanged = true;
-      }
-    }
-
-    // Fix GeoArrowArcLayer: the AI sometimes places geometry columns as
-    // getSourcePosition/getTargetPosition string accessors ("@@=col") instead
-    // of in _sqlroomsBinding.sourceGeometryColumn / targetGeometryColumn.
-    // Lift them into the binding so the GeoArrow pipeline can find them.
-    if (l['@@type'] === 'GeoArrowArcLayer') {
-      const binding =
-        l._sqlroomsBinding &&
-        typeof l._sqlroomsBinding === 'object' &&
-        !Array.isArray(l._sqlroomsBinding)
-          ? (l._sqlroomsBinding as Record<string, unknown>)
-          : undefined;
-
-      const extractCol = (accessor: unknown): string | undefined => {
-        if (typeof accessor === 'string') {
-          const m = accessor.match(/^@@=(.+)$/);
-          return m ? m[1]!.trim() : undefined;
-        }
-        if (
-          accessor &&
-          typeof accessor === 'object' &&
-          !Array.isArray(accessor)
-        ) {
-          const a = accessor as Record<string, unknown>;
-          const col = a.column ?? a.field;
-          return typeof col === 'string' ? col.trim() : undefined;
-        }
-        return undefined;
-      };
-
-      const srcCol = extractCol(l.getSourcePosition);
-      const tgtCol = extractCol(l.getTargetPosition);
-
-      const missingSrc =
-        !binding?.sourceGeometryColumn && typeof srcCol === 'string' && srcCol;
-      const missingTgt =
-        !binding?.targetGeometryColumn && typeof tgtCol === 'string' && tgtCol;
-
-      if (missingSrc || missingTgt) {
-        const newBinding: Record<string, unknown> = {...(binding ?? {})};
-        if (missingSrc) newBinding.sourceGeometryColumn = srcCol;
-        if (missingTgt) newBinding.targetGeometryColumn = tgtCol;
-        const next: Record<string, unknown> = {
-          ...l,
-          _sqlroomsBinding: newBinding,
-        };
-        // Only strip accessors that were successfully lifted.
-        if (missingSrc) delete next.getSourcePosition;
-        if (missingTgt) delete next.getTargetPosition;
-        l = next;
         layerChanged = true;
       }
     }
@@ -701,20 +588,17 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - string/zero radius on column layers → default meters
  * - string getElevation in basic mode → 0 (flat)
  * - missing or wrong _sqlroomsBinding.dataset when only one dataset → auto-inject
- * - colorRange on GeoArrowHeatmapLayer → stripped
- * - invalid getWeight object accessor on GeoArrowHeatmapLayer → converted to "@@=field" string
- * - invalid getHexagon object accessor on GeoArrowH3HexagonLayer → converted to "@@=column" string
  * - getHexagon "@@=column" on GeoArrowH3HexagonLayer → lifted into _sqlroomsBinding.hexagonColumn
  * - missing fitToData → injected from the sole dataset or first layer binding
- * - GeoArrowArcLayer getSourcePosition/getTargetPosition string accessors → lifted into _sqlroomsBinding
  * - GeoArrowArcLayer dataset: missing geometryEncodingHint → injected when transformSql mentions arc geom cols
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
  *
- * Not rewritten here (validator + agent retry): unprefixed layer class names and
- * colorScale {"@@type":"ColorScale","column":"..."} syntax.
+ * Not rewritten here (validator + agent retry): unprefixed layer class names,
+ * colorScale {"@@type":"ColorScale","column":"..."} syntax, heatmap colorRange /
+ * object getWeight, object getHexagon, and arc getSourcePosition/getTargetPosition.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,

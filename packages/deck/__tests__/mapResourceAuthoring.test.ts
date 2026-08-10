@@ -75,6 +75,108 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
+  test('rejects object getHexagon on H3 layers', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'hex',
+            getHexagon: {'@@function': 'columnAccessor', column: 'h3'},
+            _sqlroomsBinding: {dataset: 'hexes'},
+          },
+        ],
+      },
+      datasets: {
+        hexes: {source: {tableName: 'hexes'}},
+      },
+    });
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getHexagon' &&
+          i.message.includes('"@@=h3_column_name"'),
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects heatmap colorRange and object getWeight', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'heat',
+            colorRange: [[255, 0, 0]],
+            getWeight: {'@@function': 'getNumericColumn', field: 'Magnitude'},
+            _sqlroomsBinding: {dataset: 'points'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {tableName: 'points'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.colorRange' &&
+          i.message.includes('omit colorRange'),
+      ),
+    ).toBe(true);
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getWeight' &&
+          i.message.includes('"@@=ColumnName"'),
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects arc getSourcePosition/getTargetPosition accessors', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            id: 'arcs',
+            getSourcePosition: '@@=source_geom',
+            getTargetPosition: '@@=target_geom',
+            _sqlroomsBinding: {
+              dataset: 'arcs',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        arcs: {
+          source: {tableName: 'od'},
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getSourcePosition' &&
+          i.message.includes('sourceGeometryColumn'),
+      ),
+    ).toBe(true);
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getTargetPosition' &&
+          i.message.includes('targetGeometryColumn'),
+      ),
+    ).toBe(true);
+  });
+
   test('allows only a truly empty resource while waiting for user configuration', () => {
     const emptyConfig: DeckMapConfig = {spec: {layers: []}, datasets: {}};
 

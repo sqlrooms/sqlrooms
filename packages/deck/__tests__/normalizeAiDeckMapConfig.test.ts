@@ -401,203 +401,95 @@ describe('normalizeAiDeckMapConfig — filled:false guard', () => {
 });
 
 // ---------------------------------------------------------------------------
-// colorRange stripped from heatmap
+// heatmap / H3 / arc: leave invalid accessors for the validator (no silent rewrite)
 // ---------------------------------------------------------------------------
 
-describe('normalizeAiDeckMapConfig — heatmap colorRange', () => {
-  test('strips colorRange from GeoArrowHeatmapLayer', () => {
+describe('normalizeAiDeckMapConfig — leaves heatmap/H3/arc accessor mistakes alone', () => {
+  test('does not strip colorRange from GeoArrowHeatmapLayer', () => {
+    const colorRange = [
+      [255, 0, 0],
+      [0, 255, 0],
+    ];
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
           {
             '@@type': 'GeoArrowHeatmapLayer',
             _sqlroomsBinding: {dataset: 'ds'},
-            colorRange: [
-              [255, 0, 0],
-              [0, 255, 0],
-            ],
+            colorRange,
           },
         ],
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).colorRange).toBeUndefined();
+    expect(getLayer(result).colorRange).toEqual(colorRange);
   });
 
-  test('does not strip colorRange on unprefixed HeatmapLayer (validator rejects @@type first)', () => {
+  test('does not rewrite object getWeight on GeoArrowHeatmapLayer', () => {
+    const getWeight = {
+      '@@function': 'getNumericColumn',
+      field: 'Magnitude',
+    };
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
           {
-            '@@type': 'HeatmapLayer',
+            '@@type': 'GeoArrowHeatmapLayer',
             _sqlroomsBinding: {dataset: 'ds'},
-            colorRange: [[0, 0, 255]],
+            getWeight,
           },
         ],
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result)['@@type']).toBe('HeatmapLayer');
-    expect(getLayer(result).colorRange).toEqual([[0, 0, 255]]);
+    expect(getLayer(result).getWeight).toEqual(getWeight);
   });
 
-  test('does not touch colorRange on other layer types', () => {
+  test('does not rewrite object getHexagon on GeoArrowH3HexagonLayer', () => {
+    const getHexagon = {
+      '@@function': 'columnAccessor',
+      column: 'hex_id',
+    };
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
           {
-            '@@type': 'GeoArrowPolygonLayer',
+            '@@type': 'GeoArrowH3HexagonLayer',
             _sqlroomsBinding: {dataset: 'ds'},
-            colorRange: [[1, 2, 3]],
+            getHexagon,
           },
         ],
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).colorRange).toEqual([[1, 2, 3]]);
+    expect(getLayer(result).getHexagon).toEqual(getHexagon);
+    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBeUndefined();
+  });
+
+  test('does not lift arc getSourcePosition/getTargetPosition into binding', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            getSourcePosition: '@@=source_geom',
+            getTargetPosition: '@@=target_geom',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getSourcePosition).toBe('@@=source_geom');
+    expect(getLayer(result).getTargetPosition).toBe('@@=target_geom');
+    expect(getLayer(result)._sqlroomsBinding).toEqual({dataset: 'ds'});
   });
 });
 
 // ---------------------------------------------------------------------------
-// heatmap getWeight invalid accessor
-// ---------------------------------------------------------------------------
-
-describe('normalizeAiDeckMapConfig — heatmap getWeight', () => {
-  test('converts {"@@function":"getNumericColumn","field":"Magnitude"} to "@@=Magnitude"', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getWeight: {'@@function': 'getNumericColumn', field: 'Magnitude'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getWeight).toBe('@@=Magnitude');
-  });
-
-  test('converts object with "column" key to "@@=column"', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getWeight: {'@@function': 'fieldAccessor', column: 'Depth'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getWeight).toBe('@@=Depth');
-  });
-
-  test('removes unresolvable object accessor, leaving getWeight absent', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getWeight: {'@@function': 'unknown'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getWeight).toBeUndefined();
-  });
-
-  test('leaves a valid "@@=Column" string accessor unchanged', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getWeight: '@@=Magnitude',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getWeight).toBe('@@=Magnitude');
-  });
-
-  test('leaves a numeric getWeight unchanged', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getWeight: 1,
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getWeight).toBe(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// H3 getHexagon invalid accessor
+// H3 getHexagon string lift (still normalize)
 // ---------------------------------------------------------------------------
 describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
-  test('rewrites columnAccessor object to @@= string using column', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getHexagon: {'@@function': 'columnAccessor', column: 'hex_id'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getHexagon).toBe('@@=hex_id');
-    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('hex_id');
-  });
-
-  test('rewrites object with field key to @@= string', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getHexagon: {'@@function': 'getColumn', field: 'h3index'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getHexagon).toBe('@@=h3index');
-    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('h3index');
-  });
-
-  test('removes unresolvable object accessor, leaving getHexagon absent', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getHexagon: {'@@function': 'unknown'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getHexagon).toBeUndefined();
-  });
-
   test('lifts @@= getHexagon into hexagonColumn and injects fitToData', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(

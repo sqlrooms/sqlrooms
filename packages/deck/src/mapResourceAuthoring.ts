@@ -471,23 +471,63 @@ export function getDeckMapResourceConfigIssues(
       });
     }
 
-    if (layerType === 'GeoArrowH3HexagonLayer') {
-      const getHexagon = layer.getHexagon;
-      const hasGetHexagon =
-        typeof getHexagon === 'string' && getHexagon.trim().length > 0;
-      const hasHexagonBinding =
-        typeof binding?.hexagonColumn === 'string' &&
-        (binding.hexagonColumn as string).trim().length > 0;
-      if (!hasGetHexagon && !hasHexagonBinding) {
+    if (layerType === 'GeoArrowHeatmapLayer') {
+      if ('colorRange' in layer) {
         issues.push({
-          path: `spec.layers.${index}.getHexagon`,
+          path: `spec.layers.${index}.colorRange`,
           message:
-            'GeoArrowH3HexagonLayer requires getHexagon (e.g. "@@=h3_column_name") or _sqlroomsBinding.hexagonColumn set to the H3 index column',
+            'omit colorRange on GeoArrowHeatmapLayer — the UI scheme selector owns the color ramp; hand-crafted RGB arrays are not supported',
+        });
+      }
+      const getWeight = layer.getWeight;
+      if (isPlainObject(getWeight)) {
+        issues.push({
+          path: `spec.layers.${index}.getWeight`,
+          message:
+            'use a deck.gl attribute string "@@=ColumnName" (or a constant number) — object accessors like {"@@function":"...","field":"..."} are not valid for getWeight',
         });
       }
     }
 
+    if (layerType === 'GeoArrowH3HexagonLayer') {
+      const getHexagon = layer.getHexagon;
+      if (isPlainObject(getHexagon)) {
+        issues.push({
+          path: `spec.layers.${index}.getHexagon`,
+          message:
+            'use getHexagon as a deck.gl attribute string "@@=h3_column_name" (or set _sqlroomsBinding.hexagonColumn) — object accessors like {"@@function":"...","column":"..."} are not valid',
+        });
+      } else {
+        const hasGetHexagon =
+          typeof getHexagon === 'string' && getHexagon.trim().length > 0;
+        const hasHexagonBinding =
+          typeof binding?.hexagonColumn === 'string' &&
+          (binding.hexagonColumn as string).trim().length > 0;
+        if (!hasGetHexagon && !hasHexagonBinding) {
+          issues.push({
+            path: `spec.layers.${index}.getHexagon`,
+            message:
+              'GeoArrowH3HexagonLayer requires getHexagon (e.g. "@@=h3_column_name") or _sqlroomsBinding.hexagonColumn set to the H3 index column',
+          });
+        }
+      }
+    }
+
     if (layerType === 'GeoArrowArcLayer') {
+      if (layer.getSourcePosition !== undefined) {
+        issues.push({
+          path: `spec.layers.${index}.getSourcePosition`,
+          message:
+            'do not set getSourcePosition — bind the source geometry via _sqlroomsBinding.sourceGeometryColumn only',
+        });
+      }
+      if (layer.getTargetPosition !== undefined) {
+        issues.push({
+          path: `spec.layers.${index}.getTargetPosition`,
+          message:
+            'do not set getTargetPosition — bind the target geometry via _sqlroomsBinding.targetGeometryColumn only',
+        });
+      }
       const hasSource =
         typeof binding?.sourceGeometryColumn === 'string' &&
         (binding.sourceGeometryColumn as string).trim().length > 0;
