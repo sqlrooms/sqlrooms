@@ -12,6 +12,7 @@ import {
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
 import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
+import {wrapSqlGeometryColumnsAsWkb} from './datasets/wrapGeometryAsWkb';
 import {
   isDeckMapDashboardSqlDatasetSource,
   isDeckMapDashboardTableDatasetSource,
@@ -45,6 +46,8 @@ export type DeckMapDashboardDatasetClientState = {
   error?: Error;
   client: unknown;
   isSampled?: boolean;
+  /** True when the Mosaic query projected native GEOMETRY columns via ST_AsWkb. */
+  wrappedGeometryAsWkb?: boolean;
 };
 
 export function resolveDeckMapDashboardDatasetSource(options: {
@@ -96,10 +99,33 @@ function stripCatalogPrefix(tableName: string | undefined) {
   );
 }
 
+/**
+ * Compiles the unfiltered dataset SQL used for DESCRIBE probes and as the
+ * Mosaic source expression (before sampling / filters).
+ */
+export function createDeckMapDashboardDatasetSourceSql(
+  source: DeckMapDashboardDatasetSource,
+): string {
+  if (isDeckMapDashboardSqlDatasetSource(source)) {
+    return source.sqlQuery.trim().replace(/(?:\s*;+\s*)+$/, '');
+  }
+  if (
+    isDeckMapDashboardTableDatasetSource(source) &&
+    !source.transformSql?.trim()
+  ) {
+    return `SELECT * FROM ${getDeckMapDatasetSourceTableReference(source.tableName)}`;
+  }
+  return createDeckTableDatasetSql(source);
+}
+
 export function createDeckMapDashboardDatasetQuery(
   source: DeckMapDashboardDatasetSource,
   filter: unknown,
-  options?: {sampleRows?: number},
+  options?: {
+    sampleRows?: number;
+    /** Native GEOMETRY columns to project with ST_AsWKB (from DESCRIBE). */
+    geometryColumnsToWrapAsWkb?: readonly string[];
+  },
 ) {
   const isSqlSource = isDeckMapDashboardSqlDatasetSource(source);
   const isTableSource = isDeckMapDashboardTableDatasetSource(source);
@@ -107,21 +133,37 @@ export function createDeckMapDashboardDatasetQuery(
   const tableReference = isDirectTableSource
     ? getDeckMapDatasetSourceTableReference(source.tableName)
     : '';
-  // Apply USING SAMPLE at the source level so Mosaic filters work on top.
-  const sourceExpr: string = isSqlSource
-    ? `(${source.sqlQuery})`
-    : isDirectTableSource
-      ? tableReference
-      : `(${createDeckTableDatasetSql(source)})`;
 
-  const sampledSource = options?.sampleRows
-    ? `(SELECT * FROM ${sourceExpr} USING SAMPLE ${options.sampleRows} ROWS)`
-    : sourceExpr;
+  const baseSql = createDeckMapDashboardDatasetSourceSql(source);
+
+  // Sample before WKB projection so ST_AsWKB runs only on the sampled rows.
+  const sampledSql = options?.sampleRows
+    ? `SELECT * FROM (${baseSql}) AS "__sqlrooms_sample_source" USING SAMPLE ${options.sampleRows} ROWS`
+    : baseSql;
+
+  const wrappedSql = wrapSqlGeometryColumnsAsWkb(
+    sampledSql,
+    options?.geometryColumnsToWrapAsWkb ?? [],
+  );
+  const usedWrap = Boolean(wrappedSql);
+
+  let sourceExpr: string;
+  if (wrappedSql) {
+    sourceExpr = `(${wrappedSql})`;
+  } else if (options?.sampleRows) {
+    sourceExpr = `(${sampledSql})`;
+  } else if (isSqlSource) {
+    sourceExpr = `(${source.sqlQuery})`;
+  } else if (isDirectTableSource) {
+    sourceExpr = tableReference;
+  } else {
+    sourceExpr = `(${createDeckTableDatasetSql(source)})`;
+  }
 
   const query =
-    isSqlSource || !isDirectTableSource || options?.sampleRows
+    usedWrap || options?.sampleRows || isSqlSource || !isDirectTableSource
       ? Query.from({
-          __dashboard_map_dataset: verbatim(sampledSource),
+          __dashboard_map_dataset: verbatim(sourceExpr),
         })
       : Query.from({__dashboard_map_dataset: verbatim(tableReference)});
 
@@ -140,7 +182,10 @@ export function createDeckMapDashboardDatasets(
   mapConfig: DeckMapDashboardPanelConfig,
   datasetStates: Record<
     string,
-    Pick<DeckMapDashboardDatasetClientState, 'arrowTable'>
+    Pick<
+      DeckMapDashboardDatasetClientState,
+      'arrowTable' | 'wrappedGeometryAsWkb'
+    >
   >,
 ): DeckJsonMapProps['datasets'] {
   return Object.fromEntries(
@@ -149,7 +194,9 @@ export function createDeckMapDashboardDatasets(
       {
         arrowTable: datasetStates[datasetId]?.arrowTable,
         geometryColumn: dataset.geometryColumn,
-        geometryEncodingHint: dataset.geometryEncodingHint,
+        geometryEncodingHint: datasetStates[datasetId]?.wrappedGeometryAsWkb
+          ? 'wkb'
+          : dataset.geometryEncodingHint,
       },
     ]),
   );

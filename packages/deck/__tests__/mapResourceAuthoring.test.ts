@@ -866,7 +866,7 @@ describe('Deck map resource authoring contract', () => {
     expect(issues).toEqual([]);
   });
 
-  test('rejects bare ST_Point(...) AS col without ST_AsWKB', () => {
+  test('allows bare ST_Point(...) AS col (pipeline wraps native GEOMETRY as WKB)', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
         layers: [
@@ -893,16 +893,12 @@ describe('Deck map resource authoring contract', () => {
       },
     });
 
-    expect(
-      issues.some(
-        (i) =>
-          i.path === 'datasets.arcs.source' &&
-          i.message.includes('ST_AsWKB(ST_Point'),
-      ),
-    ).toBe(true);
+    expect(issues.some((i) => i.message.includes('ST_AsWKB(ST_Point'))).toBe(
+      false,
+    );
   });
 
-  test('rejects bare ST_Point with nested args as a geometry alias', () => {
+  test('allows bare ST_Point with nested args as a geometry alias', () => {
     const issues = getDeckMapResourceConfigIssues({
       ...validConfig,
       datasets: {
@@ -918,13 +914,9 @@ describe('Deck map resource authoring contract', () => {
       },
     });
 
-    expect(
-      issues.some(
-        (i) =>
-          i.path === 'datasets.places.source' &&
-          i.message.includes('ST_AsWKB(ST_Point'),
-      ),
-    ).toBe(true);
+    expect(issues.some((i) => i.message.includes('ST_AsWKB(ST_Point'))).toBe(
+      false,
+    );
   });
 
   test('accepts ST_AsWKB(ST_Point(...)) AS col', () => {

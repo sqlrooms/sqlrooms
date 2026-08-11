@@ -429,7 +429,8 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     // If the transformSql defines arc geometry columns (detected above), the
     // dataset must declare geometryEncodingHint: "wkb" so the decoder knows
     // how to read the geometry. Do not silently rewrite SQL — validator +
-    // agent retry own ST_AsWKB / ST_MakeLine(LIST(...)) corrections.
+    // agent retry own ST_MakeLine(LIST(...)) corrections; native GEOMETRY is
+    // projected to WKB by the dataset pipeline.
     const transformSql = (next?.source as Record<string, unknown> | undefined)
       ?.transformSql as string | undefined;
 

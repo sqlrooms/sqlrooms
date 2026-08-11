@@ -121,39 +121,6 @@ function hasEntries(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * True when SQL selects a geometry alias from bare `ST_Point(...) AS col`
- * without wrapping it in `ST_AsWKB(...)`. Nested ST_Point args are tolerated;
- * ST_Point used only as an argument to ST_MakeLine/LIST (no AS) is ignored.
- */
-function hasBareStPointGeometryAlias(sql: string): boolean {
-  const re = /\bST_Point\s*\(/gi;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(sql)) !== null) {
-    const start = match.index;
-    const before = sql.slice(0, start).replace(/\s+$/, '');
-    if (/\bST_AsWKB\s*\(\s*$/i.test(before)) {
-      continue;
-    }
-
-    // Walk to the matching close paren so nested ST_Point args are allowed.
-    let depth = 1;
-    let i = start + match[0].length;
-    while (i < sql.length && depth > 0) {
-      const ch = sql[i];
-      if (ch === '(') depth += 1;
-      else if (ch === ')') depth -= 1;
-      i += 1;
-    }
-    if (depth !== 0) continue;
-
-    if (/^\s+AS\s+/i.test(sql.slice(i))) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * True for invalid `ST_MakeLine(ST_Point(...) ORDER BY ...)` forms, including
  * nested coordinate expressions inside ST_Point. ORDER BY is only legal inside
  * LIST(...).
@@ -482,13 +449,6 @@ export function getDeckMapResourceConfigIssues(
         typeof part === 'string' && part.trim().length > 0,
     );
     const sql = sqlParts.join('\n');
-    if (sql && hasBareStPointGeometryAlias(sql)) {
-      issues.push({
-        path: `datasets.${datasetId}.source`,
-        message:
-          'Geometry columns must be produced with ST_AsWKB(ST_Point(...)) AS col — bare ST_Point(...) AS col returns an internal DuckDB geometry type that cannot be decoded. Wrap ST_Point with ST_AsWKB.',
-      });
-    }
     if (sql && hasSelectStarAsWkbCollision(sql)) {
       issues.push({
         path: `datasets.${datasetId}.source`,
@@ -842,7 +802,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - For animated trips use GeoArrowTripsLayer — never ArcLayer (arcs are static OD links). One output row per trip: LineString geom + timestamps. Waypoint tables: ST_MakeLine(LIST(ST_Point(...) ORDER BY col)) GROUP BY trip id, keep attrs with ANY_VALUE(col). OD-pair tables: synthesize a 2-point LineString + timestamps (no GROUP BY). Set geometryColumn "geom", geometryEncodingHint "wkb", and _sqlroomsBinding.timestampColumn "timestamps".
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
-- Never use SELECT *, ST_AsWKB(geom) AS geom — that leaves native GEOMETRY as geom and empty maps. Use SELECT * EXCLUDE (geom), ST_AsWKB(...) AS geom, or omit transformSql when geom already exists.
+- Never use SELECT *, ST_AsWKB(geom) AS geom — that leaves native GEOMETRY as geom and empty maps. Use SELECT * EXCLUDE (geom), ST_AsWKB(...) AS geom, or omit transformSql when geom already exists. Bare ST_Point(...) / table GEOMETRY columns are projected to WKB by the dataset pipeline; prefer explicit ST_AsWKB in authored SQL when practical.
 - Use configMode "basic" for a straightforward single-layer map (including extruded column/polygon maps with one elevation column via "@@=col" or a scale accessor). Use "custom" only for advanced properties the basic settings cannot represent; custom mode disables the settings panel and does not relax dataset-source or layer-binding requirements.
 - Never set mapStyle to a mapbox:// URL — MapLibre cannot load that scheme. Omit mapStyle for the host basemap, or use a token-free MapLibre https:// style URL.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.

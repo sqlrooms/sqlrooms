@@ -247,6 +247,24 @@ describe('deck dashboard integration', () => {
     expect(transformSql).toContain('WITH __sqlrooms_source AS');
     expect(transformSql).toContain('SELECT * FROM "earthquakes"');
     expect(transformSql).toContain('FROM __sqlrooms_source');
+
+    const wrappedSql = createDeckMapDashboardDatasetQuery(
+      {tableName: 'buildings'},
+      [],
+      {geometryColumnsToWrapAsWkb: ['geom']},
+    ).toString();
+    expect(wrappedSql).toContain('ST_AsWKB("geom") AS "geom"');
+    expect(wrappedSql).toContain('__sqlrooms_as_wkb');
+
+    const sampledWrappedSql = createDeckMapDashboardDatasetQuery(
+      {tableName: 'buildings'},
+      [],
+      {sampleRows: 1000, geometryColumnsToWrapAsWkb: ['geom']},
+    ).toString();
+    // Outer REPLACE wraps an inner SAMPLE subquery (sample first, then ST_AsWKB).
+    expect(sampledWrappedSql).toMatch(
+      /REPLACE[\s\S]*FROM\s*\([\s\S]*USING SAMPLE 1000 ROWS[\s\S]*\)\s+AS\s+"__sqlrooms_as_wkb"/i,
+    );
   });
 
   it('wires Arrow client results into DeckJsonMap dataset inputs', () => {

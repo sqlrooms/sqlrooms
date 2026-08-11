@@ -638,9 +638,12 @@ for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-geoarrow).
 
-When querying DuckDB spatial `GEOMETRY` columns directly, convert them first
-with `ST_AsWKB(...)` or `ST_AsText(...)`. DuckDB's internal geometry payload is
-not the same as standard WKB.
+When querying DuckDB spatial `GEOMETRY` columns, the dataset pipeline probes
+output types with `DESCRIBE` and projects native `GEOMETRY` columns through
+`SELECT * REPLACE (ST_AsWKB(col) AS col)` before prepare/decode. Authored SQL
+is not rewritten — the wrap is an outer pipeline query. Prefer writing
+`ST_AsWKB(...)` in transforms when you control the SQL; the pipeline covers
+bare `ST_Point(...)` / table `GEOMETRY` columns for every authoring surface.
 
 ## AI map config prepare
 
@@ -662,7 +665,8 @@ helpers exported from `@sqlrooms/deck`:
 
 Durable resource writes also run `getDeckMapResourceConfigIssues` /
 `assertDeckMapResourceConfig` for syntax and type/scheme compatibility
-(e.g. `quantile` + `Viridis` is rejected).
+(e.g. `quantile` + `Viridis` is rejected). Native `GEOMETRY` columns are
+normalized to WKB by the dataset pipeline (not by SQL-string validation).
 
 ## Runtime Props and Children
 
