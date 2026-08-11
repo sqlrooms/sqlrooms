@@ -551,13 +551,25 @@ export function getDeckMapResourceConfigIssues(
       });
     }
 
-    if (layerType === 'GeoArrowHeatmapLayer') {
+    if (layerType === 'GeoArrowHeatmapLayer' && 'getWeight' in layer) {
+      // Basic mode has no weight-column UI; heatmaps use default uniform density.
+      // Custom mode may set a numeric constant via the JSON editor, but column
+      // / object accessors are still rejected (and AI should omit getWeight).
       const getWeight = layer.getWeight;
-      if (isPlainObject(getWeight)) {
+      if (config.configMode !== 'custom') {
         issues.push({
           path: `spec.layers.${index}.getWeight`,
           message:
-            'use a deck.gl attribute string "@@=ColumnName" (or a constant number) — object accessors like {"@@function":"...","field":"..."} are not valid for getWeight',
+            'omit getWeight for default density — the basic settings panel has no weight-column control; do not bind a column',
+        });
+      } else if (
+        isPlainObject(getWeight) ||
+        (typeof getWeight === 'string' && getWeight.trim().length > 0)
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.getWeight`,
+          message:
+            'omit getWeight for default density, or use a numeric constant — column / object accessors are not supported',
         });
       }
     }
@@ -806,6 +818,8 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - Use configMode "basic" for a straightforward single-layer map (including extruded column/polygon maps with one elevation column via "@@=col" or a scale accessor). Use "custom" only for advanced properties the basic settings cannot represent; custom mode disables the settings panel and does not relax dataset-source or layer-binding requirements.
 - Never set mapStyle to a mapbox:// URL — MapLibre cannot load that scheme. Omit mapStyle for the host basemap, or use a token-free MapLibre https:// style URL.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column. Scatterplot/Heatmap/Column require Point positions — do not bind them to Polygon/MultiPolygon geom (typical GeoJSON footprints). Prefer GeoArrowPolygonLayer / GeoArrowSolidPolygonLayer for those tables, or transformSql with ST_AsWKB(ST_Centroid(geom)) / ST_PointOnSurface(geom) when the user explicitly wants points. The runtime will not invent centroids.
+- For mixed geometry columns (Point + LineString + Polygon in one geom column), use GeoJsonLayer — typed GeoArrowPolygonLayer / Path / Scatterplot require a uniform geometry type. To show only polygons from a mixed table, filter with WHERE ST_GeometryType(geom) IN ('POLYGON','MULTIPOLYGON') then use GeoArrowPolygonLayer.
+- For GeoArrowHeatmapLayer, omit colorRange and omit getWeight (default uniform density). Do not bind getWeight to a column — basic mode has no weight-column control.
 - Prefer data-driven color when a useful column exists: getFillColor (or getColor/getSourceColor/getTargetColor for arcs) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Use quantile for skewed numeric, sequential for uniform, categorical for strings. Exact scheme names (case-sensitive): ${formatColorSchemePromptLists()} — do not invent names. Viridis/Plasma/Inferno require type "sequential"; quantile/quantize schemes must be ColorBrewer ramps (YlOrRd, Blues, …).
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
 - When updating only visual properties (color scale, scheme, radius, width, elevation scale, visibility, opacity), send datasets as an empty object {} so the tool schema stays valid and merge keeps the existing dataset registry. Do not omit datasets entirely. Never re-send bare source.tableName without transformSql/sqlQuery — that overwrites geometry SQL and breaks the map. Include real dataset entries only when changing a data source.

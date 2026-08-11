@@ -173,9 +173,10 @@ const COLOR_ACCESSOR_PROPS = [
  * 5. Lift getHexagon "@@=column" into hexagonColumn for fit-to-bounds
  *
  * Rejected by getDeckMapResourceConfigIssues (agent retry): unprefixed layer
- * classes, ColorScale @@type/column syntax, object getWeight, object
- * getHexagon, arc getSourcePosition/getTargetPosition, and basic-mode string
- * getRadius / getWidth / getElevation / radiusPixels / column radius.
+ * classes, ColorScale @@type/column syntax, heatmap getWeight (basic mode /
+ * column accessors), object getHexagon, arc getSourcePosition/getTargetPosition,
+ * and basic-mode string getRadius / getWidth / getElevation / radiusPixels /
+ * column radius.
  */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -602,9 +603,9 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
  * colorScale {"@@type":"ColorScale","column":"..."} syntax, type/scheme
  * mismatches (e.g. quantile + Viridis), SELECT * / ST_AsWKB alias collisions,
- * object getWeight, object getHexagon, arc getSourcePosition/getTargetPosition,
- * and basic-mode string getRadius / getWidth / getElevation / radiusPixels /
- * column radius.
+ * heatmap getWeight (omit for default density), object getHexagon, arc
+ * getSourcePosition/getTargetPosition, and basic-mode string getRadius /
+ * getWidth / getElevation / radiusPixels / column radius.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,

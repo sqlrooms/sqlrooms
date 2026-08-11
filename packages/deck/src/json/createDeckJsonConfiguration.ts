@@ -2,9 +2,10 @@ import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {
-  wkbGeometryDecoder,
-  promoteToPointPositions,
   isPointPositionLayer,
+  promoteToPointPositions,
+  wkbGeometryDecoder,
+  describeGeoArrowPromotionFailure,
 } from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
@@ -213,8 +214,14 @@ function resolveGeoArrowBindings(options: {
             layerName === 'GeoArrowTripsLayer'
               ? ` GeoArrowPathLayer needs LineString WKB (or a single-part MultiLineString). Multi-part MultiLineString cannot be stitched into one path — explode/merge with ST_Dump / ST_LineMerge first, then ST_AsWKB.`
               : '';
+          const mixedHint = describeGeoArrowPromotionFailure(
+            layerName,
+            resolvedGeometry.encoding,
+            prepared.table,
+            resolvedGeometry.columnName,
+          );
           throw new Error(
-            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".${pathHint}`,
+            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".${pathHint}${mixedHint}`,
           );
         }
       }

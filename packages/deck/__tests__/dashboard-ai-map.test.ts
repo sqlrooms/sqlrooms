@@ -78,7 +78,6 @@ const multiLayerConfig = {
         '@@type': 'GeoArrowHeatmapLayer',
         id: 'earthquakes-density',
         _sqlroomsBinding: {dataset: 'earthquakes'},
-        getWeight: 'magnitude',
       },
     ],
   },

@@ -799,4 +799,80 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
       }),
     ).toThrow(/MultiLineString|LineString|promotion|ST_LineMerge|ST_Dump/i);
   });
+
+  it('rejects mixed Point/LineString/Polygon on GeoArrowPolygonLayer with GeoJsonLayer hint', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POINT(0 0)',
+          'LINESTRING(0 0, 1 1)',
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+        ],
+        new Utf8(),
+      ),
+      kind: vectorFromArray(['point', 'line', 'polygon'], new Utf8()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'mixed',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      mixed: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'mixed-geom',
+            _sqlroomsBinding: {
+              dataset: 'mixed',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      }),
+    ).toThrow(/GeoJsonLayer|POLYGON|mixed|Sampled geometry types/i);
+  });
+
+  it('renders mixed geometries with GeoJsonLayer', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POINT(0 0)',
+          'LINESTRING(0 0, 1 1)',
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'mixed',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      mixed: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoJsonLayer',
+          id: 'mixed-geom',
+          _sqlroomsBinding: {
+            dataset: 'mixed',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers).toHaveLength(1);
+    expect(converted.layers[0]?.props.data).toBeDefined();
+  });
 });

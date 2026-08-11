@@ -428,6 +428,81 @@ export function isPointPositionLayer(layerType: string): boolean {
   return POINT_POSITION_LAYERS.has(layerType);
 }
 
+const WKB_TYPE_NAMES: Record<number, string> = {
+  [WKB_POINT]: 'Point',
+  [WKB_LINESTRING]: 'LineString',
+  [WKB_POLYGON]: 'Polygon',
+  [WKB_MULTILINESTRING]: 'MultiLineString',
+  [WKB_MULTIPOLYGON]: 'MultiPolygon',
+};
+
+function uniqueSortedTypes(types: string[]): string[] {
+  return [...new Set(types)].sort();
+}
+
+function sampleGeometryTypeNames(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+): string[] | null {
+  try {
+    const parsed = getSampleGeometryTypes(table, columnName, encoding);
+    if (parsed && parsed.length > 0) {
+      return uniqueSortedTypes(parsed);
+    }
+  } catch {
+    // Fall through to WKB header sampling.
+  }
+  try {
+    const wkbTypes = getSampleWKBGeomTypes(table, columnName);
+    if (!wkbTypes || wkbTypes.length === 0) return null;
+    return uniqueSortedTypes(
+      wkbTypes.map((t) => WKB_TYPE_NAMES[t] ?? `type:${t}`),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extra guidance when a typed GeoArrow layer cannot promote WKB/WKT geometry.
+ * Mixed geometry columns must use GeoJsonLayer or an ST_GeometryType filter.
+ */
+export function describeGeoArrowPromotionFailure(
+  layerType: string,
+  encoding: ResolvedGeometryEncoding,
+  table: arrow.Table,
+  columnName: string,
+): string {
+  const sampled = sampleGeometryTypeNames(table, columnName, encoding);
+  const sampledText =
+    sampled && sampled.length > 0
+      ? ` Sampled geometry types: ${sampled.join(', ')}.`
+      : '';
+
+  if (POLYGON_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} GeoArrowPolygonLayer requires only Polygon/MultiPolygon rows.` +
+      ` For mixed Point/LineString/Polygon columns use GeoJsonLayer, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('POLYGON','MULTIPOLYGON').`
+    );
+  }
+  if (PATH_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} GeoArrowPathLayer requires only LineString/MultiLineString rows.` +
+      ` For mixed geometry columns use GeoJsonLayer, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('LINESTRING','MULTILINESTRING').`
+    );
+  }
+  if (POINT_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} This point layer requires Point geometry.` +
+      ` For mixed geometry columns use GeoJsonLayer, or filter/transform to points.`
+    );
+  }
+  return sampledText;
+}
+
 /**
  * Promotes WKB/WKT LineString geometries (and single-part MultiLineString) to a
  * native GeoArrow LineString vector (List<FixedSizeList<2, Float64>>).

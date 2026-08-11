@@ -124,8 +124,8 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
-  test('rejects object getWeight on heatmap layers (colorRange is UI-owned, not validated)', () => {
-    const issues = getDeckMapResourceConfigIssues({
+  test('rejects getWeight on heatmap layers in basic mode (default density only)', () => {
+    const objectIssues = getDeckMapResourceConfigIssues({
       spec: {
         layers: [
           {
@@ -145,16 +145,100 @@ describe('Deck map resource authoring contract', () => {
         },
       },
     });
-    expect(issues.some((i) => i.path === 'spec.layers.0.colorRange')).toBe(
-      false,
-    );
+    expect(
+      objectIssues.some((i) => i.path === 'spec.layers.0.colorRange'),
+    ).toBe(false);
+    expect(
+      objectIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getWeight' &&
+          i.message.includes('omit getWeight'),
+      ),
+    ).toBe(true);
+
+    const columnIssues = getDeckMapResourceConfigIssues({
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'heat',
+            getWeight: '@@=height',
+            _sqlroomsBinding: {dataset: 'points'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {tableName: 'points'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+    expect(
+      columnIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getWeight' &&
+          i.message.includes('omit getWeight'),
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects column getWeight on heatmap layers in custom mode', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      configMode: 'custom',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'heat',
+            getWeight: '@@=height',
+            _sqlroomsBinding: {dataset: 'points'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {tableName: 'points'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
     expect(
       issues.some(
         (i) =>
           i.path === 'spec.layers.0.getWeight' &&
-          i.message.includes('"@@=ColumnName"'),
+          i.message.includes('omit getWeight'),
       ),
     ).toBe(true);
+  });
+
+  test('allows numeric getWeight on heatmap layers in custom mode', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      configMode: 'custom',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'heat',
+            getWeight: 1,
+            _sqlroomsBinding: {dataset: 'points'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {tableName: 'points'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+    expect(issues.some((i) => i.path === 'spec.layers.0.getWeight')).toBe(
+      false,
+    );
   });
 
   test('rejects arc getSourcePosition/getTargetPosition accessors', () => {
