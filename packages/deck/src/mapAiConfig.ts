@@ -44,7 +44,7 @@ export const DeckMapResourceConfigParameter = z.looseObject({
   datasets: z
     .record(z.string(), DeckMapDatasetConfig)
     .describe(
-      'Resource datasets keyed by id. Every dataset in a new map must define source.tableName or source.sqlQuery.',
+      'Resource datasets keyed by id. Every dataset in a new map must define source.tableName or source.sqlQuery. For visual-only updates send an empty object {} so merge keeps the existing registry — do not omit this field.',
     ),
   configMode: z.enum(['basic', 'custom']).optional(),
   mapStyle: z.string().optional(),

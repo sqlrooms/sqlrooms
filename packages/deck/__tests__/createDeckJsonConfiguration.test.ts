@@ -729,13 +729,10 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
     ).toThrow(/ST_Centroid|ST_PointOnSurface|Point positions/);
   });
 
-  it('promotes WKT MultiLineString to PathLayer positions', () => {
+  it('promotes WKT LineString and single-part MultiLineString to PathLayer', () => {
     const table = new Table({
       geom: vectorFromArray(
-        [
-          'LINESTRING(0 0, 1 1, 2 0)',
-          'MULTILINESTRING((10 10, 11 11), (12 12, 13 13))',
-        ],
+        ['LINESTRING(0 0, 1 1, 2 0)', 'MULTILINESTRING((10 10, 11 11, 12 12))'],
         new Utf8(),
       ),
       label: vectorFromArray(['a', 'b'], new Utf8()),
@@ -768,5 +765,38 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
     const getPath = converted.layers[0]?.props.getPath;
     expect(getPath).toBeDefined();
     expect(converted.layers[0]?.props.data).toBeDefined();
+  });
+
+  it('rejects multi-part MultiLineString on PathLayer (no silent stitch)', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        ['MULTILINESTRING((10 10, 11 11), (12 12, 13 13))'],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'lines',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      lines: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            id: 'lines',
+            _sqlroomsBinding: {
+              dataset: 'lines',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      }),
+    ).toThrow(/MultiLineString|LineString|promotion|ST_LineMerge|ST_Dump/i);
   });
 });

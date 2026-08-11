@@ -429,10 +429,11 @@ export function isPointPositionLayer(layerType: string): boolean {
 }
 
 /**
- * Promotes WKB/WKT LineString / MultiLineString geometries to a native
- * GeoArrow LineString vector (List<FixedSizeList<2, Float64>>). MultiLineString
- * parts are flattened into one path per row (PathLayer expects LineString).
- * Returns null if any non-null geometry is not a line type.
+ * Promotes WKB/WKT LineString geometries (and single-part MultiLineString) to a
+ * native GeoArrow LineString vector (List<FixedSizeList<2, Float64>>).
+ * Multi-part MultiLineStrings are rejected — stitching parts would draw
+ * artificial segments between disjoint routes. Returns null if any non-null
+ * geometry is not a promotable line type.
  */
 function tryPromoteLineStringTable(
   table: arrow.Table,
@@ -472,12 +473,10 @@ function tryPromoteLineStringTable(
           (c) => [c[0]!, c[1]!] as [number, number],
         );
       } else if (geom.type === 'MultiLineString') {
-        coords = [];
-        for (const part of geom.coordinates as number[][][]) {
-          for (const c of part) {
-            coords.push([c[0]!, c[1]!]);
-          }
-        }
+        const parts = geom.coordinates as number[][][];
+        // Only single-part MultiLineString promotes cleanly to PathLayer.
+        if (parts.length !== 1 || !parts[0]?.length) return null;
+        coords = parts[0].map((c) => [c[0]!, c[1]!] as [number, number]);
       } else {
         return null;
       }

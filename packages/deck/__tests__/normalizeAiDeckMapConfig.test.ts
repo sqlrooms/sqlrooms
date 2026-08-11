@@ -1137,4 +1137,30 @@ describe('validateAndFixColorScaleFields', () => {
       /colorScale field "spd" is not a column.*Available columns: speed, category/,
     );
   });
+
+  test('infers the sole dataset when _sqlroomsBinding.dataset is omitted', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'mag',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {
+        quakes: {source: {tableName: 'earthquakes'}},
+      },
+    };
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /colorScale field "mag" is not a column in dataset "quakes"/,
+    );
+  });
 });

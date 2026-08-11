@@ -160,6 +160,41 @@ describe('Deck map fit core', () => {
     });
   });
 
+  test('prefers explicit geometryColumn over a visible H3 overlay', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowH3HexagonLayer',
+              _sqlroomsBinding: {
+                dataset: 'points',
+                hexagonColumn: 'hex_id',
+              },
+            },
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {
+                dataset: 'points',
+                geometryColumn: 'geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          points: {
+            source: {tableName: 'earthquakes'},
+            geometryColumn: 'geom',
+          },
+        },
+        fitToData: {dataset: 'points', geometryColumn: 'geom'},
+      }),
+    ).toEqual({
+      dataset: 'points',
+      geometryColumn: 'geom',
+    });
+  });
+
   test('builds H3 bounds SQL without casting the hexagon column', () => {
     const query = createDeckMapBoundsQuery({
       source: {tableName: 'h3_pentagon'},

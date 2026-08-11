@@ -114,7 +114,11 @@ function resolveGeoArrowBindings(options: {
     }
 
     if (binding.kind === 'geometry') {
-      const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+      const columnName =
+        resolveConfiguredColumn(layerProps, binding.configKey) ??
+        (existingIsSimpleAccessor
+          ? (existing as string).trim().slice(3)
+          : undefined);
       if (binding.required && !columnName) {
         throw new Error(
           `Layer "${layerName}" requires _sqlroomsBinding.${binding.configKey}.`,
@@ -207,7 +211,7 @@ function resolveGeoArrowBindings(options: {
           const pathHint =
             layerName === 'GeoArrowPathLayer' ||
             layerName === 'GeoArrowTripsLayer'
-              ? ` GeoArrowPathLayer needs LineString/MultiLineString WKB (filter with ST_GeometryType(geom) IN ('LINESTRING','MULTILINESTRING') and ST_AsWKB(geom)).`
+              ? ` GeoArrowPathLayer needs LineString WKB (or a single-part MultiLineString). Multi-part MultiLineString cannot be stitched into one path — explode/merge with ST_Dump / ST_LineMerge first, then ST_AsWKB.`
               : '';
           throw new Error(
             `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".${pathHint}`,
@@ -362,6 +366,14 @@ export function createDeckJsonConfiguration(
           const accessor = compileLinearScaleAccessor(table, rawElev);
           if (accessor) {
             nextProps.getElevation = accessor;
+          } else {
+            const field =
+              typeof (rawElev as {field?: unknown}).field === 'string'
+                ? (rawElev as {field: string}).field
+                : '';
+            throw new Error(
+              `Layer "${layerName}" getElevation scale field "${field || '(missing)'}" was not found in dataset "${prepared.datasetId}".`,
+            );
           }
         }
       } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {

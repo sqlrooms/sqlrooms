@@ -701,16 +701,24 @@ export function validateAndFixColorScaleFields<
 
   if (columnsByDataset.size === 0) return config;
 
+  const datasetIds = Object.keys(config.datasets ?? {});
+  const soloDatasetId = datasetIds.length === 1 ? datasetIds[0] : undefined;
+
   const errors: string[] = [];
   let changed = false;
   const nextLayers = layers.map((layer, i) => {
     const binding = layer._sqlroomsBinding as
       | Record<string, unknown>
       | undefined;
-    const datasetId =
-      typeof binding?.dataset === 'string' ? binding.dataset : undefined;
+    const boundDataset =
+      typeof binding?.dataset === 'string' && binding.dataset.trim()
+        ? binding.dataset
+        : undefined;
+    // Mirror normalize's solo-dataset inject: AI often omits
+    // `_sqlroomsBinding.dataset` when there is exactly one dataset.
+    const datasetId = boundDataset ?? soloDatasetId;
     const cols = datasetId ? columnsByDataset.get(datasetId) : undefined;
-    if (!cols) return layer;
+    if (!cols || !datasetId) return layer;
 
     let nextLayer: Record<string, unknown> | undefined;
     for (const prop of COLOR_SCALE_ACCESSOR_PROPS) {

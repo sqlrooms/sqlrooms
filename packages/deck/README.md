@@ -642,6 +642,27 @@ When querying DuckDB spatial `GEOMETRY` columns directly, convert them first
 with `ST_AsWKB(...)` or `ST_AsText(...)`. DuckDB's internal geometry payload is
 not the same as standard WKB.
 
+## AI map config prepare
+
+AI and host tooling should prepare authored Deck map configs through the shared
+helpers exported from `@sqlrooms/deck`:
+
+- `prepareAiDeckMapConfig(config, {resolveTable?})` — preferred entrypoint:
+  validates `colorScale.field` names against known tables when a resolver is
+  provided, then runs normalization.
+- `normalizeAiDeckMapConfig(config)` — safe structural defaults only (scheme
+  casing, solo-dataset binding inject, size clamps, heatmap `colorRange` strip,
+  lon/lat → WKB transform inject, `SELECT *` / `ST_AsWKB` collision rewrite).
+  Does not invent schemes or silently mutate polygon geometry into centroids.
+- `validateAndFixColorScaleFields(config, resolveTable)` — casing fix for
+  base-table columns; hard-rejects unknown fields on bare `{tableName}` sources.
+  Skips unknown-field rejection when `transformSql` / `sqlQuery` is present
+  (aliases may be transform-only).
+
+Durable resource writes also run `getDeckMapResourceConfigIssues` /
+`assertDeckMapResourceConfig` for syntax and type/scheme compatibility
+(e.g. `quantile` + `Viridis` is rejected).
+
 ## Runtime Props and Children
 
 Keep the spec serializable, then pass runtime behavior separately:

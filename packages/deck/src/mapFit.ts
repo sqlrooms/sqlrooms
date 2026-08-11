@@ -78,6 +78,22 @@ export function resolveDeckMapFitToData(
         ],
       };
     }
+  }
+
+  // Explicit geometry bounds win over inferred H3 (a visible H3 overlay must
+  // not override fitToData.geometryColumn / dataset.geometryColumn).
+  const dataset = config.datasets[fitToData.dataset];
+  const geometryColumn = fitToData.geometryColumn ?? dataset?.geometryColumn;
+  if (geometryColumn) return {...fitToData, geometryColumn};
+
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerRecord = layer as Record<string, unknown>;
+    if (layerRecord.visible === false) continue;
+    const binding = layerRecord._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset !== fitToData.dataset) continue;
 
     if (binding.hexagonColumn) {
       return {...fitToData, h3Column: String(binding.hexagonColumn)};
@@ -95,10 +111,6 @@ export function resolveDeckMapFitToData(
       }
     }
   }
-
-  const dataset = config.datasets[fitToData.dataset];
-  const geometryColumn = fitToData.geometryColumn ?? dataset?.geometryColumn;
-  if (geometryColumn) return {...fitToData, geometryColumn};
 
   if (
     config.interaction?.longitudeColumn &&

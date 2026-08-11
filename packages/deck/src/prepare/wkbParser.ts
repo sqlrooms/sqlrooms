@@ -115,8 +115,9 @@ export function readWKBLineStringXY(
 }
 
 /**
- * Reads a WKB MultiLineString and flattens all parts into one coordinate
- * sequence for PathLayer (one LineString-shaped GeoArrow vector per row).
+ * Reads a WKB MultiLineString with a single part as one coordinate sequence
+ * for PathLayer. Multi-part MultiLineStrings are rejected — flattening would
+ * draw artificial segments between disjoint parts.
  */
 export function readWKBMultiLineStringXY(
   buf: ArrayBuffer,
@@ -128,21 +129,11 @@ export function readWKBMultiLineStringXY(
   if (!hasBytes(buf, offset, WKB_UINT32_BYTES)) return null;
   const numLines = header.view.getUint32(offset, header.isLE);
   offset += WKB_UINT32_BYTES;
+  if (numLines !== 1) return null;
 
-  const coords: Array<[number, number]> = [];
-  for (let i = 0; i < numLines; i++) {
-    const lineHeader = parseWKBHeader(buf, offset);
-    if (!lineHeader || lineHeader.geomType !== WKB_LINESTRING) return null;
-    const part = readWKBLineStringXY(buf, lineHeader);
-    if (!part) return null;
-    coords.push(...part);
-    // Advance past this embedded LineString: header + count + coordinates.
-    offset =
-      lineHeader.offset +
-      WKB_UINT32_BYTES +
-      part.length * lineHeader.coordBytes;
-  }
-  return coords;
+  const lineHeader = parseWKBHeader(buf, offset);
+  if (!lineHeader || lineHeader.geomType !== WKB_LINESTRING) return null;
+  return readWKBLineStringXY(buf, lineHeader);
 }
 
 export function visitWKBPolygonCoordinates(
