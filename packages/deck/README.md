@@ -652,7 +652,8 @@ helpers exported from `@sqlrooms/deck`:
   provided, then runs normalization.
 - `normalizeAiDeckMapConfig(config)` — safe structural defaults only (scheme
   casing, solo-dataset binding inject, size clamps, heatmap `colorRange` strip,
-  lon/lat → WKB transform inject, `SELECT *` / `ST_AsWKB` collision rewrite).
+  lon/lat → WKB transform inject). `SELECT *` / `ST_AsWKB` alias collisions are
+  rejected by validation for agent retry — SQL is not rewritten.
   Does not invent schemes or silently mutate polygon geometry into centroids.
 - `validateAndFixColorScaleFields(config, resolveTable)` — casing fix for
   base-table columns; hard-rejects unknown fields on bare `{tableName}` sources.

@@ -85,17 +85,18 @@ describe('createDeckTableDatasetSql', () => {
     );
   });
 
-  it('rewrites SELECT *, ST_AsWKB(geom) AS geom to EXCLUDE the colliding column', () => {
+  it('does not rewrite SELECT *, ST_AsWKB(geom) AS geom (validator owns collisions)', () => {
     const sql = createDeckTableDatasetSql({
       tableName: 'buildings',
       transformSql: `SELECT *, ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
     });
     expect(sql).toContain(
-      `SELECT * EXCLUDE (geom), ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+      `SELECT *, ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
     );
+    expect(sql).not.toContain('EXCLUDE');
   });
 
-  it('does not EXCLUDE a new ST_AsWKB alias that is not in the source table', () => {
+  it('preserves SELECT *, ST_AsWKB(ST_Point(...)) AS geom', () => {
     const sql = createDeckTableDatasetSql({
       tableName: 'earthquakes',
       transformSql: `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
@@ -103,10 +104,9 @@ describe('createDeckTableDatasetSql', () => {
     expect(sql).toContain(
       `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
     );
-    expect(sql).not.toContain('EXCLUDE (geom)');
   });
 
-  it('does not strip geom from SELECT * FROM (… ST_AsWKB AS geom …) sample wrappers', () => {
+  it('preserves SELECT * FROM (… ST_AsWKB AS geom …) sample wrappers', () => {
     const inner = [
       'SELECT DateTime, Latitude, Longitude, Magnitude,',
       'ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom',
@@ -118,6 +118,6 @@ describe('createDeckTableDatasetSql', () => {
       transformSql: `SELECT * FROM (${inner}) USING SAMPLE 100000 ROWS`,
     });
     expect(sql).toContain('ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom');
-    expect(sql).not.toContain('EXCLUDE (geom)');
+    expect(sql).toContain('USING SAMPLE 100000 ROWS');
   });
 });

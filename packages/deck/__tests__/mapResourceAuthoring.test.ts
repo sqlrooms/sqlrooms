@@ -779,6 +779,93 @@ describe('Deck map resource authoring contract', () => {
     expect(issues).toEqual([]);
   });
 
+  test('rejects SELECT *, ST_AsWKB(geom) AS geom collisions', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {
+            tableName: 'buildings',
+            transformSql:
+              'SELECT *, ST_AsWKB(geom) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'datasets.buildings.source' &&
+          i.message.includes('SELECT * EXCLUDE'),
+      ),
+    ).toBe(true);
+  });
+
+  test('accepts SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS geom', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {
+            tableName: 'buildings',
+            transformSql:
+              'SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  test('accepts SELECT *, ST_AsWKB(ST_Point(...)) AS geom (new alias)', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'points', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        points: {
+          source: {
+            tableName: 'earthquakes',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
   test('rejects bare ST_Point(...) AS col without ST_AsWKB', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {

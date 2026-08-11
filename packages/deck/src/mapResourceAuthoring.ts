@@ -11,6 +11,7 @@ import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
 } from './mapConfig';
+import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
@@ -486,6 +487,13 @@ export function getDeckMapResourceConfigIssues(
         path: `datasets.${datasetId}.source`,
         message:
           'Geometry columns must be produced with ST_AsWKB(ST_Point(...)) AS col — bare ST_Point(...) AS col returns an internal DuckDB geometry type that cannot be decoded. Wrap ST_Point with ST_AsWKB.',
+      });
+    }
+    if (sql && hasSelectStarAsWkbCollision(sql)) {
+      issues.push({
+        path: `datasets.${datasetId}.source`,
+        message:
+          'Do not use SELECT *, ST_AsWKB(col) AS col — DuckDB keeps the original column and the WKB alias collides, producing empty maps. Use SELECT * EXCLUDE (col), ST_AsWKB(col) AS col, or omit transformSql when the geometry column already exists.',
       });
     }
   }

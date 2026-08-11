@@ -1,6 +1,5 @@
 import {quoteParsedRawSqlTableReference} from '@sqlrooms/duckdb';
 import type {DeckTableDatasetInput} from '../types';
-import {rewriteSelectStarAsWkbCollisions} from '../fixSelectStarAsWkb';
 
 /** Reserved relation name that table dataset transforms must read from. */
 export const DECK_TABLE_DATASET_SOURCE_RELATION = '__sqlrooms_source';
@@ -14,8 +13,7 @@ export class DeckTableDatasetInvalidTableNameError extends Error {
 }
 
 function cleanTransformSql(transformSql: string): string {
-  const cleaned = transformSql.trim().replace(/(?:\s*;+\s*)+$/, '');
-  return rewriteSelectStarAsWkbCollisions(cleaned) ?? cleaned;
+  return transformSql.trim().replace(/(?:\s*;+\s*)+$/, '');
 }
 
 function createTransformedTableDatasetSql(options: {

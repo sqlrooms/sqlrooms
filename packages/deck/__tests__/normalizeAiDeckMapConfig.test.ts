@@ -754,7 +754,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
     );
   });
 
-  test('rewrites SELECT *, ST_AsWKB(geom) AS geom to EXCLUDE collision', () => {
+  test('does not rewrite SELECT *, ST_AsWKB(geom) AS geom collisions', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -777,7 +777,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
       ),
     );
     expect(result.datasets.ds.source.transformSql).toBe(
-      'SELECT * EXCLUDE (geom), ST_AsWKB(geom) as geom FROM __sqlrooms_source',
+      'SELECT *, ST_AsWKB(geom) as geom FROM __sqlrooms_source',
     );
   });
 });

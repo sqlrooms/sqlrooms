@@ -1,5 +1,4 @@
 import {allKnownColorSchemeNames} from '@sqlrooms/color-scales/colorSchemeNames';
-import {rewriteSelectStarAsWkbCollisions} from './fixSelectStarAsWkb';
 
 // Inlined SQL helpers keep this module free of heavy workspace-package imports
 // (e.g. @sqlrooms/duckdb, @sqlrooms/mosaic) that would break Jest.
@@ -426,17 +425,6 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    for (const sqlKey of ['transformSql', 'sqlQuery'] as const) {
-      const sql = nextSource?.[sqlKey];
-      if (typeof sql !== 'string' || !sql.trim()) continue;
-      const rewritten = rewriteSelectStarAsWkbCollisions(sql);
-      if (rewritten && rewritten !== sql) {
-        nextSource = {...nextSource, [sqlKey]: rewritten};
-        next = {...next, source: nextSource};
-        changed = true;
-      }
-    }
-
     // Fix missing geometryEncodingHint for arc datasets.
     // If the transformSql defines arc geometry columns (detected above), the
     // dataset must declare geometryEncodingHint: "wkb" so the decoder knows
@@ -608,14 +596,14 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values
- * - SELECT *, ST_AsWKB(col) AS col → SELECT * EXCLUDE (col), ST_AsWKB(col) AS col
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
  * colorScale {"@@type":"ColorScale","column":"..."} syntax, type/scheme
- * mismatches (e.g. quantile + Viridis), object getWeight, object getHexagon,
- * arc getSourcePosition/getTargetPosition, and basic-mode string getRadius /
- * getWidth / getElevation / radiusPixels / column radius.
+ * mismatches (e.g. quantile + Viridis), SELECT * / ST_AsWKB alias collisions,
+ * object getWeight, object getHexagon, arc getSourcePosition/getTargetPosition,
+ * and basic-mode string getRadius / getWidth / getElevation / radiusPixels /
+ * column radius.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
