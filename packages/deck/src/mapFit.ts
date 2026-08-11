@@ -348,6 +348,39 @@ function fitDeckMapView(options: {
   };
 }
 
+/**
+ * Builds MapLibre `jumpTo` options for a Deck map camera update.
+ *
+ * Pitch and bearing are omitted unless explicitly provided so callers that only
+ * change lon/lat/zoom (notably fit-to-data) preserve a pitched
+ * `initialViewState` — required for extruded ColumnLayer visibility.
+ */
+export function buildDeckMapJumpToOptions(opts: {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+  bearing?: number;
+  pitch?: number;
+}): {
+  center: [number, number];
+  zoom: number;
+  bearing?: number;
+  pitch?: number;
+} {
+  const jumpOpts: {
+    center: [number, number];
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  } = {
+    center: [opts.longitude, opts.latitude],
+    zoom: opts.zoom,
+  };
+  if (opts.bearing != null) jumpOpts.bearing = opts.bearing;
+  if (opts.pitch != null) jumpOpts.pitch = opts.pitch;
+  return jumpOpts;
+}
+
 type DeckMapFitState = {
   key: string;
   didAutoFit: boolean;

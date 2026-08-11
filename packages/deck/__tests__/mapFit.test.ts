@@ -1,5 +1,6 @@
 import {describe, expect, test} from '@jest/globals';
 import {
+  buildDeckMapJumpToOptions,
   createDeckMapBoundsQuery,
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -291,5 +292,37 @@ describe('Deck map fit core', () => {
     expect(query).toContain(
       'FROM (SELECT * FROM earthquakes) AS "__sqlrooms_dashboard_map_source"',
     );
+  });
+});
+
+describe('buildDeckMapJumpToOptions', () => {
+  test('omits pitch and bearing unless explicitly provided (preserve pitched view)', () => {
+    expect(
+      buildDeckMapJumpToOptions({
+        longitude: 144.96,
+        latitude: -37.81,
+        zoom: 13,
+      }),
+    ).toEqual({
+      center: [144.96, -37.81],
+      zoom: 13,
+    });
+  });
+
+  test('includes pitch and bearing when provided', () => {
+    expect(
+      buildDeckMapJumpToOptions({
+        longitude: 144.96,
+        latitude: -37.81,
+        zoom: 13,
+        pitch: 55,
+        bearing: 20,
+      }),
+    ).toEqual({
+      center: [144.96, -37.81],
+      zoom: 13,
+      pitch: 55,
+      bearing: 20,
+    });
   });
 });
