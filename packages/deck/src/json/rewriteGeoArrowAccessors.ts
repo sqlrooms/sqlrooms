@@ -14,8 +14,8 @@ function canUseDirectVectorAccessor(propName: string, vector: arrow.Vector) {
     return (
       arrow.DataType.isUtf8(type) ||
       arrow.DataType.isLargeUtf8(type) ||
-      type instanceof arrow.Int64 ||
-      type instanceof arrow.Uint64
+      // DuckDB UBIGINT often arrives as Int(true, 64), not instanceof Int64.
+      (arrow.DataType.isInt(type) && type.bitWidth === 64)
     );
   }
 
