@@ -171,9 +171,9 @@ function resolveGeoArrowBindings(options: {
           );
         }
 
-        // Scatter/heatmap/column need point positions. If the bound column is
-        // Polygon/MultiPolygon WKB (common for building footprints), promote
-        // exterior-ring centroids instead of failing with a generic encoding error.
+        // Scatter/heatmap/column need Point positions. Do not silently
+        // centroid Polygon/MultiPolygon footprints — require an explicit
+        // ST_Centroid / ST_PointOnSurface transform (or a polygon layer).
         if (isPointPositionLayer(layerName)) {
           const promoted = promoteToPointPositions(
             prepared.table,

@@ -1,9 +1,4 @@
-import {
-  allKnownColorSchemeNames,
-  binnedNumericSchemes,
-  continuousDivergingSchemes,
-  continuousSequentialSchemes,
-} from '@sqlrooms/color-scales/colorSchemeNames';
+import {allKnownColorSchemeNames} from '@sqlrooms/color-scales/colorSchemeNames';
 import {rewriteSelectStarAsWkbCollisions} from './fixSelectStarAsWkb';
 
 // Inlined SQL helpers keep this module free of heavy workspace-package imports
@@ -17,11 +12,6 @@ function quoteDeckMapSqlIdentifier(identifier: string) {
 const SCHEME_NAME_BY_LOWER = new Map(
   allKnownColorSchemeNames.map((s) => [s.toLowerCase(), s]),
 );
-const BINNED_SCHEME_NAMES = new Set<string>(binnedNumericSchemes);
-const SEQUENTIAL_SCHEME_NAMES = new Set<string>(continuousSequentialSchemes);
-const DIVERGING_SCHEME_NAMES = new Set<string>(continuousDivergingSchemes);
-/** Default when quantile/quantize gets an unknown scheme. */
-const DEFAULT_BINNED_SCHEME = 'YlOrRd';
 
 // Minimal structural type that covers both AiMapConfig
 // and DeckMapConfig — all the passes only access these loose fields.
@@ -224,9 +214,8 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     // Normalise color accessor scheme names: AI often sends wrong casing
     // (e.g. "blues", "viridis"). Do a case-insensitive lookup and replace with
     // the canonical name so the color-scale renderer can find the interpolator.
-    // Also repair type/scheme mismatches: quantile/quantize only accept ColorBrewer
-    // binned schemes, but AI often pairs them with Viridis/Plasma. Coerce those
-    // to sequential (or diverging) so the UI scheme select and renderer agree.
+    // Type/scheme compatibility (e.g. quantile + Viridis) is rejected by
+    // getDeckMapResourceConfigIssues — agent retry, not silent coerce.
     for (const prop of COLOR_ACCESSOR_PROPS) {
       const value = l[prop];
       if (
@@ -236,39 +225,14 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
         '@@function' in (value as Record<string, unknown>) &&
         (value as Record<string, unknown>)['@@function'] === 'colorScale'
       ) {
-        let v = value as Record<string, unknown>;
-        let scaleChanged = false;
+        const v = value as Record<string, unknown>;
         const rawScheme = v.scheme;
         if (typeof rawScheme === 'string') {
           const canonical = SCHEME_NAME_BY_LOWER.get(rawScheme.toLowerCase());
           if (canonical && canonical !== rawScheme) {
-            v = {...v, scheme: canonical};
-            scaleChanged = true;
+            l = {...l, [prop]: {...v, scheme: canonical}};
+            layerChanged = true;
           }
-        }
-        const scheme = typeof v.scheme === 'string' ? v.scheme : undefined;
-        const type = typeof v.type === 'string' ? v.type : undefined;
-        if (
-          scheme &&
-          (type === 'quantile' ||
-            type === 'quantize' ||
-            type === 'threshold') &&
-          !BINNED_SCHEME_NAMES.has(scheme)
-        ) {
-          if (SEQUENTIAL_SCHEME_NAMES.has(scheme)) {
-            v = {...v, type: 'sequential', domain: v.domain ?? 'auto'};
-            scaleChanged = true;
-          } else if (DIVERGING_SCHEME_NAMES.has(scheme)) {
-            v = {...v, type: 'diverging', domain: v.domain ?? 'auto'};
-            scaleChanged = true;
-          } else {
-            v = {...v, scheme: DEFAULT_BINNED_SCHEME};
-            scaleChanged = true;
-          }
-        }
-        if (scaleChanged) {
-          l = {...l, [prop]: v};
-          layerChanged = true;
         }
       }
     }
@@ -632,7 +596,6 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * Safe to call on any surface — worksheet, dashboard, or block document. Each
  * pass is idempotent and leaves already-correct configs unchanged:
  * - scheme-name casing on colorScale accessors (e.g. "blues" → "Blues")
- * - quantile/quantize + continuous-only scheme (e.g. Viridis) → type sequential
  * - zero/negative getRadius in basic-mode scatterplot layers → numeric default
  * - numeric getWidth without widthUnits:pixels in basic-mode line layers → inject
  * - zero/negative radiusPixels on heatmap layers → default
@@ -649,9 +612,10 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
- * colorScale {"@@type":"ColorScale","column":"..."} syntax, object getWeight,
- * object getHexagon, arc getSourcePosition/getTargetPosition, and basic-mode
- * string getRadius / getWidth / getElevation / radiusPixels / column radius.
+ * colorScale {"@@type":"ColorScale","column":"..."} syntax, type/scheme
+ * mismatches (e.g. quantile + Viridis), object getWeight, object getHexagon,
+ * arc getSourcePosition/getTargetPosition, and basic-mode string getRadius /
+ * getWidth / getElevation / radiusPixels / column radius.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
@@ -673,34 +637,40 @@ const COLOR_SCALE_ACCESSOR_PROPS = [
   'getTargetColor',
 ] as const;
 
+export type ResolveColorScaleTable = (
+  tableName: string,
+) => {columns?: {name: string}[]} | undefined;
+
 /**
- * Walks the merged map config and validates every colorScale `field` against
- * the source table's actual column list (when available via `resolveTable`).
+ * Walks the map config and checks every colorScale `field` against the source
+ * table's column list (when available via `resolveTable`).
  *
- * Datasets with a `tableName` are validated against that table's columns, even
- * when `transformSql` / `sqlQuery` is also present (common lon/lat → WKB
- * transforms keep base columns via `SELECT *`). Pure `sqlQuery`-only sources
- * without `tableName` are skipped because their output schema is unknown.
+ * - Wrong casing (e.g. "magnitude" → "Magnitude") → fixed when the field
+ *   matches a base-table column case-insensitively (even with transformSql).
+ * - Unknown field on a bare `{tableName}` source → throws with available
+ *   columns so the agent can retry.
+ * - Unknown field when `transformSql` / `sqlQuery` is present → skipped.
+ *   Derived SQL can introduce aliases the base table does not have; rejecting
+ *   against the base schema would false-fail those configs.
+ * - Pure `sqlQuery`-only sources (no `tableName`) → skipped.
  *
- * Outcomes:
- * - Correct field name → no change.
- * - Wrong casing (e.g. "magnitude" → "Magnitude") → fixed silently.
- * - Unknown field (e.g. "mag" when the column is "Magnitude") → throws with
- *   a message listing the available columns so the AI can retry correctly.
+ * Call this **before** {@link normalizeAiDeckMapConfig} when possible: normalize
+ * may inject `transformSql` for lon/lat tables, which would otherwise disable
+ * unknown-field rejection for the common bare-table path.
  */
 export function validateAndFixColorScaleFields<
   T extends {spec?: unknown; datasets?: Record<string, unknown>},
->(
-  config: T,
-  resolveTable: (tableName: string) => {columns?: {name: string}[]} | undefined,
-): T {
+>(config: T, resolveTable: ResolveColorScaleTable): T {
   const spec = config.spec;
   if (!spec || typeof spec === 'string') return config;
   const layers = Array.isArray((spec as Record<string, unknown>).layers)
     ? ((spec as Record<string, unknown>).layers as Record<string, unknown>[])
     : [];
 
-  const columnsByDataset = new Map<string, Map<string, string>>();
+  const columnsByDataset = new Map<
+    string,
+    {byLower: Map<string, string>; rejectUnknown: boolean}
+  >();
   for (const [datasetId, dataset] of Object.entries(config.datasets ?? {})) {
     const source = (dataset as Record<string, unknown>)?.source as
       | Record<string, unknown>
@@ -708,20 +678,25 @@ export function validateAndFixColorScaleFields<
     if (!source) continue;
     const tableName =
       typeof source.tableName === 'string' ? source.tableName : undefined;
-    // Validate against the base table whenever tableName is known — even if
-    // transformSql/sqlQuery is present. Common point transforms are SELECT *
-    // plus geometry, so colorScale fields still come from the source table.
-    // Pure sqlQuery-only datasets (no tableName) are skipped.
     if (!tableName) continue;
 
     const table = resolveTable(tableName);
     if (!table?.columns?.length) continue;
 
+    const hasDerivedSql =
+      (typeof source.transformSql === 'string' &&
+        source.transformSql.trim().length > 0) ||
+      (typeof source.sqlQuery === 'string' &&
+        source.sqlQuery.trim().length > 0);
+
     const byLower = new Map<string, string>();
     for (const col of table.columns) {
       byLower.set(col.name.toLowerCase(), col.name);
     }
-    columnsByDataset.set(datasetId, byLower);
+    columnsByDataset.set(datasetId, {
+      byLower,
+      rejectUnknown: !hasDerivedSql,
+    });
   }
 
   if (columnsByDataset.size === 0) return config;
@@ -734,8 +709,8 @@ export function validateAndFixColorScaleFields<
       | undefined;
     const datasetId =
       typeof binding?.dataset === 'string' ? binding.dataset : undefined;
-    const colMap = datasetId ? columnsByDataset.get(datasetId) : undefined;
-    if (!colMap) return layer;
+    const cols = datasetId ? columnsByDataset.get(datasetId) : undefined;
+    if (!cols) return layer;
 
     let nextLayer: Record<string, unknown> | undefined;
     for (const prop of COLOR_SCALE_ACCESSOR_PROPS) {
@@ -747,7 +722,7 @@ export function validateAndFixColorScaleFields<
       const field = acc.field;
       if (typeof field !== 'string') continue;
 
-      const canonical = colMap.get(field.toLowerCase());
+      const canonical = cols.byLower.get(field.toLowerCase());
       if (canonical === field) {
         continue;
       }
@@ -760,7 +735,11 @@ export function validateAndFixColorScaleFields<
         changed = true;
         continue;
       }
-      const available = [...colMap.values()].join(', ');
+      if (!cols.rejectUnknown) {
+        // Field may be introduced by transformSql/sqlQuery — do not guess.
+        continue;
+      }
+      const available = [...cols.byLower.values()].join(', ');
       errors.push(
         `spec.layers.${i}.${prop}: colorScale field "${field}" is not a column in dataset "${datasetId}". Available columns: ${available}`,
       );
@@ -780,4 +759,20 @@ export function validateAndFixColorScaleFields<
       layers: nextLayers,
     },
   } as T;
+}
+
+/**
+ * Shared AI map-config prepare: validate colorScale fields against known
+ * tables (when a resolver is provided), then run {@link normalizeAiDeckMapConfig}.
+ * Validation runs first so lon/lat `transformSql` injection does not disable
+ * unknown-field checks on bare `{tableName}` sources.
+ */
+export function prepareAiDeckMapConfig<T extends Record<string, unknown>>(
+  config: T,
+  options?: {resolveTable?: ResolveColorScaleTable},
+): T {
+  const withFields = options?.resolveTable
+    ? validateAndFixColorScaleFields(config, options.resolveTable)
+    : config;
+  return normalizeAiDeckMapConfig(withFields);
 }

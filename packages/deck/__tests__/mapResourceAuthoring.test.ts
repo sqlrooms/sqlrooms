@@ -992,6 +992,112 @@ describe('Deck map resource authoring contract', () => {
     );
   });
 
+  test('rejects quantile + Viridis (continuous scheme needs sequential)', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'quantile',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringMatching(/Viridis.*sequential/i),
+        }),
+      ]),
+    );
+  });
+
+  test('accepts quantile + YlOrRd', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'quantile',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  test('accepts sequential + Viridis', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  test('rejects sequential + Tableau10', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'category',
+              type: 'sequential',
+              scheme: 'Tableau10',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringMatching(/Tableau10.*categorical/i),
+        }),
+      ]),
+    );
+  });
+
   test('rejects mapbox:// mapStyle URLs', () => {
     const issues = getDeckMapResourceConfigIssues({
       ...validConfig,

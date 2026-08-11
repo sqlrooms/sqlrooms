@@ -690,8 +690,8 @@ describe('extractColorScaleLegends', () => {
   });
 });
 
-describe('createDeckJsonConfiguration — polygon centroids for column layers', () => {
-  it('promotes WKT polygon footprints to centroids for GeoArrowColumnLayer', () => {
+describe('createDeckJsonConfiguration — point layers reject polygon geometry', () => {
+  it('rejects WKT polygon footprints on GeoArrowColumnLayer (require ST_Centroid)', () => {
     const table = new Table({
       geom: vectorFromArray(
         [
@@ -712,32 +712,21 @@ describe('createDeckJsonConfiguration — polygon centroids for column layers', 
       buildings: {status: 'ready', prepared},
     });
 
-    const converted = converter.convert({
-      layers: [
-        {
-          '@@type': 'GeoArrowColumnLayer',
-          id: 'buildings',
-          _sqlroomsBinding: {
-            dataset: 'buildings',
-            geometryColumn: 'geom',
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {
+              dataset: 'buildings',
+              geometryColumn: 'geom',
+            },
+            getElevation: '@@=height',
           },
-          getElevation: '@@=height',
-        },
-      ],
-    }) as {layers: Array<{props: Record<string, unknown>}>};
-
-    const getPosition = converted.layers[0]?.props.getPosition as {
-      get: (index: number) => {toArray?: () => number[]} | number[] | null;
-    };
-    expect(getPosition).toBeDefined();
-    const p0 = getPosition.get(0);
-    const p1 = getPosition.get(1);
-    const xy0 = Array.isArray(p0) ? p0 : p0?.toArray?.();
-    const xy1 = Array.isArray(p1) ? p1 : p1?.toArray?.();
-    expect(xy0?.[0]).toBeCloseTo(1);
-    expect(xy0?.[1]).toBeCloseTo(1);
-    expect(xy1?.[0]).toBeCloseTo(12);
-    expect(xy1?.[1]).toBeCloseTo(12);
+        ],
+      }),
+    ).toThrow(/ST_Centroid|ST_PointOnSurface|Point positions/);
   });
 
   it('promotes WKT MultiLineString to PathLayer positions', () => {

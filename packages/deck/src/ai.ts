@@ -287,14 +287,17 @@ export type DeckMapDashboardToolParams = z.infer<
 
 export {
   normalizeAiDeckMapConfig,
+  prepareAiDeckMapConfig,
   validateAndFixColorScaleFields,
 } from './aiNormalize';
-import {normalizeAiDeckMapConfig} from './aiNormalize';
+import {prepareAiDeckMapConfig} from './aiNormalize';
+import type {ResolveColorScaleTable} from './aiNormalize';
 
 function cloneConfig(
   config: DeckMapDashboardConfigToolConfig,
+  options?: {resolveTable?: ResolveColorScaleTable},
 ): DeckMapDashboardPanelConfig {
-  const normalized = normalizeAiDeckMapConfig(config);
+  const normalized = prepareAiDeckMapConfig(config, options);
   return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
 }
 
@@ -304,10 +307,11 @@ function cloneConfig(
  */
 export function createDeckMapPanelFromNativeConfig(
   params: Pick<DeckMapConfigToolParams, 'title' | 'config'>,
+  options?: {resolveTable?: ResolveColorScaleTable},
 ) {
   return createDeckMapDashboardPanelConfig({
     title: params.title || 'Map',
-    ...cloneConfig(params.config),
+    ...cloneConfig(params.config, options),
   });
 }
 
@@ -394,7 +398,9 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
           await dashboardAdapter.setSelectedTable(tableName);
         }
 
-        const panel = createDeckMapPanelFromNativeConfig(params);
+        const panel = createDeckMapPanelFromNativeConfig(params, {
+          resolveTable: (name) => databaseAdapter.findTable(name),
+        });
 
         if (params.panelId) {
           ensurePanel(

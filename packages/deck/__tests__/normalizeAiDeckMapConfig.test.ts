@@ -854,8 +854,8 @@ describe('normalizeAiDeckMapConfig — scaleLinear', () => {
   });
 });
 
-describe('normalizeAiDeckMapConfig — colorScale type/scheme compatibility', () => {
-  test('coerces quantile + Viridis to sequential (Viridis is not a binned scheme)', () => {
+describe('normalizeAiDeckMapConfig — colorScale type/scheme', () => {
+  test('does not coerce quantile + Viridis (validator owns compatibility)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -876,7 +876,7 @@ describe('normalizeAiDeckMapConfig — colorScale type/scheme compatibility', ()
       ),
     );
     expect(getLayer(result).getFillColor).toMatchObject({
-      type: 'sequential',
+      type: 'quantile',
       scheme: 'Viridis',
       domain: 'auto',
       field: 'value',
@@ -972,7 +972,7 @@ describe('validateAndFixColorScaleFields', () => {
     );
   });
 
-  test('still validates tableName+transformSql against base table columns', () => {
+  test('does not reject unknown fields when transformSql is present', () => {
     const config = {
       spec: {
         layers: [
@@ -981,7 +981,7 @@ describe('validateAndFixColorScaleFields', () => {
             _sqlroomsBinding: {dataset: 'quakes'},
             getFillColor: {
               '@@function': 'colorScale',
-              field: 'mag',
+              field: 'derived_score',
               type: 'sequential',
               scheme: 'Viridis',
               domain: 'auto',
@@ -994,14 +994,14 @@ describe('validateAndFixColorScaleFields', () => {
           source: {
             tableName: 'earthquakes',
             transformSql:
-              'SELECT *, ST_Point(lon, lat) as geom FROM __sqlrooms_source',
+              'SELECT *, Magnitude * 2 AS derived_score, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM __sqlrooms_source',
           },
         },
       },
     };
-    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
-      /colorScale field "mag" is not a column/,
-    );
+    expect(() =>
+      validateAndFixColorScaleFields(config, resolveTable),
+    ).not.toThrow();
   });
 
   test('silently fixes casing even when transformSql is present', () => {

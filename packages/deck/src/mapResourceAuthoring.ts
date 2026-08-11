@@ -1,4 +1,10 @@
-import {formatColorSchemePromptLists} from '@sqlrooms/color-scales/colorSchemeNames';
+import {
+  binnedNumericSchemes,
+  categoricalSchemes,
+  continuousDivergingSchemes,
+  continuousSequentialSchemes,
+  formatColorSchemePromptLists,
+} from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
 import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
@@ -36,6 +42,68 @@ export class DeckMapResourceConfigError extends Error {
     );
     this.name = 'DeckMapResourceConfigError';
     this.issues = issues;
+  }
+}
+
+const BINNED_SCHEME_NAMES = new Set<string>(binnedNumericSchemes);
+const SEQUENTIAL_SCHEME_NAMES = new Set<string>(continuousSequentialSchemes);
+const DIVERGING_SCHEME_NAMES = new Set<string>(continuousDivergingSchemes);
+const CATEGORICAL_SCHEME_NAMES = new Set<string>(categoricalSchemes);
+
+/**
+ * Returns an actionable issue when colorScale `type` and `scheme` disagree.
+ * Quantile/quantize/threshold require ColorBrewer binned ramps; continuous
+ * schemes like Viridis require type "sequential".
+ */
+export function getColorScaleTypeSchemeIssue(
+  type: unknown,
+  scheme: unknown,
+): string | undefined {
+  if (typeof type !== 'string' || !type.trim()) return undefined;
+  if (typeof scheme !== 'string' || !scheme.trim()) return undefined;
+
+  const scaleType = type.trim();
+  const schemeName = scheme.trim();
+
+  const allowedForType = (allowed: Set<string>, label: string) => {
+    if (allowed.has(schemeName)) return undefined;
+    if (SEQUENTIAL_SCHEME_NAMES.has(schemeName)) {
+      return `scheme "${schemeName}" requires type "sequential" (not "${scaleType}") — use type "sequential", or pick a ${label}`;
+    }
+    if (DIVERGING_SCHEME_NAMES.has(schemeName)) {
+      return `scheme "${schemeName}" requires type "diverging" (not "${scaleType}") — use type "diverging", or pick a ${label}`;
+    }
+    if (CATEGORICAL_SCHEME_NAMES.has(schemeName)) {
+      return `scheme "${schemeName}" requires type "categorical" (not "${scaleType}") — use type "categorical", or pick a ${label}`;
+    }
+    return `scheme "${schemeName}" is not valid for type "${scaleType}" — use a ${label}`;
+  };
+
+  switch (scaleType) {
+    case 'quantile':
+    case 'quantize':
+    case 'threshold':
+      return allowedForType(
+        BINNED_SCHEME_NAMES,
+        'ColorBrewer binned ramp such as YlOrRd, Blues, Greens, or RdYlBu',
+      );
+    case 'sequential':
+      return allowedForType(
+        SEQUENTIAL_SCHEME_NAMES,
+        'sequential scheme such as Viridis, Plasma, Blues, or YlOrRd',
+      );
+    case 'diverging':
+      return allowedForType(
+        DIVERGING_SCHEME_NAMES,
+        'diverging scheme such as RdBu, Spectral, or BrBG',
+      );
+    case 'categorical':
+      return allowedForType(
+        CATEGORICAL_SCHEME_NAMES,
+        'categorical scheme such as Tableau10, Set2, or Category10',
+      );
+    default:
+      return undefined;
   }
 }
 
@@ -443,6 +511,16 @@ export function getDeckMapResourceConfigIssues(
                 'colorScale requires a non-empty string "field" with the exact column name',
             });
           }
+        }
+        const schemeIssue = getColorScaleTypeSchemeIssue(
+          value.type,
+          value.scheme,
+        );
+        if (schemeIssue) {
+          issues.push({
+            path: `spec.layers.${index}.${prop}`,
+            message: schemeIssue,
+          });
         }
       }
     }

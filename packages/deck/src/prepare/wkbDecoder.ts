@@ -410,182 +410,18 @@ const POLYGON_LAYERS = new Set([
 
 const PATH_LAYERS = new Set(['GeoArrowPathLayer', 'GeoArrowTripsLayer']);
 
-function averageXY(coords: Array<[number, number]>): [number, number] | null {
-  if (coords.length === 0) return null;
-  // Drop duplicate closing vertex commonly present on polygon rings.
-  const end = coords.length;
-  const last = coords[end - 1]!;
-  const first = coords[0]!;
-  const usableEnd =
-    end > 1 && last[0] === first[0] && last[1] === first[1] ? end - 1 : end;
-  if (usableEnd <= 0) return null;
-  let sumX = 0;
-  let sumY = 0;
-  for (let i = 0; i < usableEnd; i++) {
-    sumX += coords[i]![0];
-    sumY += coords[i]![1];
-  }
-  return [sumX / usableEnd, sumY / usableEnd];
-}
-
-function centroidFromParsedPolygon(geometry: {
-  type: string;
-  coordinates: unknown;
-}): [number, number] | null {
-  if (geometry.type === 'Polygon') {
-    const rings = geometry.coordinates as number[][][];
-    const exterior = rings[0];
-    if (!exterior?.length) return null;
-    return averageXY(exterior.map((c) => [c[0]!, c[1]!] as [number, number]));
-  }
-  if (geometry.type === 'MultiPolygon') {
-    const polygons = geometry.coordinates as number[][][][];
-    const centroids: Array<[number, number]> = [];
-    for (const polygon of polygons) {
-      const exterior = polygon[0];
-      if (!exterior?.length) continue;
-      const c = averageXY(
-        exterior.map((p) => [p[0]!, p[1]!] as [number, number]),
-      );
-      if (c) centroids.push(c);
-    }
-    return averageXY(centroids);
-  }
-  return null;
-}
-
-function centroidFromWkbPolygon(
-  buf: ArrayBuffer,
-  header: ReturnType<typeof parseWKBHeader>,
-): [number, number] | null {
-  if (!header) return null;
-  const ringCoords: Array<[number, number]> = [];
-  let ringIndex = -1;
-  const visitor = {
-    onRingStart: () => {
-      ringIndex += 1;
-    },
-    onCoordinate: (x: number, y: number) => {
-      if (ringIndex === 0) ringCoords.push([x, y]);
-    },
-  };
-
-  if (header.geomType === WKB_POLYGON) {
-    if (visitWKBPolygonCoordinates(buf, header, visitor) == null) return null;
-    return averageXY(ringCoords);
-  }
-  if (header.geomType === WKB_MULTIPOLYGON) {
-    // Average centroids of each polygon's exterior ring.
-    const centroids: Array<[number, number]> = [];
-    let offset = header.offset;
-    const view = header.view;
-    if (offset + 4 > buf.byteLength) return null;
-    const numPolygons = view.getUint32(offset, header.isLE);
-    offset += 4;
-    for (let i = 0; i < numPolygons; i++) {
-      const polyHeader = parseWKBHeader(buf, offset);
-      if (!polyHeader || polyHeader.geomType !== WKB_POLYGON) return null;
-      ringCoords.length = 0;
-      ringIndex = -1;
-      const next = visitWKBPolygonCoordinates(buf, polyHeader, visitor);
-      if (next == null) return null;
-      const c = averageXY(ringCoords);
-      if (c) centroids.push(c);
-      offset = next;
-    }
-    return averageXY(centroids);
-  }
-  return null;
-}
-
 /**
- * Promote Polygon/MultiPolygon WKB/WKT to point positions via exterior-ring
- * centroids. Used by Column/Scatterplot/Heatmap when the AI binds a building
- * footprint table without an explicit ST_Centroid transform.
- */
-function tryPromotePolygonCentroidTable(
-  table: arrow.Table,
-  columnName: string,
-  encoding: ResolvedGeometryEncoding,
-): PreparedGeoArrowLayerData | null {
-  const vector = table.getChild(columnName);
-  if (!vector) return null;
-
-  const n = table.numRows;
-  const xyValues = new Float64Array(n * 2);
-  const isNull = new Uint8Array(n);
-  let nullCount = 0;
-
-  const markNull = (rowIndex: number) => {
-    isNull[rowIndex] = 1;
-    xyValues[rowIndex * 2] = Number.NaN;
-    xyValues[rowIndex * 2 + 1] = Number.NaN;
-    nullCount++;
-  };
-
-  for (let i = 0; i < n; i++) {
-    const raw = vector.get(i);
-    if (raw == null) {
-      markNull(i);
-      continue;
-    }
-
-    if (isWKTEncoding(encoding, raw)) {
-      const geom = parseGeometryValue(raw, encoding);
-      if (!geom) {
-        markNull(i);
-        continue;
-      }
-      const xy = centroidFromParsedPolygon(
-        geom as {type: string; coordinates: unknown},
-      );
-      if (!xy) return null;
-      xyValues[i * 2] = xy[0];
-      xyValues[i * 2 + 1] = xy[1];
-      continue;
-    }
-
-    const buf = toArrayBuffer(raw);
-    const hdr = parseWKBHeader(buf);
-    const xy = centroidFromWkbPolygon(buf, hdr);
-    if (!xy) return null;
-    xyValues[i * 2] = xy[0];
-    xyValues[i * 2 + 1] = xy[1];
-  }
-
-  const floatData = makeData({
-    type: new Float64(),
-    length: n * 2,
-    data: xyValues,
-  });
-  const geomData = makeData({
-    type: VERTEX_TYPE,
-    length: n,
-    nullCount,
-    nullBitmap: buildNullBitmap(n, isNull, nullCount),
-    child: floatData,
-  });
-  return buildPromotedResult(
-    table,
-    columnName,
-    new Vector([geomData]),
-    'geoarrow.point',
-  );
-}
-
-/**
- * Promote geometry to point positions for scatter/heatmap/column layers:
- * native points first, then polygon/multipolygon centroids.
+ * Promote WKB/WKT Point geometries to native GeoArrow point positions for
+ * scatter/heatmap/column layers. Does not silently centroid polygons — callers
+ * must use an explicit ST_Centroid / ST_PointOnSurface transformSql (or a
+ * polygon layer) when the source geometry is polygonal.
  */
 export function promoteToPointPositions(
   table: arrow.Table,
   columnName: string,
   encoding: ResolvedGeometryEncoding,
 ): PreparedGeoArrowLayerData | null {
-  return (
-    tryPromotePointTable(table, columnName, encoding) ??
-    tryPromotePolygonCentroidTable(table, columnName, encoding)
-  );
+  return tryPromotePointTable(table, columnName, encoding);
 }
 
 export function isPointPositionLayer(layerType: string): boolean {
@@ -717,27 +553,13 @@ export const wkbGeometryDecoder: GeometryDecoder = {
     }
 
     if (POINT_LAYERS.has(layerType)) {
-      const pointsOk = sampledGeometriesMatch(
+      return sampledGeometriesMatch(
         table,
         columnName,
         encoding,
         (geometryType) => geometryType === 'Point',
         (geometryType) => geometryType === WKB_POINT,
       );
-      if (pointsOk) return true;
-      // Scatter/heatmap/column can sit on polygon centroids; arcs need true points.
-      if (POINT_POSITION_LAYERS.has(layerType)) {
-        return sampledGeometriesMatch(
-          table,
-          columnName,
-          encoding,
-          (geometryType) =>
-            geometryType === 'Polygon' || geometryType === 'MultiPolygon',
-          (geometryType) =>
-            geometryType === WKB_POLYGON || geometryType === WKB_MULTIPOLYGON,
-        );
-      }
-      return false;
     }
 
     if (POLYGON_LAYERS.has(layerType)) {

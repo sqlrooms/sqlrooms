@@ -56,7 +56,7 @@ const normalizedScatterConfig = {
       source: {
         tableName: 'earthquakes',
         transformSql:
-          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          'SELECT * EXCLUDE (geom), ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
       },
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',
@@ -86,7 +86,7 @@ const multiLayerConfig = {
     earthquakes: {
       source: {
         sqlQuery:
-          'SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM earthquakes',
+          'SELECT * EXCLUDE (geom), ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM earthquakes',
       },
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',
@@ -451,6 +451,78 @@ describe('createDeckMapDashboardTool', () => {
       title: 'Earthquake map',
       config: normalizedScatterConfig,
     });
+  });
+
+  it('rejects unknown colorScale fields on bare tableName sources', async () => {
+    const {dashboardAdapter, databaseAdapter} = createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Bad color field',
+      config: {
+        ...scatterConfig,
+        spec: {
+          ...scatterConfig.spec,
+          layers: [
+            {
+              ...scatterConfig.spec.layers[0],
+              getFillColor: {
+                '@@function': 'colorScale',
+                field: 'mag',
+                type: 'sequential',
+                scheme: 'Viridis',
+                domain: 'auto',
+              },
+            },
+          ],
+        },
+      },
+      reasoning: 'typo field',
+    });
+
+    expect(result.llmResult.success).toBe(false);
+    expect(result.llmResult.errorMessage).toMatch(
+      /colorScale field "mag" is not a column/,
+    );
+  });
+
+  it('fixes colorScale field casing via prepare on dashboard create', async () => {
+    const {dashboards, dashboardAdapter, databaseAdapter} =
+      createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Cased color field',
+      config: {
+        ...scatterConfig,
+        spec: {
+          ...scatterConfig.spec,
+          layers: [
+            {
+              ...scatterConfig.spec.layers[0],
+              getFillColor: {
+                '@@function': 'colorScale',
+                field: 'Magnitude',
+                type: 'sequential',
+                scheme: 'Viridis',
+                domain: 'auto',
+              },
+            },
+          ],
+        },
+      },
+      reasoning: 'fix casing',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    const layer = dashboards['dashboard-1']!.panels[0].config.spec.layers[0];
+    expect(layer.getFillColor.field).toBe('magnitude');
   });
 
   it('updates an existing map panel from a native Deck JSON config', async () => {
