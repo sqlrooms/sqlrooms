@@ -224,12 +224,34 @@ function getSessionById(
     .ai.config.sessions.find((s: ChatSessionSchema) => s.id === sessionId);
 }
 
+/**
+ * Wrap every executable tool in `tools` so it receives the invoking turn's
+ * execution scope (`sessionId` plus the mutable `AiRunContext` accessors) in its
+ * AI SDK execution options.
+ *
+ * Use this wherever a toolset is handed to an agent that does not itself own the
+ * chat request — most importantly for nested `ToolLoopAgent` sub-agents, whose
+ * tools would otherwise execute with no scope at all and fall back to whatever
+ * artifact/map/session is currently visible in the UI.
+ *
+ * Semantics:
+ *
+ * - Parent scope wins over inner options when the parent supplies a value, so a
+ *   nested agent cannot accidentally reassign the owning session. Fields the
+ *   parent leaves `undefined` preserve whatever the inner options already had.
+ * - `getAiRunContext` is read at execution time rather than captured, so an
+ *   in-turn retarget (e.g. `set_primary_context_artifact`) is visible to later
+ *   tool calls, including those inside nested agents.
+ * - The inner tool's own `toolCallId`, `messages`, and `abortSignal` are left
+ *   intact.
+ * - `state` is optional and only used for `setToolCallSession` attribution. Omit
+ *   it when forwarding into nested agents; the chat transport passes it so
+ *   top-level tool calls stay attributed to their session.
+ */
 export function withRunContextTools(
   tools: ToolSet,
   args: AiToolExecutionContext & {
-    state: AiSliceStateForTransport;
-    getAiRunContext?: () => AiRunContext | undefined;
-    setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+    state?: AiSliceStateForTransport;
   },
 ): ToolSet {
   return Object.fromEntries(
@@ -252,19 +274,22 @@ export function withRunContextTools(
                 ? options.toolCallId
                 : undefined;
             if (toolCallId && args.sessionId) {
-              args.state.ai.setToolCallSession(toolCallId, args.sessionId);
+              args.state?.ai.setToolCallSession(toolCallId, args.sessionId);
             }
+            const aiRunContext = args.getAiRunContext
+              ? args.getAiRunContext()
+              : args.aiRunContext;
             return originalExecute(
               input as never,
               {
                 ...options,
-                sessionId: args.sessionId,
-                aiRunContext: args.getAiRunContext
-                  ? args.getAiRunContext()
-                  : args.aiRunContext,
-                getAiRunContext: args.getAiRunContext,
-                setAiRunContext: args.setAiRunContext,
-                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+                ...definedScopeFields({
+                  sessionId: args.sessionId,
+                  aiRunContext,
+                  getAiRunContext: args.getAiRunContext,
+                  setAiRunContext: args.setAiRunContext,
+                  setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+                }),
               } as never,
             );
           },
@@ -272,6 +297,18 @@ export function withRunContextTools(
       ];
     }),
   ) as ToolSet;
+}
+
+/**
+ * Drop `undefined` scope fields so wrapping a toolset with a partially
+ * populated parent context never erases scope the inner options already carry.
+ */
+function definedScopeFields(
+  fields: AiToolExecutionContext,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined),
+  );
 }
 
 /**

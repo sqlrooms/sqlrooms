@@ -73,8 +73,14 @@ describe('createRoomStoreCreator DevTools integration', () => {
     const creator =
       createRoomStoreCreator<BaseRoomStoreState>()(createBaseRoomSlice);
 
-    const first = creator.createRoomStore({storeKey: 'project-a'});
-    const reused = creator.createRoomStore({storeKey: 'project-a'});
+    const first = creator.createRoomStore({
+      storeKey: 'project-a',
+      devtools: true,
+    });
+    const reused = creator.createRoomStore({
+      storeKey: 'project-a',
+      devtools: true,
+    });
 
     expect(reused).toBe(first);
     expect(connect).toHaveBeenCalledTimes(1);
@@ -91,8 +97,8 @@ describe('createRoomStoreCreator DevTools integration', () => {
     const creator =
       createRoomStoreCreator<BaseRoomStoreState>()(createBaseRoomSlice);
 
-    creator.createRoomStore({storeKey: 'project-a'});
-    creator.createRoomStore({storeKey: 'project-b'});
+    creator.createRoomStore({storeKey: 'project-a', devtools: true});
+    creator.createRoomStore({storeKey: 'project-b', devtools: true});
 
     expect(connections).toHaveLength(2);
     expect(connections[0]?.unsubscribe).toHaveBeenCalledTimes(1);
@@ -102,6 +108,19 @@ describe('createRoomStoreCreator DevTools integration', () => {
     const {connect} = installDevtoolsExtension();
     const {createBaseRoomSlice, createRoomStoreCreator} =
       await loadBaseRoomStore({isDev: false, devHmr: null});
+    const creator =
+      createRoomStoreCreator<BaseRoomStoreState>()(createBaseRoomSlice);
+
+    creator.createRoomStore({storeKey: 'project-a', devtools: true});
+
+    expect(connect).not.toHaveBeenCalled();
+  });
+
+  it('does not connect DevTools unless the option is opted into', async () => {
+    const devHmr = createDevHmr();
+    const {connect} = installDevtoolsExtension();
+    const {createBaseRoomSlice, createRoomStoreCreator} =
+      await loadBaseRoomStore({isDev: true, devHmr});
     const creator =
       createRoomStoreCreator<BaseRoomStoreState>()(createBaseRoomSlice);
 

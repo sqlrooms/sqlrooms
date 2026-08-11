@@ -194,6 +194,8 @@ export type {
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
 
+export {withRunContextTools} from './chatTransport';
+
 export {
   streamSubAgent,
   updateAgentToolCallData,
