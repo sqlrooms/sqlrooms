@@ -548,10 +548,24 @@ const nestedTool = tool({
         options as AiToolExecutionContext,
       ),
     });
-    return streamSubAgent(agent, prompt, store, options.toolCallId);
+    return streamSubAgent(
+      agent,
+      prompt,
+      store,
+      options.toolCallId,
+      // The wrapper preserves `abortSignal` for the nested tools, but the
+      // sub-agent loop itself only observes cancellation through this argument.
+      options.abortSignal,
+    );
   },
 });
 ```
+
+Forward `options.abortSignal` to `streamSubAgent`. `withRunContextTools` leaves
+the signal intact for the tools the sub-agent calls, but the agent loop —
+including the model stream and any approval wait — is only cancellable through
+`streamSubAgent`'s fifth argument, so omitting it lets a stopped parent turn
+leave the nested run going.
 
 Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
 retarget via `set_primary_context_artifact` is visible to subsequent nested tool
