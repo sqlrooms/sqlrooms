@@ -84,4 +84,29 @@ describe('createDeckTableDatasetSql', () => {
       `Deck table dataset transformSql must reference ${DECK_TABLE_DATASET_SOURCE_RELATION}.`,
     );
   });
+
+  it('rewrites SELECT *, ST_AsWKB(geom) AS geom to EXCLUDE the colliding column', () => {
+    const sql = createDeckTableDatasetSql({
+      tableName: 'buildings',
+      transformSql: `SELECT *, ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    });
+    expect(sql).toContain(
+      `SELECT * EXCLUDE (geom), ST_AsWKB(geom) as geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    );
+  });
+
+  it('does not strip geom from SELECT * FROM (… ST_AsWKB AS geom …) sample wrappers', () => {
+    const inner = [
+      'SELECT DateTime, Latitude, Longitude, Magnitude,',
+      'ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom',
+      `FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+      'WHERE Latitude IS NOT NULL',
+    ].join(' ');
+    const sql = createDeckTableDatasetSql({
+      tableName: 'earthquakes',
+      transformSql: `SELECT * FROM (${inner}) USING SAMPLE 100000 ROWS`,
+    });
+    expect(sql).toContain('ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom');
+    expect(sql).not.toContain('EXCLUDE (geom)');
+  });
 });

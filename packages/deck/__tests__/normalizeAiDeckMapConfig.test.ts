@@ -753,6 +753,33 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
       'SELECT * FROM __sqlrooms_source',
     );
   });
+
+  test('rewrites SELECT *, ST_AsWKB(geom) AS geom to EXCLUDE collision', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'ds', geometryColumn: 'geom'},
+          },
+        ],
+        {
+          ds: {
+            source: {
+              tableName: 'buildings',
+              transformSql:
+                'SELECT *, ST_AsWKB(geom) as geom FROM __sqlrooms_source',
+            },
+            geometryColumn: 'geom',
+            geometryEncodingHint: 'wkb',
+          },
+        },
+      ),
+    );
+    expect(result.datasets.ds.source.transformSql).toBe(
+      'SELECT * EXCLUDE (geom), ST_AsWKB(geom) as geom FROM __sqlrooms_source',
+    );
+  });
 });
 
 describe('normalizeAiDeckMapConfig — mapStyle', () => {
@@ -789,6 +816,95 @@ describe('normalizeAiDeckMapConfig — mapStyle', () => {
       mapStyle: 'https://example.com/style.json',
     });
     expect(result.mapStyle).toBe('https://example.com/style.json');
+  });
+});
+
+describe('normalizeAiDeckMapConfig — scaleLinear', () => {
+  test('rewrites scaleLinear accessors to scale', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds', geometryColumn: 'geom'},
+            getRadius: {
+              '@@function': 'scaleLinear',
+              field: 'Magnitude',
+              domain: 'auto',
+              range: [2, 20],
+            },
+          },
+        ],
+        {
+          ds: {
+            source: {
+              tableName: 'earthquakes',
+              transformSql:
+                'SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM __sqlrooms_source',
+            },
+          },
+        },
+      ),
+    );
+    expect(getLayer(result)['@@type']).toBe('GeoArrowScatterplotLayer');
+    expect(getLayer(result).getRadius).toMatchObject({
+      '@@function': 'scale',
+      field: 'Magnitude',
+    });
+  });
+});
+
+describe('normalizeAiDeckMapConfig — colorScale type/scheme compatibility', () => {
+  test('coerces quantile + Viridis to sequential (Viridis is not a binned scheme)', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'hex_id'},
+            getHexagon: '@@=hex_id',
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'value',
+              type: 'quantile',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor).toMatchObject({
+      type: 'sequential',
+      scheme: 'Viridis',
+      domain: 'auto',
+      field: 'value',
+    });
+  });
+
+  test('keeps quantile + YlOrRd unchanged', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'ds', hexagonColumn: 'hex_id'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'value',
+              type: 'quantile',
+              scheme: 'YlOrRd',
+            },
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    expect(getLayer(result).getFillColor).toMatchObject({
+      type: 'quantile',
+      scheme: 'YlOrRd',
+    });
   });
 });
 

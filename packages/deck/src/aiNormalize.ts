@@ -1,4 +1,10 @@
-import {allKnownColorSchemeNames} from '@sqlrooms/color-scales/colorSchemeNames';
+import {
+  allKnownColorSchemeNames,
+  binnedNumericSchemes,
+  continuousDivergingSchemes,
+  continuousSequentialSchemes,
+} from '@sqlrooms/color-scales/colorSchemeNames';
+import {rewriteSelectStarAsWkbCollisions} from './fixSelectStarAsWkb';
 
 // Inlined SQL helpers keep this module free of heavy workspace-package imports
 // (e.g. @sqlrooms/duckdb, @sqlrooms/mosaic) that would break Jest.
@@ -11,6 +17,11 @@ function quoteDeckMapSqlIdentifier(identifier: string) {
 const SCHEME_NAME_BY_LOWER = new Map(
   allKnownColorSchemeNames.map((s) => [s.toLowerCase(), s]),
 );
+const BINNED_SCHEME_NAMES = new Set<string>(binnedNumericSchemes);
+const SEQUENTIAL_SCHEME_NAMES = new Set<string>(continuousSequentialSchemes);
+const DIVERGING_SCHEME_NAMES = new Set<string>(continuousDivergingSchemes);
+/** Default when quantile/quantize gets an unknown scheme. */
+const DEFAULT_BINNED_SCHEME = 'YlOrRd';
 
 // Minimal structural type that covers both AiMapConfig
 // and DeckMapConfig — all the passes only access these loose fields.
@@ -193,9 +204,29 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     let l = layer as Record<string, unknown>;
     let layerChanged = false;
 
+    // Alias: scaleLinear → scale (only `scale` is registered in Deck JSON).
+    for (const prop of ['getRadius', 'getElevation', 'getWidth'] as const) {
+      const value = l[prop];
+      if (
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        (value as Record<string, unknown>)['@@function'] === 'scaleLinear'
+      ) {
+        l = {
+          ...l,
+          [prop]: {...(value as object), '@@function': 'scale'},
+        };
+        layerChanged = true;
+      }
+    }
+
     // Normalise color accessor scheme names: AI often sends wrong casing
     // (e.g. "blues", "viridis"). Do a case-insensitive lookup and replace with
     // the canonical name so the color-scale renderer can find the interpolator.
+    // Also repair type/scheme mismatches: quantile/quantize only accept ColorBrewer
+    // binned schemes, but AI often pairs them with Viridis/Plasma. Coerce those
+    // to sequential (or diverging) so the UI scheme select and renderer agree.
     for (const prop of COLOR_ACCESSOR_PROPS) {
       const value = l[prop];
       if (
@@ -205,14 +236,39 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
         '@@function' in (value as Record<string, unknown>) &&
         (value as Record<string, unknown>)['@@function'] === 'colorScale'
       ) {
-        const v = value as Record<string, unknown>;
+        let v = value as Record<string, unknown>;
+        let scaleChanged = false;
         const rawScheme = v.scheme;
         if (typeof rawScheme === 'string') {
           const canonical = SCHEME_NAME_BY_LOWER.get(rawScheme.toLowerCase());
           if (canonical && canonical !== rawScheme) {
-            l = {...l, [prop]: {...v, scheme: canonical}};
-            layerChanged = true;
+            v = {...v, scheme: canonical};
+            scaleChanged = true;
           }
+        }
+        const scheme = typeof v.scheme === 'string' ? v.scheme : undefined;
+        const type = typeof v.type === 'string' ? v.type : undefined;
+        if (
+          scheme &&
+          (type === 'quantile' ||
+            type === 'quantize' ||
+            type === 'threshold') &&
+          !BINNED_SCHEME_NAMES.has(scheme)
+        ) {
+          if (SEQUENTIAL_SCHEME_NAMES.has(scheme)) {
+            v = {...v, type: 'sequential', domain: v.domain ?? 'auto'};
+            scaleChanged = true;
+          } else if (DIVERGING_SCHEME_NAMES.has(scheme)) {
+            v = {...v, type: 'diverging', domain: v.domain ?? 'auto'};
+            scaleChanged = true;
+          } else {
+            v = {...v, scheme: DEFAULT_BINNED_SCHEME};
+            scaleChanged = true;
+          }
+        }
+        if (scaleChanged) {
+          l = {...l, [prop]: v};
+          layerChanged = true;
         }
       }
     }
@@ -394,12 +450,25 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     const tableName = source?.tableName;
 
     let next = d;
+    let nextSource = source;
 
     if (typeof tableName === 'string') {
       const parts = splitTableRef(tableName);
       if (parts.length >= 3) {
         const stripped = parts.slice(1).join('.');
-        next = {...next, source: {...source, tableName: stripped}};
+        nextSource = {...nextSource, tableName: stripped};
+        next = {...next, source: nextSource};
+        changed = true;
+      }
+    }
+
+    for (const sqlKey of ['transformSql', 'sqlQuery'] as const) {
+      const sql = nextSource?.[sqlKey];
+      if (typeof sql !== 'string' || !sql.trim()) continue;
+      const rewritten = rewriteSelectStarAsWkbCollisions(sql);
+      if (rewritten && rewritten !== sql) {
+        nextSource = {...nextSource, [sqlKey]: rewritten};
+        next = {...next, source: nextSource};
         changed = true;
       }
     }
@@ -563,6 +632,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * Safe to call on any surface — worksheet, dashboard, or block document. Each
  * pass is idempotent and leaves already-correct configs unchanged:
  * - scheme-name casing on colorScale accessors (e.g. "blues" → "Blues")
+ * - quantile/quantize + continuous-only scheme (e.g. Viridis) → type sequential
  * - zero/negative getRadius in basic-mode scatterplot layers → numeric default
  * - numeric getWidth without widthUnits:pixels in basic-mode line layers → inject
  * - zero/negative radiusPixels on heatmap layers → default
@@ -575,6 +645,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - catalog prefix stripped from dataset tableName values
+ * - SELECT *, ST_AsWKB(col) AS col → SELECT * EXCLUDE (col), ST_AsWKB(col) AS col
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,

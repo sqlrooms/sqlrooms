@@ -130,7 +130,15 @@ function getSchemeOptions(type: ColorScaleConfig['type']) {
   if (type === 'sequential') {
     return continuousSequentialSchemes;
   }
-  return binnedNumericSchemes;
+  // Quantile/quantize/threshold prefer ColorBrewer discrete ramps, but also
+  // allow continuous sequential schemes (Viridis, Plasma, …) sampled into bins.
+  // Deduplicate: several ColorBrewer names appear in both lists.
+  return [
+    ...binnedNumericSchemes,
+    ...continuousSequentialSchemes.filter(
+      (scheme) => !(binnedNumericSchemes as readonly string[]).includes(scheme),
+    ),
+  ];
 }
 
 export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({

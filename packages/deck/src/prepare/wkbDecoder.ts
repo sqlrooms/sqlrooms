@@ -18,10 +18,12 @@ import type {
 import {
   parseWKBHeader,
   readWKBLineStringXY,
+  readWKBMultiLineStringXY,
   readWKBPointXY,
   visitWKBMultiPolygonCoordinates,
   visitWKBPolygonCoordinates,
   WKB_LINESTRING,
+  WKB_MULTILINESTRING,
   WKB_MULTIPOLYGON,
   WKB_POINT,
   WKB_POLYGON,
@@ -591,8 +593,10 @@ export function isPointPositionLayer(layerType: string): boolean {
 }
 
 /**
- * Promotes WKB/WKT LineString geometries to a native GeoArrow LineString vector
- * (List<FixedSizeList<2, Float64>>). Returns null if any geometry is not a LineString.
+ * Promotes WKB/WKT LineString / MultiLineString geometries to a native
+ * GeoArrow LineString vector (List<FixedSizeList<2, Float64>>). MultiLineString
+ * parts are flattened into one path per row (PathLayer expects LineString).
+ * Returns null if any non-null geometry is not a line type.
  */
 function tryPromoteLineStringTable(
   table: arrow.Table,
@@ -627,15 +631,28 @@ function tryPromoteLineStringTable(
         nullCount++;
         continue;
       }
-      if (geom.type !== 'LineString') return null;
-      coords = (geom.coordinates as number[][]).map(
-        (c) => [c[0]!, c[1]!] as [number, number],
-      );
+      if (geom.type === 'LineString') {
+        coords = (geom.coordinates as number[][]).map(
+          (c) => [c[0]!, c[1]!] as [number, number],
+        );
+      } else if (geom.type === 'MultiLineString') {
+        coords = [];
+        for (const part of geom.coordinates as number[][][]) {
+          for (const c of part) {
+            coords.push([c[0]!, c[1]!]);
+          }
+        }
+      } else {
+        return null;
+      }
     } else {
       const buf = toArrayBuffer(raw);
       const hdr = parseWKBHeader(buf);
       if (!hdr) return null;
-      coords = readWKBLineStringXY(buf, hdr);
+      coords =
+        hdr.geomType === WKB_MULTILINESTRING
+          ? readWKBMultiLineStringXY(buf, hdr)
+          : readWKBLineStringXY(buf, hdr);
       if (!coords) return null;
     }
 
@@ -740,8 +757,11 @@ export const wkbGeometryDecoder: GeometryDecoder = {
         table,
         columnName,
         encoding,
-        (geometryType) => geometryType === 'LineString',
-        (geometryType) => geometryType === WKB_LINESTRING,
+        (geometryType) =>
+          geometryType === 'LineString' || geometryType === 'MultiLineString',
+        (geometryType) =>
+          geometryType === WKB_LINESTRING ||
+          geometryType === WKB_MULTILINESTRING,
       );
     }
 

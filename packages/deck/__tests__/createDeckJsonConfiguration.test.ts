@@ -739,4 +739,45 @@ describe('createDeckJsonConfiguration — polygon centroids for column layers', 
     expect(xy1?.[0]).toBeCloseTo(12);
     expect(xy1?.[1]).toBeCloseTo(12);
   });
+
+  it('promotes WKT MultiLineString to PathLayer positions', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'LINESTRING(0 0, 1 1, 2 0)',
+          'MULTILINESTRING((10 10, 11 11), (12 12, 13 13))',
+        ],
+        new Utf8(),
+      ),
+      label: vectorFromArray(['a', 'b'], new Utf8()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'lines',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      lines: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPathLayer',
+          id: 'lines',
+          _sqlroomsBinding: {
+            dataset: 'lines',
+            geometryColumn: 'geom',
+          },
+          getColor: [255, 0, 0, 255],
+          getWidth: 2,
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getPath = converted.layers[0]?.props.getPath;
+    expect(getPath).toBeDefined();
+    expect(converted.layers[0]?.props.data).toBeDefined();
+  });
 });

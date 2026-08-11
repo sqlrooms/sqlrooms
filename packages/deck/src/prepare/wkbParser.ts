@@ -1,6 +1,7 @@
 export const WKB_POINT = 1;
 export const WKB_LINESTRING = 2;
 export const WKB_POLYGON = 3;
+export const WKB_MULTILINESTRING = 5;
 export const WKB_MULTIPOLYGON = 6;
 
 // Local WKB parser used until geoarrow-js ships WKB to GeoArrow parsing:
@@ -109,6 +110,37 @@ export function readWKBLineStringXY(
     const y = view.getFloat64(offset + Y_COORDINATE_OFFSET_BYTES, isLE);
     coords.push([x, y]);
     offset += coordBytes;
+  }
+  return coords;
+}
+
+/**
+ * Reads a WKB MultiLineString and flattens all parts into one coordinate
+ * sequence for PathLayer (one LineString-shaped GeoArrow vector per row).
+ */
+export function readWKBMultiLineStringXY(
+  buf: ArrayBuffer,
+  header: WKBHeader,
+): Array<[number, number]> | null {
+  if (header.geomType !== WKB_MULTILINESTRING) return null;
+
+  let offset = header.offset;
+  if (!hasBytes(buf, offset, WKB_UINT32_BYTES)) return null;
+  const numLines = header.view.getUint32(offset, header.isLE);
+  offset += WKB_UINT32_BYTES;
+
+  const coords: Array<[number, number]> = [];
+  for (let i = 0; i < numLines; i++) {
+    const lineHeader = parseWKBHeader(buf, offset);
+    if (!lineHeader || lineHeader.geomType !== WKB_LINESTRING) return null;
+    const part = readWKBLineStringXY(buf, lineHeader);
+    if (!part) return null;
+    coords.push(...part);
+    // Advance past this embedded LineString: header + count + coordinates.
+    offset =
+      lineHeader.offset +
+      WKB_UINT32_BYTES +
+      part.length * lineHeader.coordBytes;
   }
   return coords;
 }

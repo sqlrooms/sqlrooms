@@ -204,8 +204,13 @@ function resolveGeoArrowBindings(options: {
             resolvedGeometry.columnName,
           )
         ) {
+          const pathHint =
+            layerName === 'GeoArrowPathLayer' ||
+            layerName === 'GeoArrowTripsLayer'
+              ? ` GeoArrowPathLayer needs LineString/MultiLineString WKB (filter with ST_GeometryType(geom) IN ('LINESTRING','MULTILINESTRING') and ST_AsWKB(geom)).`
+              : '';
           throw new Error(
-            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".`,
+            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".${pathHint}`,
           );
         }
       }
