@@ -526,11 +526,11 @@ describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
     expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('existing');
   });
 });
-// getRadius — string and zero/negative clamping (basic mode only)
+// getRadius — zero/negative clamping (basic mode only); strings → validator
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — getRadius', () => {
-  test('replaces string getRadius with numeric default in basic mode', () => {
+  test('does not rewrite string getRadius in basic mode (validator rejects)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -544,9 +544,7 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).getRadius).toBe(4);
-    expect(getLayer(result).radiusUnits).toBe('pixels');
-    expect(getLayer(result).radiusScale).toBeUndefined();
+    expect(getLayer(result).getRadius).toBe('Magnitude * 500');
   });
 
   test('clamps getRadius:0 to default', () => {
@@ -633,12 +631,12 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getWidth — string clamping and missing widthUnits (basic mode only)
+// getWidth — widthUnits / inverted clamps (basic mode); strings → validator
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — getWidth', () => {
   test.each(['GeoArrowPathLayer', 'GeoArrowArcLayer', 'GeoArrowTripsLayer'])(
-    'replaces string getWidth with numeric default on %s in basic mode',
+    'does not rewrite string getWidth on %s in basic mode (validator rejects)',
     (type) => {
       const result = normalizeAiDeckMapConfig(
         makeBasicConfig(
@@ -652,9 +650,7 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
           {ds: {source: {tableName: 'ds'}}},
         ),
       );
-      expect(getLayer(result).getWidth).toBe(2);
-      expect(getLayer(result).widthUnits).toBe('pixels');
-      expect(getLayer(result).widthScale).toBeUndefined();
+      expect(getLayer(result).getWidth).toBe('flow * 10');
     },
   );
 
@@ -739,7 +735,7 @@ describe('normalizeAiDeckMapConfig — heatmap radiusPixels', () => {
     expect(getLayer(result).radiusPixels).toBe(30);
   });
 
-  test('clamps string radiusPixels to default', () => {
+  test('does not rewrite string radiusPixels (validator rejects)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -752,7 +748,7 @@ describe('normalizeAiDeckMapConfig — heatmap radiusPixels', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).radiusPixels).toBe(30);
+    expect(getLayer(result).radiusPixels).toBe('density * 10');
   });
 
   test('leaves valid positive radiusPixels unchanged', () => {
@@ -793,7 +789,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
     expect(getLayer(result).radius).toBe(50);
   });
 
-  test('clamps string radius to default meters', () => {
+  test('does not rewrite string radius (validator rejects)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -806,7 +802,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).radius).toBe(50);
+    expect(getLayer(result).radius).toBe('count * 5');
   });
 
   test('leaves valid positive radius unchanged', () => {
@@ -893,7 +889,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
 });
 
 // ---------------------------------------------------------------------------
-// getElevation — string stripped in basic mode
+// getElevation — strings left for validator in basic mode
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — getElevation', () => {
@@ -902,23 +898,26 @@ describe('normalizeAiDeckMapConfig — getElevation', () => {
     'GeoArrowSolidPolygonLayer',
     'GeoArrowColumnLayer',
     'GeoArrowH3HexagonLayer',
-  ])('strips string getElevation on %s in basic mode', (type) => {
-    const result = normalizeAiDeckMapConfig(
-      makeBasicConfig(
-        [
-          {
-            '@@type': type,
-            _sqlroomsBinding: {dataset: 'ds'},
-            getElevation: 'floors * 3',
-            elevationScale: 10,
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getElevation).toBe(0);
-    expect(getLayer(result).elevationScale).toBeUndefined();
-  });
+  ])(
+    'does not rewrite string getElevation on %s in basic mode (validator rejects)',
+    (type) => {
+      const result = normalizeAiDeckMapConfig(
+        makeBasicConfig(
+          [
+            {
+              '@@type': type,
+              _sqlroomsBinding: {dataset: 'ds'},
+              getElevation: 'floors * 3',
+              elevationScale: 10,
+            },
+          ],
+          {ds: {source: {tableName: 'ds'}}},
+        ),
+      );
+      expect(getLayer(result).getElevation).toBe('floors * 3');
+      expect(getLayer(result).elevationScale).toBe(10);
+    },
+  );
 
   test('leaves numeric getElevation unchanged', () => {
     const result = normalizeAiDeckMapConfig(

@@ -482,6 +482,79 @@ export function getDeckMapResourceConfigIssues(
       }
     }
 
+    // Basic-mode UI only supports numeric size/elevation props. Custom mode
+    // may use deck.gl string accessors (e.g. "@@=col"). Reject expressions
+    // that bypass the basic sliders.
+    if (config.configMode !== 'custom') {
+      if (
+        layerType === 'GeoArrowScatterplotLayer' &&
+        typeof layer.getRadius === 'string'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.getRadius`,
+          message:
+            'use a positive number (e.g. 4) with radiusUnits "pixels" — string expressions are not supported in basic mode',
+        });
+      }
+
+      const LINE_LAYER_TYPES = new Set([
+        'GeoArrowPathLayer',
+        'GeoArrowArcLayer',
+        'GeoArrowTripsLayer',
+      ]);
+      if (
+        typeof layerType === 'string' &&
+        LINE_LAYER_TYPES.has(layerType) &&
+        typeof layer.getWidth === 'string'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.getWidth`,
+          message:
+            'use a positive number (e.g. 2) with widthUnits "pixels" — string expressions are not supported in basic mode',
+        });
+      }
+
+      if (
+        layerType === 'GeoArrowHeatmapLayer' &&
+        typeof layer.radiusPixels === 'string'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.radiusPixels`,
+          message:
+            'use a positive number (e.g. 30) — string expressions are not supported in basic mode',
+        });
+      }
+
+      if (
+        layerType === 'GeoArrowColumnLayer' &&
+        typeof layer.radius === 'string'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.radius`,
+          message:
+            'use a positive number in meters (e.g. 50) — string expressions are not supported in basic mode',
+        });
+      }
+
+      const ELEVATION_LAYER_TYPES = new Set([
+        'GeoArrowPolygonLayer',
+        'GeoArrowSolidPolygonLayer',
+        'GeoArrowColumnLayer',
+        'GeoArrowH3HexagonLayer',
+      ]);
+      if (
+        typeof layerType === 'string' &&
+        ELEVATION_LAYER_TYPES.has(layerType) &&
+        typeof layer.getElevation === 'string'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.getElevation`,
+          message:
+            'use a number (0 for flat) — string expressions are not supported in basic mode; switch to custom mode for column accessors like "@@=height"',
+        });
+      }
+    }
+
     if (layerType === 'GeoArrowH3HexagonLayer') {
       const getHexagon = layer.getHexagon;
       if (isPlainObject(getHexagon)) {

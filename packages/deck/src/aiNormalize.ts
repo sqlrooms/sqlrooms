@@ -24,18 +24,15 @@ type AiMapConfig = {
 
 const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
 const DEFAULT_AI_POINT_RADIUS = 4;
-const DEFAULT_AI_LINE_WIDTH = 2;
 const DEFAULT_AI_HEATMAP_RADIUS_PIXELS = 30; // matches deck.gl default
 const DEFAULT_AI_COLUMN_RADIUS_METERS = 50; // city-scale default
 /** Sky-blue default fill — matches the UI builder's DEFAULT_FILL_COLOR. */
 const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
 
 /**
- * Strips string-expression getRadius/getWidth from basic-mode layer configs.
- * String expressions bypass pixel-mode clamping:
- * - getRadius on GeoArrowScatterplotLayer produces enormous uncontrollable points.
- * - getWidth on GeoArrowPathLayer/ArcLayer/TripsLayer produces enormous lines.
- * The UI sliders only work with numeric values.
+ * Basic-mode numeric repairs for radius/width/elevation props.
+ * String expression accessors are rejected by getDeckMapResourceConfigIssues
+ * (agent retry) — only zero/negative clamps and structural defaults live here.
  */
 function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
   if (config.configMode === 'custom') return config;
@@ -51,22 +48,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
 
     if (
       l['@@type'] === 'GeoArrowScatterplotLayer' &&
-      typeof l.getRadius === 'string'
-    ) {
-      changed = true;
-      const next = {...l};
-      delete next.radiusScale;
-      next.getRadius = DEFAULT_AI_POINT_RADIUS;
-      next.radiusUnits = 'pixels';
-      if (typeof next.radiusMinPixels !== 'number') {
-        next.radiusMinPixels = DEFAULT_AI_POINT_RADIUS;
-      }
-      delete next.radiusMaxPixels;
-      return next;
-    }
-
-    if (
-      l['@@type'] === 'GeoArrowScatterplotLayer' &&
       typeof l.getRadius === 'number' &&
       l.getRadius <= 0
     ) {
@@ -79,22 +60,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       'GeoArrowArcLayer',
       'GeoArrowTripsLayer',
     ]);
-    if (
-      typeof l['@@type'] === 'string' &&
-      LINE_LAYER_TYPES.has(l['@@type']) &&
-      typeof l.getWidth === 'string'
-    ) {
-      changed = true;
-      const next = {...l};
-      delete next.widthScale;
-      next.getWidth = DEFAULT_AI_LINE_WIDTH;
-      next.widthUnits = 'pixels';
-      if (typeof next.widthMinPixels !== 'number') {
-        next.widthMinPixels = DEFAULT_AI_LINE_WIDTH;
-      }
-      delete next.widthMaxPixels;
-      return next;
-    }
 
     // Enforce widthUnits: "pixels" when getWidth is numeric but widthUnits is
     // absent or set to meters. Meter-based widths scale with zoom and produce
@@ -130,29 +95,32 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         widthMinPixels: value,
         widthMaxPixels: value,
       };
-      if (typeof l.getWidth !== 'string') {
+      if (typeof l.getWidth === 'number') {
         next.getWidth = value;
       }
       return next;
     }
 
-    // Clamp heatmap radiusPixels: string expressions or zero/negative values
-    // produce an invisible or broken heatmap.
+    // Clamp heatmap radiusPixels: zero/negative values produce an invisible
+    // heatmap. String expressions are rejected by the validator.
     if (l['@@type'] === 'GeoArrowHeatmapLayer') {
       const rp = l.radiusPixels;
-      if (typeof rp === 'string' || (typeof rp === 'number' && rp <= 0)) {
+      if (typeof rp === 'number' && rp <= 0) {
         changed = true;
         return {...l, radiusPixels: DEFAULT_AI_HEATMAP_RADIUS_PIXELS};
       }
     }
 
-    // Clamp column radius (meters): string expressions or zero/negative values
-    // produce invisible columns. Also strip point/heatmap radius leftovers —
-    // radiusUnits:"pixels" makes radius N mean N pixels (city-scale disks).
+    // Clamp column radius (meters): missing/zero/negative values produce
+    // invisible columns. String radius is rejected by the validator. Also
+    // strip point/heatmap radius leftovers — radiusUnits:"pixels" makes
+    // radius N mean N pixels (city-scale disks).
     if (l['@@type'] === 'GeoArrowColumnLayer') {
       const r = l.radius;
+      // Leave string radius for the validator; still repair other cases.
       const needsDefaultRadius =
-        typeof r !== 'number' || !Number.isFinite(r) || r <= 0;
+        typeof r !== 'string' &&
+        (typeof r !== 'number' || !Number.isFinite(r) || r <= 0);
       const hasPixelUnits = l.radiusUnits === 'pixels';
       const hasPointRadiusLeak =
         l.getRadius !== undefined ||
@@ -164,7 +132,8 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         const next: Record<string, unknown> = {...l};
         // Always ensure an explicit meters radius when repairing this layer.
         // Stripping getRadius without setting radius leaves deck.gl's default
-        // (1000), which is enormous at city scale.
+        // (1000), which is enormous at city scale. Do not overwrite a string
+        // radius — that is a validator issue.
         if (needsDefaultRadius) {
           next.radius = DEFAULT_AI_COLUMN_RADIUS_METERS;
         }
@@ -173,31 +142,8 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         delete next.radiusMinPixels;
         delete next.radiusMaxPixels;
         delete next.radiusPixels;
-        // Fall through so later basic-mode passes (e.g. string getElevation)
-        // still run on the repaired layer.
         l = next;
       }
-    }
-
-    // Strip string getElevation in basic mode. String accessors bypass the UI
-    // elevation slider. Reset to 0 (flat, non-extruded) and clear elevationScale
-    // so the layer is at least visible; the user can re-enable extrusion via UI.
-    const ELEVATION_LAYER_TYPES = new Set([
-      'GeoArrowPolygonLayer',
-      'GeoArrowSolidPolygonLayer',
-      'GeoArrowColumnLayer',
-      'GeoArrowH3HexagonLayer',
-    ]);
-    if (
-      typeof l['@@type'] === 'string' &&
-      ELEVATION_LAYER_TYPES.has(l['@@type']) &&
-      typeof l.getElevation === 'string'
-    ) {
-      changed = true;
-      const next = {...l};
-      next.getElevation = 0;
-      delete next.elevationScale;
-      return next;
     }
 
     if (changed && l !== layer) {
@@ -228,7 +174,8 @@ const COLOR_ACCESSOR_PROPS = [
  *
  * Rejected by getDeckMapResourceConfigIssues (agent retry): unprefixed layer
  * classes, ColorScale @@type/column syntax, object getWeight, object
- * getHexagon, and arc getSourcePosition/getTargetPosition.
+ * getHexagon, arc getSourcePosition/getTargetPosition, and basic-mode string
+ * getRadius / getWidth / getElevation / radiusPixels / column radius.
  */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -594,11 +541,10 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * Safe to call on any surface — worksheet, dashboard, or block document. Each
  * pass is idempotent and leaves already-correct configs unchanged:
  * - scheme-name casing on colorScale accessors (e.g. "blues" → "Blues")
- * - string/zero getRadius in basic-mode scatterplot layers → numeric default
- * - string/zero getWidth in basic-mode line layers → numeric default + pixels units
- * - string/zero radiusPixels on heatmap layers → default
- * - string/zero radius on column layers → default meters
- * - string getElevation in basic mode → 0 (flat)
+ * - zero/negative getRadius in basic-mode scatterplot layers → numeric default
+ * - numeric getWidth without widthUnits:pixels in basic-mode line layers → inject
+ * - zero/negative radiusPixels on heatmap layers → default
+ * - missing/zero radius on column layers → default meters (+ strip point radius leaks)
  * - missing or wrong _sqlroomsBinding.dataset when only one dataset → auto-inject
  * - colorRange on GeoArrowHeatmapLayer → stripped (UI scheme selector owns it)
  * - getHexagon "@@=column" on GeoArrowH3HexagonLayer → lifted into _sqlroomsBinding.hexagonColumn
@@ -611,7 +557,8 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
  * colorScale {"@@type":"ColorScale","column":"..."} syntax, object getWeight,
- * object getHexagon, and arc getSourcePosition/getTargetPosition.
+ * object getHexagon, arc getSourcePosition/getTargetPosition, and basic-mode
+ * string getRadius / getWidth / getElevation / radiusPixels / column radius.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,

@@ -173,6 +173,145 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
+  test('rejects basic-mode string size/elevation accessors', () => {
+    const scatterIssues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getRadius: 'Magnitude * 500',
+          },
+        ],
+      },
+    });
+    expect(
+      scatterIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getRadius' &&
+          i.message.includes('positive number'),
+      ),
+    ).toBe(true);
+
+    const pathIssues = getDeckMapResourceConfigIssues({
+      configMode: 'basic',
+      datasets: {
+        routes: {
+          source: {tableName: 'routes'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            _sqlroomsBinding: {dataset: 'routes', geometryColumn: 'geom'},
+            getWidth: 'flow * 10',
+          },
+        ],
+      },
+    });
+    expect(
+      pathIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getWidth' &&
+          i.message.includes('positive number'),
+      ),
+    ).toBe(true);
+
+    const heatIssues = getDeckMapResourceConfigIssues({
+      configMode: 'basic',
+      datasets: {
+        points: {
+          source: {tableName: 'points'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'points'},
+            radiusPixels: 'density * 10',
+          },
+        ],
+      },
+    });
+    expect(
+      heatIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.radiusPixels' &&
+          i.message.includes('positive number'),
+      ),
+    ).toBe(true);
+
+    const columnIssues = getDeckMapResourceConfigIssues({
+      configMode: 'basic',
+      datasets: {
+        points: {
+          source: {tableName: 'points'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'points'},
+            radius: 'count * 5',
+            getElevation: 'floors * 3',
+          },
+        ],
+      },
+    });
+    expect(
+      columnIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.radius' &&
+          i.message.includes('positive number'),
+      ),
+    ).toBe(true);
+    expect(
+      columnIssues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getElevation' &&
+          i.message.includes('use a number'),
+      ),
+    ).toBe(true);
+  });
+
+  test('allows string size/elevation accessors in custom mode', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'custom',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getRadius: '@@=radius_col',
+          },
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getElevation: '@@=height',
+          },
+        ],
+      },
+    });
+    expect(issues.some((i) => i.path === 'spec.layers.0.getRadius')).toBe(
+      false,
+    );
+    expect(issues.some((i) => i.path === 'spec.layers.1.getElevation')).toBe(
+      false,
+    );
+  });
+
   test('allows only a truly empty resource while waiting for user configuration', () => {
     const emptyConfig: DeckMapConfig = {spec: {layers: []}, datasets: {}};
 
