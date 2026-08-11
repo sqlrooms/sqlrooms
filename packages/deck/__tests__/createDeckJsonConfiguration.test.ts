@@ -11,6 +11,7 @@ import {
 } from 'apache-arrow';
 import {createDeckJsonConfiguration} from '../src/json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from '../src/json/extractColorScaleLegends';
+import {prepareDeckDataset} from '../src/prepare/prepareDeckDataset';
 import type {PreparedDeckDataset} from '../src/prepare/types';
 import type {PreparedDeckDatasetState} from '../src/types';
 
@@ -686,5 +687,56 @@ describe('extractColorScaleLegends', () => {
     expect(legends).toHaveLength(1);
     expect(legends[0]!.title).toBe('magnitude');
     expect(legends[0]).toMatchObject({type: 'continuous'});
+  });
+});
+
+describe('createDeckJsonConfiguration — polygon centroids for column layers', () => {
+  it('promotes WKT polygon footprints to centroids for GeoArrowColumnLayer', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+          'POLYGON((10 10, 14 10, 14 14, 10 14, 10 10))',
+        ],
+        new Utf8(),
+      ),
+      height: vectorFromArray([12, 40], new Float64()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowColumnLayer',
+          id: 'buildings',
+          _sqlroomsBinding: {
+            dataset: 'buildings',
+            geometryColumn: 'geom',
+          },
+          getElevation: '@@=height',
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getPosition = converted.layers[0]?.props.getPosition as {
+      get: (index: number) => {toArray?: () => number[]} | number[] | null;
+    };
+    expect(getPosition).toBeDefined();
+    const p0 = getPosition.get(0);
+    const p1 = getPosition.get(1);
+    const xy0 = Array.isArray(p0) ? p0 : p0?.toArray?.();
+    const xy1 = Array.isArray(p1) ? p1 : p1?.toArray?.();
+    expect(xy0?.[0]).toBeCloseTo(1);
+    expect(xy0?.[1]).toBeCloseTo(1);
+    expect(xy1?.[0]).toBeCloseTo(12);
+    expect(xy1?.[1]).toBeCloseTo(12);
   });
 });

@@ -116,6 +116,7 @@ export type {
 export {DeckJsonMap} from './DeckJsonMap';
 export {
   DeckMapDefaultStylesProvider,
+  isMapboxStyleUrl,
   resolveDeckMapStyle,
   useDeckMapDefaultStyles,
   type DeckMapDefaultStyles,

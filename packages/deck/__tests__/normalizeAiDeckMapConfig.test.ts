@@ -524,7 +524,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).radius).toBe(50);
+    expect(getLayer(result).radius).toBe(20);
   });
 
   test('leaves positive radius unchanged', () => {
@@ -541,6 +541,25 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
       ),
     );
     expect(getLayer(result).radius).toBe(100);
+  });
+
+  test('sets extruded when getElevation is present', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+            radius: 15,
+            getElevation: '@@=height',
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    const layer = getLayer(result);
+    expect(layer.radius).toBe(15);
+    expect(layer.extruded).toBe(true);
   });
 
   test('strips radiusUnits:pixels and point radius leftovers', () => {
@@ -586,7 +605,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
       ),
     );
     const layer = getLayer(result);
-    expect(layer.radius).toBe(50);
+    expect(layer.radius).toBe(20);
     expect(layer.radiusUnits).toBe('meters');
     expect(layer.getRadius).toBeUndefined();
     expect(layer.radiusMinPixels).toBeUndefined();
@@ -605,7 +624,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    expect(getLayer(result).radius).toBe(50);
+    expect(getLayer(result).radius).toBe(20);
     expect(getLayer(result).radiusUnits).toBe('meters');
   });
 });
@@ -736,10 +755,46 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
   });
 });
 
+describe('normalizeAiDeckMapConfig — mapStyle', () => {
+  test('strips mapbox:// styles so the host basemap is used', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+    );
+    const withMapbox = normalizeAiDeckMapConfig({
+      ...result,
+      mapStyle: 'mapbox://styles/mapbox/dark-v11',
+    });
+    expect(withMapbox.mapStyle).toBeUndefined();
+  });
+
+  test('keeps MapLibre-compatible https styles', () => {
+    const result = normalizeAiDeckMapConfig({
+      ...makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+        {ds: {source: {tableName: 'ds'}}},
+      ),
+      mapStyle: 'https://example.com/style.json',
+    });
+    expect(result.mapStyle).toBe('https://example.com/style.json');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // validateAndFixColorScaleFields
 // ---------------------------------------------------------------------------
-
 const VALIDATE_COLUMNS = [
   {name: 'Magnitude', type: 'FLOAT'},
   {name: 'Depth', type: 'FLOAT'},

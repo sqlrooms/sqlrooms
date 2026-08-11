@@ -286,13 +286,13 @@ describe('Deck map resource authoring contract', () => {
         }),
         expect.objectContaining({
           path: 'spec.layers.0.getElevation',
-          message: expect.stringContaining('use a number'),
+          message: expect.stringContaining('@@=columnName'),
         }),
       ]),
     );
   });
 
-  test('rejects basic-mode string getElevation on polygon layers', () => {
+  test('rejects basic-mode free-form getElevation expressions on polygon layers', () => {
     const issues = getDeckMapResourceConfigIssues({
       ...validConfig,
       configMode: 'basic',
@@ -310,9 +310,30 @@ describe('Deck map resource authoring contract', () => {
       expect.arrayContaining([
         expect.objectContaining({
           path: 'spec.layers.0.getElevation',
-          message: expect.stringContaining('use a number'),
+          message: expect.stringContaining('@@=columnName'),
         }),
       ]),
+    );
+  });
+
+  test('allows basic-mode getElevation column accessor @@=height', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getElevation: '@@=height',
+            extruded: true,
+            radius: 50,
+          },
+        ],
+      },
+    });
+    expect(issues.some((i) => i.path === 'spec.layers.0.getElevation')).toBe(
+      false,
     );
   });
 
@@ -602,6 +623,7 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('_sqlroomsBinding.dataset');
     expect(instructions).toContain('Never put sql directly');
     expect(instructions).toContain('Never use data: "@@#datasetId"');
+    expect(instructions).toContain('Never set mapStyle to a mapbox://');
     expect(instructions).not.toContain('Mosaic');
   });
 
@@ -965,6 +987,21 @@ describe('Deck map resource authoring contract', () => {
         expect.objectContaining({
           path: 'spec.layers.0.getFillColor',
           message: expect.stringContaining('field'),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects mapbox:// mapStyle URLs', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      mapStyle: 'mapbox://styles/mapbox/dark-v11',
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'mapStyle',
+          message: expect.stringContaining('mapbox://'),
         }),
       ]),
     );

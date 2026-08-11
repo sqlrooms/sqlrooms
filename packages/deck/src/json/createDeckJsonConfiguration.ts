@@ -1,7 +1,11 @@
 import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
-import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
+import {
+  wkbGeometryDecoder,
+  promoteToPointPositions,
+  isPointPositionLayer,
+} from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {
@@ -161,8 +165,38 @@ function resolveGeoArrowBindings(options: {
         );
       }
       if (!resolvedGeometry.nativeGeoArrow) {
+        if (!compatibility.allowGeoArrowPromotion) {
+          throw new Error(
+            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".`,
+          );
+        }
+
+        // Scatter/heatmap/column need point positions. If the bound column is
+        // Polygon/MultiPolygon WKB (common for building footprints), promote
+        // exterior-ring centroids instead of failing with a generic encoding error.
+        if (isPointPositionLayer(layerName)) {
+          const promoted = promoteToPointPositions(
+            prepared.table,
+            resolvedGeometry.columnName,
+            resolvedGeometry.encoding,
+          );
+          if (!promoted) {
+            throw new Error(
+              `Layer "${layerName}" needs Point positions for dataset "${prepared.datasetId}" ` +
+                `(geometry encoding "${resolvedGeometry.encoding}"). ` +
+                `Use a point geometry column, or transformSql with ` +
+                `ST_AsWKB(ST_Centroid(geom)) / ST_PointOnSurface(geom). ` +
+                `For building footprints prefer GeoArrowPolygonLayer / GeoArrowSolidPolygonLayer.`,
+            );
+          }
+          boundProps[binding.prop] = promoted.geometryColumn;
+          if (table === prepared.table) {
+            table = promoted.table;
+          }
+          continue;
+        }
+
         if (
-          !compatibility.allowGeoArrowPromotion ||
           !wkbGeometryDecoder.supportsGeoArrowPromotion(
             layerName,
             resolvedGeometry.encoding,

@@ -25,7 +25,7 @@ type AiMapConfig = {
 const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
 const DEFAULT_AI_POINT_RADIUS = 4;
 const DEFAULT_AI_HEATMAP_RADIUS_PIXELS = 30; // matches deck.gl default
-const DEFAULT_AI_COLUMN_RADIUS_METERS = 50; // city-scale default
+const DEFAULT_AI_COLUMN_RADIUS_METERS = 20; // city-scale default
 /** Sky-blue default fill — matches the UI builder's DEFAULT_FILL_COLOR. */
 const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
 
@@ -284,6 +284,18 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
+    // GeoArrowColumnLayer: when elevation is driven by a field, ensure
+    // extruded is on (deck default is true, but AI often omits it after
+    // toggling other props).
+    if (
+      l['@@type'] === 'GeoArrowColumnLayer' &&
+      l.getElevation !== undefined &&
+      l.extruded === undefined
+    ) {
+      l = {...l, extruded: true};
+      layerChanged = true;
+    }
+
     // Inject default getFillColor for scatterplot/polygon layers that omit it
     // entirely. Without it deck.gl falls back to opaque black [0,0,0,255].
     // Mirror the same sky-blue default used by the UI builder.
@@ -429,6 +441,16 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
  * but the dataset only uses a tableName without a transformSql.
  */
 function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
+  // MapLibre cannot fetch mapbox:// styles without a Mapbox token/plugin.
+  // Drop them so the host theme basemap is used instead.
+  if (
+    typeof config.mapStyle === 'string' &&
+    /^mapbox:/i.test(config.mapStyle.trim())
+  ) {
+    const {mapStyle: _removed, ...rest} = config;
+    config = rest;
+  }
+
   const datasets = config.datasets;
   let fitToData = config.fitToData as
     | Record<string, unknown>

@@ -547,11 +547,18 @@ export function getDeckMapResourceConfigIssues(
         ELEVATION_LAYER_TYPES.has(layerType) &&
         typeof layer.getElevation === 'string'
       ) {
-        issues.push({
-          path: `spec.layers.${index}.getElevation`,
-          message:
-            'use a number (0 for flat) — string expressions are not supported in basic mode; switch to custom mode for column accessors like "@@=height"',
-        });
+        // Basic UI supports a single elevation column via "@@=col" or a
+        // {"@@function":"scale",...} object. Reject free-form expressions only.
+        const isColumnAccessor = /^@@=[A-Za-z_][\w]*$/.test(
+          layer.getElevation.trim(),
+        );
+        if (!isColumnAccessor) {
+          issues.push({
+            path: `spec.layers.${index}.getElevation`,
+            message:
+              'in basic mode use a number (0 for flat), a column accessor "@@=columnName", or {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} — free-form string expressions require configMode "custom"',
+          });
+        }
       }
     }
 
@@ -671,6 +678,17 @@ export function getDeckMapResourceConfigIssues(
     });
   }
 
+  if (
+    typeof config.mapStyle === 'string' &&
+    /^mapbox:/i.test(config.mapStyle.trim())
+  ) {
+    issues.push({
+      path: 'mapStyle',
+      message:
+        'mapbox:// styles are not supported (MapLibre cannot fetch that URL scheme). Omit mapStyle to use the host basemap, or use a token-free MapLibre-compatible https:// style URL',
+    });
+  }
+
   return issues;
 }
 
@@ -697,7 +715,8 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - For animated trips use GeoArrowTripsLayer — never ArcLayer (arcs are static OD links). One output row per trip: LineString geom + timestamps. Waypoint tables: ST_MakeLine(LIST(ST_Point(...) ORDER BY col)) GROUP BY trip id, keep attrs with ANY_VALUE(col). OD-pair tables: synthesize a 2-point LineString + timestamps (no GROUP BY). Set geometryColumn "geom", geometryEncodingHint "wkb", and _sqlroomsBinding.timestampColumn "timestamps".
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
-- Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
+- Use configMode "basic" for a straightforward single-layer map (including extruded column/polygon maps with one elevation column via "@@=col" or a scale accessor). Use "custom" only for advanced properties the basic settings cannot represent; custom mode disables the settings panel and does not relax dataset-source or layer-binding requirements.
+- Never set mapStyle to a mapbox:// URL — MapLibre cannot load that scheme. Omit mapStyle for the host basemap, or use a token-free MapLibre https:// style URL.
 - For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.
 - Prefer data-driven color when a useful column exists: getFillColor (or getColor/getSourceColor/getTargetColor for arcs) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Use quantile for skewed numeric, sequential for uniform, categorical for strings. Exact scheme names (case-sensitive): ${formatColorSchemePromptLists()} — do not invent names.
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.

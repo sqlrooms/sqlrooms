@@ -1,5 +1,8 @@
 import {describe, expect, test} from '@jest/globals';
-import {resolveDeckMapStyle} from '../src/DeckMapDefaultStylesProvider';
+import {
+  isMapboxStyleUrl,
+  resolveDeckMapStyle,
+} from '../src/DeckMapDefaultStylesProvider';
 
 const fallbackStyles = {
   light: 'fallback-light',
@@ -55,5 +58,28 @@ describe('resolveDeckMapStyle', () => {
         fallbackStyles,
       }),
     ).toBe('fallback-light');
+  });
+
+  test('skips mapbox:// config styles so the host basemap can load', () => {
+    expect(isMapboxStyleUrl('mapbox://styles/mapbox/dark-v11')).toBe(true);
+    expect(
+      resolveDeckMapStyle({
+        mapStyle: 'mapbox://styles/mapbox/dark-v11',
+        hostDefaultStyles: {dark: 'host-dark'},
+        resolvedTheme: 'dark',
+        fallbackStyles,
+      }),
+    ).toBe('host-dark');
+  });
+
+  test('skips mapbox:// map props and falls through to host defaults', () => {
+    expect(
+      resolveDeckMapStyle({
+        mapPropsMapStyle: 'mapbox://styles/mapbox/streets-v12',
+        hostDefaultStyles: {light: 'host-light'},
+        resolvedTheme: 'light',
+        fallbackStyles,
+      }),
+    ).toBe('host-light');
   });
 });
