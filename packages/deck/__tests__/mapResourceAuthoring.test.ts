@@ -173,8 +173,8 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
-  test('rejects basic-mode string size/elevation accessors', () => {
-    const scatterIssues = getDeckMapResourceConfigIssues({
+  test('rejects basic-mode string getRadius on scatterplot', () => {
+    const issues = getDeckMapResourceConfigIssues({
       ...validConfig,
       configMode: 'basic',
       spec: {
@@ -187,15 +187,18 @@ describe('Deck map resource authoring contract', () => {
         ],
       },
     });
-    expect(
-      scatterIssues.some(
-        (i) =>
-          i.path === 'spec.layers.0.getRadius' &&
-          i.message.includes('positive number'),
-      ),
-    ).toBe(true);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getRadius',
+          message: expect.stringContaining('positive number'),
+        }),
+      ]),
+    );
+  });
 
-    const pathIssues = getDeckMapResourceConfigIssues({
+  test('rejects basic-mode string getWidth on path layers', () => {
+    const issues = getDeckMapResourceConfigIssues({
       configMode: 'basic',
       datasets: {
         routes: {
@@ -214,15 +217,18 @@ describe('Deck map resource authoring contract', () => {
         ],
       },
     });
-    expect(
-      pathIssues.some(
-        (i) =>
-          i.path === 'spec.layers.0.getWidth' &&
-          i.message.includes('positive number'),
-      ),
-    ).toBe(true);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getWidth',
+          message: expect.stringContaining('positive number'),
+        }),
+      ]),
+    );
+  });
 
-    const heatIssues = getDeckMapResourceConfigIssues({
+  test('rejects basic-mode string radiusPixels on heatmap', () => {
+    const issues = getDeckMapResourceConfigIssues({
       configMode: 'basic',
       datasets: {
         points: {
@@ -241,15 +247,18 @@ describe('Deck map resource authoring contract', () => {
         ],
       },
     });
-    expect(
-      heatIssues.some(
-        (i) =>
-          i.path === 'spec.layers.0.radiusPixels' &&
-          i.message.includes('positive number'),
-      ),
-    ).toBe(true);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.radiusPixels',
+          message: expect.stringContaining('positive number'),
+        }),
+      ]),
+    );
+  });
 
-    const columnIssues = getDeckMapResourceConfigIssues({
+  test('rejects basic-mode string column radius and getElevation', () => {
+    const issues = getDeckMapResourceConfigIssues({
       configMode: 'basic',
       datasets: {
         points: {
@@ -269,20 +278,42 @@ describe('Deck map resource authoring contract', () => {
         ],
       },
     });
-    expect(
-      columnIssues.some(
-        (i) =>
-          i.path === 'spec.layers.0.radius' &&
-          i.message.includes('positive number'),
-      ),
-    ).toBe(true);
-    expect(
-      columnIssues.some(
-        (i) =>
-          i.path === 'spec.layers.0.getElevation' &&
-          i.message.includes('use a number'),
-      ),
-    ).toBe(true);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.radius',
+          message: expect.stringContaining('positive number'),
+        }),
+        expect.objectContaining({
+          path: 'spec.layers.0.getElevation',
+          message: expect.stringContaining('use a number'),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects basic-mode string getElevation on polygon layers', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getElevation: 'floors * 3',
+          },
+        ],
+      },
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getElevation',
+          message: expect.stringContaining('use a number'),
+        }),
+      ]),
+    );
   });
 
   test('allows string size/elevation accessors in custom mode', () => {
@@ -792,7 +823,7 @@ describe('Deck map resource authoring contract', () => {
   });
 
   test('rejects unprefixed layer class names with the GeoArrow replacement', () => {
-    const issues = getDeckMapResourceConfigIssues({
+    const scatterIssues = getDeckMapResourceConfigIssues({
       spec: {
         layers: [
           {
@@ -809,12 +840,37 @@ describe('Deck map resource authoring contract', () => {
         },
       },
     });
-
-    expect(issues).toEqual(
+    expect(scatterIssues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           path: 'spec.layers.0.@@type',
           message: expect.stringContaining('GeoArrowScatterplotLayer'),
+        }),
+      ]),
+    );
+
+    const heatIssues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'HeatmapLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+    expect(heatIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.@@type',
+          message: expect.stringContaining('GeoArrowHeatmapLayer'),
         }),
       ]),
     );
@@ -845,6 +901,29 @@ describe('Deck map resource authoring contract', () => {
       },
     });
 
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringContaining('@@function'),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects bare ColorScale @@type without field/column', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {'@@type': 'ColorScale'},
+          },
+        ],
+      },
+    });
     expect(issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

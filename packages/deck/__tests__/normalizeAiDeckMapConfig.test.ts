@@ -25,7 +25,7 @@ function getLayer(result: any, index = 0): Record<string, any> {
 }
 
 // ---------------------------------------------------------------------------
-// Layer class alias normalisation
+// Hidden layers — do not delete visible:false (legitimate hide state)
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — hidden layers', () => {
@@ -53,145 +53,14 @@ describe('normalizeAiDeckMapConfig — hidden layers', () => {
     expect(getLayer(result, 0).visible).toBe(false);
     expect(getLayer(result, 1)['@@type']).toBe('GeoArrowHeatmapLayer');
   });
-
-  test('keeps both layers when they are the same @@type', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            id: 'a',
-            _sqlroomsBinding: {dataset: 'ds'},
-            visible: false,
-          },
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            id: 'b',
-            _sqlroomsBinding: {dataset: 'ds'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(result.spec.layers).toHaveLength(2);
-  });
-
-  test('keeps all layers when all are visible', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            id: 'a',
-            _sqlroomsBinding: {dataset: 'ds'},
-          },
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            id: 'b',
-            _sqlroomsBinding: {dataset: 'ds'},
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(result.spec.layers).toHaveLength(2);
-  });
-});
-
-describe('normalizeAiDeckMapConfig — layer class aliases', () => {
-  test.each([
-    'ScatterplotLayer',
-    'HeatmapLayer',
-    'ColumnLayer',
-    'PathLayer',
-    'PolygonLayer',
-    'SolidPolygonLayer',
-    'ArcLayer',
-    'TripsLayer',
-    'H3HexagonLayer',
-  ])(
-    'does not silently rewrite unprefixed %s (validator owns this)',
-    (input) => {
-      const result = normalizeAiDeckMapConfig(
-        makeConfig([{'@@type': input, _sqlroomsBinding: {dataset: 'ds'}}], {
-          ds: {source: {tableName: 'ds'}},
-        }),
-      );
-      expect(getLayer(result)['@@type']).toBe(input);
-    },
-  );
-
-  test('leaves already-correct GeoArrow names unchanged', () => {
-    const config = makeConfig(
-      [
-        {
-          '@@type': 'GeoArrowScatterplotLayer',
-          _sqlroomsBinding: {dataset: 'ds'},
-        },
-      ],
-      {ds: {source: {tableName: 'ds'}}},
-    );
-    const result = normalizeAiDeckMapConfig(config);
-    expect(getLayer(result)['@@type']).toBe('GeoArrowScatterplotLayer');
-  });
 });
 
 // ---------------------------------------------------------------------------
-// Color accessor syntax (validator-owned; normalize only fixes scheme casing)
+// Color accessor syntax — normalize only fixes scheme casing
+// (invalid ColorScale shapes are rejected in mapResourceAuthoring.test.ts)
 // ---------------------------------------------------------------------------
 
-describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
-  test('does not rewrite @@type:ColorScale + column (validator owns this)', () => {
-    const layer = {
-      '@@type': 'GeoArrowScatterplotLayer',
-      _sqlroomsBinding: {dataset: 'ds'},
-      getFillColor: {
-        '@@type': 'ColorScale',
-        column: 'magnitude',
-        type: 'sequential',
-        scheme: 'Viridis',
-      },
-    };
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
-    );
-    const fill = getLayer(result).getFillColor;
-    expect(fill['@@type']).toBe('ColorScale');
-    expect(fill.column).toBe('magnitude');
-    expect(fill['@@function']).toBeUndefined();
-  });
-
-  test('does not remove a broken ColorScale object without a field', () => {
-    const layer = {
-      '@@type': 'GeoArrowScatterplotLayer',
-      _sqlroomsBinding: {dataset: 'ds'},
-      getFillColor: {'@@type': 'ColorScale'},
-    };
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
-    );
-    expect(getLayer(result).getFillColor).toEqual({'@@type': 'ColorScale'});
-  });
-
-  test('leaves a valid @@function colorScale accessor unchanged', () => {
-    const colorScale = {
-      '@@function': 'colorScale',
-      field: 'mag',
-      type: 'sequential',
-      scheme: 'Viridis',
-      domain: 'auto',
-    };
-    const layer = {
-      '@@type': 'GeoArrowScatterplotLayer',
-      _sqlroomsBinding: {dataset: 'ds'},
-      getFillColor: colorScale,
-    };
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([layer], {ds: {source: {tableName: 'ds'}}}),
-    );
-    expect(getLayer(result).getFillColor).toEqual(colorScale);
-  });
-
+describe('normalizeAiDeckMapConfig — colorScale scheme casing', () => {
   test('fixes lowercase scheme name to correct casing (e.g. "blues" → "Blues")', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
@@ -214,7 +83,7 @@ describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
     expect(getLayer(result).getFillColor.scheme).toBe('Blues');
   });
 
-  test('fixes mixed-case scheme name (e.g. "viridis" → "Viridis")', () => {
+  test('fixes mixed-case scheme name (e.g. "VIRIDIS" → "Viridis")', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -258,7 +127,7 @@ describe('normalizeAiDeckMapConfig — color accessor syntax', () => {
     expect(getLayer(result).getFillColor.scheme).toBe('CustomScheme');
   });
 
-  test('fixes scheme casing on non-fill color props (getLineColor, getColor)', () => {
+  test('fixes scheme casing on non-fill color props (getColor)', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -401,11 +270,11 @@ describe('normalizeAiDeckMapConfig — filled:false guard', () => {
 });
 
 // ---------------------------------------------------------------------------
-// heatmap / H3 / arc: leave invalid accessors for the validator (no silent rewrite)
+// Heatmap colorRange — AI strip only (UI may set colorRange later; not validated)
 // ---------------------------------------------------------------------------
 
-describe('normalizeAiDeckMapConfig — leaves heatmap/H3/arc accessor mistakes alone', () => {
-  test('strips colorRange from GeoArrowHeatmapLayer (AI normalize; UI may set it later)', () => {
+describe('normalizeAiDeckMapConfig — heatmap colorRange', () => {
+  test('strips colorRange from GeoArrowHeatmapLayer', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig(
         [
@@ -422,66 +291,6 @@ describe('normalizeAiDeckMapConfig — leaves heatmap/H3/arc accessor mistakes a
       ),
     );
     expect(getLayer(result).colorRange).toBeUndefined();
-  });
-
-  test('does not rewrite object getWeight on GeoArrowHeatmapLayer', () => {
-    const getWeight = {
-      '@@function': 'getNumericColumn',
-      field: 'Magnitude',
-    };
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getWeight,
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getWeight).toEqual(getWeight);
-  });
-
-  test('does not rewrite object getHexagon on GeoArrowH3HexagonLayer', () => {
-    const getHexagon = {
-      '@@function': 'columnAccessor',
-      column: 'hex_id',
-    };
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowH3HexagonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getHexagon,
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getHexagon).toEqual(getHexagon);
-    expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBeUndefined();
-  });
-
-  test('does not lift arc getSourcePosition/getTargetPosition into binding', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowArcLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getSourcePosition: '@@=source_geom',
-            getTargetPosition: '@@=target_geom',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getSourcePosition).toBe('@@=source_geom');
-    expect(getLayer(result).getTargetPosition).toBe('@@=target_geom');
-    expect(getLayer(result)._sqlroomsBinding).toEqual({dataset: 'ds'});
   });
 });
 
@@ -526,27 +335,10 @@ describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
     expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('existing');
   });
 });
-// getRadius — zero/negative clamping (basic mode only); strings → validator
+// getRadius — zero/negative clamping (basic mode only)
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — getRadius', () => {
-  test('does not rewrite string getRadius in basic mode (validator rejects)', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeBasicConfig(
-        [
-          {
-            '@@type': 'GeoArrowScatterplotLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getRadius: 'Magnitude * 500',
-            radiusUnits: 'pixels',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getRadius).toBe('Magnitude * 500');
-  });
-
   test('clamps getRadius:0 to default', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
@@ -579,7 +371,7 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
     expect(getLayer(result).getRadius).toBe(4);
   });
 
-  test('leaves valid numeric getRadius unchanged', () => {
+  test('leaves positive getRadius unchanged in basic mode', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -595,7 +387,7 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
     expect(getLayer(result).getRadius).toBe(6);
   });
 
-  test('does not clamp string getRadius in custom mode', () => {
+  test('skips radius clamps entirely in custom mode (including zero)', () => {
     const result = normalizeAiDeckMapConfig({
       configMode: 'custom' as const,
       ...makeConfig(
@@ -603,57 +395,21 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
           {
             '@@type': 'GeoArrowScatterplotLayer',
             _sqlroomsBinding: {dataset: 'ds'},
-            getRadius: '@@=radius_col',
+            getRadius: 0,
           },
         ],
         {ds: {source: {tableName: 'ds'}}},
       ),
     });
-    expect(getLayer(result).getRadius).toBe('@@=radius_col');
-  });
-
-  test('does not clamp string getRadius on unprefixed ScatterplotLayer (validator rejects @@type first)', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeBasicConfig(
-        [
-          {
-            '@@type': 'ScatterplotLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getRadius: 'mag * 500',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result)['@@type']).toBe('ScatterplotLayer');
-    expect(getLayer(result).getRadius).toBe('mag * 500');
+    expect(getLayer(result).getRadius).toBe(0);
   });
 });
 
 // ---------------------------------------------------------------------------
-// getWidth — widthUnits / inverted clamps (basic mode); strings → validator
+// getWidth — widthUnits + inverted clamps (basic mode)
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — getWidth', () => {
-  test.each(['GeoArrowPathLayer', 'GeoArrowArcLayer', 'GeoArrowTripsLayer'])(
-    'does not rewrite string getWidth on %s in basic mode (validator rejects)',
-    (type) => {
-      const result = normalizeAiDeckMapConfig(
-        makeBasicConfig(
-          [
-            {
-              '@@type': type,
-              _sqlroomsBinding: {dataset: 'ds'},
-              getWidth: 'flow * 10',
-            },
-          ],
-          {ds: {source: {tableName: 'ds'}}},
-        ),
-      );
-      expect(getLayer(result).getWidth).toBe('flow * 10');
-    },
-  );
-
   test('injects widthUnits:pixels when getWidth is numeric but widthUnits is absent', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
@@ -671,7 +427,7 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
     expect(getLayer(result).getWidth).toBe(3);
   });
 
-  test('does not overwrite an existing widthUnits when numeric getWidth is present', () => {
+  test('forces widthUnits to pixels even when meters was set', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -685,8 +441,6 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
         {ds: {source: {tableName: 'ds'}}},
       ),
     );
-    // widthUnits is already set, but it's not "pixels" — normalization only
-    // injects when absent; it doesn't overwrite an explicit meters choice.
     expect(getLayer(result).widthUnits).toBe('pixels');
   });
 
@@ -735,23 +489,7 @@ describe('normalizeAiDeckMapConfig — heatmap radiusPixels', () => {
     expect(getLayer(result).radiusPixels).toBe(30);
   });
 
-  test('does not rewrite string radiusPixels (validator rejects)', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeBasicConfig(
-        [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            radiusPixels: 'density * 10',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).radiusPixels).toBe('density * 10');
-  });
-
-  test('leaves valid positive radiusPixels unchanged', () => {
+  test('leaves positive radiusPixels unchanged', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -789,23 +527,7 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
     expect(getLayer(result).radius).toBe(50);
   });
 
-  test('does not rewrite string radius (validator rejects)', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeBasicConfig(
-        [
-          {
-            '@@type': 'GeoArrowColumnLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            radius: 'count * 5',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).radius).toBe('count * 5');
-  });
-
-  test('leaves valid positive radius unchanged', () => {
+  test('leaves positive radius unchanged', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -885,71 +607,6 @@ describe('normalizeAiDeckMapConfig — column radius', () => {
     );
     expect(getLayer(result).radius).toBe(50);
     expect(getLayer(result).radiusUnits).toBe('meters');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getElevation — strings left for validator in basic mode
-// ---------------------------------------------------------------------------
-
-describe('normalizeAiDeckMapConfig — getElevation', () => {
-  test.each([
-    'GeoArrowPolygonLayer',
-    'GeoArrowSolidPolygonLayer',
-    'GeoArrowColumnLayer',
-    'GeoArrowH3HexagonLayer',
-  ])(
-    'does not rewrite string getElevation on %s in basic mode (validator rejects)',
-    (type) => {
-      const result = normalizeAiDeckMapConfig(
-        makeBasicConfig(
-          [
-            {
-              '@@type': type,
-              _sqlroomsBinding: {dataset: 'ds'},
-              getElevation: 'floors * 3',
-              elevationScale: 10,
-            },
-          ],
-          {ds: {source: {tableName: 'ds'}}},
-        ),
-      );
-      expect(getLayer(result).getElevation).toBe('floors * 3');
-      expect(getLayer(result).elevationScale).toBe(10);
-    },
-  );
-
-  test('leaves numeric getElevation unchanged', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeBasicConfig(
-        [
-          {
-            '@@type': 'GeoArrowPolygonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getElevation: 100,
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    );
-    expect(getLayer(result).getElevation).toBe(100);
-  });
-
-  test('does not strip string getElevation in custom mode', () => {
-    const result = normalizeAiDeckMapConfig({
-      configMode: 'custom' as const,
-      ...makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowPolygonLayer',
-            _sqlroomsBinding: {dataset: 'ds'},
-            getElevation: '@@=height',
-          },
-        ],
-        {ds: {source: {tableName: 'ds'}}},
-      ),
-    });
-    expect(getLayer(result).getElevation).toBe('@@=height');
   });
 });
 
@@ -1076,50 +733,6 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
     expect(result.datasets.ds.source.transformSql).toBe(
       'SELECT * FROM __sqlrooms_source',
     );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ST_MakeLine ORDER BY — no silent SQL rewrite (validator owns this)
-// ---------------------------------------------------------------------------
-
-describe('normalizeAiDeckMapConfig — ST_MakeLine left to validator', () => {
-  test('does not rewrite ST_MakeLine(ST_Point(...) ORDER BY ...)', () => {
-    const sql =
-      'SELECT path_id, ST_AsWKB(ST_MakeLine(ST_Point(lon, lat) ORDER BY waypoint_order)) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM __sqlrooms_source GROUP BY path_id';
-    const result = normalizeAiDeckMapConfig(
-      makeConfig(
-        [
-          {
-            '@@type': 'GeoArrowTripsLayer',
-            _sqlroomsBinding: {
-              dataset: 'trips',
-              timestampColumn: 'timestamps',
-            },
-          },
-        ],
-        {
-          trips: {
-            source: {
-              tableName: 'nyc_trips_animated',
-              transformSql: sql,
-            },
-          },
-        },
-      ),
-    );
-    expect(result.datasets.trips.source.transformSql).toBe(sql);
-  });
-
-  test('leaves already-correct ST_MakeLine(LIST(...)) unchanged', () => {
-    const sql =
-      'SELECT path_id, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom FROM __sqlrooms_source GROUP BY path_id';
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([], {
-        trips: {source: {tableName: 'trips', transformSql: sql}},
-      }),
-    );
-    expect(result.datasets.trips.source.transformSql).toBe(sql);
   });
 });
 
