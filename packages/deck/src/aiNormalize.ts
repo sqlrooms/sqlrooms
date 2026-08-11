@@ -714,9 +714,12 @@ export function validateAndFixColorScaleFields<
       typeof binding?.dataset === 'string' && binding.dataset.trim()
         ? binding.dataset
         : undefined;
-    // Mirror normalize's solo-dataset inject: AI often omits
-    // `_sqlroomsBinding.dataset` when there is exactly one dataset.
-    const datasetId = boundDataset ?? soloDatasetId;
+    // Mirror normalize: omit → sole dataset; unknown/typo solo binding → sole
+    // real dataset (normalize replaces it before render).
+    const datasetId =
+      boundDataset && columnsByDataset.has(boundDataset)
+        ? boundDataset
+        : (soloDatasetId ?? boundDataset);
     const cols = datasetId ? columnsByDataset.get(datasetId) : undefined;
     if (!cols || !datasetId) return layer;
 

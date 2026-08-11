@@ -51,16 +51,20 @@ const DIVERGING_SCHEME_NAMES = new Set<string>(continuousDivergingSchemes);
 const CATEGORICAL_SCHEME_NAMES = new Set<string>(categoricalSchemes);
 
 /**
- * Returns an actionable issue when colorScale `type` and `scheme` disagree.
- * Quantile/quantize/threshold require ColorBrewer binned ramps; continuous
- * schemes like Viridis require type "sequential".
+ * Returns an actionable issue when colorScale `type` and `scheme` disagree or
+ * are incomplete. Quantile/quantize/threshold require ColorBrewer binned ramps;
+ * continuous schemes like Viridis require type "sequential".
  */
 export function getColorScaleTypeSchemeIssue(
   type: unknown,
   scheme: unknown,
 ): string | undefined {
-  if (typeof type !== 'string' || !type.trim()) return undefined;
-  if (typeof scheme !== 'string' || !scheme.trim()) return undefined;
+  if (typeof type !== 'string' || !type.trim()) {
+    return 'colorScale requires a "type" (sequential, diverging, quantize, quantile, threshold, or categorical)';
+  }
+  if (typeof scheme !== 'string' || !scheme.trim()) {
+    return 'colorScale requires a "scheme" (exact name such as Viridis, YlOrRd, Blues, or Tableau10)';
+  }
 
   const scaleType = type.trim();
   const schemeName = scheme.trim();
@@ -103,7 +107,7 @@ export function getColorScaleTypeSchemeIssue(
         'categorical scheme such as Tableau10, Set2, or Category10',
       );
     default:
-      return undefined;
+      return `colorScale type "${scaleType}" is not supported — use sequential, diverging, quantize, quantile, threshold, or categorical`;
   }
 }
 
@@ -142,6 +146,36 @@ function hasBareStPointGeometryAlias(sql: string): boolean {
     if (depth !== 0) continue;
 
     if (/^\s+AS\s+/i.test(sql.slice(i))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True for invalid `ST_MakeLine(ST_Point(...) ORDER BY ...)` forms, including
+ * nested coordinate expressions inside ST_Point. ORDER BY is only legal inside
+ * LIST(...).
+ */
+function hasBadStMakeLinePointOrderBy(sql: string): boolean {
+  const re = /\bST_MakeLine\s*\(/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(sql)) !== null) {
+    let i = match.index + match[0].length;
+    while (i < sql.length && /\s/.test(sql[i]!)) i += 1;
+    if (/^LIST\s*\(/i.test(sql.slice(i))) continue;
+    const pointMatch = sql.slice(i).match(/^ST_Point\s*\(/i);
+    if (!pointMatch) continue;
+    i += pointMatch[0].length;
+    let depth = 1;
+    while (i < sql.length && depth > 0) {
+      const ch = sql[i];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      i += 1;
+    }
+    if (depth !== 0) continue;
+    if (/^\s+ORDER\s+BY\b/i.test(sql.slice(i))) {
       return true;
     }
   }
@@ -649,12 +683,23 @@ export function getDeckMapResourceConfigIssues(
             'use getHexagon as a deck.gl attribute string "@@=h3_column_name" (or set _sqlroomsBinding.hexagonColumn) — object accessors like {"@@function":"...","column":"..."} are not valid',
         });
       } else {
-        const hasGetHexagon =
-          typeof getHexagon === 'string' && getHexagon.trim().length > 0;
         const hasHexagonBinding =
           typeof binding?.hexagonColumn === 'string' &&
           (binding.hexagonColumn as string).trim().length > 0;
-        if (!hasGetHexagon && !hasHexagonBinding) {
+        const getHexagonAccessor =
+          typeof getHexagon === 'string' ? getHexagon.trim() : '';
+        const hasGetHexagonAccessor = /^@@=.+/.test(getHexagonAccessor);
+        if (
+          getHexagonAccessor &&
+          !hasGetHexagonAccessor &&
+          !hasHexagonBinding
+        ) {
+          issues.push({
+            path: `spec.layers.${index}.getHexagon`,
+            message:
+              'use getHexagon as "@@=h3_column_name" (or set _sqlroomsBinding.hexagonColumn) — a bare column name string is not a valid H3 accessor',
+          });
+        } else if (!hasGetHexagonAccessor && !hasHexagonBinding) {
           issues.push({
             path: `spec.layers.${index}.getHexagon`,
             message:
@@ -721,12 +766,8 @@ export function getDeckMapResourceConfigIssues(
           | undefined;
         const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
         // ST_MakeLine(ST_Point(...) ORDER BY ...) is invalid: ORDER BY is only
-        // legal inside LIST. Use a pattern that tolerates nested ST_Point(...).
-        const hasBadMakeLineOrderBy =
-          /\bST_MakeLine\s*\(\s*(?!LIST\s*\()ST_Point\s*\([^)]*\)\s+ORDER\s+BY\b/i.test(
-            sql,
-          );
-        if (hasBadMakeLineOrderBy) {
+        // legal inside LIST. Walk nested ST_Point(...) before checking ORDER BY.
+        if (hasBadStMakeLinePointOrderBy(sql)) {
           issues.push({
             path: `datasets.${boundDataset}.source`,
             message:

@@ -1163,4 +1163,30 @@ describe('validateAndFixColorScaleFields', () => {
       /colorScale field "mag" is not a column in dataset "quakes"/,
     );
   });
+
+  test('uses the sole dataset when binding dataset id is a typo', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'quakez'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'mag',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {
+        quakes: {source: {tableName: 'earthquakes'}},
+      },
+    };
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /colorScale field "mag" is not a column in dataset "quakes"/,
+    );
+  });
 });

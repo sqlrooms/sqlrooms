@@ -65,7 +65,7 @@ export function resolveDeckMapStyle(options: {
   return (
     usableMapStyle(options.mapStyle) ??
     usableMapStyle(options.mapPropsMapStyle) ??
-    options.hostDefaultStyles?.[options.resolvedTheme] ??
+    usableMapStyle(options.hostDefaultStyles?.[options.resolvedTheme]) ??
     options.fallbackStyles[options.resolvedTheme]
   );
 }

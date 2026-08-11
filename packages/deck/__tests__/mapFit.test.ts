@@ -47,7 +47,7 @@ describe('Deck map fit core', () => {
     });
   });
 
-  test('prefers arc geometryColumns over a single geometryColumn', () => {
+  test('honors explicit fitToData.geometryColumn over arc inference', () => {
     expect(
       resolveDeckMapFitToData({
         spec: {
@@ -73,6 +73,34 @@ describe('Deck map fit core', () => {
     ).toEqual({
       dataset: 'arcs',
       geometryColumn: 'source_geom',
+    });
+  });
+
+  test('prefers arc geometryColumns over dataset.geometryColumn alone', () => {
+    expect(
+      resolveDeckMapFitToData({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowArcLayer',
+              _sqlroomsBinding: {
+                dataset: 'arcs',
+                sourceGeometryColumn: 'source_geom',
+                targetGeometryColumn: 'target_geom',
+              },
+            },
+          ],
+        },
+        datasets: {
+          arcs: {
+            source: {tableName: 'arcs'},
+            geometryColumn: 'source_geom',
+          },
+        },
+        fitToData: {dataset: 'arcs'},
+      }),
+    ).toEqual({
+      dataset: 'arcs',
       geometryColumns: ['source_geom', 'target_geom'],
     });
   });

@@ -95,6 +95,17 @@ describe('createDeckTableDatasetSql', () => {
     );
   });
 
+  it('does not EXCLUDE a new ST_AsWKB alias that is not in the source table', () => {
+    const sql = createDeckTableDatasetSql({
+      tableName: 'earthquakes',
+      transformSql: `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    });
+    expect(sql).toContain(
+      `SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION}`,
+    );
+    expect(sql).not.toContain('EXCLUDE (geom)');
+  });
+
   it('does not strip geom from SELECT * FROM (… ST_AsWKB AS geom …) sample wrappers', () => {
     const inner = [
       'SELECT DateTime, Latitude, Longitude, Magnitude,',

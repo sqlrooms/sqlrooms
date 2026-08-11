@@ -42,6 +42,7 @@ function collectStAsWkbAliasesInSelectList(selectList: string): string[] {
   while ((match = re.exec(selectList)) !== null) {
     let depth = 1;
     let i = match.index + match[0].length;
+    const exprStart = i;
     while (i < selectList.length && depth > 0) {
       const ch = selectList[i];
       if (ch === '(') depth += 1;
@@ -49,12 +50,21 @@ function collectStAsWkbAliasesInSelectList(selectList: string): string[] {
       i += 1;
     }
     if (depth !== 0) continue;
+    const exprBody = selectList.slice(exprStart, i - 1);
     const asMatch = selectList
       .slice(i)
       .match(/^\s+AS\s+("([^"]+)"|([A-Za-z_][\w$]*))/i);
     if (!asMatch) continue;
     const col = asMatch[2] ?? asMatch[3];
     if (!col || seen.has(col)) continue;
+    // Only EXCLUDE when the alias reuses a name from inside ST_AsWKB(...) —
+    // that is the DuckDB SELECT * collision (`ST_AsWKB(geom) AS geom`).
+    // New aliases like `__sqlrooms_geom` / `source_geom` must not be excluded
+    // (EXCLUDE against a missing source column fails the query).
+    const aliasRe = new RegExp(
+      `(^|[^A-Za-z0-9_])${col.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Za-z0-9_]|$)`,
+    );
+    if (!aliasRe.test(exprBody)) continue;
     seen.add(col);
     excludes.push(
       /^[A-Za-z_][\w$]*$/.test(col) ? col : `"${col.replace(/"/g, '""')}"`,

@@ -82,4 +82,14 @@ describe('resolveDeckMapStyle', () => {
       }),
     ).toBe('host-light');
   });
+
+  test('skips mapbox:// host defaults and falls through to package fallback', () => {
+    expect(
+      resolveDeckMapStyle({
+        hostDefaultStyles: {dark: 'mapbox://styles/mapbox/dark-v11'},
+        resolvedTheme: 'dark',
+        fallbackStyles,
+      }),
+    ).toBe('fallback-dark');
+  });
 });

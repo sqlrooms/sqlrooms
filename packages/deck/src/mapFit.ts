@@ -44,14 +44,19 @@ export function resolveDeckMapFitToData(
     return fitToData;
   }
 
+  // Explicit fitToData.geometryColumn wins over inferred arc/H3 columns.
+  if (fitToData.geometryColumn) {
+    return fitToData;
+  }
+
   const spec =
     typeof config.spec === 'string'
       ? undefined
       : (config.spec as Record<string, unknown>);
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
 
-  // Arc layers bind two geometry columns. Prefer both over a single
-  // geometryColumn so fit-to-bounds covers source AND target endpoints.
+  // Arc layers bind two geometry columns. Prefer both so fit-to-bounds covers
+  // source AND target endpoints when fitToData did not name a single column.
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;
@@ -80,10 +85,9 @@ export function resolveDeckMapFitToData(
     }
   }
 
-  // Explicit geometry bounds win over inferred H3 (a visible H3 overlay must
-  // not override fitToData.geometryColumn / dataset.geometryColumn).
+  // Dataset default geometry wins over inferred H3.
   const dataset = config.datasets[fitToData.dataset];
-  const geometryColumn = fitToData.geometryColumn ?? dataset?.geometryColumn;
+  const geometryColumn = dataset?.geometryColumn;
   if (geometryColumn) return {...fitToData, geometryColumn};
 
   for (const layer of layers) {

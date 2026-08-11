@@ -56,7 +56,7 @@ const normalizedScatterConfig = {
       source: {
         tableName: 'earthquakes',
         transformSql:
-          'SELECT * EXCLUDE (geom), ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
       },
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',
@@ -86,7 +86,7 @@ const multiLayerConfig = {
     earthquakes: {
       source: {
         sqlQuery:
-          'SELECT * EXCLUDE (geom), ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM earthquakes',
+          'SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM earthquakes',
       },
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',

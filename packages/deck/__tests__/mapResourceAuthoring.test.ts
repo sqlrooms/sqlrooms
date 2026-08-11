@@ -75,6 +75,30 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
+  test('rejects bare getHexagon column names without @@= or hexagonColumn', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'hex',
+            _sqlroomsBinding: {dataset: 'hexes'},
+            getHexagon: 'hex_id',
+          },
+        ],
+      },
+      datasets: {
+        hexes: {source: {tableName: 'hexes'}},
+      },
+    });
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getHexagon' && i.message.includes('@@='),
+      ),
+    ).toBe(true);
+  });
+
   test('rejects object getHexagon on H3 layers', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
@@ -691,6 +715,39 @@ describe('Deck map resource authoring contract', () => {
     );
   });
 
+  test('rejects nested ST_MakeLine(ST_Point(...) ORDER BY) forms', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowTripsLayer',
+            id: 'trips',
+            _sqlroomsBinding: {
+              dataset: 'trips',
+              geometryColumn: 'geom',
+              timestampColumn: 'timestamps',
+            },
+          },
+        ],
+      },
+      datasets: {
+        trips: {
+          source: {
+            tableName: 'trips',
+            transformSql:
+              'SELECT id, ST_AsWKB(ST_MakeLine(ST_Point(h3_cell_to_lng(h), h3_cell_to_lat(h)) ORDER BY t)) AS geom, LIST(t ORDER BY t) AS timestamps FROM __sqlrooms_source GROUP BY id',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues.some((i) => i.message.includes('ST_MakeLine(LIST'))).toBe(
+      true,
+    );
+  });
+
   test('accepts TripsLayer LIST aggregation with GROUP BY trip id', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
@@ -1093,6 +1150,35 @@ describe('Deck map resource authoring contract', () => {
         expect.objectContaining({
           path: 'spec.layers.0.getFillColor',
           message: expect.stringMatching(/Tableau10.*categorical/i),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects colorScale missing scheme', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringMatching(/requires a "scheme"/i),
         }),
       ]),
     );
