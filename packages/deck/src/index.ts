@@ -57,6 +57,8 @@ export {
   normalizeAiDeckMapConfig,
   prepareAiDeckMapConfig,
   validateAndFixColorScaleFields,
+  type NormalizeAiDeckMapConfigOptions,
+  type PrepareAiDeckMapConfigOptions,
   type ResolveColorScaleTable,
 } from './aiNormalize';
 export {

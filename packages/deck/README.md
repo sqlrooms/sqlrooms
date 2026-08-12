@@ -650,10 +650,11 @@ bare `ST_Point(...)` / table `GEOMETRY` columns for every authoring surface.
 AI and host tooling should prepare authored Deck map configs through the shared
 helpers exported from `@sqlrooms/deck`:
 
-- `prepareAiDeckMapConfig(config, {resolveTable?})` — preferred entrypoint:
+- `prepareAiDeckMapConfig(config, {resolveTable?, stripCatalogNames?})` — preferred entrypoint:
   validates `colorScale.field` names against known tables when a resolver is
-  provided, then runs normalization.
-- `normalizeAiDeckMapConfig(config)` — safe structural defaults only (scheme
+  provided, then runs normalization. Hosts may pass `stripCatalogNames` (e.g.
+  `['sqlrooms-cli']`) for workspace catalogs that do not exist in dataset SQL.
+- `normalizeAiDeckMapConfig(config, {stripCatalogNames?})` — safe structural defaults only (scheme
   casing, solo-dataset binding inject, size clamps, heatmap `colorRange` strip,
   lon/lat → WKB transform inject). `SELECT *` / `ST_AsWKB` alias collisions are
   rejected by validation for agent retry — SQL is not rewritten.

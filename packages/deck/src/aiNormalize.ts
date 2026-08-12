@@ -389,14 +389,14 @@ function splitTableRef(ref: string): string[] {
 }
 
 /**
- * Strips only known workspace catalog prefixes from dataset tableName values
- * (e.g. `sqlrooms-cli.main.my_table`). Attached/remote three-part catalogs such
- * as `"remote"."main"."events"` are preserved — the table SQL builder accepts
- * quoted multi-part references.
+ * Strips configured workspace catalog prefixes from dataset tableName values
+ * (e.g. `sqlrooms-cli.main.my_table` when `stripCatalogNames` includes
+ * `sqlrooms-cli`). Attached/remote three-part catalogs are preserved unless
+ * listed — the table SQL builder accepts quoted multi-part references.
+ *
+ * Catalog names are host-injected: `@sqlrooms/deck` does not hardcode app
+ * catalog identities.
  */
-/** Workspace catalogs that do not exist in the dataset query execution context. */
-const WORKSPACE_CATALOG_NAMES = new Set(['sqlrooms-cli']);
-
 function unquoteTableRefPart(part: string): string {
   const trimmed = part.trim();
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
@@ -405,7 +405,10 @@ function unquoteTableRefPart(part: string): string {
   return trimmed;
 }
 
-function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
+function normalizeAiMapConfigDatasetSources(
+  config: AiMapConfig,
+  stripCatalogNames: ReadonlySet<string>,
+): AiMapConfig {
   const datasets = config.datasets;
   if (!datasets || typeof datasets !== 'object') return config;
 
@@ -443,11 +446,11 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     let next = d;
     let nextSource = source;
 
-    if (typeof tableName === 'string') {
+    if (typeof tableName === 'string' && stripCatalogNames.size > 0) {
       const parts = splitTableRef(tableName);
       if (parts.length >= 3) {
         const catalog = unquoteTableRefPart(parts[0]!).toLowerCase();
-        if (WORKSPACE_CATALOG_NAMES.has(catalog)) {
+        if (stripCatalogNames.has(catalog)) {
           const stripped = parts.slice(1).join('.');
           nextSource = {...nextSource, tableName: stripped};
           next = {...next, source: nextSource};
@@ -617,7 +620,8 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - GeoArrowArcLayer dataset: missing geometryEncodingHint → injected when transformSql mentions arc geom cols
  * - missing getFillColor on scatterplot/polygon layers → default sky-blue
  * - filled:false with no stroke on scatterplot → reset to filled:true
- * - catalog prefix stripped from dataset tableName values
+ * - optional catalog prefixes stripped from dataset tableName when
+ *   `stripCatalogNames` is provided by the host
  * - fitToData coordinate-column → transformSql injection when transformSql is absent
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
@@ -627,13 +631,29 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * getSourcePosition/getTargetPosition, mapbox:// mapStyle, and basic-mode
  * string getRadius / getWidth / getElevation / radiusPixels / column radius.
  */
+export type NormalizeAiDeckMapConfigOptions = {
+  /**
+   * Catalog names to strip from three-part `tableName` refs (case-insensitive).
+   * Hosts inject workspace catalogs that do not exist in the dataset query
+   * context (e.g. CLI passes `['sqlrooms-cli']`). Empty/omitted → no stripping.
+   */
+  stripCatalogNames?: readonly string[];
+};
+
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
+  options?: NormalizeAiDeckMapConfigOptions,
 ): T {
+  const stripCatalogNames = new Set(
+    (options?.stripCatalogNames ?? [])
+      .map((name) => name.trim().toLowerCase())
+      .filter((name) => name.length > 0),
+  );
   return normalizeAiMapConfigRadius(
     normalizeAiMapConfigLayers(
       normalizeAiMapConfigDatasetSources(
         normalizeAiMapConfig(config as unknown as AiMapConfig),
+        stripCatalogNames,
       ),
     ),
   ) as unknown as T;
@@ -812,12 +832,18 @@ export function validateAndFixColorScaleFields<
  * Validation runs first so lon/lat `transformSql` injection does not disable
  * unknown-field checks on bare `{tableName}` sources.
  */
+export type PrepareAiDeckMapConfigOptions = NormalizeAiDeckMapConfigOptions & {
+  resolveTable?: ResolveColorScaleTable;
+};
+
 export function prepareAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,
-  options?: {resolveTable?: ResolveColorScaleTable},
+  options?: PrepareAiDeckMapConfigOptions,
 ): T {
   const withFields = options?.resolveTable
     ? validateAndFixColorScaleFields(config, options.resolveTable)
     : config;
-  return normalizeAiDeckMapConfig(withFields);
+  return normalizeAiDeckMapConfig(withFields, {
+    stripCatalogNames: options?.stripCatalogNames,
+  });
 }

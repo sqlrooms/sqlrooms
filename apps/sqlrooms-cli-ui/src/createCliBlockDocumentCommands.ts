@@ -443,6 +443,9 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
               );
               const prepared = prepareAiDeckMapConfig(merged as any, {
                 resolveTable,
+                // CLI DuckDB attaches the workspace DB as this catalog; dataset
+                // SQL runs without it, so strip it from AI-authored tableName.
+                stripCatalogNames: ['sqlrooms-cli'],
               }) as DeckMapConfig;
               return normalizeDeckMapPointConfig({
                 config: prepared,

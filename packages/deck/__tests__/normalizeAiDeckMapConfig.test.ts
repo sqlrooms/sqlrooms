@@ -709,22 +709,37 @@ describe('normalizeAiDeckMapConfig — _sqlroomsBinding.dataset', () => {
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
-  test('strips workspace catalog from three-part unquoted identifier', () => {
+  const stripCliCatalog = {stripCatalogNames: ['sqlrooms-cli'] as const};
+
+  test('strips configured workspace catalog from three-part unquoted identifier', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        ds: {source: {tableName: 'sqlrooms-cli.main.earthquakes'}},
+      }),
+      stripCliCatalog,
+    );
+    expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
+  });
+
+  test('strips configured workspace catalog from three-part quoted identifier', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        ds: {source: {tableName: '"sqlrooms-cli"."main"."earthquakes"'}},
+      }),
+      stripCliCatalog,
+    );
+    expect(result.datasets.ds.source.tableName).toBe('"main"."earthquakes"');
+  });
+
+  test('does not strip catalogs unless stripCatalogNames is provided', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig([], {
         ds: {source: {tableName: 'sqlrooms-cli.main.earthquakes'}},
       }),
     );
-    expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
-  });
-
-  test('strips workspace catalog from three-part quoted identifier', () => {
-    const result = normalizeAiDeckMapConfig(
-      makeConfig([], {
-        ds: {source: {tableName: '"sqlrooms-cli"."main"."earthquakes"'}},
-      }),
+    expect(result.datasets.ds.source.tableName).toBe(
+      'sqlrooms-cli.main.earthquakes',
     );
-    expect(result.datasets.ds.source.tableName).toBe('"main"."earthquakes"');
   });
 
   test('preserves attached/remote catalog-qualified table sources', () => {
@@ -732,6 +747,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
       makeConfig([], {
         ds: {source: {tableName: '"remote"."main"."events"'}},
       }),
+      stripCliCatalog,
     );
     expect(result.datasets.ds.source.tableName).toBe(
       '"remote"."main"."events"',
@@ -741,6 +757,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
   test('leaves two-part schema.table identifier unchanged', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig([], {ds: {source: {tableName: 'main.earthquakes'}}}),
+      stripCliCatalog,
     );
     expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
   });
@@ -748,6 +765,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
   test('leaves bare table name unchanged', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig([], {ds: {source: {tableName: 'earthquakes'}}}),
+      stripCliCatalog,
     );
     expect(result.datasets.ds.source.tableName).toBe('earthquakes');
   });
@@ -762,6 +780,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
           },
         },
       }),
+      stripCliCatalog,
     );
     expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
     expect(result.datasets.ds.source.transformSql).toBe(

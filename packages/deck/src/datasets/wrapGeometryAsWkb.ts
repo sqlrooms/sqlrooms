@@ -5,17 +5,18 @@ function quoteSqlIdentifier(identifier: string): string {
 }
 
 /**
- * True for DuckDB's native spatial `GEOMETRY` type (not GeoArrow, not WKB blob).
+ * True for DuckDB's native spatial `GEOMETRY` type (not GeoArrow, not WKB blob,
+ * not containers like `GEOMETRY[]` or `STRUCT(g GEOMETRY)`).
  *
  * Native GEOMETRY cannot be decoded by deck — it must be projected through
- * `ST_AsWKB(...)` before prepare/render.
+ * `ST_AsWKB(...)` before prepare/render. Matching must be exact: wrapping
+ * container types with `ST_AsWKB()` fails at query time.
  */
 export function isDuckDbNativeGeometryType(
   type: string | null | undefined,
 ): boolean {
   if (!type) return false;
-  const normalized = type.toLowerCase();
-  return normalized.includes('geometry') && !normalized.includes('geoarrow');
+  return type.trim().toLowerCase() === 'geometry';
 }
 
 /**

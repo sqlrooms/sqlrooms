@@ -11,9 +11,12 @@ describe('wrapGeometryAsWkb', () => {
   test('detects native DuckDB GEOMETRY types only', () => {
     expect(isDuckDbNativeGeometryType('GEOMETRY')).toBe(true);
     expect(isDuckDbNativeGeometryType('geometry')).toBe(true);
+    expect(isDuckDbNativeGeometryType(' GEOMETRY ')).toBe(true);
     expect(isDuckDbNativeGeometryType('BLOB')).toBe(false);
     expect(isDuckDbNativeGeometryType('WKB_BLOB')).toBe(false);
     expect(isDuckDbNativeGeometryType('geoarrow.point')).toBe(false);
+    expect(isDuckDbNativeGeometryType('GEOMETRY[]')).toBe(false);
+    expect(isDuckDbNativeGeometryType('STRUCT(g GEOMETRY)')).toBe(false);
   });
 
   test('builds DESCRIBE SQL around a dataset query', () => {
