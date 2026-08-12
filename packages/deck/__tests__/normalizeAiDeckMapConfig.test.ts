@@ -1338,7 +1338,71 @@ describe('normalizeAiDeckMapConfig — lon/lat transformSql injection', () => {
     );
   });
 
-  test('does not overwrite an authored non-default geometryColumn', () => {
+  test('injects __sqlrooms_geom even when an authored geometryColumn was set', () => {
+    const result = normalizeAiDeckMapConfig({
+      configMode: 'basic',
+      fitToData: {
+        dataset: 'ds',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+      datasets: {
+        ds: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds', geometryColumn: 'geom'},
+          },
+        ],
+      },
+    } as any);
+
+    expect(result.datasets.ds.geometryColumn).toBe('__sqlrooms_geom');
+    expect(result.datasets.ds.source.transformSql).toContain(
+      'AS "__sqlrooms_geom"',
+    );
+    expect(getLayer(result)._sqlroomsBinding.geometryColumn).toBe(
+      '__sqlrooms_geom',
+    );
+  });
+
+  test('injects __sqlrooms_geom for GeoJsonLayer lon/lat maps', () => {
+    const result = normalizeAiDeckMapConfig({
+      configMode: 'basic',
+      fitToData: {
+        dataset: 'ds',
+        longitudeColumn: 'lon',
+        latitudeColumn: 'lat',
+      },
+      datasets: {
+        ds: {source: {tableName: 'places'}},
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoJsonLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+      },
+    } as any);
+
+    expect(result.datasets.ds.geometryColumn).toBe('__sqlrooms_geom');
+    expect(result.datasets.ds.source.transformSql).toContain(
+      'AS "__sqlrooms_geom"',
+    );
+    expect(getLayer(result)._sqlroomsBinding.geometryColumn).toBe(
+      '__sqlrooms_geom',
+    );
+  });
+
+  test('does not inject lon/lat transform for polygon-only layers with authored geom', () => {
     const result = normalizeAiDeckMapConfig({
       configMode: 'basic',
       fitToData: {

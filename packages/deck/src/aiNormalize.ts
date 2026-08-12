@@ -574,28 +574,59 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
 
   // Always normalize when using tableName without transformSql and fitToData
   // provides coordinate columns — the geometry must be computed from them.
-  // Skip when an authored non-default geometryColumn already exists (e.g. a
-  // polygon `geom` plus centroid lon/lat used only for fit): injecting
-  // `SELECT *, ST_AsWKB(ST_Point(...)) AS geom` would collide with the source
-  // column and break the layer binding.
+  // Always alias to {@link DEFAULT_AI_GEOMETRY_COLUMN} so we never collide with
+  // an existing source `geom` / polygon column via `SELECT *, … AS geom`.
+  // Skip inject when no point-position layer is bound to this dataset (e.g. a
+  // polygon layer with real `geom` plus centroid lon/lat used only for fit).
   if (!source?.tableName || source.sqlQuery || source.transformSql) {
     return config;
   }
 
-  const existingGeometryColumn = targetDataset.geometryColumn as
-    | string
-    | undefined;
-  if (
-    typeof existingGeometryColumn === 'string' &&
-    existingGeometryColumn.trim().length > 0 &&
-    existingGeometryColumn !== DEFAULT_AI_GEOMETRY_COLUMN
-  ) {
+  const POINT_LONLAT_LAYER_TYPES = new Set([
+    'GeoArrowScatterplotLayer',
+    'GeoArrowHeatmapLayer',
+    'GeoArrowColumnLayer',
+    // Lon/lat point maps may use GeoJsonLayer; keep inject for that path.
+    'GeoJsonLayer',
+    // Unprefixed aliases are rejected by the resource validator, but dashboard
+    // prepare may still see them before repair — treat like GeoArrow*.
+    'ScatterplotLayer',
+    'HeatmapLayer',
+    'ColumnLayer',
+  ]);
+  const datasetIds = Object.keys(datasets);
+  const soleDatasetId = datasetIds.length === 1 ? datasetIds[0] : undefined;
+  const layerTargetsDataset = (
+    binding: Record<string, unknown> | undefined,
+  ): boolean => {
+    if (binding?.dataset === targetDatasetId) return true;
+    // normalizeAiMapConfigLayers later injects the sole dataset binding; treat
+    // unbound layers the same way so lon/lat inject still runs.
+    return (
+      (!binding || typeof binding.dataset !== 'string' || !binding.dataset) &&
+      soleDatasetId === targetDatasetId
+    );
+  };
+  const spec = config.spec as Record<string, unknown> | undefined;
+  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+  const pointLayersForDataset = layers.filter((layer) => {
+    if (!layer || typeof layer !== 'object') return false;
+    const rec = layer as Record<string, unknown>;
+    if (rec.visible === false) return false;
+    if (
+      typeof rec['@@type'] !== 'string' ||
+      !POINT_LONLAT_LAYER_TYPES.has(rec['@@type'])
+    ) {
+      return false;
+    }
+    const binding = rec._sqlroomsBinding as Record<string, unknown> | undefined;
+    return layerTargetsDataset(binding);
+  });
+  if (pointLayersForDataset.length === 0) {
     return config;
   }
 
-  const geometryColumn =
-    existingGeometryColumn?.trim() || DEFAULT_AI_GEOMETRY_COLUMN;
-
+  const geometryColumn = DEFAULT_AI_GEOMETRY_COLUMN;
   const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
   const quotedLat = quoteDeckMapSqlIdentifier(latCol);
   const quotedGeom = quoteDeckMapSqlIdentifier(geometryColumn);
@@ -605,8 +636,40 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     `WHERE ${quotedLon} IS NOT NULL AND ${quotedLat} IS NOT NULL`,
   ].join(' ');
 
+  const nextLayers = layers.map((layer) => {
+    if (!layer || typeof layer !== 'object') return layer;
+    const rec = layer as Record<string, unknown>;
+    if (
+      typeof rec['@@type'] !== 'string' ||
+      !POINT_LONLAT_LAYER_TYPES.has(rec['@@type'])
+    ) {
+      return layer;
+    }
+    const binding = rec._sqlroomsBinding as Record<string, unknown> | undefined;
+    if (!layerTargetsDataset(binding)) return layer;
+    const nextBinding = {
+      ...(binding ?? {}),
+      dataset: (binding?.dataset as string | undefined) ?? targetDatasetId,
+      geometryColumn,
+    };
+    if (
+      binding?.dataset === nextBinding.dataset &&
+      binding?.geometryColumn === geometryColumn
+    ) {
+      return layer;
+    }
+    return {
+      ...rec,
+      _sqlroomsBinding: nextBinding,
+    };
+  });
+  const layersChanged = nextLayers.some((layer, i) => layer !== layers[i]);
+
   return {
     ...config,
+    ...(layersChanged && spec
+      ? {spec: {...spec, layers: nextLayers} as typeof config.spec}
+      : {}),
     datasets: {
       ...datasets,
       [targetDatasetId]: {
@@ -638,7 +701,9 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * - filled:false with no stroke on scatterplot → reset to filled:true
  * - optional catalog prefixes stripped from dataset tableName when
  *   `stripCatalogNames` is provided by the host
- * - fitToData coordinate-column → transformSql injection when transformSql is absent
+ * - fitToData coordinate-column → transformSql injection as `__sqlrooms_geom`
+ *   when transformSql is absent and a point-position layer is bound (never
+ *   aliases over an existing source `geom`)
  *
  * Not rewritten here (validator + agent retry): unprefixed layer class names,
  * colorScale {"@@type":"ColorScale","column":"..."} syntax, type/scheme

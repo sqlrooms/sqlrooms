@@ -50,15 +50,26 @@ const scatterConfig = {
 };
 
 const normalizedScatterConfig = {
-  spec: scatterConfig.spec,
+  spec: {
+    ...scatterConfig.spec,
+    layers: [
+      {
+        ...scatterConfig.spec.layers[0],
+        _sqlroomsBinding: {
+          dataset: 'earthquakes',
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    ],
+  },
   datasets: {
     earthquakes: {
       source: {
         tableName: 'earthquakes',
         transformSql:
-          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
       },
-      geometryColumn: 'geom',
+      geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',
     },
   },
