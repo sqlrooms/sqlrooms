@@ -28,6 +28,8 @@
     "@uwdata/vgplot": "^0.21.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "zarrita": "^0.7.3",
     "zod": "^4.1.8"
   },
