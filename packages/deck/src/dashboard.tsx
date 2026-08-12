@@ -328,8 +328,7 @@ function DeckMapDashboardDatasetClient({
     }
   }, [source]);
 
-  // Derive pending/ready from the probe key so source changes do not need a
-  // synchronous setState inside the effect (react-hooks/set-state-in-effect).
+  // Pending while probe key mismatches (avoids setState-in-effect).
   const geometryColumnsToWrapAsWkb = useMemo(() => {
     if (!source || !sourceSqlKey) return [];
     if (geometryWrapProbe?.sourceSqlKey !== sourceSqlKey) return null;

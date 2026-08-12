@@ -433,10 +433,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             }) => {
               const resolveTable = (tableName: string) =>
                 state.db.findTable(tableName);
-              // Merge first so isSourceDowngrade can preserve existing
-              // transformSql/sqlQuery before normalize injects lon/lat SQL.
-              // prepareAiDeckMapConfig then validates colorScale fields against
-              // the merged datasets and normalizes the full config once.
+              // Merge before prepare so isSourceDowngrade keeps existing SQL.
               const merged = mergeDeckMapResourceConfigPatch(
                 existingMapConfig,
                 config as DeckMapConfig,

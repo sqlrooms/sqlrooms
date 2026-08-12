@@ -23,11 +23,7 @@ import {
   type DeckJsonMapHandle,
 } from './types';
 
-/**
- * True when `columnName` is the alias of an `ST_AsWKB(...)` projection in SQL.
- * Used so fit queries decode each geometry column independently (arcs can mix
- * WKB and native GEOMETRY columns in one transform).
- */
+/** True when `columnName` is an `ST_AsWKB(...) AS` alias (per-column fit decode). */
 function columnAliasProducedByStAsWkb(
   sql: string,
   columnName: string,
@@ -74,7 +70,7 @@ export function resolveDeckMapFitToData(
     return fitToData;
   }
 
-  // Explicit fitToData.geometryColumn wins over inferred arc/H3 columns.
+  // Explicit geometryColumn wins over inferred arc/H3.
   if (fitToData.geometryColumn) {
     return fitToData;
   }
@@ -85,13 +81,11 @@ export function resolveDeckMapFitToData(
       : (config.spec as Record<string, unknown>);
   const layers = Array.isArray(spec?.layers) ? spec.layers : [];
 
-  // Arc layers bind two geometry columns. Prefer both so fit-to-bounds covers
-  // source AND target endpoints when fitToData did not name a single column.
+  // Prefer both arc endpoints when fitToData did not name a single column.
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;
-    // Hidden layers must not drive fit — e.g. a stale/hidden H3 overlay would
-    // otherwise win over visible point lon/lat interaction columns.
+    // Hidden layers must not drive fit (e.g. stale H3 over visible lon/lat).
     if (layerRecord.visible === false) continue;
     const binding = layerRecord._sqlroomsBinding as
       | Record<string, unknown>
@@ -123,6 +117,7 @@ export function resolveDeckMapFitToData(
   for (const layer of layers) {
     if (!layer || typeof layer !== 'object') continue;
     const layerRecord = layer as Record<string, unknown>;
+    // Hidden layers must not drive fit (e.g. stale H3 over visible lon/lat).
     if (layerRecord.visible === false) continue;
     const binding = layerRecord._sqlroomsBinding as
       | Record<string, unknown>
@@ -133,7 +128,7 @@ export function resolveDeckMapFitToData(
       return {...fitToData, h3Column: String(binding.hexagonColumn)};
     }
 
-    // Fall back to getHexagon: "@@=column" when hexagonColumn was omitted.
+    // Fallback: getHexagon "@@=column" → h3Column.
     if (layerRecord['@@type'] === 'GeoArrowH3HexagonLayer') {
       const getHexagon = layerRecord.getHexagon;
       if (typeof getHexagon === 'string') {
@@ -206,10 +201,7 @@ export function createDeckMapBoundsQuery(options: {
 
   if (fitToData.h3Column) {
     const column = escapeId(fitToData.h3Column);
-    // Pass the column through directly. DuckDB's h3_cell_to_* overloads accept
-    // both VARCHAR hex indexes and BIGINT/UBIGINT cell IDs. Do NOT CAST to
-    // VARCHAR — that turns numeric IDs into decimal text, which is not a valid
-    // H3 string (use h3_h3_to_string only when an explicit hex string is needed).
+    // Do not CAST to VARCHAR — numeric H3 IDs become invalid decimal text.
     return `
       SELECT
         MIN(h3_cell_to_lng(${column})) AS min_longitude,
@@ -233,9 +225,7 @@ export function createDeckMapBoundsQuery(options: {
       ? source.sqlQuery
       : (source.transformSql ?? '');
     const asGeometry = (columnName: string) => {
-      // Decode per column: arcs can mix ST_AsWKB(source) with native
-      // ST_Point(target). A global ST_AsWKB substring check would wrap every
-      // column in ST_GeomFromWKB and break native GEOMETRY targets.
+      // Per-column decode — a global ST_AsWKB check would break mixed arc columns.
       const quoted = escapeId(columnName);
       return columnAliasProducedByStAsWkb(sourceSql, columnName)
         ? `ST_GeomFromWKB(${quoted})`
@@ -260,8 +250,7 @@ export function createDeckMapBoundsQuery(options: {
     `;
     }
 
-    // Multiple geometry columns (e.g. arc source + target): unnest all
-    // geometries in one pass so the source is scanned once.
+    // Multiple geom columns: unnest once so the source is scanned once.
     const geomExprs = geometryColumns.map((col) => {
       const column = escapeId(col);
       return `CASE WHEN ${column} IS NOT NULL THEN ${asGeometry(col)} END`;
@@ -385,11 +374,8 @@ function fitDeckMapView(options: {
 }
 
 /**
- * Builds MapLibre `jumpTo` options for a Deck map camera update.
- *
- * Pitch and bearing are omitted unless explicitly provided so callers that only
- * change lon/lat/zoom (notably fit-to-data) preserve a pitched
- * `initialViewState` — required for extruded ColumnLayer visibility.
+ * MapLibre `jumpTo` options. Omits pitch/bearing unless set so fit preserves
+ * a pitched `initialViewState` (needed for extruded columns).
  */
 export function buildDeckMapJumpToOptions(opts: {
   longitude: number;
@@ -431,7 +417,7 @@ function createInitialFitState(key: string, requestVersion: number) {
   };
 }
 
-/** Retries when H3 extension install/load races or bounds are briefly unavailable. */
+/** Retries for H3 extension load races. */
 const FIT_MAX_ATTEMPTS = 5;
 const FIT_RETRY_DELAY_MS = 750;
 
@@ -501,8 +487,7 @@ export function useDeckMapFitController(options: {
   }, [container]);
 
   useEffect(() => {
-    // Reset retries when the dataset/source changes OR the user clicks Fit again
-    // (requestVersion bumps). Otherwise a exhausted autofit leaves Fit no-oping.
+    // Reset retries on source change or Fit click — else exhausted autofit no-ops Fit.
     const attemptsKey = `${fitKey}:${requestVersion}`;
     if (fitAttemptsRef.current.key !== attemptsKey) {
       fitAttemptsRef.current = {key: attemptsKey, count: 0};
@@ -560,8 +545,7 @@ export function useDeckMapFitController(options: {
         const result = handle ? await handle : null;
         if (cancelled) return;
         if (!result) {
-          // Empty handle is usually a closed/cancelled query, not a transient
-          // race — fail once instead of scanning the table repeatedly.
+          // Empty handle ≈ cancelled query, not a transient race.
           onError?.(
             new Error('Unable to fit map view to data: empty query result.'),
           );
@@ -570,8 +554,7 @@ export function useDeckMapFitController(options: {
         }
         const bounds = readDeckMapBounds(result);
         if (!bounds) {
-          // Empty / all-NULL geometry is a permanent data state, not a race.
-          // Only H3 cold-start (extension load) is worth a limited retry.
+          // Empty geometry is permanent; only retry H3 cold-start.
           if (fitToData.h3Column) {
             scheduleRetry(
               new Error(
@@ -601,8 +584,7 @@ export function useDeckMapFitController(options: {
           error instanceof Error
             ? error
             : new Error('Unable to fit map view to data.');
-        // Retry only likely-transient H3 extension load races. Deterministic
-        // SQL errors (bad column, syntax) should fail immediately.
+        // Retry only likely-transient H3 extension races.
         const message = fitError.message.toLowerCase();
         const maybeTransientH3 =
           Boolean(fitToData.h3Column) &&

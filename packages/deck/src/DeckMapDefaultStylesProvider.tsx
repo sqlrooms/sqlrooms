@@ -34,11 +34,7 @@ export function useDeckMapDefaultStyles() {
   return useContext(DeckMapDefaultStylesContext);
 }
 
-/**
- * True for Mapbox protocol style URLs (`mapbox://…`). MapLibre's fetch cannot
- * load that scheme without a Mapbox token/plugin, so these styles must not be
- * persisted or selected as the effective basemap.
- */
+/** True for `mapbox://` style URLs (MapLibre cannot load them without a token). */
 export function isMapboxStyleUrl(style: unknown): boolean {
   return typeof style === 'string' && /^mapbox:/i.test(style.trim());
 }
@@ -50,11 +46,7 @@ function usableMapStyle(
   return style as DeckMapStyle;
 }
 
-/**
- * Resolves the effective map style from explicit config, map props, host
- * defaults, and finally the package fallback for the active theme.
- * Unsupported `mapbox://` URLs are skipped so the map can still load.
- */
+/** Resolve map style; skips `mapbox://` so the map can still load. */
 export function resolveDeckMapStyle(options: {
   mapStyle?: string;
   mapPropsMapStyle?: MapProps['mapStyle'];

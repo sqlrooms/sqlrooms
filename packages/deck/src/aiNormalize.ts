@@ -4,20 +4,16 @@ import {
   stripDeckMapColumnLayerRadiusConflicts,
 } from './mapLayerConfigUtils';
 
-// Inlined SQL helpers keep this module free of heavy workspace-package imports
-// (e.g. @sqlrooms/duckdb, @sqlrooms/mosaic) that would break Jest.
+// Avoid importing duckdb/mosaic here — keeps Jest light.
 const DECK_TABLE_DATASET_SOURCE_RELATION = '__sqlrooms_source';
 function quoteDeckMapSqlIdentifier(identifier: string) {
   return `"${identifier.replace(/"/g, '""')}"`;
 }
 
-/** Lower-cased name → canonical casing, e.g. "blues" → "Blues". */
 const SCHEME_NAME_BY_LOWER = new Map(
   allKnownColorSchemeNames.map((s) => [s.toLowerCase(), s]),
 );
 
-// Minimal structural type that covers both AiMapConfig
-// and DeckMapConfig — all the passes only access these loose fields.
 type AiMapConfig = {
   configMode?: string;
   spec?: unknown;
@@ -28,16 +24,11 @@ type AiMapConfig = {
 
 const DEFAULT_AI_GEOMETRY_COLUMN = '__sqlrooms_geom';
 const DEFAULT_AI_POINT_RADIUS = 4;
-const DEFAULT_AI_HEATMAP_RADIUS_PIXELS = 30; // matches deck.gl default
-const DEFAULT_AI_COLUMN_RADIUS_METERS = 20; // city-scale default
-/** Sky-blue default fill — matches the UI builder's DEFAULT_FILL_COLOR. */
+const DEFAULT_AI_HEATMAP_RADIUS_PIXELS = 30; // deck.gl default
+const DEFAULT_AI_COLUMN_RADIUS_METERS = 20;
 const DEFAULT_FILL_COLOR = [56, 189, 248, 180] as const;
 
-/**
- * Basic-mode numeric repairs for radius/width/elevation props.
- * String expression accessors are rejected by getDeckMapResourceConfigIssues
- * (agent retry) — only zero/negative clamps and structural defaults live here.
- */
+/** Basic-mode numeric size clamps; string accessors are validator-only. */
 function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
   if (config.configMode === 'custom') return config;
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -56,8 +47,7 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       typeof l.getRadius === 'number' &&
       l.getRadius <= 0
     ) {
-      // Pair the default radius with pixel units / clamps so deck.gl does not
-      // interpret 4 as meters or keep a stale radiusMaxPixels cap.
+      // Pair with pixel units/clamps so 4 is not meters / capped by a stale max.
       l = {
         ...l,
         getRadius: DEFAULT_AI_POINT_RADIUS,
@@ -74,8 +64,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       'GeoArrowTripsLayer',
     ]);
 
-    // Apply widthUnits and inverted-clamp repairs in one pass so a missing
-    // widthUnits does not skip the max < min fix below.
     if (
       typeof l['@@type'] === 'string' &&
       LINE_LAYER_TYPES.has(l['@@type']) &&
@@ -106,8 +94,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // Clamp heatmap radiusPixels: zero/negative values produce an invisible
-    // heatmap. String expressions are rejected by the validator.
     if (l['@@type'] === 'GeoArrowHeatmapLayer') {
       const rp = l.radiusPixels;
       if (typeof rp === 'number' && rp <= 0) {
@@ -116,23 +102,16 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // Clamp column radius (meters): missing/zero/negative values produce
-    // invisible columns. String radius is rejected by the validator. Also
-    // strip point/heatmap radius leftovers — radiusUnits:"pixels" makes
-    // radius N mean N pixels (city-scale disks).
+    // Column radius: default meters; strip scatter/heatmap radius leftovers.
     if (l['@@type'] === 'GeoArrowColumnLayer') {
       const r = l.radius;
-      // Leave string radius for the validator; still repair other cases.
       const needsDefaultRadius =
         typeof r !== 'string' &&
         (typeof r !== 'number' || !Number.isFinite(r) || r <= 0);
       const hasConflicts = deckMapColumnLayerHasRadiusConflicts(l);
       if (needsDefaultRadius || hasConflicts) {
         const next = stripDeckMapColumnLayerRadiusConflicts(l);
-        // Always ensure an explicit meters radius when repairing this layer.
-        // Stripping getRadius without setting radius leaves deck.gl's default
-        // (1000), which is enormous at city scale. Do not overwrite a string
-        // radius — that is a validator issue.
+        // Stripping getRadius without setting radius leaves deck.gl's 1000m default.
         if (needsDefaultRadius) {
           next.radius = DEFAULT_AI_COLUMN_RADIUS_METERS;
         }
@@ -160,25 +139,11 @@ const COLOR_ACCESSOR_PROPS = [
   'getTargetColor',
 ] as const;
 
-/**
- * Fixes common AI layer mistakes that are safe, unambiguous defaults:
- * 1. Missing _sqlroomsBinding.dataset when there is exactly one dataset
- * 2. colorRange on GeoArrowHeatmapLayer (AI hand-craft; UI scheme selector owns it)
- * 3. Missing getFillColor on filled layers (deck.gl defaults to opaque black)
- * 4. Scheme-name casing on valid colorScale accessors
- * 5. Lift getHexagon "@@=column" into hexagonColumn for fit-to-bounds
- *
- * Rejected by getDeckMapResourceConfigIssues (agent retry): unprefixed layer
- * classes, ColorScale @@type/column syntax, heatmap getWeight (basic mode /
- * column accessors), object getHexagon, arc getSourcePosition/getTargetPosition,
- * mapbox:// mapStyle, and basic-mode string getRadius / getWidth /
- * getElevation / radiusPixels / column radius.
- */
+/** Safe layer defaults; invalid shapes stay for getDeckMapResourceConfigIssues. */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
   if (!spec || !Array.isArray(spec.layers)) return config;
 
-  // Collect the single dataset id if and only if there is exactly one.
   const datasetIds = config.datasets ? Object.keys(config.datasets) : [];
   const soloDatasetId = datasetIds.length === 1 ? datasetIds[0] : undefined;
 
@@ -190,10 +155,7 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     let l = layer as Record<string, unknown>;
     let layerChanged = false;
 
-    // Alias: scaleLinear → scale only for getElevation. The Deck JSON
-    // preprocessor compiles scale markers for elevation; radius/width scale
-    // objects would reach deck.gl as broken accessors — leave them for the
-    // validator / agent retry.
+    // scaleLinear → scale only for getElevation (radius/width scales are invalid).
     {
       const value = l.getElevation;
       if (
@@ -210,12 +172,7 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // Normalise color accessor scheme names: AI often sends wrong casing
-    // (e.g. "blues", "viridis"). Do a case-insensitive lookup and replace with
-    // the canonical name so the color-scale renderer can find the interpolator.
-    // Also trim type/scheme so whitespace does not pass validation then fail
-    // at render. Type/scheme compatibility (e.g. quantile + Viridis) is
-    // rejected by getDeckMapResourceConfigIssues — agent retry, not silent coerce.
+    // Canonicalize scheme casing / trim; type×scheme mismatches stay for validation.
     for (const prop of COLOR_ACCESSOR_PROPS) {
       const value = l[prop];
       if (
@@ -246,11 +203,7 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // Auto-inject or fix _sqlroomsBinding.dataset when there is exactly one
-    // dataset in the config (the intent is unambiguous):
-    // - Layer has no binding / missing dataset → inject it.
-    // - Layer references a dataset ID that doesn't exist in config.datasets
-    //   (AI typo or stale name) → replace it with the real ID.
+    // Solo dataset: inject missing binding or replace unknown dataset ids.
     if (soloDatasetId) {
       const binding = l._sqlroomsBinding as Record<string, unknown> | undefined;
       const boundId =
@@ -269,26 +222,18 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // Strip colorRange from heatmap layers on AI normalize. The UI scheme
-    // selector owns that array after the user picks a scheme; hand-crafted AI
-    // RGB values bypass it and produce incorrect coloring. Do not put this in
-    // getDeckMapResourceConfigIssues — persisted UI configs legitimately set
-    // colorRange.
+    // AI-only strip: UI may keep colorRange; do not reject in the resource validator.
     if (l['@@type'] === 'GeoArrowHeatmapLayer' && 'colorRange' in l) {
       const {colorRange: _cr, ...rest} = l;
       l = rest;
       layerChanged = true;
     }
 
-    // Lift getHexagon "@@=column" into _sqlroomsBinding.hexagonColumn so
-    // fit-to-bounds can find the column. Object getHexagon syntax is rejected
-    // by getDeckMapResourceConfigIssues.
+    // Lift simple @@=column into hexagonColumn for fit-to-bounds.
     if (l['@@type'] === 'GeoArrowH3HexagonLayer') {
       const hexAccessor = l.getHexagon;
       let hexColumn: string | undefined;
       if (typeof hexAccessor === 'string') {
-        // Only simple column accessors — expressions like "@@=h3 + ''" are
-        // not liftable column names (validator asks the agent to retry).
         const m = hexAccessor.trim().match(/^@@=([A-Za-z_][\w]*)$/);
         hexColumn = m?.[1];
       }
@@ -315,9 +260,6 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       }
     }
 
-    // GeoArrowColumnLayer: when elevation is driven by a field, ensure
-    // extruded is on (deck default is true, but AI often omits it after
-    // toggling other props).
     if (
       l['@@type'] === 'GeoArrowColumnLayer' &&
       l.getElevation !== undefined &&
@@ -327,9 +269,7 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       layerChanged = true;
     }
 
-    // Inject default getFillColor for scatterplot/polygon layers that omit it
-    // entirely. Without it deck.gl falls back to opaque black [0,0,0,255].
-    // Mirror the same sky-blue default used by the UI builder.
+    // deck.gl defaults missing fill to opaque black.
     const layerType = l['@@type'];
     const needsFillDefault =
       typeof layerType === 'string' &&
@@ -342,8 +282,7 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       layerChanged = true;
     }
 
-    // Prevent invisible scatterplot points: if filled is explicitly false but
-    // stroked is also absent/false, the layer renders nothing. Reset filled.
+    // filled:false with no stroke renders nothing.
     if (
       l['@@type'] === 'GeoArrowScatterplotLayer' &&
       l.filled === false &&
@@ -357,20 +296,13 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     return layerChanged ? l : layer;
   });
 
-  // Do not delete layers with visible:false. That is legitimate user state
-  // (settings visibility toggle). Type switches should use replaceLayers:true
-  // (prompt + validator), not silent deletion on normalize.
+  // Keep visible:false — legitimate hide state (type switches use replaceLayers).
 
   if (!changed) return config;
   return {...config, spec: {...spec, layers} as typeof spec};
 }
 
-/**
- * Splits a (possibly quoted) SQL table reference on dots that are not inside
- * double-quoted identifiers, e.g.:
- *   "sqlrooms-cli"."main"."tbl"  →  ['"sqlrooms-cli"', '"main"', '"tbl"']
- *   catalog.schema.table         →  ['catalog', 'schema', 'table']
- */
+/** Split table refs on dots outside double quotes. */
 function splitTableRef(ref: string): string[] {
   const parts: string[] = [];
   let current = '';
@@ -390,15 +322,6 @@ function splitTableRef(ref: string): string[] {
   return parts;
 }
 
-/**
- * Strips configured workspace catalog prefixes from dataset tableName values
- * (e.g. `sqlrooms-cli.main.my_table` when `stripCatalogNames` includes
- * `sqlrooms-cli`). Attached/remote three-part catalogs are preserved unless
- * listed — the table SQL builder accepts quoted multi-part references.
- *
- * Catalog names are host-injected: `@sqlrooms/deck` does not hardcode app
- * catalog identities.
- */
 function unquoteTableRefPart(part: string): string {
   const trimmed = part.trim();
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
@@ -414,7 +337,7 @@ function normalizeAiMapConfigDatasetSources(
   const datasets = config.datasets;
   if (!datasets || typeof datasets !== 'object') return config;
 
-  // Per arc-bound dataset: geometry column names that must decode as WKB.
+  // Arc-bound geom columns that need WKB decode hints.
   const arcGeomColsByDataset = new Map<string, Set<string>>();
   const spec = config.spec as Record<string, unknown> | undefined;
   if (spec && Array.isArray(spec.layers)) {
@@ -461,9 +384,7 @@ function normalizeAiMapConfigDatasetSources(
       }
     }
 
-    // Fix missing geometryEncodingHint for arc datasets bound to this id.
-    // Scope by dataset so an arc column name like "geom" cannot mark an
-    // unrelated polygon dataset as WKB.
+    // Scope WKB hints to this dataset's arc columns only.
     const transformSql = (next?.source as Record<string, unknown> | undefined)
       ?.transformSql as string | undefined;
     const arcCols = arcGeomColsByDataset.get(id);
@@ -490,14 +411,9 @@ function normalizeAiMapConfigDatasetSources(
   return {...config, datasets: nextDatasets as typeof config.datasets};
 }
 
-/**
- * Normalizes an AI-generated map config to ensure dataset sources produce
- * the expected geometry column when fitToData specifies coordinate columns
- * but the dataset only uses a tableName without a transformSql.
- */
+/** Inject lon/lat → `__sqlrooms_geom` transform when fitToData needs it. */
 function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
-  // mapbox:// mapStyle is rejected by getDeckMapResourceConfigIssues (agent
-  // retry) and skipped at resolve time — do not strip it silently here.
+  // mapbox:// mapStyle: leave for validator (do not strip silently).
 
   const datasets = config.datasets;
   let fitToData = config.fitToData as
@@ -505,8 +421,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     | null
     | undefined;
 
-  // Fix common AI mistake: fitToData wrapped as { datasetId: { dataset, ... } }
-  // instead of the expected flat { dataset, longitudeColumn, ... }.
+  // Unwrap { datasetId: { dataset, … } } → flat fitToData.
   if (fitToData && !fitToData.dataset && typeof fitToData === 'object') {
     const keys = Object.keys(fitToData);
     if (keys.length === 1) {
@@ -518,8 +433,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     }
   }
 
-  // Inject fitToData when the AI omits it. Without fitToData the fit-to-bounds
-  // button stays disabled and H3/point maps often open fully zoomed out.
+  // Default fitToData to sole dataset / first layer binding.
   if (!fitToData?.dataset && datasets && typeof datasets === 'object') {
     const datasetIds = Object.keys(datasets);
     let datasetId: string | undefined =
@@ -572,12 +486,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     | {tableName?: string; transformSql?: string; sqlQuery?: string}
     | undefined;
 
-  // Always normalize when using tableName without transformSql and fitToData
-  // provides coordinate columns — the geometry must be computed from them.
-  // Always alias to {@link DEFAULT_AI_GEOMETRY_COLUMN} so we never collide with
-  // an existing source `geom` / polygon column via `SELECT *, … AS geom`.
-  // Skip inject when no point-position layer is bound to this dataset (e.g. a
-  // polygon layer with real `geom` plus centroid lon/lat used only for fit).
+  // Inject ST_Point WKB as `__sqlrooms_geom` for point layers only (never AS geom).
   if (!source?.tableName || source.sqlQuery || source.transformSql) {
     return config;
   }
@@ -586,10 +495,8 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     'GeoArrowScatterplotLayer',
     'GeoArrowHeatmapLayer',
     'GeoArrowColumnLayer',
-    // Lon/lat point maps may use GeoJsonLayer; keep inject for that path.
     'GeoJsonLayer',
-    // Unprefixed aliases are rejected by the resource validator, but dashboard
-    // prepare may still see them before repair — treat like GeoArrow*.
+    // Unprefixed aliases may appear before validator repair.
     'ScatterplotLayer',
     'HeatmapLayer',
     'ColumnLayer',
@@ -600,8 +507,7 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
     binding: Record<string, unknown> | undefined,
   ): boolean => {
     if (binding?.dataset === targetDatasetId) return true;
-    // normalizeAiMapConfigLayers later injects the sole dataset binding; treat
-    // unbound layers the same way so lon/lat inject still runs.
+    // Match solo-dataset binding injection in normalizeAiMapConfigLayers.
     return (
       (!binding || typeof binding.dataset !== 'string' || !binding.dataset) &&
       soleDatasetId === targetDatasetId
@@ -683,41 +589,11 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
 }
 
 /**
- * Applies AI-output normalization passes to a map config in one step.
- *
- * Safe to call on any surface — worksheet, dashboard, or block document. Each
- * pass is idempotent and leaves already-correct configs unchanged:
- * - scheme-name casing on colorScale accessors (e.g. "blues" → "Blues")
- * - zero/negative getRadius in basic-mode scatterplot layers → numeric default
- * - numeric getWidth without widthUnits:pixels in basic-mode line layers → inject
- * - zero/negative radiusPixels on heatmap layers → default
- * - missing/zero radius on column layers → default meters (+ strip point radius leaks)
- * - missing or wrong _sqlroomsBinding.dataset when only one dataset → auto-inject
- * - colorRange on GeoArrowHeatmapLayer → stripped (UI scheme selector owns it)
- * - getHexagon "@@=column" on GeoArrowH3HexagonLayer → lifted into _sqlroomsBinding.hexagonColumn
- * - missing fitToData → injected from the sole dataset or first layer binding
- * - GeoArrowArcLayer dataset: missing geometryEncodingHint → injected when transformSql mentions arc geom cols
- * - missing getFillColor on scatterplot/polygon layers → default sky-blue
- * - filled:false with no stroke on scatterplot → reset to filled:true
- * - optional catalog prefixes stripped from dataset tableName when
- *   `stripCatalogNames` is provided by the host
- * - fitToData coordinate-column → transformSql injection as `__sqlrooms_geom`
- *   when transformSql is absent and a point-position layer is bound (never
- *   aliases over an existing source `geom`)
- *
- * Not rewritten here (validator + agent retry): unprefixed layer class names,
- * colorScale {"@@type":"ColorScale","column":"..."} syntax, type/scheme
- * mismatches (e.g. quantile + Viridis), SELECT * / ST_AsWKB alias collisions,
- * heatmap getWeight (omit for default density), object getHexagon, arc
- * getSourcePosition/getTargetPosition, mapbox:// mapStyle, and basic-mode
- * string getRadius / getWidth / getElevation / radiusPixels / column radius.
+ * Idempotent AI map-config repairs (scheme casing, sizes, bindings, fit inject).
+ * Invalid shapes stay for {@link getDeckMapResourceConfigIssues} / agent retry.
  */
 export type NormalizeAiDeckMapConfigOptions = {
-  /**
-   * Catalog names to strip from three-part `tableName` refs (case-insensitive).
-   * Hosts inject workspace catalogs that do not exist in the dataset query
-   * context (e.g. CLI passes `['sqlrooms-cli']`). Empty/omitted → no stripping.
-   */
+  /** Host-injected catalogs to strip; omit for none — deck does not hardcode any. */
   stripCatalogNames?: readonly string[];
 };
 
@@ -753,21 +629,8 @@ export type ResolveColorScaleTable = (
 ) => {columns?: {name: string}[]} | undefined;
 
 /**
- * Walks the map config and checks every colorScale `field` against the source
- * table's column list (when available via `resolveTable`).
- *
- * - Wrong casing (e.g. "magnitude" → "Magnitude") → fixed when the field
- *   matches a base-table column case-insensitively (even with transformSql).
- * - Unknown field on a bare `{tableName}` source → throws with available
- *   columns so the agent can retry.
- * - Unknown field when `transformSql` / `sqlQuery` is present → skipped.
- *   Derived SQL can introduce aliases the base table does not have; rejecting
- *   against the base schema would false-fail those configs.
- * - Pure `sqlQuery`-only sources (no `tableName`) → skipped.
- *
- * Call this **before** {@link normalizeAiDeckMapConfig} when possible: normalize
- * may inject `transformSql` for lon/lat tables, which would otherwise disable
- * unknown-field rejection for the common bare-table path.
+ * Fix colorScale `field` casing; reject unknown fields on bare `{tableName}` sources.
+ * Call before normalize so lon/lat `transformSql` inject does not disable rejection.
  */
 export function validateAndFixColorScaleFields<
   T extends {spec?: unknown; datasets?: Record<string, unknown>},
@@ -846,8 +709,7 @@ export function validateAndFixColorScaleFields<
       typeof binding?.dataset === 'string' && binding.dataset.trim()
         ? binding.dataset
         : undefined;
-    // Mirror normalize: omit → sole dataset; unknown/typo solo binding → sole
-    // real dataset (normalize replaces it before render).
+    // Mirror solo-dataset binding repair in normalize.
     const datasetId =
       boundDataset && columnsByDataset.has(boundDataset)
         ? boundDataset
@@ -870,7 +732,6 @@ export function validateAndFixColorScaleFields<
         continue;
       }
       if (canonical !== undefined) {
-        // Wrong casing is unambiguous and reversible — fix silently.
         nextLayer = {
           ...(nextLayer ?? layer),
           [prop]: {...acc, field: canonical},
@@ -879,8 +740,7 @@ export function validateAndFixColorScaleFields<
         continue;
       }
       if (!cols.rejectUnknown) {
-        // Derived SQL may introduce aliases. Allow fields mentioned in the SQL
-        // text; reject typos that match neither the base table nor the SQL.
+        // Allow SQL aliases; reject typos absent from both schema and SQL text.
         if (cols.derivedSql.toLowerCase().includes(field.toLowerCase())) {
           continue;
         }
@@ -908,10 +768,8 @@ export function validateAndFixColorScaleFields<
 }
 
 /**
- * Shared AI map-config prepare: validate colorScale fields against known
- * tables (when a resolver is provided), then run {@link normalizeAiDeckMapConfig}.
- * Validation runs first so lon/lat `transformSql` injection does not disable
- * unknown-field checks on bare `{tableName}` sources.
+ * Validate colorScale fields (optional), then {@link normalizeAiDeckMapConfig}.
+ * Validation first so lon/lat transformSql inject does not disable unknown-field checks.
  */
 export type PrepareAiDeckMapConfigOptions = NormalizeAiDeckMapConfigOptions & {
   resolveTable?: ResolveColorScaleTable;

@@ -1,10 +1,6 @@
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 
-/**
- * Cross-surface Deck map AI contract rules shared by dashboard and worksheet
- * prompts. Surface-specific tooling (dashboard panels vs sparse resource merge)
- * stays in the host instruction builders.
- */
+/** Shared Deck map AI rules for dashboard and worksheet prompts. */
 export function getDeckMapSharedAiContractRules(): string {
   const src = DECK_TABLE_DATASET_SOURCE_RELATION;
   return `Shared Deck map authoring rules (dashboard and worksheet):

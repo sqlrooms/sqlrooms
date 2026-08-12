@@ -105,9 +105,7 @@ function resolveGeoArrowBindings(options: {
 
   for (const binding of compatibility.bindings) {
     const existing = props[binding.prop];
-    // Prefer Arrow Vector binding over a simple `@@=column` accessor.
-    // Compiled accessors can silently yield empty H3 indices; Vectors are
-    // authoritative and also restore missing-column errors.
+    // Prefer Arrow Vector over `@@=column` (avoids empty H3 / missing-column silence).
     const existingIsSimpleAccessor =
       typeof existing === 'string' &&
       /^@@=[A-Za-z_$][\w$]*$/.test(existing.trim());
@@ -177,9 +175,7 @@ function resolveGeoArrowBindings(options: {
           );
         }
 
-        // Scatter/heatmap/column need Point positions. Do not silently
-        // centroid Polygon/MultiPolygon footprints — require an explicit
-        // ST_Centroid / ST_PointOnSurface transform (or a polygon layer).
+        // Point layers: promote Points only — no silent polygon centroid.
         if (isPointPositionLayer(layerName)) {
           const promoted = promoteToPointPositions(
             prepared.table,
@@ -361,16 +357,14 @@ export function createDeckJsonConfiguration(
         ...boundProps,
       };
 
-      // Compile getElevation:
-      // - scale markers (UI/AI `@@function: scale` with domain/range) → linear map
-      // - plain `@@=field` → subtract column min so the lowest feature is at ground
+      // getElevation: scale markers → linear map; plain @@=field → minus column min.
       const rawElev = nextProps.getElevation;
       if (isScaleMarker(rawElev)) {
         const expression = compileLinearScaleExpression(table, rawElev);
         if (expression) {
           nextProps.getElevation = expression;
         } else {
-          // Non-JS-identifier fields (spaces, dashes) cannot use @@= expressions.
+          // Non-identifier fields need a compiled accessor, not @@=.
           const accessor = compileLinearScaleAccessor(table, rawElev);
           if (accessor) {
             nextProps.getElevation = accessor;

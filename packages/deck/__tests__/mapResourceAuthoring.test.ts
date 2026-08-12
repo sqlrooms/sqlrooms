@@ -883,6 +883,36 @@ describe('Deck map resource authoring contract', () => {
     expect(issues.some((i) => i.message.includes('GROUP BY'))).toBe(true);
   });
 
+  test('rejects PathLayer LIST aggregation without GROUP BY', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            id: 'routes',
+            _sqlroomsBinding: {
+              dataset: 'routes',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      },
+      datasets: {
+        routes: {
+          source: {
+            tableName: 'waypoints',
+            transformSql:
+              'SELECT ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY t))) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(issues.some((i) => i.message.includes('GROUP BY'))).toBe(true);
+  });
+
   test('rejects TripsLayer ST_MakeLine(... ORDER BY) without LIST', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
@@ -1030,6 +1060,39 @@ describe('Deck map resource authoring contract', () => {
             tableName: 'buildings',
             transformSql:
               'SELECT *, ST_AsWKB(Geom) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'datasets.buildings.source' &&
+          i.message.includes('SELECT * EXCLUDE'),
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects SELECT s.*, ST_AsWKB(s.geom) AS geom qualified-star collisions', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {
+            tableName: 'buildings',
+            transformSql:
+              'SELECT s.*, ST_AsWKB(s.geom) AS geom FROM __sqlrooms_source s',
           },
           geometryColumn: 'geom',
           geometryEncodingHint: 'wkb',

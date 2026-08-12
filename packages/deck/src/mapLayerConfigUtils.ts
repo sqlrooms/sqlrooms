@@ -89,9 +89,7 @@ const COLUMN_RADIUS_LAYER_TYPES = new Set([
   'columnlayer',
 ]);
 
-// GeoJsonLayer is intentionally omitted: elevation/scale compile only runs on
-// the geoarrow path in createDeckJsonConfiguration. Offering extrusion UI for
-// GeoJSON would set getElevation markers that never compile into accessors.
+// GeoJSON: elevation/scale compile is geoarrow-only — no extrusion UI here.
 const EXTRUDABLE_LAYER_TYPES = new Set([
   'geoarrowh3hexagonlayer',
   'h3hexagonlayer',
@@ -266,11 +264,7 @@ export function setDeckMapLayerType(
   });
 }
 
-/**
- * ColumnLayer disk size is controlled by `radius` + `radiusUnits` (default meters).
- * Point/heatmap leftovers like `radiusUnits: "pixels"` and `getRadius` make the UI
- * label ("Nm") lie — e.g. radius 300 with pixels spans kilometers on the map.
- */
+// Point/heatmap radius leftovers (`getRadius`, pixel units) break ColumnLayer meters UI.
 const COLUMN_LAYER_RADIUS_CONFLICT_KEYS = [
   'getRadius',
   'radiusMinPixels',
@@ -278,10 +272,7 @@ const COLUMN_LAYER_RADIUS_CONFLICT_KEYS = [
   'radiusPixels',
 ] as const;
 
-/**
- * Force meters and strip point/heatmap radius leftovers from a ColumnLayer.
- * Does not set `radius` — callers choose the meters value separately.
- */
+/** Force meters and strip point/heatmap radius leftovers (does not set `radius`). */
 export function stripDeckMapColumnLayerRadiusConflicts(
   layer: DeckMapLayerRecord,
 ): DeckMapLayerRecord {
@@ -459,8 +450,7 @@ export function clearDeckMapLayerColorScale(
       : DEFAULT_LAYER_FILL_COLOR;
   return updateDeckMapLayer(config, layerIndex, (layer) => ({
     ...layer,
-    // Always restore a visible flat color. Deleting the accessor leaves
-    // deck.gl's opaque black default, which looks broken with no picker.
+    // Missing fill → deck.gl opaque black; keep an explicit flat color.
     [accessor]: [...defaultColor],
   }));
 }

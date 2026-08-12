@@ -77,13 +77,8 @@ function readNumericDomain(vector: arrow.Vector): [number, number] | null {
 }
 
 /**
- * Build a GeoArrow `@@=` expression for elevation-style linear scales.
- *
- * - With `range`: map domain → range (UI extrusion: typically `[0, 200]` meters).
- * - Without `range`: legacy behavior — raw field minus domain minimum.
- *
- * Returns `undefined` when the field is not a JS identifier (spaces, dashes,
- * etc.). Use {@link compileLinearScaleAccessor} for those columns.
+ * Linear scale `@@=` expression. Non-identifier fields need
+ * {@link compileLinearScaleAccessor}.
  */
 export function compileLinearScaleExpression(
   table: arrow.Table,
@@ -116,15 +111,11 @@ export function compileLinearScaleExpression(
 
   const lo = Math.min(r0, r1);
   const hi = Math.max(r0, r1);
-  // Clamp to range after linear map. Field values are coerced from bigint in
-  // compileGeoArrowAccessor.
+  // Clamp after linear map (bigint coercion lives in compileGeoArrowAccessor).
   return `@@=Math.max(${lo}, Math.min(${hi}, ${r0} + (${field} - ${d0}) / ${span} * ${r1 - r0}))`;
 }
 
-/**
- * Compiled elevation accessor that supports any Arrow column name, including
- * non-JS-identifiers such as `"Median Income"`.
- */
+/** Elevation accessor for any Arrow column name (incl. non-identifiers). */
 export function compileLinearScaleAccessor(
   table: arrow.Table,
   scale: LinearScaleConfig,

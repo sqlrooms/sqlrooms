@@ -52,11 +52,7 @@ const SEQUENTIAL_SCHEME_NAMES = new Set<string>(continuousSequentialSchemes);
 const DIVERGING_SCHEME_NAMES = new Set<string>(continuousDivergingSchemes);
 const CATEGORICAL_SCHEME_NAMES = new Set<string>(categoricalSchemes);
 
-/**
- * Returns an actionable issue when colorScale `type` and `scheme` disagree or
- * are incomplete. Quantile/quantize/threshold require ColorBrewer binned ramps;
- * continuous schemes like Viridis require type "sequential".
- */
+/** Issue when colorScale `type` and `scheme` disagree or are incomplete. */
 export function getColorScaleTypeSchemeIssue(
   type: unknown,
   scheme: unknown,
@@ -144,11 +140,7 @@ function hasEntries(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && Object.keys(value).length > 0;
 }
 
-/**
- * True for invalid `ST_MakeLine(ST_Point(...) ORDER BY ...)` forms, including
- * nested coordinate expressions inside ST_Point. ORDER BY is only legal inside
- * LIST(...).
- */
+/** True for invalid `ST_MakeLine(ST_Point(...) ORDER BY ...)` (ORDER BY belongs in LIST). */
 function hasBadStMakeLinePointOrderBy(sql: string): boolean {
   const re = /\bST_MakeLine\s*\(/gi;
   let match: RegExpExecArray | null;
@@ -257,17 +249,7 @@ function mergeSpecPatch(
   };
 }
 
-/**
- * Returns true when the incoming source would strip geometry-producing SQL from
- * an existing source by replacing it with a bare `tableName`.
- *
- * Protects both:
- * - pinned `sqlQuery` sources
- * - `tableName` + non-empty `transformSql` sources
- *
- * Visual-only AI patches often re-send `{source: {tableName}}` and would
- * otherwise wipe the SQL that creates WKB/`geom` columns the layers bind to.
- */
+/** True when a bare `{tableName}` patch would wipe existing geometry SQL. */
 function isSourceDowngrade(
   existingSource: DeckMapDatasetSource | undefined,
   incomingSource: DeckMapDatasetSource | undefined,
@@ -586,9 +568,7 @@ export function getDeckMapResourceConfigIssues(
     }
 
     if (layerType === 'GeoArrowHeatmapLayer' && 'getWeight' in layer) {
-      // Basic mode has no weight-column UI; heatmaps use default uniform density.
-      // Custom mode may set a numeric constant via the JSON editor, but column
-      // / object accessors are still rejected (and AI should omit getWeight).
+      // Basic: omit getWeight. Custom: numeric constant only.
       const getWeight = layer.getWeight;
       if (config.configMode !== 'custom') {
         issues.push({
@@ -608,10 +588,7 @@ export function getDeckMapResourceConfigIssues(
       }
     }
 
-    // Basic-mode UI only supports numeric size props (and elevation via
-    // "@@=col" / scale objects). Custom mode may use deck.gl string accessors.
-    // Reject strings and unsupported objects (e.g. scaleLinear on getRadius)
-    // so the agent retries instead of saving broken accessors.
+    // Basic mode: numeric sizes (elevation may use @@=col / scale).
     if (config.configMode !== 'custom') {
       const rejectNonNumericSize = (
         prop: string,
@@ -675,10 +652,7 @@ export function getDeckMapResourceConfigIssues(
         layer.getElevation !== undefined
       ) {
         const elev = layer.getElevation;
-        // Basic UI supports a number, "@@=col", or a linear scale object.
-        if (typeof elev === 'number' && Number.isFinite(elev)) {
-          // Constant elevation (including 0 for flat) is fine.
-        } else if (typeof elev === 'string') {
+        if (typeof elev === 'string') {
           const isColumnAccessor = /^@@=[A-Za-z_][\w]*$/.test(elev.trim());
           if (!isColumnAccessor) {
             issues.push({
@@ -701,7 +675,7 @@ export function getDeckMapResourceConfigIssues(
                 'in basic mode use {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} (or a column accessor "@@=columnName")',
             });
           }
-        } else {
+        } else if (!(typeof elev === 'number' && Number.isFinite(elev))) {
           issues.push({
             path: `spec.layers.${index}.getElevation`,
             message:
@@ -796,16 +770,18 @@ export function getDeckMapResourceConfigIssues(
             'GeoArrowTripsLayer requires _sqlroomsBinding.timestampColumn set to the timestamps list column, e.g. "timestamps"',
         });
       }
+    }
 
-      // Waypoint aggregation via LIST(...)/ST_MakeLine must GROUP BY trip id.
-      // Without GROUP BY, all waypoints collapse into one path or the query fails.
+    if (
+      layerType === 'GeoArrowTripsLayer' ||
+      layerType === 'GeoArrowPathLayer'
+    ) {
+      // LIST(...)/ST_MakeLine needs GROUP BY path/trip id.
       if (boundDataset && config.datasets[boundDataset]) {
         const source = config.datasets[boundDataset]?.source as
           | {transformSql?: string; sqlQuery?: string}
           | undefined;
         const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
-        // ST_MakeLine(ST_Point(...) ORDER BY ...) is invalid: ORDER BY is only
-        // legal inside LIST. Walk nested ST_Point(...) before checking ORDER BY.
         if (hasBadStMakeLinePointOrderBy(sql)) {
           issues.push({
             path: `datasets.${boundDataset}.source`,
@@ -820,8 +796,7 @@ export function getDeckMapResourceConfigIssues(
         if (usesListAgg && !hasGroupBy) {
           issues.push({
             path: `datasets.${boundDataset}.source`,
-            message:
-              'GeoArrowTripsLayer waypoint aggregation using LIST(...)/ST_MakeLine must include GROUP BY the trip/path/route id column so each trip becomes one linestring. Without GROUP BY, waypoints are not split per trip.',
+            message: `${layerType} waypoint aggregation using LIST(...)/ST_MakeLine must include GROUP BY the trip/path/route id column so each trip becomes one linestring. Without GROUP BY, waypoints are not split per trip.`,
           });
         }
       }

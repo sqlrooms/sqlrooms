@@ -47,10 +47,8 @@ export type DeckMapDashboardDatasetClientState = {
   client: unknown;
   isSampled?: boolean;
   /**
-   * Native GEOMETRY column names projected through `ST_AsWKB` for this query.
-   * Only force `geometryEncodingHint: "wkb"` when the configured geometry
-   * column is in this list — wrapping an unrelated column must not retarget
-   * a WKT/GeoArrow binding.
+   * Native GEOMETRY columns wrapped via ST_AsWKB for this query.
+   * Only force `geometryEncodingHint: "wkb"` when the bound column is listed.
    */
   wrappedGeometryColumnNames?: readonly string[];
 };
@@ -64,9 +62,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   const datasetSource = options.dataset?.source;
   const dashboardTable = stripCatalogPrefix(options.dashboard.selectedTable);
 
-  // The dashboard's selected table always takes precedence as the data source.
-  // When the user switches the table in the selector, structured table-backed
-  // datasets update while literal SQL remains pinned to its authored query.
+  // Selected table wins for table sources; sqlQuery stays pinned.
   if (isDeckMapDashboardSqlDatasetSource(datasetSource)) {
     return datasetSource;
   }
@@ -104,10 +100,7 @@ function stripCatalogPrefix(tableName: string | undefined) {
   );
 }
 
-/**
- * Compiles the unfiltered dataset SQL used for DESCRIBE probes and as the
- * Mosaic source expression (before sampling / filters).
- */
+/** Unfiltered dataset SQL for DESCRIBE / Mosaic (before sample/filters). */
 export function createDeckMapDashboardDatasetSourceSql(
   source: DeckMapDashboardDatasetSource,
 ): string {
@@ -141,7 +134,7 @@ export function createDeckMapDashboardDatasetQuery(
 
   const baseSql = createDeckMapDashboardDatasetSourceSql(source);
 
-  // Sample before WKB projection so ST_AsWKB runs only on the sampled rows.
+  // Sample before WKB so ST_AsWKB runs only on sampled rows.
   const sampledSql = options?.sampleRows
     ? `SELECT * FROM (${baseSql}) AS "__sqlrooms_sample_source" USING SAMPLE ${options.sampleRows} ROWS`
     : baseSql;

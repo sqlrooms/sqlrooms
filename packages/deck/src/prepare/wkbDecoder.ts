@@ -396,7 +396,7 @@ const POINT_LAYERS = new Set([
   'GeoArrowArcLayer',
 ]);
 
-/** Point layers that place a marker/column at a single position (not OD arcs). */
+/** Scatter / heatmap / column (not OD arcs). */
 const POINT_POSITION_LAYERS = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
@@ -410,12 +410,7 @@ const POLYGON_LAYERS = new Set([
 
 const PATH_LAYERS = new Set(['GeoArrowPathLayer', 'GeoArrowTripsLayer']);
 
-/**
- * Promote WKB/WKT Point geometries to native GeoArrow point positions for
- * scatter/heatmap/column layers. Does not silently centroid polygons — callers
- * must use an explicit ST_Centroid / ST_PointOnSurface transformSql (or a
- * polygon layer) when the source geometry is polygonal.
- */
+/** Promote WKB/WKT Points only — no silent polygon centroid. */
 export function promoteToPointPositions(
   table: arrow.Table,
   columnName: string,

@@ -1,17 +1,8 @@
 /**
- * Detects DuckDB `SELECT *, ST_AsWKB(...) AS col` same-list collisions.
- *
- * DuckDB keeps the original column from `SELECT *` and renames a colliding
- * `ST_AsWKB(...) AS col` to `col_1` (or leaves the first `col` as native
- * GEOMETRY). The map then binds the undecodable internal blob and renders
- * nothing.
- *
- * Detection only — do not rewrite authored SQL. Agents / authors should use
- * `SELECT * EXCLUDE (col), ST_AsWKB(...) AS col`, or omit the transform when
- * WKB already exists. Does **not** flag wrappers like
- * `SELECT * FROM (… ST_AsWKB(...) AS geom …)` used by row sampling.
+ * Detects `SELECT *, ST_AsWKB(...) AS col` same-list collisions (DuckDB renames
+ * the WKB alias). Detection only — no rewrite. Does not flag sampling wrappers
+ * like `SELECT * FROM (… ST_AsWKB …)`.
  */
-
 function findTopLevelFromIndex(sql: string, selectStarEnd: number): number {
   let depth = 0;
   for (let i = selectStarEnd; i < sql.length; i++) {
@@ -37,13 +28,9 @@ function findTopLevelFromIndex(sql: string, selectStarEnd: number): number {
   return -1;
 }
 
-/**
- * True when a SELECT list mixes `*` with `ST_AsWKB(...) AS col` that reuses a
- * name from inside the ST_AsWKB expression (e.g. `ST_AsWKB(geom) AS geom`),
- * without EXCLUDE/REPLACE.
- */
+/** True when SELECT * mixes with `ST_AsWKB(...) AS` reusing an inner name. */
 export function hasSelectStarAsWkbCollision(sql: string): boolean {
-  const re = /\bSELECT\s+\*/gi;
+  const re = /\bSELECT\s+(?:[A-Za-z_][\w$]*\.)?\*/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(sql)) !== null) {
     const afterStar = sql.slice(match.index + match[0].length);
@@ -75,11 +62,7 @@ export function hasSelectStarAsWkbCollision(sql: string): boolean {
       if (!asMatch) continue;
       const col = asMatch[2] ?? asMatch[3];
       if (!col) continue;
-      // Only flag when the alias reuses a name from inside ST_AsWKB(...) —
-      // that is the DuckDB SELECT * collision (`ST_AsWKB(geom) AS geom`).
-      // Compare case-insensitively: DuckDB folds unquoted identifiers, so
-      // `ST_AsWKB(Geom) AS geom` is the same collision.
-      // New aliases like `__sqlrooms_geom` from ST_Point are fine with SELECT *.
+      // Alias reuse inside ST_AsWKB only (`AS geom` collision); new aliases are fine.
       const aliasRe = new RegExp(
         `(^|[^A-Za-z0-9_])${col.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Za-z0-9_]|$)`,
         'i',

@@ -4,29 +4,16 @@ function quoteSqlIdentifier(identifier: string): string {
   return `"${identifier.replace(/"/g, '""')}"`;
 }
 
-/**
- * True for DuckDB's native spatial `GEOMETRY` type (not GeoArrow, not WKB blob,
- * not containers like `GEOMETRY[]` or `STRUCT(g GEOMETRY)`).
- *
- * Accepts plain `GEOMETRY` and CRS-parameterized forms such as
- * `GEOMETRY('EPSG:4326')` / `GEOMETRY('OGC:CRS84')` that DESCRIBE returns on
- * newer DuckDB builds. Native GEOMETRY cannot be decoded by deck — it must be
- * projected through `ST_AsWKB(...)` before prepare/render.
- */
+/** True for DuckDB native `GEOMETRY` / `GEOMETRY('CRS')` (not arrays/structs). */
 export function isDuckDbNativeGeometryType(
   type: string | null | undefined,
 ): boolean {
   if (!type) return false;
   const normalized = type.trim().toLowerCase();
-  return (
-    normalized === 'geometry' || normalized.startsWith('geometry(')
-  );
+  return normalized === 'geometry' || normalized.startsWith('geometry(');
 }
 
-/**
- * Builds `DESCRIBE SELECT * FROM (<sql>)` so DuckDB returns logical column types
- * (including `GEOMETRY`) rather than Arrow binary approximations.
- */
+/** `DESCRIBE SELECT * FROM (<sql>)` for logical column types. */
 export function createDescribeDatasetSql(sql: string): string {
   const cleaned = sql.trim().replace(/(?:\s*;+\s*)+$/, '');
   return `DESCRIBE SELECT * FROM (${cleaned}) AS "__sqlrooms_describe_source"`;
@@ -38,10 +25,7 @@ export type DescribedSqlColumn = {
   type: string;
 };
 
-/**
- * Parses DuckDB `DESCRIBE` output (`column_name`, `column_type`) into a list of
- * columns. Returns an empty list when the result shape is unexpected.
- */
+/** Parse DuckDB DESCRIBE rows (`column_name`, `column_type`). */
 export function parseDescribeSqlColumns(
   table: arrow.Table,
 ): DescribedSqlColumn[] {
@@ -72,12 +56,8 @@ export function geometryColumnsNeedingWkbWrap(
 }
 
 /**
- * Wraps compiled dataset SQL so native `GEOMETRY` columns are projected as WKB
- * without rewriting the authored statement:
- *
- * `SELECT * REPLACE (ST_AsWKB(col) AS col, …) FROM (<sql>) AS "__sqlrooms_as_wkb"`
- *
- * Returns `null` when there is nothing to wrap.
+ * `SELECT * REPLACE (ST_AsWKB(col) AS col, …) FROM (<sql>)` for native GEOMETRY.
+ * Returns null when there is nothing to wrap.
  */
 export function wrapSqlGeometryColumnsAsWkb(
   sql: string,

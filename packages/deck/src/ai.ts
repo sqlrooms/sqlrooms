@@ -115,11 +115,7 @@ export function getDashboardWithDeckMapAiInstructions() {
  */
 export type CreateDashboardWithDeckMapAiToolsOptions =
   CreateDashboardAiToolsOptions & {
-    /**
-     * Host workspace catalogs to strip from AI-authored three-part tableName
-     * refs. Omit for no stripping — other apps must pass their own catalog
-     * names; `@sqlrooms/deck` does not hardcode any.
-     */
+    /** Host-injected catalogs to strip; omit for none — deck does not hardcode any. */
     stripCatalogNames?: readonly string[];
   };
 
@@ -394,10 +390,7 @@ export type CreateDeckMapDashboardToolParams = {
   dashboardAdapter: DashboardAiAdapter;
   /** Database adapter for table validation */
   databaseAdapter: DatabaseAiAdapter;
-  /**
-   * Host workspace catalogs to strip from AI-authored three-part tableName
-   * refs (e.g. CLI passes `['sqlrooms-cli']`). Omit for no stripping.
-   */
+  /** Host-injected catalogs to strip; omit for none — deck does not hardcode any. */
   stripCatalogNames?: readonly string[];
 };
 
@@ -425,14 +418,18 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
 
         if (tableName) {
           ensureTable(databaseAdapter, tableName);
-          await dashboardAdapter.setSelectedTable(tableName);
         }
 
+        // Prepare/validate before mutating dashboard selection so a rejected
+        // config does not switch the active table as a side effect.
         const panel = createDeckMapPanelFromNativeConfig(params, {
           resolveTable: (name) => databaseAdapter.findTable(name),
           stripCatalogNames,
         });
 
+        if (tableName) {
+          await dashboardAdapter.setSelectedTable(tableName);
+        }
         if (params.panelId) {
           ensurePanel(
             dashboardAdapter,

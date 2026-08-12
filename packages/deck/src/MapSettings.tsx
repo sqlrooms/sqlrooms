@@ -130,9 +130,7 @@ function getSchemeOptions(type: ColorScaleConfig['type']) {
   if (type === 'sequential') {
     return continuousSequentialSchemes;
   }
-  // Quantile/quantize/threshold: ColorBrewer discrete ramps only. Continuous
-  // schemes like Viridis require type "sequential" (validator enforces the
-  // same rule for AI-authored configs).
+  // Quantile/quantize/threshold: ColorBrewer only (Viridis → sequential).
   return binnedNumericSchemes;
 }
 

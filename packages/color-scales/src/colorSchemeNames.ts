@@ -103,17 +103,14 @@ export type ColorScaleScheme =
   | BinnedNumericScheme
   | CategoricalScheme;
 
-/** Every scheme name accepted by AI prompts / tolerant scheme casing fixes. */
+/** Scheme names for AI prompts / tolerant casing fixes. */
 export const allKnownColorSchemeNames = [
   ...continuousSequentialSchemes,
   ...continuousDivergingSchemes,
   ...categoricalSchemes,
 ] as const;
 
-/**
- * Prompt fragment listing exact scheme names (case-sensitive).
- * Keep AI instructions generated from this so surfaces cannot drift.
- */
+/** Exact scheme names for AI prompts — generate from this so surfaces cannot drift. */
 export function formatColorSchemePromptLists(): string {
   return (
     `sequential — ${continuousSequentialSchemes.join(', ')}. ` +
