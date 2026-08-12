@@ -291,4 +291,41 @@ describe('deck dashboard integration', () => {
       geometryEncodingHint: 'wkb',
     });
   });
+
+  it('only forces WKB hint when the configured geometry column was wrapped', () => {
+    const arrowTable = new Table({
+      value: vectorFromArray([1, 2, 3]),
+    });
+    const config: DeckMapDashboardPanelConfig = {
+      spec: {layers: []},
+      datasets: {
+        places: {
+          geometryColumn: 'wkt_geom',
+          geometryEncodingHint: 'wkt',
+        },
+      },
+    };
+
+    const datasets = createDeckMapDashboardDatasets(config, {
+      places: {
+        arrowTable,
+        // Unrelated native GEOMETRY column was wrapped — must not retarget wkt_geom.
+        wrappedGeometryColumnNames: ['native_geom'],
+      },
+    });
+
+    expect(datasets.places).toEqual({
+      arrowTable,
+      geometryColumn: 'wkt_geom',
+      geometryEncodingHint: 'wkt',
+    });
+
+    const wrappedConfigured = createDeckMapDashboardDatasets(config, {
+      places: {
+        arrowTable,
+        wrappedGeometryColumnNames: ['wkt_geom'],
+      },
+    });
+    expect(wrappedConfigured.places?.geometryEncodingHint).toBe('wkb');
+  });
 });

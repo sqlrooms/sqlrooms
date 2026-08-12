@@ -572,13 +572,27 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
 
   // Always normalize when using tableName without transformSql and fitToData
   // provides coordinate columns — the geometry must be computed from them.
+  // Skip when an authored non-default geometryColumn already exists (e.g. a
+  // polygon `geom` plus centroid lon/lat used only for fit): injecting
+  // `SELECT *, ST_AsWKB(ST_Point(...)) AS geom` would collide with the source
+  // column and break the layer binding.
   if (!source?.tableName || source.sqlQuery || source.transformSql) {
     return config;
   }
 
+  const existingGeometryColumn = targetDataset.geometryColumn as
+    | string
+    | undefined;
+  if (
+    typeof existingGeometryColumn === 'string' &&
+    existingGeometryColumn.trim().length > 0 &&
+    existingGeometryColumn !== DEFAULT_AI_GEOMETRY_COLUMN
+  ) {
+    return config;
+  }
+
   const geometryColumn =
-    (targetDataset.geometryColumn as string | undefined) ||
-    DEFAULT_AI_GEOMETRY_COLUMN;
+    existingGeometryColumn?.trim() || DEFAULT_AI_GEOMETRY_COLUMN;
 
   const quotedLon = quoteDeckMapSqlIdentifier(lonCol);
   const quotedLat = quoteDeckMapSqlIdentifier(latCol);

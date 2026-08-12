@@ -77,9 +77,12 @@ export function hasSelectStarAsWkbCollision(sql: string): boolean {
       if (!col) continue;
       // Only flag when the alias reuses a name from inside ST_AsWKB(...) —
       // that is the DuckDB SELECT * collision (`ST_AsWKB(geom) AS geom`).
+      // Compare case-insensitively: DuckDB folds unquoted identifiers, so
+      // `ST_AsWKB(Geom) AS geom` is the same collision.
       // New aliases like `__sqlrooms_geom` from ST_Point are fine with SELECT *.
       const aliasRe = new RegExp(
         `(^|[^A-Za-z0-9_])${col.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Za-z0-9_]|$)`,
+        'i',
       );
       if (aliasRe.test(exprBody)) return true;
     }

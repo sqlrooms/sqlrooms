@@ -1287,3 +1287,67 @@ describe('validateAndFixColorScaleFields', () => {
     );
   });
 });
+
+describe('normalizeAiDeckMapConfig — lon/lat transformSql injection', () => {
+  test('injects point WKB transform when geometryColumn is absent', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'ds'},
+          },
+        ],
+        {ds: {source: {tableName: 'places'}}},
+      ),
+    );
+    // fitToData inject + lon/lat require fitToData lon/lat
+    const withFit = normalizeAiDeckMapConfig({
+      ...result,
+      fitToData: {
+        dataset: 'ds',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+      datasets: {
+        ds: {source: {tableName: 'places'}},
+      },
+    } as any);
+    expect(withFit.datasets.ds.geometryColumn).toBe('__sqlrooms_geom');
+    expect(withFit.datasets.ds.source.transformSql).toContain(
+      'ST_AsWKB(ST_Point',
+    );
+    expect(withFit.datasets.ds.source.transformSql).toContain(
+      '__sqlrooms_geom',
+    );
+  });
+
+  test('does not overwrite an authored non-default geometryColumn', () => {
+    const result = normalizeAiDeckMapConfig({
+      configMode: 'basic',
+      fitToData: {
+        dataset: 'ds',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+      datasets: {
+        ds: {
+          source: {tableName: 'buildings'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            _sqlroomsBinding: {dataset: 'ds', geometryColumn: 'geom'},
+          },
+        ],
+      },
+    } as any);
+
+    expect(result.datasets.ds.geometryColumn).toBe('geom');
+    expect(result.datasets.ds.source.transformSql).toBeUndefined();
+  });
+});

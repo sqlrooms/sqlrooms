@@ -362,21 +362,21 @@ function DeckMapDashboardDatasetClient({
   }, [connector, source, sourceSqlKey]);
 
   const geometryProbeReady = geometryColumnsToWrapAsWkb !== null;
-  const wrappedGeometryAsWkb = Boolean(geometryColumnsToWrapAsWkb?.length);
+  const wrappedGeometryColumnNames = geometryColumnsToWrapAsWkb ?? [];
 
   const query = useCallback(
     (filter: unknown) =>
       source
         ? createDeckMapDashboardDatasetQuery(source, filter, {
             sampleRows: maxRows,
-            geometryColumnsToWrapAsWkb: geometryColumnsToWrapAsWkb ?? [],
+            geometryColumnsToWrapAsWkb: wrappedGeometryColumnNames,
           })
         : createDeckMapDashboardDatasetQuery(
             {tableName: '__missing_dashboard_map_dataset__'},
             filter,
             {sampleRows: maxRows},
           ),
-    [geometryColumnsToWrapAsWkb, maxRows, source],
+    [wrappedGeometryColumnNames, maxRows, source],
   );
   const queryError = useCallback(
     (err: Error) => {
@@ -386,10 +386,10 @@ function DeckMapDashboardDatasetClient({
         isLoading: false,
         client: null,
         isSampled: false,
-        wrappedGeometryAsWkb,
+        wrappedGeometryColumnNames,
       });
     },
-    [datasetId, onDatasetState, wrappedGeometryAsWkb],
+    [datasetId, onDatasetState, wrappedGeometryColumnNames],
   );
   const sourceKey = isDeckMapDashboardTableDatasetSource(source)
     ? source.tableName
@@ -423,7 +423,7 @@ function DeckMapDashboardDatasetClient({
       isLoading: isLoading || !geometryProbeReady,
       client,
       isSampled,
-      wrappedGeometryAsWkb,
+      wrappedGeometryColumnNames,
     });
 
     return () => {
@@ -438,7 +438,7 @@ function DeckMapDashboardDatasetClient({
     isLoading,
     isSampled,
     onDatasetState,
-    wrappedGeometryAsWkb,
+    wrappedGeometryColumnNames,
   ]);
 
   return null;

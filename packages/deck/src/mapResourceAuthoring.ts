@@ -608,19 +608,30 @@ export function getDeckMapResourceConfigIssues(
       }
     }
 
-    // Basic-mode UI only supports numeric size/elevation props. Custom mode
-    // may use deck.gl string accessors (e.g. "@@=col"). Reject expressions
-    // that bypass the basic sliders.
+    // Basic-mode UI only supports numeric size props (and elevation via
+    // "@@=col" / scale objects). Custom mode may use deck.gl string accessors.
+    // Reject strings and unsupported objects (e.g. scaleLinear on getRadius)
+    // so the agent retries instead of saving broken accessors.
     if (config.configMode !== 'custom') {
-      if (
-        layerType === 'GeoArrowScatterplotLayer' &&
-        typeof layer.getRadius === 'string'
-      ) {
+      const rejectNonNumericSize = (
+        prop: string,
+        value: unknown,
+        message: string,
+      ) => {
+        if (value === undefined) return;
+        if (typeof value === 'number' && Number.isFinite(value)) return;
         issues.push({
-          path: `spec.layers.${index}.getRadius`,
-          message:
-            'use a positive number (e.g. 4) with radiusUnits "pixels" — string expressions are not supported in basic mode',
+          path: `spec.layers.${index}.${prop}`,
+          message,
         });
+      };
+
+      if (layerType === 'GeoArrowScatterplotLayer') {
+        rejectNonNumericSize(
+          'getRadius',
+          layer.getRadius,
+          'use a positive number (e.g. 4) with radiusUnits "pixels" — string/object size accessors are not supported in basic mode',
+        );
       }
 
       const LINE_LAYER_TYPES = new Set([
@@ -628,38 +639,28 @@ export function getDeckMapResourceConfigIssues(
         'GeoArrowArcLayer',
         'GeoArrowTripsLayer',
       ]);
-      if (
-        typeof layerType === 'string' &&
-        LINE_LAYER_TYPES.has(layerType) &&
-        typeof layer.getWidth === 'string'
-      ) {
-        issues.push({
-          path: `spec.layers.${index}.getWidth`,
-          message:
-            'use a positive number (e.g. 2) with widthUnits "pixels" — string expressions are not supported in basic mode',
-        });
+      if (typeof layerType === 'string' && LINE_LAYER_TYPES.has(layerType)) {
+        rejectNonNumericSize(
+          'getWidth',
+          layer.getWidth,
+          'use a positive number (e.g. 2) with widthUnits "pixels" — string/object size accessors are not supported in basic mode',
+        );
       }
 
-      if (
-        layerType === 'GeoArrowHeatmapLayer' &&
-        typeof layer.radiusPixels === 'string'
-      ) {
-        issues.push({
-          path: `spec.layers.${index}.radiusPixels`,
-          message:
-            'use a positive number (e.g. 30) — string expressions are not supported in basic mode',
-        });
+      if (layerType === 'GeoArrowHeatmapLayer') {
+        rejectNonNumericSize(
+          'radiusPixels',
+          layer.radiusPixels,
+          'use a positive number (e.g. 30) — string/object size accessors are not supported in basic mode',
+        );
       }
 
-      if (
-        layerType === 'GeoArrowColumnLayer' &&
-        typeof layer.radius === 'string'
-      ) {
-        issues.push({
-          path: `spec.layers.${index}.radius`,
-          message:
-            'use a positive number in meters (e.g. 50) — string expressions are not supported in basic mode',
-        });
+      if (layerType === 'GeoArrowColumnLayer') {
+        rejectNonNumericSize(
+          'radius',
+          layer.radius,
+          'use a positive number in meters (e.g. 50) — string/object size accessors are not supported in basic mode',
+        );
       }
 
       const ELEVATION_LAYER_TYPES = new Set([

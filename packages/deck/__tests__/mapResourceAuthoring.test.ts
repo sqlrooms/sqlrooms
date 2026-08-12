@@ -305,6 +305,35 @@ describe('Deck map resource authoring contract', () => {
     );
   });
 
+  test('rejects basic-mode object getRadius scale accessors', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getRadius: {
+              '@@function': 'scaleLinear',
+              field: 'Magnitude',
+              domain: 'auto',
+              range: [2, 20],
+            },
+          },
+        ],
+      },
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getRadius',
+          message: expect.stringContaining('positive number'),
+        }),
+      ]),
+    );
+  });
+
   test('rejects basic-mode string getWidth on path layers', () => {
     const issues = getDeckMapResourceConfigIssues({
       configMode: 'basic',
@@ -883,6 +912,39 @@ describe('Deck map resource authoring contract', () => {
             tableName: 'buildings',
             transformSql:
               'SELECT *, ST_AsWKB(geom) AS geom FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'datasets.buildings.source' &&
+          i.message.includes('SELECT * EXCLUDE'),
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects SELECT *, ST_AsWKB(Geom) AS geom case-only collisions', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        buildings: {
+          source: {
+            tableName: 'buildings',
+            transformSql:
+              'SELECT *, ST_AsWKB(Geom) AS geom FROM __sqlrooms_source',
           },
           geometryColumn: 'geom',
           geometryEncodingHint: 'wkb',

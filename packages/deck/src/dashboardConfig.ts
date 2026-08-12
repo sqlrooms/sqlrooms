@@ -46,8 +46,13 @@ export type DeckMapDashboardDatasetClientState = {
   error?: Error;
   client: unknown;
   isSampled?: boolean;
-  /** True when the Mosaic query projected native GEOMETRY columns via ST_AsWkb. */
-  wrappedGeometryAsWkb?: boolean;
+  /**
+   * Native GEOMETRY column names projected through `ST_AsWKB` for this query.
+   * Only force `geometryEncodingHint: "wkb"` when the configured geometry
+   * column is in this list — wrapping an unrelated column must not retarget
+   * a WKT/GeoArrow binding.
+   */
+  wrappedGeometryColumnNames?: readonly string[];
 };
 
 export function resolveDeckMapDashboardDatasetSource(options: {
@@ -184,20 +189,29 @@ export function createDeckMapDashboardDatasets(
     string,
     Pick<
       DeckMapDashboardDatasetClientState,
-      'arrowTable' | 'wrappedGeometryAsWkb'
+      'arrowTable' | 'wrappedGeometryColumnNames'
     >
   >,
 ): DeckJsonMapProps['datasets'] {
   return Object.fromEntries(
-    Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => [
-      datasetId,
-      {
-        arrowTable: datasetStates[datasetId]?.arrowTable,
-        geometryColumn: dataset.geometryColumn,
-        geometryEncodingHint: datasetStates[datasetId]?.wrappedGeometryAsWkb
-          ? 'wkb'
-          : dataset.geometryEncodingHint,
-      },
-    ]),
+    Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => {
+      const wrapped =
+        datasetStates[datasetId]?.wrappedGeometryColumnNames ?? [];
+      const geometryColumn = dataset.geometryColumn;
+      const wrappedConfiguredColumn =
+        typeof geometryColumn === 'string' &&
+        geometryColumn.length > 0 &&
+        wrapped.includes(geometryColumn);
+      return [
+        datasetId,
+        {
+          arrowTable: datasetStates[datasetId]?.arrowTable,
+          geometryColumn,
+          geometryEncodingHint: wrappedConfiguredColumn
+            ? 'wkb'
+            : dataset.geometryEncodingHint,
+        },
+      ];
+    }),
   );
 }
