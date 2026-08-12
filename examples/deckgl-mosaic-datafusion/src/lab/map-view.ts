@@ -640,6 +640,8 @@ export function createMapView(container: HTMLDivElement, cube: Float32Array) {
       }
       maskTexture?.destroy();
       maskTexture = null;
+      for (const tile of liveTiles.values()) tile.texture.destroy();
+      liveTiles.clear();
       deck.finalize();
     },
   };
