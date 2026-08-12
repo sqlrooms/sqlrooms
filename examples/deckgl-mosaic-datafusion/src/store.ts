@@ -77,6 +77,7 @@ export type ForecastSliceState = {
     refreshCube: () => void;
 
     reset: () => void;
+    dispose: () => void;
   };
 };
 
@@ -97,7 +98,11 @@ function predicateSql(selection: Selection) {
   if (!predicate || (Array.isArray(predicate) && predicate.length === 0))
     return '';
   if (Array.isArray(predicate))
-    return predicate.map(String).filter(Boolean).join(' AND ');
+    return predicate
+      .map(String)
+      .filter(Boolean)
+      .map((fragment) => `(${fragment})`)
+      .join(' AND ');
   return String(predicate);
 }
 
@@ -161,52 +166,57 @@ function createForecastSlice(lab: Lab) {
 
     const refreshSelection = async () => {
       const seq = ++selectionSeq;
-      const where = predicateSql(lab.selection);
-      const table = (await lab.df.query({
-        type: 'arrow',
-        sql: where
-          ? `SELECT id FROM cells_current_lead WHERE ${where}`
-          : 'SELECT id FROM cells_current_lead',
-      })) as Table;
-      if (seq !== selectionSeq) return;
-      selectionMask.fill(0);
-      let count = 0;
-      const ids = table.getChild('id')?.toArray() as
-        | ArrayLike<number>
-        | undefined;
-      for (let i = 0, n = ids?.length ?? 0; i < n; i += 1) {
-        const id = Number(ids![i]);
-        if (id >= 0 && id < CELL_COUNT && !selectionMask[id]) {
-          selectionMask[id] = 1;
-          count += 1;
+      try {
+        const where = predicateSql(lab.selection);
+        const table = (await lab.df.query({
+          type: 'arrow',
+          sql: where
+            ? `SELECT id FROM cells_current_lead WHERE ${where}`
+            : 'SELECT id FROM cells_current_lead',
+        })) as Table;
+        if (seq !== selectionSeq) return;
+        selectionMask.fill(0);
+        let count = 0;
+        const ids = table.getChild('id')?.toArray() as
+          | ArrayLike<number>
+          | undefined;
+        for (let i = 0, n = ids?.length ?? 0; i < n; i += 1) {
+          const id = Number(ids![i]);
+          if (id >= 0 && id < CELL_COUNT && !selectionMask[id]) {
+            selectionMask[id] = 1;
+            count += 1;
+          }
         }
-      }
-      map?.setMask(selectionMask);
+        map?.setMask(selectionMask);
 
-      const rows = (await lab.df.query({
-        type: 'json',
-        sql: `SELECT avg(value) AS mean_temp,
+        const rows = (await lab.df.query({
+          type: 'json',
+          sql: `SELECT avg(value) AS mean_temp,
   sum(area_km2) AS selected_area,
   sum(CASE WHEN value >= ${HOT_THRESHOLD_C} THEN area_km2 ELSE 0 END) AS hot_area
 FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
-      })) as Array<{
-        mean_temp: number | null;
-        selected_area: number | null;
-        hot_area: number | null;
-      }>;
-      if (seq !== selectionSeq) return;
-      const mean = rows[0]?.mean_temp;
-      const selectedArea = rows[0]?.selected_area;
-      const hotArea = rows[0]?.hot_area;
-      set((state) =>
-        produce(state, (draft) => {
-          draft.forecast.selectedCount = count;
-          draft.forecast.meanTemp = mean == null ? null : Number(mean);
-          draft.forecast.selectedAreaKm2 =
-            selectedArea == null ? null : Number(selectedArea);
-          draft.forecast.hotAreaKm2 = hotArea == null ? null : Number(hotArea);
-        }),
-      );
+        })) as Array<{
+          mean_temp: number | null;
+          selected_area: number | null;
+          hot_area: number | null;
+        }>;
+        if (seq !== selectionSeq) return;
+        const mean = rows[0]?.mean_temp;
+        const selectedArea = rows[0]?.selected_area;
+        const hotArea = rows[0]?.hot_area;
+        set((state) =>
+          produce(state, (draft) => {
+            draft.forecast.selectedCount = count;
+            draft.forecast.meanTemp = mean == null ? null : Number(mean);
+            draft.forecast.selectedAreaKm2 =
+              selectedArea == null ? null : Number(selectedArea);
+            draft.forecast.hotAreaKm2 =
+              hotArea == null ? null : Number(hotArea);
+          }),
+        );
+      } catch (error) {
+        console.error('DataFusion selection refresh failed', error);
+      }
     };
 
     const fetchForecastTime = async () => {
@@ -269,7 +279,8 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
       }, PLAYBACK_STEP_MS);
     };
 
-    lab.selection.addEventListener('value', () => void refreshSelection());
+    const onSelectionValue = () => void refreshSelection();
+    lab.selection.addEventListener('value', onSelectionValue);
     void fetchForecastTime();
     void refreshSelection();
 
@@ -353,6 +364,7 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
 
         streaming: false,
         setStreaming: (streaming) => {
+          if (get().forecast.streaming === streaming) return;
           set((state) =>
             produce(state, (draft) => {
               draft.forecast.streaming = streaming;
@@ -373,6 +385,11 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
             }),
           );
           requestLead(0);
+        },
+
+        dispose: () => {
+          stopPlayback();
+          lab.selection.removeEventListener('value', onSelectionValue);
         },
       },
     };
