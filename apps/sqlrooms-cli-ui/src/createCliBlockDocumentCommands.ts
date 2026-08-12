@@ -13,6 +13,7 @@ import {
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
+import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import type {RoomState} from './store-types';
 
 export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
@@ -443,9 +444,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
               );
               const prepared = prepareAiDeckMapConfig(merged as any, {
                 resolveTable,
-                // CLI DuckDB attaches the workspace DB as this catalog; dataset
-                // SQL runs without it, so strip it from AI-authored tableName.
-                stripCatalogNames: ['sqlrooms-cli'],
+                stripCatalogNames: [CLI_WORKSPACE_CATALOG],
               }) as DeckMapConfig;
               return normalizeDeckMapPointConfig({
                 config: prepared,

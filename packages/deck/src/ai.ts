@@ -27,6 +27,8 @@ import {
 } from './datasetSourceUtils';
 import {quoteDeckMapSqlIdentifier} from './mapConfigUtils';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
+import {prepareAiDeckMapConfig} from './aiNormalize';
+import type {PrepareAiDeckMapConfigOptions} from './aiNormalize';
 
 export {getFirstDatasetSourceTableName, hasSqlOnlyDatasetSource};
 
@@ -83,9 +85,13 @@ ${getDeckMapSharedAiContractRules()}
 
 function createDeckMapDashboardExtraTools(
   extraTools?: ExtraDashboardAiToolsFactory,
+  prepareOptions?: Pick<PrepareAiDeckMapConfigOptions, 'stripCatalogNames'>,
 ) {
   return (params: ExtraDashboardAiToolsParams) => ({
-    ...createDeckMapDashboardAiTools(params),
+    ...createDeckMapDashboardAiTools({
+      ...params,
+      stripCatalogNames: prepareOptions?.stripCatalogNames,
+    }),
     ...(extraTools?.(params) ?? {}),
   });
 }
@@ -107,12 +113,25 @@ export function getDashboardWithDeckMapAiInstructions() {
  * @param options - Dashboard AI tools configuration options
  * @returns Record mapping tool names to tool instances, including map tools
  */
+export type CreateDashboardWithDeckMapAiToolsOptions =
+  CreateDashboardAiToolsOptions & {
+    /**
+     * Host workspace catalogs to strip from AI-authored three-part tableName
+     * refs. Omit for no stripping — other apps must pass their own catalog
+     * names; `@sqlrooms/deck` does not hardcode any.
+     */
+    stripCatalogNames?: readonly string[];
+  };
+
 export function createDashboardWithDeckMapAiTools(
-  options: CreateDashboardAiToolsOptions,
+  options: CreateDashboardWithDeckMapAiToolsOptions,
 ): Record<string, Tool> {
+  const {stripCatalogNames, extraTools, ...rest} = options;
   return createMosaicDashboardAiTools({
-    ...options,
-    extraTools: createDeckMapDashboardExtraTools(options.extraTools),
+    ...rest,
+    extraTools: createDeckMapDashboardExtraTools(extraTools, {
+      stripCatalogNames,
+    }),
   });
 }
 
@@ -124,18 +143,27 @@ export function createDashboardWithDeckMapAiTools(
  * @param options - Dashboard agent configuration options
  * @returns Dashboard agent tool with map support
  */
+export type CreateDashboardAgentToolWithDeckMapsOptions<
+  TState extends MosaicDashboardStoreState,
+> = CreateDashboardAgentToolOptions<TState> & {
+  stripCatalogNames?: readonly string[];
+};
+
 export function createDashboardAgentToolWithDeckMaps<
   TState extends MosaicDashboardStoreState,
->(options: CreateDashboardAgentToolOptions<TState>): Tool {
+>(options: CreateDashboardAgentToolWithDeckMapsOptions<TState>): Tool {
+  const {stripCatalogNames, extraTools, ...rest} = options;
   return createDashboardAgentTool({
-    ...options,
+    ...rest,
     additionalInstructions: [
       options.additionalInstructions,
       DECK_MAP_AI_INSTRUCTIONS.trim(),
     ]
       .filter(Boolean)
       .join('\n\n'),
-    extraTools: createDeckMapDashboardExtraTools(options.extraTools),
+    extraTools: createDeckMapDashboardExtraTools(extraTools, {
+      stripCatalogNames,
+    }),
   });
 }
 
@@ -288,12 +316,10 @@ export {
   prepareAiDeckMapConfig,
   validateAndFixColorScaleFields,
 } from './aiNormalize';
-import {prepareAiDeckMapConfig} from './aiNormalize';
-import type {ResolveColorScaleTable} from './aiNormalize';
 
 function cloneConfig(
   config: DeckMapDashboardConfigToolConfig,
-  options?: {resolveTable?: ResolveColorScaleTable},
+  options?: PrepareAiDeckMapConfigOptions,
 ): DeckMapDashboardPanelConfig {
   const normalized = prepareAiDeckMapConfig(config, options);
   return JSON.parse(JSON.stringify(normalized)) as DeckMapDashboardPanelConfig;
@@ -305,7 +331,7 @@ function cloneConfig(
  */
 export function createDeckMapPanelFromNativeConfig(
   params: Pick<DeckMapConfigToolParams, 'title' | 'config'>,
-  options?: {resolveTable?: ResolveColorScaleTable},
+  options?: PrepareAiDeckMapConfigOptions,
 ) {
   return createDeckMapDashboardPanelConfig({
     title: params.title || 'Map',
@@ -368,6 +394,11 @@ export type CreateDeckMapDashboardToolParams = {
   dashboardAdapter: DashboardAiAdapter;
   /** Database adapter for table validation */
   databaseAdapter: DatabaseAiAdapter;
+  /**
+   * Host workspace catalogs to strip from AI-authored three-part tableName
+   * refs (e.g. CLI passes `['sqlrooms-cli']`). Omit for no stripping.
+   */
+  stripCatalogNames?: readonly string[];
 };
 
 /**
@@ -380,6 +411,7 @@ export type CreateDeckMapDashboardToolParams = {
 export function createDeckMapDashboardTool({
   dashboardAdapter,
   databaseAdapter,
+  stripCatalogNames,
 }: CreateDeckMapDashboardToolParams): Tool {
   return tool({
     description: `Deck map panel: creates or updates an interactive geospatial map panel in a Mosaic dashboard from a native Deck JSON config.
@@ -398,6 +430,7 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
 
         const panel = createDeckMapPanelFromNativeConfig(params, {
           resolveTable: (name) => databaseAdapter.findTable(name),
+          stripCatalogNames,
         });
 
         if (params.panelId) {

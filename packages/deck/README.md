@@ -640,8 +640,10 @@ The GeoArrow layer implementations themselves come from
 
 When querying DuckDB spatial `GEOMETRY` columns, the dataset pipeline probes
 output types with `DESCRIBE` and projects native `GEOMETRY` columns through
-`SELECT * REPLACE (ST_AsWKB(col) AS col)` before prepare/decode. Authored SQL
-is not rewritten — the wrap is an outer pipeline query. Prefer writing
+`SELECT * REPLACE (ST_AsWKB(col) AS col)` before prepare/decode. Matching is
+exact for `GEOMETRY` and CRS-parameterized forms such as
+`GEOMETRY('EPSG:4326')` — not containers like `GEOMETRY[]`. Authored SQL is
+not rewritten — the wrap is an outer pipeline query. Prefer writing
 `ST_AsWKB(...)` in transforms when you control the SQL; the pipeline covers
 bare `ST_Point(...)` / table `GEOMETRY` columns for every authoring surface.
 
@@ -652,8 +654,13 @@ helpers exported from `@sqlrooms/deck`:
 
 - `prepareAiDeckMapConfig(config, {resolveTable?, stripCatalogNames?})` — preferred entrypoint:
   validates `colorScale.field` names against known tables when a resolver is
-  provided, then runs normalization. Hosts may pass `stripCatalogNames` (e.g.
-  `['sqlrooms-cli']`) for workspace catalogs that do not exist in dataset SQL.
+  provided, then runs normalization. Hosts that attach a workspace DB under a
+  catalog that is **not** in scope for dataset SQL should pass that catalog via
+  `stripCatalogNames` (CLI passes `['sqlrooms-cli']`). Default is **no
+  stripping** so other apps keep their own catalogs / attached remotes intact.
+  Dashboard AI helpers (`createDashboardAgentToolWithDeckMaps`,
+  `createDashboardWithDeckMapAiTools`, `createDeckMapDashboardTool`) accept the
+  same option.
 - `normalizeAiDeckMapConfig(config, {stripCatalogNames?})` — safe structural defaults only (scheme
   casing, solo-dataset binding inject, size clamps, heatmap `colorRange` strip,
   lon/lat → WKB transform inject). `SELECT *` / `ST_AsWKB` alias collisions are

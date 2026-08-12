@@ -12,6 +12,8 @@ describe('wrapGeometryAsWkb', () => {
     expect(isDuckDbNativeGeometryType('GEOMETRY')).toBe(true);
     expect(isDuckDbNativeGeometryType('geometry')).toBe(true);
     expect(isDuckDbNativeGeometryType(' GEOMETRY ')).toBe(true);
+    expect(isDuckDbNativeGeometryType("GEOMETRY('EPSG:4326')")).toBe(true);
+    expect(isDuckDbNativeGeometryType("GEOMETRY('OGC:CRS84')")).toBe(true);
     expect(isDuckDbNativeGeometryType('BLOB')).toBe(false);
     expect(isDuckDbNativeGeometryType('WKB_BLOB')).toBe(false);
     expect(isDuckDbNativeGeometryType('geoarrow.point')).toBe(false);
