@@ -732,6 +732,9 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('Never put sql directly');
     expect(instructions).toContain('Never use data: "@@#datasetId"');
     expect(instructions).toContain('Never set mapStyle to a mapbox://');
+    expect(instructions).toContain('omit getWeight');
+    expect(instructions).toContain('will not invent centroids');
+    expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
     expect(instructions).not.toContain('Mosaic');
   });
 

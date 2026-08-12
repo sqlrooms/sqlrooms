@@ -389,9 +389,11 @@ describe('createDeckMapDashboardTool', () => {
   });
 
   it('includes deck map guidance in reusable dashboard instructions', () => {
-    expect(getDashboardWithDeckMapAiInstructions()).toContain(
-      'create_dashboard_map',
-    );
+    const instructions = getDashboardWithDeckMapAiInstructions();
+    expect(instructions).toContain('create_dashboard_map');
+    expect(instructions).toContain('Shared Deck map authoring rules');
+    expect(instructions).toContain('Never set mapStyle to a mapbox://');
+    expect(instructions).toContain('omit getWeight');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {

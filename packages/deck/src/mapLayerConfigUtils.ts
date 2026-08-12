@@ -278,20 +278,43 @@ const COLUMN_LAYER_RADIUS_CONFLICT_KEYS = [
   'radiusPixels',
 ] as const;
 
-/** Apply a column radius in meters and strip conflicting point/heatmap radius props. */
-export function applyDeckMapColumnRadiusMeters(
+/**
+ * Force meters and strip point/heatmap radius leftovers from a ColumnLayer.
+ * Does not set `radius` — callers choose the meters value separately.
+ */
+export function stripDeckMapColumnLayerRadiusConflicts(
   layer: DeckMapLayerRecord,
-  radiusMeters: number,
 ): DeckMapLayerRecord {
   const next: DeckMapLayerRecord = {
     ...layer,
-    radius: radiusMeters,
     radiusUnits: 'meters',
   };
   for (const key of COLUMN_LAYER_RADIUS_CONFLICT_KEYS) {
     delete next[key];
   }
   return next;
+}
+
+/** True when ColumnLayer still carries point/heatmap radius props or pixel units. */
+export function deckMapColumnLayerHasRadiusConflicts(
+  layer: DeckMapLayerRecord,
+): boolean {
+  if (layer.radiusUnits === 'pixels') return true;
+  return COLUMN_LAYER_RADIUS_CONFLICT_KEYS.some(
+    (key) => layer[key] !== undefined,
+  );
+}
+
+/** Apply a column radius in meters and strip conflicting point/heatmap radius props. */
+export function applyDeckMapColumnRadiusMeters(
+  layer: DeckMapLayerRecord,
+  radiusMeters: number,
+): DeckMapLayerRecord {
+  return {
+    ...stripDeckMapColumnLayerRadiusConflicts(layer),
+    radius: radiusMeters,
+    radiusUnits: 'meters',
+  };
 }
 
 /** Set GeoArrowColumnLayer disk radius in meters. */

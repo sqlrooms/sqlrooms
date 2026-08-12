@@ -1,4 +1,8 @@
 import {allKnownColorSchemeNames} from '@sqlrooms/color-scales/colorSchemeNames';
+import {
+  deckMapColumnLayerHasRadiusConflicts,
+  stripDeckMapColumnLayerRadiusConflicts,
+} from './mapLayerConfigUtils';
 
 // Inlined SQL helpers keep this module free of heavy workspace-package imports
 // (e.g. @sqlrooms/duckdb, @sqlrooms/mosaic) that would break Jest.
@@ -121,15 +125,10 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       const needsDefaultRadius =
         typeof r !== 'string' &&
         (typeof r !== 'number' || !Number.isFinite(r) || r <= 0);
-      const hasPixelUnits = l.radiusUnits === 'pixels';
-      const hasPointRadiusLeak =
-        l.getRadius !== undefined ||
-        l.radiusMinPixels !== undefined ||
-        l.radiusMaxPixels !== undefined ||
-        l.radiusPixels !== undefined;
-      if (needsDefaultRadius || hasPixelUnits || hasPointRadiusLeak) {
+      const hasConflicts = deckMapColumnLayerHasRadiusConflicts(l);
+      if (needsDefaultRadius || hasConflicts) {
         changed = true;
-        const next: Record<string, unknown> = {...l};
+        const next = stripDeckMapColumnLayerRadiusConflicts(l);
         // Always ensure an explicit meters radius when repairing this layer.
         // Stripping getRadius without setting radius leaves deck.gl's default
         // (1000), which is enormous at city scale. Do not overwrite a string
@@ -137,11 +136,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         if (needsDefaultRadius) {
           next.radius = DEFAULT_AI_COLUMN_RADIUS_METERS;
         }
-        next.radiusUnits = 'meters';
-        delete next.getRadius;
-        delete next.radiusMinPixels;
-        delete next.radiusMaxPixels;
-        delete next.radiusPixels;
         l = next;
       }
     }
