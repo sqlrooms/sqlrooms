@@ -46,6 +46,10 @@ function ReadyApp({
   const {roomStore} = useMemo(() => createForecastRoomStore(lab), [lab]);
 
   useEffect(() => {
+    return () => roomStore.getState().forecast.dispose();
+  }, [roomStore]);
+
+  useEffect(() => {
     if (cubeVersion > 0) roomStore.getState().forecast.refreshCube();
   }, [roomStore, cubeVersion]);
 
@@ -53,7 +57,7 @@ function ReadyApp({
     roomStore
       .getState()
       .forecast.setStreaming(progress.loadedChunks < progress.totalChunks);
-  }, [roomStore, progress]);
+  }, [roomStore, progress.loadedChunks, progress.totalChunks]);
 
   return <Room roomStore={roomStore} />;
 }
