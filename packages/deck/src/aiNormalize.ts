@@ -49,14 +49,23 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       return layer;
     }
     let l = layer as Record<string, unknown>;
+    let layerChanged = false;
 
     if (
       l['@@type'] === 'GeoArrowScatterplotLayer' &&
       typeof l.getRadius === 'number' &&
       l.getRadius <= 0
     ) {
-      changed = true;
-      return {...l, getRadius: DEFAULT_AI_POINT_RADIUS};
+      // Pair the default radius with pixel units / clamps so deck.gl does not
+      // interpret 4 as meters or keep a stale radiusMaxPixels cap.
+      l = {
+        ...l,
+        getRadius: DEFAULT_AI_POINT_RADIUS,
+        radiusUnits: 'pixels',
+        radiusMinPixels: DEFAULT_AI_POINT_RADIUS,
+        radiusMaxPixels: DEFAULT_AI_POINT_RADIUS,
+      };
+      layerChanged = true;
     }
 
     const LINE_LAYER_TYPES = new Set([
@@ -65,44 +74,36 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
       'GeoArrowTripsLayer',
     ]);
 
-    // Enforce widthUnits: "pixels" when getWidth is numeric but widthUnits is
-    // absent or set to meters. Meter-based widths scale with zoom and produce
-    // wildly different visual thicknesses at different zoom levels.
+    // Apply widthUnits and inverted-clamp repairs in one pass so a missing
+    // widthUnits does not skip the max < min fix below.
     if (
       typeof l['@@type'] === 'string' &&
       LINE_LAYER_TYPES.has(l['@@type']) &&
-      typeof l.getWidth === 'number' &&
-      l.widthUnits !== 'pixels'
+      typeof l.getWidth === 'number'
     ) {
-      changed = true;
-      return {...l, widthUnits: 'pixels'};
-    }
-
-    // Fix inverted width clamps (max < min) that silently cap rendered width
-    // below the UI slider range.
-    if (
-      typeof l['@@type'] === 'string' &&
-      LINE_LAYER_TYPES.has(l['@@type']) &&
-      typeof l.widthMinPixels === 'number' &&
-      typeof l.widthMaxPixels === 'number' &&
-      l.widthMaxPixels < l.widthMinPixels
-    ) {
-      changed = true;
-      const value = Math.max(
-        l.widthMinPixels,
-        l.widthMaxPixels,
-        typeof l.getWidth === 'number' ? l.getWidth : 0,
-      );
-      const next: Record<string, unknown> = {
-        ...l,
-        widthUnits: 'pixels',
-        widthMinPixels: value,
-        widthMaxPixels: value,
-      };
-      if (typeof l.getWidth === 'number') {
-        next.getWidth = value;
+      if (l.widthUnits !== 'pixels') {
+        l = {...l, widthUnits: 'pixels'};
+        layerChanged = true;
       }
-      return next;
+      if (
+        typeof l.widthMinPixels === 'number' &&
+        typeof l.widthMaxPixels === 'number' &&
+        l.widthMaxPixels < l.widthMinPixels
+      ) {
+        const value = Math.max(
+          l.widthMinPixels,
+          l.widthMaxPixels,
+          typeof l.getWidth === 'number' ? l.getWidth : 0,
+        );
+        l = {
+          ...l,
+          widthUnits: 'pixels',
+          widthMinPixels: value,
+          widthMaxPixels: value,
+          getWidth: value,
+        };
+        layerChanged = true;
+      }
     }
 
     // Clamp heatmap radiusPixels: zero/negative values produce an invisible
@@ -110,8 +111,8 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
     if (l['@@type'] === 'GeoArrowHeatmapLayer') {
       const rp = l.radiusPixels;
       if (typeof rp === 'number' && rp <= 0) {
-        changed = true;
-        return {...l, radiusPixels: DEFAULT_AI_HEATMAP_RADIUS_PIXELS};
+        l = {...l, radiusPixels: DEFAULT_AI_HEATMAP_RADIUS_PIXELS};
+        layerChanged = true;
       }
     }
 
@@ -127,7 +128,6 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
         (typeof r !== 'number' || !Number.isFinite(r) || r <= 0);
       const hasConflicts = deckMapColumnLayerHasRadiusConflicts(l);
       if (needsDefaultRadius || hasConflicts) {
-        changed = true;
         const next = stripDeckMapColumnLayerRadiusConflicts(l);
         // Always ensure an explicit meters radius when repairing this layer.
         // Stripping getRadius without setting radius leaves deck.gl's default
@@ -137,10 +137,12 @@ function normalizeAiMapConfigRadius(config: AiMapConfig): AiMapConfig {
           next.radius = DEFAULT_AI_COLUMN_RADIUS_METERS;
         }
         l = next;
+        layerChanged = true;
       }
     }
 
-    if (changed && l !== layer) {
+    if (layerChanged) {
+      changed = true;
       return l;
     }
     return layer;
@@ -188,9 +190,12 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     let l = layer as Record<string, unknown>;
     let layerChanged = false;
 
-    // Alias: scaleLinear → scale (only `scale` is registered in Deck JSON).
-    for (const prop of ['getRadius', 'getElevation', 'getWidth'] as const) {
-      const value = l[prop];
+    // Alias: scaleLinear → scale only for getElevation. The Deck JSON
+    // preprocessor compiles scale markers for elevation; radius/width scale
+    // objects would reach deck.gl as broken accessors — leave them for the
+    // validator / agent retry.
+    {
+      const value = l.getElevation;
       if (
         value &&
         typeof value === 'object' &&
@@ -199,7 +204,7 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       ) {
         l = {
           ...l,
-          [prop]: {...(value as object), '@@function': 'scale'},
+          getElevation: {...(value as object), '@@function': 'scale'},
         };
         layerChanged = true;
       }
@@ -208,8 +213,9 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
     // Normalise color accessor scheme names: AI often sends wrong casing
     // (e.g. "blues", "viridis"). Do a case-insensitive lookup and replace with
     // the canonical name so the color-scale renderer can find the interpolator.
-    // Type/scheme compatibility (e.g. quantile + Viridis) is rejected by
-    // getDeckMapResourceConfigIssues — agent retry, not silent coerce.
+    // Also trim type/scheme so whitespace does not pass validation then fail
+    // at render. Type/scheme compatibility (e.g. quantile + Viridis) is
+    // rejected by getDeckMapResourceConfigIssues — agent retry, not silent coerce.
     for (const prop of COLOR_ACCESSOR_PROPS) {
       const value = l[prop];
       if (
@@ -220,13 +226,22 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
         (value as Record<string, unknown>)['@@function'] === 'colorScale'
       ) {
         const v = value as Record<string, unknown>;
+        let next = v;
         const rawScheme = v.scheme;
         if (typeof rawScheme === 'string') {
-          const canonical = SCHEME_NAME_BY_LOWER.get(rawScheme.toLowerCase());
-          if (canonical && canonical !== rawScheme) {
-            l = {...l, [prop]: {...v, scheme: canonical}};
-            layerChanged = true;
+          const trimmed = rawScheme.trim();
+          const canonical =
+            SCHEME_NAME_BY_LOWER.get(trimmed.toLowerCase()) ?? trimmed;
+          if (canonical !== rawScheme) {
+            next = {...next, scheme: canonical};
           }
+        }
+        if (typeof v.type === 'string' && v.type !== v.type.trim()) {
+          next = {...next, type: v.type.trim()};
+        }
+        if (next !== v) {
+          l = {...l, [prop]: next};
+          layerChanged = true;
         }
       }
     }
@@ -374,17 +389,28 @@ function splitTableRef(ref: string): string[] {
 }
 
 /**
- * Strips the catalog prefix from dataset tableName values.
- * DuckDB's catalog prefix (e.g. "sqlrooms-cli.main.my_table") is not valid
- * inside dataset SQL — only the bare name or schema-qualified name is.
+ * Strips only known workspace catalog prefixes from dataset tableName values
+ * (e.g. `sqlrooms-cli.main.my_table`). Attached/remote three-part catalogs such
+ * as `"remote"."main"."events"` are preserved — the table SQL builder accepts
+ * quoted multi-part references.
  */
+/** Workspace catalogs that do not exist in the dataset query execution context. */
+const WORKSPACE_CATALOG_NAMES = new Set(['sqlrooms-cli']);
+
+function unquoteTableRefPart(part: string): string {
+  const trimmed = part.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1).replace(/""/g, '"');
+  }
+  return trimmed;
+}
+
 function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
   const datasets = config.datasets;
   if (!datasets || typeof datasets !== 'object') return config;
 
-  // Collect geometry column names used by arc layers so we can check their
-  // transformSql and ensure geometryEncodingHint is set to "wkb".
-  const arcGeomCols = new Set<string>();
+  // Per arc-bound dataset: geometry column names that must decode as WKB.
+  const arcGeomColsByDataset = new Map<string, Set<string>>();
   const spec = config.spec as Record<string, unknown> | undefined;
   if (spec && Array.isArray(spec.layers)) {
     for (const layer of spec.layers) {
@@ -392,10 +418,17 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
       const l = layer as Record<string, unknown>;
       if (l['@@type'] !== 'GeoArrowArcLayer') continue;
       const binding = l._sqlroomsBinding as Record<string, unknown> | undefined;
-      if (typeof binding?.sourceGeometryColumn === 'string')
-        arcGeomCols.add(binding.sourceGeometryColumn);
-      if (typeof binding?.targetGeometryColumn === 'string')
-        arcGeomCols.add(binding.targetGeometryColumn);
+      const datasetId =
+        typeof binding?.dataset === 'string' ? binding.dataset : undefined;
+      if (!datasetId) continue;
+      const cols = arcGeomColsByDataset.get(datasetId) ?? new Set<string>();
+      if (typeof binding?.sourceGeometryColumn === 'string') {
+        cols.add(binding.sourceGeometryColumn);
+      }
+      if (typeof binding?.targetGeometryColumn === 'string') {
+        cols.add(binding.targetGeometryColumn);
+      }
+      if (cols.size > 0) arcGeomColsByDataset.set(datasetId, cols);
     }
   }
 
@@ -413,30 +446,30 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
     if (typeof tableName === 'string') {
       const parts = splitTableRef(tableName);
       if (parts.length >= 3) {
-        const stripped = parts.slice(1).join('.');
-        nextSource = {...nextSource, tableName: stripped};
-        next = {...next, source: nextSource};
-        changed = true;
+        const catalog = unquoteTableRefPart(parts[0]!).toLowerCase();
+        if (WORKSPACE_CATALOG_NAMES.has(catalog)) {
+          const stripped = parts.slice(1).join('.');
+          nextSource = {...nextSource, tableName: stripped};
+          next = {...next, source: nextSource};
+          changed = true;
+        }
       }
     }
 
-    // Fix missing geometryEncodingHint for arc datasets.
-    // If the transformSql defines arc geometry columns (detected above), the
-    // dataset must declare geometryEncodingHint: "wkb" so the decoder knows
-    // how to read the geometry. Do not silently rewrite SQL — validator +
-    // agent retry own ST_MakeLine(LIST(...)) corrections; native GEOMETRY is
-    // projected to WKB by the dataset pipeline.
+    // Fix missing geometryEncodingHint for arc datasets bound to this id.
+    // Scope by dataset so an arc column name like "geom" cannot mark an
+    // unrelated polygon dataset as WKB.
     const transformSql = (next?.source as Record<string, unknown> | undefined)
       ?.transformSql as string | undefined;
+    const arcCols = arcGeomColsByDataset.get(id);
 
     if (
-      arcGeomCols.size > 0 &&
+      arcCols &&
+      arcCols.size > 0 &&
       typeof transformSql === 'string' &&
       !next?.geometryEncodingHint
     ) {
-      // Only inject when the transformSql references at least one of the
-      // arc geometry columns — avoids touching unrelated datasets.
-      const mentionsArcCol = [...arcGeomCols].some((col) =>
+      const mentionsArcCol = [...arcCols].some((col) =>
         transformSql.includes(col),
       );
       if (mentionsArcCol) {
@@ -638,15 +671,35 @@ export type ResolveColorScaleTable = (
 export function validateAndFixColorScaleFields<
   T extends {spec?: unknown; datasets?: Record<string, unknown>},
 >(config: T, resolveTable: ResolveColorScaleTable): T {
-  const spec = config.spec;
-  if (!spec || typeof spec === 'string') return config;
-  const layers = Array.isArray((spec as Record<string, unknown>).layers)
-    ? ((spec as Record<string, unknown>).layers as Record<string, unknown>[])
+  const rawSpec = config.spec;
+  if (!rawSpec) return config;
+  let spec: Record<string, unknown>;
+  if (typeof rawSpec === 'string') {
+    try {
+      const parsed = JSON.parse(rawSpec) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return config;
+      }
+      spec = parsed as Record<string, unknown>;
+    } catch {
+      return config;
+    }
+  } else if (typeof rawSpec === 'object' && !Array.isArray(rawSpec)) {
+    spec = rawSpec as Record<string, unknown>;
+  } else {
+    return config;
+  }
+  const layers = Array.isArray(spec.layers)
+    ? (spec.layers as Record<string, unknown>[])
     : [];
 
   const columnsByDataset = new Map<
     string,
-    {byLower: Map<string, string>; rejectUnknown: boolean}
+    {
+      byLower: Map<string, string>;
+      rejectUnknown: boolean;
+      derivedSql: string;
+    }
   >();
   for (const [datasetId, dataset] of Object.entries(config.datasets ?? {})) {
     const source = (dataset as Record<string, unknown>)?.source as
@@ -660,11 +713,11 @@ export function validateAndFixColorScaleFields<
     const table = resolveTable(tableName);
     if (!table?.columns?.length) continue;
 
-    const hasDerivedSql =
-      (typeof source.transformSql === 'string' &&
-        source.transformSql.trim().length > 0) ||
-      (typeof source.sqlQuery === 'string' &&
-        source.sqlQuery.trim().length > 0);
+    const transformSql =
+      typeof source.transformSql === 'string' ? source.transformSql : '';
+    const sqlQuery = typeof source.sqlQuery === 'string' ? source.sqlQuery : '';
+    const derivedSql = `${transformSql} ${sqlQuery}`.trim();
+    const hasDerivedSql = derivedSql.length > 0;
 
     const byLower = new Map<string, string>();
     for (const col of table.columns) {
@@ -673,6 +726,7 @@ export function validateAndFixColorScaleFields<
     columnsByDataset.set(datasetId, {
       byLower,
       rejectUnknown: !hasDerivedSql,
+      derivedSql,
     });
   }
 
@@ -724,8 +778,11 @@ export function validateAndFixColorScaleFields<
         continue;
       }
       if (!cols.rejectUnknown) {
-        // Field may be introduced by transformSql/sqlQuery — do not guess.
-        continue;
+        // Derived SQL may introduce aliases. Allow fields mentioned in the SQL
+        // text; reject typos that match neither the base table nor the SQL.
+        if (cols.derivedSql.toLowerCase().includes(field.toLowerCase())) {
+          continue;
+        }
       }
       const available = [...cols.byLower.values()].join(', ');
       errors.push(
@@ -739,11 +796,11 @@ export function validateAndFixColorScaleFields<
     throw new Error(errors.join('; '));
   }
 
-  if (!changed) return config;
+  if (!changed && typeof rawSpec !== 'string') return config;
   return {
     ...config,
     spec: {
-      ...(spec as Record<string, unknown>),
+      ...spec,
       layers: nextLayers,
     },
   } as T;

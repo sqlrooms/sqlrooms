@@ -76,6 +76,14 @@ const RESERVED_IDENTIFIERS = new Set([
   'target',
 ]);
 
+/**
+ * True when a column name can be safely embedded in a GeoArrow `@@=` expression
+ * (valid JS identifier that is not a reserved word or expression global).
+ */
+export function isBindableGeoArrowFieldIdentifier(name: string): boolean {
+  return isValidIdentifier(name) && !RESERVED_IDENTIFIERS.has(name);
+}
+
 function unique<T>(values: T[]) {
   return [...new Set(values)];
 }

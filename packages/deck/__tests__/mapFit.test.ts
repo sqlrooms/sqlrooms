@@ -279,6 +279,24 @@ describe('Deck map fit core', () => {
     expect(query.match(/__sqlrooms_dashboard_map_geom"/g)).toHaveLength(1);
   });
 
+  test('decodes mixed WKB and native geometry columns independently for fit', () => {
+    const query = createDeckMapBoundsQuery({
+      source: {
+        tableName: 'arcs',
+        transformSql:
+          'SELECT *, ST_AsWKB(ST_Point(1, 2)) AS source_geom, ST_Point(3, 4) AS target_geom FROM __sqlrooms_source',
+      },
+      fitToData: {
+        dataset: 'arcs',
+        geometryColumns: ['source_geom', 'target_geom'],
+      },
+    });
+
+    expect(query).toContain('ST_GeomFromWKB("source_geom")');
+    expect(query).toContain('"target_geom"::GEOMETRY');
+    expect(query).not.toContain('ST_GeomFromWKB("target_geom")');
+  });
+
   test('strips trailing semicolons from SQL dataset bounds queries', () => {
     const query = createDeckMapBoundsQuery({
       source: {sqlQuery: ' SELECT * FROM earthquakes; ;  '},

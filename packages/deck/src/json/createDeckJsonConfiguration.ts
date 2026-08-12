@@ -30,6 +30,7 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
+import {isBindableGeoArrowFieldIdentifier} from './compileGeoArrowAccessor';
 import {
   compileLinearScaleAccessor,
   compileLinearScaleExpression,
@@ -401,7 +402,7 @@ export function createDeckJsonConfiguration(
             if (Number.isFinite(v) && v < min) min = v;
           }
           if (Number.isFinite(min)) {
-            if (/^[A-Za-z_$][\w$]*$/.test(elevField)) {
+            if (isBindableGeoArrowFieldIdentifier(elevField)) {
               if (min !== 0) {
                 nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
               }

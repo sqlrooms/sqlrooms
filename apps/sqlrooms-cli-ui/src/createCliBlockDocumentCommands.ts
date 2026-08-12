@@ -9,7 +9,6 @@ import {
   mergeDeckMapResourceConfigPatch,
   normalizeDeckMapPointConfig,
   prepareAiDeckMapConfig,
-  validateAndFixColorScaleFields,
   type DeckMapConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
@@ -433,25 +432,20 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
             }) => {
               const resolveTable = (tableName: string) =>
                 state.db.findTable(tableName);
-              // Validate colorScale fields on the incoming patch before
-              // normalize injects transformSql (which would skip unknown-field
-              // rejection for bare tableName sources).
-              const prepared = prepareAiDeckMapConfig(config as any, {
-                resolveTable,
-              }) as DeckMapConfig;
+              // Merge first so isSourceDowngrade can preserve existing
+              // transformSql/sqlQuery before normalize injects lon/lat SQL.
+              // prepareAiDeckMapConfig then validates colorScale fields against
+              // the merged datasets and normalizes the full config once.
               const merged = mergeDeckMapResourceConfigPatch(
                 existingMapConfig,
-                prepared,
+                config as DeckMapConfig,
                 {replaceLayers, replaceDatasets},
               );
-              // Second pass: fix casing on merged visual updates that keep an
-              // existing transformSql (unknown fields are not rejected then).
-              const validated = validateAndFixColorScaleFields(
-                merged,
+              const prepared = prepareAiDeckMapConfig(merged as any, {
                 resolveTable,
-              );
+              }) as DeckMapConfig;
               return normalizeDeckMapPointConfig({
-                config: validated,
+                config: prepared,
                 resolveTable,
               });
             },

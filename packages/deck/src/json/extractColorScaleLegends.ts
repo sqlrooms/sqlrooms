@@ -114,6 +114,10 @@ export function extractColorScaleLegends(options: {
           colorScale.type,
           String(colorScale.scheme ?? ''),
           colorScale.field,
+          JSON.stringify(colorScale.domain ?? null),
+          String(colorScale.reverse ?? false),
+          String(colorScale.bins ?? ''),
+          JSON.stringify(colorScale.thresholds ?? null),
         ].join('\0');
         if (seenLegendKeys.has(key)) continue;
 

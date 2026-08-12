@@ -24,6 +24,36 @@ import {
 } from './types';
 
 /**
+ * True when `columnName` is the alias of an `ST_AsWKB(...)` projection in SQL.
+ * Used so fit queries decode each geometry column independently (arcs can mix
+ * WKB and native GEOMETRY columns in one transform).
+ */
+function columnAliasProducedByStAsWkb(
+  sql: string,
+  columnName: string,
+): boolean {
+  if (!sql || !columnName) return false;
+  const lowerCol = columnName.toLowerCase();
+  const parts = sql.split(/\bST_AsWKB\s*\(/i);
+  for (let i = 1; i < parts.length; i++) {
+    const rest = parts[i]!;
+    let depth = 1;
+    let j = 0;
+    for (; j < rest.length && depth > 0; j++) {
+      const ch = rest[j];
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+    }
+    const after = rest.slice(j);
+    const match = after.match(/^\s*AS\s+("([^"]+)"|([A-Za-z_][\w$]*))/i);
+    if (!match) continue;
+    const alias = (match[2] ?? match[3] ?? '').toLowerCase();
+    if (alias === lowerCol) return true;
+  }
+  return false;
+}
+
+/**
  * Resolves the effective fit-to-data configuration for a Deck map.
  *
  * Explicit coordinate or geometry fields take precedence. Missing geometry and
@@ -202,13 +232,19 @@ export function createDeckMapBoundsQuery(options: {
     const sourceSql = isDeckMapSqlDatasetSource(source)
       ? source.sqlQuery
       : (source.transformSql ?? '');
-    const asGeometry = (column: string) =>
-      sourceSql.toLowerCase().includes('st_aswkb')
-        ? `ST_GeomFromWKB(${column})`
-        : `${column}::GEOMETRY`;
+    const asGeometry = (columnName: string) => {
+      // Decode per column: arcs can mix ST_AsWKB(source) with native
+      // ST_Point(target). A global ST_AsWKB substring check would wrap every
+      // column in ST_GeomFromWKB and break native GEOMETRY targets.
+      const quoted = escapeId(columnName);
+      return columnAliasProducedByStAsWkb(sourceSql, columnName)
+        ? `ST_GeomFromWKB(${quoted})`
+        : `${quoted}::GEOMETRY`;
+    };
 
     if (geometryColumns.length === 1) {
-      const column = escapeId(geometryColumns[0]!);
+      const columnName = geometryColumns[0]!;
+      const column = escapeId(columnName);
       return `
       SELECT
         ST_XMin(extent) AS min_longitude,
@@ -216,7 +252,7 @@ export function createDeckMapBoundsQuery(options: {
         ST_XMax(extent) AS max_longitude,
         ST_YMax(extent) AS max_latitude
       FROM (
-        SELECT ST_Extent_Agg(${asGeometry(column)}) AS extent
+        SELECT ST_Extent_Agg(${asGeometry(columnName)}) AS extent
         FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
         WHERE ${column} IS NOT NULL
       ) AS "__sqlrooms_dashboard_map_extent"
@@ -228,7 +264,7 @@ export function createDeckMapBoundsQuery(options: {
     // geometries in one pass so the source is scanned once.
     const geomExprs = geometryColumns.map((col) => {
       const column = escapeId(col);
-      return `CASE WHEN ${column} IS NOT NULL THEN ${asGeometry(column)} END`;
+      return `CASE WHEN ${column} IS NOT NULL THEN ${asGeometry(col)} END`;
     });
     return `
       SELECT

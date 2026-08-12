@@ -353,6 +353,9 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
       ),
     );
     expect(getLayer(result).getRadius).toBe(4);
+    expect(getLayer(result).radiusUnits).toBe('pixels');
+    expect(getLayer(result).radiusMinPixels).toBe(4);
+    expect(getLayer(result).radiusMaxPixels).toBe(4);
   });
 
   test('clamps negative getRadius to default', () => {
@@ -369,6 +372,7 @@ describe('normalizeAiDeckMapConfig — getRadius', () => {
       ),
     );
     expect(getLayer(result).getRadius).toBe(4);
+    expect(getLayer(result).radiusUnits).toBe('pixels');
   });
 
   test('leaves positive getRadius unchanged in basic mode', () => {
@@ -444,7 +448,7 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
     expect(getLayer(result).widthUnits).toBe('pixels');
   });
 
-  test('fixes inverted widthMaxPixels < widthMinPixels', () => {
+  test('fixes inverted width clamps even when widthUnits was also wrong', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -452,7 +456,7 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
             '@@type': 'GeoArrowPathLayer',
             _sqlroomsBinding: {dataset: 'ds'},
             getWidth: 5,
-            widthUnits: 'pixels',
+            widthUnits: 'meters',
             widthMinPixels: 20,
             widthMaxPixels: 10,
           },
@@ -461,10 +465,10 @@ describe('normalizeAiDeckMapConfig — getWidth', () => {
       ),
     );
     const layer = getLayer(result);
+    expect(layer.widthUnits).toBe('pixels');
     expect(layer.widthMinPixels).toBe(20);
     expect(layer.widthMaxPixels).toBe(20);
     expect(layer.getWidth).toBe(20);
-    expect(layer.widthUnits).toBe('pixels');
   });
 });
 
@@ -705,7 +709,7 @@ describe('normalizeAiDeckMapConfig — _sqlroomsBinding.dataset', () => {
 // ---------------------------------------------------------------------------
 
 describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
-  test('strips catalog from three-part unquoted identifier', () => {
+  test('strips workspace catalog from three-part unquoted identifier', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig([], {
         ds: {source: {tableName: 'sqlrooms-cli.main.earthquakes'}},
@@ -714,13 +718,24 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
     expect(result.datasets.ds.source.tableName).toBe('main.earthquakes');
   });
 
-  test('strips catalog from three-part quoted identifier', () => {
+  test('strips workspace catalog from three-part quoted identifier', () => {
     const result = normalizeAiDeckMapConfig(
       makeConfig([], {
         ds: {source: {tableName: '"sqlrooms-cli"."main"."earthquakes"'}},
       }),
     );
     expect(result.datasets.ds.source.tableName).toBe('"main"."earthquakes"');
+  });
+
+  test('preserves attached/remote catalog-qualified table sources', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig([], {
+        ds: {source: {tableName: '"remote"."main"."events"'}},
+      }),
+    );
+    expect(result.datasets.ds.source.tableName).toBe(
+      '"remote"."main"."events"',
+    );
   });
 
   test('leaves two-part schema.table identifier unchanged', () => {
@@ -820,7 +835,39 @@ describe('normalizeAiDeckMapConfig — mapStyle', () => {
 });
 
 describe('normalizeAiDeckMapConfig — scaleLinear', () => {
-  test('rewrites scaleLinear accessors to scale', () => {
+  test('rewrites getElevation scaleLinear to scale', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeBasicConfig(
+        [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'ds', geometryColumn: 'geom'},
+            getElevation: {
+              '@@function': 'scaleLinear',
+              field: 'height',
+              domain: 'auto',
+              range: [0, 200],
+            },
+          },
+        ],
+        {
+          ds: {
+            source: {
+              tableName: 'buildings',
+              transformSql:
+                'SELECT *, ST_AsWKB(ST_Centroid(geom)) AS geom FROM __sqlrooms_source',
+            },
+          },
+        },
+      ),
+    );
+    expect(getLayer(result).getElevation).toMatchObject({
+      '@@function': 'scale',
+      field: 'height',
+    });
+  });
+
+  test('does not rewrite getRadius scaleLinear (unsupported size scale)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -846,9 +893,8 @@ describe('normalizeAiDeckMapConfig — scaleLinear', () => {
         },
       ),
     );
-    expect(getLayer(result)['@@type']).toBe('GeoArrowScatterplotLayer');
     expect(getLayer(result).getRadius).toMatchObject({
-      '@@function': 'scale',
+      '@@function': 'scaleLinear',
       field: 'Magnitude',
     });
   });
@@ -972,7 +1018,7 @@ describe('validateAndFixColorScaleFields', () => {
     );
   });
 
-  test('does not reject unknown fields when transformSql is present', () => {
+  test('allows derived aliases mentioned in transformSql', () => {
     const config = {
       spec: {
         layers: [
@@ -1002,6 +1048,38 @@ describe('validateAndFixColorScaleFields', () => {
     expect(() =>
       validateAndFixColorScaleFields(config, resolveTable),
     ).not.toThrow();
+  });
+
+  test('rejects typos absent from both base table and transformSql', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'quakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'totl',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+      datasets: {
+        quakes: {
+          source: {
+            tableName: 'earthquakes',
+            transformSql:
+              'SELECT *, ST_AsWKB(ST_Point(Longitude, Latitude)) AS geom FROM __sqlrooms_source',
+          },
+        },
+      },
+    };
+    expect(() => validateAndFixColorScaleFields(config, resolveTable)).toThrow(
+      /colorScale field "totl"/,
+    );
   });
 
   test('silently fixes casing even when transformSql is present', () => {

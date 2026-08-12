@@ -654,6 +654,47 @@ describe('extractColorScaleLegends', () => {
     expect(legends[0]!.title).toBe('Magnitude');
   });
 
+  it('keeps legends that share title/field but differ by reverse', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            id: 'arcs',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+            getSourceColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              reverse: false,
+              legend: {title: 'Magnitude'},
+            },
+            getTargetColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              reverse: true,
+              legend: {title: 'Magnitude'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(2);
+  });
+
   it('falls back to getLineColor legend when getFillColor field is invalid', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({

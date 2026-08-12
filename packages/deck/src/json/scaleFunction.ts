@@ -1,4 +1,5 @@
 import type * as arrow from 'apache-arrow';
+import {isBindableGeoArrowFieldIdentifier} from './compileGeoArrowAccessor';
 
 const SQLROOMS_SCALE_MARKER = Symbol.for('@sqlrooms/deck/sqlrooms-scale');
 
@@ -89,7 +90,7 @@ export function compileLinearScaleExpression(
   scale: LinearScaleConfig,
 ): string | undefined {
   const field = scale.field.trim();
-  if (!field || !/^[A-Za-z_$][\w$]*$/.test(field)) return undefined;
+  if (!field || !isBindableGeoArrowFieldIdentifier(field)) return undefined;
 
   const vector = table.getChild(field);
   if (!vector) return undefined;

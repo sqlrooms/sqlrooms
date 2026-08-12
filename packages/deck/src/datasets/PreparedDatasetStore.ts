@@ -195,7 +195,14 @@ export function createPreparedDatasetStore(
                 );
                 if (wrapped) {
                   sql = wrapped;
-                  geometryEncodingHint = 'wkb';
+                  // Only force the dataset-level hint to WKB when the configured
+                  // geometry column was among the wrapped columns (or unset).
+                  // An unrelated native GEOMETRY column must not make a WKT /
+                  // GeoArrow geometryColumn decode as WKB.
+                  const resolvedGeom = input.geometryColumn;
+                  if (!resolvedGeom || geometryColumns.includes(resolvedGeom)) {
+                    geometryEncodingHint = 'wkb';
+                  }
                 }
               }
             } catch {

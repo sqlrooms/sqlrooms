@@ -67,9 +67,15 @@ export function getColorScaleTypeSchemeIssue(
   if (typeof scheme !== 'string' || !scheme.trim()) {
     return 'colorScale requires a "scheme" (exact name such as Viridis, YlOrRd, Blues, or Tableau10)';
   }
+  if (type !== type.trim()) {
+    return 'colorScale type must not have leading or trailing whitespace';
+  }
+  if (scheme !== scheme.trim()) {
+    return 'colorScale scheme must not have leading or trailing whitespace';
+  }
 
-  const scaleType = type.trim();
-  const schemeName = scheme.trim();
+  const scaleType = type;
+  const schemeName = scheme;
 
   const allowedForType = (allowed: Set<string>, label: string) => {
     if (allowed.has(schemeName)) return undefined;
@@ -111,6 +117,23 @@ export function getColorScaleTypeSchemeIssue(
     default:
       return `colorScale type "${scaleType}" is not supported — use sequential, diverging, quantize, quantile, threshold, or categorical`;
   }
+}
+
+function getColorScaleThresholdsIssue(
+  type: unknown,
+  thresholds: unknown,
+): string | undefined {
+  if (type !== 'threshold') return undefined;
+  if (
+    !Array.isArray(thresholds) ||
+    thresholds.length === 0 ||
+    !thresholds.every(
+      (value) => typeof value === 'number' && Number.isFinite(value),
+    )
+  ) {
+    return 'colorScale type "threshold" requires a non-empty numeric "thresholds" array';
+  }
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -523,6 +546,16 @@ export function getDeckMapResourceConfigIssues(
           issues.push({
             path: `spec.layers.${index}.${prop}`,
             message: schemeIssue,
+          });
+        }
+        const thresholdsIssue = getColorScaleThresholdsIssue(
+          value.type,
+          value.thresholds,
+        );
+        if (thresholdsIssue) {
+          issues.push({
+            path: `spec.layers.${index}.${prop}`,
+            message: thresholdsIssue,
           });
         }
       }

@@ -1364,4 +1364,62 @@ describe('Deck map resource authoring contract', () => {
       ]),
     );
   });
+
+  test('rejects threshold color scales without thresholds', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'value',
+              type: 'threshold',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringMatching(/thresholds/i),
+        }),
+      ]),
+    );
+  });
+
+  test('rejects colorScale type/scheme with surrounding whitespace', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'value',
+              type: ' sequential ',
+              scheme: 'Viridis',
+              domain: 'auto',
+            },
+          },
+        ],
+      },
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getFillColor',
+          message: expect.stringMatching(/whitespace/i),
+        }),
+      ]),
+    );
+  });
 });
