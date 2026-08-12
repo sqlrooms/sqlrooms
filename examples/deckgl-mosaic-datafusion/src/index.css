@@ -146,7 +146,7 @@ input:disabled {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
-  border: 2px solid currentColor;
+  border: 2px solid currentcolor;
   border-right-color: transparent;
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
@@ -238,9 +238,9 @@ input:disabled {
 }
 
 .tool-toggle.active {
-  border-color: hsl(var(--primary));
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--accent-foreground) / 0.2);
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 .brush-readout {
