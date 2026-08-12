@@ -1,6 +1,7 @@
 import {useEffect, useRef, type ReactNode} from 'react';
 import type {
   Coordinator,
+  MosaicClient,
   Selection,
   SelectionClause,
 } from '@uwdata/mosaic-core';
@@ -36,7 +37,7 @@ export function ChartSpinner() {
 
 /**
  * Charts are sized to fill their host card; the sidebar distributes the
- * remaining height across the three cards. The fallbacks cover layouts
+ * remaining height across the four cards. The fallbacks cover layouts
  * where the host has no intrinsic height, such as the stacked mobile panel.
  */
 function hostSize(host: HTMLElement, fallbackHeight: number) {
@@ -100,7 +101,7 @@ function migrateClauses(
   previous: ChartInteractor[],
   next: ChartInteractor[],
 ) {
-  for (const clause of selection.clauses) {
+  for (const clause of [...selection.clauses]) {
     const interactor = next[previous.indexOf(clause.source as ChartInteractor)];
     if (!interactor) continue;
     interactor.value = clause.value;
@@ -248,7 +249,7 @@ function buildCharts(
 }
 
 /**
- * The three crossfiltered vgplot charts. vgplot owns the host DOM, so the
+ * The four crossfiltered vgplot charts. vgplot owns the host DOM, so the
  * refs have no React children. Charts rebuild at the new size when the
  * sidebar cards change on window resize or zoom; the shared Selection and
  * any active brushes survive the rebuild. While streaming is true, domains
@@ -280,11 +281,21 @@ export function MosaicCharts({
     };
     const hostList = Object.values(hosts);
     let renderedKey = sizeKey(hostList);
+    let ownedClients: MosaicClient[] = [];
+
+    const disconnectOwnedClients = () => {
+      for (const client of ownedClients) coordinator.disconnect(client);
+      ownedClients = [];
+    };
 
     const build = () => {
       const previous = interactorsRef.current;
-      coordinator.clear();
+      disconnectOwnedClients();
+      const before = new Set(coordinator.clients);
       buildCharts(hosts, coordinator, selection, streaming);
+      ownedClients = Array.from(coordinator.clients).filter(
+        (client) => !before.has(client),
+      );
       const next = chartInteractors(hosts);
       migrateClauses(selection, previous, next);
       interactorsRef.current = next;
@@ -310,7 +321,7 @@ export function MosaicCharts({
     return () => {
       observer.disconnect();
       window.clearTimeout(resizeTimer);
-      coordinator.clear();
+      disconnectOwnedClients();
       hostList.forEach((host) => host.replaceChildren());
     };
   }, [coordinator, selection, streaming]);
