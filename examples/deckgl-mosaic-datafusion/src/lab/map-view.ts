@@ -297,195 +297,143 @@ function sliceEcmwfTileData(
   };
 }
 
-export class MapView {
-  private readonly deck: Deck;
-  private readonly container: HTMLDivElement;
-  private readonly leadCount: number;
+/**
+ * Owns the imperative deck.gl WebGL lifecycle (raster tiles, mask/brush
+ * overlays, GPU textures) behind a narrow closure-scoped API. React only
+ * calls the returned methods and finalize(); it never touches deck.gl or
+ * GPU resources directly.
+ */
+export function createMapView(container: HTMLDivElement, cube: Float32Array) {
+  const leadCount = Math.max(1, Math.floor(cube.length / CELL_COUNT));
   /**
    * Mask bytes mirror the DataFusion "SELECT id FROM cells_current_lead
    * WHERE ..." result
    * (255 = selected) and are uploaded into the r8unorm mask texture in place.
    */
-  private readonly maskBytes = new Uint8Array(CELL_COUNT).fill(255);
-  private maskTexture: Texture | null = null;
-  private maskDirty = false;
-  private maskVersion = 0;
+  const maskBytes = new Uint8Array(CELL_COUNT).fill(255);
+  let maskTexture: Texture | null = null;
+  let maskDirty = false;
+  let maskVersion = 0;
   /**
    * Tile textures currently alive in the tileset, keyed by texture so
    * refreshCube can rewrite their pixels as streamed chunks land.
    */
-  private readonly liveTiles = new Map<Texture, LiveTile>();
-  private cubeVersion = 0;
-  private device: Device | null = null;
-  private leadIndex = 0;
-  private brushCenter: MapBrushCenter | null = null;
-  private brushRadiusKm = 175;
-  private zarrArray: zarr.Array<'float32', zarr.Readable> | null = null;
-  private baseLayers: Layer[] = [];
-  private baseLayersKey = '';
-
-  constructor(
-    container: HTMLDivElement,
-    private readonly cube: Float32Array,
-  ) {
-    this.container = container;
-    this.leadCount = Math.max(1, Math.floor(cube.length / CELL_COUNT));
-    this.deck = new Deck({
-      parent: container,
-      /**
-       * Calling deck.setProps() synchronously from this callback corrupts
-       * the initial view state because the callback fires while Deck is
-       * still initializing, so the re-render is deferred by one frame.
-       */
-      onDeviceInitialized: (device) => {
-        this.device = device;
-        window.requestAnimationFrame(() => this.render());
-      },
-      initialViewState: {
-        longitude: (BOUNDS.west + BOUNDS.east) / 2,
-        latitude: (BOUNDS.south + BOUNDS.north) / 2 + 0.5,
-        zoom: 5,
-        bearing: 0,
-        pitch: 0,
-      },
-      controller: true,
-      layers: [],
-      /**
-       * Cursor-following tooltip with the temperature under the pointer at
-       * the active lead. Hidden outside the crop or over NaN samples.
-       */
-      getTooltip: (info) => {
-        if (!info.coordinate) return null;
-        const [lon, lat] = info.coordinate;
-        const value = this.sampleCubeAt(lon, lat);
-        if (value === null) return null;
-        return {
-          text: `${value.toFixed(1)} °C`,
-          style: {
-            background: 'rgba(20, 24, 23, 0.86)',
-            color: '#f4f7f4',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
-            padding: '5px 8px',
-            fontSize: '12px',
-            fontFamily: 'inherit',
-            backdropFilter: 'blur(10px)',
-          },
-        };
-      },
-    });
-    void this.loadZarrRaster();
-  }
-
-  private async loadZarrRaster() {
-    try {
-      const arr = await openEcmwfArray(ECMWF_TEMPERATURE_VARIABLE);
-      if (!arr.is('float32')) {
-        throw new Error(
-          `Expected ${ECMWF_TEMPERATURE_VARIABLE} to be float32, got ${arr.dtype}`,
-        );
-      }
-      this.zarrArray = arr;
-      this.render();
-    } catch (error) {
-      console.error(error);
-    }
-  }
+  const liveTiles = new Map<Texture, LiveTile>();
+  let cubeVersion = 0;
+  let device: Device | null = null;
+  let leadIndex = 0;
+  let brushCenter: MapBrushCenter | null = null;
+  let brushRadiusKm = 175;
+  let zarrArray: zarr.Array<'float32', zarr.Readable> | null = null;
+  let baseLayers: Layer[] = [];
+  let baseLayersKey = '';
+  /**
+   * Guards every render path (including the deferred first-frame render and
+   * in-flight loadZarrRaster()/openEcmwfArray() completions) so callbacks
+   * that resolve after finalize() cannot call deck.setProps() on a
+   * finalized Deck instance.
+   */
+  let disposed = false;
+  let deferredRenderFrame: number | null = null;
 
   /**
    * Returns the temperature under the cursor at the active lead, matching
    * what the shader draws. Null outside the crop, on NaN samples, or on
    * cells the selection mask has filtered out.
    */
-  private sampleCubeAt(lon: number, lat: number): number | null {
+  function sampleCubeAt(lon: number, lat: number): number | null {
     const x = Math.floor((lon - BOUNDS.west) / ECMWF_RESOLUTION);
     const y = Math.floor((BOUNDS.north - lat) / ECMWF_RESOLUTION);
     if (x < 0 || x >= RASTER_WIDTH || y < 0 || y >= RASTER_HEIGHT) return null;
     const cell = y * RASTER_WIDTH + x;
-    if (this.maskBytes[cell] < 128) return null;
-    const value = this.cube[this.leadIndex * CELL_COUNT + cell];
+    if (maskBytes[cell] < 128) return null;
+    const value = cube[leadIndex * CELL_COUNT + cell];
     return Number.isFinite(value) ? value : null;
   }
 
-  setLeadIndex(leadIndex: number) {
-    this.leadIndex = Math.max(0, Math.min(leadIndex, this.leadCount - 1));
-    this.render();
+  function render() {
+    if (disposed) return;
+    deck.setProps({layers: [...getBaseLayers(), brushLayer()]});
   }
 
-  /**
-   * Rewrites every live tile texture from the shared cube after new Zarr
-   * chunks have been copied into it. Freshly covered cells stop being NaN
-   * and start rendering.
-   */
-  refreshCube() {
-    for (const tile of this.liveTiles.values()) {
-      tile.texture.writeData(
-        sliceCubeToTile(
-          this.cube,
-          this.leadCount,
-          tile.relRow,
-          tile.relCol,
-          tile.width,
-          tile.height,
-        ),
-      );
+  const deck = new Deck({
+    parent: container,
+    /**
+     * Calling deck.setProps() synchronously from this callback corrupts
+     * the initial view state because the callback fires while Deck is
+     * still initializing, so the re-render is deferred by one frame.
+     */
+    onDeviceInitialized: (nextDevice) => {
+      if (disposed) return;
+      device = nextDevice;
+      deferredRenderFrame = window.requestAnimationFrame(() => {
+        deferredRenderFrame = null;
+        if (!disposed) render();
+      });
+    },
+    initialViewState: {
+      longitude: (BOUNDS.west + BOUNDS.east) / 2,
+      latitude: (BOUNDS.south + BOUNDS.north) / 2 + 0.5,
+      zoom: 5,
+      bearing: 0,
+      pitch: 0,
+    },
+    controller: true,
+    layers: [],
+    /**
+     * Cursor-following tooltip with the temperature under the pointer at
+     * the active lead. Hidden outside the crop or over NaN samples.
+     */
+    getTooltip: (info) => {
+      if (!info.coordinate) return null;
+      const [lon, lat] = info.coordinate;
+      const value = sampleCubeAt(lon, lat);
+      if (value === null) return null;
+      return {
+        text: `${value.toFixed(1)} °C`,
+        style: {
+          background: 'rgba(20, 24, 23, 0.86)',
+          color: '#f4f7f4',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          padding: '5px 8px',
+          fontSize: '12px',
+          fontFamily: 'inherit',
+          backdropFilter: 'blur(10px)',
+        },
+      };
+    },
+  });
+
+  async function loadZarrRaster() {
+    try {
+      const arr = await openEcmwfArray(ECMWF_TEMPERATURE_VARIABLE);
+      if (disposed) return;
+      if (!arr.is('float32')) {
+        throw new Error(
+          `Expected ${ECMWF_TEMPERATURE_VARIABLE} to be float32, got ${arr.dtype}`,
+        );
+      }
+      zarrArray = arr;
+      render();
+    } catch (error) {
+      console.error(error);
     }
-    this.cubeVersion += 1;
-    this.render();
-  }
-
-  setMask(mask: Uint8Array) {
-    for (let i = 0; i < this.maskBytes.length; i += 1) {
-      this.maskBytes[i] = mask[i] ? 255 : 0;
-    }
-    this.maskDirty = true;
-    this.maskVersion += 1;
-    this.render();
-  }
-
-  setBrushEnabled(enabled: boolean) {
-    if (!enabled) this.brushCenter = null;
-    this.deck.setProps({controller: !enabled});
-    this.render();
-  }
-
-  setBrushRadiusKm(radiusKm: number) {
-    this.brushRadiusKm = radiusKm;
-    this.renderBrushOnly();
-  }
-
-  setBrushCenter(center: MapBrushCenter | null) {
-    this.brushCenter = center;
-    this.renderBrushOnly();
-  }
-
-  screenToLngLat(clientX: number, clientY: number): MapBrushCenter | null {
-    const rect = this.container.getBoundingClientRect();
-    const viewport =
-      (this.deck as any).getViewports?.()[0] ??
-      (this.deck as any).viewManager?.getViewports?.()[0];
-    if (!viewport?.unproject) return null;
-    const [lon, lat] = viewport.unproject([
-      clientX - rect.left,
-      clientY - rect.top,
-    ]);
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
-    return {lon, lat};
   }
 
   /**
    * Creates the mask texture lazily once the GPU device exists, then keeps
    * it updated in place from maskBytes.
    */
-  private getMaskTexture() {
-    if (!this.device) return null;
-    if (!this.maskTexture) {
-      this.maskTexture = this.device.createTexture({
+  function getMaskTexture() {
+    if (!device) return null;
+    if (!maskTexture) {
+      maskTexture = device.createTexture({
         dimension: '2d',
         format: 'r8unorm',
         width: RASTER_WIDTH,
         height: RASTER_HEIGHT,
         mipLevels: 1,
-        data: this.maskBytes,
+        data: maskBytes,
         sampler: {
           minFilter: 'nearest',
           magFilter: 'nearest',
@@ -493,24 +441,24 @@ export class MapView {
           addressModeV: 'clamp-to-edge',
         },
       });
-    } else if (this.maskDirty) {
-      this.maskTexture.writeData(this.maskBytes);
+    } else if (maskDirty) {
+      maskTexture.writeData(maskBytes);
     }
-    this.maskDirty = false;
-    return this.maskTexture;
+    maskDirty = false;
+    return maskTexture;
   }
 
-  private zarrRasterLayer(): Layer[] {
-    const arr = this.zarrArray;
+  function zarrRasterLayer(): Layer[] {
+    const arr = zarrArray;
     if (!arr) return [];
-    const maskTex = this.getMaskTexture();
+    const maskTex = getMaskTexture();
     if (!maskTex) return [];
-    const {cube, leadCount, leadIndex} = this;
+    const currentLeadIndex = leadIndex;
     const renderTile = (data: EcmwfTileData): RenderTileResult => ({
       renderPipeline: [
         {
           module: SampleEcmwfLead,
-          props: {dataTex: data.texture, leadIndex},
+          props: {dataTex: data.texture, leadIndex: currentLeadIndex},
         },
         /*
          * DataFilterExtension semantics for the raster: the DataFusion
@@ -550,7 +498,7 @@ export class MapView {
         extent: [BOUNDS.west, BOUNDS.south, BOUNDS.east, BOUNDS.north],
         getTileData: async (node, options) => {
           const data = sliceEcmwfTileData(cube, leadCount, node, options);
-          this.liveTiles.set(data.texture, data.liveTile);
+          liveTiles.set(data.texture, data.liveTile);
           return data;
         },
         renderTile,
@@ -558,23 +506,22 @@ export class MapView {
         onTileUnload: (tile) => {
           const content = tile.content as EcmwfTileData | undefined;
           if (content) {
-            this.liveTiles.delete(content.texture);
+            liveTiles.delete(content.texture);
             content.texture.destroy();
           }
         },
         updateTriggers: {
-          renderTile: [leadIndex, this.maskVersion, this.cubeVersion],
+          renderTile: [leadIndex, maskVersion, cubeVersion],
         },
       }),
     ];
   }
 
-  private brushLayer() {
-    const brushCenter = this.brushCenter;
+  function brushLayer() {
     return new PolygonLayer({
       id: 'hover-brush-radius',
       data: brushCenter
-        ? [{polygon: circlePolygon(brushCenter, this.brushRadiusKm)}]
+        ? [{polygon: circlePolygon(brushCenter, brushRadiusKm)}]
         : [],
       pickable: false,
       getPolygon: (item: {polygon: number[][]}) => item.polygon,
@@ -585,22 +532,12 @@ export class MapView {
     });
   }
 
-  /**
-   * Fast path for hover-brush dragging: only the circle overlay moves, so
-   * the cached basemap and raster layers are reused instead of constructing
-   * new ZarrLayer/TileLayer instances on every pointer move. The mask query
-   * that follows each move lands via setMask, which does a full render.
-   */
-  private renderBrushOnly() {
-    this.deck.setProps({layers: [...this.getBaseLayers(), this.brushLayer()]});
-  }
+  function getBaseLayers() {
+    const key = `${leadIndex}:${maskVersion}:${cubeVersion}:${zarrArray ? 1 : 0}:${device ? 1 : 0}`;
+    if (key === baseLayersKey) return baseLayers;
+    baseLayersKey = key;
 
-  private getBaseLayers() {
-    const key = `${this.leadIndex}:${this.maskVersion}:${this.cubeVersion}:${this.zarrArray ? 1 : 0}:${this.device ? 1 : 0}`;
-    if (key === this.baseLayersKey) return this.baseLayers;
-    this.baseLayersKey = key;
-
-    this.baseLayers = [
+    baseLayers = [
       new TileLayer<HTMLImageElement>({
         id: 'carto-basemap',
         data: 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
@@ -616,18 +553,96 @@ export class MapView {
           });
         },
       }),
-      ...this.zarrRasterLayer(),
+      ...zarrRasterLayer(),
     ];
-    return this.baseLayers;
+    return baseLayers;
   }
 
-  private render() {
-    this.deck.setProps({layers: [...this.getBaseLayers(), this.brushLayer()]});
+  /**
+   * Fast path for hover-brush dragging: only the circle overlay moves, so
+   * the cached basemap and raster layers are reused instead of constructing
+   * new ZarrLayer/TileLayer instances on every pointer move. The mask query
+   * that follows each move lands via setMask, which does a full render.
+   */
+  function renderBrushOnly() {
+    if (disposed) return;
+    deck.setProps({layers: [...getBaseLayers(), brushLayer()]});
   }
 
-  finalize() {
-    this.maskTexture?.destroy();
-    this.maskTexture = null;
-    this.deck.finalize();
-  }
+  void loadZarrRaster();
+
+  return {
+    setLeadIndex(nextLeadIndex: number) {
+      leadIndex = Math.max(0, Math.min(nextLeadIndex, leadCount - 1));
+      render();
+    },
+    /**
+     * Rewrites every live tile texture from the shared cube after new Zarr
+     * chunks have been copied into it. Freshly covered cells stop being NaN
+     * and start rendering.
+     */
+    refreshCube() {
+      for (const tile of liveTiles.values()) {
+        tile.texture.writeData(
+          sliceCubeToTile(
+            cube,
+            leadCount,
+            tile.relRow,
+            tile.relCol,
+            tile.width,
+            tile.height,
+          ),
+        );
+      }
+      cubeVersion += 1;
+      render();
+    },
+    setMask(mask: Uint8Array) {
+      for (let i = 0; i < maskBytes.length; i += 1) {
+        maskBytes[i] = mask[i] ? 255 : 0;
+      }
+      maskDirty = true;
+      maskVersion += 1;
+      render();
+    },
+    setBrushEnabled(enabled: boolean) {
+      if (!enabled) brushCenter = null;
+      deck.setProps({controller: !enabled});
+      render();
+    },
+    setBrushRadiusKm(radiusKm: number) {
+      brushRadiusKm = radiusKm;
+      renderBrushOnly();
+    },
+    setBrushCenter(center: MapBrushCenter | null) {
+      brushCenter = center;
+      renderBrushOnly();
+    },
+    screenToLngLat(clientX: number, clientY: number): MapBrushCenter | null {
+      const rect = container.getBoundingClientRect();
+      const viewport =
+        (deck as any).getViewports?.()[0] ??
+        (deck as any).viewManager?.getViewports?.()[0];
+      if (!viewport?.unproject) return null;
+      const [lon, lat] = viewport.unproject([
+        clientX - rect.left,
+        clientY - rect.top,
+      ]);
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+      return {lon, lat};
+    },
+    finalize() {
+      if (disposed) return;
+      disposed = true;
+      if (deferredRenderFrame !== null) {
+        window.cancelAnimationFrame(deferredRenderFrame);
+        deferredRenderFrame = null;
+      }
+      maskTexture?.destroy();
+      maskTexture = null;
+      deck.finalize();
+    },
+  };
 }
+
+export type MapView = ReturnType<typeof createMapView>;

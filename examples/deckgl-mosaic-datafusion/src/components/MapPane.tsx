@@ -1,6 +1,6 @@
 import {useEffect, useRef, type ReactNode} from 'react';
-import {MapView} from '../lab/map-view';
-import type {HoverBrush} from '../hooks/use-hover-brush';
+import {createMapView, type MapView} from '../lab/map-view';
+import type {HoverBrush} from '../store';
 
 type MapPaneProps = {
   cube: Float32Array;
@@ -36,15 +36,15 @@ export function LoadingOverlay({message}: {message: string}) {
 }
 
 /**
- * Hosts the imperative deck.gl view (ZarrLayer raster plus brush ring). The
- * MapView class owns the WebGL lifecycle; React only mounts and unmounts it
+ * Hosts the imperative deck.gl view (ZarrLayer raster plus brush ring).
+ * createMapView owns the WebGL lifecycle; React only mounts and unmounts it
  * and lays the brush capture overlay on top while the hover brush is armed.
  */
 export function MapPane({cube, brush, onMap}: MapPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const map = new MapView(containerRef.current!, cube);
+    const map = createMapView(containerRef.current!, cube);
     onMap(map);
     return () => {
       onMap(null);
