@@ -90,11 +90,13 @@ export function useForecastLab(): LabState {
       if (cancelled) return;
       setBoot({phase: 'loading', message: 'Fetching ECMWF Zarr chunks'});
       stream.done.catch((error: unknown) => {
-        /*
-         * Chunks that fail after boot leave a partial cube; report the
-         * error instead of tearing the app down.
-         */
+        if (cancelled) return;
         console.error('ECMWF chunk streaming failed', error);
+        signalFirstChunk();
+        setProgress({
+          loadedChunks: stream.totalChunks,
+          totalChunks: stream.totalChunks,
+        });
       });
       await firstChunk;
       if (cancelled) return;
@@ -105,7 +107,7 @@ export function useForecastLab(): LabState {
       const df = await DataFusion.create(stream.cube, stream.loaded, () => {});
       if (cancelled) return;
       const coordinator = new Coordinator(df as never, {
-        cache: true,
+        cache: false,
         consolidate: true,
         preagg: {enabled: false},
       });

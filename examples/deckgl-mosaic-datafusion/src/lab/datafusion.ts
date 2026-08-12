@@ -160,12 +160,22 @@ function normalizeDescribeRows(rows: Row[]) {
 
 export class DataFusion {
   private leadIndex = 0;
+  private queue: Promise<unknown> = Promise.resolve();
 
   private constructor(
     private readonly ctx: DataFusionContext,
     private readonly cube: TimeCube,
     private readonly onLog: (entry: QueryLog) => void,
   ) {}
+
+  private serialize<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(task, task);
+    this.queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
 
   static async create(
     cube: TimeCube,
@@ -189,40 +199,44 @@ export class DataFusion {
    * the derived tables. Called as each streamed Zarr chunk lands.
    */
   async refreshData(loaded: Uint8Array) {
-    const started = performance.now();
-    this.ctx.register_ipc(
-      'cells_all_leads',
-      cellsAllLeadsIpc(this.cube, loaded),
-    );
-    await this.ctx.materialize_table('cells_lead0', CELLS_LEAD0_SQL);
-    await this.ctx.materialize_table(
-      'cells_current_lead',
-      currentLeadCellsSql(this.leadIndex),
-    );
-    this.onLog({
-      backend: 'client-datafusion-wasm',
-      type: 'exec',
-      sql: 'Refresh cells_all_leads from streamed Zarr chunks',
-      ms: performance.now() - started,
-      rows: 0,
-      ok: true,
+    return this.serialize(async () => {
+      const started = performance.now();
+      this.ctx.register_ipc(
+        'cells_all_leads',
+        cellsAllLeadsIpc(this.cube, loaded),
+      );
+      await this.ctx.materialize_table('cells_lead0', CELLS_LEAD0_SQL);
+      await this.ctx.materialize_table(
+        'cells_current_lead',
+        currentLeadCellsSql(this.leadIndex),
+      );
+      this.onLog({
+        backend: 'client-datafusion-wasm',
+        type: 'exec',
+        sql: 'Refresh cells_all_leads from streamed Zarr chunks',
+        ms: performance.now() - started,
+        rows: 0,
+        ok: true,
+      });
     });
   }
 
   async setLead(leadIndex: number) {
-    const started = performance.now();
-    this.leadIndex = leadIndex;
-    await this.ctx.materialize_table(
-      'cells_current_lead',
-      currentLeadCellsSql(leadIndex),
-    );
-    this.onLog({
-      backend: 'client-datafusion-wasm',
-      type: 'exec',
-      sql: `Rematerialize cells_current_lead for ECMWF lead ${leadIndex}`,
-      ms: performance.now() - started,
-      rows: 0,
-      ok: true,
+    return this.serialize(async () => {
+      const started = performance.now();
+      this.leadIndex = leadIndex;
+      await this.ctx.materialize_table(
+        'cells_current_lead',
+        currentLeadCellsSql(leadIndex),
+      );
+      this.onLog({
+        backend: 'client-datafusion-wasm',
+        type: 'exec',
+        sql: `Rematerialize cells_current_lead for ECMWF lead ${leadIndex}`,
+        ms: performance.now() - started,
+        rows: 0,
+        ok: true,
+      });
     });
   }
 

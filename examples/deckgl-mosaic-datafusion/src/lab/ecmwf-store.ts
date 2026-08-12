@@ -19,16 +19,22 @@ export function openEcmwfGroup() {
       {format: 'v3'},
     );
     return zarr.open.v3(store, {kind: 'group'});
-  })();
+  })().catch((error: unknown) => {
+    groupPromise = null;
+    throw error;
+  });
   return groupPromise;
 }
 
 export function openEcmwfArray(variable: string) {
   let promise = arrayPromises.get(variable);
   if (!promise) {
-    promise = openEcmwfGroup().then((group) =>
-      zarr.open.v3(group.resolve(variable), {kind: 'array'}),
-    );
+    promise = openEcmwfGroup()
+      .then((group) => zarr.open.v3(group.resolve(variable), {kind: 'array'}))
+      .catch((error: unknown) => {
+        arrayPromises.delete(variable);
+        throw error;
+      });
     arrayPromises.set(variable, promise);
   }
   return promise;
