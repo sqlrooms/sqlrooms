@@ -175,8 +175,8 @@ const COLOR_ACCESSOR_PROPS = [
  * Rejected by getDeckMapResourceConfigIssues (agent retry): unprefixed layer
  * classes, ColorScale @@type/column syntax, heatmap getWeight (basic mode /
  * column accessors), object getHexagon, arc getSourcePosition/getTargetPosition,
- * and basic-mode string getRadius / getWidth / getElevation / radiusPixels /
- * column radius.
+ * mapbox:// mapStyle, and basic-mode string getRadius / getWidth /
+ * getElevation / radiusPixels / column radius.
  */
 function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
   const spec = config.spec as Record<string, unknown> | undefined;
@@ -464,15 +464,8 @@ function normalizeAiMapConfigDatasetSources(config: AiMapConfig): AiMapConfig {
  * but the dataset only uses a tableName without a transformSql.
  */
 function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
-  // MapLibre cannot fetch mapbox:// styles without a Mapbox token/plugin.
-  // Drop them so the host theme basemap is used instead.
-  if (
-    typeof config.mapStyle === 'string' &&
-    /^mapbox:/i.test(config.mapStyle.trim())
-  ) {
-    const {mapStyle: _removed, ...rest} = config;
-    config = rest;
-  }
+  // mapbox:// mapStyle is rejected by getDeckMapResourceConfigIssues (agent
+  // retry) and skipped at resolve time — do not strip it silently here.
 
   const datasets = config.datasets;
   let fitToData = config.fitToData as
@@ -604,8 +597,8 @@ function normalizeAiMapConfig(config: AiMapConfig): AiMapConfig {
  * colorScale {"@@type":"ColorScale","column":"..."} syntax, type/scheme
  * mismatches (e.g. quantile + Viridis), SELECT * / ST_AsWKB alias collisions,
  * heatmap getWeight (omit for default density), object getHexagon, arc
- * getSourcePosition/getTargetPosition, and basic-mode string getRadius /
- * getWidth / getElevation / radiusPixels / column radius.
+ * getSourcePosition/getTargetPosition, mapbox:// mapStyle, and basic-mode
+ * string getRadius / getWidth / getElevation / radiusPixels / column radius.
  */
 export function normalizeAiDeckMapConfig<T extends Record<string, unknown>>(
   config: T,

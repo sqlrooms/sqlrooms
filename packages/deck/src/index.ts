@@ -62,7 +62,6 @@ export {
 export {
   DeckMapResourceConfigError,
   assertDeckMapResourceConfig,
-  getColorScaleTypeSchemeIssue,
   getDeckMapResourceAiInstructions,
   getDeckMapResourceConfigIssues,
   mergeDeckMapResourceConfigPatch,
@@ -119,7 +118,6 @@ export type {
 export {DeckJsonMap} from './DeckJsonMap';
 export {
   DeckMapDefaultStylesProvider,
-  isMapboxStyleUrl,
   resolveDeckMapStyle,
   useDeckMapDefaultStyles,
   type DeckMapDefaultStyles,

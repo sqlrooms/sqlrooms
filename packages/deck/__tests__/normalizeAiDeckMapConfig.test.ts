@@ -783,7 +783,7 @@ describe('normalizeAiDeckMapConfig — catalog prefix in tableName', () => {
 });
 
 describe('normalizeAiDeckMapConfig — mapStyle', () => {
-  test('strips mapbox:// styles so the host basemap is used', () => {
+  test('does not strip mapbox:// styles (validator rejects for agent retry)', () => {
     const result = normalizeAiDeckMapConfig(
       makeBasicConfig(
         [
@@ -799,7 +799,7 @@ describe('normalizeAiDeckMapConfig — mapStyle', () => {
       ...result,
       mapStyle: 'mapbox://styles/mapbox/dark-v11',
     });
-    expect(withMapbox.mapStyle).toBeUndefined();
+    expect(withMapbox.mapStyle).toBe('mapbox://styles/mapbox/dark-v11');
   });
 
   test('keeps MapLibre-compatible https styles', () => {
