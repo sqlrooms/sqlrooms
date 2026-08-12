@@ -287,8 +287,10 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
       const hexAccessor = l.getHexagon;
       let hexColumn: string | undefined;
       if (typeof hexAccessor === 'string') {
-        const m = hexAccessor.match(/^@@=(.+)$/);
-        hexColumn = m ? m[1]!.trim() : undefined;
+        // Only simple column accessors — expressions like "@@=h3 + ''" are
+        // not liftable column names (validator asks the agent to retry).
+        const m = hexAccessor.trim().match(/^@@=([A-Za-z_][\w]*)$/);
+        hexColumn = m?.[1];
       }
       const binding =
         l._sqlroomsBinding &&

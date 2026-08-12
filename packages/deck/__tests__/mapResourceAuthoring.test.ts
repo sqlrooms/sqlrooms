@@ -99,6 +99,31 @@ describe('Deck map resource authoring contract', () => {
     ).toBe(true);
   });
 
+  test('rejects H3 getHexagon expressions that are not simple column accessors', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'hex',
+            _sqlroomsBinding: {dataset: 'hexes'},
+            getHexagon: "@@=h3 + ''",
+          },
+        ],
+      },
+      datasets: {
+        hexes: {source: {tableName: 'hexes'}},
+      },
+    });
+    expect(
+      issues.some(
+        (i) =>
+          i.path === 'spec.layers.0.getHexagon' &&
+          i.message.includes('simple column accessor'),
+      ),
+    ).toBe(true);
+  });
+
   test('rejects object getHexagon on H3 layers', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
@@ -358,7 +383,7 @@ describe('Deck map resource authoring contract', () => {
       expect.arrayContaining([
         expect.objectContaining({
           path: 'spec.layers.0.getWidth',
-          message: expect.stringContaining('positive number'),
+          message: expect.stringContaining('widthUnits'),
         }),
       ]),
     );
@@ -463,6 +488,64 @@ describe('Deck map resource authoring contract', () => {
             '@@type': 'GeoArrowColumnLayer',
             _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
             getElevation: '@@=height',
+            extruded: true,
+            radius: 50,
+          },
+        ],
+      },
+    });
+    expect(issues.some((i) => i.path === 'spec.layers.0.getElevation')).toBe(
+      false,
+    );
+  });
+
+  test('rejects basic-mode elevation scale objects without a field', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getElevation: {
+              '@@function': 'scale',
+              type: 'linear',
+              domain: 'auto',
+              range: [0, 200],
+            },
+            extruded: true,
+            radius: 50,
+          },
+        ],
+      },
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.getElevation',
+          message: expect.stringContaining('@@function'),
+        }),
+      ]),
+    );
+  });
+
+  test('allows basic-mode elevation scale objects with a field', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      ...validConfig,
+      configMode: 'basic',
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            getElevation: {
+              '@@function': 'scale',
+              field: 'height',
+              type: 'linear',
+              domain: 'auto',
+              range: [0, 200],
+            },
             extruded: true,
             radius: 50,
           },

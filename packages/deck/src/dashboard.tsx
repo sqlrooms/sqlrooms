@@ -47,7 +47,6 @@ import {
   emitDeckMapDashboardFitRequest,
   createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
-export {createDeckMapBoundsQuery};
 import {useDeckMapDatasets} from './useDeckMapDatasets';
 import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
@@ -56,6 +55,11 @@ import {
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
 import {isDeckMapGeneratedColumn} from './useDeckMapDatasetSchema';
+
+/** Stable fallback while the DESCRIBE geometry-wrap probe is pending. */
+const EMPTY_WRAPPED_GEOMETRY_COLUMNS: readonly string[] = [];
+
+export {createDeckMapBoundsQuery};
 
 function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
   return createDeckMapDashboardPanelConfig({
@@ -362,7 +366,8 @@ function DeckMapDashboardDatasetClient({
   }, [connector, source, sourceSqlKey]);
 
   const geometryProbeReady = geometryColumnsToWrapAsWkb !== null;
-  const wrappedGeometryColumnNames = geometryColumnsToWrapAsWkb ?? [];
+  const wrappedGeometryColumnNames =
+    geometryColumnsToWrapAsWkb ?? EMPTY_WRAPPED_GEOMETRY_COLUMNS;
 
   const query = useCallback(
     (filter: unknown) =>

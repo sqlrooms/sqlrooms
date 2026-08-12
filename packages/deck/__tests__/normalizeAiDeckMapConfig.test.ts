@@ -334,6 +334,22 @@ describe('normalizeAiDeckMapConfig — H3 getHexagon', () => {
     );
     expect(getLayer(result)._sqlroomsBinding.hexagonColumn).toBe('existing');
   });
+
+  test('does not lift expression getHexagon into hexagonColumn', () => {
+    const result = normalizeAiDeckMapConfig(
+      makeConfig(
+        [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {dataset: 'h3_data'},
+            getHexagon: "@@=h3 + ''",
+          },
+        ],
+        {h3_data: {source: {tableName: 'h3_pentagon'}}},
+      ),
+    );
+    expect(getLayer(result)._sqlroomsBinding).toEqual({dataset: 'h3_data'});
+  });
 });
 // getRadius — zero/negative clamping (basic mode only)
 // ---------------------------------------------------------------------------

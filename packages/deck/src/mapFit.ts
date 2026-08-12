@@ -137,8 +137,8 @@ export function resolveDeckMapFitToData(
     if (layerRecord['@@type'] === 'GeoArrowH3HexagonLayer') {
       const getHexagon = layerRecord.getHexagon;
       if (typeof getHexagon === 'string') {
-        const match = getHexagon.match(/^@@=(.+)$/);
-        const column = match?.[1]?.trim();
+        const match = getHexagon.trim().match(/^@@=([A-Za-z_][\w]*)$/);
+        const column = match?.[1];
         if (column) {
           return {...fitToData, h3Column: column};
         }

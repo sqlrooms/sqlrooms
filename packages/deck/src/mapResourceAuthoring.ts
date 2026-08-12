@@ -643,7 +643,7 @@ export function getDeckMapResourceConfigIssues(
         rejectNonNumericSize(
           'getWidth',
           layer.getWidth,
-          'use a positive number (e.g. 2) with widthUnits "pixels" — string/object size accessors are not supported in basic mode',
+          'use a number (e.g. 2) with widthUnits "pixels" — string/object size accessors are not supported in basic mode',
         );
       }
 
@@ -672,18 +672,40 @@ export function getDeckMapResourceConfigIssues(
       if (
         typeof layerType === 'string' &&
         ELEVATION_LAYER_TYPES.has(layerType) &&
-        typeof layer.getElevation === 'string'
+        layer.getElevation !== undefined
       ) {
-        // Basic UI supports a single elevation column via "@@=col" or a
-        // {"@@function":"scale",...} object. Reject free-form expressions only.
-        const isColumnAccessor = /^@@=[A-Za-z_][\w]*$/.test(
-          layer.getElevation.trim(),
-        );
-        if (!isColumnAccessor) {
+        const elev = layer.getElevation;
+        // Basic UI supports a number, "@@=col", or a linear scale object.
+        if (typeof elev === 'number' && Number.isFinite(elev)) {
+          // Constant elevation (including 0 for flat) is fine.
+        } else if (typeof elev === 'string') {
+          const isColumnAccessor = /^@@=[A-Za-z_][\w]*$/.test(elev.trim());
+          if (!isColumnAccessor) {
+            issues.push({
+              path: `spec.layers.${index}.getElevation`,
+              message:
+                'in basic mode use a number (0 for flat), a column accessor "@@=columnName", or {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} — free-form string expressions require configMode "custom"',
+            });
+          }
+        } else if (isPlainObject(elev)) {
+          const fn = elev['@@function'];
+          const field = typeof elev.field === 'string' ? elev.field.trim() : '';
+          const typeOk =
+            elev.type === undefined ||
+            elev.type === 'linear' ||
+            (typeof elev.type === 'string' && elev.type.trim() === 'linear');
+          if ((fn !== 'scale' && fn !== 'scaleLinear') || !field || !typeOk) {
+            issues.push({
+              path: `spec.layers.${index}.getElevation`,
+              message:
+                'in basic mode use {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} (or a column accessor "@@=columnName")',
+            });
+          }
+        } else {
           issues.push({
             path: `spec.layers.${index}.getElevation`,
             message:
-              'in basic mode use a number (0 for flat), a column accessor "@@=columnName", or {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} — free-form string expressions require configMode "custom"',
+              'in basic mode use a number (0 for flat), a column accessor "@@=columnName", or {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]}',
           });
         }
       }
@@ -703,7 +725,9 @@ export function getDeckMapResourceConfigIssues(
           (binding.hexagonColumn as string).trim().length > 0;
         const getHexagonAccessor =
           typeof getHexagon === 'string' ? getHexagon.trim() : '';
-        const hasGetHexagonAccessor = /^@@=.+/.test(getHexagonAccessor);
+        const hasGetHexagonAccessor = /^@@=[A-Za-z_][\w]*$/.test(
+          getHexagonAccessor,
+        );
         if (
           getHexagonAccessor &&
           !hasGetHexagonAccessor &&
@@ -712,7 +736,7 @@ export function getDeckMapResourceConfigIssues(
           issues.push({
             path: `spec.layers.${index}.getHexagon`,
             message:
-              'use getHexagon as "@@=h3_column_name" (or set _sqlroomsBinding.hexagonColumn) — a bare column name string is not a valid H3 accessor',
+              'use getHexagon as "@@=h3_column_name" (a simple column accessor) or set _sqlroomsBinding.hexagonColumn — bare names and expressions are not valid',
           });
         } else if (!hasGetHexagonAccessor && !hasHexagonBinding) {
           issues.push({
