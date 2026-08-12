@@ -764,6 +764,8 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('omit getWeight');
     expect(instructions).toContain('will not invent centroids');
     expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
+    expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
+    expect(instructions).toContain('min = max');
     expect(instructions).not.toContain('Mosaic');
   });
 

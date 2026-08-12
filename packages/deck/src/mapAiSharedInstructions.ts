@@ -15,5 +15,6 @@ export function getDeckMapSharedAiContractRules(): string {
 - Never set mapStyle to a mapbox:// URL — MapLibre cannot load that scheme. Omit mapStyle for the host basemap, or use a token-free MapLibre https:// style URL.
 - GeoArrowH3HexagonLayer: set getHexagon to "@@=h3_column" (or _sqlroomsBinding.hexagonColumn). When aggregating lon/lat, prefer h3_h3_to_string(h3_latlng_to_cell(lat, lon, res)) AS h3_cell (lat before lon).
 - GeoArrowArcLayer: bind WKB via _sqlroomsBinding.sourceGeometryColumn / targetGeometryColumn only (do not set getSourcePosition/getTargetPosition). Use ST_AsWKB(ST_Point(...)); set geometryEncodingHint to "wkb".
-- GeoArrowTripsLayer = animated path over time; GeoArrowArcLayer = static OD curve. Prefer TripsLayer for animated/trips/moving routes.`;
+- GeoArrowTripsLayer = animated path over time; GeoArrowArcLayer = static OD curve. Prefer TripsLayer for animated/trips/moving routes.
+- COLOR SCALE FIELD VARIANCE: Before choosing a numeric colorScale field, confirm it has real range (min < max / not all zeros or a single constant). Prefer SUMMARIZE table_name or SELECT min(col), max(col), count(DISTINCT col) FROM ... when unsure. Do NOT color by a flat column unless the user explicitly asks for that column by name. If no varying column exists, use a flat fill color instead of colorScale. Categorical fields need more than one distinct non-null value to be useful. Geometry, lon/lat, H3 index, and opaque ID columns are not useful color fields unless the user asks for them.`;
 }
