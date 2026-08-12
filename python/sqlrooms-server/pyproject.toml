@@ -19,8 +19,9 @@ dependencies = [
   "duckdb>=1.5.3,<1.6.0",
   "pandas",
   "pyarrow",
+  "setuptools>=83.0.0",
   "socketify",
-  "ujson>=5.12.1",
+  "ujson>=5.13.0",
   "loro>=1.10.0"
 ]
 
