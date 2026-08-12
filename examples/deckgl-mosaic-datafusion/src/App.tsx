@@ -1,5 +1,4 @@
-import {useMemo} from 'react';
-import {ForecastProvider} from './ForecastContext';
+import {useEffect, useMemo} from 'react';
 import {useForecastLab, type Lab} from './hooks/use-forecast-lab';
 import {Room} from './room';
 import {createForecastRoomStore} from './store';
@@ -46,9 +45,15 @@ function ReadyApp({
 }) {
   const {roomStore} = useMemo(() => createForecastRoomStore(lab), [lab]);
 
-  return (
-    <ForecastProvider lab={lab} cubeVersion={cubeVersion} progress={progress}>
-      <Room roomStore={roomStore} />
-    </ForecastProvider>
-  );
+  useEffect(() => {
+    if (cubeVersion > 0) roomStore.getState().forecast.refreshCube();
+  }, [roomStore, cubeVersion]);
+
+  useEffect(() => {
+    roomStore
+      .getState()
+      .forecast.setStreaming(progress.loadedChunks < progress.totalChunks);
+  }, [roomStore, progress]);
+
+  return <Room roomStore={roomStore} />;
 }

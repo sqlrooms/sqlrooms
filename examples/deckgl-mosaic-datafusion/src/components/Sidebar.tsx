@@ -1,9 +1,5 @@
 import {CELL_COUNT} from '../lab/types';
-import {
-  HOT_THRESHOLD_C,
-  type ForecastSession,
-} from '../hooks/use-forecast-session';
-import type {HoverBrush} from '../hooks/use-hover-brush';
+import {HOT_THRESHOLD_C, type ForecastSession, type HoverBrush} from '../store';
 
 function formatUtc(ms: number) {
   const date = new Date(ms);
@@ -99,6 +95,12 @@ export function ForecastControls({
           step={1}
           value={session.leadIndex}
           disabled={loading}
+          aria-label="Forecast lead time"
+          aria-valuetext={
+            session.forecastTimeMs == null
+              ? `Lead ${session.leadIndex}`
+              : formatUtc(session.forecastTimeMs)
+          }
           onChange={(event) => session.requestLead(Number(event.target.value))}
         />
       </div>

@@ -1,5 +1,5 @@
-import type {FC} from 'react';
-import {useForecast} from '../ForecastContext';
+import {useMemo, type FC} from 'react';
+import {useRoomStore, type ForecastSession, type HoverBrush} from '../store';
 import {ForecastControls} from './Sidebar';
 import {MosaicCharts} from './MosaicCharts';
 
@@ -11,7 +11,72 @@ import {MosaicCharts} from './MosaicCharts';
  * chrome, so only the content is ported.
  */
 export const ForecastPanel: FC = () => {
-  const {lab, session, brush, streaming} = useForecast();
+  const {
+    lab,
+    streaming,
+    leadIndex,
+    forecastTimeMs,
+    selectedCount,
+    meanTemp,
+    selectedAreaKm2,
+    hotAreaKm2,
+    playing,
+    requestLead,
+    togglePlay,
+    reset,
+    brushEnabled,
+    brushRadiusKm,
+    brushCenter,
+    toggleBrush,
+    setBrushRadiusKm,
+    onBrushPointerMove,
+  } = useRoomStore((state) => state.forecast);
+
+  const session: ForecastSession = useMemo(
+    () => ({
+      leadIndex,
+      forecastTimeMs,
+      selectedCount,
+      meanTemp,
+      selectedAreaKm2,
+      hotAreaKm2,
+      playing,
+      requestLead,
+      togglePlay,
+      reset,
+    }),
+    [
+      leadIndex,
+      forecastTimeMs,
+      selectedCount,
+      meanTemp,
+      selectedAreaKm2,
+      hotAreaKm2,
+      playing,
+      requestLead,
+      togglePlay,
+      reset,
+    ],
+  );
+
+  const brush: HoverBrush = useMemo(
+    () => ({
+      enabled: brushEnabled,
+      radiusKm: brushRadiusKm,
+      active: brushCenter !== null,
+      toggle: toggleBrush,
+      setRadiusKm: setBrushRadiusKm,
+      onPointerMove: onBrushPointerMove,
+    }),
+    [
+      brushEnabled,
+      brushRadiusKm,
+      brushCenter,
+      toggleBrush,
+      setBrushRadiusKm,
+      onBrushPointerMove,
+    ],
+  );
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto p-4">
