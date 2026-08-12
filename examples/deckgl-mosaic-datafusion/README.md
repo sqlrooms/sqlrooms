@@ -2,7 +2,7 @@
 
 This example ports [Gjore Milevski](https://github.com/dzole0311)'s
 [mosaic-datafusion-zarr-deckgl](https://github.com/dzole0311/mosaic-datafusion-zarr-deckgl)
-experiment (write-up [here](https://gjoremilevski.com/posts/mosaic-datafusion-zarr-deckgl/))
+experiment (read the [original write-up](https://gjoremilevski.com/posts/mosaic-datafusion-zarr-deckgl/))
 into the SQLRooms shell, alongside the [deckgl-mosaic](../deckgl-mosaic) example
 it is structurally closest to.
 
