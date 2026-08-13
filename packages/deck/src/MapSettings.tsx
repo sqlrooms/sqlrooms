@@ -76,6 +76,7 @@ import {
   getDeckMapLayerStrokeDefault,
   replaceDeckMapLayerColorScalesWithFlat,
   replaceDeckMapLayerColorScaleWithFlat,
+  withDeckMapLayerOpacityFromFlatAlpha,
   withoutDeckMapLayerOpacityIfUnused,
 } from './mapLayerConfigUtils';
 import {
@@ -453,17 +454,25 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
           : colorScale?.scheme);
 
     applyConfig(
-      setDeckMapLayerColorScale(
-        mapConfig,
-        layerIndex,
-        accessor,
-        createDeckMapLayerColorScale({
-          field,
-          type,
-          scheme,
-          title: field,
-        }),
-      ),
+      updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+        const withScale = {
+          ...nextLayer,
+          [accessor]: createDeckMapLayerColorScale({
+            field,
+            type,
+            scheme,
+            title: field,
+          }),
+        };
+        // Enabling a scale: colorScale accessors have no alpha — carry flat
+        // alpha into layer.opacity unless another scale already owns it.
+        if (colorScale) return withScale;
+        return withDeckMapLayerOpacityFromFlatAlpha(
+          withScale,
+          flatColor[3] ?? 255,
+          accessor,
+        );
+      }),
     );
   };
 
@@ -729,11 +738,21 @@ const AppearanceArcColorPanel: FC<{
     });
 
     applyConfig(
-      updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-        ...nextLayer,
-        getSourceColor: nextScale,
-        getTargetColor: nextScale,
-      })),
+      updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+        const withScales = {
+          ...nextLayer,
+          getSourceColor: nextScale,
+          getTargetColor: nextScale,
+        };
+        if (colorScale) return withScales;
+        const alpha = Math.round(
+          ((sourceFlat[3] ?? 255) + (targetFlat[3] ?? 255)) / 2,
+        );
+        return withDeckMapLayerOpacityFromFlatAlpha(withScales, alpha, [
+          'getSourceColor',
+          'getTargetColor',
+        ]);
+      }),
     );
   };
 
@@ -764,12 +783,25 @@ const AppearanceArcColorPanel: FC<{
               lastColorScaleFieldsRef.current.getTargetColor = colorScale.field;
             }
             applyConfig(
-              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
-                replaceDeckMapLayerColorScalesWithFlat(nextLayer, {
-                  getSourceColor: DECK_MAP_DEFAULT_LAYER_COLOR,
-                  getTargetColor: DECK_MAP_DEFAULT_LAYER_COLOR,
-                }),
-              ),
+              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+                const replacements: Partial<
+                  Record<
+                    DeckMapLayerColorAccessor,
+                    readonly [number, number, number, number]
+                  >
+                > = {};
+                // Only replace scaled endpoints; keep an already-flat custom color.
+                if (getDeckMapLayerColorScale(nextLayer, 'getSourceColor')) {
+                  replacements.getSourceColor = DECK_MAP_DEFAULT_LAYER_COLOR;
+                }
+                if (getDeckMapLayerColorScale(nextLayer, 'getTargetColor')) {
+                  replacements.getTargetColor = DECK_MAP_DEFAULT_LAYER_COLOR;
+                }
+                return replaceDeckMapLayerColorScalesWithFlat(
+                  nextLayer,
+                  replacements,
+                );
+              }),
             );
           }}
         />

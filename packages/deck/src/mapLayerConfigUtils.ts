@@ -265,7 +265,9 @@ export function deckMapLayerHasColorScale(
 
 /**
  * Drop `layer.opacity` only when no remaining color-scale channel needs it.
- * Color-scale accessors compile without per-row alpha and rely on global opacity.
+ * Before dropping, bake the opacity into every flat RGBA color accessor so
+ * sibling channels (e.g. flat stroke while clearing a fill scale) keep the
+ * same rendered transparency.
  */
 export function withoutDeckMapLayerOpacityIfUnused(
   layer: DeckMapLayerRecord,
@@ -274,43 +276,66 @@ export function withoutDeckMapLayerOpacityIfUnused(
   if (deckMapLayerHasColorScale(layer, {except})) {
     return layer;
   }
-  const {opacity: _opacity, ...rest} = layer;
+  const opacity = layer.opacity;
+  const hasOpacity = typeof opacity === 'number' && Number.isFinite(opacity);
+  let next: DeckMapLayerRecord = layer;
+  if (hasOpacity) {
+    next = {...layer};
+    for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
+      const color = next[value];
+      if (!isDeckMapLayerFlatRgbaColor(color)) continue;
+      const channelAlpha = color[3] ?? 255;
+      next[value] = [
+        color[0]!,
+        color[1]!,
+        color[2]!,
+        Math.round(Math.max(0, Math.min(255, channelAlpha * opacity))),
+      ];
+    }
+  }
+  const {opacity: _opacity, ...rest} = next;
   return rest;
 }
 
-function deckMapLayerOpacityToAlpha(
+/**
+ * Set `layer.opacity` from a flat-channel alpha when enabling a color scale,
+ * unless another color-scale channel already owns global opacity.
+ */
+export function withDeckMapLayerOpacityFromFlatAlpha(
   layer: DeckMapLayerRecord,
-): number | undefined {
-  const opacity = layer.opacity;
-  if (typeof opacity !== 'number' || !Number.isFinite(opacity)) {
-    return undefined;
+  alpha: number,
+  except?: DeckMapLayerColorAccessor | readonly DeckMapLayerColorAccessor[],
+): DeckMapLayerRecord {
+  if (deckMapLayerHasColorScale(layer, {except})) {
+    return layer;
   }
-  return Math.round(Math.max(0, Math.min(1, opacity)) * 255);
+  if (typeof alpha !== 'number' || !Number.isFinite(alpha)) {
+    return layer;
+  }
+  return {
+    ...layer,
+    opacity: Math.max(0, Math.min(1, alpha / 255)),
+  };
 }
 
 /**
  * Replace a color-scale accessor with a flat RGBA. When this was the last scale,
- * bake `layer.opacity` into the flat alpha and drop `opacity` so the slider value
- * is preserved. When other scales remain, keep global opacity untouched.
+ * bake `layer.opacity` into all flat color alphas and drop `opacity`.
  */
 export function replaceDeckMapLayerColorScaleWithFlat(
   layer: DeckMapLayerRecord,
   accessor: DeckMapLayerColorAccessor,
   flatColor: readonly [number, number, number, number],
 ): DeckMapLayerRecord {
-  const keepOpacity = deckMapLayerHasColorScale(layer, {except: accessor});
-  const alpha = keepOpacity
-    ? (flatColor[3] ?? 255)
-    : (deckMapLayerOpacityToAlpha(layer) ?? flatColor[3] ?? 255);
   return withoutDeckMapLayerOpacityIfUnused({
     ...layer,
-    [accessor]: [flatColor[0], flatColor[1], flatColor[2], alpha],
+    [accessor]: [flatColor[0], flatColor[1], flatColor[2], flatColor[3] ?? 255],
   });
 }
 
 /**
  * Replace multiple color-scale accessors with flat colors in one step (e.g. arc
- * source+target). Bakes opacity only when no other scale channels remain.
+ * source+target). Bakes opacity into all remaining flats when dropping it.
  */
 export function replaceDeckMapLayerColorScalesWithFlat(
   layer: DeckMapLayerRecord,
@@ -318,21 +343,13 @@ export function replaceDeckMapLayerColorScalesWithFlat(
     Record<DeckMapLayerColorAccessor, readonly [number, number, number, number]>
   >,
 ): DeckMapLayerRecord {
-  const except = Object.keys(replacements) as DeckMapLayerColorAccessor[];
-  const keepOpacity = deckMapLayerHasColorScale(layer, {except});
-  const bakedAlpha = keepOpacity
-    ? undefined
-    : deckMapLayerOpacityToAlpha(layer);
   const next: DeckMapLayerRecord = {...layer};
-  for (const accessor of except) {
+  for (const accessor of Object.keys(
+    replacements,
+  ) as DeckMapLayerColorAccessor[]) {
     const color = replacements[accessor];
     if (!color) continue;
-    next[accessor] = [
-      color[0],
-      color[1],
-      color[2],
-      bakedAlpha ?? color[3] ?? 255,
-    ];
+    next[accessor] = [color[0], color[1], color[2], color[3] ?? 255];
   }
   return withoutDeckMapLayerOpacityIfUnused(next);
 }
