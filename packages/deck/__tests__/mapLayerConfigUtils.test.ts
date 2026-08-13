@@ -45,9 +45,16 @@ const config = {
 };
 
 describe('mapLayerConfigUtils', () => {
-  it('includes GeoArrowSolidPolygonLayer in layer-type options', () => {
-    expect(DECK_MAP_LAYER_TYPE_OPTIONS.map((o) => o.value)).toContain(
+  it('omits GeoArrowSolidPolygonLayer from layer-type options', () => {
+    // Prefer Polygon / GeoJSON in the UI; SolidPolygon remains loadable at runtime.
+    expect(DECK_MAP_LAYER_TYPE_OPTIONS.map((o) => o.value)).not.toContain(
       'GeoArrowSolidPolygonLayer',
+    );
+    expect(DECK_MAP_LAYER_TYPE_OPTIONS.map((o) => o.value)).toContain(
+      'GeoArrowPolygonLayer',
+    );
+    expect(DECK_MAP_LAYER_TYPE_OPTIONS.map((o) => o.value)).toContain(
+      'GeoJsonLayer',
     );
   });
   it('updates layer type without changing dataset bindings', () => {

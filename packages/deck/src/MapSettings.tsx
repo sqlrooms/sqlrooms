@@ -54,7 +54,6 @@ import {
   getDeckMapLayerExtruded,
   getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
-  setDeckMapLayerColorScale,
   setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerHexagonColumn,
@@ -1174,6 +1173,21 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   );
   const isPathLayer = activeLayer?.['@@type'] === 'GeoArrowPathLayer';
   const isGeoJsonLayer = activeLayer?.['@@type'] === 'GeoJsonLayer';
+  // Keep legacy types (e.g. SolidPolygon) visible if the layer already uses them.
+  const activeLayerType =
+    typeof activeLayer?.['@@type'] === 'string'
+      ? activeLayer['@@type']
+      : undefined;
+  const layerTypeOptions: ReadonlyArray<{value: string; label: string}> =
+    activeLayerType &&
+    !DECK_MAP_LAYER_TYPE_OPTIONS.some(
+      (option) => option.value === activeLayerType,
+    )
+      ? [
+          ...DECK_MAP_LAYER_TYPE_OPTIONS,
+          {value: activeLayerType, label: activeLayerType},
+        ]
+      : DECK_MAP_LAYER_TYPE_OPTIONS;
   // GeoJsonLayer uses pointRadius* / getPointRadius; scatterplot uses radius* / getRadius.
   const pointRadiusPixels = isGeoJsonLayer
     ? activeLayer?.pointRadiusUnits === 'pixels' &&
@@ -1475,7 +1489,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                       <SelectValue placeholder="Select layer type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => (
+                      {layerTypeOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>

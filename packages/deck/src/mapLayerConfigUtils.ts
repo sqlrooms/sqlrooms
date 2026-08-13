@@ -25,7 +25,6 @@ export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
   {value: 'GeoArrowColumnLayer', label: 'Column'},
   {value: 'GeoArrowPathLayer', label: 'Path'},
   {value: 'GeoArrowPolygonLayer', label: 'Polygon'},
-  {value: 'GeoArrowSolidPolygonLayer', label: 'Solid polygon'},
   {value: 'GeoArrowArcLayer', label: 'Arc'},
   {value: 'GeoArrowTripsLayer', label: 'Trips'},
   {value: 'GeoArrowH3HexagonLayer', label: 'H3 hexagon'},
@@ -293,7 +292,8 @@ export function withoutDeckMapLayerOpacityIfUnused(
       ];
     }
   }
-  const {opacity: _opacity, ...rest} = next;
+  const {opacity: _droppedOpacity, ...rest} = next;
+  void _droppedOpacity;
   return rest;
 }
 
