@@ -5,6 +5,7 @@ import {
   DECK_MAP_LAYER_TYPE_OPTIONS,
   getDeckMapColorAccessorOptions,
   getDeckMapLayerColorScale,
+  getDeckMapLayerExtruded,
   getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
   getDeckMapLayerStrokeDefault,
@@ -17,6 +18,7 @@ import {
   usesGeometryColumnSetting,
   usesRadiusSetting,
   usesStrokeSetting,
+  withoutDeckMapLayerOpacityIfUnused,
 } from '../src/mapLayerConfigUtils';
 
 const config = {
@@ -172,8 +174,60 @@ describe('mapLayerConfigUtils', () => {
       false,
     );
     expect(getDeckMapLayerStrokeDefault('GeoArrowPolygonLayer')).toBe(true);
-    expect(getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer')).toBe(true);
+    // H3 defaults extruded → stroke off unless extruded is explicitly false.
+    expect(getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer')).toBe(false);
+    expect(
+      getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer', {extruded: true}),
+    ).toBe(false);
+    expect(
+      getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer', {extruded: false}),
+    ).toBe(true);
     expect(getDeckMapLayerStrokeDefault('GeoJsonLayer')).toBe(true);
+  });
+});
+
+describe('getDeckMapLayerExtruded', () => {
+  it('defaults H3 to extruded when the prop is omitted', () => {
+    expect(getDeckMapLayerExtruded({'@@type': 'GeoArrowH3HexagonLayer'})).toBe(
+      true,
+    );
+    expect(
+      getDeckMapLayerExtruded({
+        '@@type': 'GeoArrowH3HexagonLayer',
+        extruded: false,
+      }),
+    ).toBe(false);
+    expect(getDeckMapLayerExtruded({'@@type': 'GeoArrowPolygonLayer'})).toBe(
+      false,
+    );
+  });
+});
+
+describe('withoutDeckMapLayerOpacityIfUnused', () => {
+  it('keeps opacity when another accessor still has a color scale', () => {
+    const layer = {
+      '@@type': 'GeoArrowPolygonLayer',
+      opacity: 0.5,
+      getFillColor: createDeckMapLayerColorScale({field: 'mag'}),
+      getLineColor: [0, 0, 0, 128],
+    };
+    expect(withoutDeckMapLayerOpacityIfUnused(layer, 'getLineColor')).toEqual(
+      layer,
+    );
+  });
+
+  it('clears opacity when no color-scale channel remains', () => {
+    const layer = {
+      '@@type': 'GeoArrowPolygonLayer',
+      opacity: 0.5,
+      getFillColor: [56, 189, 248, 180],
+      getLineColor: [0, 0, 0, 128],
+    };
+    expect(withoutDeckMapLayerOpacityIfUnused(layer)).toEqual({
+      '@@type': 'GeoArrowPolygonLayer',
+      getFillColor: [56, 189, 248, 180],
+      getLineColor: [0, 0, 0, 128],
+    });
   });
 });
 

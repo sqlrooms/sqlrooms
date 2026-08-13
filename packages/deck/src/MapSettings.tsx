@@ -51,6 +51,7 @@ import {
   getDeckMapColorAccessorOptions,
   getDeckMapLayerDatasetId,
   getDeckMapLayerColorScale,
+  getDeckMapLayerExtruded,
   getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
   setDeckMapLayerColorScale,
@@ -73,6 +74,7 @@ import {
   usesExtrusionSettings,
   usesStrokeSetting,
   getDeckMapLayerStrokeDefault,
+  withoutDeckMapLayerOpacityIfUnused,
 } from './mapLayerConfigUtils';
 import {
   DeckMapCodeViewerPanel,
@@ -522,7 +524,8 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
                 if (colorScale?.field) {
                   lastColorScaleFieldsRef.current[accessor] = colorScale.field;
                 }
-                // Drop scale-owned layer.opacity so flat color alpha is authoritative.
+                // Drop scale-owned layer.opacity only if no other channel still
+                // needs it (e.g. fill scale + flat stroke).
                 applyConfig(
                   updateDeckMapLayer(
                     clearDeckMapLayerColorScale(
@@ -531,10 +534,8 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
                       accessor,
                     ),
                     layerIndex,
-                    (nextLayer) => {
-                      const {opacity: _opacity, ...rest} = nextLayer;
-                      return rest;
-                    },
+                    (nextLayer) =>
+                      withoutDeckMapLayerOpacityIfUnused(nextLayer),
                   ),
                 );
               }}
@@ -633,21 +634,23 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
                 );
                 return;
               }
-              // Flat-color alpha owns opacity — clear layer.opacity so it cannot
-              // keep a prior color-scale dimming after the scale is turned off.
+              // Flat-color alpha owns opacity for this channel; keep layer.opacity
+              // when another accessor still uses a color scale.
               applyConfig(
-                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-                  const {opacity: _opacity, ...rest} = nextLayer;
-                  return {
-                    ...rest,
-                    [accessor]: [
-                      flatColor[0],
-                      flatColor[1],
-                      flatColor[2],
-                      opacityPercentToAlpha(percent),
-                    ],
-                  };
-                }),
+                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
+                  withoutDeckMapLayerOpacityIfUnused(
+                    {
+                      ...nextLayer,
+                      [accessor]: [
+                        flatColor[0],
+                        flatColor[1],
+                        flatColor[2],
+                        opacityPercentToAlpha(percent),
+                      ],
+                    },
+                    accessor,
+                  ),
+                ),
               );
             }}
           />
@@ -770,14 +773,13 @@ const AppearanceArcColorPanel: FC<{
               lastColorScaleFieldsRef.current.getTargetColor = colorScale.field;
             }
             applyConfig(
-              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-                const {opacity: _opacity, ...rest} = nextLayer;
-                return {
-                  ...rest,
+              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
+                withoutDeckMapLayerOpacityIfUnused({
+                  ...nextLayer,
                   getSourceColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
                   getTargetColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
-                };
-              }),
+                }),
+              ),
             );
           }}
         />
@@ -884,24 +886,26 @@ const AppearanceArcColorPanel: FC<{
           }
           const alpha = opacityPercentToAlpha(percent);
           applyConfig(
-            updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-              const {opacity: _opacity, ...rest} = nextLayer;
-              return {
-                ...rest,
-                getSourceColor: [
-                  sourceFlat[0],
-                  sourceFlat[1],
-                  sourceFlat[2],
-                  alpha,
-                ],
-                getTargetColor: [
-                  targetFlat[0],
-                  targetFlat[1],
-                  targetFlat[2],
-                  alpha,
-                ],
-              };
-            }),
+            updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
+              withoutDeckMapLayerOpacityIfUnused(
+                {
+                  ...nextLayer,
+                  getSourceColor: [
+                    sourceFlat[0],
+                    sourceFlat[1],
+                    sourceFlat[2],
+                    alpha,
+                  ],
+                  getTargetColor: [
+                    targetFlat[0],
+                    targetFlat[1],
+                    targetFlat[2],
+                    alpha,
+                  ],
+                },
+                ['getSourceColor', 'getTargetColor'],
+              ),
+            ),
           );
         }}
       />
@@ -918,7 +922,8 @@ const AppearanceExtrusionPanel: FC<{
   applyConfig: (config: DeckMapConfig) => void;
   readOnly?: boolean;
 }> = ({layer, columns, mapConfig, layerIndex, applyConfig, readOnly}) => {
-  const extruded = Boolean(layer?.extruded);
+  // H3 defaults extruded when omitted — match DeckH3HexagonLayer.defaultProps.
+  const extruded = getDeckMapLayerExtruded(layer);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
@@ -1119,7 +1124,9 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const strokeEnabled =
     typeof activeLayer?.stroked === 'boolean'
       ? activeLayer.stroked
-      : getDeckMapLayerStrokeDefault(activeLayer?.['@@type']);
+      : getDeckMapLayerStrokeDefault(activeLayer?.['@@type'], {
+          extruded: getDeckMapLayerExtruded(activeLayer),
+        });
   const strokeWidthPixels =
     activeLayer?.lineWidthUnits === 'pixels' &&
     typeof activeLayer?.getLineWidth === 'number'

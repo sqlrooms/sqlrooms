@@ -193,11 +193,34 @@ export function usesStrokeSetting(layerType: unknown) {
   );
 }
 
+/** True for GeoArrow / deck H3 hexagon layer class names. */
+export function isDeckMapH3HexagonLayer(layerType: unknown): boolean {
+  return (
+    typeof layerType === 'string' && H3_LAYER_TYPES.has(layerType.toLowerCase())
+  );
+}
+
 /**
- * Deck.gl default for `stroked` when the prop is omitted.
- * Scatterplot and solid-polygon default to no stroke; polygon / H3 / GeoJSON stroke by default.
+ * Effective `extruded` for UI/defaults. H3 layers default to extruded when the
+ * prop is omitted (`DeckH3HexagonLayer.defaultProps`).
  */
-export function getDeckMapLayerStrokeDefault(layerType: unknown): boolean {
+export function getDeckMapLayerExtruded(
+  layer: DeckMapLayerRecord | undefined,
+): boolean {
+  if (typeof layer?.extruded === 'boolean') return layer.extruded;
+  return isDeckMapH3HexagonLayer(layer?.['@@type']);
+}
+
+/**
+ * Deck.gl / SQLRooms default for `stroked` when the prop is omitted.
+ * Scatterplot and solid-polygon default to no stroke; polygon / GeoJSON stroke
+ * by default. H3 only strokes when not extruded — extruded H3 uses 3D faces
+ * (wireframe for edges), so enabling Stroke while extruded is misleading.
+ */
+export function getDeckMapLayerStrokeDefault(
+  layerType: unknown,
+  options?: {extruded?: boolean},
+): boolean {
   if (typeof layerType !== 'string') return false;
   const type = layerType.toLowerCase();
   if (
@@ -207,7 +230,53 @@ export function getDeckMapLayerStrokeDefault(layerType: unknown): boolean {
   ) {
     return false;
   }
+  if (isDeckMapH3HexagonLayer(layerType)) {
+    const extruded = options?.extruded ?? true;
+    return !extruded;
+  }
   return true;
+}
+
+/**
+ * True when any color accessor (optionally excluding some) holds a colorScale.
+ * Used so flat-channel opacity edits do not clear `layer.opacity` while another
+ * channel still depends on it.
+ */
+export function deckMapLayerHasColorScale(
+  layer: DeckMapLayerRecord | undefined,
+  options?: {
+    except?: DeckMapLayerColorAccessor | readonly DeckMapLayerColorAccessor[];
+  },
+): boolean {
+  if (!layer) return false;
+  const exceptList = options?.except;
+  const except = new Set<DeckMapLayerColorAccessor>(
+    exceptList == null
+      ? []
+      : typeof exceptList === 'string'
+        ? [exceptList]
+        : [...exceptList],
+  );
+  for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
+    if (except.has(value)) continue;
+    if (getDeckMapLayerColorScale(layer, value)) return true;
+  }
+  return false;
+}
+
+/**
+ * Drop `layer.opacity` only when no remaining color-scale channel needs it.
+ * Color-scale accessors compile without per-row alpha and rely on global opacity.
+ */
+export function withoutDeckMapLayerOpacityIfUnused(
+  layer: DeckMapLayerRecord,
+  except?: DeckMapLayerColorAccessor | readonly DeckMapLayerColorAccessor[],
+): DeckMapLayerRecord {
+  if (deckMapLayerHasColorScale(layer, {except})) {
+    return layer;
+  }
+  const {opacity: _opacity, ...rest} = layer;
+  return rest;
 }
 
 export function getDeckMapColorAccessorOptions(
