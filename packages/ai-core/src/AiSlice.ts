@@ -173,6 +173,8 @@ export type AiSliceState = {
         role?: string;
         /** Names of the request-assembly sources, never source content. */
         contextSources?: string[];
+        contextMetrics?: Record<string, number>;
+        sessionId?: string;
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
@@ -665,6 +667,26 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   (entry) => entry.id === id,
                 );
                 if (diagnostic) diagnostic.inputTokens = inputTokens;
+              }),
+            );
+          },
+          mergeLatestProviderContextMetrics: (
+            role: string,
+            metrics: Record<string, number>,
+          ) => {
+            if (!devtoolsOptions.captureProviderContexts) return;
+            set((state) =>
+              produce(state, (draft) => {
+                const diagnostic = draft.ai.devtools.providerContexts
+                  .slice()
+                  .reverse()
+                  .find((entry) => entry.role === role);
+                if (diagnostic) {
+                  diagnostic.preparationMetrics = {
+                    ...(diagnostic.preparationMetrics ?? {}),
+                    ...metrics,
+                  };
+                }
               }),
             );
           },
@@ -1419,6 +1441,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             useTools?: boolean;
             role?: string;
             contextSources?: string[];
+            contextMetrics?: Record<string, number>;
+            sessionId?: string;
             abortSignal?: AbortSignal;
           } = {},
         ) => {
@@ -1437,6 +1461,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               'explicit-prompt',
               'resolved-system-instructions',
             ],
+            contextMetrics,
+            sessionId,
           } = options;
 
           if (abortSignal?.aborted) {
@@ -1489,6 +1515,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   role,
                   provider,
                   model: modelId,
+                  sessionId: sessionId ?? currentSession?.id,
                   step: stepNumber,
                   instructions: resolvedInstructions,
                   messages,
@@ -1496,6 +1523,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                     ? (toolsWithoutExecute as ToolSet)
                     : undefined,
                   sources: contextSources,
+                  preparationMetrics: contextMetrics,
                 });
                 diagnosticsByStep[stepNumber] = diagnostic.id;
                 state.ai.devtools.writeProviderContext(diagnostic);

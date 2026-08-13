@@ -528,6 +528,7 @@ export function createLocalChatTransportFactory({
             role: 'chat-coordinator',
             provider,
             model: modelId,
+            sessionId,
             step: stepNumber,
             instructions: systemInstructions,
             messages,

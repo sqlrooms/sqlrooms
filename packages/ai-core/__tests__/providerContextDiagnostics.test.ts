@@ -8,6 +8,7 @@ describe('measureProviderContext', () => {
       role: 'skill-discovery',
       provider: 'test-provider',
       model: 'test-model',
+      sessionId: 'session-1',
       step: 2,
       instructions: 'héllo',
       messages: [{role: 'user', content: 'sensitive prompt'}],
@@ -22,16 +23,19 @@ describe('measureProviderContext', () => {
         }),
       },
       sources: ['catalog', 'question', 'catalog'],
+      preparationMetrics: {catalogChars: 20, candidateSkillCount: 2},
     });
 
     expect(diagnostic).toMatchObject({
       role: 'skill-discovery',
       provider: 'test-provider',
       model: 'test-model',
+      sessionId: 'session-1',
       step: 2,
       instructions: {chars: 5, bytes: 6},
       messages: {count: 1},
       sources: ['catalog', 'question'],
+      preparationMetrics: {catalogChars: 20, candidateSkillCount: 2},
     });
     expect(diagnostic.messages.bytes).toBeGreaterThan(0);
     expect(diagnostic.tools.map(({name}) => name)).toEqual(['alpha', 'zebra']);

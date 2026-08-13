@@ -34,11 +34,13 @@ export type MeasureProviderContextArgs = {
   role: string;
   provider: string;
   model: string;
+  sessionId?: string;
   step: number;
   instructions: unknown;
   messages: unknown[];
   tools?: ToolSet;
   sources?: string[];
+  preparationMetrics?: Record<string, number>;
 };
 
 /**
@@ -50,11 +52,13 @@ export async function measureProviderContext({
   role,
   provider,
   model,
+  sessionId,
   step,
   instructions,
   messages,
   tools = {},
   sources = [],
+  preparationMetrics,
 }: MeasureProviderContextArgs): Promise<ProviderContextDiagnostic> {
   const toolEntries = await Promise.all(
     Object.entries(tools)
@@ -76,6 +80,7 @@ export async function measureProviderContext({
     role,
     provider,
     model,
+    ...(sessionId ? {sessionId} : {}),
     step,
     instructions: textSize(instructions),
     messages: {
@@ -88,5 +93,8 @@ export async function measureProviderContext({
       0,
     ),
     sources: [...new Set(sources)].sort(),
+    ...(preparationMetrics
+      ? {preparationMetrics: {...preparationMetrics}}
+      : {}),
   };
 }

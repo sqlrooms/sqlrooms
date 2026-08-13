@@ -124,6 +124,7 @@ export type ProviderContextDiagnostic = {
   role: string;
   provider: string;
   model: string;
+  sessionId?: string;
   /** Zero-based provider invocation within the owning request. */
   step: number;
   instructions: {chars: number; bytes: number};
@@ -132,6 +133,8 @@ export type ProviderContextDiagnostic = {
   toolSchemaBytes: number;
   /** Names of request-assembly sources; never their content. */
   sources: string[];
+  /** Numeric request-preparation facts such as catalog or candidate size. */
+  preparationMetrics?: Record<string, number>;
   /** Provider-reported input tokens, populated after the step completes. */
   inputTokens?: number;
 };
@@ -156,6 +159,10 @@ export type AiDevtoolsState = {
   shouldCaptureProviderContexts: () => boolean;
   writeProviderContext: (diagnostic: ProviderContextDiagnostic) => void;
   setProviderContextInputTokens: (id: string, inputTokens: number) => void;
+  mergeLatestProviderContextMetrics: (
+    role: string,
+    metrics: Record<string, number>,
+  ) => void;
   clearProviderContexts: () => void;
 };
 
