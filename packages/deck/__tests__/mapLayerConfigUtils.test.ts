@@ -1,17 +1,22 @@
 import {
   clearDeckMapLayerColorScale,
   createDeckMapLayerColorScale,
+  deckMapRgbaToHex,
   DECK_MAP_LAYER_TYPE_OPTIONS,
   getDeckMapColorAccessorOptions,
   getDeckMapLayerColorScale,
+  getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
-  setDeckMapLayerGeometryColumn,
-  setDeckMapLayerColorScale,
-  setDeckMapLayerType,
+  getDeckMapLayerStrokeDefault,
   setDeckMapLayerColumnRadius,
-  usesGeometryColumnSetting,
+  setDeckMapLayerColorScale,
+  setDeckMapLayerFlatColor,
+  setDeckMapLayerGeometryColumn,
+  setDeckMapLayerType,
   usesExtrusionSettings,
+  usesGeometryColumnSetting,
   usesRadiusSetting,
+  usesStrokeSetting,
 } from '../src/mapLayerConfigUtils';
 
 const config = {
@@ -139,6 +144,16 @@ describe('mapLayerConfigUtils', () => {
     expect(usesRadiusSetting('GeoArrowColumnLayer')).toBe(false);
   });
 
+  it('detects layer types that should use stroke settings', () => {
+    expect(usesStrokeSetting('GeoArrowScatterplotLayer')).toBe(true);
+    expect(usesStrokeSetting('GeoArrowH3HexagonLayer')).toBe(true);
+    expect(usesStrokeSetting('GeoArrowPolygonLayer')).toBe(true);
+    expect(usesStrokeSetting('GeoArrowSolidPolygonLayer')).toBe(true);
+    expect(usesStrokeSetting('GeoJsonLayer')).toBe(true);
+    expect(usesStrokeSetting('GeoArrowPathLayer')).toBe(false);
+    expect(usesStrokeSetting('GeoArrowHeatmapLayer')).toBe(false);
+  });
+
   it('detects layer types that should use extrusion settings', () => {
     expect(usesExtrusionSettings('GeoArrowH3HexagonLayer')).toBe(true);
     expect(usesExtrusionSettings('GeoArrowPolygonLayer')).toBe(true);
@@ -147,6 +162,18 @@ describe('mapLayerConfigUtils', () => {
     expect(usesExtrusionSettings('GeoJsonLayer')).toBe(false);
     expect(usesExtrusionSettings('GeoArrowScatterplotLayer')).toBe(false);
     expect(usesExtrusionSettings('GeoArrowPathLayer')).toBe(false);
+  });
+
+  it('returns deck defaults for stroked when omitted', () => {
+    expect(getDeckMapLayerStrokeDefault('GeoArrowScatterplotLayer')).toBe(
+      false,
+    );
+    expect(getDeckMapLayerStrokeDefault('GeoArrowSolidPolygonLayer')).toBe(
+      false,
+    );
+    expect(getDeckMapLayerStrokeDefault('GeoArrowPolygonLayer')).toBe(true);
+    expect(getDeckMapLayerStrokeDefault('GeoArrowH3HexagonLayer')).toBe(true);
+    expect(getDeckMapLayerStrokeDefault('GeoJsonLayer')).toBe(true);
   });
 });
 
@@ -226,5 +253,23 @@ describe('clearDeckMapLayerColorScale', () => {
     expect(getDeckMapLayerRecords(cleared)[0]?.getLineColor).toEqual([
       0, 0, 0, 255,
     ]);
+  });
+});
+
+describe('deck map flat layer color', () => {
+  test('reads and writes a flat RGBA color', () => {
+    const next = setDeckMapLayerFlatColor(
+      config,
+      0,
+      'getFillColor',
+      [10, 20, 30, 40],
+    );
+    expect(
+      getDeckMapLayerFlatColor(getDeckMapLayerRecords(next)[0], 'getFillColor'),
+    ).toEqual([10, 20, 30, 40]);
+  });
+
+  test('deckMapRgbaToHex converts RGB channels', () => {
+    expect(deckMapRgbaToHex([255, 128, 0, 200])).toBe('#ff8000');
   });
 });
