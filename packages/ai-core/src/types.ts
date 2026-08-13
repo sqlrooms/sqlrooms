@@ -116,6 +116,26 @@ export type AgentSnapshot = {
   startedAt: number;
 };
 
+/** Metadata-only measurement of one outbound provider step. */
+export type ProviderContextDiagnostic = {
+  id: string;
+  recordedAt: number;
+  /** Stable caller-assigned role label, e.g. `chat-coordinator`. */
+  role: string;
+  provider: string;
+  model: string;
+  /** Zero-based provider invocation within the owning request. */
+  step: number;
+  instructions: {chars: number; bytes: number};
+  messages: {count: number; bytes: number};
+  tools: Array<{name: string; schemaBytes: number}>;
+  toolSchemaBytes: number;
+  /** Names of request-assembly sources; never their content. */
+  sources: string[];
+  /** Provider-reported input tokens, populated after the step completes. */
+  inputTokens?: number;
+};
+
 /** Devtools-only state and controls nested under the AI slice. */
 export type AiDevtoolsState = {
   /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId. */
@@ -131,6 +151,12 @@ export type AiDevtoolsState = {
   ) => void;
   /** Clears all captured agent metadata snapshots. */
   clearAgentSnapshots: () => void;
+  /** Bounded, transient, metadata-only provider request measurements. */
+  providerContexts: ProviderContextDiagnostic[];
+  shouldCaptureProviderContexts: () => boolean;
+  writeProviderContext: (diagnostic: ProviderContextDiagnostic) => void;
+  setProviderContextInputTokens: (id: string, inputTokens: number) => void;
+  clearProviderContexts: () => void;
 };
 
 /**

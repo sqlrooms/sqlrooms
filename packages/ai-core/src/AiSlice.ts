@@ -43,6 +43,7 @@ import type {
   AiDevtoolsState,
   AgentProgressSnapshot,
   AgentSnapshot,
+  ProviderContextDiagnostic,
   AgentToolCall,
   AiChatSendMessage,
   GetProviderOptions,
@@ -54,6 +55,7 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
+import {measureProviderContext} from './devtools/providerContextDiagnostics';
 import {normalizeAiConfig, ToolAbortError} from './utils';
 import {
   getAnalysisResultsFromUiMessages,
@@ -167,6 +169,10 @@ export type AiSliceState = {
         baseUrl?: string;
         abortSignal?: AbortSignal;
         useTools?: boolean;
+        /** Stable diagnostics label for this provider caller. */
+        role?: string;
+        /** Names of the request-assembly sources, never source content. */
+        contextSources?: string[];
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
@@ -336,6 +342,8 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
     captureAgentSnapshots?: boolean;
     persistAgentSnapshots?: boolean;
     maxAgentSnapshotBytes?: number;
+    captureProviderContexts?: boolean;
+    maxProviderContextRecords?: number;
   };
 }
 
@@ -363,6 +371,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     captureAgentSnapshots: params.devtools?.captureAgentSnapshots ?? false,
     persistAgentSnapshots: params.devtools?.persistAgentSnapshots ?? false,
     maxAgentSnapshotBytes: params.devtools?.maxAgentSnapshotBytes ?? 64_000,
+    captureProviderContexts: params.devtools?.captureProviderContexts ?? false,
+    maxProviderContextRecords:
+      params.devtools?.maxProviderContextRecords ?? 100,
   };
 
   return createSlice<AiSliceState>((set, get, store) => {
@@ -626,6 +637,41 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             set((state) =>
               produce(state, (draft) => {
                 draft.ai.devtools.agentSnapshots = {};
+              }),
+            );
+          },
+          providerContexts: [],
+          shouldCaptureProviderContexts: () =>
+            devtoolsOptions.captureProviderContexts,
+          writeProviderContext: (diagnostic: ProviderContextDiagnostic) => {
+            if (!devtoolsOptions.captureProviderContexts) return;
+            set((state) =>
+              produce(state, (draft) => {
+                draft.ai.devtools.providerContexts.push(diagnostic);
+                const overflow =
+                  draft.ai.devtools.providerContexts.length -
+                  devtoolsOptions.maxProviderContextRecords;
+                if (overflow > 0) {
+                  draft.ai.devtools.providerContexts.splice(0, overflow);
+                }
+              }),
+            );
+          },
+          setProviderContextInputTokens: (id: string, inputTokens: number) => {
+            if (!devtoolsOptions.captureProviderContexts) return;
+            set((state) =>
+              produce(state, (draft) => {
+                const diagnostic = draft.ai.devtools.providerContexts.find(
+                  (entry) => entry.id === id,
+                );
+                if (diagnostic) diagnostic.inputTokens = inputTokens;
+              }),
+            );
+          },
+          clearProviderContexts: () => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.ai.devtools.providerContexts = [];
               }),
             );
           },
@@ -1371,6 +1417,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             modelName?: string;
             baseUrl?: string;
             useTools?: boolean;
+            role?: string;
+            contextSources?: string[];
             abortSignal?: AbortSignal;
           } = {},
         ) => {
@@ -1384,6 +1432,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             baseUrl,
             abortSignal,
             useTools = false,
+            role = 'one-shot-helper',
+            contextSources = [
+              'explicit-prompt',
+              'resolved-system-instructions',
+            ],
           } = options;
 
           if (abortSignal?.aborted) {
@@ -1415,15 +1468,48 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             includeUsage: true,
           }).chatModel(modelId);
 
+          const diagnosticsByStep: string[] = [];
+          let completedStep = 0;
+          const resolvedInstructions =
+            systemInstructions ||
+            state.ai.getFullInstructions(currentSession?.id);
+
           try {
             const response = await generateText({
               model,
               messages: [{role: 'user', content: prompt}],
-              system:
-                systemInstructions ||
-                state.ai.getFullInstructions(currentSession?.id),
+              system: resolvedInstructions,
               abortSignal: abortSignal,
               ...(useTools ? {tools: toolsWithoutExecute as ToolSet} : {}),
+              prepareStep: async ({stepNumber, messages}) => {
+                if (!state.ai.devtools.shouldCaptureProviderContexts()) {
+                  return undefined;
+                }
+                const diagnostic = await measureProviderContext({
+                  role,
+                  provider,
+                  model: modelId,
+                  step: stepNumber,
+                  instructions: resolvedInstructions,
+                  messages,
+                  tools: useTools
+                    ? (toolsWithoutExecute as ToolSet)
+                    : undefined,
+                  sources: contextSources,
+                });
+                diagnosticsByStep[stepNumber] = diagnostic.id;
+                state.ai.devtools.writeProviderContext(diagnostic);
+                return undefined;
+              },
+              onStepFinish: ({usage}) => {
+                const diagnosticId = diagnosticsByStep[completedStep++];
+                if (diagnosticId && usage.inputTokens != null) {
+                  state.ai.devtools.setProviderContextInputTokens(
+                    diagnosticId,
+                    usage.inputTokens,
+                  );
+                }
+              },
             });
             return response.text;
           } catch (error) {

@@ -10,6 +10,9 @@ export type {
   AiSliceOptions,
   ForkSessionFromMessageArgs,
 } from './AiSlice';
+export {measureProviderContext} from './devtools/providerContextDiagnostics';
+export type {MeasureProviderContextArgs} from './devtools/providerContextDiagnostics';
+export type {ProviderContextDiagnostic} from './types';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
 /** @deprecated Use `Chat.Messages` instead. */
 export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
