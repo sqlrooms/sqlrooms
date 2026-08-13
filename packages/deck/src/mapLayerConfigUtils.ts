@@ -181,8 +181,7 @@ const STROKE_LAYER_TYPES = new Set([
   'h3hexagonlayer',
   'geoarrowpolygonlayer',
   'polygonlayer',
-  'geoarrowsolidpolygonlayer',
-  'solidpolygonlayer',
+  // SolidPolygonLayer has no stroked outlines (wireframe only) — omit stroke UI.
   'geojsonlayer',
 ]);
 
@@ -277,6 +276,65 @@ export function withoutDeckMapLayerOpacityIfUnused(
   }
   const {opacity: _opacity, ...rest} = layer;
   return rest;
+}
+
+function deckMapLayerOpacityToAlpha(
+  layer: DeckMapLayerRecord,
+): number | undefined {
+  const opacity = layer.opacity;
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity)) {
+    return undefined;
+  }
+  return Math.round(Math.max(0, Math.min(1, opacity)) * 255);
+}
+
+/**
+ * Replace a color-scale accessor with a flat RGBA. When this was the last scale,
+ * bake `layer.opacity` into the flat alpha and drop `opacity` so the slider value
+ * is preserved. When other scales remain, keep global opacity untouched.
+ */
+export function replaceDeckMapLayerColorScaleWithFlat(
+  layer: DeckMapLayerRecord,
+  accessor: DeckMapLayerColorAccessor,
+  flatColor: readonly [number, number, number, number],
+): DeckMapLayerRecord {
+  const keepOpacity = deckMapLayerHasColorScale(layer, {except: accessor});
+  const alpha = keepOpacity
+    ? (flatColor[3] ?? 255)
+    : (deckMapLayerOpacityToAlpha(layer) ?? flatColor[3] ?? 255);
+  return withoutDeckMapLayerOpacityIfUnused({
+    ...layer,
+    [accessor]: [flatColor[0], flatColor[1], flatColor[2], alpha],
+  });
+}
+
+/**
+ * Replace multiple color-scale accessors with flat colors in one step (e.g. arc
+ * source+target). Bakes opacity only when no other scale channels remain.
+ */
+export function replaceDeckMapLayerColorScalesWithFlat(
+  layer: DeckMapLayerRecord,
+  replacements: Partial<
+    Record<DeckMapLayerColorAccessor, readonly [number, number, number, number]>
+  >,
+): DeckMapLayerRecord {
+  const except = Object.keys(replacements) as DeckMapLayerColorAccessor[];
+  const keepOpacity = deckMapLayerHasColorScale(layer, {except});
+  const bakedAlpha = keepOpacity
+    ? undefined
+    : deckMapLayerOpacityToAlpha(layer);
+  const next: DeckMapLayerRecord = {...layer};
+  for (const accessor of except) {
+    const color = replacements[accessor];
+    if (!color) continue;
+    next[accessor] = [
+      color[0],
+      color[1],
+      color[2],
+      bakedAlpha ?? color[3] ?? 255,
+    ];
+  }
+  return withoutDeckMapLayerOpacityIfUnused(next);
 }
 
 export function getDeckMapColorAccessorOptions(
@@ -624,11 +682,9 @@ export function clearDeckMapLayerColorScale(
     accessor === 'getLineColor'
       ? DECK_MAP_DEFAULT_STROKE_COLOR
       : DECK_MAP_DEFAULT_LAYER_COLOR;
-  return updateDeckMapLayer(config, layerIndex, (layer) => ({
-    ...layer,
-    // Missing fill → deck.gl opaque black; keep an explicit flat color.
-    [accessor]: [...defaultColor],
-  }));
+  return updateDeckMapLayer(config, layerIndex, (layer) =>
+    replaceDeckMapLayerColorScaleWithFlat(layer, accessor, defaultColor),
+  );
 }
 
 export function createDeckMapLayerColorScale(options: {

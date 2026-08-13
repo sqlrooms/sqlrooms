@@ -74,6 +74,8 @@ import {
   usesExtrusionSettings,
   usesStrokeSetting,
   getDeckMapLayerStrokeDefault,
+  replaceDeckMapLayerColorScalesWithFlat,
+  replaceDeckMapLayerColorScaleWithFlat,
   withoutDeckMapLayerOpacityIfUnused,
 } from './mapLayerConfigUtils';
 import {
@@ -514,7 +516,7 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
             <span className="text-xs font-medium">Color scale</span>
             <Switch
               checked={Boolean(colorScale)}
-              disabled={!defaultField || readOnly}
+              disabled={readOnly || (!colorScale && !defaultField)}
               aria-label="Color scale"
               onCheckedChange={(checked) => {
                 if (checked) {
@@ -524,19 +526,8 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
                 if (colorScale?.field) {
                   lastColorScaleFieldsRef.current[accessor] = colorScale.field;
                 }
-                // Drop scale-owned layer.opacity only if no other channel still
-                // needs it (e.g. fill scale + flat stroke).
                 applyConfig(
-                  updateDeckMapLayer(
-                    clearDeckMapLayerColorScale(
-                      mapConfig,
-                      layerIndex,
-                      accessor,
-                    ),
-                    layerIndex,
-                    (nextLayer) =>
-                      withoutDeckMapLayerOpacityIfUnused(nextLayer),
-                  ),
+                  clearDeckMapLayerColorScale(mapConfig, layerIndex, accessor),
                 );
               }}
             />
@@ -761,7 +752,7 @@ const AppearanceArcColorPanel: FC<{
         <span className="text-xs font-medium">Color scale</span>
         <Switch
           checked={Boolean(colorScale)}
-          disabled={!defaultField || readOnly}
+          disabled={readOnly || (!colorScale && !defaultField)}
           aria-label="Color scale"
           onCheckedChange={(checked) => {
             if (checked) {
@@ -774,10 +765,9 @@ const AppearanceArcColorPanel: FC<{
             }
             applyConfig(
               updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
-                withoutDeckMapLayerOpacityIfUnused({
-                  ...nextLayer,
-                  getSourceColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
-                  getTargetColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
+                replaceDeckMapLayerColorScalesWithFlat(nextLayer, {
+                  getSourceColor: DECK_MAP_DEFAULT_LAYER_COLOR,
+                  getTargetColor: DECK_MAP_DEFAULT_LAYER_COLOR,
                 }),
               ),
             );
@@ -1628,7 +1618,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           ) : null}
 
                           {hasFillColor && hasLineColor && showStrokeSetting ? (
-                            <Tabs defaultValue="fill" className="w-full">
+                            <Tabs
+                              key={`appearance-fill-stroke${showExtrusionSettings ? '-extrusion' : ''}`}
+                              defaultValue="fill"
+                              className="w-full"
+                            >
                               <TabsList
                                 className={`grid h-8 w-full ${showExtrusionSettings ? 'grid-cols-3' : 'grid-cols-2'}`}
                               >
@@ -1680,10 +1674,30 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                       updateDeckMapLayer(
                                         mapConfig,
                                         activeLayerIndex,
-                                        (layer) => ({
-                                          ...layer,
-                                          stroked: checked,
-                                        }),
+                                        (layer) => {
+                                          if (checked) {
+                                            return {...layer, stroked: true};
+                                          }
+                                          // Drop a hidden stroke color scale so
+                                          // legends/opacity bookkeeping stay accurate.
+                                          const next: DeckMapLayerRecord = {
+                                            ...layer,
+                                            stroked: false,
+                                          };
+                                          if (
+                                            getDeckMapLayerColorScale(
+                                              next,
+                                              'getLineColor',
+                                            )
+                                          ) {
+                                            return replaceDeckMapLayerColorScaleWithFlat(
+                                              next,
+                                              'getLineColor',
+                                              DECK_MAP_DEFAULT_STROKE_COLOR,
+                                            );
+                                          }
+                                          return next;
+                                        },
                                       ),
                                     )
                                   }
@@ -1710,7 +1724,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                               ) : null}
                             </Tabs>
                           ) : hasFillColor && showExtrusionSettings ? (
-                            <Tabs defaultValue="fill" className="w-full">
+                            <Tabs
+                              key="appearance-fill-extrusion"
+                              defaultValue="fill"
+                              className="w-full"
+                            >
                               <TabsList className="grid h-8 w-full grid-cols-2">
                                 <TabsTrigger value="fill" className="text-xs">
                                   Fill

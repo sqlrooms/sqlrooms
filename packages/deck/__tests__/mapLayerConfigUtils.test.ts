@@ -9,11 +9,13 @@ import {
   getDeckMapLayerFlatColor,
   getDeckMapLayerRecords,
   getDeckMapLayerStrokeDefault,
+  replaceDeckMapLayerColorScaleWithFlat,
   setDeckMapLayerColumnRadius,
   setDeckMapLayerColorScale,
   setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerType,
+  updateDeckMapLayer,
   usesExtrusionSettings,
   usesGeometryColumnSetting,
   usesRadiusSetting,
@@ -150,7 +152,8 @@ describe('mapLayerConfigUtils', () => {
     expect(usesStrokeSetting('GeoArrowScatterplotLayer')).toBe(true);
     expect(usesStrokeSetting('GeoArrowH3HexagonLayer')).toBe(true);
     expect(usesStrokeSetting('GeoArrowPolygonLayer')).toBe(true);
-    expect(usesStrokeSetting('GeoArrowSolidPolygonLayer')).toBe(true);
+    // SolidPolygon outlines use wireframe, not stroked — hide Stroke UI.
+    expect(usesStrokeSetting('GeoArrowSolidPolygonLayer')).toBe(false);
     expect(usesStrokeSetting('GeoJsonLayer')).toBe(true);
     expect(usesStrokeSetting('GeoArrowPathLayer')).toBe(false);
     expect(usesStrokeSetting('GeoArrowHeatmapLayer')).toBe(false);
@@ -307,6 +310,66 @@ describe('clearDeckMapLayerColorScale', () => {
     expect(getDeckMapLayerRecords(cleared)[0]?.getLineColor).toEqual([
       0, 0, 0, 255,
     ]);
+  });
+
+  test('bakes layer.opacity into flat alpha when clearing the last scale', () => {
+    const withScale = updateDeckMapLayer(
+      setDeckMapLayerColorScale(
+        config,
+        0,
+        'getFillColor',
+        createDeckMapLayerColorScale({field: 'mag'}),
+      ),
+      0,
+      (layer) => ({...layer, opacity: 0.5}),
+    );
+    const cleared = clearDeckMapLayerColorScale(withScale, 0, 'getFillColor');
+    const layer = getDeckMapLayerRecords(cleared)[0];
+    expect(layer?.opacity).toBeUndefined();
+    expect(layer?.getFillColor).toEqual([56, 189, 248, 128]);
+  });
+
+  test('keeps layer.opacity when another color scale remains', () => {
+    const withScales = updateDeckMapLayer(
+      setDeckMapLayerColorScale(
+        setDeckMapLayerColorScale(
+          config,
+          0,
+          'getFillColor',
+          createDeckMapLayerColorScale({field: 'mag'}),
+        ),
+        0,
+        'getLineColor',
+        createDeckMapLayerColorScale({field: 'cat'}),
+      ),
+      0,
+      (layer) => ({...layer, opacity: 0.5}),
+    );
+    const cleared = clearDeckMapLayerColorScale(withScales, 0, 'getLineColor');
+    const layer = getDeckMapLayerRecords(cleared)[0];
+    expect(layer?.opacity).toBe(0.5);
+    expect(layer?.getLineColor).toEqual([0, 0, 0, 255]);
+    expect(getDeckMapLayerColorScale(layer, 'getFillColor')).toBeTruthy();
+  });
+});
+
+describe('replaceDeckMapLayerColorScaleWithFlat', () => {
+  test('clears a stroke scale left behind when disabling stroke', () => {
+    const layer = {
+      '@@type': 'GeoArrowPolygonLayer',
+      stroked: false,
+      opacity: 0.4,
+      getFillColor: createDeckMapLayerColorScale({field: 'mag'}),
+      getLineColor: createDeckMapLayerColorScale({field: 'cat'}),
+    };
+    const next = replaceDeckMapLayerColorScaleWithFlat(
+      layer,
+      'getLineColor',
+      [0, 0, 0, 255],
+    );
+    expect(next.opacity).toBe(0.4);
+    expect(next.getLineColor).toEqual([0, 0, 0, 255]);
+    expect(getDeckMapLayerColorScale(next, 'getFillColor')).toBeTruthy();
   });
 });
 
