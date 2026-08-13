@@ -645,6 +645,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           providerContexts: [],
           shouldCaptureProviderContexts: () =>
             devtoolsOptions.captureProviderContexts,
+          measureProviderContext: async (input) => {
+            if (!devtoolsOptions.captureProviderContexts) return undefined;
+            const diagnostic = await measureProviderContext(input);
+            get().ai.devtools.writeProviderContext(diagnostic);
+            return diagnostic.id;
+          },
           writeProviderContext: (diagnostic: ProviderContextDiagnostic) => {
             if (!devtoolsOptions.captureProviderContexts) return;
             set((state) =>

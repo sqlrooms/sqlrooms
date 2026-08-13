@@ -139,6 +139,19 @@ export type ProviderContextDiagnostic = {
   inputTokens?: number;
 };
 
+export type ProviderContextMeasurementInput = {
+  role: string;
+  provider: string;
+  model: string;
+  sessionId?: string;
+  step: number;
+  instructions: unknown;
+  messages: unknown[];
+  tools?: ToolSet;
+  sources?: string[];
+  preparationMetrics?: Record<string, number>;
+};
+
 /** Devtools-only state and controls nested under the AI slice. */
 export type AiDevtoolsState = {
   /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId. */
@@ -157,6 +170,9 @@ export type AiDevtoolsState = {
   /** Bounded, transient, metadata-only provider request measurements. */
   providerContexts: ProviderContextDiagnostic[];
   shouldCaptureProviderContexts: () => boolean;
+  measureProviderContext: (
+    input: ProviderContextMeasurementInput,
+  ) => Promise<string | undefined>;
   writeProviderContext: (diagnostic: ProviderContextDiagnostic) => void;
   setProviderContextInputTokens: (id: string, inputTokens: number) => void;
   mergeLatestProviderContextMetrics: (
@@ -373,8 +389,7 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
 type RenderableComponent<TProps> =
-  | ComponentType<TProps>
-  | ExoticComponent<TProps>;
+  ComponentType<TProps> | ExoticComponent<TProps>;
 
 /**
  * Component type inferred from a tool or from explicit output/input.

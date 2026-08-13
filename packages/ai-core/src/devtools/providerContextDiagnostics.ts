@@ -1,6 +1,9 @@
 import {createId} from '@paralleldrive/cuid2';
-import {asSchema, type ToolSet} from 'ai';
-import type {ProviderContextDiagnostic} from '../types';
+import {asSchema} from 'ai';
+import type {
+  ProviderContextDiagnostic,
+  ProviderContextMeasurementInput,
+} from '../types';
 
 function utf8ByteLength(value: string): number {
   let bytes = 0;
@@ -30,18 +33,7 @@ function textSize(value: unknown): {chars: number; bytes: number} {
   };
 }
 
-export type MeasureProviderContextArgs = {
-  role: string;
-  provider: string;
-  model: string;
-  sessionId?: string;
-  step: number;
-  instructions: unknown;
-  messages: unknown[];
-  tools?: ToolSet;
-  sources?: string[];
-  preparationMetrics?: Record<string, number>;
-};
+export type MeasureProviderContextArgs = ProviderContextMeasurementInput;
 
 /**
  * Measure the exact request assembly visible at the AI SDK's provider-step
