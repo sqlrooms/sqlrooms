@@ -1,6 +1,7 @@
 import {CompositeLayer, type Layer, type LayersList} from '@deck.gl/core';
 import {H3HexagonLayer} from '@deck.gl/geo-layers';
 import * as arrow from 'apache-arrow';
+import {formatH3IndexForDeck} from './h3IndexFormat';
 
 /**
  * Custom GeoArrow-compatible H3HexagonLayer wrapper.
@@ -43,10 +44,6 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
 
     const numRows = table.numRows;
     const isVector = hexProp instanceof arrow.Vector;
-    const isBigIntColumn =
-      isVector &&
-      (hexProp.type instanceof arrow.Int64 ||
-        hexProp.type instanceof arrow.Uint64);
 
     // Build a lookup from global row index to {batch, localIndex} for
     // multi-batch tables so compiled accessors receive the correct batch.
@@ -73,11 +70,7 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
     // Resolve hex value per row
     const getHexValue = (i: number): string => {
       if (isVector) {
-        const raw = hexProp.get(i);
-        if (isBigIntColumn && typeof raw === 'bigint') {
-          return raw.toString(16);
-        }
-        return String(raw ?? '');
+        return formatH3IndexForDeck(hexProp.get(i));
       }
       // Compiled accessor function
       if (typeof hexProp === 'function') {
@@ -87,8 +80,7 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
           data: {data: batch},
           target: [],
         });
-        if (typeof result === 'bigint') return result.toString(16);
-        return String(result ?? '');
+        return formatH3IndexForDeck(result);
       }
       return '';
     };
@@ -116,7 +108,9 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
           _d: Record<string, unknown>,
           {index}: {index: number},
         ) => {
-          return vec.get(index);
+          const raw = vec.get(index);
+          // Int64 elevation/width columns arrive as bigint; deck.gl needs numbers.
+          return typeof raw === 'bigint' ? Number(raw) : raw;
         };
       } else if (typeof propValue === 'function') {
         // Compiled GeoArrow accessor → wrap with batch context
@@ -126,11 +120,12 @@ export class DeckH3HexagonLayer extends CompositeLayer<{
           objectInfo: {index: number; target?: number[]},
         ) => {
           const {batch, localIndex} = resolveBatchContext(objectInfo.index);
-          return fn({
+          const result = fn({
             index: localIndex,
             data: {data: batch},
             target: objectInfo.target,
           });
+          return typeof result === 'bigint' ? Number(result) : result;
         };
       } else {
         layerProps[propName] = propValue;

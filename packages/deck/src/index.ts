@@ -54,6 +54,14 @@ export {
   DeckMapResourceToolParameters,
 } from './mapAiConfig';
 export {
+  normalizeAiDeckMapConfig,
+  prepareAiDeckMapConfig,
+  validateAndFixColorScaleFields,
+  type NormalizeAiDeckMapConfigOptions,
+  type PrepareAiDeckMapConfigOptions,
+  type ResolveColorScaleTable,
+} from './aiNormalize';
+export {
   DeckMapResourceConfigError,
   assertDeckMapResourceConfig,
   getDeckMapResourceAiInstructions,

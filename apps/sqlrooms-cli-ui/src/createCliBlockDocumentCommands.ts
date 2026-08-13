@@ -8,9 +8,12 @@ import {
   DeckMapResourceToolParameters,
   mergeDeckMapResourceConfigPatch,
   normalizeDeckMapPointConfig,
+  prepareAiDeckMapConfig,
+  type DeckMapConfig,
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
+import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import type {RoomState} from './store-types';
 
 export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
@@ -427,15 +430,24 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
               existingMapConfig,
               replaceLayers,
               replaceDatasets,
-            }) =>
-              normalizeDeckMapPointConfig({
-                config: mergeDeckMapResourceConfigPatch(
-                  existingMapConfig,
-                  config,
-                  {replaceLayers, replaceDatasets},
-                ),
-                resolveTable: (tableName) => state.db.findTable(tableName),
-              }),
+            }) => {
+              const resolveTable = (tableName: string) =>
+                state.db.findTable(tableName);
+              // Merge before prepare so isSourceDowngrade keeps existing SQL.
+              const merged = mergeDeckMapResourceConfigPatch(
+                existingMapConfig,
+                config as DeckMapConfig,
+                {replaceLayers, replaceDatasets},
+              );
+              const prepared = prepareAiDeckMapConfig(merged as any, {
+                resolveTable,
+                stripCatalogNames: [CLI_WORKSPACE_CATALOG],
+              }) as DeckMapConfig;
+              return normalizeDeckMapPointConfig({
+                config: prepared,
+                resolveTable,
+              });
+            },
           },
           {
             blockDocumentId: params.blockDocumentId,

@@ -18,10 +18,12 @@ import type {
 import {
   parseWKBHeader,
   readWKBLineStringXY,
+  readWKBMultiLineStringXY,
   readWKBPointXY,
   visitWKBMultiPolygonCoordinates,
   visitWKBPolygonCoordinates,
   WKB_LINESTRING,
+  WKB_MULTILINESTRING,
   WKB_MULTIPOLYGON,
   WKB_POINT,
   WKB_POLYGON,
@@ -394,6 +396,13 @@ const POINT_LAYERS = new Set([
   'GeoArrowArcLayer',
 ]);
 
+/** Scatter / heatmap / column (not OD arcs). */
+const POINT_POSITION_LAYERS = new Set([
+  'GeoArrowScatterplotLayer',
+  'GeoArrowHeatmapLayer',
+  'GeoArrowColumnLayer',
+]);
+
 const POLYGON_LAYERS = new Set([
   'GeoArrowPolygonLayer',
   'GeoArrowSolidPolygonLayer',
@@ -401,9 +410,100 @@ const POLYGON_LAYERS = new Set([
 
 const PATH_LAYERS = new Set(['GeoArrowPathLayer', 'GeoArrowTripsLayer']);
 
+/** Promote WKB/WKT Points only — no silent polygon centroid. */
+export function promoteToPointPositions(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+): PreparedGeoArrowLayerData | null {
+  return tryPromotePointTable(table, columnName, encoding);
+}
+
+export function isPointPositionLayer(layerType: string): boolean {
+  return POINT_POSITION_LAYERS.has(layerType);
+}
+
+const WKB_TYPE_NAMES: Record<number, string> = {
+  [WKB_POINT]: 'Point',
+  [WKB_LINESTRING]: 'LineString',
+  [WKB_POLYGON]: 'Polygon',
+  [WKB_MULTILINESTRING]: 'MultiLineString',
+  [WKB_MULTIPOLYGON]: 'MultiPolygon',
+};
+
+function uniqueSortedTypes(types: string[]): string[] {
+  return [...new Set(types)].sort();
+}
+
+function sampleGeometryTypeNames(
+  table: arrow.Table,
+  columnName: string,
+  encoding: ResolvedGeometryEncoding,
+): string[] | null {
+  try {
+    const parsed = getSampleGeometryTypes(table, columnName, encoding);
+    if (parsed && parsed.length > 0) {
+      return uniqueSortedTypes(parsed);
+    }
+  } catch {
+    // Fall through to WKB header sampling.
+  }
+  try {
+    const wkbTypes = getSampleWKBGeomTypes(table, columnName);
+    if (!wkbTypes || wkbTypes.length === 0) return null;
+    return uniqueSortedTypes(
+      wkbTypes.map((t) => WKB_TYPE_NAMES[t] ?? `type:${t}`),
+    );
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Promotes WKB/WKT LineString geometries to a native GeoArrow LineString vector
- * (List<FixedSizeList<2, Float64>>). Returns null if any geometry is not a LineString.
+ * Extra guidance when a typed GeoArrow layer cannot promote WKB/WKT geometry.
+ * Mixed geometry columns must use GeoJsonLayer or an ST_GeometryType filter.
+ */
+export function describeGeoArrowPromotionFailure(
+  layerType: string,
+  encoding: ResolvedGeometryEncoding,
+  table: arrow.Table,
+  columnName: string,
+): string {
+  const sampled = sampleGeometryTypeNames(table, columnName, encoding);
+  const sampledText =
+    sampled && sampled.length > 0
+      ? ` Sampled geometry types: ${sampled.join(', ')}.`
+      : '';
+
+  if (POLYGON_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} GeoArrowPolygonLayer requires only Polygon/MultiPolygon rows.` +
+      ` For mixed Point/LineString/Polygon columns use GeoJsonLayer, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('POLYGON','MULTIPOLYGON').`
+    );
+  }
+  if (PATH_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} GeoArrowPathLayer requires only LineString/MultiLineString rows.` +
+      ` For mixed geometry columns use GeoJsonLayer, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('LINESTRING','MULTILINESTRING').`
+    );
+  }
+  if (POINT_LAYERS.has(layerType)) {
+    return (
+      `${sampledText} This point layer requires Point geometry.` +
+      ` For mixed geometry columns use GeoJsonLayer, or filter/transform to points.`
+    );
+  }
+  return sampledText;
+}
+
+/**
+ * Promotes WKB/WKT LineString geometries (and single-part MultiLineString) to a
+ * native GeoArrow LineString vector (List<FixedSizeList<2, Float64>>).
+ * Multi-part MultiLineStrings are rejected — stitching parts would draw
+ * artificial segments between disjoint routes. Returns null if any non-null
+ * geometry is not a promotable line type.
  */
 function tryPromoteLineStringTable(
   table: arrow.Table,
@@ -438,15 +538,26 @@ function tryPromoteLineStringTable(
         nullCount++;
         continue;
       }
-      if (geom.type !== 'LineString') return null;
-      coords = (geom.coordinates as number[][]).map(
-        (c) => [c[0]!, c[1]!] as [number, number],
-      );
+      if (geom.type === 'LineString') {
+        coords = (geom.coordinates as number[][]).map(
+          (c) => [c[0]!, c[1]!] as [number, number],
+        );
+      } else if (geom.type === 'MultiLineString') {
+        const parts = geom.coordinates as number[][][];
+        // Only single-part MultiLineString promotes cleanly to PathLayer.
+        if (parts.length !== 1 || !parts[0]?.length) return null;
+        coords = parts[0].map((c) => [c[0]!, c[1]!] as [number, number]);
+      } else {
+        return null;
+      }
     } else {
       const buf = toArrayBuffer(raw);
       const hdr = parseWKBHeader(buf);
       if (!hdr) return null;
-      coords = readWKBLineStringXY(buf, hdr);
+      coords =
+        hdr.geomType === WKB_MULTILINESTRING
+          ? readWKBMultiLineStringXY(buf, hdr)
+          : readWKBLineStringXY(buf, hdr);
       if (!coords) return null;
     }
 
@@ -537,8 +648,11 @@ export const wkbGeometryDecoder: GeometryDecoder = {
         table,
         columnName,
         encoding,
-        (geometryType) => geometryType === 'LineString',
-        (geometryType) => geometryType === WKB_LINESTRING,
+        (geometryType) =>
+          geometryType === 'LineString' || geometryType === 'MultiLineString',
+        (geometryType) =>
+          geometryType === WKB_LINESTRING ||
+          geometryType === WKB_MULTILINESTRING,
       );
     }
 

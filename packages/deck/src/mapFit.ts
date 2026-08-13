@@ -5,7 +5,7 @@ import {
   useStoreWithDuckDb,
 } from '@sqlrooms/duckdb';
 import type {Table as ArrowTable} from 'apache-arrow';
-import {useEffect, useMemo, useState, type RefObject} from 'react';
+import {useEffect, useMemo, useRef, useState, type RefObject} from 'react';
 import {
   DeckTableDatasetInvalidTableNameError,
   createDeckTableDatasetSql,
@@ -22,6 +22,32 @@ import {
   type DeckDatasetInput,
   type DeckJsonMapHandle,
 } from './types';
+
+/** True when `columnName` is an `ST_AsWKB(...) AS` alias (per-column fit decode). */
+function columnAliasProducedByStAsWkb(
+  sql: string,
+  columnName: string,
+): boolean {
+  if (!sql || !columnName) return false;
+  const lowerCol = columnName.toLowerCase();
+  const parts = sql.split(/\bST_AsWKB\s*\(/i);
+  for (let i = 1; i < parts.length; i++) {
+    const rest = parts[i]!;
+    let depth = 1;
+    let j = 0;
+    for (; j < rest.length && depth > 0; j++) {
+      const ch = rest[j];
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+    }
+    const after = rest.slice(j);
+    const match = after.match(/^\s*AS\s+("([^"]+)"|([A-Za-z_][\w$]*))/i);
+    if (!match) continue;
+    const alias = (match[2] ?? match[3] ?? '').toLowerCase();
+    if (alias === lowerCol) return true;
+  }
+  return false;
+}
 
 /**
  * Resolves the effective fit-to-data configuration for a Deck map.
@@ -40,10 +66,80 @@ export function resolveDeckMapFitToData(
   const fitToData = config.fitToData;
   if (!fitToData?.dataset) return null;
   if (fitToData.longitudeColumn && fitToData.latitudeColumn) return fitToData;
+  if (fitToData.geometryColumns && fitToData.geometryColumns.length > 0) {
+    return fitToData;
+  }
 
+  // Explicit geometryColumn wins over inferred arc/H3.
+  if (fitToData.geometryColumn) {
+    return fitToData;
+  }
+
+  const spec =
+    typeof config.spec === 'string'
+      ? undefined
+      : (config.spec as Record<string, unknown>);
+  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+
+  // Prefer both arc endpoints when fitToData did not name a single column.
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerRecord = layer as Record<string, unknown>;
+    // Hidden layers must not drive fit (e.g. stale H3 over visible lon/lat).
+    if (layerRecord.visible === false) continue;
+    const binding = layerRecord._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset !== fitToData.dataset) continue;
+
+    if (
+      layerRecord['@@type'] === 'GeoArrowArcLayer' &&
+      typeof binding.sourceGeometryColumn === 'string' &&
+      binding.sourceGeometryColumn.trim() &&
+      typeof binding.targetGeometryColumn === 'string' &&
+      binding.targetGeometryColumn.trim()
+    ) {
+      return {
+        ...fitToData,
+        geometryColumns: [
+          String(binding.sourceGeometryColumn),
+          String(binding.targetGeometryColumn),
+        ],
+      };
+    }
+  }
+
+  // Dataset default geometry wins over inferred H3.
   const dataset = config.datasets[fitToData.dataset];
-  const geometryColumn = fitToData.geometryColumn ?? dataset?.geometryColumn;
+  const geometryColumn = dataset?.geometryColumn;
   if (geometryColumn) return {...fitToData, geometryColumn};
+
+  for (const layer of layers) {
+    if (!layer || typeof layer !== 'object') continue;
+    const layerRecord = layer as Record<string, unknown>;
+    // Hidden layers must not drive fit (e.g. stale H3 over visible lon/lat).
+    if (layerRecord.visible === false) continue;
+    const binding = layerRecord._sqlroomsBinding as
+      | Record<string, unknown>
+      | undefined;
+    if (binding?.dataset !== fitToData.dataset) continue;
+
+    if (binding.hexagonColumn) {
+      return {...fitToData, h3Column: String(binding.hexagonColumn)};
+    }
+
+    // Fallback: getHexagon "@@=column" → h3Column.
+    if (layerRecord['@@type'] === 'GeoArrowH3HexagonLayer') {
+      const getHexagon = layerRecord.getHexagon;
+      if (typeof getHexagon === 'string') {
+        const match = getHexagon.trim().match(/^@@=([A-Za-z_][\w]*)$/);
+        const column = match?.[1];
+        if (column) {
+          return {...fitToData, h3Column: column};
+        }
+      }
+    }
+  }
 
   if (
     config.interaction?.longitudeColumn &&
@@ -54,21 +150,6 @@ export function resolveDeckMapFitToData(
       longitudeColumn: config.interaction.longitudeColumn,
       latitudeColumn: config.interaction.latitudeColumn,
     };
-  }
-
-  const spec =
-    typeof config.spec === 'string'
-      ? undefined
-      : (config.spec as Record<string, unknown>);
-  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
-  for (const layer of layers) {
-    if (!layer || typeof layer !== 'object') continue;
-    const binding = (layer as Record<string, unknown>)._sqlroomsBinding as
-      | Record<string, unknown>
-      | undefined;
-    if (binding?.dataset === fitToData.dataset && binding.hexagonColumn) {
-      return {...fitToData, h3Column: String(binding.hexagonColumn)};
-    }
   }
 
   return fitToData;
@@ -120,6 +201,7 @@ export function createDeckMapBoundsQuery(options: {
 
   if (fitToData.h3Column) {
     const column = escapeId(fitToData.h3Column);
+    // Do not CAST to VARCHAR — numeric H3 IDs become invalid decimal text.
     return `
       SELECT
         MIN(h3_cell_to_lng(${column})) AS min_longitude,
@@ -131,14 +213,48 @@ export function createDeckMapBoundsQuery(options: {
     `;
   }
 
-  if (fitToData.geometryColumn) {
-    const column = escapeId(fitToData.geometryColumn);
+  const geometryColumns =
+    fitToData.geometryColumns && fitToData.geometryColumns.length > 0
+      ? fitToData.geometryColumns
+      : fitToData.geometryColumn
+        ? [fitToData.geometryColumn]
+        : null;
+
+  if (geometryColumns) {
     const sourceSql = isDeckMapSqlDatasetSource(source)
       ? source.sqlQuery
       : (source.transformSql ?? '');
-    const geometry = sourceSql.toLowerCase().includes('st_aswkb')
-      ? `ST_GeomFromWKB(${column})`
-      : `${column}::GEOMETRY`;
+    const asGeometry = (columnName: string) => {
+      // Per-column decode — a global ST_AsWKB check would break mixed arc columns.
+      const quoted = escapeId(columnName);
+      return columnAliasProducedByStAsWkb(sourceSql, columnName)
+        ? `ST_GeomFromWKB(${quoted})`
+        : `${quoted}::GEOMETRY`;
+    };
+
+    if (geometryColumns.length === 1) {
+      const columnName = geometryColumns[0]!;
+      const column = escapeId(columnName);
+      return `
+      SELECT
+        ST_XMin(extent) AS min_longitude,
+        ST_YMin(extent) AS min_latitude,
+        ST_XMax(extent) AS max_longitude,
+        ST_YMax(extent) AS max_latitude
+      FROM (
+        SELECT ST_Extent_Agg(${asGeometry(columnName)}) AS extent
+        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
+        WHERE ${column} IS NOT NULL
+      ) AS "__sqlrooms_dashboard_map_extent"
+      WHERE extent IS NOT NULL
+    `;
+    }
+
+    // Multiple geom columns: unnest once so the source is scanned once.
+    const geomExprs = geometryColumns.map((col) => {
+      const column = escapeId(col);
+      return `CASE WHEN ${column} IS NOT NULL THEN ${asGeometry(col)} END`;
+    });
     return `
       SELECT
         ST_XMin(extent) AS min_longitude,
@@ -146,9 +262,12 @@ export function createDeckMapBoundsQuery(options: {
         ST_XMax(extent) AS max_longitude,
         ST_YMax(extent) AS max_latitude
       FROM (
-        SELECT ST_Extent_Agg(${geometry}) AS extent
-        FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
-        WHERE ${column} IS NOT NULL
+        SELECT ST_Extent_Agg(geom) AS extent
+        FROM (
+          SELECT UNNEST([${geomExprs.join(', ')}]) AS geom
+          FROM (${baseSourceSql}) AS "__sqlrooms_dashboard_map_geom"
+        ) AS "__sqlrooms_dashboard_map_geoms"
+        WHERE geom IS NOT NULL
       ) AS "__sqlrooms_dashboard_map_extent"
       WHERE extent IS NOT NULL
     `;
@@ -254,6 +373,36 @@ function fitDeckMapView(options: {
   };
 }
 
+/**
+ * MapLibre `jumpTo` options. Omits pitch/bearing unless set so fit preserves
+ * a pitched `initialViewState` (needed for extruded columns).
+ */
+export function buildDeckMapJumpToOptions(opts: {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+  bearing?: number;
+  pitch?: number;
+}): {
+  center: [number, number];
+  zoom: number;
+  bearing?: number;
+  pitch?: number;
+} {
+  const jumpOpts: {
+    center: [number, number];
+    zoom: number;
+    bearing?: number;
+    pitch?: number;
+  } = {
+    center: [opts.longitude, opts.latitude],
+    zoom: opts.zoom,
+  };
+  if (opts.bearing != null) jumpOpts.bearing = opts.bearing;
+  if (opts.pitch != null) jumpOpts.pitch = opts.pitch;
+  return jumpOpts;
+}
+
 type DeckMapFitState = {
   key: string;
   didAutoFit: boolean;
@@ -267,6 +416,10 @@ function createInitialFitState(key: string, requestVersion: number) {
     handledRequestVersion: requestVersion,
   };
 }
+
+/** Retries for H3 extension load races. */
+const FIT_MAX_ATTEMPTS = 5;
+const FIT_RETRY_DELAY_MS = 750;
 
 /**
  * Executes host-neutral fit-to-data requests for a Deck map surface.
@@ -303,6 +456,7 @@ export function useDeckMapFitController(options: {
   } = options;
   const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
   const [containerSize, setContainerSize] = useState({width: 0, height: 0});
+  const [retryNonce, setRetryNonce] = useState(0);
   const fitKey = useMemo(
     () => JSON.stringify({scopeId, fitToData, source}),
     [fitToData, scopeId, source],
@@ -316,6 +470,7 @@ export function useDeckMapFitController(options: {
     fitState.key === fitKey
       ? fitState
       : createInitialFitState(fitKey, fitState.handledRequestVersion);
+  const fitAttemptsRef = useRef({key: '', count: 0});
 
   useEffect(() => {
     if (!container) return;
@@ -332,6 +487,12 @@ export function useDeckMapFitController(options: {
   }, [container]);
 
   useEffect(() => {
+    // Reset retries on source change or Fit click — else exhausted autofit no-ops Fit.
+    const attemptsKey = `${fitKey}:${requestVersion}`;
+    if (fitAttemptsRef.current.key !== attemptsKey) {
+      fitAttemptsRef.current = {key: attemptsKey, count: 0};
+    }
+
     const hasManualRequest =
       requestVersion > activeFitState.handledRequestVersion;
     if (
@@ -345,12 +506,24 @@ export function useDeckMapFitController(options: {
     }
 
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const markHandled = () =>
       setFitState({
         key: fitKey,
         didAutoFit: true,
         handledRequestVersion: requestVersion,
       });
+    const scheduleRetry = (error?: Error) => {
+      fitAttemptsRef.current.count += 1;
+      if (fitAttemptsRef.current.count >= FIT_MAX_ATTEMPTS) {
+        if (error) onError?.(error);
+        markHandled();
+        return;
+      }
+      retryTimer = setTimeout(() => {
+        if (!cancelled) setRetryNonce((value) => value + 1);
+      }, FIT_RETRY_DELAY_MS);
+    };
 
     void (async () => {
       try {
@@ -370,19 +543,39 @@ export function useDeckMapFitController(options: {
         }
         const handle = await executeSql(query);
         const result = handle ? await handle : null;
-        if (cancelled || !result) return;
-        const bounds = readDeckMapBounds(result);
-        if (bounds) {
-          deckMapRef.current?.jumpTo(
-            fitDeckMapView({
-              bounds,
-              width: containerSize.width,
-              height: containerSize.height,
-              padding: fitToData.padding,
-              maxZoom: fitToData.maxZoom,
-            }),
+        if (cancelled) return;
+        if (!result) {
+          // Empty handle ≈ cancelled query, not a transient race.
+          onError?.(
+            new Error('Unable to fit map view to data: empty query result.'),
           );
+          markHandled();
+          return;
         }
+        const bounds = readDeckMapBounds(result);
+        if (!bounds) {
+          // Empty geometry is permanent; only retry H3 cold-start.
+          if (fitToData.h3Column) {
+            scheduleRetry(
+              new Error(
+                'Unable to fit map view to H3 data. Check that the hexagon column contains valid H3 indexes.',
+              ),
+            );
+            return;
+          }
+          onError?.(new Error('Unable to determine map bounds from data.'));
+          markHandled();
+          return;
+        }
+        deckMapRef.current?.jumpTo(
+          fitDeckMapView({
+            bounds,
+            width: containerSize.width,
+            height: containerSize.height,
+            padding: fitToData.padding,
+            maxZoom: fitToData.maxZoom,
+          }),
+        );
         markHandled();
         onSuccess?.();
       } catch (error) {
@@ -391,6 +584,18 @@ export function useDeckMapFitController(options: {
           error instanceof Error
             ? error
             : new Error('Unable to fit map view to data.');
+        // Retry only likely-transient H3 extension races.
+        const message = fitError.message.toLowerCase();
+        const maybeTransientH3 =
+          Boolean(fitToData.h3Column) &&
+          (message.includes('h3') ||
+            message.includes('extension') ||
+            message.includes('not loaded') ||
+            message.includes('catalog'));
+        if (maybeTransientH3) {
+          scheduleRetry(fitError);
+          return;
+        }
         onError?.(fitError);
         markHandled();
       }
@@ -398,6 +603,7 @@ export function useDeckMapFitController(options: {
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [
     activeFitState.didAutoFit,
@@ -412,6 +618,7 @@ export function useDeckMapFitController(options: {
     onError,
     onSuccess,
     requestVersion,
+    retryNonce,
     source,
   ]);
 }

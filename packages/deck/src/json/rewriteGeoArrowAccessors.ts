@@ -7,6 +7,18 @@ function isSimpleColumnReference(expression: string) {
 }
 
 function canUseDirectVectorAccessor(propName: string, vector: arrow.Vector) {
+  // H3 index columns are safe as Vectors — DeckH3HexagonLayer reads them
+  // directly and converts BigInt → hex string when needed.
+  if (propName === 'getHexagon') {
+    const type = vector.type;
+    return (
+      arrow.DataType.isUtf8(type) ||
+      arrow.DataType.isLargeUtf8(type) ||
+      // DuckDB UBIGINT often arrives as Int(true, 64), not instanceof Int64.
+      (arrow.DataType.isInt(type) && type.bitWidth === 64)
+    );
+  }
+
   // Direct numeric vectors (for example `getRadius`) currently end up in deck's
   // binary attribute path and trigger `Float64Array` initialization failures in the
   // GeoArrow scatterplot wrapper. Re-test which direct vector accessors are safe

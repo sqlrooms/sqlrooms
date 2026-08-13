@@ -11,6 +11,7 @@ import {createDashboardAgentToolWithDeckMaps} from '@sqlrooms/deck/mosaic';
 import {getDeckMapResourceAiInstructions} from '@sqlrooms/deck';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {createDefaultBlockDocumentBlockId} from '@sqlrooms/documents';
+import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import {
   createCliBlockDocumentAgentTool,
   type CreateCliBlockDocumentAgentToolOptions,
@@ -109,29 +110,50 @@ export function blockDocumentAgentTool(
   };
 
   const dashboardAgentTool = (blockDocumentId: string) =>
-    (experimentalEnabled
-      ? createDashboardAgentToolWithDeckMaps
-      : createDashboardAgentTool)({
-      ...baseOptions,
-      databaseAdapter,
-      authorizeDashboard: ({dashboardId, state}) => {
-        const ownsDashboard = state.blockDocuments
-          .getBlocks(blockDocumentId)
-          .some(
-            (block) =>
-              block.type === 'statefulBlock' &&
-              block.blockType === 'dashboard' &&
-              (block.ownership ?? 'owned') === 'owned' &&
-              block.blockInstanceId === dashboardId,
-          );
+    experimentalEnabled
+      ? createDashboardAgentToolWithDeckMaps({
+          ...baseOptions,
+          databaseAdapter,
+          stripCatalogNames: [CLI_WORKSPACE_CATALOG],
+          authorizeDashboard: ({dashboardId, state}) => {
+            const ownsDashboard = state.blockDocuments
+              .getBlocks(blockDocumentId)
+              .some(
+                (block) =>
+                  block.type === 'statefulBlock' &&
+                  block.blockType === 'dashboard' &&
+                  (block.ownership ?? 'owned') === 'owned' &&
+                  block.blockInstanceId === dashboardId,
+              );
 
-        if (!ownsDashboard) {
-          throw new Error(
-            `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
-          );
-        }
-      },
-    });
+            if (!ownsDashboard) {
+              throw new Error(
+                `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+              );
+            }
+          },
+        })
+      : createDashboardAgentTool({
+          ...baseOptions,
+          databaseAdapter,
+          authorizeDashboard: ({dashboardId, state}) => {
+            const ownsDashboard = state.blockDocuments
+              .getBlocks(blockDocumentId)
+              .some(
+                (block) =>
+                  block.type === 'statefulBlock' &&
+                  block.blockType === 'dashboard' &&
+                  (block.ownership ?? 'owned') === 'owned' &&
+                  block.blockInstanceId === dashboardId,
+              );
+
+            if (!ownsDashboard) {
+              throw new Error(
+                `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+              );
+            }
+          },
+        });
 
   const blockDocumentAgentOptions: CreateCliBlockDocumentAgentToolOptions = {
     ...baseOptions,
