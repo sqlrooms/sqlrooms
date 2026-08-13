@@ -54,6 +54,18 @@ export function isDeckMapColorableColumn(column: TableColumn): boolean {
   return category === 'string' || category === 'boolean';
 }
 
+/** String/boolean (and binary) fields that need a categorical color scale. */
+export function isDeckMapCategoricalColorColumn(column: TableColumn): boolean {
+  if (!column.type || isColumnQuantitative(column.type)) return false;
+  const category = getColumnTypeCategory(column.type);
+  return (
+    category === 'string' ||
+    category === 'boolean' ||
+    category === 'binary' ||
+    isColumnCategorical(column.type)
+  );
+}
+
 export function filterDeckMapColumns(
   columns: TableColumn[],
   kind: DeckMapColumnKind,
@@ -64,7 +76,7 @@ export function filterDeckMapColumns(
     if (kind === 'numeric') return isColumnNumeric(column.type);
     if (kind === 'quantitative') return isColumnQuantitative(column.type);
     if (kind === 'colorable') return isDeckMapColorableColumn(column);
-    return isColumnCategorical(column.type);
+    return isDeckMapCategoricalColorColumn(column);
   });
 }
 

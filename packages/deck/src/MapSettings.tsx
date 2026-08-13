@@ -82,8 +82,8 @@ import {
   DeckMapSettingsField as Field,
   DeckMapTableSelector as DataTableSelector,
   filterDeckMapColumns,
+  isDeckMapCategoricalColorColumn,
 } from './MapSettingsControls';
-import {isColumnCategorical, isColumnQuantitative} from '@sqlrooms/duckdb';
 import {regenerateMapConfigForTable} from './mapConfigUtils';
 import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
 
@@ -105,8 +105,8 @@ function resolveColorScaleTypeForField(
   if (!field) return preferredType;
   const column = columns.find((candidate) => candidate.name === field);
   if (!column?.type) return preferredType;
-  // String/boolean fields only work with categorical scales.
-  if (isColumnCategorical(column.type) && !isColumnQuantitative(column.type)) {
+  // String/boolean/binary fields only work with categorical scales.
+  if (isDeckMapCategoricalColorColumn(column)) {
     return 'categorical';
   }
   return preferredType;
@@ -127,6 +127,27 @@ function getDefaultColorScaleField(
     getColorScaleColumnKind(type),
   );
   return matchingKind[0]?.name ?? colorable[0]?.name;
+}
+
+/**
+ * Choose field first, then coerce type to match that field (avoids sequential
+ * scales on string/boolean-only tables).
+ */
+export function resolveColorScaleFieldAndType(
+  columns: DataTable['columns'],
+  preferredType: ColorScaleConfig['type'],
+  preferredField?: string,
+): {field: string; type: ColorScaleConfig['type']} | undefined {
+  const field = getDefaultColorScaleField(
+    columns,
+    preferredType,
+    preferredField,
+  );
+  if (!field) return undefined;
+  return {
+    field,
+    type: resolveColorScaleTypeForField(columns, field, preferredType),
+  };
 }
 
 function schemeToColorRange(
@@ -410,13 +431,13 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
       patch.field ??
       colorScale?.field ??
       lastColorScaleFieldsRef.current[accessor];
-    const type = resolveColorScaleTypeForField(
+    const resolved = resolveColorScaleFieldAndType(
       columns,
-      preferredField,
       patch.type ?? colorScale?.type ?? 'sequential',
+      preferredField,
     );
-    const field = getDefaultColorScaleField(columns, type, preferredField);
-    if (!field) return;
+    if (!resolved) return;
+    const {field, type} = resolved;
 
     lastColorScaleFieldsRef.current[accessor] = field;
     const scheme =
@@ -501,8 +522,20 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
                 if (colorScale?.field) {
                   lastColorScaleFieldsRef.current[accessor] = colorScale.field;
                 }
+                // Drop scale-owned layer.opacity so flat color alpha is authoritative.
                 applyConfig(
-                  clearDeckMapLayerColorScale(mapConfig, layerIndex, accessor),
+                  updateDeckMapLayer(
+                    clearDeckMapLayerColorScale(
+                      mapConfig,
+                      layerIndex,
+                      accessor,
+                    ),
+                    layerIndex,
+                    (nextLayer) => {
+                      const {opacity: _opacity, ...rest} = nextLayer;
+                      return rest;
+                    },
+                  ),
                 );
               }}
             />
@@ -600,13 +633,21 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
                 );
                 return;
               }
+              // Flat-color alpha owns opacity — clear layer.opacity so it cannot
+              // keep a prior color-scale dimming after the scale is turned off.
               applyConfig(
-                setDeckMapLayerFlatColor(mapConfig, layerIndex, accessor, [
-                  flatColor[0],
-                  flatColor[1],
-                  flatColor[2],
-                  opacityPercentToAlpha(percent),
-                ]),
+                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+                  const {opacity: _opacity, ...rest} = nextLayer;
+                  return {
+                    ...rest,
+                    [accessor]: [
+                      flatColor[0],
+                      flatColor[1],
+                      flatColor[2],
+                      opacityPercentToAlpha(percent),
+                    ],
+                  };
+                }),
               );
             }}
           />
@@ -669,13 +710,13 @@ const AppearanceArcColorPanel: FC<{
       colorScale?.field ??
       lastColorScaleFieldsRef.current.getSourceColor ??
       lastColorScaleFieldsRef.current.getTargetColor;
-    const type = resolveColorScaleTypeForField(
+    const resolved = resolveColorScaleFieldAndType(
       columns,
-      preferredField,
       patch.type ?? colorScale?.type ?? 'sequential',
+      preferredField,
     );
-    const field = getDefaultColorScaleField(columns, type, preferredField);
-    if (!field) return;
+    if (!resolved) return;
+    const {field, type} = resolved;
 
     lastColorScaleFieldsRef.current.getSourceColor = field;
     lastColorScaleFieldsRef.current.getTargetColor = field;
@@ -729,11 +770,14 @@ const AppearanceArcColorPanel: FC<{
               lastColorScaleFieldsRef.current.getTargetColor = colorScale.field;
             }
             applyConfig(
-              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-                ...nextLayer,
-                getSourceColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
-                getTargetColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
-              })),
+              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+                const {opacity: _opacity, ...rest} = nextLayer;
+                return {
+                  ...rest,
+                  getSourceColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
+                  getTargetColor: [...DECK_MAP_DEFAULT_LAYER_COLOR],
+                };
+              }),
             );
           }}
         />
@@ -840,21 +884,24 @@ const AppearanceArcColorPanel: FC<{
           }
           const alpha = opacityPercentToAlpha(percent);
           applyConfig(
-            updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-              ...nextLayer,
-              getSourceColor: [
-                sourceFlat[0],
-                sourceFlat[1],
-                sourceFlat[2],
-                alpha,
-              ],
-              getTargetColor: [
-                targetFlat[0],
-                targetFlat[1],
-                targetFlat[2],
-                alpha,
-              ],
-            })),
+            updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+              const {opacity: _opacity, ...rest} = nextLayer;
+              return {
+                ...rest,
+                getSourceColor: [
+                  sourceFlat[0],
+                  sourceFlat[1],
+                  sourceFlat[2],
+                  alpha,
+                ],
+                getTargetColor: [
+                  targetFlat[0],
+                  targetFlat[1],
+                  targetFlat[2],
+                  alpha,
+                ],
+              };
+            }),
           );
         }}
       />
@@ -1205,16 +1252,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
       updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => {
         const nextLayer: DeckMapLayerRecord = {
           ...layer,
+          lineWidthUnits: 'pixels',
           lineWidthMinPixels: value,
-          lineWidthMaxPixels: Math.max(
-            value,
-            (layer.lineWidthMaxPixels as number | undefined) ?? value,
-          ),
+          lineWidthMaxPixels: value,
         };
-        if (
-          layer.lineWidthUnits === 'pixels' &&
-          typeof layer.getLineWidth !== 'string'
-        ) {
+        if (typeof layer.getLineWidth !== 'string') {
           nextLayer.getLineWidth = value;
         }
         return nextLayer;
@@ -1229,10 +1271,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
           ...layer,
           widthUnits: 'pixels',
           widthMinPixels: value,
-          widthMaxPixels: Math.max(
-            value,
-            (layer.widthMaxPixels as number | undefined) ?? value,
-          ),
+          widthMaxPixels: value,
         };
         // Path/Arc/Trips use getWidth as the stroke width; keep it in sync with
         // the slider so widthMaxPixels cannot silently clamp above ~10px.
@@ -1250,16 +1289,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         if (layer['@@type'] === 'GeoJsonLayer') {
           const nextLayer: DeckMapLayerRecord = {
             ...layer,
+            pointRadiusUnits: 'pixels',
             pointRadiusMinPixels: value,
-            pointRadiusMaxPixels: Math.max(
-              value,
-              (layer.pointRadiusMaxPixels as number | undefined) ?? value,
-            ),
+            pointRadiusMaxPixels: value,
           };
-          if (
-            layer.pointRadiusUnits === 'pixels' &&
-            typeof layer.getPointRadius !== 'string'
-          ) {
+          if (typeof layer.getPointRadius !== 'string') {
             nextLayer.getPointRadius = value;
           }
           return nextLayer;
@@ -1267,16 +1301,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
 
         const nextLayer: DeckMapLayerRecord = {
           ...layer,
+          radiusUnits: 'pixels',
           radiusMinPixels: value,
-          radiusMaxPixels: Math.max(
-            value,
-            (layer.radiusMaxPixels as number | undefined) ?? value,
-          ),
+          radiusMaxPixels: value,
         };
-        if (
-          layer.radiusUnits === 'pixels' &&
-          typeof layer.getRadius !== 'string'
-        ) {
+        if (typeof layer.getRadius !== 'string') {
           nextLayer.getRadius = value;
         }
         return nextLayer;

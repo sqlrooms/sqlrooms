@@ -8,6 +8,7 @@ const columns: TableColumn[] = [
   {name: 'name', type: 'VARCHAR'},
   {name: 'magnitude', type: 'DOUBLE'},
   {name: 'observed_at', type: 'TIMESTAMP'},
+  {name: 'is_active', type: 'BOOLEAN'},
   {name: 'geometry', type: 'GEOMETRY'},
 ];
 
@@ -23,10 +24,10 @@ describe('Deck map settings controls', () => {
     ).toEqual(['magnitude', 'observed_at']);
     expect(
       filterDeckMapColumns(columns, 'categorical').map((column) => column.name),
-    ).toEqual(['name']);
+    ).toEqual(['name', 'is_active']);
     expect(
       filterDeckMapColumns(columns, 'colorable').map((column) => column.name),
-    ).toEqual(['name', 'magnitude', 'observed_at']);
+    ).toEqual(['name', 'magnitude', 'observed_at', 'is_active']);
     expect(filterDeckMapColumns(columns, 'all')).toBe(columns);
   });
 
