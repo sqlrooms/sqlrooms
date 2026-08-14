@@ -23,6 +23,8 @@ import {
   usesStrokeSetting,
   withDeckMapLayerOpacityFromFlatAlpha,
   withoutDeckMapLayerOpacityIfUnused,
+  detachDeckMapLayerOpacity,
+  getDeckMapColorScaleOpacity,
 } from '../src/mapLayerConfigUtils';
 
 const config = {
@@ -337,6 +339,19 @@ describe('clearDeckMapLayerColorScale', () => {
     ]);
   });
 
+  test('bakes colorScale.opacity into flat alpha when clearing', () => {
+    const withScale = setDeckMapLayerColorScale(
+      config,
+      0,
+      'getFillColor',
+      createDeckMapLayerColorScale({field: 'mag', opacity: 0.5}),
+    );
+    const cleared = clearDeckMapLayerColorScale(withScale, 0, 'getFillColor');
+    const layer = getDeckMapLayerRecords(cleared)[0];
+    expect(layer?.opacity).toBeUndefined();
+    expect(layer?.getFillColor).toEqual([56, 189, 248, 90]);
+  });
+
   test('bakes layer.opacity into flat alpha when clearing the last scale', () => {
     const withScale = updateDeckMapLayer(
       setDeckMapLayerColorScale(
@@ -354,7 +369,7 @@ describe('clearDeckMapLayerColorScale', () => {
     expect(layer?.getFillColor).toEqual([56, 189, 248, 90]);
   });
 
-  test('keeps layer.opacity when another color scale remains', () => {
+  test('moves layer.opacity onto remaining colorScale when clearing another channel', () => {
     const withScales = updateDeckMapLayer(
       setDeckMapLayerColorScale(
         setDeckMapLayerColorScale(
@@ -372,9 +387,13 @@ describe('clearDeckMapLayerColorScale', () => {
     );
     const cleared = clearDeckMapLayerColorScale(withScales, 0, 'getLineColor');
     const layer = getDeckMapLayerRecords(cleared)[0];
-    expect(layer?.opacity).toBe(0.5);
-    expect(layer?.getLineColor).toEqual([0, 0, 0, 255]);
-    expect(getDeckMapLayerColorScale(layer, 'getFillColor')).toBeTruthy();
+    expect(layer?.opacity).toBeUndefined();
+    expect(layer?.getLineColor).toEqual([0, 0, 0, 128]);
+    expect(
+      getDeckMapColorScaleOpacity(
+        getDeckMapLayerColorScale(layer, 'getFillColor'),
+      ),
+    ).toBe(0.5);
   });
 });
 
@@ -392,9 +411,43 @@ describe('replaceDeckMapLayerColorScaleWithFlat', () => {
       'getLineColor',
       [0, 0, 0, 255],
     );
-    expect(next.opacity).toBe(0.4);
-    expect(next.getLineColor).toEqual([0, 0, 0, 255]);
-    expect(getDeckMapLayerColorScale(next, 'getFillColor')).toBeTruthy();
+    expect(next.opacity).toBeUndefined();
+    expect(next.getLineColor).toEqual([0, 0, 0, 102]);
+    expect(
+      getDeckMapColorScaleOpacity(
+        getDeckMapLayerColorScale(next, 'getFillColor'),
+      ),
+    ).toBe(0.4);
+  });
+
+  test('keeps fill and stroke opacity independent after detach', () => {
+    const layer = detachDeckMapLayerOpacity({
+      '@@type': 'GeoArrowScatterplotLayer',
+      opacity: 0.5,
+      getFillColor: createDeckMapLayerColorScale({
+        field: 'mag',
+        opacity: 1,
+      }),
+      getLineColor: [0, 0, 0, 255],
+    });
+    expect(layer.opacity).toBeUndefined();
+    expect(
+      getDeckMapColorScaleOpacity(
+        getDeckMapLayerColorScale(layer, 'getFillColor'),
+      ),
+    ).toBe(0.5);
+    expect(layer.getLineColor).toEqual([0, 0, 0, 128]);
+
+    const next = {
+      ...layer,
+      getLineColor: [0, 0, 0, 64] as [number, number, number, number],
+    };
+    expect(
+      getDeckMapColorScaleOpacity(
+        getDeckMapLayerColorScale(next, 'getFillColor'),
+      ),
+    ).toBe(0.5);
+    expect(next.getLineColor).toEqual([0, 0, 0, 64]);
   });
 
   test('preserves an already-flat arc endpoint when clearing only the scaled one', () => {

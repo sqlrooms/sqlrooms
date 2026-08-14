@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type MutableRefObject,
+  type ReactNode,
 } from 'react';
 import {
   getTableIdentity,
@@ -73,10 +74,10 @@ import {
   usesExtrusionSettings,
   usesStrokeSetting,
   getDeckMapLayerStrokeDefault,
+  getDeckMapColorScaleOpacity,
+  detachDeckMapLayerOpacity,
   replaceDeckMapLayerColorScalesWithFlat,
   replaceDeckMapLayerColorScaleWithFlat,
-  withDeckMapLayerOpacityFromFlatAlpha,
-  withoutDeckMapLayerOpacityIfUnused,
 } from './mapLayerConfigUtils';
 import {
   DeckMapCodeViewerPanel,
@@ -304,7 +305,8 @@ const ColorSwatchInput: FC<{
 }> = ({value, onChange, disabled, 'aria-label': ariaLabel}) => (
   <label
     className={cn(
-      'border-input relative h-8 w-10 shrink-0 overflow-hidden rounded-md border',
+      // Match Switch footprint (h-5 w-9); 3px radius (not the toggle pill).
+      'border-input relative h-5 w-9 shrink-0 overflow-hidden rounded-[3px] border',
       'ring-offset-background focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-1',
       disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
     )}
@@ -337,23 +339,31 @@ function getLayerOpacityPercent(layer: DeckMapLayerRecord | undefined): number {
   return 100;
 }
 
+/** Shared label→slider spacing for all map settings sliders. */
+const SettingsSliderField: FC<{
+  label: string;
+  children: ReactNode;
+}> = ({label, children}) => (
+  <Field label={label}>
+    <div className="pt-0.5">{children}</div>
+  </Field>
+);
+
 const AppearanceOpacitySlider: FC<{
   valuePercent: number;
   onChange: (percent: number) => void;
   disabled?: boolean;
 }> = ({valuePercent, onChange, disabled}) => (
-  <Field label={`Opacity: ${valuePercent}%`}>
-    <div className="pt-0.5">
-      <Slider
-        min={0}
-        max={100}
-        step={1}
-        value={[valuePercent]}
-        disabled={disabled}
-        onValueChange={(values) => onChange(values[0] ?? valuePercent)}
-      />
-    </div>
-  </Field>
+  <SettingsSliderField label={`Opacity: ${valuePercent}%`}>
+    <Slider
+      min={0}
+      max={100}
+      step={1}
+      value={[valuePercent]}
+      disabled={disabled}
+      onValueChange={(values) => onChange(values[0] ?? valuePercent)}
+    />
+  </SettingsSliderField>
 );
 
 type AppearanceColorChannelProps = {
@@ -408,9 +418,9 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   onRadiusChange,
   radiusLabel = 'Radius',
   radiusUnit = '',
-  radiusMin = 1,
+  radiusMin = 0.1,
   radiusMax = 50,
-  radiusStep = 1,
+  radiusStep = 0.1,
 }) => {
   const colorScale = getDeckMapLayerColorScale(layer, accessor);
   const flatColor = getDeckMapLayerFlatColor(layer, accessor) ?? [
@@ -423,7 +433,7 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   const defaultField = getDefaultColorScaleField(columns, colorScaleType);
   const showControls = enabled !== false;
   const opacityPercent = colorScale
-    ? getLayerOpacityPercent(layer)
+    ? Math.round(getDeckMapColorScaleOpacity(colorScale) * 100)
     : alphaToOpacityPercent(flatColor[3] ?? 255);
 
   const updateColorScale = (patch: {
@@ -454,23 +464,23 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
 
     applyConfig(
       updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-        const withScale = {
-          ...nextLayer,
+        // Migrate shared layer.opacity onto accessors first, then set this scale.
+        const detached = detachDeckMapLayerOpacity(nextLayer);
+        const existingScale = getDeckMapLayerColorScale(detached, accessor);
+        const currentFlat =
+          getDeckMapLayerFlatColor(detached, accessor) ?? flatColor;
+        return {
+          ...detached,
           [accessor]: createDeckMapLayerColorScale({
             field,
             type,
             scheme,
             title: field,
+            opacity: existingScale
+              ? getDeckMapColorScaleOpacity(existingScale)
+              : (currentFlat[3] ?? 255) / 255,
           }),
         };
-        // Enabling a scale: colorScale accessors have no alpha — carry flat
-        // alpha into layer.opacity unless another scale already owns it.
-        if (colorScale) return withScale;
-        return withDeckMapLayerOpacityFromFlatAlpha(
-          withScale,
-          flatColor[3] ?? 255,
-          accessor,
-        );
       }),
     );
   };
@@ -489,33 +499,33 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
       ) : null}
 
       {showControls && onWidthChange && widthPixels !== undefined ? (
-        <Field label={`${widthLabel}: ${widthPixels}px`}>
-          <div className="pt-0.5">
-            <Slider
-              min={1}
-              max={20}
-              step={1}
-              value={[widthPixels]}
-              onValueChange={(values) => onWidthChange(values[0] ?? 1)}
-            />
-          </div>
-        </Field>
+        <SettingsSliderField
+          label={`${widthLabel}: ${Number(widthPixels.toFixed(1))}px`}
+        >
+          <Slider
+            min={0.1}
+            max={20}
+            step={0.1}
+            value={[widthPixels]}
+            onValueChange={(values) => onWidthChange(values[0] ?? 1)}
+          />
+        </SettingsSliderField>
       ) : null}
 
       {showControls && onRadiusChange && radiusValue !== undefined ? (
-        <Field label={`${radiusLabel}: ${radiusValue}${radiusUnit}`}>
-          <div className="pt-0.5">
-            <Slider
-              min={radiusMin}
-              max={radiusMax}
-              step={radiusStep}
-              value={[radiusValue]}
-              onValueChange={(values) =>
-                onRadiusChange(values[0] ?? radiusValue)
-              }
-            />
-          </div>
-        </Field>
+        <SettingsSliderField
+          label={`${radiusLabel}: ${
+            radiusStep < 1 ? Number(radiusValue.toFixed(1)) : radiusValue
+          }${radiusUnit}`}
+        >
+          <Slider
+            min={radiusMin}
+            max={radiusMax}
+            step={radiusStep}
+            value={[radiusValue]}
+            onValueChange={(values) => onRadiusChange(values[0] ?? radiusValue)}
+          />
+        </SettingsSliderField>
       ) : null}
 
       {showControls ? (
@@ -624,32 +634,34 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
             valuePercent={opacityPercent}
             disabled={readOnly}
             onChange={(percent) => {
-              if (colorScale) {
-                applyConfig(
-                  updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-                    ...nextLayer,
-                    opacity: percent / 100,
-                  })),
-                );
-                return;
-              }
-              // Flat-color alpha owns opacity for this channel; keep layer.opacity
-              // when another accessor still uses a color scale.
               applyConfig(
-                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
-                  withoutDeckMapLayerOpacityIfUnused(
-                    {
-                      ...nextLayer,
-                      [accessor]: [
-                        flatColor[0],
-                        flatColor[1],
-                        flatColor[2],
-                        opacityPercentToAlpha(percent),
-                      ],
-                    },
-                    accessor,
-                  ),
-                ),
+                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+                  // Migrate away from shared layer.opacity first.
+                  const detached = detachDeckMapLayerOpacity(nextLayer);
+                  if (colorScale) {
+                    const scale =
+                      getDeckMapLayerColorScale(detached, accessor) ??
+                      colorScale;
+                    return {
+                      ...detached,
+                      [accessor]: {
+                        ...scale,
+                        opacity: percent / 100,
+                      },
+                    };
+                  }
+                  const current =
+                    getDeckMapLayerFlatColor(detached, accessor) ?? flatColor;
+                  return {
+                    ...detached,
+                    [accessor]: [
+                      current[0],
+                      current[1],
+                      current[2],
+                      opacityPercentToAlpha(percent),
+                    ],
+                  };
+                }),
               );
             }}
           />
@@ -697,7 +709,7 @@ const AppearanceArcColorPanel: FC<{
     ...DECK_MAP_DEFAULT_LAYER_COLOR,
   ];
   const opacityPercent = colorScale
-    ? getLayerOpacityPercent(layer)
+    ? Math.round(getDeckMapColorScaleOpacity(colorScale) * 100)
     : alphaToOpacityPercent(
         Math.round(((sourceFlat[3] ?? 255) + (targetFlat[3] ?? 255)) / 2),
       );
@@ -729,28 +741,32 @@ const AppearanceArcColorPanel: FC<{
         : type !== colorScale?.type
           ? undefined
           : colorScale?.scheme);
-    const nextScale = createDeckMapLayerColorScale({
-      field,
-      type,
-      scheme,
-      title: field,
-    });
 
     applyConfig(
       updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-        const withScales = {
-          ...nextLayer,
-          getSourceColor: nextScale,
-          getTargetColor: nextScale,
+        const detached = detachDeckMapLayerOpacity(nextLayer);
+        const existing =
+          getDeckMapLayerColorScale(detached, 'getSourceColor') ??
+          getDeckMapLayerColorScale(detached, 'getTargetColor');
+        const source =
+          getDeckMapLayerFlatColor(detached, 'getSourceColor') ?? sourceFlat;
+        const target =
+          getDeckMapLayerFlatColor(detached, 'getTargetColor') ?? targetFlat;
+        const opacity = existing
+          ? getDeckMapColorScaleOpacity(existing)
+          : Math.round(((source[3] ?? 255) + (target[3] ?? 255)) / 2) / 255;
+        const scale = createDeckMapLayerColorScale({
+          field,
+          type,
+          scheme,
+          title: field,
+          opacity,
+        });
+        return {
+          ...detached,
+          getSourceColor: scale,
+          getTargetColor: scale,
         };
-        if (colorScale) return withScales;
-        const alpha = Math.round(
-          ((sourceFlat[3] ?? 255) + (targetFlat[3] ?? 255)) / 2,
-        );
-        return withDeckMapLayerOpacityFromFlatAlpha(withScales, alpha, [
-          'getSourceColor',
-          'getTargetColor',
-        ]);
       }),
     );
   };
@@ -896,37 +912,34 @@ const AppearanceArcColorPanel: FC<{
         valuePercent={opacityPercent}
         disabled={readOnly}
         onChange={(percent) => {
-          if (colorScale) {
-            applyConfig(
-              updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-                ...nextLayer,
-                opacity: percent / 100,
-              })),
-            );
-            return;
-          }
-          const alpha = opacityPercentToAlpha(percent);
           applyConfig(
-            updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) =>
-              withoutDeckMapLayerOpacityIfUnused(
-                {
-                  ...nextLayer,
-                  getSourceColor: [
-                    sourceFlat[0],
-                    sourceFlat[1],
-                    sourceFlat[2],
-                    alpha,
-                  ],
-                  getTargetColor: [
-                    targetFlat[0],
-                    targetFlat[1],
-                    targetFlat[2],
-                    alpha,
-                  ],
-                },
-                ['getSourceColor', 'getTargetColor'],
-              ),
-            ),
+            updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
+              const detached = detachDeckMapLayerOpacity(nextLayer);
+              if (colorScale) {
+                const scale =
+                  getDeckMapLayerColorScale(detached, 'getSourceColor') ??
+                  getDeckMapLayerColorScale(detached, 'getTargetColor') ??
+                  colorScale;
+                const nextScale = {...scale, opacity: percent / 100};
+                return {
+                  ...detached,
+                  getSourceColor: nextScale,
+                  getTargetColor: nextScale,
+                };
+              }
+              const alpha = opacityPercentToAlpha(percent);
+              const source =
+                getDeckMapLayerFlatColor(detached, 'getSourceColor') ??
+                sourceFlat;
+              const target =
+                getDeckMapLayerFlatColor(detached, 'getTargetColor') ??
+                targetFlat;
+              return {
+                ...detached,
+                getSourceColor: [source[0], source[1], source[2], alpha],
+                getTargetColor: [target[0], target[1], target[2], alpha],
+              };
+            }),
           );
         }}
       />
@@ -1010,27 +1023,25 @@ const AppearanceExtrusionPanel: FC<{
       ) : null}
 
       {extruded ? (
-        <Field
+        <SettingsSliderField
           label={`Elevation scale: ${(layer?.elevationScale as number | undefined) ?? 1}x`}
         >
-          <div className="pt-1.5">
-            <Slider
-              min={0.01}
-              max={1000}
-              step={0.01}
-              value={[(layer?.elevationScale as number | undefined) ?? 1]}
-              onValueChange={(values) => {
-                const value = values[0] ?? 1;
-                applyConfig(
-                  updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
-                    ...nextLayer,
-                    elevationScale: value,
-                  })),
-                );
-              }}
-            />
-          </div>
-        </Field>
+          <Slider
+            min={0.01}
+            max={1000}
+            step={0.01}
+            value={[(layer?.elevationScale as number | undefined) ?? 1]}
+            onValueChange={(values) => {
+              const value = values[0] ?? 1;
+              applyConfig(
+                updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => ({
+                  ...nextLayer,
+                  elevationScale: value,
+                })),
+              );
+            }}
+          />
+        </SettingsSliderField>
       ) : null}
     </div>
   );
@@ -1368,9 +1379,9 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         onRadiusChange: setPointRadius,
         radiusLabel: 'Point radius',
         radiusUnit: 'px',
-        radiusMin: 1,
+        radiusMin: 0.1,
         radiusMax: 50,
-        radiusStep: 1,
+        radiusStep: 0.1,
       }
     : showColumnRadiusSetting
       ? {
@@ -1511,35 +1522,33 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                     <div className="flex flex-col gap-2 rounded-md border p-2">
                       {isHeatmapLayer ? (
                         <>
-                          <Field
+                          <SettingsSliderField
                             label={`Radius: ${(activeLayer?.radiusPixels as number | undefined) ?? 30}px`}
                           >
-                            <div className="pt-0.5">
-                              <Slider
-                                min={1}
-                                max={100}
-                                step={1}
-                                value={[
-                                  (activeLayer?.radiusPixels as
-                                    | number
-                                    | undefined) ?? 30,
-                                ]}
-                                onValueChange={(values) => {
-                                  const value = values[0] ?? 30;
-                                  applyConfig(
-                                    updateDeckMapLayer(
-                                      mapConfig,
-                                      activeLayerIndex,
-                                      (layer) => ({
-                                        ...layer,
-                                        radiusPixels: value,
-                                      }),
-                                    ),
-                                  );
-                                }}
-                              />
-                            </div>
-                          </Field>
+                            <Slider
+                              min={1}
+                              max={100}
+                              step={1}
+                              value={[
+                                (activeLayer?.radiusPixels as
+                                  | number
+                                  | undefined) ?? 30,
+                              ]}
+                              onValueChange={(values) => {
+                                const value = values[0] ?? 30;
+                                applyConfig(
+                                  updateDeckMapLayer(
+                                    mapConfig,
+                                    activeLayerIndex,
+                                    (layer) => ({
+                                      ...layer,
+                                      radiusPixels: value,
+                                    }),
+                                  ),
+                                );
+                              }}
+                            />
+                          </SettingsSliderField>
                           <Select
                             value={detectHeatmapScheme(activeLayer?.colorRange)}
                             onValueChange={(value) =>
@@ -1591,19 +1600,21 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           {(showTripsSettings ||
                             isPathLayer ||
                             showArcColumnSetting) && (
-                            <Field label={`Line width: ${lineWidthPixels}px`}>
-                              <div className="pt-0.5">
-                                <Slider
-                                  min={1}
-                                  max={20}
-                                  step={1}
-                                  value={[lineWidthPixels]}
-                                  onValueChange={(values) =>
-                                    setLineWidth(values[0] ?? lineWidthPixels)
-                                  }
-                                />
-                              </div>
-                            </Field>
+                            <SettingsSliderField
+                              label={`${
+                                showTripsSettings ? 'Trip width' : 'Line width'
+                              }: ${lineWidthPixels}px`}
+                            >
+                              <Slider
+                                min={1}
+                                max={20}
+                                step={1}
+                                value={[lineWidthPixels]}
+                                onValueChange={(values) =>
+                                  setLineWidth(values[0] ?? lineWidthPixels)
+                                }
+                              />
+                            </SettingsSliderField>
                           )}
 
                           {showArcColumnSetting ? (
@@ -1630,37 +1641,35 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           ) : null}
 
                           {showTripsSettings ? (
-                            <Field
+                            <SettingsSliderField
                               label={`Trail length: ${Math.round(((activeLayer?._trailLengthFactor as number | undefined) ?? 0.4) * 100)}%`}
                             >
-                              <div className="pt-0.5">
-                                <Slider
-                                  min={5}
-                                  max={100}
-                                  step={5}
-                                  value={[
-                                    Math.round(
-                                      ((activeLayer?._trailLengthFactor as
-                                        | number
-                                        | undefined) ?? 0.4) * 100,
+                              <Slider
+                                min={5}
+                                max={100}
+                                step={5}
+                                value={[
+                                  Math.round(
+                                    ((activeLayer?._trailLengthFactor as
+                                      | number
+                                      | undefined) ?? 0.4) * 100,
+                                  ),
+                                ]}
+                                onValueChange={(values) => {
+                                  const value = (values[0] ?? 40) / 100;
+                                  applyConfig(
+                                    updateDeckMapLayer(
+                                      mapConfig,
+                                      activeLayerIndex,
+                                      (layer) => ({
+                                        ...layer,
+                                        _trailLengthFactor: value,
+                                      }),
                                     ),
-                                  ]}
-                                  onValueChange={(values) => {
-                                    const value = (values[0] ?? 40) / 100;
-                                    applyConfig(
-                                      updateDeckMapLayer(
-                                        mapConfig,
-                                        activeLayerIndex,
-                                        (layer) => ({
-                                          ...layer,
-                                          _trailLengthFactor: value,
-                                        }),
-                                      ),
-                                    );
-                                  }}
-                                />
-                              </div>
-                            </Field>
+                                  );
+                                }}
+                              />
+                            </SettingsSliderField>
                           ) : null}
 
                           {hasFillColor && hasLineColor && showStrokeSetting ? (

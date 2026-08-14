@@ -7,6 +7,8 @@ export type GeometryEncodingHint = z.infer<typeof GeometryEncodingHint>;
 export const ColorScaleFunction = z.intersection(
   z.object({
     '@@function': z.literal('colorScale'),
+    /** Per-accessor opacity 0–1; preferred over layer-level opacity. */
+    opacity: z.number().min(0).max(1).optional(),
   }),
   ColorScaleConfig,
 );

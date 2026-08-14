@@ -7,6 +7,11 @@ export type DeckMapLayerRecord = Record<string, unknown>;
 
 export type DeckMapLayerColorScaleFunction = ColorScaleConfig & {
   '@@function': 'colorScale';
+  /**
+   * Per-accessor opacity (0–1). Preferred over layer-level `opacity` so fill and
+   * stroke (or arc endpoints) can be dimmed independently.
+   */
+  opacity?: number;
 };
 
 export type DeckMapLayerColorAccessor =
@@ -263,10 +268,63 @@ export function deckMapLayerHasColorScale(
 }
 
 /**
+ * Drop legacy `layer.opacity`, baking it into each flat RGBA alpha and into any
+ * colorScale that does not already encode the same dimming via `opacity`.
+ * Appearance UI prefers per-accessor opacity so fill/stroke stay independent.
+ */
+export function detachDeckMapLayerOpacity(
+  layer: DeckMapLayerRecord,
+): DeckMapLayerRecord {
+  const opacity = layer.opacity;
+  if (typeof opacity !== 'number' || !Number.isFinite(opacity)) {
+    return layer;
+  }
+  const factor = Math.max(0, Math.min(1, opacity));
+  const next: DeckMapLayerRecord = {...layer};
+  for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
+    const color = next[value];
+    if (isDeckMapLayerFlatRgbaColor(color)) {
+      const channelAlpha = color[3] ?? 255;
+      next[value] = [
+        color[0]!,
+        color[1]!,
+        color[2]!,
+        Math.round(Math.max(0, Math.min(255, channelAlpha * factor))),
+      ];
+      continue;
+    }
+    const scale = getDeckMapLayerColorScale(next, value);
+    if (scale) {
+      next[value] = {
+        ...scale,
+        opacity: getDeckMapColorScaleOpacity(scale) * factor,
+      };
+    }
+  }
+  const {opacity: _droppedOpacity, ...rest} = next;
+  void _droppedOpacity;
+  return rest;
+}
+
+/** Opacity (0–1) stored on a color-scale accessor; defaults to 1 when omitted. */
+export function getDeckMapColorScaleOpacity(
+  colorScale: DeckMapLayerColorScaleFunction | undefined,
+): number {
+  const opacity = colorScale?.opacity;
+  if (typeof opacity === 'number' && Number.isFinite(opacity)) {
+    return Math.max(0, Math.min(1, opacity));
+  }
+  return 1;
+}
+
+/**
  * Drop `layer.opacity` only when no remaining color-scale channel needs it.
  * Before dropping, bake the opacity into every flat RGBA color accessor so
  * sibling channels (e.g. flat stroke while clearing a fill scale) keep the
  * same rendered transparency.
+ *
+ * @deprecated Prefer {@link detachDeckMapLayerOpacity} plus per-accessor
+ * `colorScale.opacity` / flat RGBA alpha for independent fill/stroke opacity.
  */
 export function withoutDeckMapLayerOpacityIfUnused(
   layer: DeckMapLayerRecord,
@@ -275,31 +333,14 @@ export function withoutDeckMapLayerOpacityIfUnused(
   if (deckMapLayerHasColorScale(layer, {except})) {
     return layer;
   }
-  const opacity = layer.opacity;
-  const hasOpacity = typeof opacity === 'number' && Number.isFinite(opacity);
-  let next: DeckMapLayerRecord = layer;
-  if (hasOpacity) {
-    next = {...layer};
-    for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
-      const color = next[value];
-      if (!isDeckMapLayerFlatRgbaColor(color)) continue;
-      const channelAlpha = color[3] ?? 255;
-      next[value] = [
-        color[0]!,
-        color[1]!,
-        color[2]!,
-        Math.round(Math.max(0, Math.min(255, channelAlpha * opacity))),
-      ];
-    }
-  }
-  const {opacity: _droppedOpacity, ...rest} = next;
-  void _droppedOpacity;
-  return rest;
+  return detachDeckMapLayerOpacity(layer);
 }
 
 /**
  * Set `layer.opacity` from a flat-channel alpha when enabling a color scale,
  * unless another color-scale channel already owns global opacity.
+ *
+ * @deprecated Prefer setting `colorScale.opacity` on the accessor instead.
  */
 export function withDeckMapLayerOpacityFromFlatAlpha(
   layer: DeckMapLayerRecord,
@@ -319,23 +360,31 @@ export function withDeckMapLayerOpacityFromFlatAlpha(
 }
 
 /**
- * Replace a color-scale accessor with a flat RGBA. When this was the last scale,
- * bake `layer.opacity` into all flat color alphas and drop `opacity`.
+ * Replace a color-scale accessor with a flat RGBA, baking that scale's
+ * per-accessor opacity into the flat alpha. Also detaches legacy layer.opacity.
  */
 export function replaceDeckMapLayerColorScaleWithFlat(
   layer: DeckMapLayerRecord,
   accessor: DeckMapLayerColorAccessor,
   flatColor: readonly [number, number, number, number],
 ): DeckMapLayerRecord {
-  return withoutDeckMapLayerOpacityIfUnused({
+  const scale = getDeckMapLayerColorScale(layer, accessor);
+  const opacity = getDeckMapColorScaleOpacity(scale);
+  const baseAlpha = flatColor[3] ?? 255;
+  return detachDeckMapLayerOpacity({
     ...layer,
-    [accessor]: [flatColor[0], flatColor[1], flatColor[2], flatColor[3] ?? 255],
+    [accessor]: [
+      flatColor[0],
+      flatColor[1],
+      flatColor[2],
+      Math.round(Math.max(0, Math.min(255, baseAlpha * opacity))),
+    ],
   });
 }
 
 /**
  * Replace multiple color-scale accessors with flat colors in one step (e.g. arc
- * source+target). Bakes opacity into all remaining flats when dropping it.
+ * source+target), baking each scale's opacity into its flat alpha.
  */
 export function replaceDeckMapLayerColorScalesWithFlat(
   layer: DeckMapLayerRecord,
@@ -349,9 +398,17 @@ export function replaceDeckMapLayerColorScalesWithFlat(
   ) as DeckMapLayerColorAccessor[]) {
     const color = replacements[accessor];
     if (!color) continue;
-    next[accessor] = [color[0], color[1], color[2], color[3] ?? 255];
+    const scale = getDeckMapLayerColorScale(layer, accessor);
+    const opacity = getDeckMapColorScaleOpacity(scale);
+    const baseAlpha = color[3] ?? 255;
+    next[accessor] = [
+      color[0],
+      color[1],
+      color[2],
+      Math.round(Math.max(0, Math.min(255, baseAlpha * opacity))),
+    ];
   }
-  return withoutDeckMapLayerOpacityIfUnused(next);
+  return detachDeckMapLayerOpacity(next);
 }
 
 export function getDeckMapColorAccessorOptions(
@@ -709,6 +766,8 @@ export function createDeckMapLayerColorScale(options: {
   type?: ColorScaleConfig['type'];
   scheme?: ColorScaleScheme;
   title?: string;
+  /** Per-accessor opacity 0–1 (independent of layer.opacity). */
+  opacity?: number;
 }): DeckMapLayerColorScaleFunction {
   const type = options.type ?? 'sequential';
   const scheme =
@@ -716,10 +775,15 @@ export function createDeckMapLayerColorScale(options: {
     DECK_MAP_COLOR_SCALE_TYPE_OPTIONS.find((option) => option.value === type)
       ?.defaultScheme ??
     'Viridis';
+  const opacity =
+    typeof options.opacity === 'number' && Number.isFinite(options.opacity)
+      ? Math.max(0, Math.min(1, options.opacity))
+      : undefined;
   const base = {
     '@@function': 'colorScale' as const,
     field: options.field,
     legend: {title: options.title ?? options.field},
+    ...(opacity !== undefined ? {opacity} : {}),
   };
 
   if (type === 'categorical') {

@@ -543,7 +543,7 @@ describe('extractColorScaleLegends', () => {
     };
   }
 
-  it('preserves distinct legends for fill and line color scales', () => {
+  it('shows only the fill legend when fill and stroke both have color scales', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -573,16 +573,40 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(2);
-    expect(legends.map((l) => l.title)).toEqual(['magnitude', 'magnitude']);
-    expect(legends[0]).toMatchObject({type: 'continuous'});
-    expect(legends[1]).toMatchObject({type: 'continuous'});
-    expect((legends[0] as {gradient: string}).gradient).not.toBe(
-      (legends[1] as {gradient: string}).gradient,
-    );
+    expect(legends).toHaveLength(1);
+    expect(legends[0]).toMatchObject({type: 'continuous', title: 'magnitude'});
   });
 
-  it('keeps both fill and line legends when titles differ', () => {
+  it('shows stroke legend only when fill has no color scale', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: [56, 189, 248, 180],
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+              legend: {title: 'Stroke Legend'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('Stroke Legend');
+  });
+
+  it('prefers fill title when both scales exist even if titles differ', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -614,8 +638,8 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(2);
-    expect(legends.map((l) => l.title)).toEqual(['Fill Legend', 'Line Legend']);
+    expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('Fill Legend');
   });
 
   it('dedupes identical color-scale legends on the same layer', () => {

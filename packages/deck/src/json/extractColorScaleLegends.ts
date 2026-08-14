@@ -98,38 +98,61 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    // Show a legend for each distinct color-scale accessor on the layer
-    // (fill + stroke, or arc source/target). Skip duplicates that resolve to
-    // the same title/type/scheme/field.
-    const seenLegendKeys = new Set<string>();
-    for (const {propName, colorScale} of resolvedColorScales) {
-      try {
-        const title = resolveLegendTitle(
-          layerProps,
-          propName,
-          colorScale.field,
-        );
-        const key = [
-          title,
-          colorScale.type,
-          String(colorScale.scheme ?? ''),
-          colorScale.field,
-          JSON.stringify(colorScale),
-        ].join('\0');
-        if (seenLegendKeys.has(key)) continue;
+    // Prefer fill over stroke for legends. Stroke color-scale legends only show
+    // when fill has no color scale (avoids duplicate legends on point/polygon).
+    const hasFillColorScale = resolvedColorScales.some(
+      (entry) => entry.propName === 'getFillColor',
+    );
+    const primaryScales = hasFillColorScale
+      ? resolvedColorScales.filter((entry) => entry.propName !== 'getLineColor')
+      : resolvedColorScales;
+    const strokeFallbackScales = hasFillColorScale
+      ? resolvedColorScales.filter((entry) => entry.propName === 'getLineColor')
+      : [];
 
-        const resolvedLegend = buildColorScaleLegend({
-          table: datasetState.prepared.table,
-          colorScale,
-          title,
-        });
-        if (resolvedLegend) {
-          seenLegendKeys.add(key);
-          legends.push(resolvedLegend);
+    // Show a legend for each remaining distinct color-scale accessor on the
+    // layer (fill, path color, or arc source/target). Skip duplicates that
+    // resolve to the same title/type/scheme/field.
+    const seenLegendKeys = new Set<string>();
+    const pushLegendsFrom = (scales: typeof resolvedColorScales): number => {
+      let added = 0;
+      for (const {propName, colorScale} of scales) {
+        try {
+          const title = resolveLegendTitle(
+            layerProps,
+            propName,
+            colorScale.field,
+          );
+          const key = [
+            title,
+            colorScale.type,
+            String(colorScale.scheme ?? ''),
+            colorScale.field,
+            JSON.stringify(colorScale),
+          ].join('\0');
+          if (seenLegendKeys.has(key)) continue;
+
+          const resolvedLegend = buildColorScaleLegend({
+            table: datasetState.prepared.table,
+            colorScale,
+            title,
+          });
+          if (resolvedLegend) {
+            seenLegendKeys.add(key);
+            legends.push(resolvedLegend);
+            added += 1;
+          }
+        } catch {
+          // try next accessor
         }
-      } catch {
-        // try next accessor
       }
+      return added;
+    };
+
+    const added = pushLegendsFrom(primaryScales);
+    // Fill scale present but failed to resolve (e.g. missing field) → stroke.
+    if (added === 0 && strokeFallbackScales.length > 0) {
+      pushLegendsFrom(strokeFallbackScales);
     }
   }
 

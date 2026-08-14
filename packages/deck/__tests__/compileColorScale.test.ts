@@ -75,6 +75,33 @@ describe('compileColorScale', () => {
     expect(accessor({index: 0})).not.toEqual(accessor({index: 1}));
   });
 
+  it('applies per-accessor opacity to compiled color alpha', () => {
+    const table = createScaleTable();
+    const full = compileColorScale({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'sequential',
+        scheme: 'YlOrRd',
+        domain: 'auto',
+      },
+    });
+    const dimmed = compileColorScale({
+      table,
+      colorScale: {
+        field: 'magnitude',
+        type: 'sequential',
+        scheme: 'YlOrRd',
+        domain: 'auto',
+        opacity: 0.5,
+      } as any,
+    });
+    const fullColor = full({index: 0}) as number[];
+    const dimmedColor = dimmed({index: 0}) as number[];
+    expect(dimmedColor.slice(0, 3)).toEqual(fullColor.slice(0, 3));
+    expect(dimmedColor[3]).toBe(Math.round((fullColor[3] ?? 255) * 0.5));
+  });
+
   it('supports categorical schemes with raw row objects', () => {
     const table = createScaleTable();
     const accessor = compileColorScale({
