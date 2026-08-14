@@ -1,6 +1,11 @@
+import {jest} from '@jest/globals';
 import {tool} from 'ai';
 import {z} from 'zod';
-import {measureProviderContext} from '../src/devtools/providerContextDiagnostics';
+import {
+  measureProviderContext,
+  mergeLatestProviderContextMetricsForSession,
+  tryMeasureProviderContext,
+} from '../src/devtools/providerContextDiagnostics';
 
 describe('measureProviderContext', () => {
   it('captures deterministic metadata without retaining provider content', async () => {
@@ -60,5 +65,59 @@ describe('measureProviderContext', () => {
     expect(diagnostic.tools).toEqual([]);
     expect(diagnostic.toolSchemaBytes).toBe(0);
     expect(diagnostic.messages).toEqual({count: 0, bytes: 2});
+  });
+
+  it('fails open when diagnostics cannot serialize a tool schema', async () => {
+    const warning = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const brokenTool = {
+      description: 'Broken schema',
+      get inputSchema(): never {
+        throw new Error('schema unavailable');
+      },
+    };
+
+    await expect(
+      tryMeasureProviderContext({
+        role: 'chat-coordinator',
+        provider: 'provider',
+        model: 'model',
+        step: 0,
+        instructions: '',
+        messages: [],
+        tools: {broken: brokenTool as never},
+      }),
+    ).resolves.toBeUndefined();
+    expect(warning).toHaveBeenCalledTimes(1);
+    warning.mockRestore();
+  });
+
+  it('merges preparation metrics only into the matching session', () => {
+    const shared = {
+      recordedAt: 1,
+      provider: 'provider',
+      model: 'model',
+      step: 0,
+      instructions: {chars: 0, bytes: 0},
+      messages: {count: 0, bytes: 0},
+      tools: [],
+      toolSchemaBytes: 0,
+      sources: [],
+    };
+    const diagnostics = [
+      {id: 'a', role: 'skill-discovery', sessionId: 'session-a', ...shared},
+      {id: 'b', role: 'skill-discovery', sessionId: 'session-b', ...shared},
+    ];
+
+    mergeLatestProviderContextMetricsForSession(
+      diagnostics,
+      'skill-discovery',
+      {candidateSkillCount: 3},
+      'session-a',
+    );
+
+    expect(diagnostics[0]?.preparationMetrics).toEqual({
+      candidateSkillCount: 3,
+    });
+    expect(diagnostics[1]?.preparationMetrics).toBeUndefined();
   });
 });

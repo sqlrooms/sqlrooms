@@ -90,3 +90,39 @@ export async function measureProviderContext({
       : {}),
   };
 }
+
+/**
+ * Best-effort wrapper for request-path instrumentation. Diagnostics must never
+ * prevent an otherwise valid provider request from running.
+ */
+export async function tryMeasureProviderContext(
+  args: MeasureProviderContextArgs,
+): Promise<ProviderContextDiagnostic | undefined> {
+  try {
+    return await measureProviderContext(args);
+  } catch (error) {
+    console.warn(
+      '[ai-core] Provider context measurement failed; continuing without diagnostics.',
+      error,
+    );
+    return undefined;
+  }
+}
+
+export function mergeLatestProviderContextMetricsForSession(
+  diagnostics: ProviderContextDiagnostic[],
+  role: string,
+  metrics: Record<string, number>,
+  sessionId?: string,
+): void {
+  const diagnostic = diagnostics
+    .slice()
+    .reverse()
+    .find((entry) => entry.role === role && entry.sessionId === sessionId);
+  if (!diagnostic) return;
+
+  diagnostic.preparationMetrics = {
+    ...(diagnostic.preparationMetrics ?? {}),
+    ...metrics,
+  };
+}

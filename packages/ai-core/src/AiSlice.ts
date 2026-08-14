@@ -55,7 +55,10 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
-import {measureProviderContext} from './devtools/providerContextDiagnostics';
+import {
+  mergeLatestProviderContextMetricsForSession,
+  tryMeasureProviderContext,
+} from './devtools/providerContextDiagnostics';
 import {normalizeAiConfig, ToolAbortError} from './utils';
 import {
   getAnalysisResultsFromUiMessages,
@@ -647,7 +650,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             devtoolsOptions.captureProviderContexts,
           measureProviderContext: async (input) => {
             if (!devtoolsOptions.captureProviderContexts) return undefined;
-            const diagnostic = await measureProviderContext(input);
+            const diagnostic = await tryMeasureProviderContext(input);
+            if (!diagnostic) return undefined;
             get().ai.devtools.writeProviderContext(diagnostic);
             return diagnostic.id;
           },
@@ -679,20 +683,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           mergeLatestProviderContextMetrics: (
             role: string,
             metrics: Record<string, number>,
+            sessionId?: string,
           ) => {
             if (!devtoolsOptions.captureProviderContexts) return;
             set((state) =>
               produce(state, (draft) => {
-                const diagnostic = draft.ai.devtools.providerContexts
-                  .slice()
-                  .reverse()
-                  .find((entry) => entry.role === role);
-                if (diagnostic) {
-                  diagnostic.preparationMetrics = {
-                    ...(diagnostic.preparationMetrics ?? {}),
-                    ...metrics,
-                  };
-                }
+                mergeLatestProviderContextMetricsForSession(
+                  draft.ai.devtools.providerContexts,
+                  role,
+                  metrics,
+                  sessionId,
+                );
               }),
             );
           },
@@ -1517,7 +1518,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 if (!state.ai.devtools.shouldCaptureProviderContexts()) {
                   return undefined;
                 }
-                const diagnostic = await measureProviderContext({
+                const diagnostic = await tryMeasureProviderContext({
                   role,
                   provider,
                   model: modelId,
@@ -1531,6 +1532,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                   sources: contextSources,
                   preparationMetrics: contextMetrics,
                 });
+                if (!diagnostic) return undefined;
                 diagnosticsByStep[stepNumber] = diagnostic.id;
                 state.ai.devtools.writeProviderContext(diagnostic);
                 return undefined;

@@ -42,7 +42,7 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
-import {measureProviderContext} from './devtools/providerContextDiagnostics';
+import {tryMeasureProviderContext} from './devtools/providerContextDiagnostics';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -524,7 +524,7 @@ export function createLocalChatTransportFactory({
           if (!state.ai.devtools.shouldCaptureProviderContexts()) {
             return undefined;
           }
-          const diagnostic = await measureProviderContext({
+          const diagnostic = await tryMeasureProviderContext({
             role: 'chat-coordinator',
             provider,
             model: modelId,
@@ -540,6 +540,7 @@ export function createLocalChatTransportFactory({
               'top-level-tool-registry',
             ],
           });
+          if (!diagnostic) return undefined;
           diagnosticsByStep[stepNumber] = diagnostic.id;
           state.ai.devtools.writeProviderContext(diagnostic);
           return undefined;

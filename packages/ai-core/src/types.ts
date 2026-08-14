@@ -178,6 +178,7 @@ export type AiDevtoolsState = {
   mergeLatestProviderContextMetrics: (
     role: string,
     metrics: Record<string, number>,
+    sessionId?: string,
   ) => void;
   clearProviderContexts: () => void;
 };
