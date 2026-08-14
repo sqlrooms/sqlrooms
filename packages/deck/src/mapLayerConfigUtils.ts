@@ -185,7 +185,7 @@ const STROKE_LAYER_TYPES = new Set([
   'h3hexagonlayer',
   'geoarrowpolygonlayer',
   'polygonlayer',
-  // SolidPolygonLayer has no stroked outlines (wireframe only) — omit stroke UI.
+  // SolidPolygon: no stroked outlines (wireframe only).
   'geojsonlayer',
 ]);
 
@@ -203,10 +203,7 @@ export function isDeckMapH3HexagonLayer(layerType: unknown): boolean {
   );
 }
 
-/**
- * Effective `extruded` for UI/defaults. H3 layers default to extruded when the
- * prop is omitted (`DeckH3HexagonLayer.defaultProps`).
- */
+/** Effective `extruded`; H3 defaults to true when omitted. */
 export function getDeckMapLayerExtruded(
   layer: DeckMapLayerRecord | undefined,
 ): boolean {
@@ -214,12 +211,7 @@ export function getDeckMapLayerExtruded(
   return isDeckMapH3HexagonLayer(layer?.['@@type']);
 }
 
-/**
- * Deck.gl / SQLRooms default for `stroked` when the prop is omitted.
- * Scatterplot and solid-polygon default to no stroke; polygon / GeoJSON stroke
- * by default. H3 only strokes when not extruded — extruded H3 uses 3D faces
- * (wireframe for edges), so enabling Stroke while extruded is misleading.
- */
+/** Default `stroked` when omitted. H3 strokes only when not extruded. */
 export function getDeckMapLayerStrokeDefault(
   layerType: unknown,
   options?: {extruded?: boolean},
@@ -240,38 +232,7 @@ export function getDeckMapLayerStrokeDefault(
   return true;
 }
 
-/**
- * True when any color accessor (optionally excluding some) holds a colorScale.
- * Used so flat-channel opacity edits do not clear `layer.opacity` while another
- * channel still depends on it.
- */
-export function deckMapLayerHasColorScale(
-  layer: DeckMapLayerRecord | undefined,
-  options?: {
-    except?: DeckMapLayerColorAccessor | readonly DeckMapLayerColorAccessor[];
-  },
-): boolean {
-  if (!layer) return false;
-  const exceptList = options?.except;
-  const except = new Set<DeckMapLayerColorAccessor>(
-    exceptList == null
-      ? []
-      : typeof exceptList === 'string'
-        ? [exceptList]
-        : [...exceptList],
-  );
-  for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
-    if (except.has(value)) continue;
-    if (getDeckMapLayerColorScale(layer, value)) return true;
-  }
-  return false;
-}
-
-/**
- * Drop legacy `layer.opacity`, baking it into each flat RGBA alpha and into any
- * colorScale that does not already encode the same dimming via `opacity`.
- * Appearance UI prefers per-accessor opacity so fill/stroke stay independent.
- */
+/** Bake `layer.opacity` into flat alphas / colorScale.opacity, then drop it. */
 export function detachDeckMapLayerOpacity(
   layer: DeckMapLayerRecord,
 ): DeckMapLayerRecord {
@@ -306,7 +267,7 @@ export function detachDeckMapLayerOpacity(
   return rest;
 }
 
-/** Opacity (0–1) stored on a color-scale accessor; defaults to 1 when omitted. */
+/** Opacity 0–1 on a color-scale accessor (default 1). */
 export function getDeckMapColorScaleOpacity(
   colorScale: DeckMapLayerColorScaleFunction | undefined,
 ): number {
@@ -317,52 +278,7 @@ export function getDeckMapColorScaleOpacity(
   return 1;
 }
 
-/**
- * Drop `layer.opacity` only when no remaining color-scale channel needs it.
- * Before dropping, bake the opacity into every flat RGBA color accessor so
- * sibling channels (e.g. flat stroke while clearing a fill scale) keep the
- * same rendered transparency.
- *
- * @deprecated Prefer {@link detachDeckMapLayerOpacity} plus per-accessor
- * `colorScale.opacity` / flat RGBA alpha for independent fill/stroke opacity.
- */
-export function withoutDeckMapLayerOpacityIfUnused(
-  layer: DeckMapLayerRecord,
-  except?: DeckMapLayerColorAccessor | readonly DeckMapLayerColorAccessor[],
-): DeckMapLayerRecord {
-  if (deckMapLayerHasColorScale(layer, {except})) {
-    return layer;
-  }
-  return detachDeckMapLayerOpacity(layer);
-}
-
-/**
- * Set `layer.opacity` from a flat-channel alpha when enabling a color scale,
- * unless another color-scale channel already owns global opacity.
- *
- * @deprecated Prefer setting `colorScale.opacity` on the accessor instead.
- */
-export function withDeckMapLayerOpacityFromFlatAlpha(
-  layer: DeckMapLayerRecord,
-  alpha: number,
-  except?: DeckMapLayerColorAccessor | readonly DeckMapLayerColorAccessor[],
-): DeckMapLayerRecord {
-  if (deckMapLayerHasColorScale(layer, {except})) {
-    return layer;
-  }
-  if (typeof alpha !== 'number' || !Number.isFinite(alpha)) {
-    return layer;
-  }
-  return {
-    ...layer,
-    opacity: Math.max(0, Math.min(1, alpha / 255)),
-  };
-}
-
-/**
- * Replace a color-scale accessor with a flat RGBA, baking that scale's
- * per-accessor opacity into the flat alpha. Also detaches legacy layer.opacity.
- */
+/** Replace a color scale with flat RGBA (bakes scale opacity into alpha). */
 export function replaceDeckMapLayerColorScaleWithFlat(
   layer: DeckMapLayerRecord,
   accessor: DeckMapLayerColorAccessor,
@@ -382,10 +298,7 @@ export function replaceDeckMapLayerColorScaleWithFlat(
   });
 }
 
-/**
- * Replace multiple color-scale accessors with flat colors in one step (e.g. arc
- * source+target), baking each scale's opacity into its flat alpha.
- */
+/** Replace multiple color scales with flat RGBA (e.g. arc source+target). */
 export function replaceDeckMapLayerColorScalesWithFlat(
   layer: DeckMapLayerRecord,
   replacements: Partial<
@@ -676,7 +589,7 @@ const DEFAULT_LAYER_STROKE_COLOR: [number, number, number, number] = [
   0, 0, 0, 255,
 ];
 
-/** Default flat RGBA used when a color scale is cleared / flat fill is unset. */
+/** Default flat fill RGBA. */
 export const DECK_MAP_DEFAULT_LAYER_COLOR: readonly [
   number,
   number,
@@ -684,7 +597,7 @@ export const DECK_MAP_DEFAULT_LAYER_COLOR: readonly [
   number,
 ] = DEFAULT_LAYER_FILL_COLOR;
 
-/** Default stroke outline when `getLineColor` is unset. */
+/** Default stroke RGBA. */
 export const DECK_MAP_DEFAULT_STROKE_COLOR: readonly [
   number,
   number,
@@ -705,10 +618,7 @@ export function isDeckMapLayerFlatRgbaColor(
   );
 }
 
-/**
- * Returns the layer's flat RGBA color for an accessor, or `undefined` when the
- * accessor is a color scale / missing / not a numeric RGBA array.
- */
+/** Flat RGBA for an accessor, or undefined if scaled/missing. */
 export function getDeckMapLayerFlatColor(
   layer: DeckMapLayerRecord | undefined,
   accessor: DeckMapLayerColorAccessor,
@@ -736,7 +646,7 @@ export function setDeckMapLayerFlatColor(
   }));
 }
 
-/** Convert a deck.gl RGBA array to a `#rrggbb` string for `<input type="color">`. */
+/** RGBA → `#rrggbb` for `<input type="color">`. */
 export function deckMapRgbaToHex(
   color: readonly [number, number, number, number?],
 ): string {
@@ -766,7 +676,7 @@ export function createDeckMapLayerColorScale(options: {
   type?: ColorScaleConfig['type'];
   scheme?: ColorScaleScheme;
   title?: string;
-  /** Per-accessor opacity 0–1 (independent of layer.opacity). */
+  /** Per-accessor opacity 0–1. */
   opacity?: number;
 }): DeckMapLayerColorScaleFunction {
   const type = options.type ?? 'sequential';

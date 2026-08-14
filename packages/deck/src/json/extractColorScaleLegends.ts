@@ -98,8 +98,7 @@ export function extractColorScaleLegends(options: {
       continue;
     }
 
-    // Prefer fill over stroke for legends. Stroke color-scale legends only show
-    // when fill has no color scale (avoids duplicate legends on point/polygon).
+    // Prefer fill legend; show stroke only when fill has no color scale.
     const hasFillColorScale = resolvedColorScales.some(
       (entry) => entry.propName === 'getFillColor',
     );
@@ -110,9 +109,6 @@ export function extractColorScaleLegends(options: {
       ? resolvedColorScales.filter((entry) => entry.propName === 'getLineColor')
       : [];
 
-    // Show a legend for each remaining distinct color-scale accessor on the
-    // layer (fill, path color, or arc source/target). Skip duplicates that
-    // resolve to the same title/type/scheme/field.
     const seenLegendKeys = new Set<string>();
     const pushLegendsFrom = (scales: typeof resolvedColorScales): number => {
       let added = 0;
@@ -143,14 +139,14 @@ export function extractColorScaleLegends(options: {
             added += 1;
           }
         } catch {
-          // try next accessor
+          // skip failed accessor
         }
       }
       return added;
     };
 
     const added = pushLegendsFrom(primaryScales);
-    // Fill scale present but failed to resolve (e.g. missing field) → stroke.
+    // Fill scale failed to resolve → fall back to stroke.
     if (added === 0 && strokeFallbackScales.length > 0) {
       pushLegendsFrom(strokeFallbackScales);
     }

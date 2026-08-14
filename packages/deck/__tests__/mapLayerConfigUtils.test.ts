@@ -21,8 +21,6 @@ import {
   usesGeometryColumnSetting,
   usesRadiusSetting,
   usesStrokeSetting,
-  withDeckMapLayerOpacityFromFlatAlpha,
-  withoutDeckMapLayerOpacityIfUnused,
   detachDeckMapLayerOpacity,
   getDeckMapColorScaleOpacity,
 } from '../src/mapLayerConfigUtils';
@@ -217,34 +215,22 @@ describe('getDeckMapLayerExtruded', () => {
   });
 });
 
-describe('withoutDeckMapLayerOpacityIfUnused', () => {
-  it('keeps opacity when another accessor still has a color scale', () => {
-    const layer = {
-      '@@type': 'GeoArrowPolygonLayer',
-      opacity: 0.5,
-      getFillColor: createDeckMapLayerColorScale({field: 'mag'}),
-      getLineColor: [0, 0, 0, 128],
-    };
-    expect(withoutDeckMapLayerOpacityIfUnused(layer, 'getLineColor')).toEqual(
-      layer,
-    );
-  });
-
-  it('clears opacity when no color-scale channel remains', () => {
-    const layer = {
+describe('detachDeckMapLayerOpacity', () => {
+  it('bakes layer.opacity into flat color alphas and drops opacity', () => {
+    const next = detachDeckMapLayerOpacity({
       '@@type': 'GeoArrowPolygonLayer',
       opacity: 0.5,
       getFillColor: [56, 189, 248, 180],
       getLineColor: [0, 0, 0, 128],
-    };
-    expect(withoutDeckMapLayerOpacityIfUnused(layer)).toEqual({
+    });
+    expect(next).toEqual({
       '@@type': 'GeoArrowPolygonLayer',
       getFillColor: [56, 189, 248, 90],
       getLineColor: [0, 0, 0, 64],
     });
   });
 
-  it('bakes opacity into sibling flat channels when dropping it', () => {
+  it('bakes layer.opacity into sibling flat channels when clearing a scale', () => {
     const next = replaceDeckMapLayerColorScaleWithFlat(
       {
         '@@type': 'GeoArrowPolygonLayer',
@@ -463,30 +449,6 @@ describe('replaceDeckMapLayerColorScaleWithFlat', () => {
     expect(next.opacity).toBeUndefined();
     expect(next.getSourceColor).toEqual([56, 189, 248, 90]);
     expect(next.getTargetColor).toEqual([10, 20, 30, 128]);
-  });
-});
-
-describe('withDeckMapLayerOpacityFromFlatAlpha', () => {
-  test('sets opacity from flat alpha when no other scale owns it', () => {
-    expect(
-      withDeckMapLayerOpacityFromFlatAlpha(
-        {'@@type': 'GeoArrowScatterplotLayer', getFillColor: [1, 2, 3, 128]},
-        128,
-        'getFillColor',
-      ).opacity,
-    ).toBeCloseTo(128 / 255);
-  });
-
-  test('leaves opacity alone when another color scale remains', () => {
-    const layer = {
-      '@@type': 'GeoArrowPolygonLayer',
-      opacity: 0.25,
-      getFillColor: createDeckMapLayerColorScale({field: 'mag'}),
-      getLineColor: [0, 0, 0, 200],
-    };
-    expect(
-      withDeckMapLayerOpacityFromFlatAlpha(layer, 200, 'getLineColor'),
-    ).toEqual(layer);
   });
 });
 

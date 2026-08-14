@@ -101,7 +101,7 @@ function getColorScaleColumnKind(
   return type === 'categorical' ? 'categorical' : 'quantitative';
 }
 
-/** Pick a color-scale type that matches the selected field's column kind. */
+/** Color-scale type matching the field's column kind. */
 function resolveColorScaleTypeForField(
   columns: DataTable['columns'],
   field: string | undefined,
@@ -117,7 +117,7 @@ function resolveColorScaleTypeForField(
   return preferredType;
 }
 
-/** First column that the color-field selector can show for this scale type. */
+/** First selectable color-scale field for this type. */
 function getDefaultColorScaleField(
   columns: DataTable['columns'],
   type: ColorScaleConfig['type'],
@@ -134,10 +134,7 @@ function getDefaultColorScaleField(
   return matchingKind[0]?.name ?? colorable[0]?.name;
 }
 
-/**
- * Choose field first, then coerce type to match that field (avoids sequential
- * scales on string/boolean-only tables).
- */
+/** Pick field first, then coerce scale type to match that field. */
 export function resolveColorScaleFieldAndType(
   columns: DataTable['columns'],
   preferredType: ColorScaleConfig['type'],
@@ -226,7 +223,7 @@ function getSchemeOptions(type: ColorScaleConfig['type']) {
 
 const SCHEME_PREVIEW_STEPS = 24;
 
-/** Sample CSS colors for a named scheme, used as dropdown ramp previews. */
+/** Sample CSS colors for scheme dropdown previews. */
 function getSchemePreviewColors(
   scheme: string,
   type: ColorScaleConfig['type'],
@@ -255,7 +252,7 @@ function getSchemePreviewColors(
   );
 }
 
-/** Build a CSS gradient that covers edge-to-edge without light fringe gaps. */
+/** Edge-to-edge CSS gradient for a scheme (no fringe gaps). */
 function getSchemePreviewGradient(
   colors: string[],
   type: ColorScaleConfig['type'],
@@ -292,11 +289,7 @@ const ColorSchemeOptionLabel: FC<{
   );
 };
 
-/**
- * Theme-aware color control: shows the selected color as a swatch with the app
- * border/focus styles. The native `<input type="color">` chrome is hidden so it
- * does not flash a white OS control on dark themes.
- */
+/** Compact color swatch; native picker is visually hidden. */
 const ColorSwatchInput: FC<{
   value: string;
   onChange: (hex: string) => void;
@@ -305,7 +298,6 @@ const ColorSwatchInput: FC<{
 }> = ({value, onChange, disabled, 'aria-label': ariaLabel}) => (
   <label
     className={cn(
-      // Match Switch footprint (h-5 w-9); 3px radius (not the toggle pill).
       'border-input relative h-5 w-9 shrink-0 overflow-hidden rounded-[3px] border',
       'ring-offset-background focus-within:ring-ring focus-within:ring-1 focus-within:ring-offset-1',
       disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
@@ -339,7 +331,6 @@ function getLayerOpacityPercent(layer: DeckMapLayerRecord | undefined): number {
   return 100;
 }
 
-/** Shared label→slider spacing for all map settings sliders. */
 const SettingsSliderField: FC<{
   label: string;
   children: ReactNode;
@@ -377,7 +368,7 @@ type AppearanceColorChannelProps = {
     Partial<Record<DeckMapLayerColorAccessor, string>>
   >;
   readOnly?: boolean;
-  /** Optional enable switch (stroke on/off). */
+  /** Stroke enable switch. */
   enabled?: boolean;
   onEnabledChange?: (enabled: boolean) => void;
   enableLabel?: string;
@@ -394,10 +385,6 @@ type AppearanceColorChannelProps = {
   radiusStep?: number;
 };
 
-/**
- * Color controls for one Appearance channel: optional enable, scale toggle,
- * flat color or scale settings, and optional width/radius sliders.
- */
 const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   accessor,
   layer,
@@ -428,8 +415,7 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   ];
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
-  // Prefer ref-backed last field only in event handlers — reading refs during
-  // render trips react-hooks/refs. First matching column is enough for enable.
+  // Don't read lastColorScaleFieldsRef during render (react-hooks/refs).
   const defaultField = getDefaultColorScaleField(columns, colorScaleType);
   const showControls = enabled !== false;
   const opacityPercent = colorScale
@@ -464,7 +450,6 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
 
     applyConfig(
       updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-        // Migrate shared layer.opacity onto accessors first, then set this scale.
         const detached = detachDeckMapLayerOpacity(nextLayer);
         const existingScale = getDeckMapLayerColorScale(detached, accessor);
         const currentFlat =
@@ -636,7 +621,6 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
             onChange={(percent) => {
               applyConfig(
                 updateDeckMapLayer(mapConfig, layerIndex, (nextLayer) => {
-                  // Migrate away from shared layer.opacity first.
                   const detached = detachDeckMapLayerOpacity(nextLayer);
                   if (colorScale) {
                     const scale =
@@ -671,10 +655,7 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   );
 };
 
-/**
- * Arc colors: one Color scale toggle. Off → source + target pickers.
- * On → a single shared color-scale configurator applied to both ends.
- */
+/** Arc source/target colors; optional shared color scale. */
 const AppearanceArcColorPanel: FC<{
   layer: DeckMapLayerRecord | undefined;
   columns: DataTable['columns'];
@@ -699,8 +680,7 @@ const AppearanceArcColorPanel: FC<{
   const colorScale = sourceScale ?? targetScale;
   const colorScaleType = colorScale?.type ?? 'sequential';
   const schemeOptions = getSchemeOptions(colorScaleType);
-  // Prefer ref-backed last field only in event handlers — reading refs during
-  // render trips react-hooks/refs. First matching column is enough for enable.
+  // Don't read lastColorScaleFieldsRef during render (react-hooks/refs).
   const defaultField = getDefaultColorScaleField(columns, colorScaleType);
   const sourceFlat = getDeckMapLayerFlatColor(layer, 'getSourceColor') ?? [
     ...DECK_MAP_DEFAULT_LAYER_COLOR,
@@ -805,7 +785,6 @@ const AppearanceArcColorPanel: FC<{
                     readonly [number, number, number, number]
                   >
                 > = {};
-                // Only replace scaled endpoints; keep an already-flat custom color.
                 if (getDeckMapLayerColorScale(nextLayer, 'getSourceColor')) {
                   replacements.getSourceColor = DECK_MAP_DEFAULT_LAYER_COLOR;
                 }
@@ -947,7 +926,6 @@ const AppearanceArcColorPanel: FC<{
   );
 };
 
-/** Extrusion controls for the Appearance Extrusion tab. */
 const AppearanceExtrusionPanel: FC<{
   layer: DeckMapLayerRecord | undefined;
   columns: DataTable['columns'];
@@ -956,7 +934,6 @@ const AppearanceExtrusionPanel: FC<{
   applyConfig: (config: DeckMapConfig) => void;
   readOnly?: boolean;
 }> = ({layer, columns, mapConfig, layerIndex, applyConfig, readOnly}) => {
-  // H3 defaults extruded when omitted — match DeckH3HexagonLayer.defaultProps.
   const extruded = getDeckMapLayerExtruded(layer);
   return (
     <div className="flex flex-col gap-2">
@@ -1060,8 +1037,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'settings' | 'code'>('settings');
-  // Remember the last color-scale field per accessor so re-enabling the scale
-  // can restore it when the column is still available.
+  // Last color-scale field per accessor (restored when re-enabling a scale).
   const lastColorScaleFieldsRef = useRef<
     Partial<Record<DeckMapLayerColorAccessor, string>>
   >({});
@@ -1096,9 +1072,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     ? mapConfig.datasets?.[activeLayerDatasetId]
     : undefined;
 
-  // Resolve the structured source table separately from the compiled dataset
-  // output. Coordinate selectors edit the source transform, while render
-  // bindings such as geometry/color/elevation target output columns.
+  // Source table (coords/transform) vs compiled output columns (bindings).
   const activeLayerDatasetSource = activeLayerDataset?.source;
   const fallbackTableName = isDeckMapTableDatasetSource(
     activeLayerDatasetSource,
@@ -1226,8 +1200,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     [onConfigChange, readOnly],
   );
 
-  // Heal Column layers that still carry scatterplot/heatmap radius units.
-  // Otherwise the UI says "Nm" while deck interprets radius as pixels.
+  // Drop point/heatmap radius leftovers on Column layers (pixels vs meters).
   useEffect(() => {
     if (!showColumnRadiusSetting || !activeLayer || readOnly) return;
     const needsHeal =
@@ -1255,8 +1228,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     showColumnRadiusSetting,
   ]);
 
-  // Heal path/arc/trips widths where widthMaxPixels < widthMinPixels. That caps
-  // rendered width below the slider max (e.g. max 10 while the slider goes to 20).
+  // Fix path/arc/trips where widthMaxPixels < widthMinPixels (clamps the slider).
   useEffect(() => {
     const isLineWidthLayer =
       showTripsSettings ||
@@ -1327,8 +1299,6 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
           widthMinPixels: value,
           widthMaxPixels: value,
         };
-        // Path/Arc/Trips use getWidth as the stroke width; keep it in sync with
-        // the slider so widthMaxPixels cannot silently clamp above ~10px.
         if (typeof layer.getWidth !== 'string') {
           nextLayer.getWidth = value;
         }
@@ -1733,8 +1703,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                           if (checked) {
                                             return {...layer, stroked: true};
                                           }
-                                          // Drop a hidden stroke color scale so
-                                          // legends/opacity bookkeeping stay accurate.
+                                          // Clear stroke color scale when stroke is off.
                                           const next: DeckMapLayerRecord = {
                                             ...layer,
                                             stroked: false,

@@ -13,7 +13,7 @@
 }
 
 :root {
-  /* Opt native form controls (color pickers, scrollbars, etc.) into light UA chrome. */
+  /* Native controls (color inputs, etc.): light UA chrome. */
   color-scheme: light;
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
@@ -74,7 +74,7 @@
 }
 
 .dark {
-  /* Match ThemeProvider's `.dark` class so native controls use dark UA chrome. */
+  /* Native controls: dark UA chrome. */
   color-scheme: dark;
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
