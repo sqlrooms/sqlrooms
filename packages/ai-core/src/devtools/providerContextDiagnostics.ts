@@ -33,6 +33,11 @@ function textSize(value: unknown): {chars: number; bytes: number} {
   };
 }
 
+/**
+ * Inputs for measuring one provider-step request boundary, including its
+ * role/model identity, request content, tool registry, provenance labels, and
+ * optional preparation metrics.
+ */
 export type MeasureProviderContextArgs = ProviderContextMeasurementInput;
 
 /**
