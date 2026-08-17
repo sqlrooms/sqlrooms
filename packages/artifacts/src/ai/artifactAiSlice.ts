@@ -18,29 +18,23 @@ import {produce} from 'immer';
 import {StoreApi} from 'zustand';
 import {z} from 'zod';
 import type {ArtifactsSliceState} from '../ArtifactsSlice';
-import {
-  ArtifactSessionLinkSchema,
-  type ArtifactSessionLinkType,
-} from '../ArtifactsSliceConfig';
+import {ArtifactSessionLinkSchema} from './ArtifactSessionLink';
 import {
   cleanupSessionArtifactLinks,
   getLatestAiSessionIdForArtifact,
   getArtifactIdsForAiSession,
   getLatestArtifactIdForAiSession,
-  getCreatorSessionIdForArtifact,
 } from './artifactAiSessionHelpers';
 
 /**
  * Persisted configuration for artifact-owned AI sessions.
  *
- * `sessionArtifactLinks` is an array of links between sessions and artifacts,
- * each with metadata (createdAt, linkType).
+ * `sessionArtifactLinks` is an array of associations between sessions and
+ * artifacts.
  */
 export const ArtifactAiConfig = z
   .object({
     sessionArtifactLinks: z.array(ArtifactSessionLinkSchema).default([]),
-    /** IDs of pinned artifacts */
-    pinnedArtifactIds: z.array(z.string()).optional(),
   })
   .strict();
 export type ArtifactAiConfig = z.infer<typeof ArtifactAiConfig>;
@@ -57,11 +51,7 @@ export type ArtifactAiSliceState = {
     config: ArtifactAiConfig;
     setConfig: (config: z.input<typeof ArtifactAiConfig>) => void;
 
-    addSessionArtifactLink: (
-      sessionId: string,
-      artifactId: string,
-      linkType: ArtifactSessionLinkType,
-    ) => void;
+    addSessionArtifactLink: (sessionId: string, artifactId: string) => void;
     removeSessionArtifactLink: (sessionId: string, artifactId: string) => void;
     removeAllLinksForSession: (sessionId: string) => void;
     removeAllLinksForArtifact: (artifactId: string) => void;
@@ -69,10 +59,6 @@ export type ArtifactAiSliceState = {
     getArtifactIdsForSession: (sessionId: string) => string[];
     getSessionIdsForArtifact: (artifactId: string) => string[];
     getLatestArtifactForSession: (sessionId: string) => string | undefined;
-    getCreatorSessionForArtifact: (artifactId: string) => string | undefined;
-    togglePinArtifact: (artifactId: string) => void;
-    isPinnedArtifact: (artifactId: string) => boolean;
-
     createArtifactScopedSession: (
       name?: string,
       modelProvider?: string,
@@ -126,7 +112,7 @@ export type RoomStateWithArtifactAi = BaseRoomStoreState &
  *
  * The slice uses this snapshot to avoid running session/artifact alignment for
  * unrelated room-store updates while still reacting to artifact selection, AI
- * session config, artifact registry, and session ownership changes.
+ * session config, artifact registry, and session association changes.
  */
 type ArtifactAiSyncSnapshot = {
   currentArtifactId?: string;
@@ -153,8 +139,9 @@ export type CreateArtifactAiSliceOptions = {
  *
  * Compose this with `createArtifactsSlice` and `createAiSlice` when a room wants
  * AI chats to be scoped to the currently selected artifact. The slice stores
- * ownership separately from AI sessions, creates artifact-scoped sessions, and
- * keeps the current AI session aligned with `artifacts.config.currentArtifactId`.
+ * associations separately from AI sessions, creates artifact-scoped sessions,
+ * and keeps the current AI session aligned with
+ * `artifacts.config.currentArtifactId`.
  */
 export function createArtifactAiSlice<
   TRoomState extends RoomStateWithArtifactAi = RoomStateWithArtifactAi,
@@ -207,7 +194,7 @@ export function createArtifactAiSlice<
       );
     };
 
-    const syncForkedSessionArtifactOwnership = () => {
+    const syncForkedSessionArtifactAssociations = () => {
       const state = get();
       const sessionIds = new Set(
         state.ai.config.sessions.map((session) => session.id),
@@ -216,7 +203,7 @@ export function createArtifactAiSlice<
         state.ai.config.sessionForks ?? {},
       ).flatMap(([targetSessionId, forkOrigin]) => {
         if (!sessionIds.has(targetSessionId)) return [];
-        // Seed ownership only once: skip if the fork already has any link.
+        // Seed associations only once: skip if the fork already has any link.
         if (
           state.artifactAi.config.sessionArtifactLinks.some(
             (link) => link.sessionId === targetSessionId,
@@ -237,7 +224,7 @@ export function createArtifactAiSlice<
             return {
               targetSessionId,
               artifactId: link.artifactId,
-              createdAt: link.createdAt,
+              linkedAt: link.linkedAt,
             };
           });
       });
@@ -249,15 +236,14 @@ export function createArtifactAiSlice<
           for (const {
             targetSessionId,
             artifactId,
-            createdAt,
+            linkedAt,
           } of inheritedEntries) {
             draft.artifactAi.config.sessionArtifactLinks.push({
               sessionId: targetSessionId,
               artifactId,
               // Preserve source ordering so the fork resolves to the same
               // primary artifact even when several links are inherited.
-              createdAt,
-              linkType: 'attached',
+              linkedAt,
             });
           }
         }),
@@ -271,7 +257,7 @@ export function createArtifactAiSlice<
       if (artifactAiSyncing || artifactAiSyncSuspended) return;
       artifactAiSyncing = true;
       try {
-        syncForkedSessionArtifactOwnership();
+        syncForkedSessionArtifactAssociations();
         cleanupSessionArtifacts();
         const state = get();
         const currentArtifactId = state.artifacts.config.currentArtifactId;
@@ -440,7 +426,7 @@ export function createArtifactAiSlice<
           );
         },
 
-        addSessionArtifactLink: (sessionId, artifactId, linkType) => {
+        addSessionArtifactLink: (sessionId, artifactId) => {
           set((state) =>
             produce(state, (draft: TRoomState) => {
               const links = draft.artifactAi.config.sessionArtifactLinks;
@@ -456,16 +442,8 @@ export function createArtifactAiSlice<
                 links.push({
                   sessionId,
                   artifactId,
-                  createdAt: Date.now(),
-                  linkType,
+                  linkedAt: Date.now(),
                 });
-              } else if (
-                existingLink.linkType === 'attached' &&
-                linkType === 'created'
-              ) {
-                // Creation is durable provenance. Promote an existing link
-                // without changing its ordering timestamp; never downgrade it.
-                existingLink.linkType = 'created';
               }
             }),
           );
@@ -527,7 +505,7 @@ export function createArtifactAiSlice<
             .artifactAi.config.sessionArtifactLinks.filter(
               (link) => link.artifactId === artifactId,
             )
-            .sort((a, b) => a.createdAt - b.createdAt)
+            .sort((a, b) => a.linkedAt - b.linkedAt)
             .map((link) => link.sessionId);
         },
 
@@ -536,38 +514,6 @@ export function createArtifactAiSlice<
             sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
             sessionId,
           });
-        },
-
-        getCreatorSessionForArtifact: (artifactId) => {
-          return getCreatorSessionIdForArtifact({
-            sessionArtifactLinks: get().artifactAi.config.sessionArtifactLinks,
-            artifactId,
-          });
-        },
-
-        togglePinArtifact: (artifactId) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const pinnedArtifactIds =
-                draft.artifactAi.config.pinnedArtifactIds;
-              const index = pinnedArtifactIds?.indexOf(artifactId) ?? -1;
-              if (index === -1) {
-                if (!draft.artifacts.config.artifactsById[artifactId]) return;
-                if (!pinnedArtifactIds) {
-                  draft.artifactAi.config.pinnedArtifactIds = [artifactId];
-                } else {
-                  pinnedArtifactIds.push(artifactId);
-                }
-              } else {
-                pinnedArtifactIds?.splice(index, 1);
-              }
-            }),
-          );
-        },
-
-        isPinnedArtifact: (artifactId) => {
-          const pinnedIds = get().artifactAi.config.pinnedArtifactIds ?? [];
-          return pinnedIds.includes(artifactId);
         },
 
         // === INITIALIZATION ===
@@ -607,7 +553,6 @@ export function createArtifactAiSlice<
             get().artifactAi.addSessionArtifactLink(
               sessionId,
               currentArtifactId,
-              'attached',
             );
             return sessionId;
           } finally {

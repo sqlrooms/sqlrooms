@@ -10,36 +10,43 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
-### `@sqlrooms/artifacts`: artifact AI sessions use many-to-many links (breaking)
+### `@sqlrooms/artifacts`: artifact AI sessions use pure many-to-many associations (breaking)
 
-The prerelease-only one-to-one `artifactAi.aiSessionArtifacts` map and separate
-`artifactCreators` map were removed. `artifactAi.sessionArtifactLinks` is now
-the only persisted and runtime representation of relationships between AI
-sessions and artifacts:
+The prerelease-only one-to-one `artifactAi.aiSessionArtifacts` map,
+`artifactCreators` map, and provenance-bearing link shape were removed.
+`artifactAi.sessionArtifactLinks` is now the only persisted and runtime
+representation of relationships between AI sessions and artifacts:
 
 ```ts
 type ArtifactSessionLink = {
   sessionId: string;
   artifactId: string;
-  createdAt: number;
-  linkType: 'created' | 'attached';
+  linkedAt: number;
 };
 ```
 
 This is a clean prerelease break: `ArtifactAiConfigSchema` does not migrate the
-removed fields. If you need to retain prerelease state, convert each
-`aiSessionArtifacts` entry to an `attached` link and represent creator
-provenance with a `created` link before parsing the config. Helper APIs now
-require `sessionArtifactLinks` and the deprecated one-to-one slice methods were
-removed:
+removed fields or the previous `{createdAt, linkType}` link shape. If you need
+to retain prerelease state, convert each relationship to an association and
+rename its relationship timestamp from `createdAt` to `linkedAt`. Creation
+provenance, when needed, should live in the artifact's domain metadata rather
+than in its chat associations. Helper APIs now require
+`sessionArtifactLinks`, and the deprecated one-to-one and creator-provenance
+slice methods were removed:
 
-- `setSessionArtifact` → `addSessionArtifactLink`
+- `setSessionArtifact` → `addSessionArtifactLink(sessionId, artifactId)`
 - `clearSessionArtifact` → `removeAllLinksForSession`
 - `getSessionArtifactId` → `getLatestArtifactForSession`
-- `setArtifactCreator` → `addSessionArtifactLink` with `linkType: 'created'`
-- `getArtifactCreatorSessionId` → `getCreatorSessionForArtifact`
-- `getCreatedArtifactIds` → filter `sessionArtifactLinks` by
-  `linkType: 'created'`
+- `setArtifactCreator`, `getArtifactCreatorSessionId`, and
+  `getCreatedArtifactIds` have no association-layer replacement
+
+Artifact pinning is workspace state and has moved from the AI companion slice
+to the base artifacts slice:
+
+- `artifactAi.config.pinnedArtifactIds` →
+  `artifacts.config.pinnedArtifactIds`
+- `artifactAi.togglePinArtifact(id)` → `artifacts.togglePinArtifact(id)`
+- `artifactAi.isPinnedArtifact(id)` → `artifacts.isPinnedArtifact(id)`
 
 ### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
 

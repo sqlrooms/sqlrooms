@@ -44,7 +44,6 @@ export {
   isAiSessionVisibleForArtifact,
   getArtifactIdsForAiSession,
   getLatestArtifactIdForAiSession,
-  getCreatorSessionIdForArtifact,
 } from './artifactAiSessionHelpers';
 export type {
   ArtifactAiSession,
@@ -58,8 +57,5 @@ export type {
   EmptyArtifactAiSessionsForArtifactOptions,
   GetOwningArtifactRunContextItemsOptions,
 } from './artifactAiSessionHelpers';
-export {ArtifactSessionLinkSchema} from '../ArtifactsSliceConfig';
-export type {
-  ArtifactSessionLink,
-  ArtifactSessionLinkType,
-} from '../ArtifactsSliceConfig';
+export {ArtifactSessionLinkSchema} from './ArtifactSessionLink';
+export type {ArtifactSessionLink} from './ArtifactSessionLink';

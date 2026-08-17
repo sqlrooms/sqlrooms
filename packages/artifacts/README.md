@@ -93,6 +93,7 @@ Config uses artifact terminology throughout:
 
 - `artifacts.config.artifactsById`
 - `artifacts.config.artifactOrder`
+- `artifacts.config.pinnedArtifactIds`
 - `artifacts.config.currentArtifactId`
 
 - `artifacts.createArtifact({type, title?, id?})`
@@ -102,6 +103,8 @@ Config uses artifact terminology throughout:
 - `artifacts.deleteArtifact(id)`
 - `artifacts.setCurrentArtifact(id?)`
 - `artifacts.setArtifactOrder(order)`
+- `artifacts.togglePinArtifact(id)`
+- `artifacts.isPinnedArtifact(id)`
 - `artifacts.getArtifact(id)`
 
 `closeArtifact` is non-destructive. It runs close lifecycle cleanup, while the
@@ -215,27 +218,28 @@ representation. The prerelease-only `aiSessionArtifacts` and
 `artifactCreators` fields were removed without an automatic migration. Update
 persisted prerelease configs before parsing them with `ArtifactAiConfigSchema`.
 
-The link types are exported from `@sqlrooms/artifacts`:
+The link type is exported from `@sqlrooms/artifacts`:
 
-- `ArtifactSessionLink` — a single link: `{sessionId, artifactId, createdAt, linkType}`.
-  `createdAt` is a Unix timestamp in milliseconds.
-- `ArtifactSessionLinkType` — `'created' | 'attached'`. `'created'` records that
-  the session created the artifact; `'attached'` records that it references/works
-  in the artifact. A session may hold links to multiple artifacts.
+- `ArtifactSessionLink` — a single association:
+  `{sessionId, artifactId, linkedAt}`. `linkedAt` is a Unix timestamp in
+  milliseconds. A session may be associated with multiple artifacts.
 - `ArtifactSessionLinkSchema` — the Zod schema used to validate a link (for
   example when persisting `ArtifactAiConfigSchema`).
 
+Links intentionally describe association only. If an app needs creation
+provenance, store it with the artifact's domain metadata instead of overloading
+the chat association.
+
 All artifact AI session helpers accept `sessionArtifactLinks`; they do not
-accept a parallel one-to-one ownership map.
+accept a parallel one-to-one association map.
 
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
-artifact-scoped assistant. It creates a fresh session and attaches it to the
-current artifact; use `linkType: 'created'` only when the session itself creates
-the artifact.
+artifact-scoped assistant. It creates a fresh session and associates it with
+the current artifact.
 `artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
-with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
-ownership are ignored by artifact-scoped history.
+with `artifacts.config.currentArtifactId`. Sessions without an explicit
+artifact association are ignored by artifact-scoped history.
 
 Reusable helpers include:
 

@@ -3,13 +3,11 @@ import {
   ChatSessionSchema,
   getAiRunContextItems,
 } from '@sqlrooms/ai-config';
-import type {
-  ArtifactMetadata,
-  ArtifactSessionLink,
-} from '../ArtifactsSliceConfig';
+import type {ArtifactMetadata} from '../ArtifactsSliceConfig';
+import type {ArtifactSessionLink} from './ArtifactSessionLink';
 
 /**
- * Minimal AI session fields needed by artifact ownership helpers.
+ * Minimal AI session fields needed by artifact association helpers.
  */
 export type ArtifactAiSession = Pick<
   ChatSessionSchema,
@@ -42,7 +40,7 @@ export type ArtifactAiSessionFilterOptions = {
 /**
  * Returns true only when the session is explicitly linked to the artifact.
  *
- * Missing ownership is treated as unowned, not as visible everywhere.
+ * A missing association is treated as unassociated, not as visible everywhere.
  *
  */
 export function isAiSessionVisibleForArtifact({
@@ -132,7 +130,7 @@ export function getLatestAiSessionIdForArtifact({
       .map((link) => link.sessionId),
   );
 
-  // Sort by session.lastOpenedAt (not link.createdAt)
+  // Sort by session.lastOpenedAt (not link.linkedAt)
   return sessions
     .filter((session) => linkedSessionIds.has(session.id))
     .sort((a, b) => (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0))[0]?.id;
@@ -292,7 +290,7 @@ export function getRunningAiSessionCountsByArtifact({
 }
 
 /**
- * Input for removing stale artifact AI ownership entries.
+ * Input for removing stale artifact AI associations.
  */
 export type CleanupSessionArtifactLinksOptions = {
   sessionArtifactLinks: ArtifactSessionLink[];
@@ -330,7 +328,7 @@ function createArtifactContextItem(
 }
 
 /**
- * Input for deriving run-context items from artifact AI ownership.
+ * Input for deriving run-context items from artifact AI associations.
  */
 export type GetOwningArtifactRunContextItemsOptions = {
   sessionId: string;
@@ -338,7 +336,7 @@ export type GetOwningArtifactRunContextItemsOptions = {
   artifactsById: Record<string, ArtifactMetadata>;
   /** Explicit context items selected by the user or host app. */
   extraItems?: AiRunContextItem[];
-  /** Optional artifact-type allow-list predicate for implicit ownership. */
+  /** Optional artifact-type allow-list predicate for implicit associations. */
   isSupportedArtifactType?: (artifactType: string) => boolean;
   /**
    * Artifact the run is being initiated from (for example the currently
@@ -405,7 +403,7 @@ export function getOwningArtifactRunContextItems({
 
 /**
  * Returns all artifact IDs associated with a given AI session.
- * Preserves order by createdAt (oldest first).
+ * Preserves order by linkedAt (oldest first).
  */
 export function getArtifactIdsForAiSession({
   sessionArtifactLinks,
@@ -416,7 +414,7 @@ export function getArtifactIdsForAiSession({
 }): string[] {
   return sessionArtifactLinks
     .filter((link) => link.sessionId === sessionId)
-    .sort((a, b) => a.createdAt - b.createdAt)
+    .sort((a, b) => a.linkedAt - b.linkedAt)
     .map((link) => link.artifactId);
 }
 
@@ -433,21 +431,5 @@ export function getLatestArtifactIdForAiSession({
 }): string | undefined {
   return sessionArtifactLinks
     .filter((link) => link.sessionId === sessionId)
-    .sort((a, b) => b.createdAt - a.createdAt)[0]?.artifactId;
-}
-
-/**
- * Returns the session that created this artifact (linkType: 'created').
- * Returns undefined if artifact was not created by any session.
- */
-export function getCreatorSessionIdForArtifact({
-  sessionArtifactLinks,
-  artifactId,
-}: {
-  sessionArtifactLinks: ArtifactSessionLink[];
-  artifactId: string;
-}): string | undefined {
-  return sessionArtifactLinks.find(
-    (link) => link.artifactId === artifactId && link.linkType === 'created',
-  )?.sessionId;
+    .sort((a, b) => b.linkedAt - a.linkedAt)[0]?.artifactId;
 }

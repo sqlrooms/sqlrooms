@@ -35,8 +35,7 @@ function isRoomCommandResult(
  *
  * The command must return an `artifactId`, either as raw command data or as
  * normalized `result.data`, and that artifact must be current when the command
- * completes. Newly created artifacts receive a `created` link; existing
- * artifacts receive an `attached` link.
+ * completes.
  */
 export const artifactChatAssociationMiddleware: RoomCommandMiddleware<
   RoomState
@@ -48,10 +47,6 @@ export const artifactChatAssociationMiddleware: RoomCommandMiddleware<
 
   const stateBefore = context.getState();
   const previousArtifactId = stateBefore.artifacts.config.currentArtifactId;
-  const artifactIdsBefore = new Set(
-    Object.keys(stateBefore.artifacts.config.artifactsById),
-  );
-
   const result = await next();
   if (isRoomCommandResult(result) && !result.success) return result;
 
@@ -69,11 +64,7 @@ export const artifactChatAssociationMiddleware: RoomCommandMiddleware<
     return result;
   }
 
-  state.artifactAi.addSessionArtifactLink(
-    sessionId,
-    artifactId,
-    artifactIdsBefore.has(artifactId) ? 'attached' : 'created',
-  );
+  state.artifactAi.addSessionArtifactLink(sessionId, artifactId);
   if (state.ai.config.currentSessionId !== sessionId) {
     state.ai.switchSession(sessionId);
   }

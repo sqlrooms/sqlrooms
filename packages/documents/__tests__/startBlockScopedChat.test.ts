@@ -104,8 +104,7 @@ describe('startBlockScopedChat', () => {
         {
           sessionId: 'finished-session',
           artifactId: 'doc-1',
-          createdAt: 1,
-          linkType: 'attached',
+          linkedAt: 1,
         },
       ],
       getSessionDraftContextItemIds: (sessionId) =>
@@ -159,14 +158,12 @@ describe('startBlockScopedChat', () => {
         {
           sessionId: 'multi-session',
           artifactId: 'doc-1',
-          createdAt: 1,
-          linkType: 'created',
+          linkedAt: 1,
         },
         {
           sessionId: 'multi-session',
           artifactId: 'other-doc',
-          createdAt: 2,
-          linkType: 'attached',
+          linkedAt: 2,
         },
       ],
       getSessionDraftContextItemIds: (sessionId) =>
@@ -211,8 +208,7 @@ describe('startBlockScopedChat', () => {
         {
           sessionId: 'running-session',
           artifactId: 'doc-1',
-          createdAt: 1,
-          linkType: 'attached',
+          linkedAt: 1,
         },
       ],
       createArtifactScopedSession: jest.fn(() => 'should-not-create'),
