@@ -42,6 +42,7 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
+import {tryMeasureProviderContext} from './devtools/providerContextDiagnostics';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -511,12 +512,48 @@ export function createLocalChatTransportFactory({
       ]);
 
       const maxSteps = state.ai.getMaxStepsFromSettings();
+      const diagnosticsByStep: string[] = [];
+      let completedDiagnosticStep = 0;
 
       const agent = new ToolLoopAgent({
         model,
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
+        prepareStep: async ({stepNumber, messages}) => {
+          if (!state.ai.devtools.shouldCaptureProviderContexts()) {
+            return undefined;
+          }
+          const diagnostic = await tryMeasureProviderContext({
+            role: 'chat-coordinator',
+            provider,
+            model: modelId,
+            sessionId,
+            step: stepNumber,
+            instructions: systemInstructions,
+            messages,
+            tools,
+            sources: [
+              'base-instructions',
+              'session-run-context',
+              'sanitized-session-messages',
+              'top-level-tool-registry',
+            ],
+          });
+          if (!diagnostic) return undefined;
+          diagnosticsByStep[stepNumber] = diagnostic.id;
+          state.ai.devtools.writeProviderContext(diagnostic);
+          return undefined;
+        },
+        onStepFinish: ({usage}) => {
+          const diagnosticId = diagnosticsByStep[completedDiagnosticStep++];
+          if (diagnosticId && usage.inputTokens != null) {
+            state.ai.devtools.setProviderContextInputTokens(
+              diagnosticId,
+              usage.inputTokens,
+            );
+          }
+        },
         ...(providerOptions ? {providerOptions} : {}),
       });
 

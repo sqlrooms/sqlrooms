@@ -505,6 +505,48 @@ const snapshots = useRoomStore((state) => state.ai.devtools.agentSnapshots);
 state.ai.devtools.clearAgentSnapshots();
 ```
 
+### Provider-context diagnostics
+
+Provider-context capture is also opt-in. Enable it when creating the AI slice;
+records are kept in memory and the oldest record is discarded when the limit
+is exceeded (the default limit is `100`):
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureProviderContexts: true,
+    maxProviderContextRecords: 100,
+  },
+});
+
+const providerContexts = useRoomStore(
+  (state) => state.ai.devtools.providerContexts,
+);
+roomStore.getState().ai.devtools.clearProviderContexts();
+```
+
+Each `ProviderContextDiagnostic` describes one provider step using metadata
+only: role, provider/model, session and step identifiers, instruction/message
+sizes, tool names and schema sizes, source labels, optional preparation
+metrics, and provider-reported input tokens when available. Raw instructions,
+messages, and tool schemas are not copied into the record. The records are
+transient devtools state and are also shown by `ChatSessionDebugView`.
+
+Core chat and `ai.sendPrompt()` provider steps are captured automatically when
+the option is enabled. Custom or nested agents can use
+`state.ai.devtools.measureProviderContext(input)` to measure and append the same
+record shape while respecting the capture flag. The main package also exports
+`measureProviderContext`, `tryMeasureProviderContext`,
+`MeasureProviderContextArgs`, and `ProviderContextDiagnostic` for integrations
+that need to measure outside a slice method. `measureProviderContext` is the
+strict helper and rejects measurement failures; `tryMeasureProviderContext` is
+the fail-open request-path helper that logs a warning and returns `undefined`
+so diagnostics cannot abort a valid provider request. Callers using either
+standalone helper are responsible for writing the returned record to their
+chosen diagnostics store.
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
@@ -515,6 +557,7 @@ state.ai.devtools.clearAgentSnapshots();
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
 - Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
 - Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
+- Provider diagnostics: `measureProviderContext`, `tryMeasureProviderContext`, `MeasureProviderContextArgs`, `ProviderContextDiagnostic`
 - Tool/agent utilities:
   - `cleanupPendingUiMessages`
   - `cleanupPendingAnalysisResults`
