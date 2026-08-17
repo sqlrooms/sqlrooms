@@ -1,9 +1,18 @@
+import {
+  binnedNumericSchemes,
+  categoricalSchemes,
+  continuousDivergingSchemes,
+  continuousSequentialSchemes,
+  formatColorSchemePromptLists,
+} from '@sqlrooms/color-scales/colorSchemeNames';
 import {DeckJsonMapSpec} from './DeckJsonMapSpec';
-import type {DeckMapConfig} from './mapConfig';
+import type {DeckMapConfig, DeckMapDatasetSource} from './mapConfig';
 import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
 } from './mapConfig';
+import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
+import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
@@ -38,12 +47,123 @@ export class DeckMapResourceConfigError extends Error {
   }
 }
 
+const BINNED_SCHEME_NAMES = new Set<string>(binnedNumericSchemes);
+const SEQUENTIAL_SCHEME_NAMES = new Set<string>(continuousSequentialSchemes);
+const DIVERGING_SCHEME_NAMES = new Set<string>(continuousDivergingSchemes);
+const CATEGORICAL_SCHEME_NAMES = new Set<string>(categoricalSchemes);
+
+/** Issue when colorScale `type` and `scheme` disagree or are incomplete. */
+export function getColorScaleTypeSchemeIssue(
+  type: unknown,
+  scheme: unknown,
+): string | undefined {
+  if (typeof type !== 'string' || !type.trim()) {
+    return 'colorScale requires a "type" (sequential, diverging, quantize, quantile, threshold, or categorical)';
+  }
+  if (typeof scheme !== 'string' || !scheme.trim()) {
+    return 'colorScale requires a "scheme" (exact name such as Viridis, YlOrRd, Blues, or Tableau10)';
+  }
+  if (type !== type.trim()) {
+    return 'colorScale type must not have leading or trailing whitespace';
+  }
+  if (scheme !== scheme.trim()) {
+    return 'colorScale scheme must not have leading or trailing whitespace';
+  }
+
+  const scaleType = type;
+  const schemeName = scheme;
+
+  const allowedForType = (allowed: Set<string>, label: string) => {
+    if (allowed.has(schemeName)) return undefined;
+    if (SEQUENTIAL_SCHEME_NAMES.has(schemeName)) {
+      return `scheme "${schemeName}" requires type "sequential" (not "${scaleType}") — use type "sequential", or pick a ${label}`;
+    }
+    if (DIVERGING_SCHEME_NAMES.has(schemeName)) {
+      return `scheme "${schemeName}" requires type "diverging" (not "${scaleType}") — use type "diverging", or pick a ${label}`;
+    }
+    if (CATEGORICAL_SCHEME_NAMES.has(schemeName)) {
+      return `scheme "${schemeName}" requires type "categorical" (not "${scaleType}") — use type "categorical", or pick a ${label}`;
+    }
+    return `scheme "${schemeName}" is not valid for type "${scaleType}" — use a ${label}`;
+  };
+
+  switch (scaleType) {
+    case 'quantile':
+    case 'quantize':
+    case 'threshold':
+      return allowedForType(
+        BINNED_SCHEME_NAMES,
+        'ColorBrewer binned ramp such as YlOrRd, Blues, Greens, or RdYlBu',
+      );
+    case 'sequential':
+      return allowedForType(
+        SEQUENTIAL_SCHEME_NAMES,
+        'sequential scheme such as Viridis, Plasma, Blues, or YlOrRd',
+      );
+    case 'diverging':
+      return allowedForType(
+        DIVERGING_SCHEME_NAMES,
+        'diverging scheme such as RdBu, Spectral, or BrBG',
+      );
+    case 'categorical':
+      return allowedForType(
+        CATEGORICAL_SCHEME_NAMES,
+        'categorical scheme such as Tableau10, Set2, or Category10',
+      );
+    default:
+      return `colorScale type "${scaleType}" is not supported — use sequential, diverging, quantize, quantile, threshold, or categorical`;
+  }
+}
+
+function getColorScaleThresholdsIssue(
+  type: unknown,
+  thresholds: unknown,
+): string | undefined {
+  if (type !== 'threshold') return undefined;
+  if (
+    !Array.isArray(thresholds) ||
+    thresholds.length === 0 ||
+    !thresholds.every(
+      (value) => typeof value === 'number' && Number.isFinite(value),
+    )
+  ) {
+    return 'colorScale type "threshold" requires a non-empty numeric "thresholds" array';
+  }
+  return undefined;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 function hasEntries(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && Object.keys(value).length > 0;
+}
+
+/** True for invalid `ST_MakeLine(ST_Point(...) ORDER BY ...)` (ORDER BY belongs in LIST). */
+function hasBadStMakeLinePointOrderBy(sql: string): boolean {
+  const re = /\bST_MakeLine\s*\(/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(sql)) !== null) {
+    let i = match.index + match[0].length;
+    while (i < sql.length && /\s/.test(sql[i]!)) i += 1;
+    if (/^LIST\s*\(/i.test(sql.slice(i))) continue;
+    const pointMatch = sql.slice(i).match(/^ST_Point\s*\(/i);
+    if (!pointMatch) continue;
+    i += pointMatch[0].length;
+    let depth = 1;
+    while (i < sql.length && depth > 0) {
+      const ch = sql[i];
+      if (ch === '(') depth += 1;
+      else if (ch === ')') depth -= 1;
+      i += 1;
+    }
+    if (depth !== 0) continue;
+    if (/^\s+ORDER\s+BY\b/i.test(sql.slice(i))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function mergeOptionalRecord(
@@ -129,6 +249,31 @@ function mergeSpecPatch(
   };
 }
 
+/** True when a bare `{tableName}` patch would wipe existing geometry SQL. */
+function isSourceDowngrade(
+  existingSource: DeckMapDatasetSource | undefined,
+  incomingSource: DeckMapDatasetSource | undefined,
+): boolean {
+  if (!existingSource || !incomingSource) return false;
+
+  const incomingIsBareTableName =
+    isDeckMapTableDatasetSource(incomingSource) &&
+    !(
+      'transformSql' in incomingSource &&
+      typeof incomingSource.transformSql === 'string' &&
+      incomingSource.transformSql.trim().length > 0
+    );
+  if (!incomingIsBareTableName) return false;
+
+  if (isDeckMapSqlDatasetSource(existingSource)) return true;
+
+  return (
+    isDeckMapTableDatasetSource(existingSource) &&
+    typeof existingSource.transformSql === 'string' &&
+    existingSource.transformSql.trim().length > 0
+  );
+}
+
 function mergeDatasetRegistry(
   existingDatasets: DeckMapConfig['datasets'],
   incomingDatasets: DeckMapConfig['datasets'],
@@ -139,13 +284,21 @@ function mergeDatasetRegistry(
   const datasets = {...existingDatasets};
   for (const [datasetId, incomingDataset] of Object.entries(incomingDatasets)) {
     const existingDataset = existingDatasets[datasetId];
-    datasets[datasetId] = existingDataset
-      ? {
-          ...existingDataset,
-          ...incomingDataset,
-          source: incomingDataset.source ?? existingDataset.source,
-        }
-      : incomingDataset;
+    if (!existingDataset) {
+      datasets[datasetId] = incomingDataset;
+      continue;
+    }
+    const resolvedSource = isSourceDowngrade(
+      existingDataset.source,
+      incomingDataset.source,
+    )
+      ? existingDataset.source
+      : (incomingDataset.source ?? existingDataset.source);
+    datasets[datasetId] = {
+      ...existingDataset,
+      ...incomingDataset,
+      source: resolvedSource,
+    };
   }
   return datasets;
 }
@@ -213,6 +366,30 @@ function parseSpec(config: DeckMapConfig): {
   };
 }
 
+const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
+  ScatterplotLayer: 'GeoArrowScatterplotLayer',
+  HeatmapLayer: 'GeoArrowHeatmapLayer',
+  ColumnLayer: 'GeoArrowColumnLayer',
+  PathLayer: 'GeoArrowPathLayer',
+  PolygonLayer: 'GeoArrowPolygonLayer',
+  SolidPolygonLayer: 'GeoArrowSolidPolygonLayer',
+  ArcLayer: 'GeoArrowArcLayer',
+  TripsLayer: 'GeoArrowTripsLayer',
+  H3HexagonLayer: 'GeoArrowH3HexagonLayer',
+};
+
+const COLOR_SCALE_ACCESSOR_PROPS = [
+  'getFillColor',
+  'getLineColor',
+  'getColor',
+  'getSourceColor',
+  'getTargetColor',
+] as const;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
 /**
  * Validates the post-merge invariants of a renderable, resource-native map.
  * Patch inputs may be sparse, but the durable result must have supported
@@ -269,6 +446,22 @@ export function getDeckMapResourceConfigIssues(
             : 'must define source.tableName or source.sqlQuery',
       });
     }
+
+    const sqlParts = [
+      isDeckMapTableDatasetSource(source) ? source.transformSql : undefined,
+      isDeckMapSqlDatasetSource(source) ? source.sqlQuery : undefined,
+    ].filter(
+      (part): part is string =>
+        typeof part === 'string' && part.trim().length > 0,
+    );
+    const sql = sqlParts.join('\n');
+    if (sql && hasSelectStarAsWkbCollision(sql)) {
+      issues.push({
+        path: `datasets.${datasetId}.source`,
+        message:
+          'Do not use SELECT *, ST_AsWKB(col) AS col — DuckDB keeps the original column and the WKB alias collides, producing empty maps. Use SELECT * EXCLUDE (col), ST_AsWKB(col) AS col, or omit transformSql when the geometry column already exists.',
+      });
+    }
   }
 
   if (parsedSpec.layers.length === 0) {
@@ -285,6 +478,69 @@ export function getDeckMapResourceConfigIssues(
         path: `spec.layers.${index}.@@type`,
         message: 'must name a Deck JSON layer class',
       });
+    } else {
+      const aliased = DECK_MAP_LAYER_CLASS_ALIASES[layerType];
+      if (aliased) {
+        issues.push({
+          path: `spec.layers.${index}.@@type`,
+          message: `use "${aliased}" — plain "${layerType}" is not a registered Deck JSON layer class`,
+        });
+      }
+    }
+
+    for (const prop of COLOR_SCALE_ACCESSOR_PROPS) {
+      const value = layer[prop];
+      if (!isPlainObject(value)) continue;
+
+      if (
+        value['@@type'] === 'ColorScale' &&
+        value['@@function'] !== 'colorScale'
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.${prop}`,
+          message:
+            'use {"@@function":"colorScale","field":"<column>","type":"...","scheme":"...","domain":"auto"} — {"@@type":"ColorScale","column":"..."} is not valid colorScale syntax',
+        });
+        continue;
+      }
+
+      if (value['@@function'] === 'colorScale') {
+        if (typeof value.field !== 'string' || !value.field.trim()) {
+          if (typeof value.column === 'string' && value.column.trim()) {
+            issues.push({
+              path: `spec.layers.${index}.${prop}`,
+              message:
+                'colorScale uses "field" for the column name, not "column" — rename column → field',
+            });
+          } else {
+            issues.push({
+              path: `spec.layers.${index}.${prop}`,
+              message:
+                'colorScale requires a non-empty string "field" with the exact column name',
+            });
+          }
+        }
+        const schemeIssue = getColorScaleTypeSchemeIssue(
+          value.type,
+          value.scheme,
+        );
+        if (schemeIssue) {
+          issues.push({
+            path: `spec.layers.${index}.${prop}`,
+            message: schemeIssue,
+          });
+        }
+        const thresholdsIssue = getColorScaleThresholdsIssue(
+          value.type,
+          value.thresholds,
+        );
+        if (thresholdsIssue) {
+          issues.push({
+            path: `spec.layers.${index}.${prop}`,
+            message: thresholdsIssue,
+          });
+        }
+      }
     }
 
     const binding =
@@ -303,14 +559,248 @@ export function getDeckMapResourceConfigIssues(
           message: `references unknown dataset "${boundDataset}"`,
         });
       }
-      return;
+    } else {
+      issues.push({
+        path: `spec.layers.${index}._sqlroomsBinding.dataset`,
+        message:
+          'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
+      });
     }
 
-    issues.push({
-      path: `spec.layers.${index}._sqlroomsBinding.dataset`,
-      message:
-        'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
-    });
+    if (layerType === 'GeoArrowHeatmapLayer' && 'getWeight' in layer) {
+      // Basic: omit getWeight. Custom: numeric constant only.
+      const getWeight = layer.getWeight;
+      if (config.configMode !== 'custom') {
+        issues.push({
+          path: `spec.layers.${index}.getWeight`,
+          message:
+            'omit getWeight for default density — the basic settings panel has no weight-column control; do not bind a column',
+        });
+      } else if (
+        isPlainObject(getWeight) ||
+        (typeof getWeight === 'string' && getWeight.trim().length > 0)
+      ) {
+        issues.push({
+          path: `spec.layers.${index}.getWeight`,
+          message:
+            'omit getWeight for default density, or use a numeric constant — column / object accessors are not supported',
+        });
+      }
+    }
+
+    // Basic mode: numeric sizes (elevation may use @@=col / scale).
+    if (config.configMode !== 'custom') {
+      const rejectNonNumericSize = (
+        prop: string,
+        value: unknown,
+        message: string,
+      ) => {
+        if (value === undefined) return;
+        if (typeof value === 'number' && Number.isFinite(value)) return;
+        issues.push({
+          path: `spec.layers.${index}.${prop}`,
+          message,
+        });
+      };
+
+      if (layerType === 'GeoArrowScatterplotLayer') {
+        rejectNonNumericSize(
+          'getRadius',
+          layer.getRadius,
+          'use a positive number (e.g. 4) with radiusUnits "pixels" — string/object size accessors are not supported in basic mode',
+        );
+      }
+
+      const LINE_LAYER_TYPES = new Set([
+        'GeoArrowPathLayer',
+        'GeoArrowArcLayer',
+        'GeoArrowTripsLayer',
+      ]);
+      if (typeof layerType === 'string' && LINE_LAYER_TYPES.has(layerType)) {
+        rejectNonNumericSize(
+          'getWidth',
+          layer.getWidth,
+          'use a number (e.g. 2) with widthUnits "pixels" — string/object size accessors are not supported in basic mode',
+        );
+      }
+
+      if (layerType === 'GeoArrowHeatmapLayer') {
+        rejectNonNumericSize(
+          'radiusPixels',
+          layer.radiusPixels,
+          'use a positive number (e.g. 30) — string/object size accessors are not supported in basic mode',
+        );
+      }
+
+      if (layerType === 'GeoArrowColumnLayer') {
+        rejectNonNumericSize(
+          'radius',
+          layer.radius,
+          'use a positive number in meters (e.g. 50) — string/object size accessors are not supported in basic mode',
+        );
+      }
+
+      const ELEVATION_LAYER_TYPES = new Set([
+        'GeoArrowPolygonLayer',
+        'GeoArrowSolidPolygonLayer',
+        'GeoArrowColumnLayer',
+        'GeoArrowH3HexagonLayer',
+      ]);
+      if (
+        typeof layerType === 'string' &&
+        ELEVATION_LAYER_TYPES.has(layerType) &&
+        layer.getElevation !== undefined
+      ) {
+        const elev = layer.getElevation;
+        if (typeof elev === 'string') {
+          const isColumnAccessor = /^@@=[A-Za-z_][\w]*$/.test(elev.trim());
+          if (!isColumnAccessor) {
+            issues.push({
+              path: `spec.layers.${index}.getElevation`,
+              message:
+                'in basic mode use a number (0 for flat), a column accessor "@@=columnName", or {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} — free-form string expressions require configMode "custom"',
+            });
+          }
+        } else if (isPlainObject(elev)) {
+          const fn = elev['@@function'];
+          const field = typeof elev.field === 'string' ? elev.field.trim() : '';
+          const typeOk =
+            elev.type === undefined ||
+            elev.type === 'linear' ||
+            (typeof elev.type === 'string' && elev.type.trim() === 'linear');
+          if ((fn !== 'scale' && fn !== 'scaleLinear') || !field || !typeOk) {
+            issues.push({
+              path: `spec.layers.${index}.getElevation`,
+              message:
+                'in basic mode use {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]} (or a column accessor "@@=columnName")',
+            });
+          }
+        } else if (!(typeof elev === 'number' && Number.isFinite(elev))) {
+          issues.push({
+            path: `spec.layers.${index}.getElevation`,
+            message:
+              'in basic mode use a number (0 for flat), a column accessor "@@=columnName", or {"@@function":"scale","field":"...","type":"linear","domain":"auto","range":[0,200]}',
+          });
+        }
+      }
+    }
+
+    if (layerType === 'GeoArrowH3HexagonLayer') {
+      const getHexagon = layer.getHexagon;
+      if (isPlainObject(getHexagon)) {
+        issues.push({
+          path: `spec.layers.${index}.getHexagon`,
+          message:
+            'use getHexagon as a deck.gl attribute string "@@=h3_column_name" (or set _sqlroomsBinding.hexagonColumn) — object accessors like {"@@function":"...","column":"..."} are not valid',
+        });
+      } else {
+        const hasHexagonBinding =
+          typeof binding?.hexagonColumn === 'string' &&
+          (binding.hexagonColumn as string).trim().length > 0;
+        const getHexagonAccessor =
+          typeof getHexagon === 'string' ? getHexagon.trim() : '';
+        const hasGetHexagonAccessor = /^@@=[A-Za-z_][\w]*$/.test(
+          getHexagonAccessor,
+        );
+        if (
+          getHexagonAccessor &&
+          !hasGetHexagonAccessor &&
+          !hasHexagonBinding
+        ) {
+          issues.push({
+            path: `spec.layers.${index}.getHexagon`,
+            message:
+              'use getHexagon as "@@=h3_column_name" (a simple column accessor) or set _sqlroomsBinding.hexagonColumn — bare names and expressions are not valid',
+          });
+        } else if (!hasGetHexagonAccessor && !hasHexagonBinding) {
+          issues.push({
+            path: `spec.layers.${index}.getHexagon`,
+            message:
+              'GeoArrowH3HexagonLayer requires getHexagon (e.g. "@@=h3_column_name") or _sqlroomsBinding.hexagonColumn set to the H3 index column',
+          });
+        }
+      }
+    }
+
+    if (layerType === 'GeoArrowArcLayer') {
+      if (layer.getSourcePosition !== undefined) {
+        issues.push({
+          path: `spec.layers.${index}.getSourcePosition`,
+          message:
+            'do not set getSourcePosition — bind the source geometry via _sqlroomsBinding.sourceGeometryColumn only',
+        });
+      }
+      if (layer.getTargetPosition !== undefined) {
+        issues.push({
+          path: `spec.layers.${index}.getTargetPosition`,
+          message:
+            'do not set getTargetPosition — bind the target geometry via _sqlroomsBinding.targetGeometryColumn only',
+        });
+      }
+      const hasSource =
+        typeof binding?.sourceGeometryColumn === 'string' &&
+        (binding.sourceGeometryColumn as string).trim().length > 0;
+      const hasTarget =
+        typeof binding?.targetGeometryColumn === 'string' &&
+        (binding.targetGeometryColumn as string).trim().length > 0;
+      if (!hasSource) {
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.sourceGeometryColumn`,
+          message:
+            'GeoArrowArcLayer requires _sqlroomsBinding.sourceGeometryColumn set to the source geometry column name',
+        });
+      }
+      if (!hasTarget) {
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.targetGeometryColumn`,
+          message:
+            'GeoArrowArcLayer requires _sqlroomsBinding.targetGeometryColumn set to the target geometry column name',
+        });
+      }
+    }
+
+    if (layerType === 'GeoArrowTripsLayer') {
+      const hasTimestampColumn =
+        typeof binding?.timestampColumn === 'string' &&
+        (binding.timestampColumn as string).trim().length > 0;
+      if (!hasTimestampColumn) {
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.timestampColumn`,
+          message:
+            'GeoArrowTripsLayer requires _sqlroomsBinding.timestampColumn set to the timestamps list column, e.g. "timestamps"',
+        });
+      }
+    }
+
+    if (
+      layerType === 'GeoArrowTripsLayer' ||
+      layerType === 'GeoArrowPathLayer'
+    ) {
+      // LIST(...)/ST_MakeLine needs GROUP BY path/trip id.
+      if (boundDataset && config.datasets[boundDataset]) {
+        const source = config.datasets[boundDataset]?.source as
+          | {transformSql?: string; sqlQuery?: string}
+          | undefined;
+        const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
+        if (hasBadStMakeLinePointOrderBy(sql)) {
+          issues.push({
+            path: `datasets.${boundDataset}.source`,
+            message:
+              'ST_MakeLine is a scalar that takes a LIST of points. Use ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order)) — never ST_MakeLine(ST_Point(...) ORDER BY ...). ORDER BY is only valid inside LIST.',
+          });
+        }
+        const usesListAgg =
+          /\bST_MakeLine\s*\(\s*LIST\s*\(/i.test(sql) ||
+          /\bLIST\s*\([^)]*ORDER\s+BY/i.test(sql);
+        const hasGroupBy = /\bGROUP\s+BY\b/i.test(sql);
+        if (usesListAgg && !hasGroupBy) {
+          issues.push({
+            path: `datasets.${boundDataset}.source`,
+            message: `${layerType} waypoint aggregation using LIST(...)/ST_MakeLine must include GROUP BY the trip/path/route id column so each trip becomes one linestring. Without GROUP BY, waypoints are not split per trip.`,
+          });
+        }
+      }
+    }
   });
 
   const fitDataset = config.fitToData?.dataset;
@@ -318,6 +808,17 @@ export function getDeckMapResourceConfigIssues(
     issues.push({
       path: 'fitToData.dataset',
       message: `references unknown dataset "${fitDataset}"`,
+    });
+  }
+
+  if (
+    typeof config.mapStyle === 'string' &&
+    /^mapbox:/i.test(config.mapStyle.trim())
+  ) {
+    issues.push({
+      path: 'mapStyle',
+      message:
+        'mapbox:// styles are not supported (MapLibre cannot fetch that URL scheme). Omit mapStyle to use the host basemap, or use a token-free MapLibre-compatible https:// style URL',
     });
   }
 
@@ -341,13 +842,15 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - A new map must contain at least one config.datasets entry and at least one spec.layers entry.
 - Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
 - Bind every layer to a dataset with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable resource binding.
-- Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer.
+- Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowSolidPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer. Prefer typed GeoArrow* layers when geometry type is known; GeoJsonLayer is valid for table-backed WKB/GeoJSON via _sqlroomsBinding.
+${getDeckMapSharedAiContractRules()}
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
-- Use configMode "basic" for a straightforward single-layer map. Use "custom" only for advanced properties the basic settings cannot represent; custom mode does not relax dataset-source or layer-binding requirements.
-- For a point geometry column, prefer GeoArrowScatterplotLayer with dataset.geometryColumn and _sqlroomsBinding.geometryColumn set to the exact geometry column. For longitude/latitude columns, use source.transformSql to produce WKB geometry and bind that output column.
+- Use configMode "basic" for a straightforward single-layer map (including extruded column/polygon maps with one elevation column via "@@=col" or a scale accessor). Use "custom" only for advanced properties the basic settings cannot represent; custom mode disables the settings panel and does not relax dataset-source or layer-binding requirements.
+- Prefer data-driven color when a useful varying column exists: getFillColor (or getColor/getSourceColor/getTargetColor for arcs) with {"@@function":"colorScale","field":"<column>","type":"sequential"|"quantile"|"categorical","scheme":"<name>","domain":"auto"}. Use quantile for skewed numeric, sequential for uniform, categorical for strings. Skip numeric columns where min = max (or all zeros) unless the user names that column; otherwise use flat fill. Exact scheme names (case-sensitive): ${formatColorSchemePromptLists()} — do not invent names. Viridis/Plasma/Inferno require type "sequential"; quantile/quantize schemes must be ColorBrewer ramps (YlOrRd, Blues, …).
 - For updates, sparse config patches are allowed because they are merged with the existing resource. For creates, never send empty datasets or layers.
-- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates.
+- When updating only visual properties (color scale, scheme, radius, width, elevation scale, visibility, opacity), send datasets as an empty object {} so the tool schema stays valid and merge keeps the existing dataset registry. Do not omit datasets entirely. Never re-send bare source.tableName without transformSql/sqlQuery — that overwrites geometry SQL and breaks the map. Include real dataset entries only when changing a data source.
+- To remove existing layers or datasets, set replaceLayers and/or replaceDatasets to true and send the complete desired list or registry. Omit them for additive sparse updates. For layer-type switches, set replaceLayers: true with only the new layer — do not keep the old layer as visible: false.
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 
 Minimal table-backed point map shape:

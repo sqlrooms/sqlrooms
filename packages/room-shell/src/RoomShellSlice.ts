@@ -35,7 +35,6 @@ import {
   unregisterCommandsForOwner,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
-import {ErrorBoundary} from '@sqlrooms/ui';
 import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
@@ -115,7 +114,10 @@ export type RoomShellSliceState = {
       {fileName}: FileDataSource,
       onProgress: (progress: ProgressInfo) => void,
     ) => Promise<Uint8Array | File>;
-    CustomErrorBoundary: React.ComponentType<{
+    // Optional: consumers that render <RoomShellBase> pass their own boundary;
+    // when absent, RoomShellBase falls back to the default ErrorBoundary. Kept
+    // off the module's static imports so this slice stays UI-free.
+    CustomErrorBoundary?: React.ComponentType<{
       onRetry?: () => void;
       children?: ReactNode;
     }>;
@@ -259,7 +261,7 @@ export function createRoomShellSlice(
       layout: layoutProps,
       room: deprecatedRoomProps,
       fileDataSourceLoader,
-      CustomErrorBoundary = ErrorBoundary,
+      CustomErrorBoundary,
       createCommandProps,
       createDbProps,
       captureException = (exception) => console.error(exception),

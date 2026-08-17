@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import type {QueryHandle} from '@sqlrooms/duckdb';
-import {Table, vectorFromArray} from 'apache-arrow';
+import {Table, Utf8, vectorFromArray} from 'apache-arrow';
 import {
   createPreparedDatasetStore,
   resolvePreparedDeckDatasetState,
@@ -71,7 +71,7 @@ describe('PreparedDatasetStore', () => {
 
     await waitForEntry(store, cacheKey);
 
-    expect(executeSql).toHaveBeenCalledTimes(1);
+    expect(executeSql).toHaveBeenCalledTimes(2);
     expect(prepareDataset).toHaveBeenCalledTimes(1);
     expect(store.getState().entries[cacheKey]).toMatchObject({
       status: 'ready',
@@ -121,6 +121,65 @@ describe('PreparedDatasetStore', () => {
     });
   });
 
+  it('wraps native GEOMETRY columns from DESCRIBE before the data query', async () => {
+    const dataTable = new Table({value: vectorFromArray([1, 2, 3])});
+    const describeTable = new Table({
+      column_name: vectorFromArray(['geom', 'id']),
+      column_type: vectorFromArray(['GEOMETRY', 'BIGINT']),
+    });
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({
+        datasetId,
+        table: nextTable,
+        geometryEncodingHint,
+      }: {
+        datasetId: string;
+        table: Table;
+        geometryEncodingHint?: string;
+      }) => {
+        expect(geometryEncodingHint).toBe('wkb');
+        return createPreparedDataset(datasetId, nextTable);
+      },
+    );
+    const executeSql = jest.fn(async (sql: string) => {
+      if (sql.startsWith('DESCRIBE ')) {
+        return Promise.resolve(describeTable) as unknown as QueryHandle;
+      }
+      return Promise.resolve(dataTable) as unknown as QueryHandle;
+    });
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {
+      tableName: 'buildings',
+      geometryColumn: 'geom',
+    };
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'buildings',
+      executeSql,
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    expect(executeSql).toHaveBeenNthCalledWith(
+      2,
+      [
+        'SELECT * REPLACE (ST_AsWKB("geom") AS "geom")',
+        'FROM (SELECT * FROM "buildings") AS "__sqlrooms_as_wkb"',
+      ].join('\n'),
+    );
+    expect(store.getState().entries[cacheKey]).toMatchObject({
+      status: 'ready',
+    });
+  });
+
   it('executes table dataset inputs through compiled SQL', async () => {
     const table = new Table({value: vectorFromArray([1, 2, 3])});
     const connector = {};
@@ -153,17 +212,21 @@ describe('PreparedDatasetStore', () => {
 
     await waitForEntry(store, cacheKey);
 
-    expect(executeSql).toHaveBeenCalledWith(
-      [
-        'WITH __sqlrooms_source AS (',
-        '  SELECT * FROM "earthquakes"',
-        ')',
-        'SELECT *',
-        'FROM (',
-        'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
-        ') AS "__sqlrooms_transform"',
-      ].join('\n'),
+    const compiled = [
+      'WITH __sqlrooms_source AS (',
+      '  SELECT * FROM "earthquakes"',
+      ')',
+      'SELECT *',
+      'FROM (',
+      'SELECT *, ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+      ') AS "__sqlrooms_transform"',
+    ].join('\n');
+    expect(executeSql).toHaveBeenCalledTimes(2);
+    expect(executeSql).toHaveBeenNthCalledWith(
+      1,
+      `DESCRIBE SELECT * FROM (${compiled}) AS "__sqlrooms_describe_source"`,
     );
+    expect(executeSql).toHaveBeenNthCalledWith(2, compiled);
     expect(prepareDataset).toHaveBeenCalledTimes(1);
   });
 

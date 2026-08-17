@@ -4,7 +4,7 @@
     "interface": true,
     "type": true
   },
-  "ignoreDependencies": ["identity-obj-proxy"],
+  "ignoreDependencies": ["identity-obj-proxy", "jest-environment-node"],
   "ignore": [
     "python/**",
     "docs/**",

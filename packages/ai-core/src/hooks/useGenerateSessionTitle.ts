@@ -61,6 +61,10 @@ export type UseGenerateSessionTitleOptions = GenerateSessionTitleOptions & {
 };
 
 const DEFAULT_SESSION_NAME_PATTERNS = [
+  // New sessions are named via generateUniqueName('Chat', names, ' '),
+  // producing "Chat", "Chat 1", "Chat 2", ...
+  /^Chat$/,
+  /^Chat \d+$/,
   /^Untitled$/,
   /^Default Session$/,
   /^Session /,

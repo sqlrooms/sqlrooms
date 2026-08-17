@@ -87,6 +87,10 @@ export function AiPanel() {
 }
 ```
 
+When no chat session exists, the composer and prompt suggestions share the
+transient `ai.draftPrompt` value. `ai.setDraftPrompt()` can populate that draft,
+and the first `ai.createSession()` transfers it to the new session.
+
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
 
@@ -403,6 +407,25 @@ message and composer components stay under the same `Chat` compound API.
 </Chat.LocalAgentRoot>
 ```
 
+## Chat runtime providers
+
+`Chat.Root` and `Chat.LocalAgentRoot` render one of two runtime providers that
+the `Chat` message and composer components read via `useChatRuntime()`:
+
+- `SessionChatRuntimeProvider` — the default. Selects the **session** runtime, so
+  the UI is driven by the session-backed AI slice (`Chat.Root` wraps this).
+- `LocalAgentChatRuntimeProvider` — selects the **local-agent** runtime, driving
+  the same UI from a pre-constructed `ToolLoopAgent` with its own local message
+  state (`Chat.LocalAgentRoot` wraps this). It takes the same props as
+  `Chat.LocalAgentRoot` (`agent`, `initialMessages`, `initialSuggestions`,
+  `onMessagesChange`).
+
+The two are mutually exclusive modes, not layers: a `Chat` subtree is wrapped by
+exactly one of them. Most apps use `Chat.Root` / `Chat.LocalAgentRoot` and never
+touch these directly; they are exported for advanced setups that compose the
+runtime themselves. Both must wrap the `Chat` components that call
+`useChatRuntime()`; used outside a provider, the runtime defaults to session mode.
+
 ## Chat search
 
 `Chat` renders a `ChatSearchProvider` and exposes `Chat.Search`, an in-conversation
@@ -482,6 +505,48 @@ const snapshots = useRoomStore((state) => state.ai.devtools.agentSnapshots);
 state.ai.devtools.clearAgentSnapshots();
 ```
 
+### Provider-context diagnostics
+
+Provider-context capture is also opt-in. Enable it when creating the AI slice;
+records are kept in memory and the oldest record is discarded when the limit
+is exceeded (the default limit is `100`):
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  devtools: {
+    captureProviderContexts: true,
+    maxProviderContextRecords: 100,
+  },
+});
+
+const providerContexts = useRoomStore(
+  (state) => state.ai.devtools.providerContexts,
+);
+roomStore.getState().ai.devtools.clearProviderContexts();
+```
+
+Each `ProviderContextDiagnostic` describes one provider step using metadata
+only: role, provider/model, session and step identifiers, instruction/message
+sizes, tool names and schema sizes, source labels, optional preparation
+metrics, and provider-reported input tokens when available. Raw instructions,
+messages, and tool schemas are not copied into the record. The records are
+transient devtools state and are also shown by `ChatSessionDebugView`.
+
+Core chat and `ai.sendPrompt()` provider steps are captured automatically when
+the option is enabled. Custom or nested agents can use
+`state.ai.devtools.measureProviderContext(input)` to measure and append the same
+record shape while respecting the capture flag. The main package also exports
+`measureProviderContext`, `tryMeasureProviderContext`,
+`MeasureProviderContextArgs`, and `ProviderContextDiagnostic` for integrations
+that need to measure outside a slice method. `measureProviderContext` is the
+strict helper and rejects measurement failures; `tryMeasureProviderContext` is
+the fail-open request-path helper that logs a warning and returns `undefined`
+so diagnostics cannot abort a valid provider request. Callers using either
+standalone helper are responsible for writing the returned record to their
+chosen diagnostics store.
+
 ## Useful exports
 
 - Slice/hooks: `createAiSlice`, `useStoreWithAi`, `generateSessionTitle`, `useGenerateSessionTitle`, `AiSliceState`
@@ -492,11 +557,63 @@ state.ai.devtools.clearAgentSnapshots();
 - Session helpers: `ChatSessionSchema`, `isChatSessionEmpty`, `getChatTurnsFromUiMessages`
 - Forking: `ai.forkSessionFromMessage()`, `AiSessionForkOrigin`, `ForkSessionFromMessageArgs`
 - Types: `ChatTurn`, `ToolRendererProps`, `ToolRenderer`, `ToolRendererRegistry`, `StoredTool`, `StoredToolSet`
+- Provider diagnostics: `measureProviderContext`, `tryMeasureProviderContext`, `MeasureProviderContextArgs`, `ProviderContextDiagnostic`
 - Tool/agent utilities:
   - `cleanupPendingUiMessages`
   - `cleanupPendingAnalysisResults`
   - `fixIncompleteToolCalls`
   - `streamSubAgent`
+  - `withRunContextTools`
+
+### Forwarding execution scope into nested agents
+
+Top-level tools receive the invoking turn's `sessionId` and `AiRunContext`
+because the chat transport wraps `state.ai.tools` with `withRunContextTools`.
+Tools handed to a nested `ToolLoopAgent` are not wrapped by the transport, so
+without the same wrapper they execute with no scope and any target resolution
+that defaults to "the current artifact/map" silently follows mutable UI
+selection instead of the artifact captured when the prompt was submitted.
+
+Wrap nested toolsets with the parent's execution options:
+
+```ts
+import {withRunContextTools} from '@sqlrooms/ai-core';
+
+const nestedTool = tool({
+  inputSchema,
+  execute: async (input, options) => {
+    const agent = new ToolLoopAgent({
+      model,
+      instructions,
+      // `options` carries the parent turn's scope; forward it verbatim.
+      tools: withRunContextTools(
+        nestedTools,
+        options as AiToolExecutionContext,
+      ),
+    });
+    return streamSubAgent(
+      agent,
+      prompt,
+      store,
+      options.toolCallId,
+      // The wrapper preserves `abortSignal` for the nested tools, but the
+      // sub-agent loop itself only observes cancellation through this argument.
+      options.abortSignal,
+    );
+  },
+});
+```
+
+Forward `options.abortSignal` to `streamSubAgent`. `withRunContextTools` leaves
+the signal intact for the tools the sub-agent calls, but the agent loop —
+including the model stream and any approval wait — is only cancellable through
+`streamSubAgent`'s fifth argument, so omitting it lets a stopped parent turn
+leave the nested run going.
+
+Pass the parent's `getAiRunContext` (not a copied `aiRunContext`) so an in-turn
+retarget via `set_primary_context_artifact` is visible to subsequent nested tool
+calls. Parent scope wins over inner options, so a nested agent cannot reassign
+the owning session; fields the parent leaves `undefined` are preserved.
 
 `AnalysisSessionSchema`, `isAnalysisSessionEmpty`, `AnalysisResultsContainer`,
 `AnalysisResult`, `AnalysisAnswer`, `processAnalysisAnswerContent`, and

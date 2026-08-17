@@ -6,6 +6,7 @@ import {
   type CreateDashboardAgentToolOptions,
 } from '@sqlrooms/mosaic/ai';
 import type {StoreApi} from 'zustand';
+import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import type {RoomState} from './store-types';
 import {createDatabaseAiAdapter} from './createDatabaseAiAdapter';
 
@@ -40,6 +41,9 @@ export function dashboardAgentTool(
   };
 
   return deckMapsEnabled
-    ? createDashboardAgentToolWithDeckMaps(options)
+    ? createDashboardAgentToolWithDeckMaps({
+        ...options,
+        stripCatalogNames: [CLI_WORKSPACE_CATALOG],
+      })
     : createDashboardAgentTool(options);
 }

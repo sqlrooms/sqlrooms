@@ -1,104 +1,22 @@
 import * as chromatic from 'd3-scale-chromatic';
+import type {
+  BinnedNumericScheme,
+  CategoricalScheme,
+  ContinuousDivergingScheme,
+  ContinuousSequentialScheme,
+} from './colorSchemeNames.js';
 
-export const continuousSequentialSchemes = [
-  'Blues',
-  'BuGn',
-  'BuPu',
-  'Cividis',
-  'Cool',
-  'CubehelixDefault',
-  'GnBu',
-  'Greens',
-  'Greys',
-  'Inferno',
-  'Magma',
-  'OrRd',
-  'Oranges',
-  'Plasma',
-  'PuBu',
-  'PuBuGn',
-  'PuRd',
-  'Purples',
-  'RdPu',
-  'Reds',
-  'Turbo',
-  'Viridis',
-  'Warm',
-  'YlGn',
-  'YlGnBu',
-  'YlOrBr',
-  'YlOrRd',
-  'Rainbow',
-  'Sinebow',
-] as const;
-
-export const continuousDivergingSchemes = [
-  'BrBG',
-  'PRGn',
-  'PiYG',
-  'PuOr',
-  'RdBu',
-  'RdGy',
-  'RdYlBu',
-  'RdYlGn',
-  'Spectral',
-] as const;
-
-export const binnedNumericSchemes = [
-  'Blues',
-  'BuGn',
-  'BuPu',
-  'GnBu',
-  'Greens',
-  'Greys',
-  'OrRd',
-  'Oranges',
-  'PuBu',
-  'PuBuGn',
-  'PuRd',
-  'Purples',
-  'RdPu',
-  'Reds',
-  'YlGn',
-  'YlGnBu',
-  'YlOrBr',
-  'YlOrRd',
-  'BrBG',
-  'PRGn',
-  'PiYG',
-  'PuOr',
-  'RdBu',
-  'RdGy',
-  'RdYlBu',
-  'RdYlGn',
-  'Spectral',
-] as const;
-
-export const categoricalSchemes = [
-  'Accent',
-  'Dark2',
-  'Paired',
-  'Pastel1',
-  'Pastel2',
-  'Set1',
-  'Set2',
-  'Set3',
-  'Tableau10',
-  'Observable10',
-  'Category10',
-] as const;
-
-export type ContinuousSequentialScheme =
-  (typeof continuousSequentialSchemes)[number];
-export type ContinuousDivergingScheme =
-  (typeof continuousDivergingSchemes)[number];
-export type BinnedNumericScheme = (typeof binnedNumericSchemes)[number];
-export type CategoricalScheme = (typeof categoricalSchemes)[number];
-export type ColorScaleScheme =
-  | ContinuousSequentialScheme
-  | ContinuousDivergingScheme
-  | BinnedNumericScheme
-  | CategoricalScheme;
+export {
+  continuousSequentialSchemes,
+  continuousDivergingSchemes,
+  binnedNumericSchemes,
+  categoricalSchemes,
+  type ContinuousSequentialScheme,
+  type ContinuousDivergingScheme,
+  type BinnedNumericScheme,
+  type CategoricalScheme,
+  type ColorScaleScheme,
+} from './colorSchemeNames.js';
 
 export const continuousSequentialInterpolators: Record<
   ContinuousSequentialScheme,

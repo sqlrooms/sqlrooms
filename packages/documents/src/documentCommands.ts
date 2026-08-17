@@ -1,4 +1,7 @@
-import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
+import {
+  resolveArtifactTargetId,
+  type ArtifactMetadataType,
+} from '@sqlrooms/artifacts';
 import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import type {DocumentsSliceState} from './DocumentsSlice';
@@ -98,12 +101,15 @@ export function createDocumentCommands<
         idempotent: true,
         riskLevel: 'low',
       },
-      execute: ({getState}, input) => {
+      execute: ({getState, invocation}, input) => {
         const state = getState();
         const {artifactId: requestedArtifactId} =
           (input as z.infer<typeof DocumentIdInput> | undefined) ?? {};
-        const artifactId =
-          requestedArtifactId ?? state.artifacts.config.currentArtifactId;
+        const artifactId = resolveArtifactTargetId({
+          requestedArtifactId,
+          invocation,
+          currentArtifactId: state.artifacts.config.currentArtifactId,
+        });
         const resolved = resolveDocumentArtifact(
           state,
           artifactId,
@@ -174,16 +180,6 @@ export function createDocumentCommands<
             assets: Object.values(
               state.documents.getDocument(artifactId)?.assets ?? {},
             ).map(documentAssetMetadata),
-            artifactTargetChange: {
-              artifactId,
-              artifactType: 'document',
-              title:
-                state.artifacts.getArtifact(artifactId)?.title ??
-                title ??
-                'Document',
-              change: 'created',
-              shouldContinueChat: select,
-            },
           },
         };
       },

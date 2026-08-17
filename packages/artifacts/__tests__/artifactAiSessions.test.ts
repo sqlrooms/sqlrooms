@@ -6,12 +6,14 @@ import {
 import {produce} from 'immer';
 import {createStore} from 'zustand';
 import {
+  ArtifactSessionLinkSchema,
   createArtifactsSlice,
   defineArtifactTypes,
   type ArtifactsSliceState,
 } from '../src';
 import {
-  cleanupAiSessionArtifacts,
+  cleanupSessionArtifactLinks,
+  ArtifactAiConfigSchema,
   createArtifactAiSlice,
   findAiSessionForArtifactWithContextItem,
   getAiSessionGroupsByArtifact,
@@ -21,7 +23,10 @@ import {
   getOwningArtifactRunContextItems,
   getRunningAiSessionCountsByArtifact,
   isAiSessionVisibleForArtifact,
+  type ArtifactAiSessionFilterOptions,
+  type ArtifactAiSessionGroupsOptions,
   type ArtifactAiSliceState,
+  type CleanupSessionArtifactLinksOptions,
 } from '../src/ai';
 
 type TestRoomState = BaseRoomStoreState &
@@ -62,7 +67,7 @@ function createSession(
   };
 }
 
-function createTestStore() {
+function createTestStore({autoSync = false}: {autoSync?: boolean} = {}) {
   const artifactTypes = defineArtifactTypes({
     dashboard: {
       label: 'Dashboard',
@@ -116,7 +121,7 @@ function createTestStore() {
         );
       },
     },
-    ...createArtifactAiSlice({autoSync: false})(set, get, storeApi),
+    ...createArtifactAiSlice({autoSync})(set, get, storeApi),
   }));
 
   store.getState().artifacts.ensureArtifact('artifact-a', {
@@ -138,38 +143,79 @@ describe('artifact AI session helpers', () => {
     createSession('session-b', 2, true),
     createSession('session-unowned', 4, true),
   ];
-  const aiSessionArtifacts = {
-    'session-a-old': 'artifact-a',
-    'session-a-new': 'artifact-a',
-    'session-b': 'artifact-b',
-  };
+  const sessionArtifactLinks = [
+    {
+      sessionId: 'session-a-old',
+      artifactId: 'artifact-a',
+      createdAt: 1000,
+      linkType: 'created' as const,
+    },
+    {
+      sessionId: 'session-a-new',
+      artifactId: 'artifact-a',
+      createdAt: 3000,
+      linkType: 'attached' as const,
+    },
+    {
+      sessionId: 'session-b',
+      artifactId: 'artifact-b',
+      createdAt: 2000,
+      linkType: 'created' as const,
+    },
+  ];
+
+  it('exposes link-aware option types for public helpers', () => {
+    const filterOptions: ArtifactAiSessionFilterOptions = {
+      sessionArtifactLinks,
+      sessionId: 'session-a-new',
+      artifactId: 'artifact-a',
+    };
+    const groupsOptions: ArtifactAiSessionGroupsOptions = {
+      sessions,
+      sessionArtifactLinks,
+    };
+    const cleanupOptions: CleanupSessionArtifactLinksOptions = {
+      sessions,
+      sessionArtifactLinks,
+      artifactIds: ['artifact-a', 'artifact-b'],
+    };
+
+    expect(isAiSessionVisibleForArtifact(filterOptions)).toBe(true);
+    expect(getAiSessionGroupsByArtifact(groupsOptions)).toEqual({
+      'artifact-a': ['session-a-old', 'session-a-new'],
+      'artifact-b': ['session-b'],
+    });
+    expect(cleanupSessionArtifactLinks(cleanupOptions)).toEqual(
+      sessionArtifactLinks,
+    );
+  });
 
   it('filters and selects only explicitly artifact-owned sessions', () => {
     expect(
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        'session-a-new',
-        'artifact-a',
-      ),
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks,
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-a',
+      }),
     ).toBe(true);
     expect(
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        'session-unowned',
-        'artifact-a',
-      ),
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks,
+        sessionId: 'session-unowned',
+        artifactId: 'artifact-a',
+      }),
     ).toBe(false);
     expect(
       getAiSessionIdsForArtifact({
         sessions,
-        aiSessionArtifacts,
+        sessionArtifactLinks,
         artifactId: 'artifact-a',
       }),
     ).toEqual(['session-a-old', 'session-a-new']);
     expect(
       getLatestAiSessionIdForArtifact({
         sessions,
-        aiSessionArtifacts,
+        sessionArtifactLinks,
         artifactId: 'artifact-a',
       }),
     ).toBe('session-a-new');
@@ -184,12 +230,32 @@ describe('artifact AI session helpers', () => {
           createSession('empty-newer', 2),
           createSession('running-empty', 4, true),
         ],
-        aiSessionArtifacts: {
-          'empty-older': 'artifact-a',
-          'non-empty-newer': 'artifact-a',
-          'empty-newer': 'artifact-a',
-          'running-empty': 'artifact-a',
-        },
+        sessionArtifactLinks: [
+          {
+            sessionId: 'empty-older',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'non-empty-newer',
+            artifactId: 'artifact-a',
+            createdAt: 3000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'empty-newer',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'running-empty',
+            artifactId: 'artifact-a',
+            createdAt: 4000,
+            linkType: 'attached',
+          },
+        ],
         artifactId: 'artifact-a',
       }),
     ).toBe('empty-newer');
@@ -212,11 +278,26 @@ describe('artifact AI session helpers', () => {
             draftContextItemIds: ['block:worksheet:block-a'],
           },
         ],
-        aiSessionArtifacts: {
-          'older-draft-match': 'artifact-a',
-          'newer-draft-match': 'artifact-a',
-          'other-artifact-match': 'artifact-b',
-        },
+        sessionArtifactLinks: [
+          {
+            sessionId: 'older-draft-match',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'newer-draft-match',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'other-artifact-match',
+            artifactId: 'artifact-b',
+            createdAt: 3000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -241,7 +322,14 @@ describe('artifact AI session helpers', () => {
             },
           },
         ],
-        aiSessionArtifacts: {'run-match': 'artifact-a'},
+        sessionArtifactLinks: [
+          {
+            sessionId: 'run-match',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -253,11 +341,19 @@ describe('artifact AI session helpers', () => {
       ...createSession('running-match', 3, true),
       draftContextItemIds: ['block:worksheet:block-a'],
     };
+    const testLinks = [
+      {
+        sessionId: 'running-match',
+        artifactId: 'artifact-a',
+        createdAt: 3000,
+        linkType: 'created' as const,
+      },
+    ];
 
     expect(
       findAiSessionForArtifactWithContextItem({
         sessions: [matchingRunningSession],
-        aiSessionArtifacts: {'running-match': 'artifact-a'},
+        sessionArtifactLinks: testLinks,
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -266,7 +362,7 @@ describe('artifact AI session helpers', () => {
     expect(
       findAiSessionForArtifactWithContextItem({
         sessions: [matchingRunningSession],
-        aiSessionArtifacts: {'running-match': 'artifact-a'},
+        sessionArtifactLinks: testLinks,
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
         includeRunning: true,
@@ -283,7 +379,14 @@ describe('artifact AI session helpers', () => {
             draftContextItemIds: ['block:worksheet:block-b'],
           },
         ],
-        aiSessionArtifacts: {'no-match': 'artifact-a'},
+        sessionArtifactLinks: [
+          {
+            sessionId: 'no-match',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
         contextItemId: 'block:worksheet:block-a',
       }),
@@ -297,10 +400,20 @@ describe('artifact AI session helpers', () => {
           createSession('empty-older', 1),
           createSession('empty-newer', 2),
         ],
-        aiSessionArtifacts: {
-          'empty-older': 'artifact-a',
-          'empty-newer': 'artifact-a',
-        },
+        sessionArtifactLinks: [
+          {
+            sessionId: 'empty-older',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'empty-newer',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+        ],
         artifactId: 'artifact-a',
         excludeSessionIds: ['empty-newer'],
       }),
@@ -317,7 +430,14 @@ describe('artifact AI session helpers', () => {
             lastOpenedAt: 1,
           } as any,
         ],
-        aiSessionArtifacts: {'summary-only': 'artifact-a'},
+        sessionArtifactLinks: [
+          {
+            sessionId: 'summary-only',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ],
         artifactId: 'artifact-a',
       }),
     ).toBeUndefined();
@@ -325,41 +445,87 @@ describe('artifact AI session helpers', () => {
 
   it('groups and counts running sessions by artifact', () => {
     expect(
-      getAiSessionGroupsByArtifact({sessions, aiSessionArtifacts}),
+      getAiSessionGroupsByArtifact({sessions, sessionArtifactLinks}),
     ).toEqual({
       'artifact-a': ['session-a-old', 'session-a-new'],
       'artifact-b': ['session-b'],
     });
     expect(
-      getRunningAiSessionCountsByArtifact({sessions, aiSessionArtifacts}),
+      getRunningAiSessionCountsByArtifact({sessions, sessionArtifactLinks}),
     ).toEqual({
       'artifact-a': 1,
       'artifact-b': 1,
     });
   });
 
+  it('drops links to sessions that no longer exist when grouping', () => {
+    expect(
+      getAiSessionGroupsByArtifact({
+        sessions,
+        sessionArtifactLinks: [
+          ...sessionArtifactLinks,
+          {
+            sessionId: 'deleted-session',
+            artifactId: 'artifact-a',
+            createdAt: 5000,
+            linkType: 'attached' as const,
+          },
+        ],
+      }),
+    ).toEqual({
+      'artifact-a': ['session-a-old', 'session-a-new'],
+      'artifact-b': ['session-b'],
+    });
+  });
+
   it('removes mappings for deleted sessions and artifacts', () => {
     expect(
-      cleanupAiSessionArtifacts({
-        aiSessionArtifacts: {
-          ...aiSessionArtifacts,
-          'deleted-session': 'artifact-a',
-          'session-a-new': 'deleted-artifact',
-        },
+      cleanupSessionArtifactLinks({
+        sessionArtifactLinks: [
+          ...sessionArtifactLinks,
+          {
+            sessionId: 'deleted-session',
+            artifactId: 'artifact-a',
+            createdAt: 5000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'session-a-new',
+            artifactId: 'deleted-artifact',
+            createdAt: 6000,
+            linkType: 'attached',
+          },
+        ],
         sessions,
         artifactIds: ['artifact-a', 'artifact-b'],
       }),
-    ).toEqual({
-      'session-a-old': 'artifact-a',
-      'session-b': 'artifact-b',
-    });
+    ).toEqual([
+      {
+        sessionId: 'session-a-old',
+        artifactId: 'artifact-a',
+        createdAt: 1000,
+        linkType: 'created',
+      },
+      {
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-a',
+        createdAt: 3000,
+        linkType: 'attached',
+      },
+      {
+        sessionId: 'session-b',
+        artifactId: 'artifact-b',
+        createdAt: 2000,
+        linkType: 'created',
+      },
+    ]);
   });
 
   it('prepends the owning artifact to run context items', () => {
     expect(
       getOwningArtifactRunContextItems({
         sessionId: 'session-a-new',
-        aiSessionArtifacts,
+        sessionArtifactLinks,
         artifactsById: {
           'artifact-a': {
             id: 'artifact-a',
@@ -389,6 +555,83 @@ describe('artifact AI session helpers', () => {
       }).map((item) => item.id),
     ).toEqual(['artifact-a', 'artifact-b']);
   });
+
+  it('prefers the target artifact over the most recently linked one', () => {
+    // session-a-new is linked to artifact-a (createdAt 3000). Add a newer link
+    // to artifact-b so the "latest" artifact is artifact-b.
+    const multiLinks = [
+      ...sessionArtifactLinks,
+      {
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-b',
+        createdAt: 4000,
+        linkType: 'attached' as const,
+      },
+    ];
+    const artifactsById = {
+      'artifact-a': {
+        id: 'artifact-a',
+        type: 'dashboard',
+        title: 'Dashboard A',
+      },
+      'artifact-b': {
+        id: 'artifact-b',
+        type: 'block-document',
+        title: 'Block Document B',
+      },
+    };
+
+    // Without a preferred artifact the latest link (artifact-b) wins.
+    expect(
+      getOwningArtifactRunContextItems({
+        sessionId: 'session-a-new',
+        sessionArtifactLinks: multiLinks,
+        artifactsById,
+      }).map((item) => item.id),
+    ).toEqual(['artifact-b']);
+
+    // Asking from artifact-a should direct the run at artifact-a even though it
+    // is not the most recently linked artifact.
+    expect(
+      getOwningArtifactRunContextItems({
+        sessionId: 'session-a-new',
+        sessionArtifactLinks: multiLinks,
+        artifactsById,
+        preferredArtifactId: 'artifact-a',
+      }).map((item) => item.id),
+    ).toEqual(['artifact-a']);
+  });
+
+  it('ignores a preferred artifact not linked to the session', () => {
+    const multiLinks = [
+      ...sessionArtifactLinks,
+      {
+        sessionId: 'session-a-new',
+        artifactId: 'artifact-b',
+        createdAt: 4000,
+        linkType: 'attached' as const,
+      },
+    ];
+    const artifactsById = {
+      'artifact-a': {id: 'artifact-a', type: 'dashboard', title: 'Dashboard A'},
+      'artifact-b': {
+        id: 'artifact-b',
+        type: 'block-document',
+        title: 'Block Document B',
+      },
+    };
+
+    // 'artifact-b' is linked, but 'unlinked-artifact' is not part of the
+    // session, so it falls back to the latest linked artifact (artifact-b).
+    expect(
+      getOwningArtifactRunContextItems({
+        sessionId: 'session-a-new',
+        sessionArtifactLinks: multiLinks,
+        artifactsById,
+        preferredArtifactId: 'unlinked-artifact',
+      }).map((item) => item.id),
+    ).toEqual(['artifact-b']);
+  });
 });
 
 describe('createArtifactAiSlice', () => {
@@ -399,40 +642,17 @@ describe('createArtifactAiSlice', () => {
     const sessionId = store.getState().artifactAi.createArtifactScopedSession();
 
     expect(sessionId).toBe('session-1');
-    expect(store.getState().artifactAi.getSessionArtifactId('session-1')).toBe(
-      'artifact-a',
-    );
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('session-1'),
+    ).toBe('artifact-a');
     expect(store.getState().ai.config.currentSessionId).toBe('session-1');
-  });
-
-  it('reuses an empty artifact-scoped session instead of creating another one', () => {
-    const store = createTestStore();
-    store.getState().artifacts.setCurrentArtifact('artifact-a');
-    store.setState(
-      produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [
-          createSession('empty-session', 1),
-          {...createSession('used-session', 2), prompt: 'hello'},
-        ];
-        draft.ai.config.currentSessionId = 'used-session';
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'empty-session': 'artifact-a',
-          'used-session': 'artifact-a',
-        };
-      }),
-    );
-
-    const sessionId = store.getState().artifactAi.createArtifactScopedSession();
-
-    expect(sessionId).toBe('empty-session');
-    expect(store.getState().ai.config.currentSessionId).toBe('empty-session');
-    expect(store.getState().ai.config.sessions).toHaveLength(2);
     expect(
       store
         .getState()
-        .ai.config.sessions.find((session) => session.id === 'empty-session')
-        ?.lastOpenedAt,
-    ).toBe(100);
+        .artifactAi.config.sessionArtifactLinks.find(
+          (link) => link.sessionId === 'session-1',
+        )?.linkType,
+    ).toBe('attached');
   });
 
   it('creates a new artifact-scoped session instead of reusing the current empty session', () => {
@@ -442,9 +662,14 @@ describe('createArtifactAiSlice', () => {
       produce(store.getState(), (draft: TestRoomState) => {
         draft.ai.config.sessions = [createSession('current-empty', 1)];
         draft.ai.config.currentSessionId = 'current-empty';
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'current-empty': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'current-empty',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
@@ -453,9 +678,9 @@ describe('createArtifactAiSlice', () => {
     expect(sessionId).toBe('session-2');
     expect(store.getState().ai.config.currentSessionId).toBe('session-2');
     expect(store.getState().ai.config.sessions).toHaveLength(2);
-    expect(store.getState().artifactAi.getSessionArtifactId('session-2')).toBe(
-      'artifact-a',
-    );
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('session-2'),
+    ).toBe('artifact-a');
   });
 
   it('creates a new artifact-scoped session when explicit session options are provided', () => {
@@ -464,9 +689,14 @@ describe('createArtifactAiSlice', () => {
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
         draft.ai.config.sessions = [createSession('empty-session', 1)];
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'empty-session': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'empty-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
@@ -487,9 +717,92 @@ describe('createArtifactAiSlice', () => {
       modelProvider: 'anthropic',
       model: 'claude-sonnet-4',
     });
-    expect(store.getState().artifactAi.getSessionArtifactId('session-2')).toBe(
-      'artifact-a',
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('session-2'),
+    ).toBe('artifact-a');
+  });
+
+  it('does not revert the artifact after creating a scoped session then selecting another artifact', () => {
+    const store = createTestStore();
+
+    // Select artifact A and start an artifact-scoped chat on it. This creates
+    // a new session and makes it current under a suspended sync.
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    const sessionId = store.getState().artifactAi.createArtifactScopedSession();
+    expect(sessionId).toBe('session-1');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+
+    // User now selects a different artifact B. The subscription-driven sync
+    // must treat this as an artifact change, not a phantom session change.
+    store.getState().artifacts.setCurrentArtifact('artifact-b');
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    // Bug: with a stale baseline the sync misreads session-1 as "just changed"
+    // (Priority 1) and reverts the selection back to artifact-a.
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-b',
     );
+  });
+
+  it('anchors auto-sync to the selection that exists at initialization', async () => {
+    const store = createTestStore({autoSync: true});
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifacts.config.currentArtifactId = 'artifact-a';
+        draft.ai.config.sessions = [createSession('session-a', 1)];
+        draft.ai.config.currentSessionId = 'session-a';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-a',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
+      }),
+    );
+    await store.getState().artifactAi.initialize();
+
+    store.getState().artifacts.setCurrentArtifact('artifact-b');
+
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-b',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+    await store.getState().artifactAi.destroy();
+  });
+
+  it('keeps an unlinked chat session selected when sync runs without a current artifact', async () => {
+    const store = createTestStore({autoSync: true});
+    await store.getState().artifactAi.initialize();
+
+    // Welcome-screen / "New Chat" path: create a chat that is not linked to
+    // any artifact and make it current. Activation is a side effect of
+    // createSession setting currentSessionId.
+    store.getState().ai.createSession('Chat 1');
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+
+    // A later, unrelated ai.config change (submitting a prompt calls
+    // setPrompt right after creation; the sidebar produces similar updates)
+    // triggers another sync pass. That pass sees neither a session nor an
+    // artifact change and falls through to the reconciliation fallback.
+    // Before the fix the fallback called selectLatestSessionForArtifact(undefined),
+    // which cleared currentSessionId and dropped the UI back to the start
+    // screen (so the created chat "never activated" and startAnalysisWhenReady
+    // timed out waiting for its chat provider to mount).
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        const session = draft.ai.config.sessions.find(
+          (candidate) => candidate.id === 'session-1',
+        );
+        if (session) {
+          session.prompt = 'How many pizza places are in San Francisco?';
+        }
+      }),
+    );
+
+    expect(store.getState().ai.config.currentSessionId).toBe('session-1');
+    await store.getState().artifactAi.destroy();
   });
 
   it('inherits artifact ownership for forked sessions', () => {
@@ -507,18 +820,121 @@ describe('createArtifactAiSlice', () => {
             sourceSessionId: 'source-session',
           },
         };
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'source-session': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'source-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
     store.getState().artifactAi.syncCurrentArtifactAiSession();
 
     expect(
-      store.getState().artifactAi.getSessionArtifactId('target-session'),
+      store.getState().artifactAi.getLatestArtifactForSession('target-session'),
     ).toBe('artifact-a');
     expect(store.getState().ai.config.currentSessionId).toBe('target-session');
+  });
+
+  it('inherits all artifacts for a fork of a multi-artifact session', () => {
+    const store = createTestStore();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('target-session', 2),
+          createSession('source-session', 1),
+        ];
+        draft.ai.config.currentSessionId = 'target-session';
+        draft.ai.config.sessionForks = {
+          'target-session': {
+            sourceSessionId: 'source-session',
+          },
+        };
+        // The source session is linked to two different artifacts.
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'source-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'source-session',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    // The fork must inherit BOTH artifacts, not just the first link.
+    expect(
+      store.getState().artifactAi.getArtifactIdsForSession('target-session'),
+    ).toEqual(['artifact-a', 'artifact-b']);
+    expect(
+      store.getState().artifactAi.getLatestArtifactForSession('target-session'),
+    ).toBe('artifact-b');
+    expect(
+      store
+        .getState()
+        .artifactAi.config.sessionArtifactLinks.filter(
+          (link) => link.sessionId === 'target-session',
+        )
+        .map((link) => link.createdAt),
+    ).toEqual([1000, 2000]);
+  });
+
+  it('keeps a session selected while the current artifact is any of its links', () => {
+    const store = createTestStore();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifacts.config.currentArtifactId = 'artifact-a';
+        draft.ai.config.sessions = [
+          createSession('current-session', 1),
+          createSession('other-session', 2),
+        ];
+        draft.ai.config.currentSessionId = 'current-session';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'current-session',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'current-session',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'other-session',
+            artifactId: 'artifact-a',
+            createdAt: 3000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [...draft.ai.config.sessions];
+      }),
+    );
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(store.getState().ai.config.currentSessionId).toBe('current-session');
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
   });
 
   it('selects the latest mapped session and ignores unowned sessions', () => {
@@ -531,10 +947,20 @@ describe('createArtifactAiSlice', () => {
           createSession('owned-newer', 5),
         ];
         draft.ai.config.currentSessionId = 'unowned-newer';
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'owned-older': 'artifact-a',
-          'owned-newer': 'artifact-a',
-        };
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'owned-older',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'owned-newer',
+            artifactId: 'artifact-a',
+            createdAt: 5000,
+            linkType: 'attached',
+          },
+        ];
       }),
     );
 
@@ -543,37 +969,454 @@ describe('createArtifactAiSlice', () => {
     expect(store.getState().ai.config.currentSessionId).toBe('owned-newer');
   });
 
-  it('clears the current session when the current artifact has no owned sessions', () => {
+  it('clears the current artifact when its owning chat is deleted', () => {
     const store = createTestStore();
+
+    // Artifact-a is selected together with its only owning session.
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [createSession('unowned', 1)];
-        draft.ai.config.currentSessionId = 'unowned';
+        draft.ai.config.sessions = [createSession('session-1', 1)];
+        draft.ai.config.currentSessionId = 'session-1';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-1',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+        ];
+      }),
+    );
+
+    // Baseline the change-detection against the aligned state.
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+
+    // Delete the only chat, mirroring ai.deleteSession removing the last
+    // session: the session disappears and currentSessionId becomes undefined.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [];
+        draft.ai.config.currentSessionId = undefined;
       }),
     );
 
     store.getState().artifactAi.syncCurrentArtifactAiSession();
 
+    expect(store.getState().artifacts.config.currentArtifactId).toBeUndefined();
     expect(store.getState().ai.config.currentSessionId).toBeUndefined();
+  });
+
+  it('follows the artifact to a remaining session when the current session is removed', () => {
+    const store = createTestStore();
+
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-current', 2),
+          createSession('session-other', 1),
+        ];
+        draft.ai.config.currentSessionId = 'session-current';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-current',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-other',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+
+    // The current session is removed while the artifact still has another
+    // session. The artifact stays selected and we follow it to that session.
+    // A newer, unlinked session remains too: sync must follow the artifact's
+    // linked session, not simply pick the most recent remaining session.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-unowned', 3),
+          createSession('session-other', 1),
+        ];
+        draft.ai.config.currentSessionId = undefined;
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBe('session-other');
+  });
+
+  it('ignores a global fallback session when deleting the active artifact chat', () => {
+    const store = createTestStore();
+
+    store.getState().artifacts.setCurrentArtifact('artifact-a');
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-current', 3),
+          createSession('session-b', 2),
+          createSession('session-a-other', 1),
+        ];
+        draft.ai.config.currentSessionId = 'session-current';
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-current',
+            artifactId: 'artifact-a',
+            createdAt: 3000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-b',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'session-a-other',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    // Mirror ai.deleteSession(): it removes the active session and selects
+    // the first remaining global session, which belongs to artifact B here.
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.ai.config.sessions = [
+          createSession('session-b', 2),
+          createSession('session-a-other', 1),
+        ];
+        draft.ai.config.currentSessionId = 'session-b';
+      }),
+    );
+
+    store.getState().artifactAi.syncCurrentArtifactAiSession();
+
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(
+      'artifact-a',
+    );
+    expect(store.getState().ai.config.currentSessionId).toBe('session-a-other');
   });
 
   it('cleans up stale mappings', () => {
     const store = createTestStore();
     store.setState(
       produce(store.getState(), (draft: TestRoomState) => {
-        draft.ai.config.sessions = [createSession('session-a', 1)];
-        draft.artifactAi.config.aiSessionArtifacts = {
-          'session-a': 'artifact-a',
-          'deleted-session': 'artifact-a',
-          'session-b': 'deleted-artifact',
-        };
+        // Both session-a and session-b exist, so the deleted-artifact link below
+        // can only be removed because its artifact is gone (isolating artifact
+        // cleanup from session cleanup, which the deleted-session link covers).
+        draft.ai.config.sessions = [
+          createSession('session-a', 1),
+          createSession('session-b', 2),
+        ];
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 'session-a',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'created',
+          },
+          {
+            sessionId: 'deleted-session',
+            artifactId: 'artifact-a',
+            createdAt: 2000,
+            linkType: 'attached',
+          },
+          {
+            sessionId: 'session-b',
+            artifactId: 'deleted-artifact',
+            createdAt: 3000,
+            linkType: 'created',
+          },
+        ];
       }),
     );
 
     store.getState().artifactAi.cleanupSessionArtifacts();
 
-    expect(store.getState().artifactAi.config.aiSessionArtifacts).toEqual({
-      'session-a': 'artifact-a',
+    expect(store.getState().artifactAi.config.sessionArtifactLinks).toEqual([
+      {
+        sessionId: 'session-a',
+        artifactId: 'artifact-a',
+        createdAt: 1000,
+        linkType: 'created',
+      },
+    ]);
+  });
+});
+
+describe('artifactAi link and pin mutations', () => {
+  it('adds, queries, and removes session-artifact links', () => {
+    const store = createTestStore();
+    const {artifactAi} = store.getState();
+
+    expect(artifactAi.hasSessionArtifactLink('s1', 'artifact-a')).toBe(false);
+
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+
+    expect(
+      store.getState().artifactAi.hasSessionArtifactLink('s1', 'artifact-a'),
+    ).toBe(true);
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-a',
+      'artifact-b',
+    ]);
+    expect(
+      store.getState().artifactAi.getSessionIdsForArtifact('artifact-a'),
+    ).toEqual(['s1', 's2']);
+
+    store.getState().artifactAi.removeSessionArtifactLink('s1', 'artifact-a');
+    expect(
+      store.getState().artifactAi.hasSessionArtifactLink('s1', 'artifact-a'),
+    ).toBe(false);
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-b',
+    ]);
+  });
+
+  it('does not duplicate an existing link', () => {
+    const store = createTestStore();
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'attached');
+
+    expect(
+      store
+        .getState()
+        .artifactAi.config.sessionArtifactLinks.filter(
+          (link) => link.sessionId === 's1' && link.artifactId === 'artifact-a',
+        ),
+    ).toHaveLength(1);
+  });
+
+  it('promotes attached provenance to created without changing link order', () => {
+    const store = createTestStore();
+    store.setState(
+      produce(store.getState(), (draft: TestRoomState) => {
+        draft.artifactAi.config.sessionArtifactLinks = [
+          {
+            sessionId: 's1',
+            artifactId: 'artifact-a',
+            createdAt: 1000,
+            linkType: 'attached',
+          },
+        ];
+      }),
+    );
+
+    store
+      .getState()
+      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+
+    expect(store.getState().artifactAi.config.sessionArtifactLinks).toEqual([
+      {
+        sessionId: 's1',
+        artifactId: 'artifact-a',
+        createdAt: 1000,
+        linkType: 'created',
+      },
+    ]);
+  });
+
+  it('removes all links for a session', () => {
+    const store = createTestStore();
+    const {artifactAi} = store.getState();
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+
+    store.getState().artifactAi.removeAllLinksForSession('s1');
+
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual(
+      [],
+    );
+    expect(
+      store.getState().artifactAi.getSessionIdsForArtifact('artifact-a'),
+    ).toEqual(['s2']);
+  });
+
+  it('removes all links for an artifact', () => {
+    const store = createTestStore();
+    const {artifactAi} = store.getState();
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+
+    store.getState().artifactAi.removeAllLinksForArtifact('artifact-a');
+
+    expect(
+      store.getState().artifactAi.getSessionIdsForArtifact('artifact-a'),
+    ).toEqual([]);
+    expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
+      'artifact-b',
+    ]);
+  });
+
+  it('toggles and persists pinned artifacts', () => {
+    const store = createTestStore();
+
+    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
+      false,
+    );
+
+    store.getState().artifactAi.togglePinArtifact('artifact-a');
+    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
+      true,
+    );
+    expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([
+      'artifact-a',
+    ]);
+
+    store.getState().artifactAi.togglePinArtifact('artifact-a');
+    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
+      false,
+    );
+    expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([]);
+  });
+
+  it('does not pin missing artifacts', () => {
+    const store = createTestStore();
+
+    store.getState().artifactAi.togglePinArtifact('missing-artifact');
+
+    expect(
+      store.getState().artifactAi.isPinnedArtifact('missing-artifact'),
+    ).toBe(false);
+    expect(
+      store.getState().artifactAi.config.pinnedArtifactIds,
+    ).toBeUndefined();
+  });
+});
+
+describe('ArtifactAiConfigSchema', () => {
+  it('defaults to an empty link list', () => {
+    expect(ArtifactAiConfigSchema.parse({})).toEqual({
+      sessionArtifactLinks: [],
     });
+  });
+
+  it('accepts the session-artifact link format', () => {
+    expect(
+      ArtifactAiConfigSchema.parse({
+        sessionArtifactLinks: [
+          {
+            sessionId: 'session-2',
+            artifactId: 'artifact-b',
+            createdAt: 2000,
+            linkType: 'created',
+          },
+        ],
+      }).sessionArtifactLinks,
+    ).toEqual([
+      {
+        sessionId: 'session-2',
+        artifactId: 'artifact-b',
+        createdAt: 2000,
+        linkType: 'created',
+      },
+    ]);
+  });
+
+  it('rejects removed one-to-one artifact AI fields', () => {
+    expect(
+      ArtifactAiConfigSchema.safeParse({
+        aiSessionArtifacts: {'session-1': 'artifact-a'},
+      }).success,
+    ).toBe(false);
+    expect(
+      ArtifactAiConfigSchema.safeParse({
+        artifactCreators: {'artifact-a': 'session-1'},
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('ArtifactSessionLink types', () => {
+  it('should validate a valid created link', () => {
+    const link = {
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      createdAt: Date.now(),
+      linkType: 'created' as const,
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(link);
+    }
+  });
+
+  it('should validate a valid attached link', () => {
+    const link = {
+      sessionId: 'session-2',
+      artifactId: 'artifact-2',
+      createdAt: Date.now(),
+      linkType: 'attached' as const,
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject invalid linkType', () => {
+    const link = {
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      createdAt: Date.now(),
+      linkType: 'invalid',
+    };
+
+    const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(false);
+  });
+
+  it('should reject a link missing each required field independently', () => {
+    const validLink = {
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      createdAt: 1000,
+      linkType: 'created' as const,
+    };
+
+    for (const field of [
+      'sessionId',
+      'artifactId',
+      'createdAt',
+      'linkType',
+    ] as const) {
+      const {[field]: _omitted, ...link} = validLink;
+      const result = ArtifactSessionLinkSchema.safeParse(link);
+      expect(result.success).toBe(false);
+    }
   });
 });

@@ -15,7 +15,11 @@ import {
 import {ChevronRightIcon, FilterIcon, XIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import type {AgentSnapshot, AgentToolCall} from '../types';
+import type {
+  AgentSnapshot,
+  AgentToolCall,
+  ProviderContextDiagnostic,
+} from '../types';
 import {DebugJsonBlock} from './DebugJsonBlock';
 import {
   getAvailableToolDebugInfo,
@@ -143,7 +147,7 @@ const TimelineFilterBar: React.FC<{
   );
 
   return (
-    <div className="flex w-full gap-2 overflow-x-auto px-3 pt-1 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="flex w-full [scrollbar-width:none] gap-2 overflow-x-auto px-3 pt-1 pb-2 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <ToggleGroup
         type="multiple"
         value={filters}
@@ -401,6 +405,9 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
   const liveAgentSnapshots = useStoreWithAi(
     (state) => state.ai.devtools.agentSnapshots,
   );
+  const providerContexts = useStoreWithAi(
+    (state) => state.ai.devtools.providerContexts,
+  );
   const toolTimings = useStoreWithAi((state) => state.ai.toolTimings);
 
   const session = useMemo(
@@ -444,6 +451,14 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
   const availableTools = useMemo(
     () => getAvailableToolDebugInfo(tools, toolRenderers),
     [toolRenderers, tools],
+  );
+  const sessionProviderContexts = useMemo(
+    () =>
+      providerContexts.filter(
+        (diagnostic: ProviderContextDiagnostic) =>
+          diagnostic.sessionId === sessionId,
+      ),
+    [providerContexts, sessionId],
   );
   const timelineFilterOptions = useMemo<TimelineFilterOption[]>(() => {
     const userCount = timeline.filter(
@@ -504,7 +519,7 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="flex items-center gap-1 px-2 pt-0 pb-1">
-          <TabsList className="h-8 min-w-0 flex-1 justify-start overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabsList className="h-8 min-w-0 flex-1 [scrollbar-width:none] justify-start overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="timeline" className="h-7 px-2 text-xs">
               Timeline
             </TabsTrigger>
@@ -513,6 +528,9 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
             </TabsTrigger>
             <TabsTrigger value="context" className="h-7 px-2 text-xs">
               Context
+            </TabsTrigger>
+            <TabsTrigger value="provider" className="h-7 px-2 text-xs">
+              Provider
             </TabsTrigger>
             <TabsTrigger value="raw-session" className="h-7 px-2 text-xs">
               Raw
@@ -617,6 +635,15 @@ export const ChatSessionDebugView: React.FC<ChatSessionDebugViewProps> = ({
               value={session.runContext ?? null}
               defaultOpen
               editorClassName="h-56"
+            />
+          </TabsContent>
+
+          <TabsContent value="provider" className="m-0 px-3 pt-1 pb-8">
+            <DebugJsonBlock
+              title={`Provider context measurements (${sessionProviderContexts.length})`}
+              value={sessionProviderContexts}
+              defaultOpen
+              editorClassName="h-80"
             />
           </TabsContent>
 

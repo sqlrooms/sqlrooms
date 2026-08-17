@@ -147,7 +147,7 @@ export function getDiscreteNumericColors(options: {
   const {scheme, reverse} = options;
   const bins = clampBinCount(options.bins);
   const discreteScheme = discreteNumericSchemes[scheme];
-  const directColors = discreteScheme[bins];
+  const directColors = discreteScheme?.[bins];
   const colors = Array.isArray(directColors)
     ? [...directColors]
     : sampleInterpolator(
