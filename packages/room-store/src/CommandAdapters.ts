@@ -15,6 +15,17 @@ export type CommandCliAdapterOptions = {
   defaultMetadata?: Record<string, unknown>;
 };
 
+export type CommandInvocationPolicyOptions = {
+  /** True only after the invoking surface obtained explicit user confirmation. */
+  confirmed?: boolean;
+};
+
+export type GuardedCommandInvocationOptions = Omit<
+  RoomCommandInvocationOptions,
+  'surface'
+> &
+  CommandInvocationPolicyOptions;
+
 export type CommandCliAdapter = {
   listCommands: (
     options?: Omit<RoomCommandListOptions, 'surface'>,
@@ -22,7 +33,7 @@ export type CommandCliAdapter = {
   executeCommand: (
     commandId: string,
     input?: unknown,
-    invocation?: Omit<RoomCommandInvocationOptions, 'surface'>,
+    invocation?: GuardedCommandInvocationOptions,
   ) => Promise<RoomCommandResult>;
 };
 
@@ -57,7 +68,7 @@ export type CommandMcpAdapter = {
   callTool: (
     toolName: string,
     input?: unknown,
-    invocation?: Omit<RoomCommandInvocationOptions, 'surface'>,
+    invocation?: GuardedCommandInvocationOptions,
   ) => Promise<RoomCommandResult>;
 };
 
@@ -91,12 +102,18 @@ export function createCommandCliAdapter<RS extends BaseRoomStoreState>(
           error: 'Command registry is not available.',
         };
       }
-      return await state.commands.invokeCommand(commandId, input, {
-        surface: 'cli',
-        actor: invocation?.actor ?? options?.defaultActor,
-        traceId: invocation?.traceId ?? options?.defaultTraceId,
-        metadata: invocation?.metadata ?? options?.defaultMetadata,
-      });
+      return await invokeCommandWithPolicy(
+        store,
+        commandId,
+        input,
+        {
+          surface: 'cli',
+          actor: invocation?.actor ?? options?.defaultActor,
+          traceId: invocation?.traceId ?? options?.defaultTraceId,
+          metadata: invocation?.metadata ?? options?.defaultMetadata,
+        },
+        {confirmed: invocation?.confirmed},
+      );
     },
   };
 }
@@ -171,14 +188,91 @@ export function createCommandMcpAdapter<RS extends BaseRoomStoreState>(
         };
       }
 
-      return await state.commands.invokeCommand(commandId, input, {
-        surface: 'mcp',
-        actor: invocation?.actor ?? options?.defaultActor,
-        traceId: invocation?.traceId ?? options?.defaultTraceId,
-        metadata: invocation?.metadata ?? options?.defaultMetadata,
-      });
+      return await invokeCommandWithPolicy(
+        store,
+        commandId,
+        input,
+        {
+          surface: 'mcp',
+          actor: invocation?.actor ?? options?.defaultActor,
+          traceId: invocation?.traceId ?? options?.defaultTraceId,
+          metadata: invocation?.metadata ?? options?.defaultMetadata,
+        },
+        {confirmed: invocation?.confirmed},
+      );
     },
   };
+}
+
+/**
+ * Invoke a room command through the shared risk/confirmation guard.
+ *
+ * Invocation surfaces must use this entry point when they can be driven by an
+ * agent or external client. It deliberately evaluates the current descriptor
+ * immediately before execution so disabled and confirmation-gated commands
+ * fail closed.
+ */
+export async function invokeCommandWithPolicy<RS extends BaseRoomStoreState>(
+  store: StoreApi<RS>,
+  commandId: string,
+  input: unknown,
+  invocation: RoomCommandInvocationOptions,
+  policy?: CommandInvocationPolicyOptions,
+): Promise<RoomCommandResult> {
+  const state = store.getState();
+  if (!hasCommandSliceState(state)) {
+    return {
+      success: false,
+      commandId,
+      code: 'command-registry-unavailable',
+      error: 'Command registry is not available.',
+    };
+  }
+
+  if (!state.commands.getCommand(commandId)) {
+    return {
+      success: false,
+      commandId,
+      code: 'command-not-found',
+      error: `Unknown command "${commandId}".`,
+    };
+  }
+
+  const descriptor = state.commands
+    .listCommands({
+      ...invocation,
+      includeInvisible: true,
+      includeDisabled: true,
+      includeInputSchema: false,
+    })
+    .find((command) => command.id === commandId);
+
+  if (!descriptor?.enabled) {
+    return {
+      success: false,
+      commandId,
+      code: 'command-disabled',
+      error: `Command "${commandId}" is currently disabled.`,
+    };
+  }
+
+  if (
+    !policy?.confirmed &&
+    (descriptor.riskLevel === 'high' || descriptor.requiresConfirmation)
+  ) {
+    return {
+      success: false,
+      commandId,
+      code: 'command-confirmation-required',
+      error: `Command "${commandId}" requires explicit user confirmation before execution.`,
+      data: {
+        riskLevel: descriptor.riskLevel,
+        requiresConfirmation: descriptor.requiresConfirmation,
+      },
+    };
+  }
+
+  return await state.commands.invokeCommand(commandId, input, invocation);
 }
 
 function sanitizeToolName(commandId: string): string {

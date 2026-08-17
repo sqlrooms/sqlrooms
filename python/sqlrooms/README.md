@@ -31,6 +31,8 @@ What happens:
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
 - `--no-ui`: Start only the HTTP API server and DuckDB websocket backend; do not serve the bundled/static UI.
+- `--mcp`: Start a loopback-only MCP HTTP server backed by the live browser room.
+- `--mcp-port`: Select the loopback MCP port (defaults to 42100 or the next free port).
 - `--config`: Path to a SQLRooms TOML config file. Defaults to `~/.config/sqlrooms/config.toml` (`%APPDATA%\sqlrooms\config.toml` on Windows).
 - `--no-config`: Disable config file loading.
 

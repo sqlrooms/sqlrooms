@@ -224,6 +224,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../../packages/layout
+      '@sqlrooms/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
       '@sqlrooms/mosaic':
         specifier: workspace:*
         version: link:../../packages/mosaic
@@ -3647,6 +3650,28 @@ importers:
       '@sqlrooms/preset-jest':
         specifier: workspace:*
         version: link:../preset-jest
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
+
+  packages/mcp:
+    dependencies:
+      ajv:
+        specifier: ^8.17.1
+        version: 8.20.0
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@jest/globals':
+        specifier: ^30.3.0
+        version: 30.4.1
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      jest:
+        specifier: ^30.3.0
+        version: 30.4.2(@types/node@24.12.4)
       ts-jest:
         specifier: ^29.4.4
         version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)

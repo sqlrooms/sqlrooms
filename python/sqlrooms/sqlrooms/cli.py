@@ -502,6 +502,16 @@ def main(
         envvar="SQLROOMS_AI_DEVTOOLS",
         help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
     ),
+    mcp: bool = typer.Option(
+        False,
+        "--mcp",
+        help="Start the loopback-only MCP server for the live SQLRooms room.",
+    ),
+    mcp_port: int | None = typer.Option(
+        None,
+        "--mcp-port",
+        help="Loopback MCP HTTP port. If omitted, port 42100 or the next free port is used.",
+    ),
     debug: bool = typer.Option(
         False,
         "--debug",
@@ -549,6 +559,11 @@ def main(
     if experimental_sync and not experimental:
         typer.echo("--experimental-sync requires --experimental.", err=True)
         raise typer.Exit(code=1)
+    if mcp and no_ui:
+        typer.echo(
+            "--mcp requires the browser UI and cannot be used with --no-ui.", err=True
+        )
+        raise typer.Exit(code=1)
 
     resolved_db_path = db_path if db_path is not None else db_path_option
     if resolved_db_path is None or not resolved_db_path.strip():
@@ -580,6 +595,12 @@ def main(
     )
 
     selected_port = _resolve_http_port(host, port, ws_port)
+    if mcp_port is not None and not 1 <= mcp_port <= 65535:
+        typer.echo("--mcp-port must be between 1 and 65535.", err=True)
+        raise typer.Exit(code=1)
+    if mcp_port is not None and mcp_port in {selected_port, ws_port}:
+        typer.echo("--mcp-port must differ from --port and --ws-port.", err=True)
+        raise typer.Exit(code=1)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
         if llm_provider
@@ -608,6 +629,8 @@ def main(
         external_url=external_url,
         external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
+        mcp_enabled=mcp,
+        mcp_port=mcp_port,
         debug=debug,
     )
     try:

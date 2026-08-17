@@ -67,6 +67,11 @@ export type RuntimeConfig = {
   dbPath?: string;
   metaNamespace?: string;
   startupStatus?: RuntimeStartupStatus;
+  mcp?: {
+    enabled: boolean;
+    url: string;
+    bridgeUrl: string;
+  };
   dbBridge?: {
     id: string;
     connections: Array<{

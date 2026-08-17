@@ -48,9 +48,41 @@ def test_api_config(server):
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
     assert "wsAuthToken" in data
+    assert data["mcp"]["enabled"] is False
+    assert data["mcp"]["url"].startswith("http://127.0.0.1:")
+    assert data["mcp"]["url"].endswith("/mcp")
+    assert data["mcp"]["bridgeUrl"].endswith("/ws/mcp-bridge")
     assert (
         data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
     )
+
+
+def test_mcp_lifecycle_status_requires_session_token(server):
+    client = TestClient(server._build_app())
+
+    assert client.get("/api/mcp/status").status_code == 401
+    response = client.get(
+        "/api/mcp/status",
+        headers={"X-SQLRooms-Token": server.session_token},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "off"
+
+
+@pytest.mark.asyncio
+async def test_mcp_listener_lifecycle_is_repeatable(server):
+    first = await server._start_mcp()
+    repeated = await server._start_mcp()
+
+    assert first["enabled"] is True
+    assert first["status"] == "waiting"
+    assert repeated["url"] == first["url"]
+    assert (await server._stop_mcp())["status"] == "off"
+
+    restarted = await server._start_mcp()
+    assert restarted["enabled"] is True
+    assert (await server._stop_mcp())["status"] == "off"
 
 
 def test_api_config_uses_same_origin_ws_proxy(tmp_path):
@@ -94,6 +126,54 @@ def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
     assert exc_info.value.code == 1013
     assert "DuckDB websocket backend unavailable" in caplog.text
     assert "DuckDB websocket proxy failed" not in caplog.text
+
+
+def test_mcp_browser_bridge_requires_auth(server):
+    client = TestClient(server._build_app())
+
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect("/ws/mcp-bridge") as ws:
+            ws.send_json(
+                {
+                    "version": 1,
+                    "type": "bridge.authenticate",
+                    "pageId": "page-a",
+                    "token": "wrong",
+                }
+            )
+            ws.receive_json()
+
+    assert exc_info.value.code == 4401
+
+
+def test_mcp_browser_bridge_holds_single_ready_lease(server):
+    client = TestClient(server._build_app())
+
+    with client.websocket_connect("/ws/mcp-bridge") as first:
+        first.send_json(
+            {
+                "version": 1,
+                "type": "bridge.authenticate",
+                "pageId": "page-a",
+                "token": server.session_token,
+            }
+        )
+        assert first.receive_json()["type"] == "bridge.authenticated"
+        first.send_json({"version": 1, "type": "bridge.ready", "pageId": "page-a"})
+
+        with client.websocket_connect("/ws/mcp-bridge") as second:
+            second.send_json(
+                {
+                    "version": 1,
+                    "type": "bridge.authenticate",
+                    "pageId": "page-b",
+                    "token": server.session_token,
+                }
+            )
+            assert second.receive_json()["code"] == "bridge_lease_held"
+            with pytest.raises(WebSocketDisconnect) as exc_info:
+                second.receive_json()
+            assert exc_info.value.code == 4409
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):

@@ -15,6 +15,7 @@ import {Plus, Trash2Icon} from 'lucide-react';
 import {useCallback, useState} from 'react';
 import {useRoomStore} from '../roomStoreHooks';
 import {CliSidebarToggleButton} from './sidebar';
+import {CliMcpStatusControl} from '../components/CliMcpStatusControl';
 
 export function CliWorkspaceTopbar() {
   const roomTitle = useRoomStore((state) => state.room.config.title);
@@ -97,6 +98,7 @@ export function CliWorkspaceTopbar() {
         ) : null}
       </div>
       <div className="flex min-w-0 items-center justify-end gap-1.5">
+        <CliMcpStatusControl />
         <Tooltip>
           <TooltipTrigger asChild>
             <span>

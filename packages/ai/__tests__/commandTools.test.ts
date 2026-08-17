@@ -2,6 +2,12 @@ import {jest} from '@jest/globals';
 
 jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
   hasCommandSliceState: () => true,
+  invokeCommandWithPolicy: (
+    store: any,
+    commandId: string,
+    input: unknown,
+    invocation: unknown,
+  ) => store.getState().commands.invokeCommand(commandId, input, invocation),
 }));
 
 const {
