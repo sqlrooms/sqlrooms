@@ -48,7 +48,7 @@ ${getDeckMapSharedAiContractRules()}
 - LAYER SELECTION: Choose the layer type based on the geometry type in the data.
   IMPORTANT: Only create a layer if the table contains data suitable for that layer type, or if you can transform the data into the required format with transformSql or a standalone sqlQuery. Do NOT create a layer if the data is clearly incompatible (e.g. do not create a path layer from point-only data without aggregation, do not create a polygon layer from point coordinates, do not create an arc layer without origin-destination pairs).
   - Point data (lon/lat coordinates, point geometry): GeoArrowScatterplotLayer (Point layer), GeoArrowHeatmapLayer, GeoArrowColumnLayer. Requires lon/lat columns (via ST_Point transformSql) or a Point geometry column — follow the shared Point-position rules above.
-  - Polygon data (building footprints, boundaries, areas, parcels, zones, GeoJSON polygons): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer for uniform polygon/multipolygon columns only.
+  - Polygon data (building footprints, boundaries, areas, parcels, zones): GeoArrowPolygonLayer or GeoArrowSolidPolygonLayer for uniform Polygon columns. Use GeoJsonLayer for WKB/WKT MultiPolygon columns so separate polygon parts retain their nesting.
   - Line data (roads, routes, paths, rivers): GeoArrowPathLayer. Requires LineString geometry (or a single-part MultiLineString). Multi-part MultiLineString cannot be rendered as one path — explode/merge with ST_Dump / ST_LineMerge first. If the table has one row per waypoint (path_id/route_id + order/sequence + lat/lon), aggregate with transformSql: "SELECT path_id, label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} GROUP BY path_id, label". Set geometryColumn to "geom" and geometryEncodingHint to "wkb". If linestring geom already exists, use it directly (or SELECT * EXCLUDE (geom), ST_AsWKB(geom) AS geom ... WHERE ST_GeometryType(geom) = 'LINESTRING').
   - Animated trip data (routes with timestamps): GeoArrowTripsLayer (see shared trips-vs-arc rule). One row per trip: LineString geom + timestamps list (same order/length as vertices).
     (1) Waypoint rows (trip_id/path_id + lat/lon + order/time): GROUP BY trip id. Example: "SELECT trip_id, ANY_VALUE(label) AS label, ST_AsWKB(ST_MakeLine(LIST(ST_Point(lon, lat) ORDER BY waypoint_order))) AS geom, LIST(timestamp ORDER BY waypoint_order) AS timestamps FROM ${DECK_TABLE_DATASET_SOURCE_RELATION} GROUP BY trip_id". Keep attrs with ANY_VALUE(col). Use ST_MakeLine(LIST(...)) only — never ST_MakeLine(ST_Point(...) ORDER BY ...); always GROUP BY the trip id.
@@ -413,19 +413,18 @@ Use when: the user asks for a map in a dashboard. Author the map using native De
     inputSchema: DeckMapDashboardToolParameters,
     execute: async (params) => {
       try {
-        const tableName =
-          params.tableName ?? getFirstDatasetSourceTableName(params.config);
-
-        if (tableName) {
-          ensureTable(databaseAdapter, tableName);
-        }
-
         // Prepare/validate before mutating dashboard selection so a rejected
         // config does not switch the active table as a side effect.
         const panel = createDeckMapPanelFromNativeConfig(params, {
           resolveTable: (name) => databaseAdapter.findTable(name),
           stripCatalogNames,
         });
+        const tableName =
+          params.tableName ?? getFirstDatasetSourceTableName(panel.config);
+
+        if (tableName) {
+          ensureTable(databaseAdapter, tableName);
+        }
 
         if (tableName) {
           await dashboardAdapter.setSelectedTable(tableName);

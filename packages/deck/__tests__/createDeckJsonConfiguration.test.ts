@@ -879,6 +879,87 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
     ).toThrow(/GeoJsonLayer|POLYGON|mixed|Sampled geometry types/i);
   });
 
+  it('declines MultiPolygon promotion instead of flattening polygon parts', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'islands',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      islands: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'islands',
+            _sqlroomsBinding: {
+              dataset: 'islands',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      }),
+    ).toThrow(/GeoJsonLayer|MultiPolygon/i);
+  });
+
+  it('preserves MultiPolygon parts through the GeoJsonLayer path', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'islands',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      islands: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoJsonLayer',
+          id: 'islands',
+          _sqlroomsBinding: {
+            dataset: 'islands',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: {data?: unknown}}>};
+
+    const binary = converted.layers[0]?.props.data as {
+      polygons: {
+        polygonIndices: {value: ArrayLike<number>};
+        primitivePolygonIndices: {value: ArrayLike<number>};
+      };
+    };
+    expect(Array.from(binary.polygons.polygonIndices.value)).toEqual([
+      0, 5, 10,
+    ]);
+    expect(Array.from(binary.polygons.primitivePolygonIndices.value)).toEqual([
+      0, 5, 10,
+    ]);
+  });
+
   it('renders mixed geometries with GeoJsonLayer', () => {
     const table = new Table({
       geom: vectorFromArray(

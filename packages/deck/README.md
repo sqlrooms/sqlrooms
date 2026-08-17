@@ -134,7 +134,8 @@ By default, the helper is conservative:
 
 - point / multipoint -> `GeoArrowScatterplotLayer`
 - linestring / multilinestring -> `GeoArrowPathLayer`
-- polygon / multipolygon -> `GeoArrowPolygonLayer`
+- native GeoArrow polygon / multipolygon -> `GeoArrowPolygonLayer`
+- WKB/WKT multipolygon -> `GeoJsonLayer`
 - mixed, unknown, or unsupported -> `GeoJsonLayer`
 
 You can provide semantic hints for special layers:
@@ -632,8 +633,9 @@ The current curated layer set is:
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
 back to decoding and GeoJSON-binary preparation, with promotion available
 for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
-`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus polygon promotion for
-`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`.
+`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus Polygon promotion for
+`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`. WKB/WKT MultiPolygon
+uses the GeoJSON-binary path so separate polygon parts retain their nesting.
 
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-geoarrow).

@@ -20,7 +20,6 @@ import {
   readWKBLineStringXY,
   readWKBMultiLineStringXY,
   readWKBPointXY,
-  visitWKBMultiPolygonCoordinates,
   visitWKBPolygonCoordinates,
   WKB_LINESTRING,
   WKB_MULTILINESTRING,
@@ -252,10 +251,6 @@ function tryPromotePolygonTable(
           ringOffsetsList,
           xyList,
         );
-      } else if (geom.type === 'MultiPolygon') {
-        for (const polygon of geom.coordinates as number[][][][]) {
-          appendPolygonCoordinates(polygon, ringOffsetsList, xyList);
-        }
       } else return null;
       continue;
     }
@@ -266,10 +261,6 @@ function tryPromotePolygonTable(
 
     if (hdr.geomType === WKB_POLYGON) {
       if (visitWKBPolygonCoordinates(buf, hdr, polygonVisitor) == null) {
-        return null;
-      }
-    } else if (hdr.geomType === WKB_MULTIPOLYGON) {
-      if (!visitWKBMultiPolygonCoordinates(buf, hdr, polygonVisitor)) {
         return null;
       }
     } else return null;
@@ -477,9 +468,9 @@ export function describeGeoArrowPromotionFailure(
 
   if (POLYGON_LAYERS.has(layerType)) {
     return (
-      `${sampledText} GeoArrowPolygonLayer requires only Polygon/MultiPolygon rows.` +
-      ` For mixed Point/LineString/Polygon columns use GeoJsonLayer, or filter with` +
-      ` WHERE ST_GeometryType(geom) IN ('POLYGON','MULTIPOLYGON').`
+      `${sampledText} GeoArrowPolygonLayer requires only Polygon rows.` +
+      ` Use GeoJsonLayer for MultiPolygon or mixed geometry columns, or filter with` +
+      ` WHERE ST_GeometryType(geom) = 'POLYGON'.`
     );
   }
   if (PATH_LAYERS.has(layerType)) {
@@ -636,10 +627,8 @@ export const wkbGeometryDecoder: GeometryDecoder = {
         table,
         columnName,
         encoding,
-        (geometryType) =>
-          geometryType === 'Polygon' || geometryType === 'MultiPolygon',
-        (geometryType) =>
-          geometryType === WKB_POLYGON || geometryType === WKB_MULTIPOLYGON,
+        (geometryType) => geometryType === 'Polygon',
+        (geometryType) => geometryType === WKB_POLYGON,
       );
     }
 

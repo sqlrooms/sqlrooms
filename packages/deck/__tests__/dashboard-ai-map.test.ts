@@ -467,6 +467,56 @@ describe('createDeckMapDashboardTool', () => {
     });
   });
 
+  it('validates and selects the prepared dataset table name', async () => {
+    const selectedTables: string[] = [];
+    const resolvedTables: string[] = [];
+    const tool = createDeckMapDashboardTool({
+      stripCatalogNames: ['sqlrooms-cli'],
+      databaseAdapter: {
+        getTables: () => [],
+        findTable: (tableName) => {
+          const name =
+            typeof tableName === 'string' ? tableName : tableName.toString();
+          resolvedTables.push(name);
+          return name === 'main.earthquakes'
+            ? ({tableName: name, columns: []} as any)
+            : undefined;
+        },
+      },
+      dashboardAdapter: {
+        setSelectedTable: (tableName) => {
+          selectedTables.push(tableName);
+        },
+        addPanel: () => 'panel-1',
+        updatePanel: () => {},
+        removePanel: () => {},
+        getPanel: () => undefined,
+        getPanelIssue: () => undefined,
+      },
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Earthquake map',
+      config: {
+        ...scatterConfig,
+        datasets: {
+          earthquakes: {
+            ...scatterConfig.datasets.earthquakes,
+            source: {tableName: 'sqlrooms-cli.main.earthquakes'},
+          },
+        },
+      },
+      reasoning: 'show locations',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(resolvedTables).toContain('main.earthquakes');
+    expect(selectedTables).toEqual(['main.earthquakes']);
+    expect(
+      result.llmResult.data.config.datasets.earthquakes.source.tableName,
+    ).toBe('main.earthquakes');
+  });
+
   it('rejects unknown colorScale fields on bare tableName sources', async () => {
     const {dashboardAdapter, databaseAdapter} = createTestAdapters();
     const tool = createDeckMapDashboardTool({
