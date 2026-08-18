@@ -18,6 +18,12 @@ const DEFAULT_QUERY_ROWS = 200;
 const MAX_QUERY_ROWS = 1_000;
 const MAX_LISTED_TABLES = 1_000;
 const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
+const MCP_EXCLUDED_COMMAND_IDS = new Set([
+  'db.create-table-from-query',
+  'room.add-sql-data-source',
+  'sql-editor.run-current-query',
+  'sql-editor.run-query',
+]);
 let commandInvocationQueue = Promise.resolve();
 
 type CreateCliRoomCapabilitiesOptions = {
@@ -349,6 +355,13 @@ function createExecuteCommandCapability(): RoomCapability {
         commandId: string;
         input?: unknown;
       };
+      if (MCP_EXCLUDED_COMMAND_IDS.has(commandId)) {
+        return {
+          ok: false,
+          code: 'command_not_found',
+          message: `Unknown command "${commandId}".`,
+        };
+      }
       const result = await enqueueCommandInvocation(
         commandId,
         () =>
@@ -404,15 +417,18 @@ function listMcpCommands(
   context: RoomCapabilityContext,
   includeInputSchema = false,
 ) {
-  return roomStore.getState().commands.listCommands({
-    surface: 'mcp',
-    actor: context.actor,
-    traceId: context.traceId,
-    metadata: context.metadata,
-    includeInvisible: false,
-    includeDisabled: true,
-    includeInputSchema,
-  });
+  return roomStore
+    .getState()
+    .commands.listCommands({
+      surface: 'mcp',
+      actor: context.actor,
+      traceId: context.traceId,
+      metadata: context.metadata,
+      includeInvisible: false,
+      includeDisabled: true,
+      includeInputSchema,
+    })
+    .filter((command) => !MCP_EXCLUDED_COMMAND_IDS.has(command.id));
 }
 
 function scoreCommand(command: RoomCommandDescriptor, query: string) {

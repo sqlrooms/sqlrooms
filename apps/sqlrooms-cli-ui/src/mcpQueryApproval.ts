@@ -20,16 +20,22 @@ export type McpQueryApprovalDecision =
   | 'expired'
   | 'cancelled';
 
-type PendingApproval = McpQueryApprovalRequest & {
+type PendingApproval = Omit<McpQueryApprovalRequest, 'expiresAt'> & {
   signal?: AbortSignal;
   resolve: (decision: McpQueryApprovalDecision) => void;
-  timeout: ReturnType<typeof setTimeout>;
+  timeoutMs: number;
+  expiresAt?: number;
+  timeout?: ReturnType<typeof setTimeout>;
   onAbort: () => void;
+};
+type ActiveApproval = PendingApproval & {
+  expiresAt: number;
+  timeout: ReturnType<typeof setTimeout>;
 };
 
 type ApprovalSnapshot = {active?: McpQueryApprovalRequest};
 
-let active: PendingApproval | undefined;
+let active: ActiveApproval | undefined;
 const queue: PendingApproval[] = [];
 const listeners = new Set<() => void>();
 let snapshot: ApprovalSnapshot = {};
@@ -53,9 +59,8 @@ export function requestMcpQueryApproval(options: {
     const pending: PendingApproval = {
       ...options,
       id,
-      expiresAt: Date.now() + timeoutMs,
+      timeoutMs,
       resolve,
-      timeout: setTimeout(() => settle(id, 'expired'), timeoutMs),
       onAbort: () => settle(id, 'cancelled'),
     };
     options.signal?.addEventListener('abort', pending.onAbort, {once: true});
@@ -107,7 +112,7 @@ function settle(id: string, decision: McpQueryApprovalDecision) {
 }
 
 function finish(pending: PendingApproval, decision: McpQueryApprovalDecision) {
-  clearTimeout(pending.timeout);
+  if (pending.timeout !== undefined) clearTimeout(pending.timeout);
   pending.signal?.removeEventListener('abort', pending.onAbort);
   pending.resolve(decision);
 }
@@ -119,7 +124,12 @@ function showNext() {
       finish(pending, 'cancelled');
       continue;
     }
-    active = pending;
+    const expiresAt = Date.now() + pending.timeoutMs;
+    const timeout = setTimeout(
+      () => settle(pending.id, 'expired'),
+      pending.timeoutMs,
+    );
+    active = {...pending, expiresAt, timeout};
   }
   publish();
 }

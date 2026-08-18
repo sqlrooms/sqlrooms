@@ -39,4 +39,28 @@ describe('MCP query approval', () => {
 
     await expect(decision).resolves.toBe('cancelled');
   });
+
+  test('starts a queued approval timeout only when it becomes active', async () => {
+    jest.useFakeTimers();
+    const firstController = new AbortController();
+    const first = requestMcpQueryApproval({
+      ...request,
+      signal: firstController.signal,
+      timeoutMs: 100,
+    });
+    const second = requestMcpQueryApproval({...request, timeoutMs: 100});
+    const secondSettled = jest.fn();
+    void second.then(secondSettled);
+
+    await jest.advanceTimersByTimeAsync(90);
+    expect(secondSettled).not.toHaveBeenCalled();
+
+    firstController.abort();
+    await expect(first).resolves.toBe('cancelled');
+    await jest.advanceTimersByTimeAsync(99);
+    expect(secondSettled).not.toHaveBeenCalled();
+
+    await jest.advanceTimersByTimeAsync(1);
+    await expect(second).resolves.toBe('expired');
+  });
 });

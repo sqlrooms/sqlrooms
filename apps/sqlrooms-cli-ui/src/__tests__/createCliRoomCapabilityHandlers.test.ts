@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, jest, test} from '@jest/globals';
+import type {RoomCommandDescriptor} from '@sqlrooms/room-shell';
 
 const query = jest.fn(
   async (_sql: string, _options?: {signal?: AbortSignal}) => {
@@ -18,6 +19,7 @@ const invokeCommandWithPolicy = jest.fn(async (...args: unknown[]) => {
     commandId: 'workspace.refresh',
   };
 });
+const listCommands = jest.fn((): RoomCommandDescriptor[] => []);
 
 const state = {
   db: {
@@ -52,7 +54,7 @@ const state = {
     refreshTableSchemas: jest.fn(async () => []),
   },
   commands: {
-    listCommands: jest.fn(() => []),
+    listCommands,
   },
 };
 
@@ -101,6 +103,7 @@ beforeEach(() => {
   sqlSelectToJson.mockClear();
   state.db.refreshTableSchemas.mockClear();
   invokeCommandWithPolicy.mockClear();
+  listCommands.mockClear();
 });
 
 describe('CLI room capability handlers', () => {
@@ -169,6 +172,55 @@ describe('CLI room capability handlers', () => {
       expect.objectContaining({surface: 'mcp', signal: controller.signal}),
       {confirmed: false},
     );
+  });
+
+  test('does not expose or execute SQL-bearing commands over MCP', async () => {
+    state.commands.listCommands.mockReturnValueOnce([
+      {
+        id: 'db.create-table-from-query',
+        owner: 'test',
+        name: 'Create table from query',
+        enabled: true,
+        visible: true,
+        requiresInput: true,
+        keystrokes: [],
+        readOnly: false,
+        idempotent: false,
+        riskLevel: 'medium',
+        requiresConfirmation: false,
+      },
+      {
+        id: 'workspace.refresh',
+        owner: 'test',
+        name: 'Refresh workspace',
+        enabled: true,
+        visible: true,
+        requiresInput: false,
+        keystrokes: [],
+        readOnly: false,
+        idempotent: true,
+        riskLevel: 'low',
+        requiresConfirmation: false,
+      },
+    ]);
+    const discovery = await capability('search_commands').execute(
+      {},
+      {surface: 'mcp-http'},
+    );
+    const execution = await capability('execute_command').execute(
+      {commandId: 'db.create-table-from-query', input: {query: 'SELECT 1'}},
+      {surface: 'mcp-http'},
+    );
+
+    expect(discovery).toMatchObject({
+      ok: true,
+      data: {commands: [{id: 'workspace.refresh'}]},
+    });
+    expect(execution).toMatchObject({
+      ok: false,
+      code: 'command_not_found',
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
   });
 
   test('releases the command queue when an invocation is aborted', async () => {
