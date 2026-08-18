@@ -1,9 +1,11 @@
-### Mosaic crossfilter with DataFusion-WASM and Zarr, rendered with deck.gl
+### [Mosaic + DataFusion-WASM + Zarr](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic-datafusion)
+
+[GitHub repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic-datafusion)
 
 This example ports [Gjore Milevski](https://github.com/dzole0311)'s
 [mosaic-datafusion-zarr-deckgl](https://github.com/dzole0311/mosaic-datafusion-zarr-deckgl)
 experiment (read the [original write-up](https://gjoremilevski.com/posts/mosaic-datafusion-zarr-deckgl/))
-into the SQLRooms shell, alongside the [deckgl-mosaic](../deckgl-mosaic) example
+into the SQLRooms shell, alongside the [Deck.gl + Mosaic example](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
 it is structurally closest to.
 
 ECMWF IFS ENS temperature is streamed client-side from a public Zarr store
