@@ -10,7 +10,7 @@ import {createForecastRoomStore} from './store';
  * rather than as a static module export the way other examples do it.
  */
 export function App() {
-  const {boot, cubeVersion, progress} = useForecastLab();
+  const {boot, cubeVersion, streaming} = useForecastLab();
 
   if (boot.phase === 'error') {
     return (
@@ -30,18 +30,18 @@ export function App() {
   }
 
   return (
-    <ReadyApp lab={boot.lab} cubeVersion={cubeVersion} progress={progress} />
+    <ReadyApp lab={boot.lab} cubeVersion={cubeVersion} streaming={streaming} />
   );
 }
 
 function ReadyApp({
   lab,
   cubeVersion,
-  progress,
+  streaming,
 }: {
   lab: Lab;
   cubeVersion: number;
-  progress: {loadedChunks: number; totalChunks: number};
+  streaming: boolean;
 }) {
   const {roomStore} = useMemo(() => createForecastRoomStore(lab), [lab]);
 
@@ -54,10 +54,8 @@ function ReadyApp({
   }, [roomStore, cubeVersion]);
 
   useEffect(() => {
-    roomStore
-      .getState()
-      .forecast.setStreaming(progress.loadedChunks < progress.totalChunks);
-  }, [roomStore, progress.loadedChunks, progress.totalChunks]);
+    roomStore.getState().forecast.setStreaming(streaming);
+  }, [roomStore, streaming]);
 
   return <Room roomStore={roomStore} />;
 }

@@ -7,10 +7,10 @@
  * latitude[i] = 90 - 0.25 * i with the grid point on the south edge of the
  * cell, so Y_START = (90 - north) / 0.25 + 1.
  *
- * The crop spans a 3x3 block of the store's 32-cell inner chunks (chunk
- * columns 22..24, chunk rows 4..6), so one variable needs nine chunk
- * fetches of about 3 MB each; the streaming loader paints each chunk as
- * it arrives.
+ * The crop spans a 3x3 block of the store's 32-cell inner shard chunks
+ * (chunk columns 22..24, chunk rows 4..6). The current store keeps all lead
+ * times and ensemble members together in each inner chunk, so each spatial
+ * rectangle can be copied into the shared cube as soon as its read resolves.
  */
 export const RASTER_WIDTH = 64;
 export const RASTER_HEIGHT = 48;

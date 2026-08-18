@@ -45,7 +45,7 @@ FROM (
   FROM (
     SELECT id,
       id % ${RASTER_WIDTH} AS x,
-      id / ${RASTER_WIDTH} AS y,
+      CAST(FLOOR(CAST(id AS DOUBLE) / ${RASTER_WIDTH}) AS INTEGER) AS y,
       CAST(COALESCE(temperature, 0) AS DOUBLE) AS value
     FROM cells_all_leads
     WHERE time_index = 0
@@ -158,32 +158,26 @@ function normalizeDescribeRows(rows: Row[]) {
   });
 }
 
-export class DataFusion {
-  private leadIndex = 0;
-  private queue: Promise<unknown> = Promise.resolve();
+export type DataFusion = {
+  refreshData: (loaded: Uint8Array) => Promise<void>;
+  setLead: (leadIndex: number) => Promise<void>;
+  query: (request: QueryRequest) => Promise<unknown>;
+  dispose: () => Promise<void>;
+};
 
-  private constructor(
-    private readonly ctx: DataFusionContext,
-    private readonly cube: TimeCube,
-    private readonly onLog: (entry: QueryLog) => void,
-  ) {}
-
-  private serialize<T>(task: () => Promise<T>): Promise<T> {
-    const result = this.queue.then(task, task);
-    this.queue = result.then(
-      () => undefined,
-      () => undefined,
-    );
-    return result;
-  }
-
-  static async create(
-    cube: TimeCube,
-    loaded: Uint8Array,
-    onLog: (entry: QueryLog) => void,
-  ) {
-    await initDataFusion(dataFusionWasmUrl);
-    const ctx = DataFusionContext.new();
+/**
+ * Creates the narrow Mosaic-compatible connector used by the example.
+ * Every context operation shares one queue: DataFusion-WASM table swaps,
+ * queries, and teardown therefore cannot race each other.
+ */
+export async function createDataFusion(
+  cube: TimeCube,
+  loaded: Uint8Array,
+  onLog: (entry: QueryLog) => void,
+): Promise<DataFusion> {
+  await initDataFusion(dataFusionWasmUrl);
+  const ctx = DataFusionContext.new();
+  try {
     ctx.register_ipc('cells_all_leads', cellsAllLeadsIpc(cube, loaded));
     ctx.register_ipc('forecast_times', forecastTimesIpc(cube));
     await ctx.materialize_table('cells_lead0', CELLS_LEAD0_SQL);
@@ -191,26 +185,40 @@ export class DataFusion {
       'cells_current_lead',
       'SELECT * FROM cells_lead0',
     );
-    return new DataFusion(ctx, cube, onLog);
+  } catch (error) {
+    ctx.free();
+    throw error;
   }
+
+  let leadIndex = 0;
+  let disposed = false;
+  let queue: Promise<unknown> = Promise.resolve();
+  let disposePromise: Promise<void> | null = null;
+
+  const serialize = <T>(task: () => Promise<T>): Promise<T> => {
+    if (disposed) return Promise.reject(new Error('DataFusion is disposed'));
+    const result = queue.then(task, task);
+    queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
 
   /**
    * Re-encodes the shared cube with the current chunk coverage and rebuilds
    * the derived tables. Called as each streamed Zarr chunk lands.
    */
-  async refreshData(loaded: Uint8Array) {
-    return this.serialize(async () => {
+  const refreshData = (nextLoaded: Uint8Array) =>
+    serialize(async () => {
       const started = performance.now();
-      this.ctx.register_ipc(
-        'cells_all_leads',
-        cellsAllLeadsIpc(this.cube, loaded),
-      );
-      await this.ctx.materialize_table('cells_lead0', CELLS_LEAD0_SQL);
-      await this.ctx.materialize_table(
+      ctx.register_ipc('cells_all_leads', cellsAllLeadsIpc(cube, nextLoaded));
+      await ctx.materialize_table('cells_lead0', CELLS_LEAD0_SQL);
+      await ctx.materialize_table(
         'cells_current_lead',
-        currentLeadCellsSql(this.leadIndex),
+        currentLeadCellsSql(leadIndex),
       );
-      this.onLog({
+      onLog({
         backend: 'client-datafusion-wasm',
         type: 'exec',
         sql: 'Refresh cells_all_leads from streamed Zarr chunks',
@@ -219,71 +227,82 @@ export class DataFusion {
         ok: true,
       });
     });
-  }
 
-  async setLead(leadIndex: number) {
-    return this.serialize(async () => {
+  const setLead = (nextLeadIndex: number) =>
+    serialize(async () => {
       const started = performance.now();
-      this.leadIndex = leadIndex;
-      await this.ctx.materialize_table(
+      leadIndex = nextLeadIndex;
+      await ctx.materialize_table(
         'cells_current_lead',
-        currentLeadCellsSql(leadIndex),
+        currentLeadCellsSql(nextLeadIndex),
       );
-      this.onLog({
+      onLog({
         backend: 'client-datafusion-wasm',
         type: 'exec',
-        sql: `Rematerialize cells_current_lead for ECMWF lead ${leadIndex}`,
+        sql: `Rematerialize cells_current_lead for ECMWF lead ${nextLeadIndex}`,
         ms: performance.now() - started,
         rows: 0,
         ok: true,
       });
     });
-  }
 
-  async query({type = 'arrow', sql}: QueryRequest): Promise<unknown> {
-    const started = performance.now();
-    try {
-      let data: unknown;
-      let rows = 0;
-      if (type === 'exec') {
-        await this.ctx.execute_sql(sql);
-      } else {
-        const bytes = (await this.ctx.execute_ipc(sql)) as
-          | ArrayBuffer
-          | Uint8Array;
-        const table = tableFromIPC(bytes, {useDate: true});
-        if (/^\s*(desc|describe)\b/i.test(sql)) {
-          data = normalizeDescribeRows(table.toArray() as Row[]);
-          rows = (data as Row[]).length;
-        } else if (type === 'json') {
-          data = table.toArray() as Row[];
-          rows = (data as Row[]).length;
+  const query = ({type = 'arrow', sql}: QueryRequest) =>
+    serialize(async (): Promise<unknown> => {
+      const started = performance.now();
+      try {
+        let data: unknown;
+        let rows = 0;
+        if (type === 'exec') {
+          await ctx.execute_sql(sql);
         } else {
-          data = table;
-          rows = table.numRows;
+          const bytes = (await ctx.execute_ipc(sql)) as
+            | ArrayBuffer
+            | Uint8Array;
+          const table = tableFromIPC(bytes, {useDate: true});
+          if (/^\s*(desc|describe)\b/i.test(sql)) {
+            data = normalizeDescribeRows(table.toArray() as Row[]);
+            rows = (data as Row[]).length;
+          } else if (type === 'json') {
+            data = table.toArray() as Row[];
+            rows = (data as Row[]).length;
+          } else {
+            data = table;
+            rows = table.numRows;
+          }
         }
+        onLog({
+          backend: 'client-datafusion-wasm',
+          type,
+          sql,
+          ms: performance.now() - started,
+          rows,
+          ok: true,
+        });
+        return data;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        onLog({
+          backend: 'client-datafusion-wasm',
+          type,
+          sql,
+          ms: performance.now() - started,
+          rows: 0,
+          ok: false,
+          error: message,
+        });
+        throw error instanceof Error ? error : new Error(message);
       }
-      this.onLog({
-        backend: 'client-datafusion-wasm',
-        type,
-        sql,
-        ms: performance.now() - started,
-        rows,
-        ok: true,
-      });
-      return data;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.onLog({
-        backend: 'client-datafusion-wasm',
-        type,
-        sql,
-        ms: performance.now() - started,
-        rows: 0,
-        ok: false,
-        error: message,
-      });
-      throw error instanceof Error ? error : new Error(message);
-    }
-  }
+    });
+
+  const dispose = () => {
+    if (disposePromise) return disposePromise;
+    disposed = true;
+    disposePromise = queue.then(
+      () => ctx.free(),
+      () => ctx.free(),
+    );
+    return disposePromise;
+  };
+
+  return {refreshData, setLead, query, dispose};
 }

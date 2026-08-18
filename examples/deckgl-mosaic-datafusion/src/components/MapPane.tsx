@@ -62,6 +62,7 @@ export function MapPane({cube, brush, onMap}: MapPaneProps) {
             brush.onPointerMove(event.clientX, event.clientY);
             event.preventDefault();
           }}
+          onPointerLeave={brush.clear}
         />
       )}
     </MapShell>

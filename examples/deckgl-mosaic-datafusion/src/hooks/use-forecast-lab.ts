@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react';
 import {Coordinator, Selection} from '@uwdata/mosaic-core';
-import {DataFusion} from '../lab/datafusion';
+import {createDataFusion, type DataFusion} from '../lab/datafusion';
 import {streamTimeCube, type TimeCube} from '../lab/zarr-cube';
 
 export type Lab = {
@@ -23,6 +23,8 @@ export type LabState = {
    */
   cubeVersion: number;
   progress: {loadedChunks: number; totalChunks: number};
+  /** False only after the final DataFusion refresh has incorporated the stream. */
+  streaming: boolean;
 };
 
 /**
@@ -40,6 +42,7 @@ export function useForecastLab(): LabState {
   });
   const [cubeVersion, setCubeVersion] = useState(0);
   const [progress, setProgress] = useState({loadedChunks: 0, totalChunks: 0});
+  const [streaming, setStreaming] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +50,28 @@ export function useForecastLab(): LabState {
     let loaded: Uint8Array | null = null;
     let refreshRunning = false;
     let refreshPending = false;
+    let streamComplete = false;
+    let streamError: unknown = null;
+
+    const disposeLab = () => {
+      const currentLab = lab;
+      lab = null;
+      loaded = null;
+      if (!currentLab) return;
+      currentLab.coordinator.clear();
+      void currentLab.df.dispose();
+    };
+
+    const fail = (label: string, error: unknown) => {
+      console.error(label, error);
+      if (cancelled) return;
+      setStreaming(false);
+      setBoot({
+        phase: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      });
+      disposeLab();
+    };
 
     /**
      * Coalesces chunk arrivals: while a refresh is in flight further chunks
@@ -68,8 +93,9 @@ export function useForecastLab(): LabState {
             });
             setCubeVersion((version) => version + 1);
           }
+          if (streamComplete && !refreshPending) setStreaming(false);
         } catch (error) {
-          console.error('DataFusion cube refresh failed', error);
+          fail('DataFusion cube refresh failed', error);
         } finally {
           refreshRunning = false;
         }
@@ -89,23 +115,31 @@ export function useForecastLab(): LabState {
       });
       if (cancelled) return;
       setBoot({phase: 'loading', message: 'Fetching ECMWF Zarr chunks'});
-      stream.done.catch((error: unknown) => {
-        if (cancelled) return;
-        console.error('ECMWF chunk streaming failed', error);
-        signalFirstChunk();
-        setProgress({
-          loadedChunks: stream.totalChunks,
-          totalChunks: stream.totalChunks,
-        });
-      });
+      void stream.done.then(
+        () => {
+          if (cancelled) return;
+          streamComplete = true;
+          scheduleRefresh();
+        },
+        (error: unknown) => {
+          streamError = error;
+          signalFirstChunk();
+          if (lab) fail('ECMWF chunk streaming failed', error);
+        },
+      );
       await firstChunk;
       if (cancelled) return;
+      if (streamError) throw streamError;
       setBoot({
         phase: 'loading',
         message: 'Materializing DataFusion-WASM tables',
       });
-      const df = await DataFusion.create(stream.cube, stream.loaded, () => {});
-      if (cancelled) return;
+      const df = await createDataFusion(stream.cube, stream.loaded, () => {});
+      if (cancelled || streamError) {
+        void df.dispose();
+        if (streamError) throw streamError;
+        return;
+      }
       const coordinator = new Coordinator(df as never, {
         cache: false,
         consolidate: true,
@@ -117,16 +151,13 @@ export function useForecastLab(): LabState {
       setBoot({phase: 'ready', lab});
       scheduleRefresh();
     })().catch((error: unknown) => {
-      if (cancelled) return;
-      setBoot({
-        phase: 'error',
-        message: error instanceof Error ? error.message : String(error),
-      });
+      fail('Forecast lab initialization failed', error);
     });
     return () => {
       cancelled = true;
+      disposeLab();
     };
   }, []);
 
-  return {boot, cubeVersion, progress};
+  return {boot, cubeVersion, progress, streaming};
 }

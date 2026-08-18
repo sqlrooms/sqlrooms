@@ -1,6 +1,7 @@
 import {useMemo, type FC} from 'react';
-import {useRoomStore, type ForecastSession, type HoverBrush} from '../store';
-import {ForecastControls} from './Sidebar';
+import {useHoverBrush} from '../hooks/use-hover-brush';
+import {useRoomStore, type ForecastSession} from '../store';
+import {ForecastControls} from './ForecastControls';
 import {MosaicCharts} from './MosaicCharts';
 
 /**
@@ -24,13 +25,8 @@ export const ForecastPanel: FC = () => {
     requestLead,
     togglePlay,
     reset,
-    brushEnabled,
-    brushRadiusKm,
-    brushCenter,
-    toggleBrush,
-    setBrushRadiusKm,
-    onBrushPointerMove,
   } = useRoomStore((state) => state.forecast);
+  const brush = useHoverBrush();
 
   const session: ForecastSession = useMemo(
     () => ({
@@ -56,25 +52,6 @@ export const ForecastPanel: FC = () => {
       requestLead,
       togglePlay,
       reset,
-    ],
-  );
-
-  const brush: HoverBrush = useMemo(
-    () => ({
-      enabled: brushEnabled,
-      radiusKm: brushRadiusKm,
-      active: brushCenter !== null,
-      toggle: toggleBrush,
-      setRadiusKm: setBrushRadiusKm,
-      onPointerMove: onBrushPointerMove,
-    }),
-    [
-      brushEnabled,
-      brushRadiusKm,
-      brushCenter,
-      toggleBrush,
-      setBrushRadiusKm,
-      onBrushPointerMove,
     ],
   );
 

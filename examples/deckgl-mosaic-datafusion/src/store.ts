@@ -1,5 +1,4 @@
-import {createMosaicSlice} from '@sqlrooms/mosaic';
-import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
+import {createMosaicSlice, type MosaicSliceState} from '@sqlrooms/mosaic';
 import {
   createRoomShellSlice,
   createRoomStore,
@@ -46,6 +45,7 @@ export type HoverBrush = {
   toggle: () => void;
   setRadiusKm: (radiusKm: number) => void;
   onPointerMove: (clientX: number, clientY: number) => void;
+  clear: () => void;
 };
 
 export type ForecastSliceState = {
@@ -71,6 +71,7 @@ export type ForecastSliceState = {
     toggleBrush: () => void;
     setBrushRadiusKm: (radiusKm: number) => void;
     onBrushPointerMove: (clientX: number, clientY: number) => void;
+    clearBrush: () => void;
 
     streaming: boolean;
     setStreaming: (streaming: boolean) => void;
@@ -121,20 +122,16 @@ function createForecastSlice(lab: Lab) {
     get: () => RoomState,
   ): ForecastSliceState => {
     let map: MapView | null = null;
-    let leadIndex = 0;
-    let brushEnabled = false;
-    let brushRadiusKm = 175;
-    let brushCenter: MapBrushCenter | null = null;
 
     const selectionMask = new Uint8Array(CELL_COUNT);
     let selectionSeq = 0;
     let pendingLead: number | null = null;
     let leadRunning = false;
     let playbackTimer: number | null = null;
+    let disposed = false;
 
     const brushSource = {
       reset: () => {
-        brushCenter = null;
         map?.setBrushCenter(null);
         set((state) =>
           produce(state, (draft) => {
@@ -145,7 +142,6 @@ function createForecastSlice(lab: Lab) {
     };
 
     const publishBrush = (nextCenter: MapBrushCenter | null) => {
-      brushCenter = nextCenter;
       map?.setBrushCenter(nextCenter);
       lab.selection.update({
         source: brushSource,
@@ -153,7 +149,7 @@ function createForecastSlice(lab: Lab) {
         predicate: nextCenter
           ? geoCirclePredicateExpr({
               center: nextCenter,
-              radiusKm: brushRadiusKm,
+              radiusKm: get().forecast.brushRadiusKm,
             })
           : null,
       });
@@ -165,6 +161,7 @@ function createForecastSlice(lab: Lab) {
     };
 
     const refreshSelection = async () => {
+      if (disposed) return;
       const seq = ++selectionSeq;
       try {
         const where = predicateSql(lab.selection);
@@ -174,7 +171,7 @@ function createForecastSlice(lab: Lab) {
             ? `SELECT id FROM cells_current_lead WHERE ${where}`
             : 'SELECT id FROM cells_current_lead',
         })) as Table;
-        if (seq !== selectionSeq) return;
+        if (disposed || seq !== selectionSeq) return;
         selectionMask.fill(0);
         let count = 0;
         const ids = table.getChild('id')?.toArray() as
@@ -200,7 +197,7 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
           selected_area: number | null;
           hot_area: number | null;
         }>;
-        if (seq !== selectionSeq) return;
+        if (disposed || seq !== selectionSeq) return;
         const mean = rows[0]?.mean_temp;
         const selectedArea = rows[0]?.selected_area;
         const hotArea = rows[0]?.hot_area;
@@ -219,12 +216,14 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
       }
     };
 
-    const fetchForecastTime = async () => {
+    const fetchForecastTime = async (leadIndex: number) => {
+      if (disposed) return;
       const rows = (await lab.df.query({
         type: 'json',
         sql: `SELECT valid_time_ms FROM forecast_times WHERE time_index = ${leadIndex}`,
       })) as Array<{valid_time_ms: number | null}>;
       const ms = rows[0]?.valid_time_ms;
+      if (disposed) return;
       set((state) =>
         produce(state, (draft) => {
           draft.forecast.forecastTimeMs = ms == null ? null : Number(ms);
@@ -243,23 +242,25 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
           lab.coordinator.clients.forEach((client) => {
             if (client.enabled) void client.requestQuery();
           });
-          await fetchForecastTime();
+          await fetchForecastTime(lead);
           await refreshSelection();
         }
       } catch (error) {
         console.error('DataFusion lead swap failed', error);
       } finally {
         leadRunning = false;
+        if (pendingLead !== null) void runLeadLoop();
       }
     };
 
     const requestLead = (index: number) => {
-      leadIndex = index;
-      map?.setLeadIndex(index);
-      pendingLead = index;
+      if (disposed) return;
+      const leadIndex = Math.max(0, Math.min(index, lab.cube.leadCount - 1));
+      map?.setLeadIndex(leadIndex);
+      pendingLead = leadIndex;
       set((state) =>
         produce(state, (draft) => {
-          draft.forecast.leadIndex = index;
+          draft.forecast.leadIndex = leadIndex;
         }),
       );
       if (!leadRunning) void runLeadLoop();
@@ -275,13 +276,13 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
     const startPlayback = () => {
       stopPlayback();
       playbackTimer = window.setInterval(() => {
-        requestLead((leadIndex + 1) % lab.cube.leadCount);
+        requestLead((get().forecast.leadIndex + 1) % lab.cube.leadCount);
       }, PLAYBACK_STEP_MS);
     };
 
     const onSelectionValue = () => void refreshSelection();
     lab.selection.addEventListener('value', onSelectionValue);
-    void fetchForecastTime();
+    void fetchForecastTime(0);
     void refreshSelection();
 
     return {
@@ -297,7 +298,11 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
             }),
           );
           if (nextMap) {
-            nextMap.setLeadIndex(leadIndex);
+            const forecast = get().forecast;
+            nextMap.setLeadIndex(forecast.leadIndex);
+            nextMap.setBrushEnabled(forecast.brushEnabled);
+            nextMap.setBrushRadiusKm(forecast.brushRadiusKm);
+            nextMap.setBrushCenter(forecast.brushCenter);
             void refreshSelection();
           }
         },
@@ -325,11 +330,9 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
         brushRadiusKm: 175,
         brushCenter: null,
         toggleBrush: () => {
-          const next = !brushEnabled;
-          brushEnabled = next;
-          brushCenter = null;
+          const next = !get().forecast.brushEnabled;
           map?.setBrushEnabled(next);
-          map?.setBrushRadiusKm(brushRadiusKm);
+          map?.setBrushRadiusKm(get().forecast.brushRadiusKm);
           if (!next) publishBrush(null);
           set((state) =>
             produce(state, (draft) => {
@@ -339,14 +342,14 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
           );
         },
         setBrushRadiusKm: (radiusKm) => {
-          brushRadiusKm = radiusKm;
-          map?.setBrushRadiusKm(radiusKm);
-          if (brushCenter) publishBrush(brushCenter);
           set((state) =>
             produce(state, (draft) => {
               draft.forecast.brushRadiusKm = radiusKm;
             }),
           );
+          map?.setBrushRadiusKm(radiusKm);
+          const center = get().forecast.brushCenter;
+          if (center) publishBrush(center);
         },
         onBrushPointerMove: (clientX, clientY) => {
           const next = map?.screenToLngLat(clientX, clientY);
@@ -357,9 +360,13 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
             next.lat < BOUNDS.south ||
             next.lat > BOUNDS.north
           ) {
+            if (get().forecast.brushCenter) publishBrush(null);
             return;
           }
           publishBrush(next);
+        },
+        clearBrush: () => {
+          if (get().forecast.brushCenter) publishBrush(null);
         },
 
         streaming: false,
@@ -388,8 +395,12 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
         },
 
         dispose: () => {
+          disposed = true;
+          selectionSeq += 1;
+          pendingLead = null;
           stopPlayback();
           lab.selection.removeEventListener('value', onSelectionValue);
+          map = null;
         },
       },
     };

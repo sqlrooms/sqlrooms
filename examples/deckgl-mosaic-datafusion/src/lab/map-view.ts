@@ -15,6 +15,7 @@ import type {ShaderModule} from '@luma.gl/shadertools';
 import * as zarr from 'zarrita';
 import {openEcmwfArray} from './ecmwf-store';
 import {MaskFilter} from './gpu-modules/mask-filter';
+import {createEcmwfTileSlice, sliceCubeToTile} from './tile-data';
 import {
   BOUNDS,
   CELL_COUNT,
@@ -210,36 +211,6 @@ type LiveTile = {
 };
 
 /**
- * Slices the in-memory temperature cube (the same [lead][cell] Float32Array
- * handed to DataFusion) into a tile-shaped [lead][row][col] buffer. Regions
- * the cube does not cover, or that have not streamed in yet, stay NaN and
- * the shader discards them.
- */
-function sliceCubeToTile(
-  cube: Float32Array,
-  leadCount: number,
-  relRow: number,
-  relCol: number,
-  width: number,
-  height: number,
-): Float32Array {
-  const layerSize = width * height;
-  const data = new Float32Array(layerSize * leadCount).fill(Number.NaN);
-  const copyHeight = Math.max(0, Math.min(height, RASTER_HEIGHT - relRow));
-  const copyWidth = Math.max(0, Math.min(width, RASTER_WIDTH - relCol));
-  for (let lead = 0; lead < leadCount; lead += 1) {
-    for (let row = 0; row < copyHeight; row += 1) {
-      const src = lead * CELL_COUNT + (relRow + row) * RASTER_WIDTH + relCol;
-      data.set(
-        cube.subarray(src, src + copyWidth),
-        lead * layerSize + row * width,
-      );
-    }
-  }
-  return data;
-}
-
-/**
  * Builds a tile texture from the in-memory cube instead of re-fetching from
  * the Zarr store. With this store's chunk layout every 32x32 spatial read
  * pulls in all 51 ensemble members and 85 leads, and the streaming cube
@@ -253,16 +224,14 @@ function sliceEcmwfTileData(
 ): EcmwfTileData & {liveTile: LiveTile} {
   const tileWidth = arr.chunks[arr.chunks.length - 1];
   const tileHeight = arr.chunks[arr.chunks.length - 2];
-  const relRow = options.y * tileHeight;
-  const relCol = options.x * tileWidth;
-  const data = sliceCubeToTile(
-    cube,
-    leadCount,
-    relRow,
-    relCol,
-    options.width,
-    options.height,
-  );
+  const slice = createEcmwfTileSlice(cube, leadCount, {
+    tileRow: options.y,
+    tileCol: options.x,
+    tileWidth,
+    tileHeight,
+    width: options.width,
+    height: options.height,
+  });
 
   const texture = options.device.createTexture({
     dimension: '2d-array',
@@ -271,7 +240,7 @@ function sliceEcmwfTileData(
     height: options.height,
     depth: leadCount,
     mipLevels: 1,
-    data,
+    data: slice.data,
     sampler: {
       minFilter: 'nearest',
       magFilter: 'nearest',
@@ -284,13 +253,13 @@ function sliceEcmwfTileData(
     texture,
     width: options.width,
     height: options.height,
-    byteLength: data.byteLength,
-    maskUvOffset: [relCol / RASTER_WIDTH, relRow / RASTER_HEIGHT],
-    maskUvScale: [options.width / RASTER_WIDTH, options.height / RASTER_HEIGHT],
+    byteLength: slice.data.byteLength,
+    maskUvOffset: slice.maskUvOffset,
+    maskUvScale: slice.maskUvScale,
     liveTile: {
       texture,
-      relRow,
-      relCol,
+      relRow: slice.relRow,
+      relCol: slice.relCol,
       width: options.width,
       height: options.height,
     },
@@ -351,6 +320,10 @@ export function createMapView(container: HTMLDivElement, cube: Float32Array) {
     return Number.isFinite(value) ? value : null;
   }
 
+  /**
+   * Hover-brush moves reuse the cached base layers. Mask, lead, and cube
+   * version changes invalidate getBaseLayers() and rebuild the raster layer.
+   */
   function render() {
     if (disposed) return;
     deck.setProps({layers: [...getBaseLayers(), brushLayer()]});
@@ -558,17 +531,6 @@ export function createMapView(container: HTMLDivElement, cube: Float32Array) {
     return baseLayers;
   }
 
-  /**
-   * Fast path for hover-brush dragging: only the circle overlay moves, so
-   * the cached basemap and raster layers are reused instead of constructing
-   * new ZarrLayer/TileLayer instances on every pointer move. The mask query
-   * that follows each move lands via setMask, which does a full render.
-   */
-  function renderBrushOnly() {
-    if (disposed) return;
-    deck.setProps({layers: [...getBaseLayers(), brushLayer()]});
-  }
-
   void loadZarrRaster();
 
   return {
@@ -592,6 +554,12 @@ export function createMapView(container: HTMLDivElement, cube: Float32Array) {
             tile.width,
             tile.height,
           ),
+          {
+            width: tile.width,
+            height: tile.height,
+            depthOrArrayLayers: leadCount,
+            rowsPerImage: tile.height,
+          },
         );
       }
       cubeVersion += 1;
@@ -612,17 +580,15 @@ export function createMapView(container: HTMLDivElement, cube: Float32Array) {
     },
     setBrushRadiusKm(radiusKm: number) {
       brushRadiusKm = radiusKm;
-      renderBrushOnly();
+      render();
     },
     setBrushCenter(center: MapBrushCenter | null) {
       brushCenter = center;
-      renderBrushOnly();
+      render();
     },
     screenToLngLat(clientX: number, clientY: number): MapBrushCenter | null {
       const rect = container.getBoundingClientRect();
-      const viewport =
-        (deck as any).getViewports?.()[0] ??
-        (deck as any).viewManager?.getViewports?.()[0];
+      const viewport = deck.getViewports()[0];
       if (!viewport?.unproject) return null;
       const [lon, lat] = viewport.unproject([
         clientX - rect.left,

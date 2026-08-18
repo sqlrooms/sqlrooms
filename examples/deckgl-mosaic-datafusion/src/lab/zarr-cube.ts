@@ -39,8 +39,9 @@ export type CubeStream = {
 type ChunkRect = {x0: number; x1: number; y0: number; y1: number};
 
 /**
- * Splits the crop into store-chunk-aligned rectangles so each zarr.get call
- * touches exactly one chunk and can be painted as soon as it arrives.
+ * Splits the crop into store-chunk-aligned rectangles. In the current store,
+ * each rectangle spans one 32x32 inner shard chunk; the lead and ensemble
+ * dimensions are each stored in a single chunk and are requested together.
  */
 function chunkRects(chunkWidth: number, chunkHeight: number): ChunkRect[] {
   const rects: ChunkRect[] = [];
@@ -73,22 +74,37 @@ export async function streamTimeCube(
     );
   }
   const initTimeIndex = (arr.shape[0] ?? 1) - 1;
-  const leadCount = arr.shape[1] ?? 1;
+  const shapedLeadCount = arr.shape[1] ?? 1;
 
   const group = await openEcmwfGroup();
-  const leadArr = await zarr.open.v3(group.resolve('lead_time'), {
-    kind: 'array',
-  });
-  const leadData = await zarr.get(leadArr, null);
-  const leadHours = Array.from(
+  const [leadArr, initArr, ingestedLengthArr] = await Promise.all([
+    zarr.open.v3(group.resolve('lead_time'), {kind: 'array'}),
+    zarr.open.v3(group.resolve('init_time'), {kind: 'array'}),
+    zarr.open.v3(group.resolve('ingested_forecast_length'), {kind: 'array'}),
+  ]);
+  const [leadData, initData, ingestedLengthData] = await Promise.all([
+    zarr.get(leadArr, null),
+    zarr.get(initArr, null),
+    zarr.get(ingestedLengthArr, null),
+  ]);
+  const allLeadHours = Array.from(
     leadData.data as Float64Array,
     (seconds) => seconds / 3600,
   );
+  const ingestedSeconds = Number(
+    (ingestedLengthData.data as Float64Array)[initTimeIndex],
+  );
+  if (!Number.isFinite(ingestedSeconds)) {
+    throw new Error('Latest ECMWF initialization has no ingested forecast');
+  }
+  const firstUnavailableLead = allLeadHours.findIndex(
+    (hours) => hours * 3600 > ingestedSeconds,
+  );
+  const ingestedLeadCount =
+    firstUnavailableLead < 0 ? allLeadHours.length : firstUnavailableLead;
+  const leadCount = Math.max(1, Math.min(shapedLeadCount, ingestedLeadCount));
+  const leadHours = allLeadHours.slice(0, leadCount);
 
-  const initArr = await zarr.open.v3(group.resolve('init_time'), {
-    kind: 'array',
-  });
-  const initData = await zarr.get(initArr, null);
   const initSeconds = Number(
     (initData.data as BigInt64Array | bigint[])[initTimeIndex] ?? 0,
   );

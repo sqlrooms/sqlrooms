@@ -110,6 +110,17 @@ function migrateClauses(
   }
 }
 
+function clearOwnedClauses(
+  selection: Selection,
+  interactors: ChartInteractor[],
+) {
+  const owned = new Set(interactors);
+  for (const clause of [...selection.clauses]) {
+    if (!owned.has(clause.source as ChartInteractor)) continue;
+    selection.update({...clause, value: null, predicate: null});
+  }
+}
+
 function buildCharts(
   hosts: Hosts,
   coordinator: Coordinator,
@@ -325,6 +336,14 @@ export function MosaicCharts({
       hostList.forEach((host) => host.replaceChildren());
     };
   }, [coordinator, selection, streaming]);
+
+  useEffect(
+    () => () => {
+      clearOwnedClauses(selection, interactorsRef.current);
+      interactorsRef.current = [];
+    },
+    [selection],
+  );
 
   return (
     <>
