@@ -158,11 +158,18 @@ export type McpRuntimeStatus = {
 export async function fetchMcpStatus(
   config: RuntimeConfig,
 ): Promise<McpRuntimeStatus> {
-  const response = await fetch(`${getApiBaseUrl(config)}/api/mcp/status`, {
-    headers: getApiHeaders(config),
-  });
-  if (!response.ok) throw new Error(`MCP status failed: ${response.status}`);
-  return (await response.json()) as McpRuntimeStatus;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1_000);
+  try {
+    const response = await fetch(`${getApiBaseUrl(config)}/api/mcp/status`, {
+      headers: getApiHeaders(config),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`MCP status failed: ${response.status}`);
+    return (await response.json()) as McpRuntimeStatus;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function setMcpEnabled(

@@ -57,6 +57,28 @@ def test_api_config(server):
     )
 
 
+def test_auto_ws_port_reserves_explicit_mcp_port(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 43101
+
+    monkeypatch.setattr("sqlrooms.web.launcher._pick_free_port", fake_pick_free_port)
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=4173,
+        ws_port=None,
+        mcp_port=43100,
+        open_browser=False,
+    )
+
+    assert server.ws_port == 43101
+    assert calls[0][2] == {4173, 43100}
+
+
 def test_mcp_lifecycle_status_requires_session_token(server):
     client = TestClient(server._build_app())
 
@@ -68,6 +90,20 @@ def test_mcp_lifecycle_status_requires_session_token(server):
 
     assert response.status_code == 200
     assert response.json()["status"] == "off"
+
+
+def test_mcp_status_accepts_valid_header_when_bearer_is_invalid(server):
+    client = TestClient(server._build_app())
+
+    response = client.get(
+        "/api/mcp/status",
+        headers={
+            "Authorization": "Bearer incorrect",
+            "X-SQLRooms-Token": server.session_token,
+        },
+    )
+
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio
@@ -174,6 +210,34 @@ def test_mcp_browser_bridge_holds_single_ready_lease(server):
             with pytest.raises(WebSocketDisconnect) as exc_info:
                 second.receive_json()
             assert exc_info.value.code == 4409
+
+
+def test_mcp_browser_bridge_ignores_malformed_json_after_auth(server):
+    client = TestClient(server._build_app())
+
+    with client.websocket_connect("/ws/mcp-bridge") as first:
+        first.send_json(
+            {
+                "version": 1,
+                "type": "bridge.authenticate",
+                "pageId": "page-a",
+                "token": server.session_token,
+            }
+        )
+        assert first.receive_json()["type"] == "bridge.authenticated"
+        first.send_text("{")
+        first.send_json({"version": 1, "type": "bridge.ready", "pageId": "page-a"})
+
+        with client.websocket_connect("/ws/mcp-bridge") as second:
+            second.send_json(
+                {
+                    "version": 1,
+                    "type": "bridge.authenticate",
+                    "pageId": "page-b",
+                    "token": server.session_token,
+                }
+            )
+            assert second.receive_json()["code"] == "bridge_lease_held"
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):

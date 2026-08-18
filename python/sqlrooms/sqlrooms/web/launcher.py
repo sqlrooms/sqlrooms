@@ -475,7 +475,12 @@ class SqlroomsHttpServer:
         if ws_port is None:
             # socketify listens on all interfaces; we pick a free local port for convenience
             # to avoid collisions when multiple dev servers are running.
-            self.ws_port = _pick_free_port(self._public_host())
+            reserved_ports = {self.port}
+            if mcp_port is not None:
+                reserved_ports.add(mcp_port)
+            self.ws_port = _pick_free_port(
+                self._public_host(), reserved_ports=reserved_ports
+            )
         else:
             self.ws_port = ws_port
         self.llm_provider = llm_provider
@@ -588,7 +593,7 @@ class SqlroomsHttpServer:
             task = asyncio.create_task(server.serve(), name="sqlrooms-mcp-server")
             self._mcp_server = server
             self._mcp_task = task
-            for _ in range(200):
+            for _ in range(1_000):
                 if server.started:
                     logger.info("SQLRooms MCP URL: %s", self._mcp_url())
                     return self._mcp_status()
@@ -885,7 +890,10 @@ class SqlroomsHttpServer:
             auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
         )
         header_token = (request.headers.get("x-sqlrooms-token") or "").strip()
-        if hmac.compare_digest(bearer_token or header_token, self.session_token):
+        expected = self.session_token.encode("utf-8")
+        bearer_matches = hmac.compare_digest(bearer_token.encode("utf-8"), expected)
+        header_matches = hmac.compare_digest(header_token.encode("utf-8"), expected)
+        if bearer_matches or header_matches:
             return None
         return JSONResponse({"error": "unauthorized"}, status_code=401)
 

@@ -1,3 +1,4 @@
+/** JSON Schema subset accepted for portable room capability inputs. */
 export type JsonSchema = {
   type?: string | string[];
   title?: string;
@@ -9,6 +10,7 @@ export type JsonSchema = {
   [key: string]: unknown;
 };
 
+/** MCP-compatible behavioral hints; hosts must not treat hints as enforcement. */
 export type RoomCapabilityAnnotations = {
   readOnlyHint?: boolean;
   idempotentHint?: boolean;
@@ -16,6 +18,7 @@ export type RoomCapabilityAnnotations = {
   untrustedContentHint?: boolean;
 };
 
+/** Host-stamped invocation metadata shared across capability transports. */
 export type RoomCapabilityContext = {
   surface: 'mcp-http' | 'ai' | 'cli' | 'api' | (string & {});
   actor?: string;
@@ -26,12 +29,14 @@ export type RoomCapabilityContext = {
   signal?: AbortSignal;
 };
 
+/** Successful, JSON-serializable capability result. */
 export type RoomCapabilitySuccess = {
   ok: true;
   data?: unknown;
   message?: string;
 };
 
+/** Structured capability failure suitable for transport adapters. */
 export type RoomCapabilityFailure = {
   ok: false;
   code: string;
@@ -41,10 +46,12 @@ export type RoomCapabilityFailure = {
   inputRequired?: unknown;
 };
 
+/** Result returned by every room capability. */
 export type RoomCapabilityResult =
   | RoomCapabilitySuccess
   | RoomCapabilityFailure;
 
+/** Executable capability definition owned by a live room. */
 export type RoomCapability = {
   name: string;
   title?: string;
@@ -57,12 +64,15 @@ export type RoomCapability = {
   ) => Promise<RoomCapabilityResult> | RoomCapabilityResult;
 };
 
+/** Serializable catalog representation without the execution function. */
 export type RoomCapabilityDescriptor = Omit<RoomCapability, 'execute'>;
 
+/** Result of a pre-execution authorization decision. */
 export type RoomCapabilityPolicyDecision =
   | {allowed: true}
   | {allowed: false; result: RoomCapabilityFailure};
 
+/** Optional host policy invoked after validation and before execution. */
 export type RoomCapabilityPolicy = {
   authorize?: (options: {
     capability: RoomCapabilityDescriptor;
@@ -71,6 +81,7 @@ export type RoomCapabilityPolicy = {
   }) => RoomCapabilityPolicyDecision | Promise<RoomCapabilityPolicyDecision>;
 };
 
+/** Bounded invocation record emitted after a capability call completes. */
 export type RoomCapabilityTrace = {
   capability: RoomCapabilityDescriptor;
   context: RoomCapabilityContext;
@@ -80,6 +91,7 @@ export type RoomCapabilityTrace = {
   result: RoomCapabilityResult;
 };
 
+/** Construction limits and hooks for a room capability runtime. */
 export type CreateRoomCapabilityRuntimeOptions = {
   capabilities: RoomCapability[];
   policy?: RoomCapabilityPolicy;
@@ -89,6 +101,7 @@ export type CreateRoomCapabilityRuntimeOptions = {
   onInvocation?: (trace: RoomCapabilityTrace) => void;
 };
 
+/** Transport-neutral catalog, invocation, and lifecycle interface. */
 export type RoomCapabilityRuntime = {
   listTools: () => RoomCapabilityDescriptor[];
   callTool: (

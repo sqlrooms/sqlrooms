@@ -86,6 +86,39 @@ describe('createRoomCapabilityRuntime', () => {
     jest.useRealTimers();
   });
 
+  test('applies the timeout to authorization', async () => {
+    jest.useFakeTimers();
+    const tool = capability('guarded');
+    const runtime = createRoomCapabilityRuntime({
+      timeoutMs: 5,
+      capabilities: [tool],
+      policy: {authorize: async () => await new Promise(() => {})},
+    });
+
+    const result = runtime.callTool('guarded', {value: 'x'}, {surface: 'api'});
+    await jest.advanceTimersByTimeAsync(10);
+
+    await expect(result).resolves.toMatchObject({ok: false, code: 'timeout'});
+    expect(tool.execute).not.toHaveBeenCalled();
+    jest.useRealTimers();
+  });
+
+  test('does not execute when the caller signal is already aborted', async () => {
+    const tool = capability('cancelled');
+    const controller = new AbortController();
+    controller.abort();
+    const runtime = createRoomCapabilityRuntime({capabilities: [tool]});
+
+    await expect(
+      runtime.callTool(
+        'cancelled',
+        {value: 'x'},
+        {surface: 'api', signal: controller.signal},
+      ),
+    ).resolves.toMatchObject({ok: false, code: 'cancelled'});
+    expect(tool.execute).not.toHaveBeenCalled();
+  });
+
   test('rejects non-serializable results', async () => {
     const runtime = createRoomCapabilityRuntime({
       capabilities: [

@@ -41,6 +41,12 @@ networks; it exposes the SQLRooms UI/API bind address beyond your loopback
 interface. The DuckDB websocket backend still enforces local-only connections
 unless you explicitly use external proxy settings.
 
+The MCP listener uses the official stateless Streamable HTTP transport. The
+browser must remain open and initialized because the live room owns the tool
+catalog and execution state. Every MCP SQL query requires an allow-once dialog
+in that browser. This approval and the one-statement `SELECT` check are not a
+SQL sandbox; only approve SQL from a client and request you trust.
+
 There is intentionally no `sqlrooms add`, `sqlrooms import`, or
 `sqlrooms doctor` command in the first public CLI. Drag-and-drop import is the
 supported first-launch path, and the release smoke checklist below covers the

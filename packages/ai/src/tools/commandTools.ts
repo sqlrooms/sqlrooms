@@ -457,7 +457,7 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
             context,
             state,
           ),
-          {confirmed},
+          {confirmed: confirmed === true},
         );
         if (result.success) {
           return {

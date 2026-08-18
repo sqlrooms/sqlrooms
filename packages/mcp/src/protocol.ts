@@ -1,10 +1,33 @@
 import {z} from 'zod';
 
+/** Keep paired with python/sqlrooms/sqlrooms/web/mcp_bridge.py. */
 export const MCP_BRIDGE_PROTOCOL_VERSION = 1 as const;
 
 const BridgeBase = z.object({version: z.literal(MCP_BRIDGE_PROTOCOL_VERSION)});
 
-export const BrowserBridgeClientMessage = z.discriminatedUnion('type', [
+const BrowserBridgeResponse = z.union([
+  BridgeBase.extend({
+    type: z.literal('bridge.response'),
+    pageId: z.string().min(1).max(256),
+    requestId: z.string().min(1).max(256),
+    ok: z.literal(true),
+    result: z.unknown(),
+  }),
+  BridgeBase.extend({
+    type: z.literal('bridge.response'),
+    pageId: z.string().min(1).max(256),
+    requestId: z.string().min(1).max(256),
+    ok: z.literal(false),
+    error: z.object({
+      code: z.string(),
+      message: z.string(),
+      retryable: z.boolean().optional(),
+    }),
+  }),
+]);
+
+/** Browser-to-host messages for SQLRooms bridge protocol version 1. */
+export const BrowserBridgeClientMessage = z.union([
   BridgeBase.extend({
     type: z.literal('bridge.authenticate'),
     pageId: z.string().min(1).max(256),
@@ -22,22 +45,10 @@ export const BrowserBridgeClientMessage = z.discriminatedUnion('type', [
     type: z.literal('bridge.heartbeat'),
     pageId: z.string().min(1).max(256),
   }),
-  BridgeBase.extend({
-    type: z.literal('bridge.response'),
-    pageId: z.string().min(1).max(256),
-    requestId: z.string().min(1).max(256),
-    ok: z.boolean(),
-    result: z.unknown().optional(),
-    error: z
-      .object({
-        code: z.string(),
-        message: z.string(),
-        retryable: z.boolean().optional(),
-      })
-      .optional(),
-  }),
+  BrowserBridgeResponse,
 ]);
 
+/** Host-to-browser messages for SQLRooms bridge protocol version 1. */
 export const BrowserBridgeServerMessage = z.discriminatedUnion('type', [
   BridgeBase.extend({type: z.literal('bridge.authenticated')}),
   BridgeBase.extend({

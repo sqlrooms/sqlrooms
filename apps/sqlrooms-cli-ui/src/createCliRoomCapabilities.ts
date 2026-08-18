@@ -6,7 +6,11 @@ import {
   resolveTableReference,
 } from '@sqlrooms/duckdb';
 import {invokeCommandWithPolicy} from '@sqlrooms/room-shell';
-import type {RoomCommandDescriptor} from '@sqlrooms/room-shell';
+import type {
+  RoomCommandDescriptor,
+  RoomCommandResult,
+} from '@sqlrooms/room-shell';
+import {likePatternToRegex} from './mcpCapabilityUtils';
 import {roomStore} from './store';
 
 const DEFAULT_QUERY_ROWS = 200;
@@ -30,7 +34,7 @@ function createQueryCapability(): RoomCapability {
     name: 'query',
     title: 'Query the room database',
     description:
-      'Run one read-only SQL SELECT query against the live room and return bounded JSON rows.',
+      'Run one user-approved SQL SELECT query against the live room and return bounded JSON rows. SELECT validation is not a host sandbox.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -45,7 +49,7 @@ function createQueryCapability(): RoomCapability {
       required: ['sql'],
       additionalProperties: false,
     },
-    annotations: {readOnlyHint: true, untrustedContentHint: true},
+    annotations: {untrustedContentHint: true},
     execute: async (rawInput, context) => {
       const input = rawInput as {sql: string; maxRows?: number};
       const sql = input.sql.trim();
@@ -182,10 +186,12 @@ function createReadTableSchemaCapability(): RoomCapability {
     annotations: {readOnlyHint: true, untrustedContentHint: true},
     execute: (rawInput) => {
       const {tableId} = rawInput as {tableId: string};
-      const resolution = resolveTableReference(
-        roomStore.getState().db.tables,
-        tableId,
-      );
+      const visibleTables = roomStore
+        .getState()
+        .db.tables.filter(
+          (table) => !table.table.schema?.startsWith('__sqlrooms_'),
+        );
+      const resolution = resolveTableReference(visibleTables, tableId);
       if (resolution.ambiguousMatches) {
         return {
           ok: false,
@@ -199,7 +205,7 @@ function createReadTableSchemaCapability(): RoomCapability {
         };
       }
       const table = resolution.table;
-      if (!table || table.table.schema?.startsWith('__sqlrooms_')) {
+      if (!table) {
         return {
           ok: false,
           code: 'table_not_found',
@@ -324,8 +330,16 @@ function createExecuteCommandCapability(): RoomCapability {
         commandId: string;
         input?: unknown;
       };
-      const result = await enqueueCommandInvocation(() =>
-        invokeCommandWithPolicy(
+      const result = await enqueueCommandInvocation<RoomCommandResult>(() => {
+        if (context.signal?.aborted) {
+          return Promise.resolve({
+            success: false,
+            commandId,
+            code: 'command-cancelled',
+            error: 'Command execution was cancelled.',
+          });
+        }
+        return invokeCommandWithPolicy(
           roomStore,
           commandId,
           input,
@@ -338,10 +352,11 @@ function createExecuteCommandCapability(): RoomCapability {
               mcpRequestId: context.requestId,
               mcpClientInfo: context.clientInfo,
             },
+            signal: context.signal,
           },
           {confirmed: false},
-        ),
-      );
+        );
+      });
       if (result.success) {
         return {
           ok: true,
@@ -401,19 +416,6 @@ function scoreCommand(command: RoomCommandDescriptor, query: string) {
     if (description.includes(term)) return score + 2;
     return score;
   }, 0);
-}
-
-function likePatternToRegex(pattern: string) {
-  const normalized = pattern.replace(/%+/g, '%');
-  const wildcardCount = (normalized.match(/[%_]/g) ?? []).length;
-  if (wildcardCount > 20) {
-    throw new Error('Table pattern contains too many wildcards.');
-  }
-  const escaped = normalized
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/%/g, '.*')
-    .replace(/_/g, '.');
-  return new RegExp(`^${escaped}$`, 'i');
 }
 
 function enqueueCommandInvocation<T>(invoke: () => Promise<T>): Promise<T> {

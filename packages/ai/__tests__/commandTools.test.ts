@@ -1,13 +1,23 @@
 import {jest} from '@jest/globals';
 
-jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
-  hasCommandSliceState: () => true,
-  invokeCommandWithPolicy: (
+const invokeCommandWithPolicy = jest.fn(
+  (
     store: any,
     commandId: string,
     input: unknown,
     invocation: unknown,
-  ) => store.getState().commands.invokeCommand(commandId, input, invocation),
+    policy: unknown,
+  ) => {
+    void policy;
+    return store
+      .getState()
+      .commands.invokeCommand(commandId, input, invocation);
+  },
+);
+
+jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
+  hasCommandSliceState: () => true,
+  invokeCommandWithPolicy,
 }));
 
 const {
@@ -253,6 +263,13 @@ describe('command tools', () => {
         surface: 'ai',
         metadata: {aiSessionId: 'session-1'},
       },
+    );
+    expect(invokeCommandWithPolicy).toHaveBeenCalledWith(
+      expect.anything(),
+      'artifact.create',
+      {title: 'Artifact'},
+      expect.objectContaining({surface: 'ai'}),
+      {confirmed: false},
     );
   });
 

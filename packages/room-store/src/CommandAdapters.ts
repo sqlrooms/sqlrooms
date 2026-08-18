@@ -9,23 +9,27 @@ import {
   RoomCommandResult,
 } from './CommandSlice';
 
+/** Defaults applied to command invocations created by the CLI adapter. */
 export type CommandCliAdapterOptions = {
   defaultActor?: string;
   defaultTraceId?: string;
   defaultMetadata?: Record<string, unknown>;
 };
 
+/** Confirmation state enforced immediately before a command executes. */
 export type CommandInvocationPolicyOptions = {
   /** True only after the invoking surface obtained explicit user confirmation. */
   confirmed?: boolean;
 };
 
+/** Invocation metadata plus an explicit confirmation decision. */
 export type GuardedCommandInvocationOptions = Omit<
   RoomCommandInvocationOptions,
   'surface'
 > &
   CommandInvocationPolicyOptions;
 
+/** Portable command discovery and execution surface for CLI callers. */
 export type CommandCliAdapter = {
   listCommands: (
     options?: Omit<RoomCommandListOptions, 'surface'>,
@@ -37,6 +41,7 @@ export type CommandCliAdapter = {
   ) => Promise<RoomCommandResult>;
 };
 
+/** MCP-shaped descriptor derived from a registered room command. */
 export type CommandMcpToolDescriptor = {
   name: string;
   commandId: string;
@@ -51,6 +56,7 @@ export type CommandMcpToolDescriptor = {
   };
 };
 
+/** Selection and invocation defaults for the command MCP adapter. */
 export type CommandMcpAdapterOptions = {
   toolNamePrefix?: string;
   includeInvisible?: boolean;
@@ -62,6 +68,7 @@ export type CommandMcpAdapterOptions = {
   defaultMetadata?: Record<string, unknown>;
 };
 
+/** Portable MCP tool catalog and guarded command invocation adapter. */
 export type CommandMcpAdapter = {
   listTools: () => CommandMcpToolDescriptor[];
   resolveCommandId: (toolName: string) => string | undefined;
@@ -111,6 +118,7 @@ export function createCommandCliAdapter<RS extends BaseRoomStoreState>(
           actor: invocation?.actor ?? options?.defaultActor,
           traceId: invocation?.traceId ?? options?.defaultTraceId,
           metadata: invocation?.metadata ?? options?.defaultMetadata,
+          signal: invocation?.signal,
         },
         {confirmed: invocation?.confirmed},
       );
@@ -197,6 +205,7 @@ export function createCommandMcpAdapter<RS extends BaseRoomStoreState>(
           actor: invocation?.actor ?? options?.defaultActor,
           traceId: invocation?.traceId ?? options?.defaultTraceId,
           metadata: invocation?.metadata ?? options?.defaultMetadata,
+          signal: invocation?.signal,
         },
         {confirmed: invocation?.confirmed},
       );
@@ -219,6 +228,14 @@ export async function invokeCommandWithPolicy<RS extends BaseRoomStoreState>(
   invocation: RoomCommandInvocationOptions,
   policy?: CommandInvocationPolicyOptions,
 ): Promise<RoomCommandResult> {
+  if (invocation.signal?.aborted) {
+    return {
+      success: false,
+      commandId,
+      code: 'command-cancelled',
+      error: 'Command execution was cancelled.',
+    };
+  }
   const state = store.getState();
   if (!hasCommandSliceState(state)) {
     return {
@@ -269,6 +286,15 @@ export async function invokeCommandWithPolicy<RS extends BaseRoomStoreState>(
         riskLevel: descriptor.riskLevel,
         requiresConfirmation: descriptor.requiresConfirmation,
       },
+    };
+  }
+
+  if (invocation.signal?.aborted) {
+    return {
+      success: false,
+      commandId,
+      code: 'command-cancelled',
+      error: 'Command execution was cancelled.',
     };
   }
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import time
@@ -41,10 +42,13 @@ class SqlroomsMcpService:
         for raw in raw_tools if isinstance(raw_tools, list) else []:
             if not isinstance(raw, dict):
                 continue
+            name = str(raw.get("name") or "").strip()
+            if not name:
+                continue
             annotations = raw.get("annotations") or {}
             tools.append(
                 types.Tool(
-                    name=str(raw.get("name") or ""),
+                    name=name,
                     title=_optional_string(raw.get("title")),
                     description=_optional_string(raw.get("description")),
                     input_schema=raw.get("inputSchema") or {"type": "object"},
@@ -66,11 +70,12 @@ class SqlroomsMcpService:
         context: ServerRequestContext,
         params: types.CallToolRequestParams,
     ) -> types.CallToolResult:
-        client_info = _client_info(params)
+        client_info = _client_info(context)
         request_id = str(getattr(context, "request_id", "") or "")
         started_at = time.monotonic()
         try:
-            result = await self.broker.request(
+            result = await self._request_with_disconnect(
+                context,
                 "tools.call",
                 {
                     "name": params.name,
@@ -116,21 +121,72 @@ class SqlroomsMcpService:
             is_error=is_error,
         )
 
+    async def _request_with_disconnect(
+        self,
+        context: ServerRequestContext,
+        method: str,
+        params: Any,
+    ) -> Any:
+        request_task = asyncio.create_task(self.broker.request(method, params))
+        request = getattr(context, "request", None)
+        is_disconnected = getattr(request, "is_disconnected", None)
+        if not callable(is_disconnected):
+            return await request_task
+
+        disconnect_task = asyncio.create_task(
+            _wait_for_disconnect(is_disconnected, request_task)
+        )
+        try:
+            done, _pending = await asyncio.wait(
+                {request_task, disconnect_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if request_task in done:
+                return request_task.result()
+            if disconnect_task.result():
+                request_task.cancel()
+                await asyncio.gather(request_task, return_exceptions=True)
+                raise McpBridgeError(
+                    "cancelled",
+                    "The MCP caller disconnected.",
+                    retryable=True,
+                )
+            return await request_task
+        finally:
+            disconnect_task.cancel()
+            await asyncio.gather(disconnect_task, return_exceptions=True)
+            if not request_task.done():
+                request_task.cancel()
+                await asyncio.gather(request_task, return_exceptions=True)
+
 
 def _optional_string(value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
-def _client_info(params: types.CallToolRequestParams) -> dict[str, str] | None:
-    meta = getattr(params, "meta", None) or getattr(params, "_meta", None)
-    if not isinstance(meta, dict):
-        try:
-            meta = meta.model_dump(by_alias=True) if meta is not None else {}
-        except Exception:
-            meta = {}
-    raw = meta.get("io.modelcontextprotocol/clientInfo") or meta.get("clientInfo")
-    if not isinstance(raw, dict):
+def _client_info(context: ServerRequestContext) -> dict[str, str] | None:
+    """Return identity observed during MCP initialization, never call metadata."""
+    initialize = getattr(context.session, "client_params", None)
+    raw = getattr(initialize, "client_info", None)
+    if raw is None:
         return None
-    return {
-        key: str(raw[key]) for key in ("name", "version") if raw.get(key) is not None
+    identity = {
+        key: str(value)
+        for key, value in (
+            ("name", getattr(raw, "name", None)),
+            ("version", getattr(raw, "version", None)),
+        )
+        if value is not None
     }
+    return identity or None
+
+
+async def _wait_for_disconnect(is_disconnected, request_task: asyncio.Task) -> bool:
+    while not request_task.done():
+        try:
+            if await is_disconnected():
+                return True
+        except Exception:
+            return False
+        await asyncio.sleep(0.1)
+    return False

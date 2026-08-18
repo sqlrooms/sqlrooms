@@ -43,4 +43,25 @@ describe('createCommandMcpAdapter', () => {
     ).resolves.toMatchObject({success: true});
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  test('does not invoke a command after its caller is cancelled', async () => {
+    const {store, execute} = createTestStore();
+    const adapter = createCommandMcpAdapter(store, {
+      mapToolName: (id) => id,
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      adapter.callTool(
+        'danger',
+        {},
+        {confirmed: true, signal: controller.signal},
+      ),
+    ).resolves.toMatchObject({
+      success: false,
+      code: 'command-cancelled',
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

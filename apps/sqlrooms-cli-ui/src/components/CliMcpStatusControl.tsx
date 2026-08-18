@@ -7,7 +7,7 @@ import {
   Separator,
 } from '@sqlrooms/ui';
 import {Check, Copy, LoaderCircle} from 'lucide-react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {runtimeConfig} from '../runtimeEnvironment';
 import {
   fetchMcpStatus,
@@ -37,6 +37,8 @@ export function CliMcpStatusControl() {
   );
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<string>();
+  const [copyError, setCopyError] = useState<string>();
+  const copiedTimer = useRef<number | undefined>(undefined);
 
   const refresh = useCallback(async () => {
     if (!initial) return;
@@ -68,12 +70,30 @@ export function CliMcpStatusControl() {
     };
   }, [initial?.url, status?.url]);
 
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
+
   if (!initial || !status) return null;
 
   const copy = async (label: string, value: string) => {
-    await navigator.clipboard.writeText(value);
-    setCopied(label);
-    window.setTimeout(() => setCopied(undefined), 1_500);
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopyError(undefined);
+      setCopied(label);
+      if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
+      copiedTimer.current = window.setTimeout(() => {
+        setCopied(undefined);
+        copiedTimer.current = undefined;
+      }, 1_500);
+    } catch (error) {
+      setCopyError(
+        error instanceof Error ? error.message : 'Clipboard access failed.',
+      );
+    }
   };
   const toggle = async () => {
     setBusy(true);
@@ -131,6 +151,9 @@ export function CliMcpStatusControl() {
         </div>
         {status.lastError ? (
           <p className="text-destructive text-xs">{status.lastError}</p>
+        ) : null}
+        {copyError ? (
+          <p className="text-destructive text-xs">{copyError}</p>
         ) : null}
         <Separator />
         {Object.entries(snippets).map(([client, snippet]) => (

@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+# Keep paired with packages/mcp/src/protocol.ts for every wire-format change.
 MCP_BRIDGE_PROTOCOL_VERSION = 1
 
 
@@ -35,9 +36,11 @@ class McpBridgeBroker:
         self._page_id: str | None = None
         self._ready = False
         self._last_seen: float | None = None
+        self._last_seen_monotonic: float | None = None
         self._last_activity: float | None = None
         self._pending: dict[str, asyncio.Future[Any]] = {}
         self._connection_lock = asyncio.Lock()
+        self._send_lock = asyncio.Lock()
 
     def status(self) -> dict[str, Any]:
         return {
@@ -69,7 +72,9 @@ class McpBridgeBroker:
             or authenticated.get("type") != "bridge.authenticate"
             or not isinstance(page_id, str)
             or not isinstance(token, str)
-            or not hmac.compare_digest(token, self._token)
+            or not hmac.compare_digest(
+                token.encode("utf-8"), self._token.encode("utf-8")
+            )
         ):
             await websocket.close(code=4401, reason="unauthorized")
             return
@@ -92,13 +97,14 @@ class McpBridgeBroker:
                     except Exception:
                         pass
                 else:
-                    await websocket.send_json(
+                    await self._send_json(
+                        websocket,
                         {
                             "version": MCP_BRIDGE_PROTOCOL_VERSION,
                             "type": "bridge.error",
                             "code": "bridge_lease_held",
                             "message": "Another initialized page owns the MCP bridge lease.",
-                        }
+                        },
                     )
                     await websocket.close(code=4409, reason="bridge lease held")
                     return
@@ -107,16 +113,21 @@ class McpBridgeBroker:
             self._ready = False
             self._touch()
 
-        await websocket.send_json(
+        await self._send_json(
+            websocket,
             {
                 "version": MCP_BRIDGE_PROTOCOL_VERSION,
                 "type": "bridge.authenticated",
-            }
+            },
         )
 
         try:
             while True:
-                payload = await websocket.receive_json()
+                try:
+                    payload = await websocket.receive_json()
+                except ValueError:
+                    # A malformed frame must not tear down an authenticated lease.
+                    continue
                 self._touch()
                 if not isinstance(payload, dict):
                     continue
@@ -168,27 +179,28 @@ class McpBridgeBroker:
         future = asyncio.get_running_loop().create_future()
         self._pending[request_id] = future
         try:
-            await connection.send_json(
+            await self._send_json(
+                connection,
                 {
                     "version": MCP_BRIDGE_PROTOCOL_VERSION,
                     "type": "bridge.request",
                     "requestId": request_id,
                     "method": method,
                     "params": params,
-                }
+                },
             )
             return await asyncio.wait_for(
                 future, timeout=timeout or self._request_timeout
             )
         except asyncio.TimeoutError as exc:
-            await self._send_cancel(request_id)
+            await self._send_cancel(connection, request_id)
             raise McpBridgeError(
                 "bridge_timeout",
                 "The SQLRooms page did not reply in time.",
                 retryable=True,
             ) from exc
         except asyncio.CancelledError:
-            await self._send_cancel(request_id)
+            await self._send_cancel(connection, request_id)
             raise
         finally:
             self._pending.pop(request_id, None)
@@ -235,16 +247,17 @@ class McpBridgeBroker:
                 McpBridgeError("bridge_error", "Browser bridge call failed.")
             )
 
-    async def _send_cancel(self, request_id: str) -> None:
-        if self._connection is None:
+    async def _send_cancel(self, connection: WebSocket, request_id: str) -> None:
+        if self._connection is not connection:
             return
         try:
-            await self._connection.send_json(
+            await self._send_json(
+                connection,
                 {
                     "version": MCP_BRIDGE_PROTOCOL_VERSION,
                     "type": "request.cancel",
                     "requestId": request_id,
-                }
+                },
             )
         except Exception:
             pass
@@ -257,9 +270,14 @@ class McpBridgeBroker:
 
     def _touch(self) -> None:
         self._last_seen = time.time()
+        self._last_seen_monotonic = time.monotonic()
 
     def _lease_is_stale(self) -> bool:
         return bool(
-            self._last_seen is not None
-            and time.time() - self._last_seen > self._lease_timeout
+            self._last_seen_monotonic is not None
+            and time.monotonic() - self._last_seen_monotonic > self._lease_timeout
         )
+
+    async def _send_json(self, connection: WebSocket, payload: Any) -> None:
+        async with self._send_lock:
+            await connection.send_json(payload)

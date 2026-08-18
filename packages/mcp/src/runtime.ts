@@ -2,7 +2,6 @@ import Ajv, {type ValidateFunction} from 'ajv';
 import type {
   CreateRoomCapabilityRuntimeOptions,
   RoomCapability,
-  RoomCapabilityContext,
   RoomCapabilityDescriptor,
   RoomCapabilityFailure,
   RoomCapabilityResult,
@@ -42,7 +41,7 @@ export function createRoomCapabilityRuntime(
   }
 
   const catalog = Array.from(capabilities.values())
-    .sort((first, second) => first.name.localeCompare(second.name))
+    .sort((first, second) => compareCodePoints(first.name, second.name))
     .map(toDescriptor);
 
   return {
@@ -83,6 +82,14 @@ export function createRoomCapabilityRuntime(
         });
       }
 
+      if (context.signal?.aborted) {
+        return failure(
+          'cancelled',
+          'Capability execution was cancelled.',
+          true,
+        );
+      }
+
       const controller = new AbortController();
       const abortFromCaller = () => controller.abort(context.signal?.reason);
       context.signal?.addEventListener('abort', abortFromCaller, {once: true});
@@ -90,22 +97,19 @@ export function createRoomCapabilityRuntime(
       const executionContext = {...context, signal: controller.signal};
       let result: RoomCapabilityResult;
       try {
-        const decision = await options.policy?.authorize?.({
-          capability: toDescriptor(capability),
-          input,
-          context: executionContext,
-        });
-        if (decision && !decision.allowed) {
-          result = decision.result;
-        } else {
-          result = await executeWithTimeout(
-            capability,
-            input,
-            executionContext,
-            controller,
-            options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-          );
-        }
+        result = await executeWithTimeout(
+          async () => {
+            const decision = await options.policy?.authorize?.({
+              capability: toDescriptor(capability),
+              input,
+              context: executionContext,
+            });
+            if (decision && !decision.allowed) return decision.result;
+            return await capability.execute(input, executionContext);
+          },
+          controller,
+          options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        );
       } catch (error) {
         result = controller.signal.aborted
           ? failure('cancelled', 'Capability execution was cancelled.', true)
@@ -153,9 +157,7 @@ export function createRoomCapabilityRuntime(
 }
 
 async function executeWithTimeout(
-  capability: RoomCapability,
-  input: unknown,
-  context: RoomCapabilityContext,
+  execute: () => Promise<RoomCapabilityResult>,
   controller: AbortController,
   timeoutMs: number,
 ): Promise<RoomCapabilityResult> {
@@ -187,14 +189,14 @@ async function executeWithTimeout(
     );
   });
   try {
-    return await Promise.race([
-      Promise.resolve(capability.execute(input, context)),
-      timeoutPromise,
-      abortPromise,
-    ]);
+    return await Promise.race([execute(), timeoutPromise, abortPromise]);
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+function compareCodePoints(first: string, second: string) {
+  return first < second ? -1 : first > second ? 1 : 0;
 }
 
 function toDescriptor(capability: RoomCapability): RoomCapabilityDescriptor {

@@ -2,7 +2,10 @@ import {
   BrowserBridgeServerMessage,
   MCP_BRIDGE_PROTOCOL_VERSION,
 } from './protocol';
-import type {RoomCapabilityContext, RoomCapabilityRuntime} from './types';
+import type {RoomCapabilityRuntime} from './types';
+
+type WebSocketEvent = {data?: unknown};
+type WebSocketListener = (event: WebSocketEvent) => void;
 
 type WebSocketLike = {
   readonly readyState: number;
@@ -10,11 +13,11 @@ type WebSocketLike = {
   close(code?: number, reason?: string): void;
   addEventListener(
     type: 'open' | 'message' | 'close' | 'error',
-    listener: (event: any) => void,
+    listener: WebSocketListener,
   ): void;
   removeEventListener(
     type: 'open' | 'message' | 'close' | 'error',
-    listener: (event: any) => void,
+    listener: WebSocketListener,
   ): void;
 };
 
@@ -33,56 +36,57 @@ export type RegisterBrowserMcpBridgeOptions = {
 
 export type BrowserMcpBridge = {dispose: () => void};
 
+type BridgeConnection = {
+  socket: WebSocketLike;
+  onOpen: WebSocketListener;
+  onMessage: WebSocketListener;
+  onClose: WebSocketListener;
+  onError: WebSocketListener;
+};
+
+/**
+ * Connects a browser capability runtime to the authenticated local MCP host.
+ * Disposing it aborts active calls and prevents stale sockets from reconnecting.
+ */
 export function registerBrowserMcpBridge(
   runtime: RoomCapabilityRuntime,
   options: RegisterBrowserMcpBridgeOptions,
 ): BrowserMcpBridge {
+  if (!options.token) throw new Error('MCP bridge token is required.');
   const createWebSocket =
     options.createWebSocket ?? ((url: string) => new WebSocket(url));
   const pageId = options.pageId ?? createPageId();
   const controllers = new Map<string, AbortController>();
-  let socket: WebSocketLike | undefined;
+  let connection: BridgeConnection | undefined;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   let disposed = false;
 
-  const send = (message: unknown) => {
-    if (socket?.readyState === 1) socket.send(JSON.stringify(message));
+  const sendTo = (target: BridgeConnection, message: unknown) => {
+    if (connection === target && target.socket.readyState === 1) {
+      target.socket.send(JSON.stringify(message));
+    }
   };
 
-  const connect = () => {
-    if (disposed) return;
-    options.onStatusChange?.('connecting');
-    socket = createWebSocket(options.url);
-
-    const onOpen = () => {
-      send({
-        version: MCP_BRIDGE_PROTOCOL_VERSION,
-        type: 'bridge.authenticate',
-        pageId,
-        token: options.token,
-      });
-    };
-    const onMessage = (event: {data?: unknown}) => {
-      void handleMessage(event.data);
-    };
-    const onClose = () => {
-      clearHeartbeat();
-      abortPending();
-      options.onStatusChange?.('disconnected');
-      if (!disposed) {
-        reconnectTimer = setTimeout(connect, options.reconnectMs ?? 1_000);
-      }
-    };
-    const onError = () => options.onStatusChange?.('error', 'Bridge error.');
-
-    socket.addEventListener('open', onOpen);
-    socket.addEventListener('message', onMessage);
-    socket.addEventListener('close', onClose);
-    socket.addEventListener('error', onError);
+  const clearHeartbeat = () => {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = undefined;
   };
 
-  const handleMessage = async (raw: unknown) => {
+  const abortPending = () => {
+    for (const controller of controllers.values()) controller.abort();
+    controllers.clear();
+  };
+
+  const detach = (target: BridgeConnection) => {
+    target.socket.removeEventListener('open', target.onOpen);
+    target.socket.removeEventListener('message', target.onMessage);
+    target.socket.removeEventListener('close', target.onClose);
+    target.socket.removeEventListener('error', target.onError);
+  };
+
+  const handleMessage = async (target: BridgeConnection, raw: unknown) => {
+    if (connection !== target) return;
     let parsed: unknown;
     try {
       parsed = JSON.parse(String(raw));
@@ -93,13 +97,14 @@ export function registerBrowserMcpBridge(
     if (!validation.success) return;
     const message = validation.data;
     if (message.type === 'bridge.authenticated') {
-      send({
+      sendTo(target, {
         version: MCP_BRIDGE_PROTOCOL_VERSION,
         type: 'bridge.ready',
         pageId,
       });
+      clearHeartbeat();
       heartbeatTimer = setInterval(() => {
-        send({
+        sendTo(target, {
           version: MCP_BRIDGE_PROTOCOL_VERSION,
           type: 'bridge.heartbeat',
           pageId,
@@ -130,7 +135,7 @@ export function registerBrowserMcpBridge(
               message.requestId,
               controller.signal,
             );
-      send({
+      sendTo(target, {
         version: MCP_BRIDGE_PROTOCOL_VERSION,
         type: 'bridge.response',
         pageId,
@@ -139,7 +144,7 @@ export function registerBrowserMcpBridge(
         result,
       });
     } catch (error) {
-      send({
+      sendTo(target, {
         version: MCP_BRIDGE_PROTOCOL_VERSION,
         type: 'bridge.response',
         pageId,
@@ -152,32 +157,77 @@ export function registerBrowserMcpBridge(
         },
       });
     } finally {
-      controllers.delete(message.requestId);
+      if (controllers.get(message.requestId) === controller) {
+        controllers.delete(message.requestId);
+      }
     }
   };
 
-  const clearHeartbeat = () => {
-    if (heartbeatTimer) clearInterval(heartbeatTimer);
-    heartbeatTimer = undefined;
-  };
-  const abortPending = () => {
-    for (const controller of controllers.values()) controller.abort();
-    controllers.clear();
+  const connect = () => {
+    if (disposed) return;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = undefined;
+    options.onStatusChange?.('connecting');
+    const socket = createWebSocket(options.url);
+    const target: BridgeConnection = {
+      socket,
+      onOpen: () => {
+        sendTo(target, {
+          version: MCP_BRIDGE_PROTOCOL_VERSION,
+          type: 'bridge.authenticate',
+          pageId,
+          token: options.token,
+        });
+      },
+      onMessage: (event) => {
+        void handleMessage(target, event.data);
+      },
+      onClose: () => {
+        detach(target);
+        if (connection !== target) return;
+        connection = undefined;
+        clearHeartbeat();
+        abortPending();
+        options.onStatusChange?.('disconnected');
+        if (!disposed) {
+          reconnectTimer = setTimeout(connect, options.reconnectMs ?? 1_000);
+        }
+      },
+      onError: () => {
+        if (connection === target) {
+          options.onStatusChange?.('error', 'Bridge error.');
+        }
+      },
+    };
+    connection = target;
+    socket.addEventListener('open', target.onOpen);
+    socket.addEventListener('message', target.onMessage);
+    socket.addEventListener('close', target.onClose);
+    socket.addEventListener('error', target.onError);
   };
 
   connect();
   return {
     dispose: () => {
+      if (disposed) return;
       disposed = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
       clearHeartbeat();
+      const target = connection;
+      if (target) {
+        sendTo(target, {
+          version: MCP_BRIDGE_PROTOCOL_VERSION,
+          type: 'bridge.gone',
+          pageId,
+        });
+      }
       abortPending();
-      send({
-        version: MCP_BRIDGE_PROTOCOL_VERSION,
-        type: 'bridge.gone',
-        pageId,
-      });
-      socket?.close(1000, 'page disposed');
+      if (target) {
+        detach(target);
+        connection = undefined;
+        target.socket.close(1000, 'page disposed');
+      }
     },
   };
 }
@@ -191,7 +241,9 @@ async function callRuntime(
   const params = (rawParams ?? {}) as {
     name?: unknown;
     input?: unknown;
-    context?: Partial<RoomCapabilityContext>;
+    context?: {
+      clientInfo?: {name?: unknown; version?: unknown};
+    };
   };
   if (typeof params.name !== 'string') {
     return {
@@ -200,15 +252,23 @@ async function callRuntime(
       message: 'Tool name is required.',
     };
   }
-  const suppliedContext = params.context ?? {};
+  const rawClientInfo = params.context?.clientInfo;
+  const clientInfo = rawClientInfo
+    ? {
+        ...(typeof rawClientInfo.name === 'string'
+          ? {name: rawClientInfo.name}
+          : {}),
+        ...(typeof rawClientInfo.version === 'string'
+          ? {version: rawClientInfo.version}
+          : {}),
+      }
+    : undefined;
   return runtime.callTool(params.name, params.input ?? {}, {
-    ...suppliedContext,
-    surface: suppliedContext.surface ?? 'mcp-http',
-    requestId: suppliedContext.requestId ?? requestId,
-    metadata: {
-      ...(suppliedContext.metadata ?? {}),
-      bridgeRequestId: requestId,
-    },
+    surface: 'mcp-http',
+    requestId,
+    traceId: requestId,
+    ...(clientInfo ? {clientInfo} : {}),
+    metadata: {bridgeRequestId: requestId},
     signal,
   });
 }

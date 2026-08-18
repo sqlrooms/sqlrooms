@@ -31,7 +31,10 @@ export type RoomCommandInvocation = {
   metadata?: Record<string, unknown>;
 };
 
-export type RoomCommandInvocationOptions = Partial<RoomCommandInvocation>;
+export type RoomCommandInvocationOptions = Partial<RoomCommandInvocation> & {
+  /** Cancels command execution without becoming part of serializable audit data. */
+  signal?: AbortSignal;
+};
 
 export type RoomCommandExecutionContext<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
@@ -39,6 +42,8 @@ export type RoomCommandExecutionContext<
   store: StoreApi<RS>;
   getState: () => RS;
   invocation: RoomCommandInvocation;
+  /** Signal supplied by the invoking surface, when it supports cancellation. */
+  signal?: AbortSignal;
 };
 
 export type RoomCommandPredicate<
@@ -317,10 +322,9 @@ export function createCommandSlice<
         },
         getCommand: (commandId) => get().commands.registry[commandId],
         listCommands: (options) => {
-          const invocation = normalizeInvocation(options);
           const context = createRoomCommandExecutionContext(
             store as StoreApi<RS>,
-            invocation,
+            options,
           );
           const includeInvisible = options?.includeInvisible ?? false;
           const includeDisabled = options?.includeDisabled ?? true;
@@ -358,10 +362,9 @@ export function createCommandSlice<
             };
           }
 
-          const invocation = normalizeInvocation(invocationOptions);
           const executionContext = createRoomCommandExecutionContext(
             store as StoreApi<RS>,
-            invocation,
+            invocationOptions,
           );
 
           if (!resolveCommandEnabled(command, executionContext)) {
@@ -471,6 +474,7 @@ export function createRoomCommandExecutionContext<
     store,
     getState: () => store.getState(),
     invocation: normalizeInvocation(invocation),
+    signal: invocation?.signal,
   };
 }
 
