@@ -52,6 +52,8 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 
+packageExtensionsChecksum: sha256-7sjQR/fAb1iqir9Qwi5PO8moeosunpvdrU/CaJOIw2M=
+
 patchedDependencies:
   image-size@0.7.5: 539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321
   sigstore@4.1.1: 72ba6f3df587a050af679bdcd9c835c92bb45b80b91bd9f33351d2d92f69eb29
@@ -20822,6 +20824,7 @@ snapshots:
       '@loaders.gl/core': 4.4.1
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       d3-dsv: 1.2.0
 
   '@loaders.gl/draco@4.3.4(@loaders.gl/core@4.4.1)':
@@ -20844,6 +20847,7 @@ snapshots:
   '@loaders.gl/geoarrow@4.4.1(@loaders.gl/core@4.4.1)':
     dependencies:
       '@loaders.gl/core': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@math.gl/polygon': 4.1.0
       apache-arrow: 17.0.0
 
@@ -20976,6 +20980,7 @@ snapshots:
       '@loaders.gl/images': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@math.gl/polygon': 4.1.0
       '@probe.gl/stats': 4.1.1
       pbf: 3.3.0
@@ -20990,6 +20995,7 @@ snapshots:
       '@loaders.gl/gis': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/wkt': 4.4.1(@loaders.gl/core@4.4.1)
       '@probe.gl/log': 4.1.1
       apache-arrow: 17.0.0
@@ -21055,6 +21061,7 @@ snapshots:
       '@loaders.gl/images': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@mapbox/martini': 0.2.0
 
   '@loaders.gl/textures@4.3.4(@loaders.gl/core@4.4.1)':
