@@ -84,7 +84,7 @@
     "knip": "^5.71.0",
     "lint-staged": "^16.2.0",
     "madge": "8.0.0",
-    "mermaid": "^11.15.0",
+    "mermaid": "^11.16.1",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "react": "^19.2.0",
