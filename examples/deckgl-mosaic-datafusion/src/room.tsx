@@ -1,7 +1,7 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
 import type {FC} from 'react';
-import type {createForecastRoomStore} from './store';
+import {RoomPanelTypes, type createForecastRoomStore} from './store';
 
 export const Room: FC<{
   roomStore: ReturnType<typeof createForecastRoomStore>['roomStore'];
@@ -9,7 +9,7 @@ export const Room: FC<{
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
       <RoomShell.SidebarContainer>
-        <RoomShell.TabButtons />
+        <RoomShell.TabButtons tabsId={RoomPanelTypes.enum.forecast} />
         <div className="flex-1" />
         <ThemeSwitch />
       </RoomShell.SidebarContainer>
