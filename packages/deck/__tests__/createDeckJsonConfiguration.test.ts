@@ -957,7 +957,7 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
     ).toThrow(/GeoJsonLayer|POLYGON|mixed|Sampled geometry types/i);
   });
 
-  it('declines MultiPolygon promotion instead of flattening polygon parts', () => {
+  it('promotes WKT MultiPolygon to GeoArrowPolygonLayer without flattening parts', () => {
     const table = new Table({
       geom: vectorFromArray(
         [
@@ -976,20 +976,105 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
       islands: {status: 'ready', prepared},
     });
 
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPolygonLayer',
+          id: 'islands',
+          _sqlroomsBinding: {
+            dataset: 'islands',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.props.getPolygon).toBeDefined();
+    expect(converted.layers[0]?.props.data).toBeDefined();
+
+    const promoted = prepared.getGeoArrowLayerData('geom');
+    expect(promoted.encoding).toBe('geoarrow.multipolygon');
+    expect(promoted.geometryColumn.get(0)?.length).toBe(2);
+  });
+
+  it('promotes mixed Polygon and MultiPolygon WKT on GeoArrowPolygonLayer', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPolygonLayer',
+          id: 'buildings',
+          _sqlroomsBinding: {
+            dataset: 'buildings',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.props.getPolygon).toBeDefined();
+    const promoted = prepared.getGeoArrowLayerData('geom');
+    expect(promoted.encoding).toBe('geoarrow.multipolygon');
+    expect(promoted.geometryColumn.get(0)?.length).toBe(1);
+    expect(promoted.geometryColumn.get(1)?.length).toBe(2);
+  });
+
+  it('promotes MultiPolygon after a Polygon-only sample window', () => {
+    const polygonWkt = 'POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))';
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          ...Array.from({length: 100}, () => polygonWkt),
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
     expect(() =>
       converter.convert({
         layers: [
           {
             '@@type': 'GeoArrowPolygonLayer',
-            id: 'islands',
+            id: 'buildings',
             _sqlroomsBinding: {
-              dataset: 'islands',
+              dataset: 'buildings',
               geometryColumn: 'geom',
             },
           },
         ],
       }),
-    ).toThrow(/GeoJsonLayer|MultiPolygon/i);
+    ).not.toThrow();
+    expect(prepared.getGeoArrowLayerData('geom').encoding).toBe(
+      'geoarrow.multipolygon',
+    );
   });
 
   it('preserves MultiPolygon parts through the GeoJsonLayer path', () => {
