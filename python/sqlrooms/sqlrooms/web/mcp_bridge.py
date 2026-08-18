@@ -43,8 +43,9 @@ class McpBridgeBroker:
         self._send_lock = asyncio.Lock()
 
     def status(self) -> dict[str, Any]:
+        ready = self._ready and not self._lease_is_stale()
         return {
-            "status": "ready" if self._ready else "waiting",
+            "status": "ready" if ready else "waiting",
             "pageId": self._page_id,
             "lastSeen": self._last_seen,
             "recentActivity": bool(
@@ -137,6 +138,10 @@ class McpBridgeBroker:
                     continue
                 message_type = payload.get("type")
                 if message_type == "bridge.ready":
+                    self._ready = True
+                elif message_type == "bridge.heartbeat":
+                    # A healthy authenticated page may resume after its lease
+                    # was marked stale by a request made between heartbeats.
                     self._ready = True
                 elif message_type == "bridge.gone":
                     return

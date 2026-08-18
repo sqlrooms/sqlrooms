@@ -74,6 +74,10 @@ function capability(name: string) {
   return createCliRoomCapabilities().find((entry) => entry.name === name)!;
 }
 
+async function flushQueuedInvocations() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 beforeEach(() => {
   query.mockClear();
   sqlSelectToJson.mockClear();
@@ -123,5 +127,34 @@ describe('CLI room capability handlers', () => {
       expect.objectContaining({surface: 'mcp', signal: controller.signal}),
       {confirmed: false},
     );
+  });
+
+  test('releases the command queue when an invocation is aborted', async () => {
+    invokeCommandWithPolicy.mockImplementationOnce(
+      async () => await new Promise<never>(() => undefined),
+    );
+    const firstController = new AbortController();
+    const firstInvocation = capability('execute_command').execute(
+      {commandId: 'workspace.stuck'},
+      {surface: 'mcp-http', signal: firstController.signal},
+    );
+    await flushQueuedInvocations();
+    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
+
+    const secondInvocation = capability('execute_command').execute(
+      {commandId: 'workspace.refresh'},
+      {surface: 'mcp-http'},
+    );
+    await flushQueuedInvocations();
+    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
+
+    firstController.abort();
+
+    await expect(firstInvocation).resolves.toMatchObject({
+      ok: false,
+      code: 'command-cancelled',
+    });
+    await expect(secondInvocation).resolves.toMatchObject({ok: true});
+    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(2);
   });
 });

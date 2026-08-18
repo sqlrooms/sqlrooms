@@ -6,7 +6,7 @@ import pytest
 from mcp import Client
 
 from sqlrooms.web.mcp import SqlroomsMcpService
-from sqlrooms.web.mcp_bridge import McpBridgeError
+from sqlrooms.web.mcp_bridge import McpBridgeBroker, McpBridgeError
 
 
 class StubBroker:
@@ -31,6 +31,22 @@ class StubBroker:
                 },
             ]
         return {"ok": True, "data": {"echo": params}}
+
+
+def test_mcp_bridge_status_reports_expired_lease_as_waiting(monkeypatch):
+    monotonic_time = 10.0
+    monkeypatch.setattr(
+        "sqlrooms.web.mcp_bridge.time.monotonic", lambda: monotonic_time
+    )
+    broker = McpBridgeBroker("token", lease_timeout=5.0)
+    broker._ready = True
+    broker._touch()
+
+    assert broker.status()["status"] == "ready"
+
+    monotonic_time = 16.0
+
+    assert broker.status()["status"] == "waiting"
 
 
 @pytest.mark.asyncio

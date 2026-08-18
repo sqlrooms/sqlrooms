@@ -330,33 +330,28 @@ function createExecuteCommandCapability(): RoomCapability {
         commandId: string;
         input?: unknown;
       };
-      const result = await enqueueCommandInvocation<RoomCommandResult>(() => {
-        if (context.signal?.aborted) {
-          return Promise.resolve({
-            success: false,
+      const result = await enqueueCommandInvocation(
+        commandId,
+        () =>
+          invokeCommandWithPolicy(
+            roomStore,
             commandId,
-            code: 'command-cancelled',
-            error: 'Command execution was cancelled.',
-          });
-        }
-        return invokeCommandWithPolicy(
-          roomStore,
-          commandId,
-          input,
-          {
-            surface: 'mcp',
-            actor: context.actor,
-            traceId: context.traceId,
-            metadata: {
-              ...(context.metadata ?? {}),
-              mcpRequestId: context.requestId,
-              mcpClientInfo: context.clientInfo,
+            input,
+            {
+              surface: 'mcp',
+              actor: context.actor,
+              traceId: context.traceId,
+              metadata: {
+                ...(context.metadata ?? {}),
+                mcpRequestId: context.requestId,
+                mcpClientInfo: context.clientInfo,
+              },
+              signal: context.signal,
             },
-            signal: context.signal,
-          },
-          {confirmed: false},
-        );
-      });
+            {confirmed: false},
+          ),
+        context.signal,
+      );
       if (result.success) {
         return {
           ok: true,
@@ -418,11 +413,57 @@ function scoreCommand(command: RoomCommandDescriptor, query: string) {
   }, 0);
 }
 
-function enqueueCommandInvocation<T>(invoke: () => Promise<T>): Promise<T> {
-  const result = commandInvocationQueue.then(invoke, invoke);
-  commandInvocationQueue = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
+function cancelledCommandResult(commandId: string): RoomCommandResult {
+  return {
+    success: false,
+    commandId,
+    code: 'command-cancelled',
+    error: 'Command execution was cancelled.',
+  };
+}
+
+function enqueueCommandInvocation(
+  commandId: string,
+  invoke: () => Promise<RoomCommandResult>,
+  signal?: AbortSignal,
+): Promise<RoomCommandResult> {
+  const waitForTurn = commandInvocationQueue;
+  let releaseTurn!: () => void;
+  const turnFinished = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
+  });
+  commandInvocationQueue = waitForTurn.then(() => turnFinished);
+
+  return waitForTurn.then(async () => {
+    if (signal?.aborted) {
+      releaseTurn();
+      return cancelledCommandResult(commandId);
+    }
+
+    const invocation = Promise.resolve().then(invoke);
+    if (!signal) {
+      try {
+        return await invocation;
+      } finally {
+        releaseTurn();
+      }
+    }
+
+    let onAbort: (() => void) | undefined;
+    const aborted = new Promise<RoomCommandResult>((resolve) => {
+      onAbort = () => resolve(cancelledCommandResult(commandId));
+      signal.addEventListener('abort', onAbort, {once: true});
+      if (signal.aborted) {
+        onAbort();
+      }
+    });
+    try {
+      return await Promise.race([invocation, aborted]);
+    } finally {
+      if (onAbort) {
+        signal.removeEventListener('abort', onAbort);
+      }
+      releaseTurn();
+    }
+  });
 }

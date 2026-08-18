@@ -165,6 +165,17 @@ saved-snapshot wiring in every app.
 Use `createPersistenceController` directly only for lower-level integrations that
 need the same save policy outside a Zustand room store.
 
+## Guarded command invocation
+
+`@sqlrooms/room-shell` re-exports `invokeCommandWithPolicy()`,
+`createCommandCliAdapter()`, and `createCommandMcpAdapter()` from
+`@sqlrooms/room-store`. External and agent-facing integrations must use these
+guarded APIs rather than invoking commands directly. They re-check command
+availability and require explicit confirmation for high-risk or
+confirmation-gated commands. See the
+[room-store command guide](../room-store/README.md#guarded-command-invocation)
+for usage and fail-closed semantics.
+
 ## Related packages
 
 - `@sqlrooms/sql-editor`
