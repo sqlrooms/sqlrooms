@@ -23,6 +23,7 @@ import {
   usesStrokeSetting,
   detachDeckMapLayerOpacity,
   getDeckMapColorScaleOpacity,
+  getDeckMapLayerChannelOpacityPercent,
 } from '../src/mapLayerConfigUtils';
 
 const config = {
@@ -247,6 +248,59 @@ describe('detachDeckMapLayerOpacity', () => {
   });
 });
 
+describe('getDeckMapLayerChannelOpacityPercent', () => {
+  test('includes legacy layer.opacity for a flat accessor', () => {
+    expect(
+      getDeckMapLayerChannelOpacityPercent(
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          opacity: 0.5,
+          getFillColor: [56, 189, 248, 255],
+        },
+        'getFillColor',
+      ),
+    ).toBe(50);
+  });
+
+  test('includes legacy layer.opacity for a color scale', () => {
+    expect(
+      getDeckMapLayerChannelOpacityPercent(
+        {
+          '@@type': 'GeoArrowPolygonLayer',
+          opacity: 0.5,
+          getFillColor: createDeckMapLayerColorScale({
+            field: 'mag',
+            opacity: 1,
+          }),
+        },
+        'getFillColor',
+      ),
+    ).toBe(50);
+  });
+
+  test('writing the displayed percent after detach keeps the same alpha', () => {
+    const layer = {
+      '@@type': 'GeoArrowScatterplotLayer',
+      opacity: 0.5,
+      getFillColor: [56, 189, 248, 255] as [number, number, number, number],
+    };
+    const displayed = getDeckMapLayerChannelOpacityPercent(
+      layer,
+      'getFillColor',
+    );
+    const detached = detachDeckMapLayerOpacity(layer);
+    const next = {
+      ...detached,
+      getFillColor: [56, 189, 248, Math.round((displayed / 100) * 255)],
+    };
+    expect(next.opacity).toBeUndefined();
+    expect(next.getFillColor).toEqual(detached.getFillColor);
+    expect(getDeckMapLayerChannelOpacityPercent(next, 'getFillColor')).toBe(
+      displayed,
+    );
+  });
+});
+
 describe('getDeckMapColorAccessorOptions', () => {
   test('ColumnLayer exposes only getFillColor', () => {
     const opts = getDeckMapColorAccessorOptions('GeoArrowColumnLayer');
@@ -434,6 +488,27 @@ describe('replaceDeckMapLayerColorScaleWithFlat', () => {
       ),
     ).toBe(0.5);
     expect(next.getLineColor).toEqual([0, 0, 0, 64]);
+  });
+
+  it('materializes implicit default stroke before dropping opacity', () => {
+    const next = detachDeckMapLayerOpacity({
+      '@@type': 'GeoArrowPolygonLayer',
+      opacity: 0.5,
+      getFillColor: [56, 189, 248, 180],
+    });
+    expect(next.opacity).toBeUndefined();
+    expect(next.getFillColor).toEqual([56, 189, 248, 90]);
+    expect(next.getLineColor).toEqual([0, 0, 0, 128]);
+  });
+
+  it('does not materialize scatterplot stroke when stroked is omitted', () => {
+    const next = detachDeckMapLayerOpacity({
+      '@@type': 'GeoArrowScatterplotLayer',
+      opacity: 0.5,
+      getFillColor: [56, 189, 248, 255],
+    });
+    expect(next.getLineColor).toBeUndefined();
+    expect(next.getFillColor).toEqual([56, 189, 248, 128]);
   });
 
   test('preserves an already-flat arc endpoint when clearing only the scaled one', () => {

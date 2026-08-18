@@ -6,6 +6,7 @@ import {
   type ResolvedColorLegend,
 } from '@sqlrooms/color-scales';
 import type * as arrow from 'apache-arrow';
+import type {DeckColorScaleConfig} from './colorScaleFunction';
 
 function resolveFieldName(
   schemaOwner: arrow.Table | arrow.RecordBatch,
@@ -126,7 +127,7 @@ const MISSING_FIELD_COLOR: [number, number, number, number] = [255, 0, 0, 200];
 
 export function compileColorScale(options: {
   table: arrow.Table;
-  colorScale: ColorScaleConfig;
+  colorScale: DeckColorScaleConfig;
 }) {
   const {table, colorScale} = options;
   let column;
@@ -155,7 +156,7 @@ export function compileColorScale(options: {
 
   return (value: unknown) => {
     const color = mapper(getGeoArrowOrRowValue({value, fieldName, vector}));
-    const rawOpacity = (colorScale as {opacity?: unknown}).opacity;
+    const rawOpacity = colorScale.opacity;
     const opacity =
       typeof rawOpacity === 'number' && Number.isFinite(rawOpacity)
         ? Math.max(0, Math.min(1, rawOpacity))

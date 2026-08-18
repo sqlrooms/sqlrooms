@@ -94,7 +94,7 @@ describe('compileColorScale', () => {
         scheme: 'YlOrRd',
         domain: 'auto',
         opacity: 0.5,
-      } as any,
+      },
     });
     const fullColor = full({index: 0}) as number[];
     const dimmedColor = dimmed({index: 0}) as number[];

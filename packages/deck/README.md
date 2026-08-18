@@ -540,6 +540,21 @@ getFillColor: {
 }
 ```
 
+Optional `opacity` (0–1) is a SQLRooms `colorScale` extension. The compiler
+multiplies it into the color's alpha so fill, stroke, and arc endpoints can be
+dimmed independently of deck.gl `layer.opacity`:
+
+```tsx
+getFillColor: {
+  '@@function': 'colorScale',
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  opacity: 0.6,
+}
+```
+
 Discrete numeric palettes are supported too:
 
 ```tsx

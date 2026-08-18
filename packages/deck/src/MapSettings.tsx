@@ -75,6 +75,7 @@ import {
   usesStrokeSetting,
   getDeckMapLayerStrokeDefault,
   getDeckMapColorScaleOpacity,
+  getDeckMapLayerChannelOpacityPercent,
   detachDeckMapLayerOpacity,
   replaceDeckMapLayerColorScalesWithFlat,
   replaceDeckMapLayerColorScaleWithFlat,
@@ -418,9 +419,11 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   // Don't read lastColorScaleFieldsRef during render (react-hooks/refs).
   const defaultField = getDefaultColorScaleField(columns, colorScaleType);
   const showControls = enabled !== false;
-  const opacityPercent = colorScale
-    ? Math.round(getDeckMapColorScaleOpacity(colorScale) * 100)
-    : alphaToOpacityPercent(flatColor[3] ?? 255);
+  const opacityPercent = getDeckMapLayerChannelOpacityPercent(
+    layer,
+    accessor,
+    flatColor[3] ?? 255,
+  );
 
   const updateColorScale = (patch: {
     field?: string;
@@ -688,11 +691,19 @@ const AppearanceArcColorPanel: FC<{
   const targetFlat = getDeckMapLayerFlatColor(layer, 'getTargetColor') ?? [
     ...DECK_MAP_DEFAULT_LAYER_COLOR,
   ];
-  const opacityPercent = colorScale
-    ? Math.round(getDeckMapColorScaleOpacity(colorScale) * 100)
-    : alphaToOpacityPercent(
-        Math.round(((sourceFlat[3] ?? 255) + (targetFlat[3] ?? 255)) / 2),
-      );
+  const opacityPercent = Math.round(
+    (getDeckMapLayerChannelOpacityPercent(
+      layer,
+      'getSourceColor',
+      sourceFlat[3] ?? 255,
+    ) +
+      getDeckMapLayerChannelOpacityPercent(
+        layer,
+        'getTargetColor',
+        targetFlat[3] ?? 255,
+      )) /
+      2,
+  );
 
   const applySharedColorScale = (patch: {
     field?: string;
@@ -1246,22 +1257,12 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         : undefined;
     if (min === undefined || max === undefined || max >= min) return;
 
-    const getWidth =
-      typeof activeLayer.getWidth === 'number' ? activeLayer.getWidth : 0;
-    const value = Math.max(min, max, getWidth);
     applyConfig(
-      updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => {
-        const nextLayer: DeckMapLayerRecord = {
-          ...layer,
-          widthUnits: 'pixels',
-          widthMinPixels: value,
-          widthMaxPixels: value,
-        };
-        if (typeof layer.getWidth !== 'string') {
-          nextLayer.getWidth = value;
-        }
-        return nextLayer;
-      }),
+      updateDeckMapLayer(mapConfig, activeLayerIndex, (layer) => ({
+        ...layer,
+        widthMinPixels: Math.min(min, max),
+        widthMaxPixels: Math.max(min, max),
+      })),
     );
   }, [
     activeLayer,

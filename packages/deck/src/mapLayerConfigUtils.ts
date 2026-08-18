@@ -232,6 +232,13 @@ export function getDeckMapLayerStrokeDefault(
   return true;
 }
 
+function deckMapLayerHasActiveStroke(layer: DeckMapLayerRecord): boolean {
+  if (typeof layer.stroked === 'boolean') return layer.stroked;
+  return getDeckMapLayerStrokeDefault(layer['@@type'], {
+    extruded: getDeckMapLayerExtruded(layer),
+  });
+}
+
 /** Bake `layer.opacity` into flat alphas / colorScale.opacity, then drop it. */
 export function detachDeckMapLayerOpacity(
   layer: DeckMapLayerRecord,
@@ -242,6 +249,24 @@ export function detachDeckMapLayerOpacity(
   }
   const factor = Math.max(0, Math.min(1, opacity));
   const next: DeckMapLayerRecord = {...layer};
+  const accessors = getDeckMapColorAccessorOptions(next['@@type']);
+  // Implicit Deck defaults are still dimmed by layer.opacity — materialize
+  // them so dropping opacity does not leave a sibling channel fully opaque.
+  const implicitColor: [number, number, number, number] = [0, 0, 0, 255];
+  if (
+    accessors.some((option) => option.value === 'getFillColor') &&
+    next.getFillColor === undefined &&
+    next.filled !== false
+  ) {
+    next.getFillColor = [...implicitColor];
+  }
+  if (
+    accessors.some((option) => option.value === 'getLineColor') &&
+    next.getLineColor === undefined &&
+    deckMapLayerHasActiveStroke(next)
+  ) {
+    next.getLineColor = [...implicitColor];
+  }
   for (const {value} of DECK_MAP_COLOR_ACCESSOR_OPTIONS) {
     const color = next[value];
     if (isDeckMapLayerFlatRgbaColor(color)) {
@@ -276,6 +301,36 @@ export function getDeckMapColorScaleOpacity(
     return Math.max(0, Math.min(1, opacity));
   }
   return 1;
+}
+
+/** Layer-level opacity factor 0–1 (1 when omitted). */
+export function getDeckMapLayerOpacityFactor(
+  layer: DeckMapLayerRecord | undefined,
+): number {
+  const opacity = layer?.opacity;
+  if (typeof opacity === 'number' && Number.isFinite(opacity)) {
+    return Math.max(0, Math.min(1, opacity));
+  }
+  return 1;
+}
+
+/**
+ * Effective 0–100 opacity for a color accessor, including legacy `layer.opacity`.
+ * Matches the value the Appearance slider should show before detaching.
+ */
+export function getDeckMapLayerChannelOpacityPercent(
+  layer: DeckMapLayerRecord | undefined,
+  accessor: DeckMapLayerColorAccessor,
+  fallbackFlatAlpha = 255,
+): number {
+  const factor = getDeckMapLayerOpacityFactor(layer);
+  const scale = getDeckMapLayerColorScale(layer, accessor);
+  if (scale) {
+    return Math.round(getDeckMapColorScaleOpacity(scale) * factor * 100);
+  }
+  const flat = getDeckMapLayerFlatColor(layer, accessor);
+  const alpha = flat?.[3] ?? fallbackFlatAlpha;
+  return Math.round((Math.max(0, Math.min(255, alpha * factor)) / 255) * 100);
 }
 
 /** Replace a color scale with flat RGBA (bakes scale opacity into alpha). */
@@ -605,6 +660,7 @@ export const DECK_MAP_DEFAULT_STROKE_COLOR: readonly [
   number,
 ] = DEFAULT_LAYER_STROKE_COLOR;
 
+/** True when `value` is a 3- or 4-channel numeric RGB(A) array. */
 export function isDeckMapLayerFlatRgbaColor(
   value: unknown,
 ): value is [number, number, number, number?] {
@@ -628,6 +684,7 @@ export function getDeckMapLayerFlatColor(
   return [value[0]!, value[1]!, value[2]!, value[3] ?? 255];
 }
 
+/** Set a color accessor to a constant RGB(A); alpha defaults to 255. */
 export function setDeckMapLayerFlatColor(
   config: DeckMapConfig,
   layerIndex: number,

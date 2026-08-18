@@ -1,6 +1,5 @@
 import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
-import type {ColorScaleConfig} from '@sqlrooms/color-scales';
 import {
   isPointPositionLayer,
   promoteToPointPositions,
@@ -13,6 +12,7 @@ import {
   createColorScaleMarker,
   getAllColorScales,
   COLOR_SCALE_PROP_NAMES,
+  type DeckColorScaleConfig,
 } from './colorScaleFunction';
 import {compileColorScale} from './compileColorScale';
 import {
@@ -279,7 +279,8 @@ export function createDeckJsonConfiguration(
     enumerations: DEFAULT_DECK_JSON_ENUMERATIONS,
     constants: DEFAULT_DECK_JSON_CONSTANTS,
     functions: {
-      colorScale: (props: ColorScaleConfig) => createColorScaleMarker(props),
+      colorScale: (props: DeckColorScaleConfig) =>
+        createColorScaleMarker(props),
       scale: (props: Record<string, unknown>) => createScaleMarker(props),
     },
     // We preserve raw `@@=` strings here because `@deck.gl/json` would otherwise
