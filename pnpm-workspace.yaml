@@ -55,6 +55,10 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 packageExtensions:
+  # Kepler table imports this peer at runtime but does not declare it.
+  '@kepler.gl/table@3.3.0-alpha.0':
+    dependencies:
+      '@loaders.gl/core': 4.4.1
   # loaders.gl 4.4.1 imports this package but does not declare it.
   '@loaders.gl/csv@4.4.1':
     dependencies:
