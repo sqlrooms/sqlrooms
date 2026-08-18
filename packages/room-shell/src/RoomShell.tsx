@@ -45,7 +45,7 @@ type RoomShellLoadingProgress = {
 
 type RoomShellLoadingState = {
   room: {
-    getLoadingProgress: () => RoomShellLoadingProgress | undefined;
+    getLoadingProgress?: () => RoomShellLoadingProgress | undefined;
   };
 };
 
@@ -187,7 +187,7 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
   const loadingProgress = useBaseRoomStore<
     RoomShellLoadingState,
     RoomShellLoadingProgress | undefined
-  >((state) => state.room.getLoadingProgress());
+  >((state) => state.room.getLoadingProgress?.());
   return (
     <ProgressModal
       className={className}

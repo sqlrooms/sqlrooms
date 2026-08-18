@@ -19,6 +19,7 @@
     "build": "tsc",
     "dev": "tsc -w",
     "lint": "eslint .",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
@@ -38,6 +39,12 @@
     "lucide-react": "^0.556.0",
     "zod": "^4.1.13",
     "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "@sqlrooms/preset-jest": "workspace:*",
+    "jsdom": "^29.1.1",
+    "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
     "react": ">=18",
