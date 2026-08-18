@@ -213,6 +213,15 @@ describe('getDeckMapLayerExtruded', () => {
     expect(getDeckMapLayerExtruded({'@@type': 'GeoArrowPolygonLayer'})).toBe(
       false,
     );
+    expect(getDeckMapLayerExtruded({'@@type': 'GeoArrowColumnLayer'})).toBe(
+      true,
+    );
+    expect(
+      getDeckMapLayerExtruded({
+        '@@type': 'GeoArrowColumnLayer',
+        extruded: false,
+      }),
+    ).toBe(false);
   });
 });
 
@@ -389,7 +398,7 @@ describe('clearDeckMapLayerColorScale', () => {
     const cleared = clearDeckMapLayerColorScale(withScale, 0, 'getFillColor');
     const layer = getDeckMapLayerRecords(cleared)[0];
     expect(layer?.opacity).toBeUndefined();
-    expect(layer?.getFillColor).toEqual([56, 189, 248, 90]);
+    expect(layer?.getFillColor).toEqual([56, 189, 248, 128]);
   });
 
   test('bakes layer.opacity into flat alpha when clearing the last scale', () => {
@@ -524,6 +533,21 @@ describe('replaceDeckMapLayerColorScaleWithFlat', () => {
     expect(next.opacity).toBeUndefined();
     expect(next.getSourceColor).toEqual([56, 189, 248, 90]);
     expect(next.getTargetColor).toEqual([10, 20, 30, 128]);
+  });
+
+  test('round-trips default fill alpha when toggling a color scale', () => {
+    const withScale = replaceDeckMapLayerColorScaleWithFlat(
+      {
+        '@@type': 'GeoArrowScatterplotLayer',
+        getFillColor: createDeckMapLayerColorScale({
+          field: 'mag',
+          opacity: 180 / 255,
+        }),
+      },
+      'getFillColor',
+      [56, 189, 248, 180],
+    );
+    expect(withScale.getFillColor).toEqual([56, 189, 248, 180]);
   });
 });
 

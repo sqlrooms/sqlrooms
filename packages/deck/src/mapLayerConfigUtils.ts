@@ -203,12 +203,15 @@ export function isDeckMapH3HexagonLayer(layerType: unknown): boolean {
   );
 }
 
-/** Effective `extruded`; H3 defaults to true when omitted. */
+/** Effective `extruded`; H3 and Column default to true when omitted. */
 export function getDeckMapLayerExtruded(
   layer: DeckMapLayerRecord | undefined,
 ): boolean {
   if (typeof layer?.extruded === 'boolean') return layer.extruded;
-  return isDeckMapH3HexagonLayer(layer?.['@@type']);
+  const layerType = layer?.['@@type'];
+  return (
+    isDeckMapH3HexagonLayer(layerType) || usesColumnRadiusSetting(layerType)
+  );
 }
 
 /** Default `stroked` when omitted. H3 strokes only when not extruded. */
@@ -333,6 +336,19 @@ export function getDeckMapLayerChannelOpacityPercent(
   return Math.round((Math.max(0, Math.min(255, alpha * factor)) / 255) * 100);
 }
 
+function flatColorWithScaleOpacity(
+  color: readonly [number, number, number, number],
+  scale: DeckMapLayerColorScaleFunction | undefined,
+): [number, number, number, number] {
+  const opacity = getDeckMapColorScaleOpacity(scale);
+  const hasExplicitOpacity =
+    typeof scale?.opacity === 'number' && Number.isFinite(scale.opacity);
+  const alpha = hasExplicitOpacity
+    ? Math.round(Math.max(0, Math.min(255, opacity * 255)))
+    : (color[3] ?? 255);
+  return [color[0], color[1], color[2], alpha];
+}
+
 /** Replace a color scale with flat RGBA (bakes scale opacity into alpha). */
 export function replaceDeckMapLayerColorScaleWithFlat(
   layer: DeckMapLayerRecord,
@@ -340,16 +356,9 @@ export function replaceDeckMapLayerColorScaleWithFlat(
   flatColor: readonly [number, number, number, number],
 ): DeckMapLayerRecord {
   const scale = getDeckMapLayerColorScale(layer, accessor);
-  const opacity = getDeckMapColorScaleOpacity(scale);
-  const baseAlpha = flatColor[3] ?? 255;
   return detachDeckMapLayerOpacity({
     ...layer,
-    [accessor]: [
-      flatColor[0],
-      flatColor[1],
-      flatColor[2],
-      Math.round(Math.max(0, Math.min(255, baseAlpha * opacity))),
-    ],
+    [accessor]: flatColorWithScaleOpacity(flatColor, scale),
   });
 }
 
@@ -367,14 +376,7 @@ export function replaceDeckMapLayerColorScalesWithFlat(
     const color = replacements[accessor];
     if (!color) continue;
     const scale = getDeckMapLayerColorScale(layer, accessor);
-    const opacity = getDeckMapColorScaleOpacity(scale);
-    const baseAlpha = color[3] ?? 255;
-    next[accessor] = [
-      color[0],
-      color[1],
-      color[2],
-      Math.round(Math.max(0, Math.min(255, baseAlpha * opacity))),
-    ];
+    next[accessor] = flatColorWithScaleOpacity(color, scale);
   }
   return detachDeckMapLayerOpacity(next);
 }
