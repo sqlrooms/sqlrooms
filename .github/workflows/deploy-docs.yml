@@ -29,8 +29,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -39,6 +37,8 @@ concurrency:
 jobs:
   build-docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout documentation content
         uses: actions/checkout@v6
@@ -47,32 +47,84 @@ jobs:
           fetch-depth: 0
           lfs: true
           path: site
+          persist-credentials: false
 
       - name: Resolve published API release
         id: api-release
-        working-directory: site
+        uses: actions/github-script@v8
         env:
           REQUESTED_API_REF: ${{ inputs.api_ref }}
-        run: |
-          api_ref="$REQUESTED_API_REF"
-          if [ -z "$api_ref" ]; then
-            api_ref=$(git for-each-ref --count=1 --sort=-creatordate --format='%(refname:short)' 'refs/tags/v*')
-          fi
+        with:
+          result-encoding: string
+          script: |
+            const semverTag = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/;
+            const requestedRef = process.env.REQUESTED_API_REF.trim();
 
-          if [[ ! "$api_ref" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Could not resolve a valid published release tag: $api_ref" >&2
-            exit 1
-          fi
+            if (requestedRef) {
+              if (!semverTag.test(requestedRef)) {
+                core.setFailed(`Invalid published release tag: ${requestedRef}`);
+                return;
+              }
 
-          echo "api_ref=$api_ref" >> "$GITHUB_OUTPUT"
+              let requestedRelease;
+              try {
+                ({data: requestedRelease} =
+                  await github.rest.repos.getReleaseByTag({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    tag: requestedRef,
+                  }));
+              } catch (error) {
+                if (error.status === 404) {
+                  core.setFailed(`${requestedRef} is not a published release`);
+                  return;
+                }
+                throw error;
+              }
+
+              if (requestedRelease.draft || !requestedRelease.published_at) {
+                core.setFailed(`${requestedRef} is not a published release`);
+                return;
+              }
+
+              return requestedRef;
+            }
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              },
+            );
+            const latestRelease = releases
+              .filter(
+                (release) =>
+                  !release.draft &&
+                  release.published_at &&
+                  semverTag.test(release.tag_name),
+              )
+              .sort(
+                (left, right) =>
+                  Date.parse(right.published_at) - Date.parse(left.published_at),
+              )[0];
+
+            if (!latestRelease) {
+              core.setFailed('Could not find a published semver release');
+              return;
+            }
+
+            return latestRelease.tag_name;
 
       - name: Checkout published API source
         uses: actions/checkout@v6
         with:
-          ref: ${{ steps.api-release.outputs.api_ref }}
+          ref: ${{ steps.api-release.outputs.result }}
           fetch-depth: 0
           lfs: false
           path: api-source
+          persist-credentials: false
 
       - name: Verify Git LFS media
         working-directory: site
@@ -122,7 +174,7 @@ jobs:
           node site/scripts/assemble-versioned-docs.mjs
           --site site
           --api-source api-source
-          --api-ref ${{ steps.api-release.outputs.api_ref }}
+          --api-ref ${{ steps.api-release.outputs.result }}
 
       - name: Reclaim API build output
         run: pnpm --dir api-source run clean
@@ -145,9 +197,13 @@ jobs:
   deploy-docs:
     needs: build-docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://sqlrooms.org
     steps:
       - name: Download docs artifact
         uses: actions/download-artifact@v8
