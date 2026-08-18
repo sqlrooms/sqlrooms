@@ -79,6 +79,7 @@ function createCommandState(
   invokeCommand: any,
   descriptors: readonly any[] = [],
   options?: any,
+  extraState?: Record<string, unknown>,
 ) {
   const listCommands = jest.fn((listOptions?: {includeInputSchema?: boolean}) =>
     descriptors.map((descriptor) =>
@@ -95,6 +96,7 @@ function createCommandState(
   return createCommandTools(
     {
       getState: () => ({
+        ...extraState,
         commands: {
           registerCommands: jest.fn(),
           unregisterCommands: jest.fn(),
@@ -245,6 +247,120 @@ describe('command tools', () => {
         surface: 'ai',
         metadata: {aiSessionId: 'session-1'},
       },
+    );
+  });
+
+  it('uses the mutable tool run context as the command target', async () => {
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.create',
+    }));
+    const tools = createCommandState(invokeCommand);
+    const contextA = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'artifact-a',
+          type: 'document',
+          title: 'Artifact A',
+        },
+      ],
+      primaryItemId: 'artifact-a',
+      primaryItemKind: 'artifact',
+      capturedAt: 1,
+    };
+    const contextB = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'artifact-b',
+          type: 'document',
+          title: 'Artifact B',
+        },
+      ],
+      primaryItemId: 'artifact-b',
+      primaryItemKind: 'artifact',
+      capturedAt: 2,
+    };
+    let currentRunContext = contextA;
+    const executionContext = {
+      sessionId: 'session-a',
+      aiRunContext: contextB,
+      getAiRunContext: () => currentRunContext,
+    };
+
+    await (tools.execute_command as any).execute(
+      {commandId: 'artifact.create'},
+      executionContext,
+    );
+    currentRunContext = contextB;
+    await (tools.execute_command as any).execute(
+      {commandId: 'artifact.create'},
+      executionContext,
+    );
+
+    expect(invokeCommand).toHaveBeenNthCalledWith(
+      1,
+      'artifact.create',
+      undefined,
+      expect.objectContaining({
+        surface: 'ai',
+        target: {kind: 'artifact', id: 'artifact-a'},
+      }),
+    );
+    expect(invokeCommand).toHaveBeenNthCalledWith(
+      2,
+      'artifact.create',
+      undefined,
+      expect.objectContaining({
+        surface: 'ai',
+        target: {kind: 'artifact', id: 'artifact-b'},
+      }),
+    );
+  });
+
+  it('falls back to the invoking session run context without using the current session', async () => {
+    const invokeCommand = jest.fn(async () => ({
+      success: true,
+      commandId: 'artifact.create',
+    }));
+    const getCurrentSession = jest.fn(() => ({id: 'session-b'}));
+    const getSessionRunContext = jest.fn((sessionId: string) =>
+      sessionId === 'session-a'
+        ? {
+            items: [
+              {
+                kind: 'artifact',
+                id: 'artifact-a',
+                type: 'document',
+                title: 'Artifact A',
+              },
+            ],
+            primaryItemId: 'artifact-a',
+            primaryItemKind: 'artifact',
+            capturedAt: 1,
+          }
+        : undefined,
+    );
+    const tools = createCommandState(invokeCommand, [], undefined, {
+      ai: {getCurrentSession, getSessionRunContext},
+    });
+
+    await (tools.execute_command as any).execute(
+      {commandId: 'artifact.create'},
+      {sessionId: 'session-a'},
+    );
+
+    expect(getSessionRunContext).toHaveBeenCalledWith('session-a');
+    expect(getCurrentSession).not.toHaveBeenCalled();
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'artifact.create',
+      undefined,
+      expect.objectContaining({
+        surface: 'ai',
+        target: {kind: 'artifact', id: 'artifact-a'},
+        metadata: {aiSessionId: 'session-a'},
+      }),
     );
   });
 

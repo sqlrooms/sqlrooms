@@ -1,7 +1,12 @@
 import {JSONConfiguration} from '@deck.gl/json';
 import * as arrow from 'apache-arrow';
 import type {ColorScaleConfig} from '@sqlrooms/color-scales';
-import {wkbGeometryDecoder} from '../prepare/wkbDecoder';
+import {
+  isPointPositionLayer,
+  promoteToPointPositions,
+  wkbGeometryDecoder,
+  describeGeoArrowPromotionFailure,
+} from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
 import {
@@ -25,6 +30,13 @@ import {
   stripLayerExtensionProps,
 } from './layerConfig';
 import {rewriteGeoArrowAccessors} from './rewriteGeoArrowAccessors';
+import {isBindableGeoArrowFieldIdentifier} from './compileGeoArrowAccessor';
+import {
+  compileLinearScaleAccessor,
+  compileLinearScaleExpression,
+  createScaleMarker,
+  isScaleMarker,
+} from './scaleFunction';
 
 type CreateDeckJsonConfigurationOptions = {
   datasetStates: Record<string, PreparedDeckDatasetState>;
@@ -92,12 +104,21 @@ function resolveGeoArrowBindings(options: {
   const boundProps: Record<string, unknown> = {};
 
   for (const binding of compatibility.bindings) {
-    if (props[binding.prop] !== undefined) {
+    const existing = props[binding.prop];
+    // Prefer Arrow Vector over `@@=column` (avoids empty H3 / missing-column silence).
+    const existingIsSimpleAccessor =
+      typeof existing === 'string' &&
+      /^@@=[A-Za-z_$][\w$]*$/.test(existing.trim());
+    if (existing !== undefined && !existingIsSimpleAccessor) {
       continue;
     }
 
     if (binding.kind === 'geometry') {
-      const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+      const columnName =
+        resolveConfiguredColumn(layerProps, binding.configKey) ??
+        (existingIsSimpleAccessor
+          ? (existing as string).trim().slice(3)
+          : undefined);
       if (binding.required && !columnName) {
         throw new Error(
           `Layer "${layerName}" requires _sqlroomsBinding.${binding.configKey}.`,
@@ -148,8 +169,36 @@ function resolveGeoArrowBindings(options: {
         );
       }
       if (!resolvedGeometry.nativeGeoArrow) {
+        if (!compatibility.allowGeoArrowPromotion) {
+          throw new Error(
+            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".`,
+          );
+        }
+
+        // Point layers: promote Points only — no silent polygon centroid.
+        if (isPointPositionLayer(layerName)) {
+          const promoted = promoteToPointPositions(
+            prepared.table,
+            resolvedGeometry.columnName,
+            resolvedGeometry.encoding,
+          );
+          if (!promoted) {
+            throw new Error(
+              `Layer "${layerName}" needs Point positions for dataset "${prepared.datasetId}" ` +
+                `(geometry encoding "${resolvedGeometry.encoding}"). ` +
+                `Use a point geometry column, or transformSql with ` +
+                `ST_AsWKB(ST_Centroid(geom)) / ST_PointOnSurface(geom). ` +
+                `For building footprints prefer GeoArrowPolygonLayer / GeoArrowSolidPolygonLayer.`,
+            );
+          }
+          boundProps[binding.prop] = promoted.geometryColumn;
+          if (table === prepared.table) {
+            table = promoted.table;
+          }
+          continue;
+        }
+
         if (
-          !compatibility.allowGeoArrowPromotion ||
           !wkbGeometryDecoder.supportsGeoArrowPromotion(
             layerName,
             resolvedGeometry.encoding,
@@ -157,8 +206,19 @@ function resolveGeoArrowBindings(options: {
             resolvedGeometry.columnName,
           )
         ) {
+          const pathHint =
+            layerName === 'GeoArrowPathLayer' ||
+            layerName === 'GeoArrowTripsLayer'
+              ? ` GeoArrowPathLayer needs LineString WKB (or a single-part MultiLineString). Multi-part MultiLineString cannot be stitched into one path — explode/merge with ST_Dump / ST_LineMerge first, then ST_AsWKB.`
+              : '';
+          const mixedHint = describeGeoArrowPromotionFailure(
+            layerName,
+            resolvedGeometry.encoding,
+            prepared.table,
+            resolvedGeometry.columnName,
+          );
           throw new Error(
-            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".`,
+            `Layer "${layerName}" cannot render geometry encoding "${resolvedGeometry.encoding}" for dataset "${prepared.datasetId}".${pathHint}${mixedHint}`,
           );
         }
       }
@@ -181,7 +241,11 @@ function resolveGeoArrowBindings(options: {
       continue;
     }
 
-    const columnName = resolveConfiguredColumn(layerProps, binding.configKey);
+    const columnName =
+      resolveConfiguredColumn(layerProps, binding.configKey) ??
+      (existingIsSimpleAccessor
+        ? (existing as string).trim().slice(3)
+        : undefined);
     if (!columnName) {
       if (binding.required) {
         throw new Error(
@@ -216,11 +280,7 @@ export function createDeckJsonConfiguration(
     constants: DEFAULT_DECK_JSON_CONSTANTS,
     functions: {
       colorScale: (props: ColorScaleConfig) => createColorScaleMarker(props),
-      scale: (props: Record<string, unknown>) => {
-        const field = typeof props.field === 'string' ? props.field : undefined;
-        if (!field) return undefined;
-        return `@@=${field}`;
-      },
+      scale: (props: Record<string, unknown>) => createScaleMarker(props),
     },
     // We preserve raw `@@=` strings here because `@deck.gl/json` would otherwise
     // eagerly compile them into row-based accessors before `preProcessClassProps`
@@ -297,20 +357,56 @@ export function createDeckJsonConfiguration(
         ...boundProps,
       };
 
-      // Normalize getElevation: subtract column minimum so the lowest
-      // feature sits at ground level and differences are clearly visible.
+      // getElevation: scale markers → linear map; plain @@=field → minus column min.
       const rawElev = nextProps.getElevation;
-      if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
+      if (isScaleMarker(rawElev)) {
+        const expression = compileLinearScaleExpression(table, rawElev);
+        if (expression) {
+          nextProps.getElevation = expression;
+        } else {
+          // Non-identifier fields need a compiled accessor, not @@=.
+          const accessor = compileLinearScaleAccessor(table, rawElev);
+          if (accessor) {
+            nextProps.getElevation = accessor;
+          } else {
+            const field =
+              typeof (rawElev as {field?: unknown}).field === 'string'
+                ? (rawElev as {field: string}).field
+                : '';
+            throw new Error(
+              `Layer "${layerName}" getElevation scale field "${field || '(missing)'}" was not found in dataset "${prepared.datasetId}".`,
+            );
+          }
+        }
+      } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
         const elevField = rawElev.slice(3).trim();
         const elevVector = table.getChild(elevField);
         if (elevVector) {
           let min = Infinity;
           for (let i = 0; i < elevVector.length; i++) {
-            const v = Number(elevVector.get(i));
+            if (
+              typeof elevVector.isValid === 'function' &&
+              !elevVector.isValid(i)
+            ) {
+              continue;
+            }
+            const raw = elevVector.get(i);
+            if (raw == null) continue;
+            const v = Number(raw);
             if (Number.isFinite(v) && v < min) min = v;
           }
-          if (Number.isFinite(min) && min !== 0) {
-            nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+          if (Number.isFinite(min)) {
+            if (isBindableGeoArrowFieldIdentifier(elevField)) {
+              if (min !== 0) {
+                nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+              }
+            } else {
+              const accessor = compileLinearScaleAccessor(table, {
+                field: elevField,
+                domain: [min, min],
+              });
+              if (accessor) nextProps.getElevation = accessor;
+            }
           }
         }
       }

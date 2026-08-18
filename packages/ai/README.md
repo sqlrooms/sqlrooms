@@ -35,7 +35,13 @@ listing the full command catalog. `execute_command` refuses high-risk or
 confirmation-required commands until the caller sets `confirmed: true` after an
 explicit user confirmation. Skill runtimes can pass `skillId`, `toolCallId`,
 `traceId`, and metadata through tool execution options; the command invocation
-receives those fields for trace callbacks. `DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
+receives those fields for trace callbacks. When the current AI run has a
+primary artifact context item, command tools also propagate it as the
+invocation target. They read the mutable tool execution context first and fall
+back to the invoking session's stored run context, never the visibly selected
+chat. This keeps omitted artifact targets stable for the turn while allowing
+`set_primary_context_artifact` to retarget later calls in the same turn.
+`DEFAULT_SKILL_RUNTIME_TOOL_POLICY`
 documents the default command, artifact-context, table/query, and high-level
 agent tool policy for future skill runtimes. Hosts with product-specific agent
 tool names can call `createSkillRuntimeToolPolicy()` to substitute names such
@@ -87,8 +93,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDefaultAiTools(store),
       },
       getInstructions: () => createDefaultAiInstructions(store),
-      // Optional: observe completed, non-aborted turns for app-owned follow-up
-      // behavior such as handoff into a newly selected workspace artifact.
+      // Optional: observe completed, non-aborted turns for app-owned behavior
+      // such as audit logging or analytics.
       onChatFinish: ({sessionId, messages}) => {
         void sessionId;
         void messages;
@@ -128,6 +134,51 @@ function AiPanel() {
   );
 }
 ```
+
+### Customize chat presentation
+
+`Chat.Rendering` accepts a partial set of presentation slots. Unspecified slots
+keep the SQLRooms defaults, so an app can replace one region or row without
+reimplementing the rest of the chat. `ToolActivity` is used for top-level and
+nested tool rows; recursive agent progress and non-hoisted rich tool content
+remain pre-wired when that row is customized.
+
+```tsx
+import {
+  Chat,
+  type ChatActivityProps,
+  type ChatToolActivityProps,
+} from '@sqlrooms/ai';
+
+function AppActivity({children, isRunning}: ChatActivityProps) {
+  return <section aria-busy={isRunning}>{children}</section>;
+}
+
+function AppToolActivity({toolCall, isAgent}: ChatToolActivityProps) {
+  return (
+    <div>
+      {isAgent ? 'Agent' : 'Tool'}: {toolCall.toolName}
+    </div>
+  );
+}
+
+function AiMessages() {
+  return (
+    <Chat.Rendering
+      components={{
+        Activity: AppActivity,
+        ToolActivity: AppToolActivity,
+      }}
+    >
+      <Chat.Messages />
+    </Chat.Rendering>
+  );
+}
+```
+
+Use the `Turn` slot for a custom overall layout. Its semantic regions expose
+pre-wired `Content` components, while activity items and action capabilities
+remain available for deeper composition.
 
 ## Block-scoped Ask AI actions
 

@@ -25,3 +25,19 @@
   font-size: 0.8em;
   padding: 0;
 }
+
+.mermaid-diagram {
+  margin: 16px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.mermaid-diagram svg {
+  display: inline-block;
+  height: auto;
+  max-width: 100%;
+}
+
+.mermaid-diagram-error {
+  text-align: left;
+}

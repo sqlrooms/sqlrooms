@@ -7,7 +7,21 @@ import {
 import {
   blockDocumentNodeToBlock,
   type BlockDocumentBlock,
+  type BlockDocumentNode,
 } from './BlockDocumentSliceConfig';
+
+/**
+ * Extract plain text from an array of BlockDocumentNodes.
+ */
+function extractTextFromNodes(nodes: BlockDocumentNode[]): string {
+  return nodes
+    .map((node) => {
+      if (node.text) return node.text;
+      if (node.content) return extractTextFromNodes(node.content);
+      return '';
+    })
+    .join('');
+}
 
 const ListBlockDocumentBlocksToolInput = z.object({
   reasoning: z
@@ -85,7 +99,7 @@ function summarizeBlock(
     blockId: block.id,
     index,
     type: block.type,
-    ...('text' in block ? {title: block.text} : {}),
+    ...('text' in block ? {title: extractTextFromNodes(block.text)} : {}),
     ...('caption' in block && block.caption !== undefined
       ? {caption: block.caption}
       : {}),

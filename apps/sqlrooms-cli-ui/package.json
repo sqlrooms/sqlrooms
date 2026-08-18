@@ -52,13 +52,13 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.2",
+    "@vitejs/plugin-react": "^5.2.0",
     "eslint": "^9.36.0",
     "immer": "^11.0.1",
     "tailwindcss": "^4.1.18",
     "ts-jest": "^29.4.4",
     "typescript": "^5.9.2",
-    "vite": "^8.0.5",
+    "vite": "^8.2.0",
     "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.5.0"
   }

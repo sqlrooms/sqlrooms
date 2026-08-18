@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/color-scales",
-  "version": "0.29.0-rc.9",
+  "version": "0.29.0-rc.10",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -9,6 +9,16 @@
   "author": "SQLRooms Contributors",
   "sideEffects": false,
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./colorSchemeNames": {
+      "types": "./dist/colorSchemeNames.d.ts",
+      "import": "./dist/colorSchemeNames.js"
+    }
+  },
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

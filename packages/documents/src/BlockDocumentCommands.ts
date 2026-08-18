@@ -1,4 +1,7 @@
-import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
+import {
+  resolveArtifactTargetId,
+  type ArtifactMetadataType,
+} from '@sqlrooms/artifacts';
 import type {BaseRoomStoreState, RoomCommand} from '@sqlrooms/room-store';
 import {z} from 'zod';
 import {
@@ -233,6 +236,17 @@ export function createBlockDocumentCommandIds(
   );
 }
 
+/**
+ * Builds the set of room commands (list, get, create, append-blocks, …) for a
+ * block-document artifact type. Commands are namespaced by `commandNamespace`
+ * and labelled with `artifactLabel`, so a host can register more than one
+ * block-document family (for example worksheets and generic documents).
+ *
+ * @param options - Artifact type, labels, namespace, and supported stateful
+ * block types. All fields are optional and default to generic block-document
+ * values.
+ * @returns The list of {@link RoomCommand}s to register with the host store.
+ */
 export function createBlockDocumentCommands<
   TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
 >({
@@ -291,12 +305,15 @@ export function createBlockDocumentCommands<
       inputSchema: BlockDocumentIdInput,
       inputDescription: `Optional ${labelLower} artifact ID. Defaults to the current ${labelLower}.`,
       metadata: {readOnly: true, idempotent: true, riskLevel: 'low'},
-      execute: ({getState}, input) => {
+      execute: ({getState, invocation}, input) => {
         const state = getState();
         const {artifactId: requestedArtifactId} =
           (input as z.infer<typeof BlockDocumentIdInput> | undefined) ?? {};
-        const artifactId =
-          requestedArtifactId ?? state.artifacts.config.currentArtifactId;
+        const artifactId = resolveArtifactTargetId({
+          requestedArtifactId,
+          invocation,
+          currentArtifactId: state.artifacts.config.currentArtifactId,
+        });
         const resolved = resolveBlockDocumentArtifact(
           state,
           artifactId,
@@ -322,19 +339,20 @@ export function createBlockDocumentCommands<
       inputSchema: BlockDocumentCreateInput,
       inputDescription: 'Optional title, initial blocks, and select flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'low'},
-      execute: ({getState}, input) => {
+      execute: (context, input) => {
         const {
           title,
           blocks = [],
           select = true,
         } = (input as z.infer<typeof BlockDocumentCreateInput> | undefined) ??
         {};
-        const state = getState();
+        const state = context.getState();
         const previousArtifactId = state.artifacts.config.currentArtifactId;
         const artifactId = state.artifacts.createArtifact({
           type: artifactType,
           title: title ?? defaultTitle,
         });
+
         state.blockDocuments.ensureBlockDocument(artifactId);
         if (blocks.length) {
           state.blockDocuments.setContent(artifactId, {
@@ -351,16 +369,6 @@ export function createBlockDocumentCommands<
           message: `Created ${labelLower} artifact "${artifactId}".`,
           data: {
             ...readBlockDocumentData(state, artifactId),
-            artifactTargetChange: {
-              artifactId,
-              artifactType,
-              title:
-                state.artifacts.getArtifact(artifactId)?.title ??
-                title ??
-                defaultTitle,
-              change: 'created',
-              shouldContinueChat: select,
-            },
           },
         };
       },

@@ -193,7 +193,12 @@ describe('documents CRDT mirrors', () => {
       title: 'Block Document',
     });
     storeA.getState().blockDocuments.appendBlocks(blockDocumentId, [
-      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Findings'}],
+      },
       {
         id: 'chart',
         type: 'chart',
@@ -237,7 +242,12 @@ describe('documents CRDT mirrors', () => {
     expect(
       storeB.getState().blockDocuments.getBlocks(blockDocumentId),
     ).toMatchObject([
-      {id: 'heading', type: 'heading', level: 1, text: 'Findings'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Findings'}],
+      },
       {
         id: 'chart',
         type: 'chart',

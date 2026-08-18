@@ -6,32 +6,56 @@ packages:
   - 'apps/*'
   - 'python/*'
 overrides:
+  # First same-major releases that fix provider-utils SSRF (CVE-2026-8768).
+  # GHSA-866g-f22w-33x8 remains accepted on 3.x until an upstream backport exists.
+  '@ai-sdk/provider-utils@>=3.0.0 <4.0.0': 3.0.26
+  '@ai-sdk/provider-utils@>=4.0.0 <5.0.0': 4.0.29
+  '@babel/core@<=7.29.0': 7.29.7
   '@duckdb/duckdb-wasm': 1.32.0
   '@loaders.gl/wms': 4.4.2
   '@loaders.gl/xml': 4.4.2
+  '@sigstore/core@<=3.2.0': 3.2.1
   '@types/react': 19.2.7
   '@types/react-dom': 19.2.3
   apache-arrow: 17.0.0
+  brace-expansion@<1.1.18: 1.1.18
+  brace-expansion@>=2.0.0 <2.1.4: 2.1.4
+  brace-expansion@>=3.0.0 <5.0.9: 5.0.9
   d3-color: 3.1.0
   d3-sankey: 0.12.3
-  dompurify: 3.4.6
+  dompurify: 3.4.12
+  esbuild@>=0.27.3 <0.28.1: 0.28.1
+  fast-uri@>=3.0.0 <3.1.5: 3.1.5
   fast-xml-parser: 5.8.0
+  form-data@>=3.0.0 <3.0.5: 3.0.5
   hoek: npm:@hapi/hoek@11.0.7
+  ip-address@<=10.3.0: 10.4.0
+  js-yaml@<3.15.0: 3.15.0
+  js-yaml@>=4.0.0 <4.3.0: 4.3.0
+  linkify-it@<=5.0.1: 5.0.2
   lodash: 4.18.1
+  markdown-it@<=14.1.1: 14.3.0
   monaco-editor: 0.55.1
+  next@>=16.0.0 <16.2.11: 16.3.0
   node-fetch: 2.7.0
-  postcss: 8.5.14
+  postcss: 8.5.25
   react: 19.2.1
   react-dom: 19.2.1
   serialize-javascript: 7.0.5
+  sharp@<0.35.0: 0.35.3
+  shell-quote@<=1.8.4: 1.10.0
+  sigstore@<=4.1.0: 4.1.1
+  tar@<=7.5.20: 7.5.22
   thrift: 0.23.0
   typescript: 5.9.3
+  undici@>=5.0.0 <6.28.0: 6.28.0
+  undici@>=7.0.0 <7.29.0: 7.29.0
   uuid: 11.1.1
-  vite@<=6.4.1: 6.4.2
-  ws@>=8.0.0 <8.20.1: 8.20.1
+  ws@>=1.1.0 <5.2.5: 5.2.7
+  ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 patchedDependencies:
-  sigstore@4.1.0: patches/sigstore@4.1.0.patch
+  sigstore@4.1.1: patches/sigstore@4.1.0.patch
 allowBuilds:
   '@mongodb-js/zstd': false
   '@swc/core': true
@@ -40,3 +64,27 @@ allowBuilds:
   node-liblzma: true
   sharp: false
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@ai-sdk/provider-utils@3.0.26'
+  - '@ai-sdk/provider-utils@4.0.29'
+  - '@babel/core@7.29.7'
+  - '@sigstore/core@3.2.1'
+  - brace-expansion@1.1.18
+  - brace-expansion@2.1.4
+  - brace-expansion@5.0.9
+  - esbuild@0.28.1
+  - fast-uri@3.1.5
+  - form-data@3.0.5
+  - ip-address@10.4.0
+  - js-yaml@3.15.0
+  - js-yaml@4.3.0
+  - linkify-it@5.0.2
+  - markdown-it@14.3.0
+  - next@16.3.0
+  - sharp@0.35.3
+  - shell-quote@1.10.0
+  - sigstore@4.1.1
+  - tar@7.5.22
+  - undici@6.28.0
+  - undici@7.29.0
+  - ws@5.2.7

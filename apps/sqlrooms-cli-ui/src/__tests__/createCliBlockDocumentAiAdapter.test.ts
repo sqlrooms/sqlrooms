@@ -57,7 +57,7 @@ describe('createCliBlockDocumentAiAdapter', () => {
     const block: BlockDocumentBlock = {
       id: 'paragraph-1',
       type: 'paragraph',
-      text: 'Summary',
+      text: [{type: 'text', text: 'Summary'}],
     };
 
     await expect(adapter.addBlock('worksheet-1', block)).resolves.toBe(
@@ -92,7 +92,7 @@ describe('createCliBlockDocumentAiAdapter', () => {
       adapter.addBlock('worksheet-1', {
         id: 'paragraph-1',
         type: 'paragraph',
-        text: 'Summary',
+        text: [{type: 'text', text: 'Summary'}],
       }),
     ).rejects.toThrow('Command failed');
   });

@@ -10,12 +10,20 @@ import {
 } from '@sqlrooms/ui';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
-import type {AgentToolCall} from '../types';
+import type {AgentToolCall, ToolRendererRegistry} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 import {isDynamicToolPart, isToolPart} from '../utils';
+import {
+  useOptionalChatRendering,
+  useResolvedChatNestedActivityMode,
+} from './ChatRenderingContextBase';
 import {useHoistedRenderers} from './HoistedRenderersContext';
 import {ActivityBox} from './ActivityBox';
-import {type HoistableToolCall} from './collectHoistableRenderers';
+import {
+  canHoistAgentToolCall,
+  type HoistableToolCall,
+} from './collectHoistableRenderers';
+import {useRenderNestedHoistedOutputs} from './NestedHoistedOutputsContext';
 import {ToolCallErrorBoundary} from './tools/ToolResultErrorBoundary';
 
 // ---------------------------------------------------------------------------
@@ -90,11 +98,16 @@ type ToolGroupSegment = {
 
 type FlatSegment = AgentSegment | ToolGroupSegment;
 
+function stripTrailingEllipsis(text: string): string {
+  return text.replace(/(?:\s*(?:\.\.\.|…))+\s*$/u, '').trimEnd();
+}
+
 // ---------------------------------------------------------------------------
 // ActivityLogLine — compact single-line entry inside an ActivityBox (leaf only)
 // ---------------------------------------------------------------------------
 
-const ActivityLogLine: React.FC<{
+/** SQLRooms' built-in presentation for a normalized nested tool call. */
+export const AgentToolActivityLogLine: React.FC<{
   toolCall: AgentToolCall;
 }> = ({toolCall}) => {
   const showDetails = useShowToolCallDetails();
@@ -109,10 +122,12 @@ const ActivityLogLine: React.FC<{
       : undefined;
   const reasoning = inputObj?.reasoning as string | undefined;
 
-  const label =
+  const rawLabel =
     reasoning ??
     (getActivityLabel ? getActivityLabel(toolCall) : undefined) ??
     (isPending ? 'Thinking...' : toolCall.toolName);
+  const label =
+    typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
 
   return (
     <div
@@ -179,7 +194,8 @@ const LogLineElapsed: React.FC<{
 // ParentSummaryLine — summary line for an agent
 // ---------------------------------------------------------------------------
 
-const ParentSummaryLine: React.FC<{
+/** SQLRooms' built-in presentation for a normalized nested agent call. */
+export const AgentToolSummaryLine: React.FC<{
   toolCallId: string;
   toolName: string;
   isComplete: boolean;
@@ -304,13 +320,18 @@ const ToolCallDetailHover: React.FC<{
 // HoistedRenderer — renders a single hoisted tool component
 // ---------------------------------------------------------------------------
 
-const HoistedRenderer: React.FC<{
+/**
+ * Renders a single hoisted tool component outside the activity timeline.
+ * Exported so turn recipes can place turn-level hoisted UI between response
+ * text and summary text.
+ */
+export const HoistedToolCallRenderer: React.FC<{
   item: HoistableToolCall;
 }> = ({item}) => {
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const ToolComponent = toolRenderers[item.toolName];
 
-  if (!ToolComponent || typeof ToolComponent !== 'function') return null;
+  if (!ToolComponent) return null;
 
   const isApproval = item.state === 'approval-requested';
   if (item.state !== 'success' && !isApproval) return null;
@@ -419,9 +440,11 @@ const FlatSegmentList: React.FC<{
   segments: FlatSegment[];
   agentProgress: Record<string, AgentToolCall[]>;
   hoistableSet: ReadonlySet<string>;
-  toolRenderers: Record<string, unknown>;
+  toolRenderers: ToolRendererRegistry;
   isPassthroughTool?: (tc: AgentToolCall) => boolean;
   isAgentComplete?: boolean;
+  /** When true, omit nested ActivityBoxes. */
+  embedInParentActivity?: boolean;
 }> = ({
   segments,
   agentProgress,
@@ -429,7 +452,14 @@ const FlatSegmentList: React.FC<{
   toolRenderers,
   isPassthroughTool,
   isAgentComplete,
+  embedInParentActivity = false,
 }) => {
+  const rendering = useOptionalChatRendering();
+  const Activity = rendering?.components.Activity;
+  const ToolActivity = rendering?.components.ToolActivity;
+  const HoistedOutput =
+    rendering?.components.HoistedOutput ?? HoistedToolCallRenderer;
+  const renderNestedHoistedOutputs = useRenderNestedHoistedOutputs();
   return (
     <>
       {segments.map((seg, idx) => {
@@ -445,44 +475,27 @@ const FlatSegmentList: React.FC<{
               ? `Worked with ${toolCount} tool${toolCount === 1 ? '' : 's'}`
               : undefined;
 
-          return (
-            <React.Fragment key={`tg-${idx}`}>
-              <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
-                {seg.tools.map((tc) => {
-                  const isHoisted =
-                    hoistableSet.has(tc.toolName) &&
-                    typeof toolRenderers[tc.toolName] === 'function';
-                  const hasNonHoistedRenderer =
-                    !isHoisted &&
-                    typeof toolRenderers[tc.toolName] === 'function';
-                  return (
-                    <React.Fragment key={tc.toolCallId}>
-                      <ActivityLogLine toolCall={tc} />
-                      {hasNonHoistedRenderer && (
-                        <HoistedRenderer
-                          item={{
-                            toolCallId: tc.toolCallId,
-                            toolName: tc.toolName,
-                            output: tc.output,
-                            input: tc.input,
-                            errorText: tc.errorText,
-                            state: tc.state,
-                            approvalId: tc.approvalId,
-                          }}
-                        />
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </ActivityBox>
-              {seg.tools.map((tc) => {
-                const isHoisted =
-                  hoistableSet.has(tc.toolName) &&
-                  typeof toolRenderers[tc.toolName] === 'function';
-                if (!isHoisted) return null;
-                return (
-                  <HoistedRenderer
-                    key={`hoisted-${tc.toolCallId}`}
+          const logLines = seg.tools.map((tc) => {
+            const isHoisted = canHoistAgentToolCall(
+              tc,
+              toolRenderers,
+              hoistableSet,
+            );
+            const hasInlineRenderer =
+              !isHoisted && !!toolRenderers[tc.toolName];
+            return (
+              <React.Fragment key={tc.toolCallId}>
+                {ToolActivity ? (
+                  <ToolActivity
+                    toolCall={tc}
+                    isAgent={false}
+                    isHoisted={isHoisted}
+                  />
+                ) : (
+                  <AgentToolActivityLogLine toolCall={tc} />
+                )}
+                {hasInlineRenderer && (
+                  <HoistedToolCallRenderer
                     item={{
                       toolCallId: tc.toolCallId,
                       toolName: tc.toolName,
@@ -493,8 +506,66 @@ const FlatSegmentList: React.FC<{
                       approvalId: tc.approvalId,
                     }}
                   />
-                );
-              })}
+                )}
+              </React.Fragment>
+            );
+          });
+
+          const hoistedOutputs = seg.tools.map((tc) => {
+            const isHoisted = canHoistAgentToolCall(
+              tc,
+              toolRenderers,
+              hoistableSet,
+            );
+            if (!isHoisted) return null;
+            return (
+              <HoistedOutput
+                key={`hoisted-${tc.toolCallId}`}
+                item={{
+                  toolCallId: tc.toolCallId,
+                  toolName: tc.toolName,
+                  output: tc.output,
+                  input: tc.input,
+                  errorText: tc.errorText,
+                  state: tc.state,
+                  approvalId: tc.approvalId,
+                }}
+              />
+            );
+          });
+
+          if (embedInParentActivity) {
+            // Embed mode: the host already wraps nested activity in its own
+            // ActivityBox, so we only emit the log lines here. Hoisted
+            // outputs are still rendered so rich nested chart/map results
+            // remain visible when the default Turn places the timeline.
+            return (
+              <React.Fragment key={`tg-${idx}`}>
+                {logLines}
+                {renderNestedHoistedOutputs ? hoistedOutputs : null}
+              </React.Fragment>
+            );
+          }
+
+          const activityContent = Activity ? (
+            <Activity
+              isRunning={anyPending}
+              isCompleted={allToolsDone && isAgentComplete === true}
+              toolCount={toolCount}
+              summaryLabel={summaryLabel}
+            >
+              {logLines}
+            </Activity>
+          ) : (
+            <ActivityBox isRunning={anyPending} summaryLabel={summaryLabel}>
+              {logLines}
+            </ActivityBox>
+          );
+
+          return (
+            <React.Fragment key={`tg-${idx}`}>
+              {activityContent}
+              {renderNestedHoistedOutputs ? hoistedOutputs : null}
             </React.Fragment>
           );
         }
@@ -503,6 +574,10 @@ const FlatSegmentList: React.FC<{
         const {toolCall, nestedCalls} = seg;
         const isComplete =
           toolCall.state === 'success' || toolCall.state === 'error';
+        const presentedToolCall =
+          toolCall.agentToolCalls === nestedCalls
+            ? toolCall
+            : {...toolCall, agentToolCalls: nestedCalls};
 
         const childSegments = buildFlatSegments(
           nestedCalls,
@@ -512,14 +587,22 @@ const FlatSegmentList: React.FC<{
 
         return (
           <React.Fragment key={toolCall.toolCallId}>
-            <ParentSummaryLine
-              toolCallId={toolCall.toolCallId}
-              toolName={toolCall.toolName}
-              isComplete={isComplete}
-              startedAt={toolCall.startedAt}
-              completedAt={toolCall.completedAt}
-              toolCall={toolCall}
-            />
+            {ToolActivity ? (
+              <ToolActivity
+                toolCall={presentedToolCall}
+                isAgent
+                isHoisted={false}
+              />
+            ) : (
+              <AgentToolSummaryLine
+                toolCallId={toolCall.toolCallId}
+                toolName={toolCall.toolName}
+                isComplete={isComplete}
+                startedAt={toolCall.startedAt}
+                completedAt={toolCall.completedAt}
+                toolCall={presentedToolCall}
+              />
+            )}
             <FlatSegmentList
               segments={childSegments}
               agentProgress={agentProgress}
@@ -527,6 +610,7 @@ const FlatSegmentList: React.FC<{
               toolRenderers={toolRenderers}
               isPassthroughTool={isPassthroughTool}
               isAgentComplete={isComplete}
+              embedInParentActivity={embedInParentActivity}
             />
           </React.Fragment>
         );
@@ -600,10 +684,12 @@ const OrchestratorLogLineInner: React.FC<{
       : undefined;
   const reasoning = inputObj?.reasoning as string | undefined;
 
-  const label =
+  const rawLabel =
     reasoning ??
     (getActivityLabel ? getActivityLabel(toolCall) : undefined) ??
     (isPending ? 'Thinking...' : toolCall.toolName);
+  const label =
+    typeof rawLabel === 'string' ? stripTrailingEllipsis(rawLabel) : rawLabel;
 
   return (
     <div
@@ -669,7 +755,9 @@ export const FlatAgentRenderer: React.FC<{
   const toolRenderers = useStoreWithAi((s) => s.ai.toolRenderers);
   const agentProgress = useStoreWithAi((s) => s.ai.agentProgress);
   const hoistedRendererNames = useHoistedRenderers();
+  const nestedActivityMode = useResolvedChatNestedActivityMode();
   const {isPassthroughTool} = useToolRenderBehavior();
+  const embedInParentActivity = nestedActivityMode === 'embed';
 
   const displayCalls = agentProgress[toolCallId] ?? agentToolCalls;
 
@@ -705,7 +793,7 @@ export const FlatAgentRenderer: React.FC<{
   return (
     <div className="mt-1 flex w-full min-w-0 flex-col gap-1.5 overflow-hidden text-[0.9em]">
       {parentToolName && !hideParentSummary && (
-        <ParentSummaryLine
+        <AgentToolSummaryLine
           toolCallId={toolCallId}
           toolName={parentToolName}
           isComplete={!!isComplete}
@@ -720,6 +808,7 @@ export const FlatAgentRenderer: React.FC<{
         toolRenderers={toolRenderers}
         isPassthroughTool={isPassthroughTool}
         isAgentComplete={!!isComplete}
+        embedInParentActivity={embedInParentActivity}
       />
     </div>
   );

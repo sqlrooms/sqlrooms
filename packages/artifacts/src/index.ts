@@ -7,11 +7,14 @@ export {
   ArtifactMetadata,
   ArtifactsSliceConfig,
   ArtifactType,
+  ArtifactSessionLinkSchema,
 } from './ArtifactsSliceConfig';
 export type {
   ArtifactMetadata as ArtifactMetadataType,
   ArtifactsSliceConfig as ArtifactsSliceConfigType,
   ArtifactType as ArtifactTypeType,
+  ArtifactSessionLink,
+  ArtifactSessionLinkType,
 } from './ArtifactsSliceConfig';
 
 export {
@@ -44,6 +47,8 @@ export type {
   UseArtifactWorkspaceOptions,
   UseArtifactWorkspaceResult,
 } from './artifactWorkspace';
+
+export {resolveArtifactTargetId} from './artifactTarget';
 
 export {
   ArtifactTabs,

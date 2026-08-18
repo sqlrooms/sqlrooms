@@ -7,8 +7,8 @@ export function useCliArtifactSidebarTabs() {
   const artifactsConfig = useRoomStore((state) => state.artifacts.config);
   const artifactTypes = useRoomStore((state) => state.artifacts.artifactTypes);
   const aiSessions = useRoomStore((state) => state.ai.config.sessions);
-  const aiSessionArtifacts = useRoomStore(
-    (state) => state.artifactAi.config.aiSessionArtifacts,
+  const sessionArtifactLinks = useRoomStore(
+    (state) => state.artifactAi.config.sessionArtifactLinks,
   );
   const currentArtifactId = useRoomStore(
     (state) => state.artifacts.config.currentArtifactId,
@@ -29,9 +29,9 @@ export function useCliArtifactSidebarTabs() {
   const runningSessionCountsByArtifact = useMemo(() => {
     return getRunningAiSessionCountsByArtifact({
       sessions: aiSessions,
-      aiSessionArtifacts,
+      sessionArtifactLinks,
     });
-  }, [aiSessionArtifacts, aiSessions]);
+  }, [sessionArtifactLinks, aiSessions]);
 
   const tabs = useMemo(
     () =>

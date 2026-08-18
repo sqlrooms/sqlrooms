@@ -6,11 +6,15 @@ import {
 import {
   createBlockContextItem,
   getRunContextItemIds,
+  setAiRunContextPrimaryItem,
   type AiRunContext,
   type AiRunContextItem,
 } from '@sqlrooms/ai';
 import type {ArtifactMetadataType} from '@sqlrooms/artifacts';
-import {getOwningArtifactRunContextItems} from '@sqlrooms/artifacts/ai';
+import {
+  getOwningArtifactRunContextItems,
+  isAiSessionVisibleForArtifact,
+} from '@sqlrooms/artifacts/ai';
 import {
   blockDocumentNodeToBlock,
   defaultBlockTitle,
@@ -206,6 +210,26 @@ export function getRunContext(
     session?.runContext &&
     getRunContextItemIds(session.runContext).length > 0
   ) {
+    const currentArtifactId = state.artifacts.config.currentArtifactId;
+    const currentArtifact = currentArtifactId
+      ? artifactsById[currentArtifactId]
+      : undefined;
+    const currentArtifactIsLinked = Boolean(
+      currentArtifact &&
+      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type) &&
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
+        sessionId,
+        artifactId: currentArtifactId,
+      }),
+    );
+
+    if (currentArtifact && currentArtifactIsLinked) {
+      return setAiRunContextPrimaryItem(
+        session.runContext,
+        createArtifactContextItem(currentArtifact),
+      );
+    }
     return session.runContext;
   }
 
@@ -223,11 +247,15 @@ export function getRunContext(
     .filter(Boolean) as AiRunContextItem[];
   const items = getOwningArtifactRunContextItems({
     sessionId,
-    aiSessionArtifacts: state.artifactAi.config.aiSessionArtifacts,
+    sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
     artifactsById,
     extraItems,
     isSupportedArtifactType: (artifactType) =>
       SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(artifactType),
+    // Prefer the artifact the run is initiated from over the most recently
+    // linked one, so asking AI from an older linked artifact directs the run
+    // at that artifact.
+    preferredArtifactId: state.artifacts.config.currentArtifactId,
   });
 
   if (items.length === 0) {

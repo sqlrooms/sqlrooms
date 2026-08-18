@@ -50,6 +50,12 @@ export type DeckMapFitToDataConfig = {
   longitudeColumn?: string;
   latitudeColumn?: string;
   geometryColumn?: string;
+  /**
+   * Multiple geometry columns whose extents should be combined when fitting
+   * the view. Used for arc layers that have separate source and target
+   * geometries — a single `geometryColumn` would only cover one endpoint.
+   */
+  geometryColumns?: string[];
   h3Column?: string;
   padding?: number;
   maxZoom?: number;

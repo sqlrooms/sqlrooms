@@ -116,7 +116,13 @@ export function createMosaicDashboardCommands<
         >;
         const state = getState();
         const dashboard = state.mosaicDashboard.getDashboard(dashboardId);
-        const previousSelectedTable = dashboard?.selectedTable;
+        if (!dashboard) {
+          return dashboardMissing(
+            MOSAIC_DASHBOARD_COMMAND_IDS.setSelectedTable,
+            dashboardId,
+          );
+        }
+        const previousSelectedTable = dashboard.selectedTable;
         state.mosaicDashboard.setSelectedTable(dashboardId, tableName);
         return {
           success: true,
@@ -144,13 +150,21 @@ export function createMosaicDashboardCommands<
           typeof DashboardAddPanelInput
         >;
         const state = getState();
-        state.mosaicDashboard.addPanel(dashboardId, panel);
         const dashboard = state.mosaicDashboard.getDashboard(dashboardId);
+        if (!dashboard) {
+          return dashboardMissing(
+            MOSAIC_DASHBOARD_COMMAND_IDS.addPanel,
+            dashboardId,
+          );
+        }
+        state.mosaicDashboard.addPanel(dashboardId, panel);
+        const updatedDashboard =
+          state.mosaicDashboard.getDashboard(dashboardId);
         return {
           success: true,
           commandId: MOSAIC_DASHBOARD_COMMAND_IDS.addPanel,
           message: `Added "${panel.title}" panel to dashboard "${dashboardId}".`,
-          data: panelData(dashboardId, panel, dashboard?.selectedTable),
+          data: panelData(dashboardId, panel, updatedDashboard?.selectedTable),
         };
       },
     },

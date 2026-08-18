@@ -54,12 +54,36 @@ export type ExtraDashboardAiToolsFactory = (
 ) => Record<string, Tool>;
 
 /**
+ * Authorizes mutation of a specific dashboard using the latest store state.
+ *
+ * The dashboard target is fixed by the caller. Throw (or reject) to deny the
+ * mutation; the dashboard agent and adapter do not select an alternative
+ * dashboard. Callers may surface the failure or explicitly establish a new
+ * valid target in a separate operation.
+ */
+export type AuthorizeDashboard<TState> = (params: {
+  dashboardId: string;
+  state: TState;
+}) => void | Promise<void>;
+
+/**
  * Options for creating a dashboard agent tool.
  * Extends base agent options with dashboard-specific database adapter and optional extra tools.
  */
 export type CreateDashboardAgentToolOptions<TState> =
   BaseAgentToolOptions<TState> & {
     databaseAdapter: DatabaseAiAdapter;
+    /**
+     * Optional host authorization for a resolved dashboard target.
+     *
+     * Hosts can use this to enforce product-specific ownership constraints,
+     * such as requiring the dashboard to belong to a captured block document.
+     * The callback runs once when the dashboard agent starts and again with
+     * fresh state immediately before every adapter mutation. Throwing or
+     * rejecting blocks the operation; it does not make the agent retarget a
+     * different dashboard.
+     */
+    authorizeDashboard?: AuthorizeDashboard<TState>;
     /**
      * Host-provided dashboard tools keyed by their registered tool name.
      * Register geospatial map tools under MAP_TOOL_KEY so prompts and tools

@@ -12,6 +12,7 @@ import {
   useStoreWithMosaicDashboard,
   usePanelClientRegistration,
 } from '@sqlrooms/mosaic';
+import {useStoreWithDuckDb} from '@sqlrooms/duckdb';
 import {Button, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import type {MosaicClient} from '@uwdata/mosaic-core';
 import type {Selection} from '@uwdata/mosaic-core';
@@ -23,6 +24,7 @@ import {
   asDeckJsonMapConfig,
   createDeckMapDashboardPanelConfig,
   createDeckMapDashboardDatasetQuery,
+  createDeckMapDashboardDatasetSourceSql,
   createDeckMapDashboardDatasets,
   DECK_MAP_DASHBOARD_PANEL_TYPE,
   DEFAULT_DECK_MAP_MAX_DATA_POINTS,
@@ -36,11 +38,15 @@ import {
   type DeckMapDashboardPanelConfig,
 } from './dashboardConfig';
 import {
+  createDescribeDatasetSql,
+  geometryColumnsNeedingWkbWrap,
+  parseDescribeSqlColumns,
+} from './datasets/wrapGeometryAsWkb';
+import {
   useDeckMapFitToBounds,
   emitDeckMapDashboardFitRequest,
   createDeckMapBoundsQuery,
 } from './useDeckMapFitToBounds';
-export {createDeckMapBoundsQuery};
 import {useDeckMapDatasets} from './useDeckMapDatasets';
 import {DeckMapDashboardSettings} from './DashboardMapSettings';
 import {
@@ -49,6 +55,11 @@ import {
   findLongitudeLatitudeColumns,
 } from './mapConfigUtils';
 import {isDeckMapGeneratedColumn} from './useDeckMapDatasetSchema';
+
+/** Stable fallback while the DESCRIBE geometry-wrap probe is pending. */
+const EMPTY_WRAPPED_GEOMETRY_COLUMNS: readonly string[] = [];
+
+export {createDeckMapBoundsQuery};
 
 function createEmptyDeckMapDashboardPanelConfig(title = 'Map') {
   return createDeckMapDashboardPanelConfig({
@@ -301,18 +312,75 @@ function DeckMapDashboardDatasetClient({
       }),
     [dashboard, dataset, datasetFitToData, panel],
   );
+
+  const connector = useStoreWithDuckDb((state) => state.db.connector);
+  const [geometryWrapProbe, setGeometryWrapProbe] = useState<{
+    sourceSqlKey: string;
+    columns: string[];
+  } | null>(null);
+
+  const sourceSqlKey = useMemo(() => {
+    if (!source) return '';
+    try {
+      return createDeckMapDashboardDatasetSourceSql(source);
+    } catch {
+      return '';
+    }
+  }, [source]);
+
+  // Pending while probe key mismatches (avoids setState-in-effect).
+  const geometryColumnsToWrapAsWkb = useMemo(() => {
+    if (!source || !sourceSqlKey) return [];
+    if (geometryWrapProbe?.sourceSqlKey !== sourceSqlKey) return null;
+    return geometryWrapProbe.columns;
+  }, [geometryWrapProbe, source, sourceSqlKey]);
+
+  useEffect(() => {
+    if (!source || !sourceSqlKey) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const describeTable = await connector.query(
+          createDescribeDatasetSql(sourceSqlKey),
+        );
+        if (cancelled) return;
+        setGeometryWrapProbe({
+          sourceSqlKey,
+          columns: geometryColumnsNeedingWkbWrap(
+            parseDescribeSqlColumns(describeTable),
+          ),
+        });
+      } catch {
+        if (cancelled) return;
+        setGeometryWrapProbe({sourceSqlKey, columns: []});
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connector, source, sourceSqlKey]);
+
+  const geometryProbeReady = geometryColumnsToWrapAsWkb !== null;
+  const wrappedGeometryColumnNames =
+    geometryColumnsToWrapAsWkb ?? EMPTY_WRAPPED_GEOMETRY_COLUMNS;
+
   const query = useCallback(
     (filter: unknown) =>
       source
         ? createDeckMapDashboardDatasetQuery(source, filter, {
             sampleRows: maxRows,
+            geometryColumnsToWrapAsWkb: wrappedGeometryColumnNames,
           })
         : createDeckMapDashboardDatasetQuery(
             {tableName: '__missing_dashboard_map_dataset__'},
             filter,
             {sampleRows: maxRows},
           ),
-    [maxRows, source],
+    [wrappedGeometryColumnNames, maxRows, source],
   );
   const queryError = useCallback(
     (err: Error) => {
@@ -322,9 +390,10 @@ function DeckMapDashboardDatasetClient({
         isLoading: false,
         client: null,
         isSampled: false,
+        wrappedGeometryColumnNames,
       });
     },
-    [datasetId, onDatasetState],
+    [datasetId, onDatasetState, wrappedGeometryColumnNames],
   );
   const sourceKey = isDeckMapDashboardTableDatasetSource(source)
     ? source.tableName
@@ -337,11 +406,11 @@ function DeckMapDashboardDatasetClient({
       ? (source.transformSql ?? '')
       : '';
   const {data, error, isLoading, client} = useMosaicClient({
-    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}:${maxRows}`,
+    id: `${panel.id}:${datasetId}:${sourceKey}:${sourceQueryKey}:${maxRows}:${geometryColumnsToWrapAsWkb?.join(',') ?? 'pending'}`,
     selectionName,
     query,
     queryError,
-    enabled: Boolean(source),
+    enabled: Boolean(source) && geometryProbeReady,
     runtimeIssueContext,
     runtimeIssueReporter,
   });
@@ -355,15 +424,26 @@ function DeckMapDashboardDatasetClient({
     onDatasetState(datasetId, {
       arrowTable: data ?? undefined,
       error,
-      isLoading,
+      isLoading: isLoading || !geometryProbeReady,
       client,
       isSampled,
+      wrappedGeometryColumnNames,
     });
 
     return () => {
       onDatasetState(datasetId, undefined);
     };
-  }, [client, data, datasetId, error, isLoading, isSampled, onDatasetState]);
+  }, [
+    client,
+    data,
+    datasetId,
+    error,
+    geometryProbeReady,
+    isLoading,
+    isSampled,
+    onDatasetState,
+    wrappedGeometryColumnNames,
+  ]);
 
   return null;
 }

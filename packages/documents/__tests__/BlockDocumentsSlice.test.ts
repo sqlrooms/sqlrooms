@@ -49,7 +49,7 @@ describe('BlockDocumentsSlice', () => {
         blockDocumentBlockToNode({
           id: 'block-1',
           type: 'paragraph',
-          text: 'Hello',
+          text: [{type: 'text', text: 'Hello'}],
         }),
       ],
     });
@@ -87,7 +87,7 @@ describe('BlockDocumentsSlice', () => {
           id: 'block-1',
           type: 'heading',
           level: 2,
-          text: 'Original',
+          text: [{type: 'text', text: 'Original'}],
         }),
       ],
     });
@@ -98,14 +98,21 @@ describe('BlockDocumentsSlice', () => {
           id: 'block-2',
           type: 'heading',
           level: 2,
-          text: 'Replacement',
+          text: [{type: 'text', text: 'Replacement'}],
         }),
       ],
     });
 
     expect(
       store.getState().blockDocuments.getBlocks('block-document-1'),
-    ).toEqual([{id: 'block-1', type: 'heading', level: 2, text: 'Original'}]);
+    ).toEqual([
+      {
+        id: 'block-1',
+        type: 'heading',
+        level: 2,
+        text: [{type: 'text', text: 'Original'}],
+      },
+    ]);
   });
 
   it('round-trips block intent through document nodes', () => {
@@ -196,8 +203,17 @@ describe('BlockDocumentsSlice', () => {
     const store = createTestStore();
 
     store.getState().blockDocuments.appendBlocks('block-document-1', [
-      {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
-      {id: 'paragraph', type: 'paragraph', text: 'First note'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Overview'}],
+      },
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'First note'}],
+      },
     ]);
     store.getState().blockDocuments.insertBlocks('block-document-1', 1, [
       {
@@ -212,7 +228,12 @@ describe('BlockDocumentsSlice', () => {
     expect(
       store.getState().blockDocuments.getBlocks('block-document-1'),
     ).toEqual([
-      {id: 'heading', type: 'heading', level: 1, text: 'Overview'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'Overview'}],
+      },
       {
         id: 'chart',
         type: 'chart',
@@ -220,7 +241,11 @@ describe('BlockDocumentsSlice', () => {
         config: {chartType: 'histogram', settings: {field: 'revenue'}},
         selectionGroupId: 'overview',
       },
-      {id: 'paragraph', type: 'paragraph', text: 'First note'},
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'First note'}],
+      },
     ]);
 
     expect(
@@ -229,7 +254,7 @@ describe('BlockDocumentsSlice', () => {
         .blockDocuments.updateBlock('block-document-1', 'paragraph', {
           id: 'ignored-id',
           type: 'paragraph',
-          text: 'Updated note',
+          text: [{type: 'text', text: 'Updated note'}],
         }),
     ).toBe(true);
     expect(
@@ -246,7 +271,11 @@ describe('BlockDocumentsSlice', () => {
     expect(
       store.getState().blockDocuments.getBlocks('block-document-1'),
     ).toEqual([
-      {id: 'paragraph', type: 'paragraph', text: 'Updated note'},
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'Updated note'}],
+      },
       {
         id: 'chart',
         type: 'chart',
@@ -268,7 +297,7 @@ describe('BlockDocumentsSlice', () => {
           blockDocumentBlockToNode({
             id: 'paragraph',
             type: 'paragraph',
-            text: 'Draft',
+            text: [{type: 'text', text: 'Draft'}],
           }),
         ],
       },
@@ -286,11 +315,14 @@ describe('BlockDocumentsSlice', () => {
       store.getState().blockDocuments.getBlockDocument('block-document-1'),
     ).not.toHaveProperty('syncMetadata');
 
-    store
-      .getState()
-      .blockDocuments.appendBlocks('block-document-1', [
-        {id: 'heading', type: 'heading', level: 1, text: 'External edit'},
-      ]);
+    store.getState().blockDocuments.appendBlocks('block-document-1', [
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 1,
+        text: [{type: 'text', text: 'External edit'}],
+      },
+    ]);
 
     expect(
       store.getState().blockDocuments.getSyncMetadata('block-document-1'),
@@ -307,7 +339,7 @@ describe('BlockDocumentsSlice', () => {
     const block: BlockDocumentBlockType = {
       id: 'missing',
       type: 'paragraph',
-      text: 'Nope',
+      text: [{type: 'text', text: 'Nope'}],
     };
 
     expect(
@@ -461,7 +493,7 @@ describe('BlockDocumentsSlice', () => {
         blockDocumentBlockToNode({
           id: 'paragraph',
           type: 'paragraph',
-          text: 'Replacement',
+          text: [{type: 'text', text: 'Replacement'}],
         }),
       ],
     });
@@ -546,10 +578,29 @@ describe('BlockDocumentsSlice', () => {
 
   it('round-trips supported block DTOs through Tiptap JSON nodes', () => {
     const blocks: BlockDocumentBlockType[] = [
-      {id: 'heading', type: 'heading', level: 3, text: 'Findings'},
-      {id: 'paragraph', type: 'paragraph', text: 'A note'},
-      {id: 'list', type: 'list', ordered: true, items: ['One', 'Two']},
-      {id: 'todo', type: 'todo', checked: true, text: 'Review'},
+      {
+        id: 'heading',
+        type: 'heading',
+        level: 3,
+        text: [{type: 'text', text: 'Findings'}],
+      },
+      {
+        id: 'paragraph',
+        type: 'paragraph',
+        text: [{type: 'text', text: 'A note'}],
+      },
+      {
+        id: 'list',
+        type: 'list',
+        ordered: true,
+        items: [[{type: 'text', text: 'One'}], [{type: 'text', text: 'Two'}]],
+      },
+      {
+        id: 'todo',
+        type: 'todo',
+        checked: true,
+        text: [{type: 'text', text: 'Review'}],
+      },
       {id: 'image', type: 'image', assetId: 'asset-1', caption: 'Image'},
       {
         id: 'chart-image',
