@@ -39,7 +39,11 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
+import {AlertTriangleIcon} from 'lucide-react';
 import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   clearDeckMapLayerColorScale,
@@ -73,6 +77,7 @@ import {
   usesTripsSettings,
   usesExtrusionSettings,
   usesStrokeSetting,
+  usesStrokeExtrusionWarning,
   getDeckMapLayerStrokeDefault,
   getDeckMapColorScaleOpacity,
   getDeckMapLayerChannelOpacityPercent,
@@ -382,6 +387,8 @@ type AppearanceColorChannelProps = {
   radiusMin?: number;
   radiusMax?: number;
   radiusStep?: number;
+  /** Warning that strokes are ignored while the layer is extruded. */
+  extrusionDisablesStroke?: boolean;
 };
 
 const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
@@ -407,6 +414,7 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
   radiusMin = 0.1,
   radiusMax = 50,
   radiusStep = 0.1,
+  extrusionDisablesStroke = false,
 }) => {
   const colorScale = getDeckMapLayerColorScale(layer, accessor);
   const flatColor = getDeckMapLayerFlatColor(layer, accessor) ?? [
@@ -475,7 +483,25 @@ const AppearanceColorChannel: FC<AppearanceColorChannelProps> = ({
     <div className="flex flex-col gap-2">
       {onEnabledChange ? (
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-medium">{enableLabel}</span>
+          <span className="flex items-center gap-1 text-xs font-medium">
+            {enableLabel}
+            {extrusionDisablesStroke ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex"
+                    aria-label="no strokes with extrusion enabled"
+                  >
+                    <AlertTriangleIcon className="h-3.5 w-3.5 text-amber-500" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  no strokes with extrusion enabled
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+          </span>
           <Switch
             checked={enabled !== false}
             onCheckedChange={onEnabledChange}
@@ -1736,6 +1762,11 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                   widthPixels={strokeWidthPixels}
                                   onWidthChange={setStrokeWidth}
                                   widthLabel="Stroke width"
+                                  extrusionDisablesStroke={
+                                    usesStrokeExtrusionWarning(
+                                      activeLayer?.['@@type'],
+                                    ) && getDeckMapLayerExtruded(activeLayer)
+                                  }
                                 />
                               </TabsContent>
                               {showExtrusionSettings ? (

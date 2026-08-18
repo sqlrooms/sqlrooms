@@ -21,6 +21,7 @@ import {
   usesGeometryColumnSetting,
   usesRadiusSetting,
   usesStrokeSetting,
+  usesStrokeExtrusionWarning,
   detachDeckMapLayerOpacity,
   getDeckMapColorScaleOpacity,
   getDeckMapLayerChannelOpacityPercent,
@@ -166,6 +167,15 @@ describe('mapLayerConfigUtils', () => {
     expect(usesStrokeSetting('GeoJsonLayer')).toBe(true);
     expect(usesStrokeSetting('GeoArrowPathLayer')).toBe(false);
     expect(usesStrokeSetting('GeoArrowHeatmapLayer')).toBe(false);
+  });
+
+  it('warns that polygon, geojson, and h3 strokes are ignored while extruded', () => {
+    expect(usesStrokeExtrusionWarning('GeoArrowPolygonLayer')).toBe(true);
+    expect(usesStrokeExtrusionWarning('GeoJsonLayer')).toBe(true);
+    expect(usesStrokeExtrusionWarning('GeoArrowH3HexagonLayer')).toBe(true);
+    expect(usesStrokeExtrusionWarning('GeoArrowSolidPolygonLayer')).toBe(false);
+    expect(usesStrokeExtrusionWarning('GeoArrowScatterplotLayer')).toBe(false);
+    expect(usesStrokeExtrusionWarning('GeoArrowColumnLayer')).toBe(false);
   });
 
   it('detects layer types that should use extrusion settings', () => {

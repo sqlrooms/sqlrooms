@@ -196,6 +196,18 @@ export function usesStrokeSetting(layerType: unknown) {
   );
 }
 
+/** Polygon, GeoJSON, and H3 do not draw strokes while extruded. */
+export function usesStrokeExtrusionWarning(layerType: unknown) {
+  if (typeof layerType !== 'string') return false;
+  const type = layerType.toLowerCase();
+  return (
+    type === 'geojsonlayer' ||
+    type === 'geoarrowpolygonlayer' ||
+    type === 'polygonlayer' ||
+    H3_LAYER_TYPES.has(type)
+  );
+}
+
 /** True for GeoArrow / deck H3 hexagon layer class names. */
 export function isDeckMapH3HexagonLayer(layerType: unknown): boolean {
   return (
