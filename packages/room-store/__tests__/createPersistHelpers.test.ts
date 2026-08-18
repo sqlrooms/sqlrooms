@@ -1,7 +1,12 @@
-import {describe, expect, it} from '@jest/globals';
+import {afterEach, describe, expect, it, jest} from '@jest/globals';
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {z} from 'zod';
-import {createPersistHelpers} from '../src/createPersistHelpers';
+import {createStore, StateCreator} from 'zustand/vanilla';
+import {PersistStorage, StateStorage} from 'zustand/middleware';
+import {
+  createPersistHelpers,
+  persistSliceConfigs,
+} from '../src/createPersistHelpers';
 
 const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
 
@@ -139,5 +144,136 @@ describe('createPersistHelpers.merge', () => {
       enabled: false,
       limit: 10,
     });
+  });
+});
+
+const CounterConfig = z.object({count: z.number()});
+
+type CounterState = {
+  counter: {
+    config: z.infer<typeof CounterConfig>;
+    increment: () => void;
+  };
+};
+
+const counterStateCreator: StateCreator<CounterState> = (set) => ({
+  counter: {
+    config: {count: 0},
+    increment: () =>
+      set((state) => ({
+        counter: {
+          ...state.counter,
+          config: {count: state.counter.config.count + 1},
+        },
+      })),
+  },
+});
+
+function createCounterStore(
+  storage?: PersistStorage<{counter: z.infer<typeof CounterConfig>}>,
+) {
+  return createStore(
+    persistSliceConfigs(
+      {
+        name: 'counter-test-storage',
+        sliceConfigSchemas: {counter: CounterConfig},
+        ...(storage ? {storage} : {}),
+      },
+      counterStateCreator,
+    ),
+  );
+}
+
+const originalWindowDescriptor = Object.getOwnPropertyDescriptor(
+  globalThis,
+  'window',
+);
+
+function setWindowStorage(storage: StateStorage | null) {
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {localStorage: storage},
+  });
+}
+
+describe('persistSliceConfigs storage', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+    if (originalWindowDescriptor) {
+      Object.defineProperty(globalThis, 'window', originalWindowDescriptor);
+    } else {
+      delete (globalThis as {window?: unknown}).window;
+    }
+  });
+
+  it('continues updating state when default browser storage is unavailable', () => {
+    setWindowStorage(null);
+
+    const store = createCounterStore();
+
+    expect(() => store.getState().counter.increment()).not.toThrow();
+    expect(store.getState().counter.config.count).toBe(1);
+  });
+
+  it('continues updating state when resolving browser storage throws', () => {
+    const browserWindow = {};
+    Object.defineProperty(browserWindow, 'localStorage', {
+      get: () => {
+        throw new Error('Storage access denied');
+      },
+    });
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: browserWindow,
+    });
+
+    const store = createCounterStore();
+
+    expect(() => store.getState().counter.increment()).not.toThrow();
+    expect(store.getState().counter.config.count).toBe(1);
+  });
+
+  it('uses default browser storage when it is available', () => {
+    const values = new Map<string, string>();
+    const storage: StateStorage = {
+      getItem: jest.fn((key) => values.get(key) ?? null),
+      setItem: jest.fn((key, value) => values.set(key, value)),
+      removeItem: jest.fn((key) => values.delete(key)),
+    };
+    setWindowStorage(storage);
+
+    const store = createCounterStore();
+    store.getState().counter.increment();
+
+    expect(storage.setItem).toHaveBeenCalled();
+    expect(JSON.parse(values.get('counter-test-storage') ?? '')).toEqual({
+      state: {counter: {count: 1}},
+      version: 0,
+    });
+  });
+
+  it('tolerates failures from custom storage methods', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage: PersistStorage<{counter: {count: number}}> = {
+      getItem: () => {
+        throw new Error('getItem failed');
+      },
+      setItem: () => {
+        throw new Error('setItem failed');
+      },
+      removeItem: () => {
+        throw new Error('removeItem failed');
+      },
+    };
+
+    const store = createCounterStore(storage);
+
+    expect(() => store.getState().counter.increment()).not.toThrow();
+    expect(() =>
+      (
+        store as typeof store & {persist: {clearStorage: () => void}}
+      ).persist.clearStorage(),
+    ).not.toThrow();
+    expect(store.getState().counter.config.count).toBe(1);
   });
 });
