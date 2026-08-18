@@ -42,6 +42,35 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
+When `coordinator` is omitted, `createMosaicSlice()` obtains a connector from
+the room's DuckDB slice. To use another query engine, supply an already
+configured Mosaic coordinator. In that mode the room store does not need a
+DuckDB slice:
+
+```tsx
+import {Coordinator} from '@uwdata/mosaic-core';
+import {createMosaicSlice, type MosaicSliceState} from '@sqlrooms/mosaic';
+import {
+  createBaseRoomSlice,
+  createRoomStore,
+  type BaseRoomStoreState,
+} from '@sqlrooms/room-store';
+
+type RoomState = BaseRoomStoreState & MosaicSliceState;
+const coordinator = new Coordinator();
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    ...createBaseRoomSlice()(set, get, store),
+    ...createMosaicSlice({coordinator})(set, get, store),
+  }),
+);
+```
+
+The supplied coordinator owns query execution and connector lifecycle. If no
+coordinator is supplied, the store must include a DuckDB slice; initialization
+otherwise reports a configuration error.
+
 Mosaic's pre-aggregation optimization creates `preagg_*` cache tables lazily
 when users interact with cross-filtered selections. By default Mosaic writes
 those tables to the persistent `mosaic` schema. If the DuckDB database is a user

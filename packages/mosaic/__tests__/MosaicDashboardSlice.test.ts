@@ -1,6 +1,6 @@
 import {jest} from '@jest/globals';
 import {createStore} from 'zustand';
-import {clausePoint} from '@uwdata/mosaic-core';
+import {clausePoint, Coordinator} from '@uwdata/mosaic-core';
 import {createLayoutSlice} from '@sqlrooms/layout';
 import {
   createBaseRoomSlice,
@@ -26,7 +26,7 @@ function createTestStore(props: CreateMosaicDashboardSliceProps = {}) {
   return createStore<BaseRoomStoreState & any>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     ...createLayoutSlice()(...args),
-    ...createMosaicSlice()(...args),
+    ...createMosaicSlice({coordinator: new Coordinator()})(...args),
     ...createMosaicDashboardSlice(props)(...args),
   }));
 }

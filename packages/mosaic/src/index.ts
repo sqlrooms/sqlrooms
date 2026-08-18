@@ -38,6 +38,8 @@ export {
   createDefaultMosaicConfig,
   createMosaicSlice,
   MosaicSliceConfig,
+  type CreateCoordinatorMosaicSliceProps,
+  type CreateDuckDbMosaicSliceProps,
   type CreateMosaicSliceProps,
   type MosaicClientOptions,
   type MosaicPreAggregateOptions,
