@@ -13,6 +13,7 @@ import {
 } from './mapConfig';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
+import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
@@ -372,11 +373,14 @@ const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
   ColumnLayer: 'GeoArrowColumnLayer',
   PathLayer: 'GeoArrowPathLayer',
   PolygonLayer: 'GeoArrowPolygonLayer',
-  SolidPolygonLayer: 'GeoArrowSolidPolygonLayer',
   ArcLayer: 'GeoArrowArcLayer',
   TripsLayer: 'GeoArrowTripsLayer',
   H3HexagonLayer: 'GeoArrowH3HexagonLayer',
 };
+
+const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set(
+  DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
+);
 
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
@@ -484,6 +488,11 @@ export function getDeckMapResourceConfigIssues(
         issues.push({
           path: `spec.layers.${index}.@@type`,
           message: `use "${aliased}" — plain "${layerType}" is not a registered Deck JSON layer class`,
+        });
+      } else if (!DECK_MAP_SUPPORTED_LAYER_TYPES.has(layerType)) {
+        issues.push({
+          path: `spec.layers.${index}.@@type`,
+          message: `use a supported Deck map layer type (${[...DECK_MAP_SUPPORTED_LAYER_TYPES].join(', ')}) — "${layerType}" is not allowed`,
         });
       }
     }
@@ -642,7 +651,6 @@ export function getDeckMapResourceConfigIssues(
 
       const ELEVATION_LAYER_TYPES = new Set([
         'GeoArrowPolygonLayer',
-        'GeoArrowSolidPolygonLayer',
         'GeoArrowColumnLayer',
         'GeoArrowH3HexagonLayer',
       ]);
@@ -842,7 +850,7 @@ When authoring a worksheet map config, use the resource-native Deck JSON contrac
 - A new map must contain at least one config.datasets entry and at least one spec.layers entry.
 - Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
 - Bind every layer to a dataset with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable resource binding.
-- Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowSolidPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer. Prefer typed GeoArrow* layers when geometry type is known; GeoJsonLayer is valid for table-backed WKB/GeoJSON via _sqlroomsBinding.
+- Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer. Prefer typed GeoArrow* layers when geometry type is known; GeoJsonLayer is valid for table-backed WKB/GeoJSON via _sqlroomsBinding.
 ${getDeckMapSharedAiContractRules()}
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.

@@ -47,7 +47,6 @@ const config = {
 
 describe('mapLayerConfigUtils', () => {
   it('omits GeoArrowSolidPolygonLayer from layer-type options', () => {
-    // Prefer Polygon / GeoJSON in the UI; SolidPolygon remains loadable at runtime.
     expect(DECK_MAP_LAYER_TYPE_OPTIONS.map((o) => o.value)).not.toContain(
       'GeoArrowSolidPolygonLayer',
     );

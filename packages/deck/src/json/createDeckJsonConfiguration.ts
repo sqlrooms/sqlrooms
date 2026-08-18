@@ -288,7 +288,7 @@ function resolveGeoArrowBindings(options: {
                 `(geometry encoding "${resolvedGeometry.encoding}"). ` +
                 `Use a point geometry column, or transformSql with ` +
                 `ST_AsWKB(ST_Centroid(geom)) / ST_PointOnSurface(geom). ` +
-                `For building footprints prefer GeoArrowPolygonLayer / GeoArrowSolidPolygonLayer.`,
+                `For building footprints prefer GeoArrowPolygonLayer or GeoJsonLayer.`,
             );
           }
           boundProps[binding.prop] = promoted.geometryColumn;

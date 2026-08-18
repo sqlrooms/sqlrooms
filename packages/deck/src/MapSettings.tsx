@@ -1169,7 +1169,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   );
   const isPathLayer = activeLayer?.['@@type'] === 'GeoArrowPathLayer';
   const isGeoJsonLayer = activeLayer?.['@@type'] === 'GeoJsonLayer';
-  // Keep legacy types (e.g. SolidPolygon) visible if the layer already uses them.
+  // Keep unknown types visible if the layer already uses them.
   const activeLayerType =
     typeof activeLayer?.['@@type'] === 'string'
       ? activeLayer['@@type']
