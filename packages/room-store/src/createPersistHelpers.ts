@@ -17,14 +17,6 @@ const unavailableStorage: StateStorage = {
   removeItem: () => undefined,
 };
 
-function getBrowserStorage(): StateStorage {
-  try {
-    return window.localStorage ?? unavailableStorage;
-  } catch {
-    return unavailableStorage;
-  }
-}
-
 function warnStorageFailure(operation: string, error: unknown) {
   console.warn(
     `Persist storage ${operation} failed; persistence was skipped:`,
@@ -52,31 +44,52 @@ function runSafeStorageOperation<T>(
   }
 }
 
-/**
- * Protects storage writes and removals so failures do not prevent normal state
- * updates, and optionally handles read failures for default browser storage.
- * This also protects serialisation from errors such as `RangeError: Invalid
- * string length` when state grows unexpectedly.
- */
-function createSafeStorage<S, PersistedState>(
-  base: PersistOptions<S, PersistedState>['storage'],
-  suppressReadErrors: boolean,
-): PersistOptions<S, PersistedState>['storage'] {
-  if (!base) return base;
+function createSafeBrowserStorage(base: StateStorage): StateStorage {
   const originalGetItem = base.getItem.bind(base);
   const originalSetItem = base.setItem.bind(base);
   const originalRemoveItem = base.removeItem.bind(base);
 
   return {
+    getItem: (...args) =>
+      runSafeStorageOperation('getItem', () => originalGetItem(...args), null),
+    setItem: (...args) =>
+      runSafeStorageOperation(
+        'setItem',
+        () => originalSetItem(...args),
+        undefined,
+      ),
+    removeItem: (...args) =>
+      runSafeStorageOperation(
+        'removeItem',
+        () => originalRemoveItem(...args),
+        undefined,
+      ),
+  };
+}
+
+function getBrowserStorage(): StateStorage {
+  try {
+    const storage = window.localStorage;
+    return storage ? createSafeBrowserStorage(storage) : unavailableStorage;
+  } catch {
+    return unavailableStorage;
+  }
+}
+
+/**
+ * Protects storage writes and removals so failures do not prevent normal state
+ * updates. This also protects serialisation from errors such as `RangeError:
+ * Invalid string length` when state grows unexpectedly.
+ */
+function createSafeStorage<S, PersistedState>(
+  base: PersistOptions<S, PersistedState>['storage'],
+): PersistOptions<S, PersistedState>['storage'] {
+  if (!base) return base;
+  const originalSetItem = base.setItem.bind(base);
+  const originalRemoveItem = base.removeItem.bind(base);
+
+  return {
     ...base,
-    getItem: (...args: Parameters<typeof originalGetItem>) =>
-      suppressReadErrors
-        ? runSafeStorageOperation(
-            'getItem',
-            () => originalGetItem(...args),
-            null,
-          )
-        : originalGetItem(...args),
     setItem: (...args: Parameters<typeof originalSetItem>) =>
       runSafeStorageOperation(
         'setItem',
@@ -300,7 +313,6 @@ export function persistSliceConfigs<
 
   const safeStorage = createSafeStorage(
     storage ?? createJSONStorage<PersistedState>(getBrowserStorage),
-    storage === undefined,
   );
 
   return persist<S, [], [], PersistedState>(stateCreator, {

@@ -258,6 +258,50 @@ describe('persistSliceConfigs storage', () => {
     });
   });
 
+  it('propagates malformed JSON from default browser storage', () => {
+    const onHydrationFinished = jest.fn();
+    const storage: StateStorage = {
+      getItem: () => '{malformed',
+      setItem: jest.fn(),
+      removeItem: jest.fn(),
+    };
+    setWindowStorage(storage);
+
+    createCounterStore(undefined, () => onHydrationFinished);
+
+    expect(onHydrationFinished).toHaveBeenCalledWith(
+      undefined,
+      expect.any(SyntaxError),
+    );
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
+  it('tolerates failures from default browser storage methods', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const storage: StateStorage = {
+      getItem: () => {
+        throw new Error('getItem failed');
+      },
+      setItem: () => {
+        throw new Error('setItem failed');
+      },
+      removeItem: () => {
+        throw new Error('removeItem failed');
+      },
+    };
+    setWindowStorage(storage);
+
+    const store = createCounterStore();
+
+    expect(() => store.getState().counter.increment()).not.toThrow();
+    expect(() =>
+      (
+        store as typeof store & {persist: {clearStorage: () => void}}
+      ).persist.clearStorage(),
+    ).not.toThrow();
+    expect(store.getState().counter.config.count).toBe(1);
+  });
+
   it('propagates custom reads while tolerating write and removal failures', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const getItemError = new Error('getItem failed');

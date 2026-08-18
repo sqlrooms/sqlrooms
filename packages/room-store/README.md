@@ -115,11 +115,12 @@ project-owned store. See the
 full integration model, data flow, and examples.
 
 `persistSliceConfigs()` defaults to browser `localStorage`. If browser storage
-is `null`, cannot be accessed, or fails during an operation, the room state
-continues to work in memory and persistence is skipped. Read failures from an
-explicit custom storage adapter still propagate through Zustand's
-`onRehydrateStorage` callback so hosts can distinguish a failed load from an
-empty store; custom write and removal failures are logged and skipped.
+is `null`, cannot be accessed, or a raw storage operation fails, the room state
+continues to work in memory and persistence is skipped. Malformed persisted JSON
+and read failures from an explicit custom storage adapter still propagate
+through Zustand's `onRehydrateStorage` callback so hosts can distinguish a
+failed load from an empty store; custom write and removal failures are logged
+and skipped.
 
 Use the lower-level `createPersistenceController()` only when you need the same
 persistence policy outside a room store or Zustand persist. The controller is
