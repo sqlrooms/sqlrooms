@@ -11,6 +11,13 @@ import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
 import {VegaSqlEditorPanel} from './editor/VegaSqlEditorPanel';
 import {VegaChartEditorActions} from './editor/VegaChartEditorActions';
 export {VegaChartToolResult as VegaChartToolResult} from './VegaChartToolResult';
+export type {VegaChartToolResultProps} from './VegaChartToolResult';
+export {getCategoryAwareVegaChartHeight} from './chartSizing';
+export type {
+  VegaChartHeight,
+  VegaChartHeightResolver,
+  VegaChartSizingContext,
+} from './chartSizing';
 export type {VisualizationSpec} from 'vega-embed';
 export type {SignalListenerHandler, SignalValue} from 'vega';
 
