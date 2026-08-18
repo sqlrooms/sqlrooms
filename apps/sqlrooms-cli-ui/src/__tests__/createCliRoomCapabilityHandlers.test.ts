@@ -34,9 +34,22 @@ const state = {
         columns: [{name: 'payload', type: 'JSON'}],
         rowCount: 1,
       },
+      {
+        table: {database: 'main', schema: 'custom_meta', table: 'ui_state'},
+        isView: false,
+        columns: [{name: 'payload_json', type: 'JSON'}],
+        rowCount: 1,
+      },
+      {
+        table: {database: 'custom_meta', schema: 'main', table: 'crdt_updates'},
+        isView: false,
+        columns: [{name: 'snapshot', type: 'BLOB'}],
+        rowCount: 1,
+      },
     ],
     sqlSelectToJson,
     getConnector: jest.fn(async () => ({query})),
+    refreshTableSchemas: jest.fn(async () => []),
   },
   commands: {
     listCommands: jest.fn(() => []),
@@ -70,8 +83,13 @@ jest.unstable_mockModule('@sqlrooms/room-shell', () => ({
 const {createCliRoomCapabilities} =
   await import('../createCliRoomCapabilities');
 
-function capability(name: string) {
-  return createCliRoomCapabilities().find((entry) => entry.name === name)!;
+function capability(
+  name: string,
+  options?: Parameters<typeof createCliRoomCapabilities>[0],
+) {
+  return createCliRoomCapabilities(options).find(
+    (entry) => entry.name === name,
+  )!;
 }
 
 async function flushQueuedInvocations() {
@@ -81,20 +99,44 @@ async function flushQueuedInvocations() {
 beforeEach(() => {
   query.mockClear();
   sqlSelectToJson.mockClear();
+  state.db.refreshTableSchemas.mockClear();
   invokeCommandWithPolicy.mockClear();
 });
 
 describe('CLI room capability handlers', () => {
-  test('lists public tables without exposing internal schemas', async () => {
-    const result = await capability('list_tables').execute(
-      {},
-      {surface: 'mcp-http'},
-    );
+  test('refreshes schemas and hides default and configured metadata', async () => {
+    const result = await capability('list_tables', {
+      metaNamespace: 'custom_meta',
+    }).execute({}, {surface: 'mcp-http'});
 
     expect(result).toMatchObject({
       ok: true,
       data: {tables: [{tableId: 'main.main.events'}], totalCount: 1},
     });
+    expect(state.db.refreshTableSchemas).toHaveBeenCalledTimes(1);
+  });
+
+  test('waits for schema refresh before reading the catalog', async () => {
+    let finishRefresh!: () => void;
+    state.db.refreshTableSchemas.mockImplementationOnce(
+      () =>
+        new Promise<never[]>((resolve) => {
+          finishRefresh = () => resolve([]);
+        }),
+    );
+    let settled = false;
+    const invocation = Promise.resolve(
+      capability('list_tables').execute({}, {surface: 'mcp-http'}),
+    );
+    void invocation.then(() => {
+      settled = true;
+    });
+
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    finishRefresh();
+    await expect(invocation).resolves.toMatchObject({ok: true});
   });
 
   test('bounds a parsed SELECT and forwards cancellation', async () => {

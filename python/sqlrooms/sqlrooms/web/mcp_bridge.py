@@ -184,16 +184,28 @@ class McpBridgeBroker:
         future = asyncio.get_running_loop().create_future()
         self._pending[request_id] = future
         try:
-            await self._send_json(
-                connection,
-                {
-                    "version": MCP_BRIDGE_PROTOCOL_VERSION,
-                    "type": "bridge.request",
-                    "requestId": request_id,
-                    "method": method,
-                    "params": params,
-                },
-            )
+            try:
+                await self._send_json(
+                    connection,
+                    {
+                        "version": MCP_BRIDGE_PROTOCOL_VERSION,
+                        "type": "bridge.request",
+                        "requestId": request_id,
+                        "method": method,
+                        "params": params,
+                    },
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                future.cancel()
+                if self._connection is connection:
+                    self._ready = False
+                raise McpBridgeError(
+                    "room_not_ready",
+                    "The SQLRooms page disconnected before the request was sent.",
+                    retryable=True,
+                ) from exc
             return await asyncio.wait_for(
                 future, timeout=timeout or self._request_timeout
             )

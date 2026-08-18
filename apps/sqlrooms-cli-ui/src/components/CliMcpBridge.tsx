@@ -21,7 +21,9 @@ export function CliMcpBridge() {
       throw new Error('MCP browser bridge requires a session auth token.');
     }
     const runtime = createRoomCapabilityRuntime({
-      capabilities: createCliRoomCapabilities(),
+      capabilities: createCliRoomCapabilities({
+        metaNamespace: runtimeConfig.metaNamespace,
+      }),
       policy: {
         authorize: async ({capability, input, context}) => {
           if (capability.name !== 'query') return {allowed: true};

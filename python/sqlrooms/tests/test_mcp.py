@@ -50,6 +50,26 @@ def test_mcp_bridge_status_reports_expired_lease_as_waiting(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_mcp_bridge_normalizes_send_disconnect_as_room_not_ready():
+    class DisconnectedWebSocket:
+        async def send_json(self, _payload):
+            raise RuntimeError("websocket disconnected")
+
+    broker = McpBridgeBroker("token")
+    broker._connection = DisconnectedWebSocket()
+    broker._ready = True
+    broker._touch()
+
+    with pytest.raises(McpBridgeError) as error:
+        await broker.request("tools.list")
+
+    assert error.value.code == "room_not_ready"
+    assert error.value.retryable is True
+    assert broker.status()["status"] == "waiting"
+    assert broker._pending == {}
+
+
+@pytest.mark.asyncio
 async def test_mcp_service_adapts_dynamic_browser_catalog():
     service = SqlroomsMcpService(StubBroker())
 

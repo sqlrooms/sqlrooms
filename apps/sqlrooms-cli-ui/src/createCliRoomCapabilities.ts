@@ -1,6 +1,7 @@
 import type {RoomCapability, RoomCapabilityContext} from '@sqlrooms/mcp';
 import {
   arrowTableToJson,
+  type DataTable,
   getTableDisplayName,
   getTableIdentity,
   resolveTableReference,
@@ -16,13 +17,20 @@ import {roomStore} from './store';
 const DEFAULT_QUERY_ROWS = 200;
 const MAX_QUERY_ROWS = 1_000;
 const MAX_LISTED_TABLES = 1_000;
+const INTERNAL_SQLROOMS_PREFIX = '__sqlrooms';
 let commandInvocationQueue = Promise.resolve();
 
-export function createCliRoomCapabilities(): RoomCapability[] {
+type CreateCliRoomCapabilitiesOptions = {
+  metaNamespace?: string;
+};
+
+export function createCliRoomCapabilities({
+  metaNamespace = '__sqlrooms',
+}: CreateCliRoomCapabilitiesOptions = {}): RoomCapability[] {
   return [
     createQueryCapability(),
-    createListTablesCapability(),
-    createReadTableSchemaCapability(),
+    createListTablesCapability(metaNamespace),
+    createReadTableSchemaCapability(metaNamespace),
     createSearchCommandsCapability(),
     createGetCommandCapability(),
     createExecuteCommandCapability(),
@@ -102,7 +110,7 @@ function createQueryCapability(): RoomCapability {
   };
 }
 
-function createListTablesCapability(): RoomCapability {
+function createListTablesCapability(metaNamespace: string): RoomCapability {
   return {
     name: 'list_tables',
     title: 'List room tables',
@@ -119,18 +127,14 @@ function createListTablesCapability(): RoomCapability {
       additionalProperties: false,
     },
     annotations: {readOnlyHint: true, untrustedContentHint: true},
-    execute: (rawInput) => {
+    execute: async (rawInput) => {
       const input = rawInput as {
         database?: string;
         schema?: string;
         pattern?: string;
         includeViews?: boolean;
       };
-      let tables = roomStore
-        .getState()
-        .db.tables.filter(
-          (table) => !table.table.schema?.startsWith('__sqlrooms_'),
-        );
+      let tables = await refreshVisibleTables(metaNamespace);
       if (input.database) {
         tables = tables.filter(
           (table) => table.table.database === input.database,
@@ -171,7 +175,9 @@ function createListTablesCapability(): RoomCapability {
   };
 }
 
-function createReadTableSchemaCapability(): RoomCapability {
+function createReadTableSchemaCapability(
+  metaNamespace: string,
+): RoomCapability {
   return {
     name: 'read_table_schema',
     title: 'Read a table schema',
@@ -184,13 +190,9 @@ function createReadTableSchemaCapability(): RoomCapability {
       additionalProperties: false,
     },
     annotations: {readOnlyHint: true, untrustedContentHint: true},
-    execute: (rawInput) => {
+    execute: async (rawInput) => {
       const {tableId} = rawInput as {tableId: string};
-      const visibleTables = roomStore
-        .getState()
-        .db.tables.filter(
-          (table) => !table.table.schema?.startsWith('__sqlrooms_'),
-        );
+      const visibleTables = await refreshVisibleTables(metaNamespace);
       const resolution = resolveTableReference(visibleTables, tableId);
       if (resolution.ambiguousMatches) {
         return {
@@ -232,6 +234,23 @@ function createReadTableSchemaCapability(): RoomCapability {
       };
     },
   };
+}
+
+async function refreshVisibleTables(
+  metaNamespace: string,
+): Promise<DataTable[]> {
+  await roomStore.getState().db.refreshTableSchemas();
+  return roomStore.getState().db.tables.filter((table) => {
+    const {database, schema, table: tableName} = table.table;
+    const identifiers = [database, schema, tableName];
+    return (
+      !identifiers.some((identifier) =>
+        identifier?.startsWith(INTERNAL_SQLROOMS_PREFIX),
+      ) &&
+      database !== metaNamespace &&
+      schema !== metaNamespace
+    );
+  });
 }
 
 function createSearchCommandsCapability(): RoomCapability {
