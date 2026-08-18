@@ -141,6 +141,12 @@ export type CreateDuckDbMosaicSliceProps = CreateMosaicSliceBaseProps & {
   coordinator?: never;
 };
 
+/**
+ * Configuration for creating a Mosaic slice.
+ *
+ * Supply a coordinator to use Mosaic without a database slice, or omit it to
+ * create a coordinator from the room's DuckDB slice.
+ */
 export type CreateMosaicSliceProps =
   | CreateCoordinatorMosaicSliceProps
   | CreateDuckDbMosaicSliceProps;
