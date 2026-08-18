@@ -120,7 +120,7 @@ export const ChatMessagesContainer: React.FC<{
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        <div className="pr-3">
+        <div className="px-3">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
               <ChatTurnView
@@ -143,7 +143,7 @@ export const ChatMessagesContainer: React.FC<{
           {isRunning && (
             <ChatActiveStatus
               messages={uiMessages as UIMessage[] | undefined}
-              className="p-4"
+              className="py-4"
             />
           )}
           <div className="h-10 w-full shrink-0" />
