@@ -22,7 +22,6 @@ import {
 import {ModelSelector} from './ModelSelector';
 import {PromptSuggestions} from './PromptSuggestions';
 import {QueryControls} from './QueryControls';
-import {SessionChatManager} from './SessionChatManager';
 import {SessionControls} from './SessionControls';
 import {ChatSearch, ChatSearchProvider} from './ChatSearch';
 import {ContextSelector} from './context/ContextSelector';
@@ -59,16 +58,12 @@ type ChatComponent = FC<RootProps> & {
 const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
 
 /**
- * Local compound component wrapper to reduce the number of @sqlrooms/ai imports
- * and provide a single "root" place to mount SessionChatManager.
+ * Local compound component wrapper that provides session-mode chat context.
  */
 const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <SessionChatRuntimeProvider>
-      <ChatSearchProvider>
-        <SessionChatManager />
-        {children}
-      </ChatSearchProvider>
+      <ChatSearchProvider>{children}</ChatSearchProvider>
     </SessionChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
 );

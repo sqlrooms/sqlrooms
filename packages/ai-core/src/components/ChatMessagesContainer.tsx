@@ -6,7 +6,7 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {ChatTurnView} from './ChatTurnView';
-import {AiThinkingDots} from './AiThinkingDots';
+import {ChatActiveStatus} from './ChatActiveStatus';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
 import {getChatTurnsFromUiMessages} from '../chatTurns';
 import type {AiSessionForkOrigin, ChatSessionSchema} from '@sqlrooms/ai-config';
@@ -120,7 +120,7 @@ export const ChatMessagesContainer: React.FC<{
         viewportRef={containerRef}
         className="flex w-full grow flex-col gap-5"
       >
-        <div className="pr-3">
+        <div className="px-3">
           {chatTurns.map((chatTurn) => (
             <React.Fragment key={chatTurn.id}>
               <ChatTurnView
@@ -141,7 +141,10 @@ export const ChatMessagesContainer: React.FC<{
             </React.Fragment>
           ))}
           {isRunning && (
-            <AiThinkingDots className="text-muted-foreground p-4" />
+            <ChatActiveStatus
+              messages={uiMessages as UIMessage[] | undefined}
+              className="pb-4"
+            />
           )}
           <div className="h-10 w-full shrink-0" />
         </div>

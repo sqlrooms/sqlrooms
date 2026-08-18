@@ -1,4 +1,4 @@
-import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
+import {Chat, isChatSessionEmpty, type ChatTurnSlotProps} from '@sqlrooms/ai';
 import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {
   Button,
@@ -25,6 +25,28 @@ interface AssistantChatContainerProps {
   beforeCreateSessionAction?: React.ReactNode;
   debugPanel?: React.ReactNode;
 }
+
+const CliChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
+  const Prompt = turn.prompt.Content;
+  const Timeline = turn.timeline.Content;
+  const Error = turn.error?.Content;
+  const Actions = turn.actions.Content;
+
+  return (
+    <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
+      <div className="mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-100">
+        <Prompt />
+      </div>
+      <div className="flex w-full flex-col gap-2">
+        <Timeline />
+        {Error && <Error />}
+        <Actions />
+      </div>
+    </div>
+  );
+};
+
+const CLI_CHAT_RENDERING_COMPONENTS = {Turn: CliChatTurn};
 
 export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   contextDropTarget,
@@ -94,7 +116,9 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   const messagesPane = (
     <div className="print-container h-full min-h-0 grow overflow-hidden">
       {isDataAvailable ? (
-        <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        <Chat.Rendering components={CLI_CHAT_RENDERING_COMPONENTS}>
+          <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        </Chat.Rendering>
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center">
           <SkeletonPane className="p-4" />

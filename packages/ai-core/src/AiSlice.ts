@@ -17,18 +17,23 @@ import {
   type StateCreator,
 } from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
+import {Chat} from '@ai-sdk/react';
 import {produce} from 'immer';
 import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
   generateText,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  lastAssistantMessageIsCompleteWithToolCalls,
   ToolSet,
 } from 'ai';
 import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
+  writeAgentDebugStateToSession,
+  writeToolTimingsToMetadata,
 } from './chatTransport';
 import {
   ANALYSIS_CANCELLED,
@@ -38,14 +43,11 @@ import {
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {cloneBoundedAgentSnapshot} from './devtools/agentSnapshots';
 import type {
-  AddToolApprovalResponse,
-  AddToolOutput,
   AiDevtoolsState,
   AgentProgressSnapshot,
   AgentSnapshot,
   ProviderContextDiagnostic,
   AgentToolCall,
-  AiChatSendMessage,
   GetProviderOptions,
   PendingSubAgentApproval,
   StoredToolSet,
@@ -59,9 +61,14 @@ import {
   mergeLatestProviderContextMetricsForSession,
   tryMeasureProviderContext,
 } from './devtools/providerContextDiagnostics';
-import {normalizeAiConfig, ToolAbortError} from './utils';
+import {
+  fixIncompleteToolCalls,
+  normalizeAiConfig,
+  ToolAbortError,
+} from './utils';
 import {
   getAnalysisResultsFromUiMessages,
+  setChatRequestErrorMessage,
   uiMessagesHaveChatRequestError,
 } from './chatTurns';
 import {
@@ -72,6 +79,13 @@ import {
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
+import {
+  createRunTimeoutError,
+  getConfiguredTimeoutMs,
+  getTimedOutSessionAgentState,
+  type AiTimeoutOptions,
+} from './timeouts';
+import {createSessionChatRuntime} from './sessionChatRuntime';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -89,6 +103,10 @@ export type AiSliceState = {
     apiKeyErrors: Record<string, boolean>;
     tools: StoredToolSet;
     toolRenderers: ToolRendererRegistry;
+    /** Executable local tools that await browser output with remote chat. */
+    remoteClientToolNames: string[];
+    /** Opt-in timeout policy for chat runs and tool execution. */
+    timeouts: AiTimeoutOptions;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
@@ -103,25 +121,8 @@ export type AiSliceState = {
       sessionId: string,
       controller: AbortController | undefined,
     ) => void;
-    setChatStop: (sessionId: string, stop: (() => void) | undefined) => void;
-    getChatStop: (sessionId: string) => (() => void) | undefined;
-    setChatSendMessage: (
-      sessionId: string,
-      sendMessage: AiChatSendMessage | undefined,
-    ) => void;
-    getChatSendMessage: (sessionId: string) => AiChatSendMessage | undefined;
-    setAddToolOutput: (
-      sessionId: string,
-      addToolOutput: AddToolOutput | undefined,
-    ) => void;
-    getAddToolOutput: (sessionId: string) => AddToolOutput | undefined;
-    setAddToolApprovalResponse: (
-      sessionId: string,
-      fn: AddToolApprovalResponse | undefined,
-    ) => void;
-    getAddToolApprovalResponse: (
-      sessionId: string,
-    ) => AddToolApprovalResponse | undefined;
+    /** Return the ephemeral AI SDK chat for a session. */
+    getSessionChat: (sessionId: string) => Chat<UIMessage> | undefined;
     /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
     setToolCallSession: (
       toolCallId: string,
@@ -181,6 +182,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    /** Compatibility entry point; session controllers are ready synchronously. */
     startAnalysisWhenReady: (sessionId: string) => Promise<boolean>;
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
@@ -243,6 +245,12 @@ export type AiSliceState = {
       sessionId: string,
       uiMessages: UIMessage[],
     ) => boolean;
+    /** Persist a terminal timeout result and force the chat runtime to reload. */
+    persistTimedOutSession: (
+      sessionId: string,
+      uiMessages: UIMessage[],
+      timeoutMessage: string,
+    ) => void;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
@@ -329,12 +337,23 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   getCustomModel?: () => LanguageModel | undefined;
   getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
+  /**
+   * Optional timeout safety limits. All timeouts are disabled unless set.
+   * These are runtime behavior and are not persisted in workspace config.
+   */
+  timeouts?: AiTimeoutOptions;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
   /** Optional remote endpoint to use for chat; if empty, local transport is used */
   chatEndPoint?: string;
   /** Optional headers to send with remote endpoint */
   chatHeaders?: Record<string, string>;
+  /**
+   * Locally executable tools whose remote definitions omit `execute` and wait
+   * for browser-provided output. Used to distinguish hybrid client tools from
+   * tools that the remote endpoint executes server-side.
+   */
+  remoteClientToolNames?: ReadonlyArray<Extract<keyof TTools, string>>;
   /**
    * Called after a non-aborted chat turn has been persisted and fully ended.
    *
@@ -361,6 +380,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getApiKey,
     getBaseUrl,
     maxSteps,
+    timeouts = {},
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
@@ -369,6 +389,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
+    remoteClientToolNames = [],
     getRunContext,
     formatRunContextInstructions,
   } = params;
@@ -439,18 +460,134 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     // Create persistent Maps (outside of immer draft)
     const toolCallToSessionId = new Map<string, string>();
     const sessionAbortControllers = new Map<string, AbortController>();
-    const sessionChatStops = new Map<string, () => void>();
-    const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
-    const sessionAddToolOutputs = new Map<string, AddToolOutput>();
-    const sessionAddToolApprovalResponses = new Map<
+    const sessionRunTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+    type SessionChatRuntime = ReturnType<typeof createSessionChatRuntime>;
+    const sessionChatRuntimes = new Map<
       string,
-      AddToolApprovalResponse
+      {version: string; token: object; runtime: SessionChatRuntime}
     >();
     const pendingApprovalResolvers = new Map<
       string,
       (approved: boolean) => void
     >();
     const abortSnapshotMap = new Map<string, AgentProgressSnapshot>();
+
+    const disposeSessionChatRuntime = (sessionId: string) => {
+      const runtime = sessionChatRuntimes.get(sessionId)?.runtime;
+      sessionChatRuntimes.delete(sessionId);
+      runtime?.dispose();
+    };
+
+    const disposeAllSessionChatRuntimes = () => {
+      const runtimes = [...sessionChatRuntimes.values()];
+      sessionChatRuntimes.clear();
+      for (const {runtime} of runtimes) runtime.dispose();
+    };
+
+    const clearSessionRuntimeResources = () => {
+      disposeAllSessionChatRuntimes();
+      for (const controller of sessionAbortControllers.values()) {
+        controller.abort(ANALYSIS_CANCELLED);
+      }
+      sessionAbortControllers.clear();
+      for (const timeoutId of sessionRunTimeouts.values()) {
+        clearTimeout(timeoutId);
+      }
+      sessionRunTimeouts.clear();
+      for (const resolve of pendingApprovalResolvers.values()) resolve(false);
+      pendingApprovalResolvers.clear();
+      abortSnapshotMap.clear();
+      toolCallToSessionId.clear();
+    };
+
+    const getOrCreateSessionChatRuntime = (
+      sessionId: string,
+    ): SessionChatRuntime | undefined => {
+      const session = get().ai.config.sessions.find(
+        (candidate) => candidate.id === sessionId,
+      );
+      if (!session) return undefined;
+
+      const version = String(session.messagesRevision ?? 0);
+      const existing = sessionChatRuntimes.get(sessionId);
+      if (existing?.version === version) return existing.runtime;
+
+      disposeSessionChatRuntime(sessionId);
+      const token = {};
+      const isCurrent = () =>
+        sessionChatRuntimes.get(sessionId)?.token === token;
+      const release = () => {
+        if (isCurrent()) sessionChatRuntimes.delete(sessionId);
+      };
+
+      const trimmedEndpoint = chatEndPoint.trim();
+      const usesRemoteTransport = trimmedEndpoint.length > 0;
+      const transport = usesRemoteTransport
+        ? get().ai.getRemoteChatTransport(
+            sessionId,
+            trimmedEndpoint,
+            chatHeaders,
+          )
+        : get().ai.getLocalChatTransport(sessionId);
+      const chat = new Chat<UIMessage>({
+        id: `${sessionId}::${version}`,
+        transport,
+        messages: fixIncompleteToolCalls(
+          (session.uiMessages ?? []) as UIMessage[],
+        ),
+        sendAutomaticallyWhen: (options) => {
+          const controller = get().ai.getAbortController(sessionId);
+          if (controller?.signal.aborted) return false;
+          return (
+            lastAssistantMessageIsCompleteWithToolCalls(options) ||
+            lastAssistantMessageIsCompleteWithApprovalResponses(options)
+          );
+        },
+        onFinish: ({messages}) => {
+          if (!isCurrent()) return;
+          get().ai.onChatFinish({sessionId, messages});
+          if (isCurrent()) {
+            getOrCreateSessionChatRuntime(sessionId);
+          }
+        },
+        onError: (error) => {
+          if (!isCurrent()) return;
+          get().ai.onChatError(sessionId, error, chat.messages);
+          if (isCurrent()) {
+            getOrCreateSessionChatRuntime(sessionId);
+          }
+        },
+      });
+
+      const runtime = createSessionChatRuntime({
+        chat,
+        usesRemoteTransport,
+        getState: () => {
+          const state = get().ai;
+          return {
+            isRunning: state.getIsRunning(sessionId),
+            abortController: state.getAbortController(sessionId),
+            tools: state.tools,
+            remoteClientToolNames: state.remoteClientToolNames,
+            timeouts: state.timeouts,
+            agentProgress: state.agentProgress,
+            pendingSubAgentApprovals: state.pendingSubAgentApprovals,
+          };
+        },
+        subscribeToStateChanges: (onChange) =>
+          store.subscribe(() => onChange()),
+        onMessagesChange: (messages) => {
+          if (!isCurrent()) return;
+          get().ai.setSessionUiMessages(sessionId, messages);
+        },
+        onIdleTimeout: (messages, error) => {
+          get().ai.persistTimedOutSession(sessionId, messages, error.message);
+        },
+        onDeactivate: release,
+      });
+      sessionChatRuntimes.set(sessionId, {version, token, runtime});
+      return runtime;
+    };
 
     const getResolvedModelSelection = (
       candidateProvider?: string,
@@ -571,6 +708,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
+          clearSessionRuntimeResources();
         },
         config: baseConfig,
         promptSuggestionsVisible: true,
@@ -578,6 +716,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         apiKeyErrors: {},
         tools,
         toolRenderers: params.toolRenderers ?? {},
+        remoteClientToolNames: [...remoteClientToolNames],
+        timeouts,
         getProviderOptions,
 
         setToolCallSession: (
@@ -785,6 +925,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionId: string,
           controller: AbortController | undefined,
         ) => {
+          const timeoutId = sessionRunTimeouts.get(sessionId);
+          if (timeoutId) clearTimeout(timeoutId);
+          sessionRunTimeouts.delete(sessionId);
           if (controller) {
             sessionAbortControllers.set(sessionId, controller);
           } else {
@@ -792,60 +935,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           }
         },
 
-        setChatStop: (sessionId: string, stopFn: (() => void) | undefined) => {
-          if (stopFn) {
-            sessionChatStops.set(sessionId, stopFn);
-          } else {
-            sessionChatStops.delete(sessionId);
-          }
-        },
-        getChatStop: (sessionId: string) => {
-          return sessionChatStops.get(sessionId);
-        },
-
-        setChatSendMessage: (
-          sessionId: string,
-          sendMessageFn: AiChatSendMessage | undefined,
-        ) => {
-          if (sendMessageFn) {
-            sessionChatSendMessages.set(sessionId, sendMessageFn);
-          } else {
-            sessionChatSendMessages.delete(sessionId);
-          }
-        },
-        getChatSendMessage: (sessionId: string) => {
-          return sessionChatSendMessages.get(sessionId);
-        },
-
-        setAddToolOutput: (
-          sessionId: string,
-          addToolOutputFn: AddToolOutput | undefined,
-        ) => {
-          if (addToolOutputFn) {
-            sessionAddToolOutputs.set(sessionId, addToolOutputFn);
-          } else {
-            sessionAddToolOutputs.delete(sessionId);
-          }
-        },
-        getAddToolOutput: (sessionId: string) => {
-          return sessionAddToolOutputs.get(sessionId);
-        },
-
-        setAddToolApprovalResponse: (
-          sessionId: string,
-          fn: AddToolApprovalResponse | undefined,
-        ) => {
-          if (fn) {
-            sessionAddToolApprovalResponses.set(sessionId, fn);
-          } else {
-            sessionAddToolApprovalResponses.delete(sessionId);
-          }
-        },
-        getAddToolApprovalResponse: (sessionId: string) => {
-          return sessionAddToolApprovalResponses.get(sessionId);
-        },
+        getSessionChat: (sessionId) =>
+          getOrCreateSessionChatRuntime(sessionId)?.chat,
 
         setConfig: (config: AiSliceConfig) => {
+          clearSessionRuntimeResources();
           const normalizedConfig = cleanupSessionForks(
             normalizeAiConfig(config),
           );
@@ -1183,10 +1277,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             abortController.abort(SESSION_DELETED);
           }
           sessionAbortControllers.delete(sessionId);
-          sessionChatStops.delete(sessionId);
-          sessionChatSendMessages.delete(sessionId);
-          sessionAddToolOutputs.delete(sessionId);
-          sessionAddToolApprovalResponses.delete(sessionId);
+          const runTimeoutId = sessionRunTimeouts.get(sessionId);
+          if (runTimeoutId) clearTimeout(runTimeoutId);
+          sessionRunTimeouts.delete(sessionId);
+          disposeSessionChatRuntime(sessionId);
           const now = Date.now();
 
           set((state) =>
@@ -1313,6 +1407,73 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             );
             return false;
           }
+        },
+
+        persistTimedOutSession: (
+          sessionId: string,
+          uiMessages: UIMessage[],
+          timeoutMessage: string,
+        ) => {
+          const completedMessages = fixIncompleteToolCalls(
+            structuredClone(uiMessages),
+            timeoutMessage,
+            {completeApprovalRequests: true},
+          );
+          const lastUserMessage = completedMessages
+            .filter((message) => message.role === 'user')
+            .at(-1);
+          if (lastUserMessage) {
+            setChatRequestErrorMessage(lastUserMessage, {
+              error: timeoutMessage,
+            });
+          }
+
+          const currentState = get();
+          writeToolTimingsToMetadata(
+            completedMessages,
+            currentState.ai.getToolTimings(),
+          );
+          const timedOutAgentState = getTimedOutSessionAgentState(
+            completedMessages,
+            currentState.ai.agentProgress,
+            currentState.ai.pendingSubAgentApprovals,
+            timeoutMessage,
+          );
+
+          for (const approvalId of timedOutAgentState.approvalIds) {
+            pendingApprovalResolvers.get(approvalId)?.(false);
+            pendingApprovalResolvers.delete(approvalId);
+          }
+
+          const stateForPersistence = {
+            ...currentState,
+            ai: {
+              ...currentState.ai,
+              agentProgress: timedOutAgentState.agentProgress,
+            },
+          };
+
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (candidate) => candidate.id === sessionId,
+              );
+              if (!session) return;
+              session.uiMessages =
+                completedMessages as ChatSessionSchema['uiMessages'];
+              for (const [parentToolCallId, toolCalls] of Object.entries(
+                timedOutAgentState.agentProgress,
+              )) {
+                draft.ai.agentProgress[parentToolCallId] = toolCalls;
+              }
+              for (const approvalId of timedOutAgentState.approvalIds) {
+                delete draft.ai.pendingSubAgentApprovals[approvalId];
+              }
+              writeAgentDebugStateToSession(session, stateForPersistence);
+              session.messagesRevision = (session.messagesRevision || 0) + 1;
+              session.isRunning = false;
+            }),
+          );
         },
 
         findToolRenderer: (toolName: string) => {
@@ -1575,12 +1736,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             return;
           }
 
-          const sendMessage = state.ai.getChatSendMessage(sessionId);
-          if (!sendMessage) {
-            console.error(
-              'No sendMessage function found for session:',
-              sessionId,
-            );
+          const chat = state.ai.getSessionChat(sessionId);
+          if (!chat) {
+            console.error('Failed to create session chat:', sessionId);
             return;
           }
 
@@ -1589,6 +1747,40 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           // Store abort controller for this session
           state.ai.setAbortController(sessionId, abortController);
+
+          const runTimeoutMs = getConfiguredTimeoutMs(timeouts.runMs);
+          if (runTimeoutMs != null) {
+            const timeoutId = setTimeout(() => {
+              if (
+                get().ai.getAbortController(sessionId) !== abortController ||
+                abortController.signal.aborted
+              ) {
+                return;
+              }
+              const timeoutError = createRunTimeoutError(runTimeoutMs);
+              abortController.abort(timeoutError);
+
+              // A client tool or approval can pause useChat without an active
+              // stream, so transport callbacks are not guaranteed to run.
+              // Persist the same terminal timeout result immediately.
+              const currentMessages = chat.messages;
+              get().ai.persistTimedOutSession(
+                sessionId,
+                currentMessages,
+                timeoutError.message,
+              );
+              disposeSessionChatRuntime(sessionId);
+            }, runTimeoutMs);
+            sessionRunTimeouts.set(sessionId, timeoutId);
+            abortController.signal.addEventListener(
+              'abort',
+              () => {
+                clearTimeout(timeoutId);
+                sessionRunTimeouts.delete(sessionId);
+              },
+              {once: true},
+            );
+          }
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
@@ -1604,29 +1796,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
-
-          // Send the message through the session's chat instance
-          sendMessage({text: promptText});
+          void chat.sendMessage({text: promptText});
         },
 
         startAnalysisWhenReady: async (sessionId: string) => {
-          const maxAttempts = 50; // 50 * 20ms = 1 second max
-
-          for (let attempts = 0; attempts < maxAttempts; attempts++) {
-            const sendMessage = get().ai.getChatSendMessage(sessionId);
-            if (sendMessage) {
-              await get().ai.startAnalysis(sessionId);
-              return true;
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, 20));
+          if (!get().ai.getSessionChat(sessionId)) {
+            console.error('Session not found:', sessionId);
+            return false;
           }
-
-          console.error(
-            'Timeout waiting for chat provider to register for session:',
-            sessionId,
-          );
-          return false;
+          await get().ai.startAnalysis(sessionId);
+          return true;
         },
 
         /**
@@ -1646,7 +1825,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // Set the prompt
           get().ai.setPrompt(session.id, prompt);
 
-          // Wait for SessionChatProvider to mount and register sendMessage
           void get()
             .ai.startAnalysisWhenReady(session.id)
             .catch((error) => {
@@ -1657,12 +1835,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         cancelAnalysis: (sessionId: string) => {
           const state = get();
           const abortController = state.ai.getAbortController(sessionId);
-          const stopFn = state.ai.getChatStop(sessionId);
-
-          // Stop local chat streaming immediately if available
-          stopFn?.();
+          const chat = sessionChatRuntimes.get(sessionId)?.runtime.chat;
 
           abortController?.abort(ANALYSIS_CANCELLED);
+
+          void chat?.stop();
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
@@ -1749,6 +1926,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+          disposeSessionChatRuntime(sessionId);
         },
 
         /**
@@ -1816,6 +1994,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               store.getState().ai.getFullInstructions(sessionId),
             getCustomModel,
             sessionId,
+            timeouts,
           })();
         },
 

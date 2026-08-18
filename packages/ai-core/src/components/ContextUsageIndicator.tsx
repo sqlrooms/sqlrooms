@@ -185,17 +185,7 @@ export const ContextUsageIndicator: React.FC<ContextUsageIndicatorProps> = ({
       const contextMessage = `Please use the following context from a previous session and only respond "Got it" to this message:\n\n${summary}`;
       state.ai.setPrompt(newSessionId, contextMessage);
 
-      // Wait for SessionChatProvider to mount and register sendMessage for the new session
-      const maxWait = 3000;
-      const interval = 50;
-      let elapsed = 0;
-      while (elapsed < maxWait) {
-        await new Promise<void>((r) => setTimeout(r, interval));
-        elapsed += interval;
-        if (storeApi.getState().ai.getChatSendMessage(newSessionId)) break;
-      }
-
-      storeApi.getState().ai.startAnalysis(newSessionId);
+      await storeApi.getState().ai.startAnalysisWhenReady(newSessionId);
     } catch (error) {
       console.error('Failed to summarize conversation:', error);
     } finally {

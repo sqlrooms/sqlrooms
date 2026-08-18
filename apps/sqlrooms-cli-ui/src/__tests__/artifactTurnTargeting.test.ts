@@ -106,7 +106,9 @@ describe('per-turn artifact command targeting', () => {
     store.getState().documents.setMarkdown(artifactB, 'Content B');
 
     store.getState().artifacts.setCurrentArtifact(artifactA);
-    store.getState().ai.setChatSendMessage('session-a', jest.fn());
+    jest
+      .spyOn(store.getState().ai.getSessionChat('session-a')!, 'sendMessage')
+      .mockResolvedValue(undefined);
     store.getState().ai.setPrompt('session-a', 'Work on A');
     await store.getState().ai.startAnalysis('session-a');
     let runContext = store.getState().ai.getSessionRunContext('session-a');

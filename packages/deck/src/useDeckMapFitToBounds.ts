@@ -7,10 +7,7 @@ import {
   asDeckJsonMapConfig,
   resolveDeckMapDashboardDatasetSource,
 } from './dashboardConfig';
-import {
-  resolveDeckMapFitToData,
-  useDeckMapFitController,
-} from './mapFit';
+import {resolveDeckMapFitToData, useDeckMapFitController} from './mapFit';
 import type {DeckJsonMapHandle} from './types';
 
 export {createDeckMapBoundsQuery} from './mapFit';

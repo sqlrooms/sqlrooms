@@ -10,6 +10,7 @@ export type {
   AiSliceOptions,
   ForkSessionFromMessageArgs,
 } from './AiSlice';
+export type {AiTimeoutOptions} from './timeouts';
 export {
   measureProviderContext,
   tryMeasureProviderContext,

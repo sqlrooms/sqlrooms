@@ -375,6 +375,42 @@ for app-owned follow-up behavior, such as forking a completed chat into a new
 workspace target, while keeping the generic AI slice unaware of app-specific
 state.
 
+### Optional timeout safety limits
+
+Chat and tool timeouts are disabled by default. Apps can opt into a generous
+run limit, an idle-stream watchdog, and tool execution limits through
+`createAiSlice`. Timeout options are runtime behavior and are not persisted in
+workspace configuration.
+
+```ts
+createAiSlice({
+  tools,
+  getInstructions,
+  // Hybrid tools that omit `execute` on the configured remote endpoint.
+  remoteClientToolNames: ['weather'],
+  timeouts: {
+    runMs: 30 * 60_000,
+    idleStreamMs: 5 * 60_000,
+    toolExecutionMs: 5 * 60_000,
+    tools: {
+      query: undefined, // Allow long-running queries.
+      fetchMetadata: 30_000,
+    },
+  },
+});
+```
+
+`runMs` covers the complete multi-step run. `idleStreamMs` resets when the UI
+receives observable message progress and pauses while waiting for tool
+approval. A silent operation that is still working is indistinguishable from a
+stalled operation, so idle timeouts should remain conservative. Tool timeouts
+abort the signal passed to the tool and fail its pending call; tools should
+honor `abortSignal` to stop their underlying work promptly. Local executable
+tools and registered tools awaiting client output are covered, including hybrid
+client tools named by `remoteClientToolNames` whose remote definition omits
+`execute`. Remote endpoints remain responsible for enforcing timeouts around
+tools they execute server-side.
+
 Assistant messages can be forked into a new active chat through
 `ai.forkSessionFromMessage()`. The action snapshots the source session's
 `uiMessages` through the selected message or chat turn, inherits the source
@@ -425,6 +461,13 @@ exactly one of them. Most apps use `Chat.Root` / `Chat.LocalAgentRoot` and never
 touch these directly; they are exported for advanced setups that compose the
 runtime themselves. Both must wrap the `Chat` components that call
 `useChatRuntime()`; used outside a provider, the runtime defaults to session mode.
+
+Session chat execution itself is owned by the AI slice, independently of these
+presentation providers. `startAnalysis(sessionId)` lazily creates an ephemeral
+chat runtime for the session, so a run can continue when no React chat surface is
+mounted. `useSessionChat(sessionId)` only subscribes React to the runtime's chat.
+Persisted messages and session state remain in `ai.config`, while SDK chat
+instances, subscriptions, and timers remain ephemeral.
 
 ## Chat search
 

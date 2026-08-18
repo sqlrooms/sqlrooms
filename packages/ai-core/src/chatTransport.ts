@@ -42,6 +42,14 @@ import {
   shouldEndAnalysis,
 } from './utils';
 import {formatAbortSnapshot} from './agents/AgentUtils';
+import {
+  ChatTimeoutError,
+  createToolTimeoutError,
+  getTimedOutSessionAgentState,
+  getTimedOutToolAgentState,
+  getToolExecutionTimeoutMs,
+  type AiTimeoutOptions,
+} from './timeouts';
 import {tryMeasureProviderContext} from './devtools/providerContextDiagnostics';
 
 /**
@@ -49,7 +57,7 @@ import {tryMeasureProviderContext} from './devtools/providerContextDiagnostics';
  * survive serialization. Mutates `messages` in place — callers should pass
  * cloned messages (e.g., from `fixIncompleteToolCalls`).
  */
-function writeToolTimingsToMetadata(
+export function writeToolTimingsToMetadata(
   messages: UIMessage[],
   allTimings: Record<string, ToolTimingEntry>,
 ): void {
@@ -116,7 +124,7 @@ function enrichMessagesWithAbortSnapshots(
   }
 }
 
-function writeAgentDebugStateToSession(
+export function writeAgentDebugStateToSession(
   session: ChatSessionSchema,
   state: AiSliceStateForTransport,
 ): void {
@@ -213,6 +221,8 @@ export type ChatTransportConfig = {
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;
+  /** Optional timeout safety limits; all limits are disabled when omitted. */
+  timeouts?: AiTimeoutOptions;
 };
 
 function getSessionById(
@@ -248,11 +258,17 @@ function getSessionById(
  * - `state` is optional and only used for `setToolCallSession` attribution. Omit
  *   it when forwarding into nested agents; the chat transport passes it so
  *   top-level tool calls stay attributed to their session.
+ * - `getState` lets timeout cleanup read the latest nested-agent progress. It
+ *   should be supplied by transports that provide `state`.
+ * - Configured per-tool timeouts preserve upstream cancellation signals and
+ *   abort the signal forwarded to the wrapped tool when its limit expires.
  */
 export function withRunContextTools(
   tools: ToolSet,
   args: AiToolExecutionContext & {
     state?: AiSliceStateForTransport;
+    getState?: () => AiSliceStateForTransport;
+    timeouts?: AiTimeoutOptions;
   },
 ): ToolSet {
   return Object.fromEntries(
@@ -277,22 +293,61 @@ export function withRunContextTools(
             if (toolCallId && args.sessionId) {
               args.state?.ai.setToolCallSession(toolCallId, args.sessionId);
             }
-            const aiRunContext = args.getAiRunContext
-              ? args.getAiRunContext()
-              : args.aiRunContext;
-            return originalExecute(
-              input as never,
-              {
-                ...options,
-                ...definedScopeFields({
-                  sessionId: args.sessionId,
-                  aiRunContext,
-                  getAiRunContext: args.getAiRunContext,
-                  setAiRunContext: args.setAiRunContext,
-                  setPrimaryRunContextItem: args.setPrimaryRunContextItem,
-                }),
-              } as never,
-            );
+            const timeoutMs = getToolExecutionTimeoutMs(args.timeouts, name);
+            const timeoutController =
+              timeoutMs == null ? undefined : new AbortController();
+            const incomingAbortSignal = options?.abortSignal as
+              | AbortSignal
+              | undefined;
+            const abortSignal = mergeAbortSignals([
+              incomingAbortSignal,
+              timeoutController?.signal,
+            ]);
+            const executionOptions = {
+              ...options,
+              abortSignal,
+              ...definedScopeFields({
+                sessionId: args.sessionId,
+                aiRunContext: args.getAiRunContext
+                  ? args.getAiRunContext()
+                  : args.aiRunContext,
+                getAiRunContext: args.getAiRunContext,
+                setAiRunContext: args.setAiRunContext,
+                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+              }),
+            } as never;
+
+            if (timeoutMs == null || !timeoutController) {
+              return originalExecute(input as never, executionOptions);
+            }
+
+            let timeoutId: ReturnType<typeof setTimeout> | undefined;
+            const timeoutError = createToolTimeoutError(name, timeoutMs);
+            const timeoutPromise = new Promise<never>((_resolve, reject) => {
+              timeoutId = setTimeout(() => {
+                reject(timeoutError);
+                try {
+                  normalizeTimedOutToolAgentState(
+                    args.getState?.() ?? args.state,
+                    toolCallId,
+                    timeoutError.message,
+                  );
+                } finally {
+                  timeoutController.abort(timeoutError);
+                }
+              }, timeoutMs);
+            });
+
+            try {
+              return await Promise.race([
+                Promise.resolve(
+                  originalExecute(input as never, executionOptions),
+                ),
+                timeoutPromise,
+              ]);
+            } finally {
+              if (timeoutId) clearTimeout(timeoutId);
+            }
           },
         },
       ];
@@ -310,6 +365,31 @@ function definedScopeFields(
   return Object.fromEntries(
     Object.entries(fields).filter(([, value]) => value !== undefined),
   );
+}
+
+function normalizeTimedOutToolAgentState(
+  state: AiSliceStateForTransport | undefined,
+  toolCallId: string | undefined,
+  timeoutMessage: string,
+): void {
+  if (!state || !toolCallId) return;
+
+  const timedOutAgentState = getTimedOutToolAgentState(
+    toolCallId,
+    state.ai.agentProgress,
+    state.ai.pendingSubAgentApprovals,
+    timeoutMessage,
+  );
+  for (const [parentToolCallId, toolCalls] of Object.entries(
+    timedOutAgentState.agentProgress,
+  )) {
+    if (toolCalls !== state.ai.agentProgress[parentToolCallId]) {
+      state.ai.updateAgentProgress(parentToolCallId, toolCalls);
+    }
+  }
+  for (const approvalId of timedOutAgentState.approvalIds) {
+    state.ai.resolveSubAgentApproval(approvalId, false);
+  }
 }
 
 /**
@@ -429,6 +509,7 @@ export function createLocalChatTransportFactory({
   headers,
   getInstructions,
   getCustomModel,
+  timeouts,
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -486,6 +567,7 @@ export function createLocalChatTransportFactory({
       // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
       const tools = withRunContextTools((state.ai.tools || {}) as ToolSet, {
         state,
+        getState: () => store.getState(),
         sessionId,
         aiRunContext,
         getAiRunContext: () => aiRunContext,
@@ -493,6 +575,7 @@ export function createLocalChatTransportFactory({
         setPrimaryRunContextItem: (item) => {
           setAiRunContext(setAiRunContextPrimaryItem(aiRunContext, item));
         },
+        timeouts,
       });
 
       // get system instructions dynamically at request time to ensure fresh table schema
@@ -762,7 +845,16 @@ export function createChatHandlers({
             (getSessionById(store, sessionId)?.uiMessages as UIMessage[]) || [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
-          const completedMessages = fixIncompleteToolCalls(sourceMessages);
+          const abortReason = abortController?.signal.reason;
+          const abortMessage =
+            abortReason instanceof ChatTimeoutError
+              ? abortReason.message
+              : TOOL_CALL_CANCELLED;
+          const completedMessages = fixIncompleteToolCalls(
+            sourceMessages,
+            abortMessage,
+            {completeApprovalRequests: abortReason instanceof ChatTimeoutError},
+          );
 
           // Enrich cancelled agent tool calls with progress snapshots so the
           // LLM can see what sub-agents accomplished before the abort.
@@ -778,7 +870,7 @@ export function createChatHandlers({
             .slice(-1)[0];
           if (cancelledUserMessage) {
             setChatRequestErrorMessage(cancelledUserMessage, {
-              error: TOOL_CALL_CANCELLED,
+              error: abortMessage,
             });
           }
           state.ai.setSessionUiMessages(sessionId, completedMessages);
@@ -844,7 +936,12 @@ export function createChatHandlers({
     ) => {
       try {
         consumeSessionTokenUsage(sessionId);
-        const errMsg = getChatErrorMessageForDisplay(error);
+        const timeoutReason = store.getState().ai.getAbortController(sessionId)
+          ?.signal.reason;
+        const errMsg =
+          timeoutReason instanceof ChatTimeoutError
+            ? timeoutReason.message
+            : getChatErrorMessageForDisplay(error);
 
         // Detect API key errors (401/403 or common error messages)
         const isApiKeyError = isAuthenticationError(error, errMsg);
@@ -856,6 +953,7 @@ export function createChatHandlers({
 
         const currentState = store.getState();
         const toolTimings = currentState.ai.getToolTimings();
+        const timedOutApprovalIds: string[] = [];
 
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
@@ -870,7 +968,14 @@ export function createChatHandlers({
                 sessionMessages: existingMessages,
                 fallbackMessages,
               });
-              const completedMessages = fixIncompleteToolCalls(sourceMessages);
+              const completedMessages = fixIncompleteToolCalls(
+                sourceMessages,
+                errMsg,
+                {
+                  completeApprovalRequests:
+                    timeoutReason instanceof ChatTimeoutError,
+                },
+              );
               writeToolTimingsToMetadata(completedMessages, toolTimings);
 
               const lastUserMessage = completedMessages
@@ -887,10 +992,39 @@ export function createChatHandlers({
 
               targetSession.uiMessages =
                 completedMessages as ChatSessionSchema['uiMessages'];
-              writeAgentDebugStateToSession(targetSession, currentState);
+              let stateForPersistence = currentState;
+              if (timeoutReason instanceof ChatTimeoutError) {
+                const timedOutAgentState = getTimedOutSessionAgentState(
+                  completedMessages,
+                  currentState.ai.agentProgress,
+                  currentState.ai.pendingSubAgentApprovals,
+                  errMsg,
+                );
+                for (const [parentToolCallId, toolCalls] of Object.entries(
+                  timedOutAgentState.agentProgress,
+                )) {
+                  draft.ai.agentProgress[parentToolCallId] = toolCalls;
+                }
+                for (const approvalId of timedOutAgentState.approvalIds) {
+                  delete draft.ai.pendingSubAgentApprovals[approvalId];
+                  timedOutApprovalIds.push(approvalId);
+                }
+                stateForPersistence = {
+                  ...currentState,
+                  ai: {
+                    ...currentState.ai,
+                    agentProgress: timedOutAgentState.agentProgress,
+                  },
+                };
+              }
+              writeAgentDebugStateToSession(targetSession, stateForPersistence);
             }
           }),
         );
+
+        for (const approvalId of timedOutApprovalIds) {
+          currentState.ai.resolveSubAgentApproval(approvalId, false);
+        }
 
         // Force useChat to reinitialize with the fixed messages
         store.setState((s: AiSliceStateForTransport) =>
