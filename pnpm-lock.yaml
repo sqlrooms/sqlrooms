@@ -3257,26 +3257,26 @@ importers:
   packages/deck:
     dependencies:
       '@deck.gl/core':
-        specifier: ^9.3.10
-        version: 9.3.10
+        specifier: 9.3.2
+        version: 9.3.2
       '@deck.gl/geo-layers':
-        specifier: ^9.3.10
-        version: 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
       '@deck.gl/json':
-        specifier: ^9.3.10
-        version: 9.3.10(@deck.gl/core@9.3.10)
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)
       '@deck.gl/layers':
-        specifier: ^9.3.10
-        version: 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
       '@deck.gl/mapbox':
-        specifier: ^9.3.10
-        version: 9.3.10(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)(@math.gl/web-mercator@4.1.0)
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@math.gl/web-mercator@4.1.0)
       '@deck.gl/react':
-        specifier: ^9.3.10
-        version: 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@geoarrow/deck.gl-geoarrow':
         specifier: ^0.4.1
-        version: 0.4.1(58d529792e8717fdcd07e896593e855b)
+        version: 0.4.1(957b82a4d510f9bb03cd770ea51bc78c)
       '@loaders.gl/geoarrow':
         specifier: ^4.4.1
         version: 4.4.1(@loaders.gl/core@4.4.4)
@@ -5911,11 +5911,6 @@ packages:
       '@luma.gl/core': ~9.3.3
       '@luma.gl/webgl': ~9.3.3
 
-  '@deck.gl/json@9.3.10':
-    resolution: {integrity: sha512-MhKcaaGVfpnPlHwLDp1o0MHCcq+JW5SOR4f5ZYriSHKKVG1gK1+xvI/2eos4Et2sLAtuS3r4OwaXHw8AjWnEEg==}
-    peerDependencies:
-      '@deck.gl/core': ~9.3.0
-
   '@deck.gl/json@9.3.2':
     resolution: {integrity: sha512-8IXRwRTs0G5TAX57JO4laKgHD+hGQsCtd3G861jb+va0sGFUH/VT6O3P+vLHoeJnHdetoRgtXSJPG82DC/oc7w==}
     peerDependencies:
@@ -5945,13 +5940,6 @@ packages:
       '@luma.gl/core': ~9.3.3
       '@luma.gl/engine': ~9.3.3
 
-  '@deck.gl/mapbox@9.3.10':
-    resolution: {integrity: sha512-go5+imfjdq/+P5ELMX88ncuzNSpUpL4wolV7LbegwXnKcBIgU13IKbCxJnoGCSW8oxHZu+J99sGDcDyvkYtZcw==}
-    peerDependencies:
-      '@deck.gl/core': ~9.3.0
-      '@luma.gl/core': ~9.3.5
-      '@math.gl/web-mercator': ^4.1.0
-
   '@deck.gl/mapbox@9.3.2':
     resolution: {integrity: sha512-+T9pJwsOXwjUxyGN6oiBMfIs28VtDIG1V1Rqz4qqn4TjjNEFFw+xO0olJIg8FO5IAqw2OtePdsrMj0tX8tHdGQ==}
     peerDependencies:
@@ -5976,14 +5964,6 @@ packages:
       '@luma.gl/engine': ~9.3.3
       '@luma.gl/gltf': ~9.3.3
       '@luma.gl/shadertools': ~9.3.3
-
-  '@deck.gl/react@9.3.10':
-    resolution: {integrity: sha512-kbfceQ6uZxFS5DVwM3JLY1gSVfx+IJ8ihnkSomxX5Nhhfos1GWnH5wJo8wznKGl9WdLd/iY5bHc8q9i0f5TVjA==}
-    peerDependencies:
-      '@deck.gl/core': ~9.3.0
-      '@deck.gl/widgets': ~9.3.0
-      react: 19.2.1
-      react-dom: 19.2.1
 
   '@deck.gl/react@9.3.2':
     resolution: {integrity: sha512-XGxoyTQiQWvBHt+q5bATOHlv9INdl0xwt/IxP4eMbbE9XhLreeGTTb0CDGbk+SwDHVwQuLFp5JHZNibUt0J3fA==}
@@ -18908,12 +18888,12 @@ snapshots:
       '@math.gl/web-mercator': 4.1.0
       d3-hexbin: 0.2.2
 
-  '@deck.gl/aggregation-layers@9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))':
+  '@deck.gl/aggregation-layers@9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
     dependencies:
       '@deck.gl/core': 9.3.10
-      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
       '@luma.gl/core': 9.3.6
-      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
       '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
       '@math.gl/core': 4.1.0
       '@math.gl/web-mercator': 4.1.0
@@ -18926,6 +18906,17 @@ snapshots:
       '@luma.gl/core': 9.3.6
       '@luma.gl/engine': 9.3.3(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
       '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.3)
+      '@math.gl/core': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+      d3-hexbin: 0.2.2
+
+  '@deck.gl/aggregation-layers@9.3.2(@deck.gl/core@9.3.2)(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))':
+    dependencies:
+      '@deck.gl/core': 9.3.2
+      '@deck.gl/layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
       '@math.gl/core': 4.1.0
       '@math.gl/web-mercator': 4.1.0
       d3-hexbin: 0.2.2
@@ -19012,12 +19003,12 @@ snapshots:
 
   '@deck.gl/core@9.3.2':
     dependencies:
-      '@loaders.gl/core': 4.4.1
-      '@loaders.gl/images': 4.4.4(@loaders.gl/core@4.4.1)
-      '@luma.gl/core': 9.3.3
-      '@luma.gl/engine': 9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
-      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.3)
-      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.3)
+      '@loaders.gl/core': 4.4.4
+      '@loaders.gl/images': 4.4.4(@loaders.gl/core@4.4.4)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.6)
       '@math.gl/core': 4.1.0
       '@math.gl/sun': 4.1.0
       '@math.gl/types': 4.1.0
@@ -19027,7 +19018,7 @@ snapshots:
       '@probe.gl/stats': 4.1.1
       '@types/offscreencanvas': 2019.7.3
       gl-matrix: 3.4.4
-      mjolnir.js: 3.0.0
+      mjolnir.js: 3.0.1
 
   '@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
     dependencies:
@@ -19050,6 +19041,15 @@ snapshots:
   '@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))':
     dependencies:
       '@deck.gl/core': 9.3.10
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.6)
+      '@math.gl/core': 4.1.0
+
+  '@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))':
+    dependencies:
+      '@deck.gl/core': 9.3.2
       '@luma.gl/core': 9.3.6
       '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
       '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
@@ -19083,6 +19083,33 @@ snapshots:
       h3-js: 4.4.0
       long: 3.2.0
 
+  '@deck.gl/geo-layers@9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
+    dependencies:
+      '@deck.gl/core': 9.3.10
+      '@deck.gl/extensions': 9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/mesh-layers': 9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@loaders.gl/3d-tiles': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/core': 4.4.1
+      '@loaders.gl/gis': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/loader-utils': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/mvt': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/schema': 4.4.4
+      '@loaders.gl/terrain': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/tiles': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/wms': 4.4.2(@loaders.gl/core@4.4.1)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/gltf': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@math.gl/core': 4.1.0
+      '@math.gl/culling': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+      '@types/geojson': 7946.0.16
+      a5-js: 0.7.3
+      h3-js: 4.4.0
+      long: 3.2.0
+
   '@deck.gl/geo-layers@9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
     dependencies:
       '@deck.gl/core': 9.3.10
@@ -19102,6 +19129,33 @@ snapshots:
       '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
       '@luma.gl/gltf': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
       '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.3)
+      '@math.gl/core': 4.1.0
+      '@math.gl/culling': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+      '@types/geojson': 7946.0.16
+      a5-js: 0.7.3
+      h3-js: 4.4.0
+      long: 3.2.0
+
+  '@deck.gl/geo-layers@9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
+    dependencies:
+      '@deck.gl/core': 9.3.10
+      '@deck.gl/extensions': 9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/mesh-layers': 9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@loaders.gl/3d-tiles': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/core': 4.4.4
+      '@loaders.gl/gis': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/loader-utils': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/mvt': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/schema': 4.4.4
+      '@loaders.gl/terrain': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/tiles': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/wms': 4.4.2(@loaders.gl/core@4.4.4)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/gltf': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
       '@math.gl/core': 4.1.0
       '@math.gl/culling': 4.1.0
       '@math.gl/web-mercator': 4.1.0
@@ -19164,6 +19218,33 @@ snapshots:
       h3-js: 4.4.0
       long: 3.2.0
 
+  '@deck.gl/geo-layers@9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))':
+    dependencies:
+      '@deck.gl/core': 9.3.2
+      '@deck.gl/extensions': 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@deck.gl/layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@deck.gl/mesh-layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@loaders.gl/3d-tiles': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/core': 4.4.4
+      '@loaders.gl/gis': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/loader-utils': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/mvt': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/schema': 4.4.4
+      '@loaders.gl/terrain': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/tiles': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/wms': 4.4.2(@loaders.gl/core@4.4.4)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/gltf': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@math.gl/core': 4.1.0
+      '@math.gl/culling': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+      '@types/geojson': 7946.0.16
+      a5-js: 0.7.3
+      h3-js: 4.4.0
+      long: 3.2.0
+
   '@deck.gl/google-maps@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/webgl@9.3.6(@luma.gl/core@9.3.6))':
     dependencies:
       '@deck.gl/core': 9.3.2
@@ -19171,11 +19252,6 @@ snapshots:
       '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.6)
       '@math.gl/core': 4.1.0
       '@types/google.maps': 3.64.0
-
-  '@deck.gl/json@9.3.10(@deck.gl/core@9.3.10)':
-    dependencies:
-      '@deck.gl/core': 9.3.10
-      jsep: 0.3.5
 
   '@deck.gl/json@9.3.2(@deck.gl/core@9.3.2)':
     dependencies:
@@ -19213,6 +19289,22 @@ snapshots:
       '@types/geojson': 7946.0.16
       earcut: 2.2.4
 
+  '@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
+    dependencies:
+      '@deck.gl/core': 9.3.10
+      '@loaders.gl/core': 4.4.1
+      '@loaders.gl/images': 4.4.4(@loaders.gl/core@4.4.1)
+      '@loaders.gl/schema': 4.4.4
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@mapbox/tiny-sdf': 2.2.0
+      '@math.gl/core': 4.1.0
+      '@math.gl/polygon': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+      '@types/geojson': 7946.0.16
+      earcut: 2.2.4
+
   '@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
     dependencies:
       '@deck.gl/core': 9.3.10
@@ -19222,6 +19314,22 @@ snapshots:
       '@luma.gl/core': 9.3.3
       '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
       '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.3)
+      '@mapbox/tiny-sdf': 2.2.0
+      '@math.gl/core': 4.1.0
+      '@math.gl/polygon': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+      '@types/geojson': 7946.0.16
+      earcut: 2.2.4
+
+  '@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))':
+    dependencies:
+      '@deck.gl/core': 9.3.10
+      '@loaders.gl/core': 4.4.4
+      '@loaders.gl/images': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/schema': 4.4.4
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
       '@mapbox/tiny-sdf': 2.2.0
       '@math.gl/core': 4.1.0
       '@math.gl/polygon': 4.1.0
@@ -19260,11 +19368,20 @@ snapshots:
       '@math.gl/web-mercator': 4.1.0
       earcut: 2.2.4
 
-  '@deck.gl/mapbox@9.3.10(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)(@math.gl/web-mercator@4.1.0)':
+  '@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))':
     dependencies:
-      '@deck.gl/core': 9.3.10
+      '@deck.gl/core': 9.3.2
+      '@loaders.gl/core': 4.4.4
+      '@loaders.gl/images': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/schema': 4.4.4
       '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@mapbox/tiny-sdf': 2.2.0
+      '@math.gl/core': 4.1.0
+      '@math.gl/polygon': 4.1.0
       '@math.gl/web-mercator': 4.1.0
+      earcut: 2.2.4
 
   '@deck.gl/mapbox@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)(@math.gl/web-mercator@4.1.0)':
     dependencies:
@@ -19276,6 +19393,12 @@ snapshots:
     dependencies:
       '@deck.gl/core': 9.3.2
       '@luma.gl/core': 9.3.3
+      '@math.gl/web-mercator': 4.1.0
+
+  '@deck.gl/mapbox@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@math.gl/web-mercator@4.1.0)':
+    dependencies:
+      '@deck.gl/core': 9.3.2
+      '@luma.gl/core': 9.3.6
       '@math.gl/web-mercator': 4.1.0
 
   '@deck.gl/mesh-layers@9.2.11(@deck.gl/core@9.2.11)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.2.6)(@luma.gl/engine@9.2.6(@luma.gl/core@9.2.6)(@luma.gl/shadertools@9.2.6(@luma.gl/core@9.2.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.2.6(@luma.gl/core@9.2.6))':
@@ -19338,24 +19461,36 @@ snapshots:
     transitivePeerDependencies:
       - '@loaders.gl/core'
 
-  '@deck.gl/react@9.3.10(@deck.gl/core@9.3.10)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+  '@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))':
+    dependencies:
+      '@deck.gl/core': 9.3.2
+      '@loaders.gl/gltf': 4.4.1(@loaders.gl/core@4.4.4)
+      '@loaders.gl/schema': 4.4.4
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/gltf': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+    transitivePeerDependencies:
+      - '@loaders.gl/core'
+
+  '@deck.gl/react@9.3.2(@deck.gl/core@9.3.10)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@deck.gl/core': 9.3.10
       '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
 
-  '@deck.gl/react@9.3.10(@deck.gl/core@9.3.10)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+  '@deck.gl/react@9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
-      '@deck.gl/core': 9.3.10
+      '@deck.gl/core': 9.3.2
       '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
 
-  '@deck.gl/react@9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+  '@deck.gl/react@9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@deck.gl/core': 9.3.2
-      '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)
+      '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
 
@@ -19373,11 +19508,11 @@ snapshots:
       '@luma.gl/core': 9.3.6
       preact: 10.29.1
 
-  '@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)':
+  '@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)':
     dependencies:
       '@deck.gl/core': 9.3.2
       '@floating-ui/dom': 1.7.6
-      '@luma.gl/core': 9.3.3
+      '@luma.gl/core': 9.3.6
       preact: 10.29.1
 
   '@dependents/detective-less@5.0.3':
@@ -19844,12 +19979,12 @@ snapshots:
 
   '@gar/promise-retry@1.0.3': {}
 
-  '@geoarrow/deck.gl-geoarrow@0.4.1(58d529792e8717fdcd07e896593e855b)':
+  '@geoarrow/deck.gl-geoarrow@0.4.1(957b82a4d510f9bb03cd770ea51bc78c)':
     dependencies:
-      '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
-      '@deck.gl/core': 9.3.10
-      '@deck.gl/geo-layers': 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
-      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@deck.gl/core': 9.3.2
+      '@deck.gl/geo-layers': 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
+      '@deck.gl/layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))
       '@geoarrow/geoarrow-js': 0.3.3(apache-arrow@17.0.0)
       '@math.gl/polygon': 4.1.0
       apache-arrow: 17.0.0
@@ -20390,7 +20525,7 @@ snapshots:
     dependencies:
       '@deck.gl-community/editable-layers': 9.2.8(a7eafcf6f1a84fb4a648fec7e70cfc7c)
       '@deck.gl/core': 9.3.10
-      '@deck.gl/react': 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@deck.gl/react': 9.3.2(@deck.gl/core@9.3.10)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)
       '@dnd-kit/core': 6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@dnd-kit/modifiers': 7.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react@19.2.1)
@@ -20555,18 +20690,18 @@ snapshots:
 
   '@kepler.gl/deckgl-layers@3.3.0-alpha.0(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))':
     dependencies:
-      '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
       '@deck.gl/core': 9.3.10
-      '@deck.gl/geo-layers': 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
-      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/geo-layers': 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/wms': 4.4.2(@loaders.gl/core@4.4.1)
       '@luma.gl/constants': 9.3.3
-      '@luma.gl/core': 9.3.3
-      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
-      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.3)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.6)
       '@mapbox/geo-viewport': 0.4.1
       '@mapbox/vector-tile': 1.3.1
       '@math.gl/web-mercator': 4.1.0
@@ -20589,18 +20724,18 @@ snapshots:
 
   '@kepler.gl/deckgl-layers@3.3.0-alpha.0(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.4)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))':
     dependencies:
-      '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/aggregation-layers': 9.3.2(@deck.gl/core@9.3.10)(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
       '@deck.gl/core': 9.3.10
-      '@deck.gl/geo-layers': 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
-      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/geo-layers': 9.3.10(@deck.gl/core@9.3.10)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers': 9.3.10(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.4)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.4)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/wms': 4.4.2(@loaders.gl/core@4.4.4)
       '@luma.gl/constants': 9.3.3
-      '@luma.gl/core': 9.3.3
-      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
-      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.3)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/webgl': 9.3.6(@luma.gl/core@9.3.6)
       '@mapbox/geo-viewport': 0.4.1
       '@mapbox/vector-tile': 1.3.1
       '@math.gl/web-mercator': 4.1.0
@@ -22275,15 +22410,6 @@ snapshots:
       '@probe.gl/log': 4.1.1
       '@probe.gl/stats': 4.1.1
 
-  '@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))':
-    dependencies:
-      '@luma.gl/core': 9.3.3
-      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
-      '@math.gl/core': 4.1.0
-      '@math.gl/types': 4.1.0
-      '@probe.gl/log': 4.1.1
-      '@probe.gl/stats': 4.1.1
-
   '@luma.gl/engine@9.3.3(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))':
     dependencies:
       '@luma.gl/core': 9.3.6
@@ -22348,6 +22474,16 @@ snapshots:
       '@luma.gl/core': 9.3.6
       '@luma.gl/engine': 9.3.3(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
       '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.6)
+      '@math.gl/core': 4.1.0
+
+  '@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))':
+    dependencies:
+      '@loaders.gl/core': 4.4.4
+      '@loaders.gl/gltf': 4.4.4(@loaders.gl/core@4.4.4)
+      '@loaders.gl/textures': 4.4.4(@loaders.gl/core@4.4.4)
+      '@luma.gl/core': 9.3.6
+      '@luma.gl/engine': 9.3.6(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.3))
+      '@luma.gl/shadertools': 9.3.6(@luma.gl/core@9.3.3)
       '@math.gl/core': 4.1.0
 
   '@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))':
@@ -27098,7 +27234,7 @@ snapshots:
       '@deck.gl/mapbox': 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@math.gl/web-mercator@4.1.0)
       '@deck.gl/mesh-layers': 9.3.2(@deck.gl/core@9.3.10)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/gltf@9.3.6(@luma.gl/core@9.3.6)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6)))(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
       '@deck.gl/react': 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)
+      '@deck.gl/widgets': 9.3.2(@deck.gl/core@9.3.10)(@luma.gl/core@9.3.6)
       '@loaders.gl/core': 4.4.1
       '@luma.gl/core': 9.3.3
       '@luma.gl/engine': 9.3.3(@luma.gl/core@9.3.6)(@luma.gl/shadertools@9.3.6(@luma.gl/core@9.3.6))
