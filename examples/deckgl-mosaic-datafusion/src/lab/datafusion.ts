@@ -6,14 +6,17 @@ import {
   tableFromIPC,
   tableToIPC,
   type DataType,
+  type Table,
 } from '@uwdata/flechette';
+import type {
+  ArrowQueryRequest,
+  Connector,
+  ConnectorQueryRequest,
+  ExecQueryRequest,
+  JSONQueryRequest,
+} from '@uwdata/mosaic-core';
 import {BOUNDS, ECMWF_RESOLUTION, RASTER_WIDTH, type QueryLog} from './types';
 import type {TimeCube} from './zarr-cube';
-
-export type QueryRequest = {
-  type?: 'arrow' | 'json' | 'exec';
-  sql: string;
-};
 
 type Row = Record<string, string | number | boolean | null | undefined>;
 
@@ -158,10 +161,9 @@ function normalizeDescribeRows(rows: Row[]) {
   });
 }
 
-export type DataFusion = {
+export type DataFusion = Connector & {
   refreshData: (loaded: Uint8Array) => Promise<void>;
   setLead: (leadIndex: number) => Promise<void>;
-  query: (request: QueryRequest) => Promise<unknown>;
   dispose: () => Promise<void>;
 };
 
@@ -246,53 +248,63 @@ export async function createDataFusion(
       });
     });
 
-  const query = ({type = 'arrow', sql}: QueryRequest) =>
-    serialize(async (): Promise<unknown> => {
-      const started = performance.now();
-      try {
-        let data: unknown;
-        let rows = 0;
-        if (type === 'exec') {
-          await ctx.execute_sql(sql);
-        } else {
-          const bytes = (await ctx.execute_ipc(sql)) as
-            | ArrayBuffer
-            | Uint8Array;
-          const table = tableFromIPC(bytes, {useDate: true});
-          if (/^\s*(desc|describe)\b/i.test(sql)) {
-            data = normalizeDescribeRows(table.toArray() as Row[]);
-            rows = (data as Row[]).length;
-          } else if (type === 'json') {
-            data = table.toArray() as Row[];
-            rows = (data as Row[]).length;
+  function query(request: ArrowQueryRequest): Promise<Table>;
+  function query(request: ExecQueryRequest): Promise<void>;
+  function query(request: JSONQueryRequest): Promise<Record<string, unknown>[]>;
+  function query({
+    type = 'arrow',
+    sql,
+  }: ConnectorQueryRequest): Promise<Table | Record<string, unknown>[] | void> {
+    return serialize(
+      async (): Promise<Table | Record<string, unknown>[] | void> => {
+        const started = performance.now();
+        try {
+          let data: Table | Record<string, unknown>[] | undefined;
+          let rows = 0;
+          if (type === 'exec') {
+            await ctx.execute_sql(sql);
           } else {
-            data = table;
-            rows = table.numRows;
+            const bytes = (await ctx.execute_ipc(sql)) as
+              | ArrayBuffer
+              | Uint8Array;
+            const table = tableFromIPC(bytes, {useDate: true});
+            if (/^\s*(desc|describe)\b/i.test(sql)) {
+              data = normalizeDescribeRows(table.toArray() as Row[]);
+              rows = (data as Row[]).length;
+            } else if (type === 'json') {
+              data = table.toArray() as Row[];
+              rows = (data as Row[]).length;
+            } else {
+              data = table;
+              rows = table.numRows;
+            }
           }
+          onLog({
+            backend: 'client-datafusion-wasm',
+            type,
+            sql,
+            ms: performance.now() - started,
+            rows,
+            ok: true,
+          });
+          return data;
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          onLog({
+            backend: 'client-datafusion-wasm',
+            type,
+            sql,
+            ms: performance.now() - started,
+            rows: 0,
+            ok: false,
+            error: message,
+          });
+          throw error instanceof Error ? error : new Error(message);
         }
-        onLog({
-          backend: 'client-datafusion-wasm',
-          type,
-          sql,
-          ms: performance.now() - started,
-          rows,
-          ok: true,
-        });
-        return data;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        onLog({
-          backend: 'client-datafusion-wasm',
-          type,
-          sql,
-          ms: performance.now() - started,
-          rows: 0,
-          ok: false,
-          error: message,
-        });
-        throw error instanceof Error ? error : new Error(message);
-      }
-    });
+      },
+    );
+  }
 
   const dispose = () => {
     if (disposePromise) return disposePromise;

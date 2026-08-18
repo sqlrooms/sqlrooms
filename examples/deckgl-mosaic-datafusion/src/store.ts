@@ -1,12 +1,15 @@
 import {createMosaicSlice, type MosaicSliceState} from '@sqlrooms/mosaic';
 import {
-  createRoomShellSlice,
+  createLayoutSlice,
+  type LayoutConfig,
+  type LayoutSliceState,
+} from '@sqlrooms/layout';
+import {
+  createBaseRoomSlice,
   createRoomStore,
-  LayoutConfig,
-  RoomShellSliceState,
-  useBaseRoomShellStore,
+  useBaseRoomStore,
+  type BaseRoomStoreState,
 } from '@sqlrooms/room-shell';
-import type {Table} from '@uwdata/flechette';
 import type {ExprNode} from '@uwdata/mosaic-sql';
 import type {Selection} from '@uwdata/mosaic-core';
 import {produce} from 'immer';
@@ -82,12 +85,13 @@ export type ForecastSliceState = {
   };
 };
 
-export type RoomState = RoomShellSliceState &
+export type RoomState = BaseRoomStoreState &
+  LayoutSliceState &
   MosaicSliceState &
   ForecastSliceState;
 
 export function useRoomStore<T>(selector: (state: RoomState) => T): T {
-  return useBaseRoomShellStore<RoomState, T>(selector);
+  return useBaseRoomStore<RoomState, T>(selector);
 }
 
 function predicateSql(selection: Selection) {
@@ -165,12 +169,12 @@ function createForecastSlice(lab: Lab) {
       const seq = ++selectionSeq;
       try {
         const where = predicateSql(lab.selection);
-        const table = (await lab.df.query({
+        const table = await lab.df.query({
           type: 'arrow',
           sql: where
             ? `SELECT id FROM cells_current_lead WHERE ${where}`
             : 'SELECT id FROM cells_current_lead',
-        })) as Table;
+        });
         if (disposed || seq !== selectionSeq) return;
         selectionMask.fill(0);
         let count = 0;
@@ -186,17 +190,13 @@ function createForecastSlice(lab: Lab) {
         }
         map?.setMask(selectionMask);
 
-        const rows = (await lab.df.query({
+        const rows = await lab.df.query({
           type: 'json',
           sql: `SELECT avg(value) AS mean_temp,
   sum(area_km2) AS selected_area,
   sum(CASE WHEN value >= ${HOT_THRESHOLD_C} THEN area_km2 ELSE 0 END) AS hot_area
 FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
-        })) as Array<{
-          mean_temp: number | null;
-          selected_area: number | null;
-          hot_area: number | null;
-        }>;
+        });
         if (disposed || seq !== selectionSeq) return;
         const mean = rows[0]?.mean_temp;
         const selectedArea = rows[0]?.selected_area;
@@ -218,10 +218,10 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
 
     const fetchForecastTime = async (leadIndex: number) => {
       if (disposed) return;
-      const rows = (await lab.df.query({
+      const rows = await lab.df.query({
         type: 'json',
         sql: `SELECT valid_time_ms FROM forecast_times WHERE time_index = ${leadIndex}`,
-      })) as Array<{valid_time_ms: number | null}>;
+      });
       const ms = rows[0]?.valid_time_ms;
       if (disposed) return;
       set((state) =>
@@ -408,57 +408,53 @@ FROM cells_current_lead${where ? ` WHERE ${where}` : ''}`,
 }
 
 /**
- * The DataFusion-WASM Coordinator has to exist before the mosaic slice is
- * created (createMosaicSlice only builds a DuckDB-backed coordinator when
- * none is supplied), so the room store cannot be a static module export
- * here the way other examples' stores are. Instead it is built once the
- * ECMWF cube has streamed in and the Coordinator is ready; see App.tsx.
+ * The DataFusion-WASM Coordinator has to exist before the Mosaic slice is
+ * created, so the room store cannot be a static module export like other
+ * examples' stores. It is built once the ECMWF cube has streamed in and the
+ * Coordinator is ready; see App.tsx. The room is deliberately hand-composed
+ * without a DuckDB slice because DataFusion handles every query.
  */
 export function createForecastRoomStore(lab: Lab) {
   const {roomStore, useRoomStore: useRoomStoreHook} =
     createRoomStore<RoomState>((set, get, store) => ({
-      ...createRoomShellSlice({
+      ...createBaseRoomSlice()(set, get, store),
+
+      ...createLayoutSlice({
         config: {
-          title: 'ECMWF IFS ENS forecast explorer',
-          dataSources: [],
-        },
-        layout: {
-          config: {
-            type: 'split',
-            id: 'root',
-            direction: 'row',
-            children: [
-              {
-                type: 'tabs',
-                id: RoomPanelTypes.enum.forecast,
-                children: [RoomPanelTypes.enum.forecast],
-                defaultSize: '30%',
-                minSize: '320px',
-                maxSize: '50%',
-                activeTabIndex: 0,
-                collapsible: true,
-                collapsedSize: 0,
-                hideTabStrip: true,
-              },
-              {
-                type: 'panel',
-                id: RoomPanelTypes.enum.main,
-                panel: RoomPanelTypes.enum.main,
-                defaultSize: '70%',
-              },
-            ],
-          } satisfies LayoutConfig,
-          panels: {
-            [RoomPanelTypes.enum.forecast]: {
-              title: 'Forecast',
-              icon: SlidersHorizontalIcon,
-              component: ForecastPanel,
+          type: 'split',
+          id: 'root',
+          direction: 'row',
+          children: [
+            {
+              type: 'tabs',
+              id: RoomPanelTypes.enum.forecast,
+              children: [RoomPanelTypes.enum.forecast],
+              defaultSize: '30%',
+              minSize: '320px',
+              maxSize: '50%',
+              activeTabIndex: 0,
+              collapsible: true,
+              collapsedSize: 0,
+              hideTabStrip: true,
             },
-            [RoomPanelTypes.enum.main]: {
-              title: 'Map',
-              icon: MapIcon,
-              component: MainView,
+            {
+              type: 'panel',
+              id: RoomPanelTypes.enum.main,
+              panel: RoomPanelTypes.enum.main,
+              defaultSize: '70%',
             },
+          ],
+        } satisfies LayoutConfig,
+        panels: {
+          [RoomPanelTypes.enum.forecast]: {
+            title: 'Forecast',
+            icon: SlidersHorizontalIcon,
+            component: ForecastPanel,
+          },
+          [RoomPanelTypes.enum.main]: {
+            title: 'Map',
+            icon: MapIcon,
+            component: MainView,
           },
         },
       })(set, get, store),

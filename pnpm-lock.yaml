@@ -52,7 +52,7 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 
-packageExtensionsChecksum: sha256-7sjQR/fAb1iqir9Qwi5PO8moeosunpvdrU/CaJOIw2M=
+packageExtensionsChecksum: sha256-fKVnnyg0RtbaFPEhAFt0j8QMAMsnJVhbyoUFVpI6AHk=
 
 patchedDependencies:
   image-size@0.7.5: 539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321
@@ -1537,6 +1537,9 @@ importers:
       '@luma.gl/shadertools':
         specifier: 9.3.3
         version: 9.3.3(@luma.gl/core@9.3.3)
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
       '@sqlrooms/mosaic':
         specifier: workspace:*
         version: link:../../packages/mosaic

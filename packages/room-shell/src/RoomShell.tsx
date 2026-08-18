@@ -1,6 +1,15 @@
-import {LayoutRenderer, RoomDndProvider} from '@sqlrooms/layout';
+import {
+  LayoutRenderer,
+  RoomDndProvider,
+  useStoreWithLayout,
+} from '@sqlrooms/layout';
 import type {LayoutNode} from '@sqlrooms/layout-config';
-import {RoomStateProvider} from '@sqlrooms/room-store';
+import {
+  RoomStateProvider,
+  useBaseRoomStore,
+  type BaseRoomStoreState,
+  type StoreApi,
+} from '@sqlrooms/room-store';
 import {
   cn,
   ErrorBoundary,
@@ -17,15 +26,36 @@ import {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
 
-export function RoomShellBase({
+/** Minimal room state required by the Room Shell container. */
+export type RoomShellBaseState = BaseRoomStoreState & {
+  room: BaseRoomStoreState['room'] & {
+    CustomErrorBoundary?: React.ComponentType<{
+      onRetry?: () => void;
+      children?: React.ReactNode;
+    }>;
+  };
+};
+
+type RoomShellLoadingProgress = {
+  message: string;
+  error?: string;
+  errorDetails?: string;
+};
+
+type RoomShellLoadingState = {
+  room: {
+    getLoadingProgress: () => RoomShellLoadingProgress | undefined;
+  };
+};
+
+export function RoomShellBase<RS extends RoomShellBaseState>({
   className,
   children,
   roomStore,
 }: React.PropsWithChildren<{
   className?: string;
-  roomStore?: RoomShellStore;
+  roomStore?: StoreApi<RS>;
 }>) {
   const CustomErrorBoundary =
     roomStore?.getState().room.CustomErrorBoundary ?? ErrorBoundary;
@@ -77,19 +107,13 @@ export const LayoutComposer: FC<{
   className?: string;
   onTabCreate?: (tabsId: string) => void;
 }> = ({className, onTabCreate}) => {
-  const rootLayout = useBaseRoomShellStore((state) => state.layout.config);
-  const setLayout = useBaseRoomShellStore((state) => state.layout.setConfig);
+  const rootLayout = useStoreWithLayout((state) => state.layout.config);
+  const setLayout = useStoreWithLayout((state) => state.layout.setConfig);
 
-  const setActiveTab = useBaseRoomShellStore(
-    (state) => state.layout.setActiveTab,
-  );
-  const removeTab = useBaseRoomShellStore((state) => state.layout.removeTab);
-  const reorderTabs = useBaseRoomShellStore(
-    (state) => state.layout.reorderTabs,
-  );
-  const setCollapsed = useBaseRoomShellStore(
-    (state) => state.layout.setCollapsed,
-  );
+  const setActiveTab = useStoreWithLayout((state) => state.layout.setActiveTab);
+  const removeTab = useStoreWithLayout((state) => state.layout.removeTab);
+  const reorderTabs = useStoreWithLayout((state) => state.layout.reorderTabs);
+  const setCollapsed = useStoreWithLayout((state) => state.layout.setCollapsed);
 
   const handleLayoutChange = useCallback(
     (newLayout: LayoutNode | null) => {
@@ -160,9 +184,10 @@ export const LayoutComposer: FC<{
 };
 
 export const LoadingProgress: FC<{className?: string}> = ({className}) => {
-  const loadingProgress = useBaseRoomShellStore((state) =>
-    state.room.getLoadingProgress(),
-  );
+  const loadingProgress = useBaseRoomStore<
+    RoomShellLoadingState,
+    RoomShellLoadingProgress | undefined
+  >((state) => state.room.getLoadingProgress());
   return (
     <ProgressModal
       className={className}

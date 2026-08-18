@@ -14,7 +14,6 @@ export const Room: FC<{
         <ThemeSwitch />
       </RoomShell.SidebarContainer>
       <RoomShell.LayoutComposer />
-      <RoomShell.LoadingProgress />
     </RoomShell>
   );
 };

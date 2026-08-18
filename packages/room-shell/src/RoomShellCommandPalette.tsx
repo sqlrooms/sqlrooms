@@ -8,7 +8,10 @@ import {
   RegisteredRoomCommand,
   RoomCommandExecutionContext,
   RoomCommandPortableSchema,
+  useBaseRoomStore,
   useRoomStoreApi,
+  type BaseRoomStoreState,
+  type CommandSliceState,
 } from '@sqlrooms/room-store';
 import {
   Button,
@@ -36,10 +39,11 @@ import {
   useRef,
   useState,
 } from 'react';
-import {RoomShellSliceState, useBaseRoomShellStore} from './RoomShellSlice';
 import {SidebarButton} from './RoomShellSidebarButtons';
 
 const GENERAL_COMMAND_GROUP = 'General';
+
+type CommandPaletteRoomState = BaseRoomStoreState & CommandSliceState;
 
 export type RoomShellCommandPaletteProps = {
   isOpen?: boolean;
@@ -105,11 +109,12 @@ function RoomShellCommandPaletteBase({
   const [isSubmittingInput, setIsSubmittingInput] = useState(false);
   const isOpen = controlledOpen ?? uncontrolledOpen;
   const isOpenRef = useRef(isOpen);
-  const roomStore = useRoomStoreApi<RoomShellSliceState>();
+  const roomStore = useRoomStoreApi<CommandPaletteRoomState>();
   const isMac = useMemo(() => isMacOS(), []);
-  const commandRegistry = useBaseRoomShellStore(
-    (state) => state.commands.registry,
-  );
+  const commandRegistry = useBaseRoomStore<
+    CommandSliceState,
+    CommandSliceState['commands']['registry']
+  >((state) => state.commands.registry);
 
   const commandContext = useMemo(
     () => createRoomCommandExecutionContext(roomStore, {surface: 'palette'}),

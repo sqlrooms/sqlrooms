@@ -14,16 +14,21 @@ ECMWF IFS ENS temperature is streamed client-side from a public Zarr store
 Mosaic crossfilter, and rendered with
 [@developmentseed/deck.gl-zarr](https://github.com/developmentseed/deck.gl-raster).
 
-`@sqlrooms/mosaic`'s `createMosaicSlice()` normally builds its Mosaic
-`Coordinator` from the room's DuckDB-WASM connector. It also accepts an
-already-built `Coordinator` (see `packages/mosaic/src/MosaicSlice.ts`), which
-is the extension point this example uses instead: the DataFusion-WASM
-wrapper's `query({type, sql})` method already matches Mosaic's `Connector`
-interface (it returns [flechette](https://github.com/uwdata/flechette)
-tables directly, since that's what DataFusion's Arrow IPC output decodes
-into), so it is handed to `Coordinator` as-is. Room shell chrome (sidebar,
-theme, layout panels), the map, the raster shaders, and the crossfilter
-hooks are otherwise unchanged from the source app.
+This room is hand-composed from the base room, layout, Mosaic, and forecast
+slices. It does not include SQLRooms' DuckDB slice, so loading the example does
+not initialize or download DuckDB-WASM. Its full query path is:
+
+```text
+Mosaic clients → supplied Mosaic Coordinator → DataFusion connector → DataFusion-WASM
+```
+
+The DataFusion-WASM wrapper's `query({type, sql})` method already matches
+Mosaic's `Connector` interface. It returns
+[flechette](https://github.com/uwdata/flechette) tables directly because that
+is what DataFusion's Arrow IPC output decodes into, so the wrapper is handed to
+the supplied `Coordinator` as-is. Room shell chrome (sidebar, theme, layout
+panels), the map, the raster shaders, and the crossfilter hooks are otherwise
+unchanged from the source app.
 
 Because the Coordinator can only be built once the DataFusion tables exist
 (which needs the first streamed Zarr chunk), the room store here is not a

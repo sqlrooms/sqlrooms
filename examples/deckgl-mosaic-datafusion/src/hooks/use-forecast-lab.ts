@@ -140,7 +140,7 @@ export function useForecastLab(): LabState {
         if (streamError) throw streamError;
         return;
       }
-      const coordinator = new Coordinator(df as never, {
+      const coordinator = new Coordinator(df, {
         cache: false,
         consolidate: true,
         preagg: {enabled: false},

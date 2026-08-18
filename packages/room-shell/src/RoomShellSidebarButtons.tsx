@@ -2,6 +2,7 @@ import {
   getVisibleLayoutPanels,
   resolvePanelDefinition,
   resolvePanelIdentity,
+  useStoreWithLayout,
 } from '@sqlrooms/layout';
 import type {RoomPanelInfo} from '@sqlrooms/layout';
 import {
@@ -11,8 +12,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
 import React, {FC, useMemo} from 'react';
-import {useBaseRoomShellStore} from './RoomShellSlice';
 
 const SidebarButton: FC<{
   className?: string;
@@ -56,16 +57,14 @@ const SidebarButton: FC<{
 const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   roomPanelType,
 }) => {
-  const initialized = useBaseRoomShellStore((state) => state.room.initialized);
-  const layout = useBaseRoomShellStore((state) => state.layout.config);
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const initialized = useBaseRoomStore((state) => state.room.initialized);
+  const layout = useStoreWithLayout((state) => state.layout.config);
+  const panels = useStoreWithLayout((state) => state.layout.panels);
   const visibleRoomPanels = useMemo(
     () => getVisibleLayoutPanels(layout),
     [layout],
   );
-  const togglePanel = useBaseRoomShellStore(
-    (state) => state.layout.togglePanel,
-  );
+  const togglePanel = useStoreWithLayout((state) => state.layout.togglePanel);
   const panelDef = panels[roomPanelType];
   const info: RoomPanelInfo | undefined = panelDef
     ? resolvePanelDefinition(panelDef, {panelId: roomPanelType})
@@ -84,7 +83,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
 };
 
 const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
+  const panels = useStoreWithLayout((state) => state.layout.panels);
 
   return (
     <div className={cn('flex h-full grow flex-col', className)}>
@@ -130,21 +129,17 @@ const TabButtons: FC<{
   tabsId?: string;
   className?: string;
 }> = ({tabsId = 'left', className}) => {
-  const panels = useBaseRoomShellStore((state) => state.layout.panels);
-  const getTabs = useBaseRoomShellStore((state) => state.layout.getTabs);
-  const activeTab = useBaseRoomShellStore((state) =>
+  const panels = useStoreWithLayout((state) => state.layout.panels);
+  const getTabs = useStoreWithLayout((state) => state.layout.getTabs);
+  const activeTab = useStoreWithLayout((state) =>
     state.layout.getActiveTab(tabsId),
   );
-  const collapsed = useBaseRoomShellStore((state) =>
+  const collapsed = useStoreWithLayout((state) =>
     state.layout.isCollapsed(tabsId),
   );
-  const setActiveTab = useBaseRoomShellStore(
-    (state) => state.layout.setActiveTab,
-  );
-  const setCollapsed = useBaseRoomShellStore(
-    (state) => state.layout.setCollapsed,
-  );
-  const initialized = useBaseRoomShellStore((state) => state.room.initialized);
+  const setActiveTab = useStoreWithLayout((state) => state.layout.setActiveTab);
+  const setCollapsed = useStoreWithLayout((state) => state.layout.setCollapsed);
+  const initialized = useBaseRoomStore((state) => state.room.initialized);
 
   const tabIds = useMemo(() => getTabs(tabsId), [getTabs, tabsId]);
 
