@@ -10,8 +10,6 @@ describe('AiSlice run timeout', () => {
 
   it('is opt-in and records a timeout instead of a manual-cancel message', async () => {
     jest.useFakeTimers();
-    const sendMessage = jest.fn();
-    const stop = jest.fn();
     const store = createStore<AiSliceState>((set, get, api) =>
       createAiSlice({
         tools: {} as any,
@@ -49,8 +47,12 @@ describe('AiSlice run timeout', () => {
     ];
     store.getState().ai.setSessionUiMessages(sessionId, messages);
     store.getState().ai.setPrompt(sessionId, 'hello');
-    store.getState().ai.setChatSendMessage(sessionId, sendMessage);
-    store.getState().ai.setChatStop(sessionId, stop);
+    const chat = store.getState().ai.getSessionChatController(sessionId)!.chat;
+    chat.messages = messages;
+    const sendMessage = jest
+      .spyOn(chat, 'sendMessage')
+      .mockResolvedValue(undefined);
+    const stop = jest.spyOn(chat, 'stop').mockResolvedValue(undefined);
 
     await store.getState().ai.startAnalysis(sessionId);
     await jest.advanceTimersByTimeAsync(1_000);
@@ -96,7 +98,6 @@ describe('AiSlice run timeout', () => {
 
   it('does not schedule a run timeout when none is configured', async () => {
     jest.useFakeTimers();
-    const stop = jest.fn();
     const store = createStore<AiSliceState>((set, get, api) =>
       createAiSlice({tools: {} as any, getInstructions: () => 'test'})(
         set,
@@ -106,8 +107,9 @@ describe('AiSlice run timeout', () => {
     );
     store.getState().ai.createSession();
     const sessionId = store.getState().ai.getCurrentSession()!.id;
-    store.getState().ai.setChatSendMessage(sessionId, jest.fn());
-    store.getState().ai.setChatStop(sessionId, stop);
+    const chat = store.getState().ai.getSessionChatController(sessionId)!.chat;
+    jest.spyOn(chat, 'sendMessage').mockResolvedValue(undefined);
+    const stop = jest.spyOn(chat, 'stop').mockResolvedValue(undefined);
 
     await store.getState().ai.startAnalysis(sessionId);
     await jest.advanceTimersByTimeAsync(24 * 60 * 60_000);

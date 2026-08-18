@@ -1155,7 +1155,8 @@ AI chat state is now **scoped per session** (instead of a single global chat ins
   - `getPrompt(sessionId)` / `setPrompt(sessionId, prompt)`
   - `getIsRunning(sessionId)` / `setIsRunning(sessionId, isRunning)`
 - **New hook**: `useSessionChat(sessionId)` for session-scoped chat (replaces legacy single-instance patterns)
-- **Mounting requirement**: if you render AI primitives directly (e.g. `QueryControls`, `AnalysisResultsContainer`) you must mount chat providers once via `Chat.Root` (it mounts `SessionChatManager`).
+- **Lifecycle**: session chat execution is owned by the AI slice. Starting a run
+  does not require a mounted React chat provider.
 
 #### Before
 
@@ -1187,7 +1188,8 @@ if (sessionId) {
 
 #### Recommended UI composition
 
-Use `Chat.Root` once at the top of your AI UI tree (it mounts `SessionChatManager`):
+Use `Chat.Root` once at the top of your AI UI tree to provide the compound chat
+presentation context:
 
 ```tsx
 import {Chat} from '@sqlrooms/ai';

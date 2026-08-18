@@ -7,6 +7,8 @@ import {useElapsedTime} from '../hooks/useElapsedTime';
 import type {ToolRenderBehavior} from './FlatAgentRenderer';
 import {useToolRenderBehavior} from './FlatAgentRenderer';
 
+export {hasPendingToolApproval} from '../timeouts';
+
 type AnyUIMessagePart = UIMessagePart<any, any>;
 
 /** User-facing description of the chat run's current active step. */
@@ -189,21 +191,6 @@ function hasVisibleProgress(part: AnyUIMessagePart): boolean {
     );
   }
   return false;
-}
-
-/** Returns whether any tool in the current turn is awaiting approval. */
-export function hasPendingToolApproval(
-  messages: UIMessage[] | undefined,
-): boolean {
-  return getCurrentTurnMessages(messages).some(
-    (message) =>
-      message.role === 'assistant' &&
-      (message.parts ?? []).some(
-        (part) =>
-          isToolPart(part) &&
-          (part as {state?: string}).state === 'approval-requested',
-      ),
-  );
 }
 
 function getActiveToolLabel(

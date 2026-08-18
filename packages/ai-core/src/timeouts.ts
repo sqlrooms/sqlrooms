@@ -170,6 +170,32 @@ export function hasPendingCurrentTurnExecutableToolCall(
   return false;
 }
 
+/** Returns whether the current user turn has a tool awaiting approval. */
+export function hasPendingToolApproval(
+  messages: UIMessage[] | undefined,
+): boolean {
+  if (!messages?.length) return false;
+  let currentTurnStart = 0;
+  for (let index = messages.length - 1; index >= 0; index--) {
+    if (messages[index]?.role === 'user') {
+      currentTurnStart = index;
+      break;
+    }
+  }
+
+  return messages.slice(currentTurnStart).some(
+    (message) =>
+      message.role === 'assistant' &&
+      (message.parts ?? []).some((part) => {
+        const type = part.type;
+        return (
+          (type === 'dynamic-tool' || type.startsWith('tool-')) &&
+          (part as {state?: string}).state === 'approval-requested'
+        );
+      }),
+  );
+}
+
 /** Finds pending client tools whose opt-in execution timeout is enabled. */
 export function getPendingClientToolTimeouts(
   messages: UIMessage[],

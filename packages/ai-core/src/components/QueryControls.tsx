@@ -213,9 +213,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             activeSessionId = createSession();
             setPrompt(activeSessionId, prompt);
             setDraftPrompt(''); // Clear draft
-            // The SessionChatProvider for the new session mounts and registers
-            // sendMessage in a passive effect, so poll until it is ready rather
-            // than assuming it exists on the next tick.
+            // The compatibility entry point now creates the controller
+            // synchronously; callers do not depend on a mounted chat surface.
             runAnalysisWhenReady(activeSessionId);
           } else {
             runAnalysis(activeSessionId);
@@ -260,9 +259,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         activeSessionId = createSession();
         setPrompt(activeSessionId, prompt);
         setDraftPrompt(''); // Clear draft
-        // The SessionChatProvider for the new session mounts and registers
-        // sendMessage in a passive effect, so poll until it is ready rather
-        // than assuming it exists on the next tick.
+        // This remains compatible with block-scoped callers while creating the
+        // session controller synchronously.
         void runAnalysisWhenReady(activeSessionId);
       } else {
         runAnalysis(activeSessionId);

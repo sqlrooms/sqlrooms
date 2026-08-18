@@ -17,12 +17,15 @@ import {
   type StateCreator,
 } from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
+import {Chat} from '@ai-sdk/react';
 import {produce} from 'immer';
 import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
   generateText,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  lastAssistantMessageIsCompleteWithToolCalls,
   ToolSet,
 } from 'ai';
 import {
@@ -40,14 +43,11 @@ import {
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {cloneBoundedAgentSnapshot} from './devtools/agentSnapshots';
 import type {
-  AddToolApprovalResponse,
-  AddToolOutput,
   AiDevtoolsState,
   AgentProgressSnapshot,
   AgentSnapshot,
   ProviderContextDiagnostic,
   AgentToolCall,
-  AiChatSendMessage,
   GetProviderOptions,
   PendingSubAgentApproval,
   StoredToolSet,
@@ -85,6 +85,11 @@ import {
   getTimedOutSessionAgentState,
   type AiTimeoutOptions,
 } from './timeouts';
+import {
+  createSessionChatRuntime,
+  createSessionChatRuntimeRegistry,
+  type SessionChatController,
+} from './sessionChatRuntime';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -120,25 +125,13 @@ export type AiSliceState = {
       sessionId: string,
       controller: AbortController | undefined,
     ) => void;
-    setChatStop: (sessionId: string, stop: (() => void) | undefined) => void;
-    getChatStop: (sessionId: string) => (() => void) | undefined;
-    setChatSendMessage: (
+    /**
+     * Return the live controller for a session, creating it when necessary.
+     * Controllers are ephemeral and are not part of persisted workspace state.
+     */
+    getSessionChatController: (
       sessionId: string,
-      sendMessage: AiChatSendMessage | undefined,
-    ) => void;
-    getChatSendMessage: (sessionId: string) => AiChatSendMessage | undefined;
-    setAddToolOutput: (
-      sessionId: string,
-      addToolOutput: AddToolOutput | undefined,
-    ) => void;
-    getAddToolOutput: (sessionId: string) => AddToolOutput | undefined;
-    setAddToolApprovalResponse: (
-      sessionId: string,
-      fn: AddToolApprovalResponse | undefined,
-    ) => void;
-    getAddToolApprovalResponse: (
-      sessionId: string,
-    ) => AddToolApprovalResponse | undefined;
+    ) => SessionChatController | undefined;
     /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
     setToolCallSession: (
       toolCallId: string,
@@ -198,6 +191,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    /** Compatibility entry point; session controllers are ready synchronously. */
     startAnalysisWhenReady: (sessionId: string) => Promise<boolean>;
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
@@ -475,19 +469,105 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     // Create persistent Maps (outside of immer draft)
     const toolCallToSessionId = new Map<string, string>();
     const sessionAbortControllers = new Map<string, AbortController>();
-    const sessionChatStops = new Map<string, () => void>();
     const sessionRunTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
-    const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
-    const sessionAddToolOutputs = new Map<string, AddToolOutput>();
-    const sessionAddToolApprovalResponses = new Map<
-      string,
-      AddToolApprovalResponse
-    >();
+    const sessionChatControllers = createSessionChatRuntimeRegistry();
     const pendingApprovalResolvers = new Map<
       string,
       (approved: boolean) => void
     >();
     const abortSnapshotMap = new Map<string, AgentProgressSnapshot>();
+
+    const clearSessionRuntimeResources = () => {
+      sessionChatControllers.clear();
+      for (const controller of sessionAbortControllers.values()) {
+        controller.abort(ANALYSIS_CANCELLED);
+      }
+      sessionAbortControllers.clear();
+      for (const timeoutId of sessionRunTimeouts.values()) {
+        clearTimeout(timeoutId);
+      }
+      sessionRunTimeouts.clear();
+      for (const resolve of pendingApprovalResolvers.values()) resolve(false);
+      pendingApprovalResolvers.clear();
+      abortSnapshotMap.clear();
+      toolCallToSessionId.clear();
+    };
+
+    const getOrCreateSessionChatController = (
+      sessionId: string,
+    ): SessionChatController | undefined => {
+      const session = get().ai.config.sessions.find(
+        (candidate) => candidate.id === sessionId,
+      );
+      if (!session) return undefined;
+
+      const version = String(session.messagesRevision ?? 0);
+      return sessionChatControllers.ensure(sessionId, version, (lifecycle) => {
+        const trimmedEndpoint = chatEndPoint.trim();
+        const usesRemoteTransport = trimmedEndpoint.length > 0;
+        const transport = usesRemoteTransport
+          ? get().ai.getRemoteChatTransport(
+              sessionId,
+              trimmedEndpoint,
+              chatHeaders,
+            )
+          : get().ai.getLocalChatTransport(sessionId);
+        const chat = new Chat<UIMessage>({
+          id: `${sessionId}::${version}`,
+          transport,
+          messages: fixIncompleteToolCalls(
+            (session.uiMessages ?? []) as UIMessage[],
+          ),
+          sendAutomaticallyWhen: (options) => {
+            const controller = get().ai.getAbortController(sessionId);
+            if (controller?.signal.aborted) return false;
+            return (
+              lastAssistantMessageIsCompleteWithToolCalls(options) ||
+              lastAssistantMessageIsCompleteWithApprovalResponses(options)
+            );
+          },
+          onFinish: ({messages}) => {
+            if (!lifecycle.isCurrent()) return;
+            get().ai.onChatFinish({sessionId, messages});
+            if (lifecycle.isCurrent()) {
+              getOrCreateSessionChatController(sessionId);
+            }
+          },
+          onError: (error) => {
+            if (!lifecycle.isCurrent()) return;
+            get().ai.onChatError(sessionId, error, chat.messages);
+            if (lifecycle.isCurrent()) {
+              getOrCreateSessionChatController(sessionId);
+            }
+          },
+        });
+
+        return createSessionChatRuntime({
+          chat,
+          usesRemoteTransport,
+          getState: () => {
+            const state = get().ai;
+            return {
+              isRunning: state.getIsRunning(sessionId),
+              abortController: state.getAbortController(sessionId),
+              tools: state.tools,
+              remoteClientToolNames: state.remoteClientToolNames,
+              timeouts: state.timeouts,
+              agentProgress: state.agentProgress,
+              pendingSubAgentApprovals: state.pendingSubAgentApprovals,
+            };
+          },
+          onMessagesChange: (messages) => {
+            if (!lifecycle.isCurrent()) return;
+            get().ai.setSessionUiMessages(sessionId, messages);
+          },
+          onIdleTimeout: (messages, error) => {
+            get().ai.persistTimedOutSession(sessionId, messages, error.message);
+          },
+          onDeactivate: lifecycle.release,
+        });
+      });
+    };
 
     const getResolvedModelSelection = (
       candidateProvider?: string,
@@ -608,10 +688,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
-          for (const timeoutId of sessionRunTimeouts.values()) {
-            clearTimeout(timeoutId);
-          }
-          sessionRunTimeouts.clear();
+          clearSessionRuntimeResources();
         },
         config: baseConfig,
         promptSuggestionsVisible: true,
@@ -649,6 +726,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               draft.ai.agentProgress[parentToolCallId] = toolCalls;
             }),
           );
+          sessionChatControllers.refreshAll();
         },
         clearAgentProgress: (parentToolCallId: string) => {
           set((state) =>
@@ -656,6 +734,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               delete draft.ai.agentProgress[parentToolCallId];
             }),
           );
+          sessionChatControllers.refreshAll();
         },
         devtools: {
           agentSnapshots: initialRehydrated.snapshots,
@@ -765,6 +844,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
           // Store the resolve callback outside of immer (not serializable)
           pendingApprovalResolvers.set(approval.approvalId, approval.resolve);
+          sessionChatControllers.refreshAll();
         },
         resolveSubAgentApproval: (approvalId: string, approved: boolean) => {
           const resolver = pendingApprovalResolvers.get(approvalId);
@@ -777,6 +857,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               delete draft.ai.pendingSubAgentApprovals[approvalId];
             }),
           );
+          sessionChatControllers.refreshAll();
         },
         clearSubAgentApproval: (approvalId: string) => {
           pendingApprovalResolvers.delete(approvalId);
@@ -785,6 +866,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               delete draft.ai.pendingSubAgentApprovals[approvalId];
             }),
           );
+          sessionChatControllers.refreshAll();
         },
 
         writeAbortSnapshot: (
@@ -836,62 +918,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           } else {
             sessionAbortControllers.delete(sessionId);
           }
+          sessionChatControllers.refresh(sessionId);
         },
 
-        setChatStop: (sessionId: string, stopFn: (() => void) | undefined) => {
-          if (stopFn) {
-            sessionChatStops.set(sessionId, stopFn);
-          } else {
-            sessionChatStops.delete(sessionId);
-          }
-        },
-        getChatStop: (sessionId: string) => {
-          return sessionChatStops.get(sessionId);
-        },
-
-        setChatSendMessage: (
-          sessionId: string,
-          sendMessageFn: AiChatSendMessage | undefined,
-        ) => {
-          if (sendMessageFn) {
-            sessionChatSendMessages.set(sessionId, sendMessageFn);
-          } else {
-            sessionChatSendMessages.delete(sessionId);
-          }
-        },
-        getChatSendMessage: (sessionId: string) => {
-          return sessionChatSendMessages.get(sessionId);
-        },
-
-        setAddToolOutput: (
-          sessionId: string,
-          addToolOutputFn: AddToolOutput | undefined,
-        ) => {
-          if (addToolOutputFn) {
-            sessionAddToolOutputs.set(sessionId, addToolOutputFn);
-          } else {
-            sessionAddToolOutputs.delete(sessionId);
-          }
-        },
-        getAddToolOutput: (sessionId: string) => {
-          return sessionAddToolOutputs.get(sessionId);
-        },
-
-        setAddToolApprovalResponse: (
-          sessionId: string,
-          fn: AddToolApprovalResponse | undefined,
-        ) => {
-          if (fn) {
-            sessionAddToolApprovalResponses.set(sessionId, fn);
-          } else {
-            sessionAddToolApprovalResponses.delete(sessionId);
-          }
-        },
-        getAddToolApprovalResponse: (sessionId: string) => {
-          return sessionAddToolApprovalResponses.get(sessionId);
-        },
+        getSessionChatController: getOrCreateSessionChatController,
 
         setConfig: (config: AiSliceConfig) => {
+          clearSessionRuntimeResources();
           const normalizedConfig = cleanupSessionForks(
             normalizeAiConfig(config),
           );
@@ -973,6 +1006,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+          sessionChatControllers.refresh(sessionId);
         },
         getIsRunning: (sessionId: string) => {
           const state = get();
@@ -1232,10 +1266,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           const runTimeoutId = sessionRunTimeouts.get(sessionId);
           if (runTimeoutId) clearTimeout(runTimeoutId);
           sessionRunTimeouts.delete(sessionId);
-          sessionChatStops.delete(sessionId);
-          sessionChatSendMessages.delete(sessionId);
-          sessionAddToolOutputs.delete(sessionId);
-          sessionAddToolApprovalResponses.delete(sessionId);
+          sessionChatControllers.delete(sessionId);
           const now = Date.now();
 
           set((state) =>
@@ -1691,12 +1722,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             return;
           }
 
-          const sendMessage = state.ai.getChatSendMessage(sessionId);
-          if (!sendMessage) {
-            console.error(
-              'No sendMessage function found for session:',
-              sessionId,
-            );
+          const controller = state.ai.getSessionChatController(sessionId);
+          if (!controller) {
+            console.error('Failed to create chat controller:', sessionId);
             return;
           }
 
@@ -1721,16 +1749,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               // A client tool or approval can pause useChat without an active
               // stream, so transport callbacks are not guaranteed to run.
               // Persist the same terminal timeout result immediately.
-              const currentMessages =
-                (get().ai.config.sessions.find(
-                  (candidate) => candidate.id === sessionId,
-                )?.uiMessages as UIMessage[] | undefined) ?? [];
+              const currentMessages = controller.chat.messages;
               get().ai.persistTimedOutSession(
                 sessionId,
                 currentMessages,
                 timeoutError.message,
               );
-              get().ai.getChatStop(sessionId)?.();
+              sessionChatControllers.delete(sessionId);
             }, runTimeoutMs);
             sessionRunTimeouts.set(sessionId, timeoutId);
             abortController.signal.addEventListener(
@@ -1757,29 +1782,18 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+          sessionChatControllers.refresh(sessionId);
 
-          // Send the message through the session's chat instance
-          sendMessage({text: promptText});
+          void controller.chat.sendMessage({text: promptText});
         },
 
         startAnalysisWhenReady: async (sessionId: string) => {
-          const maxAttempts = 50; // 50 * 20ms = 1 second max
-
-          for (let attempts = 0; attempts < maxAttempts; attempts++) {
-            const sendMessage = get().ai.getChatSendMessage(sessionId);
-            if (sendMessage) {
-              await get().ai.startAnalysis(sessionId);
-              return true;
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, 20));
+          if (!get().ai.getSessionChatController(sessionId)) {
+            console.error('Session not found:', sessionId);
+            return false;
           }
-
-          console.error(
-            'Timeout waiting for chat provider to register for session:',
-            sessionId,
-          );
-          return false;
+          await get().ai.startAnalysis(sessionId);
+          return true;
         },
 
         /**
@@ -1799,7 +1813,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // Set the prompt
           get().ai.setPrompt(session.id, prompt);
 
-          // Wait for SessionChatProvider to mount and register sendMessage
           void get()
             .ai.startAnalysisWhenReady(session.id)
             .catch((error) => {
@@ -1810,12 +1823,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         cancelAnalysis: (sessionId: string) => {
           const state = get();
           const abortController = state.ai.getAbortController(sessionId);
-          const stopFn = state.ai.getChatStop(sessionId);
+          const controller = sessionChatControllers.get(sessionId);
 
           abortController?.abort(ANALYSIS_CANCELLED);
 
-          // Stop local chat streaming immediately if available
-          stopFn?.();
+          void controller?.chat.stop();
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
@@ -1829,6 +1841,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               // It will be cleared by onChatFinish
             }),
           );
+          sessionChatControllers.refresh(sessionId);
         },
 
         /**
@@ -1902,6 +1915,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+          sessionChatControllers.delete(sessionId);
         },
 
         /**

@@ -1138,9 +1138,12 @@ describe('AiSlice model selection', () => {
     const store = createTestStore({
       getRunContext: () => activeContext,
     });
-    const sendMessage = jest.fn();
-
-    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    const sendMessage = jest
+      .spyOn(
+        store.getState().ai.getSessionChatController('session-1')!.chat,
+        'sendMessage',
+      )
+      .mockResolvedValue(undefined);
     store.getState().ai.setPrompt('session-1', 'hello');
     await store.getState().ai.startAnalysis('session-1');
     activeContext = contextB;
@@ -1176,9 +1179,12 @@ describe('AiSlice model selection', () => {
         };
       },
     });
-    const sendMessage = jest.fn();
-
-    store.getState().ai.setChatSendMessage('session-1', sendMessage);
+    const sendMessage = jest
+      .spyOn(
+        store.getState().ai.getSessionChatController('session-1')!.chat,
+        'sendMessage',
+      )
+      .mockResolvedValue(undefined);
     store.getState().ai.setSessionDraftContextItemIds('session-1', ['map-a']);
     store.getState().ai.setPrompt('session-1', 'hello');
     await store.getState().ai.startAnalysis('session-1');
@@ -1211,7 +1217,12 @@ describe('AiSlice model selection', () => {
         };
       },
     });
-    const sendMessage = jest.fn();
+    const sendMessage = jest
+      .spyOn(
+        store.getState().ai.getSessionChatController('session-1')!.chat,
+        'sendMessage',
+      )
+      .mockResolvedValue(undefined);
 
     store.getState().ai.createSession('Session 2');
     const currentSessionId = store.getState().ai.getCurrentSession()?.id;
@@ -1220,7 +1231,6 @@ describe('AiSlice model selection', () => {
       .getState()
       .ai.setSessionDraftContextItemIds(currentSessionId!, ['map-current']);
 
-    store.getState().ai.setChatSendMessage('session-1', sendMessage);
     store
       .getState()
       .ai.setSessionDraftContextItemIds('session-1', ['map-target']);

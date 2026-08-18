@@ -11,6 +11,7 @@ export type {
   ForkSessionFromMessageArgs,
 } from './AiSlice';
 export type {AiTimeoutOptions} from './timeouts';
+export type {SessionChatController} from './sessionChatRuntime';
 export {
   measureProviderContext,
   tryMeasureProviderContext,
