@@ -206,6 +206,8 @@ export interface DeckMapSettingsPanelProps {
   onTitleChange: (title: string) => void;
   onConfigChange: (config: DeckMapConfig) => void;
   readOnly?: boolean;
+  /** Custom maps stay on the JSON editor so basic controls cannot clobber them. */
+  customConfig?: boolean;
 }
 
 function getSchemeOptions(type: ColorScaleConfig['type']) {
@@ -1045,9 +1047,12 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   onTitleChange,
   onConfigChange,
   readOnly,
+  customConfig = false,
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<'settings' | 'code'>('settings');
+  const [viewMode, setViewMode] = useState<'settings' | 'code'>(
+    customConfig ? 'code' : 'settings',
+  );
   // Last color-scale field per accessor (restored when re-enabling a scale).
   const lastColorScaleFieldsRef = useRef<
     Partial<Record<DeckMapLayerColorAccessor, string>>
@@ -1074,7 +1079,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     () => JSON.stringify(config, null, 2),
     [config],
   );
-  const showCode = viewMode === 'code';
+  const showCode = customConfig || viewMode === 'code';
   const layers = getDeckMapLayerRecords(mapConfig);
   const activeLayerIndex = Math.min(layerIndex, Math.max(layers.length - 1, 0));
   const activeLayer = layers[activeLayerIndex];
@@ -1372,15 +1377,17 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         title="Map settings"
         className="shrink-0 p-2"
         actions={
-          <DeckMapCodeViewToggleButton
-            label={showCode ? 'Show settings' : 'View code'}
-            selected={showCode}
-            onClick={() =>
-              setViewMode((currentViewMode) =>
-                currentViewMode === 'code' ? 'settings' : 'code',
-              )
-            }
-          />
+          customConfig ? undefined : (
+            <DeckMapCodeViewToggleButton
+              label={showCode ? 'Show settings' : 'View code'}
+              selected={showCode}
+              onClick={() =>
+                setViewMode((currentViewMode) =>
+                  currentViewMode === 'code' ? 'settings' : 'code',
+                )
+              }
+            />
+          )
         }
         onClose={onClose}
         closeLabel="Close map settings"

@@ -25,7 +25,6 @@ import {
   getFirstDatasetSourceTableName,
   hasSqlOnlyDatasetSource,
 } from './datasetSourceUtils';
-import {quoteDeckMapSqlIdentifier} from './mapConfigUtils';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {prepareAiDeckMapConfig} from './aiNormalize';
 import type {PrepareAiDeckMapConfigOptions} from './aiNormalize';
