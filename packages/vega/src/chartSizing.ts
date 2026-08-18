@@ -51,12 +51,12 @@ function getHorizontalBarCategoryField(
   const encoding = {...inheritedEncoding, ...asObject(spec.encoding)};
   const x = asObject(encoding.x);
   const y = asObject(encoding.y);
-  const isCountAggregate = x?.aggregate === 'count';
-  const isQuantitativeX = x?.type === 'quantitative' || isCountAggregate;
+  const isAggregate = typeof x?.aggregate === 'string';
+  const isQuantitativeX = x?.type === 'quantitative' || isAggregate;
   const isDiscreteY =
     y?.type === 'nominal' ||
     y?.type === 'ordinal' ||
-    (isCountAggregate && y?.type === undefined);
+    (isAggregate && y?.type === undefined);
 
   if (
     getMarkType(spec) === 'bar' &&

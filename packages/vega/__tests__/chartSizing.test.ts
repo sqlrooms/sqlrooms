@@ -64,22 +64,25 @@ describe('getCategoryAwareVegaChartHeight', () => {
     ).toBe(312);
   });
 
-  it('supports count bars with inferred channel types', () => {
-    const categories = Array.from({length: 12}, (_, index) => `C${index}`);
+  it.each([{aggregate: 'count'}, {aggregate: 'sum', field: 'value'}])(
+    'supports $aggregate bars with inferred channel types',
+    (aggregateEncoding) => {
+      const categories = Array.from({length: 12}, (_, index) => `C${index}`);
 
-    expect(
-      getCategoryAwareVegaChartHeight({
-        spec: {
-          mark: 'bar',
-          encoding: {
-            x: {aggregate: 'count'},
-            y: {field: 'category'},
+      expect(
+        getCategoryAwareVegaChartHeight({
+          spec: {
+            mark: 'bar',
+            encoding: {
+              x: aggregateEncoding,
+              y: {field: 'category'},
+            },
           },
-        },
-        arrowTable: tableWithCategories(categories),
-      }),
-    ).toBe(312);
-  });
+          arrowTable: tableWithCategories(categories),
+        }),
+      ).toBe(312);
+    },
+  );
 
   it('keeps aspect-ratio sizing for small categorical charts', () => {
     const categories = Array.from({length: 11}, (_, index) => `C${index}`);
