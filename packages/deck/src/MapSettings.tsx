@@ -318,10 +318,6 @@ const ColorSwatchInput: FC<{
   </label>
 );
 
-function alphaToOpacityPercent(alpha: number): number {
-  return Math.round((Math.max(0, Math.min(255, alpha)) / 255) * 100);
-}
-
 function opacityPercentToAlpha(percent: number): number {
   return Math.round((Math.max(0, Math.min(100, percent)) / 100) * 255);
 }
