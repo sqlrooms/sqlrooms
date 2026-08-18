@@ -53,12 +53,14 @@ function runSafeStorageOperation<T>(
 }
 
 /**
- * Wraps a Zustand persist storage so unavailable or failing storage does not
- * prevent normal state updates. This also protects serialisation from errors
- * such as `RangeError: Invalid string length` when state grows unexpectedly.
+ * Protects storage writes and removals so failures do not prevent normal state
+ * updates, and optionally handles read failures for default browser storage.
+ * This also protects serialisation from errors such as `RangeError: Invalid
+ * string length` when state grows unexpectedly.
  */
 function createSafeStorage<S, PersistedState>(
   base: PersistOptions<S, PersistedState>['storage'],
+  suppressReadErrors: boolean,
 ): PersistOptions<S, PersistedState>['storage'] {
   if (!base) return base;
   const originalGetItem = base.getItem.bind(base);
@@ -68,7 +70,13 @@ function createSafeStorage<S, PersistedState>(
   return {
     ...base,
     getItem: (...args: Parameters<typeof originalGetItem>) =>
-      runSafeStorageOperation('getItem', () => originalGetItem(...args), null),
+      suppressReadErrors
+        ? runSafeStorageOperation(
+            'getItem',
+            () => originalGetItem(...args),
+            null,
+          )
+        : originalGetItem(...args),
     setItem: (...args: Parameters<typeof originalSetItem>) =>
       runSafeStorageOperation(
         'setItem',
@@ -292,6 +300,7 @@ export function persistSliceConfigs<
 
   const safeStorage = createSafeStorage(
     storage ?? createJSONStorage<PersistedState>(getBrowserStorage),
+    storage === undefined,
   );
 
   return persist<S, [], [], PersistedState>(stateCreator, {

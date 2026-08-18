@@ -2,7 +2,7 @@ import {afterEach, describe, expect, it, jest} from '@jest/globals';
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {z} from 'zod';
 import {createStore, StateCreator} from 'zustand/vanilla';
-import {PersistStorage, StateStorage} from 'zustand/middleware';
+import {PersistOptions, PersistStorage, StateStorage} from 'zustand/middleware';
 import {
   createPersistHelpers,
   persistSliceConfigs,
@@ -148,6 +148,7 @@ describe('createPersistHelpers.merge', () => {
 });
 
 const CounterConfig = z.object({count: z.number()});
+type PersistedCounterState = {counter: z.infer<typeof CounterConfig>};
 
 type CounterState = {
   counter: {
@@ -170,7 +171,11 @@ const counterStateCreator: StateCreator<CounterState> = (set) => ({
 });
 
 function createCounterStore(
-  storage?: PersistStorage<{counter: z.infer<typeof CounterConfig>}>,
+  storage?: PersistStorage<PersistedCounterState>,
+  onRehydrateStorage?: PersistOptions<
+    CounterState,
+    PersistedCounterState
+  >['onRehydrateStorage'],
 ) {
   return createStore(
     persistSliceConfigs(
@@ -178,6 +183,7 @@ function createCounterStore(
         name: 'counter-test-storage',
         sliceConfigSchemas: {counter: CounterConfig},
         ...(storage ? {storage} : {}),
+        ...(onRehydrateStorage ? {onRehydrateStorage} : {}),
       },
       counterStateCreator,
     ),
@@ -252,11 +258,13 @@ describe('persistSliceConfigs storage', () => {
     });
   });
 
-  it('tolerates failures from custom storage methods', () => {
+  it('propagates custom reads while tolerating write and removal failures', () => {
     jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const getItemError = new Error('getItem failed');
+    const onHydrationFinished = jest.fn();
     const storage: PersistStorage<{counter: {count: number}}> = {
       getItem: () => {
-        throw new Error('getItem failed');
+        throw getItemError;
       },
       setItem: () => {
         throw new Error('setItem failed');
@@ -266,8 +274,9 @@ describe('persistSliceConfigs storage', () => {
       },
     };
 
-    const store = createCounterStore(storage);
+    const store = createCounterStore(storage, () => onHydrationFinished);
 
+    expect(onHydrationFinished).toHaveBeenCalledWith(undefined, getItemError);
     expect(() => store.getState().counter.increment()).not.toThrow();
     expect(() =>
       (
