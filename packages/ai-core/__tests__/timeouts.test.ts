@@ -7,6 +7,7 @@ import {
   getPendingClientToolTimeouts,
   getSessionAgentProgressSignal,
   getTimedOutSessionAgentState,
+  getTimedOutToolAgentState,
   getToolExecutionTimeoutMs,
   hasPendingCurrentTurnExecutableToolCall,
   hasPendingSessionSubAgentApproval,
@@ -271,6 +272,40 @@ describe('AI timeouts', () => {
     ).not.toBe(initialSignal);
   });
 
+  it('does not serialize arbitrary agent payloads into the progress signal', () => {
+    const messages: UIMessage[] = [
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-agent',
+            toolCallId: 'session-root',
+            state: 'input-available',
+            input: {},
+          },
+        ],
+      },
+    ];
+    const cyclicOutput: {self?: unknown} = {};
+    cyclicOutput.self = cyclicOutput;
+
+    expect(() =>
+      getSessionAgentProgressSignal(messages, {
+        'session-root': [
+          {
+            toolCallId: 'nested-query',
+            toolName: 'query',
+            state: 'pending',
+            input: 1n,
+            output: cyclicOutput,
+            startedAt: 100,
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
   it('finds only nested approvals reachable from the session', () => {
     const messages: UIMessage[] = [
       {
@@ -412,9 +447,59 @@ describe('AI timeouts', () => {
     ]);
   });
 
+  it('relabels cancellation cleanup beneath a timed-out tool', () => {
+    const result = getTimedOutToolAgentState(
+      'session-root',
+      {
+        'session-root': [
+          {
+            toolCallId: 'nested-query',
+            toolName: 'query',
+            state: 'error',
+            errorText: 'Tool call cancelled by user',
+          },
+        ],
+      },
+      {},
+      'Tool "agent" timed out after 1s',
+    );
+
+    expect(result.agentProgress['session-root']).toEqual([
+      expect.objectContaining({
+        toolCallId: 'nested-query',
+        state: 'error',
+        errorText: 'Tool "agent" timed out after 1s',
+        completedAt: expect.any(Number),
+      }),
+    ]);
+  });
+
   it('aborts and rejects executable tools at their configured limit', async () => {
     jest.useFakeTimers();
     let receivedSignal: AbortSignal | undefined;
+    const agentProgress = {
+      'tool-1': [
+        {
+          toolCallId: 'nested-query',
+          toolName: 'query',
+          state: 'pending' as const,
+        },
+      ],
+    };
+    const updateAgentProgress = jest.fn(
+      (parentToolCallId: string, toolCalls: unknown[]) => {
+        agentProgress[parentToolCallId as 'tool-1'] = toolCalls as never;
+      },
+    );
+    const testState = {
+      ai: {
+        setToolCallSession: jest.fn(),
+        agentProgress,
+        pendingSubAgentApprovals: {},
+        updateAgentProgress,
+        resolveSubAgentApproval: jest.fn(),
+      },
+    };
     const wrapped = withRunContextTools(
       {
         slowTool: {
@@ -439,7 +524,8 @@ describe('AI timeouts', () => {
       } as any,
       {
         sessionId: 'session-1',
-        state: {ai: {setToolCallSession: jest.fn()}} as any,
+        state: testState as any,
+        getState: () => testState as any,
         timeouts: {toolExecutionMs: 500},
       },
     );
@@ -455,6 +541,13 @@ describe('AI timeouts', () => {
     await rejection;
     expect(receivedSignal?.aborted).toBe(true);
     expect(receivedSignal?.reason).toBeInstanceOf(ChatTimeoutError);
+    expect(updateAgentProgress).toHaveBeenCalledWith('tool-1', [
+      expect.objectContaining({
+        toolCallId: 'nested-query',
+        state: 'error',
+        errorText: 'Tool "slowTool" timed out after 500ms',
+      }),
+    ]);
     jest.useRealTimers();
   });
 });

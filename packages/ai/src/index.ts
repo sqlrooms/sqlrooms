@@ -148,7 +148,11 @@ export type {
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {fixIncompleteToolCalls} from '@sqlrooms/ai-core';
-export {streamSubAgent, updateAgentToolCallData} from '@sqlrooms/ai-core';
+export {
+  streamSubAgent,
+  updateAgentToolCallData,
+  withRunContextTools,
+} from '@sqlrooms/ai-core';
 export {
   getEffectiveSessionContextItemIds,
   getRunContextItemIds,
@@ -213,8 +217,50 @@ export type {
   ToolStructureBehavior,
   ToolDisplayBehavior,
   LocalAgentChatRootProps,
+  ChatComponentType,
+  ChatRenderingProps,
+  ChatRenderingComponents,
+  ChatNestedActivityMode,
+  ChatTurnSlotProps,
+  ChatTurnPresentation,
+  ChatPromptRegion,
+  ChatActivityRegion,
+  ChatActivityItem,
+  ChatTextRegion,
+  ChatTextItem,
+  ChatOutputRegion,
+  ChatOutputItem,
+  ChatCopyAction,
+  ChatForkAction,
+  ChatErrorRegion,
+  ChatActionsRegion,
+  ChatTimelineRegion,
+  ChatToolState,
+  ChatPromptProps,
+  ChatActivityProps,
+  ChatReasoningProps,
+  ChatTextOutputProps,
+  ChatToolActivityProps,
+  ChatHoistedOutputProps,
+  ChatErrorProps,
+  ChatActionsProps,
+  ChatTurnModel,
+  ChatTurnActivityItem,
+  ChatTurnTextItem,
+  ChatTurnRenderPlan,
+  ToolRendererShouldHoist,
 } from '@sqlrooms/ai-core';
-export {Chat} from '@sqlrooms/ai-core';
+export {
+  Chat,
+  ChatRendering,
+  DefaultChatTurn,
+  DefaultChatActivity,
+  ActivityBox,
+  buildChatTurnModel,
+  buildChatTurnRenderPlan,
+  HoistedToolCallRenderer,
+  defaultChatRenderingComponents,
+} from '@sqlrooms/ai-core';
 export {ContextSelector, CHAT_CONTEXT_SELECTOR_SLOT} from '@sqlrooms/ai-core';
 export {
   findChatSearchMatches,

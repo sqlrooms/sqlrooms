@@ -50,15 +50,26 @@ const scatterConfig = {
 };
 
 const normalizedScatterConfig = {
-  spec: scatterConfig.spec,
+  spec: {
+    ...scatterConfig.spec,
+    layers: [
+      {
+        ...scatterConfig.spec.layers[0],
+        _sqlroomsBinding: {
+          dataset: 'earthquakes',
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+    ],
+  },
   datasets: {
     earthquakes: {
       source: {
         tableName: 'earthquakes',
         transformSql:
-          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
+          'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
       },
-      geometryColumn: 'geom',
+      geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',
     },
   },
@@ -78,7 +89,6 @@ const multiLayerConfig = {
         '@@type': 'GeoArrowHeatmapLayer',
         id: 'earthquakes-density',
         _sqlroomsBinding: {dataset: 'earthquakes'},
-        getWeight: 'magnitude',
       },
     ],
   },
@@ -312,9 +322,13 @@ describe('createDeckMapConfigTool', () => {
     });
 
     expect(result.llmResult.success).toBe(true);
-    expect(result.llmResult.data.config.spec.layers).toEqual(
-      multiLayerConfig.spec.layers,
-    );
+    expect(result.llmResult.data.config.spec.layers).toEqual([
+      {
+        ...multiLayerConfig.spec.layers[0],
+        getFillColor: [56, 189, 248, 180],
+      },
+      multiLayerConfig.spec.layers[1],
+    ]);
   });
 
   it('preserves configMode in the created panel config', async () => {
@@ -386,9 +400,13 @@ describe('createDeckMapDashboardTool', () => {
   });
 
   it('includes deck map guidance in reusable dashboard instructions', () => {
-    expect(getDashboardWithDeckMapAiInstructions()).toContain(
-      'create_dashboard_map',
-    );
+    const instructions = getDashboardWithDeckMapAiInstructions();
+    expect(instructions).toContain('create_dashboard_map');
+    expect(instructions).toContain('Shared Deck map authoring rules');
+    expect(instructions).toContain('Never set mapStyle to a mapbox://');
+    expect(instructions).toContain('omit getWeight');
+    expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
+    expect(instructions).toContain('min < max');
   });
 
   it('provides default dashboard slice options with the deck map panel action', () => {
@@ -447,6 +465,128 @@ describe('createDeckMapDashboardTool', () => {
       title: 'Earthquake map',
       config: normalizedScatterConfig,
     });
+  });
+
+  it('validates and selects the prepared dataset table name', async () => {
+    const selectedTables: string[] = [];
+    const resolvedTables: string[] = [];
+    const tool = createDeckMapDashboardTool({
+      stripCatalogNames: ['sqlrooms-cli'],
+      databaseAdapter: {
+        getTables: () => [],
+        findTable: (tableName) => {
+          const name =
+            typeof tableName === 'string' ? tableName : tableName.toString();
+          resolvedTables.push(name);
+          return name === 'main.earthquakes'
+            ? ({tableName: name, columns: []} as any)
+            : undefined;
+        },
+      },
+      dashboardAdapter: {
+        setSelectedTable: (tableName) => {
+          selectedTables.push(tableName);
+        },
+        addPanel: () => 'panel-1',
+        updatePanel: () => {},
+        removePanel: () => {},
+        getPanel: () => undefined,
+        getPanelIssue: () => undefined,
+      },
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Earthquake map',
+      config: {
+        ...scatterConfig,
+        datasets: {
+          earthquakes: {
+            ...scatterConfig.datasets.earthquakes,
+            source: {tableName: 'sqlrooms-cli.main.earthquakes'},
+          },
+        },
+      },
+      reasoning: 'show locations',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    expect(resolvedTables).toContain('main.earthquakes');
+    expect(selectedTables).toEqual(['main.earthquakes']);
+    expect(
+      result.llmResult.data.config.datasets.earthquakes.source.tableName,
+    ).toBe('main.earthquakes');
+  });
+
+  it('rejects unknown colorScale fields on bare tableName sources', async () => {
+    const {dashboardAdapter, databaseAdapter} = createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Bad color field',
+      config: {
+        ...scatterConfig,
+        spec: {
+          ...scatterConfig.spec,
+          layers: [
+            {
+              ...scatterConfig.spec.layers[0],
+              getFillColor: {
+                '@@function': 'colorScale',
+                field: 'mag',
+                type: 'sequential',
+                scheme: 'Viridis',
+                domain: 'auto',
+              },
+            },
+          ],
+        },
+      },
+      reasoning: 'typo field',
+    });
+
+    expect(result.llmResult.success).toBe(false);
+    expect(result.llmResult.errorMessage).toMatch(
+      /colorScale field "mag" is not a column/,
+    );
+  });
+
+  it('fixes colorScale field casing via prepare on dashboard create', async () => {
+    const {dashboards, dashboardAdapter, databaseAdapter} =
+      createTestAdapters();
+    const tool = createDeckMapDashboardTool({
+      dashboardAdapter,
+      databaseAdapter,
+    });
+
+    const result = await (tool as any).execute({
+      title: 'Cased color field',
+      config: {
+        ...scatterConfig,
+        spec: {
+          ...scatterConfig.spec,
+          layers: [
+            {
+              ...scatterConfig.spec.layers[0],
+              getFillColor: {
+                '@@function': 'colorScale',
+                field: 'Magnitude',
+                type: 'sequential',
+                scheme: 'Viridis',
+                domain: 'auto',
+              },
+            },
+          ],
+        },
+      },
+      reasoning: 'fix casing',
+    });
+
+    expect(result.llmResult.success).toBe(true);
+    const layer = dashboards['dashboard-1']!.panels[0].config.spec.layers[0];
+    expect(layer.getFillColor.field).toBe('magnitude');
   });
 
   it('updates an existing map panel from a native Deck JSON config', async () => {

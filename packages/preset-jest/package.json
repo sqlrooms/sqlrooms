@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/preset-jest",
-  "version": "0.29.0-rc.9",
+  "version": "0.29.0-rc.10",
   "private": true,
   "type": "module",
   "main": "base.js",
@@ -15,6 +15,7 @@
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.1.3",
     "jest-environment-jsdom": "^30.1.2",
+    "jest-environment-node": "^30.1.2",
     "ts-jest": "^29.4.4"
   }
 }

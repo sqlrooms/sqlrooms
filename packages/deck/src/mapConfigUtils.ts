@@ -122,6 +122,8 @@ function inferGeometryEncodingHint(
   ) {
     return 'wkt';
   }
+  // Native DuckDB GEOMETRY is not an encoding hint — the dataset pipeline
+  // projects it through ST_AsWKB via DESCRIBE + SELECT * REPLACE.
   return undefined;
 }
 

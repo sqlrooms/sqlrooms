@@ -1,4 +1,5 @@
 import type {UIMessage} from 'ai';
+import {TOOL_CALL_CANCELLED} from './constants';
 import type {
   AgentToolCall,
   PendingSubAgentApproval,
@@ -204,7 +205,11 @@ export function getSessionAgentProgressSignal(
       .filter(([parentToolCallId]) =>
         reachableToolCallIds.has(parentToolCallId),
       )
-      .sort(([left], [right]) => left.localeCompare(right)),
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([parentToolCallId, toolCalls]) => [
+        parentToolCallId,
+        toolCalls.map(getAgentToolCallProgressSignal),
+      ]),
   );
 }
 
@@ -229,6 +234,38 @@ export function getTimedOutSessionAgentState(
     messages,
     agentProgress,
   );
+  return getTimedOutAgentState(
+    reachableToolCallIds,
+    agentProgress,
+    pendingApprovals,
+    timeoutMessage,
+  );
+}
+
+/**
+ * Marks agent work reachable from one timed-out tool call as failed and
+ * returns approval IDs that must be released.
+ */
+export function getTimedOutToolAgentState(
+  toolCallId: string,
+  agentProgress: Record<string, AgentToolCall[]>,
+  pendingApprovals: Record<string, PendingSubAgentApproval>,
+  timeoutMessage: string,
+): TimedOutSessionAgentState {
+  return getTimedOutAgentState(
+    expandReachableAgentToolCallIds(new Set([toolCallId]), agentProgress),
+    agentProgress,
+    pendingApprovals,
+    timeoutMessage,
+  );
+}
+
+function getTimedOutAgentState(
+  reachableToolCallIds: Set<string>,
+  agentProgress: Record<string, AgentToolCall[]>,
+  pendingApprovals: Record<string, PendingSubAgentApproval>,
+  timeoutMessage: string,
+): TimedOutSessionAgentState {
   const approvalIds = new Set<string>();
   const completedAt = Date.now();
 
@@ -236,7 +273,8 @@ export function getTimedOutSessionAgentState(
     const agentToolCalls = toolCall.agentToolCalls?.map(completeToolCall);
     if (
       toolCall.state === 'pending' ||
-      toolCall.state === 'approval-requested'
+      toolCall.state === 'approval-requested' ||
+      (toolCall.state === 'error' && toolCall.errorText === TOOL_CALL_CANCELLED)
     ) {
       if (toolCall.approvalId) approvalIds.add(toolCall.approvalId);
       return {
@@ -302,6 +340,13 @@ function getReachableAgentToolCallIds(
     }
   }
 
+  return expandReachableAgentToolCallIds(reachableToolCallIds, agentProgress);
+}
+
+function expandReachableAgentToolCallIds(
+  reachableToolCallIds: Set<string>,
+  agentProgress: Record<string, AgentToolCall[]>,
+): Set<string> {
   let foundReachableProgress = true;
   while (foundReachableProgress) {
     foundReachableProgress = false;
@@ -316,6 +361,19 @@ function getReachableAgentToolCallIds(
   }
 
   return reachableToolCallIds;
+}
+
+function getAgentToolCallProgressSignal(toolCall: AgentToolCall): unknown[] {
+  return [
+    toolCall.toolCallId,
+    toolCall.toolName,
+    toolCall.state,
+    toolCall.approvalId,
+    toolCall.errorText,
+    toolCall.startedAt,
+    toolCall.completedAt,
+    toolCall.agentToolCalls?.map(getAgentToolCallProgressSignal),
+  ];
 }
 
 function addAgentToolCallIds(

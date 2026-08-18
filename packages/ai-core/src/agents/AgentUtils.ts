@@ -1,6 +1,7 @@
 import {ToolLoopAgent, ToolSet, UIMessageChunk, createAgentUIStream} from 'ai';
 import {ToolAbortError} from '../utils';
 import {TOOL_CALL_CANCELLED} from '../constants';
+import {ChatTimeoutError} from '../timeouts';
 import type {
   AgentProgressSnapshot,
   AgentStreamOutput,
@@ -163,6 +164,7 @@ function summarizeOutput(output: unknown): unknown {
  */
 function markPendingToolCallsAsCancelled(
   toolCallMap: Map<string, AgentToolCall>,
+  errorText: string = TOOL_CALL_CANCELLED,
 ): void {
   const now = Date.now();
   for (const [id, tc] of toolCallMap) {
@@ -170,7 +172,7 @@ function markPendingToolCallsAsCancelled(
       toolCallMap.set(id, {
         ...tc,
         state: 'error',
-        errorText: TOOL_CALL_CANCELLED,
+        errorText,
         completedAt: now,
         approvalId: undefined,
       });
@@ -301,9 +303,13 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   parentToolCallId: string,
   abortSignal?: AbortSignal,
 ): Promise<AgentStreamOutput> {
+  const getAbortMessage = () =>
+    abortSignal?.reason instanceof ChatTimeoutError
+      ? abortSignal.reason.message
+      : TOOL_CALL_CANCELLED;
   const throwIfAborted = () => {
     if (abortSignal?.aborted) {
-      throw new ToolAbortError(TOOL_CALL_CANCELLED);
+      throw new ToolAbortError(getAbortMessage());
     }
   };
 
@@ -367,6 +373,15 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
     try {
       for await (const chunk of stream) {
         throwIfAborted();
+
+        // A stream-level error (e.g. an API 401 / provider failure) is delivered
+        // as an `error` chunk rather than a thrown exception, because the AI SDK
+        // routes it through `streamText`'s `onError`. Surface it as a thrown
+        // error so callers can react (revert, show a retry) instead of silently
+        // treating the run as a successful no-op.
+        if (chunk.type === 'error') {
+          throw new Error(chunk.errorText || 'The AI request failed.');
+        }
 
         if (chunk.type === 'text-delta') {
           finalText += chunk.delta;
@@ -473,7 +488,8 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
         }
       }
     } catch (err) {
-      markPendingToolCallsAsCancelled(toolCallMap);
+      const abortMessage = getAbortMessage();
+      markPendingToolCallsAsCancelled(toolCallMap, abortMessage);
       pushProgress();
 
       if (abortSignal?.aborted) {
@@ -484,7 +500,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
           store,
         );
         store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
-        throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
+        throw new ToolAbortError(abortMessage, snapshot);
       }
       throw err;
     }
@@ -577,7 +593,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
   // of relying on agentToolCalls embedded in the tool output (which would
   // bloat the main orchestrator's message context).
   if (abortSignal?.aborted) {
-    markPendingToolCallsAsCancelled(toolCallMap);
+    markPendingToolCallsAsCancelled(toolCallMap, getAbortMessage());
   }
 
   pushProgress();
@@ -590,7 +606,7 @@ export async function streamSubAgent<TOOLS extends ToolSet = ToolSet>(
       store,
     );
     store.getState().ai.writeAbortSnapshot?.(parentToolCallId, snapshot);
-    throw new ToolAbortError(TOOL_CALL_CANCELLED, snapshot);
+    throw new ToolAbortError(getAbortMessage(), snapshot);
   }
 
   return {

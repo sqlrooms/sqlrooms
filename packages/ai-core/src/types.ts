@@ -1,4 +1,4 @@
-import type {ComponentType} from 'react';
+import type {ComponentType, ExoticComponent} from 'react';
 import type {
   AiRunContext,
   AiRunContextItem,
@@ -116,6 +116,42 @@ export type AgentSnapshot = {
   startedAt: number;
 };
 
+/** Metadata-only measurement of one outbound provider step. */
+export type ProviderContextDiagnostic = {
+  id: string;
+  recordedAt: number;
+  /** Stable caller-assigned role label, e.g. `chat-coordinator`. */
+  role: string;
+  provider: string;
+  model: string;
+  sessionId?: string;
+  /** Zero-based provider invocation within the owning request. */
+  step: number;
+  instructions: {chars: number; bytes: number};
+  messages: {count: number; bytes: number};
+  tools: Array<{name: string; schemaBytes: number}>;
+  toolSchemaBytes: number;
+  /** Names of request-assembly sources; never their content. */
+  sources: string[];
+  /** Numeric request-preparation facts such as catalog or candidate size. */
+  preparationMetrics?: Record<string, number>;
+  /** Provider-reported input tokens, populated after the step completes. */
+  inputTokens?: number;
+};
+
+export type ProviderContextMeasurementInput = {
+  role: string;
+  provider: string;
+  model: string;
+  sessionId?: string;
+  step: number;
+  instructions: unknown;
+  messages: unknown[];
+  tools?: ToolSet;
+  sources?: string[];
+  preparationMetrics?: Record<string, number>;
+};
+
 /** Devtools-only state and controls nested under the AI slice. */
 export type AiDevtoolsState = {
   /** Optional devtools snapshots for agent metadata, keyed by parent toolCallId. */
@@ -131,6 +167,20 @@ export type AiDevtoolsState = {
   ) => void;
   /** Clears all captured agent metadata snapshots. */
   clearAgentSnapshots: () => void;
+  /** Bounded, transient, metadata-only provider request measurements. */
+  providerContexts: ProviderContextDiagnostic[];
+  shouldCaptureProviderContexts: () => boolean;
+  measureProviderContext: (
+    input: ProviderContextMeasurementInput,
+  ) => Promise<string | undefined>;
+  writeProviderContext: (diagnostic: ProviderContextDiagnostic) => void;
+  setProviderContextInputTokens: (id: string, inputTokens: number) => void;
+  mergeLatestProviderContextMetrics: (
+    role: string,
+    metrics: Record<string, number>,
+    sessionId?: string,
+  ) => void;
+  clearProviderContexts: () => void;
 };
 
 /**
@@ -282,10 +332,19 @@ export interface AiStateForTransport {
   readAbortSnapshot?: (toolCallId: string) => AgentProgressSnapshot | undefined;
   clearAbortSnapshots?: () => void;
   getFullInstructions: (sessionId?: string) => string;
-  /** Get API key from settings for the current session's provider */
-  getApiKeyFromSettings: () => string;
-  /** Get base URL from settings for the current session's provider */
-  getBaseUrlFromSettings: () => string | undefined;
+  /**
+   * Get API key from settings. Defaults to the current session's provider;
+   * pass `provider`/`model` to resolve the key for a specific outbound provider.
+   */
+  getApiKeyFromSettings: (provider?: string, model?: string) => string;
+  /**
+   * Get base URL from settings. Defaults to the current session's provider;
+   * pass `provider`/`model` to resolve the URL for a specific outbound provider.
+   */
+  getBaseUrlFromSettings: (
+    provider?: string,
+    model?: string,
+  ) => string | undefined;
   /** Set API key error flag for a provider */
   setApiKeyError: (provider: string, hasError: boolean) => void;
   /** Get the maximum number of agent steps from settings */
@@ -328,6 +387,29 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
   approvalId?: string;
 };
 
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+type RenderableComponent<TProps> =
+  ComponentType<TProps> | ExoticComponent<TProps>;
+
+/**
+ * Component type inferred from a tool or from explicit output/input.
+ * Tuple-wrapped so a union tool type does not distribute into a bare
+ * `FunctionComponent` union that drops {@link ToolRendererShouldHoist}.
+ * `any` is treated as an explicit output type so registries stay writable.
+ */
+type ToolRendererComponent<TToolOrOutput, TInput> =
+  IsAny<TToolOrOutput> extends true
+    ? RenderableComponent<ToolRendererProps<any, any>>
+    : [TToolOrOutput] extends [Tool]
+      ? RenderableComponent<
+          ToolRendererProps<
+            InferToolOutput<Extract<TToolOrOutput, Tool>>,
+            InferToolInput<Extract<TToolOrOutput, Tool>>
+          >
+        >
+      : RenderableComponent<ToolRendererProps<TToolOrOutput, TInput>>;
+
 /**
  * A React component that renders the result of a tool call.
  *
@@ -335,18 +417,30 @@ export type ToolRendererProps<TOutput = unknown, TInput = unknown> = {
  * ToolRenderer<ReturnType<typeof myTool>>    // infers output/input from Tool
  * ToolRenderer<MyOutput, MyInput>            // explicit output/input
  * ```
+ *
+ * Dispatcher tools that only sometimes produce UI (e.g. `executeApi`) may
+ * attach an optional static `shouldHoist` predicate. When it returns false,
+ * ChatTurnView keeps the call in the activity timeline and does not emit an
+ * empty hoisted slot in the turn body.
  */
 export type ToolRenderer<
   TToolOrOutput = unknown,
   TInput = unknown,
-> = TToolOrOutput extends Tool
-  ? ComponentType<
-      ToolRendererProps<
-        InferToolOutput<TToolOrOutput>,
-        InferToolInput<TToolOrOutput>
-      >
-    >
-  : ComponentType<ToolRendererProps<TToolOrOutput, TInput>>;
+> = ToolRendererComponent<TToolOrOutput, TInput> & {
+  shouldHoist?: ToolRendererShouldHoist;
+};
+
+/**
+ * Optional static predicate on a {@link ToolRenderer}. Return false when this
+ * particular call has no visible UI so it is not collected into the hoisted
+ * turn-body slot list.
+ */
+export type ToolRendererShouldHoist = (args: {
+  output: unknown;
+  input: unknown;
+  /** Normalized tool-call state shared by top-level and nested calls. */
+  state: AgentToolCall['state'];
+}) => boolean;
 
 /** Registry mapping tool names to their renderer components. */
 export type ToolRendererRegistry = Record<string, ToolRenderer<any>>;

@@ -267,6 +267,24 @@ describe('createCliBlockDocumentAgentTool', () => {
     ).toBe(true);
   });
 
+  it('creates the embedded dashboard agent for the current worksheet', async () => {
+    const embeddedDashboardAgent = tool({
+      inputSchema: z.object({dashboardId: z.string()}),
+      execute: async () => ({success: true}),
+    });
+    const dashboardAgentTool = jest.fn(() => embeddedDashboardAgent);
+
+    await executeAgentTool(
+      createOptions({
+        dashboardAgentTool,
+        runSubAgent: jest.fn(async () => ({finalOutput: 'done'})),
+      }),
+      {},
+    );
+
+    expect(dashboardAgentTool).toHaveBeenCalledWith('worksheet-1');
+  });
+
   it('fails when no target-block tool is available', async () => {
     const runSubAgent = jest.fn(async () => ({}));
     const result = await executeAgentTool(

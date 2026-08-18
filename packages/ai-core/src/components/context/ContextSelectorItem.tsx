@@ -59,12 +59,7 @@ export const ContextSelectorItemComponent: FC<ContextSelectorItemProps> = ({
           <span className="text-muted-foreground text-xs capitalize">
             {defaultTypeLabel(item)}
           </span>
-          {running && (
-            <UiBadge variant="secondary" className="h-5 px-1.5 text-[10px]">
-              Running
-            </UiBadge>
-          )}
-          {selected && !running && (
+          {selected && (
             <UiBadge variant="secondary" className="h-5 px-1.5 text-[10px]">
               Selected
             </UiBadge>

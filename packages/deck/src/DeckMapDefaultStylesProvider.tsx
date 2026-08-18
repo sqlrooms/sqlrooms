@@ -34,10 +34,19 @@ export function useDeckMapDefaultStyles() {
   return useContext(DeckMapDefaultStylesContext);
 }
 
-/**
- * Resolves the effective map style from explicit config, map props, host
- * defaults, and finally the package fallback for the active theme.
- */
+/** True for `mapbox://` style URLs (MapLibre cannot load them without a token). */
+export function isMapboxStyleUrl(style: unknown): boolean {
+  return typeof style === 'string' && /^mapbox:/i.test(style.trim());
+}
+
+function usableMapStyle(
+  style: string | MapProps['mapStyle'] | undefined,
+): DeckMapStyle | undefined {
+  if (style == null || isMapboxStyleUrl(style)) return undefined;
+  return style as DeckMapStyle;
+}
+
+/** Resolve map style; skips `mapbox://` so the map can still load. */
 export function resolveDeckMapStyle(options: {
   mapStyle?: string;
   mapPropsMapStyle?: MapProps['mapStyle'];
@@ -46,9 +55,9 @@ export function resolveDeckMapStyle(options: {
   fallbackStyles: Record<ResolvedTheme, string>;
 }): DeckMapStyle {
   return (
-    options.mapStyle ??
-    options.mapPropsMapStyle ??
-    options.hostDefaultStyles?.[options.resolvedTheme] ??
+    usableMapStyle(options.mapStyle) ??
+    usableMapStyle(options.mapPropsMapStyle) ??
+    usableMapStyle(options.hostDefaultStyles?.[options.resolvedTheme]) ??
     options.fallbackStyles[options.resolvedTheme]
   );
 }

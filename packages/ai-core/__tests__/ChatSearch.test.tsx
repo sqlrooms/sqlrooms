@@ -43,13 +43,16 @@ const blocks: ChatSearchBlock[] = [
 ];
 
 function createTestStore(sessionId = 'session-1') {
-  return createStore<AiSliceState>(() => ({
-    ai: {
-      config: {
-        currentSessionId: sessionId,
-      },
-    },
-  })) as any;
+  return createStore<AiSliceState>(
+    () =>
+      ({
+        ai: {
+          config: {
+            currentSessionId: sessionId,
+          },
+        },
+      }) as unknown as AiSliceState,
+  ) as any;
 }
 
 function BlockRegistrar({
@@ -60,6 +63,25 @@ function BlockRegistrar({
   blocks: ChatSearchBlock[];
 }) {
   useRegisterChatSearchBlocks(groupId, blocks);
+  return null;
+}
+
+// Mirrors ChatTurnView: search blocks are only built while a query is active,
+// so the registered blocks transition from [] to real content after the user types.
+function QueryAwareBlockRegistrar({
+  groupId = 'group',
+  blocks,
+}: {
+  groupId?: string;
+  blocks: ChatSearchBlock[];
+}) {
+  const {query} = useChatSearch();
+  const hasQuery = query.trim().length > 0;
+  const activeBlocks = React.useMemo(
+    () => (hasQuery ? blocks : []),
+    [hasQuery, blocks],
+  );
+  useRegisterChatSearchBlocks(groupId, activeBlocks);
   return null;
 }
 
@@ -200,6 +222,31 @@ describe('chat search helpers', () => {
 });
 
 describe('Chat.Search', () => {
+  it('reports matches when blocks are registered after the query is entered', () => {
+    latestSearchRef.current = undefined;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <QueryAwareBlockRegistrar blocks={blocks} />
+            <ChatSearch />
+            <SearchController />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    setDesignQuery();
+    expect(container.textContent).toContain('1/2');
+
+    cleanup(container, root);
+  });
+
   it('renders match counts and wraps next/previous navigation', () => {
     const {container, root} = renderSearchUi();
 
@@ -229,6 +276,71 @@ describe('Chat.Search', () => {
         ?.dispatchEvent(new MouseEvent('click', {bubbles: true}));
     });
     expect(container.textContent).toContain('2/2');
+
+    cleanup(container, root);
+  });
+
+  it('does not loop when turns re-register equivalent empty blocks', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const store = createTestStore();
+    let consumerRenderCount = 0;
+
+    function SearchConsumer() {
+      useChatSearch();
+      React.useEffect(() => {
+        consumerRenderCount += 1;
+      });
+      return null;
+    }
+
+    function FreshEmptyRegistrar({nonce}: {nonce: number}) {
+      // Fresh [] each render — mirrors ChatTurnView when searchBlocks memo
+      // invalidates and returns a new empty array on every streamed token.
+      void nonce;
+      useRegisterChatSearchBlocks('turn-1', []);
+      useRegisterChatSearchBlocks('turn-2', []);
+      return <SearchConsumer />;
+    }
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <FreshEmptyRegistrar nonce={0} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    const afterMount = consumerRenderCount;
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <FreshEmptyRegistrar nonce={1} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    act(() => {
+      root.render(
+        <RoomStateProvider roomStore={store}>
+          <ChatSearchProvider>
+            <FreshEmptyRegistrar nonce={2} />
+          </ChatSearchProvider>
+        </RoomStateProvider>,
+      );
+    });
+
+    // Without equality bailout, each fresh [] registration setStates the
+    // provider, re-renders the registrar with another fresh [], and exceeds
+    // React's max update depth. Keep consumer renders bounded.
+    expect(consumerRenderCount).toBeLessThan(afterMount + 10);
+    expect(consumerRenderCount).toBeLessThan(50);
 
     cleanup(container, root);
   });

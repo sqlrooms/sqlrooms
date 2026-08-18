@@ -1,6 +1,5 @@
 import {z} from 'zod';
 import {ChatSessionSchema} from './schema/ChatSessionSchema';
-import {createId} from '@paralleldrive/cuid2';
 
 export const AiSessionForkOrigin = z.object({
   sourceSessionId: z.string(),
@@ -20,31 +19,33 @@ export const AiSliceConfig = z.object({
   openSessionTabs: z.array(z.string()).optional(),
   /** targetSessionId -> fork provenance */
   sessionForks: z.record(z.string(), AiSessionForkOrigin).default({}),
+  /** IDs of pinned sessions */
+  pinnedSessionIds: z.array(z.string()).optional(),
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
+/**
+ * Creates the default AI slice configuration.
+ *
+ * The default config intentionally contains no chat session: the first session
+ * is created lazily when the user sends their first message, so an empty
+ * workspace does not show a stray session. `currentSessionId` is therefore
+ * `undefined` and all session collections start empty.
+ *
+ * @param props - Optional overrides merged on top of the generated defaults.
+ * Any provided field replaces the corresponding default.
+ * @returns A fully-populated {@link AiSliceConfig}.
+ */
 export function createDefaultAiConfig(
   props?: Partial<AiSliceConfig>,
 ): AiSliceConfig {
-  const defaultSessionId = createId();
+  // Don't create default session - let it be created when user sends first message
   return {
-    sessions: [
-      {
-        id: defaultSessionId,
-        name: 'Untitled',
-        modelProvider: 'openai',
-        model: 'gpt-4.1',
-        createdAt: new Date(),
-        uiMessages: [],
-        messagesRevision: 0,
-        prompt: '',
-        isRunning: false,
-        lastOpenedAt: Date.now(),
-      },
-    ],
-    currentSessionId: defaultSessionId,
-    openSessionTabs: [defaultSessionId],
+    sessions: [],
+    currentSessionId: undefined,
+    openSessionTabs: [],
     sessionForks: {},
+    pinnedSessionIds: [],
     ...props,
   };
 }

@@ -26,6 +26,7 @@ import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
+import {buildDeckMapJumpToOptions} from './mapFit';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -513,12 +514,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       ref,
       () => ({
         jumpTo(opts) {
-          const jumpOpts = {
-            center: [opts.longitude, opts.latitude] as [number, number],
-            zoom: opts.zoom,
-            bearing: opts.bearing ?? 0,
-            pitch: opts.pitch ?? 0,
-          };
+          const jumpOpts = buildDeckMapJumpToOptions(opts);
           if (mapRef.current) {
             mapRef.current.jumpTo(jumpOpts);
           } else {

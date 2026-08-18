@@ -6,6 +6,7 @@ import {
   useChatRuntime,
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
+import {ChatRendering, type ChatRenderingProps} from './ChatRenderingContext';
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
@@ -35,6 +36,11 @@ type RootProps = PropsWithChildren<{
 type ChatComponent = FC<RootProps> & {
   Root: FC<RootProps>;
   LocalAgentRoot: FC<LocalAgentChatRootProps>;
+  /**
+   * Subtree-scoped presentation recipe. Partial `components` overrides merge
+   * with SQLRooms defaults (or a parent recipe).
+   */
+  Rendering: FC<ChatRenderingProps>;
   Sessions: typeof SessionControls;
   Header: typeof ChatHeader;
   History: typeof ChatHistoryView;
@@ -130,6 +136,7 @@ const PromptSuggestionsCompound = Object.assign(PromptSuggestionsContainer, {
 export const Chat: ChatComponent = Object.assign(Root, {
   Root,
   LocalAgentRoot,
+  Rendering: ChatRendering,
   Sessions: SessionControls,
   Header: ChatHeader,
   History: ChatHistoryView,
@@ -142,4 +149,4 @@ export const Chat: ChatComponent = Object.assign(Root, {
   ContextSelector: ContextSelector,
 }) as ChatComponent;
 
-export type {LocalAgentChatRootProps};
+export type {LocalAgentChatRootProps, ChatRenderingProps};

@@ -19,6 +19,7 @@ describe('AiSlice run timeout', () => {
         timeouts: {runMs: 1_000},
       })(set, get, api),
     );
+    store.getState().ai.createSession();
     const sessionId = store.getState().ai.getCurrentSession()!.id;
     const messages: UIMessage[] = [
       {
@@ -103,6 +104,7 @@ describe('AiSlice run timeout', () => {
         api,
       ),
     );
+    store.getState().ai.createSession();
     const sessionId = store.getState().ai.getCurrentSession()!.id;
     store.getState().ai.setChatSendMessage(sessionId, jest.fn());
     store.getState().ai.setChatStop(sessionId, stop);
@@ -124,6 +126,7 @@ describe('AiSlice run timeout', () => {
         api,
       ),
     );
+    store.getState().ai.createSession();
     const session = store.getState().ai.getCurrentSession()!;
     const messages: UIMessage[] = [
       {
@@ -204,6 +207,7 @@ describe('AiSlice run timeout', () => {
         api,
       ),
     );
+    store.getState().ai.createSession();
     const session = store.getState().ai.getCurrentSession()!;
     const messages: UIMessage[] = [
       {
@@ -313,6 +317,7 @@ describe('AiSlice run timeout', () => {
         api,
       ),
     );
+    store.getState().ai.createSession();
     const sessionId = store.getState().ai.getCurrentSession()!.id;
     const controller = new AbortController();
     controller.abort(
@@ -323,6 +328,14 @@ describe('AiSlice run timeout', () => {
       ),
     );
     store.getState().ai.setAbortController(sessionId, controller);
+    store.getState().ai.updateAgentProgress('tool-1', [
+      {
+        toolCallId: 'nested-query',
+        toolName: 'query',
+        state: 'error',
+        errorText: 'Tool call cancelled by user',
+      },
+    ]);
 
     const messages: UIMessage[] = [
       {
@@ -360,6 +373,17 @@ describe('AiSlice run timeout', () => {
     expect(saved[1]?.parts[0]).toMatchObject({
       state: 'output-error',
       errorText: 'No model or tool progress received for 2s',
+    });
+    const state = store.getState();
+    expect(state.ai.agentProgress['tool-1']).toEqual([
+      expect.objectContaining({
+        toolCallId: 'nested-query',
+        state: 'error',
+        errorText: 'No model or tool progress received for 2s',
+      }),
+    ]);
+    expect(state.ai.getCurrentSession()?.agentProgress).toEqual({
+      'tool-1': state.ai.agentProgress['tool-1'],
     });
   });
 });

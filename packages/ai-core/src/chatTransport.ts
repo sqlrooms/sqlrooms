@@ -45,9 +45,12 @@ import {formatAbortSnapshot} from './agents/AgentUtils';
 import {
   ChatTimeoutError,
   createToolTimeoutError,
+  getTimedOutSessionAgentState,
+  getTimedOutToolAgentState,
   getToolExecutionTimeoutMs,
   type AiTimeoutOptions,
 } from './timeouts';
+import {tryMeasureProviderContext} from './devtools/providerContextDiagnostics';
 
 /**
  * Write tool timings from the store into assistant message metadata so they
@@ -233,15 +236,38 @@ function getSessionById(
 }
 
 /**
- * Adds SQLRooms run context to executable tools and enforces any configured
- * per-tool execution timeout while preserving upstream cancellation signals.
+ * Wrap every executable tool in `tools` so it receives the invoking turn's
+ * execution scope (`sessionId` plus the mutable `AiRunContext` accessors) in its
+ * AI SDK execution options.
+ *
+ * Use this wherever a toolset is handed to an agent that does not itself own the
+ * chat request — most importantly for nested `ToolLoopAgent` sub-agents, whose
+ * tools would otherwise execute with no scope at all and fall back to whatever
+ * artifact/map/session is currently visible in the UI.
+ *
+ * Semantics:
+ *
+ * - Parent scope wins over inner options when the parent supplies a value, so a
+ *   nested agent cannot accidentally reassign the owning session. Fields the
+ *   parent leaves `undefined` preserve whatever the inner options already had.
+ * - `getAiRunContext` is read at execution time rather than captured, so an
+ *   in-turn retarget (e.g. `set_primary_context_artifact`) is visible to later
+ *   tool calls, including those inside nested agents.
+ * - The inner tool's own `toolCallId`, `messages`, and `abortSignal` are left
+ *   intact.
+ * - `state` is optional and only used for `setToolCallSession` attribution. Omit
+ *   it when forwarding into nested agents; the chat transport passes it so
+ *   top-level tool calls stay attributed to their session.
+ * - `getState` lets timeout cleanup read the latest nested-agent progress. It
+ *   should be supplied by transports that provide `state`.
+ * - Configured per-tool timeouts preserve upstream cancellation signals and
+ *   abort the signal forwarded to the wrapped tool when its limit expires.
  */
 export function withRunContextTools(
   tools: ToolSet,
   args: AiToolExecutionContext & {
-    state: AiSliceStateForTransport;
-    getAiRunContext?: () => AiRunContext | undefined;
-    setAiRunContext?: (runContext: AiRunContext | undefined) => void;
+    state?: AiSliceStateForTransport;
+    getState?: () => AiSliceStateForTransport;
     timeouts?: AiTimeoutOptions;
   },
 ): ToolSet {
@@ -265,7 +291,7 @@ export function withRunContextTools(
                 ? options.toolCallId
                 : undefined;
             if (toolCallId && args.sessionId) {
-              args.state.ai.setToolCallSession(toolCallId, args.sessionId);
+              args.state?.ai.setToolCallSession(toolCallId, args.sessionId);
             }
             const timeoutMs = getToolExecutionTimeoutMs(args.timeouts, name);
             const timeoutController =
@@ -280,13 +306,15 @@ export function withRunContextTools(
             const executionOptions = {
               ...options,
               abortSignal,
-              sessionId: args.sessionId,
-              aiRunContext: args.getAiRunContext
-                ? args.getAiRunContext()
-                : args.aiRunContext,
-              getAiRunContext: args.getAiRunContext,
-              setAiRunContext: args.setAiRunContext,
-              setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+              ...definedScopeFields({
+                sessionId: args.sessionId,
+                aiRunContext: args.getAiRunContext
+                  ? args.getAiRunContext()
+                  : args.aiRunContext,
+                getAiRunContext: args.getAiRunContext,
+                setAiRunContext: args.setAiRunContext,
+                setPrimaryRunContextItem: args.setPrimaryRunContextItem,
+              }),
             } as never;
 
             if (timeoutMs == null || !timeoutController) {
@@ -298,7 +326,15 @@ export function withRunContextTools(
             const timeoutPromise = new Promise<never>((_resolve, reject) => {
               timeoutId = setTimeout(() => {
                 reject(timeoutError);
-                timeoutController.abort(timeoutError);
+                try {
+                  normalizeTimedOutToolAgentState(
+                    args.getState?.() ?? args.state,
+                    toolCallId,
+                    timeoutError.message,
+                  );
+                } finally {
+                  timeoutController.abort(timeoutError);
+                }
               }, timeoutMs);
             });
 
@@ -317,6 +353,43 @@ export function withRunContextTools(
       ];
     }),
   ) as ToolSet;
+}
+
+/**
+ * Drop `undefined` scope fields so wrapping a toolset with a partially
+ * populated parent context never erases scope the inner options already carry.
+ */
+function definedScopeFields(
+  fields: AiToolExecutionContext,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined),
+  );
+}
+
+function normalizeTimedOutToolAgentState(
+  state: AiSliceStateForTransport | undefined,
+  toolCallId: string | undefined,
+  timeoutMessage: string,
+): void {
+  if (!state || !toolCallId) return;
+
+  const timedOutAgentState = getTimedOutToolAgentState(
+    toolCallId,
+    state.ai.agentProgress,
+    state.ai.pendingSubAgentApprovals,
+    timeoutMessage,
+  );
+  for (const [parentToolCallId, toolCalls] of Object.entries(
+    timedOutAgentState.agentProgress,
+  )) {
+    if (toolCalls !== state.ai.agentProgress[parentToolCallId]) {
+      state.ai.updateAgentProgress(parentToolCallId, toolCalls);
+    }
+  }
+  for (const approvalId of timedOutAgentState.approvalIds) {
+    state.ai.resolveSubAgentApproval(approvalId, false);
+  }
 }
 
 /**
@@ -494,6 +567,7 @@ export function createLocalChatTransportFactory({
       // Cast: state.ai.tools holds real AI SDK tools behind StoredToolSet.
       const tools = withRunContextTools((state.ai.tools || {}) as ToolSet, {
         state,
+        getState: () => store.getState(),
         sessionId,
         aiRunContext,
         getAiRunContext: () => aiRunContext,
@@ -521,12 +595,48 @@ export function createLocalChatTransportFactory({
       ]);
 
       const maxSteps = state.ai.getMaxStepsFromSettings();
+      const diagnosticsByStep: string[] = [];
+      let completedDiagnosticStep = 0;
 
       const agent = new ToolLoopAgent({
         model,
         instructions: systemInstructions,
         tools,
         stopWhen: stepCountIs(maxSteps),
+        prepareStep: async ({stepNumber, messages}) => {
+          if (!state.ai.devtools.shouldCaptureProviderContexts()) {
+            return undefined;
+          }
+          const diagnostic = await tryMeasureProviderContext({
+            role: 'chat-coordinator',
+            provider,
+            model: modelId,
+            sessionId,
+            step: stepNumber,
+            instructions: systemInstructions,
+            messages,
+            tools,
+            sources: [
+              'base-instructions',
+              'session-run-context',
+              'sanitized-session-messages',
+              'top-level-tool-registry',
+            ],
+          });
+          if (!diagnostic) return undefined;
+          diagnosticsByStep[stepNumber] = diagnostic.id;
+          state.ai.devtools.writeProviderContext(diagnostic);
+          return undefined;
+        },
+        onStepFinish: ({usage}) => {
+          const diagnosticId = diagnosticsByStep[completedDiagnosticStep++];
+          if (diagnosticId && usage.inputTokens != null) {
+            state.ai.devtools.setProviderContextInputTokens(
+              diagnosticId,
+              usage.inputTokens,
+            );
+          }
+        },
         ...(providerOptions ? {providerOptions} : {}),
       });
 
@@ -843,6 +953,7 @@ export function createChatHandlers({
 
         const currentState = store.getState();
         const toolTimings = currentState.ai.getToolTimings();
+        const timedOutApprovalIds: string[] = [];
 
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
@@ -881,10 +992,39 @@ export function createChatHandlers({
 
               targetSession.uiMessages =
                 completedMessages as ChatSessionSchema['uiMessages'];
-              writeAgentDebugStateToSession(targetSession, currentState);
+              let stateForPersistence = currentState;
+              if (timeoutReason instanceof ChatTimeoutError) {
+                const timedOutAgentState = getTimedOutSessionAgentState(
+                  completedMessages,
+                  currentState.ai.agentProgress,
+                  currentState.ai.pendingSubAgentApprovals,
+                  errMsg,
+                );
+                for (const [parentToolCallId, toolCalls] of Object.entries(
+                  timedOutAgentState.agentProgress,
+                )) {
+                  draft.ai.agentProgress[parentToolCallId] = toolCalls;
+                }
+                for (const approvalId of timedOutAgentState.approvalIds) {
+                  delete draft.ai.pendingSubAgentApprovals[approvalId];
+                  timedOutApprovalIds.push(approvalId);
+                }
+                stateForPersistence = {
+                  ...currentState,
+                  ai: {
+                    ...currentState.ai,
+                    agentProgress: timedOutAgentState.agentProgress,
+                  },
+                };
+              }
+              writeAgentDebugStateToSession(targetSession, stateForPersistence);
             }
           }),
         );
+
+        for (const approvalId of timedOutApprovalIds) {
+          currentState.ai.resolveSubAgentApproval(approvalId, false);
+        }
 
         // Force useChat to reinitialize with the fixed messages
         store.setState((s: AiSliceStateForTransport) =>

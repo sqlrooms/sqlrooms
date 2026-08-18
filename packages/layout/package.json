@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/layout",
-  "version": "0.29.0-rc.9",
+  "version": "0.29.0-rc.10",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
@@ -35,7 +35,7 @@
     "lucide-react": "^0.556.0",
     "react-grid-layout": "^1.5.2",
     "react-resizable": "^3.0.5",
-    "react-resizable-panels": "^4.7.6",
+    "react-resizable-panels": "^4.12.1",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },

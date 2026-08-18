@@ -33,13 +33,11 @@ export const MainView: React.FC = () => {
 
         {settingsPanelOpen.isOpen ? (
           <div className="grow overflow-auto">
-            {currentSessionId && (
-              <AiSettingsPanel disclosure={settingsPanelOpen}>
-                <AiSettingsPanel.ProvidersSettings />
-                <AiSettingsPanel.ModelsSettings />
-                <AiSettingsPanel.ModelParametersSettings />
-              </AiSettingsPanel>
-            )}
+            <AiSettingsPanel disclosure={settingsPanelOpen}>
+              <AiSettingsPanel.ProvidersSettings />
+              <AiSettingsPanel.ModelsSettings />
+              <AiSettingsPanel.ModelParametersSettings />
+            </AiSettingsPanel>
           </div>
         ) : (
           <>
