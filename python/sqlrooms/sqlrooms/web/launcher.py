@@ -357,16 +357,24 @@ def _pick_free_port(
                 return port
         raise RuntimeError(f"No available port found starting from {start_port}.")
 
-    sock = socket.socket(family, socket.SOCK_STREAM)
+    sockets = []
     try:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if family == socket.AF_INET6:
-            sock.bind((host, 0, 0, 0))
-        else:
-            sock.bind((host, 0))
-        return int(sock.getsockname()[1])
+        # Keep rejected sockets open so the OS cannot select the same reserved
+        # ephemeral port again on the next attempt.
+        for _attempt in range(len(reserved) + 1):
+            sock = socket.socket(family, socket.SOCK_STREAM)
+            sockets.append(sock)
+            if family == socket.AF_INET6:
+                sock.bind((host, 0, 0, 0))
+            else:
+                sock.bind((host, 0))
+            port = int(sock.getsockname()[1])
+            if port not in reserved:
+                return port
+        raise RuntimeError("No unreserved ephemeral port was available.")
     finally:
-        sock.close()
+        for sock in sockets:
+            sock.close()
 
 
 def _normalize_sql_for_policy(sql: str) -> str:

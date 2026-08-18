@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import time
+from collections.abc import Mapping
 from typing import Any
 
 import mcp.types as types
@@ -171,16 +172,23 @@ def _optional_string(value: Any) -> str | None:
 
 
 def _client_info(context: ServerRequestContext) -> dict[str, str] | None:
-    """Return identity observed during MCP initialization, never call metadata."""
-    initialize = getattr(context.session, "client_params", None)
-    raw = getattr(initialize, "client_info", None)
+    """Return SDK-managed protocol identity, never tool-call arguments."""
+    meta = getattr(context, "meta", None)
+    raw = meta.get(types.CLIENT_INFO_META_KEY) if isinstance(meta, Mapping) else None
+    if raw is None:
+        initialize = getattr(context.session, "client_params", None)
+        raw = getattr(initialize, "client_info", None)
     if raw is None:
         return None
+
+    def get_value(key: str) -> Any:
+        return raw.get(key) if isinstance(raw, Mapping) else getattr(raw, key, None)
+
     identity = {
         key: str(value)
         for key, value in (
-            ("name", getattr(raw, "name", None)),
-            ("version", getattr(raw, "version", None)),
+            ("name", get_value("name")),
+            ("version", get_value("version")),
         )
         if value is not None
     }

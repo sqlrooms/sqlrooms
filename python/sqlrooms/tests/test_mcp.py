@@ -70,6 +70,33 @@ async def test_mcp_bridge_normalizes_send_disconnect_as_room_not_ready():
 
 
 @pytest.mark.asyncio
+async def test_mcp_bridge_cleans_up_lease_when_auth_ack_fails():
+    class AckDisconnectedWebSocket:
+        async def accept(self):
+            pass
+
+        async def receive_json(self):
+            return {
+                "version": 1,
+                "type": "bridge.authenticate",
+                "pageId": "page-a",
+                "token": "token",
+            }
+
+        async def send_json(self, _payload):
+            raise RuntimeError("websocket disconnected")
+
+    broker = McpBridgeBroker("token")
+
+    with pytest.raises(RuntimeError, match="websocket disconnected"):
+        await broker.handle_websocket(AckDisconnectedWebSocket())
+
+    assert broker._connection is None
+    assert broker._page_id is None
+    assert broker.status()["status"] == "waiting"
+
+
+@pytest.mark.asyncio
 async def test_mcp_service_adapts_dynamic_browser_catalog():
     service = SqlroomsMcpService(StubBroker())
 
@@ -135,6 +162,34 @@ async def test_mcp_service_serves_2026_protocol_with_official_client():
     assert call_params["context"]["clientInfo"] == {
         "name": "Codex",
         "version": "6.1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_mcp_service_reads_2026_client_identity_from_request_metadata():
+    broker = StubBroker()
+    service = SqlroomsMcpService(broker)
+    context = SimpleNamespace(
+        meta={
+            types.CLIENT_INFO_META_KEY: {
+                "name": "Codex HTTP",
+                "version": "6.2",
+            }
+        },
+        session=SimpleNamespace(client_params=None),
+        request_id="request-1",
+        request=None,
+    )
+    params = types.CallToolRequestParams(name="query", arguments={"sql": "select 1"})
+
+    await service._call_tool(context, params)
+
+    call_params = next(
+        params for method, params in broker.requests if method == "tools.call"
+    )
+    assert call_params["context"]["clientInfo"] == {
+        "name": "Codex HTTP",
+        "version": "6.2",
     }
 
 

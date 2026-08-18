@@ -114,15 +114,14 @@ class McpBridgeBroker:
             self._ready = False
             self._touch()
 
-        await self._send_json(
-            websocket,
-            {
-                "version": MCP_BRIDGE_PROTOCOL_VERSION,
-                "type": "bridge.authenticated",
-            },
-        )
-
         try:
+            await self._send_json(
+                websocket,
+                {
+                    "version": MCP_BRIDGE_PROTOCOL_VERSION,
+                    "type": "bridge.authenticated",
+                },
+            )
             while True:
                 try:
                     payload = await websocket.receive_json()

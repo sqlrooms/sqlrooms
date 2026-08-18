@@ -508,6 +508,38 @@ def test_pick_free_port_skips_reserved_port():
     assert selected_port > reserved_port
 
 
+def test_pick_ephemeral_port_retries_reserved_os_selection(monkeypatch):
+    selected_ports = iter([43100, 43101])
+    sockets = []
+
+    class FakeSocket:
+        def __init__(self):
+            self.port = None
+            self.closed = False
+
+        def bind(self, _address):
+            self.port = next(selected_ports)
+
+        def getsockname(self):
+            return ("127.0.0.1", self.port)
+
+        def close(self):
+            self.closed = True
+
+    def create_socket(_family, _kind):
+        sock = FakeSocket()
+        sockets.append(sock)
+        return sock
+
+    monkeypatch.setattr(socket, "socket", create_socket)
+
+    selected = _pick_free_port("127.0.0.1", reserved_ports={43100})
+
+    assert selected == 43101
+    assert len(sockets) == 2
+    assert all(sock.closed for sock in sockets)
+
+
 def test_localhost_port_probe_checks_ipv4_loopback():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
