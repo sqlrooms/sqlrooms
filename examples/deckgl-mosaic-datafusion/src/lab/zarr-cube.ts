@@ -1,5 +1,6 @@
 import * as zarr from 'zarrita';
 import {openEcmwfArray, openEcmwfGroup} from './ecmwf-store';
+import {availableLeadCount} from './forecast-availability';
 import {
   CELL_COUNT,
   ECMWF_ENSEMBLE_MEMBER,
@@ -94,15 +95,28 @@ export async function streamTimeCube(
   const ingestedSeconds = Number(
     (ingestedLengthData.data as Float64Array)[initTimeIndex],
   );
+  let temperatureProbe: Float32Array | undefined;
   if (!Number.isFinite(ingestedSeconds)) {
-    throw new Error('Latest ECMWF initialization has no ingested forecast');
+    const probe = await zarr.get(arr, [
+      initTimeIndex,
+      null,
+      ECMWF_ENSEMBLE_MEMBER,
+      ECMWF_Y_START,
+      ECMWF_X_START,
+    ]);
+    temperatureProbe = probe.data as Float32Array;
   }
-  const firstUnavailableLead = allLeadHours.findIndex(
-    (hours) => hours * 3600 > ingestedSeconds,
+  const leadCount = availableLeadCount(
+    allLeadHours,
+    shapedLeadCount,
+    ingestedSeconds,
+    temperatureProbe,
   );
-  const ingestedLeadCount =
-    firstUnavailableLead < 0 ? allLeadHours.length : firstUnavailableLead;
-  const leadCount = Math.max(1, Math.min(shapedLeadCount, ingestedLeadCount));
+  if (leadCount === 0) {
+    throw new Error(
+      'Latest ECMWF initialization has no available forecast values',
+    );
+  }
   const leadHours = allLeadHours.slice(0, leadCount);
 
   const initSeconds = Number(
