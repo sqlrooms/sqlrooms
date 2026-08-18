@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-export {RoomShell} from './RoomShell';
+export {RoomShell, type RoomShellBaseState} from './RoomShell';
 export {RoomDndProvider} from '@sqlrooms/layout';
 export {RoomShellCommandPalette} from './RoomShellCommandPalette';
 export type {

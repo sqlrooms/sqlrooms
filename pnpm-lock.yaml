@@ -52,6 +52,8 @@ overrides:
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
 
+packageExtensionsChecksum: sha256-8CydoOKHxOSay+IG8L2vKcEOoPo55QBV/4qmS/SCIxk=
+
 patchedDependencies:
   image-size@0.7.5: 539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321
   sigstore@4.1.1: 72ba6f3df587a050af679bdcd9c835c92bb45b80b91bd9f33351d2d92f69eb29
@@ -1496,6 +1498,130 @@ importers:
       tailwindcss:
         specifier: ^4.1.18
         version: 4.3.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.44.1
+        version: 8.59.3(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
+      vite:
+        specifier: ^8.2.0
+        version: 8.2.0(@types/node@24.12.4)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0)
+
+  examples/deckgl-mosaic-datafusion:
+    dependencies:
+      '@deck.gl/core':
+        specifier: 9.3.2
+        version: 9.3.2
+      '@deck.gl/geo-layers':
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers':
+        specifier: 9.3.2
+        version: 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@developmentseed/deck.gl-raster':
+        specifier: ^0.7.0
+        version: 0.7.0(78c1c2956ab92197ba18cd07155112e0)
+      '@developmentseed/deck.gl-zarr':
+        specifier: ^0.7.0
+        version: 0.7.0(78c1c2956ab92197ba18cd07155112e0)
+      '@developmentseed/proj':
+        specifier: ^0.7.0
+        version: 0.7.0
+      '@dzole0311/datafusion-wasm':
+        specifier: ^0.4.0
+        version: 0.4.0
+      '@luma.gl/core':
+        specifier: 9.3.3
+        version: 9.3.3
+      '@luma.gl/shadertools':
+        specifier: 9.3.3
+        version: 9.3.3(@luma.gl/core@9.3.3)
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../../packages/mosaic
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@uwdata/flechette':
+        specifier: ^2.2.6
+        version: 2.5.0
+      '@uwdata/mosaic-core':
+        specifier: ^0.21.0
+        version: 0.21.1
+      '@uwdata/mosaic-sql':
+        specifier: ^0.21.0
+        version: 0.21.1
+      '@uwdata/vgplot':
+        specifier: ^0.21.0
+        version: 0.21.1
+      immer:
+        specifier: ^11.0.1
+        version: 11.1.8
+      lucide-react:
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+      zarrita:
+        specifier: ^0.7.3
+        version: 0.7.4
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.36.0
+        version: 9.39.4
+      '@jest/globals':
+        specifier: ^30.3.0
+        version: 30.4.1
+      '@sqlrooms/preset-jest':
+        specifier: workspace:*
+        version: link:../../packages/preset-jest
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.3.0(vite@8.2.0(@types/node@24.12.4)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      '@vitejs/plugin-react':
+        specifier: ^5.2.0
+        version: 5.2.0(vite@8.2.0(@types/node@24.12.4)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.48.0)(yaml@2.9.0))
+      eslint:
+        specifier: ^9.36.0
+        version: 9.39.4(jiti@2.7.0)
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.39.4(jiti@2.7.0))
+      eslint-plugin-react-refresh:
+        specifier: ^0.4.21
+        version: 0.4.26(eslint@9.39.4(jiti@2.7.0))
+      globals:
+        specifier: ^15.15.0
+        version: 15.15.0
+      jest:
+        specifier: ^30.1.3
+        version: 30.4.2(@types/node@24.12.4)
+      tailwindcss:
+        specifier: ^4.1.18
+        version: 4.3.0
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -3134,22 +3260,22 @@ importers:
   packages/deck:
     dependencies:
       '@deck.gl/core':
-        specifier: ^9.3.1
+        specifier: 9.3.2
         version: 9.3.2
       '@deck.gl/geo-layers':
-        specifier: ^9.3.1
+        specifier: 9.3.2
         version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
       '@deck.gl/json':
-        specifier: ^9.3.1
+        specifier: 9.3.2
         version: 9.3.2(@deck.gl/core@9.3.2)
       '@deck.gl/layers':
-        specifier: ^9.3.1
+        specifier: 9.3.2
         version: 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
       '@deck.gl/mapbox':
-        specifier: ^9.3.1
+        specifier: 9.3.2
         version: 9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@math.gl/web-mercator@4.1.0)
       '@deck.gl/react':
-        specifier: ^9.3.1
+        specifier: 9.3.2
         version: 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/widgets@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@geoarrow/deck.gl-geoarrow':
         specifier: ^0.4.1
@@ -3506,7 +3632,7 @@ importers:
         version: 3.3.0-alpha.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@kepler.gl/table':
         specifier: 3.3.0-alpha.0
-        version: 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+        version: 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types':
         specifier: 3.3.0-alpha.0
         version: 3.3.0-alpha.0
@@ -4133,6 +4259,19 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.13(@types/react@19.2.7)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+    devDependencies:
+      '@jest/globals':
+        specifier: ^30.3.0
+        version: 30.4.1
+      '@sqlrooms/preset-jest':
+        specifier: workspace:*
+        version: link:../preset-jest
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1(@noble/hashes@2.2.0)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
 
   packages/room-store:
     dependencies:
@@ -5841,6 +5980,40 @@ packages:
     resolution: {integrity: sha512-v6oD9Ukp+N7V4n6p5I/+mM5fIohSfkrDSGlFm5w/pYmchvbk+sMIHsLxrFJ5Lnujewj1BzWL0K84d88lwZAMQA==}
     engines: {node: '>=18'}
 
+  '@developmentseed/affine@0.7.0':
+    resolution: {integrity: sha512-O00T3nLFY8DiEqTIpKzEDc6wyVLth4DoFc0gPE6EiaEdFM4lQsQnH8x5mrknDB7jeLyKW2aPnNyBxoPqS7JKHA==}
+
+  '@developmentseed/deck.gl-raster@0.7.0':
+    resolution: {integrity: sha512-I9X81fus7r9MoOZUwMj6GAR24diPGlMT2ep3N5vQOnmfntT+kGSLYX1EEkO6jwKBO0roOMrqb/8U2JkPhtT/gQ==}
+    peerDependencies:
+      '@deck.gl/core': ^9.3.0
+      '@deck.gl/geo-layers': ^9.3.0
+      '@deck.gl/layers': ^9.3.0
+      '@deck.gl/mesh-layers': ^9.3.0
+      '@developmentseed/morecantile': ^0.7.0
+      '@luma.gl/core': ^9.3.2
+      '@luma.gl/shadertools': ^9.3.2
+
+  '@developmentseed/deck.gl-zarr@0.7.0':
+    resolution: {integrity: sha512-NUlILasuXAmBZmB5LAZ9aJ6/Jc+y2exLKg0Fa5DnxIdKeqafqbD/qUoyqBPbtK9+x1uh8uomeQBiNXF1soa4pw==}
+    peerDependencies:
+      '@deck.gl/core': ^9.3.0
+      '@deck.gl/geo-layers': ^9.3.0
+      '@deck.gl/layers': ^9.3.0
+      '@luma.gl/core': ^9.3.2
+
+  '@developmentseed/geozarr@0.7.0':
+    resolution: {integrity: sha512-yZdKhrxNAQq7pGATRgOvQdRD/DI5ogO6V00dmBng1+6IsLnm72aNCWYRhhro8njWswDiMTqu9AjMR0fMOIm2Sw==}
+
+  '@developmentseed/morecantile@0.7.0':
+    resolution: {integrity: sha512-m9tWDase9COlP/EZ2KK/ydraRU/5yfwvmF/y/2g/iFMFW1vYHQTW/8JYjmo84SiJXUifDDY2xoA3ErYlcWJctg==}
+
+  '@developmentseed/proj@0.7.0':
+    resolution: {integrity: sha512-3EPvX29sM3iCn+avpGKz18ZzlRJdn53SbkmFWJXDWh/fNreP3RjcDJGBbvfwnZnVtiLUqnTzM8V4fLKnYHKj0A==}
+
+  '@developmentseed/raster-reproject@0.7.0':
+    resolution: {integrity: sha512-2tZzANK0nZIV3Y5E2qYhbNtdjN04LKQYECPZsGii1r5ylGySoKjh3oJzVBCKfRq/PTEZTtVol0r7krmT6Ry8fQ==}
+
   '@discoveryjs/json-ext@1.1.0':
     resolution: {integrity: sha512-Xc3VhU02wqZ1HvHRJUwL09HkZSTvidqY5Ya0NXBSYOxAp+Ln9dcJr9fySI+CkONzP3PekQo9WdzCv0PGER/mOA==}
     engines: {node: '>=14.17.0'}
@@ -5932,6 +6105,9 @@ packages:
 
   '@duckdb/node-bindings@1.4.4-r.3':
     resolution: {integrity: sha512-ucvhCF3IK60BzxTFwYTjyQao9zavEwXJ1JdGk70UEXa85JQlos3pJslEG3lIczhdtSPu0aum+hv67aBmpH21cw==}
+
+  '@dzole0311/datafusion-wasm@0.4.0':
+    resolution: {integrity: sha512-o9msmBlOHH+bAigd3SytsladMaC4V89yQwfmF1cZo6rdm7g8KS25SzXnJm1sOPOLrColcPL8RDRT5oTElQqVhA==}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -10179,6 +10355,9 @@ packages:
   '@xyflow/system@0.0.76':
     resolution: {integrity: sha512-hvwvnRS1B3REwVDlWexsq7YQaPZeG3/mKo1jv38UmnpWmxihp14bW6VtEOuHEwJX2FvzFw8k77LyKSk/wiZVNA==}
 
+  '@zarrita/storage@0.2.0':
+    resolution: {integrity: sha512-855ZXqtnds7spnT8vNvD+MXa3QExP1m2GqShe8yt7uZXHnQLgJHgkpVwFjE1B0KDDRO0ki09hmk6OboTaIfPsQ==}
+
   '@zip.js/zip.js@2.8.26':
     resolution: {integrity: sha512-RQ4h9F6DOiHxpdocUDrOl6xBM+yOtz+LkUol47AVWcfebGBDpZ7w7Xvz9PS24JgXvLGiXXzSAfdCdVy1tPlaFA==}
     engines: {bun: '>=0.7.0', deno: '>=1.0.0', node: '>=18.0.0'}
@@ -14010,6 +14189,9 @@ packages:
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
 
+  numcodecs@0.3.2:
+    resolution: {integrity: sha512-6YSPnmZgg0P87jnNhi3s+FVLOcIn3y+1CTIgUulA3IdASzK9fJM87sUFkpyA+be9GibGRaST2wCgkD+6U+fWKw==}
+
   nwsapi@2.2.23:
     resolution: {integrity: sha512-7wfH4sLbt4M0gCDzGE6vzQBo0bfTKjU7Sfpqy/7gs1qBfYz2vEJH6vXcBKpO3+6Yu1telwd0t9HpyOoLEQQbIQ==}
 
@@ -14989,6 +15171,9 @@ packages:
 
   redux@5.0.1:
     resolution: {integrity: sha512-M9/ELqF6fy8FwmkpnF0S3YKOqMyoWJ4+CS5Efg2ct3oY9daQvd/Pc71FpGZsVsbl3Cpb+IIcjBDUnnyBdQbq4w==}
+
+  reference-spec-reader@0.2.0:
+    resolution: {integrity: sha512-q0mfCi5yZSSHXpCyxjgQeaORq3tvDsxDyzaadA/5+AbAUwRyRuuTh0aRQuE/vAOt/qzzxidJ5iDeu1cLHaNBlQ==}
 
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
@@ -16201,6 +16386,10 @@ packages:
   unrs-resolver@1.11.1:
     resolution: {integrity: sha512-bSjt9pjaEBnNiGgc9rUiHGKv5l4/TGzDmYw3RhnkJGtLhbnnA/5qJj7x3dNDCRx/PJxu774LlH8lCOlB4hEfKg==}
 
+  unzipit@2.0.0:
+    resolution: {integrity: sha512-DVeVIWUZCAQPNzm5sB0hpsG1GygTTdBnzNtYYEpInkttx5evkyqRgZi6rTczoySqp8hO5jHVKzrH0f23X8FZLg==}
+    engines: {node: '>=18'}
+
   upath@1.2.0:
     resolution: {integrity: sha512-aZwGpamFO61g3OlfT7OQCHqhGnW43ieH9WZeP7QxN/G/jS4jfqUkZxoryvJgVPEcrl5NL/ggHsSmLMHuH64Lhg==}
     engines: {node: '>=4'}
@@ -16839,6 +17028,9 @@ packages:
   yoctocolors@2.1.2:
     resolution: {integrity: sha512-CzhO+pFNo8ajLM2d2IW/R93ipy99LWjtwblvC1RsoSUMZgyLbYFr221TnSNT7GjGdYui6P459mw9JH/g/zW2ug==}
     engines: {node: '>=18'}
+
+  zarrita@0.7.4:
+    resolution: {integrity: sha512-NChufj86SceFj45z4CYjndmI98dphaG7hU8Wj0UGpMyT21o0V3HTY6zo87aSobYWts1tNFivSXzH2AR1AkaWjA==}
 
   zeptomatch@2.1.0:
     resolution: {integrity: sha512-KiGErG2J0G82LSpniV0CtIzjlJ10E04j02VOudJsPyPwNZgGnRKQy7I1R7GMyg/QswnE4l7ohSGrQbQbjXPPDA==}
@@ -18291,7 +18483,7 @@ snapshots:
 
   '@carto/api-client@0.5.29':
     dependencies:
-      '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema': 4.4.2
       '@types/geojson': 7946.0.16
       d3-format: 3.1.2
       d3-scale: 4.0.2
@@ -18621,7 +18813,7 @@ snapshots:
   '@deck.gl/core@9.3.2':
     dependencies:
       '@loaders.gl/core': 4.4.1
-      '@loaders.gl/images': 4.4.1(@loaders.gl/core@4.4.1)
+      '@loaders.gl/images': 4.4.2(@loaders.gl/core@4.4.1)
       '@luma.gl/core': 9.3.3
       '@luma.gl/engine': 9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))
       '@luma.gl/shadertools': 9.3.3(@luma.gl/core@9.3.3)
@@ -18705,8 +18897,8 @@ snapshots:
     dependencies:
       '@deck.gl/core': 9.3.2
       '@loaders.gl/core': 4.4.1
-      '@loaders.gl/images': 4.4.1(@loaders.gl/core@4.4.1)
-      '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/images': 4.4.2(@loaders.gl/core@4.4.1)
+      '@loaders.gl/schema': 4.4.2
       '@luma.gl/core': 9.3.3
       '@luma.gl/engine': 9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))
       '@luma.gl/shadertools': 9.3.3(@luma.gl/core@9.3.3)
@@ -18764,6 +18956,59 @@ snapshots:
     dependencies:
       gonzales-pe: 4.3.0
       node-source-walk: 7.0.2
+
+  '@developmentseed/affine@0.7.0': {}
+
+  '@developmentseed/deck.gl-raster@0.7.0(78c1c2956ab92197ba18cd07155112e0)':
+    dependencies:
+      '@deck.gl/core': 9.3.2
+      '@deck.gl/geo-layers': 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@deck.gl/mesh-layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))
+      '@developmentseed/affine': 0.7.0
+      '@developmentseed/morecantile': 0.7.0
+      '@developmentseed/proj': 0.7.0
+      '@developmentseed/raster-reproject': 0.7.0
+      '@luma.gl/core': 9.3.3
+      '@luma.gl/shadertools': 9.3.3(@luma.gl/core@9.3.3)
+      '@math.gl/core': 4.1.0
+      '@math.gl/culling': 4.1.0
+      '@math.gl/web-mercator': 4.1.0
+
+  '@developmentseed/deck.gl-zarr@0.7.0(78c1c2956ab92197ba18cd07155112e0)':
+    dependencies:
+      '@deck.gl/core': 9.3.2
+      '@deck.gl/geo-layers': 9.3.2(@deck.gl/core@9.3.2)(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@deck.gl/layers': 9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))
+      '@developmentseed/affine': 0.7.0
+      '@developmentseed/deck.gl-raster': 0.7.0(78c1c2956ab92197ba18cd07155112e0)
+      '@developmentseed/geozarr': 0.7.0
+      '@developmentseed/proj': 0.7.0
+      '@developmentseed/raster-reproject': 0.7.0
+      '@luma.gl/core': 9.3.3
+      proj4: 2.20.8
+      wkt-parser: 1.5.5
+      zarrita: 0.7.4
+    transitivePeerDependencies:
+      - '@deck.gl/mesh-layers'
+      - '@developmentseed/morecantile'
+      - '@luma.gl/shadertools'
+
+  '@developmentseed/geozarr@0.7.0':
+    dependencies:
+      '@developmentseed/affine': 0.7.0
+      zarrita: 0.7.4
+      zod: 4.1.13
+
+  '@developmentseed/morecantile@0.7.0':
+    dependencies:
+      '@developmentseed/affine': 0.7.0
+
+  '@developmentseed/proj@0.7.0':
+    dependencies:
+      wkt-parser: 1.5.5
+
+  '@developmentseed/raster-reproject@0.7.0': {}
 
   '@discoveryjs/json-ext@1.1.0': {}
 
@@ -18853,6 +19098,8 @@ snapshots:
       '@duckdb/node-bindings-linux-x64': 1.4.4-r.3
       '@duckdb/node-bindings-win32-arm64': 1.4.4-r.3
       '@duckdb/node-bindings-win32-x64': 1.4.4-r.3
+
+  '@dzole0311/datafusion-wasm@0.4.0': {}
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -19650,7 +19897,7 @@ snapshots:
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/layers': 3.3.0-alpha.0(b197bc8b4c066aa2fd07322ab3662482)
       '@kepler.gl/processors': 3.3.0-alpha.0(bf0aa191d807c397072d279c5b39c3da)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@reduxjs/toolkit': 1.9.7(react-redux@8.1.3(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(redux@4.2.1))(react@19.2.1)
@@ -19728,7 +19975,7 @@ snapshots:
       '@kepler.gl/reducers': 3.3.0-alpha.0(108065f40ce945914bdb079a0cd5964e)
       '@kepler.gl/schemas': 3.3.0-alpha.0(8cc5b5b44478787936594318cab4db63)
       '@kepler.gl/styles': 3.3.0-alpha.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/mvt': 4.4.1(@loaders.gl/core@4.4.1)
@@ -19893,7 +20140,7 @@ snapshots:
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/processors': 3.3.0-alpha.0(bf0aa191d807c397072d279c5b39c3da)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@monaco-editor/react': 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -19960,7 +20207,7 @@ snapshots:
       '@kepler.gl/deckgl-arrow-layers': 3.3.0-alpha.0(ce384245f5c9fb6d7ff5e96cffd57511)
       '@kepler.gl/deckgl-layers': 3.3.0-alpha.0(@deck.gl/extensions@9.3.2(@deck.gl/core@9.3.2)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))))(@deck.gl/mesh-layers@9.3.2(@deck.gl/core@9.3.2)(@loaders.gl/core@4.4.1)(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/gltf@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/engine@9.3.3(@luma.gl/core@9.3.3)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3)))(@loaders.gl/core@4.4.1)(@luma.gl/shadertools@9.3.3(@luma.gl/core@9.3.3))(react-dom@19.2.1(react@19.2.1))
       '@kepler.gl/localization': 3.3.0-alpha.0(typescript@5.9.3)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/3d-tiles': 4.3.4(@loaders.gl/core@4.4.1)
@@ -20034,7 +20281,7 @@ snapshots:
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/schemas': 3.3.0-alpha.0(8cc5b5b44478787936594318cab4db63)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/arrow': 4.4.1(@loaders.gl/core@4.4.1)
@@ -20090,7 +20337,7 @@ snapshots:
       '@kepler.gl/localization': 3.3.0-alpha.0(typescript@5.9.3)
       '@kepler.gl/processors': 3.3.0-alpha.0(bf0aa191d807c397072d279c5b39c3da)
       '@kepler.gl/schemas': 3.3.0-alpha.0(8cc5b5b44478787936594318cab4db63)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/tasks': 3.3.0-alpha.0(bf0aa191d807c397072d279c5b39c3da)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
@@ -20147,7 +20394,7 @@ snapshots:
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/layers': 3.3.0-alpha.0(b197bc8b4c066aa2fd07322ab3662482)
-      '@kepler.gl/table': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
+      '@kepler.gl/table': 3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
@@ -20186,12 +20433,13 @@ snapshots:
       - react
       - react-dom
 
-  '@kepler.gl/table@3.3.0-alpha.0(@loaders.gl/core@4.4.1)(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)':
+  '@kepler.gl/table@3.3.0-alpha.0(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-dom@19.2.1(react@19.2.1))(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@kepler.gl/common-utils': 3.3.0-alpha.0
       '@kepler.gl/constants': 3.3.0-alpha.0
       '@kepler.gl/types': 3.3.0-alpha.0
       '@kepler.gl/utils': 3.3.0-alpha.0(@loaders.gl/core@4.4.1)(react-dom@19.2.1(react@19.2.1))
+      '@loaders.gl/core': 4.4.1
       '@loaders.gl/mvt': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/pmtiles': 4.4.1(@loaders.gl/core@4.4.1)
       '@types/d3-array': 2.12.8
@@ -20203,7 +20451,6 @@ snapshots:
       react-palm: 3.3.11(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       type-analyzer: 0.4.0
     transitivePeerDependencies:
-      - '@loaders.gl/core'
       - encoding
       - enzyme
       - enzyme-adapter-utils
@@ -20593,6 +20840,7 @@ snapshots:
       '@loaders.gl/core': 4.4.1
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       d3-dsv: 1.2.0
 
   '@loaders.gl/draco@4.3.4(@loaders.gl/core@4.4.1)':
@@ -20615,6 +20863,7 @@ snapshots:
   '@loaders.gl/geoarrow@4.4.1(@loaders.gl/core@4.4.1)':
     dependencies:
       '@loaders.gl/core': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@math.gl/polygon': 4.1.0
       apache-arrow: 17.0.0
 
@@ -20747,6 +20996,7 @@ snapshots:
       '@loaders.gl/images': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@math.gl/polygon': 4.1.0
       '@probe.gl/stats': 4.1.1
       pbf: 3.3.0
@@ -20761,6 +21011,7 @@ snapshots:
       '@loaders.gl/gis': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/wkt': 4.4.1(@loaders.gl/core@4.4.1)
       '@probe.gl/log': 4.1.1
       apache-arrow: 17.0.0
@@ -20826,6 +21077,7 @@ snapshots:
       '@loaders.gl/images': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/loader-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@loaders.gl/schema': 4.4.1
+      '@loaders.gl/schema-utils': 4.4.1(@loaders.gl/core@4.4.1)
       '@mapbox/martini': 0.2.0
 
   '@loaders.gl/textures@4.3.4(@loaders.gl/core@4.4.1)':
@@ -24469,6 +24721,11 @@ snapshots:
       d3-interpolate: 3.0.1
       d3-selection: 3.0.0
       d3-zoom: 3.0.0
+
+  '@zarrita/storage@0.2.0':
+    dependencies:
+      reference-spec-reader: 0.2.0
+      unzipit: 2.0.0
 
   '@zip.js/zip.js@2.8.26': {}
 
@@ -29160,6 +29417,10 @@ snapshots:
     dependencies:
       boolbase: 1.0.0
 
+  numcodecs@0.3.2:
+    dependencies:
+      fflate: 0.8.2
+
   nwsapi@2.2.23: {}
 
   object-assign@4.1.1: {}
@@ -30272,6 +30533,8 @@ snapshots:
       '@babel/runtime': 7.29.2
 
   redux@5.0.1: {}
+
+  reference-spec-reader@0.2.0: {}
 
   reflect.getprototypeof@1.0.10:
     dependencies:
@@ -31664,6 +31927,8 @@ snapshots:
       '@unrs/resolver-binding-win32-ia32-msvc': 1.11.1
       '@unrs/resolver-binding-win32-x64-msvc': 1.11.1
 
+  unzipit@2.0.0: {}
+
   upath@1.2.0: {}
 
   update-browserslist-db@1.2.3(browserslist@4.28.2):
@@ -32582,6 +32847,11 @@ snapshots:
   yoctocolors-cjs@2.1.3: {}
 
   yoctocolors@2.1.2: {}
+
+  zarrita@0.7.4:
+    dependencies:
+      '@zarrita/storage': 0.2.0
+      numcodecs: 0.3.2
 
   zeptomatch@2.1.0:
     dependencies:

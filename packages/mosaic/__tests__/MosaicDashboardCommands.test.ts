@@ -1,4 +1,5 @@
 import {createStore} from 'zustand';
+import {Coordinator} from '@uwdata/mosaic-core';
 import {createLayoutSlice} from '@sqlrooms/layout';
 import {
   createBaseRoomSlice,
@@ -25,7 +26,7 @@ function createTestStore() {
     ...createBaseRoomSlice()(...args),
     ...createCommandSlice<TestRoomState>()(...args),
     ...createLayoutSlice()(...args),
-    ...createMosaicSlice()(...args),
+    ...createMosaicSlice({coordinator: new Coordinator()})(...args),
     ...createMosaicDashboardSlice()(...args),
   }));
   store

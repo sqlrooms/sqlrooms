@@ -54,6 +54,27 @@ overrides:
   ws@>=1.1.0 <5.2.5: 5.2.7
   ws@>=8.0.0 <8.20.1: 8.21.0
   zod: 4.1.13
+packageExtensions:
+  # Kepler table imports this peer at runtime but does not declare it.
+  '@kepler.gl/table@3.3.0-alpha.0':
+    dependencies:
+      '@loaders.gl/core': 4.4.1
+  # loaders.gl 4.4.1 imports this package but does not declare it.
+  '@loaders.gl/csv@4.4.1':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/geoarrow@4.4.1':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/mvt@4.4.1':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/parquet@4.4.1':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.4.1
+  '@loaders.gl/terrain@4.4.1':
+    dependencies:
+      '@loaders.gl/schema-utils': 4.4.1
 patchedDependencies:
   image-size@0.7.5: patches/image-size@0.7.5.patch
   sigstore@4.1.1: patches/sigstore@4.1.0.patch
