@@ -355,7 +355,10 @@ function createExecuteCommandCapability(): RoomCapability {
         commandId: string;
         input?: unknown;
       };
-      if (MCP_EXCLUDED_COMMAND_IDS.has(commandId)) {
+      const command = listMcpCommands(context).find(
+        (descriptor) => descriptor.id === commandId,
+      );
+      if (!command) {
         return {
           ok: false,
           code: 'command_not_found',
@@ -476,12 +479,9 @@ function enqueueCommandInvocation(
     }
 
     const invocation = Promise.resolve().then(invoke);
+    void invocation.then(releaseTurn, releaseTurn);
     if (!signal) {
-      try {
-        return await invocation;
-      } finally {
-        releaseTurn();
-      }
+      return await invocation;
     }
 
     let onAbort: (() => void) | undefined;
@@ -498,7 +498,6 @@ function enqueueCommandInvocation(
       if (onAbort) {
         signal.removeEventListener('abort', onAbort);
       }
-      releaseTurn();
     }
   });
 }

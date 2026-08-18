@@ -1,5 +1,9 @@
-import {describe, expect, jest, test} from '@jest/globals';
+import {afterEach, describe, expect, jest, test} from '@jest/globals';
 import {createRoomCapabilityRuntime} from '../src';
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 function capability(name: string) {
   return {
@@ -83,7 +87,6 @@ describe('createRoomCapabilityRuntime', () => {
     const result = runtime.callTool('slow', {value: 'x'}, {surface: 'api'});
     await jest.advanceTimersByTimeAsync(10);
     await expect(result).resolves.toMatchObject({ok: false, code: 'timeout'});
-    jest.useRealTimers();
   });
 
   test('applies the timeout to authorization', async () => {
@@ -100,7 +103,6 @@ describe('createRoomCapabilityRuntime', () => {
 
     await expect(result).resolves.toMatchObject({ok: false, code: 'timeout'});
     expect(tool.execute).not.toHaveBeenCalled();
-    jest.useRealTimers();
   });
 
   test('does not execute when the caller signal is already aborted', async () => {

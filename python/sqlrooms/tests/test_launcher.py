@@ -121,6 +121,28 @@ async def test_mcp_listener_lifecycle_is_repeatable(server):
     assert (await server._stop_mcp())["status"] == "off"
 
 
+@pytest.mark.asyncio
+async def test_mcp_start_normalizes_uvicorn_system_exit(server, monkeypatch):
+    class FailingUvicornServer:
+        started = False
+        should_exit = False
+
+        def __init__(self, _config):
+            pass
+
+        async def serve(self):
+            raise SystemExit(1)
+
+    monkeypatch.setattr("sqlrooms.web.launcher.uvicorn.Server", FailingUvicornServer)
+
+    with pytest.raises(RuntimeError, match="exit code 1"):
+        await server._start_mcp()
+
+    assert server._mcp_last_error == "MCP listener failed to start (exit code 1)."
+    assert server._mcp_server is None
+    assert server._mcp_task is None
+
+
 def test_api_config_uses_same_origin_ws_proxy(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",

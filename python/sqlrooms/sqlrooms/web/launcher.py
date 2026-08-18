@@ -590,7 +590,16 @@ class SqlroomsHttpServer:
                 loop="asyncio",
             )
             server = uvicorn.Server(config)
-            task = asyncio.create_task(server.serve(), name="sqlrooms-mcp-server")
+
+            async def serve_mcp() -> None:
+                try:
+                    await server.serve()
+                except SystemExit as exc:
+                    raise RuntimeError(
+                        f"MCP listener failed to start (exit code {exc.code})."
+                    ) from exc
+
+            task = asyncio.create_task(serve_mcp(), name="sqlrooms-mcp-server")
             self._mcp_server = server
             self._mcp_task = task
             for _ in range(1_000):

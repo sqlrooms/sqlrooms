@@ -31,11 +31,22 @@ export type RoomCommandInvocation = {
   metadata?: Record<string, unknown>;
 };
 
+/**
+ * Optional invocation metadata for a room command.
+ *
+ * `signal` supports cooperative cancellation and is excluded from serializable
+ * invocation and audit data.
+ */
 export type RoomCommandInvocationOptions = Partial<RoomCommandInvocation> & {
   /** Cancels command execution without becoming part of serializable audit data. */
   signal?: AbortSignal;
 };
 
+/**
+ * Runtime context passed to room command predicates, validation, middleware,
+ * and execution handlers. Its signal supports cooperative cancellation and is
+ * not retained in serializable invocation or audit data.
+ */
 export type RoomCommandExecutionContext<
   RS extends BaseRoomStoreState = BaseRoomStoreState,
 > = {

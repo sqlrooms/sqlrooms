@@ -19,7 +19,23 @@ const invokeCommandWithPolicy = jest.fn(async (...args: unknown[]) => {
     commandId: 'workspace.refresh',
   };
 });
-const listCommands = jest.fn((): RoomCommandDescriptor[] => []);
+const commandDescriptor = (id: string): RoomCommandDescriptor => ({
+  id,
+  owner: 'test',
+  name: id,
+  enabled: true,
+  visible: true,
+  requiresInput: false,
+  keystrokes: [],
+  readOnly: false,
+  idempotent: true,
+  riskLevel: 'low',
+  requiresConfirmation: false,
+});
+const listCommands = jest.fn((): RoomCommandDescriptor[] => [
+  commandDescriptor('workspace.refresh'),
+  commandDescriptor('workspace.stuck'),
+]);
 
 const state = {
   db: {
@@ -223,9 +239,28 @@ describe('CLI room capability handlers', () => {
     expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
   });
 
-  test('releases the command queue when an invocation is aborted', async () => {
+  test('does not execute commands outside the visible MCP catalog', async () => {
+    listCommands.mockReturnValueOnce([]);
+
+    const result = await capability('execute_command').execute(
+      {commandId: 'workspace.hidden'},
+      {surface: 'mcp-http'},
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'command_not_found',
+    });
+    expect(invokeCommandWithPolicy).not.toHaveBeenCalled();
+  });
+
+  test('keeps the command queue occupied until an aborted invocation settles', async () => {
+    let finishFirst!: (result: {success: boolean; commandId: string}) => void;
     invokeCommandWithPolicy.mockImplementationOnce(
-      async () => await new Promise<never>(() => undefined),
+      async () =>
+        await new Promise<{success: boolean; commandId: string}>((resolve) => {
+          finishFirst = resolve;
+        }),
     );
     const firstController = new AbortController();
     const firstInvocation = capability('execute_command').execute(
@@ -248,6 +283,11 @@ describe('CLI room capability handlers', () => {
       ok: false,
       code: 'command-cancelled',
     });
+    await flushQueuedInvocations();
+    expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(1);
+
+    finishFirst({success: true, commandId: 'workspace.stuck'});
+
     await expect(secondInvocation).resolves.toMatchObject({ok: true});
     expect(invokeCommandWithPolicy).toHaveBeenCalledTimes(2);
   });
