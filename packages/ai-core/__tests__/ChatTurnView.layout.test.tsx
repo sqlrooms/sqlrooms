@@ -266,6 +266,12 @@ describe('ChatTurnView layout', () => {
       container.querySelector('[data-testid="spatial-agent-thoughts"]'),
     ).toBeNull();
 
+    const stickyPrompt = container.querySelector('.sticky');
+    expect(stickyPrompt?.classList.contains('rounded-md')).toBe(false);
+    expect(
+      stickyPrompt?.firstElementChild?.classList.contains('rounded-md'),
+    ).toBe(true);
+
     cleanup(container, root);
   });
 
