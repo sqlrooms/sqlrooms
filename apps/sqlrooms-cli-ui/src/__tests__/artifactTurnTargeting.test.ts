@@ -107,10 +107,7 @@ describe('per-turn artifact command targeting', () => {
 
     store.getState().artifacts.setCurrentArtifact(artifactA);
     jest
-      .spyOn(
-        store.getState().ai.getSessionChatController('session-a')!.chat,
-        'sendMessage',
-      )
+      .spyOn(store.getState().ai.getSessionChat('session-a')!, 'sendMessage')
       .mockResolvedValue(undefined);
     store.getState().ai.setPrompt('session-a', 'Work on A');
     await store.getState().ai.startAnalysis('session-a');

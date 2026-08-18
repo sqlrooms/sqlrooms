@@ -47,7 +47,7 @@ describe('AiSlice run timeout', () => {
     ];
     store.getState().ai.setSessionUiMessages(sessionId, messages);
     store.getState().ai.setPrompt(sessionId, 'hello');
-    const chat = store.getState().ai.getSessionChatController(sessionId)!.chat;
+    const chat = store.getState().ai.getSessionChat(sessionId)!;
     chat.messages = messages;
     const sendMessage = jest
       .spyOn(chat, 'sendMessage')
@@ -107,7 +107,7 @@ describe('AiSlice run timeout', () => {
     );
     store.getState().ai.createSession();
     const sessionId = store.getState().ai.getCurrentSession()!.id;
-    const chat = store.getState().ai.getSessionChatController(sessionId)!.chat;
+    const chat = store.getState().ai.getSessionChat(sessionId)!;
     jest.spyOn(chat, 'sendMessage').mockResolvedValue(undefined);
     const stop = jest.spyOn(chat, 'stop').mockResolvedValue(undefined);
 

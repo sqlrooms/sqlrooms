@@ -464,12 +464,10 @@ runtime themselves. Both must wrap the `Chat` components that call
 
 Session chat execution itself is owned by the AI slice, independently of these
 presentation providers. `startAnalysis(sessionId)` lazily creates an ephemeral
-`SessionChatController` for the session, so a run can continue when no React chat
-surface is mounted. `useSessionChat(sessionId)` is a thin React subscription to
-that controller. Advanced integrations can access the same controller through
-`ai.getSessionChatController(sessionId)`; persisted messages and session state
-remain in `ai.config`, while SDK chat instances, subscriptions, and timers remain
-ephemeral.
+chat runtime for the session, so a run can continue when no React chat surface is
+mounted. `useSessionChat(sessionId)` only subscribes React to the runtime's chat.
+Persisted messages and session state remain in `ai.config`, while SDK chat
+instances, subscriptions, and timers remain ephemeral.
 
 ## Chat search
 

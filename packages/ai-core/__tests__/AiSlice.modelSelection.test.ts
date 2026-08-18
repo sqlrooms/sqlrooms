@@ -1139,10 +1139,7 @@ describe('AiSlice model selection', () => {
       getRunContext: () => activeContext,
     });
     const sendMessage = jest
-      .spyOn(
-        store.getState().ai.getSessionChatController('session-1')!.chat,
-        'sendMessage',
-      )
+      .spyOn(store.getState().ai.getSessionChat('session-1')!, 'sendMessage')
       .mockResolvedValue(undefined);
     store.getState().ai.setPrompt('session-1', 'hello');
     await store.getState().ai.startAnalysis('session-1');
@@ -1180,10 +1177,7 @@ describe('AiSlice model selection', () => {
       },
     });
     const sendMessage = jest
-      .spyOn(
-        store.getState().ai.getSessionChatController('session-1')!.chat,
-        'sendMessage',
-      )
+      .spyOn(store.getState().ai.getSessionChat('session-1')!, 'sendMessage')
       .mockResolvedValue(undefined);
     store.getState().ai.setSessionDraftContextItemIds('session-1', ['map-a']);
     store.getState().ai.setPrompt('session-1', 'hello');
@@ -1218,10 +1212,7 @@ describe('AiSlice model selection', () => {
       },
     });
     const sendMessage = jest
-      .spyOn(
-        store.getState().ai.getSessionChatController('session-1')!.chat,
-        'sendMessage',
-      )
+      .spyOn(store.getState().ai.getSessionChat('session-1')!, 'sendMessage')
       .mockResolvedValue(undefined);
 
     store.getState().ai.createSession('Session 2');

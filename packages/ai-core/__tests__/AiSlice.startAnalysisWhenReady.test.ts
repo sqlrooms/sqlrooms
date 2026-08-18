@@ -32,11 +32,9 @@ function createTestStore() {
 describe('startAnalysisWhenReady', () => {
   it('starts without a mounted React chat provider', async () => {
     const store = createTestStore();
-    const controller = store
-      .getState()
-      .ai.getSessionChatController('session-1')!;
+    const chat = store.getState().ai.getSessionChat('session-1')!;
     const sendMessage = jest
-      .spyOn(controller.chat, 'sendMessage')
+      .spyOn(chat, 'sendMessage')
       .mockResolvedValue(undefined);
 
     await store.getState().ai.startAnalysis('session-1');
@@ -45,20 +43,18 @@ describe('startAnalysisWhenReady', () => {
     expect(store.getState().ai.getCurrentSession()?.prompt).toBe('');
   });
 
-  it('reuses the same controller and delegates immediately', async () => {
+  it('reuses the same chat and delegates immediately', async () => {
     const store = createTestStore();
-    const first = store.getState().ai.getSessionChatController('session-1')!;
+    const first = store.getState().ai.getSessionChat('session-1')!;
     const sendMessage = jest
-      .spyOn(first.chat, 'sendMessage')
+      .spyOn(first, 'sendMessage')
       .mockResolvedValue(undefined);
 
     await expect(
       store.getState().ai.startAnalysisWhenReady('session-1'),
     ).resolves.toBe(true);
 
-    expect(store.getState().ai.getSessionChatController('session-1')).toBe(
-      first,
-    );
+    expect(store.getState().ai.getSessionChat('session-1')).toBe(first);
     expect(sendMessage).toHaveBeenCalledWith({text: 'hello world'});
   });
 
@@ -74,14 +70,22 @@ describe('startAnalysisWhenReady', () => {
     errorSpy.mockRestore();
   });
 
-  it('disposes live controllers and abort signals on slice destruction', async () => {
+  it('replaces and fences a stale chat generation', () => {
     const store = createTestStore();
-    const controller = store
-      .getState()
-      .ai.getSessionChatController('session-1')!;
-    const stop = jest
-      .spyOn(controller.chat, 'stop')
-      .mockResolvedValue(undefined);
+    const first = store.getState().ai.getSessionChat('session-1')!;
+    const stop = jest.spyOn(first, 'stop').mockResolvedValue(undefined);
+
+    store.getState().ai.persistTimedOutSession('session-1', [], 'timed out');
+    const second = store.getState().ai.getSessionChat('session-1')!;
+
+    expect(second).not.toBe(first);
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('disposes live chats and abort signals on slice destruction', async () => {
+    const store = createTestStore();
+    const chat = store.getState().ai.getSessionChat('session-1')!;
+    const stop = jest.spyOn(chat, 'stop').mockResolvedValue(undefined);
     const abortController = new AbortController();
     store.getState().ai.setAbortController('session-1', abortController);
 

@@ -14,11 +14,11 @@ export type UseSessionChatResult = {
 };
 
 /**
- * Subscribe to the AI SDK chat controller owned by a session.
+ * Subscribe to the AI SDK chat owned by a session runtime.
  *
- * The AI slice owns the controller lifecycle, so a session can keep running
- * without a mounted React component. This hook only bridges that controller
- * into React.
+ * The AI slice owns the runtime lifecycle, so a session can keep running
+ * without a mounted React component. This hook only bridges its chat into
+ * React.
  *
  * @param sessionId - The ID of the session to observe.
  * @returns Messages and imperative chat methods for the session.
@@ -30,25 +30,17 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
       state.ai.config.sessions.find((session) => session.id === sessionId)
         ?.messagesRevision,
   );
-  const getSessionChatController = useStoreWithAi(
-    (state) => state.ai.getSessionChatController,
-  );
-  const controller = requireSessionChatController(
-    sessionId,
-    getSessionChatController(sessionId),
-  );
+  const getSessionChat = useStoreWithAi((state) => state.ai.getSessionChat);
+  const chat = requireSessionChat(sessionId, getSessionChat(sessionId));
 
   const {messages, sendMessage, stop, status} = useChat({
-    chat: controller.chat,
+    chat,
   });
 
   return {messages, sendMessage, stop, status, sessionId};
 }
 
-function requireSessionChatController<T>(
-  sessionId: string,
-  controller: T | undefined,
-): T {
-  if (!controller) throw new Error(`AI session not found: ${sessionId}`);
-  return controller;
+function requireSessionChat<T>(sessionId: string, chat: T | undefined): T {
+  if (!chat) throw new Error(`AI session not found: ${sessionId}`);
+  return chat;
 }

@@ -1,11 +1,7 @@
 import {jest} from '@jest/globals';
 import {Chat} from '@ai-sdk/react';
 import type {UIMessage} from 'ai';
-import {
-  createSessionChatRuntime,
-  createSessionChatRuntimeRegistry,
-  type SessionChatController,
-} from '../src/sessionChatRuntime';
+import {createSessionChatRuntime} from '../src/sessionChatRuntime';
 
 const userMessage: UIMessage = {
   id: 'user-1',
@@ -33,10 +29,12 @@ describe('sessionChatRuntime', () => {
     const chat = new Chat<UIMessage>({messages: []});
     jest.spyOn(chat, 'stop').mockResolvedValue(undefined);
     const onMessagesChange = jest.fn();
+    const unsubscribe = jest.fn();
     const runtime = createSessionChatRuntime({
       chat,
       usesRemoteTransport: false,
       getState: () => createRuntimeState(),
+      subscribeToStateChanges: () => unsubscribe,
       onMessagesChange,
       onIdleTimeout: jest.fn(),
     });
@@ -45,6 +43,7 @@ describe('sessionChatRuntime', () => {
     expect(onMessagesChange).toHaveBeenLastCalledWith([userMessage]);
 
     runtime.dispose();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
     chat.messages = [];
     expect(onMessagesChange).toHaveBeenCalledTimes(1);
   });
@@ -56,20 +55,27 @@ describe('sessionChatRuntime', () => {
     const stop = jest.spyOn(chat, 'stop').mockResolvedValue(undefined);
     const events: string[] = [];
     const onIdleTimeout = jest.fn(() => events.push('persist'));
+    let state = createRuntimeState();
+    let notifyStateChange = () => {};
 
     createSessionChatRuntime({
       chat,
       usesRemoteTransport: false,
-      getState: () =>
-        createRuntimeState({
-          isRunning: true,
-          abortController,
-          timeouts: {idleStreamMs: 100},
-        }),
+      getState: () => state,
+      subscribeToStateChanges: (onChange) => {
+        notifyStateChange = onChange;
+        return jest.fn();
+      },
       onMessagesChange: jest.fn(),
       onIdleTimeout,
       onDeactivate: () => events.push('fence'),
     });
+    state = createRuntimeState({
+      isRunning: true,
+      abortController,
+      timeouts: {idleStreamMs: 100},
+    });
+    notifyStateChange();
 
     await jest.advanceTimersByTimeAsync(100);
 
@@ -110,6 +116,7 @@ describe('sessionChatRuntime', () => {
           tools: {clientTool: {}},
           timeouts: {toolExecutionMs: 100},
         }),
+      subscribeToStateChanges: () => jest.fn(),
       onMessagesChange: jest.fn(),
       onIdleTimeout: jest.fn(),
     });
@@ -122,35 +129,5 @@ describe('sessionChatRuntime', () => {
       state: 'output-error',
       errorText: 'Tool "clientTool" timed out after 100ms',
     });
-  });
-
-  it('reuses a generation and disposes it before replacement', () => {
-    const registry = createSessionChatRuntimeRegistry();
-    const first = {
-      chat: new Chat<UIMessage>({messages: []}),
-      refresh: jest.fn(),
-      dispose: jest.fn(),
-    } satisfies SessionChatController;
-    let isFirstCurrent = () => false;
-    const created = registry.ensure('session-1', '0', (lifecycle) => {
-      isFirstCurrent = lifecycle.isCurrent;
-      return first;
-    });
-
-    expect(isFirstCurrent()).toBe(true);
-    expect(registry.ensure('session-1', '0', () => first)).toBe(created);
-
-    let previousWasDisposed = false;
-    const second = registry.ensure('session-1', '1', () => {
-      previousWasDisposed = first.dispose.mock.calls.length === 1;
-      return {
-        ...first,
-        dispose: jest.fn(),
-      };
-    });
-
-    expect(previousWasDisposed).toBe(true);
-    expect(isFirstCurrent()).toBe(false);
-    expect(second).not.toBe(first);
   });
 });

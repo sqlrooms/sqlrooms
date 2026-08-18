@@ -18,8 +18,7 @@ import {
   type AiTimeoutOptions,
 } from './timeouts';
 
-/** Runtime state read by a session chat without becoming part of its interface. */
-export type SessionChatRuntimeState = {
+type SessionChatRuntimeState = {
   isRunning: boolean;
   abortController: AbortController | undefined;
   tools: StoredToolSet;
@@ -29,26 +28,13 @@ export type SessionChatRuntimeState = {
   pendingSubAgentApprovals: Record<string, PendingSubAgentApproval>;
 };
 
-/**
- * Ephemeral per-session chat runtime. Persisted session state remains owned by
- * the AI slice; this module owns the live SDK chat and its lifecycle resources.
- */
-export type SessionChatController = {
-  chat: Chat<UIMessage>;
-  /** Re-evaluates timeout scheduling after non-message runtime state changes. */
-  refresh: () => void;
-  /** Stops the chat and releases subscriptions and timers. */
-  dispose: () => void;
-};
-
-/** Options for constructing one ephemeral session chat runtime. */
-export type CreateSessionChatRuntimeOptions = {
+type CreateSessionChatRuntimeOptions = {
   chat: Chat<UIMessage>;
   usesRemoteTransport: boolean;
   getState: () => SessionChatRuntimeState;
+  subscribeToStateChanges: (onChange: () => void) => () => void;
   onMessagesChange: (messages: UIMessage[]) => void;
   onIdleTimeout: (messages: UIMessage[], error: Error) => void;
-  /** Fences callbacks before a terminal runtime-owned shutdown. */
   onDeactivate?: () => void;
 };
 
@@ -60,10 +46,11 @@ export function createSessionChatRuntime({
   chat,
   usesRemoteTransport,
   getState,
+  subscribeToStateChanges,
   onMessagesChange,
   onIdleTimeout,
   onDeactivate,
-}: CreateSessionChatRuntimeOptions): SessionChatController {
+}: CreateSessionChatRuntimeOptions) {
   const clientToolTimeouts = new Map<
     string,
     {timeoutId: ReturnType<typeof setTimeout>; timeoutMs: number}
@@ -74,6 +61,7 @@ export function createSessionChatRuntime({
   let lastAgentProgressSignal = '';
   let lastIdleDisposition = '';
   let unregisterMessages = () => {};
+  let unsubscribeFromState = () => {};
 
   const clearIdleTimeout = () => {
     if (idleTimeoutId) clearTimeout(idleTimeoutId);
@@ -84,6 +72,7 @@ export function createSessionChatRuntime({
     if (disposed) return false;
     disposed = true;
     unregisterMessages();
+    unsubscribeFromState();
     clearIdleTimeout();
     for (const {timeoutId} of clientToolTimeouts.values()) {
       clearTimeout(timeoutId);
@@ -213,80 +202,14 @@ export function createSessionChatRuntime({
     onMessagesChange(chat.messages);
     refresh();
   });
+  unsubscribeFromState = subscribeToStateChanges(refresh);
   refresh();
 
   return {
     chat,
-    refresh,
     dispose: () => {
       if (!deactivate()) return;
       void chat.stop();
-    },
-  };
-}
-
-/** Lifecycle fence supplied to a runtime by its registry entry. */
-export type SessionChatControllerLifecycle = {
-  /** True while this runtime is the current generation for its session. */
-  isCurrent: () => boolean;
-  /** Releases this generation without recursively disposing it. */
-  release: () => void;
-};
-
-/** Registry interface for versioned per-session chat runtimes. */
-export type SessionChatControllerRegistry = {
-  ensure: (
-    sessionId: string,
-    version: string,
-    create: (
-      lifecycle: SessionChatControllerLifecycle,
-    ) => SessionChatController,
-  ) => SessionChatController;
-  get: (sessionId: string) => SessionChatController | undefined;
-  refresh: (sessionId: string) => void;
-  refreshAll: () => void;
-  delete: (sessionId: string) => void;
-  clear: () => void;
-};
-
-/** Creates a registry that replaces and disposes stale session runtimes. */
-export function createSessionChatRuntimeRegistry(): SessionChatControllerRegistry {
-  const runtimes = new Map<
-    string,
-    {version: string; token: object; runtime: SessionChatController}
-  >();
-
-  return {
-    ensure: (sessionId, version, create) => {
-      const existing = runtimes.get(sessionId);
-      if (existing?.version === version) return existing.runtime;
-      runtimes.delete(sessionId);
-      existing?.runtime.dispose();
-      const token = {};
-      const isCurrent = () => runtimes.get(sessionId)?.token === token;
-      const runtime = create({
-        isCurrent,
-        release: () => {
-          if (isCurrent()) runtimes.delete(sessionId);
-        },
-      });
-      runtimes.set(sessionId, {version, token, runtime});
-      return runtime;
-    },
-    get: (sessionId) => runtimes.get(sessionId)?.runtime,
-    refresh: (sessionId) => runtimes.get(sessionId)?.runtime.refresh(),
-    refreshAll: () => {
-      for (const {runtime} of runtimes.values()) runtime.refresh();
-    },
-    delete: (sessionId) => {
-      const runtime = runtimes.get(sessionId)?.runtime;
-      runtimes.delete(sessionId);
-      runtime?.dispose();
-    },
-    clear: () => {
-      const activeRuntimes = [...runtimes.values()];
-      runtimes.clear();
-      for (const {runtime} of activeRuntimes) runtime.dispose();
     },
   };
 }
