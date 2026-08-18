@@ -147,20 +147,17 @@ describe('artifact AI session helpers', () => {
     {
       sessionId: 'session-a-old',
       artifactId: 'artifact-a',
-      createdAt: 1000,
-      linkType: 'created' as const,
+      linkedAt: 1000,
     },
     {
       sessionId: 'session-a-new',
       artifactId: 'artifact-a',
-      createdAt: 3000,
-      linkType: 'attached' as const,
+      linkedAt: 3000,
     },
     {
       sessionId: 'session-b',
       artifactId: 'artifact-b',
-      createdAt: 2000,
-      linkType: 'created' as const,
+      linkedAt: 2000,
     },
   ];
 
@@ -234,26 +231,22 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'empty-older',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'non-empty-newer',
             artifactId: 'artifact-a',
-            createdAt: 3000,
-            linkType: 'attached',
+            linkedAt: 3000,
           },
           {
             sessionId: 'empty-newer',
             artifactId: 'artifact-a',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
           {
             sessionId: 'running-empty',
             artifactId: 'artifact-a',
-            createdAt: 4000,
-            linkType: 'attached',
+            linkedAt: 4000,
           },
         ],
         artifactId: 'artifact-a',
@@ -282,20 +275,17 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'older-draft-match',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'newer-draft-match',
             artifactId: 'artifact-a',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
           {
             sessionId: 'other-artifact-match',
             artifactId: 'artifact-b',
-            createdAt: 3000,
-            linkType: 'created',
+            linkedAt: 3000,
           },
         ],
         artifactId: 'artifact-a',
@@ -326,8 +316,7 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'run-match',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ],
         artifactId: 'artifact-a',
@@ -345,8 +334,7 @@ describe('artifact AI session helpers', () => {
       {
         sessionId: 'running-match',
         artifactId: 'artifact-a',
-        createdAt: 3000,
-        linkType: 'created' as const,
+        linkedAt: 3000,
       },
     ];
 
@@ -383,8 +371,7 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'no-match',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ],
         artifactId: 'artifact-a',
@@ -404,14 +391,12 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'empty-older',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'empty-newer',
             artifactId: 'artifact-a',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
         ],
         artifactId: 'artifact-a',
@@ -434,8 +419,7 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'summary-only',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ],
         artifactId: 'artifact-a',
@@ -467,8 +451,7 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'deleted-session',
             artifactId: 'artifact-a',
-            createdAt: 5000,
-            linkType: 'attached' as const,
+            linkedAt: 5000,
           },
         ],
       }),
@@ -486,14 +469,12 @@ describe('artifact AI session helpers', () => {
           {
             sessionId: 'deleted-session',
             artifactId: 'artifact-a',
-            createdAt: 5000,
-            linkType: 'attached',
+            linkedAt: 5000,
           },
           {
             sessionId: 'session-a-new',
             artifactId: 'deleted-artifact',
-            createdAt: 6000,
-            linkType: 'attached',
+            linkedAt: 6000,
           },
         ],
         sessions,
@@ -503,20 +484,17 @@ describe('artifact AI session helpers', () => {
       {
         sessionId: 'session-a-old',
         artifactId: 'artifact-a',
-        createdAt: 1000,
-        linkType: 'created',
+        linkedAt: 1000,
       },
       {
         sessionId: 'session-a-new',
         artifactId: 'artifact-a',
-        createdAt: 3000,
-        linkType: 'attached',
+        linkedAt: 3000,
       },
       {
         sessionId: 'session-b',
         artifactId: 'artifact-b',
-        createdAt: 2000,
-        linkType: 'created',
+        linkedAt: 2000,
       },
     ]);
   });
@@ -557,15 +535,14 @@ describe('artifact AI session helpers', () => {
   });
 
   it('prefers the target artifact over the most recently linked one', () => {
-    // session-a-new is linked to artifact-a (createdAt 3000). Add a newer link
+    // session-a-new is linked to artifact-a (linkedAt 3000). Add a newer link
     // to artifact-b so the "latest" artifact is artifact-b.
     const multiLinks = [
       ...sessionArtifactLinks,
       {
         sessionId: 'session-a-new',
         artifactId: 'artifact-b',
-        createdAt: 4000,
-        linkType: 'attached' as const,
+        linkedAt: 4000,
       },
     ];
     const artifactsById = {
@@ -608,8 +585,7 @@ describe('artifact AI session helpers', () => {
       {
         sessionId: 'session-a-new',
         artifactId: 'artifact-b',
-        createdAt: 4000,
-        linkType: 'attached' as const,
+        linkedAt: 4000,
       },
     ];
     const artifactsById = {
@@ -649,10 +625,8 @@ describe('createArtifactAiSlice', () => {
     expect(
       store
         .getState()
-        .artifactAi.config.sessionArtifactLinks.find(
-          (link) => link.sessionId === 'session-1',
-        )?.linkType,
-    ).toBe('attached');
+        .artifactAi.hasSessionArtifactLink('session-1', 'artifact-a'),
+    ).toBe(true);
   });
 
   it('creates a new artifact-scoped session instead of reusing the current empty session', () => {
@@ -666,8 +640,7 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'current-empty',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -693,8 +666,7 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'empty-session',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -755,8 +727,7 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'session-a',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -824,8 +795,7 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'source-session',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -858,14 +828,12 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'source-session',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'source-session',
             artifactId: 'artifact-b',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
         ];
       }),
@@ -886,7 +854,7 @@ describe('createArtifactAiSlice', () => {
         .artifactAi.config.sessionArtifactLinks.filter(
           (link) => link.sessionId === 'target-session',
         )
-        .map((link) => link.createdAt),
+        .map((link) => link.linkedAt),
     ).toEqual([1000, 2000]);
   });
 
@@ -904,20 +872,17 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'current-session',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'current-session',
             artifactId: 'artifact-b',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
           {
             sessionId: 'other-session',
             artifactId: 'artifact-a',
-            createdAt: 3000,
-            linkType: 'attached',
+            linkedAt: 3000,
           },
         ];
       }),
@@ -951,14 +916,12 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'owned-older',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'owned-newer',
             artifactId: 'artifact-a',
-            createdAt: 5000,
-            linkType: 'attached',
+            linkedAt: 5000,
           },
         ];
       }),
@@ -982,8 +945,7 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'session-1',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -1025,14 +987,12 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'session-current',
             artifactId: 'artifact-a',
-            createdAt: 2000,
-            linkType: 'created',
+            linkedAt: 2000,
           },
           {
             sessionId: 'session-other',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'attached',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -1081,20 +1041,17 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'session-current',
             artifactId: 'artifact-a',
-            createdAt: 3000,
-            linkType: 'created',
+            linkedAt: 3000,
           },
           {
             sessionId: 'session-b',
             artifactId: 'artifact-b',
-            createdAt: 2000,
-            linkType: 'created',
+            linkedAt: 2000,
           },
           {
             sessionId: 'session-a-other',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'attached',
+            linkedAt: 1000,
           },
         ];
       }),
@@ -1137,20 +1094,17 @@ describe('createArtifactAiSlice', () => {
           {
             sessionId: 'session-a',
             artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'deleted-session',
             artifactId: 'artifact-a',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
           {
             sessionId: 'session-b',
             artifactId: 'deleted-artifact',
-            createdAt: 3000,
-            linkType: 'created',
+            linkedAt: 3000,
           },
         ];
       }),
@@ -1162,23 +1116,22 @@ describe('createArtifactAiSlice', () => {
       {
         sessionId: 'session-a',
         artifactId: 'artifact-a',
-        createdAt: 1000,
-        linkType: 'created',
+        linkedAt: 1000,
       },
     ]);
   });
 });
 
-describe('artifactAi link and pin mutations', () => {
+describe('artifactAi link mutations', () => {
   it('adds, queries, and removes session-artifact links', () => {
     const store = createTestStore();
     const {artifactAi} = store.getState();
 
     expect(artifactAi.hasSessionArtifactLink('s1', 'artifact-a')).toBe(false);
 
-    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
-    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
-    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a');
 
     expect(
       store.getState().artifactAi.hasSessionArtifactLink('s1', 'artifact-a'),
@@ -1202,12 +1155,8 @@ describe('artifactAi link and pin mutations', () => {
 
   it('does not duplicate an existing link', () => {
     const store = createTestStore();
-    store
-      .getState()
-      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
-    store
-      .getState()
-      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'attached');
+    store.getState().artifactAi.addSessionArtifactLink('s1', 'artifact-a');
+    store.getState().artifactAi.addSessionArtifactLink('s1', 'artifact-a');
 
     expect(
       store
@@ -1218,41 +1167,12 @@ describe('artifactAi link and pin mutations', () => {
     ).toHaveLength(1);
   });
 
-  it('promotes attached provenance to created without changing link order', () => {
-    const store = createTestStore();
-    store.setState(
-      produce(store.getState(), (draft: TestRoomState) => {
-        draft.artifactAi.config.sessionArtifactLinks = [
-          {
-            sessionId: 's1',
-            artifactId: 'artifact-a',
-            createdAt: 1000,
-            linkType: 'attached',
-          },
-        ];
-      }),
-    );
-
-    store
-      .getState()
-      .artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
-
-    expect(store.getState().artifactAi.config.sessionArtifactLinks).toEqual([
-      {
-        sessionId: 's1',
-        artifactId: 'artifact-a',
-        createdAt: 1000,
-        linkType: 'created',
-      },
-    ]);
-  });
-
   it('removes all links for a session', () => {
     const store = createTestStore();
     const {artifactAi} = store.getState();
-    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
-    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
-    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a');
 
     store.getState().artifactAi.removeAllLinksForSession('s1');
 
@@ -1267,9 +1187,9 @@ describe('artifactAi link and pin mutations', () => {
   it('removes all links for an artifact', () => {
     const store = createTestStore();
     const {artifactAi} = store.getState();
-    artifactAi.addSessionArtifactLink('s1', 'artifact-a', 'created');
-    artifactAi.addSessionArtifactLink('s2', 'artifact-a', 'attached');
-    artifactAi.addSessionArtifactLink('s1', 'artifact-b', 'attached');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-a');
+    artifactAi.addSessionArtifactLink('s2', 'artifact-a');
+    artifactAi.addSessionArtifactLink('s1', 'artifact-b');
 
     store.getState().artifactAi.removeAllLinksForArtifact('artifact-a');
 
@@ -1279,41 +1199,6 @@ describe('artifactAi link and pin mutations', () => {
     expect(store.getState().artifactAi.getArtifactIdsForSession('s1')).toEqual([
       'artifact-b',
     ]);
-  });
-
-  it('toggles and persists pinned artifacts', () => {
-    const store = createTestStore();
-
-    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
-      false,
-    );
-
-    store.getState().artifactAi.togglePinArtifact('artifact-a');
-    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
-      true,
-    );
-    expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([
-      'artifact-a',
-    ]);
-
-    store.getState().artifactAi.togglePinArtifact('artifact-a');
-    expect(store.getState().artifactAi.isPinnedArtifact('artifact-a')).toBe(
-      false,
-    );
-    expect(store.getState().artifactAi.config.pinnedArtifactIds).toEqual([]);
-  });
-
-  it('does not pin missing artifacts', () => {
-    const store = createTestStore();
-
-    store.getState().artifactAi.togglePinArtifact('missing-artifact');
-
-    expect(
-      store.getState().artifactAi.isPinnedArtifact('missing-artifact'),
-    ).toBe(false);
-    expect(
-      store.getState().artifactAi.config.pinnedArtifactIds,
-    ).toBeUndefined();
   });
 });
 
@@ -1331,8 +1216,7 @@ describe('ArtifactAiConfigSchema', () => {
           {
             sessionId: 'session-2',
             artifactId: 'artifact-b',
-            createdAt: 2000,
-            linkType: 'created',
+            linkedAt: 2000,
           },
         ],
       }).sessionArtifactLinks,
@@ -1340,13 +1224,12 @@ describe('ArtifactAiConfigSchema', () => {
       {
         sessionId: 'session-2',
         artifactId: 'artifact-b',
-        createdAt: 2000,
-        linkType: 'created',
+        linkedAt: 2000,
       },
     ]);
   });
 
-  it('rejects removed one-to-one artifact AI fields', () => {
+  it('rejects fields no longer owned by the artifact AI slice', () => {
     expect(
       ArtifactAiConfigSchema.safeParse({
         aiSessionArtifacts: {'session-1': 'artifact-a'},
@@ -1357,16 +1240,19 @@ describe('ArtifactAiConfigSchema', () => {
         artifactCreators: {'artifact-a': 'session-1'},
       }).success,
     ).toBe(false);
+    expect(
+      ArtifactAiConfigSchema.safeParse({pinnedArtifactIds: ['artifact-a']})
+        .success,
+    ).toBe(false);
   });
 });
 
 describe('ArtifactSessionLink types', () => {
-  it('should validate a valid created link', () => {
+  it('validates an association', () => {
     const link = {
       sessionId: 'session-1',
       artifactId: 'artifact-1',
-      createdAt: Date.now(),
-      linkType: 'created' as const,
+      linkedAt: Date.now(),
     };
 
     const result = ArtifactSessionLinkSchema.safeParse(link);
@@ -1376,27 +1262,25 @@ describe('ArtifactSessionLink types', () => {
     }
   });
 
-  it('should validate a valid attached link', () => {
-    const link = {
-      sessionId: 'session-2',
-      artifactId: 'artifact-2',
-      createdAt: Date.now(),
-      linkType: 'attached' as const,
-    };
-
-    const result = ArtifactSessionLinkSchema.safeParse(link);
-    expect(result.success).toBe(true);
-  });
-
-  it('should reject invalid linkType', () => {
+  it('rejects legacy provenance metadata', () => {
     const link = {
       sessionId: 'session-1',
       artifactId: 'artifact-1',
-      createdAt: Date.now(),
-      linkType: 'invalid',
+      linkedAt: Date.now(),
+      linkType: 'created',
     };
 
     const result = ArtifactSessionLinkSchema.safeParse(link);
+    expect(result.success).toBe(false);
+  });
+
+  it.each([-1, 1.5])('rejects invalid linkedAt value %s', (linkedAt) => {
+    const result = ArtifactSessionLinkSchema.safeParse({
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      linkedAt,
+    });
+
     expect(result.success).toBe(false);
   });
 
@@ -1404,17 +1288,11 @@ describe('ArtifactSessionLink types', () => {
     const validLink = {
       sessionId: 'session-1',
       artifactId: 'artifact-1',
-      createdAt: 1000,
-      linkType: 'created' as const,
+      linkedAt: 1000,
     };
 
-    for (const field of [
-      'sessionId',
-      'artifactId',
-      'createdAt',
-      'linkType',
-    ] as const) {
-      const {[field]: _omitted, ...link} = validLink;
+    for (const field of ['sessionId', 'artifactId', 'linkedAt'] as const) {
+      const link = {...validLink, [field]: undefined};
       const result = ArtifactSessionLinkSchema.safeParse(link);
       expect(result.success).toBe(false);
     }

@@ -162,14 +162,12 @@ function createMultiArtifactStore(
           {
             sessionId: 'session-1',
             artifactId: 'worksheet-old',
-            createdAt: 1000,
-            linkType: 'created',
+            linkedAt: 1000,
           },
           {
             sessionId: 'session-1',
             artifactId: 'worksheet-new',
-            createdAt: 2000,
-            linkType: 'attached',
+            linkedAt: 2000,
           },
         ],
       },

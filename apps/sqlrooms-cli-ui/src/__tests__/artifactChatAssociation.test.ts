@@ -67,7 +67,6 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
   expect(addSessionArtifactLink).toHaveBeenCalledWith(
     sourceSessionId,
     targetArtifactId,
-    'created',
   );
   expect(switchSession).toHaveBeenCalledWith(sourceSessionId);
 });
