@@ -23,6 +23,11 @@ export type RoomCommandInvocation = {
   surface: RoomCommandSurface;
   actor?: string;
   traceId?: string;
+  /** Stable resource target captured for this invocation, when available. */
+  target?: {
+    kind: string;
+    id: string;
+  };
   metadata?: Record<string, unknown>;
 };
 
@@ -778,6 +783,7 @@ function normalizeInvocation(
     surface: invocation?.surface ?? DEFAULT_COMMAND_SURFACE,
     actor: invocation?.actor,
     traceId: invocation?.traceId,
+    target: invocation?.target,
     metadata: invocation?.metadata,
   };
 }

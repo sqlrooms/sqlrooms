@@ -134,7 +134,8 @@ By default, the helper is conservative:
 
 - point / multipoint -> `GeoArrowScatterplotLayer`
 - linestring / multilinestring -> `GeoArrowPathLayer`
-- polygon / multipolygon -> `GeoArrowPolygonLayer`
+- native GeoArrow polygon / multipolygon -> `GeoArrowPolygonLayer`
+- WKB/WKT multipolygon -> `GeoJsonLayer`
 - mixed, unknown, or unsupported -> `GeoJsonLayer`
 
 You can provide semantic hints for special layers:
@@ -632,15 +633,50 @@ The current curated layer set is:
 GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
 back to decoding and GeoJSON-binary preparation, with promotion available
 for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
-`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus polygon promotion for
-`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`.
+`GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus Polygon promotion for
+`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`. WKB/WKT MultiPolygon
+uses the GeoJSON-binary path so separate polygon parts retain their nesting.
 
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-geoarrow).
 
-When querying DuckDB spatial `GEOMETRY` columns directly, convert them first
-with `ST_AsWKB(...)` or `ST_AsText(...)`. DuckDB's internal geometry payload is
-not the same as standard WKB.
+When querying DuckDB spatial `GEOMETRY` columns, the dataset pipeline probes
+output types with `DESCRIBE` and projects native `GEOMETRY` columns through
+`SELECT * REPLACE (ST_AsWKB(col) AS col)` before prepare/decode. Matching is
+exact for `GEOMETRY` and CRS-parameterized forms such as
+`GEOMETRY('EPSG:4326')` — not containers like `GEOMETRY[]`. Authored SQL is
+not rewritten — the wrap is an outer pipeline query. Prefer writing
+`ST_AsWKB(...)` in transforms when you control the SQL; the pipeline covers
+bare `ST_Point(...)` / table `GEOMETRY` columns for every authoring surface.
+
+## AI map config prepare
+
+AI and host tooling should prepare authored Deck map configs through the shared
+helpers exported from `@sqlrooms/deck`:
+
+- `prepareAiDeckMapConfig(config, {resolveTable?, stripCatalogNames?})` — preferred entrypoint:
+  validates `colorScale.field` names against known tables when a resolver is
+  provided, then runs normalization. Hosts that attach a workspace DB under a
+  catalog that is **not** in scope for dataset SQL should pass that catalog via
+  `stripCatalogNames` (CLI passes `['sqlrooms-cli']`). Default is **no
+  stripping** so other apps keep their own catalogs / attached remotes intact.
+  Dashboard AI helpers (`createDashboardAgentToolWithDeckMaps`,
+  `createDashboardWithDeckMapAiTools`, `createDeckMapDashboardTool`) accept the
+  same option.
+- `normalizeAiDeckMapConfig(config, {stripCatalogNames?})` — safe structural defaults only (scheme
+  casing, solo-dataset binding inject, size clamps, heatmap `colorRange` strip,
+  lon/lat → WKB transform inject). `SELECT *` / `ST_AsWKB` alias collisions are
+  rejected by validation for agent retry — SQL is not rewritten.
+  Does not invent schemes or silently mutate polygon geometry into centroids.
+- `validateAndFixColorScaleFields(config, resolveTable)` — casing fix for
+  base-table columns; hard-rejects unknown fields on bare `{tableName}` sources.
+  Skips unknown-field rejection when `transformSql` / `sqlQuery` is present
+  (aliases may be transform-only).
+
+Durable resource writes also run `getDeckMapResourceConfigIssues` /
+`assertDeckMapResourceConfig` for syntax and type/scheme compatibility
+(e.g. `quantile` + `Viridis` is rejected). Native `GEOMETRY` columns are
+normalized to WKB by the dataset pipeline (not by SQL-string validation).
 
 ## Runtime Props and Children
 

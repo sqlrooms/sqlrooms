@@ -1,4 +1,4 @@
-import {Chat, isChatSessionEmpty} from '@sqlrooms/ai';
+import {Chat, isChatSessionEmpty, type ChatTurnSlotProps} from '@sqlrooms/ai';
 import {isAiSessionVisibleForArtifact} from '@sqlrooms/artifacts/ai';
 import {
   Button,
@@ -26,6 +26,28 @@ interface AssistantChatContainerProps {
   debugPanel?: React.ReactNode;
 }
 
+const CliChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
+  const Prompt = turn.prompt.Content;
+  const Timeline = turn.timeline.Content;
+  const Error = turn.error?.Content;
+  const Actions = turn.actions.Content;
+
+  return (
+    <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
+      <div className="mb-2 flex items-center gap-2 text-gray-700 dark:text-gray-100">
+        <Prompt />
+      </div>
+      <div className="flex w-full flex-col gap-2">
+        <Timeline />
+        {Error && <Error />}
+        <Actions />
+      </div>
+    </div>
+  );
+};
+
+const CLI_CHAT_RENDERING_COMPONENTS = {Turn: CliChatTurn};
+
 export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
   contextDropTarget,
   beforeCreateSessionAction,
@@ -40,8 +62,8 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
     (s) => s.artifacts.config.currentArtifactId,
   );
   const sessions = useRoomStore((s) => s.ai.config.sessions);
-  const aiSessionArtifacts = useRoomStore(
-    (s) => s.artifactAi.config.aiSessionArtifacts,
+  const sessionArtifactLinks = useRoomStore(
+    (s) => s.artifactAi.config.sessionArtifactLinks,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const updateProvider = useRoomStore((s) => s.aiSettings.updateProvider);
@@ -67,12 +89,12 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
 
   const filterSession = useCallback(
     (session: (typeof sessions)[number]) =>
-      isAiSessionVisibleForArtifact(
-        aiSessionArtifacts,
-        session.id,
-        currentArtifactId,
-      ),
-    [aiSessionArtifacts, currentArtifactId],
+      isAiSessionVisibleForArtifact({
+        sessionArtifactLinks,
+        sessionId: session.id,
+        artifactId: currentArtifactId,
+      }),
+    [sessionArtifactLinks, currentArtifactId],
   );
 
   const historyIsRunning = useMemo(() => {
@@ -83,18 +105,20 @@ export const AssistantChatContainer: React.FC<AssistantChatContainerProps> = ({
       (session) =>
         session.isRunning &&
         session.id !== currentSession?.id &&
-        isAiSessionVisibleForArtifact(
-          aiSessionArtifacts,
-          session.id,
-          currentArtifactId,
-        ),
+        isAiSessionVisibleForArtifact({
+          sessionArtifactLinks,
+          sessionId: session.id,
+          artifactId: currentArtifactId,
+        }),
     );
-  }, [aiSessionArtifacts, currentArtifactId, currentSession, sessions]);
+  }, [sessionArtifactLinks, currentArtifactId, currentSession, sessions]);
 
   const messagesPane = (
     <div className="print-container h-full min-h-0 grow overflow-hidden">
       {isDataAvailable ? (
-        <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        <Chat.Rendering components={CLI_CHAT_RENDERING_COMPONENTS}>
+          <Chat.Messages key={currentSessionId} hoistedRenderers={['chart']} />
+        </Chat.Rendering>
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center">
           <SkeletonPane className="p-4" />

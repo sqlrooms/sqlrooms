@@ -106,6 +106,47 @@ describe('ArtifactsSlice', () => {
     expect(store.getState().artifacts.config.currentArtifactId).toBeUndefined();
   });
 
+  it('owns pinned artifact workspace state', () => {
+    const store = createTestStore();
+    store.getState().artifacts.ensureArtifact('a', {
+      type: 'dashboard',
+      title: 'A',
+    });
+
+    expect(store.getState().artifacts.isPinnedArtifact('a')).toBe(false);
+    store.getState().artifacts.togglePinArtifact('a');
+    expect(store.getState().artifacts.isPinnedArtifact('a')).toBe(true);
+    expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual(['a']);
+
+    store.getState().artifacts.deleteArtifact('a');
+    expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual([]);
+  });
+
+  it('does not pin missing artifacts', () => {
+    const store = createTestStore();
+    store.getState().artifacts.togglePinArtifact('missing');
+
+    expect(store.getState().artifacts.isPinnedArtifact('missing')).toBe(false);
+    expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual([]);
+  });
+
+  it('removes every persisted duplicate when unpinning an artifact', () => {
+    const store = createTestStore();
+    store.getState().artifacts.setConfig(
+      ArtifactsSliceConfig.parse({
+        artifactsById: {
+          a: {id: 'a', type: 'dashboard', title: 'A'},
+        },
+        artifactOrder: ['a'],
+        pinnedArtifactIds: ['a', 'a'],
+      }),
+    );
+
+    store.getState().artifacts.togglePinArtifact('a');
+
+    expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual([]);
+  });
+
   it('parses artifact metadata without visibility state', () => {
     const result = ArtifactsSliceConfig.parse({
       artifactsById: {
@@ -119,6 +160,7 @@ describe('ArtifactsSlice', () => {
       type: 'dashboard',
       title: 'A',
     });
+    expect(result.pinnedArtifactIds).toEqual([]);
   });
 
   it('validates configured artifact types', () => {

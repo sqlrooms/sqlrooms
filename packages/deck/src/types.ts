@@ -26,6 +26,7 @@ export type DeckAutoLayerType =
   | 'GeoArrowColumnLayer'
   | 'GeoArrowPathLayer'
   | 'GeoArrowPolygonLayer'
+  | 'GeoArrowSolidPolygonLayer'
   | 'GeoArrowArcLayer'
   | 'GeoArrowTripsLayer'
   | 'GeoArrowH3HexagonLayer';

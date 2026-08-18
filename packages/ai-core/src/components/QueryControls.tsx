@@ -26,7 +26,12 @@ type QueryControlsProps = PropsWithChildren<{
   placeholder?: string;
   /** Actions rendered in the composer's top row, right-aligned next to context controls. */
   topActions?: ReactNode;
-  onRun?: () => void;
+  /**
+   * Called before creating a session and running analysis.
+   * Return false to prevent session creation (useful for custom session management).
+   * Receives the prompt text as parameter.
+   */
+  onRun?: (prompt?: string) => void | false;
   onCancel?: () => void;
   contextDropTarget?: {
     id: string;
@@ -128,12 +133,15 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     () => (aiSettingsConfig ? extractModelsFromSettings(aiSettingsConfig) : []),
     [aiSettingsConfig],
   );
-  const hasSelectedModel = aiSettingsConfig
-    ? settingsModels.some(
-        (candidate) =>
-          candidate.provider === modelProvider && candidate.value === model,
-      )
-    : Boolean(modelProvider && model);
+  // If no session exists, assume default model will be used (session created on first message)
+  const hasSelectedModel = !currentSession
+    ? true
+    : aiSettingsConfig
+      ? settingsModels.some(
+          (candidate) =>
+            candidate.provider === modelProvider && candidate.value === model,
+        )
+      : Boolean(modelProvider && model);
 
   // Extract special composer controls from children
   const {inlineApiKeyInput, contextSelectors, otherChildren} =
@@ -151,11 +159,20 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     sessionId ? s.ai.getIsRunning(sessionId) : false,
   );
   const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
-  const prompt = useStoreWithAi((s) =>
+
+  const draftPrompt = useStoreWithAi((s) => s.ai.draftPrompt);
+  const setDraftPrompt = useStoreWithAi((s) => s.ai.setDraftPrompt);
+  const storedPrompt = useStoreWithAi((s) =>
     sessionId ? s.ai.getPrompt(sessionId) : '',
   );
+  const prompt = sessionId ? storedPrompt : draftPrompt;
+
   const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
+  const createSession = useStoreWithAi((s) => s.ai.createSession);
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const runAnalysisWhenReady = useStoreWithAi(
+    (s) => s.ai.startAnalysisWhenReady,
+  );
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
 
   useEffect(() => {
@@ -179,11 +196,29 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         if (
           !isSummarizing &&
           !isRunning &&
-          sessionId &&
           hasSelectedModel &&
           prompt.trim().length
         ) {
-          runAnalysis(sessionId);
+          // Call onRun BEFORE creating session (allows host to create artifacts, etc.)
+          const shouldContinue = onRun?.(prompt);
+
+          // If onRun returns false, skip session creation and analysis
+          if (shouldContinue === false) {
+            return;
+          }
+
+          // Create session if it doesn't exist
+          let activeSessionId = sessionId;
+          if (!activeSessionId) {
+            activeSessionId = createSession();
+            setPrompt(activeSessionId, prompt);
+            setDraftPrompt(''); // Clear draft
+            // The compatibility entry point now creates the controller
+            // synchronously; callers do not depend on a mounted chat surface.
+            runAnalysisWhenReady(activeSessionId);
+          } else {
+            runAnalysis(activeSessionId);
+          }
         }
       }
     },
@@ -193,24 +228,57 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       sessionId,
       hasSelectedModel,
       prompt,
+      onRun,
       runAnalysis,
+      runAnalysisWhenReady,
+      createSession,
+      setPrompt,
+      setDraftPrompt,
     ],
   );
 
-  const canStart = Boolean(
-    sessionId && hasSelectedModel && prompt.trim().length,
-  );
+  const canStart = Boolean(hasSelectedModel && prompt.trim().length);
 
   const handleClickRunOrCancel = useCallback(() => {
-    if (!sessionId) return;
     if (isRunning) {
+      if (!sessionId) return;
       cancelAnalysis(sessionId);
       onCancel?.();
     } else {
-      runAnalysis(sessionId);
-      onRun?.();
+      // Call onRun BEFORE creating session (allows host to create artifacts, etc.)
+      const shouldContinue = onRun?.(prompt);
+
+      // If onRun returns false, skip session creation and analysis
+      if (shouldContinue === false) {
+        return;
+      }
+
+      // Create session if it doesn't exist
+      let activeSessionId = sessionId;
+      if (!activeSessionId) {
+        activeSessionId = createSession();
+        setPrompt(activeSessionId, prompt);
+        setDraftPrompt(''); // Clear draft
+        // This remains compatible with block-scoped callers while creating the
+        // session controller synchronously.
+        void runAnalysisWhenReady(activeSessionId);
+      } else {
+        runAnalysis(activeSessionId);
+      }
     }
-  }, [sessionId, isRunning, cancelAnalysis, onCancel, runAnalysis, onRun]);
+  }, [
+    sessionId,
+    isRunning,
+    cancelAnalysis,
+    onCancel,
+    runAnalysis,
+    runAnalysisWhenReady,
+    onRun,
+    createSession,
+    setPrompt,
+    setDraftPrompt,
+    prompt,
+  ]);
 
   // Render the API key input mode
   if (showApiKeyInput && inlineApiKeyInput) {
@@ -275,8 +343,13 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                 value={prompt}
                 disabled={isSummarizing}
                 onChange={(e) => {
+                  const value = e.target.value;
                   if (sessionId) {
-                    setPrompt(sessionId, e.target.value);
+                    setPrompt(sessionId, value);
+                  } else {
+                    // No session yet - keep the draft in the shared AI slice so
+                    // suggestions and alternate composer surfaces stay aligned.
+                    setDraftPrompt(value);
                   }
                 }}
                 onKeyDown={handleKeyDown}
@@ -408,8 +481,11 @@ const InlineApiKeyInputRenderer: React.FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
 
+  // Use the resolved selection (not the current session's) so first-time key
+  // entry works before any session exists: with lazy session creation there is
+  // no current session yet, but a provider is still known from the default.
   const modelProvider = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.modelProvider,
+    (s) => s.ai.getSelectedModel().modelProvider,
   );
   const setApiKeyError = useStoreWithAi((s) => s.ai.setApiKeyError);
 

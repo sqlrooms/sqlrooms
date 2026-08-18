@@ -41,3 +41,32 @@
 .mermaid-diagram-error {
   text-align: left;
 }
+
+.api-release-notice {
+  align-items: center;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  color: var(--vp-c-text-2);
+  display: flex;
+  font-size: 0.875rem;
+  gap: 0.625rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.api-release-notice a {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+.api-release-badge {
+  background: var(--vp-c-warning-soft);
+  border-radius: 999px;
+  color: var(--vp-c-warning-1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  white-space: nowrap;
+}

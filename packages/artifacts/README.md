@@ -93,6 +93,7 @@ Config uses artifact terminology throughout:
 
 - `artifacts.config.artifactsById`
 - `artifacts.config.artifactOrder`
+- `artifacts.config.pinnedArtifactIds`
 - `artifacts.config.currentArtifactId`
 
 - `artifacts.createArtifact({type, title?, id?})`
@@ -102,6 +103,8 @@ Config uses artifact terminology throughout:
 - `artifacts.deleteArtifact(id)`
 - `artifacts.setCurrentArtifact(id?)`
 - `artifacts.setArtifactOrder(order)`
+- `artifacts.togglePinArtifact(id)`
+- `artifacts.isPinnedArtifact(id)`
 - `artifacts.getArtifact(id)`
 
 `closeArtifact` is non-destructive. It runs close lifecycle cleanup, while the
@@ -164,12 +167,12 @@ Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 selection and run-context updates; the app supplies artifact payload readers for
 domain-specific types such as documents or dashboards.
 
-Commands and tools that create or select the user's primary working artifact
-can include `artifactTargetChange` in their result data. The exported
-`ArtifactTargetChange` type is a small metadata shape for host apps that want
-to compose command results with artifact-scoped AI behavior. It does not trigger
-chat changes by itself; apps still own the policy for when an AI chat should
-continue in a new artifact.
+Artifact-aware room commands can use `resolveArtifactTargetId()` to preserve
+the same per-turn target. Its precedence is an explicit command artifact ID,
+then an AI invocation's captured artifact target, then the live current artifact
+for non-AI and compatibility fallback behavior. The helper depends only on room
+command invocation data; it does not require artifact-owned sessions or a
+context-selector UI.
 
 ## Artifact-Owned AI Sessions
 
@@ -204,23 +207,39 @@ const store = createRoomStore<RoomState>(
 );
 ```
 
-The slice stores:
+The slice stores a list of links between sessions and artifacts:
 
 ```ts
-aiSessionArtifacts: Record<string, string>; // sessionId -> artifactId
+sessionArtifactLinks: ArtifactSessionLink[];
 ```
 
+`sessionArtifactLinks` is the only supported persisted and runtime
+representation. The prerelease-only `aiSessionArtifacts` and
+`artifactCreators` fields were removed without an automatic migration. Update
+persisted prerelease configs before parsing them with `ArtifactAiConfigSchema`.
+
+The link type is exported from `@sqlrooms/artifacts`:
+
+- `ArtifactSessionLink` — a single association:
+  `{sessionId, artifactId, linkedAt}`. `linkedAt` is a Unix timestamp in
+  milliseconds. A session may be associated with multiple artifacts.
+- `ArtifactSessionLinkSchema` — the Zod schema used to validate a link (for
+  example when persisting `ArtifactAiConfigSchema`).
+
+Links intentionally describe association only. If an app needs creation
+provenance, store it with the artifact's domain metadata instead of overloading
+the chat association.
+
+All artifact AI session helpers accept `sessionArtifactLinks`; they do not
+accept a parallel one-to-one association map.
+
 Use `artifactAi.createArtifactScopedSession()` when creating chats from an
-artifact-scoped assistant. For default session creation, it reuses the most
-recently opened other empty, non-running session for the current artifact before
-creating a new one. This avoids duplicate blank drafts in history while still
-letting the selected empty draft start a separate chat when the host UI exposes
-a New session action. Calls that provide an explicit `name`, `modelProvider`, or
-`model` always create a fresh session so those options are preserved.
+artifact-scoped assistant. It creates a fresh session and associates it with
+the current artifact.
 `artifactAi.selectLatestSessionForArtifact()` and
 `artifactAi.syncCurrentArtifactAiSession()` keep the current AI session aligned
-with `artifacts.config.currentArtifactId`. Sessions without explicit artifact
-ownership are ignored by artifact-scoped history.
+with `artifacts.config.currentArtifactId`. Sessions without an explicit
+artifact association are ignored by artifact-scoped history.
 
 Reusable helpers include:
 

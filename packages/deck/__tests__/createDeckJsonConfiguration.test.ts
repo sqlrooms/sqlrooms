@@ -11,6 +11,7 @@ import {
 } from 'apache-arrow';
 import {createDeckJsonConfiguration} from '../src/json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from '../src/json/extractColorScaleLegends';
+import {prepareDeckDataset} from '../src/prepare/prepareDeckDataset';
 import type {PreparedDeckDataset} from '../src/prepare/types';
 import type {PreparedDeckDatasetState} from '../src/types';
 
@@ -300,6 +301,98 @@ describe('createDeckJsonConfiguration', () => {
     );
   });
 
+  it('prefers Vector binding when getHexagon is already a @@= accessor', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowH3HexagonLayer',
+          id: 'h3-hexagons',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+            hexagonColumn: 'h3',
+          },
+          getHexagon: '@@=h3',
+          getFillColor: [56, 189, 248, 161],
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(JSON.stringify(converted.layers[0]?.props.getHexagon)).toBe(
+      JSON.stringify(table.getChild('h3')),
+    );
+  });
+
+  it('compiles getElevation scale range into a linear accessor', () => {
+    const pointField = new Field(
+      'geom',
+      new FixedSizeList(2, new Field('xy', new Float64())),
+      true,
+      new Map([['ARROW:extension:name', 'geoarrow.point']]),
+    );
+    const table = new Table(
+      new Schema([pointField, new Field('magnitude', new Float64())]),
+      {
+        geom: vectorFromArray(
+          [
+            [7.4386, 46.9511],
+            [8.5417, 47.3769],
+          ],
+          pointField.type,
+        ),
+        magnitude: vectorFromArray([1, 5], new Float64()),
+      },
+    );
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowColumnLayer',
+          id: 'columns',
+          _sqlroomsBinding: {
+            dataset: 'earthquakes',
+            geometryColumn: 'geom',
+          },
+          extruded: true,
+          elevationScale: 100,
+          getElevation: {
+            '@@function': 'scale',
+            field: 'magnitude',
+            type: 'linear',
+            domain: 'auto',
+            range: [0, 200],
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getElevation = converted.layers[0]?.props.getElevation;
+    expect(typeof getElevation).toBe('function');
+
+    const batch = table.batches[0]!;
+    const elev = getElevation as (info: {
+      index: number;
+      data: {data: unknown};
+      target: number[];
+    }) => number;
+
+    expect(elev({index: 0, data: {data: batch}, target: []})).toBeCloseTo(0);
+    expect(elev({index: 1, data: {data: batch}, target: []})).toBeCloseTo(200);
+  });
+
   it('keeps explicit getFillColor while still compiling getLineColor colorScale', () => {
     const table = createPointTable();
     const converter = createConverter({
@@ -450,7 +543,7 @@ describe('extractColorScaleLegends', () => {
     };
   }
 
-  it('returns a legend for each color scale property on a layer', () => {
+  it('preserves distinct legends for fill and line color scales', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -481,9 +574,15 @@ describe('extractColorScaleLegends', () => {
     });
 
     expect(legends).toHaveLength(2);
+    expect(legends.map((l) => l.title)).toEqual(['magnitude', 'magnitude']);
+    expect(legends[0]).toMatchObject({type: 'continuous'});
+    expect(legends[1]).toMatchObject({type: 'continuous'});
+    expect((legends[0] as {gradient: string}).gradient).not.toBe(
+      (legends[1] as {gradient: string}).gradient,
+    );
   });
 
-  it('uses the correct legend title for each accessor', () => {
+  it('keeps both fill and line legends when titles differ', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -516,11 +615,87 @@ describe('extractColorScaleLegends', () => {
     });
 
     expect(legends).toHaveLength(2);
-    expect(legends[0]!.title).toBe('Fill Legend');
-    expect(legends[1]!.title).toBe('Line Legend');
+    expect(legends.map((l) => l.title)).toEqual(['Fill Legend', 'Line Legend']);
   });
 
-  it('skips a failing color scale without blocking others', () => {
+  it('dedupes identical color-scale legends on the same layer', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              legend: {title: 'Magnitude'},
+            },
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              legend: {title: 'Magnitude'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('Magnitude');
+  });
+
+  it('keeps legends that share title/field but differ by reverse', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowArcLayer',
+            id: 'arcs',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              sourceGeometryColumn: 'source_geom',
+              targetGeometryColumn: 'target_geom',
+            },
+            getSourceColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              reverse: false,
+              legend: {title: 'Magnitude'},
+            },
+            getTargetColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'Viridis',
+              domain: 'auto',
+              reverse: true,
+              legend: {title: 'Magnitude'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(2);
+  });
+
+  it('falls back to getLineColor legend when getFillColor field is invalid', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -551,5 +726,275 @@ describe('extractColorScaleLegends', () => {
     });
 
     expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('magnitude');
+    expect(legends[0]).toMatchObject({type: 'continuous'});
+  });
+});
+
+describe('createDeckJsonConfiguration — point layers reject polygon geometry', () => {
+  it('rejects WKT polygon footprints on GeoArrowColumnLayer (require ST_Centroid)', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+          'POLYGON((10 10, 14 10, 14 14, 10 14, 10 10))',
+        ],
+        new Utf8(),
+      ),
+      height: vectorFromArray([12, 40], new Float64()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowColumnLayer',
+            id: 'buildings',
+            _sqlroomsBinding: {
+              dataset: 'buildings',
+              geometryColumn: 'geom',
+            },
+            getElevation: '@@=height',
+          },
+        ],
+      }),
+    ).toThrow(/ST_Centroid|ST_PointOnSurface|Point positions/);
+  });
+
+  it('promotes WKT LineString and single-part MultiLineString to PathLayer', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        ['LINESTRING(0 0, 1 1, 2 0)', 'MULTILINESTRING((10 10, 11 11, 12 12))'],
+        new Utf8(),
+      ),
+      label: vectorFromArray(['a', 'b'], new Utf8()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'lines',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      lines: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPathLayer',
+          id: 'lines',
+          _sqlroomsBinding: {
+            dataset: 'lines',
+            geometryColumn: 'geom',
+          },
+          getColor: [255, 0, 0, 255],
+          getWidth: 2,
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getPath = converted.layers[0]?.props.getPath;
+    expect(getPath).toBeDefined();
+    expect(converted.layers[0]?.props.data).toBeDefined();
+  });
+
+  it('rejects multi-part MultiLineString on PathLayer (no silent stitch)', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        ['MULTILINESTRING((10 10, 11 11), (12 12, 13 13))'],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'lines',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      lines: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowPathLayer',
+            id: 'lines',
+            _sqlroomsBinding: {
+              dataset: 'lines',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      }),
+    ).toThrow(/MultiLineString|LineString|promotion|ST_LineMerge|ST_Dump/i);
+  });
+
+  it('rejects mixed Point/LineString/Polygon on GeoArrowPolygonLayer with GeoJsonLayer hint', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POINT(0 0)',
+          'LINESTRING(0 0, 1 1)',
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+        ],
+        new Utf8(),
+      ),
+      kind: vectorFromArray(['point', 'line', 'polygon'], new Utf8()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'mixed',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      mixed: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'mixed-geom',
+            _sqlroomsBinding: {
+              dataset: 'mixed',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      }),
+    ).toThrow(/GeoJsonLayer|POLYGON|mixed|Sampled geometry types/i);
+  });
+
+  it('declines MultiPolygon promotion instead of flattening polygon parts', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'islands',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      islands: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowPolygonLayer',
+            id: 'islands',
+            _sqlroomsBinding: {
+              dataset: 'islands',
+              geometryColumn: 'geom',
+            },
+          },
+        ],
+      }),
+    ).toThrow(/GeoJsonLayer|MultiPolygon/i);
+  });
+
+  it('preserves MultiPolygon parts through the GeoJsonLayer path', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'islands',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      islands: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoJsonLayer',
+          id: 'islands',
+          _sqlroomsBinding: {
+            dataset: 'islands',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: {data?: unknown}}>};
+
+    const binary = converted.layers[0]?.props.data as {
+      polygons: {
+        polygonIndices: {value: ArrayLike<number>};
+        primitivePolygonIndices: {value: ArrayLike<number>};
+      };
+    };
+    expect(Array.from(binary.polygons.polygonIndices.value)).toEqual([
+      0, 5, 10,
+    ]);
+    expect(Array.from(binary.polygons.primitivePolygonIndices.value)).toEqual([
+      0, 5, 10,
+    ]);
+  });
+
+  it('renders mixed geometries with GeoJsonLayer', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POINT(0 0)',
+          'LINESTRING(0 0, 1 1)',
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'mixed',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      mixed: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoJsonLayer',
+          id: 'mixed-geom',
+          _sqlroomsBinding: {
+            dataset: 'mixed',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers).toHaveLength(1);
+    expect(converted.layers[0]?.props.data).toBeDefined();
   });
 });

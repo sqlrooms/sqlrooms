@@ -47,7 +47,7 @@ function createMockStore() {
     },
     artifactAi: {
       config: {
-        aiSessionArtifacts: {},
+        sessionArtifactLinks: [],
       },
     },
     ai: {
@@ -129,5 +129,106 @@ describe('getRunContext', () => {
         (item) => item.type,
       ),
     ).toEqual(['chart', 'dashboard', 'html-app', 'map']);
+  });
+});
+
+function createMultiArtifactStore(
+  currentArtifactId: string | undefined,
+  sessionOverrides: Record<string, unknown> = {},
+) {
+  const state = {
+    artifacts: {
+      config: {
+        currentArtifactId,
+        artifactsById: {
+          'worksheet-old': {
+            id: 'worksheet-old',
+            type: 'worksheet',
+            title: 'Older Worksheet',
+          },
+          'worksheet-new': {
+            id: 'worksheet-new',
+            type: 'worksheet',
+            title: 'Newer Worksheet',
+          },
+        },
+      },
+    },
+    artifactAi: {
+      config: {
+        // session-1 is linked to worksheet-old first, then worksheet-new later,
+        // so the most recently linked artifact is worksheet-new.
+        sessionArtifactLinks: [
+          {
+            sessionId: 'session-1',
+            artifactId: 'worksheet-old',
+            linkedAt: 1000,
+          },
+          {
+            sessionId: 'session-1',
+            artifactId: 'worksheet-new',
+            linkedAt: 2000,
+          },
+        ],
+      },
+    },
+    ai: {
+      config: {
+        sessions: [
+          {id: 'session-1', draftContextItemIds: [], ...sessionOverrides},
+        ],
+      },
+    },
+    blockDocuments: {config: {artifacts: {}}},
+    db: {tables: []},
+  } as unknown as RoomState;
+
+  return {getState: () => state} as StoreApi<RoomState>;
+}
+
+describe('getRunContext primary artifact selection', () => {
+  it('directs the run at the currently selected artifact, not the latest link', () => {
+    const store = createMultiArtifactStore('worksheet-old');
+
+    expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
+      'worksheet-old',
+    );
+  });
+
+  it('falls back to the most recently linked artifact when none is selected', () => {
+    const store = createMultiArtifactStore(undefined);
+
+    expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
+      'worksheet-new',
+    );
+  });
+
+  it('updates a cached run context when invoked from another linked artifact', () => {
+    const store = createMultiArtifactStore('worksheet-old', {
+      draftContextItemIds: undefined,
+      runContext: {
+        items: [
+          {
+            kind: 'artifact',
+            id: 'worksheet-new',
+            type: 'worksheet',
+            title: 'Newer Worksheet',
+          },
+        ],
+        primaryItemId: 'worksheet-new',
+        primaryItemKind: 'artifact',
+        capturedAt: 1000,
+      },
+    });
+
+    expect(getRunContext(store, 'session-1')).toMatchObject({
+      primaryItemId: 'worksheet-old',
+      primaryItemKind: 'artifact',
+      capturedAt: 1000,
+      items: [
+        {kind: 'artifact', id: 'worksheet-old'},
+        {kind: 'artifact', id: 'worksheet-new'},
+      ],
+    });
   });
 });

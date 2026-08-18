@@ -12,6 +12,7 @@ import {
 import {verbatim} from '@uwdata/mosaic-sql';
 import type {Table as ArrowTable} from 'apache-arrow';
 import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
+import {wrapSqlGeometryColumnsAsWkb} from './datasets/wrapGeometryAsWkb';
 import {
   isDeckMapDashboardSqlDatasetSource,
   isDeckMapDashboardTableDatasetSource,
@@ -45,6 +46,11 @@ export type DeckMapDashboardDatasetClientState = {
   error?: Error;
   client: unknown;
   isSampled?: boolean;
+  /**
+   * Native GEOMETRY columns wrapped via ST_AsWKB for this query.
+   * Only force `geometryEncodingHint: "wkb"` when the bound column is listed.
+   */
+  wrappedGeometryColumnNames?: readonly string[];
 };
 
 export function resolveDeckMapDashboardDatasetSource(options: {
@@ -56,9 +62,7 @@ export function resolveDeckMapDashboardDatasetSource(options: {
   const datasetSource = options.dataset?.source;
   const dashboardTable = stripCatalogPrefix(options.dashboard.selectedTable);
 
-  // The dashboard's selected table always takes precedence as the data source.
-  // When the user switches the table in the selector, structured table-backed
-  // datasets update while literal SQL remains pinned to its authored query.
+  // Selected table wins for table sources; sqlQuery stays pinned.
   if (isDeckMapDashboardSqlDatasetSource(datasetSource)) {
     return datasetSource;
   }
@@ -96,10 +100,30 @@ function stripCatalogPrefix(tableName: string | undefined) {
   );
 }
 
+/** Unfiltered dataset SQL for DESCRIBE / Mosaic (before sample/filters). */
+export function createDeckMapDashboardDatasetSourceSql(
+  source: DeckMapDashboardDatasetSource,
+): string {
+  if (isDeckMapDashboardSqlDatasetSource(source)) {
+    return source.sqlQuery.trim().replace(/(?:\s*;+\s*)+$/, '');
+  }
+  if (
+    isDeckMapDashboardTableDatasetSource(source) &&
+    !source.transformSql?.trim()
+  ) {
+    return `SELECT * FROM ${getDeckMapDatasetSourceTableReference(source.tableName)}`;
+  }
+  return createDeckTableDatasetSql(source);
+}
+
 export function createDeckMapDashboardDatasetQuery(
   source: DeckMapDashboardDatasetSource,
   filter: unknown,
-  options?: {sampleRows?: number},
+  options?: {
+    sampleRows?: number;
+    /** Native GEOMETRY columns to project with ST_AsWKB (from DESCRIBE). */
+    geometryColumnsToWrapAsWkb?: readonly string[];
+  },
 ) {
   const isSqlSource = isDeckMapDashboardSqlDatasetSource(source);
   const isTableSource = isDeckMapDashboardTableDatasetSource(source);
@@ -107,21 +131,37 @@ export function createDeckMapDashboardDatasetQuery(
   const tableReference = isDirectTableSource
     ? getDeckMapDatasetSourceTableReference(source.tableName)
     : '';
-  // Apply USING SAMPLE at the source level so Mosaic filters work on top.
-  const sourceExpr: string = isSqlSource
-    ? `(${source.sqlQuery})`
-    : isDirectTableSource
-      ? tableReference
-      : `(${createDeckTableDatasetSql(source)})`;
 
-  const sampledSource = options?.sampleRows
-    ? `(SELECT * FROM ${sourceExpr} USING SAMPLE ${options.sampleRows} ROWS)`
-    : sourceExpr;
+  const baseSql = createDeckMapDashboardDatasetSourceSql(source);
+
+  // Sample before WKB so ST_AsWKB runs only on sampled rows.
+  const sampledSql = options?.sampleRows
+    ? `SELECT * FROM (${baseSql}) AS "__sqlrooms_sample_source" USING SAMPLE ${options.sampleRows} ROWS`
+    : baseSql;
+
+  const wrappedSql = wrapSqlGeometryColumnsAsWkb(
+    sampledSql,
+    options?.geometryColumnsToWrapAsWkb ?? [],
+  );
+  const usedWrap = Boolean(wrappedSql);
+
+  let sourceExpr: string;
+  if (wrappedSql) {
+    sourceExpr = `(${wrappedSql})`;
+  } else if (options?.sampleRows) {
+    sourceExpr = `(${sampledSql})`;
+  } else if (isSqlSource) {
+    sourceExpr = `(${source.sqlQuery})`;
+  } else if (isDirectTableSource) {
+    sourceExpr = tableReference;
+  } else {
+    sourceExpr = `(${createDeckTableDatasetSql(source)})`;
+  }
 
   const query =
-    isSqlSource || !isDirectTableSource || options?.sampleRows
+    usedWrap || options?.sampleRows || isSqlSource || !isDirectTableSource
       ? Query.from({
-          __dashboard_map_dataset: verbatim(sampledSource),
+          __dashboard_map_dataset: verbatim(sourceExpr),
         })
       : Query.from({__dashboard_map_dataset: verbatim(tableReference)});
 
@@ -140,17 +180,31 @@ export function createDeckMapDashboardDatasets(
   mapConfig: DeckMapDashboardPanelConfig,
   datasetStates: Record<
     string,
-    Pick<DeckMapDashboardDatasetClientState, 'arrowTable'>
+    Pick<
+      DeckMapDashboardDatasetClientState,
+      'arrowTable' | 'wrappedGeometryColumnNames'
+    >
   >,
 ): DeckJsonMapProps['datasets'] {
   return Object.fromEntries(
-    Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => [
-      datasetId,
-      {
-        arrowTable: datasetStates[datasetId]?.arrowTable,
-        geometryColumn: dataset.geometryColumn,
-        geometryEncodingHint: dataset.geometryEncodingHint,
-      },
-    ]),
+    Object.entries(mapConfig.datasets).map(([datasetId, dataset]) => {
+      const wrapped =
+        datasetStates[datasetId]?.wrappedGeometryColumnNames ?? [];
+      const geometryColumn = dataset.geometryColumn;
+      const wrappedConfiguredColumn =
+        typeof geometryColumn === 'string' &&
+        geometryColumn.length > 0 &&
+        wrapped.includes(geometryColumn);
+      return [
+        datasetId,
+        {
+          arrowTable: datasetStates[datasetId]?.arrowTable,
+          geometryColumn,
+          geometryEncodingHint: wrappedConfiguredColumn
+            ? 'wkb'
+            : dataset.geometryEncodingHint,
+        },
+      ];
+    }),
   );
 }

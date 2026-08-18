@@ -1,8 +1,8 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme';
-import {ref, onMounted} from 'vue';
+import {computed, ref, onMounted} from 'vue';
 import {useData} from 'vitepress';
-const {frontmatter} = useData();
+const {frontmatter, page, theme} = useData();
 import CaseStudiesCarousel from './CaseStudiesCarousel.vue';
 
 const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
@@ -10,6 +10,10 @@ const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
 const currentYear = new Date().getFullYear();
+const isApiReference = computed(() =>
+  page.value.relativePath.startsWith('api/'),
+);
+const apiRelease = computed(() => theme.value.apiRelease);
 
 onMounted(() => {
   if (localStorage.getItem(`sqlrooms-banner-${BANNER_ID}`) === 'true') {
@@ -49,6 +53,18 @@ function dismiss() {
       <button @click="dismiss" aria-label="Close banner">&times;</button>
     </div>
     <DefaultTheme.Layout>
+      <template #doc-before>
+        <aside v-if="isApiReference" class="api-release-notice">
+          <span>
+            API reference for SQLRooms
+            <a :href="apiRelease.url">v{{ apiRelease.version }}</a>
+          </span>
+          <span v-if="apiRelease.prerelease" class="api-release-badge">
+            prerelease
+          </span>
+        </aside>
+      </template>
+
       <template #home-hero-image>
         <video
           class="video"

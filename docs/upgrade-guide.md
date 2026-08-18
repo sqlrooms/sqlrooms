@@ -10,6 +10,44 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.29.0 (upcoming)
 
+### `@sqlrooms/artifacts`: artifact AI sessions use pure many-to-many associations (breaking)
+
+The prerelease-only one-to-one `artifactAi.aiSessionArtifacts` map,
+`artifactCreators` map, and provenance-bearing link shape were removed.
+`artifactAi.sessionArtifactLinks` is now the only persisted and runtime
+representation of relationships between AI sessions and artifacts:
+
+```ts
+type ArtifactSessionLink = {
+  sessionId: string;
+  artifactId: string;
+  linkedAt: number;
+};
+```
+
+This is a clean prerelease break: `ArtifactAiConfigSchema` does not migrate the
+removed fields or the previous `{createdAt, linkType}` link shape. If you need
+to retain prerelease state, convert each relationship to an association and
+rename its relationship timestamp from `createdAt` to `linkedAt`. Creation
+provenance, when needed, should live in the artifact's domain metadata rather
+than in its chat associations. Helper APIs now require
+`sessionArtifactLinks`, and the deprecated one-to-one and creator-provenance
+slice methods were removed:
+
+- `setSessionArtifact` → `addSessionArtifactLink(sessionId, artifactId)`
+- `clearSessionArtifact` → `removeAllLinksForSession`
+- `getSessionArtifactId` → `getLatestArtifactForSession`
+- `setArtifactCreator`, `getArtifactCreatorSessionId`, and
+  `getCreatedArtifactIds` have no association-layer replacement
+
+Artifact pinning is workspace state and has moved from the AI companion slice
+to the base artifacts slice:
+
+- `artifactAi.config.pinnedArtifactIds` →
+  `artifacts.config.pinnedArtifactIds`
+- `artifactAi.togglePinArtifact(id)` → `artifacts.togglePinArtifact(id)`
+- `artifactAi.isPinnedArtifact(id)` → `artifacts.isPinnedArtifact(id)`
+
 ### `@sqlrooms/artifacts`: "Sheets" terminology migrated to "Artifacts" (breaking)
 
 The concept of "sheets" has been replaced with "artifacts" to better represent the variety of content types (app builders, charts, maps, etc.) that can be created and managed.
@@ -1124,7 +1162,8 @@ AI chat state is now **scoped per session** (instead of a single global chat ins
   - `getPrompt(sessionId)` / `setPrompt(sessionId, prompt)`
   - `getIsRunning(sessionId)` / `setIsRunning(sessionId, isRunning)`
 - **New hook**: `useSessionChat(sessionId)` for session-scoped chat (replaces legacy single-instance patterns)
-- **Mounting requirement**: if you render AI primitives directly (e.g. `QueryControls`, `AnalysisResultsContainer`) you must mount chat providers once via `Chat.Root` (it mounts `SessionChatManager`).
+- **Lifecycle**: session chat execution is owned by the AI slice. Starting a run
+  does not require a mounted React chat provider.
 
 #### Before
 
@@ -1156,7 +1195,8 @@ if (sessionId) {
 
 #### Recommended UI composition
 
-Use `Chat.Root` once at the top of your AI UI tree (it mounts `SessionChatManager`):
+Use `Chat.Root` once at the top of your AI UI tree to provide the compound chat
+presentation context:
 
 ```tsx
 import {Chat} from '@sqlrooms/ai';

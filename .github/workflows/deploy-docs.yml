@@ -1,35 +1,133 @@
 name: Deploy docs
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'docs/**'
-      - '.github/workflows/deploy-docs.yml'
+  workflow_call:
+    inputs:
+      content_ref:
+        description: 'Git ref containing the non-API documentation'
+        required: false
+        default: main
+        type: string
+      api_ref:
+        description: 'Published release tag used to generate API documentation'
+        required: true
+        type: string
+    secrets:
+      DOCS_DEPLOY_KEY:
+        required: true
   workflow_dispatch:
+    inputs:
+      content_ref:
+        description: 'Git ref containing the non-API documentation'
+        required: false
+        default: main
+        type: string
+      api_ref:
+        description: 'Published release tag for the API docs (blank uses the newest v* tag)'
+        required: false
+        type: string
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# Allow only one concurrent deployment
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout
+      - name: Checkout documentation content
         uses: actions/checkout@v6
         with:
-          lfs: true # Enable Git LFS for this checkout
+          ref: ${{ inputs.content_ref || 'main' }}
+          fetch-depth: 0
+          lfs: true
+          path: site
+          persist-credentials: false
+
+      - name: Resolve published API release
+        id: api-release
+        uses: actions/github-script@v8
+        env:
+          REQUESTED_API_REF: ${{ inputs.api_ref }}
+        with:
+          result-encoding: string
+          script: |
+            const semverTag = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+            const requestedRef = process.env.REQUESTED_API_REF.trim();
+
+            if (requestedRef) {
+              if (!semverTag.test(requestedRef)) {
+                core.setFailed(`Invalid published release tag: ${requestedRef}`);
+                return;
+              }
+
+              let requestedRelease;
+              try {
+                ({data: requestedRelease} =
+                  await github.rest.repos.getReleaseByTag({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    tag: requestedRef,
+                  }));
+              } catch (error) {
+                if (error.status === 404) {
+                  core.setFailed(`${requestedRef} is not a published release`);
+                  return;
+                }
+                throw error;
+              }
+
+              if (requestedRelease.draft || !requestedRelease.published_at) {
+                core.setFailed(`${requestedRef} is not a published release`);
+                return;
+              }
+
+              return requestedRef;
+            }
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100,
+              },
+            );
+            const latestRelease = releases
+              .filter(
+                (release) =>
+                  !release.draft &&
+                  release.published_at &&
+                  semverTag.test(release.tag_name),
+              )
+              .sort(
+                (left, right) =>
+                  Date.parse(right.published_at) - Date.parse(left.published_at),
+              )[0];
+
+            if (!latestRelease) {
+              core.setFailed('Could not find a published semver release');
+              return;
+            }
+
+            return latestRelease.tag_name;
+
+      - name: Checkout published API source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.api-release.outputs.result }}
+          fetch-depth: 0
+          lfs: false
+          path: api-source
+          persist-credentials: false
 
       - name: Verify Git LFS media
+        working-directory: site
         run: |
           git lfs ls-files | wc -l
           du -sh docs/public/media
@@ -46,86 +144,88 @@ jobs:
           echo "After cleanup:"
           df -h
           df -i
-          du -sh /usr/share/dotnet /opt/ghc /usr/local/lib/android 2>/dev/null || true
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
+          version: 11.1.2
           run_install: false
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: pnpm
+          cache-dependency-path: |
+            site/pnpm-lock.yaml
+            api-source/pnpm-lock.yaml
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install API source dependencies
+        run: pnpm --dir api-source install --frozen-lockfile
 
-      - name: Cache for Turbo
-        uses: actions/cache@v5
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-turbo-
+      - name: Build published packages
+        run: pnpm --dir api-source build
 
-      - name: Print TypeScript, TypeDoc, and plugin versions
-        run: |
-          pnpm list typescript typedoc typedoc-vitepress-theme typedoc-plugin-markdown typedoc-plugin-zod || true
-          npx tsc --version
-          npx typedoc --version
+      - name: Build API docs from published source
+        run: pnpm --dir api-source run docs:clean && pnpm --dir api-source run docs:build:typedoc
 
-      - name: List files in packages/duckdb/src
-        run: ls -l packages/duckdb/src
-      - name: Build packages (required for TypeDoc module resolution)
-        run: pnpm build
+      - name: Assemble versioned documentation
+        run: >-
+          node site/scripts/assemble-versioned-docs.mjs
+          --site site
+          --api-source api-source
+          --api-ref ${{ steps.api-release.outputs.result }}
 
-      - name: Build API docs (TypeDoc)
-        run: pnpm run docs:clean && pnpm run docs:build:typedoc
+      - name: Reclaim API build output
+        run: pnpm --dir api-source run clean
 
-      - name: Reclaim disk before VitePress build
-        run: |
-          pnpm run clean
-          df -h
-          df -i
+      - name: Install documentation dependencies
+        run: pnpm --dir site install --frozen-lockfile
 
-      - name: Build docs site (VitePress)
-        run: pnpm run docs:build:vitepress
+      - name: Build docs site
+        run: pnpm --dir site run docs:build:vitepress
+
+      - name: Verify rendered API release
+        run: node site/scripts/verify-docs-release.mjs --site site
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v7
         with:
           name: docs-dist
-          path: docs/.vitepress/dist
+          path: site/docs/.vitepress/dist
+          include-hidden-files: true
 
   deploy-docs:
     needs: build-docs
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://sqlrooms.org
     steps:
       - name: Download docs artifact
         uses: actions/download-artifact@v8
         with:
           name: docs-dist
-          path: docs/.vitepress/dist
+          path: docs-dist
 
       - name: Create CNAME file
-        run: echo "sqlrooms.org" > docs/.vitepress/dist/CNAME
+        run: echo "sqlrooms.org" > docs-dist/CNAME
 
       - name: Upload artifact to GitHub Pages
         uses: actions/upload-pages-artifact@v5
         with:
-          path: docs/.vitepress/dist
+          path: docs-dist
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
           external_repository: sqlrooms/sqlrooms.github.io
-          publish_dir: docs/.vitepress/dist
+          publish_dir: docs-dist
           publish_branch: main
           force_orphan: true
           user_name: 'github-actions[bot]'

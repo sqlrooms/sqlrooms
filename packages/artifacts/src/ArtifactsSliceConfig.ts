@@ -13,6 +13,8 @@ export type ArtifactMetadata = z.infer<typeof ArtifactMetadata>;
 export const ArtifactsSliceConfig = z.object({
   artifactsById: z.record(z.string(), ArtifactMetadata).default({}),
   artifactOrder: z.array(z.string()).default([]),
+  /** Artifact IDs pinned in workspace navigation. */
+  pinnedArtifactIds: z.array(z.string()).default([]),
   currentArtifactId: z.string().optional(),
 });
 export type ArtifactsSliceConfig = z.infer<typeof ArtifactsSliceConfig>;

@@ -130,6 +130,7 @@ function getSchemeOptions(type: ColorScaleConfig['type']) {
   if (type === 'sequential') {
     return continuousSequentialSchemes;
   }
+  // Quantile/quantize/threshold: ColorBrewer only (Viridis → sequential).
   return binnedNumericSchemes;
 }
 
@@ -241,9 +242,13 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   const effectiveColorAccessor =
     colorAccessorOptions.find((option) => option.value === colorAccessor)
       ?.value ?? colorAccessorOptions[0]?.value;
-  const pointRadiusPixels =
-    activeLayer?.radiusUnits === 'pixels' &&
-    typeof activeLayer?.getRadius === 'number'
+  const isGeoJsonLayer = activeLayer?.['@@type'] === 'GeoJsonLayer';
+  const pointRadiusPixels = isGeoJsonLayer
+    ? typeof activeLayer?.getPointRadius === 'number'
+      ? activeLayer.getPointRadius
+      : ((activeLayer?.pointRadiusMinPixels as number | undefined) ?? 2)
+    : activeLayer?.radiusUnits === 'pixels' &&
+        typeof activeLayer?.getRadius === 'number'
       ? activeLayer.getRadius
       : ((activeLayer?.radiusMinPixels as number | undefined) ?? 2);
   const colorScale = effectiveColorAccessor
@@ -706,17 +711,33 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                           mapConfig,
                           activeLayerIndex,
                           (layer) => {
-                            const nextLayer: DeckMapLayerRecord = {
-                              ...layer,
-                              radiusMinPixels: value,
-                              radiusMaxPixels: Math.max(
-                                value,
-                                (layer.radiusMaxPixels as number | undefined) ??
-                                  value,
-                              ),
-                            };
+                            const nextLayer: DeckMapLayerRecord =
+                              layer['@@type'] === 'GeoJsonLayer'
+                                ? {
+                                    ...layer,
+                                    pointRadiusUnits: 'pixels',
+                                    pointRadiusMinPixels: value,
+                                    pointRadiusMaxPixels: Math.max(
+                                      value,
+                                      (layer.pointRadiusMaxPixels as
+                                        | number
+                                        | undefined) ?? value,
+                                    ),
+                                    getPointRadius: value,
+                                  }
+                                : {
+                                    ...layer,
+                                    radiusMinPixels: value,
+                                    radiusMaxPixels: Math.max(
+                                      value,
+                                      (layer.radiusMaxPixels as
+                                        | number
+                                        | undefined) ?? value,
+                                    ),
+                                  };
 
                             if (
+                              layer['@@type'] !== 'GeoJsonLayer' &&
                               layer.radiusUnits === 'pixels' &&
                               typeof layer.getRadius !== 'string'
                             ) {

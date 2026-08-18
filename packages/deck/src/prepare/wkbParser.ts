@@ -1,6 +1,7 @@
 export const WKB_POINT = 1;
 export const WKB_LINESTRING = 2;
 export const WKB_POLYGON = 3;
+export const WKB_MULTILINESTRING = 5;
 export const WKB_MULTIPOLYGON = 6;
 
 // Local WKB parser used until geoarrow-js ships WKB to GeoArrow parsing:
@@ -111,6 +112,28 @@ export function readWKBLineStringXY(
     offset += coordBytes;
   }
   return coords;
+}
+
+/**
+ * Reads a WKB MultiLineString with a single part as one coordinate sequence
+ * for PathLayer. Multi-part MultiLineStrings are rejected — flattening would
+ * draw artificial segments between disjoint parts.
+ */
+export function readWKBMultiLineStringXY(
+  buf: ArrayBuffer,
+  header: WKBHeader,
+): Array<[number, number]> | null {
+  if (header.geomType !== WKB_MULTILINESTRING) return null;
+
+  let offset = header.offset;
+  if (!hasBytes(buf, offset, WKB_UINT32_BYTES)) return null;
+  const numLines = header.view.getUint32(offset, header.isLE);
+  offset += WKB_UINT32_BYTES;
+  if (numLines !== 1) return null;
+
+  const lineHeader = parseWKBHeader(buf, offset);
+  if (!lineHeader || lineHeader.geomType !== WKB_LINESTRING) return null;
+  return readWKBLineStringXY(buf, lineHeader);
 }
 
 export function visitWKBPolygonCoordinates(

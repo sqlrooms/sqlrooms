@@ -143,7 +143,8 @@ export type CreateDocumentsCrdtMirrorOptions = {
  * Creates a CRDT mirror for Markdown documents, block documents, and their
  * artifact metadata.
  *
- * The room's current artifact selection is intentionally kept local.
+ * The room's current artifact selection and pinned artifacts are intentionally
+ * kept local.
  *
  * TODO: Once the Tiptap document schema settles, replace the Markdown body
  * snapshot in this mirror with a structured ProseMirror/Loro body synced via
@@ -289,6 +290,9 @@ export function createDocumentsCrdtMirror<
         ...incomingSyncedOrder,
         ...missingSyncedOrder,
       ];
+      const pinnedArtifactIds = currentArtifactsConfig.pinnedArtifactIds.filter(
+        (id) => Boolean(artifactsById[id]),
+      );
       const currentArtifactId = currentArtifactsConfig.currentArtifactId;
 
       set((state: S) => ({
@@ -298,6 +302,7 @@ export function createDocumentsCrdtMirror<
           config: ArtifactsSliceConfig.parse({
             artifactsById,
             artifactOrder,
+            pinnedArtifactIds,
             currentArtifactId:
               currentArtifactId && artifactsById[currentArtifactId]
                 ? currentArtifactId

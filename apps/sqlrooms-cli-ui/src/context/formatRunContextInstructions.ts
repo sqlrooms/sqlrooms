@@ -48,6 +48,32 @@ function formatArtifactContextInstructions(
   ];
 }
 
+/** Cap listed columns so wide tables cannot blow up every AI run prompt. */
+export const MAX_COLUMNS_IN_RUN_CONTEXT = 40;
+/** DuckDB STRUCT/MAP types can be huge; keep a short hint only. */
+export const MAX_COLUMN_TYPE_CHARS = 48;
+
+export function formatColumnForRunContext(column: {
+  name: string;
+  type: string;
+}): string {
+  const type =
+    column.type.length > MAX_COLUMN_TYPE_CHARS
+      ? `${column.type.slice(0, MAX_COLUMN_TYPE_CHARS)}…`
+      : column.type;
+  return `${column.name} (${type})`;
+}
+
+export function formatTableColumnsForRunContext(
+  columns: readonly {name: string; type: string}[],
+): string {
+  if (columns.length === 0) return '';
+  const listed = columns.slice(0, MAX_COLUMNS_IN_RUN_CONTEXT);
+  const omitted = columns.length - listed.length;
+  const suffix = omitted > 0 ? ` (+${omitted} more)` : '';
+  return `\n    columns: ${listed.map(formatColumnForRunContext).join(', ')}${suffix}`;
+}
+
 function formatTableContextInstructions(
   tableItems: AiRunContextItem[],
   store: StoreApi<RoomState>,
@@ -61,13 +87,14 @@ function formatTableContextInstructions(
   const tableDetails = tableItems.map((item) => {
     const tableObj = state.db.findTable(item.id);
 
-    const columnCount = tableObj?.columns.length ?? 0;
+    const columns = tableObj?.columns ?? [];
     const rowCount = tableObj?.rowCount;
 
     const typeLabel = item.type === 'view' ? 'view' : 'table';
     const rowInfo =
       rowCount !== undefined ? `, ${rowCount.toLocaleString()} rows` : '';
-    return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columnCount} columns${rowInfo}) → qualified name: ${item.id}`;
+
+    return `  - ${item.title} (${typeLabel}${item.subtitle ? ` in ${item.subtitle}` : ''}, ${columns.length} columns${rowInfo}) → qualified name: ${item.id}${formatTableColumnsForRunContext(columns)}`;
   });
 
   return [
@@ -75,6 +102,7 @@ function formatTableContextInstructions(
     `Current table context (${tableItems.length} ${tableItems.length === 1 ? 'table' : 'tables'}):`,
     ...tableDetails,
     '- Use the qualified names shown above when querying these tables.',
+    '- Use the exact column names shown above (preserving case) in colorScale "field", chart axes, and SQL queries. If a table lists "+N more", inspect the schema (e.g. DESCRIBE / information_schema) before guessing omitted names.',
   ];
 }
 

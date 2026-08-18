@@ -125,6 +125,32 @@ describe('block document commands', () => {
     });
   });
 
+  it('reads the AI invocation target when the live document changes', async () => {
+    const {store} = createTestStore();
+    const artifactA = store.getState().artifacts.createArtifact({
+      type: 'block-document',
+      title: 'Document A',
+    });
+    store.getState().blockDocuments.ensureBlockDocument(artifactA);
+    const artifactB = store.getState().artifacts.createArtifact({
+      type: 'block-document',
+      title: 'Document B',
+    });
+    store.getState().blockDocuments.ensureBlockDocument(artifactB);
+
+    const result = await store.getState().commands.invokeCommand(
+      'block-document.get',
+      {},
+      {
+        surface: 'ai',
+        target: {kind: 'artifact', id: artifactA},
+      },
+    );
+
+    expect(result.data).toMatchObject({artifactId: artifactA});
+    expect(store.getState().artifacts.config.currentArtifactId).toBe(artifactB);
+  });
+
   it('mutates block document blocks by command', async () => {
     const {store} = createTestStore();
     const createResult = await store

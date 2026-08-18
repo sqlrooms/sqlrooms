@@ -20,15 +20,15 @@ overrides:
   brace-expansion@>=3.0.0 <5.0.9: 5.0.9
   d3-color: 3.1.0
   d3-sankey: 0.12.3
-  dompurify: 3.4.12
+  dompurify: 3.4.13
   esbuild@>=0.27.3 <0.28.1: 0.28.1
   fast-uri@>=3.0.0 <3.1.5: 3.1.5
   fast-xml-parser: 5.8.0
   form-data@>=3.0.0 <3.0.5: 3.0.5
   hoek: npm:@hapi/hoek@11.0.7
   ip-address@<=10.3.0: 10.4.0
-  js-yaml@<3.15.0: 3.15.0
-  js-yaml@>=4.0.0 <4.3.0: 4.3.0
+  js-yaml@<3.15.1: 3.15.1
+  js-yaml@>=4.0.0 <4.3.1: 4.3.1
   linkify-it@<=5.0.1: 5.0.2
   lodash: 4.18.1
   markdown-it@<=14.1.1: 14.3.0
@@ -53,6 +53,7 @@ overrides:
   zod: 4.1.13
 
 patchedDependencies:
+  image-size@0.7.5: 539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321
   sigstore@4.1.1: 72ba6f3df587a050af679bdcd9c835c92bb45b80b91bd9f33351d2d92f69eb29
 
 importers:
@@ -129,7 +130,7 @@ importers:
         specifier: 8.0.0
         version: 8.0.0(typescript@5.9.3)
       mermaid:
-        specifier: ^11.15.0
+        specifier: ^11.16.1
         version: 11.16.1
       prettier:
         specifier: ^3.6.2
@@ -2597,9 +2598,6 @@ importers:
 
   packages/ai-config:
     dependencies:
-      '@paralleldrive/cuid2':
-        specifier: ^3.0.0
-        version: 3.3.0
       zod:
         specifier: 4.1.13
         version: 4.1.13
@@ -3740,7 +3738,7 @@ importers:
         specifier: ^3.0.5
         version: 3.2.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       react-resizable-panels:
-        specifier: ^4.7.6
+        specifier: ^4.12.1
         version: 4.12.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       zod:
         specifier: 4.1.13
@@ -4074,6 +4072,9 @@ importers:
         specifier: ^30.1.3
         version: 30.4.2(@types/node@24.12.4)
       jest-environment-jsdom:
+        specifier: ^30.1.2
+        version: 30.4.1
+      jest-environment-node:
         specifier: ^30.1.2
         version: 30.4.1
       ts-jest:
@@ -4608,7 +4609,7 @@ importers:
         specifier: ^7.63.0
         version: 7.75.0(react@19.2.1)
       react-resizable-panels:
-        specifier: ^4.7.6
+        specifier: ^4.12.1
         version: 4.12.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       sonner:
         specifier: ^2.0.7
@@ -4628,6 +4629,10 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+    devDependencies:
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
 
   packages/utils:
     dependencies:
@@ -4723,6 +4728,15 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      jest:
+        specifier: ^30.1.3
+        version: 30.4.2(@types/node@24.12.4)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
 
   packages/webcontainer:
     dependencies:
@@ -11609,8 +11623,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@3.4.12:
-    resolution: {integrity: sha512-zQvGet8Z2sWbQhCmfFz/T5QWH2oBmjnqK3qvOjaqaNLrLEF912WamU+ohnTp0TCep/MFVHpdJuCZEdFOdTnEFg==}
+  dompurify@3.4.13:
+    resolution: {integrity: sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==}
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
@@ -13054,12 +13068,12 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@3.15.0:
-    resolution: {integrity: sha512-ttBQIIQPDeLjpPOohtUdXuXUVoA2uIB6fEH9HyJ7234s5mBJ5wTx20njxplLZQgLaOfpmPQA7X2t5AX6tIPbog==}
+  js-yaml@3.15.1:
+    resolution: {integrity: sha512-S99WuO3HlhO3XN41EtYUNl9zzXjoJx7QvmipxsJVxtCBT0YHEFy+iOJhjSvrmV12nYhWpZaM8lPHkJm0yUMbag==}
     hasBin: true
 
-  js-yaml@4.3.0:
-    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   jsdom@26.1.0:
@@ -17055,7 +17069,7 @@ snapshots:
 
   '@11ty/gray-matter@2.1.0':
     dependencies:
-      js-yaml: 4.3.0
+      js-yaml: 4.3.1
       section-matter: 1.0.0
 
   '@adobe/css-tools@4.4.4': {}
@@ -18588,7 +18602,7 @@ snapshots:
       d3-selection: 3.0.0
       d3-transition: 3.0.1(d3-selection@3.0.0)
       d3-zoom: 3.0.0
-      dompurify: 3.4.12
+      dompurify: 3.4.13
       gl-bench: 1.0.42
       gl-matrix: 3.4.4
       random: 4.1.0
@@ -19229,7 +19243,7 @@ snapshots:
       globals: 14.0.0
       ignore: 5.3.2
       import-fresh: 3.3.1
-      js-yaml: 4.3.0
+      js-yaml: 4.3.1
       minimatch: 3.1.5
       strip-json-comments: 3.1.1
     transitivePeerDependencies:
@@ -19622,7 +19636,7 @@ snapshots:
       camelcase: 5.3.1
       find-up: 4.1.0
       get-package-type: 0.1.0
-      js-yaml: 3.15.0
+      js-yaml: 3.15.1
       resolve-from: 5.0.0
 
   '@istanbuljs/schema@0.1.6': {}
@@ -26104,7 +26118,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@3.4.12:
+  dompurify@3.4.13:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -27279,7 +27293,7 @@ snapshots:
 
   ignore@7.0.5: {}
 
-  image-size@0.7.5: {}
+  image-size@0.7.5(patch_hash=539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321): {}
 
   immediate@3.0.6: {}
 
@@ -27945,12 +27959,12 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@3.15.0:
+  js-yaml@3.15.1:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
 
-  js-yaml@4.3.0:
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
@@ -28841,7 +28855,7 @@ snapshots:
       d3-sankey: 0.12.3
       dagre-d3-es: 7.0.14
       dayjs: 1.11.20
-      dompurify: 3.4.12
+      dompurify: 3.4.13
       es-toolkit: 1.47.0
       katex: 0.16.47
       khroma: 2.1.0
@@ -29176,7 +29190,7 @@ snapshots:
 
   monaco-editor@0.55.1:
     dependencies:
-      dompurify: 3.4.12
+      dompurify: 3.4.13
       marked: 14.0.0
 
   moo@0.5.3: {}
@@ -31406,7 +31420,7 @@ snapshots:
   texture-compressor@1.0.2:
     dependencies:
       argparse: 1.0.10
-      image-size: 0.7.5
+      image-size: 0.7.5(patch_hash=539106326193918147bbe316fda5d631372279285c4a9eca6dc227e3af52f321)
 
   threads@1.7.0:
     dependencies:

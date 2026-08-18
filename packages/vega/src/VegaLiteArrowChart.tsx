@@ -1,11 +1,6 @@
 import {ToolErrorMessage} from '@sqlrooms/ai-core';
 import {arrowTableToJson} from '@sqlrooms/duckdb';
-import {
-  AspectRatio,
-  cn,
-  useAspectRatioDimensions,
-  useTheme,
-} from '@sqlrooms/ui';
+import {cn, useAspectRatioDimensions, useTheme} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -62,16 +57,19 @@ export function makeDefaultVegaLiteOptions(
   };
 }
 
-const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
-  className,
-  aspectRatio = 16 / 9,
-  spec,
-  arrowTable,
-  options: propsOptions,
-  width = 'auto',
-  height = 'auto',
-  children,
-}) => {
+const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = (props) => {
+  const {
+    className,
+    spec,
+    arrowTable,
+    options: propsOptions,
+    width = 'auto',
+    height = 'auto',
+    children,
+  } = props;
+  const aspectRatio = Object.hasOwn(props, 'aspectRatio')
+    ? props.aspectRatio
+    : 16 / 9;
   const {theme} = useTheme();
 
   const options = useMemo(
@@ -136,7 +134,8 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     containerRef,
     width,
     height,
-    aspectRatio,
+    aspectRatio:
+      height === 'auto' || width !== 'auto' ? aspectRatio : undefined,
   });
   const changeDimensions = useCallback(
     (width: number, height: number) => {
@@ -150,11 +149,13 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
 
   return (
     <VegaChartContextProvider value={{embed}}>
-      <div
-        ref={containerRef}
-        className={cn('relative flex h-full w-full flex-col gap-2', className)}
-      >
-        <div className="peer relative">
+      <div className={cn('relative flex w-full flex-col gap-2', className)}>
+        <div
+          className={cn(
+            'peer relative',
+            height === 'auto' && aspectRatio === undefined && 'h-full',
+          )}
+        >
           {displayError ? (
             <ToolErrorMessage
               error={displayError}
@@ -166,13 +167,27 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
           ) : (
             specWithData &&
             data && (
-              <AspectRatio
-                ratio={aspectRatio}
-                className="overflow-visible"
-                asChild
+              <div
+                ref={containerRef}
+                style={{
+                  ...(height === 'auto' && aspectRatio !== undefined
+                    ? {aspectRatio}
+                    : height !== 'auto'
+                      ? {height}
+                      : {}),
+                  ...(width !== 'auto' ? {width} : {}),
+                }}
+                className={cn(
+                  'overflow-visible',
+                  width === 'auto' && 'w-full',
+                  height === 'auto' && aspectRatio === undefined && 'h-full',
+                )}
               >
-                <div ref={ref} className="[&_svg]:overflow-visible" />
-              </AspectRatio>
+                <div
+                  ref={ref}
+                  className="h-full w-full [&_svg]:overflow-visible"
+                />
+              </div>
             )
           )}
         </div>

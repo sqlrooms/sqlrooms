@@ -148,6 +148,13 @@ describe('documents CRDT mirrors', () => {
       type: 'dashboard',
       title: 'Dashboard',
     });
+    const removedDocumentId = store.getState().artifacts.createArtifact({
+      id: 'removed-document',
+      type: 'document',
+      title: 'Removed document',
+    });
+    store.getState().artifacts.togglePinArtifact(dashboardId);
+    store.getState().artifacts.togglePinArtifact(removedDocumentId);
     store.setState((state) => ({
       ...state,
       artifacts: {
@@ -179,6 +186,9 @@ describe('documents CRDT mirrors', () => {
       dashboardId,
       'doc-1',
       'doc-2',
+    ]);
+    expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual([
+      dashboardId,
     ]);
   });
 

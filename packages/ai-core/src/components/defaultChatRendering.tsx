@@ -5,7 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
-import {SplitIcon, SquareTerminalIcon} from 'lucide-react';
+import {SplitIcon} from 'lucide-react';
 import React from 'react';
 import type {Components} from 'react-markdown';
 import {TOOL_CALL_CANCELLED} from '../constants';
@@ -53,8 +53,7 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
   prompt,
   searchBlockId,
 }) => (
-  <div className="group/prompt bg-muted flex w-full items-start gap-2 rounded-md border p-2 text-sm">
-    <SquareTerminalIcon className="mt-0.5 h-4 w-4 shrink-0" />
+  <div className="group/prompt bg-muted relative ml-auto flex w-fit max-w-[85%] items-start rounded-md border p-2 text-sm">
     <div className="min-w-0 flex-1">
       <ExpandableContent maxHeight={60} showLabels={false}>
         <div className="break-words">
@@ -62,10 +61,10 @@ export const DefaultChatPrompt: React.FC<ChatPromptProps> = ({
         </div>
       </ExpandableContent>
     </div>
-    <div className="shrink-0 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
+    <div className="absolute top-1/2 right-full mr-1 shrink-0 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
       <CopyButton
         text={prompt}
-        className="relative top-[2px] h-4 w-6"
+        className="h-6 w-6"
         tooltipLabel="Copy prompt"
       />
     </div>
@@ -635,7 +634,7 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
   const Actions = turn.actions.Content;
   return (
     <div className="group mb-4 flex w-full flex-col gap-2 pb-2 text-sm">
-      <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 rounded-md text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
+      <div className="bg-background sticky top-0 z-10 mb-2 flex items-center gap-2 text-gray-700 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.15)] dark:text-gray-100 dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.4)]">
         <Prompt />
       </div>
       <div className="flex w-full flex-col gap-2">

@@ -14,6 +14,9 @@ export {
   getDashboardWithDeckMapAiInstructions,
 } from './ai';
 export type {
+  CreateDashboardAgentToolWithDeckMapsOptions,
+  CreateDashboardWithDeckMapAiToolsOptions,
+  CreateDeckMapDashboardToolParams,
   DeckMapConfigToolParams,
   DeckMapDashboardConfigToolConfig,
   DeckMapDashboardToolParams,

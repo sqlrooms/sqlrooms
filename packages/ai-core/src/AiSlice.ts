@@ -16,18 +16,24 @@ import {
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
+import {generateUniqueName} from '@sqlrooms/utils';
+import {Chat} from '@ai-sdk/react';
 import {produce} from 'immer';
 import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
   generateText,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  lastAssistantMessageIsCompleteWithToolCalls,
   ToolSet,
 } from 'ai';
 import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
+  writeAgentDebugStateToSession,
+  writeToolTimingsToMetadata,
 } from './chatTransport';
 import {
   ANALYSIS_CANCELLED,
@@ -37,13 +43,11 @@ import {
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {cloneBoundedAgentSnapshot} from './devtools/agentSnapshots';
 import type {
-  AddToolApprovalResponse,
-  AddToolOutput,
   AiDevtoolsState,
   AgentProgressSnapshot,
   AgentSnapshot,
+  ProviderContextDiagnostic,
   AgentToolCall,
-  AiChatSendMessage,
   GetProviderOptions,
   PendingSubAgentApproval,
   StoredToolSet,
@@ -53,9 +57,18 @@ import type {
   ToolTimingEntry,
   AssistantMessageMetadata,
 } from './types';
-import {normalizeAiConfig, ToolAbortError} from './utils';
+import {
+  mergeLatestProviderContextMetricsForSession,
+  tryMeasureProviderContext,
+} from './devtools/providerContextDiagnostics';
+import {
+  fixIncompleteToolCalls,
+  normalizeAiConfig,
+  ToolAbortError,
+} from './utils';
 import {
   getAnalysisResultsFromUiMessages,
+  setChatRequestErrorMessage,
   uiMessagesHaveChatRequestError,
 } from './chatTurns';
 import {
@@ -66,6 +79,13 @@ import {
 
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {z} from 'zod';
+import {
+  createRunTimeoutError,
+  getConfiguredTimeoutMs,
+  getTimedOutSessionAgentState,
+  type AiTimeoutOptions,
+} from './timeouts';
+import {createSessionChatRuntime} from './sessionChatRuntime';
 
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
@@ -77,13 +97,21 @@ export type AiSliceState = {
     destroy?: () => Promise<void>;
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
+    /** Transient composer prompt used before the first session is created. */
+    draftPrompt: string;
     /** Tracks API key errors per provider (e.g., 401/403 responses) */
     apiKeyErrors: Record<string, boolean>;
     tools: StoredToolSet;
     toolRenderers: ToolRendererRegistry;
+    /** Executable local tools that await browser output with remote chat. */
+    remoteClientToolNames: string[];
+    /** Opt-in timeout policy for chat runs and tool execution. */
+    timeouts: AiTimeoutOptions;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
+    /** Update the transient composer prompt used when no session is active. */
+    setDraftPrompt: (prompt: string) => void;
     /** Set API key error flag for a provider */
     setApiKeyError: (provider: string, hasError: boolean) => void;
     /** Check if there's an API key error for the current provider */
@@ -93,25 +121,8 @@ export type AiSliceState = {
       sessionId: string,
       controller: AbortController | undefined,
     ) => void;
-    setChatStop: (sessionId: string, stop: (() => void) | undefined) => void;
-    getChatStop: (sessionId: string) => (() => void) | undefined;
-    setChatSendMessage: (
-      sessionId: string,
-      sendMessage: AiChatSendMessage | undefined,
-    ) => void;
-    getChatSendMessage: (sessionId: string) => AiChatSendMessage | undefined;
-    setAddToolOutput: (
-      sessionId: string,
-      addToolOutput: AddToolOutput | undefined,
-    ) => void;
-    getAddToolOutput: (sessionId: string) => AddToolOutput | undefined;
-    setAddToolApprovalResponse: (
-      sessionId: string,
-      fn: AddToolApprovalResponse | undefined,
-    ) => void;
-    getAddToolApprovalResponse: (
-      sessionId: string,
-    ) => AddToolApprovalResponse | undefined;
+    /** Return the ephemeral AI SDK chat for a session. */
+    getSessionChat: (sessionId: string) => Chat<UIMessage> | undefined;
     /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
     setToolCallSession: (
       toolCallId: string,
@@ -162,18 +173,39 @@ export type AiSliceState = {
         baseUrl?: string;
         abortSignal?: AbortSignal;
         useTools?: boolean;
+        /** Stable diagnostics label for this provider caller. */
+        role?: string;
+        /** Names of the request-assembly sources, never source content. */
+        contextSources?: string[];
+        contextMetrics?: Record<string, number>;
+        sessionId?: string;
       },
     ) => Promise<string>;
     startAnalysis: (sessionId: string) => Promise<void>;
+    /** Compatibility entry point; session controllers are ready synchronously. */
     startAnalysisWhenReady: (sessionId: string) => Promise<boolean>;
     startNewSession: (name: string, prompt: string) => Promise<void>;
     cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
+    /**
+     * Resolve the model/provider that would be used right now: the current
+     * session's selection when a session exists, otherwise the default that a
+     * lazily created session would receive. Useful before any session exists,
+     * e.g. to know which provider a first-time API key belongs to.
+     */
+    getSelectedModel: () => {modelProvider: string; model: string};
+    /**
+     * Create a new chat session, make it the current session, and open it in a
+     * tab. When `modelProvider`/`model` are omitted the current selection (or
+     * configured defaults) are used.
+     *
+     * @returns The id of the newly created session.
+     */
     createSession: (
       name?: string,
       modelProvider?: string,
       model?: string,
-    ) => void;
+    ) => string;
     forkSessionFromMessage: (
       args: ForkSessionFromMessageArgs,
     ) => string | undefined;
@@ -181,9 +213,23 @@ export type AiSliceState = {
       sessionId: string,
     ) => AiSessionForkOrigin | undefined;
     switchSession: (sessionId: string) => void;
+    /**
+     * Clear the current session selection (sets `currentSessionId` to
+     * `undefined`) without deleting any session, returning the UI to the
+     * start/new-chat state. A fresh session is created lazily on the next
+     * message.
+     */
+    resetCurrentSession: () => void;
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     setOpenSessionTabs: (tabs: string[]) => void;
+    /**
+     * Toggle the pinned state of a session. Pinning an unknown session id is a
+     * no-op; unpinning is always allowed (also used to drop stale ids).
+     */
+    togglePinSession: (sessionId: string) => void;
+    /** @returns `true` when the session is currently pinned. */
+    isPinnedSession: (sessionId: string) => boolean;
     getCurrentSession: () => ChatSessionSchema | undefined;
     getSessionRunContext: (sessionId: string) => AiRunContext | undefined;
     setSessionRunContext: (
@@ -199,12 +245,32 @@ export type AiSliceState = {
       sessionId: string,
       uiMessages: UIMessage[],
     ) => boolean;
+    /** Persist a terminal timeout result and force the chat runtime to reload. */
+    persistTimedOutSession: (
+      sessionId: string,
+      uiMessages: UIMessage[],
+      timeoutMessage: string,
+    ) => void;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolRenderer: (toolName: string) => ToolRenderer | undefined;
-    getApiKeyFromSettings: () => string;
-    getBaseUrlFromSettings: () => string | undefined;
+    /**
+     * Resolve the API key for the outbound provider. When `provider`/`model`
+     * are omitted the current session's provider (or the default) is used;
+     * callers targeting a specific provider (e.g. one-shot `sendPrompt`) must
+     * pass it so the key matches the endpoint the request is sent to.
+     */
+    getApiKeyFromSettings: (provider?: string, model?: string) => string;
+    /**
+     * Resolve the base URL for the outbound provider. See
+     * {@link AiSliceState.ai.getApiKeyFromSettings} for the `provider`/`model`
+     * override semantics.
+     */
+    getBaseUrlFromSettings: (
+      provider?: string,
+      model?: string,
+    ) => string | undefined;
     getMaxStepsFromSettings: () => number;
     getFullInstructions: (sessionId?: string) => string;
     getLocalChatTransport: (
@@ -271,12 +337,23 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   getCustomModel?: () => LanguageModel | undefined;
   getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
+  /**
+   * Optional timeout safety limits. All timeouts are disabled unless set.
+   * These are runtime behavior and are not persisted in workspace config.
+   */
+  timeouts?: AiTimeoutOptions;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
   /** Optional remote endpoint to use for chat; if empty, local transport is used */
   chatEndPoint?: string;
   /** Optional headers to send with remote endpoint */
   chatHeaders?: Record<string, string>;
+  /**
+   * Locally executable tools whose remote definitions omit `execute` and wait
+   * for browser-provided output. Used to distinguish hybrid client tools from
+   * tools that the remote endpoint executes server-side.
+   */
+  remoteClientToolNames?: ReadonlyArray<Extract<keyof TTools, string>>;
   /**
    * Called after a non-aborted chat turn has been persisted and fully ended.
    *
@@ -289,6 +366,8 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
     captureAgentSnapshots?: boolean;
     persistAgentSnapshots?: boolean;
     maxAgentSnapshotBytes?: number;
+    captureProviderContexts?: boolean;
+    maxProviderContextRecords?: number;
   };
 }
 
@@ -301,6 +380,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getApiKey,
     getBaseUrl,
     maxSteps,
+    timeouts = {},
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
@@ -309,6 +389,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
+    remoteClientToolNames = [],
     getRunContext,
     formatRunContextInstructions,
   } = params;
@@ -316,6 +397,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     captureAgentSnapshots: params.devtools?.captureAgentSnapshots ?? false,
     persistAgentSnapshots: params.devtools?.persistAgentSnapshots ?? false,
     maxAgentSnapshotBytes: params.devtools?.maxAgentSnapshotBytes ?? 64_000,
+    captureProviderContexts: params.devtools?.captureProviderContexts ?? false,
+    maxProviderContextRecords:
+      params.devtools?.maxProviderContextRecords ?? 100,
   };
 
   return createSlice<AiSliceState>((set, get, store) => {
@@ -376,18 +460,134 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     // Create persistent Maps (outside of immer draft)
     const toolCallToSessionId = new Map<string, string>();
     const sessionAbortControllers = new Map<string, AbortController>();
-    const sessionChatStops = new Map<string, () => void>();
-    const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
-    const sessionAddToolOutputs = new Map<string, AddToolOutput>();
-    const sessionAddToolApprovalResponses = new Map<
+    const sessionRunTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+    type SessionChatRuntime = ReturnType<typeof createSessionChatRuntime>;
+    const sessionChatRuntimes = new Map<
       string,
-      AddToolApprovalResponse
+      {version: string; token: object; runtime: SessionChatRuntime}
     >();
     const pendingApprovalResolvers = new Map<
       string,
       (approved: boolean) => void
     >();
     const abortSnapshotMap = new Map<string, AgentProgressSnapshot>();
+
+    const disposeSessionChatRuntime = (sessionId: string) => {
+      const runtime = sessionChatRuntimes.get(sessionId)?.runtime;
+      sessionChatRuntimes.delete(sessionId);
+      runtime?.dispose();
+    };
+
+    const disposeAllSessionChatRuntimes = () => {
+      const runtimes = [...sessionChatRuntimes.values()];
+      sessionChatRuntimes.clear();
+      for (const {runtime} of runtimes) runtime.dispose();
+    };
+
+    const clearSessionRuntimeResources = () => {
+      disposeAllSessionChatRuntimes();
+      for (const controller of sessionAbortControllers.values()) {
+        controller.abort(ANALYSIS_CANCELLED);
+      }
+      sessionAbortControllers.clear();
+      for (const timeoutId of sessionRunTimeouts.values()) {
+        clearTimeout(timeoutId);
+      }
+      sessionRunTimeouts.clear();
+      for (const resolve of pendingApprovalResolvers.values()) resolve(false);
+      pendingApprovalResolvers.clear();
+      abortSnapshotMap.clear();
+      toolCallToSessionId.clear();
+    };
+
+    const getOrCreateSessionChatRuntime = (
+      sessionId: string,
+    ): SessionChatRuntime | undefined => {
+      const session = get().ai.config.sessions.find(
+        (candidate) => candidate.id === sessionId,
+      );
+      if (!session) return undefined;
+
+      const version = String(session.messagesRevision ?? 0);
+      const existing = sessionChatRuntimes.get(sessionId);
+      if (existing?.version === version) return existing.runtime;
+
+      disposeSessionChatRuntime(sessionId);
+      const token = {};
+      const isCurrent = () =>
+        sessionChatRuntimes.get(sessionId)?.token === token;
+      const release = () => {
+        if (isCurrent()) sessionChatRuntimes.delete(sessionId);
+      };
+
+      const trimmedEndpoint = chatEndPoint.trim();
+      const usesRemoteTransport = trimmedEndpoint.length > 0;
+      const transport = usesRemoteTransport
+        ? get().ai.getRemoteChatTransport(
+            sessionId,
+            trimmedEndpoint,
+            chatHeaders,
+          )
+        : get().ai.getLocalChatTransport(sessionId);
+      const chat = new Chat<UIMessage>({
+        id: `${sessionId}::${version}`,
+        transport,
+        messages: fixIncompleteToolCalls(
+          (session.uiMessages ?? []) as UIMessage[],
+        ),
+        sendAutomaticallyWhen: (options) => {
+          const controller = get().ai.getAbortController(sessionId);
+          if (controller?.signal.aborted) return false;
+          return (
+            lastAssistantMessageIsCompleteWithToolCalls(options) ||
+            lastAssistantMessageIsCompleteWithApprovalResponses(options)
+          );
+        },
+        onFinish: ({messages}) => {
+          if (!isCurrent()) return;
+          get().ai.onChatFinish({sessionId, messages});
+          if (isCurrent()) {
+            getOrCreateSessionChatRuntime(sessionId);
+          }
+        },
+        onError: (error) => {
+          if (!isCurrent()) return;
+          get().ai.onChatError(sessionId, error, chat.messages);
+          if (isCurrent()) {
+            getOrCreateSessionChatRuntime(sessionId);
+          }
+        },
+      });
+
+      const runtime = createSessionChatRuntime({
+        chat,
+        usesRemoteTransport,
+        getState: () => {
+          const state = get().ai;
+          return {
+            isRunning: state.getIsRunning(sessionId),
+            abortController: state.getAbortController(sessionId),
+            tools: state.tools,
+            remoteClientToolNames: state.remoteClientToolNames,
+            timeouts: state.timeouts,
+            agentProgress: state.agentProgress,
+            pendingSubAgentApprovals: state.pendingSubAgentApprovals,
+          };
+        },
+        subscribeToStateChanges: (onChange) =>
+          store.subscribe(() => onChange()),
+        onMessagesChange: (messages) => {
+          if (!isCurrent()) return;
+          get().ai.setSessionUiMessages(sessionId, messages);
+        },
+        onIdleTimeout: (messages, error) => {
+          get().ai.persistTimedOutSession(sessionId, messages, error.message);
+        },
+        onDeactivate: release,
+      });
+      sessionChatRuntimes.set(sessionId, {version, token, runtime});
+      return runtime;
+    };
 
     const getResolvedModelSelection = (
       candidateProvider?: string,
@@ -410,6 +610,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
       if (modelIsAvailable(candidateProvider, candidateModel)) {
         return {modelProvider: candidateProvider!, model: candidateModel!};
+      }
+
+      // A provider-only request is authoritative even when it omits the model.
+      // Select that provider's first available model instead of silently
+      // reverting to the default provider/model pair.
+      if (candidateProvider) {
+        const firstProviderModel = availableModels.find(
+          (candidate) => candidate.provider === candidateProvider,
+        );
+        if (firstProviderModel) {
+          return {
+            modelProvider: firstProviderModel.provider,
+            model: firstProviderModel.value,
+          };
+        }
       }
 
       if (modelIsAvailable(defaultProvider, defaultModel)) {
@@ -493,12 +708,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
         destroy: async () => {
           unregisterCommandsForOwner(store, AI_COMMAND_OWNER);
+          clearSessionRuntimeResources();
         },
         config: baseConfig,
         promptSuggestionsVisible: true,
+        draftPrompt: baseConfig.sessions.length === 0 ? initialPrompt : '',
         apiKeyErrors: {},
         tools,
         toolRenderers: params.toolRenderers ?? {},
+        remoteClientToolNames: [...remoteClientToolNames],
+        timeouts,
         getProviderOptions,
 
         setToolCallSession: (
@@ -563,6 +782,65 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             set((state) =>
               produce(state, (draft) => {
                 draft.ai.devtools.agentSnapshots = {};
+              }),
+            );
+          },
+          providerContexts: [],
+          shouldCaptureProviderContexts: () =>
+            devtoolsOptions.captureProviderContexts,
+          measureProviderContext: async (input) => {
+            if (!devtoolsOptions.captureProviderContexts) return undefined;
+            const diagnostic = await tryMeasureProviderContext(input);
+            if (!diagnostic) return undefined;
+            get().ai.devtools.writeProviderContext(diagnostic);
+            return diagnostic.id;
+          },
+          writeProviderContext: (diagnostic: ProviderContextDiagnostic) => {
+            if (!devtoolsOptions.captureProviderContexts) return;
+            set((state) =>
+              produce(state, (draft) => {
+                draft.ai.devtools.providerContexts.push(diagnostic);
+                const overflow =
+                  draft.ai.devtools.providerContexts.length -
+                  devtoolsOptions.maxProviderContextRecords;
+                if (overflow > 0) {
+                  draft.ai.devtools.providerContexts.splice(0, overflow);
+                }
+              }),
+            );
+          },
+          setProviderContextInputTokens: (id: string, inputTokens: number) => {
+            if (!devtoolsOptions.captureProviderContexts) return;
+            set((state) =>
+              produce(state, (draft) => {
+                const diagnostic = draft.ai.devtools.providerContexts.find(
+                  (entry) => entry.id === id,
+                );
+                if (diagnostic) diagnostic.inputTokens = inputTokens;
+              }),
+            );
+          },
+          mergeLatestProviderContextMetrics: (
+            role: string,
+            metrics: Record<string, number>,
+            sessionId?: string,
+          ) => {
+            if (!devtoolsOptions.captureProviderContexts) return;
+            set((state) =>
+              produce(state, (draft) => {
+                mergeLatestProviderContextMetricsForSession(
+                  draft.ai.devtools.providerContexts,
+                  role,
+                  metrics,
+                  sessionId,
+                );
+              }),
+            );
+          },
+          clearProviderContexts: () => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.ai.devtools.providerContexts = [];
               }),
             );
           },
@@ -647,6 +925,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           sessionId: string,
           controller: AbortController | undefined,
         ) => {
+          const timeoutId = sessionRunTimeouts.get(sessionId);
+          if (timeoutId) clearTimeout(timeoutId);
+          sessionRunTimeouts.delete(sessionId);
           if (controller) {
             sessionAbortControllers.set(sessionId, controller);
           } else {
@@ -654,60 +935,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           }
         },
 
-        setChatStop: (sessionId: string, stopFn: (() => void) | undefined) => {
-          if (stopFn) {
-            sessionChatStops.set(sessionId, stopFn);
-          } else {
-            sessionChatStops.delete(sessionId);
-          }
-        },
-        getChatStop: (sessionId: string) => {
-          return sessionChatStops.get(sessionId);
-        },
-
-        setChatSendMessage: (
-          sessionId: string,
-          sendMessageFn: AiChatSendMessage | undefined,
-        ) => {
-          if (sendMessageFn) {
-            sessionChatSendMessages.set(sessionId, sendMessageFn);
-          } else {
-            sessionChatSendMessages.delete(sessionId);
-          }
-        },
-        getChatSendMessage: (sessionId: string) => {
-          return sessionChatSendMessages.get(sessionId);
-        },
-
-        setAddToolOutput: (
-          sessionId: string,
-          addToolOutputFn: AddToolOutput | undefined,
-        ) => {
-          if (addToolOutputFn) {
-            sessionAddToolOutputs.set(sessionId, addToolOutputFn);
-          } else {
-            sessionAddToolOutputs.delete(sessionId);
-          }
-        },
-        getAddToolOutput: (sessionId: string) => {
-          return sessionAddToolOutputs.get(sessionId);
-        },
-
-        setAddToolApprovalResponse: (
-          sessionId: string,
-          fn: AddToolApprovalResponse | undefined,
-        ) => {
-          if (fn) {
-            sessionAddToolApprovalResponses.set(sessionId, fn);
-          } else {
-            sessionAddToolApprovalResponses.delete(sessionId);
-          }
-        },
-        getAddToolApprovalResponse: (sessionId: string) => {
-          return sessionAddToolApprovalResponses.get(sessionId);
-        },
+        getSessionChat: (sessionId) =>
+          getOrCreateSessionChatRuntime(sessionId)?.chat,
 
         setConfig: (config: AiSliceConfig) => {
+          clearSessionRuntimeResources();
           const normalizedConfig = cleanupSessionForks(
             normalizeAiConfig(config),
           );
@@ -727,6 +959,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           set((state) =>
             produce(state, (draft) => {
               draft.ai.promptSuggestionsVisible = visible;
+            }),
+          );
+        },
+
+        setDraftPrompt: (prompt: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.draftPrompt = prompt;
             }),
           );
         },
@@ -806,6 +1046,14 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
         },
 
+        getSelectedModel: () => {
+          const currentSession = get().ai.getCurrentSession();
+          return getResolvedModelSelection(
+            currentSession?.modelProvider,
+            currentSession?.model,
+          );
+        },
+
         /**
          * Get the current active session
          */
@@ -870,16 +1118,21 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           model?: string,
         ) => {
           const currentSession = get().ai.getCurrentSession();
+          const firstSessionPrompt = currentSession ? '' : get().ai.draftPrompt;
           const modelSelection = getResolvedModelSelection(
-            modelProvider || currentSession?.modelProvider,
-            model || currentSession?.model,
+            modelProvider ?? currentSession?.modelProvider,
+            model ??
+              (modelProvider === undefined ? currentSession?.model : undefined),
           );
           const newSessionId = createId();
 
-          // Generate a default name if none is provided
+          // Generate a unique name if none is provided
           let sessionName = name;
           if (!sessionName) {
-            sessionName = 'Untitled';
+            const existingNames = get().ai.config.sessions.map(
+              (s: ChatSessionSchema) => s.name,
+            );
+            sessionName = generateUniqueName('Chat', existingNames, ' ');
           }
 
           set((state) =>
@@ -894,12 +1147,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
                 createdAt: new Date(),
                 uiMessages: [],
                 messagesRevision: 0,
-                prompt: '',
+                prompt: firstSessionPrompt,
                 draftContextItemIds: undefined,
                 isRunning: false,
                 lastOpenedAt: now,
               });
               draft.ai.config.currentSessionId = newSessionId;
+              draft.ai.draftPrompt = '';
               // Add new session to open tabs
               if (!draft.ai.config.openSessionTabs) {
                 draft.ai.config.openSessionTabs = [];
@@ -907,6 +1161,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               draft.ai.config.openSessionTabs.push(newSessionId);
             }),
           );
+          return newSessionId;
         },
 
         forkSessionFromMessage: (args) => {
@@ -969,6 +1224,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         /**
+         * Reset the current session (set currentSessionId to undefined)
+         */
+        resetCurrentSession: () => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.config.currentSessionId = undefined;
+            }),
+          );
+        },
+
+        /**
          * Set the list of open session tab IDs
          */
         setOpenSessionTabs: (tabs: string[]) => {
@@ -1011,10 +1277,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             abortController.abort(SESSION_DELETED);
           }
           sessionAbortControllers.delete(sessionId);
-          sessionChatStops.delete(sessionId);
-          sessionChatSendMessages.delete(sessionId);
-          sessionAddToolOutputs.delete(sessionId);
-          sessionAddToolApprovalResponses.delete(sessionId);
+          const runTimeoutId = sessionRunTimeouts.get(sessionId);
+          if (runTimeoutId) clearTimeout(runTimeoutId);
+          sessionRunTimeouts.delete(sessionId);
+          disposeSessionChatRuntime(sessionId);
           const now = Date.now();
 
           set((state) =>
@@ -1025,6 +1291,12 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               if (sessionIndex !== -1) {
                 draft.ai.config.sessions.splice(sessionIndex, 1);
                 delete draft.ai.config.sessionForks[sessionId];
+                if (draft.ai.config.pinnedSessionIds) {
+                  draft.ai.config.pinnedSessionIds =
+                    draft.ai.config.pinnedSessionIds.filter(
+                      (id) => id !== sessionId,
+                    );
+                }
                 if (draft.ai.config.openSessionTabs) {
                   draft.ai.config.openSessionTabs =
                     draft.ai.config.openSessionTabs.filter(
@@ -1054,6 +1326,40 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+        },
+
+        /**
+         * Toggle pin status for a session
+         */
+        togglePinSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.ai.config.pinnedSessionIds) {
+                draft.ai.config.pinnedSessionIds = [];
+              }
+              const index = draft.ai.config.pinnedSessionIds.indexOf(sessionId);
+              if (index === -1) {
+                // Only pin sessions that exist; ignore unknown ids so stale
+                // references are not persisted.
+                const sessionExists = draft.ai.config.sessions.some(
+                  (s: ChatSessionSchema) => s.id === sessionId,
+                );
+                if (sessionExists) {
+                  draft.ai.config.pinnedSessionIds.push(sessionId);
+                }
+              } else {
+                draft.ai.config.pinnedSessionIds.splice(index, 1);
+              }
+            }),
+          );
+        },
+
+        /**
+         * Check if a session is pinned
+         */
+        isPinnedSession: (sessionId: string) => {
+          const pinnedIds = get().ai.config.pinnedSessionIds ?? [];
+          return pinnedIds.includes(sessionId);
         },
 
         /**
@@ -1103,64 +1409,140 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           }
         },
 
+        persistTimedOutSession: (
+          sessionId: string,
+          uiMessages: UIMessage[],
+          timeoutMessage: string,
+        ) => {
+          const completedMessages = fixIncompleteToolCalls(
+            structuredClone(uiMessages),
+            timeoutMessage,
+            {completeApprovalRequests: true},
+          );
+          const lastUserMessage = completedMessages
+            .filter((message) => message.role === 'user')
+            .at(-1);
+          if (lastUserMessage) {
+            setChatRequestErrorMessage(lastUserMessage, {
+              error: timeoutMessage,
+            });
+          }
+
+          const currentState = get();
+          writeToolTimingsToMetadata(
+            completedMessages,
+            currentState.ai.getToolTimings(),
+          );
+          const timedOutAgentState = getTimedOutSessionAgentState(
+            completedMessages,
+            currentState.ai.agentProgress,
+            currentState.ai.pendingSubAgentApprovals,
+            timeoutMessage,
+          );
+
+          for (const approvalId of timedOutAgentState.approvalIds) {
+            pendingApprovalResolvers.get(approvalId)?.(false);
+            pendingApprovalResolvers.delete(approvalId);
+          }
+
+          const stateForPersistence = {
+            ...currentState,
+            ai: {
+              ...currentState.ai,
+              agentProgress: timedOutAgentState.agentProgress,
+            },
+          };
+
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (candidate) => candidate.id === sessionId,
+              );
+              if (!session) return;
+              session.uiMessages =
+                completedMessages as ChatSessionSchema['uiMessages'];
+              for (const [parentToolCallId, toolCalls] of Object.entries(
+                timedOutAgentState.agentProgress,
+              )) {
+                draft.ai.agentProgress[parentToolCallId] = toolCalls;
+              }
+              for (const approvalId of timedOutAgentState.approvalIds) {
+                delete draft.ai.pendingSubAgentApprovals[approvalId];
+              }
+              writeAgentDebugStateToSession(session, stateForPersistence);
+              session.messagesRevision = (session.messagesRevision || 0) + 1;
+              session.isRunning = false;
+            }),
+          );
+        },
+
         findToolRenderer: (toolName: string) => {
           return get().ai.toolRenderers[toolName];
         },
 
-        getBaseUrlFromSettings: () => {
+        getBaseUrlFromSettings: (providerOverride, modelOverride) => {
           // First try the getBaseUrl function if provided
           const baseUrlFromFunction = getBaseUrl?.();
           if (baseUrlFromFunction) {
             return baseUrlFromFunction;
           }
 
-          // Fall back to settings
+          // Fall back to settings. Resolve the same provider/model a newly
+          // created session would use when no current session exists.
           const store = get();
           if (hasAiSettingsConfig(store)) {
             const currentSession = getCurrentSessionFromState(store);
-            if (currentSession) {
-              if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.baseUrl;
-              }
-              const provider =
-                store.aiSettings.config.providers[currentSession.modelProvider];
-              return provider?.baseUrl;
+            const selection = getResolvedModelSelection(
+              providerOverride ?? currentSession?.modelProvider,
+              modelOverride ?? currentSession?.model,
+            );
+            const provider = providerOverride ?? selection.modelProvider;
+            const model = modelOverride ?? selection.model;
+            if (provider === 'custom') {
+              const customModel = store.aiSettings.config.customModels.find(
+                (m: {modelName: string}) => m.modelName === model,
+              );
+              return customModel?.baseUrl;
             }
+            return store.aiSettings.config.providers[provider]?.baseUrl;
           }
           return undefined;
         },
 
-        getApiKeyFromSettings: () => {
+        getApiKeyFromSettings: (providerOverride, modelOverride) => {
           const store = get();
           const currentSession = getCurrentSessionFromState(store);
-          if (currentSession) {
-            // First try the getApiKey function if provided
-            const apiKeyFromFunction = getApiKey?.(
-              currentSession.modelProvider || 'openai',
-            );
-            if (apiKeyFromFunction) {
-              return apiKeyFromFunction;
-            }
+          const selection = getResolvedModelSelection(
+            providerOverride ?? currentSession?.modelProvider,
+            modelOverride ?? currentSession?.model,
+          );
+          // Explicit provider overrides remain authoritative for one-shot
+          // calls, while the model falls back to the resolved session default.
+          const provider = providerOverride ?? selection.modelProvider;
+          const model = modelOverride ?? selection.model;
 
-            // Fall back to settings
-            if (hasAiSettingsConfig(store)) {
-              if (currentSession.modelProvider === 'custom') {
-                const customModel = store.aiSettings.config.customModels.find(
-                  (m: {modelName: string}) =>
-                    m.modelName === currentSession.model,
-                );
-                return customModel?.apiKey || '';
-              } else {
-                const provider =
-                  store.aiSettings.config.providers?.[
-                    currentSession.modelProvider
-                  ];
-                return provider?.apiKey || '';
-              }
+          // First try the getApiKey function if provided. This must not depend
+          // on a current chat session: chat-free flows (e.g. in-place block
+          // edits) resolve a key without ever selecting a session.
+          const apiKeyFromFunction = getApiKey?.(provider);
+          if (apiKeyFromFunction) {
+            return apiKeyFromFunction;
+          }
+
+          // Fall back to settings for the resolved provider. With lazy session
+          // creation the key may be read before any session exists (e.g. the
+          // composer's inline API-key prompt); the default provider is used then
+          // so users who already saved a key are not asked to re-enter it.
+          if (hasAiSettingsConfig(store)) {
+            if (provider === 'custom') {
+              const customModel = store.aiSettings.config.customModels.find(
+                (m: {modelName: string}) => m.modelName === model,
+              );
+              return customModel?.apiKey || '';
+            } else {
+              return (
+                store.aiSettings.config.providers?.[provider]?.apiKey || ''
+              );
             }
           }
           return '';
@@ -1225,6 +1607,10 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             modelName?: string;
             baseUrl?: string;
             useTools?: boolean;
+            role?: string;
+            contextSources?: string[];
+            contextMetrics?: Record<string, number>;
+            sessionId?: string;
             abortSignal?: AbortSignal;
           } = {},
         ) => {
@@ -1238,16 +1624,31 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             baseUrl,
             abortSignal,
             useTools = false,
+            role = 'one-shot-helper',
+            contextSources = [
+              'explicit-prompt',
+              'resolved-system-instructions',
+            ],
+            contextMetrics,
+            sessionId,
           } = options;
 
           if (abortSignal?.aborted) {
             throw new ToolAbortError(TOOL_CALL_CANCELLED);
           }
 
+          const selectedModel = state.ai.getSelectedModel();
           const provider =
-            modelProvider || currentSession?.modelProvider || defaultProvider;
-          const modelId = modelName || currentSession?.model || defaultModel;
-          const baseURL = baseUrl ?? state.ai.getBaseUrlFromSettings() ?? '';
+            modelProvider ??
+            currentSession?.modelProvider ??
+            selectedModel.modelProvider;
+          const modelId =
+            modelName ?? currentSession?.model ?? selectedModel.model;
+          // Resolve the key/base URL for the SAME provider the request targets,
+          // so an explicit provider/base URL never receives another provider's
+          // credential.
+          const baseURL =
+            baseUrl ?? state.ai.getBaseUrlFromSettings(provider, modelId) ?? '';
           const tools = state.ai.tools;
 
           const toolsWithoutExecute = Object.fromEntries(
@@ -1255,21 +1656,57 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           );
 
           const model = createOpenAICompatible({
-            apiKey: state.ai.getApiKeyFromSettings(),
+            apiKey: state.ai.getApiKeyFromSettings(provider, modelId),
             name: provider,
             baseURL,
             includeUsage: true,
           }).chatModel(modelId);
 
+          const diagnosticsByStep: string[] = [];
+          let completedStep = 0;
+          const resolvedInstructions =
+            systemInstructions ||
+            state.ai.getFullInstructions(currentSession?.id);
+
           try {
             const response = await generateText({
               model,
               messages: [{role: 'user', content: prompt}],
-              system:
-                systemInstructions ||
-                state.ai.getFullInstructions(currentSession?.id),
+              system: resolvedInstructions,
               abortSignal: abortSignal,
               ...(useTools ? {tools: toolsWithoutExecute as ToolSet} : {}),
+              prepareStep: async ({stepNumber, messages}) => {
+                if (!state.ai.devtools.shouldCaptureProviderContexts()) {
+                  return undefined;
+                }
+                const diagnostic = await tryMeasureProviderContext({
+                  role,
+                  provider,
+                  model: modelId,
+                  sessionId: sessionId ?? currentSession?.id,
+                  step: stepNumber,
+                  instructions: resolvedInstructions,
+                  messages,
+                  tools: useTools
+                    ? (toolsWithoutExecute as ToolSet)
+                    : undefined,
+                  sources: contextSources,
+                  preparationMetrics: contextMetrics,
+                });
+                if (!diagnostic) return undefined;
+                diagnosticsByStep[stepNumber] = diagnostic.id;
+                state.ai.devtools.writeProviderContext(diagnostic);
+                return undefined;
+              },
+              onStepFinish: ({usage}) => {
+                const diagnosticId = diagnosticsByStep[completedStep++];
+                if (diagnosticId && usage.inputTokens != null) {
+                  state.ai.devtools.setProviderContextInputTokens(
+                    diagnosticId,
+                    usage.inputTokens,
+                  );
+                }
+              },
             });
             return response.text;
           } catch (error) {
@@ -1299,12 +1736,9 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             return;
           }
 
-          const sendMessage = state.ai.getChatSendMessage(sessionId);
-          if (!sendMessage) {
-            console.error(
-              'No sendMessage function found for session:',
-              sessionId,
-            );
+          const chat = state.ai.getSessionChat(sessionId);
+          if (!chat) {
+            console.error('Failed to create session chat:', sessionId);
             return;
           }
 
@@ -1313,6 +1747,40 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           // Store abort controller for this session
           state.ai.setAbortController(sessionId, abortController);
+
+          const runTimeoutMs = getConfiguredTimeoutMs(timeouts.runMs);
+          if (runTimeoutMs != null) {
+            const timeoutId = setTimeout(() => {
+              if (
+                get().ai.getAbortController(sessionId) !== abortController ||
+                abortController.signal.aborted
+              ) {
+                return;
+              }
+              const timeoutError = createRunTimeoutError(runTimeoutMs);
+              abortController.abort(timeoutError);
+
+              // A client tool or approval can pause useChat without an active
+              // stream, so transport callbacks are not guaranteed to run.
+              // Persist the same terminal timeout result immediately.
+              const currentMessages = chat.messages;
+              get().ai.persistTimedOutSession(
+                sessionId,
+                currentMessages,
+                timeoutError.message,
+              );
+              disposeSessionChatRuntime(sessionId);
+            }, runTimeoutMs);
+            sessionRunTimeouts.set(sessionId, timeoutId);
+            abortController.signal.addEventListener(
+              'abort',
+              () => {
+                clearTimeout(timeoutId);
+                sessionRunTimeouts.delete(sessionId);
+              },
+              {once: true},
+            );
+          }
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
@@ -1328,29 +1796,16 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
-
-          // Send the message through the session's chat instance
-          sendMessage({text: promptText});
+          void chat.sendMessage({text: promptText});
         },
 
         startAnalysisWhenReady: async (sessionId: string) => {
-          const maxAttempts = 50; // 50 * 20ms = 1 second max
-
-          for (let attempts = 0; attempts < maxAttempts; attempts++) {
-            const sendMessage = get().ai.getChatSendMessage(sessionId);
-            if (sendMessage) {
-              await get().ai.startAnalysis(sessionId);
-              return true;
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, 20));
+          if (!get().ai.getSessionChat(sessionId)) {
+            console.error('Session not found:', sessionId);
+            return false;
           }
-
-          console.error(
-            'Timeout waiting for chat provider to register for session:',
-            sessionId,
-          );
-          return false;
+          await get().ai.startAnalysis(sessionId);
+          return true;
         },
 
         /**
@@ -1370,7 +1825,6 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // Set the prompt
           get().ai.setPrompt(session.id, prompt);
 
-          // Wait for SessionChatProvider to mount and register sendMessage
           void get()
             .ai.startAnalysisWhenReady(session.id)
             .catch((error) => {
@@ -1381,12 +1835,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         cancelAnalysis: (sessionId: string) => {
           const state = get();
           const abortController = state.ai.getAbortController(sessionId);
-          const stopFn = state.ai.getChatStop(sessionId);
-
-          // Stop local chat streaming immediately if available
-          stopFn?.();
+          const chat = sessionChatRuntimes.get(sessionId)?.runtime.chat;
 
           abortController?.abort(ANALYSIS_CANCELLED);
+
+          void chat?.stop();
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {
@@ -1473,6 +1926,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               }
             }),
           );
+          disposeSessionChatRuntime(sessionId);
         },
 
         /**
@@ -1540,6 +1994,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
               store.getState().ai.getFullInstructions(sessionId),
             getCustomModel,
             sessionId,
+            timeouts,
           })();
         },
 

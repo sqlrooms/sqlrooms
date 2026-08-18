@@ -247,6 +247,24 @@ describe('deck dashboard integration', () => {
     expect(transformSql).toContain('WITH __sqlrooms_source AS');
     expect(transformSql).toContain('SELECT * FROM "earthquakes"');
     expect(transformSql).toContain('FROM __sqlrooms_source');
+
+    const wrappedSql = createDeckMapDashboardDatasetQuery(
+      {tableName: 'buildings'},
+      [],
+      {geometryColumnsToWrapAsWkb: ['geom']},
+    ).toString();
+    expect(wrappedSql).toContain('ST_AsWKB("geom") AS "geom"');
+    expect(wrappedSql).toContain('__sqlrooms_as_wkb');
+
+    const sampledWrappedSql = createDeckMapDashboardDatasetQuery(
+      {tableName: 'buildings'},
+      [],
+      {sampleRows: 1000, geometryColumnsToWrapAsWkb: ['geom']},
+    ).toString();
+    // Outer REPLACE wraps an inner SAMPLE subquery (sample first, then ST_AsWKB).
+    expect(sampledWrappedSql).toMatch(
+      /REPLACE[\s\S]*FROM\s*\([\s\S]*USING SAMPLE 1000 ROWS[\s\S]*\)\s+AS\s+"__sqlrooms_as_wkb"/i,
+    );
   });
 
   it('wires Arrow client results into DeckJsonMap dataset inputs', () => {
@@ -272,5 +290,42 @@ describe('deck dashboard integration', () => {
       geometryColumn: 'geom',
       geometryEncodingHint: 'wkb',
     });
+  });
+
+  it('only forces WKB hint when the configured geometry column was wrapped', () => {
+    const arrowTable = new Table({
+      value: vectorFromArray([1, 2, 3]),
+    });
+    const config: DeckMapDashboardPanelConfig = {
+      spec: {layers: []},
+      datasets: {
+        places: {
+          geometryColumn: 'wkt_geom',
+          geometryEncodingHint: 'wkt',
+        },
+      },
+    };
+
+    const datasets = createDeckMapDashboardDatasets(config, {
+      places: {
+        arrowTable,
+        // Unrelated native GEOMETRY column was wrapped — must not retarget wkt_geom.
+        wrappedGeometryColumnNames: ['native_geom'],
+      },
+    });
+
+    expect(datasets.places).toEqual({
+      arrowTable,
+      geometryColumn: 'wkt_geom',
+      geometryEncodingHint: 'wkt',
+    });
+
+    const wrappedConfigured = createDeckMapDashboardDatasets(config, {
+      places: {
+        arrowTable,
+        wrappedGeometryColumnNames: ['wkt_geom'],
+      },
+    });
+    expect(wrappedConfigured.places?.geometryEncodingHint).toBe('wkb');
   });
 });

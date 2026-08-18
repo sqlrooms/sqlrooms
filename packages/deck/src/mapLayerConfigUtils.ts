@@ -17,7 +17,7 @@ export type DeckMapLayerColorAccessor =
   | 'getTargetColor';
 
 export const DECK_MAP_LAYER_TYPE_OPTIONS: ReadonlyArray<{
-  value: DeckAutoLayerType | 'GeoArrowSolidPolygonLayer';
+  value: DeckAutoLayerType;
   label: string;
 }> = [
   {value: 'GeoArrowScatterplotLayer', label: 'Point'},
@@ -81,6 +81,7 @@ const TRIPS_LAYER_TYPES = new Set([
 const RADIUS_LAYER_TYPES = new Set([
   'geoarrowscatterplotlayer',
   'scatterplotlayer',
+  'geojsonlayer',
 ]);
 
 const COLUMN_RADIUS_LAYER_TYPES = new Set([
@@ -88,6 +89,7 @@ const COLUMN_RADIUS_LAYER_TYPES = new Set([
   'columnlayer',
 ]);
 
+// GeoJSON: elevation/scale compile is geoarrow-only — no extrusion UI here.
 const EXTRUDABLE_LAYER_TYPES = new Set([
   'geoarrowh3hexagonlayer',
   'h3hexagonlayer',
@@ -192,6 +194,12 @@ export function getDeckMapColorAccessorOptions(
     return [];
   }
 
+  if (layerType === 'GeoArrowColumnLayer') {
+    return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
+      (option) => option.value === 'getFillColor',
+    );
+  }
+
   return DECK_MAP_COLOR_ACCESSOR_OPTIONS.filter(
     (option) =>
       option.value === 'getFillColor' || option.value === 'getLineColor',
@@ -240,11 +248,75 @@ export function setDeckMapLayerType(
       lt === 'columnlayer' ||
       lt === 'deckcolumnlayer'
     ) {
-      nextLayer.radius ??= 3;
-      nextLayer.elevationScale ??= 1;
+      const radius =
+        typeof nextLayer.radius === 'number' &&
+        Number.isFinite(nextLayer.radius) &&
+        nextLayer.radius > 0
+          ? nextLayer.radius
+          : 50;
+      const withRadius = applyDeckMapColumnRadiusMeters(nextLayer, radius);
+      if (typeof withRadius.elevationScale !== 'number') {
+        withRadius.elevationScale = 1;
+      }
+      return withRadius;
     }
     return nextLayer;
   });
+}
+
+// Point/heatmap radius leftovers (`getRadius`, pixel units) break ColumnLayer meters UI.
+const COLUMN_LAYER_RADIUS_CONFLICT_KEYS = [
+  'getRadius',
+  'radiusMinPixels',
+  'radiusMaxPixels',
+  'radiusPixels',
+] as const;
+
+/** Force meters and strip point/heatmap radius leftovers (does not set `radius`). */
+export function stripDeckMapColumnLayerRadiusConflicts(
+  layer: DeckMapLayerRecord,
+): DeckMapLayerRecord {
+  const next: DeckMapLayerRecord = {
+    ...layer,
+    radiusUnits: 'meters',
+  };
+  for (const key of COLUMN_LAYER_RADIUS_CONFLICT_KEYS) {
+    delete next[key];
+  }
+  return next;
+}
+
+/** True when ColumnLayer still carries point/heatmap radius props or pixel units. */
+export function deckMapColumnLayerHasRadiusConflicts(
+  layer: DeckMapLayerRecord,
+): boolean {
+  if (layer.radiusUnits === 'pixels') return true;
+  return COLUMN_LAYER_RADIUS_CONFLICT_KEYS.some(
+    (key) => layer[key] !== undefined,
+  );
+}
+
+/** Apply a column radius in meters and strip conflicting point/heatmap radius props. */
+export function applyDeckMapColumnRadiusMeters(
+  layer: DeckMapLayerRecord,
+  radiusMeters: number,
+): DeckMapLayerRecord {
+  return {
+    ...stripDeckMapColumnLayerRadiusConflicts(layer),
+    radius: radiusMeters,
+    radiusUnits: 'meters',
+  };
+}
+
+/** Set GeoArrowColumnLayer disk radius in meters. */
+export function setDeckMapLayerColumnRadius(
+  config: DeckMapConfig,
+  layerIndex: number,
+  radiusMeters: number,
+): DeckMapConfig {
+  return updateDeckMapLayer(config, layerIndex, (layer) =>
+    applyDeckMapColumnRadiusMeters(layer, radiusMeters),
+  );
 }
 
 export function setDeckMapLayerGeometryColumn(
@@ -363,20 +435,24 @@ const DEFAULT_LAYER_FILL_COLOR: [number, number, number, number] = [
   56, 189, 248, 180,
 ];
 
+const DEFAULT_LAYER_STROKE_COLOR: [number, number, number, number] = [
+  0, 0, 0, 255,
+];
+
 export function clearDeckMapLayerColorScale(
   config: DeckMapConfig,
   layerIndex: number,
   accessor: DeckMapLayerColorAccessor,
 ): DeckMapConfig {
-  return updateDeckMapLayer(config, layerIndex, (layer) => {
-    const nextLayer = {...layer};
-    if (accessor === 'getFillColor') {
-      nextLayer[accessor] = [...DEFAULT_LAYER_FILL_COLOR];
-    } else {
-      delete nextLayer[accessor];
-    }
-    return nextLayer;
-  });
+  const defaultColor =
+    accessor === 'getLineColor'
+      ? DEFAULT_LAYER_STROKE_COLOR
+      : DEFAULT_LAYER_FILL_COLOR;
+  return updateDeckMapLayer(config, layerIndex, (layer) => ({
+    ...layer,
+    // Missing fill → deck.gl opaque black; keep an explicit flat color.
+    [accessor]: [...defaultColor],
+  }));
 }
 
 export function createDeckMapLayerColorScale(options: {

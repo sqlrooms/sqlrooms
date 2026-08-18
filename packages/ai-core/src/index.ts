@@ -10,6 +10,13 @@ export type {
   AiSliceOptions,
   ForkSessionFromMessageArgs,
 } from './AiSlice';
+export type {AiTimeoutOptions} from './timeouts';
+export {
+  measureProviderContext,
+  tryMeasureProviderContext,
+} from './devtools/providerContextDiagnostics';
+export type {MeasureProviderContextArgs} from './devtools/providerContextDiagnostics';
+export type {ProviderContextDiagnostic} from './types';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
 /** @deprecated Use `Chat.Messages` instead. */
 export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
@@ -94,6 +101,10 @@ export {
   DefaultChatActions,
   defaultChatRenderingComponents,
 } from './components/defaultChatRendering';
+export {
+  LocalAgentChatRuntimeProvider,
+  SessionChatRuntimeProvider,
+} from './components/ChatRuntimeContext';
 export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
@@ -189,6 +200,8 @@ export type {
   MessageTokenUsage,
 } from './types';
 export {fixIncompleteToolCalls} from './utils';
+
+export {withRunContextTools} from './chatTransport';
 
 export {
   streamSubAgent,
