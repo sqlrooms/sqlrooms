@@ -226,8 +226,8 @@ function AppReasoning({text, isRunning}: ChatReasoningProps) {
 </Chat.Rendering>;
 ```
 
-You can combine any of these in one map, e.g.
-`components={{Prompt: AppPrompt, Reasoning: AppReasoning}}`.
+You can combine any of these in one `components` map by providing both the
+`Prompt` and `Reasoning` entries.
 
 `TextOutput` receives `isAnswer=true` only for text that is the final message
 part. Planning text followed by tool activity remains regular response text.
