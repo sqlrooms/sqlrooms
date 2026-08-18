@@ -143,7 +143,7 @@ export const ChatMessagesContainer: React.FC<{
           {isRunning && (
             <ChatActiveStatus
               messages={uiMessages as UIMessage[] | undefined}
-              className="py-4"
+              className="pb-4"
             />
           )}
           <div className="h-10 w-full shrink-0" />
