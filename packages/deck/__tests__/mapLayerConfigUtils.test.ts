@@ -173,8 +173,7 @@ describe('mapLayerConfigUtils', () => {
     expect(usesExtrusionSettings('GeoArrowH3HexagonLayer')).toBe(true);
     expect(usesExtrusionSettings('GeoArrowPolygonLayer')).toBe(true);
     expect(usesExtrusionSettings('GeoArrowColumnLayer')).toBe(true);
-    // GeoJSON is not extrudable in the UI: elevation scale compile is geoarrow-only.
-    expect(usesExtrusionSettings('GeoJsonLayer')).toBe(false);
+    expect(usesExtrusionSettings('GeoJsonLayer')).toBe(true);
     expect(usesExtrusionSettings('GeoArrowScatterplotLayer')).toBe(false);
     expect(usesExtrusionSettings('GeoArrowPathLayer')).toBe(false);
   });

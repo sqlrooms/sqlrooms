@@ -93,7 +93,6 @@ const COLUMN_RADIUS_LAYER_TYPES = new Set([
   'columnlayer',
 ]);
 
-// GeoJSON: elevation/scale compile is geoarrow-only — no extrusion UI here.
 const EXTRUDABLE_LAYER_TYPES = new Set([
   'geoarrowh3hexagonlayer',
   'h3hexagonlayer',
@@ -103,6 +102,7 @@ const EXTRUDABLE_LAYER_TYPES = new Set([
   'polygonlayer',
   'geoarrowsolidpolygonlayer',
   'solidpolygonlayer',
+  'geojsonlayer',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

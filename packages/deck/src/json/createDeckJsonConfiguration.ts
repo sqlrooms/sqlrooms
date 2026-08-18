@@ -90,6 +90,106 @@ function applyColorScale(options: {
   return result;
 }
 
+function getElevationTrigger(rawElev: unknown) {
+  if (rawElev === undefined) return 'none';
+  if (typeof rawElev === 'string' || typeof rawElev === 'number') {
+    return String(rawElev);
+  }
+  try {
+    return JSON.stringify(rawElev);
+  } catch {
+    return String(rawElev);
+  }
+}
+
+function mergeGetElevationTrigger(
+  props: Record<string, unknown>,
+  rawElev: unknown,
+) {
+  const existing =
+    props.updateTriggers &&
+    typeof props.updateTriggers === 'object' &&
+    !Array.isArray(props.updateTriggers)
+      ? (props.updateTriggers as Record<string, unknown>)
+      : {};
+  return {
+    ...props,
+    updateTriggers: {
+      ...existing,
+      getElevation: getElevationTrigger(rawElev),
+    },
+  };
+}
+
+/** Compile `getElevation` scale / `@@=` column accessors against the Arrow table. */
+function compileGetElevation(options: {
+  props: Record<string, unknown>;
+  table: arrow.Table;
+  layerName: string;
+  datasetId: string;
+  /** GeoJSON cannot evaluate `@@=` column expressions; always emit a function. */
+  requireFunctionAccessor?: boolean;
+}): Record<string, unknown> {
+  const {table, layerName, datasetId, requireFunctionAccessor} = options;
+  const nextProps = {...options.props};
+  const rawElev = nextProps.getElevation;
+
+  if (isScaleMarker(rawElev)) {
+    const expression = requireFunctionAccessor
+      ? undefined
+      : compileLinearScaleExpression(table, rawElev);
+    if (expression) {
+      nextProps.getElevation = expression;
+    } else {
+      const accessor = compileLinearScaleAccessor(table, rawElev);
+      if (accessor) {
+        nextProps.getElevation = accessor;
+      } else {
+        const field = typeof rawElev.field === 'string' ? rawElev.field : '';
+        throw new Error(
+          `Layer "${layerName}" getElevation scale field "${field || '(missing)'}" was not found in dataset "${datasetId}".`,
+        );
+      }
+    }
+  } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
+    const elevField = rawElev.slice(3).trim();
+    const elevVector = table.getChild(elevField);
+    if (elevVector) {
+      let min = Infinity;
+      for (let i = 0; i < elevVector.length; i++) {
+        if (
+          typeof elevVector.isValid === 'function' &&
+          !elevVector.isValid(i)
+        ) {
+          continue;
+        }
+        const raw = elevVector.get(i);
+        if (raw == null) continue;
+        const v = Number(raw);
+        if (Number.isFinite(v) && v < min) min = v;
+      }
+      if (Number.isFinite(min)) {
+        if (
+          !requireFunctionAccessor &&
+          isBindableGeoArrowFieldIdentifier(elevField)
+        ) {
+          if (min !== 0) {
+            nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
+          }
+        } else {
+          const accessor = compileLinearScaleAccessor(table, {
+            field: elevField,
+            domain: [min, min],
+          });
+          if (accessor) nextProps.getElevation = accessor;
+        }
+      }
+    }
+  }
+
+  return nextProps;
+}
+
 function resolveGeoArrowBindings(options: {
   layerName: string;
   compatibility: NonNullable<ReturnType<typeof getLayerCompatibility>> & {
@@ -333,8 +433,15 @@ export function createDeckJsonConfiguration(
           props: strippedProps,
           table: prepared.table,
         });
+        const withElevation = compileGetElevation({
+          props: baseProps,
+          table: prepared.table,
+          layerName,
+          datasetId: prepared.datasetId,
+          requireFunctionAccessor: true,
+        });
         return {
-          ...baseProps,
+          ...mergeGetElevationTrigger(withElevation, baseProps.getElevation),
           data: prepared.getGeoJsonBinaryData(geometryColumn),
         };
       }
@@ -352,65 +459,16 @@ export function createDeckJsonConfiguration(
         props: strippedProps,
         table,
       });
-      const nextProps: Record<string, unknown> = {
-        ...baseProps,
-        data: table,
-        ...boundProps,
-      };
-
-      // getElevation: scale markers → linear map; plain @@=field → minus column min.
-      const rawElev = nextProps.getElevation;
-      if (isScaleMarker(rawElev)) {
-        const expression = compileLinearScaleExpression(table, rawElev);
-        if (expression) {
-          nextProps.getElevation = expression;
-        } else {
-          // Non-identifier fields need a compiled accessor, not @@=.
-          const accessor = compileLinearScaleAccessor(table, rawElev);
-          if (accessor) {
-            nextProps.getElevation = accessor;
-          } else {
-            const field =
-              typeof (rawElev as {field?: unknown}).field === 'string'
-                ? (rawElev as {field: string}).field
-                : '';
-            throw new Error(
-              `Layer "${layerName}" getElevation scale field "${field || '(missing)'}" was not found in dataset "${prepared.datasetId}".`,
-            );
-          }
-        }
-      } else if (typeof rawElev === 'string' && rawElev.startsWith('@@=')) {
-        const elevField = rawElev.slice(3).trim();
-        const elevVector = table.getChild(elevField);
-        if (elevVector) {
-          let min = Infinity;
-          for (let i = 0; i < elevVector.length; i++) {
-            if (
-              typeof elevVector.isValid === 'function' &&
-              !elevVector.isValid(i)
-            ) {
-              continue;
-            }
-            const raw = elevVector.get(i);
-            if (raw == null) continue;
-            const v = Number(raw);
-            if (Number.isFinite(v) && v < min) min = v;
-          }
-          if (Number.isFinite(min)) {
-            if (isBindableGeoArrowFieldIdentifier(elevField)) {
-              if (min !== 0) {
-                nextProps.getElevation = `@@=Math.max(0, ${elevField} - ${min})`;
-              }
-            } else {
-              const accessor = compileLinearScaleAccessor(table, {
-                field: elevField,
-                domain: [min, min],
-              });
-              if (accessor) nextProps.getElevation = accessor;
-            }
-          }
-        }
-      }
+      const nextProps = compileGetElevation({
+        props: {
+          ...baseProps,
+          data: table,
+          ...boundProps,
+        },
+        table,
+        layerName,
+        datasetId: prepared.datasetId,
+      });
 
       const rewritten = rewriteGeoArrowAccessors({
         props: nextProps,

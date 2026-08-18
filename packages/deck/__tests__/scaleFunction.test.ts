@@ -118,4 +118,19 @@ describe('scaleFunction', () => {
       200,
     );
   });
+
+  test('reads GeoJSON feature properties for elevation', () => {
+    const table = new Table(new Schema([new Field('height', new Float64())]), {
+      height: vectorFromArray([10, 30], new Float64()),
+    });
+
+    const accessor = compileLinearScaleAccessor(table, {
+      field: 'height',
+      domain: 'auto',
+      range: [0, 200],
+    });
+    expect(accessor).toBeDefined();
+    expect(accessor!({properties: {height: 10}})).toBeCloseTo(0);
+    expect(accessor!({properties: {height: 30}})).toBeCloseTo(200);
+  });
 });

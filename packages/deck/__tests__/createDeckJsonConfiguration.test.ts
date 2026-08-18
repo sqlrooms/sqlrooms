@@ -393,6 +393,60 @@ describe('createDeckJsonConfiguration', () => {
     expect(elev({index: 1, data: {data: batch}, target: []})).toBeCloseTo(200);
   });
 
+  it('compiles getElevation scale for GeoJsonLayer from feature properties', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+          'POLYGON((4 0, 6 0, 6 2, 4 2, 4 0))',
+        ],
+        new Utf8(),
+      ),
+      height: vectorFromArray([10, 30], new Float64()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoJsonLayer',
+          id: 'buildings',
+          extruded: true,
+          _sqlroomsBinding: {
+            dataset: 'buildings',
+            geometryColumn: 'geom',
+          },
+          getElevation: {
+            '@@function': 'scale',
+            field: 'height',
+            type: 'linear',
+            domain: 'auto',
+            range: [0, 200],
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getElevation = converted.layers[0]?.props.getElevation;
+    expect(typeof getElevation).toBe('function');
+
+    const elev = getElevation as (object: unknown) => number;
+    expect(elev({properties: {height: 10}})).toBeCloseTo(0);
+    expect(elev({properties: {height: 30}})).toBeCloseTo(200);
+    expect(
+      (converted.layers[0]?.props.updateTriggers as {getElevation?: string})
+        ?.getElevation,
+    ).toContain('height');
+  });
+
   it('keeps explicit getFillColor while still compiling getLineColor colorScale', () => {
     const table = createPointTable();
     const converter = createConverter({
