@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.29.0-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.10...v0.29.0-rc.11) (2026-08-18)
+
+### Bug Fixes
+
+* address Dependabot vulnerabilities ([#836](https://github.com/sqlrooms/sqlrooms/issues/836)) ([24d3b6d](https://github.com/sqlrooms/sqlrooms/commit/24d3b6de011a70e72bd61bd855e1aa3abe256d58))
+* **deck:** remove unused quoteDeckMapSqlIdentifier import ([#850](https://github.com/sqlrooms/sqlrooms/issues/850)) ([96220b1](https://github.com/sqlrooms/sqlrooms/commit/96220b179445f7570157d28735b0c2390df9ed2b))
+* **deps:** resolve current Dependabot vulnerabilities ([#847](https://github.com/sqlrooms/sqlrooms/issues/847)) ([13fa184](https://github.com/sqlrooms/sqlrooms/commit/13fa18455f95bb802daea6c263f5aa85a7c4a9c2))
+* **docs:** avoid Vue interpolation in API docs ([#846](https://github.com/sqlrooms/sqlrooms/issues/846)) ([9068f8e](https://github.com/sqlrooms/sqlrooms/commit/9068f8e3c68a40747f36abb5f9b0733afdd83b64))
+* **room-store:** tolerate unavailable persistence storage ([#849](https://github.com/sqlrooms/sqlrooms/issues/849)) ([bd6efe8](https://github.com/sqlrooms/sqlrooms/commit/bd6efe8481cbd86379d54ba0eee542a2e8b1b43a))
+* **sql-editor:** abort query immediately instead of waiting on the query promise ([#818](https://github.com/sqlrooms/sqlrooms/issues/818)) ([ec6440a](https://github.com/sqlrooms/sqlrooms/commit/ec6440a962af5e48633b70b7125227f7d74b5493))
+
+### Features
+
+* [WIP] worksheets ([#831](https://github.com/sqlrooms/sqlrooms/issues/831)) ([ef870bf](https://github.com/sqlrooms/sqlrooms/commit/ef870bfa331c1a81c50de9e1bab3252ad9ca9220))
+* **ai-core:** add active chat status and opt-in timeouts ([#814](https://github.com/sqlrooms/sqlrooms/issues/814)) ([a6dd90f](https://github.com/sqlrooms/sqlrooms/commit/a6dd90fd03dfcd4ee58d851189fd5707fddbe19a))
+* customizable chat presentation ([#828](https://github.com/sqlrooms/sqlrooms/issues/828)) ([8085903](https://github.com/sqlrooms/sqlrooms/commit/8085903d0a76a5fb908d0218251c05825fe69dbb))
+* port Mosaic + Datafusion + Zarr example ([#834](https://github.com/sqlrooms/sqlrooms/issues/834)) ([5c8052f](https://github.com/sqlrooms/sqlrooms/commit/5c8052f254890bbce58eb0f301887d42b64534ec))
+* **vega:** add dynamic AI chart sizing ([#813](https://github.com/sqlrooms/sqlrooms/issues/813)) ([ffd6942](https://github.com/sqlrooms/sqlrooms/commit/ffd69420928bbd131fe545e6323ece0b1082f69d))
+
 # [0.29.0-rc.10](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.9...v0.29.0-rc.10) (2026-08-04)
 
 ### Bug Fixes
