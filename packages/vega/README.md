@@ -123,15 +123,16 @@ createAiSlice({
 The automatic policy inspects the parsed Vega-Lite encoding and counts distinct
 values in the loaded Arrow data. Horizontal bar charts with at least 12
 categories use `clamp(280, 48 + categoryCount * 22, 800)` pixels; other charts
-continue to use `aspectRatio` (16:9 by default). A numeric `height` fixes the
-outer chart viewport while preserving responsive width. Applications can also
-provide `getHeight={({spec, arrowTable}) => ...}` for a custom sizing policy;
-returning `'auto'` delegates to the built-in category-aware policy.
+continue to use `aspectRatio` (16:9 by default). Transformed and concatenated
+multi-view specs also use the aspect ratio because raw Arrow rows do not reflect
+their rendered data or panel layout. A numeric `height` fixes the outer chart
+viewport while preserving responsive width. Applications can also provide
+`getHeight={({spec, arrowTable}) => ...}` for a custom sizing policy; returning
+`'auto'` delegates to the built-in category-aware policy.
 
-Sizing is based on rendered data rather than an LLM-provided row count, so it
-stays accurate when SQL results, filters, or the generated spec change. The
-Vega-Lite spec remains responsible for visualization semantics, not React
-layout.
+Sizing is based on loaded query data rather than an LLM-provided row count, so
+it stays accurate when SQL results or application filters change. The Vega-Lite
+spec remains responsible for visualization semantics, not React layout.
 
 ### LLM invocation / Zod schema fields
 

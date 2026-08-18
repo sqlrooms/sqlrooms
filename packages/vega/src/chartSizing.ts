@@ -43,6 +43,30 @@ function getMarkType(spec: JsonObject): string | undefined {
   return asObject(spec.mark)?.type as string | undefined;
 }
 
+/** Checks for data/layout semantics that raw-table sizing cannot reproduce. */
+function hasUnsupportedAutoSizingStructure(spec: JsonObject): boolean {
+  if (Array.isArray(spec.transform) && spec.transform.length > 0) {
+    return true;
+  }
+
+  for (const key of ['concat', 'hconcat', 'vconcat'] as const) {
+    if (Array.isArray(spec[key])) return true;
+  }
+
+  const layers = spec.layer;
+  if (
+    Array.isArray(layers) &&
+    layers.some((layer) =>
+      hasUnsupportedAutoSizingStructure(asObject(layer) ?? {}),
+    )
+  ) {
+    return true;
+  }
+
+  const nestedSpec = asObject(spec.spec);
+  return nestedSpec ? hasUnsupportedAutoSizingStructure(nestedSpec) : false;
+}
+
 /** Finds the discrete y field of a horizontal bar unit in a nested spec. */
 function getHorizontalBarCategoryField(
   spec: JsonObject,
@@ -112,7 +136,10 @@ export function getCategoryAwareVegaChartHeight({
 }: VegaChartSizingContext): VegaChartHeight {
   if (!arrowTable) return 'auto';
 
-  const categoryField = getHorizontalBarCategoryField(asObject(spec) ?? {});
+  const specObject = asObject(spec) ?? {};
+  if (hasUnsupportedAutoSizingStructure(specObject)) return 'auto';
+
+  const categoryField = getHorizontalBarCategoryField(specObject);
   if (!categoryField) return 'auto';
 
   const categoryCount = countDistinctValues(arrowTable, categoryField);

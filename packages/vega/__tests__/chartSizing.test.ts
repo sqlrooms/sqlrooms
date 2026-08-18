@@ -84,6 +84,36 @@ describe('getCategoryAwareVegaChartHeight', () => {
     },
   );
 
+  it('keeps aspect-ratio sizing when transforms change the rendered rows', () => {
+    const categories = Array.from({length: 30}, (_, index) => `C${index}`);
+
+    expect(
+      getCategoryAwareVegaChartHeight({
+        spec: {
+          ...horizontalBarSpec,
+          transform: [{filter: 'datum.value < 5'}],
+        },
+        arrowTable: tableWithCategories(categories),
+      }),
+    ).toBe('auto');
+  });
+
+  it.each(['concat', 'hconcat', 'vconcat'] as const)(
+    'keeps aspect-ratio sizing for %s multi-view specs',
+    (composition) => {
+      const categories = Array.from({length: 30}, (_, index) => `C${index}`);
+
+      expect(
+        getCategoryAwareVegaChartHeight({
+          spec: {
+            [composition]: [horizontalBarSpec, horizontalBarSpec],
+          },
+          arrowTable: tableWithCategories(categories),
+        }),
+      ).toBe('auto');
+    },
+  );
+
   it('keeps aspect-ratio sizing for small categorical charts', () => {
     const categories = Array.from({length: 11}, (_, index) => `C${index}`);
 
