@@ -1,12 +1,15 @@
 /** JSON Schema subset accepted for portable room capability inputs. */
 export type JsonSchema = {
+  $schema?: string;
   type?: string | string[];
   title?: string;
   description?: string;
   properties?: Record<string, JsonSchema>;
   required?: string[];
-  items?: JsonSchema;
+  items?: JsonSchema | boolean;
+  prefixItems?: JsonSchema[];
   additionalProperties?: boolean | JsonSchema;
+  unevaluatedProperties?: boolean | JsonSchema;
   [key: string]: unknown;
 };
 
@@ -98,7 +101,7 @@ export type CreateRoomCapabilityRuntimeOptions = {
   timeoutMs?: number;
   maxInputBytes?: number;
   maxOutputBytes?: number;
-  onInvocation?: (trace: RoomCapabilityTrace) => void;
+  onInvocation?: (trace: RoomCapabilityTrace) => void | Promise<void>;
 };
 
 /** Transport-neutral catalog, invocation, and lifecycle interface. */

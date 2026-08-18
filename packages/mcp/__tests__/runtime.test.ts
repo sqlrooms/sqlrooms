@@ -33,15 +33,45 @@ describe('createRoomCapabilityRuntime', () => {
     expect(runtime.listTools()[0]!.description).toBe('alpha capability');
   });
 
-  test('rejects duplicate and invalid names', () => {
+  test('accepts dotted names and rejects duplicate and invalid names', () => {
+    expect(() =>
+      createRoomCapabilityRuntime({capabilities: [capability('db.query')]}),
+    ).not.toThrow();
     expect(() =>
       createRoomCapabilityRuntime({
         capabilities: [capability('same'), capability('same')],
       }),
     ).toThrow('Duplicate');
     expect(() =>
-      createRoomCapabilityRuntime({capabilities: [capability('bad.name')]}),
+      createRoomCapabilityRuntime({capabilities: [capability('bad/name')]}),
     ).toThrow('Invalid');
+  });
+
+  test('validates JSON Schema 2020-12 keywords', async () => {
+    const tool = {
+      ...capability('tuple'),
+      inputSchema: {
+        $schema: 'https://json-schema.org/draft/2020-12/schema',
+        type: 'object' as const,
+        properties: {
+          values: {
+            type: 'array',
+            prefixItems: [{type: 'string'}],
+            items: false,
+          },
+        },
+        required: ['values'],
+        unevaluatedProperties: false,
+      },
+    };
+    const runtime = createRoomCapabilityRuntime({capabilities: [tool]});
+
+    await expect(
+      runtime.callTool('tuple', {values: [42]}, {surface: 'api'}),
+    ).resolves.toMatchObject({ok: false, code: 'invalid_input'});
+    await expect(
+      runtime.callTool('tuple', {values: ['valid']}, {surface: 'api'}),
+    ).resolves.toMatchObject({ok: true});
   });
 
   test('validates inputs before execution', async () => {
@@ -137,5 +167,31 @@ describe('createRoomCapabilityRuntime', () => {
     await expect(
       runtime.callTool('circular', {value: 'x'}, {surface: 'api'}),
     ).resolves.toMatchObject({ok: false, code: 'not_serializable'});
+  });
+
+  test('does not let invocation tracing failures alter results', async () => {
+    const successful = createRoomCapabilityRuntime({
+      capabilities: [capability('sync-trace')],
+      onInvocation: () => {
+        throw new Error('telemetry unavailable');
+      },
+    });
+    const asynchronouslyTraced = createRoomCapabilityRuntime({
+      capabilities: [capability('async-trace')],
+      onInvocation: async () => {
+        throw new Error('telemetry unavailable');
+      },
+    });
+
+    await expect(
+      successful.callTool('sync-trace', {value: 'x'}, {surface: 'api'}),
+    ).resolves.toMatchObject({ok: true});
+    await expect(
+      asynchronouslyTraced.callTool(
+        'async-trace',
+        {value: 'x'},
+        {surface: 'api'},
+      ),
+    ).resolves.toMatchObject({ok: true});
   });
 });

@@ -1,4 +1,4 @@
-import Ajv, {type ValidateFunction} from 'ajv';
+import Ajv2020, {type ValidateFunction} from 'ajv/dist/2020.js';
 import type {
   CreateRoomCapabilityRuntimeOptions,
   RoomCapability,
@@ -8,7 +8,7 @@ import type {
   RoomCapabilityRuntime,
 } from './types';
 
-const TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const TOOL_NAME_PATTERN = /^[A-Za-z0-9_.-]{1,128}$/;
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_INPUT_BYTES = 256 * 1024;
 const DEFAULT_MAX_OUTPUT_BYTES = 1024 * 1024;
@@ -26,14 +26,14 @@ export function createRoomCapabilityRuntime(
 ): RoomCapabilityRuntime {
   const capabilities = new Map<string, RoomCapability>();
   const validators = new Map<string, ValidateFunction>();
-  const ajv = new Ajv({allErrors: true, strict: false});
+  const ajv = new Ajv2020({allErrors: true, strict: false});
   const activeControllers = new Set<AbortController>();
   let disposed = false;
 
   for (const capability of options.capabilities) {
     if (!TOOL_NAME_PATTERN.test(capability.name)) {
       throw new Error(
-        `Invalid room capability name "${capability.name}". Use 1-128 letters, numbers, underscores, or hyphens.`,
+        `Invalid room capability name "${capability.name}". Use 1-128 letters, numbers, dots, underscores, or hyphens.`,
       );
     }
     if (capabilities.has(capability.name)) {
@@ -144,14 +144,21 @@ export function createRoomCapabilityRuntime(
       }
 
       const finalOutputSize = measureJson(result);
-      options.onInvocation?.({
-        capability: toDescriptor(capability),
-        context: executionContext,
-        durationMs: Date.now() - startedAt,
-        inputBytes: inputSize.bytes,
-        outputBytes: finalOutputSize.ok ? finalOutputSize.bytes : 0,
-        result,
-      });
+      try {
+        const traceResult = options.onInvocation?.({
+          capability: toDescriptor(capability),
+          context: executionContext,
+          durationMs: Date.now() - startedAt,
+          inputBytes: inputSize.bytes,
+          outputBytes: finalOutputSize.ok ? finalOutputSize.bytes : 0,
+          result,
+        });
+        if (traceResult) {
+          void Promise.resolve(traceResult).catch(() => undefined);
+        }
+      } catch {
+        // Observability hooks must not alter a completed capability result.
+      }
       return cloneSerializable(result);
     },
     dispose: () => {

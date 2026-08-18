@@ -174,6 +174,21 @@ describe('CLI room capability handlers', () => {
     });
   });
 
+  test('denies queries against the configured metadata namespace', async () => {
+    const result = await capability('query', {
+      metaNamespace: 'custom_meta',
+    }).execute(
+      {sql: 'SELECT payload_json FROM "custom_meta".ui_state'},
+      {surface: 'mcp-http'},
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'query_internal_namespace',
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
+
   test('executes external commands with confirmation denied by default', async () => {
     const controller = new AbortController();
     await capability('execute_command').execute(

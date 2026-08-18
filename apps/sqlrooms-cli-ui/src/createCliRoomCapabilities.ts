@@ -34,7 +34,7 @@ export function createCliRoomCapabilities({
   metaNamespace = '__sqlrooms',
 }: CreateCliRoomCapabilitiesOptions = {}): RoomCapability[] {
   return [
-    createQueryCapability(),
+    createQueryCapability(metaNamespace),
     createListTablesCapability(metaNamespace),
     createReadTableSchemaCapability(metaNamespace),
     createSearchCommandsCapability(),
@@ -43,7 +43,7 @@ export function createCliRoomCapabilities({
   ];
 }
 
-function createQueryCapability(): RoomCapability {
+function createQueryCapability(metaNamespace: string): RoomCapability {
   return {
     name: 'query',
     title: 'Query the room database',
@@ -85,6 +85,13 @@ function createQueryCapability(): RoomCapability {
           message: parseError || 'Only one SELECT statement is allowed.',
         };
       }
+      if (referencesInternalNamespace(sql, metaNamespace)) {
+        return {
+          ok: false,
+          code: 'query_internal_namespace',
+          message: `Access to internal schema ${metaNamespace} is denied.`,
+        };
+      }
       try {
         const connector = await state.db.getConnector();
         const boundedSql = sql.replace(/;+\s*$/, '');
@@ -114,6 +121,14 @@ function createQueryCapability(): RoomCapability {
       }
     },
   };
+}
+
+function referencesInternalNamespace(sql: string, namespace: string) {
+  const escaped = namespace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(
+    `(^|[^A-Za-z0-9_])(?:${escaped}|"${escaped}"|\`${escaped}\`|\\[${escaped}\\])\\s*\\.`,
+    'i',
+  ).test(sql);
 }
 
 function createListTablesCapability(metaNamespace: string): RoomCapability {
