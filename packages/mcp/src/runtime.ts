@@ -13,6 +13,14 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_INPUT_BYTES = 256 * 1024;
 const DEFAULT_MAX_OUTPUT_BYTES = 1024 * 1024;
 
+/**
+ * Creates a transport-neutral runtime for discovering and invoking room
+ * capabilities with schema validation, policy authorization, cancellation,
+ * timeouts, and bounded JSON inputs and outputs.
+ *
+ * Call {@link RoomCapabilityRuntime.dispose} when the host no longer exposes
+ * the room so active invocations are cancelled and later calls are rejected.
+ */
 export function createRoomCapabilityRuntime(
   options: CreateRoomCapabilityRuntimeOptions,
 ): RoomCapabilityRuntime {

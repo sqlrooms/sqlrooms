@@ -83,6 +83,37 @@ async def test_mcp_service_adapts_dynamic_browser_catalog():
 
 
 @pytest.mark.asyncio
+async def test_mcp_service_returns_short_lived_empty_catalog_while_room_not_ready():
+    class WaitingBroker:
+        async def request(self, _method, _params=None):
+            raise McpBridgeError(
+                "room_not_ready",
+                "The SQLRooms page is not connected.",
+                retryable=True,
+            )
+
+    service = SqlroomsMcpService(WaitingBroker())
+
+    result = await service._list_tools(None, None)
+
+    assert result.tools == []
+    assert result.ttl_ms == 1_000
+    assert result.cache_scope == "private"
+
+
+@pytest.mark.asyncio
+async def test_mcp_service_preserves_non_transient_discovery_errors():
+    class FailedBroker:
+        async def request(self, _method, _params=None):
+            raise McpBridgeError("bridge_error", "Bridge failed.")
+
+    service = SqlroomsMcpService(FailedBroker())
+
+    with pytest.raises(McpBridgeError, match="Bridge failed"):
+        await service._list_tools(None, None)
+
+
+@pytest.mark.asyncio
 async def test_mcp_service_serves_2026_protocol_with_official_client():
     broker = StubBroker()
     service = SqlroomsMcpService(broker)

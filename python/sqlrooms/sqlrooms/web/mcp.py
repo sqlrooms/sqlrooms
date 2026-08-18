@@ -37,7 +37,13 @@ class SqlroomsMcpService:
         _context: ServerRequestContext,
         _params: types.PaginatedRequestParams | None,
     ) -> types.ListToolsResult:
-        raw_tools = await self.broker.request("tools.list")
+        try:
+            raw_tools = await self.broker.request("tools.list")
+        except McpBridgeError as exc:
+            if exc.code != "room_not_ready":
+                raise
+            logger.debug("MCP tool discovery waiting for browser bridge")
+            raw_tools = []
         tools = []
         for raw in raw_tools if isinstance(raw_tools, list) else []:
             if not isinstance(raw, dict):
