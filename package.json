@@ -54,6 +54,7 @@
     "typedoc:watch": "pnpm run check:typedoc-links && turbo typedoc -- -watch",
     "update-deps": "pnpm --filter '*' update --interactive",
     "update-readme": "node scripts/update-readme.mjs",
+    "verify-published-packages": "node scripts/verify-published-packages.mjs",
     "version-auto": "lerna version --conventional-commits --yes --sync-workspace-lock",
     "version-major": "lerna version major --yes --sync-workspace-lock",
     "version-minor": "lerna version minor --yes --sync-workspace-lock",

@@ -1,4 +1,6 @@
 import {createRequire} from 'node:module';
+import {existsSync, readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import {defineConfig} from 'vitepress';
 import llmstxt from 'vitepress-plugin-llms';
 import {apiSidebarConfig} from './gen-api-sidebar.ts';
@@ -6,6 +8,26 @@ import {apiSidebarConfig} from './gen-api-sidebar.ts';
 const SITE_URL = 'https://sqlrooms.org';
 const require = createRequire(import.meta.url);
 const mermaidRequire = createRequire(require.resolve('mermaid/package.json'));
+const localVersion = require('../../lerna.json').version;
+
+function loadApiReleaseMetadata() {
+  const metadataPath = fileURLToPath(
+    new URL('./api-release.generated.json', import.meta.url),
+  );
+
+  if (existsSync(metadataPath)) {
+    return JSON.parse(readFileSync(metadataPath, 'utf8'));
+  }
+
+  return {
+    version: localVersion,
+    ref: `v${localVersion}`,
+    prerelease: localVersion.includes('-'),
+  };
+}
+
+const apiRelease = loadApiReleaseMetadata();
+const apiReleaseUrl = `https://github.com/sqlrooms/sqlrooms/releases/tag/${apiRelease.ref}`;
 
 function publicUrl(relativePath?: string) {
   const normalizedRelativePath = (relativePath || '').replace(/^\/+/, '');
@@ -194,6 +216,10 @@ Canonical package combos:
     ],
   ],
   themeConfig: {
+    apiRelease: {
+      ...apiRelease,
+      url: apiReleaseUrl,
+    },
     outline: 'deep',
     logo: '/logo.svg',
     search: {
@@ -207,6 +233,10 @@ Canonical package combos:
       {text: 'Examples', link: '/examples'},
       {text: 'Case Studies', link: '/case-studies'},
       {text: 'Get started', link: '/getting-started'},
+      {
+        text: `API v${apiRelease.version}`,
+        link: apiReleaseUrl,
+      },
       // {
       //   text: 'Join Slack',
       //   link: '/join-slack',

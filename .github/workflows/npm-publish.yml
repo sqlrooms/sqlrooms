@@ -34,6 +34,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
   id-token: write
 
 concurrency:
@@ -43,6 +44,8 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release-metadata.outputs.tag }}
     env:
       HUSKY: 0
     # only run publish if run manually or if commit starts with one of "feat|fix"
@@ -119,6 +122,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
+      - name: Read release metadata
+        id: release-metadata
+        run: |
+          version=$(node -p "require('./lerna.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
       - name: Publish prerelease
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease' }}
         run: pnpm publish-prerelease
@@ -126,6 +136,9 @@ jobs:
       - name: Publish
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}
         run: pnpm publish-release
+
+      - name: Verify packages are available from npm
+        run: pnpm verify-published-packages ${{ steps.release-metadata.outputs.version }}
 
       - name: Push version commit and tags
         if: ${{ success() }}
@@ -142,7 +155,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          tag=$(git describe --abbrev=0 --tags)
+          tag=${{ steps.release-metadata.outputs.tag }}
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag already exists, skipping"
             exit 0
@@ -152,3 +165,11 @@ jobs:
             prerelease_flag="--prerelease"
           fi
           gh release create "$tag" --title "$tag" --generate-notes ${prerelease_flag}
+
+  deploy-docs:
+    needs: publish
+    uses: ./.github/workflows/deploy-docs.yml
+    with:
+      content_ref: ${{ needs.publish.outputs.release_tag }}
+      api_ref: ${{ needs.publish.outputs.release_tag }}
+    secrets: inherit
