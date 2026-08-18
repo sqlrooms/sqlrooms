@@ -193,6 +193,7 @@ jobs:
         with:
           name: docs-dist
           path: site/docs/.vitepress/dist
+          include-hidden-files: true
 
   deploy-docs:
     needs: build-docs
