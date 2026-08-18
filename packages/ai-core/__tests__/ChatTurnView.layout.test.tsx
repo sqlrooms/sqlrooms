@@ -268,9 +268,14 @@ describe('ChatTurnView layout', () => {
 
     const stickyPrompt = container.querySelector('.sticky');
     expect(stickyPrompt?.classList.contains('rounded-md')).toBe(false);
+    const promptBubble = stickyPrompt?.firstElementChild;
+    expect(promptBubble?.classList.contains('rounded-md')).toBe(true);
+    expect(promptBubble?.classList.contains('ml-auto')).toBe(true);
+    expect(promptBubble?.classList.contains('w-fit')).toBe(true);
+    expect(promptBubble?.classList.contains('max-w-[85%]')).toBe(true);
     expect(
-      stickyPrompt?.firstElementChild?.classList.contains('rounded-md'),
-    ).toBe(true);
+      promptBubble?.querySelector('svg[class*="square-terminal"]'),
+    ).toBeNull();
 
     cleanup(container, root);
   });
