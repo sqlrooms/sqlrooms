@@ -1274,6 +1274,16 @@ describe('ArtifactSessionLink types', () => {
     expect(result.success).toBe(false);
   });
 
+  it.each([-1, 1.5])('rejects invalid linkedAt value %s', (linkedAt) => {
+    const result = ArtifactSessionLinkSchema.safeParse({
+      sessionId: 'session-1',
+      artifactId: 'artifact-1',
+      linkedAt,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('should reject a link missing each required field independently', () => {
     const validLink = {
       sessionId: 'session-1',

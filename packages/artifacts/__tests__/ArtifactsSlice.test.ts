@@ -130,6 +130,23 @@ describe('ArtifactsSlice', () => {
     expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual([]);
   });
 
+  it('removes every persisted duplicate when unpinning an artifact', () => {
+    const store = createTestStore();
+    store.getState().artifacts.setConfig(
+      ArtifactsSliceConfig.parse({
+        artifactsById: {
+          a: {id: 'a', type: 'dashboard', title: 'A'},
+        },
+        artifactOrder: ['a'],
+        pinnedArtifactIds: ['a', 'a'],
+      }),
+    );
+
+    store.getState().artifacts.togglePinArtifact('a');
+
+    expect(store.getState().artifacts.config.pinnedArtifactIds).toEqual([]);
+  });
+
   it('parses artifact metadata without visibility state', () => {
     const result = ArtifactsSliceConfig.parse({
       artifactsById: {

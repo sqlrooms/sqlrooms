@@ -15,6 +15,6 @@ export const ArtifactSessionLinkSchema = z
   .object({
     sessionId: z.string(),
     artifactId: z.string(),
-    linkedAt: z.number(),
+    linkedAt: z.number().int().nonnegative(),
   })
   .strict();

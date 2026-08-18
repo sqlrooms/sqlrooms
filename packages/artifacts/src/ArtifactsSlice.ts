@@ -277,7 +277,8 @@ export function createArtifactsSlice<
             if (index === -1) {
               pinnedArtifactIds.push(id);
             } else {
-              pinnedArtifactIds.splice(index, 1);
+              draft.artifacts.config.pinnedArtifactIds =
+                pinnedArtifactIds.filter((candidate) => candidate !== id);
             }
           }),
         );
