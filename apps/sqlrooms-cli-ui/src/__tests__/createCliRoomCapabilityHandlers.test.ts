@@ -8,10 +8,16 @@ const query = jest.fn(
     return {rows: [{value: 1}, {value: 2}]};
   },
 );
-const sqlSelectToJson = jest.fn(async () => ({
-  error: false,
-  statements: [{node: {type: 'SELECT_NODE'}}],
-}));
+type ParsedSqlResult = {
+  error: false;
+  statements: Array<{node: Record<string, unknown>}>;
+};
+const sqlSelectToJson = jest.fn(
+  async (): Promise<ParsedSqlResult> => ({
+    error: false,
+    statements: [{node: {type: 'SELECT_NODE'}}],
+  }),
+);
 const invokeCommandWithPolicy = jest.fn(async (...args: unknown[]) => {
   void args;
   return {
@@ -175,6 +181,22 @@ describe('CLI room capability handlers', () => {
   });
 
   test('denies queries against the configured metadata namespace', async () => {
+    sqlSelectToJson.mockResolvedValueOnce({
+      error: false,
+      statements: [
+        {
+          node: {
+            type: 'SELECT_NODE',
+            from_table: {
+              type: 'BASE_TABLE',
+              catalog_name: '',
+              schema_name: 'custom_meta',
+              table_name: 'ui_state',
+            },
+          },
+        },
+      ],
+    });
     const result = await capability('query', {
       metaNamespace: 'custom_meta',
     }).execute(
@@ -185,6 +207,44 @@ describe('CLI room capability handlers', () => {
     expect(result).toMatchObject({
       ok: false,
       code: 'query_internal_namespace',
+    });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  test('allows internal namespace text inside a string literal', async () => {
+    const result = await capability('query').execute(
+      {sql: "SELECT '__sqlrooms.table' AS value"},
+      {surface: 'mcp-http'},
+    );
+
+    expect(result).toMatchObject({ok: true});
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  test('denies dynamic SQL table functions that bypass parsed references', async () => {
+    sqlSelectToJson.mockResolvedValueOnce({
+      error: false,
+      statements: [
+        {
+          node: {
+            type: 'SELECT_NODE',
+            from_table: {
+              type: 'TABLE_FUNCTION',
+              function: {function_name: 'query'},
+            },
+          },
+        },
+      ],
+    });
+
+    const result = await capability('query').execute(
+      {sql: "SELECT * FROM query('SELECT * FROM __sqlrooms.ui_state')"},
+      {surface: 'mcp-http'},
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'query_dynamic_table_reference',
     });
     expect(query).not.toHaveBeenCalled();
   });

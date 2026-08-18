@@ -85,11 +85,23 @@ function createQueryCapability(metaNamespace: string): RoomCapability {
           message: parseError || 'Only one SELECT statement is allowed.',
         };
       }
-      if (referencesInternalNamespace(sql, metaNamespace)) {
+      const namespaceReference = findInternalNamespaceReference(
+        parsed.statements,
+        metaNamespace,
+      );
+      if (namespaceReference === 'internal') {
         return {
           ok: false,
           code: 'query_internal_namespace',
           message: `Access to internal schema ${metaNamespace} is denied.`,
+        };
+      }
+      if (namespaceReference === 'dynamic') {
+        return {
+          ok: false,
+          code: 'query_dynamic_table_reference',
+          message:
+            'Dynamic query and table references are not allowed over MCP.',
         };
       }
       try {
@@ -123,12 +135,56 @@ function createQueryCapability(metaNamespace: string): RoomCapability {
   };
 }
 
-function referencesInternalNamespace(sql: string, namespace: string) {
-  const escaped = namespace.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(
-    `(^|[^A-Za-z0-9_])(?:${escaped}|"${escaped}"|\`${escaped}\`|\\[${escaped}\\])\\s*\\.`,
-    'i',
-  ).test(sql);
+function findInternalNamespaceReference(
+  statements: unknown[],
+  namespace: string,
+): 'internal' | 'dynamic' | undefined {
+  const normalizedNamespace = namespace.toLowerCase();
+  let result: 'internal' | 'dynamic' | undefined;
+
+  const visit = (value: unknown): void => {
+    if (result === 'internal' || value === null || typeof value !== 'object') {
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry);
+      return;
+    }
+
+    const node = value as Record<string, unknown>;
+    if (node.type === 'BASE_TABLE') {
+      const identifiers = [node.catalog_name, node.schema_name];
+      if (
+        identifiers.some(
+          (identifier) =>
+            typeof identifier === 'string' &&
+            identifier.toLowerCase() === normalizedNamespace,
+        )
+      ) {
+        result = 'internal';
+        return;
+      }
+    }
+    if (node.type === 'TABLE_FUNCTION') {
+      const tableFunction = node.function;
+      if (tableFunction && typeof tableFunction === 'object') {
+        const functionName = (tableFunction as Record<string, unknown>)
+          .function_name;
+        if (
+          typeof functionName === 'string' &&
+          (functionName.toLowerCase() === 'query' ||
+            functionName.toLowerCase() === 'query_table')
+        ) {
+          result = 'dynamic';
+        }
+      }
+    }
+
+    for (const child of Object.values(node)) visit(child);
+  };
+
+  visit(statements);
+  return result;
 }
 
 function createListTablesCapability(metaNamespace: string): RoomCapability {
