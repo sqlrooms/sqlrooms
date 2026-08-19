@@ -8,14 +8,18 @@ import {
 import {GeoJsonLayer} from '@deck.gl/layers';
 import {
   GeoArrowArcLayer,
-  GeoArrowHeatmapLayer,
   GeoArrowPathLayer,
   GeoArrowPolygonLayer,
   GeoArrowScatterplotLayer,
   GeoArrowSolidPolygonLayer,
 } from '@geoarrow/deck.gl-geoarrow';
 import {createTableToRecordBatchAdapter} from './layers/createTableToRecordBatchAdapter';
-import {DeckColumnLayer, DeckH3HexagonLayer, DeckTripsLayer} from './layers';
+import {
+  DeckColumnLayer,
+  DeckH3HexagonLayer,
+  DeckHeatmapLayer,
+  DeckTripsLayer,
+} from './layers';
 
 // The 0.4.x GeoArrow layers expect `data: RecordBatch` + geometry as `Data`,
 // but our JSON pipeline passes `data: Table` + geometry as `Vector`.
@@ -25,7 +29,7 @@ const AdaptedScatterplotLayer = createTableToRecordBatchAdapter(
   'GeoArrowScatterplotLayer',
 );
 const AdaptedHeatmapLayer = createTableToRecordBatchAdapter(
-  GeoArrowHeatmapLayer as any,
+  DeckHeatmapLayer as any,
   'GeoArrowHeatmapLayer',
 );
 const AdaptedPathLayer = createTableToRecordBatchAdapter(

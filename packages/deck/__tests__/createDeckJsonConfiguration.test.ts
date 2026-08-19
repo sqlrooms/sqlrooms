@@ -533,6 +533,36 @@ describe('createDeckJsonConfiguration', () => {
     expect(typeof converted.layers[0]?.props.getSourceColor).toBe('function');
     expect(typeof converted.layers[0]?.props.getTargetColor).toBe('function');
   });
+
+  it('assigns a stable layer id from the dataset so deck.gl can reuse GPU resources', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.id ?? converted.layers[0]?.props.id).toBe(
+      'earthquakes',
+    );
+    const updateTriggers = converted.layers[0]?.props.updateTriggers as
+      | Record<string, unknown>
+      | undefined;
+    expect(JSON.stringify(updateTriggers?.getWeight ?? null)).not.toBe(
+      JSON.stringify(converted.layers[0]?.props.colorRange),
+    );
+    expect(converted.layers[0]?.props.weightsTextureSize).toBe(512);
+  });
 });
 
 describe('extractColorScaleLegends', () => {

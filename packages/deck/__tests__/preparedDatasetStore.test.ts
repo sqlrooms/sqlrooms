@@ -5,7 +5,10 @@ import {
   createPreparedDatasetStore,
   resolvePreparedDeckDatasetState,
 } from '../src/datasets/PreparedDatasetStore';
-import {resolvePreparedDatasetCacheKey} from '../src/datasets/helpers';
+import {
+  getDatasetRegistryFingerprint,
+  resolvePreparedDatasetCacheKey,
+} from '../src/datasets/helpers';
 import type {PreparedDeckDataset} from '../src/prepare/types';
 import type {DeckDatasetInput} from '../src/types';
 
@@ -380,5 +383,75 @@ describe('PreparedDatasetStore', () => {
     expect(store.getState().entries[secondKey]).toMatchObject({
       status: 'ready',
     });
+  });
+
+  it('does not replace entries on a cache hit', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {sqlQuery: 'select * from earthquakes'};
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+    await waitForEntry(store, cacheKey);
+
+    const entriesAfterReady = store.getState().entries;
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+
+    expect(store.getState().entries).toBe(entriesAfterReady);
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('getDatasetRegistryFingerprint', () => {
+  it('ignores wrapper object identity for equivalent table inputs', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        transformSql: 'SELECT * FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        transformSql: 'SELECT * FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+      },
+    };
+
+    expect(getDatasetRegistryFingerprint(first)).toBe(
+      getDatasetRegistryFingerprint(second),
+    );
+  });
+
+  it('changes when the source query changes', () => {
+    const first = {places: {sqlQuery: 'select 1'}};
+    const second = {places: {sqlQuery: 'select 2'}};
+
+    expect(getDatasetRegistryFingerprint(first)).not.toBe(
+      getDatasetRegistryFingerprint(second),
+    );
   });
 });

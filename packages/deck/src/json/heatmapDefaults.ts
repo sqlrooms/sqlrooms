@@ -5,6 +5,15 @@ import {
 
 const HEATMAP_COLOR_STEPS = 6;
 
+/**
+ * Size of the GPU weights texture used for heatmap aggregation.
+ *
+ * deck.gl defaults to 2048, which makes the max-weight pass take ~50–100ms.
+ * Kepler.gl uses 512 (~5–7ms) so radius/intensity sliders stay interactive.
+ * Smaller values are faster but more pixelated.
+ */
+export const DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE = 512;
+
 /** Default color range for heatmap layers (YlOrRd, matching deck.gl's built-in default). */
 export const DEFAULT_HEATMAP_COLOR_RANGE: Array<
   [number, number, number, number]

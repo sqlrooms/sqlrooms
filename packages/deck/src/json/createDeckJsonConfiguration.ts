@@ -20,7 +20,10 @@ import {
   DEFAULT_DECK_JSON_CONSTANTS,
   DEFAULT_DECK_JSON_ENUMERATIONS,
 } from './defaultClasses';
-import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
+import {
+  DEFAULT_HEATMAP_COLOR_RANGE,
+  DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE,
+} from './heatmapDefaults';
 import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
@@ -320,12 +323,21 @@ export function createDeckJsonConfiguration(
       }
 
       if (datasetState.status !== 'ready') {
-        return {...stripLayerExtensionProps(layerProps), data: []};
+        const pendingProps = stripLayerExtensionProps(layerProps);
+        if (typeof pendingProps.id !== 'string' || pendingProps.id === '') {
+          pendingProps.id = datasetId;
+        }
+        return {...pendingProps, data: []};
       }
 
       const prepared = datasetState.prepared;
       const geometryColumn = resolveGeometryColumn(extensionProps);
       const strippedProps = stripLayerExtensionProps(layerProps);
+      if (typeof strippedProps.id !== 'string' || strippedProps.id === '') {
+        // Deck.gl matches layers by id. Without a stable id, each JSON convert
+        // creates a new layer instance and rebuilds GPU resources.
+        strippedProps.id = datasetId;
+      }
 
       if (compatibility.representation === 'geojson') {
         const baseProps = applyColorScale({
@@ -486,26 +498,16 @@ export function createDeckJsonConfiguration(
         }
       }
 
-      // For HeatmapLayer: apply default colorRange (YlOrRd) when not explicitly set.
-      // Also set updateTriggers to force re-aggregation when colorRange changes.
+      // HeatmapLayer remaps colorRange in _updateColorTexture. Putting it in
+      // getWeight updateTriggers would mark aggregation dirty and rebuild the
+      // GPU weight texture when only the colormap changed.
       if (layerName === 'GeoArrowHeatmapLayer') {
         if (!rewritten.colorRange) {
           rewritten.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
         }
-        const existingTriggers =
-          rewritten.updateTriggers &&
-          typeof rewritten.updateTriggers === 'object' &&
-          !Array.isArray(rewritten.updateTriggers)
-            ? (rewritten.updateTriggers as Record<string, unknown>)
-            : {};
-        const previousGetWeight = existingTriggers.getWeight;
-        rewritten.updateTriggers = {
-          ...existingTriggers,
-          getWeight:
-            previousGetWeight === undefined
-              ? JSON.stringify(rewritten.colorRange)
-              : [previousGetWeight, JSON.stringify(rewritten.colorRange)],
-        };
+        if (rewritten.weightsTextureSize === undefined) {
+          rewritten.weightsTextureSize = DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE;
+        }
       }
 
       return rewritten;

@@ -639,6 +639,9 @@ uses the GeoJSON-binary path so separate polygon parts retain their nesting.
 
 The GeoArrow layer implementations themselves come from
 [`@geoarrow/deck.gl-geoarrow`](https://github.com/geoarrow/deck.gl-geoarrow).
+`GeoArrowHeatmapLayer` reuses the inner heatmap `data` object when only style
+props change, and defaults `weightsTextureSize` to 512 (Kepler.gl) so radius
+sliders stay interactive.
 
 When querying DuckDB spatial `GEOMETRY` columns, the dataset pipeline probes
 output types with `DESCRIBE` and projects native `GEOMETRY` columns through

@@ -13,7 +13,6 @@ import {
   evictLruEntries,
   nextAccessTimestamp,
   resolvePreparedDatasetCacheKey,
-  touchEntry,
 } from './helpers';
 import {resolveArrowTable} from './normalizeDatasets';
 import {createDeckTableDatasetSql} from './tableDatasetSql';
@@ -53,10 +52,9 @@ type PreparedDatasetStoreState = {
   /**
    * Ensure a cache entry exists for the given dataset key.
    *
-   * If an entry already exists, this is a no-op other than touching its LRU
-   * metadata. Otherwise the store creates a `loading` entry, resolves the
-   * source table through DuckDB if needed, runs `prepareDeckDataset(...)`, and
-   * stores the resulting `ready` or `error` state.
+   * If an entry already exists, this is a no-op besides refreshing the
+   * in-place LRU timestamp. Subscribers are not notified: a cache hit is not
+   * a dataset change, and notifying would rebuild every mounted map's layers.
    */
   ensureEntry: (options: {
     cacheKey: string;
@@ -153,13 +151,9 @@ export function createPreparedDatasetStore(
       const existing = get().entries[cacheKey];
       if (existing) {
         if (existing.status !== 'loading') {
-          set((state) => ({
-            ...state,
-            entries: {
-              ...state.entries,
-              [cacheKey]: touchEntry(existing),
-            },
-          }));
+          // Mutate the timestamp in place so LRU still works without replacing
+          // `entries` and forcing every DeckJsonMap to reconvert layers.
+          existing.lastAccessedAt = nextAccessTimestamp();
         }
         return;
       }
