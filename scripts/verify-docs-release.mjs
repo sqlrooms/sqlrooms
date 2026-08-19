@@ -22,7 +22,7 @@ async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, 'utf8'));
 }
 
-async function loadApiMetadata(siteDir) {
+async function loadApiMetadata(siteDir, allowLocalFallback) {
   try {
     return await readJson(
       path.join(siteDir, 'docs', '.vitepress', 'api-release.generated.json'),
@@ -30,6 +30,12 @@ async function loadApiMetadata(siteDir) {
   } catch (error) {
     if (error.code !== 'ENOENT') {
       throw error;
+    }
+
+    if (!allowLocalFallback) {
+      throw new Error(
+        'Release verification requires docs/.vitepress/api-release.generated.json',
+      );
     }
   }
 
@@ -42,9 +48,44 @@ async function loadApiMetadata(siteDir) {
   };
 }
 
+async function getPublicPackageNames(siteDir) {
+  const packagesDir = path.join(siteDir, 'packages');
+  const entries = await readdir(packagesDir, {withFileTypes: true});
+  const packageNames = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    try {
+      const packageJson = await readJson(
+        path.join(packagesDir, entry.name, 'package.json'),
+      );
+
+      if (packageJson.name?.startsWith('@sqlrooms/') && !packageJson.private) {
+        packageNames.push(packageJson.name.slice('@sqlrooms/'.length));
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+
+  return packageNames.sort();
+}
+
 const args = readArguments(process.argv.slice(2));
 const siteDir = path.resolve(args.get('site') || 'site');
-const metadata = await loadApiMetadata(siteDir);
+const verificationMode = args.get('mode') || 'release';
+
+if (!['local', 'release'].includes(verificationMode)) {
+  throw new Error(`Invalid verification mode: ${verificationMode}`);
+}
+
+const isLocalVerification = verificationMode === 'local';
+const metadata = await loadApiMetadata(siteDir, isLocalVerification);
 const apiDistDir = path.join(siteDir, 'docs', '.vitepress', 'dist', 'api');
 const apiPackages = (await readdir(apiDistDir, {withFileTypes: true})).filter(
   (entry) => entry.isDirectory(),
@@ -57,6 +98,21 @@ const catalogPackageNames = apiPackageCategories
   .flatMap((category) => category.packages)
   .map((packageMetadata) => packageMetadata.name)
   .sort();
+
+if (isLocalVerification) {
+  const publicPackageNames = await getPublicPackageNames(siteDir);
+  const missingCatalogPackages = publicPackageNames.filter(
+    (packageName) => !catalogPackageNames.includes(packageName),
+  );
+
+  if (missingCatalogPackages.length > 0) {
+    throw new Error(
+      `Public packages missing from API catalog: ${missingCatalogPackages.join(
+        ', ',
+      )}`,
+    );
+  }
+}
 
 if (apiPackages.length === 0) {
   throw new Error('The rendered site contains no API package directories');

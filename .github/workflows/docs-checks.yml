@@ -12,7 +12,9 @@ on:
       - 'scripts/fix-typedoc-package-titles.mjs'
       - 'scripts/verify-docs-release.mjs'
       - 'packages/*/package.json'
-      - 'packages/*/typedoc.json'
+      - 'packages/*/src/**'
+      - 'packages/*/typedoc.js'
+      - 'packages/preset-typedoc/typedoc-base-config.js'
       - 'lerna.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -28,7 +30,9 @@ on:
       - 'scripts/fix-typedoc-package-titles.mjs'
       - 'scripts/verify-docs-release.mjs'
       - 'packages/*/package.json'
-      - 'packages/*/typedoc.json'
+      - 'packages/*/src/**'
+      - 'packages/*/typedoc.js'
+      - 'packages/preset-typedoc/typedoc-base-config.js'
       - 'lerna.json'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -46,6 +50,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
