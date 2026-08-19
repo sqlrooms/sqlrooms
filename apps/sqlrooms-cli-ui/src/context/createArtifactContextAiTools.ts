@@ -5,7 +5,10 @@ import {
   type ArtifactContextToolsOptions,
 } from '@sqlrooms/artifacts/ai';
 import type {StoreApi} from 'zustand';
-import {cliCapabilityProfile} from '../runtimeEnvironment';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from '../profiles';
 import type {RoomState} from '../store-types';
 
 function readCliArtifact({
@@ -156,10 +159,9 @@ function readCliArtifact({
 
 function createArtifactContextOptions(
   store: StoreApi<RoomState>,
+  profile: CliCapabilityProfile,
 ): ArtifactContextToolsOptions<RoomState> {
-  const supportedArtifactTypes = new Set<string>(
-    cliCapabilityProfile.artifacts.runContext,
-  );
+  const supportedArtifactTypes = new Set<string>(profile.artifacts.runContext);
   const getContextSessionId = (
     state: RoomState,
     context?: ArtifactContextToolExecutionContext,
@@ -190,16 +192,20 @@ export function makeArtifactPrimaryForAiRun(
   store: StoreApi<RoomState>,
   artifactId: string,
   context?: ArtifactContextToolExecutionContext,
+  profile: CliCapabilityProfile = DEFAULT_CLI_CAPABILITY_PROFILE,
 ) {
   return makeReusableArtifactPrimaryForAiRun(
-    createArtifactContextOptions(store),
+    createArtifactContextOptions(store, profile),
     artifactId,
     context,
   );
 }
 
-export function createArtifactContextAiTools(store: StoreApi<RoomState>) {
+export function createArtifactContextAiTools(
+  store: StoreApi<RoomState>,
+  profile: CliCapabilityProfile = DEFAULT_CLI_CAPABILITY_PROFILE,
+) {
   return createReusableArtifactContextAiTools(
-    createArtifactContextOptions(store),
+    createArtifactContextOptions(store, profile),
   );
 }

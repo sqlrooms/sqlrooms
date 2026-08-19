@@ -49,6 +49,8 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
+    "@sqlrooms/duckdb-node": "workspace:*",
+    "@sqlrooms/evals": "workspace:*",
     "@sqlrooms/preset-jest": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.7",
