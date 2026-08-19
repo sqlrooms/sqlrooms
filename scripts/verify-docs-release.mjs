@@ -18,24 +18,40 @@ function readArguments(argv) {
   return argumentsByName;
 }
 
+async function readJson(filePath) {
+  return JSON.parse(await readFile(filePath, 'utf8'));
+}
+
+async function loadApiMetadata(siteDir) {
+  try {
+    return await readJson(
+      path.join(siteDir, 'docs', '.vitepress', 'api-release.generated.json'),
+    );
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+
+  const {version} = await readJson(path.join(siteDir, 'lerna.json'));
+
+  return {
+    version,
+    ref: `v${version}`,
+    prerelease: version.includes('-'),
+  };
+}
+
 const args = readArguments(process.argv.slice(2));
 const siteDir = path.resolve(args.get('site') || 'site');
-const metadata = JSON.parse(
-  await readFile(
-    path.join(siteDir, 'docs', '.vitepress', 'api-release.generated.json'),
-    'utf8',
-  ),
-);
+const metadata = await loadApiMetadata(siteDir);
 const apiDistDir = path.join(siteDir, 'docs', '.vitepress', 'dist', 'api');
 const apiPackages = (await readdir(apiDistDir, {withFileTypes: true})).filter(
   (entry) => entry.isDirectory(),
 );
 const apiPackageNames = apiPackages.map((entry) => entry.name).sort();
-const apiPackageCategories = JSON.parse(
-  await readFile(
-    path.join(siteDir, 'docs', '.vitepress', 'api-packages.json'),
-    'utf8',
-  ),
+const apiPackageCategories = await readJson(
+  path.join(siteDir, 'docs', '.vitepress', 'api-packages.json'),
 );
 const catalogPackageNames = apiPackageCategories
   .flatMap((category) => category.packages)
