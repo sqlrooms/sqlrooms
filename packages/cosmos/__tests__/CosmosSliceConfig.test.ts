@@ -23,6 +23,21 @@ function createPersistMergeInput(persisted: unknown) {
 }
 
 describe('CosmosSliceConfig persistence migration', () => {
+  it('parses plain current configuration without treating it as merge input', () => {
+    const config = {
+      ...createDefaultCosmosConfig(),
+      pointSizeScale: 2,
+    };
+
+    expect(CosmosSliceConfig.parse(config)).toEqual(config);
+  });
+
+  it('preserves the public Zod object composition API', () => {
+    expect(CosmosSliceConfig.partial().parse({pointSizeScale: 2})).toEqual({
+      pointSizeScale: 2,
+    });
+  });
+
   it('fills new defaults and migrates the Cosmos 2 link arrow option', () => {
     const config = CosmosSliceConfig.parse(
       createPersistMergeInput({
