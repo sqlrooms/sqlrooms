@@ -6,6 +6,7 @@ import type {GraphConfig} from '@cosmos.gl/graph';
  * These values provide a balanced starting point for most graph visualizations.
  */
 const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
+  transitionDuration: 0,
   pointSizeScale: 1.1,
   scalePointsOnZoom: true,
   simulationGravity: 0.25,
@@ -30,6 +31,7 @@ const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
  * Node Appearance:
  * - `pointSizeScale`: Controls the size of nodes
  * - `scalePointsOnZoom`: Enables dynamic node sizing based on zoom level
+ * - `transitionDuration`: Controls data update animation duration
  *
  * Link Appearance:
  * - `renderLinks`: Toggles link visibility
@@ -86,6 +88,15 @@ const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
  * ```
  */
 export const CosmosSliceConfig = z.object({
+  /**
+   * Duration of data update transitions in milliseconds.
+   * The default preserves snap updates without pausing a running simulation.
+   * @default 0
+   */
+  transitionDuration: z
+    .number()
+    .describe('Duration of graph data update transitions in milliseconds'),
+
   /**
    * Scale factor for point (node) sizes in the graph.
    * Values > 1 make nodes larger, values < 1 make them smaller.

@@ -1,5 +1,5 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
-import {useState, useCallback, useMemo} from 'react';
+import {useState, useCallback, useMemo, useRef} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
 import type {GraphConfig} from '@cosmos.gl/graph';
 
@@ -55,21 +55,38 @@ export const useHoverState = (
   hoveredPoint: HoverState;
   eventHandlers: {
     onPointMouseOver: Required<GraphConfig>['onPointMouseOver'];
+    onMouseMove: Required<GraphConfig>['onMouseMove'];
     onPointMouseOut: () => void;
     onZoomStart: () => void;
     onDragStart: () => void;
   };
 } => {
   const [hoveredPoint, setHoveredPoint] = useState<HoverState>(null);
+  const lastPointerPosition = useRef<[number, number] | null>(null);
+
+  const onMouseMove = useCallback<Required<GraphConfig>['onMouseMove']>(
+    (_index, _pointPosition, event) => {
+      lastPointerPosition.current = calcRelativeCoordinates(
+        event.clientX,
+        event.clientY,
+      );
+    },
+    [calcRelativeCoordinates],
+  );
 
   const onPointMouseOver = useCallback<
     Required<GraphConfig>['onPointMouseOver']
   >(
     (index, _pointPosition, event) => {
-      if (hasClientCoordinates(event)) {
+      const position = hasClientCoordinates(event)
+        ? calcRelativeCoordinates(event.clientX, event.clientY)
+        : lastPointerPosition.current;
+
+      if (position) {
+        lastPointerPosition.current = position;
         setHoveredPoint({
           index,
-          position: calcRelativeCoordinates(event.clientX, event.clientY),
+          position,
         });
       }
     },
@@ -81,11 +98,12 @@ export const useHoverState = (
   const eventHandlers = useMemo(
     () => ({
       onPointMouseOver,
+      onMouseMove,
       onPointMouseOut: clearHoverState,
       onZoomStart: clearHoverState,
       onDragStart: clearHoverState,
     }),
-    [onPointMouseOver, clearHoverState],
+    [onPointMouseOver, onMouseMove, clearHoverState],
   );
 
   return {

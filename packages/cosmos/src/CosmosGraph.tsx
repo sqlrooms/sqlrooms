@@ -99,6 +99,10 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
     updateGraphConfig({
       ...config,
       ...eventHandlers,
+      onMouseMove: (...args) => {
+        eventHandlers.onMouseMove(...args);
+        config.onMouseMove?.(...args);
+      },
     });
   }, [config, eventHandlers, updateGraphConfig]);
 

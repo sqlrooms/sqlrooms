@@ -58,6 +58,34 @@ export type CosmosSliceState = {
   };
 };
 
+type CosmosSliceSet = Parameters<StateCreator<CosmosSliceState>>[0];
+type CosmosSliceGet = Parameters<StateCreator<CosmosSliceState>>[1];
+
+function syncSimulationState(
+  set: CosmosSliceSet,
+  get: CosmosSliceGet,
+  graph: Graph,
+  fallback: boolean,
+) {
+  const sync = () => {
+    if (get().cosmos.graph !== graph) return;
+
+    const isSimulationRunning = graph.isReady
+      ? graph.isSimulationRunning
+      : fallback;
+    set((state) =>
+      produce(state, (draft) => {
+        draft.cosmos.isSimulationRunning = isSimulationRunning;
+      }),
+    );
+  };
+
+  sync();
+  if (!graph.isReady) {
+    void graph.ready.then(sync, () => undefined);
+  }
+}
+
 /**
  * Creates a Zustand slice for managing Cosmos graph state.
  * This slice handles graph creation, destruction, configuration, and data updates.
@@ -95,29 +123,22 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
         set((state) =>
           produce(state, (draft) => {
             draft.cosmos.graph = graph;
-            draft.cosmos.isSimulationRunning = true;
+            draft.cosmos.isSimulationRunning = graph.config.enableSimulation;
           }),
         );
+        syncSimulationState(set, get, graph, graph.config.enableSimulation);
       },
 
       toggleSimulation: () => {
-        const {graph} = get().cosmos;
+        const {graph, isSimulationRunning} = get().cosmos;
         if (!graph) return;
 
-        if (graph.isSimulationRunning) {
+        if (isSimulationRunning) {
           graph.pause();
-          set((state) =>
-            produce(state, (draft) => {
-              draft.cosmos.isSimulationRunning = false;
-            }),
-          );
+          syncSimulationState(set, get, graph, false);
         } else {
           graph.unpause();
-          set((state) =>
-            produce(state, (draft) => {
-              draft.cosmos.isSimulationRunning = true;
-            }),
-          );
+          syncSimulationState(set, get, graph, graph.config.enableSimulation);
         }
       },
 
@@ -131,11 +152,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
         const {graph} = get().cosmos;
         if (!graph) return;
         graph.start(1);
-        set((state) =>
-          produce(state, (draft) => {
-            draft.cosmos.isSimulationRunning = true;
-          }),
-        );
+        syncSimulationState(set, get, graph, graph.config.enableSimulation);
       },
 
       updateSimulationConfig: (config: Partial<CosmosSliceConfig>) => {
@@ -150,7 +167,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
       },
 
       updateGraphConfig: (config: GraphConfig) => {
-        const {graph} = get().cosmos;
+        const {graph, isSimulationRunning} = get().cosmos;
         graph?.setConfigPartial(config);
 
         set((state) =>
@@ -158,6 +175,15 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
             Object.assign(draft.cosmos.config, config);
           }),
         );
+
+        if (graph) {
+          syncSimulationState(
+            set,
+            get,
+            graph,
+            config.enableSimulation ?? isSimulationRunning,
+          );
+        }
       },
 
       updateGraphData: (data) => {

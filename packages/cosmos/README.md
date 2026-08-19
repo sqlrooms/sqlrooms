@@ -75,6 +75,19 @@ export function GraphView() {
 }
 ```
 
+## Migrating from Cosmos 2
+
+Cosmos 3 renamed the default link arrow option. Replace `linkArrows` with
+`linkDefaultArrows` in room configuration and persisted workspace data before
+parsing it with `CosmosSliceConfig`:
+
+```ts
+const config = {
+  // linkArrows: true,
+  linkDefaultArrows: true,
+};
+```
+
 ## Update simulation programmatically
 
 ```tsx
