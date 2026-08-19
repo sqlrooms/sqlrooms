@@ -415,4 +415,54 @@ describe('createCliBlockDocumentAgentTool', () => {
       finalOutput: 'Worksheet created successfully.',
     });
   });
+
+  it('uses dashboard-free tools and instructions for worksheet charts/maps', async () => {
+    let capturedAgent: ToolLoopAgent<any, any, any> | undefined;
+    const directMapTool = tool({
+      description: 'mock direct map tool',
+      inputSchema: z.object({}),
+      execute: async () => ({success: true}),
+    });
+    const result = await executeAgentTool(
+      createOptions({
+        dashboardBlocksEnabled: false,
+        dataTableBlocksEnabled: false,
+        htmlAppBlocksEnabled: false,
+        mapBlocksEnabled: true,
+        extraTools: () => ({
+          [KnownBlockDocumentTools.create_block_document_map_block]:
+            directMapTool,
+        }),
+        runSubAgent: jest.fn<
+          CreateCliBlockDocumentAgentToolOptions['runSubAgent']
+        >(async ({agent}) => {
+          capturedAgent = agent;
+          return {};
+        }),
+      }),
+      {},
+    );
+
+    expect(result.success).toBe(true);
+    expect(capturedAgent?.tools).toHaveProperty(
+      KnownBlockDocumentTools.create_block_document_map_block,
+    );
+    expect(capturedAgent?.tools).not.toHaveProperty(
+      KnownBlockDocumentTools.add_dashboard_block,
+    );
+    expect(capturedAgent?.tools).not.toHaveProperty(
+      KnownBlockDocumentTools.embedded_dashboard_agent,
+    );
+    expect(capturedAgent?.tools).not.toHaveProperty(
+      KnownBlockDocumentTools.add_data_table_explorer,
+    );
+    const instructions = String((capturedAgent as any).settings.instructions);
+    expect(instructions).toContain('text, chart, and direct map blocks');
+    expect(instructions).not.toContain(
+      KnownBlockDocumentTools.embedded_dashboard_agent,
+    );
+    expect(instructions).not.toContain(
+      KnownBlockDocumentTools.add_dashboard_block,
+    );
+  });
 });

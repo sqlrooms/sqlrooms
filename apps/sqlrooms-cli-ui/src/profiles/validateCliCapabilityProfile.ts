@@ -208,6 +208,11 @@ export function validateCliCapabilityProfile(
       'The dashboard-agent tool group and dashboard nested agent must be enabled together.',
     );
   }
+  if (tools.has('dashboard-agent') && !artifacts.has('dashboard')) {
+    errors.push(
+      'The top-level dashboard agent requires creatable dashboard artifacts.',
+    );
+  }
   if (tools.has('worksheet-agent') !== nestedAgents.has('worksheet')) {
     errors.push(
       'The worksheet-agent tool group and worksheet nested agent must be enabled together.',
@@ -218,12 +223,18 @@ export function validateCliCapabilityProfile(
       'The html-app-agent tool group and HTML app nested agent must be enabled together.',
     );
   }
+  if (nestedAgents.has('worksheet-dashboard') && !stateful.has('dashboard')) {
+    errors.push(
+      'The embedded worksheet-dashboard agent requires dashboard blocks.',
+    );
+  }
   if (
     nestedAgents.has('worksheet') &&
+    stateful.has('dashboard') &&
     !nestedAgents.has('worksheet-dashboard')
   ) {
     errors.push(
-      'The worksheet agent requires its embedded worksheet-dashboard agent.',
+      'A worksheet agent with dashboard blocks requires its embedded worksheet-dashboard agent.',
     );
   }
 

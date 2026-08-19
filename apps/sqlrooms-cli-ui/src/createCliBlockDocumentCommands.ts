@@ -499,7 +499,7 @@ export function createCliBlockDocumentCommands({
     const blockType =
       CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES[
         command.id as keyof typeof CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES
-      ];
+    ];
     return blockType === undefined || enabledBlockTypes.has(blockType);
   });
 }

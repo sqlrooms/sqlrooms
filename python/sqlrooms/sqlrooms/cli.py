@@ -39,7 +39,7 @@ else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 3000
-CAPABILITY_PROFILE_NAMES = ("default", "experimental")
+CAPABILITY_PROFILE_NAMES = ("default", "experimental", "worksheet-charts-maps")
 DEFAULT_CAPABILITY_PROFILE = "default"
 EXPERIMENTAL_CAPABILITY_PROFILE = "experimental"
 
@@ -544,7 +544,7 @@ def main(
     capability_profile: str | None = typer.Option(
         None,
         "--profile",
-        help="Named capability profile: default or experimental. Overrides [app].profile from the config file.",
+        help="Named capability profile: default, experimental, or worksheet-charts-maps. Overrides [app].profile from the config file.",
     ),
     experimental_sync: bool = typer.Option(
         False,

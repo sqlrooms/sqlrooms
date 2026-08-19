@@ -54,15 +54,17 @@ export type CreateCliBlockDocumentAgentToolOptions =
     blockDocumentAdapter: BlockDocumentAiAdapter &
       BlockDocumentMoveBlockAiAdapter;
     databaseAdapter: DatabaseAiAdapter;
-    dashboardAgentTool: Tool | ((blockDocumentId: string) => Tool);
+    dashboardAgentTool?: Tool | ((blockDocumentId: string) => Tool);
     chartToolsOptions?: ChartToolsOptions;
     htmlAppBlocksEnabled?: boolean;
     mapBlocksEnabled?: boolean;
+    dashboardBlocksEnabled?: boolean;
+    dataTableBlocksEnabled?: boolean;
     extraTools?: ExtraBlockDocumentAiToolsFactory;
-    createDashboardBlock: Parameters<
+    createDashboardBlock?: Parameters<
       typeof createCliBlockDocumentAiTools
     >[0]['createDashboardBlock'];
-    createDataTableExplorerBlock: Parameters<
+    createDataTableExplorerBlock?: Parameters<
       typeof createCliBlockDocumentAiTools
     >[0]['createDataTableExplorerBlock'];
     createHtmlAppBlock?: Parameters<
@@ -293,6 +295,25 @@ ${
 }
 ${htmlAppBlocksEnabled ? `- For worksheet app requests, use ${KnownBlockDocumentTools.add_html_app_block} + ${KnownBlockDocumentTools.embedded_html_app_agent} so the app is embedded in the worksheet` : ''}
 - Charts are created immediately when you call the ${BLOCK_DOCUMENT_CHART_TOOL_PREFIX}* tools`;
+}
+
+function getWorksheetChartsMapsAgentInstructions(
+  options: CreateCliBlockDocumentAgentToolOptions,
+): string {
+  const chartTools = resolveChartTypes(options.chartToolsOptions?.chartTypes);
+  return `You are a worksheet builder AI agent for text, chart, and direct map blocks.
+
+Create and edit content only in the requested worksheet. Prefer chart blocks with concise text context. For exploratory requests, create 3-5 diverse charts rather than a long text narrative.
+
+Available worksheet operations:
+- Create charts with these tools:
+${createChartToolsInstructions(chartTools, BLOCK_DOCUMENT_CHART_TOOL_PREFIX)}
+- Add headings, paragraphs, or lists with ${KnownBlockDocumentTools.add_text_block}.
+- Create or update a direct worksheet map with ${KnownBlockDocumentTools.create_block_document_map_block}.
+- Use ${KnownBlockDocumentTools.list_blocks} before updating an existing map or reordering content. Pass the map block's statefulBlock.blockInstanceId as mapId.
+- Reorder blocks with ${KnownBlockDocumentTools.move_block}.
+
+For a specific targetBlock, modify only that block. Validate chart columns, aggregate large datasets, preserve existing map datasets and layers unless the user requests a replacement, and repair map runtime issues in place.`;
 }
 
 const BlockDocumentAgentInputSchema = z.object({
@@ -547,6 +568,8 @@ export function createCliBlockDocumentAgentTool(
     extraTools,
     htmlAppBlocksEnabled = true,
     mapBlocksEnabled = false,
+    dashboardBlocksEnabled = true,
+    dataTableBlocksEnabled = true,
     createDashboardBlock,
     createDataTableExplorerBlock,
     createHtmlAppBlock,
@@ -559,12 +582,18 @@ export function createCliBlockDocumentAgentTool(
     description: `An AI agent that creates DATA ANALYSIS WORKSHEETS with:
 - CHART BLOCKS (histograms, scatter plots, heatmaps, etc.)
 - TEXT BLOCKS (headings, paragraphs, lists)
-- DASHBOARD BLOCKS (interactive dashboards for multi-faceted exploration)
+${dashboardBlocksEnabled ? '- DASHBOARD BLOCKS (interactive dashboards for multi-faceted exploration)' : ''}
+${dataTableBlocksEnabled ? '- DATA TABLE EXPLORER BLOCKS' : ''}
 ${htmlAppBlocksEnabled ? '- HTML APP BLOCKS (custom browser apps powered by window.sqlrooms.query/queryRows)' : ''}
 
-IF user requests DASHBOARD:
+${
+  dashboardBlocksEnabled
+    ? `IF user requests DASHBOARD:
 1. Call ${KnownBlockDocumentTools.add_dashboard_block} to create the container (get dashboardId)
 2. Call ${KnownBlockDocumentTools.embedded_dashboard_agent} with dashboardId to populate it with charts
+`
+    : ''
+}
 
 IF user requests a MAP in a worksheet:
 ${
@@ -595,7 +624,7 @@ Otherwise, create chart and text blocks directly using ${BLOCK_DOCUMENT_CHART_TO
 Use this for:
 - Exploratory requests: "analyze the earthquakes dataset", "create comprehensive insights", "high-level overview"
 - Multi-chart requests: "create worksheet with depth and magnitude histograms"
-- Dashboard requests: "add dashboard analyzing sales data" (use two-step workflow)
+${dashboardBlocksEnabled ? '- Dashboard requests: "add dashboard analyzing sales data" (use two-step workflow)' : ''}
 ${htmlAppBlocksEnabled ? '- App requests in worksheets: "create an app", "make a D3 visualization", "build a browser widget"' : ''}
 
 IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using this tool for any queries or data analysis tasks.`,
@@ -620,10 +649,13 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
         validateTargetBlock(blockDocumentAdapter, blockDocumentId, targetBlock);
 
         const dataTools = options.createDataTools?.({store}) ?? {};
-        const embeddedDashboardAgentTool =
-          typeof dashboardAgentTool === 'function'
-            ? dashboardAgentTool(blockDocumentId)
-            : dashboardAgentTool;
+        let embeddedDashboardAgentTool: Tool | undefined;
+        if (dashboardBlocksEnabled) {
+          embeddedDashboardAgentTool =
+            typeof dashboardAgentTool === 'function'
+              ? dashboardAgentTool(blockDocumentId)
+              : dashboardAgentTool;
+        }
         const blockDocumentTools = createCliBlockDocumentAiTools({
           databaseAdapter,
           blockDocumentAdapter,
@@ -637,6 +669,8 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           dashboardAgentTool: embeddedDashboardAgentTool,
           extraTools,
           htmlAppBlocksEnabled,
+          dashboardBlocksEnabled,
+          dataTableBlocksEnabled,
           createDashboardBlock,
           createDataTableExplorerBlock,
           createHtmlAppBlock,
@@ -675,7 +709,10 @@ IMPORTANT: IF primary artefact in run context is a worksheet, prioritize using t
           },
           stopWhen: [stepCountIs(Math.max(5, Math.min(50, maxSteps ?? 20)))],
           instructions: [
-            options.instructions ?? getBlockDocumentAgentInstructions(options),
+            options.instructions ??
+              (dashboardBlocksEnabled || dataTableBlocksEnabled
+                ? getBlockDocumentAgentInstructions(options)
+                : getWorksheetChartsMapsAgentInstructions(options)),
             mapBlocksEnabled ? getDeckMapResourceAiInstructions() : undefined,
             getTargetBlockInstructions(targetBlock),
             options.additionalInstructions,

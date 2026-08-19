@@ -8,6 +8,7 @@ import type {
 export const CLI_CAPABILITY_PROFILE_NAMES = [
   'default',
   'experimental',
+  'worksheet-charts-maps',
 ] as const;
 
 /** A production capability profile name accepted by the CLI runtime. */

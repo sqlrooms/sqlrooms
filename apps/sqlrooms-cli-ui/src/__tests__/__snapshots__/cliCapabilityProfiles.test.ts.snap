@@ -224,3 +224,88 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   "version": 1,
 }
 `;
+
+exports[`CLI capability profiles locks the worksheet-charts-maps capability baseline 1`] = `
+{
+  "ai": {
+    "instructionSets": [
+      "stable",
+    ],
+    "nestedAgents": [
+      "worksheet",
+    ],
+    "topLevelToolGroups": [
+      "default-data-analysis",
+      "artifact-context",
+      "worksheet-agent",
+      "chart",
+      "chart-image-for-markdown",
+    ],
+  },
+  "artifacts": {
+    "creatable": [
+      "worksheet",
+    ],
+    "runContext": [
+      "worksheet",
+    ],
+  },
+  "blocks": {
+    "aiContext": [
+      "chart",
+      "map",
+    ],
+    "interactiveRenderers": [
+      "chart",
+      "map",
+    ],
+    "placeholderRenderers": [
+      "dashboard",
+      "pivot",
+      "data-table",
+      "document",
+      "sql-query",
+      "html-app",
+      "python",
+    ],
+    "stateful": [
+      "map",
+    ],
+  },
+  "commands": [
+    "block-document",
+    "cli-block-document",
+  ],
+  "dashboard": {
+    "deckMaps": false,
+  },
+  "lifecycleSlices": [
+    "ai",
+    "ai-settings",
+    "app-project",
+    "artifacts",
+    "artifact-ai",
+    "block-documents",
+    "canvas",
+    "cells",
+    "crdt",
+    "dashboard",
+    "dashboard-features",
+    "db-settings",
+    "deck-maps",
+    "documents",
+    "html-apps",
+    "mosaic",
+    "notebook",
+    "pivot",
+    "python",
+    "room-shell",
+    "sql-editor",
+    "webcontainer",
+    "workspace-ui",
+  ],
+  "name": "worksheet-charts-maps",
+  "skills": [],
+  "version": 1,
+}
+`;
