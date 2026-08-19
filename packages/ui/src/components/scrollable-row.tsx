@@ -61,7 +61,13 @@ export function ScrollableRow({
       container.removeEventListener('scroll', updateScrollState);
       resizeObserver.disconnect();
     };
-  }, [children, containerRef]);
+    // `children` is intentionally excluded: it is typically a fresh array on
+    // every parent render, and depending on it would re-run this effect (and
+    // call setState) on every render, tripping React's "Maximum update depth
+    // exceeded" warning. Content changes are still reflected here because
+    // ResizeObserver re-fires on content-size changes and the scroll listener
+    // covers user/dnd scrolling.
+  }, [containerRef]);
 
   const arrowBaseClass = cn(
     'absolute top-0 z-10 flex h-full w-8 items-center backdrop-blur-md bg-background/50 transition-colors',
