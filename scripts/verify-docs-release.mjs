@@ -101,13 +101,30 @@ const catalogPackageNames = apiPackageCategories
 
 if (isLocalVerification) {
   const publicPackageNames = await getPublicPackageNames(siteDir);
+  const excludedPackageNames = await readJson(
+    path.join(siteDir, 'docs', '.vitepress', 'api-package-exclusions.json'),
+  );
+  const excludedPackages = new Set(excludedPackageNames);
   const missingCatalogPackages = publicPackageNames.filter(
-    (packageName) => !catalogPackageNames.includes(packageName),
+    (packageName) =>
+      !catalogPackageNames.includes(packageName) &&
+      !excludedPackages.has(packageName),
+  );
+  const cataloguedExcludedPackages = catalogPackageNames.filter((packageName) =>
+    excludedPackages.has(packageName),
   );
 
   if (missingCatalogPackages.length > 0) {
     throw new Error(
       `Public packages missing from API catalog: ${missingCatalogPackages.join(
+        ', ',
+      )}`,
+    );
+  }
+
+  if (cataloguedExcludedPackages.length > 0) {
+    throw new Error(
+      `Packages cannot be both catalogued and excluded: ${cataloguedExcludedPackages.join(
         ', ',
       )}`,
     );
