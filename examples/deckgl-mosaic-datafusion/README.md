@@ -1,6 +1,9 @@
-### [Mosaic + DataFusion-WASM + Zarr](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic-datafusion)
+### [Mosaic + DataFusion-WASM + Zarr](https://sqlrooms-deckgl-mosaic-datafusion.netlify.app/)
 
-[GitHub repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic-datafusion)
+[Try live](https://sqlrooms-deckgl-mosaic-datafusion.netlify.app/)
+| [GitHub repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic-datafusion)
+
+<video src="https://sqlrooms.org/media/examples/sqlrooms-deckgl-mosaic-datafusion-example.mp4" alt="SQLRooms Deck.gl, Mosaic, and DataFusion example app" width="450" controls loop muted></video>
 
 This example ports [Gjore Milevski](https://github.com/dzole0311)'s
 [mosaic-datafusion-zarr-deckgl](https://github.com/dzole0311/mosaic-datafusion-zarr-deckgl)
