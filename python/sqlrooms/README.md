@@ -22,7 +22,7 @@ What happens:
 - `--db-path`: DuckDB database to use as a flag alternative. Pass a filepath to persist, or `:memory:` for an explicit temporary in-memory session.
 - `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `3000` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
-- `--profile`: Select a complete production capability profile: `default` or `experimental`.
+- `--profile`: Select a complete production capability profile: `default`, `experimental`, or `worksheet-charts-maps`.
 - `--experimental`: Compatibility alias for `--profile experimental`.
 - `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires the `experimental` profile.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.

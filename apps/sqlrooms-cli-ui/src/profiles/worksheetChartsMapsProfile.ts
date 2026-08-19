@@ -1,0 +1,68 @@
+import type {CliCapabilityProfile} from './types';
+
+/** Worksheet-only production profile with chart and direct map authoring. */
+export const WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE = {
+  name: 'worksheet-charts-maps',
+  version: 1,
+  artifacts: {
+    creatable: ['worksheet'],
+    runContext: ['worksheet'],
+  },
+  blocks: {
+    stateful: ['map'],
+    aiContext: ['chart', 'map'],
+    interactiveRenderers: ['chart', 'map'],
+    placeholderRenderers: [
+      'dashboard',
+      'pivot',
+      'data-table',
+      'document',
+      'sql-query',
+      'html-app',
+      'python',
+    ],
+  },
+  commands: ['block-document', 'cli-block-document'],
+  blockDocumentCommands: [
+    'block-document.update-block-metadata',
+    'block-document.add-map-block',
+  ],
+  ai: {
+    instructionSets: ['stable'],
+    topLevelToolGroups: [
+      'default-data-analysis',
+      'artifact-context',
+      'worksheet-agent',
+      'chart',
+      'chart-image-for-markdown',
+    ],
+    nestedAgents: ['worksheet'],
+  },
+  skills: [],
+  lifecycleSlices: [
+    'ai',
+    'ai-settings',
+    'app-project',
+    'artifacts',
+    'artifact-ai',
+    'block-documents',
+    'canvas',
+    'cells',
+    'crdt',
+    'dashboard',
+    'dashboard-features',
+    'db-settings',
+    'deck-maps',
+    'documents',
+    'html-apps',
+    'mosaic',
+    'notebook',
+    'pivot',
+    'python',
+    'room-shell',
+    'sql-editor',
+    'webcontainer',
+    'workspace-ui',
+  ],
+  dashboard: {deckMaps: false},
+} as const satisfies CliCapabilityProfile;

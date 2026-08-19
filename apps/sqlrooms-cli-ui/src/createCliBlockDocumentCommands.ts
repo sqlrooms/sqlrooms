@@ -14,6 +14,7 @@ import {
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
+import type {CliBlockDocumentCommandId} from './profiles/types';
 import type {RoomState} from './store-types';
 
 export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
@@ -21,15 +22,16 @@ export const CLI_BLOCK_DOCUMENT_COMMAND_OWNER =
 
 const BLOCK_DOCUMENT_CREATE_STATEFUL_BLOCK_COMMAND_ID =
   'block-document.create-stateful-block';
-const BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID =
+export const BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID =
   'block-document.add-dashboard-block';
-const BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID =
+export const BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID =
   'block-document.add-data-table-block';
-const BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID =
+export const BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID =
   'block-document.add-html-app-block';
-const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
+export const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
   'block-document.update-block-metadata';
-const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
+export const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID =
+  'block-document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
 
 const BlockDocumentIdInput = z.object({
@@ -156,8 +158,12 @@ function findStatefulBlock(
     });
 }
 
-export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
-  return [
+export function createCliBlockDocumentCommands({
+  enabledCommandIds,
+}: {
+  enabledCommandIds?: readonly CliBlockDocumentCommandId[];
+} = {}): RoomCommand<RoomState>[] {
+  const commands: RoomCommand<RoomState>[] = [
     {
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add block document dashboard block',
@@ -478,4 +484,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       },
     },
   ];
+  if (!enabledCommandIds) return commands;
+  const enabled = new Set<string>(enabledCommandIds);
+  return commands.filter((command) => enabled.has(command.id));
 }

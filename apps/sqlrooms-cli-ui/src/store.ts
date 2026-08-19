@@ -86,6 +86,7 @@ import {
   WebContainerPersistConfig,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
+import type {Tool} from 'ai';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
@@ -183,6 +184,14 @@ Experimental SQLRooms tools are available in this session. Use them for app, map
 - If a new top-level html-app artifact is needed, first execute the html-app.create-artifact command, then call html_app_agent with appId set to the returned artifactId.
 - For HTML app undo, redo, or restoring an earlier version, use list_commands and execute_command with html-app.undo-revision, html-app.redo-revision, or html-app.restore-revision. Do not rewrite, delete, or edit chat messages to perform app undo/redo.
 - If an embedded worksheet HTML app target is ambiguous, ask the user to select the app/block or provide appId instead of mutating a guessed app.
+`;
+const WORKSHEET_CHARTS_MAPS_AI_INSTRUCTIONS = `
+This SQLRooms session exposes worksheet artifacts with text, chart, and direct map blocks.
+
+- Use ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} for worksheet creation, analysis, charts, maps, block edits, and block reordering.
+- If run context contains a kind:"block" item, pass its blockDocumentId and targetBlock fields unchanged so only that worksheet block is edited.
+- For worksheet maps, use the worksheet agent's direct map tool. Preserve existing map datasets and layers for incremental edits.
+- Use standalone chart tools only for inline chat visualizations or when no worksheet target is available.
 `;
 
 const BLOCK_DOCUMENT_OPTIONS = {
@@ -767,7 +776,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             registerCommandsForOwner(
               store,
               CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
-              createCliBlockDocumentCommands(),
+              createCliBlockDocumentCommands({
+                enabledCommandIds: cliCapabilityProfile.blockDocumentCommands,
+              }),
             );
           }
           if (cliCapabilityProfile.commands.includes('block-document-python')) {
@@ -1123,6 +1134,40 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...(() => {
           const webContainerToolkit = createWebContainerToolkit(store);
+          const enabledTools = new Set(
+            cliCapabilityProfile.ai.topLevelToolGroups,
+          );
+          const tools: Record<string, Tool> = {};
+          if (enabledTools.has('default-data-analysis')) {
+            Object.assign(tools, createDefaultAiTools(store, {query: {}}));
+          }
+          if (enabledTools.has('artifact-context')) {
+            Object.assign(tools, createArtifactContextAiTools(store));
+          }
+          if (enabledTools.has('dashboard-agent')) {
+            tools.dashboard_agent = dashboardAgentTool(store, {
+              deckMapsEnabled: cliCapabilityProfile.dashboard.deckMaps,
+            });
+          }
+          if (enabledTools.has('html-app-agent')) {
+            tools.html_app_agent = htmlAppAgentTool(store);
+          }
+          if (enabledTools.has('worksheet-agent')) {
+            tools[CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME] = blockDocumentAgentTool(
+              store,
+              {profile: cliCapabilityProfile},
+            );
+          }
+          if (enabledTools.has('webcontainer')) {
+            Object.assign(tools, webContainerToolkit.tools);
+          }
+          if (enabledTools.has('chart')) {
+            tools.chart = createVegaChartTool();
+          }
+          if (enabledTools.has('chart-image-for-markdown')) {
+            tools.chart_image_for_markdown =
+              createChartImageForMarkdownTool(store);
+          }
           return createAiSlice({
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
@@ -1135,7 +1180,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getInstructions: () =>
               [
                 createDefaultAiInstructions(store),
-                STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
+                cliCapabilityProfile.name === 'worksheet-charts-maps'
+                  ? WORKSHEET_CHARTS_MAPS_AI_INSTRUCTIONS.trim()
+                  : STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
                 cliCapabilityProfile.ai.instructionSets.includes('experimental')
                   ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
                   : '',
@@ -1148,25 +1195,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
-            tools: {
-              ...createDefaultAiTools(store, {query: {}}),
-              ...createArtifactContextAiTools(store),
-              dashboard_agent: dashboardAgentTool(store, {
-                deckMapsEnabled: cliCapabilityProfile.dashboard.deckMaps,
-              }),
-              ...(cliCapabilityProfile.ai.topLevelToolGroups.includes(
-                'html-app-agent',
-              )
-                ? {html_app_agent: htmlAppAgentTool(store)}
-                : {}),
-              [CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME]: blockDocumentAgentTool(
-                store,
-                {profile: cliCapabilityProfile},
-              ),
-              ...webContainerToolkit.tools,
-              chart: createVegaChartTool(),
-              chart_image_for_markdown: createChartImageForMarkdownTool(store),
-            },
+            tools,
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
               ...webContainerToolkit.toolRenderers,

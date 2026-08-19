@@ -2,6 +2,7 @@ import {
   createCliCapabilityProfileSnapshot,
   DEFAULT_CLI_CAPABILITY_PROFILE,
   EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
   listCliCapabilityProfiles,
   resolveCliCapabilityProfile,
 } from '../profiles';
@@ -48,6 +49,23 @@ describe('CLI capability profiles', () => {
     expect(resolveCliCapabilityProfile({experimentalEnabled: true})).toBe(
       EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
     );
+    expect(
+      resolveCliCapabilityProfile({profileName: 'worksheet-charts-maps'}),
+    ).toBe(WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE);
+  });
+
+  it('keeps the worksheet charts/maps profile dashboard-free', () => {
+    const profile = WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
+    expect(profile.artifacts.creatable).toEqual(['worksheet']);
+    expect(profile.blocks.stateful).toEqual(['map']);
+    expect(profile.blocks.aiContext).toEqual(['chart', 'map']);
+    expect(profile.blockDocumentCommands).toEqual([
+      'block-document.update-block-metadata',
+      'block-document.add-map-block',
+    ]);
+    expect(profile.ai.topLevelToolGroups).not.toContain('dashboard-agent');
+    expect(profile.ai.nestedAgents).not.toContain('dashboard');
+    expect(profile.ai.nestedAgents).not.toContain('worksheet-dashboard');
   });
 
   it('rejects unknown and conflicting runtime selections', () => {

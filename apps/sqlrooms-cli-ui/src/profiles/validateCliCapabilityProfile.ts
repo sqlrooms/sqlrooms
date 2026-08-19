@@ -9,6 +9,7 @@ import {
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 import type {
+  CliBlockDocumentCommandId,
   CliCapabilityProfile,
   CliCommandGroupId,
   CliLifecycleSliceId,
@@ -23,6 +24,14 @@ const COMMAND_GROUPS: readonly CliCommandGroupId[] = [
   'cli-block-document',
   'block-document-python',
   'html-app-revision',
+];
+
+const BLOCK_DOCUMENT_COMMANDS: readonly CliBlockDocumentCommandId[] = [
+  'block-document.add-dashboard-block',
+  'block-document.add-data-table-block',
+  'block-document.add-html-app-block',
+  'block-document.update-block-metadata',
+  'block-document.add-map-block',
 ];
 
 const TOP_LEVEL_TOOL_GROUPS: readonly CliTopLevelToolGroupId[] = [
@@ -95,6 +104,7 @@ export function validateCliCapabilityProfile(
     ['blocks.interactiveRenderers', profile.blocks.interactiveRenderers],
     ['blocks.placeholderRenderers', profile.blocks.placeholderRenderers],
     ['commands', profile.commands],
+    ['blockDocumentCommands', profile.blockDocumentCommands ?? []],
     ['ai.instructionSets', profile.ai.instructionSets],
     ['ai.topLevelToolGroups', profile.ai.topLevelToolGroups],
     ['ai.nestedAgents', profile.ai.nestedAgents],
@@ -129,6 +139,11 @@ export function validateCliCapabilityProfile(
       CLI_AI_BLOCK_TYPES,
     ),
     ...validateKnownValues('commands', profile.commands, COMMAND_GROUPS),
+    ...validateKnownValues(
+      'blockDocumentCommands',
+      profile.blockDocumentCommands ?? [],
+      BLOCK_DOCUMENT_COMMANDS,
+    ),
     ...validateKnownValues(
       'ai.topLevelToolGroups',
       profile.ai.topLevelToolGroups,
@@ -192,6 +207,38 @@ export function validateCliCapabilityProfile(
     );
   }
 
+  const blockDocumentCommands = new Set<string>(
+    profile.blockDocumentCommands ?? [],
+  );
+  const hasBlockDocumentCommandAllowlist =
+    profile.blockDocumentCommands !== undefined;
+  if (
+    blockDocumentCommands.has('block-document.add-dashboard-block') &&
+    !stateful.has('dashboard')
+  ) {
+    errors.push('The dashboard block command requires dashboard blocks.');
+  }
+  if (
+    blockDocumentCommands.has('block-document.add-data-table-block') &&
+    !stateful.has('data-table')
+  ) {
+    errors.push('The data-table block command requires data-table blocks.');
+  }
+  if (
+    hasBlockDocumentCommandAllowlist &&
+    stateful.has('html-app') &&
+    !blockDocumentCommands.has('block-document.add-html-app-block')
+  ) {
+    errors.push('HTML-app blocks require the HTML-app block command.');
+  }
+  if (
+    hasBlockDocumentCommandAllowlist &&
+    stateful.has('map') &&
+    !blockDocumentCommands.has('block-document.add-map-block')
+  ) {
+    errors.push('Map blocks require the map block command.');
+  }
+
   const tools = new Set<string>(profile.ai.topLevelToolGroups);
   const nestedAgents = new Set<string>(profile.ai.nestedAgents);
   const artifacts = new Set<string>(profile.artifacts.creatable);
@@ -208,6 +255,11 @@ export function validateCliCapabilityProfile(
       'The dashboard-agent tool group and dashboard nested agent must be enabled together.',
     );
   }
+  if (tools.has('dashboard-agent') && !artifacts.has('dashboard')) {
+    errors.push(
+      'The top-level dashboard agent requires creatable dashboard artifacts.',
+    );
+  }
   if (tools.has('worksheet-agent') !== nestedAgents.has('worksheet')) {
     errors.push(
       'The worksheet-agent tool group and worksheet nested agent must be enabled together.',
@@ -218,12 +270,18 @@ export function validateCliCapabilityProfile(
       'The html-app-agent tool group and HTML app nested agent must be enabled together.',
     );
   }
+  if (nestedAgents.has('worksheet-dashboard') && !stateful.has('dashboard')) {
+    errors.push(
+      'The embedded worksheet-dashboard agent requires dashboard blocks.',
+    );
+  }
   if (
     nestedAgents.has('worksheet') &&
+    stateful.has('dashboard') &&
     !nestedAgents.has('worksheet-dashboard')
   ) {
     errors.push(
-      'The worksheet agent requires its embedded worksheet-dashboard agent.',
+      'A worksheet agent with dashboard blocks requires its embedded worksheet-dashboard agent.',
     );
   }
 

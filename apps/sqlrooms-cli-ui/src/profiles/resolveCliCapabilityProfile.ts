@@ -1,5 +1,6 @@
 import {DEFAULT_CLI_CAPABILITY_PROFILE} from './defaultProfile';
 import {EXPERIMENTAL_CLI_CAPABILITY_PROFILE} from './experimentalProfile';
+import {WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE} from './worksheetChartsMapsProfile';
 import {
   CLI_CAPABILITY_PROFILE_NAMES,
   type CliCapabilityProfile,
@@ -9,6 +10,7 @@ import {
 const CLI_CAPABILITY_PROFILES = {
   default: DEFAULT_CLI_CAPABILITY_PROFILE,
   experimental: EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  'worksheet-charts-maps': WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
 } as const satisfies Record<CliCapabilityProfileName, CliCapabilityProfile>;
 
 export type ResolveCliCapabilityProfileOptions = {

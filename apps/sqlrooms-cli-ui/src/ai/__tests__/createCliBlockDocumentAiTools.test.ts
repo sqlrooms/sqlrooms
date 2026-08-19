@@ -2,9 +2,13 @@ import {jest} from '@jest/globals';
 import {tool, type Tool} from 'ai';
 import type {
   BlockDocumentAiAdapter,
+  BlockDocumentBlock,
   BlockDocumentMoveBlockAiAdapter,
+  BlockDocumentNode,
   BlockDocumentStatefulBlockBlock,
 } from '@sqlrooms/documents';
+import {blockDocumentBlockToNode} from '@sqlrooms/documents';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import type {DatabaseAiAdapter} from '@sqlrooms/mosaic/ai';
 import {createCliBlockDocumentAiTools} from '../createCliBlockDocumentAiTools';
 import {KnownBlockDocumentTools} from '../constants';
@@ -24,7 +28,15 @@ describe('createCliBlockDocumentAiTools', () => {
   function createDatabaseAdapter(): DatabaseAiAdapter {
     return {
       getTables: () => [],
-      findTable: (tableName) => ({tableName: String(tableName)}) as any,
+      findTable: (tableName) =>
+        ({
+          tableName: String(tableName),
+          table: makeQualifiedTableName({
+            schema: 'main',
+            table: String(tableName),
+          }),
+          columns: [{name: 'magnitude', type: 'DOUBLE'}],
+        }) as any,
     };
   }
 
@@ -82,6 +94,97 @@ describe('createCliBlockDocumentAiTools', () => {
     expect(
       tools[KnownBlockDocumentTools.embedded_html_app_agent],
     ).toBeUndefined();
+  });
+
+  it('omits dashboard and data-table tools for a worksheet charts/maps profile', () => {
+    const directMapTool = tool({
+      description: 'mock direct map tool',
+      inputSchema: {} as any,
+      execute: async () => ({success: true}),
+    });
+    const tools = createCliBlockDocumentAiTools({
+      ...createOptions(),
+      chartToolsOptions: {},
+      dashboardBlocksEnabled: false,
+      dataTableBlocksEnabled: false,
+      extraTools: () => ({
+        [KnownBlockDocumentTools.create_block_document_map_block]:
+          directMapTool,
+      }),
+    });
+
+    expect(tools[KnownBlockDocumentTools.add_dashboard_block]).toBeUndefined();
+    expect(
+      tools[KnownBlockDocumentTools.embedded_dashboard_agent],
+    ).toBeUndefined();
+    expect(
+      tools[KnownBlockDocumentTools.add_data_table_explorer],
+    ).toBeUndefined();
+    expect(tools[KnownBlockDocumentTools.create_block_document_map_block]).toBe(
+      directMapTool,
+    );
+    expect(Object.keys(tools).some((name) => name.includes('chart'))).toBe(
+      true,
+    );
+  });
+
+  it('creates and updates worksheet charts deterministically', async () => {
+    let currentBlocks: BlockDocumentNode[] = [];
+    const addBlock = jest.fn(
+      (_documentId: string, block: BlockDocumentBlock) => block.id,
+    );
+    const updateBlock = jest.fn(
+      (_documentId: string, _blockId: string, _block: BlockDocumentBlock) => {},
+    );
+    const blockDocumentAdapter: BlockDocumentAiAdapter &
+      BlockDocumentMoveBlockAiAdapter = {
+      ...createBlockDocumentAdapter(),
+      getBlocks: () => currentBlocks,
+      addBlock,
+      updateBlock,
+    };
+    const createTools = createCliBlockDocumentAiTools({
+      ...createOptions({blockDocumentAdapter}),
+      chartToolsOptions: {},
+      dashboardBlocksEnabled: false,
+      dataTableBlocksEnabled: false,
+    });
+    const histogram = createTools.create_block_document_chart_histogram as any;
+    const created = await histogram.execute({
+      tableName: 'earthquakes',
+      title: 'Magnitude Distribution',
+      settings: {field: 'magnitude'},
+    });
+
+    expect(created).toMatchObject({success: true});
+    expect(addBlock).toHaveBeenCalledWith(
+      'worksheet-1',
+      expect.objectContaining({type: 'chart'}),
+    );
+
+    const existingBlock = (addBlock.mock.calls[0] as any)[1];
+    currentBlocks = [blockDocumentBlockToNode(existingBlock)];
+    const updateTools = createCliBlockDocumentAiTools({
+      ...createOptions({blockDocumentAdapter}),
+      chartToolsOptions: {},
+      targetBlockId: existingBlock.id,
+      dashboardBlocksEnabled: false,
+      dataTableBlocksEnabled: false,
+    });
+    const updated = await (
+      updateTools.create_block_document_chart_histogram as any
+    ).execute({
+      tableName: 'earthquakes',
+      title: 'Updated Magnitude Distribution',
+      settings: {field: 'magnitude'},
+    });
+
+    expect(updated).toMatchObject({success: true});
+    expect(updateBlock).toHaveBeenCalledWith(
+      'worksheet-1',
+      existingBlock.id,
+      expect.objectContaining({caption: 'Updated Magnitude Distribution'}),
+    );
   });
 
   it('registers a built-in block document block move tool', async () => {

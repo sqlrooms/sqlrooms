@@ -5,6 +5,7 @@ import type {StatefulBlockArtifactType} from '../statefulBlockArtifactConfigs';
 export const CLI_CAPABILITY_PROFILE_NAMES = [
   'default',
   'experimental',
+  'worksheet-charts-maps',
 ] as const;
 
 /** A production capability profile name accepted by the CLI runtime. */
@@ -21,6 +22,13 @@ export type CliCommandGroupId =
   | 'html-app-revision';
 
 export type CliInstructionSetId = 'stable' | 'experimental';
+
+export type CliBlockDocumentCommandId =
+  | 'block-document.add-dashboard-block'
+  | 'block-document.add-data-table-block'
+  | 'block-document.add-html-app-block'
+  | 'block-document.update-block-metadata'
+  | 'block-document.add-map-block';
 
 export type CliTopLevelToolGroupId =
   | 'default-data-analysis'
@@ -86,6 +94,8 @@ export type CliCapabilityProfile = {
     readonly placeholderRenderers: readonly StatefulBlockArtifactType[];
   };
   readonly commands: readonly CliCommandGroupId[];
+  /** Optional command allowlist; omitted profiles retain the legacy full set. */
+  readonly blockDocumentCommands?: readonly CliBlockDocumentCommandId[];
   readonly ai: {
     readonly instructionSets: readonly CliInstructionSetId[];
     readonly topLevelToolGroups: readonly CliTopLevelToolGroupId[];

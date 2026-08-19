@@ -1,5 +1,6 @@
 export {DEFAULT_CLI_CAPABILITY_PROFILE} from './defaultProfile';
 export {EXPERIMENTAL_CLI_CAPABILITY_PROFILE} from './experimentalProfile';
+export {WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE} from './worksheetChartsMapsProfile';
 export {
   listCliCapabilityProfiles,
   resolveCliCapabilityProfile,
@@ -11,6 +12,7 @@ export {
   type CliCapabilityProfile,
   type CliCapabilityProfileName,
   type CliCapabilityProfileSnapshot,
+  type CliBlockDocumentCommandId,
   type CliCommandGroupId,
   type CliInstructionSetId,
   type CliLifecycleSliceId,

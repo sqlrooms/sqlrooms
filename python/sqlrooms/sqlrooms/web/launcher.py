@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
 NO_STORE_HEADERS = {"Cache-Control": "no-store"}
-CAPABILITY_PROFILE_NAMES = ("default", "experimental")
+CAPABILITY_PROFILE_NAMES = ("default", "experimental", "worksheet-charts-maps")
 
 
 async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
