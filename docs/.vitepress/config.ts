@@ -1,28 +1,28 @@
-import {createRequire} from 'node:module';
-import {existsSync, readFileSync} from 'node:fs';
-import {fileURLToPath} from 'node:url';
-import {defineConfig} from 'vitepress';
-import llmstxt from 'vitepress-plugin-llms';
-import {apiSidebarConfig} from './gen-api-sidebar.ts';
+import {createRequire} from "node:module";
+import {existsSync, readFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
+import {defineConfig} from "vitepress";
+import llmstxt from "vitepress-plugin-llms";
+import {apiSidebarConfig} from "./gen-api-sidebar.ts";
 
-const SITE_URL = 'https://sqlrooms.org';
+const SITE_URL = "https://sqlrooms.org";
 const require = createRequire(import.meta.url);
-const mermaidRequire = createRequire(require.resolve('mermaid/package.json'));
-const localVersion = require('../../lerna.json').version;
+const mermaidRequire = createRequire(require.resolve("mermaid/package.json"));
+const localVersion = require("../../lerna.json").version;
 
 function loadApiReleaseMetadata() {
   const metadataPath = fileURLToPath(
-    new URL('./api-release.generated.json', import.meta.url),
+    new URL("./api-release.generated.json", import.meta.url),
   );
 
   if (existsSync(metadataPath)) {
-    return JSON.parse(readFileSync(metadataPath, 'utf8'));
+    return JSON.parse(readFileSync(metadataPath, "utf8"));
   }
 
   return {
     version: localVersion,
     ref: `v${localVersion}`,
-    prerelease: localVersion.includes('-'),
+    prerelease: localVersion.includes("-"),
   };
 }
 
@@ -30,59 +30,12 @@ const apiRelease = loadApiReleaseMetadata();
 const apiReleaseUrl = `https://github.com/sqlrooms/sqlrooms/releases/tag/${apiRelease.ref}`;
 
 function publicUrl(relativePath?: string) {
-  const normalizedRelativePath = (relativePath || '').replace(/^\/+/, '');
+  const normalizedRelativePath = (relativePath || "").replace(/^\/+/, "");
 
   return `${SITE_URL}/${normalizedRelativePath}`
-    .replace(/index\.md$/, '')
-    .replace(/\.md$/, '.html');
+    .replace(/index\.md$/, "")
+    .replace(/\.md$/, ".html");
 }
-
-const PACKAGE_CATEGORIES = {
-  'Core Packages': [
-    'ai',
-    'ai-core',
-    'artifacts',
-    'db',
-    'room-shell',
-    'room-store',
-    'duckdb',
-    'duckdb-core',
-    'ui',
-    'layout',
-  ],
-  'Feature Packages': [
-    'ai-settings',
-    'blocks',
-    'cells',
-    'codemirror',
-    'color-scales',
-    'cosmos',
-    'data-table',
-    'db-settings',
-    'deck',
-    'documents',
-    'dropzone',
-    'kepler',
-    'monaco-editor',
-    'mosaic',
-    'motherduck',
-    'recharts',
-    's3-browser',
-    'schema-tree',
-    'sql-editor',
-    'vega',
-  ],
-  Experimental: [
-    'ai-rag',
-    'canvas',
-    'crdt',
-    'discuss',
-    'notebook',
-    'pivot',
-    'webcontainer',
-  ],
-  'Utility Packages': ['duckdb-node', 'utils'],
-};
 
 // https://vitepress.dev/reference/site-config
 const config = defineConfig({
@@ -92,7 +45,7 @@ const config = defineConfig({
 
       md.renderer.rules.fence = (tokens, index, options, env, self) => {
         const token = tokens[index];
-        if (token.info.trim() === 'mermaid') {
+        if (token.info.trim() === "mermaid") {
           const encoded = encodeURIComponent(token.content);
           return `<MermaidDiagram encoded="${encoded}" />`;
         }
@@ -108,23 +61,23 @@ const config = defineConfig({
       alias: [
         {
           find: /^dayjs$/,
-          replacement: mermaidRequire.resolve('dayjs/esm/index.js'),
+          replacement: mermaidRequire.resolve("dayjs/esm/index.js"),
         },
         {
           find: /^@braintree\/sanitize-url$/,
-          replacement: mermaidRequire.resolve('@braintree/sanitize-url'),
+          replacement: mermaidRequire.resolve("@braintree/sanitize-url"),
         },
         {
           find: /^cytoscape$/,
-          replacement: mermaidRequire.resolve('cytoscape'),
+          replacement: mermaidRequire.resolve("cytoscape"),
         },
         {
           find: /^cytoscape-cose-bilkent$/,
-          replacement: mermaidRequire.resolve('cytoscape-cose-bilkent'),
+          replacement: mermaidRequire.resolve("cytoscape-cose-bilkent"),
         },
         {
           find: /^debug$/,
-          replacement: mermaidRequire.resolve('debug'),
+          replacement: mermaidRequire.resolve("debug"),
         },
       ],
     },
@@ -134,31 +87,31 @@ const config = defineConfig({
         domain: SITE_URL,
         ignoreFiles: [
           // Omit generated media and non-reference pages from all LLM outputs.
-          'api/**/_media/**',
-          'join-slack.md',
-          'packages.md',
+          "api/**/_media/**",
+          "join-slack.md",
+          "packages.md",
         ],
         ignoreFilesPerOutput: {
           // Keep summary bundles focused on package-level docs, while still
           // generating per-symbol .md pages so package references can link to
           // useful markdown targets.
           llmsTxt: [
-            'api/**/classes/**',
-            'api/**/functions/**',
-            'api/**/interfaces/**',
-            'api/**/type-aliases/**',
-            'api/**/variables/**',
-            'api/**/enumerations/**',
-            'api/**/namespaces/**',
+            "api/**/classes/**",
+            "api/**/functions/**",
+            "api/**/interfaces/**",
+            "api/**/type-aliases/**",
+            "api/**/variables/**",
+            "api/**/enumerations/**",
+            "api/**/namespaces/**",
           ],
           llmsFullTxt: [
-            'api/**/classes/**',
-            'api/**/functions/**',
-            'api/**/interfaces/**',
-            'api/**/type-aliases/**',
-            'api/**/variables/**',
-            'api/**/enumerations/**',
-            'api/**/namespaces/**',
+            "api/**/classes/**",
+            "api/**/functions/**",
+            "api/**/interfaces/**",
+            "api/**/type-aliases/**",
+            "api/**/variables/**",
+            "api/**/enumerations/**",
+            "api/**/namespaces/**",
           ],
         },
         customLLMsTxtTemplate: `# {title}
@@ -198,20 +151,20 @@ Canonical package combos:
     ],
   },
   ignoreDeadLinks: true,
-  title: 'SQLRooms',
+  title: "SQLRooms",
   description:
-    'An open source React toolkit for human + agent collaborative analytics apps',
-  base: '/',
+    "An open source React toolkit for human + agent collaborative analytics apps",
+  base: "/",
   sitemap: {
     hostname: SITE_URL,
   },
   head: [
-    ['link', {rel: 'icon', href: '/logo.svg', type: 'image/svg+xml'}],
+    ["link", {rel: "icon", href: "/logo.svg", type: "image/svg+xml"}],
     [
-      'meta',
+      "meta",
       {
-        name: 'google-site-verification',
-        content: 'x-FE_DDWM1BS8Eu4JOG0el7pL1gWJgIM-fwFl2EG4OU',
+        name: "google-site-verification",
+        content: "x-FE_DDWM1BS8Eu4JOG0el7pL1gWJgIM-fwFl2EG4OU",
       },
     ],
   ],
@@ -220,22 +173,22 @@ Canonical package combos:
       ...apiRelease,
       url: apiReleaseUrl,
     },
-    outline: 'deep',
-    logo: '/logo.svg',
+    outline: "deep",
+    logo: "/logo.svg",
     search: {
-      provider: 'local',
+      provider: "local",
     },
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      {text: 'Home', link: '/'},
-      {text: 'Overview', link: '/overview'},
+      {text: "Home", link: "/"},
+      {text: "Overview", link: "/overview"},
       //{text: 'Concepts', link: '/key-concepts'},
-      {text: 'Examples', link: '/examples'},
-      {text: 'Case Studies', link: '/case-studies'},
-      {text: 'Get started', link: '/getting-started'},
+      {text: "Examples", link: "/examples"},
+      {text: "Case Studies", link: "/case-studies"},
+      {text: "Get started", link: "/getting-started"},
       {
         text: `API v${apiRelease.version}`,
-        link: apiReleaseUrl,
+        link: "/packages",
       },
       // {
       //   text: 'Join Slack',
@@ -246,104 +199,101 @@ Canonical package combos:
 
     sidebar: [
       {
-        text: 'Introduction',
+        text: "Introduction",
         items: [
           {
-            text: 'Overview',
-            link: '/overview',
+            text: "Overview",
+            link: "/overview",
           },
           {
-            text: 'Key Concepts',
-            link: '/key-concepts',
+            text: "Key Concepts",
+            link: "/key-concepts",
           },
           {
-            text: 'Modular Architecture',
-            link: '/modular-architecture',
+            text: "Modular Architecture",
+            link: "/modular-architecture",
           },
           {
-            text: 'Deployment Scenarios',
-            link: '/deployment-scenarios',
+            text: "Deployment Scenarios",
+            link: "/deployment-scenarios",
           },
           {
             text: "What's New",
-            link: '/whats-new',
+            link: "/whats-new",
           },
           {
-            text: 'Upgrade Guide',
-            link: '/upgrade-guide',
+            text: "Upgrade Guide",
+            link: "/upgrade-guide",
           },
         ],
       },
       {
-        text: 'Developer Guide',
+        text: "Developer Guide",
         items: [
           {
-            text: 'Getting Started',
-            link: '/getting-started',
+            text: "Getting Started",
+            link: "/getting-started",
           },
           {
-            text: 'State Management',
-            link: '/state-management',
+            text: "State Management",
+            link: "/state-management",
           },
           {
-            text: 'Persistence',
-            link: '/persistence',
+            text: "Persistence",
+            link: "/persistence",
           },
           {
-            text: 'Commands',
-            link: '/commands',
+            text: "Commands",
+            link: "/commands",
           },
           {
-            text: 'Query Cancellation',
-            link: '/query-cancellation',
+            text: "Query Cancellation",
+            link: "/query-cancellation",
           },
           {
-            text: 'Theming',
-            link: '/theming',
+            text: "Theming",
+            link: "/theming",
           },
           {
-            text: 'Offline Use',
-            link: '/offline-use',
-          },
-        ],
-      },
-
-      {
-        text: 'Examples',
-        items: [
-          {
-            text: 'Example Apps',
-            link: '/examples',
-          },
-          {
-            text: 'Case Studies',
-            link: '/case-studies',
+            text: "Offline Use",
+            link: "/offline-use",
           },
         ],
       },
 
       {
-        text: 'Reference',
+        text: "Examples",
         items: [
           {
-            text: 'Docs for LLMs',
-            link: '/llms',
+            text: "Example Apps",
+            link: "/examples",
           },
-          ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {
-            return {
-              text: category,
-              items: apiSidebarConfig.filter((item) =>
-                packages.includes(item.text),
-              ),
-            };
-          }),
+          {
+            text: "Case Studies",
+            link: "/case-studies",
+          },
+        ],
+      },
+
+      {
+        text: "Reference",
+        items: [
+          {
+            text: "Package Reference",
+            link: "/packages",
+          },
+          ...apiSidebarConfig,
+          {
+            text: "Docs for LLMs",
+            link: "/llms",
+          },
         ],
       },
     ],
 
     socialLinks: [
-      {icon: 'slack', link: '/join-slack'},
-      {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
+      {icon: "slack", link: "/join-slack"},
+      {icon: "github", link: "https://github.com/sqlrooms/sqlrooms"},
     ],
   },
   transformHead({pageData, siteData}: any) {
@@ -351,12 +301,12 @@ Canonical package combos:
 
     const frontmatter = pageData.frontmatter || {};
     const isHome =
-      frontmatter.layout === 'home' || pageData.relativePath === 'index.md';
+      frontmatter.layout === "home" || pageData.relativePath === "index.md";
 
     const hero = (frontmatter.hero as any) || {};
 
     const title = isHome
-      ? `${hero.name || siteData.title} – ${hero.text || ''}`.trim()
+      ? `${hero.name || siteData.title} – ${hero.text || ""}`.trim()
       : pageData.title || siteData.title;
 
     const description = isHome
@@ -366,15 +316,15 @@ Canonical package combos:
     const image = `${SITE_URL}/sqlrooms-og.webp`;
 
     return [
-      ['meta', {property: 'og:type', content: 'website'}],
-      ['meta', {property: 'og:title', content: title}],
-      ['meta', {property: 'og:description', content: description}],
-      ['meta', {property: 'og:image', content: image}],
-      ['meta', {property: 'og:url', content: url}],
-      ['meta', {name: 'twitter:card', content: 'summary_large_image'}],
-      ['meta', {name: 'twitter:title', content: title}],
-      ['meta', {name: 'twitter:description', content: description}],
-      ['meta', {name: 'twitter:image', content: image}],
+      ["meta", {property: "og:type", content: "website"}],
+      ["meta", {property: "og:title", content: title}],
+      ["meta", {property: "og:description", content: description}],
+      ["meta", {property: "og:image", content: image}],
+      ["meta", {property: "og:url", content: url}],
+      ["meta", {name: "twitter:card", content: "summary_large_image"}],
+      ["meta", {name: "twitter:title", content: title}],
+      ["meta", {name: "twitter:description", content: description}],
+      ["meta", {name: "twitter:image", content: image}],
     ];
   },
   transformPageData(pageData) {
@@ -386,13 +336,13 @@ Canonical package combos:
       : [];
 
     const hasCanonical = pageData.frontmatter.head.some(
-      (entry) => entry[0] === 'link' && entry[1]?.rel === 'canonical',
+      (entry) => entry[0] === "link" && entry[1]?.rel === "canonical",
     );
 
     if (!hasCanonical) {
       pageData.frontmatter.head.push([
-        'link',
-        {rel: 'canonical', href: canonicalUrl},
+        "link",
+        {rel: "canonical", href: canonicalUrl},
       ]);
     }
   },
