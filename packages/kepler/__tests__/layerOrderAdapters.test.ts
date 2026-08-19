@@ -5,10 +5,8 @@ import {
   SORTABLE_LAYER_TYPE,
   SORTABLE_SIDE_PANEL_TYPE,
 } from '@kepler.gl/components';
-import type {Layer} from '@kepler.gl/layers';
 import type {LayerOrder, LayerOrderGroup} from '@kepler.gl/types';
 import {isLayerOrderDragType} from '../src/components/CustomDndContext';
-import {orderLayersForLegend} from '../src/components/CustomMapLegend';
 import {getLayerOrderAfterDrag} from '../src/hooks/useDndLayers';
 
 const group = (id: string, layerOrder: LayerOrder): LayerOrderGroup => ({
@@ -152,22 +150,5 @@ describe('isLayerOrderDragType', () => {
     expect(isLayerOrderDragType(SORTABLE_LAYER_TYPE)).toBe(true);
     expect(isLayerOrderDragType(SORTABLE_LAYER_GROUP_TYPE)).toBe(true);
     expect(isLayerOrderDragType('effect')).toBe(false);
-  });
-});
-
-describe('orderLayersForLegend', () => {
-  it('uses flattened group order instead of the raw layers array', () => {
-    const layers = [
-      {id: 'a', config: {isVisible: true}},
-      {id: 'b', config: {isVisible: false}},
-      {id: 'c', config: {isVisible: true}},
-    ] as Layer[];
-    const layerOrder = [group('group-a', ['c', 'a']), 'b'];
-
-    expect(orderLayersForLegend(layers, layerOrder).map(({id}) => id)).toEqual([
-      'c',
-      'a',
-      'b',
-    ]);
   });
 });
