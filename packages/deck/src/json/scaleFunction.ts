@@ -115,13 +115,50 @@ export function compileLinearScaleExpression(
   return `@@=Math.max(${lo}, Math.min(${hi}, ${r0} + (${field} - ${d0}) / ${span} * ${r1 - r0}))`;
 }
 
-/** Elevation accessor for any Arrow column name (incl. non-identifiers). */
+function readLinearScaleRawValue(
+  value: unknown,
+  field: string,
+  vector: arrow.Vector,
+): unknown {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const object = value as {
+    index?: unknown;
+    data?: {data?: {getChild?: (name: string) => arrow.Vector | null}};
+    properties?: Record<string, unknown>;
+  };
+
+  if (typeof object.index === 'number') {
+    const batch = object.data?.data;
+    if (batch?.getChild) {
+      return batch.getChild(field)?.get(object.index);
+    }
+    if (batch) {
+      // Batch-local index (GeoArrow) without this field — do not fall back to
+      // the table-level vector.
+      return undefined;
+    }
+    return vector.get(object.index);
+  }
+
+  const sources = [object.properties, object as Record<string, unknown>];
+  for (const source of sources) {
+    if (source && typeof source === 'object' && field in source) {
+      return source[field];
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Elevation accessor for any Arrow column name (incl. non-identifiers).
+ * Reads GeoArrow `{index, data}` callbacks or GeoJSON `{properties}` features.
+ */
 export function compileLinearScaleAccessor(
   table: arrow.Table,
   scale: LinearScaleConfig,
-):
-  | ((info: {index: number; data: {data: unknown}; target: number[]}) => number)
-  | undefined {
+): ((value: unknown) => number) | undefined {
   const field = scale.field.trim();
   if (!field) return undefined;
 
@@ -137,10 +174,8 @@ export function compileLinearScaleAccessor(
   const [d0, d1] = domain;
   const range = scale.range;
 
-  return ({index, data}) => {
-    const batch = data.data as arrow.Table | arrow.RecordBatch;
-    const child = batch.getChild?.(field) ?? vector;
-    const raw = child?.get(index);
+  return (value) => {
+    const raw = readLinearScaleRawValue(value, field, vector);
     if (raw == null) return 0;
     const v = Number(raw);
     if (!Number.isFinite(v)) return 0;

@@ -36,6 +36,8 @@ export type WKBHeader = {
 };
 
 export type WKBPolygonCoordinateVisitor = {
+  /** Called once per polygon part. Used when visiting MultiPolygon. */
+  onPolygonStart?: () => void;
   onRingStart: () => void;
   onCoordinate: (x: number, y: number) => void;
 };
@@ -182,6 +184,7 @@ export function visitWKBMultiPolygonCoordinates(
   for (let polygonIndex = 0; polygonIndex < numPolygons; polygonIndex++) {
     const polygonHeader = parseWKBHeader(buf, offset);
     if (!polygonHeader || polygonHeader.geomType !== WKB_POLYGON) return false;
+    visitor.onPolygonStart?.();
     const nextOffset = visitWKBPolygonCoordinates(buf, polygonHeader, visitor);
     if (nextOffset == null) return false;
     offset = nextOffset;

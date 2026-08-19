@@ -228,7 +228,7 @@ export function DeckMapSurface({
   if (configIssues.length > 0) {
     return (
       <div className="text-destructive flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">
-        {`Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}`}
+        {`Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}. Open map settings to change the layer type or fix the config.`}
       </div>
     );
   }

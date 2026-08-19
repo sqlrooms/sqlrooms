@@ -393,6 +393,60 @@ describe('createDeckJsonConfiguration', () => {
     expect(elev({index: 1, data: {data: batch}, target: []})).toBeCloseTo(200);
   });
 
+  it('compiles getElevation scale for GeoJsonLayer from feature properties', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+          'POLYGON((4 0, 6 0, 6 2, 4 2, 4 0))',
+        ],
+        new Utf8(),
+      ),
+      height: vectorFromArray([10, 30], new Float64()),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoJsonLayer',
+          id: 'buildings',
+          extruded: true,
+          _sqlroomsBinding: {
+            dataset: 'buildings',
+            geometryColumn: 'geom',
+          },
+          getElevation: {
+            '@@function': 'scale',
+            field: 'height',
+            type: 'linear',
+            domain: 'auto',
+            range: [0, 200],
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    const getElevation = converted.layers[0]?.props.getElevation;
+    expect(typeof getElevation).toBe('function');
+
+    const elev = getElevation as (object: unknown) => number;
+    expect(elev({properties: {height: 10}})).toBeCloseTo(0);
+    expect(elev({properties: {height: 30}})).toBeCloseTo(200);
+    expect(
+      (converted.layers[0]?.props.updateTriggers as {getElevation?: string})
+        ?.getElevation,
+    ).toContain('height');
+  });
+
   it('keeps explicit getFillColor while still compiling getLineColor colorScale', () => {
     const table = createPointTable();
     const converter = createConverter({
@@ -543,7 +597,7 @@ describe('extractColorScaleLegends', () => {
     };
   }
 
-  it('preserves distinct legends for fill and line color scales', () => {
+  it('shows only the fill legend when fill and stroke both have color scales', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -573,16 +627,40 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(2);
-    expect(legends.map((l) => l.title)).toEqual(['magnitude', 'magnitude']);
-    expect(legends[0]).toMatchObject({type: 'continuous'});
-    expect(legends[1]).toMatchObject({type: 'continuous'});
-    expect((legends[0] as {gradient: string}).gradient).not.toBe(
-      (legends[1] as {gradient: string}).gradient,
-    );
+    expect(legends).toHaveLength(1);
+    expect(legends[0]).toMatchObject({type: 'continuous', title: 'magnitude'});
   });
 
-  it('keeps both fill and line legends when titles differ', () => {
+  it('shows stroke legend only when fill has no color scale', () => {
+    const table = createPointTable();
+    const legends = extractColorScaleLegends({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            id: 'points',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+            getFillColor: [56, 189, 248, 180],
+            getLineColor: {
+              '@@function': 'colorScale',
+              field: 'magnitude',
+              type: 'sequential',
+              scheme: 'YlOrRd',
+              domain: 'auto',
+              legend: {title: 'Stroke Legend'},
+            },
+          },
+        ],
+      },
+      datasetIds: ['earthquakes'],
+      datasetStates: {earthquakes: createReadyState(table)},
+    });
+
+    expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('Stroke Legend');
+  });
+
+  it('prefers fill title when both scales exist even if titles differ', () => {
     const table = createPointTable();
     const legends = extractColorScaleLegends({
       spec: {
@@ -614,8 +692,8 @@ describe('extractColorScaleLegends', () => {
       datasetStates: {earthquakes: createReadyState(table)},
     });
 
-    expect(legends).toHaveLength(2);
-    expect(legends.map((l) => l.title)).toEqual(['Fill Legend', 'Line Legend']);
+    expect(legends).toHaveLength(1);
+    expect(legends[0]!.title).toBe('Fill Legend');
   });
 
   it('dedupes identical color-scale legends on the same layer', () => {
@@ -879,7 +957,7 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
     ).toThrow(/GeoJsonLayer|POLYGON|mixed|Sampled geometry types/i);
   });
 
-  it('declines MultiPolygon promotion instead of flattening polygon parts', () => {
+  it('promotes WKT MultiPolygon to GeoArrowPolygonLayer without flattening parts', () => {
     const table = new Table({
       geom: vectorFromArray(
         [
@@ -898,20 +976,105 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
       islands: {status: 'ready', prepared},
     });
 
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPolygonLayer',
+          id: 'islands',
+          _sqlroomsBinding: {
+            dataset: 'islands',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.props.getPolygon).toBeDefined();
+    expect(converted.layers[0]?.props.data).toBeDefined();
+
+    const promoted = prepared.getGeoArrowLayerData('geom');
+    expect(promoted.encoding).toBe('geoarrow.multipolygon');
+    expect(promoted.geometryColumn.get(0)?.length).toBe(2);
+  });
+
+  it('promotes mixed Polygon and MultiPolygon WKT on GeoArrowPolygonLayer', () => {
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          'POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))',
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowPolygonLayer',
+          id: 'buildings',
+          _sqlroomsBinding: {
+            dataset: 'buildings',
+            geometryColumn: 'geom',
+          },
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.props.getPolygon).toBeDefined();
+    const promoted = prepared.getGeoArrowLayerData('geom');
+    expect(promoted.encoding).toBe('geoarrow.multipolygon');
+    expect(promoted.geometryColumn.get(0)?.length).toBe(1);
+    expect(promoted.geometryColumn.get(1)?.length).toBe(2);
+  });
+
+  it('promotes MultiPolygon after a Polygon-only sample window', () => {
+    const polygonWkt = 'POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))';
+    const table = new Table({
+      geom: vectorFromArray(
+        [
+          ...Array.from({length: 100}, () => polygonWkt),
+          'MULTIPOLYGON(((0 0, 2 0, 2 2, 0 2, 0 0)), ((10 10, 12 10, 12 12, 10 12, 10 10)))',
+        ],
+        new Utf8(),
+      ),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'buildings',
+      table,
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkt',
+    });
+    const converter = createConverter({
+      buildings: {status: 'ready', prepared},
+    });
+
     expect(() =>
       converter.convert({
         layers: [
           {
             '@@type': 'GeoArrowPolygonLayer',
-            id: 'islands',
+            id: 'buildings',
             _sqlroomsBinding: {
-              dataset: 'islands',
+              dataset: 'buildings',
               geometryColumn: 'geom',
             },
           },
         ],
       }),
-    ).toThrow(/GeoJsonLayer|MultiPolygon/i);
+    ).not.toThrow();
+    expect(prepared.getGeoArrowLayerData('geom').encoding).toBe(
+      'geoarrow.multipolygon',
+    );
   });
 
   it('preserves MultiPolygon parts through the GeoJsonLayer path', () => {

@@ -7,6 +7,7 @@ import {
 } from '@sqlrooms/duckdb';
 import {
   createDeckMapDashboardPanelConfig,
+  isDeckMapTableDatasetSource,
   type DeckMapDashboardPanelConfig,
   type DeckMapConfig,
 } from './mapConfig';
@@ -700,5 +701,51 @@ export function regenerateMapConfigForTable(
     ...existingConfig,
     datasets: nextConfig.datasets,
     fitToData: nextConfig.fitToData ?? existingConfig.fitToData,
+  };
+}
+
+/**
+ * Applies a worksheet map table pick: regenerate geospatial config when
+ * possible, otherwise retarget the single table-backed dataset.
+ */
+export function applyDeckMapTableSelection(
+  config: DeckMapConfig,
+  table: DataTable,
+  longitudeColumn?: string,
+  latitudeColumn?: string,
+): DeckMapConfig {
+  const regenerated = regenerateMapConfigForTable(
+    {config},
+    table,
+    longitudeColumn,
+    latitudeColumn,
+  );
+  if (regenerated !== config) {
+    return regenerated as DeckMapConfig;
+  }
+
+  const datasetIds = Object.keys(config.datasets ?? {});
+  if (datasetIds.length !== 1) return config;
+  const datasetId = datasetIds[0]!;
+  const dataset = config.datasets[datasetId];
+  if (!dataset || !isDeckMapTableDatasetSource(dataset.source)) {
+    return config;
+  }
+
+  const tableName = quoteDeckMapSqlTableReference(table.table);
+  if (dataset.source.tableName === tableName) return config;
+
+  return {
+    ...config,
+    datasets: {
+      ...config.datasets,
+      [datasetId]: {
+        ...dataset,
+        source: {
+          ...dataset.source,
+          tableName,
+        },
+      },
+    },
   };
 }

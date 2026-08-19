@@ -1331,6 +1331,36 @@ describe('Deck map resource authoring contract', () => {
     );
   });
 
+  test('rejects unsupported layer types', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowSolidPolygonLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {tableName: 'places'},
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        },
+      },
+    });
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0.@@type',
+          message: expect.stringMatching(
+            /use a supported Deck map layer type \(.*GeoArrowPolygonLayer.*\) — "GeoArrowSolidPolygonLayer" is not allowed/,
+          ),
+        }),
+      ]),
+    );
+  });
+
   test('rejects ColorScale @@type/column color accessor syntax', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {
