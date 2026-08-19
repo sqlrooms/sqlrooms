@@ -54,19 +54,41 @@ export function ScrollableRow({
     updateScrollState();
 
     container.addEventListener('scroll', updateScrollState);
+
     const resizeObserver = new ResizeObserver(updateScrollState);
     resizeObserver.observe(container);
+
+    // The container's own box stays fixed when its content changes size (e.g.
+    // loading placeholders replaced by wider suggestions), so ResizeObserver
+    // on the container alone would leave the arrows stale. Observe each child
+    // element instead, and re-observe as children are added or removed, so
+    // overflow changes track content-size changes too.
+    const contentObserver = new ResizeObserver(updateScrollState);
+    const observeChildren = () => {
+      contentObserver.disconnect();
+      for (const child of Array.from(container.children)) {
+        contentObserver.observe(child);
+      }
+    };
+    observeChildren();
+
+    const mutationObserver = new MutationObserver(() => {
+      observeChildren();
+      updateScrollState();
+    });
+    mutationObserver.observe(container, {childList: true});
 
     return () => {
       container.removeEventListener('scroll', updateScrollState);
       resizeObserver.disconnect();
+      contentObserver.disconnect();
+      mutationObserver.disconnect();
     };
-    // `children` is intentionally excluded: it is typically a fresh array on
-    // every parent render, and depending on it would re-run this effect (and
-    // call setState) on every render, tripping React's "Maximum update depth
-    // exceeded" warning. Content changes are still reflected here because
-    // ResizeObserver re-fires on content-size changes and the scroll listener
-    // covers user/dnd scrolling.
+    // `children` is intentionally excluded from the deps: it is typically a
+    // fresh array on every parent render, and re-running this effect (which
+    // calls setState) on every render would trip React's "Maximum update depth
+    // exceeded" warning. Content changes are handled instead by observing the
+    // child elements above; the scroll listener covers user/dnd scrolling.
   }, [containerRef]);
 
   const arrowBaseClass = cn(
