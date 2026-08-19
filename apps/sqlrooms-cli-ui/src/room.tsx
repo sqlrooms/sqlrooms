@@ -10,6 +10,8 @@ import {CliWorkspaceTopbar} from './workspace/CliWorkspaceTopbar';
 import {CliWorkspaceSidebar} from './workspace/sidebar';
 import {roomStore} from './store';
 import {CliDuckDbConnectionLostDialog} from './components/CliDuckDbConnectionLostDialog';
+import {CliMcpBridge} from './components/CliMcpBridge';
+import {CliMcpQueryApprovalDialog} from './components/CliMcpQueryApprovalDialog';
 
 export const Room = () => {
   const sqlEditor = useDisclosure();
@@ -24,6 +26,8 @@ export const Room = () => {
             <RoomShell.LoadingProgress />
             <RoomShell.CommandPalette />
             <CliDuckDbConnectionLostDialog />
+            <CliMcpBridge />
+            <CliMcpQueryApprovalDialog />
             <SqlEditorModal
               isOpen={sqlEditor.isOpen}
               onClose={sqlEditor.onClose}

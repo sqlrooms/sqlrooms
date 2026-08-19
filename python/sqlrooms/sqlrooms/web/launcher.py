@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import errno
+import hmac
 import json
 import logging
 import os
@@ -40,6 +41,8 @@ from .db_bridge import (
     build_cli_db_bridge_registry,
     build_ephemeral_connector,
 )
+from .mcp import SqlroomsMcpService
+from .mcp_bridge import McpBridgeBroker
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
@@ -354,16 +357,24 @@ def _pick_free_port(
                 return port
         raise RuntimeError(f"No available port found starting from {start_port}.")
 
-    sock = socket.socket(family, socket.SOCK_STREAM)
+    sockets = []
     try:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if family == socket.AF_INET6:
-            sock.bind((host, 0, 0, 0))
-        else:
-            sock.bind((host, 0))
-        return int(sock.getsockname()[1])
+        # Keep rejected sockets open so the OS cannot select the same reserved
+        # ephemeral port again on the next attempt.
+        for _attempt in range(len(reserved) + 1):
+            sock = socket.socket(family, socket.SOCK_STREAM)
+            sockets.append(sock)
+            if family == socket.AF_INET6:
+                sock.bind((host, 0, 0, 0))
+            else:
+                sock.bind((host, 0))
+            port = int(sock.getsockname()[1])
+            if port not in reserved:
+                return port
+        raise RuntimeError("No unreserved ephemeral port was available.")
     finally:
-        sock.close()
+        for sock in sockets:
+            sock.close()
 
 
 def _normalize_sql_for_policy(sql: str) -> str:
@@ -452,6 +463,8 @@ class SqlroomsHttpServer:
         external_url: str | None = None,
         external_ws_url: str | None = None,
         ai_devtools: bool = False,
+        mcp_enabled: bool = False,
+        mcp_port: int | None = None,
         debug: bool = False,
     ):
         db_path_str = str(db_path)
@@ -470,7 +483,12 @@ class SqlroomsHttpServer:
         if ws_port is None:
             # socketify listens on all interfaces; we pick a free local port for convenience
             # to avoid collisions when multiple dev servers are running.
-            self.ws_port = _pick_free_port(self._public_host())
+            reserved_ports = {self.port}
+            if mcp_port is not None:
+                reserved_ports.add(mcp_port)
+            self.ws_port = _pick_free_port(
+                self._public_host(), reserved_ports=reserved_ports
+            )
         else:
             self.ws_port = ws_port
         self.llm_provider = llm_provider
@@ -483,6 +501,7 @@ class SqlroomsHttpServer:
         self.serve_ui = serve_ui
         self.experimental_enabled = bool(experimental_enabled)
         self.ai_devtools = bool(ai_devtools)
+        self.mcp_enabled_default = bool(mcp_enabled)
         self.debug = bool(debug)
         self.sync_enabled = bool(sync_enabled)
         self.meta_db = meta_db
@@ -496,6 +515,9 @@ class SqlroomsHttpServer:
         self.connector_settings = connector_settings or []
         self.external_url = external_url.rstrip("/") if external_url else None
         self.external_ws_url = external_ws_url if external_ws_url else None
+        self.mcp_port = mcp_port or _pick_free_port(
+            "127.0.0.1", 42100, reserved_ports={self.port, self.ws_port}
+        )
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -507,6 +529,12 @@ class SqlroomsHttpServer:
         self._duckdb_thread: threading.Thread | None = None
         self._duckdb_ready = threading.Event()
         self._duckdb_start_error: BaseException | None = None
+        self.mcp_broker = McpBridgeBroker(self.session_token)
+        self.mcp_service = SqlroomsMcpService(self.mcp_broker)
+        self._mcp_server: uvicorn.Server | None = None
+        self._mcp_task: asyncio.Task[None] | None = None
+        self._mcp_lock = asyncio.Lock()
+        self._mcp_last_error: str | None = None
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
@@ -525,6 +553,8 @@ class SqlroomsHttpServer:
         if self.sync_enabled:
             logger.info("CRDT sync is ENABLED")
         self._start_duckdb_backend()
+        if self.mcp_enabled_default:
+            await self._start_mcp()
         app = self._build_app()
 
         if self.open_browser and self.serve_ui:
@@ -543,7 +573,103 @@ class SqlroomsHttpServer:
             loop="asyncio",
         )
         server = uvicorn.Server(config)
-        await server.serve()
+        try:
+            await server.serve()
+        finally:
+            await self._stop_mcp()
+            await self.mcp_broker.close()
+
+    async def _start_mcp(self) -> Dict[str, Any]:
+        async with self._mcp_lock:
+            if self._mcp_task is not None and not self._mcp_task.done():
+                return self._mcp_status()
+            self._mcp_last_error = None
+            # The MCP SDK's StreamableHTTPSessionManager is single-use. Build a
+            # fresh service whenever the independently controlled listener is
+            # started so a stop/start cycle gets a new session manager.
+            self.mcp_service = SqlroomsMcpService(self.mcp_broker)
+            config = uvicorn.Config(
+                self.mcp_service.app,
+                host="127.0.0.1",
+                port=self.mcp_port,
+                log_level="debug" if self.debug else "warning",
+                access_log=self.debug,
+                lifespan="on",
+                loop="asyncio",
+            )
+            server = uvicorn.Server(config)
+
+            async def serve_mcp() -> None:
+                try:
+                    await server.serve()
+                except SystemExit as exc:
+                    raise RuntimeError(
+                        f"MCP listener failed to start (exit code {exc.code})."
+                    ) from exc
+
+            task = asyncio.create_task(serve_mcp(), name="sqlrooms-mcp-server")
+            self._mcp_server = server
+            self._mcp_task = task
+            for _ in range(1_000):
+                if server.started:
+                    logger.info("SQLRooms MCP URL: %s", self._mcp_url())
+                    return self._mcp_status()
+                if task.done():
+                    try:
+                        task.result()
+                    except Exception as exc:
+                        self._mcp_last_error = str(exc)
+                    self._mcp_server = None
+                    self._mcp_task = None
+                    raise RuntimeError(
+                        self._mcp_last_error or "MCP listener failed to start."
+                    )
+                await asyncio.sleep(0.01)
+            server.should_exit = True
+            await asyncio.gather(task, return_exceptions=True)
+            self._mcp_server = None
+            self._mcp_task = None
+            self._mcp_last_error = "Timed out starting MCP listener."
+            raise RuntimeError(self._mcp_last_error)
+
+    async def _stop_mcp(self) -> Dict[str, Any]:
+        async with self._mcp_lock:
+            server = self._mcp_server
+            task = self._mcp_task
+            if server is None or task is None:
+                return self._mcp_status()
+            server.should_exit = True
+            try:
+                await asyncio.wait_for(task, timeout=5)
+            except asyncio.TimeoutError:
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                self._mcp_last_error = "Timed out stopping MCP listener."
+            finally:
+                self._mcp_server = None
+                self._mcp_task = None
+            return self._mcp_status()
+
+    def _mcp_status(self) -> Dict[str, Any]:
+        running = self._mcp_task is not None and not self._mcp_task.done()
+        bridge = self.mcp_broker.status()
+        if self._mcp_last_error:
+            status = "error"
+        elif not running:
+            status = "off"
+        elif bridge["status"] != "ready":
+            status = "waiting"
+        elif bridge["pendingRequests"] or bridge["recentActivity"]:
+            status = "working"
+        else:
+            status = "ready"
+        return {
+            "status": status,
+            "enabled": running,
+            "url": self._mcp_url(),
+            "bridge": bridge,
+            "lastError": self._mcp_last_error,
+        }
 
     def _open_browser(self) -> None:
         url = self._ui_url()
@@ -581,6 +707,24 @@ class SqlroomsHttpServer:
 
     def _ws_proxy_url(self) -> str:
         return f"ws://{self._host_for_url(self._ui_host())}:{self.port}/ws/duckdb"
+
+    def _mcp_url(self) -> str:
+        return f"http://127.0.0.1:{self.mcp_port}/mcp"
+
+    def _mcp_bridge_url(self) -> str:
+        if self.external_url:
+            parsed = urlsplit(self.external_url)
+            scheme = "wss" if parsed.scheme == "https" else "ws"
+            return urlunsplit(
+                (
+                    scheme,
+                    parsed.netloc,
+                    f"{parsed.path.rstrip('/')}/ws/mcp-bridge",
+                    "",
+                    "",
+                )
+            )
+        return f"ws://{self._host_for_url(self._ui_host())}:{self.port}/ws/mcp-bridge"
 
     def _assert_ui_available(self) -> None:
         if not self.serve_ui:
@@ -692,6 +836,7 @@ class SqlroomsHttpServer:
             "status": status,
             "components": {
                 "duckdbWebSocket": duckdb_status,
+                "mcp": self._mcp_status(),
             },
         }
 
@@ -725,6 +870,11 @@ class SqlroomsHttpServer:
             "dbPath": self.duckdb_database,
             "metaNamespace": self.meta_namespace,
             "startupStatus": self._runtime_status(),
+            "mcp": {
+                "enabled": self._mcp_status()["enabled"],
+                "url": self._mcp_url(),
+                "bridgeUrl": self._mcp_bridge_url(),
+            },
             "dbBridge": {
                 "id": self.db_bridge_registry.bridge_id,
                 "connections": self.db_bridge_registry.runtime_connections(),
@@ -748,6 +898,19 @@ class SqlroomsHttpServer:
 
     def _require_api_auth(self, request: Request):
         if self._is_authorized_request(request):
+            return None
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    def _require_session_token(self, request: Request):
+        auth_header = (request.headers.get("authorization") or "").strip()
+        bearer_token = (
+            auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+        )
+        header_token = (request.headers.get("x-sqlrooms-token") or "").strip()
+        expected = self.session_token.encode("utf-8")
+        bearer_matches = hmac.compare_digest(bearer_token.encode("utf-8"), expected)
+        header_matches = hmac.compare_digest(header_token.encode("utf-8"), expected)
+        if bearer_matches or header_matches:
             return None
         return JSONResponse({"error": "unauthorized"}, status_code=401)
 
@@ -883,6 +1046,10 @@ class SqlroomsHttpServer:
                 except Exception:
                     pass
 
+        @app.websocket("/ws/mcp-bridge")
+        async def mcp_browser_bridge(client_ws: WebSocket):
+            await self.mcp_broker.handle_websocket(client_ws)
+
         @app.get("/api/status")
         async def get_status():
             return self._runtime_status()
@@ -890,6 +1057,31 @@ class SqlroomsHttpServer:
         @app.get("/status.json")
         async def get_status_json():
             return self._runtime_status()
+
+        @app.get("/api/mcp/status")
+        async def get_mcp_status(request: Request):
+            unauthorized = self._require_session_token(request)
+            if unauthorized is not None:
+                return unauthorized
+            return self._mcp_status()
+
+        @app.post("/api/mcp/start")
+        async def start_mcp(request: Request):
+            unauthorized = self._require_session_token(request)
+            if unauthorized is not None:
+                return unauthorized
+            try:
+                return await self._start_mcp()
+            except Exception as exc:
+                self._mcp_last_error = str(exc)
+                return JSONResponse(self._mcp_status(), status_code=500)
+
+        @app.post("/api/mcp/stop")
+        async def stop_mcp(request: Request):
+            unauthorized = self._require_session_token(request)
+            if unauthorized is not None:
+                return unauthorized
+            return await self._stop_mcp()
 
         @app.get("/api/db/settings")
         async def get_db_settings():

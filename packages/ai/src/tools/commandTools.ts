@@ -4,7 +4,10 @@ import {
   getAiRunContextPrimaryItem,
   type AiRunContext,
 } from '@sqlrooms/ai-config';
-import {hasCommandSliceState} from '@sqlrooms/room-shell';
+import {
+  hasCommandSliceState,
+  invokeCommandWithPolicy,
+} from '@sqlrooms/room-shell';
 import type {
   BaseRoomStoreState,
   RoomCommandDescriptor,
@@ -444,7 +447,8 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
           } satisfies ExecuteCommandToolLlmResult;
         }
 
-        const result = await state.commands.invokeCommand(
+        const result = await invokeCommandWithPolicy(
+          store,
           commandId,
           input,
           createCommandToolInvocationOptions(
@@ -453,6 +457,7 @@ Call ${searchToolName} first to discover valid command IDs. Call ${getToolName} 
             context,
             state,
           ),
+          {confirmed: confirmed === true},
         );
         if (result.success) {
           return {

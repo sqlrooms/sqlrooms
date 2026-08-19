@@ -68,14 +68,23 @@ def _configure_logging(*, debug: bool) -> None:
     logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
 
 
-def _resolve_http_port(host: str, port: int | None, ws_port: int | None = None) -> int:
+def _resolve_http_port(
+    host: str,
+    port: int | None,
+    ws_port: int | None = None,
+    mcp_port: int | None = None,
+) -> int:
     if port is not None:
         return port
-    reserved_ports = {ws_port} if ws_port is not None else None
+    reserved_ports = {
+        reserved_port
+        for reserved_port in (ws_port, mcp_port)
+        if reserved_port is not None
+    }
     selected_port = _pick_free_port(
         host,
         DEFAULT_HTTP_PORT,
-        reserved_ports=reserved_ports,
+        reserved_ports=reserved_ports or None,
     )
     if selected_port != DEFAULT_HTTP_PORT:
         logger.info(
@@ -502,6 +511,16 @@ def main(
         envvar="SQLROOMS_AI_DEVTOOLS",
         help="Enable the AI session devtools button in the UI, including production-built UI bundles.",
     ),
+    mcp: bool = typer.Option(
+        False,
+        "--mcp",
+        help="Start the loopback-only MCP server for the live SQLRooms room.",
+    ),
+    mcp_port: int | None = typer.Option(
+        None,
+        "--mcp-port",
+        help="Loopback MCP HTTP port. If omitted, port 42100 or the next free port is used.",
+    ),
     debug: bool = typer.Option(
         False,
         "--debug",
@@ -549,6 +568,11 @@ def main(
     if experimental_sync and not experimental:
         typer.echo("--experimental-sync requires --experimental.", err=True)
         raise typer.Exit(code=1)
+    if mcp and no_ui:
+        typer.echo(
+            "--mcp requires the browser UI and cannot be used with --no-ui.", err=True
+        )
+        raise typer.Exit(code=1)
 
     resolved_db_path = db_path if db_path is not None else db_path_option
     if resolved_db_path is None or not resolved_db_path.strip():
@@ -579,7 +603,13 @@ def main(
         config_path if config_path else (None if no_config else DEFAULT_CONFIG_PATH)
     )
 
-    selected_port = _resolve_http_port(host, port, ws_port)
+    if mcp_port is not None and not 1 <= mcp_port <= 65535:
+        typer.echo("--mcp-port must be between 1 and 65535.", err=True)
+        raise typer.Exit(code=1)
+    selected_port = _resolve_http_port(host, port, ws_port, mcp_port)
+    if mcp_port is not None and mcp_port in {selected_port, ws_port}:
+        typer.echo("--mcp-port must differ from --port and --ws-port.", err=True)
+        raise typer.Exit(code=1)
     selected_api_key = (
         str(ai_providers.get(llm_provider or "", {}).get("apiKey") or "")
         if llm_provider
@@ -608,6 +638,8 @@ def main(
         external_url=external_url,
         external_ws_url=external_ws_url,
         ai_devtools=ai_devtools,
+        mcp_enabled=mcp,
+        mcp_port=mcp_port,
         debug=debug,
     )
     try:

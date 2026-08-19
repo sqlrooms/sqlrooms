@@ -48,9 +48,99 @@ def test_api_config(server):
     assert data["dbBridge"]["connections"] == []
     assert data["dbBridge"]["diagnostics"] == []
     assert "wsAuthToken" in data
+    assert data["mcp"]["enabled"] is False
+    assert data["mcp"]["url"].startswith("http://127.0.0.1:")
+    assert data["mcp"]["url"].endswith("/mcp")
+    assert data["mcp"]["bridgeUrl"].endswith("/ws/mcp-bridge")
     assert (
         data["startupStatus"]["components"]["duckdbWebSocket"]["status"] == "starting"
     )
+
+
+def test_auto_ws_port_reserves_explicit_mcp_port(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_pick_free_port(host, start_port=None, *, reserved_ports=None):
+        calls.append((host, start_port, reserved_ports))
+        return 43101
+
+    monkeypatch.setattr("sqlrooms.web.launcher._pick_free_port", fake_pick_free_port)
+
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=4173,
+        ws_port=None,
+        mcp_port=43100,
+        open_browser=False,
+    )
+
+    assert server.ws_port == 43101
+    assert calls[0][2] == {4173, 43100}
+
+
+def test_mcp_lifecycle_status_requires_session_token(server):
+    client = TestClient(server._build_app())
+
+    assert client.get("/api/mcp/status").status_code == 401
+    response = client.get(
+        "/api/mcp/status",
+        headers={"X-SQLRooms-Token": server.session_token},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "off"
+
+
+def test_mcp_status_accepts_valid_header_when_bearer_is_invalid(server):
+    client = TestClient(server._build_app())
+
+    response = client.get(
+        "/api/mcp/status",
+        headers={
+            "Authorization": "Bearer incorrect",
+            "X-SQLRooms-Token": server.session_token,
+        },
+    )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_mcp_listener_lifecycle_is_repeatable(server):
+    first = await server._start_mcp()
+    repeated = await server._start_mcp()
+
+    assert first["enabled"] is True
+    assert first["status"] == "waiting"
+    assert repeated["url"] == first["url"]
+    assert (await server._stop_mcp())["status"] == "off"
+
+    restarted = await server._start_mcp()
+    assert restarted["enabled"] is True
+    assert (await server._stop_mcp())["status"] == "off"
+
+
+@pytest.mark.asyncio
+async def test_mcp_start_normalizes_uvicorn_system_exit(server, monkeypatch):
+    class FailingUvicornServer:
+        started = False
+        should_exit = False
+
+        def __init__(self, _config):
+            pass
+
+        async def serve(self):
+            raise SystemExit(1)
+
+    monkeypatch.setattr("sqlrooms.web.launcher.uvicorn.Server", FailingUvicornServer)
+
+    with pytest.raises(RuntimeError, match="exit code 1"):
+        await server._start_mcp()
+
+    assert server._mcp_last_error == "MCP listener failed to start (exit code 1)."
+    assert server._mcp_server is None
+    assert server._mcp_task is None
 
 
 def test_api_config_uses_same_origin_ws_proxy(tmp_path):
@@ -94,6 +184,82 @@ def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
     assert exc_info.value.code == 1013
     assert "DuckDB websocket backend unavailable" in caplog.text
     assert "DuckDB websocket proxy failed" not in caplog.text
+
+
+def test_mcp_browser_bridge_requires_auth(server):
+    client = TestClient(server._build_app())
+
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with client.websocket_connect("/ws/mcp-bridge") as ws:
+            ws.send_json(
+                {
+                    "version": 1,
+                    "type": "bridge.authenticate",
+                    "pageId": "page-a",
+                    "token": "wrong",
+                }
+            )
+            ws.receive_json()
+
+    assert exc_info.value.code == 4401
+
+
+def test_mcp_browser_bridge_holds_single_ready_lease(server):
+    client = TestClient(server._build_app())
+
+    with client.websocket_connect("/ws/mcp-bridge") as first:
+        first.send_json(
+            {
+                "version": 1,
+                "type": "bridge.authenticate",
+                "pageId": "page-a",
+                "token": server.session_token,
+            }
+        )
+        assert first.receive_json()["type"] == "bridge.authenticated"
+        first.send_json({"version": 1, "type": "bridge.ready", "pageId": "page-a"})
+
+        with client.websocket_connect("/ws/mcp-bridge") as second:
+            second.send_json(
+                {
+                    "version": 1,
+                    "type": "bridge.authenticate",
+                    "pageId": "page-b",
+                    "token": server.session_token,
+                }
+            )
+            assert second.receive_json()["code"] == "bridge_lease_held"
+            with pytest.raises(WebSocketDisconnect) as exc_info:
+                second.receive_json()
+            assert exc_info.value.code == 4409
+
+
+def test_mcp_browser_bridge_ignores_malformed_json_after_auth(server):
+    client = TestClient(server._build_app())
+
+    with client.websocket_connect("/ws/mcp-bridge") as first:
+        first.send_json(
+            {
+                "version": 1,
+                "type": "bridge.authenticate",
+                "pageId": "page-a",
+                "token": server.session_token,
+            }
+        )
+        assert first.receive_json()["type"] == "bridge.authenticated"
+        first.send_text("{")
+        first.send_json({"version": 1, "type": "bridge.ready", "pageId": "page-a"})
+
+        with client.websocket_connect("/ws/mcp-bridge") as second:
+            second.send_json(
+                {
+                    "version": 1,
+                    "type": "bridge.authenticate",
+                    "pageId": "page-b",
+                    "token": server.session_token,
+                }
+            )
+            assert second.receive_json()["code"] == "bridge_lease_held"
 
 
 def test_ui_url_wraps_ipv6_host(tmp_path):
@@ -340,6 +506,38 @@ def test_pick_free_port_skips_reserved_port():
     )
 
     assert selected_port > reserved_port
+
+
+def test_pick_ephemeral_port_retries_reserved_os_selection(monkeypatch):
+    selected_ports = iter([43100, 43101])
+    sockets = []
+
+    class FakeSocket:
+        def __init__(self):
+            self.port = None
+            self.closed = False
+
+        def bind(self, _address):
+            self.port = next(selected_ports)
+
+        def getsockname(self):
+            return ("127.0.0.1", self.port)
+
+        def close(self):
+            self.closed = True
+
+    def create_socket(_family, _kind):
+        sock = FakeSocket()
+        sockets.append(sock)
+        return sock
+
+    monkeypatch.setattr(socket, "socket", create_socket)
+
+    selected = _pick_free_port("127.0.0.1", reserved_ports={43100})
+
+    assert selected == 43101
+    assert len(sockets) == 2
+    assert all(sock.closed for sock in sockets)
 
 
 def test_localhost_port_probe_checks_ipv4_loopback():

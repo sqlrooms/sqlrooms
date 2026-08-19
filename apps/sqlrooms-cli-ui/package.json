@@ -26,6 +26,7 @@
     "@sqlrooms/documents": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/mcp": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/pivot": "workspace:*",
