@@ -6,8 +6,10 @@ import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {ChatTurnView} from './ChatTurnView';
-import {ChatActiveStatus} from './ChatActiveStatus';
+import {getChatActiveStatus} from './ChatActiveStatus';
+import {useChatRenderingComponents} from './ChatRenderingContext';
 import type {ErrorMessageComponentProps} from './ErrorMessage';
+import {useToolRenderBehavior} from './FlatAgentRenderer';
 import {getChatTurnsFromUiMessages} from '../chatTurns';
 import type {AiSessionForkOrigin, ChatSessionSchema} from '@sqlrooms/ai-config';
 
@@ -68,6 +70,12 @@ export const ChatMessagesContainer: React.FC<{
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages,
   );
+  const toolRenderBehavior = useToolRenderBehavior();
+  const activeStatus = getChatActiveStatus(
+    uiMessages as UIMessage[] | undefined,
+    toolRenderBehavior,
+  );
+  const ActiveStatus = useChatRenderingComponents().ActiveStatus;
   const chatTurns = React.useMemo(
     () =>
       getChatTurnsFromUiMessages(uiMessages as UIMessage[] | undefined, {
@@ -140,12 +148,7 @@ export const ChatMessagesContainer: React.FC<{
               )}
             </React.Fragment>
           ))}
-          {isRunning && (
-            <ChatActiveStatus
-              messages={uiMessages as UIMessage[] | undefined}
-              className="pb-4"
-            />
-          )}
+          {isRunning && <ActiveStatus status={activeStatus} className="pb-4" />}
           <div className="h-10 w-full shrink-0" />
         </div>
         <ScrollBar orientation="vertical" />

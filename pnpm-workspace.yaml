@@ -11,6 +11,14 @@ overrides:
   '@ai-sdk/provider-utils@>=3.0.0 <4.0.0': 3.0.26
   '@ai-sdk/provider-utils@>=4.0.0 <5.0.0': 4.0.29
   '@babel/core@<=7.29.0': 7.29.7
+  # Keep the complete luma.gl rendering stack aligned with Kepler and Deck.
+  '@luma.gl/constants': 9.3.3
+  '@luma.gl/core': 9.3.3
+  '@luma.gl/effects': 9.3.3
+  '@luma.gl/engine': 9.3.3
+  '@luma.gl/gltf': 9.3.3
+  '@luma.gl/shadertools': 9.3.3
+  '@luma.gl/webgl': 9.3.3
   '@duckdb/duckdb-wasm': 1.32.0
   '@loaders.gl/wms': 4.4.2
   '@loaders.gl/xml': 4.4.2

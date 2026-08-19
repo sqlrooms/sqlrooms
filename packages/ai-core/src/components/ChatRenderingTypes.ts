@@ -17,6 +17,19 @@ export type ChatComponentType<TProps = object> =
 /** How nested agent activity is composed into turn-level activity. */
 export type ChatNestedActivityMode = 'own-boxes' | 'embed';
 
+/** User-facing description of the chat run's current active step. */
+export type ChatActiveStatusInfo = {
+  key: string;
+  label: string;
+  kind: 'tool' | 'approval' | 'model';
+};
+
+/** Props for the active chat-run status presentation slot. */
+export type ChatActiveStatusProps = {
+  status: ChatActiveStatusInfo;
+  className?: string;
+};
+
 /** Props for the user-prompt presentation slot. */
 export type ChatPromptProps = {
   prompt: string;
@@ -202,6 +215,7 @@ export type ChatTurnSlotProps = {
 
 /** Component slots that define a chat presentation recipe. */
 export type ChatRenderingComponents = {
+  ActiveStatus: ChatComponentType<ChatActiveStatusProps>;
   Turn: ChatComponentType<ChatTurnSlotProps>;
   Prompt: ChatComponentType<ChatPromptProps>;
   Activity: ChatComponentType<ChatActivityProps>;

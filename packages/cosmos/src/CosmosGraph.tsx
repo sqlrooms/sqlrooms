@@ -1,15 +1,16 @@
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfig} from '@cosmos.gl/graph';
 import {cn, useRelativeCoordinates} from '@sqlrooms/ui';
 import {FC, useEffect, useRef} from 'react';
 import {useStoreWithCosmos} from './CosmosSlice';
 import {useHoverState} from './hooks/useHoverState';
+import {composeMouseMoveHandlers} from './utils/composeEventHandlers';
 
 /**
  * Props for the CosmosGraph component.
  */
 export type CosmosGraphProps = {
   /** Configuration object for the graph's visual and behavioral properties */
-  config: GraphConfigInterface;
+  config: GraphConfig;
   /** Float32Array containing x,y coordinates for each point (2 values per point) */
   pointPositions: Float32Array;
   /** Float32Array containing size values for each point (1 value per point) */
@@ -86,11 +87,12 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   );
   const updateGraphData = useStoreWithCosmos((s) => s.cosmos.updateGraphData);
   const setFocusedPoint = useStoreWithCosmos((s) => s.cosmos.setFocusedPoint);
+  const initialConfigRef = useRef(config);
 
   // Create graph instance and clean up on unmount
   useEffect(() => {
     if (!containerRef.current) return;
-    createGraph(containerRef.current);
+    createGraph(containerRef.current, initialConfigRef.current);
     return () => destroyGraph();
   }, [createGraph, destroyGraph]);
 
@@ -99,6 +101,10 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
     updateGraphConfig({
       ...config,
       ...eventHandlers,
+      onMouseMove: composeMouseMoveHandlers(
+        eventHandlers.onMouseMove,
+        config.onMouseMove,
+      ),
     });
   }, [config, eventHandlers, updateGraphConfig]);
 
