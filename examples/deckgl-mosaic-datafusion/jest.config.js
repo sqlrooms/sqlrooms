@@ -1,8 +1,12 @@
+import {createRequire} from 'node:module';
+
+const requireFromExample = createRequire(import.meta.url);
+
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
   preset: 'ts-jest',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  testEnvironment: 'node',
+  testEnvironment: requireFromExample.resolve('jest-environment-node'),
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '\\.(css|less|sass|scss)$': 'identity-obj-proxy',

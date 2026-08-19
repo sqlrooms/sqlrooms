@@ -3,7 +3,7 @@
 [Try live](https://sqlrooms-deckgl-mosaic-datafusion.netlify.app/)
 | [GitHub repo](https://github.com/sqlrooms/sqlrooms/tree/main/examples/deckgl-mosaic-datafusion)
 
-<video src="https://sqlrooms.org/media/examples/sqlrooms-deckgl-mosaic-datafusion-example.mp4" alt="SQLRooms Deck.gl, Mosaic, and DataFusion example app" width="450" controls loop muted></video>
+<video src="https://sqlrooms.org/media/examples/sqlrooms-deckgl-mosaic-datafusion-example.mp4" aria-label="SQLRooms Deck.gl, Mosaic, and DataFusion example app preview" width="450" controls loop muted>Preview of the SQLRooms Deck.gl, Mosaic, and DataFusion example app.</video>
 
 This example ports [Gjore Milevski](https://github.com/dzole0311)'s
 [mosaic-datafusion-zarr-deckgl](https://github.com/dzole0311/mosaic-datafusion-zarr-deckgl)
