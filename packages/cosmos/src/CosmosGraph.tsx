@@ -3,6 +3,7 @@ import {cn, useRelativeCoordinates} from '@sqlrooms/ui';
 import {FC, useEffect, useRef} from 'react';
 import {useStoreWithCosmos} from './CosmosSlice';
 import {useHoverState} from './hooks/useHoverState';
+import {composeMouseMoveHandlers} from './utils/composeEventHandlers';
 
 /**
  * Props for the CosmosGraph component.
@@ -99,10 +100,10 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
     updateGraphConfig({
       ...config,
       ...eventHandlers,
-      onMouseMove: (...args) => {
-        eventHandlers.onMouseMove(...args);
-        config.onMouseMove?.(...args);
-      },
+      onMouseMove: composeMouseMoveHandlers(
+        eventHandlers.onMouseMove,
+        config.onMouseMove,
+      ),
     });
   }, [config, eventHandlers, updateGraphConfig]);
 

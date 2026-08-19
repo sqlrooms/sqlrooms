@@ -8,44 +8,52 @@ jest.unstable_mockModule('@cosmos.gl/graph', () => ({
 
 const {createCosmosSlice} = await import('../src/CosmosSlice');
 
-class TestGraph {
-  config: GraphConfig & {enableSimulation: boolean};
-  isReady = true;
-  ready = Promise.resolve();
+function createGraph(
+  enableSimulation: boolean,
+  initialSimulationRunning: boolean,
+  options: {isReady?: boolean; ready?: Promise<void>} = {},
+) {
+  let config: GraphConfig & {enableSimulation: boolean} = {enableSimulation};
+  let isSimulationRunning = initialSimulationRunning;
+  let isReady = options.isReady ?? true;
+  const ready = options.ready ?? Promise.resolve();
 
-  constructor(
-    enableSimulation: boolean,
-    public isSimulationRunning: boolean,
-  ) {
-    this.config = {enableSimulation};
-  }
+  const graph = {
+    get config() {
+      return config;
+    },
+    get isReady() {
+      return isReady;
+    },
+    get isSimulationRunning() {
+      return isSimulationRunning;
+    },
+    ready,
+    markReady: jest.fn(() => {
+      isReady = true;
+    }),
+    pause: jest.fn(() => {
+      isSimulationRunning = false;
+    }),
+    unpause: jest.fn(() => {
+      if (config.enableSimulation) {
+        isSimulationRunning = true;
+      }
+    }),
+    start: jest.fn(() => {
+      if (config.enableSimulation) {
+        isSimulationRunning = true;
+      }
+    }),
+    setConfigPartial: jest.fn((nextConfig: GraphConfig) => {
+      config = {...config, ...nextConfig};
+      if (nextConfig.enableSimulation !== undefined) {
+        isSimulationRunning = nextConfig.enableSimulation;
+      }
+    }),
+  };
 
-  pause = jest.fn(() => {
-    this.isSimulationRunning = false;
-  });
-
-  unpause = jest.fn(() => {
-    if (this.config.enableSimulation) {
-      this.isSimulationRunning = true;
-    }
-  });
-
-  start = jest.fn(() => {
-    if (this.config.enableSimulation) {
-      this.isSimulationRunning = true;
-    }
-  });
-
-  setConfigPartial = jest.fn((config: GraphConfig) => {
-    Object.assign(this.config, config);
-    if (config.enableSimulation !== undefined) {
-      this.isSimulationRunning = config.enableSimulation;
-    }
-  });
-}
-
-function createGraph(enableSimulation: boolean, isSimulationRunning: boolean) {
-  return new TestGraph(enableSimulation, isSimulationRunning);
+  return graph;
 }
 
 function createTestStore(graph: ReturnType<typeof createGraph>) {
@@ -60,11 +68,10 @@ function createTestStore(graph: ReturnType<typeof createGraph>) {
 describe('CosmosSlice simulation controls', () => {
   it('honors a queued pause while the graph is initializing', async () => {
     let resolveReady: () => void = () => undefined;
-    const graph = createGraph(true, false);
-    graph.isReady = false;
-    graph.ready = new Promise<void>((resolve) => {
+    const ready = new Promise<void>((resolve) => {
       resolveReady = resolve;
     });
+    const graph = createGraph(true, false, {isReady: false, ready});
     const store = createTestStore(graph);
 
     store.getState().cosmos.toggleSimulation();
@@ -72,7 +79,7 @@ describe('CosmosSlice simulation controls', () => {
     expect(graph.unpause).not.toHaveBeenCalled();
     expect(store.getState().cosmos.isSimulationRunning).toBe(false);
 
-    graph.isReady = true;
+    graph.markReady();
     resolveReady();
     await graph.ready;
     expect(store.getState().cosmos.isSimulationRunning).toBe(false);
