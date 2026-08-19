@@ -22,6 +22,7 @@ export function mergeChatRenderingComponents(
 ): ChatRenderingComponents {
   if (!overrides) return base;
   return {
+    ActiveStatus: overrides.ActiveStatus ?? base.ActiveStatus,
     Turn: overrides.Turn ?? base.Turn,
     Prompt: overrides.Prompt ?? base.Prompt,
     Activity: overrides.Activity ?? base.Activity,
@@ -105,6 +106,8 @@ export function useChatNestedActivityMode(): ChatNestedActivityMode {
 }
 
 export type {
+  ChatActiveStatusInfo,
+  ChatActiveStatusProps,
   ChatComponentType,
   ChatActionsProps,
   ChatActionsRegion,
