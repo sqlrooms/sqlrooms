@@ -291,6 +291,12 @@ importers:
       '@jest/globals':
         specifier: ^30.3.0
         version: 30.4.1
+      '@sqlrooms/duckdb-node':
+        specifier: workspace:*
+        version: link:../../packages/duckdb-node
+      '@sqlrooms/evals':
+        specifier: workspace:*
+        version: link:../../packages/evals
       '@sqlrooms/preset-jest':
         specifier: workspace:*
         version: link:../../packages/preset-jest
