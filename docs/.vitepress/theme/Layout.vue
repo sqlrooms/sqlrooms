@@ -10,8 +10,10 @@ const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
 const currentYear = new Date().getFullYear();
-const isApiReference = computed(() =>
-  page.value.relativePath.startsWith('api/'),
+const isApiReference = computed(
+  () =>
+    page.value.relativePath === 'packages.md' ||
+    page.value.relativePath.startsWith('api/'),
 );
 const apiRelease = computed(() => theme.value.apiRelease);
 

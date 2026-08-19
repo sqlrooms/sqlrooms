@@ -1,7 +1,5 @@
-import path from 'node:path';
-import {globSync} from 'glob';
+import {createRequire} from 'node:module';
 
-// Type for sidebar items based on the structure we've seen
 interface SidebarItem {
   text: string;
   link?: string;
@@ -9,47 +7,31 @@ interface SidebarItem {
   collapsed?: boolean;
 }
 
-function findTypeDocSidebars(apiDir: string): string[] {
-  return globSync('**/typedoc-sidebar.json', {
-    cwd: apiDir,
-    absolute: false,
-  });
+export interface ApiPackage {
+  name: string;
+  description: string;
 }
 
-/**
- * Generates package-level API sidebar entries from TypeDoc output.
- *
- * The main docs sidebar should stay human-curated. TypeDoc symbol pages remain
- * available through package API pages and search, but are intentionally not
- * expanded into the global navigation.
- * @param docsDir The docs directory path
- * @returns The sidebar configuration
- */
-function generateApiDocs(docsDir: string): NonNullable<SidebarItem['items']> {
-  const apiDir = path.join(docsDir, 'api');
-  const sidebarFiles = findTypeDocSidebars(apiDir);
-
-  // Get unique package names from sidebar files
-  const packageNames = new Set<string>();
-  for (const sidebarFile of sidebarFiles) {
-    const packageName = path.dirname(sidebarFile);
-    packageNames.add(packageName);
-  }
-
-  const packageNamesArray = Array.from(packageNames);
-
-  // Create a simple list of packages with links to their main pages
-  const packages: SidebarItem[] = packageNamesArray.map((packageName) => ({
-    text: packageName,
-    link: `/api/${packageName}/`,
-  }));
-  // Sort packages alphabetically by text
-  return packages.sort((a, b) => a.text.localeCompare(b.text));
+export interface ApiPackageCategory {
+  text: string;
+  packages: ApiPackage[];
 }
 
-// Generate the API docs and sidebar
-const docsDir = path.resolve(import.meta.dirname, '..');
-const apiSidebar = generateApiDocs(docsDir);
+const require = createRequire(import.meta.url);
 
-// Export the sidebar for use in config.ts
-export const apiSidebarConfig = apiSidebar;
+/** Package metadata shared by the API landing page and sidebar. */
+export const apiPackageCategories =
+  require('./api-packages.json') as ApiPackageCategory[];
+
+/** Package-level API sidebar entries grouped by category. */
+export const apiSidebarConfig: SidebarItem[] = apiPackageCategories.map(
+  (category) => ({
+    text: category.text,
+    items: [...category.packages]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((packageMetadata) => ({
+        text: packageMetadata.name,
+        link: `/api/${packageMetadata.name}/`,
+      })),
+  }),
+);

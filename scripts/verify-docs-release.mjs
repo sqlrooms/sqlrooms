@@ -30,9 +30,37 @@ const apiDistDir = path.join(siteDir, 'docs', '.vitepress', 'dist', 'api');
 const apiPackages = (await readdir(apiDistDir, {withFileTypes: true})).filter(
   (entry) => entry.isDirectory(),
 );
+const apiPackageNames = apiPackages.map((entry) => entry.name).sort();
+const apiPackageCategories = JSON.parse(
+  await readFile(
+    path.join(siteDir, 'docs', '.vitepress', 'api-packages.json'),
+    'utf8',
+  ),
+);
+const catalogPackageNames = apiPackageCategories
+  .flatMap((category) => category.packages)
+  .map((packageMetadata) => packageMetadata.name)
+  .sort();
 
 if (apiPackages.length === 0) {
   throw new Error('The rendered site contains no API package directories');
+}
+
+const missingApiDocs = catalogPackageNames.filter(
+  (packageName) => !apiPackageNames.includes(packageName),
+);
+const uncataloguedApiDocs = apiPackageNames.filter(
+  (packageName) => !catalogPackageNames.includes(packageName),
+);
+
+if (missingApiDocs.length > 0 || uncataloguedApiDocs.length > 0) {
+  throw new Error(
+    [
+      `The API package catalog does not match the rendered API docs.`,
+      `Missing docs: ${missingApiDocs.join(', ') || 'none'}.`,
+      `Uncatalogued docs: ${uncataloguedApiDocs.join(', ') || 'none'}.`,
+    ].join(' '),
+  );
 }
 
 const representativePackage = apiPackages.find(
@@ -51,8 +79,15 @@ const homePage = await readFile(
   path.join(siteDir, 'docs', '.vitepress', 'dist', 'index.html'),
   'utf8',
 );
+const packagesPage = await readFile(
+  path.join(siteDir, 'docs', '.vitepress', 'dist', 'packages.html'),
+  'utf8',
+);
 const apiPageText = apiPage.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 const homePageText = homePage.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+const packagesPageText = packagesPage
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/\s+/g, ' ');
 
 if (
   !apiPageText.includes(`API reference for SQLRooms v${metadata.version}`) ||
@@ -63,9 +98,26 @@ if (
   );
 }
 
-if (!homePageText.includes(`API v${metadata.version}`)) {
+if (
+  !homePageText.includes(`API v${metadata.version}`) ||
+  !homePage.includes('href="/packages.html"')
+) {
   throw new Error(
-    `The rendered site navigation does not show API v${metadata.version}`,
+    `The rendered site navigation does not link API v${metadata.version} to /packages`,
+  );
+}
+
+if (
+  !packagesPageText.includes(
+    `API reference for SQLRooms v${metadata.version}`,
+  ) ||
+  !packagesPage.includes(metadata.ref) ||
+  catalogPackageNames.some(
+    (packageName) => !packagesPage.includes(`href="/api/${packageName}/"`),
+  )
+) {
+  throw new Error(
+    `The rendered package index is incomplete for release ${metadata.ref}`,
   );
 }
 
