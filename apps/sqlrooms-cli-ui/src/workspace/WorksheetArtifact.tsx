@@ -22,13 +22,12 @@ import {
 } from '@sqlrooms/mosaic';
 import {PythonBlock} from '@sqlrooms/python/block';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';
-import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
-import {experimentalEnabled} from '../runtimeEnvironment';
+import {cliCapabilityProfile} from '../runtimeEnvironment';
 import type {RoomState} from '../store-types';
+import type {CliCapabilityProfile} from '../profiles';
 import {
   createStatefulBlockTypes,
-  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
   type StatefulBlockArtifactType,
@@ -167,17 +166,10 @@ const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
   BlockDocumentStatefulBlockRenderer
 >;
 
-const WORKSHEET_AI_BLOCK_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
-
 function getEnabledWorksheetAiBlockTypes(
-  includeExperimental: boolean,
+  profile: CliCapabilityProfile,
 ): Set<string> {
-  return new Set<string>([
-    'chart',
-    ...getEnabledStatefulBlockArtifactTypes(includeExperimental).filter(
-      (type) => WORKSHEET_AI_BLOCK_TYPES.has(type),
-    ),
-  ]);
+  return new Set<string>(profile.blocks.aiContext);
 }
 
 function createStartBlockScopedChatActions(
@@ -206,20 +198,16 @@ function createStartBlockScopedChatActions(
 }
 
 function createWorksheetStatefulBlockRenderers(
-  includeExperimental: boolean,
+  profile: CliCapabilityProfile,
 ): Record<StatefulBlockArtifactType, BlockDocumentStatefulBlockRenderer> {
-  if (includeExperimental) {
-    return WORKSHEET_STATEFUL_BLOCK_RENDERERS;
+  const renderers: Record<
+    StatefulBlockArtifactType,
+    BlockDocumentStatefulBlockRenderer
+  > = {...WORKSHEET_STATEFUL_BLOCK_RENDERERS};
+  for (const blockType of profile.blocks.placeholderRenderers) {
+    renderers[blockType] = ExperimentalStatefulBlockPlaceholder;
   }
-  return {
-    ...WORKSHEET_STATEFUL_BLOCK_RENDERERS,
-    map: ExperimentalStatefulBlockPlaceholder,
-    pivot: ExperimentalStatefulBlockPlaceholder,
-    document: ExperimentalStatefulBlockPlaceholder,
-    'sql-query': ExperimentalStatefulBlockPlaceholder,
-    'html-app': ExperimentalStatefulBlockPlaceholder,
-    python: ExperimentalStatefulBlockPlaceholder,
-  };
+  return renderers;
 }
 
 export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
@@ -247,17 +235,17 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     () =>
       createStatefulBlockTypes({
         getState: roomStore.getState,
-        experimentalEnabled,
+        profile: cliCapabilityProfile,
       }),
     [roomStore],
   );
   const statefulBlockRenderers = useMemo(
-    () => createWorksheetStatefulBlockRenderers(experimentalEnabled),
+    () => createWorksheetStatefulBlockRenderers(cliCapabilityProfile),
     [],
   );
 
   const enabledWorksheetAiBlockTypes = useMemo(
-    () => getEnabledWorksheetAiBlockTypes(experimentalEnabled),
+    () => getEnabledWorksheetAiBlockTypes(cliCapabilityProfile),
     [],
   );
 

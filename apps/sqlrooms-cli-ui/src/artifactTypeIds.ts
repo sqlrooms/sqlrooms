@@ -20,3 +20,5 @@ export const CLI_AI_BLOCK_TYPES = [
   'html-app',
   'map',
 ] as const;
+
+export type CliAiBlockType = (typeof CLI_AI_BLOCK_TYPES)[number];

@@ -39,6 +39,9 @@ else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 3000
+CAPABILITY_PROFILE_NAMES = ("default", "experimental")
+DEFAULT_CAPABILITY_PROFILE = "default"
+EXPERIMENTAL_CAPABILITY_PROFILE = "experimental"
 
 
 def _get_cli_version() -> str:
@@ -127,6 +130,49 @@ def _read_toml(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise RuntimeError(f"SQLRooms config must be a TOML object: {path}")
     return data
+
+
+def _load_capability_profile(path: Path | None) -> str | None:
+    """Load the optional production capability profile from ``[app]``."""
+    if path is None:
+        return None
+    raw = _read_toml(path)
+    app_config = raw.get("app")
+    if app_config is None:
+        return None
+    if not isinstance(app_config, dict):
+        raise RuntimeError("'app' must be an object in SQLRooms config.")
+    profile = _normalize_config_string(app_config.get("profile"))
+    if app_config.get("profile") is not None and profile is None:
+        raise RuntimeError("'app.profile' must be a non-empty string.")
+    return profile
+
+
+def _resolve_capability_profile(
+    explicit_profile: str | None,
+    config_profile: str | None,
+    *,
+    experimental: bool,
+) -> str:
+    """Resolve CLI/config selection and the legacy ``--experimental`` alias."""
+    selected = explicit_profile or config_profile
+    if selected is not None:
+        selected = selected.strip()
+        if selected not in CAPABILITY_PROFILE_NAMES:
+            expected = ", ".join(CAPABILITY_PROFILE_NAMES)
+            raise RuntimeError(
+                f"Unknown SQLRooms capability profile '{selected}'. "
+                f"Expected one of: {expected}."
+            )
+
+    if experimental and selected and selected != EXPERIMENTAL_CAPABILITY_PROFILE:
+        raise RuntimeError(
+            f"--experimental conflicts with capability profile '{selected}'. "
+            "Use --profile experimental or remove one of the selections."
+        )
+    if experimental:
+        return EXPERIMENTAL_CAPABILITY_PROFILE
+    return selected or DEFAULT_CAPABILITY_PROFILE
 
 
 def _require_config_string(
@@ -493,12 +539,17 @@ def main(
     experimental: bool = typer.Option(
         False,
         "--experimental",
-        help="Enable experimental artifacts, blocks, commands, and agent tools.",
+        help="Compatibility alias for --profile experimental.",
+    ),
+    capability_profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Named capability profile: default or experimental. Overrides [app].profile from the config file.",
     ),
     experimental_sync: bool = typer.Option(
         False,
         "--experimental-sync",
-        help="Enable experimental sync (CRDT) over WebSocket (Loro). Requires --experimental.",
+        help="Enable experimental sync (CRDT) over WebSocket (Loro). Requires the experimental capability profile.",
     ),
     legacy_sync: bool = typer.Option(
         False,
@@ -565,26 +616,20 @@ def main(
             err=True,
         )
         raise typer.Exit(code=1)
-    if experimental_sync and not experimental:
-        typer.echo("--experimental-sync requires --experimental.", err=True)
-        raise typer.Exit(code=1)
     if mcp and no_ui:
         typer.echo(
             "--mcp requires the browser UI and cannot be used with --no-ui.", err=True
         )
         raise typer.Exit(code=1)
 
-    resolved_db_path = db_path if db_path is not None else db_path_option
-    if resolved_db_path is None or not resolved_db_path.strip():
-        typer.echo(
-            "Please provide a DuckDB project file, e.g. `sqlrooms ./my-project.duckdb`, "
-            "or pass `--db-path :memory:` for a temporary in-memory session.",
-            err=True,
-        )
-        raise typer.Exit(code=1)
-
     try:
         config_path = _resolve_config_path(config, no_config=no_config)
+        config_capability_profile = _load_capability_profile(config_path)
+        resolved_capability_profile = _resolve_capability_profile(
+            capability_profile,
+            config_capability_profile,
+            experimental=experimental,
+        )
         connector_settings = _load_connector_config(config_path)
         (
             llm_provider,
@@ -596,6 +641,25 @@ def main(
     except Exception as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(code=1) from exc
+
+    if (
+        experimental_sync
+        and resolved_capability_profile != EXPERIMENTAL_CAPABILITY_PROFILE
+    ):
+        typer.echo(
+            "--experimental-sync requires --experimental or --profile experimental.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    resolved_db_path = db_path if db_path is not None else db_path_option
+    if resolved_db_path is None or not resolved_db_path.strip():
+        typer.echo(
+            "Please provide a DuckDB project file, e.g. `sqlrooms ./my-project.duckdb`, "
+            "or pass `--db-path :memory:` for a temporary in-memory session.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
 
     # config_path may be None when the file doesn't exist yet; for saving we
     # still want a writable target unless the user explicitly opted out.
@@ -621,7 +685,7 @@ def main(
         port=selected_port,
         ws_port=ws_port,
         sync_enabled=experimental_sync,
-        experimental_enabled=experimental,
+        capability_profile=resolved_capability_profile,
         meta_db=meta_db,
         meta_namespace=meta_namespace,
         llm_provider=llm_provider,

@@ -1,0 +1,71 @@
+import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import type {CliCapabilityProfile} from './types';
+
+/** Current non-experimental SQLRooms CLI behavior. */
+export const DEFAULT_CLI_CAPABILITY_PROFILE = {
+  name: 'default',
+  version: 1,
+  artifacts: {
+    creatable: ['worksheet', 'dashboard'],
+    runContext: CLI_ARTIFACT_TYPES,
+  },
+  blocks: {
+    stateful: ['dashboard', 'data-table'],
+    aiContext: ['chart', 'dashboard'],
+    interactiveRenderers: ['chart', 'dashboard', 'data-table'],
+    placeholderRenderers: [
+      'pivot',
+      'map',
+      'document',
+      'sql-query',
+      'html-app',
+      'python',
+    ],
+  },
+  commands: [
+    'dashboard',
+    'mosaic-dashboard',
+    'block-document',
+    'cli-block-document',
+  ],
+  ai: {
+    instructionSets: ['stable'],
+    topLevelToolGroups: [
+      'default-data-analysis',
+      'artifact-context',
+      'dashboard-agent',
+      'worksheet-agent',
+      'webcontainer',
+      'chart',
+      'chart-image-for-markdown',
+    ],
+    nestedAgents: ['dashboard', 'worksheet', 'worksheet-dashboard'],
+  },
+  skills: [],
+  lifecycleSlices: [
+    'ai',
+    'ai-settings',
+    'app-project',
+    'artifacts',
+    'artifact-ai',
+    'block-documents',
+    'canvas',
+    'cells',
+    'crdt',
+    'dashboard',
+    'dashboard-features',
+    'db-settings',
+    'deck-maps',
+    'documents',
+    'html-apps',
+    'mosaic',
+    'notebook',
+    'pivot',
+    'python',
+    'room-shell',
+    'sql-editor',
+    'webcontainer',
+    'workspace-ui',
+  ],
+  dashboard: {deckMaps: false},
+} as const satisfies CliCapabilityProfile;

@@ -125,7 +125,7 @@ import {
 import type {RuntimeConfig} from './runtimeConfig';
 import {
   aiDevtoolsEnabled,
-  experimentalEnabled,
+  cliCapabilityProfile,
   runtimeConfig,
 } from './runtimeEnvironment';
 import {
@@ -193,7 +193,9 @@ const BLOCK_DOCUMENT_OPTIONS = {
   defaultTitle: 'Worksheet',
 } as const;
 
-const cliArtifactTypes = createCliArtifactTypes({experimentalEnabled});
+const cliArtifactTypes = createCliArtifactTypes({
+  profile: cliCapabilityProfile,
+});
 const defaultWorkspaceTitle = getDefaultWorkspaceTitle(runtimeConfig);
 const runtimeAiSettings = runtimeConfig.aiSettings || {};
 const runtimeAiProviders =
@@ -728,39 +730,47 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
-          registerCommandsForOwner(
-            store,
-            DASHBOARD_COMMAND_OWNER,
-            createDashboardCommands({artifactTypes: cliArtifactTypes}),
-          );
-          registerCommandsForOwner(
-            store,
-            MOSAIC_DASHBOARD_COMMAND_OWNER,
-            createMosaicDashboardCommands<RoomState>(),
-          );
-          if (experimentalEnabled) {
+          if (cliCapabilityProfile.commands.includes('dashboard')) {
+            registerCommandsForOwner(
+              store,
+              DASHBOARD_COMMAND_OWNER,
+              createDashboardCommands({artifactTypes: cliArtifactTypes}),
+            );
+          }
+          if (cliCapabilityProfile.commands.includes('mosaic-dashboard')) {
+            registerCommandsForOwner(
+              store,
+              MOSAIC_DASHBOARD_COMMAND_OWNER,
+              createMosaicDashboardCommands<RoomState>(),
+            );
+          }
+          if (cliCapabilityProfile.commands.includes('document')) {
             registerCommandsForOwner(
               store,
               DOCUMENT_COMMAND_OWNER,
               createDocumentCommands<RoomState>(),
             );
           }
-          registerCommandsForOwner(
-            store,
-            BLOCK_DOCUMENT_COMMAND_OWNER,
-            createBlockDocumentCommands<RoomState>({
-              ...BLOCK_DOCUMENT_OPTIONS,
-              statefulBlockTypes: createStatefulBlockCommandTypes({
-                experimentalEnabled,
+          if (cliCapabilityProfile.commands.includes('block-document')) {
+            registerCommandsForOwner(
+              store,
+              BLOCK_DOCUMENT_COMMAND_OWNER,
+              createBlockDocumentCommands<RoomState>({
+                ...BLOCK_DOCUMENT_OPTIONS,
+                statefulBlockTypes: createStatefulBlockCommandTypes({
+                  profile: cliCapabilityProfile,
+                }),
               }),
-            }),
-          );
-          registerCommandsForOwner(
-            store,
-            CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
-            createCliBlockDocumentCommands(),
-          );
-          if (experimentalEnabled) {
+            );
+          }
+          if (cliCapabilityProfile.commands.includes('cli-block-document')) {
+            registerCommandsForOwner(
+              store,
+              CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
+              createCliBlockDocumentCommands(),
+            );
+          }
+          if (cliCapabilityProfile.commands.includes('block-document-python')) {
             registerCommandsForOwner(
               store,
               BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER,
@@ -771,6 +781,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 commandGroup: BLOCK_DOCUMENT_OPTIONS.commandGroup,
               }),
             );
+          }
+          if (cliCapabilityProfile.commands.includes('html-app-revision')) {
             registerCommandsForOwner(
               store,
               HTML_APP_REVISION_COMMAND_OWNER,
@@ -1003,7 +1015,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ...createDeckMapsSlice()(set, get, store),
 
         ...createDashboardFeatureSlices(
-          experimentalEnabled
+          cliCapabilityProfile.dashboard.deckMaps
             ? createDeckMapDashboardSliceOptions()
             : {
                 addPanelActions: defaultAddPanelActions,
@@ -1124,30 +1136,32 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               [
                 createDefaultAiInstructions(store),
                 STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
-                experimentalEnabled
+                cliCapabilityProfile.ai.instructionSets.includes('experimental')
                   ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
                   : '',
               ]
                 .filter(Boolean)
                 .join('\n\n'),
             getRunContext: (sessionId) =>
-              getRunContext(store, sessionId, {experimentalEnabled}),
+              getRunContext(store, sessionId, {
+                profile: cliCapabilityProfile,
+              }),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
             tools: {
               ...createDefaultAiTools(store, {query: {}}),
               ...createArtifactContextAiTools(store),
               dashboard_agent: dashboardAgentTool(store, {
-                deckMapsEnabled: experimentalEnabled,
+                deckMapsEnabled: cliCapabilityProfile.dashboard.deckMaps,
               }),
-              ...(experimentalEnabled
+              ...(cliCapabilityProfile.ai.topLevelToolGroups.includes(
+                'html-app-agent',
+              )
                 ? {html_app_agent: htmlAppAgentTool(store)}
                 : {}),
               [CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME]: blockDocumentAgentTool(
                 store,
-                {
-                  experimentalEnabled,
-                },
+                {profile: cliCapabilityProfile},
               ),
               ...webContainerToolkit.tools,
               chart: createVegaChartTool(),

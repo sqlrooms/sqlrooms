@@ -4,6 +4,7 @@ import {
 } from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import {getRunContext} from '../context/getRunContext';
+import {EXPERIMENTAL_CLI_CAPABILITY_PROFILE} from '../profiles';
 import type {RoomState} from '../store-types';
 
 function createMockStore() {
@@ -113,7 +114,7 @@ function createMockStore() {
 }
 
 describe('getRunContext', () => {
-  it('omits experimental block targets when experimental mode is disabled', () => {
+  it('omits experimental block targets in the default profile', () => {
     const {store} = createMockStore();
 
     expect(
@@ -121,13 +122,13 @@ describe('getRunContext', () => {
     ).toEqual(['chart', 'dashboard']);
   });
 
-  it('includes experimental block targets when experimental mode is enabled', () => {
+  it('includes experimental block targets in the experimental profile', () => {
     const {store} = createMockStore();
 
     expect(
-      getRunContext(store, 'session-1', {experimentalEnabled: true})?.items.map(
-        (item) => item.type,
-      ),
+      getRunContext(store, 'session-1', {
+        profile: EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+      })?.items.map((item) => item.type),
     ).toEqual(['chart', 'dashboard', 'html-app', 'map']);
   });
 });

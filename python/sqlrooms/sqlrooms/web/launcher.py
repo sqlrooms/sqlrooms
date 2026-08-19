@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
 NO_STORE_HEADERS = {"Cache-Control": "no-store"}
+CAPABILITY_PROFILE_NAMES = ("default", "experimental")
 
 
 async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
@@ -459,6 +460,7 @@ class SqlroomsHttpServer:
         ui_dir: str | None = None,
         serve_ui: bool = True,
         experimental_enabled: bool = False,
+        capability_profile: str | None = None,
         config_path: Path | None = None,
         external_url: str | None = None,
         external_ws_url: str | None = None,
@@ -499,7 +501,22 @@ class SqlroomsHttpServer:
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
-        self.experimental_enabled = bool(experimental_enabled)
+        resolved_capability_profile = capability_profile or (
+            "experimental" if experimental_enabled else "default"
+        )
+        if resolved_capability_profile not in CAPABILITY_PROFILE_NAMES:
+            expected = ", ".join(CAPABILITY_PROFILE_NAMES)
+            raise ValueError(
+                f"Unknown SQLRooms capability profile '{resolved_capability_profile}'. "
+                f"Expected one of: {expected}."
+            )
+        if experimental_enabled and resolved_capability_profile != "experimental":
+            raise ValueError(
+                "experimental_enabled conflicts with capability_profile "
+                f"'{resolved_capability_profile}'."
+            )
+        self.capability_profile = resolved_capability_profile
+        self.experimental_enabled = self.capability_profile == "experimental"
         self.ai_devtools = bool(ai_devtools)
         self.mcp_enabled_default = bool(mcp_enabled)
         self.debug = bool(debug)
@@ -854,6 +871,7 @@ class SqlroomsHttpServer:
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "configWritable": self.config_path is not None,
+            "capabilityProfile": self.capability_profile,
             "experimentalEnabled": self.experimental_enabled,
             "aiDevtools": self.ai_devtools,
             "syncEnabled": self.sync_enabled,
