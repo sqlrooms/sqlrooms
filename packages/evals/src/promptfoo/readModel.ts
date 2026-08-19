@@ -3,6 +3,8 @@ import {JsonObjectSchema, JsonValueSchema} from '../json';
 import {OracleResultSchema} from '../oracle';
 import {RunEvidenceEventSchema} from '../evidence';
 
+export * from './trajectory';
+
 /** Promptfoo-independent span retained for run diagnosis. */
 export const ObservatorySpanSchema = z.looseObject({
   traceId: z.string(),

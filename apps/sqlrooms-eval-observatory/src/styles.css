@@ -232,6 +232,123 @@ code {
   padding: 2px 5px;
   border-radius: 4px;
 }
+.trajectory-comparison {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid #405249;
+  border-radius: 12px;
+  background: #101b16;
+}
+.trajectory-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 16px;
+}
+.trajectory-heading h3,
+.trajectory-node-detail h3 {
+  margin: 5px 0 0;
+}
+.trajectory-heading > p {
+  max-width: 540px;
+  margin: 0;
+  color: #aebdb3;
+  font-size: 13px;
+}
+.trajectory-graphs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.trajectory-graphs.has-baseline {
+  grid-template-columns: 1fr 1fr;
+}
+.trajectory-graphs article {
+  min-width: 0;
+}
+.trajectory-graphs h4 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #c7d6cc;
+}
+.trajectory-graphs small {
+  display: block;
+  margin-top: 8px;
+  color: #93a49a;
+}
+.trajectory-canvas {
+  height: 360px;
+  overflow: hidden;
+  border: 1px solid #34473d;
+  border-radius: 9px;
+  background: #132019;
+}
+.trajectory-note {
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px dashed #52675b;
+  border-radius: 9px;
+  color: #b7c7bd;
+}
+.trajectory-node-detail {
+  margin-top: 14px;
+  border: 1px solid #5d7467;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.trajectory-node-detail > :not(pre) {
+  padding-right: 16px;
+  padding-left: 16px;
+}
+.trajectory-node-detail .eyebrow {
+  padding-top: 14px;
+}
+.trajectory-node-detail h3 {
+  padding-bottom: 14px;
+}
+.event-list {
+  max-height: 420px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  background: #101b16;
+}
+.event-list button {
+  display: grid;
+  grid-template-columns: 34px 110px minmax(140px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #cfe4d6;
+  text-align: left;
+  cursor: pointer;
+}
+.event-list button:hover,
+.event-list button.selected {
+  background: #294036;
+}
+.event-list small {
+  color: #8fa198;
+}
+/* @sqlrooms/cosmos uses these utility classes for its canvas shell. */
+.relative {
+  position: relative;
+}
+.absolute {
+  position: absolute;
+}
+.h-full {
+  height: 100%;
+}
+.w-full {
+  width: 100%;
+}
 @media (max-width: 1050px) {
   main {
     padding: 24px;
@@ -243,6 +360,9 @@ code {
     grid-template-columns: repeat(4, 1fr);
   }
   .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  .trajectory-graphs.has-baseline {
     grid-template-columns: 1fr;
   }
 }

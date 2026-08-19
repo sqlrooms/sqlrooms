@@ -20,6 +20,10 @@ adapter uses Node's built-in SQLite API.
   The adapter validates known tables and columns, preserves unknown metadata,
   and exports portable JSON. Promptfoo remains a storage/runner boundary, not
   the core package interface.
+- The observatory trajectory model derives ordered and explicit parent/child
+  relationships from normalized SQLRooms run evidence, never Promptfoo spans.
+  It also reports whether a delegated run benefits from a graph or is clearer
+  as an ordered list.
 - The scripted model implements the AI SDK v3 language-model contract and can
   assert prompt/tool wiring without credentials or network access.
 
