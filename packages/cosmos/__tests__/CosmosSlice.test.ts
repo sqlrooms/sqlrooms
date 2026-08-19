@@ -7,15 +7,18 @@ jest.unstable_mockModule('@cosmos.gl/graph', () => ({
 }));
 
 const {createCosmosSlice} = await import('../src/CosmosSlice');
+const {Graph: GraphConstructor} = await import('@cosmos.gl/graph');
+const MockGraphConstructor = jest.mocked(GraphConstructor);
 
 function createGraph(
   enableSimulation: boolean,
   initialSimulationRunning: boolean,
-  options: {isReady?: boolean; ready?: Promise<void>} = {},
+  options: {isReady?: boolean; ready?: Promise<void>; progress?: number} = {},
 ) {
   let config: GraphConfig & {enableSimulation: boolean} = {enableSimulation};
   let isSimulationRunning = initialSimulationRunning;
   let isReady = options.isReady ?? true;
+  let progress = options.progress ?? 0;
   const ready = options.ready ?? Promise.resolve();
 
   const graph = {
@@ -27,6 +30,9 @@ function createGraph(
     },
     get isSimulationRunning() {
       return isSimulationRunning;
+    },
+    get progress() {
+      return progress;
     },
     ready,
     markReady: jest.fn(() => {
@@ -43,7 +49,15 @@ function createGraph(
     start: jest.fn(() => {
       if (config.enableSimulation) {
         isSimulationRunning = true;
+        progress = 0;
       }
+    }),
+    render: jest.fn(),
+    destroy: jest.fn(),
+    finish: jest.fn(() => {
+      isSimulationRunning = false;
+      progress = 1;
+      config.onSimulationEnd?.();
     }),
     setConfigPartial: jest.fn((nextConfig: GraphConfig) => {
       config = {...config, ...nextConfig};
@@ -66,6 +80,30 @@ function createTestStore(graph: ReturnType<typeof createGraph>) {
 }
 
 describe('CosmosSlice simulation controls', () => {
+  it('passes initial-only configuration into the Graph constructor', () => {
+    const graph = createGraph(true, false);
+    MockGraphConstructor.mockImplementationOnce(
+      () => graph as unknown as Graph,
+    );
+    const store = createStore(createCosmosSlice());
+    const container = {} as HTMLDivElement;
+
+    store.getState().cosmos.createGraph(container, {
+      initialZoomLevel: 2,
+      randomSeed: 'stable-layout',
+      attribution: 'SQLRooms',
+    });
+
+    expect(MockGraphConstructor).toHaveBeenLastCalledWith(
+      container,
+      expect.objectContaining({
+        initialZoomLevel: 2,
+        randomSeed: 'stable-layout',
+        attribution: 'SQLRooms',
+      }),
+    );
+  });
+
   it('honors a queued pause while the graph is initializing', async () => {
     let resolveReady: () => void = () => undefined;
     const ready = new Promise<void>((resolve) => {
@@ -110,6 +148,34 @@ describe('CosmosSlice simulation controls', () => {
 
     store.getState().cosmos.toggleSimulation();
     expect(graph.unpause).toHaveBeenCalledTimes(1);
+    expect(store.getState().cosmos.isSimulationRunning).toBe(true);
+  });
+
+  it('tracks simulation completion and reheats an ended simulation', () => {
+    const graph = createGraph(true, true);
+    const store = createTestStore(graph);
+    const onSimulationEnd = jest.fn();
+
+    store.getState().cosmos.updateGraphConfig({onSimulationEnd});
+    graph.finish();
+
+    expect(onSimulationEnd).toHaveBeenCalledTimes(1);
+    expect(store.getState().cosmos.isSimulationRunning).toBe(false);
+
+    store.getState().cosmos.toggleSimulation();
+    expect(graph.start).toHaveBeenCalledWith(1);
+    expect(graph.unpause).not.toHaveBeenCalled();
+    expect(store.getState().cosmos.isSimulationRunning).toBe(true);
+  });
+
+  it('renders after injecting simulation energy', () => {
+    const graph = createGraph(true, false);
+    const store = createTestStore(graph);
+
+    store.getState().cosmos.startWithEnergy();
+
+    expect(graph.start).toHaveBeenCalledWith(1);
+    expect(graph.render).toHaveBeenCalledTimes(1);
     expect(store.getState().cosmos.isSimulationRunning).toBe(true);
   });
 });

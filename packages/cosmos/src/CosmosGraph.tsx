@@ -87,11 +87,12 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   );
   const updateGraphData = useStoreWithCosmos((s) => s.cosmos.updateGraphData);
   const setFocusedPoint = useStoreWithCosmos((s) => s.cosmos.setFocusedPoint);
+  const initialConfigRef = useRef(config);
 
   // Create graph instance and clean up on unmount
   useEffect(() => {
     if (!containerRef.current) return;
-    createGraph(containerRef.current);
+    createGraph(containerRef.current, initialConfigRef.current);
     return () => destroyGraph();
   }, [createGraph, destroyGraph]);
 

@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import type {GraphConfig} from '@cosmos.gl/graph';
 
+const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
+
 /**
  * Default configuration values for the Cosmos graph visualization.
  * These values provide a balanced starting point for most graph visualizations.
@@ -87,7 +89,7 @@ const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
  * };
  * ```
  */
-export const CosmosSliceConfig = z.object({
+const CosmosSliceConfigSchema = z.object({
   /**
    * Duration of data update transitions in milliseconds.
    * The default preserves snap updates without pausing a running simulation.
@@ -203,8 +205,54 @@ export const CosmosSliceConfig = z.object({
       'Decay coefficient in the simulation. Use smaller values if you want the simulation to "cool down" slower.',
     ),
 } satisfies Partial<Record<keyof GraphConfig, unknown>>);
-export type CosmosSliceConfig = z.infer<typeof CosmosSliceConfig>;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function migrateCosmosConfig(persisted: unknown, defaults?: unknown) {
+  if (!isRecord(persisted)) return persisted;
+
+  const {linkArrows, ...currentConfig} = persisted;
+  return {
+    ...(isRecord(defaults) ? defaults : {}),
+    ...currentConfig,
+    ...(!Object.hasOwn(currentConfig, 'linkDefaultArrows') &&
+    typeof linkArrows === 'boolean'
+      ? {linkDefaultArrows: linkArrows}
+      : {}),
+  };
+}
+
+const PersistedCosmosConfigInput = z.object({
+  defaults: z.unknown(),
+  persisted: z.unknown(),
+});
+
+/** Schema for persisted Cosmos graph configuration, including v2 migration. */
+export const CosmosSliceConfig = Object.assign(
+  z.preprocess((value) => {
+    const mergeInput = PersistedCosmosConfigInput.safeParse(value);
+    return mergeInput.success
+      ? migrateCosmosConfig(mergeInput.data.persisted, mergeInput.data.defaults)
+      : migrateCosmosConfig(value);
+  }, CosmosSliceConfigSchema),
+  {
+    shape: CosmosSliceConfigSchema.shape,
+    [PersistMergeInputSymbol]: ({
+      defaults,
+      persisted,
+    }: {
+      defaults: unknown;
+      persisted: unknown;
+    }) => ({defaults, persisted}),
+  },
+);
+
+/** Validated, migration-safe configuration stored by the Cosmos slice. */
+export type CosmosSliceConfig = z.infer<typeof CosmosSliceConfigSchema>;
+
+/** Creates a fresh Cosmos slice configuration with SQLRooms defaults. */
 export function createDefaultCosmosConfig(): CosmosSliceConfig {
   return DEFAULT_COSMOS_CONFIG;
 }
