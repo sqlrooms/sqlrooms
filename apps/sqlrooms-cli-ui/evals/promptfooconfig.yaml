@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+description: SQLRooms worksheet charts/maps behavioral canary
+
+prompts:
+  - label: pinned-scenario-turn
+    raw: '{{prompt}}'
+
+providers:
+  - id: file://./dist/promptfooProvider.mjs
+    label: openrouter:deepseek/deepseek-v4-flash-0731
+
+tests:
+  - description: worksheet.create-chart-map@1
+    vars:
+      scenarioId: worksheet.create-chart-map
+      prompt: >-
+        Create exactly one new Worksheet named Event analysis. In it, add a quantitative chart of metric by category and a geographic point map using latitude and longitude from analytics.events. Do not use archive.events and do not create a dashboard or a second worksheet. Summarize exactly what you created and which table you used.
+    metadata:
+      scenarioVersion: 1
+      profile: worksheet-charts-maps@1
+    assert:
+      - type: javascript
+        metric: sqlrooms-oracles
+        value: return context.metadata.sqlroomsAssertion
+  - description: worksheet.mutate-chart-map@1
+    vars:
+      scenarioId: worksheet.mutate-chart-map
+      prompt: >-
+        In the current Worksheet, update the existing chart in place so its title is "Metric by category", then add one short paragraph saying "Source: analytics.events". Preserve the existing map and heading exactly. Do not create another chart, map, worksheet, or dashboard. Report only changes that actually succeeded.
+    metadata:
+      scenarioVersion: 1
+      profile: worksheet-charts-maps@1
+    assert:
+      - type: javascript
+        metric: sqlrooms-oracles
+        value: return context.metadata.sqlroomsAssertion
+
+evaluateOptions:
+  repeat: 3
+  maxConcurrency: 1
+  cache: false
+  timeoutMs: 240000
+
+metadata:
+  profile: worksheet-charts-maps@1
+  model: deepseek/deepseek-v4-flash-0731
+  modelProvider: openrouter
+  modelSettings: temperature=0,maxSteps=24
+  suiteVersion: 1
+
+writeLatestResults: true

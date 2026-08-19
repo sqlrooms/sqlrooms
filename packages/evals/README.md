@@ -4,7 +4,8 @@ Private, evaluator-neutral behavioral evaluation primitives for SQLRooms.
 
 The package defines versioned scenarios, composable oracle results, a durable
 run-evidence envelope, and a deterministic AI SDK language model. It has no CLI
-application, React, browser, Promptfoo, or SQLite dependency.
+application, React, browser, or Promptfoo runtime dependency. Its observatory
+adapter uses Node's built-in SQLite API.
 
 ## Boundaries
 
@@ -15,9 +16,11 @@ application, React, browser, Promptfoo, or SQLite dependency.
   expectation; they do not require one exact tool trajectory.
 - Run evidence records strictly ordered events and durable outcomes in a
   versioned JSON envelope. Preserved extension fields must contain JSON values.
-- `@sqlrooms/evals/promptfoo` contains only structural conversion helpers for
-  provider metadata and assertion results. Promptfoo remains a runner, not the
-  core package interface.
+- `@sqlrooms/evals/promptfoo` contains structural conversion helpers, a
+  read-only SQLite adapter, and a Promptfoo-independent observatory read model.
+  The adapter validates known tables and columns, preserves unknown metadata,
+  and exports portable JSON. Promptfoo remains a storage/runner boundary, not
+  the core package interface.
 - The scripted model implements the AI SDK v3 language-model contract and can
   assert prompt/tool wiring without credentials or network access.
 

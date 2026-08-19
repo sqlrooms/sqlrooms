@@ -24,7 +24,10 @@
         "vitepress-plugin-llms",
         "typescript-language-server"
       ],
-      "ignoreBinaries": ["uv"]
+      "ignoreBinaries": [
+        "uv",
+        "apps/sqlrooms-cli-ui/evals/promptfooconfig.yaml"
+      ]
     },
     "packages/*": {
       "entry": ["src/index.{ts,tsx}"]
@@ -51,6 +54,13 @@
     "examples/*": {
       "entry": ["src/main.{ts,tsx}"]
     },
-    "apps/*": {}
+    "apps/*": {},
+    "apps/sqlrooms-cli-ui": {
+      "entry": [
+        "src/main.{ts,tsx}",
+        "src/evals/promptfooProvider.ts"
+      ],
+      "ignoreDependencies": ["@duckdb/node-api"]
+    }
   }
 }

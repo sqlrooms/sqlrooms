@@ -20,6 +20,16 @@
       "types": "./dist/promptfoo/index.d.ts",
       "import": "./dist/promptfoo/index.js",
       "default": "./dist/promptfoo/index.js"
+    },
+    "./promptfoo/export": {
+      "types": "./dist/promptfoo/export.d.ts",
+      "import": "./dist/promptfoo/export.js",
+      "default": "./dist/promptfoo/export.js"
+    },
+    "./promptfoo/read-model": {
+      "types": "./dist/promptfoo/readModel.d.ts",
+      "import": "./dist/promptfoo/readModel.js",
+      "default": "./dist/promptfoo/readModel.js"
     }
   },
   "main": "dist/index.js",

@@ -61,6 +61,10 @@ export type CliEvalTargetOptions = {
   timeoutMs?: number;
   sensitiveValues?: readonly string[];
   now?: () => Date;
+  modelSettings?: JsonObject;
+  configuredRevision?: string;
+  upstreamProvider?: string;
+  maxSteps?: number;
 };
 
 export type CliEvalRunOptions = {
@@ -114,6 +118,34 @@ function errorsFromMessages(
   return [...errors].map((error) =>
     observedError(new Error(error), sensitiveValues),
   );
+}
+
+function usageFromMessages(
+  messages: readonly UIMessage[],
+): RunEvidence['usage'] {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+  for (const message of messages) {
+    const usage = (
+      message.metadata as
+        | {
+            tokenUsage?: {
+              inputTokens?: number;
+              outputTokens?: number;
+              totalTokens?: number;
+            };
+          }
+        | undefined
+    )?.tokenUsage;
+    inputTokens += usage?.inputTokens ?? 0;
+    outputTokens += usage?.outputTokens ?? 0;
+    totalTokens += usage?.totalTokens ?? 0;
+  }
+  if (inputTokens === 0 && outputTokens === 0 && totalTokens === 0) {
+    return undefined;
+  }
+  return {inputTokens, outputTokens, totalTokens, grader: {totalTokens: 0}};
 }
 
 function redact(value: string, sensitiveValues: readonly string[]): string {
@@ -350,6 +382,7 @@ function createHeadlessStore(
   profile: CliCapabilityProfile,
   model: LanguageModel,
   timeoutMs: number,
+  maxSteps?: number,
 ): {
   store: StoreApi<RoomState>;
   connector: ReturnType<typeof createNodeDuckDbConnector>;
@@ -424,12 +457,98 @@ function createHeadlessStore(
           getRunContext(typedStore, sessionId, {profile}),
         formatRunContextInstructions: ({runContext}) =>
           formatRunContextInstructions(runContext, typedStore),
+        maxSteps,
         timeouts: {runMs: timeoutMs},
       })(set, get, store),
     };
     return state as unknown as RoomState;
   });
   return {store: roomStore, connector};
+}
+
+function fixtureWorkspaceMode(
+  scenario: ScenarioDefinition,
+): 'empty' | 'worksheet' | 'worksheet-chart-map' {
+  const mode = scenario.fixture.workspace;
+  if (
+    mode === 'empty' ||
+    mode === 'worksheet' ||
+    mode === 'worksheet-chart-map'
+  ) {
+    return mode;
+  }
+  return 'worksheet';
+}
+
+function seedWorksheet(
+  store: StoreApi<RoomState>,
+  scenario: ScenarioDefinition,
+  repetition: number,
+  mode: 'worksheet' | 'worksheet-chart-map',
+): string {
+  const worksheetId = store.getState().artifacts.createArtifact({
+    id: `eval-${scenario.id}-${repetition}`,
+    type: 'worksheet',
+    title: 'Evaluation Worksheet',
+  });
+  store.getState().blockDocuments.ensureBlockDocument(worksheetId);
+  if (mode === 'worksheet-chart-map') {
+    const mapId = `${worksheetId}-map`;
+    store.getState().blockDocuments.appendBlocks(worksheetId, [
+      {
+        id: 'seed-heading',
+        type: 'heading',
+        level: 2,
+        text: [{type: 'text', text: 'Existing analysis'}],
+      },
+      {
+        id: 'seed-chart',
+        type: 'chart',
+        tableName: '"analytics"."events"',
+        config: {
+          chartType: 'bar',
+          x: {field: 'category'},
+          y: {field: 'metric', aggregate: 'sum'},
+          title: 'Original metric chart',
+        },
+      },
+      {
+        id: 'seed-map-block',
+        type: 'statefulBlock',
+        blockType: 'map',
+        blockInstanceId: mapId,
+        ownership: 'owned',
+        caption: 'Existing event map',
+      },
+    ]);
+    store.getState().deckMaps.updateMap(mapId, {
+      title: 'Existing event map',
+      selectedTable: '"analytics"."events"',
+      config: {
+        datasets: {
+          events: {source: {tableName: '"analytics"."events"'}},
+        },
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {
+                dataset: 'events',
+                longitudeColumn: 'longitude',
+                latitudeColumn: 'latitude',
+              },
+            },
+          ],
+        },
+        fitToData: {
+          dataset: 'events',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+      },
+    });
+  }
+  return worksheetId;
 }
 
 /** Creates an isolated, in-process CLI eval target using production wiring. */
@@ -445,6 +564,7 @@ export function createCliEvalTarget(
     profile,
     options.model,
     timeoutMs,
+    options.maxSteps,
   );
   const now = options.now ?? (() => new Date());
   let initialized = false;
@@ -477,32 +597,60 @@ export function createCliEvalTarget(
         await resetCliEvalWorkspace(store);
         const startedAt = now();
         const initialState = snapshotCliEvalState(store.getState());
+        let fixtureState = initialState;
         const errors: ObservedError[] = [];
         let sessionId = '';
         try {
-          const worksheetId = store.getState().artifacts.createArtifact({
-            id: `eval-${scenario.id}-${repetition}`,
-            type: 'worksheet',
-            title: 'Evaluation Worksheet',
-          });
-          sessionId =
+          const workspaceMode = fixtureWorkspaceMode(scenario);
+          const worksheetId =
+            workspaceMode === 'empty'
+              ? undefined
+              : seedWorksheet(store, scenario, repetition, workspaceMode);
+          fixtureState = snapshotCliEvalState(store.getState());
+          if (worksheetId) {
+            sessionId =
+              store
+                .getState()
+                .artifactAi.createArtifactScopedSession(
+                  scenario.title,
+                  options.modelProvider ?? modelIdentity.provider,
+                  options.modelId ?? modelIdentity.modelId,
+                ) ?? '';
+          } else {
             store
               .getState()
-              .artifactAi.createArtifactScopedSession(
+              .ai.createSession(
                 scenario.title,
                 options.modelProvider ?? modelIdentity.provider,
                 options.modelId ?? modelIdentity.modelId,
-              ) ?? '';
+              );
+            sessionId = store.getState().ai.getCurrentSession()?.id ?? '';
+          }
           if (!sessionId)
             throw new Error('Failed to create an eval AI session.');
-          store
-            .getState()
-            .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
+          if (worksheetId) {
+            store
+              .getState()
+              .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
+          }
           for (const turn of scenario.turns) {
             store.getState().ai.setPrompt(sessionId, turn.input);
             const completion = waitForSession(store, sessionId, timeoutMs);
             await store.getState().ai.startAnalysis(sessionId);
             await completion;
+            const currentArtifactId =
+              store.getState().artifacts.config.currentArtifactId;
+            if (
+              currentArtifactId &&
+              store.getState().artifacts.config.artifactsById[currentArtifactId]
+            ) {
+              store
+                .getState()
+                .artifactAi.addSessionArtifactLink(
+                  sessionId,
+                  currentArtifactId,
+                );
+            }
           }
         } catch (error) {
           if (error instanceof CliEvalTimeoutError && sessionId) {
@@ -522,7 +670,7 @@ export function createCliEvalTarget(
         const finalAnswer = textFromMessages(messages);
         const finalState = snapshotCliEvalState(store.getState());
         const mutations: ObservedMutation[] =
-          JSON.stringify(initialState) === JSON.stringify(finalState)
+          JSON.stringify(fixtureState) === JSON.stringify(finalState)
             ? []
             : [{kind: 'workspace-state', data: {finalState}}];
         const oracleResults = await evaluateOracles(oracles, {
@@ -532,7 +680,7 @@ export function createCliEvalTarget(
           finalAnswer,
           errors,
           mutations,
-          metadata: {},
+          metadata: {initialState: fixtureState},
         });
         const summary = summarizeOracleResults(oracleResults);
         const status =
@@ -575,7 +723,13 @@ export function createCliEvalTarget(
           model: {
             provider: options.modelProvider ?? modelIdentity.provider,
             modelId: options.modelId ?? modelIdentity.modelId,
-            settings: {},
+            ...(options.configuredRevision
+              ? {configuredRevision: options.configuredRevision}
+              : {}),
+            ...(options.upstreamProvider
+              ? {upstreamProvider: options.upstreamProvider}
+              : {}),
+            settings: options.modelSettings ?? {},
           },
           timing: {
             startedAt: startedAt.toISOString(),
@@ -586,6 +740,7 @@ export function createCliEvalTarget(
           promptTurns: scenario.turns,
           finalAnswer,
           events,
+          usage: usageFromMessages(messages),
           finalState,
           oracleResults,
           metadata: {initialState},
