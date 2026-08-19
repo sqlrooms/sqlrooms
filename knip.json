@@ -32,6 +32,9 @@
     "packages/artifacts": {
       "ignoreDependencies": ["ts-jest"]
     },
+    "packages/kepler": {
+      "ignoreDependencies": ["@deck.gl-community/layers"]
+    },
     "packages/preset-jest": {
       "entry": ["*.js"],
       "ignoreDependencies": ["@testing-library/*", "jest-environment-jsdom"]

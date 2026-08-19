@@ -10,6 +10,8 @@ import {
 } from '@kepler.gl/components';
 import {DIMENSIONS} from '@kepler.gl/constants';
 import {Layer} from '@kepler.gl/layers';
+import {getFlatLayerOrder} from '@kepler.gl/reducers';
+import type {LayerOrder} from '@kepler.gl/types';
 import {Button} from '@sqlrooms/ui';
 import {
   ChevronDownIcon,
@@ -39,6 +41,20 @@ type KeplerGlContextValue = {
 const keplerGlContext =
   KeplerGlContext as unknown as Context<KeplerGlContextValue>;
 
+/** Returns layers in the display order represented by Kepler's hierarchy. */
+export function orderLayersForLegend(
+  layers: readonly Layer[],
+  layerOrder: LayerOrder | undefined,
+): Layer[] {
+  if (!layerOrder) return [...layers];
+
+  const layersById = new Map(layers.map((layer) => [layer.id, layer]));
+  return getFlatLayerOrder(layerOrder).flatMap((id) => {
+    const layer = layersById.get(id);
+    return layer ? [layer] : [];
+  });
+}
+
 CustomMapLegendFactory.deps = [
   LayerLegendHeaderFactory,
   LayerLegendContentFactory,
@@ -52,6 +68,7 @@ export function CustomMapLegendFactory(
     MapLegendProps & {mapIndex?: number; onClose?: () => void}
   > = ({
     layers = [],
+    layerOrder,
     width,
     isExport,
     mapIndex: mapIndexProp,
@@ -81,7 +98,7 @@ export function CustomMapLegendFactory(
     const panelLayers =
       isSplit && mapIndex != null ? splitMaps[mapIndex]?.layers : undefined;
 
-    const visibleLayers = layers.filter(
+    const visibleLayers = orderLayersForLegend(layers, layerOrder).filter(
       (layer) =>
         layer.config.isVisible && (!panelLayers || panelLayers[layer.id]),
     );
@@ -106,10 +123,10 @@ export function CustomMapLegendFactory(
             </div>
           )}
           <div className="flex w-full flex-1 flex-col items-center">
-            {visibleLayers.map((layer, index) => {
+            {visibleLayers.map((layer) => {
               return (
                 <LayerLegendItem
-                  key={index}
+                  key={layer.id}
                   layer={layer}
                   containerW={containerW}
                   isExport={isExport}
