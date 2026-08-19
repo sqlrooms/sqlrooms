@@ -224,7 +224,8 @@ function normalizeAiMapConfigLayers(config: AiMapConfig): AiMapConfig {
 
     // AI-only strip: UI may keep colorRange; do not reject in the resource validator.
     if (l['@@type'] === 'GeoArrowHeatmapLayer' && 'colorRange' in l) {
-      const {colorRange: _cr, ...rest} = l;
+      const rest = {...l};
+      delete rest.colorRange;
       l = rest;
       layerChanged = true;
     }

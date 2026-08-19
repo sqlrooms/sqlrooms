@@ -38,8 +38,13 @@ function getPackageName(packageJson) {
   return packageJson.name.slice('@sqlrooms/'.length);
 }
 
-function createReleasePackageCatalog(packageCategories, publicPackages) {
+function createReleasePackageCatalog(
+  packageCategories,
+  publicPackages,
+  excludedPackageNames,
+) {
   const publicPackageNames = new Set(publicPackages.map(getPackageName));
+  const excludedPackages = new Set(excludedPackageNames);
   const catalogPackageNames = packageCategories.flatMap((category) =>
     category.packages.map((packageMetadata) => packageMetadata.name),
   );
@@ -47,7 +52,12 @@ function createReleasePackageCatalog(packageCategories, publicPackages) {
     (packageName, index) => catalogPackageNames.indexOf(packageName) !== index,
   );
   const missingCatalogPackages = [...publicPackageNames].filter(
-    (packageName) => !catalogPackageNames.includes(packageName),
+    (packageName) =>
+      !catalogPackageNames.includes(packageName) &&
+      !excludedPackages.has(packageName),
+  );
+  const cataloguedExcludedPackages = catalogPackageNames.filter((packageName) =>
+    excludedPackages.has(packageName),
   );
 
   if (duplicateCatalogPackages.length > 0) {
@@ -61,6 +71,14 @@ function createReleasePackageCatalog(packageCategories, publicPackages) {
   if (missingCatalogPackages.length > 0) {
     throw new Error(
       `Public packages missing from API catalog: ${missingCatalogPackages.join(
+        ', ',
+      )}`,
+    );
+  }
+
+  if (cataloguedExcludedPackages.length > 0) {
+    throw new Error(
+      `Packages cannot be both catalogued and excluded: ${cataloguedExcludedPackages.join(
         ', ',
       )}`,
     );
@@ -160,6 +178,18 @@ const apiSourcePackageCatalogPath = path.join(
   '.vitepress',
   'api-packages.json',
 );
+const sitePackageExclusionsPath = path.join(
+  siteDir,
+  'docs',
+  '.vitepress',
+  'api-package-exclusions.json',
+);
+const apiSourcePackageExclusionsPath = path.join(
+  apiSourceDir,
+  'docs',
+  '.vitepress',
+  'api-package-exclusions.json',
+);
 const metadata = {
   version,
   ref: apiRef,
@@ -168,9 +198,13 @@ const metadata = {
 const packageCatalogSource =
   (await readJsonIfPresent(apiSourcePackageCatalogPath)) ??
   (await readJson(sitePackageCatalogPath));
+const packageExclusions =
+  (await readJsonIfPresent(apiSourcePackageExclusionsPath)) ??
+  (await readJson(sitePackageExclusionsPath));
 const releasePackageCatalog = createReleasePackageCatalog(
   packageCatalogSource,
   publicPackages,
+  packageExclusions,
 );
 
 await rm(siteApiDir, {recursive: true, force: true});

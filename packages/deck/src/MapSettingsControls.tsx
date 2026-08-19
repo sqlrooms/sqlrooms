@@ -4,6 +4,7 @@ import {
   isColumnCategorical,
   isColumnNumeric,
   isColumnQuantitative,
+  getColumnTypeCategory,
   type DataTable,
   type TableColumn,
 } from '@sqlrooms/duckdb';
@@ -41,7 +42,29 @@ export type DeckMapColumnKind =
   | 'all'
   | 'numeric'
   | 'quantitative'
-  | 'categorical';
+  | 'categorical'
+  /** Numeric/temporal + string columns usable for color scales. */
+  | 'colorable';
+
+/** True for columns that can drive a color scale (excludes geometry blobs/structs). */
+export function isDeckMapColorableColumn(column: TableColumn): boolean {
+  if (!column.type) return false;
+  if (isColumnQuantitative(column.type)) return true;
+  const category = getColumnTypeCategory(column.type);
+  return category === 'string' || category === 'boolean';
+}
+
+/** String/boolean (and binary) fields that need a categorical color scale. */
+export function isDeckMapCategoricalColorColumn(column: TableColumn): boolean {
+  if (!column.type || isColumnQuantitative(column.type)) return false;
+  const category = getColumnTypeCategory(column.type);
+  return (
+    category === 'string' ||
+    category === 'boolean' ||
+    category === 'binary' ||
+    isColumnCategorical(column.type)
+  );
+}
 
 export function filterDeckMapColumns(
   columns: TableColumn[],
@@ -52,7 +75,8 @@ export function filterDeckMapColumns(
     if (!column.type) return false;
     if (kind === 'numeric') return isColumnNumeric(column.type);
     if (kind === 'quantitative') return isColumnQuantitative(column.type);
-    return isColumnCategorical(column.type);
+    if (kind === 'colorable') return isDeckMapColorableColumn(column);
+    return isDeckMapCategoricalColorColumn(column);
   });
 }
 
@@ -135,6 +159,9 @@ export const DeckMapColumnSelector = Object.assign(DeckMapColumnSelectorRoot, {
   ),
   Categorical: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
     <DeckMapColumnSelectorRoot {...props} kind="categorical" />
+  ),
+  Colorable: (props: Omit<DeckMapColumnSelectorProps, 'kind'>) => (
+    <DeckMapColumnSelectorRoot {...props} kind="colorable" />
   ),
 });
 

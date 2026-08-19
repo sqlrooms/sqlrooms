@@ -20,6 +20,7 @@ import {
   readWKBLineStringXY,
   readWKBMultiLineStringXY,
   readWKBPointXY,
+  visitWKBMultiPolygonCoordinates,
   visitWKBPolygonCoordinates,
   WKB_LINESTRING,
   WKB_MULTILINESTRING,
@@ -34,6 +35,8 @@ const VERTEX_FIELD = new Field('', VERTEX_TYPE, true);
 const RING_TYPE = new List(VERTEX_FIELD);
 const RING_FIELD = new Field('', RING_TYPE, true);
 const POLYGON_TYPE = new List(RING_FIELD);
+const POLYGON_FIELD = new Field('', POLYGON_TYPE, true);
+const MULTIPOLYGON_TYPE = new List(POLYGON_FIELD);
 
 const GEOMETRY_SAMPLE_LIMIT = 100;
 const BITS_PER_VALIDITY_BYTE = 8;
@@ -218,23 +221,36 @@ function tryPromotePolygonTable(
   if (!vector) return null;
 
   const n = table.numRows;
-  const polygonOffsets = new Int32Array(n + 1);
+  const rowPolygonOffsets = new Int32Array(n + 1);
+  const polygonRingStarts: number[] = [];
   const ringOffsetsList: number[] = [];
   const xyList: number[] = [];
   const isNull = new Uint8Array(n);
   let nullCount = 0;
+  let sawMultiPolygon = false;
+
+  const startPolygon = () => {
+    polygonRingStarts.push(ringOffsetsList.length);
+  };
   const polygonVisitor = {
+    onPolygonStart: startPolygon,
     onRingStart: () => ringOffsetsList.push(xyList.length / 2),
     onCoordinate: (x: number, y: number) => xyList.push(x, y),
   };
 
+  const appendParsedPolygon = (rings: number[][][]) => {
+    startPolygon();
+    appendPolygonCoordinates(rings, ringOffsetsList, xyList);
+  };
+
   for (let i = 0; i < n; i++) {
-    polygonOffsets[i] = ringOffsetsList.length;
+    rowPolygonOffsets[i] = polygonRingStarts.length;
     const raw = vector.get(i);
 
     if (raw == null) {
       isNull[i] = 1;
       nullCount++;
+      startPolygon();
       continue;
     }
 
@@ -243,15 +259,19 @@ function tryPromotePolygonTable(
       if (!geom) {
         isNull[i] = 1;
         nullCount++;
+        startPolygon();
         continue;
       }
       if (geom.type === 'Polygon') {
-        appendPolygonCoordinates(
-          geom.coordinates as number[][][],
-          ringOffsetsList,
-          xyList,
-        );
-      } else return null;
+        appendParsedPolygon(geom.coordinates as number[][][]);
+      } else if (geom.type === 'MultiPolygon') {
+        sawMultiPolygon = true;
+        for (const rings of geom.coordinates as number[][][][]) {
+          appendParsedPolygon(rings);
+        }
+      } else {
+        return null;
+      }
       continue;
     }
 
@@ -260,13 +280,22 @@ function tryPromotePolygonTable(
     if (!hdr) return null;
 
     if (hdr.geomType === WKB_POLYGON) {
+      startPolygon();
       if (visitWKBPolygonCoordinates(buf, hdr, polygonVisitor) == null) {
         return null;
       }
-    } else return null;
+    } else if (hdr.geomType === WKB_MULTIPOLYGON) {
+      sawMultiPolygon = true;
+      if (!visitWKBMultiPolygonCoordinates(buf, hdr, polygonVisitor)) {
+        return null;
+      }
+    } else {
+      return null;
+    }
   }
-  polygonOffsets[n] = ringOffsetsList.length;
+  rowPolygonOffsets[n] = polygonRingStarts.length;
 
+  const nPolygons = polygonRingStarts.length;
   const totalRings = ringOffsetsList.length;
   const totalPoints = xyList.length / 2;
 
@@ -274,11 +303,14 @@ function tryPromotePolygonTable(
   for (let j = 0; j < totalRings; j++) ringOffsets[j] = ringOffsetsList[j]!;
   ringOffsets[totalRings] = totalPoints;
 
-  const flatCoords = new Float64Array(xyList);
+  const polygonOffsets = new Int32Array(nPolygons + 1);
+  for (let j = 0; j < nPolygons; j++) polygonOffsets[j] = polygonRingStarts[j]!;
+  polygonOffsets[nPolygons] = totalRings;
+
   const floatData = makeData({
     type: new Float64(),
     length: totalPoints * 2,
-    data: flatCoords,
+    data: new Float64Array(xyList),
   });
   const pointData = makeData({
     type: VERTEX_TYPE,
@@ -293,17 +325,36 @@ function tryPromotePolygonTable(
   });
   const polyData = makeData({
     type: POLYGON_TYPE,
+    length: nPolygons,
+    nullCount: sawMultiPolygon ? 0 : nullCount,
+    nullBitmap: sawMultiPolygon ? null : buildNullBitmap(n, isNull, nullCount),
+    valueOffsets: polygonOffsets,
+    child: ringData,
+  });
+
+  if (!sawMultiPolygon) {
+    if (nPolygons !== n) return null;
+    return buildPromotedResult(
+      table,
+      columnName,
+      new Vector([polyData]),
+      'geoarrow.polygon',
+    );
+  }
+
+  const multiData = makeData({
+    type: MULTIPOLYGON_TYPE,
     length: n,
     nullCount,
     nullBitmap: buildNullBitmap(n, isNull, nullCount),
-    valueOffsets: polygonOffsets,
-    child: ringData,
+    valueOffsets: rowPolygonOffsets,
+    child: polyData,
   });
   return buildPromotedResult(
     table,
     columnName,
-    new Vector([polyData]),
-    'geoarrow.polygon',
+    new Vector([multiData]),
+    'geoarrow.multipolygon',
   );
 }
 
@@ -468,9 +519,9 @@ export function describeGeoArrowPromotionFailure(
 
   if (POLYGON_LAYERS.has(layerType)) {
     return (
-      `${sampledText} GeoArrowPolygonLayer requires only Polygon rows.` +
-      ` Use GeoJsonLayer for MultiPolygon or mixed geometry columns, or filter with` +
-      ` WHERE ST_GeometryType(geom) = 'POLYGON'.`
+      `${sampledText} GeoArrowPolygonLayer requires Polygon or MultiPolygon rows.` +
+      ` Use GeoJsonLayer for mixed Point/Line/Polygon columns, or filter with` +
+      ` WHERE ST_GeometryType(geom) IN ('POLYGON','MULTIPOLYGON').`
     );
   }
   if (PATH_LAYERS.has(layerType)) {
@@ -627,8 +678,10 @@ export const wkbGeometryDecoder: GeometryDecoder = {
         table,
         columnName,
         encoding,
-        (geometryType) => geometryType === 'Polygon',
-        (geometryType) => geometryType === WKB_POLYGON,
+        (geometryType) =>
+          geometryType === 'Polygon' || geometryType === 'MultiPolygon',
+        (geometryType) =>
+          geometryType === WKB_POLYGON || geometryType === WKB_MULTIPOLYGON,
       );
     }
 

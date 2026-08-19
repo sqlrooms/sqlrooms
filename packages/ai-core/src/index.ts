@@ -17,6 +17,10 @@ export {
 } from './devtools/providerContextDiagnostics';
 export type {MeasureProviderContextArgs} from './devtools/providerContextDiagnostics';
 export type {ProviderContextDiagnostic} from './types';
+export {
+  ChatActiveStatus,
+  getChatActiveStatus,
+} from './components/ChatActiveStatus';
 export {ChatMessagesContainer} from './components/ChatMessagesContainer';
 /** @deprecated Use `Chat.Messages` instead. */
 export {ChatMessagesContainer as AnalysisResultsContainer} from './components/ChatMessagesContainer';
@@ -60,6 +64,8 @@ export {
   mergeChatRenderingComponents,
 } from './components/ChatRenderingContext';
 export type {
+  ChatActiveStatusInfo,
+  ChatActiveStatusProps,
   ChatComponentType,
   ChatRenderingProps,
   ChatRenderingComponents,

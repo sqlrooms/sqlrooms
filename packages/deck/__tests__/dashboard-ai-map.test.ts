@@ -365,6 +365,38 @@ describe('createDeckMapConfigTool', () => {
     expect(result.llmResult.success).toBe(true);
     expect(result.llmResult.data.config.configMode).toBeUndefined();
   });
+
+  it('rejects unsupported layer types', async () => {
+    const tool = createDeckMapConfigTool();
+
+    const result = await (tool as any).execute({
+      title: 'Polygon map',
+      config: {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowSolidPolygonLayer',
+              id: 'buildings',
+              _sqlroomsBinding: {dataset: 'buildings', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        datasets: {
+          buildings: {
+            source: {tableName: 'buildings'},
+            geometryColumn: 'geom',
+            geometryEncodingHint: 'wkb',
+          },
+        },
+      },
+      reasoning: 'show building footprints',
+    });
+
+    expect(result.llmResult.success).toBe(false);
+    expect(result.llmResult.errorMessage).toMatch(
+      /use a supported Deck map layer type \(.*\) — "GeoArrowSolidPolygonLayer" is not allowed/,
+    );
+  });
 });
 
 describe('createDeckMapDashboardTool', () => {

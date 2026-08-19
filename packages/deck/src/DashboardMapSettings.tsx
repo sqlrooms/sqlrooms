@@ -6,8 +6,6 @@ import {
   useStoreWithMosaicDashboard,
   useTablesWithColumns,
 } from '@sqlrooms/mosaic';
-import {Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
 import {type FC, useCallback} from 'react';
 import {DeckMapSettingsPanel} from './MapSettings';
 import {
@@ -71,6 +69,12 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
   const {handleChangeRequest, handleConfirm, handleCancel, isDialogOpen} =
     useConfirmDatasetChange(handleTableChange);
 
+  const panel = dashboard?.panels.find((candidate) => candidate.id === blockId);
+  const mapConfig =
+    panel?.type === DECK_MAP_DASHBOARD_PANEL_TYPE
+      ? (panel.config as DeckMapDashboardPanelConfig)
+      : undefined;
+
   if (!dashboard) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -79,38 +83,10 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
     );
   }
 
-  const panel = dashboard.panels.find((candidate) => candidate.id === blockId);
-
-  if (!panel || panel.type !== DECK_MAP_DASHBOARD_PANEL_TYPE) {
+  if (!panel || !mapConfig) {
     return (
       <div className="flex h-full items-center justify-center p-4">
         <p className="text-muted-foreground text-sm">Map panel not found</p>
-      </div>
-    );
-  }
-
-  const mapConfig = panel.config as DeckMapDashboardPanelConfig;
-  if (mapConfig.configMode === 'custom') {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
-          <span>Map settings</span>
-          {onClose ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </Button>
-          ) : null}
-        </div>
-        <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
-          This custom map configuration cannot be safely edited with the basic
-          settings controls.
-        </div>
       </div>
     );
   }
@@ -127,6 +103,7 @@ export const DeckMapDashboardSettings: FC<BlockSettingsComponentProps> = ({
         onTitleChange={handleTitleChange}
         onConfigChange={handleConfigChange}
         readOnly={readOnly}
+        customConfig={mapConfig.configMode === 'custom'}
       />
       <ConfirmDatasetChangeDialog
         open={isDialogOpen}

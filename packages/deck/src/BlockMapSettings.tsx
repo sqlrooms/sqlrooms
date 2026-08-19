@@ -5,13 +5,10 @@ import {
   type BlockSettingsComponentProps,
   useStoreWithBlockDocuments,
 } from '@sqlrooms/documents';
-import {Button} from '@sqlrooms/ui';
-import {XIcon} from 'lucide-react';
 import {useCallback, useMemo} from 'react';
 import {useStoreWithDeckMaps} from './DeckMapsSlice';
 import {DeckMapSettingsPanel} from './MapSettings';
-import {regenerateMapConfigForTable} from './mapConfigUtils';
-import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
+import {applyDeckMapTableSelection} from './mapConfigUtils';
 
 export function DeckMapBlockSettings({
   blockId,
@@ -46,11 +43,6 @@ export function DeckMapBlockSettings({
         : undefined,
     [artifact, blockId],
   );
-  const configIssues = useMemo(
-    () =>
-      map ? getDeckMapResourceConfigIssues(map.config, {allowEmpty: true}) : [],
-    [map],
-  );
 
   const handleTitleChange = useCallback(
     (title: string) => {
@@ -69,11 +61,9 @@ export function DeckMapBlockSettings({
   const handleTableChange = useCallback(
     (table: DataTable) => {
       if (readOnly || !map) return;
-      const config = regenerateMapConfigForTable({config: map.config}, table);
-      if (config === map.config) return;
       updateMap(mapId, {
         selectedTable: getTableIdentity(table.table),
-        config: config as typeof map.config,
+        config: applyDeckMapTableSelection(map.config, table),
       });
     },
     [map, mapId, readOnly, updateMap],
@@ -86,32 +76,6 @@ export function DeckMapBlockSettings({
       </div>
     );
 
-  if (configIssues.length > 0 || map.config.configMode === 'custom') {
-    return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-3 py-1.5 text-xs font-medium">
-          <span>Map settings</span>
-          {onClose ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5"
-              onClick={onClose}
-              aria-label="Close"
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </Button>
-          ) : null}
-        </div>
-        <div className="text-muted-foreground flex flex-1 items-center justify-center p-4 text-center text-sm">
-          {configIssues.length > 0
-            ? `Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}`
-            : 'This custom map configuration cannot be safely edited with the basic settings controls.'}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <DeckMapSettingsPanel
       title={block?.caption ?? map.title}
@@ -123,6 +87,8 @@ export function DeckMapBlockSettings({
       onTableChange={handleTableChange}
       onConfigChange={(config) => updateMap(mapId, {config})}
       readOnly={readOnly}
+      customConfig={map.config.configMode === 'custom'}
+      preferDatasetSource
     />
   );
 }

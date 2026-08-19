@@ -540,6 +540,21 @@ getFillColor: {
 }
 ```
 
+Optional `opacity` (0–1) is a SQLRooms `colorScale` extension. The compiler
+multiplies it into the color's alpha so fill, stroke, and arc endpoints can be
+dimmed independently of deck.gl `layer.opacity`:
+
+```tsx
+getFillColor: {
+  '@@function': 'colorScale',
+  field: 'Magnitude',
+  type: 'sequential',
+  scheme: 'YlOrRd',
+  domain: 'auto',
+  opacity: 0.6,
+}
+```
+
 Discrete numeric palettes are supported too:
 
 ```tsx
@@ -624,7 +639,6 @@ The current curated layer set is:
 - `GeoArrowColumnLayer`
 - `GeoArrowPathLayer`
 - `GeoArrowPolygonLayer`
-- `GeoArrowSolidPolygonLayer`
 - `GeoArrowArcLayer`
 - `GeoArrowTripsLayer`
 - `GeoArrowH3HexagonLayer`
@@ -634,7 +648,7 @@ GeoArrow-native geometry columns are the efficient path. WKB/WKT geometry falls
 back to decoding and GeoJSON-binary preparation, with promotion available
 for point-focused GeoArrow layers such as `GeoArrowScatterplotLayer`,
 `GeoArrowHeatmapLayer`, and `GeoArrowColumnLayer`, plus Polygon promotion for
-`GeoArrowPolygonLayer` and `GeoArrowSolidPolygonLayer`. WKB/WKT MultiPolygon
+`GeoArrowPolygonLayer`. WKB/WKT MultiPolygon
 uses the GeoJSON-binary path so separate polygon parts retain their nesting.
 
 The GeoArrow layer implementations themselves come from
@@ -677,8 +691,9 @@ helpers exported from `@sqlrooms/deck`:
   (aliases may be transform-only).
 
 Durable resource writes also run `getDeckMapResourceConfigIssues` /
-`assertDeckMapResourceConfig` for syntax and type/scheme compatibility
-(e.g. `quantile` + `Viridis` is rejected). Native `GEOMETRY` columns are
+`assertDeckMapResourceConfig` for syntax, supported layer types, and type/scheme
+compatibility (e.g. `quantile` + `Viridis` is rejected; layer `@@type` must be
+one of the settings picker classes). Native `GEOMETRY` columns are
 normalized to WKB by the dataset pipeline (not by SQL-string validation).
 
 ## Runtime Props and Children

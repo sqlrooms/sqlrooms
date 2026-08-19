@@ -11,16 +11,16 @@
         "description": "Shared contracts for composable blocks designed for BlockDocuments and other block containers; @sqlrooms/documents provides the editor, persistence, and runtime."
       },
       {
-        "name": "room-config",
-        "description": "Zod schemas and types for persisted room configuration."
-      },
-      {
         "name": "room-shell",
         "description": "Central application shell and Zustand-based state manager with panel system and DuckDB integration."
       },
       {
         "name": "room-store",
         "description": "Core state management utilities, RoomStore, and React context providers."
+      },
+      {
+        "name": "db",
+        "description": "DuckDB-centered orchestration layer for multi-database execution."
       },
       {
         "name": "duckdb",
@@ -41,10 +41,6 @@
       {
         "name": "layout",
         "description": "State and rendering for panel-based UIs with resizable splits, tabs, docking, and responsive grid layouts."
-      },
-      {
-        "name": "layout-config",
-        "description": "Zod schemas and types for persisted layout configuration."
       }
     ]
   },
@@ -56,16 +52,8 @@
         "description": "Natural-language querying and AI-assisted analytics tools."
       },
       {
-        "name": "ai-config",
-        "description": "Zod schemas and defaults for persisted AI slice configuration."
-      },
-      {
         "name": "ai-core",
         "description": "Lower-level AI slice, chat UI primitives, and tool-streaming utilities."
-      },
-      {
-        "name": "ai-rag",
-        "description": "Retrieval-augmented generation slice for semantic search over DuckDB-backed embeddings."
       },
       {
         "name": "ai-settings",
@@ -76,14 +64,6 @@
   {
     "text": "Feature Packages",
     "packages": [
-      {
-        "name": "app-runtime",
-        "description": "Sandboxed iframe runtime bridge for generated HTML apps and their SQLRooms hosts."
-      },
-      {
-        "name": "cells",
-        "description": "Shared cells model and UI primitives used by notebook and canvas views."
-      },
       {
         "name": "codemirror",
         "description": "CodeMirror 6 editor components with SQLRooms theme integration and JSON and JavaScript editing helpers."
@@ -117,10 +97,6 @@
         "description": "Kepler.gl integration for map-first SQLRooms analytics experiences."
       },
       {
-        "name": "kepler-config",
-        "description": "Zod schemas for persisted Kepler slice state."
-      },
-      {
         "name": "monaco-editor",
         "description": "VS Code's Monaco editor with SQL-aware autocompletion."
       },
@@ -141,24 +117,12 @@
         "description": "Responsive charts built with Recharts."
       },
       {
-        "name": "s3-browser",
-        "description": "S3-compatible storage browser with uploads and directory management."
-      },
-      {
-        "name": "s3-browser-config",
-        "description": "Zod schemas for persisted S3 browser configuration."
-      },
-      {
         "name": "schema-tree",
         "description": "Interactive database-schema explorer."
       },
       {
         "name": "sql-editor",
         "description": "SQL editor with history, syntax highlighting, and result docking."
-      },
-      {
-        "name": "sql-editor-config",
-        "description": "Zod schemas and defaults for persisted SQL editor state."
       },
       {
         "name": "vega",
@@ -170,16 +134,24 @@
     "text": "Experimental Packages",
     "packages": [
       {
+        "name": "ai-rag",
+        "description": "Retrieval-augmented generation slice for semantic search over DuckDB-backed embeddings."
+      },
+      {
+        "name": "app-runtime",
+        "description": "Sandboxed iframe runtime bridge for generated HTML apps and their SQLRooms hosts."
+      },
+      {
         "name": "canvas",
         "description": "React Flow-based artifact canvas for SQL, Vega, and dataflow node DAGs."
       },
       {
-        "name": "crdt",
-        "description": "Loro-backed CRDT slice, persistence, and sync helpers."
+        "name": "cells",
+        "description": "Shared cells model and UI primitives used by notebook and canvas views."
       },
       {
-        "name": "db",
-        "description": "DuckDB-centered orchestration layer for multi-database execution."
+        "name": "crdt",
+        "description": "Loro-backed CRDT slice, persistence, and sync helpers."
       },
       {
         "name": "db-settings",
@@ -194,8 +166,16 @@
         "description": "Artifact-scoped notebook UI and state slice for SQL, text, Markdown, Vega, and input cells."
       },
       {
+        "name": "mcp",
+        "description": "Transport-neutral MCP capability runtime with schema validation, invocation policies, and a browser bridge protocol."
+      },
+      {
         "name": "pivot",
         "description": "Slice-driven pivot table UI backed by DuckDB SQL and Vega-Lite charts."
+      },
+      {
+        "name": "s3-browser",
+        "description": "S3-compatible storage browser with uploads and directory management."
       },
       {
         "name": "webcontainer",
