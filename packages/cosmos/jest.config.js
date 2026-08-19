@@ -1,5 +1,4 @@
 import nodeConfig from '@sqlrooms/preset-jest/node.js';
-import reactConfig from '@sqlrooms/preset-jest/react.js';
 
 /** @type {import('ts-jest').JestConfigWithTsJest} */
 export default {
@@ -10,8 +9,9 @@ export default {
       testMatch: ['<rootDir>/__tests__/**/*.test.ts'],
     },
     {
-      ...reactConfig,
+      ...nodeConfig,
       displayName: 'react',
+      testEnvironment: 'jest-environment-jsdom',
       testMatch: ['<rootDir>/__tests__/**/*.test.tsx'],
     },
   ],
