@@ -6,11 +6,8 @@ import {
   KeplerGlContext,
   LayerLegendContentFactory,
   LayerLegendHeaderFactory,
+  MapLegendFactory,
 } from '@kepler.gl/components';
-import {
-  MapLegendIcons,
-  MapLegendProps,
-} from '@kepler.gl/components/dist/map/map-legend';
 import {DIMENSIONS} from '@kepler.gl/constants';
 import {Layer} from '@kepler.gl/layers';
 import {Button} from '@sqlrooms/ui';
@@ -25,6 +22,9 @@ import {useCallback, useContext, useRef, useState} from 'react';
 import type {Context, MouseEventHandler} from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
 import {SplitMapIndexContext} from './SplitMapIndexContext';
+
+type MapLegendProps = React.ComponentProps<ReturnType<typeof MapLegendFactory>>;
+type MapLegendIcons = NonNullable<MapLegendProps['actionIcons']>;
 
 const defaultActionIcons = {
   expanded: ChevronDownIcon as unknown as MapLegendIcons['expanded'],

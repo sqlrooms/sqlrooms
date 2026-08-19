@@ -7,6 +7,7 @@ import {
 } from '@kepler.gl/actions';
 import {reorderLayerOrder} from '@kepler.gl/reducers';
 import {Layer} from '@kepler.gl/layers';
+import type {LayerOrder} from '@kepler.gl/types';
 import {
   DROPPABLE_MAP_CONTAINER_TYPE,
   SORTABLE_LAYER_TYPE,
@@ -23,7 +24,7 @@ type DndEffectsHook = {
 const useDndLayers: (
   mapId: string | undefined,
   layers: Layer[],
-  layerOrder: string[],
+  layerOrder: LayerOrder,
 ) => DndEffectsHook = (mapId, layers, layerOrder) => {
   const dispatch = useStoreWithKepler((state) => state.kepler.dispatchAction);
 
@@ -81,19 +82,21 @@ const useDndLayers: (
           break;
         }
         //  moving layers within side panel
-        case SORTABLE_SIDE_PANEL_TYPE:
+        case SORTABLE_SIDE_PANEL_TYPE: {
           // move layer to the end of the list
-          dispatch(
-            mapId,
-            reorderLayer(
-              reorderLayerOrder(
-                layerOrder,
-                activeLayerId,
-                layerOrder[layerOrder.length - 1] || '',
+          const lastEntry = layerOrder[layerOrder.length - 1];
+          const lastEntryId =
+            typeof lastEntry === 'string' ? lastEntry : lastEntry?.id;
+          if (lastEntryId) {
+            dispatch(
+              mapId,
+              reorderLayer(
+                reorderLayerOrder(layerOrder, activeLayerId, lastEntryId),
               ),
-            ),
-          );
+            );
+          }
           break;
+        }
         default:
           break;
       }
