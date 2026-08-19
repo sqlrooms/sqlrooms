@@ -1,7 +1,7 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
-import {useState, useCallback, useMemo} from 'react';
+import {useState, useCallback, useMemo, useRef} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfig} from '@cosmos.gl/graph';
 
 /**
  * Represents the state of a hovered point in the graph.
@@ -54,22 +54,39 @@ export const useHoverState = (
 ): {
   hoveredPoint: HoverState;
   eventHandlers: {
-    onPointMouseOver: Required<GraphConfigInterface>['onPointMouseOver'];
+    onPointMouseOver: Required<GraphConfig>['onPointMouseOver'];
+    onMouseMove: Required<GraphConfig>['onMouseMove'];
     onPointMouseOut: () => void;
     onZoomStart: () => void;
     onDragStart: () => void;
   };
 } => {
   const [hoveredPoint, setHoveredPoint] = useState<HoverState>(null);
+  const lastPointerPosition = useRef<[number, number] | null>(null);
+
+  const onMouseMove = useCallback<Required<GraphConfig>['onMouseMove']>(
+    (_index, _pointPosition, event) => {
+      lastPointerPosition.current = calcRelativeCoordinates(
+        event.clientX,
+        event.clientY,
+      );
+    },
+    [calcRelativeCoordinates],
+  );
 
   const onPointMouseOver = useCallback<
-    Required<GraphConfigInterface>['onPointMouseOver']
+    Required<GraphConfig>['onPointMouseOver']
   >(
     (index, _pointPosition, event) => {
-      if (hasClientCoordinates(event)) {
+      const position = hasClientCoordinates(event)
+        ? calcRelativeCoordinates(event.clientX, event.clientY)
+        : lastPointerPosition.current;
+
+      if (position) {
+        lastPointerPosition.current = position;
         setHoveredPoint({
           index,
-          position: calcRelativeCoordinates(event.clientX, event.clientY),
+          position,
         });
       }
     },
@@ -81,11 +98,12 @@ export const useHoverState = (
   const eventHandlers = useMemo(
     () => ({
       onPointMouseOver,
+      onMouseMove,
       onPointMouseOut: clearHoverState,
       onZoomStart: clearHoverState,
       onDragStart: clearHoverState,
     }),
-    [onPointMouseOver, clearHoverState],
+    [onPointMouseOver, onMouseMove, clearHoverState],
   );
 
   return {
