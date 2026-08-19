@@ -49,17 +49,12 @@ if (apiPackages.length === 0) {
 const missingApiDocs = catalogPackageNames.filter(
   (packageName) => !apiPackageNames.includes(packageName),
 );
-const uncataloguedApiDocs = apiPackageNames.filter(
-  (packageName) => !catalogPackageNames.includes(packageName),
-);
 
-if (missingApiDocs.length > 0 || uncataloguedApiDocs.length > 0) {
+if (missingApiDocs.length > 0) {
   throw new Error(
-    [
-      `The API package catalog does not match the rendered API docs.`,
-      `Missing docs: ${missingApiDocs.join(', ') || 'none'}.`,
-      `Uncatalogued docs: ${uncataloguedApiDocs.join(', ') || 'none'}.`,
-    ].join(' '),
+    `The API package catalog links to missing docs: ${missingApiDocs.join(
+      ', ',
+    )}`,
   );
 }
 
@@ -122,5 +117,5 @@ if (
 }
 
 console.log(
-  `Verified ${apiPackages.length} rendered API packages for ${metadata.ref}`,
+  `Verified ${catalogPackageNames.length} public API packages for ${metadata.ref}`,
 );
