@@ -1,11 +1,13 @@
 import type {DragEndEvent} from '@dnd-kit/core';
 import {
   SORTABLE_LAYER_GROUP_DROPPABLE_TYPE,
+  SORTABLE_LAYER_GROUP_TYPE,
   SORTABLE_LAYER_TYPE,
   SORTABLE_SIDE_PANEL_TYPE,
 } from '@kepler.gl/components';
 import type {Layer} from '@kepler.gl/layers';
 import type {LayerOrder, LayerOrderGroup} from '@kepler.gl/types';
+import {isLayerOrderDragType} from '../src/components/CustomDndContext';
 import {orderLayersForLegend} from '../src/components/CustomMapLegend';
 import {getLayerOrderAfterDrag} from '../src/hooks/useDndLayers';
 
@@ -23,11 +25,12 @@ const drag = (
   activeParent?: LayerOrderGroup,
   overParent?: LayerOrderGroup,
   overType = SORTABLE_LAYER_TYPE,
+  activeType = SORTABLE_LAYER_TYPE,
 ) =>
   ({
     active: {
       id: activeId,
-      data: {current: {type: SORTABLE_LAYER_TYPE, parent: activeParent}},
+      data: {current: {type: activeType, parent: activeParent}},
     },
     over: {
       id: overId,
@@ -91,11 +94,74 @@ describe('getLayerOrderAfterDrag', () => {
       getLayerOrderAfterDrag(['a', targetGroup], event.active, event.over),
     ).toEqual([{...targetGroup, layerOrder: ['a']}]);
   });
+
+  it('cancels a grouped layer drop when there is no target', () => {
+    const sourceGroup = group('group-a', ['a', 'b']);
+    const event = drag('a', 'unused', sourceGroup);
+
+    expect(
+      getLayerOrderAfterDrag([sourceGroup, 'c'], event.active, null),
+    ).toBeUndefined();
+  });
+
+  it('reorders layer groups without replacing them with ids', () => {
+    const sourceGroup = group('group-a', ['a']);
+    const targetGroup = group('group-b', ['b']);
+    const event = drag(
+      'group-a',
+      'group-b',
+      undefined,
+      undefined,
+      SORTABLE_LAYER_GROUP_TYPE,
+      SORTABLE_LAYER_GROUP_TYPE,
+    );
+
+    expect(
+      getLayerOrderAfterDrag(
+        [sourceGroup, targetGroup],
+        event.active,
+        event.over,
+      ),
+    ).toEqual([targetGroup, sourceGroup]);
+  });
+
+  it('moves a layer group to the root end without losing its metadata', () => {
+    const sourceGroup = group('group-a', ['a']);
+    const targetGroup = group('group-b', ['b']);
+    const event = drag(
+      'group-a',
+      'side-panel',
+      undefined,
+      undefined,
+      SORTABLE_SIDE_PANEL_TYPE,
+      SORTABLE_LAYER_GROUP_TYPE,
+    );
+
+    expect(
+      getLayerOrderAfterDrag(
+        [sourceGroup, targetGroup],
+        event.active,
+        event.over,
+      ),
+    ).toEqual([targetGroup, sourceGroup]);
+  });
+});
+
+describe('isLayerOrderDragType', () => {
+  it('routes layers and layer groups to the layer drag handler', () => {
+    expect(isLayerOrderDragType(SORTABLE_LAYER_TYPE)).toBe(true);
+    expect(isLayerOrderDragType(SORTABLE_LAYER_GROUP_TYPE)).toBe(true);
+    expect(isLayerOrderDragType('effect')).toBe(false);
+  });
 });
 
 describe('orderLayersForLegend', () => {
   it('uses flattened group order instead of the raw layers array', () => {
-    const layers = [{id: 'a'}, {id: 'b'}, {id: 'c'}] as Layer[];
+    const layers = [
+      {id: 'a', config: {isVisible: true}},
+      {id: 'b', config: {isVisible: false}},
+      {id: 'c', config: {isVisible: true}},
+    ] as Layer[];
     const layerOrder = [group('group-a', ['c', 'a']), 'b'];
 
     expect(orderLayersForLegend(layers, layerOrder).map(({id}) => id)).toEqual([

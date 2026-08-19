@@ -6,6 +6,7 @@ import {
   LayerPanelHeaderFactory,
   DND_MODIFIERS,
   DND_EMPTY_MODIFIERS,
+  SORTABLE_LAYER_GROUP_TYPE,
   SORTABLE_LAYER_TYPE,
   SORTABLE_EFFECT_TYPE,
 } from '@kepler.gl/components';
@@ -19,6 +20,10 @@ const DragItem = styled.div`
 `;
 
 const nop = () => {};
+
+/** Returns whether a drag item belongs to Kepler's layer-order hierarchy. */
+export const isLayerOrderDragType = (type: unknown): boolean =>
+  type === SORTABLE_LAYER_TYPE || type === SORTABLE_LAYER_GROUP_TYPE;
 
 export type DndContextProps = PropsWithChildren<{
   visState?: VisState;
@@ -89,10 +94,12 @@ export function CustomDndContextFactory(
     const onDragStart = useCallback(
       (event: any) => {
         const activeType = event.active.data?.current?.type;
+        if (isLayerOrderDragType(activeType)) {
+          onLayerDragStart(event);
+          return;
+        }
+
         switch (activeType) {
-          case SORTABLE_LAYER_TYPE:
-            onLayerDragStart(event);
-            break;
           case SORTABLE_EFFECT_TYPE:
             onEffectDragStart(event);
             break;
@@ -106,10 +113,12 @@ export function CustomDndContextFactory(
     const onDragEnd = useCallback(
       (event: any) => {
         const activeType = event.active.data?.current?.type;
+        if (isLayerOrderDragType(activeType)) {
+          onLayerDragEnd(event);
+          return;
+        }
+
         switch (activeType) {
-          case SORTABLE_LAYER_TYPE:
-            onLayerDragEnd(event);
-            break;
           case SORTABLE_EFFECT_TYPE:
             onEffectDragEnd(event);
             break;

@@ -3689,10 +3689,10 @@ importers:
         version: 3.3.11(enzyme-adapter-utils@1.14.2(react@19.2.1))(enzyme@3.11.0)(react-test-renderer@16.14.0(react@19.2.1))(react@19.2.1)
       react-redux:
         specifier: ^9.1.0
-        version: 9.3.0(@types/react@19.2.7)(react@19.2.1)(redux@4.2.1)
+        version: 9.3.0(@types/react@19.2.7)(react@19.2.1)(redux@5.0.1)
       redux:
-        specifier: ^4.2.1
-        version: 4.2.1
+        specifier: ^5.0.1
+        version: 5.0.1
       redux-logger:
         specifier: ^3.0.6
         version: 3.0.6
@@ -30390,15 +30390,6 @@ snapshots:
       '@types/react-dom': 19.2.3(@types/react@19.2.7)
       react-dom: 19.2.1(react@19.2.1)
       redux: 5.0.1
-
-  react-redux@9.3.0(@types/react@19.2.7)(react@19.2.1)(redux@4.2.1):
-    dependencies:
-      '@types/use-sync-external-store': 0.0.6
-      react: 19.2.1
-      use-sync-external-store: 1.6.0(react@19.2.1)
-    optionalDependencies:
-      '@types/react': 19.2.7
-      redux: 4.2.1
 
   react-redux@9.3.0(@types/react@19.2.7)(react@19.2.1)(redux@5.0.1):
     dependencies:

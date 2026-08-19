@@ -18,6 +18,7 @@ import type {LayerOrder, LayerOrderGroup} from '@kepler.gl/types';
 import {
   DROPPABLE_MAP_CONTAINER_TYPE,
   SORTABLE_LAYER_GROUP_DROPPABLE_TYPE,
+  SORTABLE_LAYER_GROUP_TYPE,
   SORTABLE_LAYER_TYPE,
   SORTABLE_SIDE_PANEL_TYPE,
 } from '@kepler.gl/components';
@@ -50,18 +51,20 @@ export function getLayerOrderAfterDrag(
   const activeType = active.data.current?.type;
   const overParent = over?.data.current?.parent as LayerOrderGroup | undefined;
   const overType = over?.data.current?.type;
+  const activeEntry =
+    activeType === SORTABLE_LAYER_GROUP_TYPE
+      ? (getLayerGroupFromLayerOrder(layerOrder, activeId) ?? activeId)
+      : activeId;
 
   const moveToRootEnd = () =>
     addLayerOrGroupToLayerOrder(
       removeElementFromLayerOrder(layerOrder, activeId),
-      activeId,
+      activeEntry,
       layerOrder.length,
     );
 
   if (!overId) {
-    return activeParent && activeType === SORTABLE_LAYER_TYPE
-      ? moveToRootEnd()
-      : undefined;
+    return undefined;
   }
 
   if (
@@ -112,7 +115,7 @@ export function getLayerOrderAfterDrag(
     const targetIndex = over!.data.current?.sortable?.index ?? 0;
     return addLayerOrGroupToLayerOrder(
       removeElementFromLayerOrder(layerOrder, activeId),
-      activeId,
+      activeEntry,
       targetIndex,
     );
   }
@@ -160,6 +163,7 @@ const useDndLayers: (
       setActiveLayer(undefined);
 
       if (overType === DROPPABLE_MAP_CONTAINER_TYPE) {
+        if (active.data.current?.type !== SORTABLE_LAYER_TYPE) return;
         const mapIndex = over?.data.current?.index ?? 0;
         dispatch(mapId, toggleLayerForMap(mapIndex, activeLayerId));
         return;

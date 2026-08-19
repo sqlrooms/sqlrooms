@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright contributors to the kepler.gl project
 
-import {layerConfigChange, toggleMapControl} from '@kepler.gl/actions';
+import {toggleMapControl} from '@kepler.gl/actions';
 import {
   KeplerGlContext,
   LayerLegendContentFactory,
@@ -23,7 +23,6 @@ import {
 import {useCallback, useContext, useRef, useState} from 'react';
 import type {Context, MouseEventHandler} from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
-import {SplitMapIndexContext} from './SplitMapIndexContext';
 
 type MapLegendProps = React.ComponentProps<ReturnType<typeof MapLegendFactory>>;
 type MapLegendIcons = NonNullable<MapLegendProps['actionIcons']>;
@@ -66,24 +65,11 @@ export function CustomMapLegendFactory(
 ) {
   const MapLegend: React.FC<
     MapLegendProps & {mapIndex?: number; onClose?: () => void}
-  > = ({
-    layers = [],
-    layerOrder,
-    width,
-    isExport,
-    mapIndex: mapIndexProp,
-    onClose,
-    ...restProps
-  }) => {
+  > = ({layers = [], layerOrder, width, isExport, onClose, ...restProps}) => {
     const containerW = width || DIMENSIONS.mapControl.width;
     const mapId = useContext(keplerGlContext).id;
-    const splitMapIndex = useContext(SplitMapIndexContext);
-    const mapIndex = mapIndexProp ?? splitMapIndex;
     const dispatchAction = useStoreWithKepler(
       (state) => state.kepler.dispatchAction,
-    );
-    const splitMaps = useStoreWithKepler(
-      (state) => state.kepler.map[mapId]?.visState?.splitMaps,
     );
     const handleClose = (evt: React.MouseEvent<HTMLButtonElement>) => {
       evt.stopPropagation();
@@ -94,14 +80,7 @@ export function CustomMapLegendFactory(
       }
     };
 
-    const isSplit = splitMaps && splitMaps.length > 1;
-    const panelLayers =
-      isSplit && mapIndex != null ? splitMaps[mapIndex]?.layers : undefined;
-
-    const visibleLayers = orderLayersForLegend(layers, layerOrder).filter(
-      (layer) =>
-        layer.config.isVisible && (!panelLayers || panelLayers[layer.id]),
-    );
+    const orderedLayers = orderLayersForLegend(layers, layerOrder);
 
     return (
       <div
@@ -123,7 +102,7 @@ export function CustomMapLegendFactory(
             </div>
           )}
           <div className="flex w-full flex-1 flex-col items-center">
-            {visibleLayers.map((layer) => {
+            {orderedLayers.map((layer) => {
               return (
                 <LayerLegendItem
                   key={layer.id}
@@ -147,12 +126,12 @@ export function CustomMapLegendFactory(
     mapState,
     disableEdit,
     onLayerVisConfigChange,
+    onToggleLayerVisibility,
+    onMapToggleLayer,
+    isSplit,
+    splitMaps,
   }: {layer: Layer; containerW: number} & MapLegendProps) => {
     const [isExpanded, setIsExpanded] = useState(layer.config.isVisible);
-
-    const dispatchAction = useStoreWithKepler(
-      (state) => state.kepler.dispatchAction,
-    );
     const scrollIntoView = useCallback(() => {
       requestAnimationFrame(() => {
         containerRef.current?.scrollIntoView({
@@ -172,7 +151,18 @@ export function CustomMapLegendFactory(
       }
     };
 
-    const mapId = useContext(keplerGlContext).id;
+    const handleToggleVisibility: MouseEventHandler<HTMLElement> = (evt) => {
+      evt.stopPropagation();
+      onToggleLayerVisibility?.(layer);
+    };
+
+    const handleToggleMapVisibility =
+      (targetMapIndex: number): MouseEventHandler<HTMLElement> =>
+      (evt) => {
+        evt.stopPropagation();
+        onMapToggleLayer?.(targetMapIndex, layer.id);
+      };
+
     const containerRef = useRef<HTMLDivElement>(null);
 
     if (!layer.isValidToSave() || layer.config.hidden) {
@@ -183,6 +173,16 @@ export function CustomMapLegendFactory(
       return null;
     }
 
+    const hasSplitVisibilityControls =
+      !isExport &&
+      Boolean(onMapToggleLayer) &&
+      Boolean(isSplit) &&
+      Boolean(splitMaps && splitMaps.length > 1);
+    const isLeftVisible =
+      layer.config.isVisible && Boolean(splitMaps?.[0]?.layers[layer.id]);
+    const isRightVisible =
+      layer.config.isVisible && Boolean(splitMaps?.[1]?.layers[layer.id]);
+
     return (
       <div
         ref={containerRef}
@@ -192,11 +192,58 @@ export function CustomMapLegendFactory(
           className="flex w-full flex-row items-center gap-2"
           onClick={handleToggleExpanded}
         >
-          <div className="cursor-pointer items-center overflow-hidden p-2 text-xs text-ellipsis whitespace-nowrap select-none">
+          <div
+            className="cursor-pointer items-center overflow-hidden p-2 text-xs text-ellipsis whitespace-nowrap select-none"
+            style={{opacity: layer.config.isVisible ? 1 : 0.5}}
+          >
             {layer.config.label}
           </div>
           <div className="flex-1" />
           <div className="flex flex-row items-center justify-end gap-1">
+            {hasSplitVisibilityControls ? (
+              <>
+                <Button
+                  aria-label="Toggle layer in left map"
+                  className="h-7 w-7"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleMapVisibility(0)}
+                >
+                  {isLeftVisible ? (
+                    <EyeIcon className="h-4 w-4" />
+                  ) : (
+                    <EyeOffIcon className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  aria-label="Toggle layer in right map"
+                  className="h-7 w-7"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleMapVisibility(1)}
+                >
+                  {isRightVisible ? (
+                    <EyeIcon className="h-4 w-4" />
+                  ) : (
+                    <EyeOffIcon className="h-4 w-4" />
+                  )}
+                </Button>
+              </>
+            ) : !isExport && onToggleLayerVisibility ? (
+              <Button
+                aria-label="Toggle layer visibility"
+                className="h-7 w-7"
+                variant="ghost"
+                size="icon"
+                onClick={handleToggleVisibility}
+              >
+                {layer.config.isVisible ? (
+                  <EyeIcon className="h-4 w-4" />
+                ) : (
+                  <EyeOffIcon className="h-4 w-4" />
+                )}
+              </Button>
+            ) : null}
             <Button
               className="h-7 w-7"
               variant="ghost"
