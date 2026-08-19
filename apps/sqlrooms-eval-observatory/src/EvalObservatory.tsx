@@ -1,13 +1,22 @@
 import {
   ObservatoryExportSchema,
   compareObservatoryRuns,
+  createObservatoryTrajectory,
   filterObservatoryRuns,
   findAutomaticBaseline,
   summarizeObservatoryRuns,
   type ObservatoryRun,
   type ObservatoryRunFilters,
+  type ObservatoryTrajectory,
+  type ObservatoryTrajectoryNode,
 } from '@sqlrooms/evals/promptfoo/read-model';
-import {useMemo, useState} from 'react';
+import {lazy, Suspense, useMemo, useState} from 'react';
+
+const TrajectoryGraph = lazy(() =>
+  import('./TrajectoryGraph').then((module) => ({
+    default: module.TrajectoryGraph,
+  })),
+);
 
 type GroupKey =
   | 'none'
@@ -56,6 +65,7 @@ export function EvalObservatory() {
   const [groupBy, setGroupBy] = useState<GroupKey>('scenario');
   const [selectedId, setSelectedId] = useState<string>();
   const [baselineId, setBaselineId] = useState<string>();
+  const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const filtered = useMemo(
     () => filterObservatoryRuns(runs, filters),
     [runs, filters],
@@ -66,6 +76,19 @@ export function EvalObservatory() {
     ? findAutomaticBaseline(runs, selected)
     : undefined;
   const baseline = runs.find((run) => run.id === baselineId) ?? defaultBaseline;
+  const selectedTrajectory = useMemo(
+    () => (selected ? createObservatoryTrajectory(selected) : undefined),
+    [selected],
+  );
+  const baselineTrajectory = useMemo(
+    () => (baseline ? createObservatoryTrajectory(baseline) : undefined),
+    [baseline],
+  );
+  const selectedTrajectoryNode = findTrajectoryNode(
+    selectedNodeId,
+    selectedTrajectory,
+    baselineTrajectory,
+  );
   const grouped = useMemo(() => {
     const result = new Map<string, ObservatoryRun[]>();
     for (const run of filtered) {
@@ -288,7 +311,10 @@ export function EvalObservatory() {
                             type="button"
                             className="run-select"
                             aria-pressed={selectedId === run.id}
-                            onClick={() => setSelectedId(run.id)}
+                            onClick={() => {
+                              setSelectedId(run.id);
+                              setSelectedNodeId(undefined);
+                            }}
                           >
                             {run.scenario.id}@{run.scenario.version ?? '?'}
                           </button>
@@ -325,9 +351,10 @@ export function EvalObservatory() {
                   Compare with
                   <select
                     value={baseline?.id ?? ''}
-                    onChange={(event) =>
-                      setBaselineId(event.target.value || undefined)
-                    }
+                    onChange={(event) => {
+                      setBaselineId(event.target.value || undefined);
+                      setSelectedNodeId(undefined);
+                    }}
                   >
                     <option value="">Last known good</option>
                     {runs
@@ -343,6 +370,40 @@ export function EvalObservatory() {
               {baseline && (
                 <Json value={compareObservatoryRuns(selected, baseline)} />
               )}
+              {selectedTrajectory && (
+                <TrajectoryComparison
+                  selected={selectedTrajectory}
+                  baseline={baselineTrajectory}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={setSelectedNodeId}
+                />
+              )}
+              {selectedTrajectoryNode && (
+                <section className="trajectory-node-detail">
+                  <p className="eyebrow">Selected trajectory item</p>
+                  <h3>
+                    {selectedTrajectoryNode.kind}:{' '}
+                    {selectedTrajectoryNode.label}
+                  </h3>
+                  <Json
+                    value={{
+                      status: selectedTrajectoryNode.status,
+                      durationMs: selectedTrajectoryNode.durationMs,
+                      timestamp: selectedTrajectoryNode.timestamp,
+                      input: selectedTrajectoryNode.data.input,
+                      output: selectedTrajectoryNode.data.output,
+                      error: selectedTrajectoryNode.data.errorText,
+                      relatedOracleEvidence: relatedOracles(
+                        selectedTrajectoryNode,
+                        selectedTrajectoryNode.id.startsWith(`${selected.id}:`)
+                          ? selected
+                          : baseline,
+                      ),
+                      raw: selectedTrajectoryNode.data,
+                    }}
+                  />
+                </section>
+              )}
               <div className="detail-grid">
                 <Detail title="Prompt turns">
                   <Json value={selected.promptTurns} />
@@ -357,7 +418,11 @@ export function EvalObservatory() {
                   <Json value={selected.graderFeedback ?? null} />
                 </Detail>
                 <Detail title="Ordered events">
-                  <Json value={selected.events} />
+                  <EventList
+                    trajectory={selectedTrajectory}
+                    selectedNodeId={selectedNodeId}
+                    onSelectNode={setSelectedNodeId}
+                  />
                 </Detail>
                 <Detail title="Promptfoo spans">
                   <Json value={selected.spans} />
@@ -374,6 +439,128 @@ export function EvalObservatory() {
         </>
       )}
     </main>
+  );
+}
+
+function findTrajectoryNode(
+  nodeId: string | undefined,
+  ...trajectories: Array<ObservatoryTrajectory | undefined>
+): ObservatoryTrajectoryNode | undefined {
+  if (!nodeId) return undefined;
+  return trajectories
+    .flatMap((trajectory) => trajectory?.nodes ?? [])
+    .find((node) => node.id === nodeId);
+}
+
+function relatedOracles(
+  node: ObservatoryTrajectoryNode,
+  ...runs: Array<ObservatoryRun | undefined>
+) {
+  return runs
+    .flatMap((run) => run?.oracleResults ?? [])
+    .filter((oracle) => node.relatedOracleIds.includes(oracle.oracleId));
+}
+
+function TrajectoryComparison({
+  selected,
+  baseline,
+  selectedNodeId,
+  onSelectNode,
+}: {
+  selected: ObservatoryTrajectory;
+  baseline?: ObservatoryTrajectory;
+  selectedNodeId?: string;
+  onSelectNode: (nodeId?: string) => void;
+}) {
+  if (!selected.graphRecommended && !baseline?.graphRecommended) {
+    return (
+      <div className="trajectory-note">
+        <strong>Graph omitted.</strong> {selected.recommendationReason}
+      </div>
+    );
+  }
+  return (
+    <section className="trajectory-comparison">
+      <div className="trajectory-heading">
+        <div>
+          <p className="eyebrow">Delegated trajectory</p>
+          <h3>Linked execution graph</h3>
+        </div>
+        <p>
+          Purple links are explicit parent/child relationships. The ordered
+          event list remains the source for linear inspection.
+        </p>
+      </div>
+      <Suspense
+        fallback={<div className="trajectory-note">Loading graph…</div>}
+      >
+        <div className={`trajectory-graphs ${baseline ? 'has-baseline' : ''}`}>
+          <article>
+            <h4>Selected · {selected.runId}</h4>
+            <div className="trajectory-canvas">
+              <TrajectoryGraph
+                trajectory={selected}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={onSelectNode}
+              />
+            </div>
+            <small>{selected.recommendationReason}</small>
+          </article>
+          {baseline && (
+            <article>
+              <h4>Baseline · {baseline.runId}</h4>
+              {baseline.graphRecommended ? (
+                <div className="trajectory-canvas">
+                  <TrajectoryGraph
+                    trajectory={baseline}
+                    selectedNodeId={selectedNodeId}
+                    onSelectNode={onSelectNode}
+                  />
+                </div>
+              ) : (
+                <div className="trajectory-note">
+                  Graph omitted. {baseline.recommendationReason}
+                </div>
+              )}
+              <small>{baseline.recommendationReason}</small>
+            </article>
+          )}
+        </div>
+      </Suspense>
+    </section>
+  );
+}
+
+function EventList({
+  trajectory,
+  selectedNodeId,
+  onSelectNode,
+}: {
+  trajectory?: ObservatoryTrajectory;
+  selectedNodeId?: string;
+  onSelectNode: (nodeId?: string) => void;
+}) {
+  const events = (trajectory?.nodes ?? []).filter(
+    (node) => node.sequence !== undefined,
+  );
+  if (events.length === 0) return <p className="answer">No events recorded.</p>;
+  return (
+    <ol className="event-list">
+      {events.map((node) => (
+        <li key={node.id}>
+          <button
+            type="button"
+            className={selectedNodeId === node.id ? 'selected' : ''}
+            onClick={() => onSelectNode(node.id)}
+          >
+            <span>{node.sequence}</span>
+            <strong>{node.kind}</strong>
+            <span>{node.label}</span>
+            <small>{node.status ?? 'recorded'}</small>
+          </button>
+        </li>
+      ))}
+    </ol>
   );
 }
 

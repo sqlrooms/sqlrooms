@@ -12,3 +12,11 @@ pnpm --filter sqlrooms-eval-observatory dev
 The Node adapter opens Promptfoo SQLite files read-only and normalizes their
 schema before this app sees any data. The browser can load multiple retained CI
 summaries and requires no central service.
+
+Runs with explicit nested-agent or parent/child tool evidence also get a linked
+`@sqlrooms/cosmos` trajectory view. Simple runs deliberately remain in the
+ordered event list. Graph nodes are derived from the normalized SQLRooms
+evidence model, never directly from Promptfoo spans, and selecting a node shows
+its exact recorded input, output, duration, status, and explicitly related
+oracle evidence. When a baseline is available, graph-worthy trajectories appear
+side by side.

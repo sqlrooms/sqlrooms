@@ -349,9 +349,15 @@ importers:
 
   apps/sqlrooms-eval-observatory:
     dependencies:
+      '@sqlrooms/cosmos':
+        specifier: workspace:*
+        version: link:../../packages/cosmos
       '@sqlrooms/evals':
         specifier: workspace:*
         version: link:../../packages/evals
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../../packages/room-store
       react:
         specifier: 19.2.1
         version: 19.2.1

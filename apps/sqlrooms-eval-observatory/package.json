@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sqlrooms/cosmos": "workspace:*",
     "@sqlrooms/evals": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
