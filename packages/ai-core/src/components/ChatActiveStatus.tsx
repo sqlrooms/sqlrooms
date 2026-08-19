@@ -5,18 +5,14 @@ import React, {type FC} from 'react';
 import type {AgentToolCall} from '../types';
 import {useElapsedTime} from '../hooks/useElapsedTime';
 import type {ToolRenderBehavior} from './FlatAgentRenderer';
-import {useToolRenderBehavior} from './FlatAgentRenderer';
+import type {
+  ChatActiveStatusInfo,
+  ChatActiveStatusProps,
+} from './ChatRenderingTypes';
 
 export {hasPendingToolApproval} from '../timeouts';
 
 type AnyUIMessagePart = UIMessagePart<any, any>;
-
-/** User-facing description of the chat run's current active step. */
-export type ChatActiveStatusInfo = {
-  key: string;
-  label: string;
-  kind: 'tool' | 'approval' | 'model';
-};
 
 /**
  * Derives the current user-facing activity from the latest chat turn.
@@ -66,21 +62,16 @@ export function getChatActiveStatus(
 }
 
 /** Displays the current chat activity and elapsed time for that step. */
-export const ChatActiveStatus: FC<{
-  messages: UIMessage[] | undefined;
-  className?: string;
-}> = ({messages, className}) => {
-  const behavior = useToolRenderBehavior();
-  const status = getChatActiveStatus(messages, behavior);
-
-  return (
-    <ChatActiveStatusLine
-      key={status.key}
-      status={status}
-      className={className}
-    />
-  );
-};
+export const ChatActiveStatus: FC<ChatActiveStatusProps> = ({
+  status,
+  className,
+}) => (
+  <ChatActiveStatusLine
+    key={status.key}
+    status={status}
+    className={className}
+  />
+);
 
 const ChatActiveStatusLine: FC<{
   status: ChatActiveStatusInfo;

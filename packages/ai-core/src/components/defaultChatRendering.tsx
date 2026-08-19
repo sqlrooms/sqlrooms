@@ -29,6 +29,7 @@ import type {
   ChatTurnPresentation,
   ChatTurnSlotProps,
 } from './ChatRenderingTypes';
+import {ChatActiveStatus} from './ChatActiveStatus';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {ExpandableContent} from './ExpandableContent';
 import {
@@ -649,6 +650,7 @@ export const DefaultChatTurn: React.FC<ChatTurnSlotProps> = ({turn}) => {
 /** Built-in SQLRooms rendering recipe. */
 export const defaultChatRenderingComponents: Readonly<ChatRenderingComponents> =
   Object.freeze({
+    ActiveStatus: ChatActiveStatus,
     Turn: DefaultChatTurn,
     Prompt: DefaultChatPrompt,
     Activity: DefaultChatActivity,

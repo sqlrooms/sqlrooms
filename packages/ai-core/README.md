@@ -117,6 +117,7 @@ order, what is hoistable / running / completed), then asks the nearest
 
 | Slot            | Role                                                          |
 | --------------- | ------------------------------------------------------------- |
+| `ActiveStatus`  | Current in-flight run status and elapsed-time presentation    |
 | `Turn`          | Full turn layout recipe — composes pre-wired semantic regions |
 | `Prompt`        | User prompt chrome for the turn                               |
 | `Activity`      | Collapsible / status chrome around in-progress work           |
@@ -228,6 +229,27 @@ function AppReasoning({text, isRunning}: ChatReasoningProps) {
 
 You can combine any of these in one `components` map by providing both the
 `Prompt` and `Reasoning` entries.
+
+**Active run status** — change or suppress the progress indicator without
+reimplementing chat-run state derivation. The exported `getChatActiveStatus`
+helper is also available when the indicator needs to be placed outside
+`Chat.Messages`:
+
+```tsx
+import {Chat, type ChatActiveStatusProps} from '@sqlrooms/ai-core';
+
+function AppActiveStatus({status}: ChatActiveStatusProps) {
+  return <MyProgressIndicator label={status.label} />;
+}
+
+<Chat.Rendering components={{ActiveStatus: AppActiveStatus}}>
+  <Chat.Messages />
+</Chat.Rendering>;
+```
+
+Set `ActiveStatus` to a component that returns `null` when the host owns the
+indicator's placement entirely. For that case, call `getChatActiveStatus` with
+the current messages and `ToolRenderBehavior` to reuse the same status model.
 
 `TextOutput` receives `isAnswer=true` only for text that is the final message
 part. Planning text followed by tool activity remains regular response text.
