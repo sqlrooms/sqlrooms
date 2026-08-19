@@ -213,6 +213,12 @@ export interface DeckMapSettingsPanelProps {
   readOnly?: boolean;
   /** Custom maps stay on the JSON editor so basic controls cannot clobber them. */
   customConfig?: boolean;
+  /**
+   * Worksheet maps own their dataset in `config.datasets`. Prefer that table
+   * over `selectedTable`, which is only a sidecar. Dashboards leave this false
+   * so the shared dashboard selected table is shown.
+   */
+  preferDatasetSource?: boolean;
 }
 
 function getSchemeOptions(type: ColorScaleConfig['type']) {
@@ -1070,6 +1076,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
   onConfigChange,
   readOnly,
   customConfig = false,
+  preferDatasetSource = false,
 }) => {
   const [layerIndex, setLayerIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'settings' | 'code'>(
@@ -1124,7 +1131,9 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
         : undefined,
     [fallbackTableName, tables],
   );
-  const sourceDataTable = selectedDataTable ?? fallbackTable;
+  const sourceDataTable = preferDatasetSource
+    ? (fallbackTable ?? selectedDataTable)
+    : (selectedDataTable ?? fallbackTable);
   const sourceColumns = sourceDataTable?.columns ?? EMPTY_COLUMNS;
   const resolvedActiveLayerDatasetSource = useMemo(() => {
     if (!activeLayerDatasetSource) {
@@ -1137,14 +1146,15 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
     }
 
     return {
-      tableName: selectedDataTable
-        ? getTableIdentity(selectedDataTable.table)
-        : activeLayerDatasetSource.tableName,
+      tableName:
+        !preferDatasetSource && selectedDataTable
+          ? getTableIdentity(selectedDataTable.table)
+          : activeLayerDatasetSource.tableName,
       ...(activeLayerDatasetSource.transformSql
         ? {transformSql: activeLayerDatasetSource.transformSql}
         : {}),
     };
-  }, [activeLayerDatasetSource, selectedDataTable]);
+  }, [activeLayerDatasetSource, preferDatasetSource, selectedDataTable]);
   const datasetSchema = useDeckMapDatasetSchema({
     source: resolvedActiveLayerDatasetSource,
     sourceColumns,
@@ -1437,7 +1447,7 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
               <DataTableSelector
                 onChange={handleTableChange}
                 tables={tables}
-                value={selectedDataTable}
+                value={sourceDataTable}
                 disabled={readOnly}
               />
             </Field>

@@ -8,7 +8,7 @@ import {
 import {useCallback, useMemo} from 'react';
 import {useStoreWithDeckMaps} from './DeckMapsSlice';
 import {DeckMapSettingsPanel} from './MapSettings';
-import {regenerateMapConfigForTable} from './mapConfigUtils';
+import {applyDeckMapTableSelection} from './mapConfigUtils';
 
 export function DeckMapBlockSettings({
   blockId,
@@ -61,11 +61,9 @@ export function DeckMapBlockSettings({
   const handleTableChange = useCallback(
     (table: DataTable) => {
       if (readOnly || !map) return;
-      const config = regenerateMapConfigForTable({config: map.config}, table);
-      if (config === map.config) return;
       updateMap(mapId, {
         selectedTable: getTableIdentity(table.table),
-        config: config as typeof map.config,
+        config: applyDeckMapTableSelection(map.config, table),
       });
     },
     [map, mapId, readOnly, updateMap],
@@ -90,6 +88,7 @@ export function DeckMapBlockSettings({
       onConfigChange={(config) => updateMap(mapId, {config})}
       readOnly={readOnly}
       customConfig={map.config.configMode === 'custom'}
+      preferDatasetSource
     />
   );
 }

@@ -58,5 +58,9 @@ describe('Deck map settings controls', () => {
     expect(worksheetSurfaceSource).toContain("onClearIssue('fit-error')");
     expect(dashboardAdapterSource).toContain('<DeckMapSettingsPanel');
     expect(dashboardAdapterSource).toContain('customConfig=');
+    expect(panelSource).toContain('value={sourceDataTable}');
+    expect(worksheetAdapterSource).toContain('applyDeckMapTableSelection');
+    expect(worksheetAdapterSource).toContain('preferDatasetSource');
+    expect(dashboardAdapterSource).not.toContain('preferDatasetSource');
   });
 });

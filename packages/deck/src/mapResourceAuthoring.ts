@@ -378,7 +378,7 @@ const DECK_MAP_LAYER_CLASS_ALIASES: Record<string, string> = {
   H3HexagonLayer: 'GeoArrowH3HexagonLayer',
 };
 
-const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set(
+const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
 );
 
