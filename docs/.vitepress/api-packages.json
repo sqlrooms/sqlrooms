@@ -41,10 +41,6 @@
       {
         "name": "layout",
         "description": "State and rendering for panel-based UIs with resizable splits, tabs, docking, and responsive grid layouts."
-      },
-      {
-        "name": "mcp",
-        "description": "Transport-neutral MCP capability runtime with schema validation, invocation policies, and a browser bridge protocol."
       }
     ]
   },
@@ -60,10 +56,6 @@
         "description": "Lower-level AI slice, chat UI primitives, and tool-streaming utilities."
       },
       {
-        "name": "ai-rag",
-        "description": "Retrieval-augmented generation slice for semantic search over DuckDB-backed embeddings."
-      },
-      {
         "name": "ai-settings",
         "description": "AI provider and model settings state and UI components."
       }
@@ -72,14 +64,6 @@
   {
     "text": "Feature Packages",
     "packages": [
-      {
-        "name": "app-runtime",
-        "description": "Sandboxed iframe runtime bridge for generated HTML apps and their SQLRooms hosts."
-      },
-      {
-        "name": "cells",
-        "description": "Shared cells model and UI primitives used by notebook and canvas views."
-      },
       {
         "name": "codemirror",
         "description": "CodeMirror 6 editor components with SQLRooms theme integration and JSON and JavaScript editing helpers."
@@ -150,8 +134,20 @@
     "text": "Experimental Packages",
     "packages": [
       {
+        "name": "ai-rag",
+        "description": "Retrieval-augmented generation slice for semantic search over DuckDB-backed embeddings."
+      },
+      {
+        "name": "app-runtime",
+        "description": "Sandboxed iframe runtime bridge for generated HTML apps and their SQLRooms hosts."
+      },
+      {
         "name": "canvas",
         "description": "React Flow-based artifact canvas for SQL, Vega, and dataflow node DAGs."
+      },
+      {
+        "name": "cells",
+        "description": "Shared cells model and UI primitives used by notebook and canvas views."
       },
       {
         "name": "crdt",
@@ -168,6 +164,10 @@
       {
         "name": "notebook",
         "description": "Artifact-scoped notebook UI and state slice for SQL, text, Markdown, Vega, and input cells."
+      },
+      {
+        "name": "mcp",
+        "description": "Transport-neutral MCP capability runtime with schema validation, invocation policies, and a browser bridge protocol."
       },
       {
         "name": "pivot",
