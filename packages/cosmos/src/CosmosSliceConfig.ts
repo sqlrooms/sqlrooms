@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfig} from '@cosmos.gl/graph';
 
 /**
  * Default configuration values for the Cosmos graph visualization.
@@ -15,11 +15,11 @@ const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
   simulationFriction: 0.85,
   simulationDecay: 1000,
   renderLinks: true,
-  linkArrows: false,
+  linkDefaultArrows: false,
   curvedLinks: false,
   linkWidthScale: 1,
   linkArrowsSizeScale: 1,
-} as const satisfies Partial<GraphConfigInterface>;
+} as const satisfies GraphConfig;
 
 /**
  * Zod schema for validating and configuring the Cosmos graph visualization.
@@ -34,7 +34,7 @@ const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
  * Link Appearance:
  * - `renderLinks`: Toggles link visibility
  * - `linkWidthScale`: Controls link thickness
- * - `linkArrows`: Toggles directional arrows
+ * - `linkDefaultArrows`: Toggles directional arrows by default
  * - `linkArrowsSizeScale`: Controls arrow size
  * - `curvedLinks`: Toggles curved/straight links
  *
@@ -63,7 +63,7 @@ const DEFAULT_COSMOS_CONFIG: CosmosSliceConfig = {
  * ```typescript
  * const directedGraphConfig: CosmosSliceConfig = {
  *   cosmos: {
- *     linkArrows: true,
+ *     linkDefaultArrows: true,
  *     linkArrowsSizeScale: 1.2,
  *     curvedLinks: true,
  *     simulationLinkDistance: 15,
@@ -117,7 +117,7 @@ export const CosmosSliceConfig = z.object({
 
   /**
    * Scale factor for the size of directional arrows on links.
-   * Only applies when linkArrows is true.
+   * Only applies when linkDefaultArrows is true.
    * @default 1
    */
   linkArrowsSizeScale: z.number().describe('Scale factor for link arrows size'),
@@ -127,7 +127,9 @@ export const CosmosSliceConfig = z.object({
    * Useful for directed graphs.
    * @default false
    */
-  linkArrows: z.boolean().describe('Control displaying link direction arrows'),
+  linkDefaultArrows: z
+    .boolean()
+    .describe('Control displaying link direction arrows by default'),
 
   /**
    * When true, links are rendered as curved Bezier paths.
@@ -189,7 +191,7 @@ export const CosmosSliceConfig = z.object({
     .describe(
       'Decay coefficient in the simulation. Use smaller values if you want the simulation to "cool down" slower.',
     ),
-} satisfies Partial<Record<keyof GraphConfigInterface, unknown>>);
+} satisfies Partial<Record<keyof GraphConfig, unknown>>);
 export type CosmosSliceConfig = z.infer<typeof CosmosSliceConfig>;
 
 export function createDefaultCosmosConfig(): CosmosSliceConfig {

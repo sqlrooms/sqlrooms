@@ -1,7 +1,7 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
 import {useState, useCallback, useMemo} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfig} from '@cosmos.gl/graph';
 
 /**
  * Represents the state of a hovered point in the graph.
@@ -54,7 +54,7 @@ export const useHoverState = (
 ): {
   hoveredPoint: HoverState;
   eventHandlers: {
-    onPointMouseOver: Required<GraphConfigInterface>['onPointMouseOver'];
+    onPointMouseOver: Required<GraphConfig>['onPointMouseOver'];
     onPointMouseOut: () => void;
     onZoomStart: () => void;
     onDragStart: () => void;
@@ -63,7 +63,7 @@ export const useHoverState = (
   const [hoveredPoint, setHoveredPoint] = useState<HoverState>(null);
 
   const onPointMouseOver = useCallback<
-    Required<GraphConfigInterface>['onPointMouseOver']
+    Required<GraphConfig>['onPointMouseOver']
   >(
     (index, _pointPosition, event) => {
       if (hasClientCoordinates(event)) {

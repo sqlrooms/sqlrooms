@@ -3,7 +3,7 @@
  * This module provides state management and control functions for the Cosmos graph visualization.
  */
 
-import {Graph, GraphConfigInterface} from '@cosmos.gl/graph';
+import {Graph, type GraphConfig} from '@cosmos.gl/graph';
 import {
   createSlice,
   useBaseRoomShellStore,
@@ -42,7 +42,7 @@ export type CosmosSliceState = {
     /** Updates the simulation configuration parameters */
     updateSimulationConfig: (config: Partial<CosmosSliceConfig>) => void;
     /** Updates the graph's visual configuration */
-    updateGraphConfig: (config: Partial<GraphConfigInterface>) => void;
+    updateGraphConfig: (config: GraphConfig) => void;
     /** Updates the graph's data (points, links, colors, etc.) */
     updateGraphData: (data: {
       pointPositions?: Float32Array;
@@ -88,14 +88,14 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
         }
 
         // Create and configure new graph
-        const graph = new Graph(container);
         const config = get().cosmos.config;
-        graph.setConfig(config);
+        const graph = new Graph(container, config);
         graph.start();
 
         set((state) =>
           produce(state, (draft) => {
             draft.cosmos.graph = graph;
+            draft.cosmos.isSimulationRunning = true;
           }),
         );
       },
@@ -112,7 +112,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
             }),
           );
         } else {
-          graph.restart();
+          graph.unpause();
           set((state) =>
             produce(state, (draft) => {
               draft.cosmos.isSimulationRunning = true;
@@ -140,26 +140,22 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
       updateSimulationConfig: (config: Partial<CosmosSliceConfig>) => {
         const {graph} = get().cosmos;
+        graph?.setConfigPartial(config);
 
         set((state) =>
           produce(state, (draft) => {
             Object.assign(draft.cosmos.config, config);
-            if (graph) {
-              graph.setConfig(draft.cosmos.config);
-            }
           }),
         );
       },
 
-      updateGraphConfig: (config: Partial<GraphConfigInterface>) => {
+      updateGraphConfig: (config: GraphConfig) => {
         const {graph} = get().cosmos;
+        graph?.setConfigPartial(config);
 
         set((state) =>
           produce(state, (draft) => {
             Object.assign(draft.cosmos.config, config);
-            if (graph) {
-              graph.setConfig(draft.cosmos.config);
-            }
           }),
         );
       },
@@ -190,7 +186,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
       setFocusedPoint: (index) => {
         const {graph} = get().cosmos;
         if (!graph) return;
-        graph.setConfig({
+        graph.setConfigPartial({
           focusedPointIndex: index,
         });
       },

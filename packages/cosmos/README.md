@@ -35,10 +35,10 @@ import {
   CosmosGraph,
   CosmosGraphControls,
   CosmosSimulationControls,
+  type GraphConfig,
 } from '@sqlrooms/cosmos';
-import {GraphConfigInterface} from '@cosmos.gl/graph';
 
-const config: GraphConfigInterface = {
+const config: GraphConfig = {
   backgroundColor: 'transparent',
   simulationGravity: 0.2,
   simulationRepulsion: 1,

@@ -23,7 +23,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@cosmos.gl/graph": "^2.6.4",
+    "@cosmos.gl/graph": "^3.4.1",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",

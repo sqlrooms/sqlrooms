@@ -26,4 +26,7 @@ export {
   createDefaultCosmosConfig,
 } from './CosmosSliceConfig';
 
-export type {GraphConfigInterface} from '@cosmos.gl/graph';
+export type {GraphConfig} from '@cosmos.gl/graph';
+
+/** @deprecated Use {@link GraphConfig} instead. */
+export type GraphConfigInterface = import('@cosmos.gl/graph').GraphConfig;

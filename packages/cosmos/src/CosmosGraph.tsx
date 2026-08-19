@@ -1,4 +1,4 @@
-import {GraphConfigInterface} from '@cosmos.gl/graph';
+import type {GraphConfig} from '@cosmos.gl/graph';
 import {cn, useRelativeCoordinates} from '@sqlrooms/ui';
 import {FC, useEffect, useRef} from 'react';
 import {useStoreWithCosmos} from './CosmosSlice';
@@ -9,7 +9,7 @@ import {useHoverState} from './hooks/useHoverState';
  */
 export type CosmosGraphProps = {
   /** Configuration object for the graph's visual and behavioral properties */
-  config: GraphConfigInterface;
+  config: GraphConfig;
   /** Float32Array containing x,y coordinates for each point (2 values per point) */
   pointPositions: Float32Array;
   /** Float32Array containing size values for each point (1 value per point) */
