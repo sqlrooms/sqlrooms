@@ -14,6 +14,10 @@ import {
   SessionChatComposerProvider,
   Stop as ComposerStop,
 } from './composer';
+import {
+  LocalAgentChatSuggestionsProvider,
+  SessionChatSuggestionsProvider,
+} from './suggestions';
 import {ChatRendering, type ChatRenderingProps} from './ChatRenderingContext';
 import {
   type ToolRenderBehavior,
@@ -21,11 +25,6 @@ import {
 } from './FlatAgentRenderer';
 import {InlineApiKeyInput} from './InlineApiKeyInput';
 import {LocalAgentChatMessages} from './LocalAgentChatMessages';
-import {
-  LocalAgentPromptSuggestionItem,
-  LocalAgentPromptSuggestionsContainer,
-  LocalAgentPromptSuggestionsVisibilityToggle,
-} from './LocalAgentPromptSuggestions';
 import {ModelSelector} from './ModelSelector';
 import {PromptSuggestions} from './PromptSuggestions';
 import {QueryControls} from './QueryControls';
@@ -58,10 +57,7 @@ type ChatComponent = FC<RootProps> & {
     DropTarget: typeof ComposerDropTarget;
   };
   InlineApiKeyInput: typeof InlineApiKeyInput;
-  PromptSuggestions: typeof PromptSuggestions.Container & {
-    Item: typeof PromptSuggestions.Item;
-    VisibilityToggle: typeof PromptSuggestions.VisibilityToggle;
-  };
+  PromptSuggestions: typeof PromptSuggestions;
   Search: typeof ChatSearch;
   ModelSelector: typeof ModelSelector;
   ContextSelector: typeof ContextSelector;
@@ -76,7 +72,9 @@ const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <SessionChatRuntimeProvider>
       <SessionChatComposerProvider>
-        <ChatSearchProvider>{children}</ChatSearchProvider>
+        <SessionChatSuggestionsProvider>
+          <ChatSearchProvider>{children}</ChatSearchProvider>
+        </SessionChatSuggestionsProvider>
       </SessionChatComposerProvider>
     </SessionChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
@@ -90,7 +88,9 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <LocalAgentChatRuntimeProvider {...props}>
       <LocalAgentChatComposerProvider>
-        {children}
+        <LocalAgentChatSuggestionsProvider>
+          {children}
+        </LocalAgentChatSuggestionsProvider>
       </LocalAgentChatComposerProvider>
     </LocalAgentChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
@@ -114,37 +114,9 @@ const Composer = Object.assign(QueryControls, {
   DropTarget: ComposerDropTarget,
 });
 
-const PromptSuggestionsContainer: typeof PromptSuggestions.Container = (
-  props,
-) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode === 'local-agent') {
-    return <LocalAgentPromptSuggestionsContainer {...props} />;
-  }
-  return <PromptSuggestions.Container {...props} />;
-};
-
-const PromptSuggestionsItem: typeof PromptSuggestions.Item = (props) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode === 'local-agent') {
-    return <LocalAgentPromptSuggestionItem {...props} />;
-  }
-  return <PromptSuggestions.Item {...props} />;
-};
-
-const PromptSuggestionsVisibilityToggle: typeof PromptSuggestions.VisibilityToggle =
-  (props) => {
-    const runtime = useChatRuntime();
-    if (runtime.mode === 'local-agent') {
-      return <LocalAgentPromptSuggestionsVisibilityToggle {...props} />;
-    }
-    return <PromptSuggestions.VisibilityToggle {...props} />;
-  };
-
-const PromptSuggestionsCompound = Object.assign(PromptSuggestionsContainer, {
-  Item: PromptSuggestionsItem,
-  VisibilityToggle: PromptSuggestionsVisibilityToggle,
-});
+// `PromptSuggestions` itself now serves both runtime modes — it sources its
+// state from `usePromptSuggestions()`, which normalizes over session and
+// local-agent mode, so no runtime-dispatch wrapper is needed here.
 
 export const Chat: ChatComponent = Object.assign(Root, {
   Root,
@@ -156,7 +128,7 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Messages,
   Composer,
   InlineApiKeyInput: InlineApiKeyInput,
-  PromptSuggestions: PromptSuggestionsCompound,
+  PromptSuggestions,
   Search: ChatSearch,
   ModelSelector: ModelSelector,
   ContextSelector: ContextSelector,

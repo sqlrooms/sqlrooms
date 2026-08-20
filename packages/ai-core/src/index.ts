@@ -127,6 +127,20 @@ export type {
   ChatComposerDropTargetProps,
 } from './components/composer';
 export {
+  usePromptSuggestions,
+  Root as ChatSuggestionsRoot,
+  Item as ChatSuggestionsItem,
+  VisibilityToggle as ChatSuggestionsVisibilityToggle,
+  Dismiss as ChatSuggestionsDismiss,
+} from './components/suggestions';
+export type {
+  ChatSuggestionsState,
+  ChatSuggestionsRootProps,
+  ChatSuggestionsItemProps,
+  ChatSuggestionsVisibilityToggleProps,
+  ChatSuggestionsDismissProps,
+} from './components/suggestions';
+export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
