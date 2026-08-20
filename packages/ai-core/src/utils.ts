@@ -160,6 +160,67 @@ export function extractModelsFromSettings(
 }
 
 /**
+ * Checks whether a `(provider, model)` pair is present in an
+ * {@link AiSettingsSliceConfig}, without allocating an intermediate list.
+ *
+ * Produces the same result as
+ * `extractModelsFromSettings(config).some(m => m.provider === provider && m.value === model)`,
+ * but scans in place with an early return instead of building an array
+ * first. Intended for call sites (like a Zustand selector) that run
+ * frequently and only need the boolean, not the full model list.
+ *
+ * `config.providers` keys are arbitrary strings — including, in principle,
+ * `'custom'` — so `extractModelsFromSettings` treats a `'custom'` match as
+ * the **union** of `config.providers['custom']` and `config.customModels`
+ * (which it always maps to provider `'custom'`). This check preserves that
+ * union: it looks in `config.providers[provider]` first, and additionally
+ * checks `config.customModels` when `provider === 'custom'`.
+ *
+ * `config.providers` is a plain object, so a naive `config.providers[provider]`
+ * lookup would resolve inherited `Object.prototype` members (e.g. `provider`
+ * values of `'constructor'`, `'toString'`, `'hasOwnProperty'`, `'__proto__'`)
+ * to a truthy, non-`undefined` value that has no `.models` array — throwing
+ * on the immediately following property access rather than returning `false`.
+ * `Object.entries`, which `extractModelsFromSettings` uses, only ever sees own
+ * enumerable keys and never has this problem, so this check guards with an
+ * explicit own-property check to match that behavior exactly. `config` also
+ * arrives from a persisted/parsed boundary, so a provider entry's `models` is
+ * accessed defensively too — this affects only inputs that are already
+ * malformed relative to {@link AiSettingsSliceConfig}, so it does not change
+ * old/new parity for well-formed config, but hardens this hot selector path
+ * against otherwise-crashing input.
+ *
+ * @param config - The AI settings configuration to search.
+ * @param provider - The provider key to look for (`'custom'` also matches custom models).
+ * @param model - The model name to look for.
+ * @returns `true` if the pair is present in `config`.
+ */
+export function isModelInSettings(
+  config: AiSettingsSliceConfig,
+  provider: string | undefined,
+  model: string | undefined,
+): boolean {
+  if (!provider || !model) return false;
+
+  if (
+    Object.hasOwn(config.providers, provider) &&
+    config.providers[provider]?.models?.some(
+      (providerModel) => providerModel.modelName === model,
+    )
+  ) {
+    return true;
+  }
+
+  if (provider === 'custom') {
+    return config.customModels.some(
+      (customModel) => customModel.modelName === model,
+    );
+  }
+
+  return false;
+}
+
+/**
  * Type guard to check if a UIMessagePart is a text part
  * @param part - The message part to check
  * @returns True if the part is a text part

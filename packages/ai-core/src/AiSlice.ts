@@ -63,6 +63,7 @@ import {
 } from './devtools/providerContextDiagnostics';
 import {
   fixIncompleteToolCalls,
+  isModelInSettings,
   normalizeAiConfig,
   ToolAbortError,
 } from './utils';
@@ -194,6 +195,23 @@ export type AiSliceState = {
      * e.g. to know which provider a first-time API key belongs to.
      */
     getSelectedModel: () => {modelProvider: string; model: string};
+    /**
+     * Whether a model is resolvable right now by *any* configured path: a
+     * custom-model factory supplied to {@link AiSliceOptions.getCustomModel},
+     * or the current (or default) provider/model pair being present in the
+     * `@sqlrooms/ai-settings` model list when that slice is installed.
+     *
+     * This only checks that a custom-model factory **was configured** — it
+     * never calls it. Invoking the factory could have side effects (e.g. a
+     * network call to a server-side proxy) and a factory returning `undefined`
+     * at call time means "configured but not currently ready", which is a
+     * different condition than "no path can ever produce a model".
+     *
+     * Use this instead of independently re-deriving readiness from
+     * `aiSettings.config`, so UI and runtime agree on a single source of
+     * truth.
+     */
+    hasResolvableModel: () => boolean;
     /**
      * Create a new chat session, make it the current session, and open it in a
      * tab. When `modelProvider`/`model` are omitted the current selection (or
@@ -1052,6 +1070,32 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
             currentSession?.modelProvider,
             currentSession?.model,
           );
+        },
+
+        hasResolvableModel: () => {
+          // A configured custom-model factory is authoritative and is never
+          // invoked here — only its presence is checked.
+          if (typeof getCustomModel === 'function') {
+            return true;
+          }
+
+          const state = get();
+          const currentSession = state.ai.getCurrentSession();
+          // No session yet: a lazily created session will use the resolved
+          // default provider/model, so a model is available.
+          if (!currentSession) {
+            return true;
+          }
+
+          if (hasAiSettingsConfig(state)) {
+            return isModelInSettings(
+              state.aiSettings.config,
+              currentSession.modelProvider,
+              currentSession.model,
+            );
+          }
+
+          return Boolean(currentSession.modelProvider && currentSession.model);
         },
 
         /**

@@ -11,15 +11,12 @@ import {
   ReactNode,
   Ref,
   useRef,
-  useMemo,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
 import {ContextSelector} from './context/ContextSelector';
 import {CHAT_CONTEXT_SELECTOR_SLOT} from './context/types';
-import {hasAiSettingsConfig} from '../hasAiSettingsConfig';
-import {extractModelsFromSettings} from '../utils';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -121,27 +118,13 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
 
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
-  const model = currentSession?.model;
-  const modelProvider = currentSession?.modelProvider;
 
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
   const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
-  const aiSettingsConfig = useStoreWithAi((s) =>
-    hasAiSettingsConfig(s) ? s.aiSettings.config : undefined,
-  );
-  const settingsModels = useMemo(
-    () => (aiSettingsConfig ? extractModelsFromSettings(aiSettingsConfig) : []),
-    [aiSettingsConfig],
-  );
-  // If no session exists, assume default model will be used (session created on first message)
-  const hasSelectedModel = !currentSession
-    ? true
-    : aiSettingsConfig
-      ? settingsModels.some(
-          (candidate) =>
-            candidate.provider === modelProvider && candidate.value === model,
-        )
-      : Boolean(modelProvider && model);
+  // Routes through the AI slice's single source of truth for send readiness,
+  // which also honors a configured custom-model factory (see
+  // `AiSliceState.ai.hasResolvableModel`).
+  const hasSelectedModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
 
   // Extract special composer controls from children
   const {inlineApiKeyInput, contextSelectors, otherChildren} =

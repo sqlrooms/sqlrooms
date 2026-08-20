@@ -20,6 +20,9 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
 - `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing
+- `getCustomModel` (optional) – returns a pre-constructed AI SDK `LanguageModel`, bypassing the OpenAI-compatible fallback entirely. Use this when a model is produced some other way, e.g. an app streaming through a server-side model proxy so no API key ever reaches the browser.
+
+Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
