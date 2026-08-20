@@ -11,18 +11,25 @@ type ScrollableRowProps = {
   arrowVisibility?: 'hover' | 'always';
   arrowClassName?: string;
   arrowIconClassName?: string;
-};
+} & Omit<React.ComponentPropsWithoutRef<'div'>, 'children' | 'className'>;
 
-export function ScrollableRow({
-  children,
-  className,
-  scrollClassName,
-  scrollRef,
-  scrollAmount = 200,
-  arrowVisibility = 'hover',
-  arrowClassName,
-  arrowIconClassName,
-}: ScrollableRowProps) {
+export const ScrollableRow = React.forwardRef<
+  HTMLDivElement,
+  ScrollableRowProps
+>(function ScrollableRow(
+  {
+    children,
+    className,
+    scrollClassName,
+    scrollRef,
+    scrollAmount = 200,
+    arrowVisibility = 'hover',
+    arrowClassName,
+    arrowIconClassName,
+    ...rest
+  },
+  forwardedRef,
+) {
   const internalRef = useRef<HTMLDivElement>(null);
   const containerRef = scrollRef ?? internalRef;
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -72,7 +79,7 @@ export function ScrollableRow({
   );
 
   return (
-    <div className={cn('relative', className)}>
+    <div ref={forwardedRef} className={cn('relative', className)} {...rest}>
       <button
         type="button"
         onClick={() => scrollBy('left')}
@@ -120,4 +127,6 @@ export function ScrollableRow({
       </button>
     </div>
   );
-}
+});
+
+ScrollableRow.displayName = 'ScrollableRow';

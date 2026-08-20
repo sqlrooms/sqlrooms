@@ -353,6 +353,12 @@ export {useDebouncedValue} from './hooks/useDebouncedValue';
 export {useIsMobile} from './hooks/use-mobile';
 export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 
+export {
+  useAutoResizeTextarea,
+  type UseAutoResizeTextareaOptions,
+  type UseAutoResizeTextareaResult,
+} from './hooks/useAutoResizeTextarea';
+
 // Utilities
 export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
 export {cn} from './lib/utils';

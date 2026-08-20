@@ -68,6 +68,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
     "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
