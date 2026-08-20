@@ -702,6 +702,28 @@ return createAgentUIStreamResponse({
 - `findToolComponent` — replaced by `findToolRenderer`
 - `VegaChartToolParametersType` from `@sqlrooms/vega` — removed (use `VegaChartToolParameters` directly)
 
+### `@sqlrooms/ai-core`: Composer and prompt suggestions rebuilt on unstyled primitives (breaking)
+
+`Chat.Composer` and `Chat.PromptSuggestions` are now recipes built on a new
+public primitive layer — `useChatComposer()` / `usePromptSuggestions()` and a
+set of `asChild`-capable, unstyled components (`Input`, `Send`, `Stop`,
+`DropTarget` for the composer; `Root`, `Item`, `VisibilityToggle`, `Dismiss`
+for suggestions). See the "Composable composer and prompt-suggestions
+primitives" section of the [`@sqlrooms/ai-core` README](https://github.com/sqlrooms/sqlrooms/blob/main/packages/ai-core/README.md)
+for the full layering and API.
+
+Two behavior changes ship alongside the new primitives:
+
+- **Local-agent `Enter` while streaming no longer stops the run.** It is now
+  a no-op, matching session mode: `Enter` sends when ready, and never
+  cancels a run in flight.
+- **`Chat.PromptSuggestions` now defaults to a full-width vertical list**
+  with click-to-send and CSS-ellipsis truncation (plus a native `title` for
+  the full text), replacing the previous horizontal card carousel that
+  filled the prompt for editing and truncated by character count. A
+  horizontal layout is still available — build it directly from the
+  suggestions primitives, as `examples/ai-rag` now does.
+
 ### `@sqlrooms/layout`, `@sqlrooms/layout-config`: Layout config refactored (breaking)
 
 The layout system has been significantly refactored. `LayoutConfig` is now `LayoutNode | null` directly — the outer `{ type: 'mosaic', nodes: ... }` wrapper is gone. Type names have been renamed from `MosaicLayout*` to `Layout*`, and `react-resizable-panels` now handles all layout rendering.

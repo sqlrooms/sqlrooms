@@ -97,6 +97,113 @@ and the first `ai.createSession()` transfers it to the new session.
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
 
+> `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`
+> unconditionally, so passing it as a `Chat.Composer` child under
+> `Chat.LocalAgentRoot` throws. Local-agent apps have no concept of a
+> browser-held API key, so omit it there.
+
+### Composable composer and prompt-suggestions primitives
+
+`Chat.Composer` and `Chat.PromptSuggestions` are recipes: fully-styled,
+opinionated defaults built on two lower layers that are themselves public API
+for hosts that need a different visual shape.
+
+**Layering**, thinnest to thickest:
+
+1. **Behavior hooks** — `useChatComposer()` and `usePromptSuggestions()`. No
+   DOM, no styling. Normalized state and actions that read identically
+   whether the surrounding `Chat` is in session mode (`Chat.Root`) or
+   local-agent mode (`Chat.LocalAgentRoot`).
+2. **Unstyled primitives** — thin components built on the hooks above. All
+   accept `asChild` (via Radix's `Slot`) to render as a single host-supplied
+   child instead of their default DOM element, and none carry position,
+   size, overflow, truncation, or other visual styling of their own.
+3. **Recipes** — `Chat.Composer` and `Chat.PromptSuggestions`. SQLRooms' own
+   opinionated, styled defaults, built entirely from the primitives above.
+   Most apps only need these.
+
+Reach for a lower layer only when a recipe's fixed appearance does not fit —
+a host design system's own textarea, button, or list component, a
+popover-anchored suggestions panel, or a horizontal carousel instead of the
+vertical default.
+
+`useChatComposer()` returns
+`{mode, prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey}`.
+Use it directly for anything that isn't textarea-shaped (a rich editor, a
+custom input surface); `Input` below is built on it for the common textarea
+case. It (and `ChatComposerStateBoundary`, for use outside any `<Chat>`
+ancestor) is also how a suggestions list rendered elsewhere in the tree can
+stay in sync with a composer mounted somewhere else.
+
+Composer primitives (imported from `@sqlrooms/ai-core`, or via
+`Chat.Composer.Input` / `.Send` / `.Stop` / `.DropTarget`):
+
+- **`Input`** — binds the composer's prompt to a `<textarea>` (or, with
+  `asChild`, a host-supplied one). Owns the Enter-to-send keymap (with an
+  IME-composition guard and a no-modifiers check), optional auto-resize, and
+  disables itself while busy. Host event handlers passed as props are
+  merged, not replaced: the host's handler runs first, and calling
+  `event.preventDefault()` suppresses this component's own behavior for that
+  event — this is how `submitOnEnter` can be overridden by a host that wants
+  full keymap control. Accepts a synchronous `onBeforeSend` pre-send veto
+  (return `false` to abort a send).
+
+  **The forwarded ref must reach the real DOM `<textarea>`.** With `asChild`,
+  auto-resize measures and mutates inline `height` through the ref this
+  component receives; if the host component that owns that ref does not
+  forward it down to its own `<textarea>`, auto-resize silently does
+  nothing — no error, and nothing a type check would catch.
+
+- **`Send`** — sends the current prompt on activation. Renders nothing
+  (`null`) while a run is in flight; disabled whenever `canSend` is `false`.
+  Accepts the same synchronous `onBeforeSend` veto as `Input`.
+- **`Stop`** — cancels the in-flight run on activation. Renders nothing while
+  idle; never disabled once a run is in flight.
+- **`DropTarget`** — marks an element as a drop target for in-app context
+  items dragged into the composer (built on dnd-kit). **Handles in-app
+  context items only, not file uploads** — dnd-kit observes pointer-driven
+  drags between elements it manages, not native HTML5 file-drag events; a
+  file drop needs a separate, native-drag-based primitive.
+
+`usePromptSuggestions()` returns
+`{mode, visible, setVisible, toggle, items, isSessionEmpty, fill, send, canSend}`,
+normalized the same way across both runtime modes. `send`/`canSend` are the
+composer's own readiness signals, so a suggestion and the composer's send
+control can never disagree about whether sending is currently possible.
+
+Suggestions primitives:
+
+- **`Root`** — visibility gate: renders nothing when suggestions are hidden,
+  its child otherwise. Accepts an `open` override for hosts whose own
+  popover, dropdown, or overlay already owns open/closed state.
+- **`Item`** — a single suggestion. Fills the prompt on activation by
+  default; pass `submit` to send immediately instead. Disabled whenever
+  `canSend` is `false`.
+- **`VisibilityToggle`** — toggles visibility; exposes `aria-pressed` for
+  styling pressed/unpressed.
+- **`Dismiss`** — hides suggestions unconditionally (unlike
+  `VisibilityToggle`, it never re-shows them).
+
+None of the suggestions primitives carry position, size, overflow,
+truncation, or tooltip styling — a host's own vertical list, popover, or
+horizontal scroller owns all of that. `examples/ai-rag` builds a horizontal
+carousel directly from these primitives (composed with `@sqlrooms/ui`'s
+`ScrollableRow`) — it stays in the repo specifically to prove the primitives
+impose no layout of their own, alongside `examples/ai`'s use of the vertical
+recipe.
+
+#### Breaking changes in this release
+
+- **Local-agent `Enter` while streaming no longer stops the run.** It is now
+  a no-op, matching session mode: `Enter` sends when ready, and never
+  cancels a run in flight.
+- **`Chat.PromptSuggestions` now defaults to a full-width vertical list**
+  with click-to-send and CSS-ellipsis truncation (plus a native `title` for
+  the full text), replacing the previous horizontal card carousel that
+  filled the prompt for editing and truncated by character count. A
+  horizontal layout is still available — build it from the suggestions
+  primitives, as `examples/ai-rag` does.
+
 ### Customizable chat presentation
 
 SQLRooms owns the **semantic model** for each turn (activity, status, reasoning,
