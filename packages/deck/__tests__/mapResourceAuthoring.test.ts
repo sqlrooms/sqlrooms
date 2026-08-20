@@ -846,6 +846,9 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('Never set mapStyle to a mapbox://');
     expect(instructions).toContain('omit getWeight');
     expect(instructions).toContain('will not invent centroids');
+    expect(instructions).toContain(
+      'longitudeColumn/latitudeColumn on _sqlroomsBinding are not geometry',
+    );
     expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
     expect(instructions).toContain('min = max');
@@ -1161,6 +1164,133 @@ describe('Deck map resource authoring contract', () => {
     });
 
     expect(issues).toEqual([]);
+  });
+
+  test('rejects lon/lat column projections that never produce a geometry column', () => {
+    const columnOnlySql =
+      'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source';
+    const makeConfig = (geometryColumn?: string): DeckMapConfig => ({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              ...(geometryColumn ? {geometryColumn} : {}),
+              longitudeColumn: 'Longitude',
+              latitudeColumn: 'Latitude',
+            },
+            radiusPixels: 30,
+          },
+        ],
+      },
+      datasets: {
+        earthquakes: {
+          source: {tableName: 'earthquakes', transformSql: columnOnlySql},
+          ...(geometryColumn ? {geometryColumn} : {}),
+        },
+      },
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+    });
+
+    const missingGeom = makeConfig();
+    expect(getDeckMapResourceConfigIssues(missingGeom)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+          message: expect.stringContaining('needs point locations'),
+          repair: expect.stringContaining(
+            'ST_AsWKB(ST_Point("Longitude", "Latitude"))',
+          ),
+        }),
+      ]),
+    );
+    expect(() => assertDeckMapResourceConfig(missingGeom)).toThrow(
+      /ST_AsWKB\(ST_Point\("Longitude", "Latitude"\)\)/,
+    );
+    expect(
+      getDeckMapResourceConfigIssues(makeConfig('__sqlrooms_geom')),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+        }),
+      ]),
+    );
+  });
+
+  test('accepts lon/lat fitToData when native geom is kept', () => {
+    const fitToData = {
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+    };
+
+    expect(
+      getDeckMapResourceConfigIssues({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {dataset: 'places'},
+            },
+          ],
+        },
+        datasets: {places: {source: {tableName: 'places'}}},
+        fitToData,
+      }),
+    ).toEqual([]);
+
+    expect(
+      getDeckMapResourceConfigIssues({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowHeatmapLayer',
+              _sqlroomsBinding: {dataset: 'places'},
+              radiusPixels: 30,
+            },
+          ],
+        },
+        datasets: {
+          places: {
+            source: {
+              tableName: 'places',
+              transformSql: 'SELECT * FROM __sqlrooms_source',
+            },
+          },
+        },
+        fitToData,
+      }),
+    ).toEqual([]);
+
+    expect(
+      getDeckMapResourceConfigIssues({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        datasets: {
+          places: {
+            source: {
+              tableName: 'places',
+              transformSql:
+                'SELECT geom, longitude, latitude, name FROM __sqlrooms_source',
+            },
+            geometryColumn: 'geom',
+          },
+        },
+        fitToData,
+      }),
+    ).toEqual([]);
   });
 
   test('allows bare ST_Point(...) AS col (pipeline wraps native GEOMETRY as WKB)', () => {

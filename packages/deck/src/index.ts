@@ -64,6 +64,7 @@ export {
 export {
   DeckMapResourceConfigError,
   assertDeckMapResourceConfig,
+  formatDeckMapResourceConfigIssueForAgent,
   getDeckMapResourceAiInstructions,
   getDeckMapResourceConfigIssues,
   mergeDeckMapResourceConfigPatch,

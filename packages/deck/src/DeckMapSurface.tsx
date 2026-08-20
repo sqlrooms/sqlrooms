@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import {DeckJsonMap} from './DeckJsonMap';
+import {DeckMapErrorOverlay} from './DeckMapErrorOverlay';
 import type {DeckMapResource, DeckMapRuntimeIssue} from './DeckMapsSlice';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import {
@@ -15,7 +16,10 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
-import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
+import {
+  formatDeckMapResourceConfigIssueForAgent,
+  getDeckMapResourceConfigIssues,
+} from './mapResourceAuthoring';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -151,7 +155,7 @@ export function DeckMapSurface({
     if (configIssues.length > 0) {
       onReportIssue({
         kind: 'config-error',
-        message: `${configIssues[0]!.path}: ${configIssues[0]!.message}`,
+        message: formatDeckMapResourceConfigIssueForAgent(configIssues[0]!),
         recoverable: true,
         details: {issues: configIssues},
       });
@@ -226,9 +230,10 @@ export function DeckMapSurface({
   });
 
   if (configIssues.length > 0) {
+    const message = configIssues.map((issue) => issue.message).join('\n\n');
     return (
-      <div className="text-destructive flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">
-        {`Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}. Open map settings to change the layer type or fix the config.`}
+      <div className="relative h-full min-h-[320px]">
+        <DeckMapErrorOverlay error={message} />
       </div>
     );
   }

@@ -690,8 +690,13 @@ helpers exported from `@sqlrooms/deck`:
 Durable resource writes also run `getDeckMapResourceConfigIssues` /
 `assertDeckMapResourceConfig` for syntax, supported layer types, and type/scheme
 compatibility (e.g. `quantile` + `Viridis` is rejected; layer `@@type` must be
-one of the settings picker classes). Native `GEOMETRY` columns are
-normalized to WKB by the dataset pipeline (not by SQL-string validation).
+one of the settings picker classes). Point layers whose SQL projects lon/lat
+columns without producing geometry are rejected — `longitudeColumn` /
+`latitudeColumn` on `_sqlroomsBinding` are not a geometry binding.
+`DeckMapResourceConfigIssue.repair` holds agent retry instructions;
+`formatDeckMapResourceConfigIssueForAgent` includes them, while the map overlay
+shows only `message`. Native `GEOMETRY` columns are normalized to WKB by the
+dataset pipeline (not by SQL-string validation).
 
 ## Runtime Props and Children
 

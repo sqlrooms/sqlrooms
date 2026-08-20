@@ -52,7 +52,8 @@ describe('Deck map settings controls', () => {
     expect(worksheetAdapterSource).toContain('<DeckMapSettingsPanel');
     expect(worksheetAdapterSource).not.toContain('configIssues');
     expect(worksheetAdapterSource).not.toContain('Invalid map configuration:');
-    expect(worksheetSurfaceSource).toContain('Invalid map configuration:');
+    expect(worksheetSurfaceSource).toContain('DeckMapErrorOverlay');
+    expect(worksheetSurfaceSource).not.toContain('Invalid map configuration:');
     expect(worksheetSurfaceSource).toContain('autoFit: true');
     expect(worksheetSurfaceSource).toContain("kind: 'fit-error'");
     expect(worksheetSurfaceSource).toContain("onClearIssue('fit-error')");
