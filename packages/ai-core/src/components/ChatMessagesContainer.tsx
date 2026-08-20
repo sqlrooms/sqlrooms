@@ -1,4 +1,4 @@
-import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {ChevronDown, SplitIcon} from 'lucide-react';
 import type {UIMessage} from 'ai';
 import React, {useEffect, useRef} from 'react';
@@ -124,9 +124,9 @@ export const ChatMessagesContainer: React.FC<{
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
-      <ScrollArea
-        viewportRef={containerRef}
-        className="flex w-full min-w-0 grow flex-col gap-5 [&>[data-radix-scroll-area-viewport]>div]:!block [&>[data-radix-scroll-area-viewport]>div]:!w-full [&>[data-radix-scroll-area-viewport]>div]:!min-w-0"
+      <div
+        ref={containerRef}
+        className="scrollbar-thin flex min-h-0 w-full min-w-0 grow flex-col gap-5 overflow-x-hidden overflow-y-auto"
       >
         <div className="px-3">
           {chatTurns.map((chatTurn) => (
@@ -151,8 +151,7 @@ export const ChatMessagesContainer: React.FC<{
           {isRunning && <ActiveStatus status={activeStatus} className="pb-4" />}
           <div className="h-10 w-full shrink-0" />
         </div>
-        <ScrollBar orientation="vertical" />
-      </ScrollArea>
+      </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button
           onClick={scrollToBottom}

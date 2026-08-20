@@ -182,6 +182,18 @@ function SettingsPanel({onClose}: {onClose: () => void}) {
 - **Custom Styling**: Extend components with custom styles using Tailwind CSS
 - **Animation**: Smooth transitions and animations for interactive elements
 
+## Native scrolling
+
+Use the `scrollbar-thin` utility for simple native overflow containers that
+should use a thin, theme-aware scrollbar:
+
+```tsx
+<div className="scrollbar-thin overflow-y-auto">{/* content */}</div>
+```
+
+Use `ScrollArea` instead when a surface needs custom horizontal or
+bidirectional scrollbar behavior.
+
 ## TabStrip
 
 `TabStrip` supports a `fontSize` prop for sizing tab labels, inline rename
