@@ -6,6 +6,14 @@ import {
   useChatRuntime,
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
+import {
+  DropTarget as ComposerDropTarget,
+  Input as ComposerInput,
+  LocalAgentChatComposerProvider,
+  Send as ComposerSend,
+  SessionChatComposerProvider,
+  Stop as ComposerStop,
+} from './composer';
 import {ChatRendering, type ChatRenderingProps} from './ChatRenderingContext';
 import {
   type ToolRenderBehavior,
@@ -44,7 +52,12 @@ type ChatComponent = FC<RootProps> & {
   Header: typeof ChatHeader;
   History: typeof ChatHistoryView;
   Messages: FC<ComponentProps<typeof ChatMessagesContainer>>;
-  Composer: FC<ComponentProps<typeof QueryControls>>;
+  Composer: FC<ComponentProps<typeof QueryControls>> & {
+    Input: typeof ComposerInput;
+    Send: typeof ComposerSend;
+    Stop: typeof ComposerStop;
+    DropTarget: typeof ComposerDropTarget;
+  };
   InlineApiKeyInput: typeof InlineApiKeyInput;
   PromptSuggestions: typeof PromptSuggestions.Container & {
     Item: typeof PromptSuggestions.Item;
@@ -63,7 +76,9 @@ const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
 const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <SessionChatRuntimeProvider>
-      <ChatSearchProvider>{children}</ChatSearchProvider>
+      <SessionChatComposerProvider>
+        <ChatSearchProvider>{children}</ChatSearchProvider>
+      </SessionChatComposerProvider>
     </SessionChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
 );
@@ -75,7 +90,9 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
 }) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <LocalAgentChatRuntimeProvider {...props}>
-      {children}
+      <LocalAgentChatComposerProvider>
+        {children}
+      </LocalAgentChatComposerProvider>
     </LocalAgentChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
 );
@@ -88,13 +105,20 @@ const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (props) => {
   return <ChatMessagesContainer {...props} />;
 };
 
-const Composer: FC<ComponentProps<typeof QueryControls>> = (props) => {
+const ComposerRoot: FC<ComponentProps<typeof QueryControls>> = (props) => {
   const runtime = useChatRuntime();
   if (runtime.mode === 'local-agent') {
     return <LocalAgentChatComposer {...props} />;
   }
   return <QueryControls {...props} />;
 };
+
+const Composer = Object.assign(ComposerRoot, {
+  Input: ComposerInput,
+  Send: ComposerSend,
+  Stop: ComposerStop,
+  DropTarget: ComposerDropTarget,
+});
 
 const PromptSuggestionsContainer: typeof PromptSuggestions.Container = (
   props,

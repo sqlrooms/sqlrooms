@@ -112,6 +112,21 @@ export {
   SessionChatRuntimeProvider,
 } from './components/ChatRuntimeContext';
 export {
+  useChatComposer,
+  Input as ChatComposerInput,
+  Send as ChatComposerSend,
+  Stop as ChatComposerStop,
+  DropTarget as ChatComposerDropTarget,
+} from './components/composer';
+export type {
+  ChatComposerMode,
+  ChatComposerState,
+  ChatComposerInputProps,
+  ChatComposerSendProps,
+  ChatComposerStopProps,
+  ChatComposerDropTargetProps,
+} from './components/composer';
+export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
