@@ -17,19 +17,8 @@ import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
-  /** Short explanation shown in the map overlay. */
   message: string;
-  /** Repair instructions for AI retry; omitted from the user overlay. */
-  repair?: string;
 };
-
-export function formatDeckMapResourceConfigIssueForAgent(
-  issue: DeckMapResourceConfigIssue,
-): string {
-  return issue.repair
-    ? `${issue.path}: ${issue.message} ${issue.repair}`
-    : `${issue.path}: ${issue.message}`;
-}
 
 export type DeckMapResourceConfigValidationOptions = {
   /** Empty resources are valid while waiting for a user-selected table. */
@@ -51,7 +40,7 @@ export class DeckMapResourceConfigError extends Error {
   constructor(issues: DeckMapResourceConfigIssue[]) {
     super(
       `Invalid Deck map resource config: ${issues
-        .map((issue) => formatDeckMapResourceConfigIssueForAgent(issue))
+        .map((issue) => `${issue.path}: ${issue.message}`)
         .join('; ')}`,
     );
     this.name = 'DeckMapResourceConfigError';
@@ -176,71 +165,6 @@ function hasBadStMakeLinePointOrderBy(sql: string): boolean {
     }
   }
   return false;
-}
-
-function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function sqlMentionsIdentifier(sql: string, name: string): boolean {
-  const quoted = `"${name.replace(/"/g, '""')}"`;
-  if (sql.includes(quoted)) return true;
-  return new RegExp(
-    `(^|[^A-Za-z0-9_])${escapeRegExp(name)}([^A-Za-z0-9_]|$)`,
-    'i',
-  ).test(sql);
-}
-
-const KNOWN_GEOM_OUTPUT_NAMES = [
-  'geom',
-  'geometry',
-  '__sqlrooms_geom',
-  'wkb_geometry',
-  'the_geom',
-];
-
-function sqlSelectListIncludesStar(sql: string): boolean {
-  const match = sql.match(/\bSELECT\s+([\s\S]+?)\bFROM\b/i);
-  return Boolean(
-    match && /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|,|$)/i.test(match[1]!),
-  );
-}
-
-/**
- * Authored SQL that selects lon/lat columns but never produces a geometry
- * column. Table-only sources and `SELECT *` are left alone (native geom /
- * ST_Point inject can still apply).
- */
-function sqlIsLonLatProjectionMissingGeometry(
-  sql: string,
-  lon: string,
-  lat: string,
-  geometryColumn: string | undefined,
-): boolean {
-  const trimmed = sql.trim();
-  if (!trimmed) return false;
-  if (
-    /\bST_(AsWKB|Point|MakePoint|GeomFrom(?:Text|WKB)?|Centroid|PointOnSurface)\s*\(/i.test(
-      trimmed,
-    )
-  ) {
-    return false;
-  }
-  if (sqlSelectListIncludesStar(trimmed)) return false;
-  if (
-    !sqlMentionsIdentifier(trimmed, lon) ||
-    !sqlMentionsIdentifier(trimmed, lat)
-  ) {
-    return false;
-  }
-  if (geometryColumn) return !sqlMentionsIdentifier(trimmed, geometryColumn);
-  return !KNOWN_GEOM_OUTPUT_NAMES.some((name) =>
-    sqlMentionsIdentifier(trimmed, name),
-  );
 }
 
 function mergeOptionalRecord(
@@ -458,13 +382,6 @@ const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
 );
 
-const POINT_POSITION_LAYER_TYPES = new Set([
-  'GeoArrowScatterplotLayer',
-  'GeoArrowHeatmapLayer',
-  'GeoArrowColumnLayer',
-  'GeoJsonLayer',
-]);
-
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
   'getLineColor',
@@ -657,51 +574,6 @@ export function getDeckMapResourceConfigIssues(
         message:
           'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
       });
-    }
-
-    if (
-      typeof layerType === 'string' &&
-      POINT_POSITION_LAYER_TYPES.has(layerType) &&
-      boundDataset &&
-      datasetIdSet.has(boundDataset)
-    ) {
-      const dataset = config.datasets[boundDataset];
-      const layerGeom = nonEmptyString(binding?.geometryColumn);
-      const datasetGeom = nonEmptyString(dataset?.geometryColumn);
-      const source = dataset?.source as
-        | {transformSql?: string; sqlQuery?: string}
-        | undefined;
-      const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
-      const fitToData = config.fitToData;
-      const fitMatchesDataset = fitToData?.dataset === boundDataset;
-      const lon =
-        nonEmptyString(binding?.longitudeColumn) ??
-        (fitMatchesDataset
-          ? nonEmptyString(fitToData?.longitudeColumn)
-          : undefined);
-      const lat =
-        nonEmptyString(binding?.latitudeColumn) ??
-        (fitMatchesDataset
-          ? nonEmptyString(fitToData?.latitudeColumn)
-          : undefined);
-      const geometryColumn = layerGeom ?? datasetGeom;
-      if (
-        lon &&
-        lat &&
-        sqlIsLonLatProjectionMissingGeometry(sql, lon, lat, geometryColumn)
-      ) {
-        const quotedLon = lon.replace(/"/g, '""');
-        const quotedLat = lat.replace(/"/g, '""');
-        issues.push({
-          path: `spec.layers.${index}._sqlroomsBinding.geometryColumn`,
-          message:
-            'This map needs point locations, not just longitude and latitude columns.',
-          repair:
-            `Use transformSql such as SELECT *, ST_AsWKB(ST_Point("${quotedLon}", "${quotedLat}")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "${quotedLon}" IS NOT NULL AND "${quotedLat}" IS NOT NULL, ` +
-            `then set datasets.${boundDataset}.geometryColumn and _sqlroomsBinding.geometryColumn to "__sqlrooms_geom" with geometryEncodingHint "wkb". ` +
-            `Do not put longitudeColumn/latitudeColumn on _sqlroomsBinding — those are only valid on fitToData.`,
-        });
-      }
     }
 
     if (layerType === 'GeoArrowHeatmapLayer' && 'getWeight' in layer) {
