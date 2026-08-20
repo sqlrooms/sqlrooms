@@ -1,6 +1,7 @@
 {
   "name": "@sqlrooms/mcp",
   "version": "0.29.0-rc.10",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/sqlrooms/sqlrooms.git"
