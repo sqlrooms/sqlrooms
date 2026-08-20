@@ -1,5 +1,6 @@
 import type {Layer, LayersList} from '@deck.gl/core';
 import {GeoArrowHeatmapLayer} from '@geoarrow/deck.gl-geoarrow';
+import {DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE} from '../heatmapDefaults';
 
 type HeatmapDataCache = {
   sourceData: unknown;
@@ -17,6 +18,14 @@ type LayerWithData = Layer & {props: {data?: unknown}};
  */
 export class DeckHeatmapLayer extends GeoArrowHeatmapLayer {
   static layerName = 'GeoArrowHeatmapLayer';
+  static defaultProps = {
+    weightsTextureSize: {
+      type: 'number' as const,
+      min: 128,
+      max: 2048,
+      value: DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE,
+    },
+  };
 
   declare state: {heatmapDataCache?: HeatmapDataCache};
 
@@ -30,8 +39,8 @@ export class DeckHeatmapLayer extends GeoArrowHeatmapLayer {
       this.props as Record<string, unknown>,
       heatmap.props.data,
     );
-    if (this.state?.heatmapDataCache !== cache) {
-      this.state = {...this.state, heatmapDataCache: cache};
+    if (this.state) {
+      this.state.heatmapDataCache = cache;
     }
     if (cache.data === heatmap.props.data) {
       return heatmap;

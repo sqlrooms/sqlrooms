@@ -1,3 +1,4 @@
+import {DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE} from '../src/json/heatmapDefaults';
 import {
   DeckHeatmapLayer,
   reuseCachedHeatmapData,
@@ -6,6 +7,10 @@ import {
 describe('DeckHeatmapLayer', () => {
   it('keeps the GeoArrow heatmap class name for JSONConverter', () => {
     expect(DeckHeatmapLayer.layerName).toBe('GeoArrowHeatmapLayer');
+    expect(DeckHeatmapLayer.defaultProps.weightsTextureSize).toEqual(
+      expect.objectContaining({value: DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE}),
+    );
+    expect(DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE).toBe(512);
   });
 
   it('reuses the inner heatmap data wrapper when only radius changes', () => {

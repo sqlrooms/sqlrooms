@@ -20,7 +20,10 @@ import {
   DEFAULT_DECK_JSON_CONSTANTS,
   DEFAULT_DECK_JSON_ENUMERATIONS,
 } from './defaultClasses';
-import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
+import {
+  DEFAULT_HEATMAP_COLOR_RANGE,
+  DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE,
+} from './heatmapDefaults';
 import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
@@ -560,6 +563,9 @@ export function createDeckJsonConfiguration(
       if (layerName === 'GeoArrowHeatmapLayer') {
         if (!rewritten.colorRange) {
           rewritten.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
+        }
+        if (rewritten.weightsTextureSize === undefined) {
+          rewritten.weightsTextureSize = DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE;
         }
       }
 

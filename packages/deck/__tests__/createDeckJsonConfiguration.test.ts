@@ -618,6 +618,7 @@ describe('createDeckJsonConfiguration', () => {
     expect(JSON.stringify(updateTriggers?.getWeight ?? null)).not.toBe(
       JSON.stringify(converted.layers[0]?.props.colorRange),
     );
+    expect(converted.layers[0]?.props.weightsTextureSize).toBe(512);
   });
 });
 
