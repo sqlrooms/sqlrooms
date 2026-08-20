@@ -126,7 +126,7 @@ export const ChatMessagesContainer: React.FC<{
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
         viewportRef={containerRef}
-        className="flex w-full grow flex-col gap-5"
+        className="flex w-full min-w-0 grow flex-col gap-5 [&_[data-radix-scroll-area-viewport]>div]:!block [&_[data-radix-scroll-area-viewport]>div]:!w-full [&_[data-radix-scroll-area-viewport]>div]:!min-w-0"
       >
         <div className="px-3">
           {chatTurns.map((chatTurn) => (
