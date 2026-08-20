@@ -20,7 +20,6 @@ import {
   ToolRenderBehaviorProvider,
 } from './FlatAgentRenderer';
 import {InlineApiKeyInput} from './InlineApiKeyInput';
-import {LocalAgentChatComposer} from './LocalAgentChatComposer';
 import {LocalAgentChatMessages} from './LocalAgentChatMessages';
 import {
   LocalAgentPromptSuggestionItem,
@@ -105,15 +104,10 @@ const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (props) => {
   return <ChatMessagesContainer {...props} />;
 };
 
-const ComposerRoot: FC<ComponentProps<typeof QueryControls>> = (props) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode === 'local-agent') {
-    return <LocalAgentChatComposer {...props} />;
-  }
-  return <QueryControls {...props} />;
-};
-
-const Composer = Object.assign(ComposerRoot, {
+// `QueryControls` itself now serves both runtime modes — it sources its
+// state from `useChatComposer()`, which normalizes over session and
+// local-agent mode, so no runtime-dispatch wrapper is needed here.
+const Composer = Object.assign(QueryControls, {
   Input: ComposerInput,
   Send: ComposerSend,
   Stop: ComposerStop,

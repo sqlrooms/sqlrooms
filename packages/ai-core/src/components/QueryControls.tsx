@@ -2,17 +2,27 @@ import {DragEndEvent, useDndMonitor, useDroppable} from '@dnd-kit/core';
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, LoaderCircleIcon, OctagonXIcon} from 'lucide-react';
 import {
-  PropsWithChildren,
-  useCallback,
-  useEffect,
-  useState,
   Children,
   isValidElement,
   ReactNode,
   Ref,
+  useCallback,
+  useEffect,
   useRef,
+  useState,
+  type FC,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PropsWithChildren,
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {
+  ChatComposerStateBoundary,
+  Input,
+  Send,
+  Stop,
+  useChatComposer,
+} from './composer';
 import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {InlineApiKeyInput, InlineApiKeyInputButton} from './InlineApiKeyInput';
 import {ContextSelector} from './context/ContextSelector';
@@ -47,7 +57,13 @@ type ContextDropTargetRenderArgs = {
 };
 
 /**
- * Checks if a child is an InlineApiKeyInput component
+ * Checks if a child is an InlineApiKeyInput component.
+ *
+ * @deprecated Part of the child-sniffing routing kept for existing consumers
+ * of `QueryControls`. New composers should render the composer primitives
+ * (`Chat.Composer.Input`, `.Send`, `.Stop`, `.DropTarget`) directly, and a
+ * host wanting a credential gate should branch on `useChatComposer()`'s
+ * `needsApiKey` flag instead of relying on this identity check.
  */
 function isInlineApiKeyInput(
   child: ReactNode,
@@ -55,6 +71,9 @@ function isInlineApiKeyInput(
   return isValidElement(child) && child.type === InlineApiKeyInput;
 }
 
+/**
+ * @deprecated See {@link isInlineApiKeyInput}.
+ */
 function isContextSelector(
   child: ReactNode,
 ): child is React.ReactElement<React.ComponentProps<typeof ContextSelector>> {
@@ -72,6 +91,12 @@ function isContextSelector(
 
 /**
  * Extracts special composer children and returns the rest.
+ *
+ * @deprecated This identity-check-based routing silently breaks when a host
+ * wraps a child in `memo`, `lazy`, a fragment, or its own abstraction. It is
+ * kept only so existing `QueryControls` consumers keep working unchanged.
+ * New composers should use the composer primitives directly instead of
+ * relying on `children` being sniffed and routed.
  */
 function extractComposerChildren(children: ReactNode): {
   inlineApiKeyInput: React.ReactElement<
@@ -104,8 +129,38 @@ function extractComposerChildren(children: ReactNode): {
  *
  * Accepts composer `children`, optional `topActions`, prompt placeholder text,
  * run/cancel handlers, and a context drop target for attached inputs.
+ *
+ * Composed from {@link useChatComposer} and the composer primitives
+ * (`Input`/`Send`/`Stop`), so it works under both `Chat.Root` (session mode) and
+ * `Chat.LocalAgentRoot` (local-agent mode) — and, via
+ * {@link ChatComposerStateBoundary}, with no `<Chat>` ancestor at all.
+ * Session-only chrome (context selectors, the context-usage indicator, the
+ * inline API-key mode, and the summarizing overlay) is isolated in a
+ * session-only branch and never renders, and never reaches for the AI slice,
+ * in local-agent mode.
  */
-export const QueryControls: React.FC<QueryControlsProps> = ({
+export const QueryControls: React.FC<QueryControlsProps> = (props) => (
+  <ChatComposerStateBoundary>
+    <QueryControlsBody {...props} />
+  </ChatComposerStateBoundary>
+);
+
+function QueryControlsBody(props: QueryControlsProps) {
+  const composer = useChatComposer();
+  if (composer.mode === 'session') {
+    return <SessionQueryControls {...props} />;
+  }
+  return <LocalAgentQueryControls {...props} />;
+}
+
+/**
+ * Session-mode composer body. The only place in `QueryControls` that reads
+ * the AI slice directly, for the handful of session-only concerns
+ * `useChatComposer()` does not normalize: the resolvable-model check (used
+ * for the placeholder and the API-key swap), the API key itself, and the
+ * summarizing flag.
+ */
+const SessionQueryControls: FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
   children,
@@ -114,19 +169,16 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   onCancel,
   contextDropTarget,
 }) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const sessionId = currentSession?.id;
-
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
   const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
   // Routes through the AI slice's single source of truth for send readiness,
   // which also honors a configured custom-model factory (see
-  // `AiSliceState.ai.hasResolvableModel`).
+  // `AiSliceState.ai.hasResolvableModel`). `useChatComposer()`'s `canSend`
+  // already consumes this same predicate for the send control; it is read
+  // again here only for the placeholder text and the API-key swap decision.
   const hasSelectedModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
+  const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
 
-  // Extract special composer controls from children
   const {inlineApiKeyInput, contextSelectors, otherChildren} =
     extractComposerChildren(children);
 
@@ -137,131 +189,6 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     inlineApiKeyInput !== null &&
     hasSelectedModel &&
     (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
-
-  const isRunning = useStoreWithAi((s) =>
-    sessionId ? s.ai.getIsRunning(sessionId) : false,
-  );
-  const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
-
-  const draftPrompt = useStoreWithAi((s) => s.ai.draftPrompt);
-  const setDraftPrompt = useStoreWithAi((s) => s.ai.setDraftPrompt);
-  const storedPrompt = useStoreWithAi((s) =>
-    sessionId ? s.ai.getPrompt(sessionId) : '',
-  );
-  const prompt = sessionId ? storedPrompt : draftPrompt;
-
-  const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
-  const createSession = useStoreWithAi((s) => s.ai.createSession);
-  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
-  const runAnalysisWhenReady = useStoreWithAi(
-    (s) => s.ai.startAnalysisWhenReady,
-  );
-  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
-
-  useEffect(() => {
-    if (showApiKeyInput) return;
-    const timer = setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [showApiKeyInput]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (
-        e.key === 'Enter' &&
-        !e.shiftKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.metaKey
-      ) {
-        e.preventDefault();
-        if (
-          !isSummarizing &&
-          !isRunning &&
-          hasSelectedModel &&
-          prompt.trim().length
-        ) {
-          // Call onRun BEFORE creating session (allows host to create artifacts, etc.)
-          const shouldContinue = onRun?.(prompt);
-
-          // If onRun returns false, skip session creation and analysis
-          if (shouldContinue === false) {
-            return;
-          }
-
-          // Create session if it doesn't exist
-          let activeSessionId = sessionId;
-          if (!activeSessionId) {
-            activeSessionId = createSession();
-            setPrompt(activeSessionId, prompt);
-            setDraftPrompt(''); // Clear draft
-            // The compatibility entry point now creates the controller
-            // synchronously; callers do not depend on a mounted chat surface.
-            runAnalysisWhenReady(activeSessionId);
-          } else {
-            runAnalysis(activeSessionId);
-          }
-        }
-      }
-    },
-    [
-      isSummarizing,
-      isRunning,
-      sessionId,
-      hasSelectedModel,
-      prompt,
-      onRun,
-      runAnalysis,
-      runAnalysisWhenReady,
-      createSession,
-      setPrompt,
-      setDraftPrompt,
-    ],
-  );
-
-  const canStart = Boolean(hasSelectedModel && prompt.trim().length);
-
-  const handleClickRunOrCancel = useCallback(() => {
-    if (isRunning) {
-      if (!sessionId) return;
-      cancelAnalysis(sessionId);
-      onCancel?.();
-    } else {
-      // Call onRun BEFORE creating session (allows host to create artifacts, etc.)
-      const shouldContinue = onRun?.(prompt);
-
-      // If onRun returns false, skip session creation and analysis
-      if (shouldContinue === false) {
-        return;
-      }
-
-      // Create session if it doesn't exist
-      let activeSessionId = sessionId;
-      if (!activeSessionId) {
-        activeSessionId = createSession();
-        setPrompt(activeSessionId, prompt);
-        setDraftPrompt(''); // Clear draft
-        // This remains compatible with block-scoped callers while creating the
-        // session controller synchronously.
-        void runAnalysisWhenReady(activeSessionId);
-      } else {
-        runAnalysis(activeSessionId);
-      }
-    }
-  }, [
-    sessionId,
-    isRunning,
-    cancelAnalysis,
-    onCancel,
-    runAnalysis,
-    runAnalysisWhenReady,
-    onRun,
-    createSession,
-    setPrompt,
-    setDraftPrompt,
-    prompt,
-  ]);
 
   // Render the API key input mode
   if (showApiKeyInput && inlineApiKeyInput) {
@@ -288,7 +215,113 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     );
   }
 
-  // Render the normal prompt mode
+  return (
+    <ComposerFrame
+      className={className}
+      placeholder={hasSelectedModel ? placeholder : 'No model selected'}
+      topActions={topActions}
+      contextSelectors={contextSelectors}
+      otherChildren={otherChildren}
+      contextDropTarget={contextDropTarget}
+      textareaDisabled={isSummarizing}
+      showContextUsageIndicator
+      isSummarizing={isSummarizing}
+      onRun={onRun}
+      onCancel={onCancel}
+    />
+  );
+};
+
+/**
+ * Local-agent-mode composer body. Never reads the AI slice — everything it
+ * needs comes from {@link useChatComposer}, which sources local-agent state
+ * from the local-agent chat runtime instead.
+ */
+const LocalAgentQueryControls: FC<QueryControlsProps> = ({
+  className,
+  placeholder = 'Message...',
+  children,
+  topActions,
+  onRun,
+  onCancel,
+}) => {
+  const composer = useChatComposer();
+
+  return (
+    <ComposerFrame
+      className={className}
+      placeholder={placeholder}
+      topActions={topActions}
+      contextSelectors={[]}
+      otherChildren={children}
+      textareaDisabled={composer.isRunning}
+      showContextUsageIndicator={false}
+      isSummarizing={false}
+      onRun={onRun}
+      onCancel={onCancel}
+    />
+  );
+};
+
+/**
+ * The composer's box, textarea, and footer — shared, unstyled-behavior-wise,
+ * by both {@link SessionQueryControls} and {@link LocalAgentQueryControls}.
+ * All AI-slice access happens before this component is reached; it only
+ * reads {@link useChatComposer}, which is safe in both runtime modes.
+ */
+function ComposerFrame({
+  className,
+  placeholder,
+  topActions,
+  contextSelectors,
+  otherChildren,
+  contextDropTarget,
+  textareaDisabled,
+  showContextUsageIndicator,
+  isSummarizing,
+  onRun,
+  onCancel,
+}: {
+  className?: string;
+  placeholder: string;
+  topActions?: ReactNode;
+  contextSelectors: ReactNode[];
+  otherChildren?: ReactNode;
+  contextDropTarget?: ContextDropTargetConfig;
+  textareaDisabled: boolean;
+  showContextUsageIndicator: boolean;
+  isSummarizing: boolean;
+  onRun?: (prompt?: string) => void | false;
+  onCancel?: () => void;
+}) {
+  const composer = useChatComposer();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Call onRun BEFORE creating a session (allows a host to create artifacts,
+  // etc.). This is the composer's pre-send veto, wired through the `Input`
+  // and `Send` primitives' `onBeforeSend` seam rather than duplicating their
+  // Enter/click guards here.
+  const handleBeforeSend = useCallback(
+    () => onRun?.(composer.prompt) !== false,
+    [composer, onRun],
+  );
+
+  const handleStopClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      composer.cancel();
+      onCancel?.();
+      e.preventDefault();
+    },
+    [composer, onCancel],
+  );
+
   return (
     <div
       className={cn(
@@ -319,28 +352,20 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                 contextSelectors={contextSelectors}
                 topActions={topActions}
               />
-              <Textarea
+              <Input
                 ref={textareaRef}
-                className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
-                autoResize
-                value={prompt}
-                disabled={isSummarizing}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (sessionId) {
-                    setPrompt(sessionId, value);
-                  } else {
-                    // No session yet - keep the draft in the shared AI slice so
-                    // suggestions and alternate composer surfaces stay aligned.
-                    setDraftPrompt(value);
-                  }
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  hasSelectedModel ? placeholder : 'No model selected'
-                }
+                asChild
+                autoResize={false}
+                disabled={textareaDisabled}
+                placeholder={placeholder}
                 autoFocus
-              />
+                onBeforeSend={handleBeforeSend}
+              >
+                <Textarea
+                  className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
+                  autoResize
+                />
+              </Input>
               <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
                 <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
                   <div className="min-w-0 flex-1 overflow-hidden">
@@ -349,16 +374,25 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                     </div>
                   </div>
                   <div className="ml-auto flex shrink-0 items-center gap-1 p-2">
-                    <ContextUsageIndicator />
-                    <Button
-                      className="h-8 w-8 rounded-full"
-                      variant="default"
-                      size="icon"
-                      onClick={handleClickRunOrCancel}
-                      disabled={isSummarizing || (!isRunning && !canStart)}
-                    >
-                      {isRunning ? <OctagonXIcon /> : <ArrowUpIcon />}
-                    </Button>
+                    {showContextUsageIndicator && <ContextUsageIndicator />}
+                    <Send asChild onBeforeSend={handleBeforeSend}>
+                      <Button
+                        className="h-8 w-8 rounded-full"
+                        variant="default"
+                        size="icon"
+                      >
+                        <ArrowUpIcon />
+                      </Button>
+                    </Send>
+                    <Stop asChild onClick={handleStopClick}>
+                      <Button
+                        className="h-8 w-8 rounded-full"
+                        variant="default"
+                        size="icon"
+                      >
+                        <OctagonXIcon />
+                      </Button>
+                    </Stop>
                   </div>
                 </div>
               </div>
@@ -368,7 +402,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       </OptionalContextDropTarget>
     </div>
   );
-};
+}
 
 function OptionalContextDropTarget({
   target,
@@ -491,7 +525,7 @@ const InlineApiKeyInputRenderer: React.FC<{
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: KeyboardEvent<HTMLInputElement>) => {
       if (
         e.key === 'Enter' &&
         !e.shiftKey &&

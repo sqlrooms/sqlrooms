@@ -462,6 +462,158 @@ describe('composer primitives — local-agent mode', () => {
     expect(el.style.height).toBe('77px');
     await cleanup(container, root);
   });
+
+  describe('onBeforeSend', () => {
+    it('Input: returning false on Enter prevents the send', async () => {
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const onBeforeSend = jest.fn<() => boolean>(() => false);
+      const {container, root} = await renderTree(
+        <LocalAgentComposer>
+          <Input onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+
+      await act(async () => {
+        fireKeyDown(textarea(container)!);
+      });
+
+      expect(onBeforeSend).toHaveBeenCalledTimes(1);
+      expect(mockRuntime.sendPrompt).not.toHaveBeenCalled();
+      await cleanup(container, root);
+    });
+
+    it('Input: returning undefined or true on Enter allows the send', async () => {
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const onBeforeSend = jest.fn<() => boolean | void>(() => undefined);
+      const {container, root} = await renderTree(
+        <LocalAgentComposer>
+          <Input onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+
+      await act(async () => {
+        fireKeyDown(textarea(container)!);
+      });
+
+      expect(onBeforeSend).toHaveBeenCalledTimes(1);
+      expect(mockRuntime.sendPrompt).toHaveBeenCalledWith(undefined);
+      await cleanup(container, root);
+    });
+
+    it('Input: not called when an earlier guard already rejects the keystroke', async () => {
+      const onBeforeSend = jest.fn<() => boolean>(() => true);
+
+      // IME composition active.
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const composing = await renderTree(
+        <LocalAgentComposer>
+          <Input onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+      await act(async () => {
+        fireKeyDown(textarea(composing.container)!, {isComposing: true});
+      });
+      await cleanup(composing.container, composing.root);
+      expect(onBeforeSend).not.toHaveBeenCalled();
+
+      // A modifier is held.
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const shiftHeld = await renderTree(
+        <LocalAgentComposer>
+          <Input onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+      await act(async () => {
+        fireKeyDown(textarea(shiftHeld.container)!, {shiftKey: true});
+      });
+      await cleanup(shiftHeld.container, shiftHeld.root);
+      expect(onBeforeSend).not.toHaveBeenCalled();
+
+      // submitOnEnter is off.
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const noSubmitOnEnter = await renderTree(
+        <LocalAgentComposer>
+          <Input submitOnEnter={false} onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+      await act(async () => {
+        fireKeyDown(textarea(noSubmitOnEnter.container)!);
+      });
+      await cleanup(noSubmitOnEnter.container, noSubmitOnEnter.root);
+      expect(onBeforeSend).not.toHaveBeenCalled();
+
+      // canSend is false (empty prompt).
+      mockRuntime = createMockLocalAgentRuntime({prompt: '   '});
+      const emptyPrompt = await renderTree(
+        <LocalAgentComposer>
+          <Input onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+      await act(async () => {
+        fireKeyDown(textarea(emptyPrompt.container)!);
+      });
+      await cleanup(emptyPrompt.container, emptyPrompt.root);
+      expect(onBeforeSend).not.toHaveBeenCalled();
+    });
+
+    it('Send: returning false on activation prevents the send', async () => {
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const onBeforeSend = jest.fn<() => boolean>(() => false);
+      const {container, root} = await renderTree(
+        <LocalAgentComposer>
+          <Send onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+
+      const button = container.querySelector('button')!;
+      await act(async () => {
+        button.click();
+      });
+
+      expect(onBeforeSend).toHaveBeenCalledTimes(1);
+      expect(mockRuntime.sendPrompt).not.toHaveBeenCalled();
+      await cleanup(container, root);
+    });
+
+    it('Send: returning undefined or true on activation allows the send', async () => {
+      mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
+      const onBeforeSend = jest.fn<() => boolean | void>(() => true);
+      const {container, root} = await renderTree(
+        <LocalAgentComposer>
+          <Send onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+
+      const button = container.querySelector('button')!;
+      await act(async () => {
+        button.click();
+      });
+
+      expect(onBeforeSend).toHaveBeenCalledTimes(1);
+      expect(mockRuntime.sendPrompt).toHaveBeenCalled();
+      await cleanup(container, root);
+    });
+
+    it('Send: not called when canSend is false (button disabled, click is a no-op)', async () => {
+      mockRuntime = createMockLocalAgentRuntime({prompt: '   '});
+      const onBeforeSend = jest.fn<() => boolean>(() => true);
+      const {container, root} = await renderTree(
+        <LocalAgentComposer>
+          <Send onBeforeSend={onBeforeSend} />
+        </LocalAgentComposer>,
+      );
+
+      const button = container.querySelector('button')!;
+      expect(button.disabled).toBe(true);
+      await act(async () => {
+        button.click();
+      });
+
+      expect(onBeforeSend).not.toHaveBeenCalled();
+      expect(mockRuntime.sendPrompt).not.toHaveBeenCalled();
+      await cleanup(container, root);
+    });
+  });
 });
 
 describe('useChatComposer — no provider present', () => {

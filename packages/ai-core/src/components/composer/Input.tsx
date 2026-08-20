@@ -28,6 +28,19 @@ export type ChatComposerInputProps = Omit<
   submitOnEnter?: boolean;
   /** Auto-grow to fit content. Defaults to `true`. */
   autoResize?: boolean;
+  /**
+   * Synchronous pre-send veto, called after the keymap guards pass and
+   * immediately before the prompt is sent. Return `false` to abort the send;
+   * any other return value proceeds.
+   *
+   * This exists because merging a host `onKeyDown` can only run before or
+   * after this component's whole handler — it cannot interpose between
+   * "guards passed" and the send itself, which is where a pre-send hook
+   * belongs. Deliberately synchronous: an asynchronous veto is out of scope,
+   * since it would leave the composer in an indeterminate state while
+   * awaiting.
+   */
+  onBeforeSend?: () => boolean | void;
 };
 
 /**
@@ -66,6 +79,7 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
       asChild,
       submitOnEnter = true,
       autoResize = true,
+      onBeforeSend,
       onChange,
       onKeyDown,
       disabled,
@@ -114,9 +128,10 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
         // Enter while a run is in flight is a no-op — it must never cancel.
         if (composer.isBusy) return;
         if (!composer.canSend) return;
+        if (onBeforeSend?.() === false) return;
         composer.send();
       },
-      [submitOnEnter, composer],
+      [submitOnEnter, composer, onBeforeSend],
     );
 
     const mergedOnChange = mergeHandlers(onChange, handleChange);

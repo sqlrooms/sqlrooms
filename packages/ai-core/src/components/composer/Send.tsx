@@ -9,6 +9,15 @@ import {mergeHandlers} from './mergeHandlers';
 export type ChatComposerSendProps = ComponentPropsWithoutRef<'button'> & {
   /** Render as the single child element instead of a `<button>`, via Radix's `Slot`. */
   asChild?: boolean;
+  /**
+   * Synchronous pre-send veto, called immediately before the prompt is sent.
+   * Return `false` to abort the send; any other return value proceeds.
+   *
+   * Preferred over signalling a veto by calling `preventDefault()` on the
+   * click, which reads as an obscure idiom for "do not send". Deliberately
+   * synchronous, matching {@link Input}'s seam.
+   */
+  onBeforeSend?: () => boolean | void;
 };
 
 /**
@@ -21,12 +30,13 @@ export type ChatComposerSendProps = ComponentPropsWithoutRef<'button'> & {
  * not merely disabled, whenever a response is streaming.
  */
 export const Send = forwardRef<HTMLButtonElement, ChatComposerSendProps>(
-  function Send({asChild, onClick, disabled, ...rest}, ref) {
+  function Send({asChild, onBeforeSend, onClick, disabled, ...rest}, ref) {
     const composer = useChatComposer();
 
     const handleClick = useCallback(() => {
+      if (onBeforeSend?.() === false) return;
       composer.send();
-    }, [composer]);
+    }, [composer, onBeforeSend]);
 
     if (composer.isRunning) return null;
 
