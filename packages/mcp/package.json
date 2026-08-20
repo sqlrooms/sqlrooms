@@ -48,8 +48,5 @@
     "@types/jest": "^30.0.0",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.4"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }
