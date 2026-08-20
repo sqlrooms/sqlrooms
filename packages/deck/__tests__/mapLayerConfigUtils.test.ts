@@ -26,6 +26,7 @@ import {
   getDeckMapColorScaleOpacity,
   getDeckMapLayerChannelOpacityPercent,
 } from '../src/mapLayerConfigUtils';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from '../src/json/heatmapDefaults';
 
 const config = {
   spec: {
@@ -66,7 +67,36 @@ describe('mapLayerConfigUtils', () => {
       id: 'points',
       _sqlroomsBinding: {dataset: 'places'},
     });
+    expect(getDeckMapLayerRecords(nextConfig)[0]?.colorRange).toEqual(
+      DEFAULT_HEATMAP_COLOR_RANGE,
+    );
     expect(config.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
+  });
+
+  it('keeps an existing heatmap colorRange when switching to heatmap', () => {
+    const customRange = [
+      [0, 0, 0, 255],
+      [255, 255, 255, 255],
+    ];
+    const heatmapConfig = setDeckMapLayerType(
+      config,
+      0,
+      'GeoArrowHeatmapLayer',
+    );
+    const withCustomRange = updateDeckMapLayer(heatmapConfig, 0, (layer) => ({
+      ...layer,
+      colorRange: customRange,
+    }));
+
+    const nextConfig = setDeckMapLayerType(
+      withCustomRange,
+      0,
+      'GeoArrowHeatmapLayer',
+    );
+
+    expect(getDeckMapLayerRecords(nextConfig)[0]?.colorRange).toEqual(
+      customRange,
+    );
   });
 
   it('forces column radius to meters and strips point radius leftovers', () => {
