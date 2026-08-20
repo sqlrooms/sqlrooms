@@ -5,12 +5,6 @@ import {
 
 const HEATMAP_COLOR_STEPS = 6;
 
-/**
- * Size of the GPU weights texture used for heatmap aggregation.
- * Matches deck.gl's HeatmapLayer default (2048).
- */
-export const DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE = 2048;
-
 /** Default color range for heatmap layers (YlOrRd, matching deck.gl's built-in default). */
 export const DEFAULT_HEATMAP_COLOR_RANGE: Array<
   [number, number, number, number]

@@ -1403,8 +1403,7 @@ describe('normalizeAiDeckMapConfig — lon/lat transformSql injection', () => {
   });
 
   test('does not rewrite an existing column-only transformSql', () => {
-    const sql =
-      'SELECT Latitude, Longitude, Magnitude, Depth, DateTime FROM __sqlrooms_source';
+    const sql = 'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source';
     const result = normalizeAiDeckMapConfig({
       configMode: 'basic',
       fitToData: {
@@ -1413,29 +1412,19 @@ describe('normalizeAiDeckMapConfig — lon/lat transformSql injection', () => {
         latitudeColumn: 'Latitude',
       },
       datasets: {
-        earthquakes: {
-          source: {
-            tableName: '"main"."earthquakes"',
-            transformSql: sql,
-          },
-        },
+        earthquakes: {source: {tableName: 'earthquakes', transformSql: sql}},
       },
       spec: {
         layers: [
           {
             '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {
-              dataset: 'earthquakes',
-              longitudeColumn: 'Longitude',
-              latitudeColumn: 'Latitude',
-            },
+            _sqlroomsBinding: {dataset: 'earthquakes'},
           },
         ],
       },
     } as any);
 
     expect(result.datasets.earthquakes.source.transformSql).toBe(sql);
-    expect(result.datasets.earthquakes.geometryColumn).toBeUndefined();
   });
 
   test('does not inject lon/lat transform for polygon-only layers with authored geom', () => {

@@ -203,21 +203,11 @@ const KNOWN_GEOM_OUTPUT_NAMES = [
   'the_geom',
 ];
 
-/** Outermost SELECT list is `*` / `alias.*` and does not EXCLUDE a known geom column. */
 function sqlSelectListIncludesStar(sql: string): boolean {
   const match = sql.match(/\bSELECT\s+([\s\S]+?)\bFROM\b/i);
-  if (!match) return false;
-  const list = match[1]!;
-  const exclude = list.match(/EXCLUDE\s*\(([^)]*)\)/i);
-  if (
-    exclude &&
-    KNOWN_GEOM_OUTPUT_NAMES.some((name) =>
-      sqlMentionsIdentifier(exclude[1] ?? '', name),
-    )
-  ) {
-    return false;
-  }
-  return /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|,|$|EXCLUDE)/i.test(list);
+  return Boolean(
+    match && /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|,|$)/i.test(match[1]!),
+  );
 }
 
 /**
@@ -475,19 +465,6 @@ const POINT_POSITION_LAYER_TYPES = new Set([
   'GeoJsonLayer',
 ]);
 
-function pointLayerUserLabel(layerType: string): string {
-  switch (layerType) {
-    case 'GeoArrowHeatmapLayer':
-      return 'heatmap';
-    case 'GeoArrowScatterplotLayer':
-      return 'point map';
-    case 'GeoArrowColumnLayer':
-      return 'column map';
-    default:
-      return 'map';
-  }
-}
-
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
   'getLineColor',
@@ -717,7 +694,8 @@ export function getDeckMapResourceConfigIssues(
         const quotedLat = lat.replace(/"/g, '""');
         issues.push({
           path: `spec.layers.${index}._sqlroomsBinding.geometryColumn`,
-          message: `This ${pointLayerUserLabel(layerType)} needs point locations, not just longitude and latitude columns.`,
+          message:
+            'This map needs point locations, not just longitude and latitude columns.',
           repair:
             `Use transformSql such as SELECT *, ST_AsWKB(ST_Point("${quotedLon}", "${quotedLat}")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "${quotedLon}" IS NOT NULL AND "${quotedLat}" IS NOT NULL, ` +
             `then set datasets.${boundDataset}.geometryColumn and _sqlroomsBinding.geometryColumn to "__sqlrooms_geom" with geometryEncodingHint "wkb". ` +

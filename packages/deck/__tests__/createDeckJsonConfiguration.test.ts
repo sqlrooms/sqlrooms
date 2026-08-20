@@ -609,13 +609,15 @@ describe('createDeckJsonConfiguration', () => {
     expect(converted.layers[0]?.id ?? converted.layers[0]?.props.id).toBe(
       'earthquakes',
     );
+    expect(converted.layers[0]?.props.colorRange).toEqual(
+      expect.arrayContaining([expect.any(Array)]),
+    );
     const updateTriggers = converted.layers[0]?.props.updateTriggers as
       | Record<string, unknown>
       | undefined;
     expect(JSON.stringify(updateTriggers?.getWeight ?? null)).not.toBe(
       JSON.stringify(converted.layers[0]?.props.colorRange),
     );
-    expect(converted.layers[0]?.props.weightsTextureSize).toBe(2048);
   });
 });
 

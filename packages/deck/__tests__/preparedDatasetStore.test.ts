@@ -412,6 +412,7 @@ describe('PreparedDatasetStore', () => {
     await waitForEntry(store, cacheKey);
 
     const entriesAfterReady = store.getState().entries;
+    const accessedAt = store.getState().entries[cacheKey]!.lastAccessedAt;
     store.getState().ensureEntry({
       cacheKey,
       datasetId: 'earthquakes',
@@ -420,6 +421,9 @@ describe('PreparedDatasetStore', () => {
     });
 
     expect(store.getState().entries).toBe(entriesAfterReady);
+    expect(store.getState().entries[cacheKey]?.lastAccessedAt).toBeGreaterThan(
+      accessedAt,
+    );
     expect(prepareDataset).toHaveBeenCalledTimes(1);
   });
 });

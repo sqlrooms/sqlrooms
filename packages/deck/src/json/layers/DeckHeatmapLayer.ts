@@ -1,6 +1,5 @@
 import type {Layer, LayersList} from '@deck.gl/core';
 import {GeoArrowHeatmapLayer} from '@geoarrow/deck.gl-geoarrow';
-import {DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE} from '../heatmapDefaults';
 
 type HeatmapDataCache = {
   sourceData: unknown;
@@ -12,26 +11,12 @@ type HeatmapDataCache = {
 type LayerWithData = Layer & {props: {data?: unknown}};
 
 /**
- * GeoArrow heatmap composite that keeps the inner binary `data` object stable
- * across style-only updates (radius, opacity, colormap).
- *
- * JSONConverter always constructs new layer instances; deck.gl LayerManager
- * matches them by `id` and transfers GPU state. The expensive part is
- * GeoArrow allocating a new `{attributes: {getPosition}}` wrapper on every
- * `renderLayers()` call, which the inner heatmap treats as a data change and
- * rebuilds aggregation. This subclass reuses the previous wrapper when the
- * Arrow table / position / weight inputs are unchanged.
+ * GeoArrow heatmap that reuses the inner binary `data` wrapper when only style
+ * props change. JSONConverter builds a new layer each time; a new wrapper looks
+ * like a data change and rebuilds aggregation.
  */
 export class DeckHeatmapLayer extends GeoArrowHeatmapLayer {
   static layerName = 'GeoArrowHeatmapLayer';
-  static defaultProps = {
-    weightsTextureSize: {
-      type: 'number' as const,
-      min: 128,
-      max: 2048,
-      value: DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE,
-    },
-  };
 
   declare state: {heatmapDataCache?: HeatmapDataCache};
 
@@ -62,9 +47,7 @@ export class DeckHeatmapLayer extends GeoArrowHeatmapLayer {
   }
 }
 
-/**
- * Return the previous inner heatmap `data` object when Arrow inputs match.
- */
+/** Return the previous inner heatmap `data` object when Arrow inputs match. */
 export function reuseCachedHeatmapData(
   cache: HeatmapDataCache | undefined,
   props: Record<string, unknown>,
