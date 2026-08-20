@@ -1219,6 +1219,129 @@ describe('Deck map resource authoring contract', () => {
     );
   });
 
+  test('accepts table-only lon/lat fitToData when native geom can be auto-detected', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places'},
+          },
+        ],
+      },
+      datasets: {
+        places: {source: {tableName: 'places'}},
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  test('accepts SELECT * transformSql that keeps native geom with lon/lat fitToData', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'places'},
+            radiusPixels: 30,
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql: 'SELECT * FROM __sqlrooms_source',
+          },
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  test('rejects lon/lat column projections even when geometryColumn is set', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              geometryColumn: '__sqlrooms_geom',
+            },
+            radiusPixels: 30,
+          },
+        ],
+      },
+      datasets: {
+        earthquakes: {
+          source: {
+            tableName: 'earthquakes',
+            transformSql:
+              'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source',
+          },
+          geometryColumn: '__sqlrooms_geom',
+        },
+      },
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+          message: expect.stringContaining('needs point locations'),
+        }),
+      ]),
+    );
+  });
+
+  test('accepts an explicit geom column in a lon/lat select list', () => {
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql:
+              'SELECT geom, longitude, latitude, name FROM __sqlrooms_source',
+          },
+          geometryColumn: 'geom',
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+    });
+
+    expect(issues).toEqual([]);
+  });
+
   test('allows bare ST_Point(...) AS col (pipeline wraps native GEOMETRY as WKB)', () => {
     const issues = getDeckMapResourceConfigIssues({
       spec: {

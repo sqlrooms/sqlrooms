@@ -182,10 +182,74 @@ function nonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-/** True when SQL constructs a Point (or WKB of one) rather than selecting lon/lat only. */
-function sqlBuildsPointGeometry(sql: string): boolean {
-  return /\bST_(AsWKB|Point|MakePoint|GeomFrom(?:Text|WKB)?|Centroid|PointOnSurface)\s*\(/i.test(
-    sql,
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function sqlMentionsIdentifier(sql: string, name: string): boolean {
+  const quoted = `"${name.replace(/"/g, '""')}"`;
+  if (sql.includes(quoted)) return true;
+  return new RegExp(
+    `(^|[^A-Za-z0-9_])${escapeRegExp(name)}([^A-Za-z0-9_]|$)`,
+    'i',
+  ).test(sql);
+}
+
+const KNOWN_GEOM_OUTPUT_NAMES = [
+  'geom',
+  'geometry',
+  '__sqlrooms_geom',
+  'wkb_geometry',
+  'the_geom',
+];
+
+/** Outermost SELECT list is `*` / `alias.*` and does not EXCLUDE a known geom column. */
+function sqlSelectListIncludesStar(sql: string): boolean {
+  const match = sql.match(/\bSELECT\s+([\s\S]+?)\bFROM\b/i);
+  if (!match) return false;
+  const list = match[1]!;
+  const exclude = list.match(/EXCLUDE\s*\(([^)]*)\)/i);
+  if (
+    exclude &&
+    KNOWN_GEOM_OUTPUT_NAMES.some((name) =>
+      sqlMentionsIdentifier(exclude[1] ?? '', name),
+    )
+  ) {
+    return false;
+  }
+  return /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|,|$|EXCLUDE)/i.test(list);
+}
+
+/**
+ * Authored SQL that selects lon/lat columns but never produces a geometry
+ * column. Table-only sources and `SELECT *` are left alone (native geom /
+ * ST_Point inject can still apply).
+ */
+function sqlIsLonLatProjectionMissingGeometry(
+  sql: string,
+  lon: string,
+  lat: string,
+  geometryColumn: string | undefined,
+): boolean {
+  const trimmed = sql.trim();
+  if (!trimmed) return false;
+  if (
+    /\bST_(AsWKB|Point|MakePoint|GeomFrom(?:Text|WKB)?|Centroid|PointOnSurface)\s*\(/i.test(
+      trimmed,
+    )
+  ) {
+    return false;
+  }
+  if (sqlSelectListIncludesStar(trimmed)) return false;
+  if (
+    !sqlMentionsIdentifier(trimmed, lon) ||
+    !sqlMentionsIdentifier(trimmed, lat)
+  ) {
+    return false;
+  }
+  if (geometryColumn) return !sqlMentionsIdentifier(trimmed, geometryColumn);
+  return !KNOWN_GEOM_OUTPUT_NAMES.some((name) =>
+    sqlMentionsIdentifier(trimmed, name),
   );
 }
 
@@ -643,11 +707,11 @@ export function getDeckMapResourceConfigIssues(
         (fitMatchesDataset
           ? nonEmptyString(fitToData?.latitudeColumn)
           : undefined);
+      const geometryColumn = layerGeom ?? datasetGeom;
       if (
         lon &&
         lat &&
-        !sqlBuildsPointGeometry(sql) &&
-        !(layerGeom || datasetGeom)
+        sqlIsLonLatProjectionMissingGeometry(sql, lon, lat, geometryColumn)
       ) {
         const quotedLon = lon.replace(/"/g, '""');
         const quotedLat = lat.replace(/"/g, '""');

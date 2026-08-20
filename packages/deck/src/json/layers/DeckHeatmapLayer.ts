@@ -21,9 +21,6 @@ type LayerWithData = Layer & {props: {data?: unknown}};
  * `renderLayers()` call, which the inner heatmap treats as a data change and
  * rebuilds aggregation. This subclass reuses the previous wrapper when the
  * Arrow table / position / weight inputs are unchanged.
- *
- * Also defaults `weightsTextureSize` to 512 (Kepler.gl). deck.gl's 2048
- * default makes the max-weight pass ~10× slower.
  */
 export class DeckHeatmapLayer extends GeoArrowHeatmapLayer {
   static layerName = 'GeoArrowHeatmapLayer';

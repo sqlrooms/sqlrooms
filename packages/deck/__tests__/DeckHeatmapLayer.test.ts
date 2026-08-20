@@ -28,12 +28,12 @@ function createPointTable(numRows = 4) {
 }
 
 describe('DeckHeatmapLayer', () => {
-  it('keeps the GeoArrow heatmap class and Kepler-sized weights texture', () => {
+  it('keeps the GeoArrow heatmap class and deck.gl default weights texture size', () => {
     expect(DeckHeatmapLayer.layerName).toBe('GeoArrowHeatmapLayer');
     expect(DeckHeatmapLayer.defaultProps.weightsTextureSize).toEqual(
       expect.objectContaining({value: DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE}),
     );
-    expect(DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE).toBe(512);
+    expect(DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE).toBe(2048);
   });
 
   it('reuses the inner heatmap data wrapper when only radius changes', () => {
