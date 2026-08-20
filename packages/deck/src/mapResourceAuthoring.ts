@@ -17,8 +17,19 @@ import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
+  /** Short explanation shown in the map overlay. */
   message: string;
+  /** Repair instructions for AI retry; omitted from the user overlay. */
+  repair?: string;
 };
+
+export function formatDeckMapResourceConfigIssueForAgent(
+  issue: DeckMapResourceConfigIssue,
+): string {
+  return issue.repair
+    ? `${issue.path}: ${issue.message} ${issue.repair}`
+    : `${issue.path}: ${issue.message}`;
+}
 
 export type DeckMapResourceConfigValidationOptions = {
   /** Empty resources are valid while waiting for a user-selected table. */
@@ -40,7 +51,7 @@ export class DeckMapResourceConfigError extends Error {
   constructor(issues: DeckMapResourceConfigIssue[]) {
     super(
       `Invalid Deck map resource config: ${issues
-        .map((issue) => `${issue.path}: ${issue.message}`)
+        .map((issue) => formatDeckMapResourceConfigIssueForAgent(issue))
         .join('; ')}`,
     );
     this.name = 'DeckMapResourceConfigError';
@@ -165,6 +176,17 @@ function hasBadStMakeLinePointOrderBy(sql: string): boolean {
     }
   }
   return false;
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+/** True when SQL constructs a Point (or WKB of one) rather than selecting lon/lat only. */
+function sqlBuildsPointGeometry(sql: string): boolean {
+  return /\bST_(AsWKB|Point|MakePoint|GeomFrom(?:Text|WKB)?|Centroid|PointOnSurface)\s*\(/i.test(
+    sql,
+  );
 }
 
 function mergeOptionalRecord(
@@ -382,6 +404,26 @@ const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
 );
 
+const POINT_POSITION_LAYER_TYPES = new Set([
+  'GeoArrowScatterplotLayer',
+  'GeoArrowHeatmapLayer',
+  'GeoArrowColumnLayer',
+  'GeoJsonLayer',
+]);
+
+function pointLayerUserLabel(layerType: string): string {
+  switch (layerType) {
+    case 'GeoArrowHeatmapLayer':
+      return 'heatmap';
+    case 'GeoArrowScatterplotLayer':
+      return 'point map';
+    case 'GeoArrowColumnLayer':
+      return 'column map';
+    default:
+      return 'map';
+  }
+}
+
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
   'getLineColor',
@@ -574,6 +616,50 @@ export function getDeckMapResourceConfigIssues(
         message:
           'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
       });
+    }
+
+    if (
+      typeof layerType === 'string' &&
+      POINT_POSITION_LAYER_TYPES.has(layerType) &&
+      boundDataset &&
+      datasetIdSet.has(boundDataset)
+    ) {
+      const dataset = config.datasets[boundDataset];
+      const layerGeom = nonEmptyString(binding?.geometryColumn);
+      const datasetGeom = nonEmptyString(dataset?.geometryColumn);
+      const source = dataset?.source as
+        | {transformSql?: string; sqlQuery?: string}
+        | undefined;
+      const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
+      const fitToData = config.fitToData;
+      const fitMatchesDataset = fitToData?.dataset === boundDataset;
+      const lon =
+        nonEmptyString(binding?.longitudeColumn) ??
+        (fitMatchesDataset
+          ? nonEmptyString(fitToData?.longitudeColumn)
+          : undefined);
+      const lat =
+        nonEmptyString(binding?.latitudeColumn) ??
+        (fitMatchesDataset
+          ? nonEmptyString(fitToData?.latitudeColumn)
+          : undefined);
+      if (
+        lon &&
+        lat &&
+        !sqlBuildsPointGeometry(sql) &&
+        !(layerGeom || datasetGeom)
+      ) {
+        const quotedLon = lon.replace(/"/g, '""');
+        const quotedLat = lat.replace(/"/g, '""');
+        issues.push({
+          path: `spec.layers.${index}._sqlroomsBinding.geometryColumn`,
+          message: `This ${pointLayerUserLabel(layerType)} needs point locations, not just longitude and latitude columns.`,
+          repair:
+            `Use transformSql such as SELECT *, ST_AsWKB(ST_Point("${quotedLon}", "${quotedLat}")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "${quotedLon}" IS NOT NULL AND "${quotedLat}" IS NOT NULL, ` +
+            `then set datasets.${boundDataset}.geometryColumn and _sqlroomsBinding.geometryColumn to "__sqlrooms_geom" with geometryEncodingHint "wkb". ` +
+            `Do not put longitudeColumn/latitudeColumn on _sqlroomsBinding — those are only valid on fitToData.`,
+        });
+      }
     }
 
     if (layerType === 'GeoArrowHeatmapLayer' && 'getWeight' in layer) {

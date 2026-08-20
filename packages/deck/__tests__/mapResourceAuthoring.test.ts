@@ -846,6 +846,9 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('Never set mapStyle to a mapbox://');
     expect(instructions).toContain('omit getWeight');
     expect(instructions).toContain('will not invent centroids');
+    expect(instructions).toContain(
+      'longitudeColumn/latitudeColumn on _sqlroomsBinding are not geometry',
+    );
     expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
     expect(instructions).toContain('min = max');
@@ -1161,6 +1164,59 @@ describe('Deck map resource authoring contract', () => {
     });
 
     expect(issues).toEqual([]);
+  });
+
+  test('rejects heatmap lon/lat configs that never create a Point geometry column', () => {
+    const config = {
+      configMode: 'basic' as const,
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'earthquake-heatmap',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              longitudeColumn: 'Longitude',
+              latitudeColumn: 'Latitude',
+            },
+            radiusPixels: 30,
+            intensity: 1,
+            threshold: 0.05,
+            pickable: false,
+          },
+        ],
+      },
+      datasets: {
+        earthquakes: {
+          source: {
+            tableName: '"main"."earthquakes"',
+            transformSql:
+              'SELECT Latitude, Longitude, Magnitude, Depth, DateTime FROM __sqlrooms_source',
+          },
+        },
+      },
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+    };
+
+    const issues = getDeckMapResourceConfigIssues(config);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+          message: expect.stringContaining('needs point locations'),
+          repair: expect.stringContaining(
+            'ST_AsWKB(ST_Point("Longitude", "Latitude"))',
+          ),
+        }),
+      ]),
+    );
+    expect(() => assertDeckMapResourceConfig(config)).toThrow(
+      /ST_AsWKB\(ST_Point\("Longitude", "Latitude"\)\)/,
+    );
   });
 
   test('allows bare ST_Point(...) AS col (pipeline wraps native GEOMETRY as WKB)', () => {
