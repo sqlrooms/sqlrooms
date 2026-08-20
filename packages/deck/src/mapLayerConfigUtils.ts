@@ -472,6 +472,15 @@ export function setDeckMapLayerType(
       }
       return nextLayer;
     }
+    // deck.gl paints missing fill as opaque black; the settings picker shows blue.
+    const colorAccessors = getDeckMapColorAccessorOptions(layerType);
+    if (
+      colorAccessors.some((option) => option.value === 'getFillColor') &&
+      nextLayer.getFillColor === undefined &&
+      nextLayer.filled !== false
+    ) {
+      nextLayer.getFillColor = [...DECK_MAP_DEFAULT_LAYER_COLOR];
+    }
     if (
       lt === 'geoarrowcolumnlayer' ||
       lt === 'columnlayer' ||
