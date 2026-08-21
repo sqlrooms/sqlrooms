@@ -9,6 +9,8 @@ import {
 } from '@sqlrooms/evals';
 import {CLI_EVAL_TARGET_TABLE} from './fixture';
 
+const CLI_EVAL_DECOY_TABLES = new Set(['archive.events', '"archive"."events"']);
+
 type WorkspaceSnapshot = {
   artifacts: {artifactsById: Record<string, {type: string}>};
   worksheets: Array<{
@@ -37,7 +39,7 @@ function asJson(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
 }
 
-function hasObjectShape(value: unknown): boolean {
+function hasObjectShape(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
@@ -172,6 +174,19 @@ function chartAndMap(workspace: WorkspaceSnapshot) {
   };
 }
 
+function mapDatasetTableNames(workspace: WorkspaceSnapshot): string[] {
+  return workspace.maps.flatMap((map) =>
+    Object.values(map.config.datasets).flatMap((dataset) => {
+      if (!hasObjectShape(dataset)) return [];
+      const source = dataset.source;
+      if (!hasObjectShape(source) || typeof source.tableName !== 'string') {
+        return [];
+      }
+      return [source.tableName];
+    }),
+  );
+}
+
 /** Deterministic state and policy oracles for a pinned CLI scenario. */
 export function createCliScenarioOracles(
   scenario: ScenarioDefinition,
@@ -208,13 +223,14 @@ export function createCliScenarioOracles(
       evaluate: (value) => {
         const workspace = snapshot(value);
         const {charts} = chartAndMap(workspace);
+        const mapTables = mapDatasetTableNames(workspace);
         const serializedMaps = JSON.stringify(workspace.maps);
         const pass =
           charts.some((chart) => chart.tableName === CLI_EVAL_TARGET_TABLE) &&
-          serializedMaps.includes(CLI_EVAL_TARGET_TABLE) &&
+          mapTables.includes(CLI_EVAL_TARGET_TABLE) &&
           serializedMaps.includes('latitude') &&
           serializedMaps.includes('longitude') &&
-          !serializedMaps.includes('archive.events');
+          !mapTables.some((tableName) => CLI_EVAL_DECOY_TABLES.has(tableName));
         return {
           pass,
           reason: pass
@@ -222,6 +238,7 @@ export function createCliScenarioOracles(
             : 'A visualization has an unexpected table or missing field binding.',
           evidence: {
             chartTables: charts.map((chart) => chart.tableName ?? null),
+            mapTables,
             maps: asJson(workspace.maps),
           },
         };
@@ -334,12 +351,11 @@ export function createCliScenarioOracles(
             normalized.includes('analytics.events')
           : normalized.includes('analytics.events') &&
             normalized.includes('chart') &&
-            normalized.includes('map') &&
-            !normalized.includes('archive.events');
+            normalized.includes('map');
         return {
           pass,
           reason: pass
-            ? 'The final answer describes the durable result without the decoy table.'
+            ? 'The final answer describes the durable result and intended table.'
             : 'The final answer omits or contradicts the requested durable result.',
           evidence: {answer},
         };

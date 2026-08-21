@@ -147,6 +147,9 @@ describe('createCliBlockDocumentCommands', () => {
     expect(result).toMatchObject({success: true});
     const mapId = (result as any).data.mapId as string;
     expect(mapsById[mapId]).toMatchObject({title: 'New Earthquake Map'});
+    expect(mapsById[mapId].config.datasets.earthquakes.source.tableName).toBe(
+      '"main"."earthquakes"',
+    );
     expect(invokeCommand).toHaveBeenCalledWith(
       'block-document.create-stateful-block',
       expect.objectContaining({blockType: 'map', blockInstanceId: mapId}),
@@ -196,7 +199,7 @@ describe('createCliBlockDocumentCommands', () => {
       geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',
       source: {
-        tableName: 'earthquakes',
+        tableName: '"main"."earthquakes"',
         transformSql: expect.stringContaining('ST_AsWKB'),
       },
     });
