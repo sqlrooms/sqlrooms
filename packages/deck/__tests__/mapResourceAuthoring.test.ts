@@ -1271,57 +1271,13 @@ describe('Deck map resource authoring contract', () => {
     );
   });
 
-  test('rejects SELECT * EXCLUDE (geom) lon/lat projections', () => {
-    const issues = getDeckMapResourceConfigIssues({
-      spec: {
-        layers: [
-          {
-            '@@type': 'GeoArrowHeatmapLayer',
-            _sqlroomsBinding: {
-              dataset: 'places',
-              geometryColumn: 'geom',
-            },
-            radiusPixels: 30,
-          },
-        ],
-      },
-      datasets: {
-        places: {
-          source: {
-            tableName: 'places',
-            transformSql:
-              'SELECT * EXCLUDE (geom), longitude, latitude FROM __sqlrooms_source',
-          },
-          geometryColumn: 'geom',
-        },
-      },
-      fitToData: {
-        dataset: 'places',
-        longitudeColumn: 'longitude',
-        latitudeColumn: 'latitude',
-      },
-    });
-
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
-          message: expect.stringContaining('needs point locations'),
-        }),
-      ]),
-    );
-  });
-
-  test('rejects lon/lat SQL that only mentions geometry in WHERE/JOIN/ORDER BY', () => {
+  test('rejects lon/lat SQL that drops geometry from the SELECT list', () => {
     const makeConfig = (transformSql: string): DeckMapConfig => ({
       spec: {
         layers: [
           {
             '@@type': 'GeoArrowScatterplotLayer',
-            _sqlroomsBinding: {
-              dataset: 'places',
-              geometryColumn: 'geom',
-            },
+            _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
           },
         ],
       },
@@ -1338,32 +1294,19 @@ describe('Deck map resource authoring contract', () => {
       },
     });
 
-    expect(
-      getDeckMapResourceConfigIssues(
-        makeConfig(
-          'SELECT longitude, latitude FROM __sqlrooms_source WHERE geom IS NOT NULL',
-        ),
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
-        }),
-      ]),
-    );
-    expect(
-      getDeckMapResourceConfigIssues(
-        makeConfig(
-          'SELECT longitude, latitude FROM __sqlrooms_source JOIN extras ON extras.id = id ORDER BY geom',
-        ),
-      ),
-    ).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
-        }),
-      ]),
-    );
+    for (const transformSql of [
+      'SELECT * EXCLUDE (geom), longitude, latitude FROM __sqlrooms_source',
+      'SELECT longitude, latitude FROM __sqlrooms_source WHERE geom IS NOT NULL',
+      'SELECT longitude, latitude FROM __sqlrooms_source JOIN extras ON extras.id = id ORDER BY geom',
+    ]) {
+      expect(getDeckMapResourceConfigIssues(makeConfig(transformSql))).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+          }),
+        ]),
+      );
+    }
   });
 
   test('accepts lon/lat fitToData when native geom is kept', () => {

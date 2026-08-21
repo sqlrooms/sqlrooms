@@ -199,42 +199,33 @@ function sqlMentionsIdentifier(sql: string, name: string): boolean {
   ).test(sql);
 }
 
-function findTopLevelFromIndex(sql: string, start: number): number {
+/** Outer SELECT list only; ignores WHERE / JOIN / ORDER BY. */
+function getOuterSelectList(sql: string): string | undefined {
+  const match = /\bSELECT\s+(?:ALL\s+|DISTINCT\s+)?/i.exec(sql);
+  if (!match) return undefined;
+  const listStart = match.index + match[0].length;
   let depth = 0;
-  for (let i = start; i < sql.length; i++) {
+  for (let i = listStart; i < sql.length; i++) {
     const ch = sql[i];
     if (ch === '(') {
       depth += 1;
       continue;
     }
     if (ch === ')') {
-      if (depth === 0) return -1;
+      if (depth === 0) return undefined;
       depth -= 1;
       continue;
     }
-    if (depth !== 0) continue;
     if (
+      depth === 0 &&
       (ch === 'F' || ch === 'f') &&
       /^FROM\b/i.test(sql.slice(i)) &&
-      (i === 0 || !/[A-Za-z0-9_]/.test(sql[i - 1]!))
+      !/[A-Za-z0-9_]/.test(sql[i - 1]!)
     ) {
-      return i;
+      return sql.slice(listStart, i);
     }
   }
-  return -1;
-}
-
-function getOuterSelectList(sql: string): string | undefined {
-  const match = /\bSELECT\s+(?:ALL\s+|DISTINCT\s+)?/i.exec(sql);
-  if (!match) return undefined;
-  const listStart = match.index + match[0].length;
-  const fromAt = findTopLevelFromIndex(sql, listStart);
-  if (fromAt < 0) return undefined;
-  return sql.slice(listStart, fromAt);
-}
-
-function stripExcludeClauses(selectList: string): string {
-  return selectList.replace(/\bEXCLUDE\s*\([^)]*\)/gi, '');
+  return undefined;
 }
 
 const KNOWN_GEOM_OUTPUT_NAMES = [
@@ -244,35 +235,6 @@ const KNOWN_GEOM_OUTPUT_NAMES = [
   'wkb_geometry',
   'the_geom',
 ];
-
-function selectStarExcludesIdentifier(
-  selectList: string,
-  name: string,
-): boolean {
-  const starRe = /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*/gi;
-  let match: RegExpExecArray | null;
-  while ((match = starRe.exec(selectList)) !== null) {
-    const after = selectList.slice(match.index + match[0].length);
-    const exclude = /^\s*EXCLUDE\s*\(([^)]*)\)/i.exec(after);
-    if (exclude && sqlMentionsIdentifier(exclude[1]!, name)) return true;
-  }
-  return false;
-}
-
-function selectStarKeepsGeometry(
-  selectList: string,
-  geometryColumn: string | undefined,
-): boolean {
-  if (
-    !/(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|$|,|EXCLUDE|REPLACE)/i.test(
-      selectList,
-    )
-  ) {
-    return false;
-  }
-  const names = geometryColumn ? [geometryColumn] : KNOWN_GEOM_OUTPUT_NAMES;
-  return !names.some((name) => selectStarExcludesIdentifier(selectList, name));
-}
 
 function getDatasetSourceSql(source: DeckMapDatasetSource | undefined): string {
   if (isDeckMapSqlDatasetSource(source)) return source.sqlQuery ?? '';
@@ -333,8 +295,15 @@ function sqlIsLonLatProjectionMissingGeometry(
   ) {
     return false;
   }
-  if (selectStarKeepsGeometry(selectList, geometryColumn)) return false;
-  const outputList = stripExcludeClauses(selectList);
+  const exclude = /\*\s*EXCLUDE\s*\(([^)]*)\)/i.exec(selectList)?.[1];
+  const geomNames = geometryColumn ? [geometryColumn] : KNOWN_GEOM_OUTPUT_NAMES;
+  const starKeepsGeom =
+    /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*/.test(selectList) &&
+    !geomNames.some(
+      (name) => exclude != null && sqlMentionsIdentifier(exclude, name),
+    );
+  if (starKeepsGeom) return false;
+  const outputList = selectList.replace(/\bEXCLUDE\s*\([^)]*\)/gi, '');
   if (
     !sqlMentionsIdentifier(outputList, lon) ||
     !sqlMentionsIdentifier(outputList, lat)
