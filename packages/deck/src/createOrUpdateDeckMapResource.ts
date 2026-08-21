@@ -1,5 +1,6 @@
 import type {DeckMapResource} from './DeckMapsSlice';
-import type {DeckMapConfig} from './mapConfig';
+import {createDeckTableDatasetSql} from './datasets/tableDatasetSql';
+import {isDeckMapTableDatasetSource, type DeckMapConfig} from './mapConfig';
 import {
   getFirstDatasetSourceTableName,
   hasSqlOnlyDatasetSource,
@@ -79,6 +80,37 @@ export type CreateOrUpdateDeckMapResourceResult = {
   created: boolean;
 };
 
+function resolveTableDatasetSources(
+  host: Pick<CreateOrUpdateDeckMapResourceHost, 'findTable'>,
+  config: DeckMapConfig,
+): DeckMapConfig {
+  let changed = false;
+  const datasets = Object.fromEntries(
+    Object.entries(config.datasets).map(([datasetId, dataset]) => {
+      const source = dataset.source;
+      if (!isDeckMapTableDatasetSource(source)) return [datasetId, dataset];
+
+      const table = host.findTable(source.tableName);
+      if (!table) {
+        throw new Error(
+          `Dataset "${datasetId}" table "${source.tableName}" was not found.`,
+        );
+      }
+      const canonicalSource = {
+        ...source,
+        tableName: table.tableIdentity,
+      };
+      createDeckTableDatasetSql(canonicalSource);
+      if (canonicalSource.tableName === source.tableName) {
+        return [datasetId, dataset];
+      }
+      changed = true;
+      return [datasetId, {...dataset, source: canonicalSource}];
+    }),
+  );
+  return changed ? {...config, datasets} : config;
+}
+
 /** Resource-native worksheet map orchestration with metadata-after-map-write ordering. */
 export async function createOrUpdateDeckMapResource(
   host: CreateOrUpdateDeckMapResourceHost,
@@ -110,9 +142,10 @@ export async function createOrUpdateDeckMapResource(
         replaceDatasets: params.replaceDatasets,
       })
     : params.config;
-  assertDeckMapResourceConfig(preparedConfig);
+  const resolvedConfig = resolveTableDatasetSources(host, preparedConfig);
+  assertDeckMapResourceConfig(resolvedConfig);
   const tableName =
-    requestedTable ?? getFirstDatasetSourceTableName(preparedConfig);
+    requestedTable ?? getFirstDatasetSourceTableName(resolvedConfig);
   if (
     (params.requireTableNameForSqlOnlyUpdate ?? true) &&
     existingBlock &&
@@ -149,7 +182,7 @@ export async function createOrUpdateDeckMapResource(
   await host.writeMap({
     mapId: block.mapId,
     title,
-    config: preparedConfig,
+    config: resolvedConfig,
     selectedTable: table?.tableIdentity,
   });
   if (existingBlock) {
