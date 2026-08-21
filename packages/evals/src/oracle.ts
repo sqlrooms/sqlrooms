@@ -142,11 +142,29 @@ export function createPolicyOracle(
   );
 }
 
-/** Evaluates oracles in declaration order and normalizes their results. */
+/**
+ * Evaluates oracles in declaration order and normalizes their results.
+ *
+ * @throws When a scenario expectation has no matching oracle implementation.
+ */
 export async function evaluateOracles(
   oracles: readonly BehavioralOracle[],
   context: OracleContext,
 ): Promise<OracleResult[]> {
+  const availableOracleIds = new Set(oracles.map((oracle) => oracle.id));
+  const missingOracleIds = Array.from(
+    new Set(
+      context.scenario.expectations
+        .map((expectation) => expectation.oracleId)
+        .filter((oracleId) => !availableOracleIds.has(oracleId)),
+    ),
+  );
+  if (missingOracleIds.length > 0) {
+    throw new Error(
+      `Missing required oracle implementations: ${missingOracleIds.join(', ')}.`,
+    );
+  }
+
   const results: OracleResult[] = [];
   for (const oracle of oracles) {
     const evaluation = await oracle.evaluate(context);

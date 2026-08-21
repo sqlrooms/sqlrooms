@@ -96,7 +96,18 @@ describe('behavioral oracles', () => {
           }),
         }),
       ],
-      context,
+      {
+        ...context,
+        scenario: defineScenario({
+          ...scenario,
+          expectations: [
+            {
+              oracleId: 'read-only',
+              description: 'Workspace remains read-only.',
+            },
+          ],
+        }),
+      },
     );
 
     expect(result).toMatchObject({
@@ -109,5 +120,30 @@ describe('behavioral oracles', () => {
 
   it('does not pass when no oracle results were produced', () => {
     expect(summarizeOracleResults([])).toEqual({pass: false, score: 0});
+  });
+
+  it('rejects a passing subset when required oracles are missing', async () => {
+    const scenarioWithMultipleExpectations = defineScenario({
+      ...scenario,
+      expectations: [
+        ...scenario.expectations,
+        {
+          oracleId: 'workspace',
+          description: 'Workspace state is valid.',
+        },
+      ],
+    });
+
+    await expect(
+      evaluateOracles(
+        [
+          createDatabaseOracle({
+            id: 'database',
+            evaluate: () => ({pass: true, reason: 'Database is valid.'}),
+          }),
+        ],
+        {...context, scenario: scenarioWithMultipleExpectations},
+      ),
+    ).rejects.toThrow('Missing required oracle implementations: workspace.');
   });
 });

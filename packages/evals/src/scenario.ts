@@ -19,7 +19,7 @@ export const ScenarioTurnSchema = z.object({
 export const ScenarioExpectationSchema = z.object({
   oracleId: z.string().min(1),
   description: z.string().min(1),
-  config: JsonObjectSchema.default({}),
+  config: JsonObjectSchema.default(() => ({})),
 });
 
 /** Versioned, evaluator-neutral behavioral scenario definition. */
@@ -29,10 +29,10 @@ export const ScenarioDefinitionSchema = z.looseObject({
   title: z.string().min(1),
   description: z.string().min(1).optional(),
   compatibleProfiles: z.array(z.string().min(1)).min(1),
-  fixture: JsonObjectSchema.default({}),
+  fixture: JsonObjectSchema.default(() => ({})),
   turns: z.array(ScenarioTurnSchema).min(1),
   expectations: z.array(ScenarioExpectationSchema).min(1),
-  metadata: JsonObjectSchema.default({}),
+  metadata: JsonObjectSchema.default(() => ({})),
 });
 
 /** A parsed behavioral scenario. */

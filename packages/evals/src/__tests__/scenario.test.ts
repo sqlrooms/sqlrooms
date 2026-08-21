@@ -39,4 +39,26 @@ describe('behavioral scenarios', () => {
       }),
     ).toThrow('Scenario IDs');
   });
+
+  it('allocates fresh object defaults for every parsed scenario', () => {
+    const input = {
+      id: 'worksheet.defaults',
+      version: 1,
+      title: 'Fresh defaults',
+      compatibleProfiles: ['default'],
+      turns: [{id: 'verify', input: 'Verify defaults.'}],
+      expectations: [
+        {oracleId: 'workspace', description: 'Workspace is valid.'},
+      ],
+    };
+
+    const first = defineScenario(input);
+    const second = defineScenario(input);
+
+    expect(first.fixture).not.toBe(second.fixture);
+    expect(first.metadata).not.toBe(second.metadata);
+    expect(first.expectations[0]?.config).not.toBe(
+      second.expectations[0]?.config,
+    );
+  });
 });
