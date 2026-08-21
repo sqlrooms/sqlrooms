@@ -8,8 +8,11 @@ import {
 } from '@sqlrooms/evals/promptfoo';
 import type {LanguageModel} from 'ai';
 import {createCliEvalTarget} from './createCliEvalTarget';
+import {loadLocalEvalEnvironment} from './loadLocalEvalEnvironment';
 import {createOpenRouterCostTracker} from './openRouterCost';
 import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioOracles} from './scenarios';
+
+loadLocalEvalEnvironment();
 
 const MODEL_ID = 'deepseek/deepseek-v4-flash-0731';
 const MODEL_INPUT_COST_USD_PER_MILLION_TOKENS = 0.08;
