@@ -10,6 +10,10 @@ import {
 import {CLI_ARTIFACT_TYPES} from '../../artifactTypeIds';
 import {createCliEvalTarget} from '../createCliEvalTarget';
 import {CLI_EVAL_TARGET_TABLE} from '../fixture';
+import {
+  MUTATE_WORKSHEET_SCENARIO,
+  createCliScenarioOracles,
+} from '../scenarios';
 
 function workspaceFacts(workspace: JsonValue | undefined) {
   return workspace as {
@@ -64,6 +68,7 @@ describe('createCliEvalTarget', () => {
       steps: [
         {
           expectation: {promptIncludes: ['Current artifact: worksheet']},
+          usage: {inputTokens: 10, outputTokens: 2},
           content: [
             {
               type: 'tool-call',
@@ -81,6 +86,7 @@ describe('createCliEvalTarget', () => {
           expectation: {
             promptIncludes: ['worksheet builder AI agent', 'direct map'],
           },
+          usage: {inputTokens: 20, outputTokens: 3},
           content: [
             {
               type: 'tool-call',
@@ -126,6 +132,7 @@ describe('createCliEvalTarget', () => {
           ],
         },
         {
+          usage: {inputTokens: 30, outputTokens: 4},
           content: [
             {
               type: 'text',
@@ -134,6 +141,7 @@ describe('createCliEvalTarget', () => {
           ],
         },
         {
+          usage: {inputTokens: 40, outputTokens: 5},
           content: [
             {
               type: 'text',
@@ -229,6 +237,49 @@ describe('createCliEvalTarget', () => {
         ]),
       );
       expect(evidence.oracleResults.every((result) => result.pass)).toBe(true);
+      expect(evidence.usage).toMatchObject({
+        inputTokens: 100,
+        outputTokens: 14,
+        totalTokens: 114,
+      });
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('retains both the empty initial state and seeded fixture state', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'No changes made.'}]}],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: MUTATE_WORKSHEET_SCENARIO,
+        oracles: createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO),
+      });
+      const initialState = evidence.metadata.initialState as {
+        worksheets: unknown[];
+        maps: unknown[];
+      };
+      const fixtureState = evidence.metadata.fixtureState as {
+        worksheets: Array<{blocks: Array<{id: string}>}>;
+        maps: unknown[];
+      };
+
+      expect(initialState.worksheets).toHaveLength(0);
+      expect(initialState.maps).toHaveLength(0);
+      expect(
+        fixtureState.worksheets[0]?.blocks.map((block) => block.id),
+      ).toEqual(
+        expect.arrayContaining([
+          'seed-heading',
+          'seed-chart',
+          'seed-map-block',
+        ]),
+      );
+      expect(fixtureState.maps).toHaveLength(1);
       scripted.assertComplete();
     } finally {
       await target.dispose();

@@ -27,6 +27,7 @@ function workspace() {
               chartType: 'bar',
               x: {field: 'category'},
               y: {field: 'metric', aggregate: 'sum'},
+              title: 'Original metric chart',
             },
           },
           {
@@ -83,6 +84,7 @@ describe('CLI behavioral scenario oracles', () => {
       chartType: 'bar',
       x: {field: 'wrong-category'},
       y: {field: 'wrong-metric', aggregate: 'sum'},
+      title: 'Original metric chart',
     };
     const oracle = createCliScenarioOracles(
       CREATE_WORKSHEET_CHART_MAP_SCENARIO,
@@ -116,5 +118,28 @@ describe('CLI behavioral scenario oracles', () => {
         context(MUTATE_WORKSHEET_SCENARIO, changed, initial),
       ),
     ).toMatchObject({pass: false});
+  });
+
+  it('requires an exact chart title and a distinct source paragraph', async () => {
+    const combinedTitle = workspace();
+    combinedTitle.worksheets[0]!.blocks[1]!.config!.title =
+      'Metric by category — Source: analytics.events';
+    const valid = workspace();
+    valid.worksheets[0]!.blocks[1]!.config!.title = 'Metric by category';
+    valid.worksheets[0]!.blocks.push({
+      id: 'source-note',
+      type: 'paragraph',
+      text: [{type: 'text', text: 'Source: analytics.events'}],
+    } as (typeof valid.worksheets)[number]['blocks'][number]);
+    const oracle = createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO).find(
+      (candidate) => candidate.id === 'mutated-in-place',
+    );
+
+    expect(
+      await oracle?.evaluate(context(MUTATE_WORKSHEET_SCENARIO, combinedTitle)),
+    ).toMatchObject({pass: false});
+    expect(
+      await oracle?.evaluate(context(MUTATE_WORKSHEET_SCENARIO, valid)),
+    ).toMatchObject({pass: true});
   });
 });

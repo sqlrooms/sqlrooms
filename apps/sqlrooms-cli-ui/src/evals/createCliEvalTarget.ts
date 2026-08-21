@@ -17,7 +17,12 @@ import {
   type ScenarioDefinition,
 } from '@sqlrooms/evals';
 import {createRoomShellSlice} from '@sqlrooms/room-shell';
-import type {LanguageModel, UIMessage} from 'ai';
+import {
+  wrapLanguageModel,
+  type LanguageModel,
+  type LanguageModelMiddleware,
+  type UIMessage,
+} from 'ai';
 import type {StoreApi} from 'zustand';
 import {createStore} from 'zustand/vanilla';
 import {createCliAiInstructions} from '../createCliAiInstructions';
@@ -122,6 +127,11 @@ function errorsFromMessages(
 
 function usageFromMessages(
   messages: readonly UIMessage[],
+  recordedUsage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  },
 ): RunEvidence['usage'] {
   let inputTokens = 0;
   let outputTokens = 0;
@@ -145,10 +155,125 @@ function usageFromMessages(
     totalTokens +=
       usage?.totalTokens ?? messageInputTokens + messageOutputTokens;
   }
+  const nestedInputTokens = Math.max(
+    0,
+    recordedUsage.inputTokens - inputTokens,
+  );
+  const nestedOutputTokens = Math.max(
+    0,
+    recordedUsage.outputTokens - outputTokens,
+  );
+  const nestedTotalTokens = Math.max(
+    0,
+    recordedUsage.totalTokens - totalTokens,
+  );
+  inputTokens += nestedInputTokens;
+  outputTokens += nestedOutputTokens;
+  totalTokens += nestedTotalTokens;
   if (inputTokens === 0 && outputTokens === 0 && totalTokens === 0) {
     return undefined;
   }
   return {inputTokens, outputTokens, totalTokens, grader: {totalTokens: 0}};
+}
+
+function createModelUsageRecorder(model: LanguageModel): {
+  model: LanguageModel;
+  reset(): void;
+  snapshot(): {inputTokens: number; outputTokens: number; totalTokens: number};
+} {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+  const tokenCount = (value: unknown): number => {
+    if (typeof value === 'number') return value;
+    if (value && typeof value === 'object') {
+      const total = (value as {total?: unknown}).total;
+      if (typeof total === 'number') return total;
+    }
+    return 0;
+  };
+  const record = (usage: unknown) => {
+    if (!usage || typeof usage !== 'object') return;
+    const value = usage as Record<string, unknown>;
+    const recordedInputTokens = tokenCount(value.inputTokens);
+    const recordedOutputTokens = tokenCount(value.outputTokens);
+    inputTokens += recordedInputTokens;
+    outputTokens += recordedOutputTokens;
+    totalTokens +=
+      typeof value.totalTokens === 'number'
+        ? value.totalTokens
+        : recordedInputTokens + recordedOutputTokens;
+  };
+  const middleware: LanguageModelMiddleware = {
+    specificationVersion: 'v3',
+    wrapGenerate: async ({doGenerate}) => {
+      const result = await doGenerate();
+      record(result.usage);
+      return result;
+    },
+    wrapStream: async ({doStream}) => {
+      const result = await doStream();
+      return {
+        ...result,
+        stream: result.stream.pipeThrough(
+          new TransformStream({
+            transform(part, controller) {
+              if (part.type === 'finish') record(part.usage);
+              controller.enqueue(part);
+            },
+          }),
+        ),
+      };
+    },
+  };
+  let recordedModel: LanguageModel;
+  if (typeof model === 'string') {
+    recordedModel = model;
+  } else if (model.specificationVersion === 'v3') {
+    recordedModel = wrapLanguageModel({model, middleware});
+  } else {
+    const v2Model = model;
+    recordedModel = new Proxy(v2Model, {
+      get(target, property) {
+        if (property === 'doGenerate') {
+          return async (options: Parameters<typeof v2Model.doGenerate>[0]) => {
+            const result = await v2Model.doGenerate(options);
+            record(result.usage);
+            return result;
+          };
+        }
+        if (property === 'doStream') {
+          return async (options: Parameters<typeof v2Model.doStream>[0]) => {
+            const result = await v2Model.doStream(options);
+            return {
+              ...result,
+              stream: result.stream.pipeThrough(
+                new TransformStream({
+                  transform(part, controller) {
+                    if (part.type === 'finish') record(part.usage);
+                    controller.enqueue(part);
+                  },
+                }),
+              ),
+            };
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  }
+  return {
+    model: recordedModel,
+    reset() {
+      inputTokens = 0;
+      outputTokens = 0;
+      totalTokens = 0;
+    },
+    snapshot() {
+      return {inputTokens, outputTokens, totalTokens};
+    },
+  };
 }
 
 function redact(value: string, sensitiveValues: readonly string[]): string {
@@ -583,10 +708,11 @@ export function createCliEvalTarget(
     profileName: 'worksheet-charts-maps',
   });
   const modelIdentity = getLanguageModelIdentity(options.model);
+  const usageRecorder = createModelUsageRecorder(options.model);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const {store, connector} = createHeadlessStore(
     profile,
-    options.model,
+    usageRecorder.model,
     timeoutMs,
     options.maxSteps,
   );
@@ -619,6 +745,7 @@ export function createCliEvalTarget(
         }
         await this.initialize();
         await resetCliEvalWorkspace(store);
+        usageRecorder.reset();
         const startedAt = now();
         const initialState = snapshotCliEvalState(store.getState());
         let fixtureState = initialState;
@@ -770,10 +897,10 @@ export function createCliEvalTarget(
           promptTurns: scenario.turns,
           finalAnswer,
           events,
-          usage: usageFromMessages(messages),
+          usage: usageFromMessages(messages, usageRecorder.snapshot()),
           finalState,
           oracleResults,
-          metadata: {initialState},
+          metadata: {initialState, fixtureState},
         });
         return redactRunEvidence(evidence, options.sensitiveValues ?? []);
       } finally {

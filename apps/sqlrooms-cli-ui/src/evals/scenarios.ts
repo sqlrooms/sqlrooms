@@ -20,6 +20,7 @@ type WorkspaceSnapshot = {
       blockType?: string;
       blockInstanceId?: string;
       caption?: string;
+      text?: unknown;
       config?: unknown;
     }>;
   }>;
@@ -270,19 +271,32 @@ export function createCliScenarioOracles(
       evaluate: (value) => {
         const workspace = snapshot(value);
         const {worksheet, charts} = chartAndMap(workspace);
-        const serializedChart = JSON.stringify(charts[0] ?? {});
-        const serializedBlocks = JSON.stringify(worksheet?.blocks ?? []);
+        const chartConfig = hasObjectShape(charts[0]?.config)
+          ? (charts[0]!.config as Record<string, unknown>)
+          : {};
+        const sourceNote = worksheet?.blocks.find(
+          (block) =>
+            block.type === 'paragraph' &&
+            JSON.stringify(block.text ?? null).includes(
+              'Source: analytics.events',
+            ),
+        );
         const pass =
           charts.length === 1 &&
           charts[0]?.id === 'seed-chart' &&
-          serializedChart.includes('Metric by category') &&
-          serializedBlocks.includes('Source: analytics.events');
+          chartConfig.title === 'Metric by category' &&
+          Boolean(sourceNote);
         return {
           pass,
           reason: pass
             ? 'The seeded chart was updated in place and the source note was added.'
             : 'The requested in-place chart/note mutation is incomplete.',
-          evidence: {blocks: asJson(worksheet?.blocks ?? [])},
+          evidence: {
+            chartTitle:
+              typeof chartConfig.title === 'string' ? chartConfig.title : null,
+            sourceNote: asJson(sourceNote ?? null),
+            blocks: asJson(worksheet?.blocks ?? []),
+          },
         };
       },
     }),
