@@ -156,7 +156,7 @@ function inferScenario(testCase: JsonObject, metadata: JsonObject) {
   };
 }
 
-function spansByEval(
+function spansByTrace(
   database: DatabaseSync,
 ): Map<string, ObservatoryRun['spans']> {
   const tables = new Set(
@@ -178,13 +178,13 @@ function spansByEval(
   assertColumns(database, 'spans', OPTIONAL_TRACE_COLUMNS.spans);
   const rows = database
     .prepare(
-      `SELECT t.evaluation_id, s.* FROM traces t JOIN spans s ON s.trace_id = t.trace_id ORDER BY s.start_time`,
+      `SELECT s.* FROM traces t JOIN spans s ON s.trace_id = t.trace_id ORDER BY s.start_time`,
     )
     .all() as SqlRow[];
   const result = new Map<string, ObservatoryRun['spans']>();
   for (const row of rows) {
-    const evalId = String(row.evaluation_id);
-    const spans = result.get(evalId) ?? [];
+    const traceId = String(row.trace_id);
+    const spans = result.get(traceId) ?? [];
     spans.push({
       traceId: String(row.trace_id),
       spanId: String(row.span_id),
@@ -204,7 +204,7 @@ function spansByEval(
         : {}),
       attributes: object(row.attributes),
     });
-    result.set(evalId, spans);
+    result.set(traceId, spans);
   }
   return result;
 }
@@ -239,7 +239,7 @@ export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
       );
     }
 
-    const evalSpans = spansByEval(database);
+    const traceSpans = spansByTrace(database);
     const rows = database
       .prepare(
         `SELECT r.*, e.created_at AS eval_created_at, e.results AS eval_results_json,
@@ -253,6 +253,9 @@ export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
     return rows.map((row) => {
       const testCase = object(row.test_case);
       const metadata = object(row.metadata);
+      const traceId = string(
+        object(object(metadata.promptfoo).traceLinkage).traceId,
+      );
       const response = object(row.response);
       const grading = json(row.grading_result) as JsonValue | undefined;
       const evidence = findEvidence(
@@ -333,7 +336,7 @@ export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
         oracleResults: evidence?.oracleResults ?? [],
         graderFeedback: grading,
         events,
-        spans: evalSpans.get(String(row.eval_id)) ?? [],
+        spans: traceId ? (traceSpans.get(traceId) ?? []) : [],
         finalState: evidence?.finalState,
         unknownMetadata: {
           evalConfig: json(row.eval_config) as JsonValue,

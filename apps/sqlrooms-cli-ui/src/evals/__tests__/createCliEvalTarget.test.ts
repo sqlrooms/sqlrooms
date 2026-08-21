@@ -458,6 +458,102 @@ describe('createCliEvalTarget', () => {
     }
   }, 30_000);
 
+  it('cleans up the pending session wait when analysis fails to start', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+    const unsubscribed = jest.fn();
+    const originalSubscribe = target.store.subscribe;
+    const subscribe = jest
+      .spyOn(target.store, 'subscribe')
+      .mockImplementation((listener) => {
+        const unsubscribe = originalSubscribe(listener);
+        return () => {
+          unsubscribed();
+          unsubscribe();
+        };
+      });
+    const originalAi = target.store.getState().ai;
+    const startAnalysis = jest.fn(async () => {
+      throw new Error('analysis failed to start');
+    });
+    target.store.setState({ai: {...originalAi, startAnalysis}});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.start-failure',
+          version: 1,
+          title: 'Start failure cleanup',
+          compatibleProfiles: ['worksheet-charts-maps'],
+          turns: [{id: 'run', input: 'Fail before streaming.'}],
+          expectations: [
+            {oracleId: 'error', description: 'The start error is captured.'},
+          ],
+        }),
+        oracles: [
+          createErrorOracle({
+            id: 'error',
+            evaluate: (errors) => ({
+              pass: errors.some((error) =>
+                error.message.includes('analysis failed to start'),
+              ),
+              reason: 'The start failure was captured.',
+            }),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('error');
+      expect(unsubscribed).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(evidence)).toContain('analysis failed to start');
+    } finally {
+      target.store.setState({ai: originalAi});
+      subscribe.mockRestore();
+      await target.dispose();
+    }
+  });
+
+  it('derives total usage when transport metadata omits total tokens', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          content: [{type: 'text', text: 'Usage recorded.'}],
+          usage: {inputTokens: 11, outputTokens: 7},
+        },
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.usage',
+          version: 1,
+          title: 'Usage accounting',
+          compatibleProfiles: ['worksheet-charts-maps'],
+          turns: [{id: 'run', input: 'Record usage.'}],
+          expectations: [
+            {oracleId: 'answer', description: 'The run completes.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: () => ({pass: true, reason: 'The run completed.'}),
+          }),
+        ],
+      });
+
+      expect(evidence.usage).toMatchObject({
+        inputTokens: 11,
+        outputTokens: 7,
+        totalTokens: 18,
+      });
+    } finally {
+      await target.dispose();
+    }
+  });
+
   it('redacts sensitive values across the complete evidence envelope', async () => {
     const secret = 'provider-secret-token';
     const scripted = createScriptedLanguageModel({

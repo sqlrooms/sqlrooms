@@ -1,7 +1,8 @@
 import {afterEach, describe, expect, it} from '@jest/globals';
-import {mkdtempSync, rmSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {mkdtempSync, readFileSync, readdirSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {basename, dirname, join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import type {RunEvidence} from '../evidence';
 import {
@@ -10,7 +11,9 @@ import {
   computeCalibrationRates,
   exportPromptfooSqlite,
   filterObservatoryRuns,
+  findAutomaticBaseline,
   readPromptfooSqlite,
+  renderObservatoryMarkdown,
   summarizeObservatoryRuns,
 } from '../promptfoo';
 
@@ -115,9 +118,10 @@ function insertRun(
   database: DatabaseSync,
   runEvidence: RunEvidence,
   id: string,
+  traceId = `trace-${id}`,
 ) {
   database
-    .prepare('INSERT INTO evals VALUES (?, ?, ?, ?)')
+    .prepare('INSERT OR IGNORE INTO evals VALUES (?, ?, ?, ?)')
     .run('eval-1', 1_776_254_400_000, '{}', '{"futureConfig":true}');
   database
     .prepare(
@@ -143,17 +147,20 @@ function insertRun(
       runEvidence.status === 'passed' ? 1 : 0,
       runEvidence.status === 'passed' ? 1 : 0,
       '{"reason":"deterministic oracles"}',
-      '{"futureResult":"preserved"}',
+      JSON.stringify({
+        futureResult: 'preserved',
+        promptfoo: {traceLinkage: {traceId}},
+      }),
     );
   database
     .prepare('INSERT INTO traces VALUES (?, ?, ?, ?, ?)')
-    .run('trace-row', 'trace-1', 'eval-1', id, '{"futureTrace":true}');
+    .run(`${id}-trace-row`, traceId, 'eval-1', id, '{"futureTrace":true}');
   database
     .prepare('INSERT INTO spans VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
     .run(
-      'span-row',
-      'trace-1',
-      'span-1',
+      `${id}-span-row`,
+      traceId,
+      `${id}-span-1`,
       null,
       'agent',
       100,
@@ -164,19 +171,31 @@ function insertRun(
     );
 }
 
+function snapshotSqliteFiles(path: string): Record<string, string> {
+  const directory = dirname(path);
+  const filename = basename(path);
+  return Object.fromEntries(
+    readdirSync(directory)
+      .filter((entry) => entry === filename || entry.startsWith(`${filename}-`))
+      .sort()
+      .map((entry) => [
+        entry,
+        createHash('sha256')
+          .update(readFileSync(join(directory, entry)))
+          .digest('hex'),
+      ]),
+  );
+}
+
 describe('Promptfoo SQLite observatory adapter', () => {
   it('normalizes evidence and traces without mutating the source database', () => {
     const {database, path} = fixtureDatabase();
     insertRun(database, evidence('failed'), 'result-1');
     database.close();
 
-    const beforeDatabase = new DatabaseSync(path, {readOnly: true});
-    const before = beforeDatabase.prepare('PRAGMA data_version').get();
-    beforeDatabase.close();
+    const before = snapshotSqliteFiles(path);
     const [run] = readPromptfooSqlite(path);
-    const afterDatabase = new DatabaseSync(path, {readOnly: true});
-    const after = afterDatabase.prepare('PRAGMA data_version').get();
-    afterDatabase.close();
+    const after = snapshotSqliteFiles(path);
 
     expect(run).toMatchObject({
       id: 'run-failed',
@@ -192,6 +211,31 @@ describe('Promptfoo SQLite observatory adapter', () => {
       true,
     );
     expect(after).toEqual(before);
+  });
+
+  it('associates spans through each result trace linkage', () => {
+    const {database, path} = fixtureDatabase();
+    insertRun(
+      database,
+      {...evidence('passed'), runId: 'run-one'},
+      'result-1',
+      'trace-1',
+    );
+    insertRun(
+      database,
+      {...evidence('failed'), runId: 'run-two'},
+      'result-2',
+      'trace-2',
+    );
+    database.close();
+
+    const runs = readPromptfooSqlite(path);
+    expect(runs.find((run) => run.id === 'run-one')?.spans).toEqual([
+      expect.objectContaining({traceId: 'trace-1'}),
+    ]);
+    expect(runs.find((run) => run.id === 'run-two')?.spans).toEqual([
+      expect.objectContaining({traceId: 'trace-2'}),
+    ]);
   });
 
   it('fails clearly when required Promptfoo columns are unavailable', () => {
@@ -253,5 +297,55 @@ describe('Promptfoo SQLite observatory adapter', () => {
         passRate: 0.5,
       }),
     ]);
+
+    const lateRun = {
+      ...filtered[0]!,
+      id: 'late-run',
+      createdAt: '2026-08-21T23:59:59.999Z',
+    };
+    expect(filterObservatoryRuns([lateRun], {to: '2026-08-21'})).toEqual([
+      lateRun,
+    ]);
+    expect(filterObservatoryRuns([lateRun], {to: '2026-08-20'})).toEqual([]);
+
+    const selected = {
+      ...filtered[0]!,
+      id: 'selected',
+      createdAt: '2026-08-21T12:00:00.000Z',
+      model: {...filtered[0]!.model, revision: 'revision-2'},
+    };
+    const wrongRevision = {
+      ...filtered[0]!,
+      id: 'wrong-revision',
+      createdAt: '2026-08-21T11:00:00.000Z',
+      model: {...filtered[0]!.model, revision: 'revision-1'},
+    };
+    const matchingRevision = {
+      ...filtered[0]!,
+      id: 'matching-revision',
+      createdAt: '2026-08-21T10:00:00.000Z',
+      model: {...filtered[0]!.model, revision: 'revision-2'},
+    };
+    expect(
+      findAutomaticBaseline(
+        [wrongRevision, matchingRevision, selected],
+        selected,
+      )?.id,
+    ).toBe('matching-revision');
+
+    const markdown = renderObservatoryMarkdown({
+      ...exported,
+      runs: [
+        filtered[0]!,
+        {
+          ...filtered[0]!,
+          id: 'different-cohort',
+          repository: {commitSha: 'different-commit'},
+          model: {...filtered[0]!.model, modelId: 'different-model'},
+        },
+      ],
+    });
+    expect(markdown).toContain('- Commit: mixed');
+    expect(markdown).toContain('- Model: mixed');
   });
 });

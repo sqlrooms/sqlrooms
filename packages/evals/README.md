@@ -17,10 +17,10 @@ adapter uses Node's built-in SQLite API.
 - Run evidence records strictly ordered events and durable outcomes in a
   versioned JSON envelope. Preserved extension fields must contain JSON values.
 - `@sqlrooms/evals/promptfoo` contains structural conversion helpers, a
-  read-only SQLite adapter, and a Promptfoo-independent observatory read model.
-  The adapter validates known tables and columns, preserves unknown metadata,
-  and exports portable JSON. Promptfoo remains a storage/runner boundary, not
-  the core package interface.
+  read-only SQLite adapter, a Promptfoo-independent observatory read model, and
+  a side-effect-free Markdown report renderer. The adapter validates known
+  tables and columns, preserves unknown metadata, and exports portable JSON.
+  Promptfoo remains a storage/runner boundary, not the core package interface.
 - The scripted model implements the AI SDK v3 language-model contract and can
   assert prompt/tool wiring without credentials or network access.
 

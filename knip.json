@@ -35,6 +35,9 @@
     "packages/artifacts": {
       "ignoreDependencies": ["ts-jest"]
     },
+    "packages/evals": {
+      "entry": ["src/promptfoo/export.ts"]
+    },
     "packages/preset-jest": {
       "entry": ["*.js"],
       "ignoreDependencies": ["@testing-library/*", "jest-environment-jsdom"]
@@ -56,10 +59,7 @@
     },
     "apps/*": {},
     "apps/sqlrooms-cli-ui": {
-      "entry": [
-        "src/main.{ts,tsx}",
-        "src/evals/promptfooProvider.ts"
-      ],
+      "entry": ["src/main.{ts,tsx}", "src/evals/promptfooProvider.ts"],
       "ignoreDependencies": ["@duckdb/node-api"]
     }
   }

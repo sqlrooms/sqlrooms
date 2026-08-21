@@ -41,6 +41,18 @@ function hasObjectShape(value: unknown): boolean {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function hasFieldBinding(value: unknown, field: string): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => hasFieldBinding(item, field));
+  }
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return (
+    record.field === field ||
+    Object.values(record).some((item) => hasFieldBinding(item, field))
+  );
+}
+
 /** Pinned production-model scenario that starts from an empty workspace. */
 export const CREATE_WORKSHEET_CHART_MAP_SCENARIO = defineScenario({
   id: 'worksheet.create-chart-map',
@@ -210,7 +222,12 @@ export function createCliScenarioOracles(
         const {charts} = chartAndMap(workspace);
         const serializedMaps = JSON.stringify(workspace.maps);
         const pass =
-          charts.some((chart) => chart.tableName === CLI_EVAL_TARGET_TABLE) &&
+          charts.some(
+            (chart) =>
+              chart.tableName === CLI_EVAL_TARGET_TABLE &&
+              hasFieldBinding(chart.config, 'category') &&
+              hasFieldBinding(chart.config, 'metric'),
+          ) &&
           serializedMaps.includes(CLI_EVAL_TARGET_TABLE) &&
           serializedMaps.includes('latitude') &&
           serializedMaps.includes('longitude') &&
@@ -222,6 +239,7 @@ export function createCliScenarioOracles(
             : 'A visualization has an unexpected table or missing field binding.',
           evidence: {
             chartTables: charts.map((chart) => chart.tableName ?? null),
+            chartConfigs: asJson(charts.map((chart) => chart.config ?? null)),
             maps: asJson(workspace.maps),
           },
         };
@@ -278,6 +296,9 @@ export function createCliScenarioOracles(
         const heading = workspace.worksheets[0]?.blocks.find(
           (block) => block.id === 'seed-heading',
         );
+        const initialHeading = initial.worksheets[0]?.blocks.find(
+          (block) => block.id === 'seed-heading',
+        );
         const map = workspace.maps.find((candidate) =>
           candidate.id.endsWith('-map'),
         );
@@ -286,6 +307,7 @@ export function createCliScenarioOracles(
         );
         const pass =
           Boolean(heading) &&
+          JSON.stringify(heading) === JSON.stringify(initialHeading) &&
           Boolean(map) &&
           JSON.stringify(map) === JSON.stringify(initialMap);
         return {

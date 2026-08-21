@@ -2,6 +2,7 @@ import {
   ObservatoryExportSchema,
   compareObservatoryRuns,
   filterObservatoryRuns,
+  findAutomaticBaseline,
   summarizeObservatoryRuns,
   type ObservatoryRun,
   type ObservatoryRunFilters,
@@ -62,15 +63,7 @@ export function EvalObservatory() {
   const summary = useMemo(() => summarizeObservatoryRuns(filtered), [filtered]);
   const selected = runs.find((run) => run.id === selectedId);
   const defaultBaseline = selected
-    ? [...runs]
-        .filter(
-          (run) =>
-            run.id !== selected.id &&
-            run.scenario.id === selected.scenario.id &&
-            run.status === 'passed' &&
-            run.createdAt <= selected.createdAt,
-        )
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+    ? findAutomaticBaseline(runs, selected)
     : undefined;
   const baseline = runs.find((run) => run.id === baselineId) ?? defaultBaseline;
   const grouped = useMemo(() => {
@@ -284,7 +277,6 @@ export function EvalObservatory() {
                       <tr
                         key={run.id}
                         className={selectedId === run.id ? 'selected' : ''}
-                        onClick={() => setSelectedId(run.id)}
                       >
                         <td>
                           <span className={`status ${run.status}`}>
@@ -292,7 +284,14 @@ export function EvalObservatory() {
                           </span>
                         </td>
                         <td>
-                          {run.scenario.id}@{run.scenario.version ?? '?'}
+                          <button
+                            type="button"
+                            className="run-select"
+                            aria-pressed={selectedId === run.id}
+                            onClick={() => setSelectedId(run.id)}
+                          >
+                            {run.scenario.id}@{run.scenario.version ?? '?'}
+                          </button>
                         </td>
                         <td>{run.repository.commitSha?.slice(0, 8) ?? '—'}</td>
                         <td>{run.model.modelId}</td>

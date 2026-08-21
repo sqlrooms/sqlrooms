@@ -5,6 +5,7 @@ import {RunEvidenceSchema} from '../evidence';
 
 export * from './readModel';
 export * from './calibration';
+export * from './markdown';
 export * from './sqlite';
 
 /** Promptfoo-compatible provider response without a Promptfoo dependency. */

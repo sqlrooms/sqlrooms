@@ -138,9 +138,12 @@ function usageFromMessages(
           }
         | undefined
     )?.tokenUsage;
-    inputTokens += usage?.inputTokens ?? 0;
-    outputTokens += usage?.outputTokens ?? 0;
-    totalTokens += usage?.totalTokens ?? 0;
+    const messageInputTokens = usage?.inputTokens ?? 0;
+    const messageOutputTokens = usage?.outputTokens ?? 0;
+    inputTokens += messageInputTokens;
+    outputTokens += messageOutputTokens;
+    totalTokens +=
+      usage?.totalTokens ?? messageInputTokens + messageOutputTokens;
   }
   if (inputTokens === 0 && outputTokens === 0 && totalTokens === 0) {
     return undefined;
@@ -200,11 +203,22 @@ function waitForSession(
   store: StoreApi<RoomState>,
   sessionId: string,
   timeoutMs: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
+): {completion: Promise<void>; cancel(): void} {
+  let settled = false;
+  let unsubscribe = () => {};
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let resolveCompletion = () => {};
+  const cleanup = () => {
+    if (timeout !== undefined) clearTimeout(timeout);
+    unsubscribe();
+  };
+  const completion = new Promise<void>((resolve, reject) => {
+    resolveCompletion = resolve;
     let sawRunning = false;
-    const timeout = setTimeout(() => {
-      unsubscribe();
+    timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(
         new CliEvalTimeoutError(
           `CLI eval session timed out after ${timeoutMs}ms.`,
@@ -217,14 +231,24 @@ function waitForSession(
         .ai.config.sessions.find((candidate) => candidate.id === sessionId);
       sawRunning ||= Boolean(session?.isRunning);
       if (session && sawRunning && !session.isRunning) {
-        clearTimeout(timeout);
-        unsubscribe();
+        if (settled) return;
+        settled = true;
+        cleanup();
         resolve();
       }
     };
-    const unsubscribe = store.subscribe(inspect);
+    unsubscribe = store.subscribe(inspect);
     inspect();
   });
+  return {
+    completion,
+    cancel() {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolveCompletion();
+    },
+  };
 }
 
 async function cancelSessionAndWait(
@@ -635,9 +659,15 @@ export function createCliEvalTarget(
           }
           for (const turn of scenario.turns) {
             store.getState().ai.setPrompt(sessionId, turn.input);
-            const completion = waitForSession(store, sessionId, timeoutMs);
-            await store.getState().ai.startAnalysis(sessionId);
-            await completion;
+            const sessionWait = waitForSession(store, sessionId, timeoutMs);
+            try {
+              await store.getState().ai.startAnalysis(sessionId);
+            } catch (error) {
+              sessionWait.cancel();
+              await sessionWait.completion.catch(() => {});
+              throw error;
+            }
+            await sessionWait.completion;
             const currentArtifactId =
               store.getState().artifacts.config.currentArtifactId;
             if (

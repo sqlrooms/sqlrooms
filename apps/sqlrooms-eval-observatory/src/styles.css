@@ -62,7 +62,19 @@ h2 {
   white-space: nowrap;
 }
 .load input {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.load:focus-within {
+  outline: 3px solid #6fbf9f;
+  outline-offset: 3px;
 }
 .empty,
 .error {
@@ -153,12 +165,24 @@ td {
   padding: 12px;
   border-bottom: 1px solid #e2e5df;
 }
-tbody tr {
-  cursor: pointer;
-}
 tbody tr:hover,
 tr.selected {
   background: #edf4ef;
+}
+.run-select {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.run-select:focus-visible {
+  outline: 2px solid #17643d;
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 .status {
   display: inline-block;

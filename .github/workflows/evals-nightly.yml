@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 45
     env:
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      PROMPTFOO_CONFIG_DIR: ${{ runner.temp }}/promptfoo
+      PROMPTFOO_CONFIG_DIR: ${{ github.workspace }}/.promptfoo
       PROMPTFOO_DISABLE_TELEMETRY: '1'
     steps:
       - name: Checkout
@@ -57,7 +57,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: |
-            ${{ runner.temp }}/promptfoo/promptfoo.db
+            ${{ github.workspace }}/.promptfoo/promptfoo.db
             artifacts/results.json
             artifacts/summary.json
             artifacts/summary.md

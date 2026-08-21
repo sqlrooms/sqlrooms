@@ -102,6 +102,13 @@ export function filterObservatoryRuns(
 ): ObservatoryRun[] {
   const from = filters.from ? Date.parse(filters.from) : undefined;
   const to = filters.to ? Date.parse(filters.to) : undefined;
+  const toExclusive =
+    filters.to &&
+    /^\d{4}-\d{2}-\d{2}$/.test(filters.to) &&
+    typeof to === 'number' &&
+    Number.isFinite(to)
+      ? to + 24 * 60 * 60 * 1000
+      : undefined;
   return runs.filter((run) => {
     const createdAt = Date.parse(run.createdAt);
     return (
@@ -111,9 +118,33 @@ export function filterObservatoryRuns(
       (!filters.model || run.model.modelId === filters.model) &&
       (!filters.status || run.status === filters.status) &&
       (from === undefined || createdAt >= from) &&
-      (to === undefined || createdAt <= to)
+      (toExclusive !== undefined
+        ? createdAt < toExclusive
+        : to === undefined || createdAt <= to)
     );
   });
+}
+
+/** Finds the latest successful baseline in the selected run's model cohort. */
+export function findAutomaticBaseline(
+  runs: readonly ObservatoryRun[],
+  selected: ObservatoryRun,
+): ObservatoryRun | undefined {
+  return [...runs]
+    .filter(
+      (run) =>
+        run.id !== selected.id &&
+        run.scenario.id === selected.scenario.id &&
+        run.profile.name === selected.profile.name &&
+        run.profile.version === selected.profile.version &&
+        run.model.provider === selected.model.provider &&
+        run.model.modelId === selected.model.modelId &&
+        run.model.revision === selected.model.revision &&
+        run.model.upstreamProvider === selected.model.upstreamProvider &&
+        run.status === 'passed' &&
+        run.createdAt <= selected.createdAt,
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
 }
 
 /** Aggregate metrics for one filtered/grouped set of runs. */
