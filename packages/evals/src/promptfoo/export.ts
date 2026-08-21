@@ -1,7 +1,7 @@
 import {mkdir, writeFile} from 'node:fs/promises';
 import {dirname} from 'node:path';
-import {renderObservatoryMarkdown} from './markdown';
-import {exportPromptfooSqlite} from './sqlite';
+import {renderObservatoryMarkdown} from './markdown.js';
+import {exportPromptfooSqlite} from './sqlite.js';
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name);

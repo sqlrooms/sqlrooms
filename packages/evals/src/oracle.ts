@@ -1,7 +1,7 @@
 import {z} from 'zod';
-import type {JsonObject, JsonValue} from './json';
-import {JsonObjectSchema, JsonValueSchema} from './json';
-import type {ScenarioDefinition} from './scenario';
+import type {JsonObject, JsonValue} from './json.js';
+import {JsonObjectSchema, JsonValueSchema} from './json.js';
+import type {ScenarioDefinition} from './scenario.js';
 
 /** Supported evaluator-neutral oracle categories. */
 export const OracleKindSchema = z.enum([

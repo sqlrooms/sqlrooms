@@ -349,9 +349,15 @@ importers:
 
   apps/sqlrooms-eval-observatory:
     dependencies:
+      '@sqlrooms/cosmos':
+        specifier: workspace:*
+        version: link:../../packages/cosmos
       '@sqlrooms/evals':
         specifier: workspace:*
         version: link:../../packages/evals
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../../packages/room-store
       react:
         specifier: 19.2.1
         version: 19.2.1
@@ -359,6 +365,12 @@ importers:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
     devDependencies:
+      '@jest/globals':
+        specifier: ^30.3.0
+        version: 30.4.1
+      '@sqlrooms/preset-jest':
+        specifier: workspace:*
+        version: link:../../packages/preset-jest
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -371,6 +383,9 @@ importers:
       eslint:
         specifier: ^9.36.0
         version: 9.39.4(jiti@2.7.0)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.9(@babel/core@7.29.7)(@jest/transform@30.4.1)(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.12.4))(typescript@5.9.3)
       typescript:
         specifier: 5.9.3
         version: 5.9.3

@@ -63,6 +63,22 @@ describe('createCliEvalTarget', () => {
     }
   });
 
+  it('uses the target timeout for the underlying chat run', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'Done.'}]}],
+    });
+    const target = createCliEvalTarget({
+      model: scripted.model,
+      timeoutMs: 180_000,
+    });
+
+    try {
+      expect(target.store.getState().ai.timeouts.runMs).toBe(180_000);
+    } finally {
+      await target.dispose();
+    }
+  });
+
   it('runs the production chat and nested worksheet tool loop without a browser or network', async () => {
     const scripted = createScriptedLanguageModel({
       steps: [

@@ -95,6 +95,18 @@ describe('createCliBlockDocumentAgentTool', () => {
     )) as {success: boolean; finalOutput: string; error?: string};
   }
 
+  it('describes the wrapped create result and unsupported-block fallback', () => {
+    const agentTool = createCliBlockDocumentAgentTool(createOptions()) as any;
+
+    expect(agentTool.description).toContain('result.data.artifactId');
+    expect(agentTool.description).toContain(
+      'even when another Worksheet is in run context',
+    );
+    expect(agentTool.description).toContain(
+      'Use registered block-document commands for requested block types this tool does not expose',
+    );
+  });
+
   it.each([
     {
       blockType: 'dashboard',
