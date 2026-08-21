@@ -23,10 +23,9 @@ import {
  * both chat runtime modes.
  *
  * Read via {@link usePromptSuggestions}. This is the behavior layer: no DOM,
- * no styling. `send` and `canSend` are the composer's own {@link
- * useChatComposer} readiness predicate and send action, so a suggestion item
- * and the composer's send control can never disagree about whether sending
- * is currently possible.
+ * no styling. `send` and `isReadyToSend` reuse the composer's own send action
+ * and readiness signals, so a suggestion and the send control never
+ * disagree.
  */
 export interface ChatSuggestionsState {
   /** Which runtime this state was sourced from. */
@@ -53,21 +52,16 @@ export interface ChatSuggestionsState {
   isSessionEmpty: boolean;
   /** Writes `text` into the prompt without sending it. */
   fill: (text: string) => void;
-  /** Sends `text` immediately, subject to {@link canSend}. */
+  /** Sends `text` immediately, subject to {@link isReadyToSend}. */
   send: (text: string) => void;
   /**
-   * True when sending is currently possible for an item's own text: a model
-   * is resolvable (session mode) and nothing is already running or
-   * summarizing/streaming — the same underlying readiness signals {@link
-   * useChatComposer}'s `canSend` is built from. This is deliberately **not**
-   * identical to `canSend` itself: `canSend` also requires the composer's
-   * *current* prompt to be non-empty, which is the wrong question for an
-   * item that supplies its own non-empty text. Reusing the same underlying
-   * signals (rather than re-deriving them) is what keeps a suggestion item
-   * and the send control from ever disagreeing about busy/model-resolvable
-   * state.
+   * True when an item's own text could be sent: a model is resolvable
+   * (session mode) and nothing is running or summarizing. Built from the same
+   * signals as {@link useChatComposer}'s `canSend`, minus its non-empty-prompt
+   * requirement, which is the wrong question for an item supplying its own
+   * text.
    */
-  canSend: boolean;
+  isReadyToSend: boolean;
 }
 
 const ChatSuggestionsContext = createContext<ChatSuggestionsState | null>(null);
@@ -76,11 +70,7 @@ const EMPTY_ITEMS: readonly string[] = [];
 
 /**
  * Session-mode suggestions state. Visibility and the empty-session flag come
- * from the AI slice; `fill` and `send` are read from {@link useChatComposer}.
- * `canSend` is derived from the same underlying signals as the composer's
- * own `canSend` (a resolvable model, and nothing running or summarizing) but
- * — deliberately — without also requiring the composer's current prompt to
- * be non-empty; see {@link ChatSuggestionsState.canSend}.
+ * from the AI slice; `fill` and `send` from {@link useChatComposer}.
  */
 function useSessionSuggestionsState(): ChatSuggestionsState {
   const visible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
@@ -97,7 +87,7 @@ function useSessionSuggestionsState(): ChatSuggestionsState {
   const send = useCallback((text: string) => composer.send(text), [composer]);
 
   const isSessionEmpty = isChatSessionEmpty(currentSession);
-  const canSend = hasResolvableModel && !composer.isBusy;
+  const isReadyToSend = hasResolvableModel && !composer.isBusy;
 
   return useMemo(
     () => ({
@@ -109,19 +99,16 @@ function useSessionSuggestionsState(): ChatSuggestionsState {
       isSessionEmpty,
       fill,
       send,
-      canSend,
+      isReadyToSend,
     }),
-    [visible, setVisible, toggle, isSessionEmpty, fill, send, canSend],
+    [visible, setVisible, toggle, isSessionEmpty, fill, send, isReadyToSend],
   );
 }
 
 /**
  * Local-agent-mode suggestions state, sourced from the local-agent chat
  * runtime for visibility and items, and from {@link useChatComposer} for
- * `fill` and `send`. `canSend` is derived from the composer's `isBusy` alone
- * (there is no model-resolvability concept in local-agent mode), again
- * deliberately not requiring the composer's current prompt to be non-empty;
- * see {@link ChatSuggestionsState.canSend}. Never reads the AI slice.
+ * `fill` and `send`. Never reads the AI slice.
  */
 function useLocalAgentSuggestionsState(
   runtime: LocalAgentChatRuntime,
@@ -141,7 +128,7 @@ function useLocalAgentSuggestionsState(
   const send = useCallback((text: string) => composer.send(text), [composer]);
 
   const isSessionEmpty = runtime.messages.length === 0;
-  const canSend = !composer.isBusy;
+  const isReadyToSend = !composer.isBusy;
 
   return useMemo(
     () => ({
@@ -153,7 +140,7 @@ function useLocalAgentSuggestionsState(
       isSessionEmpty,
       fill,
       send,
-      canSend,
+      isReadyToSend,
     }),
     [
       suggestionsVisible,
@@ -163,7 +150,7 @@ function useLocalAgentSuggestionsState(
       isSessionEmpty,
       fill,
       send,
-      canSend,
+      isReadyToSend,
     ],
   );
 }

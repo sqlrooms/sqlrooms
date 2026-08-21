@@ -166,10 +166,11 @@ Composer primitives (imported from `@sqlrooms/ai-core`, or via
   file drop needs a separate, native-drag-based primitive.
 
 `usePromptSuggestions()` returns
-`{mode, visible, setVisible, toggle, items, isSessionEmpty, fill, send, canSend}`,
-normalized the same way across both runtime modes. `send`/`canSend` are the
-composer's own readiness signals, so a suggestion and the composer's send
-control can never disagree about whether sending is currently possible.
+`{mode, visible, setVisible, toggle, items, isSessionEmpty, fill, send, isReadyToSend}`,
+normalized the same way across both runtime modes. `send`/`isReadyToSend` reuse
+the composer's own send action and readiness signals, so a suggestion and the
+composer's send control can never disagree about whether sending is currently
+possible.
 
 Suggestions primitives:
 
@@ -178,7 +179,7 @@ Suggestions primitives:
   popover, dropdown, or overlay already owns open/closed state.
 - **`Item`** — a single suggestion. Fills the prompt on activation by
   default; pass `submit` to send immediately instead. Disabled whenever
-  `canSend` is `false`.
+  `isReadyToSend` is `false`.
 - **`VisibilityToggle`** — toggles visibility; exposes `aria-pressed` for
   styling pressed/unpressed.
 - **`Dismiss`** — hides suggestions unconditionally (unlike

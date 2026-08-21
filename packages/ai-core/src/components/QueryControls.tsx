@@ -304,13 +304,12 @@ function ComposerFrame({
     return () => clearTimeout(timer);
   }, []);
 
-  // Call onRun BEFORE creating a session (allows a host to create artifacts,
-  // etc.). This is the composer's pre-send veto, wired through the `Input`
-  // and `Send` primitives' `onBeforeSend` seam rather than duplicating their
-  // Enter/click guards here.
+  // Runs before a session is created, so a host can create artifacts first.
+  // Wired through the primitives' `onBeforeSend` seam rather than duplicating
+  // their Enter/click guards here.
   const handleBeforeSend = useCallback(
-    () => onRun?.(composer.prompt) !== false,
-    [composer, onRun],
+    (text: string) => onRun?.(text) !== false,
+    [onRun],
   );
 
   const handleStopClick = useCallback(

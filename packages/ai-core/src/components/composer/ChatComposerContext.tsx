@@ -43,13 +43,9 @@ export interface ChatComposerState {
   /** Updates the prompt in whichever store currently backs it. */
   setPrompt: (value: string) => void;
   /**
-   * Sends the current prompt, or `text` when provided instead of it.
-   *
-   * A no-op when sending is not currently possible (see {@link canSend}).
-   * In session mode, sending with no active session creates one, transfers
-   * the prompt into it, clears the shared draft, and starts analysis through
-   * the when-ready entry point; sending with an active session starts
-   * analysis on it directly.
+   * Sends the current prompt, or `text` when provided instead. A no-op when
+   * sending is not currently possible (see {@link canSend}). In session mode,
+   * this creates a session first if none is active.
    */
   send: (text?: string) => void;
   /**
@@ -80,14 +76,9 @@ export interface ChatComposerState {
 const ChatComposerContext = createContext<ChatComposerState | null>(null);
 
 /**
- * Session-mode composer state, sourced entirely from the AI slice.
- *
- * Reproduces `QueryControls`' existing send semantics exactly: the prompt
+ * Session-mode composer state, sourced entirely from the AI slice. The prompt
  * reads from the active session when one exists and the shared draft
- * otherwise; sending with no session creates one, transfers the prompt,
- * clears the draft, and starts via the when-ready entry point; sending with
- * an active session starts analysis on it directly; cancel cancels that
- * session's run.
+ * otherwise.
  */
 function useSessionComposerState(): ChatComposerState {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -151,14 +142,10 @@ function useSessionComposerState(): ChatComposerState {
         activeSessionId = createSession();
         setPromptAction(activeSessionId, value);
         setDraftPrompt('');
-        // The compatibility entry point creates the controller synchronously;
-        // callers do not depend on a mounted chat surface.
         void runAnalysisWhenReady(activeSessionId);
       } else {
-        // Match `QueryControls` exactly: with no override, the session's
-        // stored prompt is already `value` (that's what `prompt` reads from),
-        // so only write it back when a caller explicitly overrides the text
-        // (e.g. a suggestion sent into an existing session).
+        // With no override the session's stored prompt is already `value`, so
+        // only write it back when a caller supplies different text.
         if (text !== undefined) {
           setPromptAction(activeSessionId, value);
         }
@@ -290,18 +277,14 @@ export const LocalAgentChatComposerProvider: FC<PropsWithChildren> = ({
 /**
  * Wraps `children` so that {@link useChatComposer} always has state to read.
  *
- * If an ancestor already published composer state (i.e. `Chat.Root` or
- * `Chat.LocalAgentRoot` is above), `children` render unchanged. Otherwise a
- * session-mode provider is rendered around them, so a composer used without
- * an explicit `<Chat>` ancestor still works.
+ * If an ancestor already published composer state (`Chat.Root` or
+ * `Chat.LocalAgentRoot`), `children` render unchanged. Otherwise a
+ * session-mode provider is rendered around them, so a composer used without a
+ * `<Chat>` ancestor still works.
  *
- * The dispatch is deliberately at the component level rather than inside
- * {@link useChatComposer}: choosing between "already provided" and "provide
- * session mode" by branching on a hook call would change hook order if a
- * subtree were ever re-parented under a provider. Here the provider's own
- * hooks live in a child that mounts and unmounts as a unit, so no such
- * hazard exists — and local-agent trees, which must never touch the AI
- * slice, never render the session provider at all.
+ * Dispatching here rather than inside {@link useChatComposer} keeps the
+ * session provider's hooks in a child that mounts as a unit, so local-agent
+ * trees — which must never touch the AI slice — never render it at all.
  */
 export const ChatComposerStateBoundary: FC<PropsWithChildren> = ({
   children,

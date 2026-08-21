@@ -113,6 +113,7 @@ export {
 } from './components/ChatRuntimeContext';
 export {
   useChatComposer,
+  ChatComposerStateBoundary,
   Input as ChatComposerInput,
   Send as ChatComposerSend,
   Stop as ChatComposerStop,
@@ -128,6 +129,7 @@ export type {
 } from './components/composer';
 export {
   usePromptSuggestions,
+  ChatSuggestionsStateBoundary,
   Root as ChatSuggestionsRoot,
   Item as ChatSuggestionsItem,
   VisibilityToggle as ChatSuggestionsVisibilityToggle,

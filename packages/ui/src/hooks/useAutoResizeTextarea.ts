@@ -13,16 +13,14 @@ export interface UseAutoResizeTextareaOptions {
   /** Whether auto-resize is active. When false, the hook is a no-op. */
   autoResize: boolean;
   /**
-   * Ref to the textarea element to measure and resize. This can point to any
-   * textarea element reached via a ref — including one rendered by a
-   * component the caller does not own, such as a host's own text-input
-   * component — not only one this hook's caller rendered itself.
+   * Ref to the textarea to measure and resize. May point to a textarea
+   * rendered by a component the caller does not own.
    */
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   /** The textarea's current controlled value, if any. */
-  value: React.ComponentProps<'textarea'>['value'];
+  value?: React.ComponentProps<'textarea'>['value'];
   /** The textarea's uncontrolled default value, if any. */
-  defaultValue: React.ComponentProps<'textarea'>['defaultValue'];
+  defaultValue?: React.ComponentProps<'textarea'>['defaultValue'];
 }
 
 /**
@@ -39,14 +37,12 @@ export interface UseAutoResizeTextareaResult {
  * Keeps a textarea's height synchronized with its content and container
  * width.
  *
- * This hook carries no assumptions about who rendered the textarea: it reads
- * and writes only through the DOM node reached via `textareaRef`, so it can
- * be applied to a textarea rendered by any component, not only one from this
- * package. This is what allows auto-grow behavior to be layered onto a
- * caller-supplied text input that does not implement it itself.
+ * Reads and writes only through the DOM node reached via `textareaRef`, so
+ * auto-grow can be layered onto a text input rendered by any component,
+ * including one that does not implement it itself.
  *
- * The resize path is intentionally triggered from multiple sources (input,
- * value changes, and width changes) and then deduped per frame.
+ * The resize path is triggered from several sources (input, value changes,
+ * width changes) and deduped per frame.
  *
  * @param options - See {@link UseAutoResizeTextareaOptions}.
  * @returns See {@link UseAutoResizeTextareaResult}.

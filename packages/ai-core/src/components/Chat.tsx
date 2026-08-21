@@ -104,19 +104,12 @@ const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (props) => {
   return <ChatMessagesContainer {...props} />;
 };
 
-// `QueryControls` itself now serves both runtime modes — it sources its
-// state from `useChatComposer()`, which normalizes over session and
-// local-agent mode, so no runtime-dispatch wrapper is needed here.
 const Composer = Object.assign(QueryControls, {
   Input: ComposerInput,
   Send: ComposerSend,
   Stop: ComposerStop,
   DropTarget: ComposerDropTarget,
 });
-
-// `PromptSuggestions` itself now serves both runtime modes — it sources its
-// state from `usePromptSuggestions()`, which normalizes over session and
-// local-agent mode, so no runtime-dispatch wrapper is needed here.
 
 export const Chat: ChatComponent = Object.assign(Root, {
   Root,

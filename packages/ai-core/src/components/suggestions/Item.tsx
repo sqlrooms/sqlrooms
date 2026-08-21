@@ -1,48 +1,37 @@
-import {Slot} from '@sqlrooms/ui';
-import {forwardRef, useCallback, type ComponentPropsWithoutRef} from 'react';
-import {mergeHandlers} from '../composer/mergeHandlers';
+import {forwardRef, useCallback} from 'react';
+import {ActionButton, type ActionButtonProps} from '../primitives/ActionButton';
 import {usePromptSuggestions} from './ChatSuggestionsContext';
 
 /**
  * Props for {@link Item}.
  */
-export type ChatSuggestionsItemProps = ComponentPropsWithoutRef<'button'> & {
-  /** Render as the single child element instead of a `<button>`, via Radix's `Slot`. */
-  asChild?: boolean;
+export type ChatSuggestionsItemProps = Omit<ActionButtonProps, 'onActivate'> & {
   /** The suggestion's text. */
   text: string;
   /**
-   * When `true`, activation sends `text` immediately instead of filling it
-   * into the prompt. Defaults to `false` (fill), so existing consumers of
-   * this primitive are unaffected by the recipe layer opting into submit.
+   * Send `text` on activation instead of filling it into the prompt.
+   * Defaults to `false` (fill).
    *
-   * Submitting reuses {@link useChatComposer}'s `send`, so — matching fill's
-   * existing semantics — it **overwrites a non-empty draft** rather than
-   * appending to or confirming over it.
+   * Submitting reuses the composer's `send`, so — like fill — it overwrites a
+   * non-empty draft rather than appending to it.
    */
   submit?: boolean;
 };
 
 /**
- * A single suggestion. On activation, fills the composer's prompt with
- * `text` by default, or sends it immediately when `submit` is passed.
- * Disabled whenever sending is not currently possible ({@link
- * useChatComposer}'s `canSend`, read here through {@link
- * usePromptSuggestions}), regardless of whether this item fills or submits —
- * so a suggestion list and the send control can never disagree about
- * readiness.
+ * A single suggestion. Fills the composer's prompt with `text` on activation,
+ * or sends it when `submit` is passed. Disabled whenever
+ * {@link usePromptSuggestions}'s `isReadyToSend` is false, so suggestions and
+ * the send control never disagree.
  *
  * Carries no width, height, truncation, or tooltip — the host places, sizes,
  * and labels it.
  */
 export const Item = forwardRef<HTMLButtonElement, ChatSuggestionsItemProps>(
-  function Item(
-    {asChild, text, submit = false, onClick, disabled, ...rest},
-    ref,
-  ) {
+  function Item({text, submit = false, disabled, ...rest}, ref) {
     const suggestions = usePromptSuggestions();
 
-    const handleClick = useCallback(() => {
+    const handleActivate = useCallback(() => {
       if (submit) {
         suggestions.send(text);
       } else {
@@ -50,14 +39,11 @@ export const Item = forwardRef<HTMLButtonElement, ChatSuggestionsItemProps>(
       }
     }, [submit, suggestions, text]);
 
-    const Comp = asChild ? Slot : 'button';
-
     return (
-      <Comp
+      <ActionButton
         ref={ref}
-        type={asChild ? undefined : 'button'}
-        disabled={disabled ?? !suggestions.canSend}
-        onClick={mergeHandlers(onClick, handleClick)}
+        disabled={disabled ?? !suggestions.isReadyToSend}
+        onActivate={handleActivate}
         {...rest}
       />
     );

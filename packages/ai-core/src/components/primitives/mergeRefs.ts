@@ -1,11 +1,11 @@
 import type {Ref, RefCallback} from 'react';
 
 /**
- * Combines multiple refs into one callback ref that updates all of them.
+ * Combines refs into one callback ref that updates all of them, so a
+ * primitive can keep its own ref on an element without clobbering the host's.
  *
- * Used so a primitive can attach its own ref to an element (to manage
- * auto-resize, for instance) while still forwarding whatever ref the host
- * passed in, rather than one clobbering the other.
+ * Memoize the result (or the callers' `useCallback`) — a fresh callback makes
+ * React detach and reattach the ref on every render.
  */
 export function mergeRefs<T>(
   ...refs: Array<Ref<T> | undefined>

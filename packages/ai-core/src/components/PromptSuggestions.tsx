@@ -22,20 +22,14 @@ type PromptSuggestionsContainerProps = PropsWithChildren<{
 }>;
 
 /**
- * SQLRooms' default prompt-suggestions recipe: a full-width vertical list
- * with a bounded max height and internal vertical scrolling, built entirely
- * from the suggestions primitives ({@link Root}, {@link Item}, {@link
- * Dismiss}) and {@link usePromptSuggestions}.
+ * SQLRooms' default prompt-suggestions recipe: a full-width vertical list with
+ * a bounded max height and internal scrolling, built from {@link Root},
+ * {@link Item}, {@link Dismiss} and {@link usePromptSuggestions}.
  *
- * This is a deliberate redesign from the previous horizontal card carousel —
- * see the package README for the two breaking changes this carries: rows now
- * render in full (CSS ellipsis plus a native `title`, never a
- * character-count truncation), and clicking a row sends immediately instead
- * of filling the prompt for editing.
- *
- * The max-height number lives here, in the recipe, not in {@link Root} — a
- * host embedding the primitives directly chooses its own height policy,
- * including unbounded.
+ * Replaces the previous horizontal card carousel; see the package README for
+ * the breaking changes that carries. The max-height lives here rather than in
+ * {@link Root}, so a host embedding the primitives picks its own height
+ * policy.
  */
 const Container: React.FC<PromptSuggestionsContainerProps> = ({
   isLoading = false,
@@ -88,59 +82,47 @@ type PromptSuggestionsItemProps = {
   className?: string;
   icon?: ReactNode;
   /**
-   * Optional onClick handler. If provided, it fully replaces the default
-   * click-to-send behavior — useful when a suggestion should do something
-   * other than send into the current chat, such as loading a template from
-   * a start screen.
+   * Replaces the default click-to-send behavior — for a suggestion that should
+   * do something other than send into the current chat, such as loading a
+   * template from a start screen.
    */
   onClick?: (text: string) => void;
 };
 
 /**
- * A single row in the default vertical recipe. Sends immediately on click
- * (via {@link Item}'s `submit`) unless `onClick` overrides that behavior.
- * Text renders in full, ellipsizing by CSS with a native `title` fallback —
- * never cut at a fixed character count.
+ * A single row in the default vertical recipe. Sends immediately on click (via
+ * {@link Item}'s `submit`) unless `onClick` overrides that. Text renders in
+ * full, ellipsizing by CSS with a native `title` — never cut at a fixed
+ * character count.
  */
 const RecipeItem: FC<PromptSuggestionsItemProps> = ({
   text,
   className,
   icon,
   onClick,
-}) => {
-  const rowContent = (
-    <>
-      <span className="shrink-0 opacity-60">
-        {icon ?? <Lightbulb className="h-3.5 w-3.5" />}
-      </span>
-      <span className="min-w-0 flex-1 truncate">{text}</span>
-    </>
-  );
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        title={text}
-        onClick={() => onClick(text)}
-        className={cn(ROW_CLASSES, className)}
-      >
-        {rowContent}
-      </button>
-    );
-  }
-
-  return (
-    <Item
-      text={text}
-      submit
-      title={text}
-      className={cn(ROW_CLASSES, className)}
-    >
-      {rowContent}
-    </Item>
-  );
-};
+}) => (
+  <Item
+    text={text}
+    submit
+    title={text}
+    className={cn(ROW_CLASSES, className)}
+    // Host-first merging means preventing default suppresses `Item`'s own
+    // submit, so an override replaces sending while keeping the row's
+    // readiness-driven disabled state.
+    onClick={
+      onClick &&
+      ((event) => {
+        event.preventDefault();
+        onClick(text);
+      })
+    }
+  >
+    <span className="shrink-0 opacity-60">
+      {icon ?? <Lightbulb className="h-3.5 w-3.5" />}
+    </span>
+    <span className="min-w-0 flex-1 truncate">{text}</span>
+  </Item>
+);
 
 type PromptSuggestionsVisibilityToggleProps = {
   className?: string;
@@ -204,12 +186,7 @@ const PromptSuggestionsVisibilityToggle: FC<
  * ```
  */
 export const PromptSuggestions = Object.assign(Container, {
-  /**
-   * @deprecated Render `<PromptSuggestions>` directly. Retained because the
-   * previous export was a plain object whose only container entry point was
-   * `PromptSuggestions.Container`; dropping it would be an unannounced
-   * breaking change for anyone who reached for it.
-   */
+  /** @deprecated Render `<PromptSuggestions>` directly. */
   Container,
   Item: RecipeItem,
   VisibilityToggle: PromptSuggestionsVisibilityToggle,

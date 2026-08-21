@@ -1,48 +1,38 @@
-import {Slot} from '@sqlrooms/ui';
-import {forwardRef, useCallback, type ComponentPropsWithoutRef} from 'react';
-import {mergeHandlers} from '../composer/mergeHandlers';
+import {forwardRef, useCallback} from 'react';
+import {ActionButton, type ActionButtonProps} from '../primitives/ActionButton';
 import {usePromptSuggestions} from './ChatSuggestionsContext';
 
 /**
  * Props for {@link VisibilityToggle}.
  */
-export type ChatSuggestionsVisibilityToggleProps =
-  ComponentPropsWithoutRef<'button'> & {
-    /** Render as the single child element instead of a `<button>`, via Radix's `Slot`. */
-    asChild?: boolean;
-  };
+export type ChatSuggestionsVisibilityToggleProps = Omit<
+  ActionButtonProps,
+  'onActivate'
+>;
 
 /**
- * Toggles suggestions visibility on activation, and exposes the current
- * state via `aria-pressed` so a host can style pressed/unpressed without
- * this component owning any visual classes.
+ * Toggles suggestions visibility on activation, exposing the current state as
+ * `aria-pressed` so a host can style it without this component owning classes.
  *
- * Can be rendered anywhere under `<Chat>` — including outside the composer
- * or the suggestions list itself — and still stays in sync, because
- * visibility lives in {@link usePromptSuggestions}'s normalized state, not in
- * a container-scoped context.
+ * Can live anywhere under `<Chat>` — including outside the composer or the
+ * list itself — and stays in sync, because visibility lives in the normalized
+ * state rather than a container-scoped context.
  */
 export const VisibilityToggle = forwardRef<
   HTMLButtonElement,
   ChatSuggestionsVisibilityToggleProps
->(function VisibilityToggle(
-  {asChild, onClick, 'aria-pressed': ariaPressed, ...rest},
-  ref,
-) {
+>(function VisibilityToggle({'aria-pressed': ariaPressed, ...rest}, ref) {
   const suggestions = usePromptSuggestions();
 
-  const handleClick = useCallback(() => {
+  const handleActivate = useCallback(() => {
     suggestions.toggle();
   }, [suggestions]);
 
-  const Comp = asChild ? Slot : 'button';
-
   return (
-    <Comp
+    <ActionButton
       ref={ref}
-      type={asChild ? undefined : 'button'}
       aria-pressed={ariaPressed ?? suggestions.visible}
-      onClick={mergeHandlers(onClick, handleClick)}
+      onActivate={handleActivate}
       {...rest}
     />
   );

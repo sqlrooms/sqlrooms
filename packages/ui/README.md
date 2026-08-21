@@ -205,7 +205,6 @@ function MyTextarea({value}: {value: string}) {
     autoResize: true,
     textareaRef,
     value,
-    defaultValue: undefined,
   });
 
   return (

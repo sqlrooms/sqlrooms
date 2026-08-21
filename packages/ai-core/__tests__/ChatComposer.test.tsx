@@ -466,7 +466,7 @@ describe('composer primitives — local-agent mode', () => {
   describe('onBeforeSend', () => {
     it('Input: returning false on Enter prevents the send', async () => {
       mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
-      const onBeforeSend = jest.fn<() => boolean>(() => false);
+      const onBeforeSend = jest.fn<(text: string) => boolean>(() => false);
       const {container, root} = await renderTree(
         <LocalAgentComposer>
           <Input onBeforeSend={onBeforeSend} />
@@ -484,7 +484,9 @@ describe('composer primitives — local-agent mode', () => {
 
     it('Input: returning undefined or true on Enter allows the send', async () => {
       mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
-      const onBeforeSend = jest.fn<() => boolean | void>(() => undefined);
+      const onBeforeSend = jest.fn<(text: string) => boolean | void>(
+        () => undefined,
+      );
       const {container, root} = await renderTree(
         <LocalAgentComposer>
           <Input onBeforeSend={onBeforeSend} />
@@ -496,12 +498,13 @@ describe('composer primitives — local-agent mode', () => {
       });
 
       expect(onBeforeSend).toHaveBeenCalledTimes(1);
+      expect(onBeforeSend).toHaveBeenCalledWith('hello');
       expect(mockRuntime.sendPrompt).toHaveBeenCalledWith(undefined);
       await cleanup(container, root);
     });
 
     it('Input: not called when an earlier guard already rejects the keystroke', async () => {
-      const onBeforeSend = jest.fn<() => boolean>(() => true);
+      const onBeforeSend = jest.fn<(text: string) => boolean>(() => true);
 
       // IME composition active.
       mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
@@ -558,7 +561,7 @@ describe('composer primitives — local-agent mode', () => {
 
     it('Send: returning false on activation prevents the send', async () => {
       mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
-      const onBeforeSend = jest.fn<() => boolean>(() => false);
+      const onBeforeSend = jest.fn<(text: string) => boolean>(() => false);
       const {container, root} = await renderTree(
         <LocalAgentComposer>
           <Send onBeforeSend={onBeforeSend} />
@@ -577,7 +580,9 @@ describe('composer primitives — local-agent mode', () => {
 
     it('Send: returning undefined or true on activation allows the send', async () => {
       mockRuntime = createMockLocalAgentRuntime({prompt: 'hello'});
-      const onBeforeSend = jest.fn<() => boolean | void>(() => true);
+      const onBeforeSend = jest.fn<(text: string) => boolean | void>(
+        () => true,
+      );
       const {container, root} = await renderTree(
         <LocalAgentComposer>
           <Send onBeforeSend={onBeforeSend} />
@@ -590,13 +595,14 @@ describe('composer primitives — local-agent mode', () => {
       });
 
       expect(onBeforeSend).toHaveBeenCalledTimes(1);
+      expect(onBeforeSend).toHaveBeenCalledWith('hello');
       expect(mockRuntime.sendPrompt).toHaveBeenCalled();
       await cleanup(container, root);
     });
 
     it('Send: not called when canSend is false (button disabled, click is a no-op)', async () => {
       mockRuntime = createMockLocalAgentRuntime({prompt: '   '});
-      const onBeforeSend = jest.fn<() => boolean>(() => true);
+      const onBeforeSend = jest.fn<(text: string) => boolean>(() => true);
       const {container, root} = await renderTree(
         <LocalAgentComposer>
           <Send onBeforeSend={onBeforeSend} />

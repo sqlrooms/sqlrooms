@@ -196,20 +196,18 @@ export type AiSliceState = {
      */
     getSelectedModel: () => {modelProvider: string; model: string};
     /**
-     * Whether a model is resolvable right now by *any* configured path: a
-     * custom-model factory supplied to {@link AiSliceOptions.getCustomModel},
-     * or the current (or default) provider/model pair being present in the
-     * `@sqlrooms/ai-settings` model list when that slice is installed.
+     * Whether a model is resolvable by *any* configured path: a custom-model
+     * factory supplied to {@link AiSliceOptions.getCustomModel}, or — once a
+     * session exists — its provider/model pair being present in the
+     * `@sqlrooms/ai-settings` model list. With no session yet, the resolved
+     * default is assumed available.
      *
-     * This only checks that a custom-model factory **was configured** — it
-     * never calls it. Invoking the factory could have side effects (e.g. a
-     * network call to a server-side proxy) and a factory returning `undefined`
-     * at call time means "configured but not currently ready", which is a
-     * different condition than "no path can ever produce a model".
+     * Only checks that a factory **was configured**; never calls it, since
+     * invoking it may have side effects and a factory returning `undefined`
+     * means "configured but not currently ready".
      *
-     * Use this instead of independently re-deriving readiness from
-     * `aiSettings.config`, so UI and runtime agree on a single source of
-     * truth.
+     * Prefer this over re-deriving readiness from `aiSettings.config`, so UI
+     * and runtime agree on one source of truth.
      */
     hasResolvableModel: () => boolean;
     /**

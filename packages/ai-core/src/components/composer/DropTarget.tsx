@@ -1,7 +1,18 @@
 import {type DragEndEvent, useDndMonitor, useDroppable} from '@dnd-kit/core';
 import {Slot} from '@sqlrooms/ui';
-import {forwardRef, useCallback, type ComponentPropsWithoutRef} from 'react';
-import {mergeRefs} from './mergeRefs';
+import {
+  forwardRef,
+  useCallback,
+  useMemo,
+  type ComponentPropsWithoutRef,
+} from 'react';
+import {mergeRefs} from '../primitives/mergeRefs';
+
+/**
+ * Droppable priority for composer drop targets, used by the room's dnd-kit
+ * collision resolution to prefer the composer over enclosing droppables.
+ */
+const COMPOSER_DROP_PRIORITY = 100;
 
 /**
  * Props for {@link DropTarget}.
@@ -18,19 +29,18 @@ export type ChatComposerDropTargetProps = ComponentPropsWithoutRef<'div'> & {
 };
 
 /**
- * Marks an element as a drop target for in-app context items being dragged
- * into the composer — the one primitive that carries a ref and drag state a
- * plain `<div>` cannot.
+ * Marks an element as a drop target for in-app context items dragged into the
+ * composer — the one primitive carrying a ref and drag state a plain `<div>`
+ * cannot.
  *
- * **This handles in-app context items only, not file uploads.** It is
- * dnd-kit based: dnd-kit's sensors observe pointer-driven drag gestures
- * between elements it manages, not the browser's native HTML5 file-drag
- * events fired when a file is dragged in from the OS. A file drop needs a
- * separate primitive built on native drag events, not this one.
+ * **In-app context items only, not file uploads.** dnd-kit observes
+ * pointer-driven drags between elements it manages, not the browser's native
+ * HTML5 file-drag events. A file drop needs a separate primitive built on
+ * native drag events.
  *
- * While an accepted drag is over the element, `data-drop-active` is present
- * on the rendered element so a host can style the hover state without this
- * component owning any visual classes itself.
+ * While an accepted drag is over the element, `data-drop-active` is present,
+ * so a host can style the hover state (e.g. Tailwind's
+ * `data-[drop-active]:…`) without this component owning visual classes.
  */
 export const DropTarget = forwardRef<
   HTMLDivElement,
@@ -38,7 +48,7 @@ export const DropTarget = forwardRef<
 >(function DropTarget({asChild, id, canAccept, onDrop, ...rest}, forwardedRef) {
   const {active, isOver, setNodeRef} = useDroppable({
     id,
-    data: {roomDndPriority: 100},
+    data: {roomDndPriority: COMPOSER_DROP_PRIORITY},
   });
   const activeDropData = active?.data.current;
   const isAcceptedOver = Boolean(
@@ -66,7 +76,11 @@ export const DropTarget = forwardRef<
     },
   });
 
-  const ref = mergeRefs(setNodeRef, forwardedRef);
+  // Memoized: a fresh callback ref would detach and reattach every render.
+  const ref = useMemo(
+    () => mergeRefs(setNodeRef, forwardedRef),
+    [setNodeRef, forwardedRef],
+  );
   const Comp = asChild ? Slot : 'div';
 
   return (

@@ -2,14 +2,15 @@ import {Slot, useAutoResizeTextarea} from '@sqlrooms/ui';
 import {
   forwardRef,
   useCallback,
+  useMemo,
   useRef,
   type ChangeEvent,
   type ComponentPropsWithoutRef,
   type KeyboardEvent,
 } from 'react';
+import {mergeHandlers} from '../primitives/mergeHandlers';
+import {mergeRefs} from '../primitives/mergeRefs';
 import {useChatComposer} from './ChatComposerContext';
-import {mergeHandlers} from './mergeHandlers';
-import {mergeRefs} from './mergeRefs';
 
 /**
  * Props for {@link Input}.
@@ -19,9 +20,8 @@ export type ChatComposerInputProps = Omit<
   'value' | 'defaultValue'
 > & {
   /**
-   * Render as the single child element instead of a `<textarea>`, via
-   * Radix's `Slot`. The child must forward its ref to a real DOM element —
-   * see the caveat in {@link Input}'s tsdoc.
+   * Render as the single child element instead of a `<textarea>`, via Radix's
+   * `Slot`. The child must forward its ref to a real DOM element.
    */
   asChild?: boolean;
   /** Send on Enter with no modifiers. Defaults to `true`. */
@@ -29,49 +29,34 @@ export type ChatComposerInputProps = Omit<
   /** Auto-grow to fit content. Defaults to `true`. */
   autoResize?: boolean;
   /**
-   * Synchronous pre-send veto, called after the keymap guards pass and
-   * immediately before the prompt is sent. Return `false` to abort the send;
-   * any other return value proceeds.
+   * Synchronous pre-send veto, called with the text about to be sent, after
+   * the keymap guards pass. Return `false` to abort; any other value proceeds.
    *
-   * This exists because merging a host `onKeyDown` can only run before or
-   * after this component's whole handler — it cannot interpose between
-   * "guards passed" and the send itself, which is where a pre-send hook
-   * belongs. Deliberately synchronous: an asynchronous veto is out of scope,
-   * since it would leave the composer in an indeterminate state while
-   * awaiting.
+   * A merged host `onKeyDown` can only run before or after this component's
+   * whole handler — it cannot interpose between "guards passed" and the send,
+   * which is where a pre-send hook belongs.
    */
-  onBeforeSend?: () => boolean | void;
+  onBeforeSend?: (text: string) => boolean | void;
 };
 
 /**
- * Binds the composer prompt to a text input and owns the Enter-to-send
- * keymap and auto-resize.
+ * Binds the composer prompt to a text input and owns the Enter-to-send keymap
+ * and auto-resize.
  *
- * **Textarea-shaped contract.** `Input` injects `value`, `onChange`,
- * `onKeyDown`, `placeholder`, and `disabled`, and mutates its element's
- * inline `height` when `autoResize` is on. This is the right shape for a
- * plain textarea or a textarea-like host component. It is **not** a fit for
- * rich editors — contenteditable surfaces, editor-state models, or anything
- * with its own keymap — because those don't expose a single value/onChange
- * pair or a DOM node whose inline height can be mutated safely. Build those
- * directly on {@link useChatComposer} instead.
+ * **Textarea-shaped contract.** Injects `value`, `onChange`, `onKeyDown`,
+ * `placeholder`, and `disabled`, and mutates the element's inline `height`
+ * when `autoResize` is on. Rich editors — contenteditable, editor-state
+ * models, anything with its own keymap — should build on
+ * {@link useChatComposer} instead.
  *
- * **The forwarded ref must reach the real DOM node.** Auto-resize measures
- * and mutates the textarea's inline height through the ref this component
- * receives. When `asChild` is used, that ref flows through Radix's `Slot` to
- * the child element — so the child (or the host component it renders) must
- * forward its ref down to the actual `<textarea>`. A component that accepts
- * a `ref` prop but does not forward it will silently get no auto-grow, with
- * no error and nothing to catch it in a type check.
+ * **The forwarded ref must reach the real DOM node,** or auto-resize silently
+ * does nothing: with `asChild`, the child must forward its ref down to the
+ * actual `<textarea>`.
  *
- * **Host handlers are merged, not replaced.** Every handler passed as a prop
- * (`onChange`, `onKeyDown`, `onPaste`, and so on) runs alongside this
- * component's own behavior for that same event. Where this component owns
- * behavior for an event, the host's handler runs first; if it calls
- * `event.preventDefault()`, this component's own behavior for that event is
- * suppressed. This is how `submitOnEnter` can be effectively overridden by a
- * host that wants full control of the keymap, and it is why `onPaste` is
- * left untouched today — carried through for future attachment support.
+ * **Host handlers are merged, not replaced.** A handler passed as a prop runs
+ * before this component's own behavior for the same event; calling
+ * `event.preventDefault()` suppresses that behavior. This is how a host takes
+ * over the keymap, and why `onPaste` passes through untouched.
  */
 export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
   function Input(
@@ -89,13 +74,16 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
   ) {
     const composer = useChatComposer();
     const innerRef = useRef<HTMLTextAreaElement>(null);
-    const ref = mergeRefs(innerRef, forwardedRef);
+    // Memoized: a fresh callback ref would detach and reattach every render.
+    const ref = useMemo(
+      () => mergeRefs(innerRef, forwardedRef),
+      [forwardedRef],
+    );
 
     const {resizeToFitContent} = useAutoResizeTextarea({
       autoResize,
       textareaRef: innerRef,
       value: composer.prompt,
-      defaultValue: undefined,
     });
 
     const handleChange = useCallback(
@@ -115,8 +103,8 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
         }
 
         // Guard IME composition: committing a CJK candidate with Enter must
-        // not also send. `keyCode === 229` covers older engines that don't
-        // set `isComposing`.
+        // not also send. `keyCode === 229` covers engines without
+        // `isComposing`.
         const nativeEvent = event.nativeEvent as unknown as {
           isComposing?: boolean;
         };
@@ -128,14 +116,11 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
         // Enter while a run is in flight is a no-op — it must never cancel.
         if (composer.isBusy) return;
         if (!composer.canSend) return;
-        if (onBeforeSend?.() === false) return;
+        if (onBeforeSend?.(composer.prompt) === false) return;
         composer.send();
       },
       [submitOnEnter, composer, onBeforeSend],
     );
-
-    const mergedOnChange = mergeHandlers(onChange, handleChange);
-    const mergedOnKeyDown = mergeHandlers(onKeyDown, handleKeyDown);
 
     const Comp = asChild ? Slot : 'textarea';
 
@@ -143,8 +128,8 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
       <Comp
         ref={ref}
         value={composer.prompt}
-        onChange={mergedOnChange}
-        onKeyDown={mergedOnKeyDown}
+        onChange={mergeHandlers(onChange, handleChange)}
+        onKeyDown={mergeHandlers(onKeyDown, handleKeyDown)}
         disabled={disabled ?? composer.isBusy}
         {...rest}
       />

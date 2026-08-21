@@ -24,17 +24,9 @@ const SUGGESTIONS = [
 ];
 
 /**
- * A horizontal, scrollable carousel of suggestion chips, built directly from
- * the suggestions primitives (`ChatSuggestionsRoot`/`ChatSuggestionsItem`)
- * rather than the `Chat.PromptSuggestions` recipe.
- *
- * This is intentional, not an oversight: the default recipe renders a
- * full-width vertical list, so a horizontal layout can no longer be had by
- * configuring the recipe. This example exists to keep the horizontal shape
- * demonstrated and tested somewhere in the repository — proof that the
- * primitives impose no layout of their own. Do not "consistency-fix" this
- * back to the vertical recipe; that would delete the only place the
- * horizontal layout is exercised.
+ * A horizontal carousel built from the suggestions primitives rather than the
+ * vertical `Chat.PromptSuggestions` recipe — deliberately, as the in-repo
+ * proof that the primitives impose no layout. Don't "fix" it to the recipe.
  */
 const HorizontalPromptSuggestions: FC = () => (
   <ChatSuggestionsRoot asChild>
@@ -61,10 +53,7 @@ const HorizontalPromptSuggestions: FC = () => (
   </ChatSuggestionsRoot>
 );
 
-/**
- * A minimal toggle button for the horizontal carousel above, styled locally
- * since the primitive itself carries no appearance.
- */
+/** Toggle for the carousel above, styled locally — the primitive has no look. */
 const HorizontalPromptSuggestionsVisibilityToggle: FC = () => {
   const suggestions = usePromptSuggestions();
   return (
