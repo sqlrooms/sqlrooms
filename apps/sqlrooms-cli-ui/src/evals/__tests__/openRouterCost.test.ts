@@ -50,14 +50,25 @@ describe('createOpenRouterCostTracker', () => {
   it('falls back when one streamed response has usage but no cost', () => {
     const tracker = createOpenRouterCostTracker(RATES);
     const reported = tracker.metadataExtractor.createStreamExtractor();
-    reported.processChunk({usage: {cost: 0.012}});
+    reported.processChunk({
+      usage: {
+        cost: 0.012,
+        prompt_tokens: 1_000_000,
+        completion_tokens: 500_000,
+      },
+    });
     reported.buildMetadata();
     const omitted = tracker.metadataExtractor.createStreamExtractor();
-    omitted.processChunk({usage: {total_tokens: 100}});
+    omitted.processChunk({
+      usage: {
+        prompt_tokens: 500_000,
+        completion_tokens: 1_000_000,
+      },
+    });
     omitted.buildMetadata();
 
     expect(
-      tracker.resolveCost({inputTokens: 1_000_000, outputTokens: 1_000_000}),
-    ).toEqual({costUsd: 0.26, source: 'estimated'});
+      tracker.resolveCost({inputTokens: 10_000, outputTokens: 10_000}),
+    ).toEqual({costUsd: 0.39, source: 'estimated'});
   });
 });

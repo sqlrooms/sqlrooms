@@ -58,6 +58,7 @@ function createPinnedOpenRouterModel(
       'HTTP-Referer': 'https://github.com/sqlrooms/sqlrooms',
       'X-Title': 'SQLRooms behavioral evals',
     },
+    includeUsage: true,
     metadataExtractor,
   });
   return provider.languageModel(MODEL_ID, {
