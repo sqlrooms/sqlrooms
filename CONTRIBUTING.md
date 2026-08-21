@@ -10,6 +10,10 @@ what actions will and will not be tolerated.
 
 ## Our Development Process
 
+Repository development and testing require Node.js `>=24.9` and the pnpm
+version declared in `package.json`. Published packages may support older Node.js
+versions independently of this repository tooling requirement.
+
 We use example applications to test and validate changes. You can run the examples by following these steps:
 
 ```bash

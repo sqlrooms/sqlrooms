@@ -114,7 +114,7 @@ not require explaining all of them.
   - `uv tool install sqlrooms`
   - `sqlrooms --help`
 - Confirm `requires-python` should remain `>=3.10` even though the monorepo
-  requires Node `>=22` for development. Users of the published Python tool
+  requires Node `>=24.9` for development. Users of the published Python tool
   should not need Node.
 - Confirm all runtime dependencies are captured transitively. The CLI imports
   `diskcache` via launcher code; today that appears to arrive through
