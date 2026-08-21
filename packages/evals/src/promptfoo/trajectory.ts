@@ -1,5 +1,5 @@
-import type {JsonObject, JsonValue} from '../json';
-import type {ObservatoryRun} from './readModel';
+import type {JsonObject, JsonValue} from '../json.js';
+import type {ObservatoryRun} from './readModel.js';
 
 /** Semantic node in a runner-independent observatory trajectory. */
 export type ObservatoryTrajectoryNode = {

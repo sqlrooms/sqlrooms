@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {JsonObjectSchema} from './json';
+import {JsonObjectSchema} from './json.js';
 
 /** Stable scenario identifier format used in run history. */
 export const ScenarioIdSchema = z

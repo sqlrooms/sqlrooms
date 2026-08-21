@@ -1,4 +1,4 @@
-import {summarizeObservatoryRuns, type ObservatoryExport} from './readModel';
+import {summarizeObservatoryRuns, type ObservatoryExport} from './readModel.js';
 
 function aggregate(values: readonly string[], fallback: string): string {
   const distinct = [...new Set(values)];

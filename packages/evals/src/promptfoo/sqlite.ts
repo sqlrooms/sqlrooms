@@ -1,12 +1,12 @@
 import {DatabaseSync} from 'node:sqlite';
-import {RunEvidenceSchema, type RunEvidence} from '../evidence';
-import type {JsonObject, JsonValue} from '../json';
+import {RunEvidenceSchema, type RunEvidence} from '../evidence.js';
+import type {JsonObject, JsonValue} from '../json.js';
 import {
   ObservatoryExportSchema,
   ObservatoryRunSchema,
   type ObservatoryExport,
   type ObservatoryRun,
-} from './readModel';
+} from './readModel.js';
 
 type SqlRow = Record<string, unknown>;
 

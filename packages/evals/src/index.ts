@@ -5,8 +5,8 @@
  * @packageDocumentation
  */
 
-export * from './evidence';
-export * from './json';
-export * from './oracle';
-export * from './scenario';
-export * from './scriptedModel';
+export * from './evidence.js';
+export * from './json.js';
+export * from './oracle.js';
+export * from './scenario.js';
+export * from './scriptedModel.js';

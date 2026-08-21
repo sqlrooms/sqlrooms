@@ -1,9 +1,9 @@
 import {z} from 'zod';
-import {JsonObjectSchema, JsonValueSchema} from '../json';
-import {OracleResultSchema} from '../oracle';
-import {RunEvidenceEventSchema} from '../evidence';
+import {JsonObjectSchema, JsonValueSchema} from '../json.js';
+import {OracleResultSchema} from '../oracle.js';
+import {RunEvidenceEventSchema} from '../evidence.js';
 
-export * from './trajectory';
+export * from './trajectory.js';
 
 /** Promptfoo-independent span retained for run diagnosis. */
 export const ObservatorySpanSchema = z.looseObject({

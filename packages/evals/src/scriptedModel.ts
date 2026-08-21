@@ -7,7 +7,7 @@ import type {
   LanguageModelV3StreamPart,
   LanguageModelV3Usage,
 } from '@ai-sdk/provider';
-import type {JsonObject} from './json';
+import type {JsonObject} from './json.js';
 
 /** One text or tool-call output emitted by a scripted model step. */
 export type ScriptedModelContent =
