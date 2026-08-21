@@ -1,10 +1,8 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
-import {ArrowUpIcon, LoaderCircleIcon, OctagonXIcon} from 'lucide-react';
+import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {useCallback, useRef, type MouseEvent, type ReactNode} from 'react';
 import {Input, Send, Stop, useChatComposer} from '../composer';
-import {ContextUsageIndicator} from '../ContextUsageIndicator';
 import {ComposerFooterStrip} from './ComposerFooterStrip';
-import {ComposerTopRow} from './ComposerTopRow';
 import {
   ContextDropTarget,
   type ContextDropTargetConfig,
@@ -14,32 +12,35 @@ import {useDelayedFocus} from './useDelayedFocus';
 export type ComposerFrameProps = {
   className?: string;
   placeholder: string;
-  topActions?: ReactNode;
-  contextSelectors: ReactNode[];
-  otherChildren?: ReactNode;
-  contextDropTarget?: ContextDropTargetConfig;
-  textareaDisabled: boolean;
-  showContextUsageIndicator: boolean;
-  isSummarizing: boolean;
+  /** Disables the prompt textarea. Each runtime mode decides when. */
+  disabled?: boolean;
+  dropTarget?: ContextDropTargetConfig;
+  /** Rendered above the textarea — context selectors and host actions. */
+  topRow?: ReactNode;
+  /** Covers the whole frame, e.g. a busy state. Positioned by the caller. */
+  overlay?: ReactNode;
+  /** Chips in the scrolling footer strip. */
+  footerStart?: ReactNode;
+  /** Controls between the footer chips and the send/stop buttons. */
+  footerEnd?: ReactNode;
   onRun?: (prompt?: string) => void | false;
   onCancel?: () => void;
 };
 
 /**
- * The composer's box, textarea, and footer, shared by both runtime modes. All
- * AI-slice access happens before this component is reached; it only reads
- * {@link useChatComposer}, which is safe in either mode.
+ * The composer's box, textarea, and footer — pure layout over the composer
+ * primitives. Carries no knowledge of runtime modes: callers pass their own
+ * chrome through the slots and read their own state.
  */
 export function ComposerFrame({
   className,
   placeholder,
-  topActions,
-  contextSelectors,
-  otherChildren,
-  contextDropTarget,
-  textareaDisabled,
-  showContextUsageIndicator,
-  isSummarizing,
+  disabled,
+  dropTarget,
+  topRow,
+  overlay,
+  footerStart,
+  footerEnd,
   onRun,
   onCancel,
 }: ComposerFrameProps) {
@@ -72,15 +73,8 @@ export function ComposerFrame({
         className,
       )}
     >
-      {isSummarizing && (
-        <div className="bg-background/70 absolute inset-0 z-10 flex items-center justify-center rounded-md backdrop-blur-sm">
-          <LoaderCircleIcon className="text-muted-foreground mr-2 h-4 w-4 animate-spin" />
-          <span className="text-muted-foreground text-sm">
-            Summarizing conversation…
-          </span>
-        </div>
-      )}
-      <ContextDropTarget target={contextDropTarget}>
+      {overlay}
+      <ContextDropTarget target={dropTarget}>
         {({setNodeRef, isAcceptedOver}) => (
           <div
             ref={setNodeRef}
@@ -91,15 +85,12 @@ export function ComposerFrame({
             )}
           >
             <div className="flex w-full flex-col gap-1 overflow-hidden">
-              <ComposerTopRow
-                contextSelectors={contextSelectors}
-                topActions={topActions}
-              />
+              {topRow}
               <Input
                 ref={textareaRef}
                 asChild
                 autoResize={false}
-                disabled={textareaDisabled}
+                disabled={disabled}
                 placeholder={placeholder}
                 autoFocus
                 onBeforeSend={handleBeforeSend}
@@ -112,7 +103,7 @@ export function ComposerFrame({
               <ComposerFooterStrip
                 actions={
                   <div className="ml-auto flex shrink-0 items-center gap-1 p-2">
-                    {showContextUsageIndicator && <ContextUsageIndicator />}
+                    {footerEnd}
                     <Send asChild onBeforeSend={handleBeforeSend}>
                       <Button
                         className="h-8 w-8 rounded-full"
@@ -134,7 +125,7 @@ export function ComposerFrame({
                   </div>
                 }
               >
-                {otherChildren}
+                {footerStart}
               </ComposerFooterStrip>
             </div>
           </div>

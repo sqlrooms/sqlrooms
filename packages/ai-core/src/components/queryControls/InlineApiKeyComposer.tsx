@@ -10,7 +10,6 @@ import {
 import {useStoreWithAi} from '../../AiSlice';
 import {InlineApiKeyInputButton} from '../InlineApiKeyInput';
 import {ComposerFooterStrip} from './ComposerFooterStrip';
-import {ComposerTopRow} from './ComposerTopRow';
 import {useDelayedFocus} from './useDelayedFocus';
 import type {InlineApiKeyInputElement} from './deprecatedChildren';
 
@@ -30,17 +29,10 @@ function formatProviderLabel(provider: string): string {
  */
 export const InlineApiKeyComposer: FC<{
   className?: string;
-  contextSelectors: ReactNode[];
-  topActions?: ReactNode;
+  topRow?: ReactNode;
   inlineApiKeyInput: InlineApiKeyInputElement;
   children?: ReactNode;
-}> = ({
-  className,
-  contextSelectors,
-  topActions,
-  inlineApiKeyInput,
-  children,
-}) => {
+}> = ({className, topRow, inlineApiKeyInput, children}) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
 
@@ -86,10 +78,7 @@ export const InlineApiKeyComposer: FC<{
     >
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
-          <ComposerTopRow
-            contextSelectors={contextSelectors}
-            topActions={topActions}
-          />
+          {topRow}
           <input
             ref={inputRef}
             type="password"

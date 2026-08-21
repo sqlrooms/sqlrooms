@@ -1,7 +1,10 @@
+import {LoaderCircleIcon} from 'lucide-react';
 import {type FC, type PropsWithChildren, type ReactNode} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {ChatComposerStateBoundary, useChatComposer} from './composer';
+import {ContextUsageIndicator} from './ContextUsageIndicator';
 import {ComposerFrame} from './queryControls/ComposerFrame';
+import {ComposerTopRow} from './queryControls/ComposerTopRow';
 import type {ContextDropTargetConfig} from './queryControls/ContextDropTarget';
 import {InlineApiKeyComposer} from './queryControls/InlineApiKeyComposer';
 import {extractComposerChildren} from './queryControls/deprecatedChildren';
@@ -71,6 +74,13 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
   const {inlineApiKeyInput, contextSelectors, otherChildren} =
     extractComposerChildren(children);
 
+  const topRow = (
+    <ComposerTopRow
+      contextSelectors={contextSelectors}
+      topActions={topActions}
+    />
+  );
+
   // Swap in key entry when a host supplied the input and no usable key exists.
   const needsKeyEntry =
     inlineApiKeyInput !== null &&
@@ -81,8 +91,7 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
     return (
       <InlineApiKeyComposer
         className={className}
-        contextSelectors={contextSelectors}
-        topActions={topActions}
+        topRow={topRow}
         inlineApiKeyInput={inlineApiKeyInput}
       >
         {otherChildren}
@@ -94,13 +103,14 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
     <ComposerFrame
       className={className}
       placeholder={hasSelectedModel ? placeholder : 'No model selected'}
-      topActions={topActions}
-      contextSelectors={contextSelectors}
-      otherChildren={otherChildren}
-      contextDropTarget={contextDropTarget}
-      textareaDisabled={isSummarizing}
-      showContextUsageIndicator
-      isSummarizing={isSummarizing}
+      // Deliberately not `isBusy`: typing stays available during a run, and is
+      // blocked only while the conversation is being summarized.
+      disabled={isSummarizing}
+      dropTarget={contextDropTarget}
+      topRow={topRow}
+      overlay={isSummarizing ? <SummarizingOverlay /> : null}
+      footerStart={otherChildren}
+      footerEnd={<ContextUsageIndicator />}
       onRun={onRun}
       onCancel={onCancel}
     />
@@ -125,14 +135,22 @@ const LocalAgentQueryControls: FC<QueryControlsProps> = ({
     <ComposerFrame
       className={className}
       placeholder={placeholder}
-      topActions={topActions}
-      contextSelectors={[]}
-      otherChildren={children}
-      textareaDisabled={composer.isRunning}
-      showContextUsageIndicator={false}
-      isSummarizing={false}
+      disabled={composer.isRunning}
+      topRow={<ComposerTopRow contextSelectors={[]} topActions={topActions} />}
+      footerStart={children}
       onRun={onRun}
       onCancel={onCancel}
     />
   );
 };
+
+function SummarizingOverlay() {
+  return (
+    <div className="bg-background/70 absolute inset-0 z-10 flex items-center justify-center rounded-md backdrop-blur-sm">
+      <LoaderCircleIcon className="text-muted-foreground mr-2 h-4 w-4 animate-spin" />
+      <span className="text-muted-foreground text-sm">
+        Summarizing conversation…
+      </span>
+    </div>
+  );
+}
