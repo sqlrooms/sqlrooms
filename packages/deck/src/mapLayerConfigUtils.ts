@@ -472,7 +472,7 @@ export function setDeckMapLayerType(
       }
       return nextLayer;
     }
-    // deck.gl paints missing fill as opaque black; the settings picker shows blue.
+
     const colorAccessors = getDeckMapColorAccessorOptions(layerType);
     if (
       colorAccessors.some((option) => option.value === 'getFillColor') &&
