@@ -15,6 +15,7 @@ import {
 import {
   type BlockDocumentStatefulBlockRenderer,
   type BlockDocumentStatefulBlockRendererProps,
+  isBlockDocumentStatefulBlockTypeEnabled,
   useBlockDocumentRenderBlockHeaderActions,
   useBlockDocumentStatefulBlockRenderer,
   useBlockDocumentStatefulBlockTypes,
@@ -133,7 +134,6 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const {documentId, readOnly} = useBlockDocumentEditorContext();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const updateAttributesRef = useRef(updateAttributes);
-  const readOnlyRef = useRef(readOnly);
   const hideScrollHintTimeoutRef = useRef<number | undefined>(undefined);
   const scrollHintTargetRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
@@ -151,6 +151,9 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const blockTypeConfig = blockTypes.find(
     (candidate) => candidate.blockType === blockType,
   );
+  const blockReadOnly =
+    readOnly || !isBlockDocumentStatefulBlockTypeEnabled(blockTypes, blockType);
+  const readOnlyRef = useRef(blockReadOnly);
   const resizableHeight = Boolean(blockTypeConfig?.resizableHeight);
   const minHeight = blockTypeConfig?.minHeight ?? 320;
   const maxHeight = blockTypeConfig?.maxHeight;
@@ -167,7 +170,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   const resolvedHeight = resizingHeight ?? persistedHeight;
   const blockHeaderActions = useMemo(
     () =>
-      !readOnly && renderBlockHeaderActions
+      !blockReadOnly && renderBlockHeaderActions
         ? renderBlockHeaderActions({
             blockDocumentId: documentId,
             blockId,
@@ -180,7 +183,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
       blockInstanceId,
       blockType,
       documentId,
-      readOnly,
+      blockReadOnly,
       renderBlockHeaderActions,
     ],
   );
@@ -192,8 +195,25 @@ export const BlockDocumentStatefulBlockNodeView: FC<
 
   useEffect(() => {
     updateAttributesRef.current = updateAttributes;
-    readOnlyRef.current = readOnly;
-  }, [readOnly, updateAttributes]);
+    readOnlyRef.current = blockReadOnly;
+  }, [blockReadOnly, updateAttributes]);
+
+  useEffect(() => {
+    if (!blockReadOnly || !selected) return;
+    const editorElement = editor.view.dom;
+    const preventBlockRemoval = (event: KeyboardEvent) => {
+      const isDeleteKey = event.key === 'Backspace' || event.key === 'Delete';
+      const isCutShortcut =
+        (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'x';
+      if (!isDeleteKey && !isCutShortcut) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    editorElement.addEventListener('keydown', preventBlockRemoval, true);
+    return () => {
+      editorElement.removeEventListener('keydown', preventBlockRemoval, true);
+    };
+  }, [blockReadOnly, editor, selected]);
 
   useEffect(() => {
     return () => {
@@ -315,7 +335,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
   }, [hideScrollHint, isMac, requireScrollModifier, showScrollHint]);
 
   const handleResizeMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (readOnly || !resizableHeight || !persistedHeight) return;
+    if (blockReadOnly || !resizableHeight || !persistedHeight) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -405,7 +425,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             height={resolvedHeight}
             headerActions={blockHeaderActions}
             selected={selected}
-            readOnly={readOnly}
+            readOnly={blockReadOnly}
             onCaptionChange={handleCaptionChange}
             onTableNameChange={handleTableNameChange}
           />
@@ -422,7 +442,7 @@ export const BlockDocumentStatefulBlockNodeView: FC<
             </div>
           </div>
         )}
-        {resizableHeight && !readOnly ? (
+        {resizableHeight && !blockReadOnly ? (
           <div
             className="absolute right-0 -bottom-4 left-0 z-10 flex h-3 cursor-row-resize items-start justify-center opacity-0 transition-opacity group-hover/stateful-block:opacity-100"
             onMouseDown={handleResizeMouseDown}
