@@ -1,8 +1,10 @@
 import {JSONConverter} from '@deck.gl/json';
 import {
+  DataType,
   Field,
   FixedSizeList,
   Float64,
+  Int64,
   List,
   Schema,
   Table,
@@ -35,6 +37,7 @@ function createPointTable() {
     new Map([['ARROW:extension:name', 'geoarrow.point']]),
   );
   const magnitudeField = new Field('magnitude', new Float64());
+  const countField = new Field('count', new Int64());
   const h3Field = new Field('h3', new Utf8());
   const timestampField = new Field(
     'timestamps',
@@ -45,6 +48,7 @@ function createPointTable() {
     sourcePointField,
     targetPointField,
     magnitudeField,
+    countField,
     h3Field,
     timestampField,
   ]);
@@ -54,6 +58,7 @@ function createPointTable() {
     source_geom: vectorFromArray([[7.4386, 46.9511]], sourcePointField.type),
     target_geom: vectorFromArray([[8.5417, 47.3769]], targetPointField.type),
     magnitude: vectorFromArray([4.4]),
+    count: vectorFromArray([7n], new Int64()),
     h3: vectorFromArray(['8928308280fffff']),
     timestamps: vectorFromArray([[1, 2, 3]], timestampField.type),
   });
@@ -663,6 +668,42 @@ describe('createDeckJsonConfiguration', () => {
       layers: spec.layers.map((layer) => ({...layer})),
     }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
     expect(layerId(second)).toEqual(layerId(first));
+  });
+
+  it('passes float heatmap getWeight as a Vector and keeps Int64 on the function accessor', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const floatConverted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          getWeight: '@@=magnitude',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+    const floatWeight = floatConverted.layers[0]?.props.getWeight as {
+      type: unknown;
+    };
+    expect(typeof floatWeight).not.toBe('function');
+    expect(DataType.isFloat(floatWeight.type)).toBe(true);
+
+    const intConverted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          getWeight: '@@=count',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+    expect(typeof intConverted.layers[0]?.props.getWeight).toBe('function');
   });
 });
 

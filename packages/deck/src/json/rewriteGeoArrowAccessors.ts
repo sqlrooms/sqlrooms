@@ -24,14 +24,13 @@ function canUseDirectVectorAccessor(propName: string, vector: arrow.Vector) {
     return false;
   }
 
-  // Heatmap weights are a scalar column. Passing the Vector through lets the
-  // GeoArrow heatmap put them in binary attributes instead of a new function
-  // on every JSON convert (which would look like a data change).
+  // Heatmap weights are a scalar column. Passing a float Vector through lets
+  // GeoArrow put them in binary attributes instead of a new function on every
+  // JSON convert (which would look like a data change). Integer columns stay
+  // on the function accessor: GeoArrow only uploads float weights, and Int64
+  // values are bigint / BigInt64Array which deck.gl cannot use as GPU data.
   if (propName === 'getWeight') {
-    return (
-      arrow.DataType.isFloat(firstChunk.type) ||
-      arrow.DataType.isInt(firstChunk.type)
-    );
+    return arrow.DataType.isFloat(firstChunk.type);
   }
 
   // Direct numeric vectors (for example `getRadius`) currently end up in deck's
