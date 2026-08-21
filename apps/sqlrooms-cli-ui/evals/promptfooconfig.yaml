@@ -21,7 +21,7 @@ tests:
     assert:
       - type: javascript
         metric: sqlrooms-oracles
-        value: return context.metadata.sqlroomsAssertion
+        value: context.metadata.sqlroomsAssertion
   - description: worksheet.mutate-chart-map@1
     vars:
       scenarioId: worksheet.mutate-chart-map
@@ -33,7 +33,7 @@ tests:
     assert:
       - type: javascript
         metric: sqlrooms-oracles
-        value: return context.metadata.sqlroomsAssertion
+        value: context.metadata.sqlroomsAssertion
 
 evaluateOptions:
   repeat: 3
