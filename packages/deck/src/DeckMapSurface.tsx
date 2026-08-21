@@ -233,7 +233,11 @@ export function DeckMapSurface({
     const message = configIssues.map((issue) => issue.message).join('\n\n');
     return (
       <div className="relative h-full min-h-[320px]">
-        <DeckMapErrorOverlay error={message} />
+        <DeckMapErrorOverlay
+          error={message}
+          title="Invalid map configuration"
+          defaultOpen
+        />
       </div>
     );
   }

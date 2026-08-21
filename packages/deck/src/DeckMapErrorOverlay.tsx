@@ -5,19 +5,25 @@ import {
 } from '@sqlrooms/ui';
 import {ChevronRightIcon} from 'lucide-react';
 
-/** Collapsible overlay for map config and rendering errors. */
+/**
+ * Collapsible overlay for map config and rendering errors.
+ * `error` is the detail text; `title` is the always-visible heading.
+ * Pass `defaultOpen` for config issues so the message is visible immediately.
+ */
 export function DeckMapErrorOverlay({
   error,
   title = "Map couldn't be rendered",
+  defaultOpen = false,
 }: {
   error: Error | string;
   title?: string;
+  defaultOpen?: boolean;
 }) {
   const message = typeof error === 'string' ? error : error.message;
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
       <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
-        <Collapsible>
+        <Collapsible defaultOpen={defaultOpen}>
           <div className="flex items-start gap-1">
             <span>{title}</span>
             <CollapsibleTrigger

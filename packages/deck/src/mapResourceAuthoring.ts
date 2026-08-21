@@ -199,6 +199,44 @@ function sqlMentionsIdentifier(sql: string, name: string): boolean {
   ).test(sql);
 }
 
+function findTopLevelFromIndex(sql: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === '(') {
+      depth += 1;
+      continue;
+    }
+    if (ch === ')') {
+      if (depth === 0) return -1;
+      depth -= 1;
+      continue;
+    }
+    if (depth !== 0) continue;
+    if (
+      (ch === 'F' || ch === 'f') &&
+      /^FROM\b/i.test(sql.slice(i)) &&
+      (i === 0 || !/[A-Za-z0-9_]/.test(sql[i - 1]!))
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+function getOuterSelectList(sql: string): string | undefined {
+  const match = /\bSELECT\s+(?:ALL\s+|DISTINCT\s+)?/i.exec(sql);
+  if (!match) return undefined;
+  const listStart = match.index + match[0].length;
+  const fromAt = findTopLevelFromIndex(sql, listStart);
+  if (fromAt < 0) return undefined;
+  return sql.slice(listStart, fromAt);
+}
+
+function stripExcludeClauses(selectList: string): string {
+  return selectList.replace(/\bEXCLUDE\s*\([^)]*\)/gi, '');
+}
+
 const KNOWN_GEOM_OUTPUT_NAMES = [
   'geom',
   'geometry',
@@ -207,17 +245,76 @@ const KNOWN_GEOM_OUTPUT_NAMES = [
   'the_geom',
 ];
 
-function sqlSelectListIncludesStar(sql: string): boolean {
-  const match = sql.match(/\bSELECT\s+([\s\S]+?)\bFROM\b/i);
-  return Boolean(
-    match && /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|,|$)/i.test(match[1]!),
+function selectStarExcludesIdentifier(
+  selectList: string,
+  name: string,
+): boolean {
+  const starRe = /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*/gi;
+  let match: RegExpExecArray | null;
+  while ((match = starRe.exec(selectList)) !== null) {
+    const after = selectList.slice(match.index + match[0].length);
+    const exclude = /^\s*EXCLUDE\s*\(([^)]*)\)/i.exec(after);
+    if (exclude && sqlMentionsIdentifier(exclude[1]!, name)) return true;
+  }
+  return false;
+}
+
+function selectStarKeepsGeometry(
+  selectList: string,
+  geometryColumn: string | undefined,
+): boolean {
+  if (
+    !/(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*(?:\s|$|,|EXCLUDE|REPLACE)/i.test(
+      selectList,
+    )
+  ) {
+    return false;
+  }
+  const names = geometryColumn ? [geometryColumn] : KNOWN_GEOM_OUTPUT_NAMES;
+  return !names.some((name) => selectStarExcludesIdentifier(selectList, name));
+}
+
+function getDatasetSourceSql(source: DeckMapDatasetSource | undefined): string {
+  if (isDeckMapSqlDatasetSource(source)) return source.sqlQuery ?? '';
+  if (isDeckMapTableDatasetSource(source)) return source.transformSql ?? '';
+  return '';
+}
+
+function getLonLatMissingGeometryRepair(options: {
+  datasetId: string;
+  source: DeckMapDatasetSource | undefined;
+  lon: string;
+  lat: string;
+}): string {
+  const quotedLon = options.lon.replace(/"/g, '""');
+  const quotedLat = options.lat.replace(/"/g, '""');
+  const pointExpr = `ST_AsWKB(ST_Point("${quotedLon}", "${quotedLat}"))`;
+  const bind =
+    `then set datasets.${options.datasetId}.geometryColumn and _sqlroomsBinding.geometryColumn to "__sqlrooms_geom" with geometryEncodingHint "wkb". ` +
+    `Do not put longitudeColumn/latitudeColumn on _sqlroomsBinding — those are only valid on fitToData.`;
+
+  if (isDeckMapSqlDatasetSource(options.source)) {
+    return (
+      `Revise source.sqlQuery so it projects ${pointExpr} AS "__sqlrooms_geom" ` +
+      `(wrap the current query if needed: SELECT src.*, ${pointExpr} AS "__sqlrooms_geom" FROM (<current sqlQuery>) AS src). ` +
+      `Do not add transformSql or read from __sqlrooms_source — this dataset is a pinned sqlQuery. ` +
+      bind
+    );
+  }
+
+  return (
+    `Use transformSql such as SELECT *, ${pointExpr} AS "__sqlrooms_geom" FROM __sqlrooms_source ` +
+    `WHERE "${quotedLon}" IS NOT NULL AND "${quotedLat}" IS NOT NULL, ` +
+    bind
   );
 }
 
 /**
- * Authored SQL that selects lon/lat columns but never produces a geometry
- * column. Table-only sources and `SELECT *` are left alone (native geom /
- * ST_Point inject can still apply).
+ * Authored SQL that projects lon/lat columns but never produces a geometry
+ * column. Inspects the outer SELECT list only (WHERE / JOIN / ORDER BY do not
+ * count). Table-only sources and `SELECT *` that still keep geom are left
+ * alone so native geom / ST_Point inject can apply. `SELECT * EXCLUDE (geom)`
+ * is treated as dropping geometry.
  */
 function sqlIsLonLatProjectionMissingGeometry(
   sql: string,
@@ -227,23 +324,26 @@ function sqlIsLonLatProjectionMissingGeometry(
 ): boolean {
   const trimmed = sql.trim();
   if (!trimmed) return false;
+  const selectList = getOuterSelectList(trimmed);
+  if (selectList === undefined) return false;
   if (
     /\bST_(AsWKB|Point|MakePoint|GeomFrom(?:Text|WKB)?|Centroid|PointOnSurface)\s*\(/i.test(
-      trimmed,
+      selectList,
     )
   ) {
     return false;
   }
-  if (sqlSelectListIncludesStar(trimmed)) return false;
+  if (selectStarKeepsGeometry(selectList, geometryColumn)) return false;
+  const outputList = stripExcludeClauses(selectList);
   if (
-    !sqlMentionsIdentifier(trimmed, lon) ||
-    !sqlMentionsIdentifier(trimmed, lat)
+    !sqlMentionsIdentifier(outputList, lon) ||
+    !sqlMentionsIdentifier(outputList, lat)
   ) {
     return false;
   }
-  if (geometryColumn) return !sqlMentionsIdentifier(trimmed, geometryColumn);
+  if (geometryColumn) return !sqlMentionsIdentifier(outputList, geometryColumn);
   return !KNOWN_GEOM_OUTPUT_NAMES.some((name) =>
-    sqlMentionsIdentifier(trimmed, name),
+    sqlMentionsIdentifier(outputList, name),
   );
 }
 
@@ -672,10 +772,8 @@ export function getDeckMapResourceConfigIssues(
       const dataset = config.datasets[boundDataset];
       const layerGeom = nonEmptyString(binding?.geometryColumn);
       const datasetGeom = nonEmptyString(dataset?.geometryColumn);
-      const source = dataset?.source as
-        | {transformSql?: string; sqlQuery?: string}
-        | undefined;
-      const sql = `${source?.transformSql ?? ''} ${source?.sqlQuery ?? ''}`;
+      const source = dataset?.source;
+      const sql = getDatasetSourceSql(source);
       const fitToData = config.fitToData;
       const fitMatchesDataset = fitToData?.dataset === boundDataset;
       const lon =
@@ -694,16 +792,16 @@ export function getDeckMapResourceConfigIssues(
         lat &&
         sqlIsLonLatProjectionMissingGeometry(sql, lon, lat, geometryColumn)
       ) {
-        const quotedLon = lon.replace(/"/g, '""');
-        const quotedLat = lat.replace(/"/g, '""');
         issues.push({
           path: `spec.layers.${index}._sqlroomsBinding.geometryColumn`,
           message:
             'This map needs point locations, not just longitude and latitude columns.',
-          repair:
-            `Use transformSql such as SELECT *, ST_AsWKB(ST_Point("${quotedLon}", "${quotedLat}")) AS "__sqlrooms_geom" FROM __sqlrooms_source WHERE "${quotedLon}" IS NOT NULL AND "${quotedLat}" IS NOT NULL, ` +
-            `then set datasets.${boundDataset}.geometryColumn and _sqlroomsBinding.geometryColumn to "__sqlrooms_geom" with geometryEncodingHint "wkb". ` +
-            `Do not put longitudeColumn/latitudeColumn on _sqlroomsBinding — those are only valid on fitToData.`,
+          repair: getLonLatMissingGeometryRepair({
+            datasetId: boundDataset,
+            source,
+            lon,
+            lat,
+          }),
         });
       }
     }
