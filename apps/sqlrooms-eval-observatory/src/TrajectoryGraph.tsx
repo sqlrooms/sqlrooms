@@ -107,7 +107,7 @@ export function TrajectoryGraph({
       enableDrag: true,
       fitViewOnInit: true,
       fitViewDelay: 250,
-      linkArrows: true,
+      linkDefaultArrows: true,
       linkWidth: 1,
       pointSizeScale: 1,
       renderFocusedPointRing: true,
