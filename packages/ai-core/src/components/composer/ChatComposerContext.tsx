@@ -13,11 +13,9 @@ import {
 } from '../ChatRuntimeContext';
 
 /**
- * Which chat runtime a {@link ChatComposerState} was normalized from.
- *
- * `'session'` sources state from the AI slice (`useStoreWithAi`); `'local-agent'`
- * sources state from the local-agent chat runtime
- * ({@link LocalAgentChatRuntime}) and never touches the AI slice.
+ * Which chat runtime a {@link ChatComposerState} was normalized from:
+ * `'session'` reads the AI slice, `'local-agent'` reads
+ * {@link LocalAgentChatRuntime} and never touches the slice.
  */
 export type ChatComposerMode = 'session' | 'local-agent';
 
@@ -81,8 +79,9 @@ const ChatComposerContext = createContext<ChatComposerState | null>(null);
  * otherwise.
  */
 function useSessionComposerState(): ChatComposerState {
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const sessionId = currentSession?.id;
+  // Select the id, not the session: the session object is replaced as messages
+  // stream in, which would re-render every composer on each token.
+  const sessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
 
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
   const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
@@ -119,23 +118,23 @@ function useSessionComposerState(): ChatComposerState {
     [sessionId, setPromptAction, setDraftPrompt],
   );
 
-  const canSend =
-    hasResolvableModel &&
-    prompt.trim().length > 0 &&
-    !isRunning &&
-    !isSummarizing;
+  // One predicate for both `canSend` (over the current prompt) and `send`'s own
+  // guard (over an optional override), so the two cannot disagree.
+  const canSendText = useCallback(
+    (text: string) =>
+      hasResolvableModel &&
+      !isRunning &&
+      !isSummarizing &&
+      text.trim().length > 0,
+    [hasResolvableModel, isRunning, isSummarizing],
+  );
+
+  const canSend = canSendText(prompt);
 
   const send = useCallback(
     (text?: string) => {
       const value = text ?? prompt;
-      if (
-        isRunning ||
-        isSummarizing ||
-        !hasResolvableModel ||
-        !value.trim().length
-      ) {
-        return;
-      }
+      if (!canSendText(value)) return;
 
       let activeSessionId = sessionId;
       if (!activeSessionId) {
@@ -154,9 +153,7 @@ function useSessionComposerState(): ChatComposerState {
     },
     [
       prompt,
-      isRunning,
-      isSummarizing,
-      hasResolvableModel,
+      canSendText,
       sessionId,
       createSession,
       setPromptAction,
@@ -171,6 +168,8 @@ function useSessionComposerState(): ChatComposerState {
     cancelAnalysis(sessionId);
   }, [sessionId, cancelAnalysis]);
 
+  const isBusy = isRunning || isSummarizing;
+
   const needsApiKey =
     hasResolvableModel &&
     (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
@@ -184,19 +183,10 @@ function useSessionComposerState(): ChatComposerState {
       cancel,
       canSend,
       isRunning,
-      isBusy: isRunning || isSummarizing,
+      isBusy,
       needsApiKey,
     }),
-    [
-      prompt,
-      setPrompt,
-      send,
-      cancel,
-      canSend,
-      isRunning,
-      isSummarizing,
-      needsApiKey,
-    ],
+    [prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey],
   );
 }
 
@@ -210,15 +200,11 @@ function useLocalAgentComposerState(
 ): ChatComposerState {
   const {prompt, setPrompt, sendPrompt, stop, isStreaming} = runtime;
 
-  const send = useCallback(
-    (text?: string) => {
-      sendPrompt(text);
-    },
-    [sendPrompt],
-  );
-
+  // `sendPrompt` already matches `send`'s signature and applies the same
+  // guards, so it is used directly. `stop` returns a promise, so it is wrapped
+  // to match `cancel`'s `void` contract.
   const cancel = useCallback(() => {
-    stop();
+    void stop();
   }, [stop]);
 
   const canSend = !isStreaming && prompt.trim().length > 0;
@@ -228,14 +214,14 @@ function useLocalAgentComposerState(
       mode: 'local-agent' as const,
       prompt,
       setPrompt,
-      send,
+      send: sendPrompt,
       cancel,
       canSend,
       isRunning: isStreaming,
       isBusy: isStreaming,
       needsApiKey: false,
     }),
-    [prompt, setPrompt, send, cancel, canSend, isStreaming],
+    [prompt, setPrompt, sendPrompt, cancel, canSend, isStreaming],
   );
 }
 

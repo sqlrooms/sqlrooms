@@ -13,6 +13,15 @@ import {mergeRefs} from '../primitives/mergeRefs';
 import {useChatComposer} from './ChatComposerContext';
 
 /**
+ * Whether an IME composition is in progress, so Enter commits the candidate
+ * rather than sending. `keyCode === 229` is the legacy signal from engines
+ * that don't set `isComposing` (hence the deprecation hint on it).
+ */
+function isImeComposing(event: KeyboardEvent<HTMLTextAreaElement>): boolean {
+  return event.nativeEvent.isComposing || event.keyCode === 229;
+}
+
+/**
  * Props for {@link Input}.
  */
 export type ChatComposerInputProps = Omit<
@@ -102,14 +111,7 @@ export const Input = forwardRef<HTMLTextAreaElement, ChatComposerInputProps>(
           return;
         }
 
-        // Guard IME composition: committing a CJK candidate with Enter must
-        // not also send. `keyCode === 229` covers engines without
-        // `isComposing`.
-        const nativeEvent = event.nativeEvent as unknown as {
-          isComposing?: boolean;
-        };
-        const legacyKeyCode = (event as unknown as {keyCode?: number}).keyCode;
-        if (nativeEvent.isComposing || legacyKeyCode === 229) return;
+        if (isImeComposing(event)) return;
 
         event.preventDefault();
 
