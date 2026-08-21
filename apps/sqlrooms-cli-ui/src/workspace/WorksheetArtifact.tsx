@@ -30,6 +30,7 @@ import {
   createStatefulBlockTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
 import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
@@ -204,8 +205,13 @@ function createWorksheetStatefulBlockRenderers(
     StatefulBlockArtifactType,
     BlockDocumentStatefulBlockRenderer
   > = {...WORKSHEET_STATEFUL_BLOCK_RENDERERS};
-  for (const blockType of profile.blocks.placeholderRenderers) {
-    renderers[blockType] = ExperimentalStatefulBlockPlaceholder;
+  const enabledBlockTypes = new Set<StatefulBlockArtifactType>(
+    profile.blocks.stateful,
+  );
+  for (const blockType of STATEFUL_BLOCK_ARTIFACT_TYPES) {
+    if (!enabledBlockTypes.has(blockType)) {
+      renderers[blockType] = ExperimentalStatefulBlockPlaceholder;
+    }
   }
   return renderers;
 }

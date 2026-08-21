@@ -644,6 +644,9 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
+// Capability profiles gate exposed behavior, not lifecycle state. Keep every
+// persisted slice registered so disabled content round-trips through narrower
+// profiles and can be restored when its capability is enabled again.
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
   layout: LayoutConfig,

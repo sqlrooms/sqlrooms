@@ -3,14 +3,13 @@
 The SQLRooms CLI exposes complete, named production capability profiles. The
 profile is selected by the Python launcher, included in `/api/config`, and
 resolved once by the UI. Artifact creation, worksheet blocks and renderers,
-command registration, run context, instructions, tools, nested agents, and
-dashboard map support all consume that same profile.
+command registration, run context, instructions, tools, nested agents, block
+renderer selection, and dashboard map support all consume that same profile.
 
 The checked-in Jest snapshots in
 `src/__tests__/__snapshots__/cliCapabilityProfiles.test.ts.snap` are the
 deterministic baseline for the exact profile contents. The coherence validator
-also checks dependencies between blocks, renderers, commands, artifacts, and AI
-tools.
+also checks dependencies between blocks, commands, artifacts, and AI tools.
 
 ## Current profiles
 
@@ -25,11 +24,17 @@ tools.
 | Additional instructions               | none                  | experimental app/map/HTML-app routing                                                             | worksheet chart/map     |
 | Skills                                | none                  | none                                                                                              | none                    |
 
-All three profiles retain lifecycle state for every currently persisted app slice.
-This is intentional: opening a workspace under the narrower `default` profile
-must preserve disabled experimental state and show placeholders rather than
-deleting or mutating it. The profile controls creation, editing, discovery,
-commands, AI exposure, and interactive rendering.
+The CLI app retains lifecycle state for every currently persisted app slice,
+independently of the selected profile. This app-level invariant is intentional:
+opening a workspace under a narrower profile must preserve disabled state and
+show placeholders rather than deleting or mutating it. Profiles control
+creation, editing, discovery, commands, AI exposure, and interactive rendering;
+they do not control store construction or persistence.
+
+`blocks.stateful` is the renderer source of truth. Enabled stateful block types
+use their interactive renderer; every other persisted stateful block type uses
+the placeholder renderer. Chart rendering remains available as the built-in
+non-stateful worksheet surface.
 
 The `worksheet-charts-maps` profile is dashboard-free. It keeps worksheet text,
 chart, and direct-map authoring plus data-analysis and artifact-context tools.

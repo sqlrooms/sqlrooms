@@ -14,7 +14,6 @@ export {
   type CliCapabilityProfileSnapshot,
   type CliCommandGroupId,
   type CliInstructionSetId,
-  type CliLifecycleSliceId,
   type CliNestedAgentId,
   type CliTopLevelToolGroupId,
 } from './types';
