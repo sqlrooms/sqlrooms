@@ -7,6 +7,10 @@ import {
   resolveCliCapabilityProfile,
 } from '../profiles';
 import {validateCliCapabilityProfile} from '../profiles/validateCliCapabilityProfile';
+import {
+  createStatefulBlockCommandTypes,
+  getEnabledStatefulBlockArtifactTypes,
+} from '../statefulBlockArtifactConfigs';
 
 describe('CLI capability profiles', () => {
   it.each(listCliCapabilityProfiles())(
@@ -62,6 +66,17 @@ describe('CLI capability profiles', () => {
     expect(profile.ai.topLevelToolGroups).not.toContain('dashboard-agent');
     expect(profile.ai.nestedAgents).not.toContain('dashboard');
     expect(profile.ai.nestedAgents).not.toContain('worksheet-dashboard');
+  });
+
+  it('registers only map stateful blocks for the worksheet profile', () => {
+    const profile = WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
+
+    expect(getEnabledStatefulBlockArtifactTypes(profile)).toEqual(['map']);
+    expect(
+      createStatefulBlockCommandTypes({profile}).map(
+        ({blockType}) => blockType,
+      ),
+    ).toEqual(['map']);
   });
 
   it('rejects unknown and conflicting runtime selections', () => {

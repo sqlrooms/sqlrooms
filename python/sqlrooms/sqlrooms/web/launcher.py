@@ -518,6 +518,8 @@ class SqlroomsHttpServer:
                 f"'{resolved_capability_profile}'."
             )
         self.capability_profile = resolved_capability_profile
+        if sync_enabled and self.capability_profile != "experimental":
+            raise ValueError("sync_enabled requires capability_profile 'experimental'.")
         self.experimental_enabled = self.capability_profile == "experimental"
         self.ai_devtools = bool(ai_devtools)
         self.mcp_enabled_default = bool(mcp_enabled)

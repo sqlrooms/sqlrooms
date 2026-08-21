@@ -8,6 +8,10 @@ import {
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
 import {createStore} from 'zustand';
+import {
+  CLI_ARTIFACT_TYPES,
+  type CliArtifactType,
+} from '../artifactTypeIds';
 import {createDashboardCommands} from '../createDashboardCommands';
 
 type TestRoomState = BaseRoomStoreState & ArtifactsSliceState;
@@ -48,6 +52,23 @@ function getCommand(id: string) {
 }
 
 describe('createDashboardCommands', () => {
+  it('keeps generic worksheet commands when dashboard creation is disabled', () => {
+    expect(
+      createDashboardCommands({
+        artifactTypes: Object.fromEntries(
+          CLI_ARTIFACT_TYPES.map((artifactType) => [
+            artifactType,
+            {canCreate: artifactType === 'worksheet'},
+          ]),
+        ) as Record<CliArtifactType, {canCreate: boolean}>,
+      }).map(({id}) => id),
+    ).toEqual([
+      'artifact.select',
+      'artifact.rename',
+      'worksheet.create-artifact',
+    ]);
+  });
+
   it('renames artifacts through the artifact slice and preserves rename hooks', async () => {
     const events: string[] = [];
     const store = createArtifactStore(events);

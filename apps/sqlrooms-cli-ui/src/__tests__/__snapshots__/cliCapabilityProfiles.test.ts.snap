@@ -239,7 +239,6 @@ exports[`CLI capability profiles locks the worksheet-charts-maps capability base
       "artifact-context",
       "worksheet-agent",
       "chart",
-      "chart-image-for-markdown",
     ],
   },
   "artifacts": {

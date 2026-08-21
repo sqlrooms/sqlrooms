@@ -518,6 +518,11 @@ the package API generic.
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
 
+Hosts with a narrower block surface can also pass `allowedBlockTypes`. The
+generic create, append, insert, and update commands then reject other block
+kinds; allowed `statefulBlock` payloads are additionally restricted to the
+configured `statefulBlockTypes`.
+
 Block mutation command results include the full refreshed document data plus
 focused mutation payloads such as `blockId`, `blockIds`, `blockType`,
 `blockTypes`, and `affectedBlocks`. Chart and stateful block creation also

@@ -25,7 +25,7 @@ tools.
 | Additional instructions               | none                  | experimental app/map/HTML-app routing                                                             | worksheet chart/map     |
 | Skills                                | none                  | none                                                                                              | none                    |
 
-Both profiles retain lifecycle state for every currently persisted app slice.
+All three profiles retain lifecycle state for every currently persisted app slice.
 This is intentional: opening a workspace under the narrower `default` profile
 must preserve disabled experimental state and show placeholders rather than
 deleting or mutating it. The profile controls creation, editing, discovery,

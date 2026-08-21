@@ -80,6 +80,10 @@ def test_resolve_capability_profile_defaults_and_alias():
         _resolve_capability_profile("experimental", None, experimental=False)
         == "experimental"
     )
+    assert (
+        _resolve_capability_profile(None, "default", experimental=True)
+        == "experimental"
+    )
 
 
 def test_resolve_capability_profile_prefers_cli_over_config():

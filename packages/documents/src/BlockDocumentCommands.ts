@@ -62,6 +62,14 @@ export type CreateBlockDocumentCommandsOptions<
   commandGroup?: string;
   defaultTitle?: string;
   statefulBlockTypes?: BlockDocumentStatefulBlockCommandType<TRoomState>[];
+  /**
+   * Top-level block kinds accepted by generic create, append, insert, and
+   * update commands. Omit to accept every block kind.
+   *
+   * When `statefulBlock` is allowed, its `blockType` must also be present in
+   * `statefulBlockTypes`.
+   */
+  allowedBlockTypes?: readonly BlockDocumentBlockType['type'][];
 };
 
 type BlockDocumentCommandState = BaseRoomStoreState & {
@@ -228,6 +236,35 @@ function labelFromBlockType(blockType: string) {
     .join(' ');
 }
 
+function constrainBlockInput<TSchema extends z.ZodType<unknown>>(
+  schema: TSchema,
+  blocksFromInput: (input: z.infer<TSchema>) => BlockDocumentBlockType[],
+  allowedBlockTypes: ReadonlySet<string> | undefined,
+  statefulBlockTypes: ReadonlySet<string>,
+): TSchema {
+  if (!allowedBlockTypes) return schema;
+  return schema.superRefine((input, ctx) => {
+    for (const [index, block] of blocksFromInput(input).entries()) {
+      if (!allowedBlockTypes.has(block.type)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', index],
+          message: `Unsupported block type "${block.type}".`,
+        });
+      } else if (
+        block.type === 'statefulBlock' &&
+        !statefulBlockTypes.has(block.blockType)
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', index, 'blockType'],
+          message: `Unsupported stateful block type "${block.blockType}".`,
+        });
+      }
+    }
+  }) as TSchema;
+}
+
 export function createBlockDocumentCommandIds(
   commandNamespace = 'block-document',
 ) {
@@ -256,6 +293,7 @@ export function createBlockDocumentCommands<
   commandGroup = artifactLabel,
   defaultTitle = artifactLabel,
   statefulBlockTypes = [],
+  allowedBlockTypes,
 }: CreateBlockDocumentCommandsOptions<TRoomState> = {}): RoomCommand<TRoomState>[] {
   const label = artifactLabel;
   const labelLower = lowerLabel(label);
@@ -263,6 +301,34 @@ export function createBlockDocumentCommands<
     `${commandNamespace}.${suffix}`;
   const statefulBlockTypesByType = new Map(
     statefulBlockTypes.map((blockType) => [blockType.blockType, blockType]),
+  );
+  const allowedBlockTypeSet = allowedBlockTypes
+    ? new Set<string>(allowedBlockTypes)
+    : undefined;
+  const statefulBlockTypeSet = new Set(statefulBlockTypesByType.keys());
+  const createInputSchema = constrainBlockInput(
+    BlockDocumentCreateInput,
+    (input) => input.blocks ?? [],
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const blocksInputSchema = constrainBlockInput(
+    BlockDocumentBlocksInput,
+    (input) => input.blocks,
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const insertBlocksInputSchema = constrainBlockInput(
+    BlockDocumentInsertBlocksInput,
+    (input) => input.blocks,
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const updateBlockInputSchema = constrainBlockInput(
+    BlockDocumentUpdateBlockInput,
+    (input) => [input.block],
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
   );
 
   const commandsBySuffix = {
@@ -336,7 +402,7 @@ export function createBlockDocumentCommands<
       description: `Create a ${label} artifact with optional initial blocks`,
       group: commandGroup,
       keywords: [labelLower, 'create', 'new', 'blocks'],
-      inputSchema: BlockDocumentCreateInput,
+      inputSchema: createInputSchema,
       inputDescription: 'Optional title, initial blocks, and select flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'low'},
       execute: (context, input) => {
@@ -379,7 +445,7 @@ export function createBlockDocumentCommands<
       description: `Append top-level blocks to a ${label} artifact`,
       group: commandGroup,
       keywords: [labelLower, 'append', 'blocks'],
-      inputSchema: BlockDocumentBlocksInput,
+      inputSchema: blocksInputSchema,
       inputDescription: `${label} artifact ID and blocks to append.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
@@ -412,7 +478,7 @@ export function createBlockDocumentCommands<
       description: `Insert top-level blocks into a ${label} artifact`,
       group: commandGroup,
       keywords: [labelLower, 'insert', 'blocks'],
-      inputSchema: BlockDocumentInsertBlocksInput,
+      inputSchema: insertBlocksInputSchema,
       inputDescription: `${label} artifact ID, insertion index, and blocks.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
@@ -448,7 +514,7 @@ export function createBlockDocumentCommands<
       description: `Replace one top-level ${label} block by block ID`,
       group: commandGroup,
       keywords: [labelLower, 'update', 'block'],
-      inputSchema: BlockDocumentUpdateBlockInput,
+      inputSchema: updateBlockInputSchema,
       inputDescription: `${label} artifact ID, block ID, and replacement block.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {

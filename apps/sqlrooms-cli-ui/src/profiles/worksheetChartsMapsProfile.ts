@@ -30,7 +30,6 @@ export const WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE = {
       'artifact-context',
       'worksheet-agent',
       'chart',
-      'chart-image-for-markdown',
     ],
     nestedAgents: ['worksheet'],
   },

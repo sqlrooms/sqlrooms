@@ -100,6 +100,7 @@ import {
   createDocumentCommands,
   createDocumentsSlice,
   DocumentsSliceConfig,
+  type BlockDocumentBlock,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
@@ -161,6 +162,14 @@ const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
 const BLOCK_DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents/block-document';
 const BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER = '@sqlrooms/python/block-document';
+const WORKSHEET_CHARTS_MAPS_ALLOWED_BLOCK_TYPES = [
+  'heading',
+  'paragraph',
+  'list',
+  'todo',
+  'chart',
+  'statefulBlock',
+] as const satisfies readonly BlockDocumentBlock['type'][];
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
 In the SQLRooms CLI app, a Worksheet is a block document artifact. When the user asks to create, edit, inspect, or add content to a worksheet, target the current worksheet artifact using block-document commands and block-document agent tools. Use the word Worksheet in user-facing replies, but use block-document tool names and command IDs when invoking tools. The artifact type may still be "worksheet"; its editable content model is a block document.
@@ -739,13 +748,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
-          if (cliCapabilityProfile.commands.includes('dashboard')) {
-            registerCommandsForOwner(
-              store,
-              DASHBOARD_COMMAND_OWNER,
-              createDashboardCommands({artifactTypes: cliArtifactTypes}),
-            );
-          }
+          registerCommandsForOwner(
+            store,
+            DASHBOARD_COMMAND_OWNER,
+            createDashboardCommands({artifactTypes: cliArtifactTypes}),
+          );
           if (cliCapabilityProfile.commands.includes('mosaic-dashboard')) {
             registerCommandsForOwner(
               store,
@@ -769,6 +776,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 statefulBlockTypes: createStatefulBlockCommandTypes({
                   profile: cliCapabilityProfile,
                 }),
+                allowedBlockTypes:
+                  cliCapabilityProfile.name === 'worksheet-charts-maps'
+                    ? WORKSHEET_CHARTS_MAPS_ALLOWED_BLOCK_TYPES
+                    : undefined,
               }),
             );
           }
