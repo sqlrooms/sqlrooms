@@ -8,16 +8,22 @@ in the evidence envelope.
 
 ## Run locally
 
-Build workspace packages, set an OpenRouter key, and run either the whole suite
-or one scenario. `evals:nightly` first creates the Node provider bundle used by
-Promptfoo, avoiding browser-only CSS/module imports from application barrels:
+Build workspace packages, copy the local environment template, set an OpenRouter
+key in `.env.local`, and run either the whole suite or one scenario.
+`evals:nightly` first creates the Node provider bundle used by Promptfoo,
+avoiding browser-only CSS/module imports from application barrels:
 
 ```sh
 pnpm build
-export OPENROUTER_API_KEY=...
+cp .env.example .env.local
+# Edit .env.local and set OPENROUTER_API_KEY.
 pnpm evals:nightly
 pnpm evals:nightly --filter-pattern 'worksheet.create-chart-map'
 ```
+
+An existing environment variable takes precedence over `.env.local`. The
+nightly GitHub Actions workflow supplies `OPENROUTER_API_KEY` from GitHub
+Secrets, so CI does not depend on a local environment file.
 
 The model revision, temperature, maximum steps, scenario/profile versions, and
 three repetitions are pinned in `promptfooconfig.yaml`. Promptfoo stores its
