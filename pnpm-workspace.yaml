@@ -5,6 +5,7 @@ packages:
   - 'packages/kepler.gl/src/*'
   - 'apps/*'
   - 'python/*'
+engineStrict: true
 overrides:
   # First same-major releases that fix provider-utils SSRF (CVE-2026-8768).
   # GHSA-866g-f22w-33x8 remains accepted on 3.x until an upstream backport exists.
