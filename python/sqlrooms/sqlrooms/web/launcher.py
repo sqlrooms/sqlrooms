@@ -501,8 +501,10 @@ class SqlroomsHttpServer:
         self.ai_model_parameters = ai_model_parameters or {}
         self.open_browser = open_browser
         self.serve_ui = serve_ui
-        resolved_capability_profile = capability_profile or (
-            "experimental" if experimental_enabled else "default"
+        resolved_capability_profile = (
+            capability_profile
+            if capability_profile is not None
+            else ("experimental" if experimental_enabled else "default")
         )
         if resolved_capability_profile not in CAPABILITY_PROFILE_NAMES:
             expected = ", ".join(CAPABILITY_PROFILE_NAMES)

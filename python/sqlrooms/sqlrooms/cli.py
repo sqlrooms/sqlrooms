@@ -155,7 +155,7 @@ def _resolve_capability_profile(
     experimental: bool,
 ) -> str:
     """Resolve CLI/config selection and the legacy ``--experimental`` alias."""
-    selected = explicit_profile or config_profile
+    selected = explicit_profile if explicit_profile is not None else config_profile
     if selected is not None:
         selected = selected.strip()
         if selected not in CAPABILITY_PROFILE_NAMES:

@@ -1,5 +1,8 @@
-import type {CliAiBlockType, CliArtifactType} from '../artifactTypeIds';
-import type {StatefulBlockArtifactType} from '../statefulBlockArtifactConfigs';
+import type {
+  CliAiBlockType,
+  CliArtifactType,
+  StatefulBlockArtifactType,
+} from '../artifactTypeIds';
 
 /** Names of production capability profiles supported by the SQLRooms CLI. */
 export const CLI_CAPABILITY_PROFILE_NAMES = [

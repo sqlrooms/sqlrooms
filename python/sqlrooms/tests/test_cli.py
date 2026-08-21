@@ -105,6 +105,16 @@ def test_resolve_capability_profile_rejects_unknown_and_conflicting_alias():
         raise AssertionError("Expected conflicting profile failure")
 
 
+def test_cli_rejects_empty_explicit_profile():
+    result = runner.invoke(
+        app,
+        ["--no-config", "--profile", "", ":memory:"],
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown SQLRooms capability profile" in result.stderr
+
+
 def test_cli_passes_named_profile_to_server(monkeypatch):
     captured = {}
 

@@ -25,7 +25,7 @@ export function resolveCliCapabilityProfile({
 }: ResolveCliCapabilityProfileOptions = {}): CliCapabilityProfile {
   const normalizedName = profileName?.trim();
   if (
-    normalizedName &&
+    profileName !== undefined &&
     !CLI_CAPABILITY_PROFILE_NAMES.includes(
       normalizedName as CliCapabilityProfileName,
     )
@@ -45,10 +45,13 @@ export function resolveCliCapabilityProfile({
     );
   }
 
-  const resolvedName = (normalizedName ||
-    (experimentalEnabled
-      ? 'experimental'
-      : 'default')) as CliCapabilityProfileName;
+  const resolvedName = (
+    profileName === undefined
+      ? experimentalEnabled
+        ? 'experimental'
+        : 'default'
+      : normalizedName
+  ) as CliCapabilityProfileName;
   return CLI_CAPABILITY_PROFILES[resolvedName];
 }
 

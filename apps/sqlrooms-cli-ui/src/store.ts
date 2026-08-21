@@ -767,7 +767,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             registerCommandsForOwner(
               store,
               CLI_BLOCK_DOCUMENT_COMMAND_OWNER,
-              createCliBlockDocumentCommands(),
+              createCliBlockDocumentCommands({
+                statefulBlockTypes: cliCapabilityProfile.blocks.stateful,
+              }),
             );
           }
           if (cliCapabilityProfile.commands.includes('block-document-python')) {

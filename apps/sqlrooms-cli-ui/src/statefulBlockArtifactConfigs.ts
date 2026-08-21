@@ -9,6 +9,10 @@ import {
   DataTableBlockSettings,
   MosaicDashboardSettings,
 } from '@sqlrooms/mosaic';
+import {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
 import type {RoomState} from './store-types';
 import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
@@ -187,14 +191,15 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.python.removeBlock(artifactId);
     },
   },
-} as const satisfies Record<string, StatefulBlockArtifactConfig>;
+} as const satisfies Record<
+  StatefulBlockArtifactType,
+  StatefulBlockArtifactConfig
+>;
 
-export type StatefulBlockArtifactType =
-  keyof typeof STATEFUL_BLOCK_ARTIFACT_CONFIGS;
-
-export const STATEFUL_BLOCK_ARTIFACT_TYPES = Object.keys(
-  STATEFUL_BLOCK_ARTIFACT_CONFIGS,
-) as StatefulBlockArtifactType[];
+export {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
 
 export function isStatefulBlockArtifactType(
   artifactType: string,

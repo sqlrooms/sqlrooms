@@ -501,6 +501,16 @@ def test_server_rejects_unknown_or_conflicting_capability_profile(tmp_path):
             port=0,
             ws_port=None,
             open_browser=False,
+            capability_profile="",
+        )
+
+    with pytest.raises(ValueError, match="Unknown SQLRooms capability profile"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db",
+            host="127.0.0.1",
+            port=0,
+            ws_port=None,
+            open_browser=False,
             capability_profile="unknown",
         )
 

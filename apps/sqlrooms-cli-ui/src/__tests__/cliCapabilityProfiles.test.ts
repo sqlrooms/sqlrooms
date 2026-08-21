@@ -54,6 +54,9 @@ describe('CLI capability profiles', () => {
     expect(() => resolveCliCapabilityProfile({profileName: 'unknown'})).toThrow(
       'Unknown SQLRooms capability profile',
     );
+    expect(() => resolveCliCapabilityProfile({profileName: '   '})).toThrow(
+      'Unknown SQLRooms capability profile',
+    );
     expect(() =>
       resolveCliCapabilityProfile({
         profileName: 'default',
