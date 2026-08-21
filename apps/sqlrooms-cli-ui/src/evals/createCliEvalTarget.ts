@@ -281,7 +281,10 @@ function eventsFromMessages(
 function createHeadlessStore(
   profile: CliCapabilityProfile,
   model: LanguageModel,
-  maxSteps?: number,
+  {
+    maxSteps,
+    timeoutMs,
+  }: Pick<CliEvalTargetOptions, 'maxSteps' | 'timeoutMs'> = {},
 ): {
   store: StoreApi<RoomState>;
   connector: ReturnType<typeof createNodeDuckDbConnector>;
@@ -356,7 +359,7 @@ function createHeadlessStore(
         formatRunContextInstructions: ({runContext}) =>
           formatRunContextInstructions(runContext, typedStore),
         maxSteps,
-        timeouts: {runMs: DEFAULT_TIMEOUT_MS},
+        timeouts: {runMs: timeoutMs ?? DEFAULT_TIMEOUT_MS},
       })(set, get, store),
     };
     return state as unknown as RoomState;
@@ -457,11 +460,10 @@ export function createCliEvalTarget(
     profileName: 'worksheet-charts-maps',
   });
   const modelIdentity = getLanguageModelIdentity(options.model);
-  const {store, connector} = createHeadlessStore(
-    profile,
-    options.model,
-    options.maxSteps,
-  );
+  const {store, connector} = createHeadlessStore(profile, options.model, {
+    maxSteps: options.maxSteps,
+    timeoutMs: options.timeoutMs,
+  });
   const now = options.now ?? (() => new Date());
   let initialized = false;
   let disposed = false;
