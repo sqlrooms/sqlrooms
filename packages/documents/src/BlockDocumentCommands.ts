@@ -53,6 +53,13 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
   ) => void;
 };
 
+/**
+ * Configuration for a reusable block-document command family.
+ *
+ * `allowedBlockTypes` constrains generic block mutations. If it includes
+ * `statefulBlock`, an individual stateful block is accepted only when its
+ * `blockType` is also configured in `statefulBlockTypes`.
+ */
 export type CreateBlockDocumentCommandsOptions<
   TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
 > = {
@@ -293,9 +300,11 @@ export function createBlockDocumentCommandIds(
  * and labelled with `artifactLabel`, so a host can register more than one
  * block-document family (for example worksheets and generic documents).
  *
- * @param options - Artifact type, labels, namespace, and supported stateful
- * block types. All fields are optional and default to generic block-document
- * values.
+ * @param options - Artifact type, labels, namespace, supported stateful block
+ * types, and optional generic-mutation constraints. When `allowedBlockTypes`
+ * includes `statefulBlock`, only block types configured in
+ * `statefulBlockTypes` are accepted. All fields are optional and default to
+ * generic block-document values.
  * @returns The list of {@link RoomCommand}s to register with the host store.
  */
 export function createBlockDocumentCommands<

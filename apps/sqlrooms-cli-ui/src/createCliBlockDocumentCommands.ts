@@ -173,6 +173,7 @@ export function createCliBlockDocumentCommands({
 }: {
   statefulBlockTypes?: readonly StatefulBlockArtifactType[];
 } = {}): RoomCommand<RoomState>[] {
+  const statefulBlockTypeSet = new Set<string>(statefulBlockTypes);
   const commands: RoomCommand<RoomState>[] = [
     {
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
@@ -329,6 +330,14 @@ export function createCliBlockDocumentCommands({
         if (!existing) {
           throw new Error(
             `Block document block ${blockId} was not found in ${blockDocumentId}`,
+          );
+        }
+        if (
+          existing.type === 'statefulBlock' &&
+          !statefulBlockTypeSet.has(existing.blockType)
+        ) {
+          throw new Error(
+            `Stateful block type ${existing.blockType} is not available in the selected capability profile`,
           );
         }
         const updated = state.blockDocuments.updateBlock(
@@ -499,7 +508,7 @@ export function createCliBlockDocumentCommands({
     const blockType =
       CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES[
         command.id as keyof typeof CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES
-    ];
+      ];
     return blockType === undefined || enabledBlockTypes.has(blockType);
   });
 }

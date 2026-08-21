@@ -1,5 +1,4 @@
 import {createStore} from 'zustand';
-import {jest} from '@jest/globals';
 import {
   createBaseRoomSlice,
   type BaseRoomStoreState,
@@ -177,7 +176,19 @@ describe('createArtifactContextAiTools', () => {
       primaryItemId: 'dashboard-1',
       capturedAt: 1,
     };
-    const readArtifact = jest.fn();
+    const readArtifactCalls: string[] = [];
+    const readArtifact = ({artifactId}: {artifactId: string}) => {
+      readArtifactCalls.push(artifactId);
+      return {
+        success: true as const,
+        artifact: {
+          artifactId,
+          title: 'Doc',
+          type: 'document',
+        },
+        payload: undefined,
+      };
+    };
     const tools = createArtifactContextAiTools({
       store,
       isArtifactAllowed: ({artifact}) => artifact.type === 'document',
@@ -195,10 +206,8 @@ describe('createArtifactContextAiTools', () => {
     expect(listResult.llmResult.primaryArtifactId).toBe('doc-1');
 
     await (tools.read_context_artifact as any).execute({}, executionContext);
-    expect(readArtifact).toHaveBeenCalledWith(
-      expect.objectContaining({artifactId: 'doc-1'}),
-    );
-    readArtifact.mockClear();
+    expect(readArtifactCalls).toEqual(['doc-1']);
+    readArtifactCalls.length = 0;
 
     const setResult = await (tools.set_primary_context_artifact as any).execute(
       {artifactId: 'dashboard-1'},
@@ -228,6 +237,58 @@ describe('createArtifactContextAiTools', () => {
         'is not in the current run context',
       ),
     });
-    expect(readArtifact).not.toHaveBeenCalled();
+    expect(readArtifactCalls).toEqual([]);
+  });
+
+  it('preserves non-artifact context when changing the primary artifact', async () => {
+    const store = createTestStore();
+    let runContext: AiRunContext | undefined = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+        {
+          kind: 'table',
+          id: 'main.sales',
+          type: 'table',
+          title: 'Sales',
+        },
+        {
+          kind: 'block',
+          id: 'doc-1:chart-1',
+          type: 'chart',
+          title: 'Revenue chart',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {
+        getAiRunContext: () => runContext,
+        setAiRunContext: (nextContext: AiRunContext) => {
+          runContext = nextContext;
+        },
+      },
+    );
+
+    expect(result.llmResult).toMatchObject({
+      success: true,
+      primaryArtifactId: 'doc-1',
+    });
+    expect(runContext?.items.map(({kind, id}) => ({kind, id}))).toEqual([
+      {kind: 'artifact', id: 'doc-1'},
+      {kind: 'table', id: 'main.sales'},
+      {kind: 'block', id: 'doc-1:chart-1'},
+    ]);
   });
 });

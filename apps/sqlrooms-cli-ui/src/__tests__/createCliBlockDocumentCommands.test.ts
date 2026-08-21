@@ -26,6 +26,22 @@ function command(id: string) {
   return result;
 }
 
+function profileCommand(
+  id: string,
+  statefulBlockTypes: readonly (
+    | 'dashboard'
+    | 'data-table'
+    | 'html-app'
+    | 'map'
+  )[],
+) {
+  const result = createCliBlockDocumentCommands({statefulBlockTypes}).find(
+    (item) => item.id === id,
+  );
+  if (!result) throw new Error(`Missing ${id}`);
+  return result;
+}
+
 function setup() {
   const blocks: any[] = [
     {
@@ -148,6 +164,34 @@ describe('createCliBlockDocumentCommands', () => {
       'block-document.update-block-metadata',
       'block-document.add-map-block',
     ]);
+  });
+
+  it('rejects metadata edits for stateful blocks disabled by the profile', async () => {
+    const {state} = setup();
+    state.blockDocuments.getBlocks = () => [
+      {
+        id: 'dashboard-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        caption: 'Dashboard',
+      },
+    ];
+    const updateMetadata = profileCommand(
+      'block-document.update-block-metadata',
+      WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    );
+
+    expect(() =>
+      updateMetadata.execute({getState: () => state} as any, {
+        blockDocumentId: 'worksheet-1',
+        blockId: 'dashboard-block',
+        caption: 'Changed',
+      }),
+    ).toThrow(
+      'Stateful block type dashboard is not available in the selected capability profile',
+    );
+    expect(state.blockDocuments.updateBlock).not.toHaveBeenCalled();
   });
 
   it('creates a direct worksheet map without a model or dashboard command', async () => {

@@ -255,8 +255,18 @@ function getAllowedContextArtifactItems<TState extends ArtifactsSliceState>(
   state: TState,
   runContext: AiRunContext | undefined,
 ): AiRunContextItem[] {
+  return getEligibleRunContextItems(options, state, runContext).filter(
+    (item) => item.kind === 'artifact',
+  );
+}
+
+function getEligibleRunContextItems<TState extends ArtifactsSliceState>(
+  options: ArtifactContextToolsOptions<TState>,
+  state: TState,
+  runContext: AiRunContext | undefined,
+): AiRunContextItem[] {
   return getAiRunContextItems(runContext).filter((item) => {
-    if (item.kind !== 'artifact') return false;
+    if (item.kind !== 'artifact') return true;
     const artifact = state.artifacts.config.artifactsById[item.id];
     if (!artifact) return !options.isArtifactAllowed;
     return (
@@ -343,7 +353,7 @@ function setPrimaryArtifact<TState extends ArtifactsSliceState>(
   const eligibleRunContext = options.isArtifactAllowed
     ? {
         ...(runContext ?? {}),
-        items: getAllowedContextArtifactItems(options, state, runContext),
+        items: getEligibleRunContextItems(options, state, runContext),
       }
     : runContext;
   const nextContext = setAiRunContextPrimaryItem(eligibleRunContext, item);
