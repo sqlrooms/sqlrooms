@@ -549,7 +549,7 @@ export function createCliEvalTarget(
             sequence: events.length,
             timestamp: endedAt.toISOString(),
             type: 'error',
-            name: error.name,
+            ...(error.name ? {name: error.name} : {}),
             data: {message: error.message, ...(error.metadata ?? {})},
           });
         }
