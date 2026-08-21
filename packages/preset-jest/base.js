@@ -29,11 +29,27 @@ export default {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  // Compile SQLRooms package output from both conventional node_modules trees
+  // and pnpm's virtual store while continuing to ignore other dependencies.
+  transformIgnorePatterns: [
+    'node_modules/(?!\\.pnpm(?:/|$)|@sqlrooms/)',
+    'node_modules/\\.pnpm/(?!@sqlrooms\\+[^@/]+@)',
+    '\\.pnp\\.[^\\/]+$',
+  ],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
         useESM: true,
+      },
+    ],
+    '^.+\\.jsx?$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: {
+          allowJs: true,
+        },
       },
     ],
   },
