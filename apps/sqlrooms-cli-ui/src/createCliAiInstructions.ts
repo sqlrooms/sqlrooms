@@ -41,9 +41,10 @@ This SQLRooms session exposes worksheet artifacts with text, chart, and direct m
 const WORKSHEET_AGENT_ROUTING_INSTRUCTIONS = `
 The ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} tool edits an existing Worksheet and requires its blockDocumentId; it does not create the Worksheet artifact container.
 
-- When the user requests a new Worksheet and no Worksheet artifact ID is available in run context, use the command tools to execute block-document.create exactly once. Then call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} with the returned data.artifactId as blockDocumentId and delegate all requested text, chart, map, and other block creation to it.
+- An explicit request to create a new Worksheet takes precedence over any Worksheet artifact ID in run context. For that request, use the command tools to execute block-document.create exactly once, then use the returned result.data.artifactId as the new blockDocumentId.
+- Delegate requested block types exposed by the current profile's ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} to it. This includes text and charts, plus maps, dashboards, data tables, or HTML apps when the tool description lists them. For Worksheet block types that the tool does not expose, such as Python, pivot, document, or SQL-query blocks, use the corresponding registered block-document commands after creating the container.
 - After creating the Worksheet container, do not create its requested chart or map blocks through generic block-document commands. The Worksheet agent owns those block writes and has the specialized authoring contracts needed to produce valid content.
-- When a Worksheet artifact ID is already available in run context, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} with that ID directly and do not create another Worksheet.
+- When the user asks to edit or add content to an existing Worksheet and its artifact ID is available in run context, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} with that ID directly and do not create another Worksheet.
 `;
 
 /** Builds the production CLI assistant instructions for a capability profile. */

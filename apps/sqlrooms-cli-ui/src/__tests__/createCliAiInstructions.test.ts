@@ -26,13 +26,19 @@ describe('createCliAiInstructions', () => {
       'execute block-document.create exactly once',
     );
     expect(instructions).toContain(
-      'returned data.artifactId as blockDocumentId',
+      'returned result.data.artifactId as the new blockDocumentId',
+    );
+    expect(instructions).toContain(
+      'takes precedence over any Worksheet artifact ID in run context',
     );
     expect(instructions).toContain(
       'do not create its requested chart or map blocks through generic block-document commands',
     );
     expect(instructions).toContain(
-      'call block_document_agent with that ID directly and do not create another Worksheet',
+      'For Worksheet block types that the tool does not expose, such as Python, pivot, document, or SQL-query blocks, use the corresponding registered block-document commands',
+    );
+    expect(instructions).toContain(
+      'asks to edit or add content to an existing Worksheet',
     );
   });
 });

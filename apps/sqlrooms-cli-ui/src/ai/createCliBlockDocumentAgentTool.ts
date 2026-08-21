@@ -586,7 +586,7 @@ ${dashboardBlocksEnabled ? '- DASHBOARD BLOCKS (interactive dashboards for multi
 ${dataTableBlocksEnabled ? '- DATA TABLE EXPLORER BLOCKS' : ''}
 ${htmlAppBlocksEnabled ? '- HTML APP BLOCKS (custom browser apps powered by window.sqlrooms.query/queryRows)' : ''}
 
-This tool requires the target Worksheet's blockDocumentId and does not create the Worksheet artifact container. For a new Worksheet, first execute the block-document.create command exactly once, then call this tool with the returned data.artifactId as blockDocumentId. Delegate the requested Worksheet blocks to this agent instead of creating charts or maps through generic commands.
+This tool requires the target Worksheet's blockDocumentId and does not create the Worksheet artifact container. For an explicit new-Worksheet request, first execute the block-document.create command exactly once even when another Worksheet is in run context, then call this tool with the returned result.data.artifactId as blockDocumentId. Delegate the block types listed above to this agent instead of creating charts or maps through generic commands. Use registered block-document commands for requested block types this tool does not expose, such as Python, pivot, document, or SQL-query blocks.
 
 ${
   dashboardBlocksEnabled
