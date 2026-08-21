@@ -395,6 +395,38 @@ describe('block document commands', () => {
         block: {id: 'ignored', type: 'image', assetId: 'asset-1'},
       }),
     ).resolves.toMatchObject({success: false});
+    store.getState().blockDocuments.appendBlocks(artifactId, [
+      {
+        id: 'persisted-document-1',
+        type: 'statefulBlock',
+        blockType: 'document',
+        blockInstanceId: 'persisted-document-1',
+      },
+    ]);
+    await expect(
+      store.getState().commands.invokeCommand('block-document.update-block', {
+        artifactId,
+        blockId: 'persisted-document-1',
+        block: {
+          id: 'ignored',
+          type: 'paragraph',
+          text: [{type: 'text', text: 'Replacement'}],
+        },
+      }),
+    ).resolves.toMatchObject({success: false});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.remove-block', {
+        artifactId,
+        blockId: 'persisted-document-1',
+      }),
+    ).resolves.toMatchObject({success: false});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.move-block', {
+        artifactId,
+        blockId: 'persisted-document-1',
+        toIndex: 0,
+      }),
+    ).resolves.toMatchObject({success: false});
 
     expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
       {
@@ -402,6 +434,12 @@ describe('block document commands', () => {
         type: 'statefulBlock',
         blockType: 'dashboard',
         blockInstanceId: 'dashboard-1',
+      },
+      {
+        id: 'persisted-document-1',
+        type: 'statefulBlock',
+        blockType: 'document',
+        blockInstanceId: 'persisted-document-1',
       },
     ]);
   });

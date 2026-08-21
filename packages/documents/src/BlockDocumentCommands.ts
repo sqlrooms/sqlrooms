@@ -236,6 +236,24 @@ function labelFromBlockType(blockType: string) {
     .join(' ');
 }
 
+function getBlockCapabilityError(
+  block: BlockDocumentBlockType,
+  allowedBlockTypes: ReadonlySet<string> | undefined,
+  statefulBlockTypes: ReadonlySet<string>,
+): string | undefined {
+  if (!allowedBlockTypes) return undefined;
+  if (!allowedBlockTypes.has(block.type)) {
+    return `Unsupported block type "${block.type}".`;
+  }
+  if (
+    block.type === 'statefulBlock' &&
+    !statefulBlockTypes.has(block.blockType)
+  ) {
+    return `Unsupported stateful block type "${block.blockType}".`;
+  }
+  return undefined;
+}
+
 function constrainBlockInput<TSchema extends z.ZodType<unknown>>(
   schema: TSchema,
   blocksFromInput: (input: z.infer<TSchema>) => BlockDocumentBlockType[],
@@ -245,20 +263,16 @@ function constrainBlockInput<TSchema extends z.ZodType<unknown>>(
   if (!allowedBlockTypes) return schema;
   return schema.superRefine((input, ctx) => {
     for (const [index, block] of blocksFromInput(input).entries()) {
-      if (!allowedBlockTypes.has(block.type)) {
+      const error = getBlockCapabilityError(
+        block,
+        allowedBlockTypes,
+        statefulBlockTypes,
+      );
+      if (error) {
         ctx.addIssue({
           code: 'custom',
           path: ['blocks', index],
-          message: `Unsupported block type "${block.type}".`,
-        });
-      } else if (
-        block.type === 'statefulBlock' &&
-        !statefulBlockTypes.has(block.blockType)
-      ) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['blocks', index, 'blockType'],
-          message: `Unsupported stateful block type "${block.blockType}".`,
+          message: error,
         });
       }
     }
@@ -330,6 +344,28 @@ export function createBlockDocumentCommands<
     allowedBlockTypeSet,
     statefulBlockTypeSet,
   );
+  const resolveMutableBlock = (
+    state: BlockDocumentCommandState,
+    artifactId: string,
+    blockId: string,
+    mutationCommandId: string,
+  ) => {
+    const block = findBlockById(state, artifactId, blockId);
+    if (!block) return missingBlock(mutationCommandId, blockId);
+    const error = getBlockCapabilityError(
+      block,
+      allowedBlockTypeSet,
+      statefulBlockTypeSet,
+    );
+    if (error) {
+      return {
+        success: false as const,
+        commandId: mutationCommandId,
+        error: `Block "${blockId}" cannot be changed: ${error}`,
+      };
+    }
+    return {success: true as const, block};
+  };
 
   const commandsBySuffix = {
     list: {
@@ -531,6 +567,13 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('update-block'),
+        );
+        if (!target.success) return target;
         const replacementBlock = {
           ...block,
           id: blockId,
@@ -573,7 +616,13 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
-        const block = findBlockById(state, artifactId, blockId);
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('remove-block'),
+        );
+        if (!target.success) return target;
         const removed = state.blockDocuments.removeBlock(artifactId, blockId);
         if (!removed) return missingBlock(commandId('remove-block'), blockId);
         return blockMutationSuccess(
@@ -581,7 +630,10 @@ export function createBlockDocumentCommands<
           commandId('remove-block'),
           artifactId,
           labelLower,
-          block ? {removedBlock: block, ...blockResultData([block])} : {},
+          {
+            removedBlock: target.block,
+            ...blockResultData([target.block]),
+          },
         );
       },
     },
@@ -608,7 +660,13 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
-        const block = findBlockById(state, artifactId, blockId);
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('move-block'),
+        );
+        if (!target.success) return target;
         const moved = state.blockDocuments.moveBlock(
           artifactId,
           blockId,
@@ -622,7 +680,7 @@ export function createBlockDocumentCommands<
           labelLower,
           {
             toIndex,
-            ...(block ? blockResultData([block]) : {}),
+            ...blockResultData([target.block]),
           },
         );
       },

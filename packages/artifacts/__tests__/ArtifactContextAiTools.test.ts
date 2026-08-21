@@ -1,4 +1,5 @@
 import {createStore} from 'zustand';
+import {jest} from '@jest/globals';
 import {
   createBaseRoomSlice,
   type BaseRoomStoreState,
@@ -154,5 +155,79 @@ describe('createArtifactContextAiTools', () => {
       errorMessage:
         'Artifact "doc-2" is not in the current run context. Use set_primary_context_artifact before reading it as context.',
     });
+  });
+
+  it('enforces artifact eligibility across every context operation', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'doc-1',
+          type: 'document',
+          title: 'Doc',
+        },
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const readArtifact = jest.fn();
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+      readArtifact,
+    });
+    const executionContext = {getAiRunContext: () => runContext};
+
+    const listResult = await (tools.list_context_artifacts as any).execute(
+      {},
+      executionContext,
+    );
+    expect(listResult.llmResult.artifacts).toMatchObject([
+      {artifactId: 'doc-1', role: 'primary'},
+    ]);
+    expect(listResult.llmResult.primaryArtifactId).toBe('doc-1');
+
+    await (tools.read_context_artifact as any).execute({}, executionContext);
+    expect(readArtifact).toHaveBeenCalledWith(
+      expect.objectContaining({artifactId: 'doc-1'}),
+    );
+    readArtifact.mockClear();
+
+    const setResult = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'dashboard-1'},
+      executionContext,
+    );
+    expect(setResult.llmResult).toEqual({
+      success: false,
+      errorMessage: 'Artifact "dashboard-1" is not available as AI context.',
+    });
+
+    const allowedSetResult = await (
+      tools.set_primary_context_artifact as any
+    ).execute({artifactId: 'doc-1'}, executionContext);
+    expect(allowedSetResult.llmResult).toMatchObject({
+      success: true,
+      primaryArtifactId: 'doc-1',
+      contextItems: [{id: 'doc-1'}],
+    });
+
+    const readResult = await (tools.read_context_artifact as any).execute(
+      {artifactId: 'dashboard-1'},
+      executionContext,
+    );
+    expect(readResult.llmResult).toMatchObject({
+      success: false,
+      errorMessage: expect.stringContaining(
+        'is not in the current run context',
+      ),
+    });
+    expect(readArtifact).not.toHaveBeenCalled();
   });
 });

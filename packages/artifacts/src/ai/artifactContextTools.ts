@@ -216,6 +216,15 @@ export type ArtifactContextToolsOptions<TState extends ArtifactsSliceState> = {
     artifactId: string;
     artifact: ArtifactMetadataType;
   }) => ArtifactContextReadResult | Promise<ArtifactContextReadResult>;
+  /**
+   * Returns whether an artifact may participate in AI context operations.
+   * Hosts can use this to enforce capability profiles consistently across
+   * listing, reading, and primary-artifact selection.
+   */
+  isArtifactAllowed?: (args: {
+    state: TState;
+    artifact: ArtifactMetadataType;
+  }) => boolean;
 };
 
 function getExecutionRunContext<TState extends ArtifactsSliceState>(
@@ -230,18 +239,42 @@ function getExecutionRunContext<TState extends ArtifactsSliceState>(
   );
 }
 
-function artifactToContextItem<TState extends ArtifactsSliceState>(
-  state: TState,
-  artifactId: string,
-): AiRunContextItem | undefined {
-  const artifact = state.artifacts.config.artifactsById[artifactId];
-  if (!artifact) return undefined;
+function artifactToContextItem(
+  artifact: ArtifactMetadataType,
+): AiRunContextItem {
   return {
     kind: 'artifact',
     id: artifact.id,
     type: artifact.type,
     title: artifact.title,
   };
+}
+
+function getAllowedContextArtifactItems<TState extends ArtifactsSliceState>(
+  options: ArtifactContextToolsOptions<TState>,
+  state: TState,
+  runContext: AiRunContext | undefined,
+): AiRunContextItem[] {
+  return getAiRunContextItems(runContext).filter((item) => {
+    if (item.kind !== 'artifact') return false;
+    const artifact = state.artifacts.config.artifactsById[item.id];
+    if (!artifact) return !options.isArtifactAllowed;
+    return (
+      !options.isArtifactAllowed || options.isArtifactAllowed({state, artifact})
+    );
+  });
+}
+
+function getAllowedPrimaryContextArtifact(
+  items: AiRunContextItem[],
+  runContext: AiRunContext | undefined,
+): AiRunContextItem | undefined {
+  const primaryItem = getAiRunContextPrimaryItem(runContext);
+  return (
+    items.find(
+      (item) => item.id === primaryItem?.id && item.kind === primaryItem?.kind,
+    ) ?? items[0]
+  );
 }
 
 function contextArtifactSummary<TState extends ArtifactsSliceState>(
@@ -288,16 +321,32 @@ function setPrimaryArtifact<TState extends ArtifactsSliceState>(
   context: ArtifactContextToolExecutionContext | undefined,
   artifactId: string,
 ): MakeArtifactPrimaryForAiRunResult {
-  const item = artifactToContextItem(state, artifactId);
-  if (!item) {
+  const artifact = state.artifacts.config.artifactsById[artifactId];
+  if (!artifact) {
     return {
       success: false,
       errorMessage: `Unknown artifact "${artifactId}".`,
     };
   }
+  if (
+    options.isArtifactAllowed &&
+    !options.isArtifactAllowed({state, artifact})
+  ) {
+    return {
+      success: false,
+      errorMessage: `Artifact "${artifactId}" is not available as AI context.`,
+    };
+  }
+  const item = artifactToContextItem(artifact);
 
   const runContext = getExecutionRunContext(options, state, context);
-  const nextContext = setAiRunContextPrimaryItem(runContext, item);
+  const eligibleRunContext = options.isArtifactAllowed
+    ? {
+        ...(runContext ?? {}),
+        items: getAllowedContextArtifactItems(options, state, runContext),
+      }
+    : runContext;
+  const nextContext = setAiRunContextPrimaryItem(eligibleRunContext, item);
   if (context?.setAiRunContext) {
     context.setAiRunContext(nextContext);
   } else if (context?.setPrimaryRunContextItem) {
@@ -379,10 +428,18 @@ export function createArtifactContextAiTools<
           | undefined;
         const state = options.store.getState();
         const runContext = getExecutionRunContext(options, state, context);
-        const primaryItem = getAiRunContextPrimaryItem(runContext);
-        const artifacts = getAiRunContextItems(runContext)
-          .filter((item) => item.kind === 'artifact')
-          .map((item) => contextArtifactSummary(state, item, primaryItem?.id));
+        const artifactItems = getAllowedContextArtifactItems(
+          options,
+          state,
+          runContext,
+        );
+        const primaryItem = getAllowedPrimaryContextArtifact(
+          artifactItems,
+          runContext,
+        );
+        const artifacts = artifactItems.map((item) =>
+          contextArtifactSummary(state, item, primaryItem?.id),
+        );
 
         return {
           llmResult: {
@@ -407,11 +464,13 @@ export function createArtifactContextAiTools<
           | undefined;
         const state = options.store.getState();
         const runContext = getExecutionRunContext(options, state, context);
-        const items = getAiRunContextItems(runContext).filter(
-          (item) => item.kind === 'artifact',
+        const items = getAllowedContextArtifactItems(
+          options,
+          state,
+          runContext,
         );
-        const requestedArtifactId =
-          params.artifactId ?? getAiRunContextPrimaryItem(runContext)?.id;
+        const primaryItem = getAllowedPrimaryContextArtifact(items, runContext);
+        const requestedArtifactId = params.artifactId ?? primaryItem?.id;
         if (!requestedArtifactId) {
           return {
             llmResult: {

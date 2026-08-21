@@ -194,10 +194,14 @@ function filterStoredRunContext(
 ): AiRunContext | undefined {
   const items = getAiRunContextItems(runContext).filter((item) => {
     if (item.kind === 'artifact') {
-      return supportedContextArtifactTypes.has(item.type);
+      return (
+        item.type !== undefined && supportedContextArtifactTypes.has(item.type)
+      );
     }
     if (item.kind === 'block') {
-      return enabledCliBlockContextTypes.has(item.type);
+      return (
+        item.type !== undefined && enabledCliBlockContextTypes.has(item.type)
+      );
     }
     return true;
   });
