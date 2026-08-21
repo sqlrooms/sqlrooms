@@ -359,10 +359,17 @@ function setPrimaryArtifact<TState extends ArtifactsSliceState>(
   const nextContext = setAiRunContextPrimaryItem(eligibleRunContext, item);
   if (context?.setAiRunContext) {
     context.setAiRunContext(nextContext);
+  } else if (options.setRunContext) {
+    options.setRunContext({state, context, runContext: nextContext});
   } else if (context?.setPrimaryRunContextItem) {
+    if (options.isArtifactAllowed) {
+      return {
+        success: false,
+        errorMessage:
+          'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
+      };
+    }
     context.setPrimaryRunContextItem(item);
-  } else {
-    options.setRunContext?.({state, context, runContext: nextContext});
   }
 
   const items = getAiRunContextItems(nextContext);

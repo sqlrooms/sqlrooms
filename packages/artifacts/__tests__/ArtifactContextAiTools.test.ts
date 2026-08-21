@@ -291,4 +291,89 @@ describe('createArtifactContextAiTools', () => {
       {kind: 'block', id: 'doc-1:chart-1'},
     ]);
   });
+
+  it('prefers a full adapter setter when filtering artifact context', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    let persistedContext: AiRunContext | undefined;
+    const partialSetterCalls: string[] = [];
+    const tools = createArtifactContextAiTools({
+      store,
+      getRunContext: () => runContext,
+      setRunContext: ({runContext: nextContext}) => {
+        persistedContext = nextContext;
+      },
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {
+        setPrimaryRunContextItem: (item: {id: string}) => {
+          partialSetterCalls.push(item.id);
+        },
+      },
+    );
+
+    expect(result.llmResult).toMatchObject({
+      success: true,
+      primaryArtifactId: 'doc-1',
+    });
+    expect(persistedContext?.items.map(({id}) => id)).toEqual(['doc-1']);
+    expect(partialSetterCalls).toEqual([]);
+  });
+
+  it('rejects filtered updates when only the primary-item setter is available', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const partialSetterCalls: string[] = [];
+    const contextChangeCalls: string[][] = [];
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+      onContextItemsChanged: ({items}) => {
+        contextChangeCalls.push(items.map(({id}) => id));
+      },
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {
+        getAiRunContext: () => runContext,
+        setPrimaryRunContextItem: (item: {id: string}) => {
+          partialSetterCalls.push(item.id);
+        },
+      },
+    );
+
+    expect(result.llmResult).toEqual({
+      success: false,
+      errorMessage:
+        'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
+    });
+    expect(partialSetterCalls).toEqual([]);
+    expect(contextChangeCalls).toEqual([]);
+  });
 });
