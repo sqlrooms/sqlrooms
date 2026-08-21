@@ -607,7 +607,7 @@ describe('createDeckJsonConfiguration', () => {
     }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
 
     expect(converted.layers[0]?.id ?? converted.layers[0]?.props.id).toBe(
-      'earthquakes',
+      'earthquakes:GeoArrowHeatmapLayer:0',
     );
     expect(converted.layers[0]?.props.colorRange).toEqual(
       expect.arrayContaining([expect.any(Array)]),
@@ -619,6 +619,50 @@ describe('createDeckJsonConfiguration', () => {
       JSON.stringify(converted.layers[0]?.props.colorRange),
     );
     expect(converted.layers[0]?.props.weightsTextureSize).toBe(512);
+  });
+
+  it('gives two layers on the same dataset distinct stable ids', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+    const spec = {
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'explicit-points',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    };
+    const layerId = (converted: {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    }) => converted.layers.map((layer) => layer.id ?? layer.props.id);
+
+    const first = converter.convert(spec) as {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    };
+    expect(layerId(first)).toEqual([
+      'earthquakes:GeoArrowHeatmapLayer:0',
+      'earthquakes:GeoArrowScatterplotLayer:1',
+      'explicit-points',
+    ]);
+
+    const second = converter.convert({
+      layers: spec.layers.map((layer) => ({...layer})),
+    }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
+    expect(layerId(second)).toEqual(layerId(first));
   });
 });
 

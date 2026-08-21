@@ -51,6 +51,20 @@ function getLayerName(Class: unknown) {
   return maybeClass.layerName ?? maybeClass.name ?? 'UnknownLayer';
 }
 
+/**
+ * Deck.gl matches layers by id. Each JSON convert would otherwise create a new
+ * GPU layer. Dataset id alone collides when two layers share a dataset.
+ */
+function assignStableLayerId(
+  props: Record<string, unknown>,
+  datasetId: string,
+  layerName: string,
+  index: number,
+) {
+  if (typeof props.id === 'string' && props.id !== '') return;
+  props.id = `${datasetId}:${layerName}:${index}`;
+}
+
 function applyColorScale(options: {
   props: Record<string, unknown>;
   table: import('apache-arrow').Table;
@@ -376,6 +390,7 @@ export function createDeckJsonConfiguration(
   options: CreateDeckJsonConfigurationOptions,
 ) {
   const {datasetStates, datasetIds} = options;
+  let nextManagedLayerIndex = 0;
 
   return new JSONConfiguration({
     classes: DEFAULT_DECK_JSON_CLASSES,
@@ -425,20 +440,24 @@ export function createDeckJsonConfiguration(
 
       if (datasetState.status !== 'ready') {
         const pendingProps = stripLayerExtensionProps(layerProps);
-        if (typeof pendingProps.id !== 'string' || pendingProps.id === '') {
-          pendingProps.id = datasetId;
-        }
+        assignStableLayerId(
+          pendingProps,
+          datasetId,
+          layerName,
+          nextManagedLayerIndex++,
+        );
         return {...pendingProps, data: []};
       }
 
       const prepared = datasetState.prepared;
       const geometryColumn = resolveGeometryColumn(extensionProps);
       const strippedProps = stripLayerExtensionProps(layerProps);
-      if (typeof strippedProps.id !== 'string' || strippedProps.id === '') {
-        // Deck.gl matches layers by id. Without a stable id, each JSON convert
-        // creates a new layer instance and rebuilds GPU resources.
-        strippedProps.id = datasetId;
-      }
+      assignStableLayerId(
+        strippedProps,
+        datasetId,
+        layerName,
+        nextManagedLayerIndex++,
+      );
 
       if (compatibility.representation === 'geojson') {
         const baseProps = applyColorScale({
@@ -572,6 +591,7 @@ export function createDeckJsonConfiguration(
       return rewritten;
     },
     postProcessConvertedJson: (json: unknown) => {
+      nextManagedLayerIndex = 0;
       if (
         json &&
         typeof json === 'object' &&
