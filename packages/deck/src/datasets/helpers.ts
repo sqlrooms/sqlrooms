@@ -61,8 +61,11 @@ export function getSqlSourceIdentity(sqlSourceIdentity: object): string {
   return identity;
 }
 
-export function buildGeometryKey(input: DeckDatasetInput): string {
-  return `${input.geometryColumn ?? ''}\u0001${input.geometryEncodingHint ?? ''}`;
+export function buildGeometryKey(options: {
+  geometryColumn?: string;
+  geometryEncodingHint?: string;
+}): string {
+  return `${options.geometryColumn ?? ''}\u0001${options.geometryEncodingHint ?? ''}`;
 }
 
 /**
@@ -102,7 +105,9 @@ export function getDatasetRegistryFingerprint(
  * Identity of prepared dataset *payloads*, not the wrapper object.
  *
  * Used so JSONConverter is not rebuilt when a new `datasetStates` record
- * points at the same prepared tables.
+ * points at the same prepared tables. Geometry column and encoding are part
+ * of the identity so two cache entries that share an Arrow table but were
+ * prepared with different geometry options do not look interchangeable.
  */
 export function getPreparedDatasetStatesIdentity(
   datasetStates: Record<string, PreparedDeckDatasetState>,
@@ -112,7 +117,15 @@ export function getPreparedDatasetStatesIdentity(
     .map((datasetId) => {
       const state = datasetStates[datasetId]!;
       if (state.status === 'ready') {
-        return `${datasetId}:ready:${getTableIdentity(state.prepared.table)}`;
+        return [
+          datasetId,
+          'ready',
+          getTableIdentity(state.prepared.table),
+          buildGeometryKey({
+            geometryColumn: state.prepared.datasetGeometryColumn,
+            geometryEncodingHint: state.prepared.datasetGeometryEncodingHint,
+          }),
+        ].join(':');
       }
       if (state.status === 'error') {
         return `${datasetId}:error:${state.error.message}`;

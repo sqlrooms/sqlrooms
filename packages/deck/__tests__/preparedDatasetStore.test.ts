@@ -7,16 +7,28 @@ import {
 } from '../src/datasets/PreparedDatasetStore';
 import {
   getDatasetRegistryFingerprint,
+  getPreparedDatasetStatesIdentity,
   resolvePreparedDatasetCacheKey,
 } from '../src/datasets/helpers';
-import type {PreparedDeckDataset} from '../src/prepare/types';
+import type {
+  GeometryEncodingHint,
+  PreparedDeckDataset,
+} from '../src/prepare/types';
 import type {DeckDatasetInput} from '../src/types';
 
-function createPreparedDataset(datasetId: string, table: Table) {
+function createPreparedDataset(
+  datasetId: string,
+  table: Table,
+  options?: {
+    geometryColumn?: string;
+    geometryEncodingHint?: GeometryEncodingHint;
+  },
+) {
   return {
     datasetId,
     table,
-    datasetGeometryColumn: undefined,
+    datasetGeometryColumn: options?.geometryColumn,
+    datasetGeometryEncodingHint: options?.geometryEncodingHint,
     resolveGeometry: (() => {
       throw new Error('Not used in preparedDatasetStore tests.');
     }) as PreparedDeckDataset['resolveGeometry'],
@@ -456,6 +468,75 @@ describe('getDatasetRegistryFingerprint', () => {
 
     expect(getDatasetRegistryFingerprint(first)).not.toBe(
       getDatasetRegistryFingerprint(second),
+    );
+  });
+});
+
+describe('getPreparedDatasetStatesIdentity', () => {
+  function readyState(
+    table: Table,
+    options?: {
+      geometryColumn?: string;
+      geometryEncodingHint?: GeometryEncodingHint;
+    },
+  ) {
+    return {
+      status: 'ready' as const,
+      prepared: createPreparedDataset('places', table, options),
+    };
+  }
+
+  it('keeps the same identity when only the datasetStates wrapper changes', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const prepared = createPreparedDataset('places', table, {
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    });
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: {status: 'ready', prepared},
+      }),
+    ).toBe(
+      getPreparedDatasetStatesIdentity({
+        places: {status: 'ready', prepared},
+      }),
+    );
+  });
+
+  it('distinguishes ready states that share a table but differ in geometry options', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    ).not.toBe(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'other_geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    );
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    ).not.toBe(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkt',
+        }),
+      }),
     );
   });
 });
