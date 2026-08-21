@@ -31,6 +31,7 @@ import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
   type CliCapabilityProfile,
 } from './profiles';
+import {createCliWorksheetArtifactDefinition} from './createCliWorksheetArtifactDefinition';
 
 type FeatureStability = 'stable' | 'experimental';
 
@@ -130,19 +131,9 @@ export function createCliArtifactTypes({
   profile?: CliCapabilityProfile;
 } = {}) {
   const worksheetDefinition: ArtifactTypeDefinition<RoomState> = {
-    label: 'Worksheet',
-    defaultTitle: 'Worksheet',
+    ...createCliWorksheetArtifactDefinition(),
     icon: FileStackIcon,
     component: WorksheetArtifact,
-    onCreate: ({artifactId, store}) => {
-      store.getState().blockDocuments.ensureBlockDocument(artifactId);
-    },
-    onEnsure: ({artifactId, store}) => {
-      store.getState().blockDocuments.ensureBlockDocument(artifactId);
-    },
-    onDelete: ({artifactId, store}) => {
-      store.getState().blockDocuments.removeBlockDocument(artifactId);
-    },
   };
 
   const notebookDefinition: ArtifactTypeDefinition<RoomState> = {

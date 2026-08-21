@@ -86,8 +86,10 @@ export function blockDocumentAgentTool(
   store: StoreApi<RoomState>,
   {
     profile = DEFAULT_CLI_CAPABILITY_PROFILE,
+    getModel,
   }: {
     profile?: CliCapabilityProfile;
+    getModel?: BaseAgentToolOptions<RoomState>['getModel'];
   } = {},
 ) {
   const blockDocumentAdapter = createCliBlockDocumentAiAdapter(store);
@@ -95,18 +97,20 @@ export function blockDocumentAgentTool(
 
   const baseOptions: BaseAgentToolOptions<RoomState> = {
     store,
-    getModel: ({state}) => {
-      const currentSession = state.ai.getCurrentSession();
-      const provider = currentSession?.modelProvider || 'openai';
-      const modelId = currentSession?.model || 'gpt-4.1';
+    getModel:
+      getModel ??
+      (({state}) => {
+        const currentSession = state.ai.getCurrentSession();
+        const provider = currentSession?.modelProvider || 'openai';
+        const modelId = currentSession?.model || 'gpt-4.1';
 
-      return createOpenAICompatible({
-        apiKey: state.ai.getApiKeyFromSettings(),
-        name: provider || '',
-        baseURL:
-          state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
-      }).chatModel(modelId);
-    },
+        return createOpenAICompatible({
+          apiKey: state.ai.getApiKeyFromSettings(),
+          name: provider || '',
+          baseURL:
+            state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+        }).chatModel(modelId);
+      }),
     createDataTools: () =>
       createDefaultAiTools(store, {query: {}, tables: true, commands: false}),
     runSubAgent: ({agent, prompt, parentToolCallId, abortSignal}) =>
