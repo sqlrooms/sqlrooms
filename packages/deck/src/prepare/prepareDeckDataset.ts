@@ -93,6 +93,7 @@ export function prepareDeckDataset(
     datasetId,
     table,
     datasetGeometryColumn: geometryColumn,
+    datasetGeometryEncodingHint: geometryEncodingHint,
     resolveGeometry,
     getGeoArrowLayerData(geometryColumnOverride?: string) {
       const cacheKey = geometryColumnOverride ?? '__default__';

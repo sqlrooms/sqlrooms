@@ -1,19 +1,20 @@
 import {useStoreWithDuckDb} from '@sqlrooms/duckdb';
 import {useEffect, useId, useMemo, useState} from 'react';
 import {useStore} from 'zustand';
-import {shallow} from 'zustand/shallow';
 import {type DeckDatasetInput, type PreparedDeckDatasetState} from '../types';
+import {
+  getDatasetRegistryFingerprint,
+  getPreparedDatasetStatesIdentity,
+} from './helpers';
 import {
   preparedDatasetStore,
   resolvePreparedDeckDatasetStates,
 } from './PreparedDatasetStore';
 
 /**
- * Stabilize a `datasets` record so that a new object reference created on
- * every render (e.g. an inline `{ earthquakes: { arrowTable } }` literal)
- * does not cause downstream effects and memos to re-run when nothing
- * actually changed.  Uses Zustand's `shallow` to compare top-level keys
- * and per-entry identity.
+ * Stabilize a `datasets` record so that a new object wrapper created on every
+ * render (for example after a slider-driven spec update) does not resync
+ * prepared data when the underlying query/table identity is unchanged.
  *
  * Implemented via the "adjusting state during rendering" pattern so the
  * React compiler does not flag ref access during render.
@@ -22,7 +23,10 @@ function useStableDatasets(
   datasets: Record<string, DeckDatasetInput>,
 ): Record<string, DeckDatasetInput> {
   const [stable, setStable] = useState(datasets);
-  if (!shallow(stable, datasets)) {
+  if (
+    getDatasetRegistryFingerprint(stable) !==
+    getDatasetRegistryFingerprint(datasets)
+  ) {
     setStable(datasets);
   }
   return stable;
@@ -63,7 +67,7 @@ export function usePreparedDatasetStates(
     };
   }, [connector, consumerId, stableDatasets, executeSql]);
 
-  return useMemo(
+  const datasetStates = useMemo(
     () =>
       resolvePreparedDeckDatasetStates({
         datasets: stableDatasets,
@@ -72,4 +76,13 @@ export function usePreparedDatasetStates(
       }),
     [connector, stableDatasets, entries],
   );
+
+  const [stableStates, setStableStates] = useState(datasetStates);
+  if (
+    getPreparedDatasetStatesIdentity(stableStates) !==
+    getPreparedDatasetStatesIdentity(datasetStates)
+  ) {
+    setStableStates(datasetStates);
+  }
+  return stableStates;
 }

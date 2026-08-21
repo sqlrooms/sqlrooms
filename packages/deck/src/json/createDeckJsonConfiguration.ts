@@ -20,7 +20,10 @@ import {
   DEFAULT_DECK_JSON_CONSTANTS,
   DEFAULT_DECK_JSON_ENUMERATIONS,
 } from './defaultClasses';
-import {DEFAULT_HEATMAP_COLOR_RANGE} from './heatmapDefaults';
+import {
+  DEFAULT_HEATMAP_COLOR_RANGE,
+  DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE,
+} from './heatmapDefaults';
 import {getLayerCompatibility} from './layerCompatibility';
 import {
   isManagedLayer,
@@ -46,6 +49,20 @@ type CreateDeckJsonConfigurationOptions = {
 function getLayerName(Class: unknown) {
   const maybeClass = Class as {layerName?: string; name?: string};
   return maybeClass.layerName ?? maybeClass.name ?? 'UnknownLayer';
+}
+
+/**
+ * Deck.gl matches layers by id. Each JSON convert would otherwise create a new
+ * GPU layer. Dataset id alone collides when two layers share a dataset.
+ */
+function assignStableLayerId(
+  props: Record<string, unknown>,
+  datasetId: string,
+  layerName: string,
+  index: number,
+) {
+  if (typeof props.id === 'string' && props.id !== '') return;
+  props.id = `${datasetId}:${layerName}:${index}`;
 }
 
 function applyColorScale(options: {
@@ -373,6 +390,7 @@ export function createDeckJsonConfiguration(
   options: CreateDeckJsonConfigurationOptions,
 ) {
   const {datasetStates, datasetIds} = options;
+  let nextManagedLayerIndex = 0;
 
   return new JSONConfiguration({
     classes: DEFAULT_DECK_JSON_CLASSES,
@@ -388,188 +406,202 @@ export function createDeckJsonConfiguration(
     // can rewrite them for GeoArrow's batch-oriented callback contract.
     convertFunction: ((expression: string) => `@@=${expression}`) as never,
     preProcessClassProps: (Class: unknown, props: Record<string, unknown>) => {
-      const layerName = getLayerName(Class);
-      const compatibility = getLayerCompatibility(layerName);
-
-      if (!compatibility) {
-        return props;
+      try {
+        return preprocessManagedLayer();
+      } catch (error) {
+        // JSONConverter skips postProcessConvertedJson when convert throws.
+        nextManagedLayerIndex = 0;
+        throw error;
       }
 
-      const layerProps = props as Record<string, unknown>;
-      const extensionProps = layerProps as typeof layerProps &
-        LayerBindingProps;
-      const datasetId = resolveDatasetId(extensionProps, datasetIds);
-      const managed =
-        isManagedLayer(extensionProps, datasetIds) ||
-        (datasetIds.length > 1 && layerProps.data === undefined);
+      function preprocessManagedLayer() {
+        const layerName = getLayerName(Class);
+        const compatibility = getLayerCompatibility(layerName);
 
-      if (!managed) {
-        return props;
-      }
+        if (!compatibility) {
+          return props;
+        }
 
-      if (!datasetId) {
-        throw new Error(
-          `Layer "${layerName}" must declare _sqlroomsBinding.dataset when multiple datasets are available.`,
+        const layerProps = props as Record<string, unknown>;
+        const extensionProps = layerProps as typeof layerProps &
+          LayerBindingProps;
+        const datasetId = resolveDatasetId(extensionProps, datasetIds);
+        const managed =
+          isManagedLayer(extensionProps, datasetIds) ||
+          (datasetIds.length > 1 && layerProps.data === undefined);
+
+        if (!managed) {
+          return props;
+        }
+
+        if (!datasetId) {
+          throw new Error(
+            `Layer "${layerName}" must declare _sqlroomsBinding.dataset when multiple datasets are available.`,
+          );
+        }
+
+        const datasetState = datasetStates[datasetId];
+        if (!datasetState) {
+          throw new Error(
+            `Layer "${layerName}" references unknown dataset "${datasetId}".`,
+          );
+        }
+
+        if (datasetState.status !== 'ready') {
+          const pendingProps = stripLayerExtensionProps(layerProps);
+          assignStableLayerId(
+            pendingProps,
+            datasetId,
+            layerName,
+            nextManagedLayerIndex++,
+          );
+          return {...pendingProps, data: []};
+        }
+
+        const prepared = datasetState.prepared;
+        const geometryColumn = resolveGeometryColumn(extensionProps);
+        const strippedProps = stripLayerExtensionProps(layerProps);
+        assignStableLayerId(
+          strippedProps,
+          datasetId,
+          layerName,
+          nextManagedLayerIndex++,
         );
-      }
 
-      const datasetState = datasetStates[datasetId];
-      if (!datasetState) {
-        throw new Error(
-          `Layer "${layerName}" references unknown dataset "${datasetId}".`,
-        );
-      }
+        if (compatibility.representation === 'geojson') {
+          const baseProps = applyColorScale({
+            props: strippedProps,
+            table: prepared.table,
+          });
+          const withElevation = compileGetElevation({
+            props: baseProps,
+            table: prepared.table,
+            layerName,
+            datasetId: prepared.datasetId,
+            requireFunctionAccessor: true,
+          });
+          return {
+            ...mergeGetElevationTrigger(withElevation, baseProps.getElevation),
+            data: prepared.getGeoJsonBinaryData(geometryColumn),
+          };
+        }
 
-      if (datasetState.status !== 'ready') {
-        return {...stripLayerExtensionProps(layerProps), data: []};
-      }
-
-      const prepared = datasetState.prepared;
-      const geometryColumn = resolveGeometryColumn(extensionProps);
-      const strippedProps = stripLayerExtensionProps(layerProps);
-
-      if (compatibility.representation === 'geojson') {
+        const {table, boundProps} = resolveGeoArrowBindings({
+          layerName,
+          compatibility: compatibility as NonNullable<
+            ReturnType<typeof getLayerCompatibility>
+          > & {representation: 'geoarrow'},
+          layerProps: extensionProps,
+          prepared,
+          props: strippedProps,
+        });
         const baseProps = applyColorScale({
           props: strippedProps,
-          table: prepared.table,
+          table,
         });
-        const withElevation = compileGetElevation({
-          props: baseProps,
-          table: prepared.table,
+        const nextProps = compileGetElevation({
+          props: {
+            ...baseProps,
+            data: table,
+            ...boundProps,
+          },
+          table,
           layerName,
           datasetId: prepared.datasetId,
-          requireFunctionAccessor: true,
         });
-        return {
-          ...mergeGetElevationTrigger(withElevation, baseProps.getElevation),
-          data: prepared.getGeoJsonBinaryData(geometryColumn),
-        };
-      }
 
-      const {table, boundProps} = resolveGeoArrowBindings({
-        layerName,
-        compatibility: compatibility as NonNullable<
-          ReturnType<typeof getLayerCompatibility>
-        > & {representation: 'geoarrow'},
-        layerProps: extensionProps,
-        prepared,
-        props: strippedProps,
-      });
-      const baseProps = applyColorScale({
-        props: strippedProps,
-        table,
-      });
-      const nextProps = compileGetElevation({
-        props: {
-          ...baseProps,
-          data: table,
-          ...boundProps,
-        },
-        table,
-        layerName,
-        datasetId: prepared.datasetId,
-      });
+        const rewritten = rewriteGeoArrowAccessors({
+          props: nextProps,
+          table,
+          layerName,
+        });
 
-      const rewritten = rewriteGeoArrowAccessors({
-        props: nextProps,
-        table,
-        layerName,
-      });
-
-      // Set updateTriggers for @@= accessor props and getElevation
-      // so deck.gl re-evaluates them when references change or are cleared.
-      {
-        const accessorTriggers: Record<string, unknown> = {};
-        for (const [propName, propValue] of Object.entries(nextProps)) {
-          if (
-            typeof propValue === 'string' &&
-            propValue.startsWith('@@=') &&
-            propName.startsWith('get')
-          ) {
-            accessorTriggers[propName] = propValue;
-          }
-        }
-        // Always emit getElevation trigger so clearing the column invalidates
-        // stale heights from a previous column-based accessor.
-        if (!('getElevation' in accessorTriggers)) {
-          const elev = nextProps.getElevation;
-          accessorTriggers.getElevation =
-            elev !== undefined ? String(elev) : 'none';
-        }
-        const existingTriggers =
-          rewritten.updateTriggers &&
-          typeof rewritten.updateTriggers === 'object' &&
-          !Array.isArray(rewritten.updateTriggers)
-            ? (rewritten.updateTriggers as Record<string, unknown>)
-            : {};
-        rewritten.updateTriggers = {
-          ...existingTriggers,
-          ...accessorTriggers,
-        };
-      }
-
-      // For TripsLayer: compute max timestamp for animation and set defaults
-      if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
-        const tsVector = boundProps.getTimestamps as arrow.Vector | undefined;
-        if (tsVector) {
-          let maxTs = 0;
-          for (let i = 0; i < tsVector.length; i++) {
-            const listItem = tsVector.get(i);
+        // Set updateTriggers for @@= accessor props and getElevation
+        // so deck.gl re-evaluates them when references change or are cleared.
+        {
+          const accessorTriggers: Record<string, unknown> = {};
+          for (const [propName, propValue] of Object.entries(nextProps)) {
             if (
-              listItem &&
-              typeof listItem === 'object' &&
-              'length' in listItem
+              typeof propValue === 'string' &&
+              propValue.startsWith('@@=') &&
+              propName.startsWith('get')
             ) {
-              const list = listItem as {
-                length: number;
-                get: (i: number) => unknown;
-              };
-              for (let j = 0; j < list.length; j++) {
-                const v = Number(list.get(j)) || 0;
-                if (v > maxTs) maxTs = v;
+              accessorTriggers[propName] = propValue;
+            }
+          }
+          // Always emit getElevation trigger so clearing the column invalidates
+          // stale heights from a previous column-based accessor.
+          if (!('getElevation' in accessorTriggers)) {
+            const elev = nextProps.getElevation;
+            accessorTriggers.getElevation =
+              elev !== undefined ? String(elev) : 'none';
+          }
+          const existingTriggers =
+            rewritten.updateTriggers &&
+            typeof rewritten.updateTriggers === 'object' &&
+            !Array.isArray(rewritten.updateTriggers)
+              ? (rewritten.updateTriggers as Record<string, unknown>)
+              : {};
+          rewritten.updateTriggers = {
+            ...existingTriggers,
+            ...accessorTriggers,
+          };
+        }
+
+        // For TripsLayer: compute max timestamp for animation and set defaults
+        if (layerName === 'GeoArrowTripsLayer' || layerName === 'TripsLayer') {
+          const tsVector = boundProps.getTimestamps as arrow.Vector | undefined;
+          if (tsVector) {
+            let maxTs = 0;
+            for (let i = 0; i < tsVector.length; i++) {
+              const listItem = tsVector.get(i);
+              if (
+                listItem &&
+                typeof listItem === 'object' &&
+                'length' in listItem
+              ) {
+                const list = listItem as {
+                  length: number;
+                  get: (i: number) => unknown;
+                };
+                for (let j = 0; j < list.length; j++) {
+                  const v = Number(list.get(j)) || 0;
+                  if (v > maxTs) maxTs = v;
+                }
+              }
+            }
+            if (maxTs > 0) {
+              rewritten._tripsMaxTimestamp = maxTs;
+              if (!rewritten.trailLength) {
+                rewritten.trailLength = maxTs;
+              }
+              if (
+                rewritten.currentTime === undefined ||
+                rewritten.currentTime === 0
+              ) {
+                rewritten.currentTime = maxTs;
               }
             }
           }
-          if (maxTs > 0) {
-            rewritten._tripsMaxTimestamp = maxTs;
-            if (!rewritten.trailLength) {
-              rewritten.trailLength = maxTs;
-            }
-            if (
-              rewritten.currentTime === undefined ||
-              rewritten.currentTime === 0
-            ) {
-              rewritten.currentTime = maxTs;
-            }
+        }
+
+        // HeatmapLayer remaps colorRange in _updateColorTexture. Putting it in
+        // getWeight updateTriggers would mark aggregation dirty and rebuild the
+        // GPU weight texture when only the colormap changed.
+        if (layerName === 'GeoArrowHeatmapLayer') {
+          if (!rewritten.colorRange) {
+            rewritten.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
+          }
+          if (rewritten.weightsTextureSize === undefined) {
+            rewritten.weightsTextureSize = DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE;
           }
         }
-      }
 
-      // For HeatmapLayer: apply default colorRange (YlOrRd) when not explicitly set.
-      // Also set updateTriggers to force re-aggregation when colorRange changes.
-      if (layerName === 'GeoArrowHeatmapLayer') {
-        if (!rewritten.colorRange) {
-          rewritten.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
-        }
-        const existingTriggers =
-          rewritten.updateTriggers &&
-          typeof rewritten.updateTriggers === 'object' &&
-          !Array.isArray(rewritten.updateTriggers)
-            ? (rewritten.updateTriggers as Record<string, unknown>)
-            : {};
-        const previousGetWeight = existingTriggers.getWeight;
-        rewritten.updateTriggers = {
-          ...existingTriggers,
-          getWeight:
-            previousGetWeight === undefined
-              ? JSON.stringify(rewritten.colorRange)
-              : [previousGetWeight, JSON.stringify(rewritten.colorRange)],
-        };
+        return rewritten;
       }
-
-      return rewritten;
     },
     postProcessConvertedJson: (json: unknown) => {
+      nextManagedLayerIndex = 0;
       if (
         json &&
         typeof json === 'object' &&

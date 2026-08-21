@@ -1,8 +1,10 @@
 import type * as arrow from 'apache-arrow';
 import {
+  isArrowTableDatasetInput,
   isSqlDatasetInput,
   isTableDatasetInput,
   type DeckDatasetInput,
+  type PreparedDeckDatasetState,
 } from '../types';
 import {resolveArrowTable} from './normalizeDatasets';
 import type {PreparedDatasetCacheEntry} from './types';
@@ -59,8 +61,78 @@ export function getSqlSourceIdentity(sqlSourceIdentity: object): string {
   return identity;
 }
 
-export function buildGeometryKey(input: DeckDatasetInput): string {
-  return `${input.geometryColumn ?? ''}\u0001${input.geometryEncodingHint ?? ''}`;
+export function buildGeometryKey(options: {
+  geometryColumn?: string;
+  geometryEncodingHint?: string;
+}): string {
+  return `${options.geometryColumn ?? ''}\u0001${options.geometryEncodingHint ?? ''}`;
+}
+
+/**
+ * Content identity for one dataset input, ignoring object-wrapper identity.
+ *
+ * Spec-only updates (slider opacity, radius, etc.) often recreate
+ * `{ tableName, transformSql }` literals even though the query did not change.
+ */
+export function getDatasetInputFingerprint(input: DeckDatasetInput): string {
+  if (isSqlDatasetInput(input)) {
+    return `sql\u0001${input.sqlQuery}\u0001${buildGeometryKey(input)}`;
+  }
+  if (isTableDatasetInput(input)) {
+    return `table\u0001${input.tableName}\u0001${input.transformSql ?? ''}\u0001${buildGeometryKey(input)}`;
+  }
+  if (isArrowTableDatasetInput(input)) {
+    const table = resolveArrowTable(input);
+    return `arrow\u0001${table ? getTableIdentity(table) : 'pending'}\u0001${buildGeometryKey(input)}`;
+  }
+  return 'unknown';
+}
+
+/** Sorted content identity for a dataset registry. */
+export function getDatasetRegistryFingerprint(
+  datasets: Record<string, DeckDatasetInput>,
+): string {
+  return Object.entries(datasets)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([datasetId, input]) =>
+        `${datasetId}\u0001${getDatasetInputFingerprint(input)}`,
+    )
+    .join('\u0002');
+}
+
+/**
+ * Identity of prepared dataset *payloads*, not the wrapper object.
+ *
+ * Used so JSONConverter is not rebuilt when a new `datasetStates` record
+ * points at the same prepared tables. Geometry column and encoding are part
+ * of the identity so two cache entries that share an Arrow table but were
+ * prepared with different geometry options do not look interchangeable.
+ */
+export function getPreparedDatasetStatesIdentity(
+  datasetStates: Record<string, PreparedDeckDatasetState>,
+): string {
+  return Object.keys(datasetStates)
+    .sort()
+    .map((datasetId) => {
+      const state = datasetStates[datasetId]!;
+      if (state.status === 'ready') {
+        return [
+          datasetId,
+          'ready',
+          getTableIdentity(state.prepared.table),
+          buildGeometryKey({
+            geometryColumn: state.prepared.datasetGeometryColumn,
+            geometryEncodingHint: state.prepared.datasetGeometryEncodingHint,
+          }),
+        ].join(':');
+      }
+      if (state.status === 'error') {
+        return `${datasetId}:error:${state.error.message}`;
+      }
+      return `${datasetId}:${state.status}`;
+    })
+    .join('|');
 }
 
 /**

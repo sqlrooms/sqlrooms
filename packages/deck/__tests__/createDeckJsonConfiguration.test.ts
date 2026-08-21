@@ -1,8 +1,10 @@
 import {JSONConverter} from '@deck.gl/json';
 import {
+  DataType,
   Field,
   FixedSizeList,
   Float64,
+  Int64,
   List,
   Schema,
   Table,
@@ -35,6 +37,7 @@ function createPointTable() {
     new Map([['ARROW:extension:name', 'geoarrow.point']]),
   );
   const magnitudeField = new Field('magnitude', new Float64());
+  const countField = new Field('count', new Int64());
   const h3Field = new Field('h3', new Utf8());
   const timestampField = new Field(
     'timestamps',
@@ -45,6 +48,7 @@ function createPointTable() {
     sourcePointField,
     targetPointField,
     magnitudeField,
+    countField,
     h3Field,
     timestampField,
   ]);
@@ -54,6 +58,7 @@ function createPointTable() {
     source_geom: vectorFromArray([[7.4386, 46.9511]], sourcePointField.type),
     target_geom: vectorFromArray([[8.5417, 47.3769]], targetPointField.type),
     magnitude: vectorFromArray([4.4]),
+    count: vectorFromArray([7n], new Int64()),
     h3: vectorFromArray(['8928308280fffff']),
     timestamps: vectorFromArray([[1, 2, 3]], timestampField.type),
   });
@@ -586,6 +591,171 @@ describe('createDeckJsonConfiguration', () => {
 
     expect(typeof converted.layers[0]?.props.getSourceColor).toBe('function');
     expect(typeof converted.layers[0]?.props.getTargetColor).toBe('function');
+  });
+
+  it('assigns a stable layer id from the dataset so deck.gl can reuse GPU resources', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const converted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
+
+    expect(converted.layers[0]?.id ?? converted.layers[0]?.props.id).toBe(
+      'earthquakes:GeoArrowHeatmapLayer:0',
+    );
+    expect(converted.layers[0]?.props.colorRange).toEqual(
+      expect.arrayContaining([expect.any(Array)]),
+    );
+    const updateTriggers = converted.layers[0]?.props.updateTriggers as
+      | Record<string, unknown>
+      | undefined;
+    expect(JSON.stringify(updateTriggers?.getWeight ?? null)).not.toBe(
+      JSON.stringify(converted.layers[0]?.props.colorRange),
+    );
+    expect(converted.layers[0]?.props.weightsTextureSize).toBe(512);
+  });
+
+  it('gives two layers on the same dataset distinct stable ids', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+    const spec = {
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          id: 'explicit-points',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    };
+    const layerId = (converted: {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    }) => converted.layers.map((layer) => layer.id ?? layer.props.id);
+
+    const first = converter.convert(spec) as {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    };
+    expect(layerId(first)).toEqual([
+      'earthquakes:GeoArrowHeatmapLayer:0',
+      'earthquakes:GeoArrowScatterplotLayer:1',
+      'explicit-points',
+    ]);
+
+    const second = converter.convert({
+      layers: spec.layers.map((layer) => ({...layer})),
+    }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
+    expect(layerId(second)).toEqual(layerId(first));
+  });
+
+  it('passes float heatmap getWeight as a Vector and keeps Int64 on the function accessor', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+
+    const floatConverted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          getWeight: '@@=magnitude',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+    const floatWeight = floatConverted.layers[0]?.props.getWeight as {
+      type: unknown;
+    };
+    expect(typeof floatWeight).not.toBe('function');
+    expect(DataType.isFloat(floatWeight.type)).toBe(true);
+
+    const intConverted = converter.convert({
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          getWeight: '@@=count',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    }) as {layers: Array<{props: Record<string, unknown>}>};
+    expect(typeof intConverted.layers[0]?.props.getWeight).toBe('function');
+  });
+
+  it('keeps layer ids stable after a failed convert on a reused converter', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+    const validSpec = {
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    };
+    const layerId = (converted: {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    }) => converted.layers.map((layer) => layer.id ?? layer.props.id);
+
+    const before = converter.convert(validSpec) as {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    };
+    expect(layerId(before)).toEqual([
+      'earthquakes:GeoArrowHeatmapLayer:0',
+      'earthquakes:GeoArrowScatterplotLayer:1',
+    ]);
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              hexagonColumn: 'missing',
+            },
+          },
+        ],
+      }),
+    ).toThrow('unknown column "missing"');
+
+    const after = converter.convert({
+      layers: validSpec.layers.map((layer) => ({...layer})),
+    }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
+    expect(layerId(after)).toEqual(layerId(before));
   });
 });
 
