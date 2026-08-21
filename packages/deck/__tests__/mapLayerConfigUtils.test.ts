@@ -16,6 +16,7 @@ import {
   setDeckMapLayerFlatColor,
   setDeckMapLayerGeometryColumn,
   setDeckMapLayerType,
+  DECK_MAP_DEFAULT_LAYER_COLOR,
   updateDeckMapLayer,
   usesExtrusionSettings,
   usesGeometryColumnSetting,
@@ -26,6 +27,7 @@ import {
   getDeckMapColorScaleOpacity,
   getDeckMapLayerChannelOpacityPercent,
 } from '../src/mapLayerConfigUtils';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from '../src/json/heatmapDefaults';
 
 const config = {
   spec: {
@@ -66,7 +68,82 @@ describe('mapLayerConfigUtils', () => {
       id: 'points',
       _sqlroomsBinding: {dataset: 'places'},
     });
+    expect(getDeckMapLayerRecords(nextConfig)[0]?.colorRange).toEqual(
+      DEFAULT_HEATMAP_COLOR_RANGE,
+    );
     expect(config.spec.layers[0]['@@type']).toBe('GeoArrowScatterplotLayer');
+  });
+
+  it('keeps an existing heatmap colorRange when switching to heatmap', () => {
+    const customRange = [
+      [0, 0, 0, 255],
+      [255, 255, 255, 255],
+    ];
+    const heatmapConfig = setDeckMapLayerType(
+      config,
+      0,
+      'GeoArrowHeatmapLayer',
+    );
+    const withCustomRange = updateDeckMapLayer(heatmapConfig, 0, (layer) => ({
+      ...layer,
+      colorRange: customRange,
+    }));
+
+    const nextConfig = setDeckMapLayerType(
+      withCustomRange,
+      0,
+      'GeoArrowHeatmapLayer',
+    );
+
+    expect(getDeckMapLayerRecords(nextConfig)[0]?.colorRange).toEqual(
+      customRange,
+    );
+  });
+
+  it('writes the default fill color when switching heatmap to point', () => {
+    const heatmapConfig = setDeckMapLayerType(
+      config,
+      0,
+      'GeoArrowHeatmapLayer',
+    );
+    const withoutFill = updateDeckMapLayer(heatmapConfig, 0, (layer) => {
+      const next = {...layer};
+      delete next.getFillColor;
+      return next;
+    });
+
+    const nextConfig = setDeckMapLayerType(
+      withoutFill,
+      0,
+      'GeoArrowScatterplotLayer',
+    );
+    const layer = getDeckMapLayerRecords(nextConfig)[0];
+
+    expect(layer?.['@@type']).toBe('GeoArrowScatterplotLayer');
+    expect(layer?.getFillColor).toEqual([...DECK_MAP_DEFAULT_LAYER_COLOR]);
+  });
+
+  it('keeps an existing fill color when switching heatmap back to point', () => {
+    const customFill = [255, 0, 0, 255];
+    const withFill = updateDeckMapLayer(config, 0, (layer) => ({
+      ...layer,
+      getFillColor: customFill,
+    }));
+    const heatmapConfig = setDeckMapLayerType(
+      withFill,
+      0,
+      'GeoArrowHeatmapLayer',
+    );
+
+    const nextConfig = setDeckMapLayerType(
+      heatmapConfig,
+      0,
+      'GeoArrowScatterplotLayer',
+    );
+
+    expect(getDeckMapLayerRecords(nextConfig)[0]?.getFillColor).toEqual(
+      customFill,
+    );
   });
 
   it('forces column radius to meters and strips point radius leftovers', () => {
