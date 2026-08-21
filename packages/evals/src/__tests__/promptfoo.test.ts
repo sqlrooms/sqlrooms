@@ -65,4 +65,29 @@ describe('Promptfoo boundary helpers', () => {
       namedScores: {workspace: 1, answer: 0.25},
     });
   });
+
+  it('reports an empty result set as a failure', () => {
+    expect(toPromptfooAssertionResult([])).toEqual({
+      pass: false,
+      score: 0,
+      reason: 'No SQLRooms oracle results were produced.',
+      namedScores: {},
+    });
+  });
+
+  it('rejects duplicate oracle result IDs', () => {
+    const result = {
+      oracleId: 'workspace',
+      kind: 'workspace-state' as const,
+      pass: true,
+      score: 1,
+      reason: 'Valid.',
+      evidence: {},
+      metadata: {},
+    };
+
+    expect(() => toPromptfooAssertionResult([result, result])).toThrow(
+      'Duplicate oracle result IDs: workspace.',
+    );
+  });
 });

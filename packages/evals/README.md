@@ -11,9 +11,10 @@ application, React, browser, Promptfoo, or SQLite dependency.
 - Scenarios describe user turns, compatible production profiles, fixtures, and
   target-neutral outcome expectations.
 - Oracles inspect the final answer, database snapshot, workspace state, errors,
-  and mutations. They do not require one exact tool trajectory.
-- Run evidence records ordered events and durable outcomes in a versioned JSON
-  envelope.
+  and mutations. Oracle IDs must be unique and cover every scenario
+  expectation; they do not require one exact tool trajectory.
+- Run evidence records strictly ordered events and durable outcomes in a
+  versioned JSON envelope. Preserved extension fields must contain JSON values.
 - `@sqlrooms/evals/promptfoo` contains only structural conversion helpers for
   provider metadata and assertion results. Promptfoo remains a runner, not the
   core package interface.

@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import type {JsonObject, JsonValue} from './json';
-import {JsonObjectSchema} from './json';
+import {JsonObjectSchema, JsonValueSchema} from './json';
 import type {ScenarioDefinition} from './scenario';
 
 /** Supported evaluator-neutral oracle categories. */
@@ -13,15 +13,17 @@ export const OracleKindSchema = z.enum([
 ]);
 
 /** Structured result produced by one behavioral oracle. */
-export const OracleResultSchema = z.looseObject({
-  oracleId: z.string().min(1),
-  kind: OracleKindSchema,
-  pass: z.boolean(),
-  score: z.number().min(0).max(1),
-  reason: z.string().min(1),
-  evidence: JsonObjectSchema.default(() => ({})),
-  metadata: JsonObjectSchema.default(() => ({})),
-});
+export const OracleResultSchema = z
+  .looseObject({
+    oracleId: z.string().min(1),
+    kind: OracleKindSchema,
+    pass: z.boolean(),
+    score: z.number().min(0).max(1),
+    reason: z.string().min(1),
+    evidence: JsonObjectSchema.default(() => ({})),
+    metadata: JsonObjectSchema.default(() => ({})),
+  })
+  .catchall(JsonValueSchema);
 
 /** Structured result produced by one behavioral oracle. */
 export type OracleResult = z.infer<typeof OracleResultSchema>;
@@ -145,12 +147,28 @@ export function createPolicyOracle(
 /**
  * Evaluates oracles in declaration order and normalizes their results.
  *
- * @throws When a scenario expectation has no matching oracle implementation.
+ * @throws When oracle IDs are duplicated or a scenario expectation has no
+ * matching oracle implementation.
  */
 export async function evaluateOracles(
   oracles: readonly BehavioralOracle[],
   context: OracleContext,
 ): Promise<OracleResult[]> {
+  const duplicateOracleIds = Array.from(
+    new Set(
+      oracles
+        .map((oracle) => oracle.id)
+        .filter(
+          (oracleId, index, oracleIds) => oracleIds.indexOf(oracleId) !== index,
+        ),
+    ),
+  );
+  if (duplicateOracleIds.length > 0) {
+    throw new Error(
+      `Duplicate oracle implementations: ${duplicateOracleIds.join(', ')}.`,
+    );
+  }
+
   const availableOracleIds = new Set(oracles.map((oracle) => oracle.id));
   const missingOracleIds = Array.from(
     new Set(

@@ -28,23 +28,44 @@ export function toPromptfooProviderResponse(
   };
 }
 
-/** Converts oracle results into one Promptfoo assertion result. */
+/**
+ * Converts oracle results into one Promptfoo assertion result.
+ *
+ * @throws When multiple results use the same oracle ID.
+ */
 export function toPromptfooAssertionResult(
   results: readonly OracleResult[],
 ): PromptfooAssertionResult {
   const parsedResults = results.map((result) =>
     OracleResultSchema.parse(result),
   );
+  const duplicateOracleIds = Array.from(
+    new Set(
+      parsedResults
+        .map((result) => result.oracleId)
+        .filter(
+          (oracleId, index, oracleIds) => oracleIds.indexOf(oracleId) !== index,
+        ),
+    ),
+  );
+  if (duplicateOracleIds.length > 0) {
+    throw new Error(
+      `Duplicate oracle result IDs: ${duplicateOracleIds.join(', ')}.`,
+    );
+  }
+
   const summary = summarizeOracleResults(parsedResults);
   const failures = parsedResults.filter((result) => !result.pass);
   return {
     ...summary,
     reason:
-      failures.length === 0
-        ? `${parsedResults.length} SQLRooms oracle${parsedResults.length === 1 ? '' : 's'} passed.`
-        : failures
-            .map((result) => `${result.oracleId}: ${result.reason}`)
-            .join('; '),
+      parsedResults.length === 0
+        ? 'No SQLRooms oracle results were produced.'
+        : failures.length === 0
+          ? `${parsedResults.length} SQLRooms oracle${parsedResults.length === 1 ? '' : 's'} passed.`
+          : failures
+              .map((result) => `${result.oracleId}: ${result.reason}`)
+              .join('; '),
     namedScores: Object.fromEntries(
       parsedResults.map((result) => [result.oracleId, result.score]),
     ),

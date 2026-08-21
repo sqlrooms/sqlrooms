@@ -146,4 +146,15 @@ describe('behavioral oracles', () => {
       ),
     ).rejects.toThrow('Missing required oracle implementations: workspace.');
   });
+
+  it('rejects duplicate oracle implementations', async () => {
+    const duplicateOracle = createDatabaseOracle({
+      id: 'database',
+      evaluate: () => ({pass: true, reason: 'Database is valid.'}),
+    });
+
+    await expect(
+      evaluateOracles([duplicateOracle, duplicateOracle], context),
+    ).rejects.toThrow('Duplicate oracle implementations: database.');
+  });
 });

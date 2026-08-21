@@ -104,6 +104,71 @@ describe('run evidence', () => {
     expect(() => parseRunEvidence({schemaVersion: 2})).toThrow();
   });
 
+  it.each([
+    ['duplicate', [0, 0]],
+    ['descending', [1, 0]],
+  ])('rejects %s event sequence values', (_name, sequences) => {
+    expect(() =>
+      parseRunEvidence({
+        schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
+        runId: 'run-ordering',
+        scenario: {id: 'worksheet.ordering', version: 1, repetition: 0},
+        target: {
+          type: 'cli-in-process',
+          profileName: 'worksheet-charts-maps',
+          profileVersion: 1,
+        },
+        model: {provider: 'scripted', modelId: 'scripted-v1'},
+        timing: {
+          startedAt: '2026-08-19T12:00:00.000Z',
+          endedAt: '2026-08-19T12:00:00.010Z',
+          latencyMs: 10,
+        },
+        status: 'passed',
+        promptTurns: [],
+        finalAnswer: 'Done.',
+        events: sequences.map((sequence) => ({
+          sequence,
+          timestamp: '2026-08-19T12:00:00.005Z',
+          type: 'tool',
+        })),
+        oracleResults: [],
+      }),
+    ).toThrow('Event sequence values must be strictly increasing.');
+  });
+
+  it.each([
+    ['bigint', BigInt(1)],
+    ['undefined', undefined],
+    ['function', () => 1],
+    ['symbol', Symbol('future')],
+  ])('rejects a non-JSON %s extension value', (_name, value) => {
+    expect(() =>
+      parseRunEvidence({
+        schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
+        runId: 'run-json-extension',
+        scenario: {id: 'worksheet.json-extension', version: 1, repetition: 0},
+        target: {
+          type: 'cli-in-process',
+          profileName: 'worksheet-charts-maps',
+          profileVersion: 1,
+        },
+        model: {provider: 'scripted', modelId: 'scripted-v1'},
+        timing: {
+          startedAt: '2026-08-19T12:00:00.000Z',
+          endedAt: '2026-08-19T12:00:00.010Z',
+          latencyMs: 10,
+        },
+        status: 'passed',
+        promptTurns: [],
+        finalAnswer: 'Done.',
+        events: [],
+        oracleResults: [],
+        futureEnvelopeField: value,
+      }),
+    ).toThrow();
+  });
+
   it('allocates fresh object defaults for every evidence record', () => {
     const input = {
       schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
