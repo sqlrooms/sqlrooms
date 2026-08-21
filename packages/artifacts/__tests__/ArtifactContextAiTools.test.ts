@@ -158,7 +158,7 @@ describe('createArtifactContextAiTools', () => {
 
   it('enforces artifact eligibility across every context operation', async () => {
     const store = createTestStore();
-    const runContext: AiRunContext = {
+    let runContext: AiRunContext = {
       items: [
         {
           kind: 'artifact',
@@ -194,7 +194,12 @@ describe('createArtifactContextAiTools', () => {
       isArtifactAllowed: ({artifact}) => artifact.type === 'document',
       readArtifact,
     });
-    const executionContext = {getAiRunContext: () => runContext};
+    const executionContext = {
+      getAiRunContext: () => runContext,
+      setAiRunContext: (nextContext: AiRunContext) => {
+        runContext = nextContext;
+      },
+    };
 
     const listResult = await (tools.list_context_artifacts as any).execute(
       {},
@@ -374,6 +379,42 @@ describe('createArtifactContextAiTools', () => {
         'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
     });
     expect(partialSetterCalls).toEqual([]);
+    expect(contextChangeCalls).toEqual([]);
+  });
+
+  it('rejects filtered updates when no run-context setter is available', async () => {
+    const store = createTestStore();
+    const runContext: AiRunContext = {
+      items: [
+        {
+          kind: 'artifact',
+          id: 'dashboard-1',
+          type: 'dashboard',
+          title: 'Dashboard',
+        },
+      ],
+      primaryItemId: 'dashboard-1',
+      capturedAt: 1,
+    };
+    const contextChangeCalls: string[][] = [];
+    const tools = createArtifactContextAiTools({
+      store,
+      isArtifactAllowed: ({artifact}) => artifact.type === 'document',
+      onContextItemsChanged: ({items}) => {
+        contextChangeCalls.push(items.map(({id}) => id));
+      },
+    });
+
+    const result = await (tools.set_primary_context_artifact as any).execute(
+      {artifactId: 'doc-1'},
+      {getAiRunContext: () => runContext},
+    );
+
+    expect(result.llmResult).toEqual({
+      success: false,
+      errorMessage:
+        'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
+    });
     expect(contextChangeCalls).toEqual([]);
   });
 });

@@ -361,14 +361,13 @@ function setPrimaryArtifact<TState extends ArtifactsSliceState>(
     context.setAiRunContext(nextContext);
   } else if (options.setRunContext) {
     options.setRunContext({state, context, runContext: nextContext});
+  } else if (options.isArtifactAllowed) {
+    return {
+      success: false,
+      errorMessage:
+        'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
+    };
   } else if (context?.setPrimaryRunContextItem) {
-    if (options.isArtifactAllowed) {
-      return {
-        success: false,
-        errorMessage:
-          'Cannot change the primary context artifact because capability filtering requires a full run-context setter.',
-      };
-    }
     context.setPrimaryRunContextItem(item);
   }
 
