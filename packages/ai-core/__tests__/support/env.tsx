@@ -2,7 +2,8 @@
  * Browser globals the composer and suggestions trees touch but jsdom does not
  * provide. Importing this module installs them as a side effect.
  *
- * jsdom-only — every consumer declares `@jest-environment jsdom`.
+ * Only usable from a suite running in the jsdom test environment, which every
+ * consumer of this module declares in its own docblock.
  */
 import {jest} from '@jest/globals';
 import {TransformStream} from 'node:stream/web';
