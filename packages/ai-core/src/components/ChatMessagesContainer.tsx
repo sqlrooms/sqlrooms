@@ -1,4 +1,4 @@
-import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {ChevronDown, SplitIcon} from 'lucide-react';
 import type {UIMessage} from 'ai';
 import React, {useEffect, useRef} from 'react';
@@ -43,6 +43,19 @@ function ChatForkProvenance({
       )}
       <div className="bg-border h-px min-w-8 flex-1" />
     </div>
+  );
+}
+
+function RunningDots() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-5 w-5 items-center justify-center gap-0.5"
+    >
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.3s] motion-reduce:animate-none" />
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.15s] motion-reduce:animate-none" />
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current motion-reduce:animate-none" />
+    </span>
   );
 }
 
@@ -124,9 +137,9 @@ export const ChatMessagesContainer: React.FC<{
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
-      <ScrollArea
-        viewportRef={containerRef}
-        className="flex w-full grow flex-col gap-5"
+      <div
+        ref={containerRef}
+        className="scrollbar-thin flex min-h-0 w-full min-w-0 grow flex-col gap-5 overflow-x-hidden overflow-y-auto"
       >
         <div className="px-3">
           {chatTurns.map((chatTurn) => (
@@ -151,8 +164,7 @@ export const ChatMessagesContainer: React.FC<{
           {isRunning && <ActiveStatus status={activeStatus} className="pb-4" />}
           <div className="h-10 w-full shrink-0" />
         </div>
-        <ScrollBar orientation="vertical" />
-      </ScrollArea>
+      </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button
           onClick={scrollToBottom}
@@ -163,7 +175,7 @@ export const ChatMessagesContainer: React.FC<{
           )}
           aria-label="Scroll to bottom"
         >
-          <ChevronDown className="h-5 w-5" />
+          {isRunning ? <RunningDots /> : <ChevronDown className="h-5 w-5" />}
         </button>
       </div>
     </div>
