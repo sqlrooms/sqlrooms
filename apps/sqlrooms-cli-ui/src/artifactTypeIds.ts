@@ -20,3 +20,21 @@ export const CLI_AI_BLOCK_TYPES = [
   'html-app',
   'map',
 ] as const;
+
+export type CliAiBlockType = (typeof CLI_AI_BLOCK_TYPES)[number];
+
+/** Stateful block artifact types supported by the CLI block-document runtime. */
+export const STATEFUL_BLOCK_ARTIFACT_TYPES = [
+  'dashboard',
+  'pivot',
+  'data-table',
+  'map',
+  'document',
+  'sql-query',
+  'html-app',
+  'python',
+] as const;
+
+/** A stateful block artifact type supported by the CLI. */
+export type StatefulBlockArtifactType =
+  (typeof STATEFUL_BLOCK_ARTIFACT_TYPES)[number];

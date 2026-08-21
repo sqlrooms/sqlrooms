@@ -22,14 +22,16 @@ import {
 } from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
-import {CLI_AI_BLOCK_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {
-  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from '../profiles';
 
-const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
 
 type TableInfo = {
@@ -186,9 +188,9 @@ export function getRunContext(
   store: StoreApi<RoomState>,
   sessionId: string,
   {
-    experimentalEnabled = false,
+    profile = DEFAULT_CLI_CAPABILITY_PROFILE,
   }: {
-    experimentalEnabled?: boolean;
+    profile?: CliCapabilityProfile;
   } = {},
 ): AiRunContext | undefined {
   const state = store.getState();
@@ -198,12 +200,14 @@ export function getRunContext(
     (candidate) => candidate.id === sessionId,
   );
   const tablesByQualifiedName = buildTablesMap(tables);
-  const enabledCliBlockContextTypes = new Set<string>([
-    'chart',
-    ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter(
-      (type) => CLI_BLOCK_CONTEXT_TYPES.has(type),
+  const supportedContextArtifactTypes = new Set<string>(
+    profile.artifacts.runContext,
+  );
+  const enabledCliBlockContextTypes = new Set<string>(
+    profile.blocks.aiContext.filter((type) =>
+      CLI_BLOCK_CONTEXT_TYPES.has(type),
     ),
-  ]);
+  );
 
   if (
     session?.draftContextItemIds === undefined &&
@@ -216,7 +220,7 @@ export function getRunContext(
       : undefined;
     const currentArtifactIsLinked = Boolean(
       currentArtifact &&
-      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type) &&
+      supportedContextArtifactTypes.has(currentArtifact.type) &&
       isAiSessionVisibleForArtifact({
         sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
         sessionId,
@@ -251,7 +255,7 @@ export function getRunContext(
     artifactsById,
     extraItems,
     isSupportedArtifactType: (artifactType) =>
-      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(artifactType),
+      supportedContextArtifactTypes.has(artifactType),
     // Prefer the artifact the run is initiated from over the most recently
     // linked one, so asking AI from an older linked artifact directs the run
     // at that artifact.

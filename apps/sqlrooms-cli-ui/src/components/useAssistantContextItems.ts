@@ -27,10 +27,9 @@ import {
 } from '@sqlrooms/artifacts/ai';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../roomStoreHooks';
-import {experimentalEnabled} from '../runtimeEnvironment';
+import {cliCapabilityProfile} from '../runtimeEnvironment';
 import {isContextArtifactType} from './assistantUtils';
 import {
-  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
@@ -60,12 +59,9 @@ function getOwningArtifactId(
 }
 
 function isEnabledCliBlockType(blockType: string): boolean {
-  if (blockType === 'chart') return true;
-  if (!isStatefulBlockArtifactType(blockType)) return false;
   return (
-    getEnabledStatefulBlockArtifactTypes(experimentalEnabled).includes(
-      blockType,
-    ) && CLI_BLOCK_CONTEXT_TYPES.has(blockType)
+    CLI_BLOCK_CONTEXT_TYPES.has(blockType) &&
+    cliCapabilityProfile.blocks.aiContext.some((type) => type === blockType)
   );
 }
 

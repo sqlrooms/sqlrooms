@@ -13,6 +13,10 @@ import {
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
+import {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
 import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import type {RoomState} from './store-types';
 
@@ -31,6 +35,13 @@ const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
   'block-document.update-block-metadata';
 const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
+
+const CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES = {
+  [BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID]: 'dashboard',
+  [BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID]: 'data-table',
+  [BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID]: 'html-app',
+  [BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID]: 'map',
+} as const satisfies Record<string, StatefulBlockArtifactType>;
 
 const BlockDocumentIdInput = z.object({
   blockDocumentId: z.string().describe('Target block document artifact ID.'),
@@ -156,8 +167,13 @@ function findStatefulBlock(
     });
 }
 
-export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
-  return [
+/** Creates CLI worksheet commands allowed by the selected block capabilities. */
+export function createCliBlockDocumentCommands({
+  statefulBlockTypes = STATEFUL_BLOCK_ARTIFACT_TYPES,
+}: {
+  statefulBlockTypes?: readonly StatefulBlockArtifactType[];
+} = {}): RoomCommand<RoomState>[] {
+  const commands: RoomCommand<RoomState>[] = [
     {
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add block document dashboard block',
@@ -478,4 +494,12 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       },
     },
   ];
+  const enabledBlockTypes = new Set(statefulBlockTypes);
+  return commands.filter((command) => {
+    const blockType =
+      CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES[
+        command.id as keyof typeof CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES
+      ];
+    return blockType === undefined || enabledBlockTypes.has(blockType);
+  });
 }

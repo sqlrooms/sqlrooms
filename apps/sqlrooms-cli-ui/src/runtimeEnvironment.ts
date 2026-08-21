@@ -1,4 +1,5 @@
 import {fetchRuntimeConfig} from './runtimeConfig';
+import {resolveCliCapabilityProfile} from './profiles';
 
 /** Runtime configuration loaded once during CLI UI startup. */
 export const runtimeConfig = await fetchRuntimeConfig();
@@ -7,5 +8,11 @@ export const runtimeConfig = await fetchRuntimeConfig();
 export const aiDevtoolsEnabled =
   import.meta.env.DEV || Boolean(runtimeConfig.aiDevtools);
 
-/** Whether experimental SQLRooms features are enabled for this runtime. */
-export const experimentalEnabled = Boolean(runtimeConfig.experimentalEnabled);
+/** Production capability profile selected for this runtime. */
+export const cliCapabilityProfile = resolveCliCapabilityProfile({
+  profileName: runtimeConfig.capabilityProfile,
+  experimentalEnabled: runtimeConfig.experimentalEnabled,
+});
+
+/** @deprecated Prefer cliCapabilityProfile. */
+export const experimentalEnabled = cliCapabilityProfile.name === 'experimental';

@@ -21,6 +21,10 @@ import {
   KnownBlockDocumentTools,
 } from './ai/constants';
 import {BlockDocumentMapBlockToolParameters} from './createCliBlockDocumentCommands';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from './profiles';
 
 const BlockDocumentMapBlockToolInput = BlockDocumentMapBlockToolParameters.omit(
   {
@@ -81,9 +85,9 @@ ${getDeckMapResourceAiInstructions()}`,
 export function blockDocumentAgentTool(
   store: StoreApi<RoomState>,
   {
-    experimentalEnabled = false,
+    profile = DEFAULT_CLI_CAPABILITY_PROFILE,
   }: {
-    experimentalEnabled?: boolean;
+    profile?: CliCapabilityProfile;
   } = {},
 ) {
   const blockDocumentAdapter = createCliBlockDocumentAiAdapter(store);
@@ -110,7 +114,7 @@ export function blockDocumentAgentTool(
   };
 
   const dashboardAgentTool = (blockDocumentId: string) =>
-    experimentalEnabled
+    profile.dashboard.deckMaps
       ? createDashboardAgentToolWithDeckMaps({
           ...baseOptions,
           databaseAdapter,
@@ -160,8 +164,8 @@ export function blockDocumentAgentTool(
     databaseAdapter,
     blockDocumentAdapter,
     dashboardAgentTool,
-    htmlAppBlocksEnabled: experimentalEnabled,
-    mapBlocksEnabled: experimentalEnabled,
+    htmlAppBlocksEnabled: profile.blocks.stateful.includes('html-app'),
+    mapBlocksEnabled: profile.blocks.stateful.includes('map'),
     addDashboardBlock: async ({blockDocumentId, title, tableName, intent}) => {
       const result = await store
         .getState()
@@ -251,7 +255,7 @@ export function blockDocumentAgentTool(
       tableName,
       caption: title,
     }),
-    additionalInstructions: experimentalEnabled
+    additionalInstructions: profile.ai.instructionSets.includes('experimental')
       ? EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS
       : undefined,
     extraTools: ({blockDocumentId}) => {

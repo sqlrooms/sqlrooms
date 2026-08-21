@@ -27,6 +27,10 @@ import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 import {type CliArtifactType} from './artifactTypeIds';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from './profiles';
 
 type FeatureStability = 'stable' | 'experimental';
 
@@ -66,10 +70,10 @@ const ExperimentalArtifactPlaceholder: RoomPanelComponent = ({panelInfo}) => {
 function withStability<T extends ArtifactTypeDefinition<RoomState>>(
   type: CliArtifactType,
   definition: T,
-  experimentalEnabled: boolean,
+  profile: CliCapabilityProfile,
 ): CliArtifactTypeDefinition {
   const stability = ARTIFACT_STABILITY[type];
-  if (stability === 'stable' || experimentalEnabled) {
+  if (profile.artifacts.creatable.includes(type)) {
     return {...definition, stability, canCreate: true};
   }
   return {
@@ -121,9 +125,9 @@ const pythonBlockDefinition = createPythonBlockDefinition<RoomState>({
 });
 
 export function createCliArtifactTypes({
-  experimentalEnabled = false,
+  profile = DEFAULT_CLI_CAPABILITY_PROFILE,
 }: {
-  experimentalEnabled?: boolean;
+  profile?: CliCapabilityProfile;
 } = {}) {
   const worksheetDefinition: ArtifactTypeDefinition<RoomState> = {
     label: 'Worksheet',
@@ -184,52 +188,40 @@ export function createCliArtifactTypes({
   };
 
   return defineArtifactTypes({
-    worksheet: withStability(
-      'worksheet',
-      worksheetDefinition,
-      experimentalEnabled,
-    ),
+    worksheet: withStability('worksheet', worksheetDefinition, profile),
     dashboard: withStability(
       'dashboard',
       createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     pivot: withStability(
       'pivot',
       createArtifactTypeFromStatefulBlock(pivotBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
-    notebook: withStability(
-      'notebook',
-      notebookDefinition,
-      experimentalEnabled,
-    ),
+    notebook: withStability('notebook', notebookDefinition, profile),
     document: withStability(
       'document',
       createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     'sql-query': withStability(
       'sql-query',
       createArtifactTypeFromStatefulBlock(sqlQueryBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     'html-app': withStability(
       'html-app',
       createArtifactTypeFromStatefulBlock(htmlAppBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     python: withStability(
       'python',
       createArtifactTypeFromStatefulBlock(pythonBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
-    canvas: withStability('canvas', canvasDefinition, experimentalEnabled),
-    'app-builder': withStability(
-      'app-builder',
-      appDefinition,
-      experimentalEnabled,
-    ),
+    canvas: withStability('canvas', canvasDefinition, profile),
+    'app-builder': withStability('app-builder', appDefinition, profile),
   } satisfies Record<CliArtifactType, CliArtifactTypeDefinition>);
 }
 

@@ -2,6 +2,9 @@
 
 This package is the **Vite/React UI** that powers the Python `sqlrooms` CLI (`python/sqlrooms`).
 
+The app's named production capability sets and their behavior-preserving
+baseline are documented in [docs/capability-profiles.md](docs/capability-profiles.md).
+
 In development it runs as a separate dev server (default `http://localhost:3100`) and **proxies API calls** to the Python server.
 
 In production (published `sqlrooms` wheel), the UI is served as **static assets** bundled into the Python package at:

@@ -1,6 +1,10 @@
 import {jest} from '@jest/globals';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+} from '../profiles';
 
 const table = {
   table: makeQualifiedTableName({schema: 'main', table: 'earthquakes'}),
@@ -108,6 +112,34 @@ function setup() {
 }
 
 describe('createCliBlockDocumentCommands', () => {
+  it('only exposes block-creating commands enabled by the profile', () => {
+    const defaultCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes: DEFAULT_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(defaultCommandIds).toEqual(
+      expect.arrayContaining([
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+      ]),
+    );
+    expect(defaultCommandIds).not.toContain(
+      'block-document.add-html-app-block',
+    );
+    expect(defaultCommandIds).not.toContain('block-document.add-map-block');
+
+    const experimentalCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes: EXPERIMENTAL_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(experimentalCommandIds).toEqual(
+      expect.arrayContaining([
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+        'block-document.add-html-app-block',
+        'block-document.add-map-block',
+      ]),
+    );
+  });
+
   it('updates worksheet maps as resources without dashboard commands or panelId', async () => {
     const {state, invokeCommand, mapsById} = setup();
     const result = await command('block-document.add-map-block').execute(
