@@ -1,30 +1,26 @@
 // SPDX-License-Identifier: MIT
 // Copyright contributors to the kepler.gl project
 
-import {layerConfigChange, toggleMapControl} from '@kepler.gl/actions';
+import {toggleMapControl} from '@kepler.gl/actions';
 import {
   KeplerGlContext,
   LayerLegendContentFactory,
   LayerLegendHeaderFactory,
+  MapLegendFactory,
 } from '@kepler.gl/components';
-import {
-  MapLegendIcons,
-  MapLegendProps,
-} from '@kepler.gl/components/dist/map/map-legend';
 import {DIMENSIONS} from '@kepler.gl/constants';
 import {Layer} from '@kepler.gl/layers';
 import {Button} from '@sqlrooms/ui';
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  EyeIcon,
-  EyeOffIcon,
-  XIcon,
-} from 'lucide-react';
+import {ChevronDownIcon, ChevronRightIcon, XIcon} from 'lucide-react';
 import {useCallback, useContext, useRef, useState} from 'react';
 import type {Context, MouseEventHandler} from 'react';
 import {useStoreWithKepler} from '../KeplerSlice';
-import {SplitMapIndexContext} from './SplitMapIndexContext';
+import {LegendLayerList} from './legendLayerOrder';
+
+export {LegendLayerList, orderLayersForLegend} from './legendLayerOrder';
+
+type MapLegendProps = React.ComponentProps<ReturnType<typeof MapLegendFactory>>;
+type MapLegendIcons = NonNullable<MapLegendProps['actionIcons']>;
 
 const defaultActionIcons = {
   expanded: ChevronDownIcon as unknown as MapLegendIcons['expanded'],
@@ -50,23 +46,11 @@ export function CustomMapLegendFactory(
 ) {
   const MapLegend: React.FC<
     MapLegendProps & {mapIndex?: number; onClose?: () => void}
-  > = ({
-    layers = [],
-    width,
-    isExport,
-    mapIndex: mapIndexProp,
-    onClose,
-    ...restProps
-  }) => {
+  > = ({layers = [], layerOrder, width, isExport, onClose, ...restProps}) => {
     const containerW = width || DIMENSIONS.mapControl.width;
     const mapId = useContext(keplerGlContext).id;
-    const splitMapIndex = useContext(SplitMapIndexContext);
-    const mapIndex = mapIndexProp ?? splitMapIndex;
     const dispatchAction = useStoreWithKepler(
       (state) => state.kepler.dispatchAction,
-    );
-    const splitMaps = useStoreWithKepler(
-      (state) => state.kepler.map[mapId]?.visState?.splitMaps,
     );
     const handleClose = (evt: React.MouseEvent<HTMLButtonElement>) => {
       evt.stopPropagation();
@@ -76,15 +60,6 @@ export function CustomMapLegendFactory(
         dispatchAction(mapId, toggleMapControl('mapLegend', 0));
       }
     };
-
-    const isSplit = splitMaps && splitMaps.length > 1;
-    const panelLayers =
-      isSplit && mapIndex != null ? splitMaps[mapIndex]?.layers : undefined;
-
-    const visibleLayers = layers.filter(
-      (layer) =>
-        layer.config.isVisible && (!panelLayers || panelLayers[layer.id]),
-    );
 
     return (
       <div
@@ -106,17 +81,20 @@ export function CustomMapLegendFactory(
             </div>
           )}
           <div className="flex w-full flex-1 flex-col items-center">
-            {visibleLayers.map((layer, index) => {
-              return (
+            <LegendLayerList
+              layers={layers}
+              layerOrder={layerOrder}
+              isExport={isExport}
+            >
+              {(layer, exportMode) => (
                 <LayerLegendItem
-                  key={index}
                   layer={layer}
                   containerW={containerW}
-                  isExport={isExport}
+                  isExport={exportMode}
                   {...restProps}
                 />
-              );
-            })}
+              )}
+            </LegendLayerList>
           </div>
         </div>
       </div>
@@ -132,10 +110,6 @@ export function CustomMapLegendFactory(
     onLayerVisConfigChange,
   }: {layer: Layer; containerW: number} & MapLegendProps) => {
     const [isExpanded, setIsExpanded] = useState(layer.config.isVisible);
-
-    const dispatchAction = useStoreWithKepler(
-      (state) => state.kepler.dispatchAction,
-    );
     const scrollIntoView = useCallback(() => {
       requestAnimationFrame(() => {
         containerRef.current?.scrollIntoView({
@@ -155,7 +129,6 @@ export function CustomMapLegendFactory(
       }
     };
 
-    const mapId = useContext(keplerGlContext).id;
     const containerRef = useRef<HTMLDivElement>(null);
 
     if (!layer.isValidToSave() || layer.config.hidden) {
