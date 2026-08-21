@@ -135,6 +135,7 @@ export function findAutomaticBaseline(
       (run) =>
         run.id !== selected.id &&
         run.scenario.id === selected.scenario.id &&
+        run.scenario.version === selected.scenario.version &&
         run.profile.name === selected.profile.name &&
         run.profile.version === selected.profile.version &&
         run.model.provider === selected.model.provider &&

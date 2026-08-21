@@ -42,6 +42,10 @@ function hasObjectShape(value: unknown): boolean {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function object(value: unknown): Record<string, unknown> | undefined {
+  return hasObjectShape(value) ? (value as Record<string, unknown>) : undefined;
+}
+
 function hasFieldBinding(value: unknown, field: string): boolean {
   if (Array.isArray(value)) {
     return value.some((item) => hasFieldBinding(item, field));
@@ -52,6 +56,36 @@ function hasFieldBinding(value: unknown, field: string): boolean {
     record.field === field ||
     Object.values(record).some((item) => hasFieldBinding(item, field))
   );
+}
+
+function hasCanonicalMapBinding(
+  map: WorkspaceSnapshot['maps'][number] | undefined,
+): boolean {
+  if (!map) return false;
+  const spec = object(map.config.spec);
+  const layers = Array.isArray(spec?.layers) ? spec.layers : [];
+  const activeLayers = layers.filter(
+    (layer) => object(layer)?.visible !== false,
+  );
+  const fitToData = object((map.config as {fitToData?: unknown}).fitToData);
+  const fitDataset = fitToData?.dataset;
+  const fitMatches =
+    typeof fitDataset === 'string' &&
+    fitToData?.longitudeColumn === 'longitude' &&
+    fitToData?.latitudeColumn === 'latitude';
+  if (!fitMatches || activeLayers.length === 0) return false;
+
+  return activeLayers.every((layer) => {
+    const binding = object(object(layer)?._sqlroomsBinding);
+    const dataset = binding?.dataset;
+    if (typeof dataset !== 'string' || dataset !== fitDataset) return false;
+    const source = object(object(map.config.datasets[dataset])?.source);
+    return (
+      source?.tableName === CLI_EVAL_TARGET_TABLE &&
+      binding?.longitudeColumn === 'longitude' &&
+      binding?.latitudeColumn === 'latitude'
+    );
+  });
 }
 
 /** Pinned production-model scenario that starts from an empty workspace. */
@@ -221,18 +255,13 @@ export function createCliScenarioOracles(
       evaluate: (value) => {
         const workspace = snapshot(value);
         const {charts} = chartAndMap(workspace);
-        const serializedMaps = JSON.stringify(workspace.maps);
         const pass =
           charts.some(
             (chart) =>
               chart.tableName === CLI_EVAL_TARGET_TABLE &&
               hasFieldBinding(chart.config, 'category') &&
               hasFieldBinding(chart.config, 'metric'),
-          ) &&
-          serializedMaps.includes(CLI_EVAL_TARGET_TABLE) &&
-          serializedMaps.includes('latitude') &&
-          serializedMaps.includes('longitude') &&
-          !serializedMaps.includes('archive.events');
+          ) && workspace.maps.some(hasCanonicalMapBinding);
         return {
           pass,
           reason: pass
@@ -319,9 +348,17 @@ export function createCliScenarioOracles(
         const initialMap = initial.maps.find((candidate) =>
           candidate.id.endsWith('-map'),
         );
+        const mapBlock = workspace.worksheets[0]?.blocks.find(
+          (block) => block.id === 'seed-map-block',
+        );
+        const initialMapBlock = initial.worksheets[0]?.blocks.find(
+          (block) => block.id === 'seed-map-block',
+        );
         const pass =
           Boolean(heading) &&
           JSON.stringify(heading) === JSON.stringify(initialHeading) &&
+          Boolean(mapBlock) &&
+          JSON.stringify(mapBlock) === JSON.stringify(initialMapBlock) &&
           Boolean(map) &&
           JSON.stringify(map) === JSON.stringify(initialMap);
         return {
@@ -331,6 +368,7 @@ export function createCliScenarioOracles(
             : 'Unrelated seeded state changed.',
           evidence: {
             heading: asJson(heading ?? null),
+            mapBlock: asJson(mapBlock ?? null),
             map: asJson(map ?? null),
           },
         };

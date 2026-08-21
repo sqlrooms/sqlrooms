@@ -326,9 +326,15 @@ describe('Promptfoo SQLite observatory adapter', () => {
       createdAt: '2026-08-21T10:00:00.000Z',
       model: {...filtered[0]!.model, revision: 'revision-2'},
     };
+    const wrongScenarioVersion = {
+      ...matchingRevision,
+      id: 'wrong-scenario-version',
+      createdAt: '2026-08-21T11:30:00.000Z',
+      scenario: {...matchingRevision.scenario, version: 2},
+    };
     expect(
       findAutomaticBaseline(
-        [wrongRevision, matchingRevision, selected],
+        [wrongRevision, wrongScenarioVersion, matchingRevision, selected],
         selected,
       )?.id,
     ).toBe('matching-revision');

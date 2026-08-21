@@ -50,11 +50,17 @@ function workspace() {
             layers: [
               {
                 _sqlroomsBinding: {
+                  dataset: 'events',
                   longitudeColumn: 'longitude',
                   latitudeColumn: 'latitude',
                 },
               },
             ],
+          },
+          fitToData: {
+            dataset: 'events',
+            longitudeColumn: 'longitude',
+            latitudeColumn: 'latitude',
           },
         },
       },
@@ -97,6 +103,29 @@ describe('CLI behavioral scenario oracles', () => {
     ).toMatchObject({pass: false});
   });
 
+  it('rejects a map whose active layer uses a decoy dataset', async () => {
+    const current = workspace();
+    Object.assign(current.maps[0]!.config.datasets, {
+      archive: {source: {tableName: '"archive"."events"'}},
+    });
+    current.maps[0]!.config.spec.layers[0]!._sqlroomsBinding.dataset =
+      'archive';
+    current.maps[0]!.config.fitToData = {
+      dataset: 'archive',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+    };
+    const oracle = createCliScenarioOracles(
+      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'canonical-bindings');
+
+    expect(
+      await oracle?.evaluate(
+        context(CREATE_WORKSHEET_CHART_MAP_SCENARIO, current),
+      ),
+    ).toMatchObject({pass: false});
+  });
+
   it('requires the seeded heading to remain byte-for-byte unchanged', async () => {
     const initial = workspace();
     const unchanged = workspace();
@@ -104,6 +133,8 @@ describe('CLI behavioral scenario oracles', () => {
     changed.worksheets[0]!.blocks[0]!.text = [
       {type: 'text', text: 'Changed analysis'},
     ];
+    const changedMapBlock = workspace();
+    changedMapBlock.worksheets[0]!.blocks[2]!.blockInstanceId = 'other-map';
     const oracle = createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO).find(
       (candidate) => candidate.id === 'unrelated-state-preserved',
     );
@@ -116,6 +147,11 @@ describe('CLI behavioral scenario oracles', () => {
     expect(
       await oracle?.evaluate(
         context(MUTATE_WORKSHEET_SCENARIO, changed, initial),
+      ),
+    ).toMatchObject({pass: false});
+    expect(
+      await oracle?.evaluate(
+        context(MUTATE_WORKSHEET_SCENARIO, changedMapBlock, initial),
       ),
     ).toMatchObject({pass: false});
   });
