@@ -43,8 +43,13 @@ const OPTIONAL_TRACE_COLUMNS = {
   ],
 } as const;
 
-/** Clear error raised when the retained Promptfoo schema is unsupported. */
+/** Error raised when a retained database does not match the supported schema. */
 export class UnsupportedPromptfooSchemaError extends Error {
+  /**
+   * Creates an error describing an unsupported Promptfoo schema detail.
+   *
+   * @param message - The missing table, column, or trace-storage requirement.
+   */
   constructor(message: string) {
     super(`Unsupported Promptfoo SQLite schema: ${message}`);
     this.name = 'UnsupportedPromptfooSchemaError';
@@ -209,7 +214,17 @@ function spansByTrace(
   return result;
 }
 
-/** Reads a Promptfoo SQLite database through a strictly read-only connection. */
+/**
+ * Reads retained Promptfoo results into the normalized observatory run model.
+ *
+ * The database is opened through a strictly read-only connection and is never
+ * migrated or otherwise modified.
+ *
+ * @param databasePath - Path to the retained Promptfoo SQLite database.
+ * @returns Normalized runs ordered from newest to oldest.
+ * @throws {@link UnsupportedPromptfooSchemaError} When required tables or
+ * columns are missing, or trace storage is only partially present.
+ */
 export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
   const database = new DatabaseSync(databasePath, {readOnly: true});
   try {
@@ -352,7 +367,18 @@ export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
   }
 }
 
-/** Creates a portable observatory export from a retained Promptfoo database. */
+/**
+ * Creates a portable observatory export from a retained Promptfoo database.
+ *
+ * The source database is read through {@link readPromptfooSqlite} and is never
+ * modified.
+ *
+ * @param databasePath - Path to the retained Promptfoo SQLite database.
+ * @param now - Timestamp to record as the export time.
+ * @returns A validated, portable observatory export.
+ * @throws {@link UnsupportedPromptfooSchemaError} When the database uses an
+ * unsupported Promptfoo schema.
+ */
 export function exportPromptfooSqlite(
   databasePath: string,
   now: Date = new Date(),

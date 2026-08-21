@@ -347,5 +347,31 @@ describe('Promptfoo SQLite observatory adapter', () => {
     });
     expect(markdown).toContain('- Commit: mixed');
     expect(markdown).toContain('- Model: mixed');
+
+    const providerMarkdown = renderObservatoryMarkdown({
+      ...exported,
+      runs: [
+        filtered[0]!,
+        {
+          ...filtered[0]!,
+          id: 'different-provider',
+          model: {...filtered[0]!.model, provider: 'direct'},
+        },
+      ],
+    });
+    expect(providerMarkdown).toContain('- Model: mixed');
+
+    const upstreamProviderMarkdown = renderObservatoryMarkdown({
+      ...exported,
+      runs: [
+        filtered[0]!,
+        {
+          ...filtered[0]!,
+          id: 'different-upstream-provider',
+          model: {...filtered[0]!.model, upstreamProvider: 'anthropic'},
+        },
+      ],
+    });
+    expect(upstreamProviderMarkdown).toContain('- Model: mixed');
   });
 });

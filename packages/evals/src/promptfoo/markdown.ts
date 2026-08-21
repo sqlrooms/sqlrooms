@@ -6,7 +6,12 @@ function aggregate(values: readonly string[], fallback: string): string {
   return distinct.length === 1 ? distinct[0]! : 'mixed';
 }
 
-/** Renders a portable observatory export as a compact Markdown report. */
+/**
+ * Renders a portable observatory export as a compact Markdown report.
+ *
+ * @param exported - Validated observatory data to summarize.
+ * @returns A self-contained Markdown summary with aggregate and per-run data.
+ */
 export function renderObservatoryMarkdown(exported: ObservatoryExport): string {
   const summary = summarizeObservatoryRuns(exported.runs);
   const lines = [
@@ -29,7 +34,8 @@ export function renderObservatoryMarkdown(exported: ObservatoryExport): string {
     )}`,
     `- Model: ${aggregate(
       exported.runs.map(
-        (run) => `${run.model.modelId}@${run.model.revision ?? 'unversioned'}`,
+        (run) =>
+          `${run.model.provider}/${run.model.modelId}@${run.model.revision ?? 'unversioned'} (upstream: ${run.model.upstreamProvider ?? 'unknown'})`,
       ),
       'unknown',
     )}`,
