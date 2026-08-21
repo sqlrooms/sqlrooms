@@ -46,6 +46,19 @@ function ChatForkProvenance({
   );
 }
 
+function RunningDots() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-5 w-5 items-center justify-center gap-0.5"
+    >
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.3s] motion-reduce:animate-none" />
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current [animation-delay:-0.15s] motion-reduce:animate-none" />
+      <span className="h-1 w-1 animate-bounce rounded-full bg-current motion-reduce:animate-none" />
+    </span>
+  );
+}
+
 export const ChatMessagesContainer: React.FC<{
   className?: string;
   customMarkdownComponents?: Partial<Components>;
@@ -162,7 +175,7 @@ export const ChatMessagesContainer: React.FC<{
           )}
           aria-label="Scroll to bottom"
         >
-          <ChevronDown className="h-5 w-5" />
+          {isRunning ? <RunningDots /> : <ChevronDown className="h-5 w-5" />}
         </button>
       </div>
     </div>

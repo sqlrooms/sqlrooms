@@ -30,7 +30,7 @@ Object.assign(globalThis, {
 const {ChatMessagesContainer} =
   await import('../src/components/ChatMessagesContainer');
 
-function renderMessages() {
+function renderMessages({isRunning = false}: {isRunning?: boolean} = {}) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -43,7 +43,7 @@ function renderMessages() {
     uiMessages: [],
     messagesRevision: 0,
     prompt: '',
-    isRunning: false,
+    isRunning,
   };
   const store = createStore<AiSliceState>(() => ({
     ai: {
@@ -54,7 +54,7 @@ function renderMessages() {
       },
       getCurrentSession: () => session,
       getSessionForkOrigin: () => undefined,
-      getIsRunning: () => false,
+      getIsRunning: () => isRunning,
       switchSession: jest.fn(),
     } as unknown as AiSliceState['ai'],
   }));
@@ -125,6 +125,24 @@ describe('ChatMessagesContainer', () => {
     });
     expect(scrollTop).toBe(700);
     expect(scrollButton!.classList.contains('opacity-0')).toBe(true);
+
+    cleanup(container, root);
+  });
+
+  it('shows animated dots instead of the chevron while chat is running', () => {
+    const scrollTo = jest.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+      configurable: true,
+      value: scrollTo,
+    });
+
+    const {container, root} = renderMessages({isRunning: true});
+    const scrollButton = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Scroll to bottom"]',
+    );
+
+    expect(scrollButton?.querySelectorAll('.animate-bounce')).toHaveLength(3);
+    expect(scrollButton?.querySelector('.lucide-chevron-down')).toBeNull();
 
     cleanup(container, root);
   });
