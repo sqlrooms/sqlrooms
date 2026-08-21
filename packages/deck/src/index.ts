@@ -64,8 +64,11 @@ export {
 export {
   DeckMapResourceConfigError,
   assertDeckMapResourceConfig,
+  formatDeckMapResourceConfigIssueForAgent,
+  getDeckMapOverlayErrorMessage,
   getDeckMapResourceAiInstructions,
   getDeckMapResourceConfigIssues,
+  getLonLatMissingGeometryIssue,
   mergeDeckMapResourceConfigPatch,
   type DeckMapResourceConfigMergeOptions,
   type DeckMapResourceConfigIssue,

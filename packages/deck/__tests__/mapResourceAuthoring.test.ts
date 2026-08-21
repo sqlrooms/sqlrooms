@@ -2,9 +2,12 @@ import {describe, expect, test} from '@jest/globals';
 import type {DeckMapConfig} from '../src/mapConfig';
 import {
   assertDeckMapResourceConfig,
+  getDeckMapOverlayErrorMessage,
   getDeckMapResourceAiInstructions,
   getDeckMapResourceConfigIssues,
+  getLonLatMissingGeometryIssue,
   mergeDeckMapResourceConfigPatch,
+  DeckMapResourceConfigError,
 } from '../src/mapResourceAuthoring';
 
 const validConfig: DeckMapConfig = {
@@ -846,6 +849,9 @@ describe('Deck map resource authoring contract', () => {
     expect(instructions).toContain('Never set mapStyle to a mapbox://');
     expect(instructions).toContain('omit getWeight');
     expect(instructions).toContain('will not invent centroids');
+    expect(instructions).toContain(
+      'longitudeColumn/latitudeColumn on _sqlroomsBinding are not geometry',
+    );
     expect(instructions).toContain('SELECT *, ST_AsWKB(col) AS col');
     expect(instructions).toContain('COLOR SCALE FIELD VARIANCE');
     expect(instructions).toContain('min = max');
@@ -1161,6 +1167,259 @@ describe('Deck map resource authoring contract', () => {
     });
 
     expect(issues).toEqual([]);
+  });
+
+  test('keeps column-only lon/lat maps structurally valid', () => {
+    const columnOnlySql =
+      'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source';
+    const issues = getDeckMapResourceConfigIssues({
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              longitudeColumn: 'Longitude',
+              latitudeColumn: 'Latitude',
+            },
+            radiusPixels: 30,
+          },
+        ],
+      },
+      datasets: {
+        earthquakes: {
+          source: {tableName: 'earthquakes', transformSql: columnOnlySql},
+        },
+      },
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+    });
+
+    expect(issues).toEqual([]);
+    expect(() =>
+      assertDeckMapResourceConfig({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowHeatmapLayer',
+              _sqlroomsBinding: {
+                dataset: 'earthquakes',
+                longitudeColumn: 'Longitude',
+                latitudeColumn: 'Latitude',
+              },
+              radiusPixels: 30,
+            },
+          ],
+        },
+        datasets: {
+          earthquakes: {
+            source: {tableName: 'earthquakes', transformSql: columnOnlySql},
+          },
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  test('diagnoses missing geometry from DESCRIBE/output columns, not SQL text', () => {
+    const tableSource = {
+      tableName: 'earthquakes',
+      transformSql:
+        'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source',
+    };
+    const missingGeom = getLonLatMissingGeometryIssue({
+      columns: [
+        {name: 'Latitude', type: 'DOUBLE'},
+        {name: 'Longitude', type: 'DOUBLE'},
+        {name: 'Magnitude', type: 'DOUBLE'},
+      ],
+      datasetId: 'earthquakes',
+      source: tableSource,
+      path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+    });
+    expect(missingGeom).toEqual(
+      expect.objectContaining({
+        path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+        message: expect.stringContaining('needs point locations'),
+        repair: expect.stringContaining(
+          'ST_AsWKB(ST_Point("Longitude", "Latitude"))',
+        ),
+      }),
+    );
+    expect(missingGeom?.repair).toEqual(
+      expect.stringContaining('transformSql'),
+    );
+    expect(missingGeom?.repair).toEqual(
+      expect.stringContaining('__sqlrooms_source'),
+    );
+    expect(
+      getDeckMapOverlayErrorMessage(
+        new DeckMapResourceConfigError([missingGeom!]),
+      ),
+    ).toBe(missingGeom?.message);
+    expect(
+      getDeckMapOverlayErrorMessage(
+        new DeckMapResourceConfigError([missingGeom!]),
+      ),
+    ).not.toContain('ST_AsWKB');
+
+    expect(
+      getLonLatMissingGeometryIssue({
+        columns: [
+          {name: 'Latitude', type: 'DOUBLE'},
+          {name: 'Longitude', type: 'DOUBLE'},
+          {name: 'Magnitude', type: 'DOUBLE'},
+        ],
+        datasetId: 'earthquakes',
+        source: tableSource,
+        geometryColumn: '__sqlrooms_geom',
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('needs point locations'),
+      }),
+    );
+
+    const sqlQueryIssue = getLonLatMissingGeometryIssue({
+      columns: [
+        {name: 'Latitude', type: 'DOUBLE'},
+        {name: 'Longitude', type: 'DOUBLE'},
+        {name: 'Magnitude', type: 'DOUBLE'},
+      ],
+      datasetId: 'earthquakes',
+      source: {
+        sqlQuery: 'SELECT Latitude, Longitude, Magnitude FROM earthquakes',
+      },
+      path: 'spec.layers.0._sqlroomsBinding.geometryColumn',
+    });
+    expect(sqlQueryIssue?.repair).toEqual(
+      expect.stringContaining('source.sqlQuery'),
+    );
+    expect(sqlQueryIssue?.repair).toEqual(
+      expect.stringContaining('ST_AsWKB(ST_Point("Longitude", "Latitude"))'),
+    );
+    expect(sqlQueryIssue?.repair).toEqual(
+      expect.stringContaining('Do not add transformSql'),
+    );
+    expect(sqlQueryIssue?.repair).not.toEqual(
+      expect.stringContaining('Use transformSql'),
+    );
+    expect(sqlQueryIssue?.repair).not.toEqual(
+      expect.stringContaining('FROM __sqlrooms_source'),
+    );
+
+    expect(
+      getLonLatMissingGeometryIssue({
+        columns: [
+          {name: 'longitude', type: 'DOUBLE'},
+          {name: 'latitude', type: 'DOUBLE'},
+        ],
+        datasetId: 'places',
+        source: {tableName: 'places'},
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('needs point locations'),
+      }),
+    );
+
+    expect(
+      getLonLatMissingGeometryIssue({
+        columns: [
+          {name: 'geom', type: 'GEOMETRY'},
+          {name: 'longitude', type: 'DOUBLE'},
+          {name: 'latitude', type: 'DOUBLE'},
+          {name: 'name', type: 'VARCHAR'},
+        ],
+        datasetId: 'places',
+        source: {tableName: 'places'},
+        geometryColumn: 'geom',
+      }),
+    ).toBeUndefined();
+
+    expect(
+      getLonLatMissingGeometryIssue({
+        columns: [
+          {name: 'shape', type: "GEOMETRY('EPSG:3857')"},
+          {name: 'longitude', type: 'DOUBLE'},
+          {name: 'latitude', type: 'DOUBLE'},
+        ],
+        datasetId: 'places',
+        source: {tableName: 'places'},
+      }),
+    ).toBeUndefined();
+  });
+
+  test('accepts lon/lat fitToData when native geom is kept', () => {
+    const fitToData = {
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+    };
+
+    expect(
+      getDeckMapResourceConfigIssues({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {dataset: 'places'},
+            },
+          ],
+        },
+        datasets: {places: {source: {tableName: 'places'}}},
+        fitToData,
+      }),
+    ).toEqual([]);
+
+    expect(
+      getDeckMapResourceConfigIssues({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowHeatmapLayer',
+              _sqlroomsBinding: {dataset: 'places'},
+              radiusPixels: 30,
+            },
+          ],
+        },
+        datasets: {
+          places: {
+            source: {
+              tableName: 'places',
+              transformSql: 'SELECT * FROM __sqlrooms_source',
+            },
+          },
+        },
+        fitToData,
+      }),
+    ).toEqual([]);
+
+    expect(
+      getDeckMapResourceConfigIssues({
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {dataset: 'places', geometryColumn: 'geom'},
+            },
+          ],
+        },
+        datasets: {
+          places: {
+            source: {
+              tableName: 'places',
+              transformSql:
+                'SELECT geom, longitude, latitude, name FROM __sqlrooms_source',
+            },
+            geometryColumn: 'geom',
+          },
+        },
+        fitToData,
+      }),
+    ).toEqual([]);
   });
 
   test('allows bare ST_Point(...) AS col (pipeline wraps native GEOMETRY as WKB)', () => {

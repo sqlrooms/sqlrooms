@@ -1,6 +1,7 @@
 import {Table, Utf8, vectorFromArray} from 'apache-arrow';
 import {
   createDescribeDatasetSql,
+  describedColumnsIncludeGeometry,
   geometryColumnsNeedingWkbWrap,
   isDuckDbNativeGeometryType,
   parseDescribeSqlColumns,
@@ -62,5 +63,43 @@ describe('wrapGeometryAsWkb', () => {
 
   test('returns null when there are no geometry columns to wrap', () => {
     expect(wrapSqlGeometryColumnsAsWkb('SELECT 1', [])).toBeNull();
+  });
+
+  test('treats DESCRIBE output as the source of truth for geometry presence', () => {
+    expect(
+      describedColumnsIncludeGeometry([
+        {name: 'Latitude', type: 'DOUBLE'},
+        {name: 'Longitude', type: 'DOUBLE'},
+        {name: 'Magnitude', type: 'DOUBLE'},
+      ]),
+    ).toBe(false);
+    expect(
+      describedColumnsIncludeGeometry([
+        {name: 'geom', type: 'GEOMETRY'},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ]),
+    ).toBe(true);
+    expect(
+      describedColumnsIncludeGeometry([
+        {name: 'shape', type: "GEOMETRY('EPSG:3857')"},
+        {name: 'longitude', type: 'DOUBLE'},
+      ]),
+    ).toBe(true);
+    expect(
+      describedColumnsIncludeGeometry(
+        [
+          {name: 'Longitude', type: 'DOUBLE'},
+          {name: 'Latitude', type: 'DOUBLE'},
+        ],
+        '__sqlrooms_geom',
+      ),
+    ).toBe(false);
+    expect(
+      describedColumnsIncludeGeometry([
+        {name: '__sqlrooms_geom', type: 'BLOB'},
+        {name: 'Longitude', type: 'DOUBLE'},
+      ]),
+    ).toBe(true);
   });
 });

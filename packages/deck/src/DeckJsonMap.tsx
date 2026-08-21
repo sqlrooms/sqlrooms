@@ -1,15 +1,7 @@
 import {JSONConverter} from '@deck.gl/json';
 import {MapboxOverlay} from '@deck.gl/mapbox';
 import {ColorScaleLegend} from '@sqlrooms/color-scales';
-import {
-  cn,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  ResolvedTheme,
-  useTheme,
-} from '@sqlrooms/ui';
-import {ChevronRightIcon} from 'lucide-react';
+import {cn, ResolvedTheme, useTheme} from '@sqlrooms/ui';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   useCallback,
@@ -30,11 +22,13 @@ import {
 } from './DeckMapDefaultStylesProvider';
 import {normalizeDatasets} from './datasets/normalizeDatasets';
 import {usePreparedDatasetStates} from './datasets/usePreparedDatasetStates';
+import {DeckMapErrorOverlay} from './DeckMapErrorOverlay';
 import {createDeckJsonConfiguration} from './json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import {buildDeckMapJumpToOptions} from './mapFit';
+import {DeckMapResourceConfigError} from './mapResourceAuthoring';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -153,7 +147,12 @@ function renderDatasetErrorOverlay(
           key={datasetId}
           className="rounded-md border border-red-200 bg-red-50/95 px-3 py-2 text-sm text-red-700 shadow-sm"
         >
-          {`Dataset "${datasetId}" failed: ${state.error.message}`}
+          {`Dataset "${datasetId}" failed: ${
+            state.error instanceof DeckMapResourceConfigError &&
+            state.error.issues[0]
+              ? state.error.issues[0].message
+              : state.error.message
+          }`}
         </div>
       ))}
     </div>
@@ -277,31 +276,6 @@ function DeckOverlayControl({
   }
 
   return null;
-}
-
-function DeckMapRenderingErrorOverlay({error}: {error: Error}) {
-  return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-      <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">
-        <Collapsible>
-          <div className="flex items-start gap-1">
-            <span>{"Map couldn't be rendered"}</span>
-            <CollapsibleTrigger
-              className="group mt-0.5 shrink-0 rounded p-0.5 hover:bg-red-100"
-              aria-label="Show error details"
-            >
-              <ChevronRightIcon className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-90" />
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent>
-            <pre className="mt-2 max-h-40 overflow-auto font-mono text-xs whitespace-pre-wrap">
-              {error.message}
-            </pre>
-          </CollapsibleContent>
-        </Collapsible>
-      </div>
-    </div>
-  );
 }
 
 export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
@@ -600,7 +574,17 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     return (
       <div className={cn('relative h-full w-full', className)}>
         {finalDeckPropsResult.error ? (
-          <DeckMapRenderingErrorOverlay error={finalDeckPropsResult.error} />
+          <DeckMapErrorOverlay
+            error={finalDeckPropsResult.error}
+            title={
+              finalDeckPropsResult.error instanceof DeckMapResourceConfigError
+                ? 'Invalid map configuration'
+                : undefined
+            }
+            defaultOpen={
+              finalDeckPropsResult.error instanceof DeckMapResourceConfigError
+            }
+          />
         ) : null}
 
         <Map

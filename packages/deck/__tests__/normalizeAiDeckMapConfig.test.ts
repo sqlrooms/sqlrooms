@@ -1402,6 +1402,31 @@ describe('normalizeAiDeckMapConfig — lon/lat transformSql injection', () => {
     );
   });
 
+  test('does not rewrite an existing column-only transformSql', () => {
+    const sql = 'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source';
+    const result = normalizeAiDeckMapConfig({
+      configMode: 'basic',
+      fitToData: {
+        dataset: 'earthquakes',
+        longitudeColumn: 'Longitude',
+        latitudeColumn: 'Latitude',
+      },
+      datasets: {
+        earthquakes: {source: {tableName: 'earthquakes', transformSql: sql}},
+      },
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+          },
+        ],
+      },
+    } as any);
+
+    expect(result.datasets.earthquakes.source.transformSql).toBe(sql);
+  });
+
   test('does not inject lon/lat transform for polygon-only layers with authored geom', () => {
     const result = normalizeAiDeckMapConfig({
       configMode: 'basic',

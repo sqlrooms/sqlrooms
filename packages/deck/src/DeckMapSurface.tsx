@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import {DeckJsonMap} from './DeckJsonMap';
+import {DeckMapErrorOverlay} from './DeckMapErrorOverlay';
 import type {DeckMapResource, DeckMapRuntimeIssue} from './DeckMapsSlice';
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 import {
@@ -15,7 +16,11 @@ import {
   isDeckMapTableDatasetSource,
 } from './mapConfig';
 import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
-import {getDeckMapResourceConfigIssues} from './mapResourceAuthoring';
+import {
+  formatDeckMapResourceConfigIssueForAgent,
+  getDeckMapResourceConfigIssues,
+  DeckMapResourceConfigError,
+} from './mapResourceAuthoring';
 import {
   getDeckMapDatasetSource,
   resolveDeckMapFitToData,
@@ -151,7 +156,7 @@ export function DeckMapSurface({
     if (configIssues.length > 0) {
       onReportIssue({
         kind: 'config-error',
-        message: `${configIssues[0]!.path}: ${configIssues[0]!.message}`,
+        message: formatDeckMapResourceConfigIssueForAgent(configIssues[0]!),
         recoverable: true,
         details: {issues: configIssues},
       });
@@ -170,8 +175,18 @@ export function DeckMapSurface({
       if (failure) {
         onReportIssue({
           kind: 'sql-error',
-          message: failure.error.message,
+          message:
+            failure.error instanceof DeckMapResourceConfigError &&
+            failure.error.issues[0]
+              ? formatDeckMapResourceConfigIssueForAgent(
+                  failure.error.issues[0],
+                )
+              : failure.error.message,
           recoverable: true,
+          details:
+            failure.error instanceof DeckMapResourceConfigError
+              ? {issues: failure.error.issues}
+              : undefined,
         });
       } else if (
         Object.values(states).every((state) => state.status === 'ready')
@@ -226,9 +241,14 @@ export function DeckMapSurface({
   });
 
   if (configIssues.length > 0) {
+    const message = configIssues.map((issue) => issue.message).join('\n\n');
     return (
-      <div className="text-destructive flex h-full min-h-[320px] items-center justify-center p-4 text-center text-sm">
-        {`Invalid map configuration: ${configIssues[0]!.path}: ${configIssues[0]!.message}. Open map settings to change the layer type or fix the config.`}
+      <div className="relative h-full min-h-[320px]">
+        <DeckMapErrorOverlay
+          error={message}
+          title="Invalid map configuration"
+          defaultOpen
+        />
       </div>
     );
   }
@@ -253,8 +273,15 @@ export function DeckMapSurface({
         onRenderingError={(error) =>
           onReportIssue({
             kind: 'render-error',
-            message: error.message,
+            message:
+              error instanceof DeckMapResourceConfigError && error.issues[0]
+                ? formatDeckMapResourceConfigIssueForAgent(error.issues[0])
+                : error.message,
             recoverable: true,
+            details:
+              error instanceof DeckMapResourceConfigError
+                ? {issues: error.issues}
+                : undefined,
           })
         }
       />

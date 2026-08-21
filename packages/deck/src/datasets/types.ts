@@ -1,5 +1,7 @@
 import type * as arrow from 'apache-arrow';
+import type {DescribedSqlColumn} from './wrapGeometryAsWkb';
 import type {GeometryEncodingHint, PreparedDeckDataset} from '../prepare/types';
+import type {DeckDatasetInput} from '../types';
 
 /**
  * One cached prepared-dataset entry keyed by resolved dataset identity.
@@ -32,5 +34,7 @@ export type PreparedDatasetStoreOptions = {
     geometryColumn?: string;
     geometryEncodingHint?: GeometryEncodingHint;
     table: arrow.Table;
+    describedColumns?: readonly DescribedSqlColumn[];
+    input?: DeckDatasetInput;
   }) => PreparedDeckDataset;
 };
