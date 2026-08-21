@@ -10,6 +10,10 @@ import {
 import {CLI_ARTIFACT_TYPES} from '../../artifactTypeIds';
 import {createCliEvalTarget} from '../createCliEvalTarget';
 import {CLI_EVAL_TARGET_TABLE} from '../fixture';
+import {
+  MUTATE_WORKSHEET_SCENARIO,
+  createCliScenarioOracles,
+} from '../scenarios';
 
 function workspaceFacts(workspace: JsonValue | undefined) {
   return workspace as {
@@ -64,6 +68,7 @@ describe('createCliEvalTarget', () => {
       steps: [
         {
           expectation: {promptIncludes: ['Current artifact: worksheet']},
+          usage: {inputTokens: 10, outputTokens: 2},
           content: [
             {
               type: 'tool-call',
@@ -81,6 +86,7 @@ describe('createCliEvalTarget', () => {
           expectation: {
             promptIncludes: ['worksheet builder AI agent', 'direct map'],
           },
+          usage: {inputTokens: 20, outputTokens: 3},
           content: [
             {
               type: 'tool-call',
@@ -126,6 +132,7 @@ describe('createCliEvalTarget', () => {
           ],
         },
         {
+          usage: {inputTokens: 30, outputTokens: 4},
           content: [
             {
               type: 'text',
@@ -134,6 +141,7 @@ describe('createCliEvalTarget', () => {
           ],
         },
         {
+          usage: {inputTokens: 40, outputTokens: 5},
           content: [
             {
               type: 'text',
@@ -229,6 +237,49 @@ describe('createCliEvalTarget', () => {
         ]),
       );
       expect(evidence.oracleResults.every((result) => result.pass)).toBe(true);
+      expect(evidence.usage).toMatchObject({
+        inputTokens: 100,
+        outputTokens: 14,
+        totalTokens: 114,
+      });
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('retains both the empty initial state and seeded fixture state', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'No changes made.'}]}],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: MUTATE_WORKSHEET_SCENARIO,
+        oracles: createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO),
+      });
+      const initialState = evidence.metadata.initialState as {
+        worksheets: unknown[];
+        maps: unknown[];
+      };
+      const fixtureState = evidence.metadata.fixtureState as {
+        worksheets: Array<{blocks: Array<{id: string}>}>;
+        maps: unknown[];
+      };
+
+      expect(initialState.worksheets).toHaveLength(0);
+      expect(initialState.maps).toHaveLength(0);
+      expect(
+        fixtureState.worksheets[0]?.blocks.map((block) => block.id),
+      ).toEqual(
+        expect.arrayContaining([
+          'seed-heading',
+          'seed-chart',
+          'seed-map-block',
+        ]),
+      );
+      expect(fixtureState.maps).toHaveLength(1);
       scripted.assertComplete();
     } finally {
       await target.dispose();
@@ -457,6 +508,102 @@ describe('createCliEvalTarget', () => {
       await target.dispose();
     }
   }, 30_000);
+
+  it('cleans up the pending session wait when analysis fails to start', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+    const unsubscribed = jest.fn();
+    const originalSubscribe = target.store.subscribe;
+    const subscribe = jest
+      .spyOn(target.store, 'subscribe')
+      .mockImplementation((listener) => {
+        const unsubscribe = originalSubscribe(listener);
+        return () => {
+          unsubscribed();
+          unsubscribe();
+        };
+      });
+    const originalAi = target.store.getState().ai;
+    const startAnalysis = jest.fn(async () => {
+      throw new Error('analysis failed to start');
+    });
+    target.store.setState({ai: {...originalAi, startAnalysis}});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.start-failure',
+          version: 1,
+          title: 'Start failure cleanup',
+          compatibleProfiles: ['worksheet-charts-maps'],
+          turns: [{id: 'run', input: 'Fail before streaming.'}],
+          expectations: [
+            {oracleId: 'error', description: 'The start error is captured.'},
+          ],
+        }),
+        oracles: [
+          createErrorOracle({
+            id: 'error',
+            evaluate: (errors) => ({
+              pass: errors.some((error) =>
+                error.message.includes('analysis failed to start'),
+              ),
+              reason: 'The start failure was captured.',
+            }),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('error');
+      expect(unsubscribed).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(evidence)).toContain('analysis failed to start');
+    } finally {
+      target.store.setState({ai: originalAi});
+      subscribe.mockRestore();
+      await target.dispose();
+    }
+  });
+
+  it('derives total usage when transport metadata omits total tokens', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          content: [{type: 'text', text: 'Usage recorded.'}],
+          usage: {inputTokens: 11, outputTokens: 7},
+        },
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.usage',
+          version: 1,
+          title: 'Usage accounting',
+          compatibleProfiles: ['worksheet-charts-maps'],
+          turns: [{id: 'run', input: 'Record usage.'}],
+          expectations: [
+            {oracleId: 'answer', description: 'The run completes.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: () => ({pass: true, reason: 'The run completed.'}),
+          }),
+        ],
+      });
+
+      expect(evidence.usage).toMatchObject({
+        inputTokens: 11,
+        outputTokens: 7,
+        totalTokens: 18,
+      });
+    } finally {
+      await target.dispose();
+    }
+  });
 
   it('redacts sensitive values across the complete evidence envelope', async () => {
     const secret = 'provider-secret-token';

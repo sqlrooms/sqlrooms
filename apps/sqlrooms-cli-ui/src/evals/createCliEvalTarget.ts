@@ -17,7 +17,12 @@ import {
   type ScenarioDefinition,
 } from '@sqlrooms/evals';
 import {createRoomShellSlice} from '@sqlrooms/room-shell';
-import type {LanguageModel, UIMessage} from 'ai';
+import {
+  wrapLanguageModel,
+  type LanguageModel,
+  type LanguageModelMiddleware,
+  type UIMessage,
+} from 'ai';
 import type {StoreApi} from 'zustand';
 import {createStore} from 'zustand/vanilla';
 import {createCliAiInstructions} from '../createCliAiInstructions';
@@ -61,6 +66,10 @@ export type CliEvalTargetOptions = {
   timeoutMs?: number;
   sensitiveValues?: readonly string[];
   now?: () => Date;
+  modelSettings?: JsonObject;
+  configuredRevision?: string;
+  upstreamProvider?: string;
+  maxSteps?: number;
 };
 
 export type CliEvalRunOptions = {
@@ -116,6 +125,157 @@ function errorsFromMessages(
   );
 }
 
+function usageFromMessages(
+  messages: readonly UIMessage[],
+  recordedUsage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  },
+): RunEvidence['usage'] {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+  for (const message of messages) {
+    const usage = (
+      message.metadata as
+        | {
+            tokenUsage?: {
+              inputTokens?: number;
+              outputTokens?: number;
+              totalTokens?: number;
+            };
+          }
+        | undefined
+    )?.tokenUsage;
+    const messageInputTokens = usage?.inputTokens ?? 0;
+    const messageOutputTokens = usage?.outputTokens ?? 0;
+    inputTokens += messageInputTokens;
+    outputTokens += messageOutputTokens;
+    totalTokens +=
+      usage?.totalTokens ?? messageInputTokens + messageOutputTokens;
+  }
+  const nestedInputTokens = Math.max(
+    0,
+    recordedUsage.inputTokens - inputTokens,
+  );
+  const nestedOutputTokens = Math.max(
+    0,
+    recordedUsage.outputTokens - outputTokens,
+  );
+  const nestedTotalTokens = Math.max(
+    0,
+    recordedUsage.totalTokens - totalTokens,
+  );
+  inputTokens += nestedInputTokens;
+  outputTokens += nestedOutputTokens;
+  totalTokens += nestedTotalTokens;
+  if (inputTokens === 0 && outputTokens === 0 && totalTokens === 0) {
+    return undefined;
+  }
+  return {inputTokens, outputTokens, totalTokens, grader: {totalTokens: 0}};
+}
+
+function createModelUsageRecorder(model: LanguageModel): {
+  model: LanguageModel;
+  reset(): void;
+  snapshot(): {inputTokens: number; outputTokens: number; totalTokens: number};
+} {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+  const tokenCount = (value: unknown): number => {
+    if (typeof value === 'number') return value;
+    if (value && typeof value === 'object') {
+      const total = (value as {total?: unknown}).total;
+      if (typeof total === 'number') return total;
+    }
+    return 0;
+  };
+  const record = (usage: unknown) => {
+    if (!usage || typeof usage !== 'object') return;
+    const value = usage as Record<string, unknown>;
+    const recordedInputTokens = tokenCount(value.inputTokens);
+    const recordedOutputTokens = tokenCount(value.outputTokens);
+    inputTokens += recordedInputTokens;
+    outputTokens += recordedOutputTokens;
+    totalTokens +=
+      typeof value.totalTokens === 'number'
+        ? value.totalTokens
+        : recordedInputTokens + recordedOutputTokens;
+  };
+  const middleware: LanguageModelMiddleware = {
+    specificationVersion: 'v3',
+    wrapGenerate: async ({doGenerate}) => {
+      const result = await doGenerate();
+      record(result.usage);
+      return result;
+    },
+    wrapStream: async ({doStream}) => {
+      const result = await doStream();
+      return {
+        ...result,
+        stream: result.stream.pipeThrough(
+          new TransformStream({
+            transform(part, controller) {
+              if (part.type === 'finish') record(part.usage);
+              controller.enqueue(part);
+            },
+          }),
+        ),
+      };
+    },
+  };
+  let recordedModel: LanguageModel;
+  if (typeof model === 'string') {
+    recordedModel = model;
+  } else if (model.specificationVersion === 'v3') {
+    recordedModel = wrapLanguageModel({model, middleware});
+  } else {
+    const v2Model = model;
+    recordedModel = new Proxy(v2Model, {
+      get(target, property) {
+        if (property === 'doGenerate') {
+          return async (options: Parameters<typeof v2Model.doGenerate>[0]) => {
+            const result = await v2Model.doGenerate(options);
+            record(result.usage);
+            return result;
+          };
+        }
+        if (property === 'doStream') {
+          return async (options: Parameters<typeof v2Model.doStream>[0]) => {
+            const result = await v2Model.doStream(options);
+            return {
+              ...result,
+              stream: result.stream.pipeThrough(
+                new TransformStream({
+                  transform(part, controller) {
+                    if (part.type === 'finish') record(part.usage);
+                    controller.enqueue(part);
+                  },
+                }),
+              ),
+            };
+          };
+        }
+        const value = Reflect.get(target, property, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  }
+  return {
+    model: recordedModel,
+    reset() {
+      inputTokens = 0;
+      outputTokens = 0;
+      totalTokens = 0;
+    },
+    snapshot() {
+      return {inputTokens, outputTokens, totalTokens};
+    },
+  };
+}
+
 function redact(value: string, sensitiveValues: readonly string[]): string {
   return sensitiveValues.reduce(
     (result, secret) =>
@@ -168,11 +328,22 @@ function waitForSession(
   store: StoreApi<RoomState>,
   sessionId: string,
   timeoutMs: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
+): {completion: Promise<void>; cancel(): void} {
+  let settled = false;
+  let unsubscribe = () => {};
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let resolveCompletion = () => {};
+  const cleanup = () => {
+    if (timeout !== undefined) clearTimeout(timeout);
+    unsubscribe();
+  };
+  const completion = new Promise<void>((resolve, reject) => {
+    resolveCompletion = resolve;
     let sawRunning = false;
-    const timeout = setTimeout(() => {
-      unsubscribe();
+    timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       reject(
         new CliEvalTimeoutError(
           `CLI eval session timed out after ${timeoutMs}ms.`,
@@ -185,14 +356,24 @@ function waitForSession(
         .ai.config.sessions.find((candidate) => candidate.id === sessionId);
       sawRunning ||= Boolean(session?.isRunning);
       if (session && sawRunning && !session.isRunning) {
-        clearTimeout(timeout);
-        unsubscribe();
+        if (settled) return;
+        settled = true;
+        cleanup();
         resolve();
       }
     };
-    const unsubscribe = store.subscribe(inspect);
+    unsubscribe = store.subscribe(inspect);
     inspect();
   });
+  return {
+    completion,
+    cancel() {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolveCompletion();
+    },
+  };
 }
 
 async function cancelSessionAndWait(
@@ -350,6 +531,7 @@ function createHeadlessStore(
   profile: CliCapabilityProfile,
   model: LanguageModel,
   timeoutMs: number,
+  maxSteps?: number,
 ): {
   store: StoreApi<RoomState>;
   connector: ReturnType<typeof createNodeDuckDbConnector>;
@@ -424,12 +606,98 @@ function createHeadlessStore(
           getRunContext(typedStore, sessionId, {profile}),
         formatRunContextInstructions: ({runContext}) =>
           formatRunContextInstructions(runContext, typedStore),
+        maxSteps,
         timeouts: {runMs: timeoutMs},
       })(set, get, store),
     };
     return state as unknown as RoomState;
   });
   return {store: roomStore, connector};
+}
+
+function fixtureWorkspaceMode(
+  scenario: ScenarioDefinition,
+): 'empty' | 'worksheet' | 'worksheet-chart-map' {
+  const mode = scenario.fixture.workspace;
+  if (
+    mode === 'empty' ||
+    mode === 'worksheet' ||
+    mode === 'worksheet-chart-map'
+  ) {
+    return mode;
+  }
+  return 'worksheet';
+}
+
+function seedWorksheet(
+  store: StoreApi<RoomState>,
+  scenario: ScenarioDefinition,
+  repetition: number,
+  mode: 'worksheet' | 'worksheet-chart-map',
+): string {
+  const worksheetId = store.getState().artifacts.createArtifact({
+    id: `eval-${scenario.id}-${repetition}`,
+    type: 'worksheet',
+    title: 'Evaluation Worksheet',
+  });
+  store.getState().blockDocuments.ensureBlockDocument(worksheetId);
+  if (mode === 'worksheet-chart-map') {
+    const mapId = `${worksheetId}-map`;
+    store.getState().blockDocuments.appendBlocks(worksheetId, [
+      {
+        id: 'seed-heading',
+        type: 'heading',
+        level: 2,
+        text: [{type: 'text', text: 'Existing analysis'}],
+      },
+      {
+        id: 'seed-chart',
+        type: 'chart',
+        tableName: '"analytics"."events"',
+        config: {
+          chartType: 'bar',
+          x: {field: 'category'},
+          y: {field: 'metric', aggregate: 'sum'},
+          title: 'Original metric chart',
+        },
+      },
+      {
+        id: 'seed-map-block',
+        type: 'statefulBlock',
+        blockType: 'map',
+        blockInstanceId: mapId,
+        ownership: 'owned',
+        caption: 'Existing event map',
+      },
+    ]);
+    store.getState().deckMaps.updateMap(mapId, {
+      title: 'Existing event map',
+      selectedTable: '"analytics"."events"',
+      config: {
+        datasets: {
+          events: {source: {tableName: '"analytics"."events"'}},
+        },
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {
+                dataset: 'events',
+                longitudeColumn: 'longitude',
+                latitudeColumn: 'latitude',
+              },
+            },
+          ],
+        },
+        fitToData: {
+          dataset: 'events',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+      },
+    });
+  }
+  return worksheetId;
 }
 
 /** Creates an isolated, in-process CLI eval target using production wiring. */
@@ -440,11 +708,13 @@ export function createCliEvalTarget(
     profileName: 'worksheet-charts-maps',
   });
   const modelIdentity = getLanguageModelIdentity(options.model);
+  const usageRecorder = createModelUsageRecorder(options.model);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const {store, connector} = createHeadlessStore(
     profile,
-    options.model,
+    usageRecorder.model,
     timeoutMs,
+    options.maxSteps,
   );
   const now = options.now ?? (() => new Date());
   let initialized = false;
@@ -475,34 +745,69 @@ export function createCliEvalTarget(
         }
         await this.initialize();
         await resetCliEvalWorkspace(store);
+        usageRecorder.reset();
         const startedAt = now();
         const initialState = snapshotCliEvalState(store.getState());
+        let fixtureState = initialState;
         const errors: ObservedError[] = [];
         let sessionId = '';
         try {
-          const worksheetId = store.getState().artifacts.createArtifact({
-            id: `eval-${scenario.id}-${repetition}`,
-            type: 'worksheet',
-            title: 'Evaluation Worksheet',
-          });
-          sessionId =
+          const workspaceMode = fixtureWorkspaceMode(scenario);
+          const worksheetId =
+            workspaceMode === 'empty'
+              ? undefined
+              : seedWorksheet(store, scenario, repetition, workspaceMode);
+          fixtureState = snapshotCliEvalState(store.getState());
+          if (worksheetId) {
+            sessionId =
+              store
+                .getState()
+                .artifactAi.createArtifactScopedSession(
+                  scenario.title,
+                  options.modelProvider ?? modelIdentity.provider,
+                  options.modelId ?? modelIdentity.modelId,
+                ) ?? '';
+          } else {
             store
               .getState()
-              .artifactAi.createArtifactScopedSession(
+              .ai.createSession(
                 scenario.title,
                 options.modelProvider ?? modelIdentity.provider,
                 options.modelId ?? modelIdentity.modelId,
-              ) ?? '';
+              );
+            sessionId = store.getState().ai.getCurrentSession()?.id ?? '';
+          }
           if (!sessionId)
             throw new Error('Failed to create an eval AI session.');
-          store
-            .getState()
-            .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
+          if (worksheetId) {
+            store
+              .getState()
+              .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
+          }
           for (const turn of scenario.turns) {
             store.getState().ai.setPrompt(sessionId, turn.input);
-            const completion = waitForSession(store, sessionId, timeoutMs);
-            await store.getState().ai.startAnalysis(sessionId);
-            await completion;
+            const sessionWait = waitForSession(store, sessionId, timeoutMs);
+            try {
+              await store.getState().ai.startAnalysis(sessionId);
+            } catch (error) {
+              sessionWait.cancel();
+              await sessionWait.completion.catch(() => {});
+              throw error;
+            }
+            await sessionWait.completion;
+            const currentArtifactId =
+              store.getState().artifacts.config.currentArtifactId;
+            if (
+              currentArtifactId &&
+              store.getState().artifacts.config.artifactsById[currentArtifactId]
+            ) {
+              store
+                .getState()
+                .artifactAi.addSessionArtifactLink(
+                  sessionId,
+                  currentArtifactId,
+                );
+            }
           }
         } catch (error) {
           if (error instanceof CliEvalTimeoutError && sessionId) {
@@ -522,7 +827,7 @@ export function createCliEvalTarget(
         const finalAnswer = textFromMessages(messages);
         const finalState = snapshotCliEvalState(store.getState());
         const mutations: ObservedMutation[] =
-          JSON.stringify(initialState) === JSON.stringify(finalState)
+          JSON.stringify(fixtureState) === JSON.stringify(finalState)
             ? []
             : [{kind: 'workspace-state', data: {finalState}}];
         const oracleResults = await evaluateOracles(oracles, {
@@ -532,7 +837,7 @@ export function createCliEvalTarget(
           finalAnswer,
           errors,
           mutations,
-          metadata: {},
+          metadata: {initialState: fixtureState},
         });
         const summary = summarizeOracleResults(oracleResults);
         const status =
@@ -575,7 +880,13 @@ export function createCliEvalTarget(
           model: {
             provider: options.modelProvider ?? modelIdentity.provider,
             modelId: options.modelId ?? modelIdentity.modelId,
-            settings: {},
+            ...(options.configuredRevision
+              ? {configuredRevision: options.configuredRevision}
+              : {}),
+            ...(options.upstreamProvider
+              ? {upstreamProvider: options.upstreamProvider}
+              : {}),
+            settings: options.modelSettings ?? {},
           },
           timing: {
             startedAt: startedAt.toISOString(),
@@ -586,9 +897,10 @@ export function createCliEvalTarget(
           promptTurns: scenario.turns,
           finalAnswer,
           events,
+          usage: usageFromMessages(messages, usageRecorder.snapshot()),
           finalState,
           oracleResults,
-          metadata: {initialState},
+          metadata: {initialState, fixtureState},
         });
         return redactRunEvidence(evidence, options.sensitiveValues ?? []);
       } finally {

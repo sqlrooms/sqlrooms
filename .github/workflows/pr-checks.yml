@@ -63,3 +63,6 @@ jobs:
 
       - name: Test
         run: pnpm test --filter='!./python/*'
+
+      - name: Deterministic behavioral eval wiring
+        run: pnpm evals:test
