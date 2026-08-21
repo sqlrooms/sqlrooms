@@ -1,13 +1,19 @@
-import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import {
+  createOpenAICompatible,
+  type MetadataExtractor,
+} from '@ai-sdk/openai-compatible';
 import {
   toPromptfooAssertionResult,
   toPromptfooProviderResponse,
 } from '@sqlrooms/evals/promptfoo';
 import type {LanguageModel} from 'ai';
 import {createCliEvalTarget} from './createCliEvalTarget';
+import {createOpenRouterCostTracker} from './openRouterCost';
 import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioOracles} from './scenarios';
 
 const MODEL_ID = 'deepseek/deepseek-v4-flash-0731';
+const MODEL_INPUT_COST_USD_PER_MILLION_TOKENS = 0.08;
+const MODEL_OUTPUT_COST_USD_PER_MILLION_TOKENS = 0.18;
 const MAX_STEPS = 24;
 const TEMPERATURE = 0;
 
@@ -38,7 +44,9 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
-function createPinnedOpenRouterModel(): LanguageModel {
+function createPinnedOpenRouterModel(
+  metadataExtractor: MetadataExtractor,
+): LanguageModel {
   const provider = createOpenAICompatible({
     name: 'openrouter',
     apiKey: requiredEnvironment('OPENROUTER_API_KEY'),
@@ -47,6 +55,7 @@ function createPinnedOpenRouterModel(): LanguageModel {
       'HTTP-Referer': 'https://github.com/sqlrooms/sqlrooms',
       'X-Title': 'SQLRooms behavioral evals',
     },
+    metadataExtractor,
   });
   return provider.languageModel(MODEL_ID, {
     transformRequestBody: (body) => ({...body, temperature: TEMPERATURE}),
@@ -100,8 +109,12 @@ export default class SqlroomsCliEvalProvider {
     }
 
     const repeatIndex = context?.repeatIndex ?? 0;
+    const costTracker = createOpenRouterCostTracker({
+      inputCostUsdPerMillionTokens: MODEL_INPUT_COST_USD_PER_MILLION_TOKENS,
+      outputCostUsdPerMillionTokens: MODEL_OUTPUT_COST_USD_PER_MILLION_TOKENS,
+    });
     const target = createCliEvalTarget({
-      model: createPinnedOpenRouterModel(),
+      model: createPinnedOpenRouterModel(costTracker.metadataExtractor),
       modelProvider: 'openrouter',
       modelId: MODEL_ID,
       configuredRevision: MODEL_ID,
@@ -113,11 +126,22 @@ export default class SqlroomsCliEvalProvider {
     });
 
     try {
-      const evidence = await target.run({
+      const runEvidence = await target.run({
         scenario,
         oracles: createCliScenarioOracles(scenario),
         repetition: repeatIndex,
       });
+      const cost = costTracker.resolveCost(runEvidence.usage);
+      const evidence = cost
+        ? {
+            ...runEvidence,
+            usage: {...runEvidence.usage, costUsd: cost.costUsd},
+            metadata: {
+              ...runEvidence.metadata,
+              cost: {source: cost.source},
+            },
+          }
+        : runEvidence;
       const response = toPromptfooProviderResponse(evidence);
       const assertion = toPromptfooAssertionResult(evidence.oracleResults);
       return {
