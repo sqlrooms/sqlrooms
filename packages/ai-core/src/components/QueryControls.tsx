@@ -21,6 +21,7 @@ type QueryControlsProps = PropsWithChildren<{
    */
   onRun?: (prompt?: string) => void | false;
   onCancel?: () => void;
+  /** Accepts in-app context items dropped onto the composer. Both modes. */
   contextDropTarget?: ContextDropTargetConfig;
 }>;
 
@@ -53,7 +54,7 @@ function QueryControlsBody(props: QueryControlsProps) {
 /**
  * Session-mode composer. The only place in `QueryControls` that reads the AI
  * slice, for the session-only concerns {@link useChatComposer} does not
- * normalize: the resolvable-model check, the API key, and the summarizing flag.
+ * normalize: the resolvable-model check and the summarizing flag.
  */
 const SessionQueryControls: FC<QueryControlsProps> = ({
   className,
@@ -64,10 +65,9 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
   onCancel,
   contextDropTarget,
 }) => {
-  const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
-  const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
+  const composer = useChatComposer();
   // The AI slice owns send readiness; `useChatComposer()`'s `canSend` consumes
-  // the same predicate. Read here only for the placeholder and the key swap.
+  // the same predicate. Read here only for the placeholder.
   const hasSelectedModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
   const isSummarizing = useStoreWithAi((s) => s.ai.isSummarizing);
 
@@ -81,11 +81,10 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
     />
   );
 
-  // Swap in key entry when a host supplied the input and no usable key exists.
-  const needsKeyEntry =
-    inlineApiKeyInput !== null &&
-    hasSelectedModel &&
-    (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
+  // Swap in key entry when a host supplied the input and one is actually
+  // needed. Taken from the composer rather than recomputed, so the recipe and
+  // any host reading `needsApiKey` cannot disagree.
+  const needsKeyEntry = inlineApiKeyInput !== null && composer.needsApiKey;
 
   if (needsKeyEntry && inlineApiKeyInput) {
     return (
@@ -128,6 +127,7 @@ const LocalAgentQueryControls: FC<QueryControlsProps> = ({
   topActions,
   onRun,
   onCancel,
+  contextDropTarget,
 }) => {
   const composer = useChatComposer();
 
@@ -136,6 +136,7 @@ const LocalAgentQueryControls: FC<QueryControlsProps> = ({
       className={className}
       placeholder={placeholder}
       disabled={composer.isRunning}
+      dropTarget={contextDropTarget}
       topRow={<ComposerTopRow contextSelectors={[]} topActions={topActions} />}
       footerStart={children}
       onRun={onRun}

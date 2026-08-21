@@ -6,9 +6,14 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {Lightbulb, X} from 'lucide-react';
-import {type FC, type PropsWithChildren, type ReactNode} from 'react';
+import {Children, type FC, type PropsWithChildren, type ReactNode} from 'react';
 import {Dismiss, Item, Root, VisibilityToggle} from './suggestions';
 import {usePromptSuggestions} from './suggestions/ChatSuggestionsContext';
+
+/** Whether `node` would render anything — `null`, `false` and `[]` do not. */
+function hasRenderableContent(node: ReactNode): boolean {
+  return Children.toArray(node).length > 0;
+}
 
 const ROW_CLASSES = cn(
   'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs',
@@ -38,14 +43,19 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
 }) => {
   const suggestions = usePromptSuggestions();
 
-  const hasExplicitChildren = children !== undefined;
-  if (!isLoading && !hasExplicitChildren && suggestions.items.length === 0) {
+  // Emptiness is decided on *renderable* content, not on `children !==
+  // undefined`. `null` and `false` are what a host's own conditional renders
+  // when it has nothing to show, so they count as no children rather than as
+  // an explicit — and then permanently empty — list, which would leave the
+  // frame and its dismiss button wrapped around nothing. `Children.toArray`
+  // is the test that drops them; `Children.count` counts `false` as one.
+  const content = hasRenderableContent(children)
+    ? children
+    : suggestions.items.map((text) => <RecipeItem key={text} text={text} />);
+
+  if (!isLoading && !hasRenderableContent(content)) {
     return null;
   }
-
-  const content =
-    children ??
-    suggestions.items.map((text) => <RecipeItem key={text} text={text} />);
 
   return (
     <Root className={cn('flex w-full items-start gap-2 py-1', className)}>

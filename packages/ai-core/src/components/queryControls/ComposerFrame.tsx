@@ -1,7 +1,19 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {useCallback, useRef, type MouseEvent, type ReactNode} from 'react';
-import {Input, Send, Stop, useChatComposer} from '../composer';
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
+import {
+  Input,
+  Send,
+  Stop,
+  useChatComposer,
+  useRegisterBeforeSend,
+} from '../composer';
 import {ComposerFooterStrip} from './ComposerFooterStrip';
 import {
   ContextDropTarget,
@@ -50,11 +62,15 @@ export function ComposerFrame({
   useDelayedFocus(textareaRef);
 
   // Runs before a session is created, so a host can create artifacts first.
-  // Wired through the primitives' `onBeforeSend` seam rather than duplicating
-  // their Enter/click guards here.
-  const handleBeforeSend = useCallback(
-    (text: string) => onRun?.(text) !== false,
-    [onRun],
+  // Registered on the composer state rather than wired into this frame's own
+  // controls, so it also applies to sends that originate elsewhere — a prompt
+  // suggestion row, say. A policy the composer enforces and a suggestion
+  // bypasses is a policy two surfaces disagree about.
+  useRegisterBeforeSend(
+    useMemo(
+      () => (onRun ? (text: string) => onRun(text) !== false : undefined),
+      [onRun],
+    ),
   );
 
   const handleStopClick = useCallback(
@@ -93,7 +109,6 @@ export function ComposerFrame({
                 disabled={disabled}
                 placeholder={placeholder}
                 autoFocus
-                onBeforeSend={handleBeforeSend}
               >
                 <Textarea
                   className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-hidden focus-visible:ring-0"
@@ -104,11 +119,12 @@ export function ComposerFrame({
                 actions={
                   <div className="ml-auto flex shrink-0 items-center gap-1 p-2">
                     {footerEnd}
-                    <Send asChild onBeforeSend={handleBeforeSend}>
+                    <Send asChild>
                       <Button
                         className="h-8 w-8 rounded-full"
                         variant="default"
                         size="icon"
+                        aria-label="Send message"
                       >
                         <ArrowUpIcon />
                       </Button>
@@ -118,6 +134,7 @@ export function ComposerFrame({
                         className="h-8 w-8 rounded-full"
                         variant="default"
                         size="icon"
+                        aria-label="Stop generating"
                       >
                         <OctagonXIcon />
                       </Button>

@@ -1,10 +1,11 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback, useMemo, type FC, type PropsWithChildren} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import type {LocalAgentChatRuntime} from '../ChatRuntimeContext';
 import {
   createDualModeChatContext,
   type ChatComposerMode,
 } from '../primitives/createDualModeChatContext';
+import {ChatComposerBeforeSendProvider, useVetoableSend} from './beforeSend';
 
 export type {ChatComposerMode};
 
@@ -31,8 +32,13 @@ export interface ChatComposerState {
   setPrompt: (value: string) => void;
   /**
    * Sends the current prompt, or `text` when provided instead. A no-op when
-   * sending is not currently possible (see {@link canSend}). In session mode,
-   * this creates a session first if none is active.
+   * sending is not currently possible (see {@link canSend}).
+   *
+   * Every registered pre-send veto is consulted first (see
+   * {@link useRegisterBeforeSend}), so a host policy applies to *any* surface
+   * that sends — the composer's own controls, a suggestion row, a command —
+   * rather than only the one that installed it. In session mode a session is
+   * created first if none is active, after the vetoes pass.
    */
   send: (text?: string) => void;
   /** Cancels the in-flight run, if any. A no-op when nothing is running. */
@@ -52,8 +58,12 @@ export interface ChatComposerState {
   isBusy: boolean;
   /**
    * True when an API key must be supplied before sending can succeed.
+   *
    * Always `false` in local-agent mode, which has no concept of a
-   * browser-held API key.
+   * browser-held API key — and also `false` in session mode when the model is
+   * resolved by a custom-model factory, which supplies its own credentials
+   * (see the slice's `requiresApiKey`). An app streaming through a
+   * server-side proxy therefore never sees a key prompt.
    */
   needsApiKey: boolean;
 }
@@ -71,6 +81,7 @@ function useSessionComposerState(): ChatComposerState {
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
   const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
   const hasResolvableModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
+  const requiresApiKey = useStoreWithAi((s) => s.ai.requiresApiKey());
 
   const isRunning = useStoreWithAi((s) =>
     sessionId ? s.ai.getIsRunning(sessionId) : false,
@@ -116,7 +127,7 @@ function useSessionComposerState(): ChatComposerState {
 
   const canSend = canSendText(prompt);
 
-  const send = useCallback(
+  const rawSend = useCallback(
     (text?: string) => {
       const value = text ?? prompt;
       if (!canSendText(value)) return;
@@ -148,6 +159,8 @@ function useSessionComposerState(): ChatComposerState {
     ],
   );
 
+  const send = useVetoableSend(rawSend, prompt);
+
   const cancel = useCallback(() => {
     if (!sessionId) return;
     cancelAnalysis(sessionId);
@@ -155,7 +168,10 @@ function useSessionComposerState(): ChatComposerState {
 
   const isBusy = isRunning || isSummarizing;
 
+  // Gated on `requiresApiKey` first: a resolvable model whose credentials the
+  // host owns must not raise a key prompt just because settings hold no key.
   const needsApiKey =
+    requiresApiKey &&
     hasResolvableModel &&
     (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
 
@@ -186,8 +202,10 @@ function useLocalAgentComposerState(
   const {prompt, setPrompt, sendPrompt, stop, isStreaming} = runtime;
 
   // `sendPrompt` already matches `send`'s signature and applies the same
-  // guards, so it is used directly. `stop` returns a promise, so it is wrapped
-  // to match `cancel`'s `void` contract.
+  // guards, so only the veto wrapper is added. `stop` returns a promise, so it
+  // is wrapped to match `cancel`'s `void` contract.
+  const send = useVetoableSend(sendPrompt, prompt);
+
   const cancel = useCallback(() => {
     void stop();
   }, [stop]);
@@ -199,14 +217,14 @@ function useLocalAgentComposerState(
       mode: 'local-agent' as const,
       prompt,
       setPrompt,
-      send: sendPrompt,
+      send,
       cancel,
       canSend,
       isRunning: isStreaming,
       isBusy: isStreaming,
       needsApiKey: false,
     }),
-    [prompt, setPrompt, sendPrompt, cancel, canSend, isStreaming],
+    [prompt, setPrompt, send, cancel, canSend, isStreaming],
   );
 }
 
@@ -219,16 +237,38 @@ const composerContext = createDualModeChatContext<ChatComposerState>({
 });
 
 /**
+ * Wraps a state provider in the pre-send veto registry, which has to sit above
+ * it: the provider builds `send`, and `send` consults the registry.
+ */
+function withBeforeSend(
+  Provider: FC<PropsWithChildren>,
+  displayName: string,
+): FC<PropsWithChildren> {
+  const Wrapped: FC<PropsWithChildren> = ({children}) => (
+    <ChatComposerBeforeSendProvider>
+      <Provider>{children}</Provider>
+    </ChatComposerBeforeSendProvider>
+  );
+  Wrapped.displayName = displayName;
+  return Wrapped;
+}
+
+/**
  * Publishes normalized session-mode composer state. Rendered by `Chat.Root`.
  */
-export const SessionChatComposerProvider = composerContext.SessionProvider;
+export const SessionChatComposerProvider = withBeforeSend(
+  composerContext.SessionProvider,
+  'SessionChatComposerProvider',
+);
 
 /**
  * Publishes normalized local-agent-mode composer state. Rendered by
  * `Chat.LocalAgentRoot`, inside its `LocalAgentChatRuntimeProvider`.
  */
-export const LocalAgentChatComposerProvider =
-  composerContext.LocalAgentProvider;
+export const LocalAgentChatComposerProvider = withBeforeSend(
+  composerContext.LocalAgentProvider,
+  'LocalAgentChatComposerProvider',
+);
 
 /**
  * Wraps `children` so that {@link useChatComposer} always has state to read.
@@ -238,7 +278,10 @@ export const LocalAgentChatComposerProvider =
  * session-mode provider is rendered around them, so a composer used without a
  * `<Chat>` ancestor still works.
  */
-export const ChatComposerStateBoundary = composerContext.StateBoundary;
+export const ChatComposerStateBoundary = withBeforeSend(
+  composerContext.StateBoundary,
+  'ChatComposerStateBoundary',
+);
 
 /**
  * Reads normalized composer state and actions.

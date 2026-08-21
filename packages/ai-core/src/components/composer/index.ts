@@ -6,6 +6,12 @@ export {
 } from './ChatComposerContext';
 export type {ChatComposerMode, ChatComposerState} from './ChatComposerContext';
 
+export {
+  ChatComposerBeforeSendProvider,
+  useRegisterBeforeSend,
+} from './beforeSend';
+export type {BeforeSendHandler} from './beforeSend';
+
 export {Input} from './Input';
 export type {ChatComposerInputProps} from './Input';
 

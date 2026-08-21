@@ -2,17 +2,42 @@ import {ChevronLeft, ChevronRight} from 'lucide-react';
 import React, {useEffect, useRef, useState} from 'react';
 import {cn} from '../lib/utils';
 
+/**
+ * Props for {@link ScrollableRow}. Any other `div` prop is spread onto the
+ * outer wrapper, so the component composes through a slot.
+ */
 type ScrollableRowProps = {
   children: React.ReactNode;
+  /** Classes for the outer wrapper, which positions the arrows. */
   className?: string;
+  /** Classes for the inner horizontally scrolling container. */
   scrollClassName?: string;
+  /**
+   * Ref to the inner scrolling container, for reading or driving its scroll
+   * position. Distinct from the component's forwarded ref, which points at the
+   * outer wrapper — see {@link ScrollableRow}.
+   */
   scrollRef?: React.RefObject<HTMLDivElement>;
+  /** Pixels scrolled per arrow activation. Defaults to 200. */
   scrollAmount?: number;
+  /** Whether the arrows appear on hover only, or stay visible. */
   arrowVisibility?: 'hover' | 'always';
   arrowClassName?: string;
   arrowIconClassName?: string;
 } & Omit<React.ComponentPropsWithoutRef<'div'>, 'children' | 'className'>;
 
+/**
+ * A horizontally scrolling row with overflow-aware previous/next arrows, which
+ * appear only in the direction there is more content.
+ *
+ * **Two refs, two elements.** The forwarded ref points at the **outer
+ * wrapper** — the element that also receives `className` and any extra `div`
+ * props — so wrapping this component in something that needs a DOM handle,
+ * such as a Radix `Slot` or a drop target, works. `scrollRef` instead points
+ * at the **inner scrolling container**; pass it when you need to read or set
+ * `scrollLeft`. Supplying `scrollRef` replaces the internal ref, so the arrows
+ * keep working either way.
+ */
 export const ScrollableRow = React.forwardRef<
   HTMLDivElement,
   ScrollableRowProps

@@ -11,18 +11,28 @@ import {
   createBaseRoomSlice,
   type BaseRoomStoreState,
 } from '@sqlrooms/room-store';
-import {createAiSlice, type AiSliceState} from '../../src/AiSlice';
+import {
+  createAiSlice,
+  type AiSliceOptions,
+  type AiSliceState,
+} from '../../src/AiSlice';
 
 export type SessionTestState = BaseRoomStoreState & AiSliceState;
 
-/** A store with one empty AI slice and no sessions. */
-export function createSessionTestStore() {
+/**
+ * A store with one empty AI slice and no sessions.
+ *
+ * @param options - Slice options to override, e.g. `getCustomModel` for the
+ *   server-side-proxy case where no browser-held API key exists.
+ */
+export function createSessionTestStore(options: Partial<AiSliceOptions> = {}) {
   return createStore<SessionTestState>()((set, get, storeApi) => ({
     ...createBaseRoomSlice()(set, get, storeApi),
     ...createAiSlice({
       tools: {},
       getInstructions: () => 'test instructions',
       config: {sessions: []},
+      ...options,
     })(set, get, storeApi),
   }));
 }

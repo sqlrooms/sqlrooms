@@ -113,6 +113,7 @@ export {
 } from './components/ChatRuntimeContext';
 export {
   useChatComposer,
+  useRegisterBeforeSend,
   ChatComposerStateBoundary,
   Input as ChatComposerInput,
   Send as ChatComposerSend,
@@ -122,6 +123,7 @@ export {
 export type {
   ChatComposerMode,
   ChatComposerState,
+  BeforeSendHandler,
   ChatComposerInputProps,
   ChatComposerSendProps,
   ChatComposerStopProps,

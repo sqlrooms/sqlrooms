@@ -184,7 +184,10 @@ function SettingsPanel({onClose}: {onClose: () => void}) {
 - **`ScrollableRow` forwards its ref and passes through extra props** (e.g.
   `data-*`, `aria-*`, event handlers) to its outermost element, so it can be
   wrapped by a slot component (such as Radix's `Slot`, re-exported from this
-  package) without silently losing the ref or those props.
+  package) without silently losing the ref or those props. Note the two refs
+  point at different elements: the forwarded ref is the outer wrapper (the one
+  that also takes `className`), while `scrollRef` is the inner scrolling
+  container, for reading or setting `scrollLeft`.
 
 ## Auto-Resize for Textareas
 
@@ -195,11 +198,20 @@ component. Give it a ref to the textarea and it grows the element's height to
 fit its content, tracks whether the content now exceeds the element's
 `max-height`, and re-measures on container resize.
 
+`resizeToFitContent` schedules the measurement on the next animation frame, so
+the element's height is not yet updated when the call returns.
+
 ```tsx
 import {useAutoResizeTextarea} from '@sqlrooms/ui';
 import {useRef} from 'react';
 
-function MyTextarea({value}: {value: string}) {
+function MyTextarea({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const {hasOverflow, resizeToFitContent} = useAutoResizeTextarea({
     autoResize: true,
@@ -211,6 +223,7 @@ function MyTextarea({value}: {value: string}) {
     <textarea
       ref={textareaRef}
       value={value}
+      onChange={(event) => onChange(event.currentTarget.value)}
       onInput={() => resizeToFitContent()}
       className={hasOverflow ? 'overflow-y-auto' : 'overflow-y-hidden'}
     />

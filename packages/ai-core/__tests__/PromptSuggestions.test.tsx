@@ -29,6 +29,7 @@ const {
   Item,
   VisibilityToggle,
   Dismiss,
+  usePromptSuggestions,
 } = await import('../src/components/suggestions');
 const {PromptSuggestions} = await import('../src/components/PromptSuggestions');
 
@@ -234,6 +235,69 @@ describe('suggestions primitives — Item activation', () => {
   });
 });
 
+describe('usePromptSuggestions — isSessionEmpty', () => {
+  /** Renders the flag as text so a test can assert on it. */
+  function EmptyProbe() {
+    return <span>{String(usePromptSuggestions().isSessionEmpty)}</span>;
+  }
+
+  it('session mode: is false once a draft prompt exists, before any session does', async () => {
+    // The draft lives in `ai.draftPrompt` until the first send creates a
+    // session, so a session-shaped emptiness check alone reports "empty" while
+    // the user is visibly typing. The composer's normalized prompt is the only
+    // value that covers both.
+    const store = createSessionTestStore();
+    stubAnalysisActions(store);
+
+    const {container, root} = await renderTree(
+      <SessionTree store={store}>
+        <EmptyProbe />
+      </SessionTree>,
+    );
+
+    expect(container.textContent).toBe('true');
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+
+    await act(async () => {
+      store.getState().ai.setDraftPrompt('half a question');
+    });
+
+    expect(container.textContent).toBe('false');
+    // Still no session — the flag flipped on the draft alone.
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+
+    await cleanup(container, root);
+  });
+
+  it('local-agent mode: is false once the runtime prompt is non-empty', async () => {
+    setMockRuntime({messages: [], prompt: 'half a question'});
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <EmptyProbe />
+      </LocalAgentTree>,
+    );
+
+    expect(container.textContent).toBe('false');
+
+    await cleanup(container, root);
+  });
+
+  it('is true for whitespace-only prompt text', async () => {
+    setMockRuntime({messages: [], prompt: '   '});
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <EmptyProbe />
+      </LocalAgentTree>,
+    );
+
+    expect(container.textContent).toBe('true');
+
+    await cleanup(container, root);
+  });
+});
+
 describe('suggestions primitives — Dismiss', () => {
   it('hides the list', async () => {
     const store = createSessionTestStore();
@@ -352,6 +416,46 @@ describe('recipe — Chat.PromptSuggestions (the new vertical default)', () => {
     expect(runtime.sendPrompt).toHaveBeenCalledWith(
       'What does this data show?',
     );
+
+    await cleanup(container, root);
+  });
+
+  it('falls back to runtime items when children are a false conditional branch', async () => {
+    // `{isReady && <Item/>}` is how a host renders "nothing yet". Testing
+    // `children !== undefined` would treat that `false` as an explicit — and
+    // permanently empty — list, leaving the frame and its dismiss button
+    // wrapped around nothing.
+    setMockRuntime({initialSuggestions: ['A runtime item']});
+    const isReady = false;
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <PromptSuggestions>
+          {isReady && <PromptSuggestions.Item text="host item" />}
+        </PromptSuggestions>
+      </LocalAgentTree>,
+    );
+
+    expect(container.textContent).toContain('A runtime item');
+    expect(container.textContent).not.toContain('host item');
+
+    await cleanup(container, root);
+  });
+
+  it('renders nothing when neither children nor runtime items have content', async () => {
+    setMockRuntime({initialSuggestions: []});
+    const isReady = false;
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <PromptSuggestions>
+          {isReady && <PromptSuggestions.Item text="host item" />}
+        </PromptSuggestions>
+      </LocalAgentTree>,
+    );
+
+    // No frame, and in particular no orphaned dismiss button.
+    expect(container.querySelector('button')).toBeNull();
 
     await cleanup(container, root);
   });

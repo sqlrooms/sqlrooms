@@ -211,6 +211,23 @@ export type AiSliceState = {
      */
     hasResolvableModel: () => boolean;
     /**
+     * Whether the model resolution path in effect needs a browser-held API key
+     * at all.
+     *
+     * `false` when a custom-model factory is configured
+     * ({@link AiSliceOptions.getCustomModel}): that factory supplies a fully
+     * configured client, so credentials live wherever the host put them — a
+     * server-side proxy, for instance — and never reach the browser. `true`
+     * otherwise, when requests go out through the built-in
+     * OpenAI-compatible client and it needs a key.
+     *
+     * Symmetric with {@link AiSliceState.ai.hasResolvableModel}: both treat a
+     * configured factory as authoritative and neither invokes it. Use this to
+     * gate API-key entry UI, so an app behind a model proxy is not asked for a
+     * key it has no use for.
+     */
+    requiresApiKey: () => boolean;
+    /**
      * Create a new chat session, make it the current session, and open it in a
      * tab. When `modelProvider`/`model` are omitted the current selection (or
      * configured defaults) are used.
@@ -1095,6 +1112,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
           return Boolean(currentSession.modelProvider && currentSession.model);
         },
+
+        // A configured factory owns its own credentials, so the built-in
+        // client — the only thing that consumes a browser-held key — is out of
+        // the picture. Checked, never invoked, matching `hasResolvableModel`.
+        requiresApiKey: () => typeof getCustomModel !== 'function',
 
         /**
          * Get the current active session

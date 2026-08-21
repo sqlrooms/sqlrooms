@@ -212,3 +212,42 @@ describe('AiSlice hasResolvableModel', () => {
     expect(getCustomModel).not.toHaveBeenCalled();
   });
 });
+
+describe('AiSlice requiresApiKey', () => {
+  it('does not require a key when a custom-model factory was configured', () => {
+    // The factory supplies a fully configured client, so credentials live
+    // wherever the host put them — a server-side proxy, typically — and the
+    // built-in OpenAI-compatible client that consumes a browser-held key is
+    // never reached. Without this, `hasResolvableModel()` turning true for
+    // these apps would newly raise an API-key prompt they have no use for.
+    const store = createTestStore({
+      getCustomModel: () => undefined,
+      aiSettingsConfig: createSettingsConfig([]),
+      sessionConfig: createSessionConfig('proxy', 'unlisted-model'),
+    });
+
+    expect(store.getState().ai.requiresApiKey()).toBe(false);
+  });
+
+  it('requires a key when no custom-model factory was configured', () => {
+    const store = createTestStore({
+      aiSettingsConfig: createSettingsConfig([
+        {provider: 'openai', modelName: 'shared-model'},
+      ]),
+      sessionConfig: createSessionConfig('openai', 'shared-model'),
+    });
+
+    expect(store.getState().ai.requiresApiKey()).toBe(true);
+  });
+
+  it('never invokes the factory, matching hasResolvableModel', () => {
+    const getCustomModel = jest.fn<() => LanguageModel | undefined>(
+      () => undefined,
+    );
+    const store = createTestStore({getCustomModel});
+
+    store.getState().ai.requiresApiKey();
+
+    expect(getCustomModel).not.toHaveBeenCalled();
+  });
+});

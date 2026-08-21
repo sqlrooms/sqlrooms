@@ -29,7 +29,10 @@ export interface UseAutoResizeTextareaOptions {
 export interface UseAutoResizeTextareaResult {
   /** True when the content's height exceeds the element's `max-height`. */
   hasOverflow: boolean;
-  /** Re-measures the element and applies its resized height immediately. */
+  /**
+   * Schedules a re-measure and height update on the next animation frame —
+   * the element's height is not yet updated when this returns.
+   */
   resizeToFitContent: () => void;
 }
 

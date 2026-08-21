@@ -1,6 +1,5 @@
 import {useCallback, useMemo} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
-import {isChatSessionEmpty} from '../../contextSelection';
 import {
   ChatComposerStateBoundary,
   useChatComposer,
@@ -33,16 +32,22 @@ export interface ChatSuggestionsState {
    */
   items: readonly string[];
   /**
-   * True when the current chat session (or, in local-agent mode, the
-   * message history) has no messages and no in-progress prompt. A suitable
-   * predicate for a host that wants to show suggestions only on an empty
-   * session — no `when`-style prop is provided for this; branch on this flag
-   * instead.
+   * True when the chat has no messages *and* no in-progress prompt — in both
+   * modes, and including a draft typed before any session exists, which in
+   * session mode lives outside the session itself.
+   *
+   * A suitable predicate for a host that wants to show suggestions only on a
+   * genuinely empty chat. No `when`-style prop is provided for this; branch on
+   * this flag instead.
    */
   isSessionEmpty: boolean;
   /** Writes `text` into the prompt without sending it. */
   fill: (text: string) => void;
-  /** Sends `text` immediately, subject to {@link isReadyToSend}. */
+  /**
+   * Sends `text` immediately, subject to {@link isReadyToSend}. Routed through
+   * the composer's `send`, so any pre-send veto a host registered applies here
+   * too — a suggestion cannot bypass a policy the composer enforces.
+   */
   send: (text: string) => void;
   /**
    * True when an item's own text could be sent: a model is resolvable
@@ -63,7 +68,7 @@ const EMPTY_ITEMS: readonly string[] = [];
  */
 type SuggestionsSource = Pick<
   ChatSuggestionsState,
-  'mode' | 'visible' | 'setVisible' | 'items' | 'isSessionEmpty'
+  'mode' | 'visible' | 'setVisible' | 'items'
 > & {
   /**
    * The mode-specific half of send readiness, ANDed with "not busy" by the
@@ -71,6 +76,13 @@ type SuggestionsSource = Pick<
    * mode has no such concept and always passes `true`.
    */
   hasSendableTarget: boolean;
+  /**
+   * The message half of {@link ChatSuggestionsState.isSessionEmpty}. The
+   * prompt half is added by the shared derivation from the composer's own
+   * normalized prompt, which is the only place that already accounts for a
+   * draft typed before a session exists.
+   */
+  hasNoMessages: boolean;
 };
 
 /**
@@ -79,7 +91,7 @@ type SuggestionsSource = Pick<
  * suggestion and the send control can never disagree.
  */
 function useSuggestionsState(source: SuggestionsSource): ChatSuggestionsState {
-  const {mode, visible, setVisible, items, isSessionEmpty, hasSendableTarget} =
+  const {mode, visible, setVisible, items, hasSendableTarget, hasNoMessages} =
     source;
   const composer = useChatComposer();
 
@@ -91,6 +103,7 @@ function useSuggestionsState(source: SuggestionsSource): ChatSuggestionsState {
   const send = useCallback((text: string) => composer.send(text), [composer]);
 
   const isReadyToSend = hasSendableTarget && !composer.isBusy;
+  const isSessionEmpty = hasNoMessages && composer.prompt.trim().length === 0;
 
   return useMemo(
     () => ({
@@ -122,7 +135,12 @@ function useSuggestionsState(source: SuggestionsSource): ChatSuggestionsState {
 function useSessionSuggestionsState(): ChatSuggestionsState {
   const visible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
   const setVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  // Derive the boolean inside the selector: the session object is replaced as
+  // messages stream in, so selecting it would re-render every suggestions
+  // surface on each token for a flag that flips once.
+  const hasNoMessages = useStoreWithAi(
+    (s) => (s.ai.getCurrentSession()?.uiMessages.length ?? 0) === 0,
+  );
   const hasResolvableModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
 
   return useSuggestionsState({
@@ -130,8 +148,8 @@ function useSessionSuggestionsState(): ChatSuggestionsState {
     visible,
     setVisible,
     items: EMPTY_ITEMS,
-    isSessionEmpty: isChatSessionEmpty(currentSession),
     hasSendableTarget: hasResolvableModel,
+    hasNoMessages,
   });
 }
 
@@ -147,8 +165,8 @@ function useLocalAgentSuggestionsState(
     visible: runtime.suggestionsVisible,
     setVisible: runtime.setSuggestionsVisible,
     items: runtime.initialSuggestions,
-    isSessionEmpty: runtime.messages.length === 0,
     hasSendableTarget: true,
+    hasNoMessages: runtime.messages.length === 0,
   });
 }
 
