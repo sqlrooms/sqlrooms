@@ -197,6 +197,24 @@ describe('CLI behavioral scenario oracles', () => {
     expect(result.pass).toBe(true);
   });
 
+  it('rejects a grounded answer that claims the decoy table was used', async () => {
+    const oracle = createCliScenarioOracles(
+      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'grounded-answer');
+    if (!oracle) throw new Error('Missing grounded-answer oracle.');
+
+    const result = await oracle.evaluate({
+      scenario: CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+      finalAnswer:
+        'Created a chart and map from analytics.events, but archive.events was also used.',
+      errors: [],
+      mutations: [],
+      metadata: {},
+    });
+
+    expect(result.pass).toBe(false);
+  });
+
   it('recognizes a canonical quoted table identity in map dataset state', async () => {
     const current = workspace();
     const oracle = createCliScenarioOracles(

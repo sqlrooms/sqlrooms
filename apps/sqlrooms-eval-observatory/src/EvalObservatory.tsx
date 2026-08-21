@@ -58,6 +58,13 @@ function Json({value}: {value: unknown}) {
   return <pre>{JSON.stringify(value, null, 2)}</pre>;
 }
 
+export function baselineIdAfterRunSelection(
+  baselineId: string | undefined,
+  selectedRunId: string,
+): string | undefined {
+  return baselineId === selectedRunId ? undefined : baselineId;
+}
+
 export function EvalObservatory() {
   const [runs, setRuns] = useState<ObservatoryRun[]>([]);
   const [error, setError] = useState('');
@@ -84,11 +91,12 @@ export function EvalObservatory() {
     () => (baseline ? createObservatoryTrajectory(baseline) : undefined),
     [baseline],
   );
-  const selectedTrajectoryNode = findTrajectoryNode(
+  const selectedTrajectoryNodeMatch = findTrajectoryNode(
     selectedNodeId,
     selectedTrajectory,
     baselineTrajectory,
   );
+  const selectedTrajectoryNode = selectedTrajectoryNodeMatch?.node;
   const grouped = useMemo(() => {
     const result = new Map<string, ObservatoryRun[]>();
     for (const run of filtered) {
@@ -313,6 +321,9 @@ export function EvalObservatory() {
                             aria-pressed={selectedId === run.id}
                             onClick={() => {
                               setSelectedId(run.id);
+                              setBaselineId((current) =>
+                                baselineIdAfterRunSelection(current, run.id),
+                              );
                               setSelectedNodeId(undefined);
                             }}
                           >
@@ -397,7 +408,8 @@ export function EvalObservatory() {
                         selectedTrajectoryNode.data.message,
                       relatedOracleEvidence: relatedOracles(
                         selectedTrajectoryNode,
-                        selectedTrajectoryNode.id.startsWith(`${selected.id}:`)
+                        selectedTrajectoryNodeMatch?.trajectory ===
+                          selectedTrajectory
                           ? selected
                           : baseline,
                       ),
@@ -444,14 +456,21 @@ export function EvalObservatory() {
   );
 }
 
-function findTrajectoryNode(
+export function findTrajectoryNode(
   nodeId: string | undefined,
   ...trajectories: Array<ObservatoryTrajectory | undefined>
-): ObservatoryTrajectoryNode | undefined {
+):
+  | {
+      node: ObservatoryTrajectoryNode;
+      trajectory: ObservatoryTrajectory;
+    }
+  | undefined {
   if (!nodeId) return undefined;
-  return trajectories
-    .flatMap((trajectory) => trajectory?.nodes ?? [])
-    .find((node) => node.id === nodeId);
+  for (const trajectory of trajectories) {
+    const node = trajectory?.nodes.find((candidate) => candidate.id === nodeId);
+    if (trajectory && node) return {node, trajectory};
+  }
+  return undefined;
 }
 
 function relatedOracles(
@@ -463,7 +482,7 @@ function relatedOracles(
     .filter((oracle) => node.relatedOracleIds.includes(oracle.oracleId));
 }
 
-function TrajectoryComparison({
+export function TrajectoryComparison({
   selected,
   baseline,
   selectedNodeId,
@@ -474,7 +493,7 @@ function TrajectoryComparison({
   selectedNodeId?: string;
   onSelectNode: (nodeId?: string) => void;
 }) {
-  if (!selected.graphRecommended && !baseline?.graphRecommended) {
+  if (!selected.graphRecommended) {
     return (
       <div className="trajectory-note">
         <strong>Graph omitted.</strong> {selected.recommendationReason}

@@ -51,10 +51,7 @@ describe('createCliAiInstructions', () => {
       const instructions = createCliAiInstructions(store, profile);
 
       expect(instructions).toContain(
-        'For a block type that block_document_agent does not expose in an existing Worksheet',
-      );
-      expect(instructions).toContain(
-        'use the corresponding registered block-document command with the existing artifact ID',
+        'For a block type that block_document_agent does not expose in an existing Worksheet, use the corresponding registered block-document command with the existing artifact ID.',
       );
     },
   );

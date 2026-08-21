@@ -11,6 +11,29 @@ import {CLI_EVAL_TARGET_TABLE} from './fixture';
 
 const CLI_EVAL_DECOY_TABLES = new Set(['archive.events', '"archive"."events"']);
 
+function positivelyClaimsDecoyUse(answer: string): boolean {
+  return answer
+    .toLowerCase()
+    .split(/[;!?]|\.(?=\s|$)|\bbut\b/)
+    .some((clause) => {
+      const mentionsDecoy = [...CLI_EVAL_DECOY_TABLES].some((table) =>
+        clause.includes(table),
+      );
+      if (!mentionsDecoy) return false;
+
+      const negatesUse =
+        /\b(?:not|never)\b(?:\s+\w+){0,2}\s+\b(?:use|used|using)\b/.test(
+          clause,
+        ) ||
+        /\bwithout\s+(?:using\s+)?/.test(clause) ||
+        /n't\s+(?:use|used|using)\b/.test(clause);
+      const claimsUse = /\b(?:use|used|using|from|source|sourced)\b/.test(
+        clause,
+      );
+      return claimsUse && !negatesUse;
+    });
+}
+
 type WorkspaceSnapshot = {
   artifacts: {artifactsById: Record<string, {type: string}>};
   worksheets: Array<{
@@ -427,7 +450,8 @@ export function createCliScenarioOracles(
             normalized.includes('analytics.events')
           : normalized.includes('analytics.events') &&
             normalized.includes('chart') &&
-            normalized.includes('map');
+            normalized.includes('map') &&
+            !positivelyClaimsDecoyUse(answer);
         return {
           pass,
           reason: pass
