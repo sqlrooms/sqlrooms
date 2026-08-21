@@ -106,4 +106,8 @@ describe('behavioral oracles', () => {
       evidence: {mutations: 1},
     });
   });
+
+  it('does not pass when no oracle results were produced', () => {
+    expect(summarizeOracleResults([])).toEqual({pass: false, score: 0});
+  });
 });

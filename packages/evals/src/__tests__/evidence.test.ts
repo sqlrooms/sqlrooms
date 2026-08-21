@@ -14,25 +14,39 @@ describe('run evidence', () => {
         id: 'worksheet.create-chart-map',
         version: 1,
         repetition: 0,
+        futureScenarioField: 'preserved',
       },
       target: {
         type: 'cli-in-process',
         profileName: 'worksheet-charts-maps',
         profileVersion: 1,
+        futureTargetField: 'preserved',
       },
-      repository: {commitSha: 'abc123', dirty: false},
+      repository: {
+        commitSha: 'abc123',
+        dirty: false,
+        futureRepositoryField: 'preserved',
+      },
       model: {
         provider: 'openrouter',
         modelId: 'deepseek/deepseek-v4-flash-0731',
         settings: {temperature: 0},
+        futureModelField: 'preserved',
       },
       timing: {
         startedAt: '2026-08-19T12:00:00.000Z',
         endedAt: '2026-08-19T12:00:01.000Z',
         latencyMs: 1000,
+        futureTimingField: 'preserved',
       },
       status: 'passed' as const,
-      promptTurns: [{id: 'create', input: 'Create a worksheet.'}],
+      promptTurns: [
+        {
+          id: 'create',
+          input: 'Create a worksheet.',
+          futurePromptField: 'preserved',
+        },
+      ],
       finalAnswer: 'Created the worksheet.',
       events: [
         {
@@ -43,6 +57,10 @@ describe('run evidence', () => {
           futureEventField: 'preserved',
         },
       ],
+      usage: {
+        totalTokens: 10,
+        futureUsageField: 'preserved',
+      },
       finalState: {worksheetCount: 1},
       oracleResults: [
         {
@@ -66,6 +84,19 @@ describe('run evidence', () => {
       input.oracleResults[0]?.metadata,
     );
     expect(parsed.events[0]).toHaveProperty('futureEventField', 'preserved');
+    expect(parsed.scenario).toHaveProperty('futureScenarioField', 'preserved');
+    expect(parsed.target).toHaveProperty('futureTargetField', 'preserved');
+    expect(parsed.repository).toHaveProperty(
+      'futureRepositoryField',
+      'preserved',
+    );
+    expect(parsed.model).toHaveProperty('futureModelField', 'preserved');
+    expect(parsed.timing).toHaveProperty('futureTimingField', 'preserved');
+    expect(parsed.promptTurns[0]).toHaveProperty(
+      'futurePromptField',
+      'preserved',
+    );
+    expect(parsed.usage).toHaveProperty('futureUsageField', 'preserved');
     expect(parsed).toHaveProperty('futureEnvelopeField', {retained: true});
   });
 

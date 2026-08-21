@@ -26,38 +26,38 @@ export const RunEvidenceEventSchema = z.looseObject({
 export const RunEvidenceSchema = z.looseObject({
   schemaVersion: z.literal(RUN_EVIDENCE_SCHEMA_VERSION),
   runId: z.string().min(1),
-  scenario: z.object({
+  scenario: z.looseObject({
     id: ScenarioIdSchema,
     version: z.number().int().positive(),
     repetition: z.number().int().nonnegative(),
   }),
-  target: z.object({
+  target: z.looseObject({
     type: z.string().min(1),
     profileName: z.string().min(1),
     profileVersion: z.number().int().positive(),
   }),
   repository: z
-    .object({
+    .looseObject({
       commitSha: z.string().min(1),
       dirty: z.boolean(),
       workflowUrl: z.string().url().optional(),
     })
     .optional(),
-  model: z.object({
+  model: z.looseObject({
     provider: z.string().min(1),
     modelId: z.string().min(1),
     configuredRevision: z.string().min(1).optional(),
     upstreamProvider: z.string().min(1).optional(),
     settings: JsonObjectSchema.default({}),
   }),
-  timing: z.object({
+  timing: z.looseObject({
     startedAt: z.string().datetime(),
     endedAt: z.string().datetime(),
     latencyMs: z.number().nonnegative(),
   }),
   status: z.enum(['passed', 'failed', 'error', 'cancelled']),
   promptTurns: z.array(
-    z.object({
+    z.looseObject({
       id: z.string().min(1),
       input: z.string(),
     }),
@@ -65,7 +65,7 @@ export const RunEvidenceSchema = z.looseObject({
   finalAnswer: z.string(),
   events: z.array(RunEvidenceEventSchema),
   usage: z
-    .object({
+    .looseObject({
       inputTokens: z.number().nonnegative().optional(),
       outputTokens: z.number().nonnegative().optional(),
       totalTokens: z.number().nonnegative().optional(),

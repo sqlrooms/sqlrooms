@@ -171,7 +171,7 @@ export function summarizeOracleResults(results: readonly OracleResult[]): {
   score: number;
 } {
   return {
-    pass: results.every((result) => result.pass),
+    pass: results.length > 0 && results.every((result) => result.pass),
     score:
       results.length === 0
         ? 0
