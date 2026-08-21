@@ -705,6 +705,58 @@ describe('createDeckJsonConfiguration', () => {
     }) as {layers: Array<{props: Record<string, unknown>}>};
     expect(typeof intConverted.layers[0]?.props.getWeight).toBe('function');
   });
+
+  it('keeps layer ids stable after a failed convert on a reused converter', () => {
+    const table = createPointTable();
+    const converter = createConverter({
+      earthquakes: {
+        status: 'ready',
+        prepared: createPreparedDataset(table),
+      },
+    });
+    const validSpec = {
+      layers: [
+        {
+          '@@type': 'GeoArrowHeatmapLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+        {
+          '@@type': 'GeoArrowScatterplotLayer',
+          _sqlroomsBinding: {dataset: 'earthquakes'},
+        },
+      ],
+    };
+    const layerId = (converted: {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    }) => converted.layers.map((layer) => layer.id ?? layer.props.id);
+
+    const before = converter.convert(validSpec) as {
+      layers: Array<{id?: string; props: Record<string, unknown>}>;
+    };
+    expect(layerId(before)).toEqual([
+      'earthquakes:GeoArrowHeatmapLayer:0',
+      'earthquakes:GeoArrowScatterplotLayer:1',
+    ]);
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            _sqlroomsBinding: {
+              dataset: 'earthquakes',
+              hexagonColumn: 'missing',
+            },
+          },
+        ],
+      }),
+    ).toThrow('unknown column "missing"');
+
+    const after = converter.convert({
+      layers: validSpec.layers.map((layer) => ({...layer})),
+    }) as {layers: Array<{id?: string; props: Record<string, unknown>}>};
+    expect(layerId(after)).toEqual(layerId(before));
+  });
 });
 
 describe('extractColorScaleLegends', () => {
