@@ -690,9 +690,9 @@ helpers exported from `@sqlrooms/deck`:
 Durable resource writes also run `getDeckMapResourceConfigIssues` /
 `assertDeckMapResourceConfig` for syntax, supported layer types, and type/scheme
 compatibility (e.g. `quantile` + `Viridis` is rejected; layer `@@type` must be
-one of the settings picker classes). Point layers whose SQL projects lon/lat
-columns without producing geometry are rejected — `longitudeColumn` /
-`latitudeColumn` on `_sqlroomsBinding` are not a geometry binding.
+one of the settings picker classes). Missing point geometry is diagnosed from
+the prepared dataset schema (DuckDB `DESCRIBE` column names/types, or the
+Arrow table) when a layer asks for geometry — authored SQL is not parsed.
 `DeckMapResourceConfigIssue.repair` holds agent retry instructions;
 `formatDeckMapResourceConfigIssueForAgent` includes them, while the map overlay
 shows only `message`. Native `GEOMETRY` columns are normalized to WKB by the

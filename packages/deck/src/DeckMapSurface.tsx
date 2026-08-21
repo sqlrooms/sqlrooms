@@ -19,6 +19,7 @@ import {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
 import {
   formatDeckMapResourceConfigIssueForAgent,
   getDeckMapResourceConfigIssues,
+  DeckMapResourceConfigError,
 } from './mapResourceAuthoring';
 import {
   getDeckMapDatasetSource,
@@ -174,8 +175,18 @@ export function DeckMapSurface({
       if (failure) {
         onReportIssue({
           kind: 'sql-error',
-          message: failure.error.message,
+          message:
+            failure.error instanceof DeckMapResourceConfigError &&
+            failure.error.issues[0]
+              ? formatDeckMapResourceConfigIssueForAgent(
+                  failure.error.issues[0],
+                )
+              : failure.error.message,
           recoverable: true,
+          details:
+            failure.error instanceof DeckMapResourceConfigError
+              ? {issues: failure.error.issues}
+              : undefined,
         });
       } else if (
         Object.values(states).every((state) => state.status === 'ready')
@@ -262,8 +273,15 @@ export function DeckMapSurface({
         onRenderingError={(error) =>
           onReportIssue({
             kind: 'render-error',
-            message: error.message,
+            message:
+              error instanceof DeckMapResourceConfigError && error.issues[0]
+                ? formatDeckMapResourceConfigIssueForAgent(error.issues[0])
+                : error.message,
             recoverable: true,
+            details:
+              error instanceof DeckMapResourceConfigError
+                ? {issues: error.issues}
+                : undefined,
           })
         }
       />

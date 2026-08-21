@@ -28,6 +28,7 @@ import {extractColorScaleLegends} from './json/extractColorScaleLegends';
 import {getLayerCompatibility} from './json/layerCompatibility';
 import {resolveDatasetId} from './json/layerConfig';
 import {buildDeckMapJumpToOptions} from './mapFit';
+import {DeckMapResourceConfigError} from './mapResourceAuthoring';
 import type {
   DeckJsonMapHandle,
   DeckJsonMapProps,
@@ -146,7 +147,12 @@ function renderDatasetErrorOverlay(
           key={datasetId}
           className="rounded-md border border-red-200 bg-red-50/95 px-3 py-2 text-sm text-red-700 shadow-sm"
         >
-          {`Dataset "${datasetId}" failed: ${state.error.message}`}
+          {`Dataset "${datasetId}" failed: ${
+            state.error instanceof DeckMapResourceConfigError &&
+            state.error.issues[0]
+              ? state.error.issues[0].message
+              : state.error.message
+          }`}
         </div>
       ))}
     </div>
@@ -568,7 +574,17 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
     return (
       <div className={cn('relative h-full w-full', className)}>
         {finalDeckPropsResult.error ? (
-          <DeckMapErrorOverlay error={finalDeckPropsResult.error} />
+          <DeckMapErrorOverlay
+            error={finalDeckPropsResult.error}
+            title={
+              finalDeckPropsResult.error instanceof DeckMapResourceConfigError
+                ? 'Invalid map configuration'
+                : undefined
+            }
+            defaultOpen={
+              finalDeckPropsResult.error instanceof DeckMapResourceConfigError
+            }
+          />
         ) : null}
 
         <Map

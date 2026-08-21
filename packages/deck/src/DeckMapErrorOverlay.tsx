@@ -4,6 +4,7 @@ import {
   CollapsibleTrigger,
 } from '@sqlrooms/ui';
 import {ChevronRightIcon} from 'lucide-react';
+import {getDeckMapOverlayErrorMessage} from './mapResourceAuthoring';
 
 /**
  * Collapsible overlay for map config and rendering errors.
@@ -19,7 +20,7 @@ export function DeckMapErrorOverlay({
   title?: string;
   defaultOpen?: boolean;
 }) {
-  const message = typeof error === 'string' ? error : error.message;
+  const message = getDeckMapOverlayErrorMessage(error);
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
       <div className="max-w-sm rounded-md border border-red-200 bg-red-50/95 p-4 text-sm text-red-700 shadow-sm">

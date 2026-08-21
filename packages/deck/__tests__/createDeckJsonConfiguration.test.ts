@@ -11,6 +11,7 @@ import {
 } from 'apache-arrow';
 import {createDeckJsonConfiguration} from '../src/json/createDeckJsonConfiguration';
 import {extractColorScaleLegends} from '../src/json/extractColorScaleLegends';
+import {DeckMapResourceConfigError} from '../src/mapResourceAuthoring';
 import {prepareDeckDataset} from '../src/prepare/prepareDeckDataset';
 import type {PreparedDeckDataset} from '../src/prepare/types';
 import type {PreparedDeckDatasetState} from '../src/types';
@@ -1159,5 +1160,118 @@ describe('createDeckJsonConfiguration — point layers reject polygon geometry',
 
     expect(converted.layers).toHaveLength(1);
     expect(converted.layers[0]?.props.data).toBeDefined();
+  });
+
+  it('rejects lon/lat tables without geometry using schema, not SQL text', () => {
+    const table = new Table({
+      Latitude: vectorFromArray([37.77]),
+      Longitude: vectorFromArray([-122.42]),
+      Magnitude: vectorFromArray([4.4]),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'earthquakes',
+      table,
+      describedColumns: [
+        {name: 'Latitude', type: 'DOUBLE'},
+        {name: 'Longitude', type: 'DOUBLE'},
+        {name: 'Magnitude', type: 'DOUBLE'},
+      ],
+      input: {
+        tableName: 'earthquakes',
+        transformSql:
+          'SELECT Latitude, Longitude, Magnitude FROM __sqlrooms_source',
+      },
+    });
+    const converter = createConverter({
+      earthquakes: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'earthquakes',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+          },
+        ],
+      }),
+    ).toThrow(DeckMapResourceConfigError);
+
+    try {
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowHeatmapLayer',
+            id: 'earthquakes',
+            _sqlroomsBinding: {dataset: 'earthquakes'},
+          },
+        ],
+      });
+      throw new Error('expected convert to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DeckMapResourceConfigError);
+      const issue = (error as DeckMapResourceConfigError).issues[0];
+      expect(issue?.message).toContain('needs point locations');
+      expect(issue?.repair).toContain(
+        'ST_AsWKB(ST_Point("Longitude", "Latitude"))',
+      );
+      expect(issue?.repair).toContain('transformSql');
+    }
+  });
+
+  it('does not treat a native GEOMETRY column as missing lon/lat geometry', () => {
+    const table = new Table({
+      shape: vectorFromArray([new Uint8Array([1, 1, 0, 0, 0])]),
+      longitude: vectorFromArray([-122.42]),
+      latitude: vectorFromArray([37.77]),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'places',
+      table,
+      describedColumns: [
+        {name: 'shape', type: "GEOMETRY('EPSG:4326')"},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+      input: {tableName: 'places'},
+    });
+
+    expect(() => prepared.resolveGeometry()).not.toThrow();
+    expect(prepared.resolveGeometry().columnName).toBe('shape');
+  });
+
+  it('does not require point geometry for H3 layers that also have lon/lat columns', () => {
+    const table = new Table({
+      h3: vectorFromArray(['8928308280fffff']),
+      longitude: vectorFromArray([-122.42]),
+      latitude: vectorFromArray([37.77]),
+    });
+    const prepared = prepareDeckDataset({
+      datasetId: 'hexes',
+      table,
+      describedColumns: [
+        {name: 'h3', type: 'VARCHAR'},
+        {name: 'longitude', type: 'DOUBLE'},
+        {name: 'latitude', type: 'DOUBLE'},
+      ],
+      input: {tableName: 'hexes'},
+    });
+    const converter = createConverter({
+      hexes: {status: 'ready', prepared},
+    });
+
+    expect(() =>
+      converter.convert({
+        layers: [
+          {
+            '@@type': 'GeoArrowH3HexagonLayer',
+            id: 'hexes',
+            _sqlroomsBinding: {dataset: 'hexes', hexagonColumn: 'h3'},
+            getHexagon: '@@=h3',
+          },
+        ],
+      }),
+    ).not.toThrow();
   });
 });

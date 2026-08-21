@@ -8,6 +8,7 @@ import {
 } from '../prepare/wkbDecoder';
 import {tryAggregateWaypointsToLineStrings} from './aggregateWaypoints';
 import type {LayerBindingProps, PreparedDeckDatasetState} from '../types';
+import {DeckMapResourceConfigError} from '../mapResourceAuthoring';
 import {
   createColorScaleMarker,
   getAllColorScales,
@@ -228,7 +229,8 @@ function resolveGeoArrowBindings(options: {
       let resolvedGeometry;
       try {
         resolvedGeometry = prepared.resolveGeometry(columnName);
-      } catch {
+      } catch (error) {
+        if (error instanceof DeckMapResourceConfigError) throw error;
         throw new Error(
           `Geometry column "${columnName}" was not found in dataset "${prepared.datasetId}".`,
         );

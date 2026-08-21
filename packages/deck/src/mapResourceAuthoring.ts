@@ -11,9 +11,11 @@ import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
 } from './mapConfig';
+import {describedColumnsIncludeGeometry} from './datasets/wrapGeometryAsWkb';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
+import {findCoordinateColumnNames} from './prepare/detectGeometryColumn';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
@@ -182,66 +184,6 @@ function hasBadStMakeLinePointOrderBy(sql: string): boolean {
   return false;
 }
 
-function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function sqlMentionsIdentifier(sql: string, name: string): boolean {
-  const quoted = `"${name.replace(/"/g, '""')}"`;
-  if (sql.includes(quoted)) return true;
-  return new RegExp(
-    `(^|[^A-Za-z0-9_])${escapeRegExp(name)}([^A-Za-z0-9_]|$)`,
-    'i',
-  ).test(sql);
-}
-
-/** Outer SELECT list only; ignores WHERE / JOIN / ORDER BY. */
-function getOuterSelectList(sql: string): string | undefined {
-  const match = /\bSELECT\s+(?:ALL\s+|DISTINCT\s+)?/i.exec(sql);
-  if (!match) return undefined;
-  const listStart = match.index + match[0].length;
-  let depth = 0;
-  for (let i = listStart; i < sql.length; i++) {
-    const ch = sql[i];
-    if (ch === '(') {
-      depth += 1;
-      continue;
-    }
-    if (ch === ')') {
-      if (depth === 0) return undefined;
-      depth -= 1;
-      continue;
-    }
-    if (
-      depth === 0 &&
-      (ch === 'F' || ch === 'f') &&
-      /^FROM\b/i.test(sql.slice(i)) &&
-      !/[A-Za-z0-9_]/.test(sql[i - 1]!)
-    ) {
-      return sql.slice(listStart, i);
-    }
-  }
-  return undefined;
-}
-
-const KNOWN_GEOM_OUTPUT_NAMES = [
-  'geom',
-  'geometry',
-  '__sqlrooms_geom',
-  'wkb_geometry',
-  'the_geom',
-];
-
-function getDatasetSourceSql(source: DeckMapDatasetSource | undefined): string {
-  if (isDeckMapSqlDatasetSource(source)) return source.sqlQuery ?? '';
-  if (isDeckMapTableDatasetSource(source)) return source.transformSql ?? '';
-  return '';
-}
-
 function getLonLatMissingGeometryRepair(options: {
   datasetId: string;
   source: DeckMapDatasetSource | undefined;
@@ -271,49 +213,69 @@ function getLonLatMissingGeometryRepair(options: {
   );
 }
 
+function pickColumnName(
+  names: readonly string[],
+  wanted: string,
+): string | undefined {
+  return names.find((name) => name.toLowerCase() === wanted.toLowerCase());
+}
+
 /**
- * Authored SQL that projects lon/lat columns but never produces a geometry
- * column. Inspects the outer SELECT list only (WHERE / JOIN / ORDER BY do not
- * count). Table-only sources and `SELECT *` that still keep geom are left
- * alone so native geom / ST_Point inject can apply. `SELECT * EXCLUDE (geom)`
- * is treated as dropping geometry.
+ * Missing-geometry issue derived from actual output columns (DuckDB DESCRIBE
+ * or the prepared Arrow schema). Does not inspect authored SQL text.
  */
-function sqlIsLonLatProjectionMissingGeometry(
-  sql: string,
-  lon: string,
-  lat: string,
-  geometryColumn: string | undefined,
-): boolean {
-  const trimmed = sql.trim();
-  if (!trimmed) return false;
-  const selectList = getOuterSelectList(trimmed);
-  if (selectList === undefined) return false;
+export function getLonLatMissingGeometryIssue(options: {
+  columns: readonly {name: string; type?: string}[];
+  datasetId: string;
+  source?: DeckMapDatasetSource;
+  geometryColumn?: string;
+  longitudeColumn?: string;
+  latitudeColumn?: string;
+  path?: string;
+}): DeckMapResourceConfigIssue | undefined {
+  const describedColumns = options.columns.map((column) => ({
+    name: column.name,
+    type: column.type ?? '',
+  }));
   if (
-    /\bST_(AsWKB|Point|MakePoint|GeomFrom(?:Text|WKB)?|Centroid|PointOnSurface)\s*\(/i.test(
-      selectList,
-    )
+    describedColumnsIncludeGeometry(describedColumns, options.geometryColumn)
   ) {
-    return false;
+    return undefined;
   }
-  const exclude = /\*\s*EXCLUDE\s*\(([^)]*)\)/i.exec(selectList)?.[1];
-  const geomNames = geometryColumn ? [geometryColumn] : KNOWN_GEOM_OUTPUT_NAMES;
-  const starKeepsGeom =
-    /(?:^|,)\s*(?:[A-Za-z_][\w]*\.)?\*/.test(selectList) &&
-    !geomNames.some(
-      (name) => exclude != null && sqlMentionsIdentifier(exclude, name),
-    );
-  if (starKeepsGeom) return false;
-  const outputList = selectList.replace(/\bEXCLUDE\s*\([^)]*\)/gi, '');
-  if (
-    !sqlMentionsIdentifier(outputList, lon) ||
-    !sqlMentionsIdentifier(outputList, lat)
-  ) {
-    return false;
+
+  const names = describedColumns.map((column) => column.name);
+  const explicitLon = options.longitudeColumn
+    ? pickColumnName(names, options.longitudeColumn)
+    : undefined;
+  const explicitLat = options.latitudeColumn
+    ? pickColumnName(names, options.latitudeColumn)
+    : undefined;
+  const coords =
+    explicitLon && explicitLat
+      ? {lonField: explicitLon, latField: explicitLat}
+      : findCoordinateColumnNames(names);
+  if (!coords) return undefined;
+
+  return {
+    path: options.path ?? `datasets.${options.datasetId}`,
+    message:
+      'This map needs point locations, not just longitude and latitude columns.',
+    repair: getLonLatMissingGeometryRepair({
+      datasetId: options.datasetId,
+      source: options.source,
+      lon: coords.lonField,
+      lat: coords.latField,
+    }),
+  };
+}
+
+/** Overlay text for a config/render error. Omits agent-only `repair`. */
+export function getDeckMapOverlayErrorMessage(error: Error | string): string {
+  if (typeof error === 'string') return error;
+  if (error instanceof DeckMapResourceConfigError) {
+    return error.issues.map((issue) => issue.message).join('\n\n');
   }
-  if (geometryColumn) return !sqlMentionsIdentifier(outputList, geometryColumn);
-  return !KNOWN_GEOM_OUTPUT_NAMES.some((name) =>
-    sqlMentionsIdentifier(outputList, name),
-  );
+  return error.message;
 }
 
 function mergeOptionalRecord(
@@ -531,13 +493,6 @@ const DECK_MAP_SUPPORTED_LAYER_TYPES = new Set<string>(
   DECK_MAP_LAYER_TYPE_OPTIONS.map((option) => option.value),
 );
 
-const POINT_POSITION_LAYER_TYPES = new Set([
-  'GeoArrowScatterplotLayer',
-  'GeoArrowHeatmapLayer',
-  'GeoArrowColumnLayer',
-  'GeoJsonLayer',
-]);
-
 const COLOR_SCALE_ACCESSOR_PROPS = [
   'getFillColor',
   'getLineColor',
@@ -730,49 +685,6 @@ export function getDeckMapResourceConfigIssues(
         message:
           'must bind the layer to a config.datasets entry; layer data references and implicit bindings are not durable resource bindings',
       });
-    }
-
-    if (
-      typeof layerType === 'string' &&
-      POINT_POSITION_LAYER_TYPES.has(layerType) &&
-      boundDataset &&
-      datasetIdSet.has(boundDataset)
-    ) {
-      const dataset = config.datasets[boundDataset];
-      const layerGeom = nonEmptyString(binding?.geometryColumn);
-      const datasetGeom = nonEmptyString(dataset?.geometryColumn);
-      const source = dataset?.source;
-      const sql = getDatasetSourceSql(source);
-      const fitToData = config.fitToData;
-      const fitMatchesDataset = fitToData?.dataset === boundDataset;
-      const lon =
-        nonEmptyString(binding?.longitudeColumn) ??
-        (fitMatchesDataset
-          ? nonEmptyString(fitToData?.longitudeColumn)
-          : undefined);
-      const lat =
-        nonEmptyString(binding?.latitudeColumn) ??
-        (fitMatchesDataset
-          ? nonEmptyString(fitToData?.latitudeColumn)
-          : undefined);
-      const geometryColumn = layerGeom ?? datasetGeom;
-      if (
-        lon &&
-        lat &&
-        sqlIsLonLatProjectionMissingGeometry(sql, lon, lat, geometryColumn)
-      ) {
-        issues.push({
-          path: `spec.layers.${index}._sqlroomsBinding.geometryColumn`,
-          message:
-            'This map needs point locations, not just longitude and latitude columns.',
-          repair: getLonLatMissingGeometryRepair({
-            datasetId: boundDataset,
-            source,
-            lon,
-            lat,
-          }),
-        });
-      }
     }
 
     if (layerType === 'GeoArrowHeatmapLayer' && 'getWeight' in layer) {
