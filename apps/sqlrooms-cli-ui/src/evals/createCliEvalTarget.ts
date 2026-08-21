@@ -23,6 +23,7 @@ import {createStore} from 'zustand/vanilla';
 import {createCliAiInstructions} from '../createCliAiInstructions';
 import {createCliAiTools} from '../createCliAiTools';
 import {createCliHeadlessArtifactTypes} from '../createCliWorksheetArtifactDefinition';
+import {artifactChatAssociationMiddleware} from '../artifactChatAssociation';
 import {formatRunContextInstructions} from '../context/formatRunContextInstructions';
 import {getRunContext} from '../context/getRunContext';
 import {
@@ -251,6 +252,12 @@ async function resetCliEvalWorkspace(
     store.getState().deckMaps.removeMap(mapId);
   }
   store.getState().artifactAi.setConfig({sessionArtifactLinks: []});
+
+  const roomConfig = store.getState().room.config;
+  store.getState().room.setConfig({...roomConfig, dataSources: []});
+  await store.getState().db.destroy();
+  await store.getState().db.initialize();
+  await store.getState().db.refreshTableSchemas();
 }
 
 function eventsFromMessages(
@@ -342,6 +349,7 @@ function eventsFromMessages(
 function createHeadlessStore(
   profile: CliCapabilityProfile,
   model: LanguageModel,
+  timeoutMs: number,
 ): {
   store: StoreApi<RoomState>;
   connector: ReturnType<typeof createNodeDuckDbConnector>;
@@ -360,6 +368,9 @@ function createHeadlessStore(
       ...createRoomShellSlice({
         connector,
         config: {title: 'SQLRooms Eval', dataSources: []},
+        createCommandProps: {
+          middleware: [artifactChatAssociationMiddleware as any],
+        },
       })(set, get, store),
       ...createArtifactsSlice<RoomState>({artifactTypes})(set, get, store),
       ...createArtifactAiSlice<RoomState>({autoSync: false})(set, get, store),
@@ -413,7 +424,7 @@ function createHeadlessStore(
           getRunContext(typedStore, sessionId, {profile}),
         formatRunContextInstructions: ({runContext}) =>
           formatRunContextInstructions(runContext, typedStore),
-        timeouts: {runMs: DEFAULT_TIMEOUT_MS},
+        timeouts: {runMs: timeoutMs},
       })(set, get, store),
     };
     return state as unknown as RoomState;
@@ -429,10 +440,16 @@ export function createCliEvalTarget(
     profileName: 'worksheet-charts-maps',
   });
   const modelIdentity = getLanguageModelIdentity(options.model);
-  const {store, connector} = createHeadlessStore(profile, options.model);
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const {store, connector} = createHeadlessStore(
+    profile,
+    options.model,
+    timeoutMs,
+  );
   const now = options.now ?? (() => new Date());
   let initialized = false;
   let disposed = false;
+  let runInProgress = false;
 
   return {
     profile,
@@ -446,132 +463,137 @@ export function createCliEvalTarget(
       initialized = true;
     },
     async run({scenario, oracles = [], repetition = 0}) {
-      if (!scenario.compatibleProfiles.includes(profile.name)) {
-        throw new Error(
-          `Scenario ${scenario.id} does not support profile ${profile.name}.`,
-        );
+      if (runInProgress) {
+        throw new Error('CLI eval target already has a run in progress.');
       }
-      await this.initialize();
-      await resetCliEvalWorkspace(store);
-      const startedAt = now();
-      const initialState = snapshotCliEvalState(store.getState());
-      const errors: ObservedError[] = [];
-      let sessionId = '';
+      runInProgress = true;
       try {
-        const worksheetId = store.getState().artifacts.createArtifact({
-          id: `eval-${scenario.id}-${repetition}`,
-          type: 'worksheet',
-          title: 'Evaluation Worksheet',
-        });
-        sessionId =
+        if (!scenario.compatibleProfiles.includes(profile.name)) {
+          throw new Error(
+            `Scenario ${scenario.id} does not support profile ${profile.name}.`,
+          );
+        }
+        await this.initialize();
+        await resetCliEvalWorkspace(store);
+        const startedAt = now();
+        const initialState = snapshotCliEvalState(store.getState());
+        const errors: ObservedError[] = [];
+        let sessionId = '';
+        try {
+          const worksheetId = store.getState().artifacts.createArtifact({
+            id: `eval-${scenario.id}-${repetition}`,
+            type: 'worksheet',
+            title: 'Evaluation Worksheet',
+          });
+          sessionId =
+            store
+              .getState()
+              .artifactAi.createArtifactScopedSession(
+                scenario.title,
+                options.modelProvider ?? modelIdentity.provider,
+                options.modelId ?? modelIdentity.modelId,
+              ) ?? '';
+          if (!sessionId)
+            throw new Error('Failed to create an eval AI session.');
           store
             .getState()
-            .artifactAi.createArtifactScopedSession(
-              scenario.title,
-              options.modelProvider ?? modelIdentity.provider,
-              options.modelId ?? modelIdentity.modelId,
-            ) ?? '';
-        if (!sessionId) throw new Error('Failed to create an eval AI session.');
-        store
-          .getState()
-          .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
-        for (const turn of scenario.turns) {
-          store.getState().ai.setPrompt(sessionId, turn.input);
-          const completion = waitForSession(
-            store,
-            sessionId,
-            options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-          );
-          await store.getState().ai.startAnalysis(sessionId);
-          await completion;
+            .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
+          for (const turn of scenario.turns) {
+            store.getState().ai.setPrompt(sessionId, turn.input);
+            const completion = waitForSession(store, sessionId, timeoutMs);
+            await store.getState().ai.startAnalysis(sessionId);
+            await completion;
+          }
+        } catch (error) {
+          if (error instanceof CliEvalTimeoutError && sessionId) {
+            await cancelSessionAndWait(store, sessionId);
+          }
+          errors.push(observedError(error, options.sensitiveValues ?? []));
         }
-      } catch (error) {
-        if (error instanceof CliEvalTimeoutError && sessionId) {
-          await cancelSessionAndWait(store, sessionId);
-        }
-        errors.push(observedError(error, options.sensitiveValues ?? []));
-      }
 
-      const endedAt = now();
-      const session = store
-        .getState()
-        .ai.config.sessions.find((candidate) => candidate.id === sessionId);
-      const messages = (session?.uiMessages ?? []) as UIMessage[];
-      errors.push(
-        ...errorsFromMessages(messages, options.sensitiveValues ?? []),
-      );
-      const finalAnswer = textFromMessages(messages);
-      const finalState = snapshotCliEvalState(store.getState());
-      const mutations: ObservedMutation[] =
-        JSON.stringify(initialState) === JSON.stringify(finalState)
-          ? []
-          : [{kind: 'workspace-state', data: {finalState}}];
-      const oracleResults = await evaluateOracles(oracles, {
-        scenario,
-        workspace: finalState,
-        database: {tables: finalState.tables},
-        finalAnswer,
-        errors,
-        mutations,
-        metadata: {},
-      });
-      const summary = summarizeOracleResults(oracleResults);
-      const status =
-        errors.length > 0 ? 'error' : summary.pass ? 'passed' : 'failed';
-      const events = eventsFromMessages(
-        messages,
-        startedAt,
-        (session?.agentProgress ?? {}) as Parameters<
-          typeof eventsFromMessages
-        >[2],
-      );
-      for (const error of errors) {
-        events.push({
-          sequence: events.length,
-          timestamp: endedAt.toISOString(),
-          type: 'error',
-          name: error.name,
-          data: {message: error.message, ...(error.metadata ?? {})},
+        const endedAt = now();
+        const session = store
+          .getState()
+          .ai.config.sessions.find((candidate) => candidate.id === sessionId);
+        const messages = (session?.uiMessages ?? []) as UIMessage[];
+        errors.push(
+          ...errorsFromMessages(messages, options.sensitiveValues ?? []),
+        );
+        const finalAnswer = textFromMessages(messages);
+        const finalState = snapshotCliEvalState(store.getState());
+        const mutations: ObservedMutation[] =
+          JSON.stringify(initialState) === JSON.stringify(finalState)
+            ? []
+            : [{kind: 'workspace-state', data: {finalState}}];
+        const oracleResults = await evaluateOracles(oracles, {
+          scenario,
+          workspace: finalState,
+          database: {tables: finalState.tables},
+          finalAnswer,
+          errors,
+          mutations,
+          metadata: {},
         });
-      }
-      if (mutations.length > 0) {
-        events.push({
-          sequence: events.length,
-          timestamp: endedAt.toISOString(),
-          type: 'mutation',
-          name: 'workspace-state',
-          data: {kind: mutations[0]!.kind},
+        const summary = summarizeOracleResults(oracleResults);
+        const status =
+          errors.length > 0 ? 'error' : summary.pass ? 'passed' : 'failed';
+        const events = eventsFromMessages(
+          messages,
+          startedAt,
+          (session?.agentProgress ?? {}) as Parameters<
+            typeof eventsFromMessages
+          >[2],
+        );
+        for (const error of errors) {
+          events.push({
+            sequence: events.length,
+            timestamp: endedAt.toISOString(),
+            type: 'error',
+            name: error.name,
+            data: {message: error.message, ...(error.metadata ?? {})},
+          });
+        }
+        if (mutations.length > 0) {
+          events.push({
+            sequence: events.length,
+            timestamp: endedAt.toISOString(),
+            type: 'mutation',
+            name: 'workspace-state',
+            data: {kind: mutations[0]!.kind},
+          });
+        }
+        const evidence = RunEvidenceSchema.parse({
+          schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
+          runId: `${scenario.id}-${repetition}-${startedAt.getTime()}`,
+          scenario: {id: scenario.id, version: scenario.version, repetition},
+          target: {
+            type: 'cli-in-process',
+            profileName: profile.name,
+            profileVersion: profile.version,
+          },
+          repository: options.repository,
+          model: {
+            provider: options.modelProvider ?? modelIdentity.provider,
+            modelId: options.modelId ?? modelIdentity.modelId,
+            settings: {},
+          },
+          timing: {
+            startedAt: startedAt.toISOString(),
+            endedAt: endedAt.toISOString(),
+            latencyMs: Math.max(0, endedAt.getTime() - startedAt.getTime()),
+          },
+          status,
+          promptTurns: scenario.turns,
+          finalAnswer,
+          events,
+          finalState,
+          oracleResults,
+          metadata: {initialState},
         });
+        return redactRunEvidence(evidence, options.sensitiveValues ?? []);
+      } finally {
+        runInProgress = false;
       }
-      const evidence = RunEvidenceSchema.parse({
-        schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
-        runId: `${scenario.id}-${repetition}-${startedAt.getTime()}`,
-        scenario: {id: scenario.id, version: scenario.version, repetition},
-        target: {
-          type: 'cli-in-process',
-          profileName: profile.name,
-          profileVersion: profile.version,
-        },
-        repository: options.repository,
-        model: {
-          provider: options.modelProvider ?? modelIdentity.provider,
-          modelId: options.modelId ?? modelIdentity.modelId,
-          settings: {},
-        },
-        timing: {
-          startedAt: startedAt.toISOString(),
-          endedAt: endedAt.toISOString(),
-          latencyMs: Math.max(0, endedAt.getTime() - startedAt.getTime()),
-        },
-        status,
-        promptTurns: scenario.turns,
-        finalAnswer,
-        events,
-        finalState,
-        oracleResults,
-        metadata: {initialState},
-      });
-      return redactRunEvidence(evidence, options.sensitiveValues ?? []);
     },
     async dispose() {
       if (disposed) return;

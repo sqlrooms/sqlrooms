@@ -264,24 +264,139 @@ describe('createCliEvalTarget', () => {
     try {
       await target.run({scenario, oracles});
       target.store.getState().deckMaps.ensureMap('stale-map');
+      const connector = await target.store.getState().db.getConnector();
+      await connector.execute('CREATE TABLE derived_events AS SELECT 1 AS id')
+        .result;
+      await target.store.getState().db.refreshTableSchemas();
+      const roomConfig = target.store.getState().room.config;
+      target.store.getState().room.setConfig({
+        ...roomConfig,
+        dataSources: [
+          {
+            type: 'sql',
+            sqlQuery: 'SELECT 1 AS id',
+            tableName: 'derived_events',
+          },
+        ],
+      });
+      expect(target.store.getState().room.config.dataSources).toHaveLength(1);
 
       const evidence = await target.run({scenario, oracles});
       const initialState = evidence.metadata.initialState as {
         artifacts: {artifactsById: Record<string, unknown>};
         maps: unknown[];
+        tables: string[];
       };
       const finalState = workspaceFacts(evidence.finalState);
 
       expect(Object.keys(initialState.artifacts.artifactsById)).toHaveLength(0);
       expect(initialState.maps).toHaveLength(0);
+      expect(
+        initialState.tables.some((table) => table.includes('derived_events')),
+      ).toBe(false);
       expect(finalState.worksheets).toHaveLength(1);
       expect(finalState.maps).toHaveLength(0);
+      expect(target.store.getState().room.config.dataSources).toHaveLength(0);
       expect(target.store.getState().ai.config.sessions).toHaveLength(1);
       scripted.assertComplete();
     } finally {
       await target.dispose();
     }
   }, 30_000);
+
+  it('rejects overlapping runs so they cannot mutate the shared store', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'First run complete.'}]}],
+    });
+    let signalStarted!: () => void;
+    let releaseStream!: () => void;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const streamGate = new Promise<void>((resolve) => {
+      releaseStream = resolve;
+    });
+    const slowModel = {
+      ...scripted.model,
+      doStream: async (
+        callOptions: Parameters<typeof scripted.model.doStream>[0],
+      ) => {
+        signalStarted();
+        await streamGate;
+        return scripted.model.doStream(callOptions);
+      },
+    };
+    const target = createCliEvalTarget({model: slowModel});
+    const scenario = defineScenario({
+      id: 'cli.concurrent-run',
+      version: 1,
+      title: 'Concurrent run isolation',
+      compatibleProfiles: ['worksheet-charts-maps'],
+      turns: [{id: 'run', input: 'Complete this run.'}],
+      expectations: [{oracleId: 'answer', description: 'The run completes.'}],
+    });
+    const oracles = [
+      createAnswerGroundingOracle({
+        id: 'answer',
+        evaluate: () => ({pass: true, reason: 'The first run completed.'}),
+      }),
+    ];
+
+    try {
+      const firstRun = target.run({scenario, oracles});
+      await started;
+      await expect(target.run({scenario, oracles})).rejects.toThrow(
+        'already has a run in progress',
+      );
+      releaseStream();
+      await expect(firstRun).resolves.toMatchObject({status: 'passed'});
+      scripted.assertComplete();
+    } finally {
+      releaseStream();
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('associates artifacts created by AI commands with the invoking session', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      await target.initialize();
+      const initialArtifactId = target.store
+        .getState()
+        .artifacts.createArtifact({
+          type: 'worksheet',
+          title: 'Initial worksheet',
+        });
+      const sessionId = target.store
+        .getState()
+        .artifactAi.createArtifactScopedSession();
+      expect(sessionId).toBeDefined();
+
+      const result = await target.store.getState().commands.invokeCommand(
+        'worksheet.create-artifact',
+        {title: 'Created by AI'},
+        {
+          surface: 'ai',
+          actor: 'eval-test',
+          metadata: {aiSessionId: sessionId},
+        },
+      );
+      const createdArtifactId = (result.data as {artifactId?: string})
+        .artifactId;
+
+      expect(initialArtifactId).toBeDefined();
+      expect(createdArtifactId).toBeDefined();
+      expect(
+        target.store
+          .getState()
+          .artifactAi.hasSessionArtifactLink(sessionId!, createdArtifactId!),
+      ).toBe(true);
+    } finally {
+      await target.dispose();
+    }
+  });
 
   it('cancels and awaits a timed-out session before returning evidence', async () => {
     const scripted = createScriptedLanguageModel({
