@@ -19,8 +19,8 @@ export const OracleResultSchema = z.looseObject({
   pass: z.boolean(),
   score: z.number().min(0).max(1),
   reason: z.string().min(1),
-  evidence: JsonObjectSchema.default({}),
-  metadata: JsonObjectSchema.default({}),
+  evidence: JsonObjectSchema.default(() => ({})),
+  metadata: JsonObjectSchema.default(() => ({})),
 });
 
 /** Structured result produced by one behavioral oracle. */

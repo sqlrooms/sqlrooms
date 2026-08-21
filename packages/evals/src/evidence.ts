@@ -19,7 +19,7 @@ export const RunEvidenceEventSchema = z.looseObject({
     'mutation',
   ]),
   name: z.string().min(1).optional(),
-  data: JsonObjectSchema.default({}),
+  data: JsonObjectSchema.default(() => ({})),
 });
 
 /** Versioned evidence persisted for one behavioral scenario run. */
@@ -48,7 +48,7 @@ export const RunEvidenceSchema = z.looseObject({
     modelId: z.string().min(1),
     configuredRevision: z.string().min(1).optional(),
     upstreamProvider: z.string().min(1).optional(),
-    settings: JsonObjectSchema.default({}),
+    settings: JsonObjectSchema.default(() => ({})),
   }),
   timing: z.looseObject({
     startedAt: z.string().datetime(),
@@ -75,7 +75,7 @@ export const RunEvidenceSchema = z.looseObject({
     .optional(),
   finalState: JsonValueSchema.optional(),
   oracleResults: z.array(OracleResultSchema),
-  metadata: JsonObjectSchema.default({}),
+  metadata: JsonObjectSchema.default(() => ({})),
 });
 
 /** Parsed run-evidence envelope. */

@@ -103,4 +103,62 @@ describe('run evidence', () => {
   it('rejects unsupported evidence versions', () => {
     expect(() => parseRunEvidence({schemaVersion: 2})).toThrow();
   });
+
+  it('allocates fresh object defaults for every evidence record', () => {
+    const input = {
+      schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
+      runId: 'run-defaults',
+      scenario: {
+        id: 'worksheet.defaults',
+        version: 1,
+        repetition: 0,
+      },
+      target: {
+        type: 'cli-in-process',
+        profileName: 'worksheet-charts-maps',
+        profileVersion: 1,
+      },
+      model: {
+        provider: 'scripted',
+        modelId: 'scripted-v1',
+      },
+      timing: {
+        startedAt: '2026-08-19T12:00:00.000Z',
+        endedAt: '2026-08-19T12:00:00.010Z',
+        latencyMs: 10,
+      },
+      status: 'passed',
+      promptTurns: [],
+      finalAnswer: 'Done.',
+      events: [
+        {
+          sequence: 0,
+          timestamp: '2026-08-19T12:00:00.005Z',
+          type: 'tool',
+        },
+      ],
+      oracleResults: [
+        {
+          oracleId: 'workspace',
+          kind: 'workspace-state',
+          pass: true,
+          score: 1,
+          reason: 'Workspace is valid.',
+        },
+      ],
+    };
+
+    const first = parseRunEvidence(input);
+    const second = parseRunEvidence(input);
+
+    expect(first.metadata).not.toBe(second.metadata);
+    expect(first.model.settings).not.toBe(second.model.settings);
+    expect(first.events[0]?.data).not.toBe(second.events[0]?.data);
+    expect(first.oracleResults[0]?.evidence).not.toBe(
+      second.oracleResults[0]?.evidence,
+    );
+    expect(first.oracleResults[0]?.metadata).not.toBe(
+      second.oracleResults[0]?.metadata,
+    );
+  });
 });
