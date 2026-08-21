@@ -1,5 +1,5 @@
 import {createArtifactAiSlice} from '@sqlrooms/artifacts/ai';
-import {createArtifactsSlice, defineArtifactTypes} from '@sqlrooms/artifacts';
+import {createArtifactsSlice} from '@sqlrooms/artifacts';
 import {createAiSlice, getChatRequestErrorMessage} from '@sqlrooms/ai';
 import {createDeckMapsSlice, ensureDeckMapResourceState} from '@sqlrooms/deck';
 import {createBlockDocumentsSlice} from '@sqlrooms/documents';
@@ -22,7 +22,7 @@ import type {StoreApi} from 'zustand';
 import {createStore} from 'zustand/vanilla';
 import {createCliAiInstructions} from '../createCliAiInstructions';
 import {createCliAiTools} from '../createCliAiTools';
-import {createCliWorksheetArtifactDefinition} from '../createCliWorksheetArtifactDefinition';
+import {createCliHeadlessArtifactTypes} from '../createCliWorksheetArtifactDefinition';
 import {formatRunContextInstructions} from '../context/formatRunContextInstructions';
 import {getRunContext} from '../context/getRunContext';
 import {
@@ -38,6 +38,10 @@ import {createCliEvalDuckDbOptions} from './fixture';
 import {snapshotCliEvalState} from './snapshot';
 
 const DEFAULT_TIMEOUT_MS = 20_000;
+
+class CliEvalTimeoutError extends Error {
+  override name = 'CliEvalTimeoutError';
+}
 
 function getLanguageModelIdentity(model: LanguageModel): {
   provider: string;
@@ -119,6 +123,32 @@ function redact(value: string, sensitiveValues: readonly string[]): string {
   );
 }
 
+function redactEvidenceValue(
+  value: unknown,
+  sensitiveValues: readonly string[],
+): unknown {
+  if (typeof value === 'string') return redact(value, sensitiveValues);
+  if (Array.isArray(value)) {
+    return value.map((item) => redactEvidenceValue(item, sensitiveValues));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        redact(key, sensitiveValues),
+        redactEvidenceValue(item, sensitiveValues),
+      ]),
+    );
+  }
+  return value;
+}
+
+function redactRunEvidence(
+  evidence: RunEvidence,
+  sensitiveValues: readonly string[],
+): RunEvidence {
+  return redactEvidenceValue(evidence, sensitiveValues) as RunEvidence;
+}
+
 function observedError(
   error: unknown,
   sensitiveValues: readonly string[],
@@ -142,7 +172,11 @@ function waitForSession(
     let sawRunning = false;
     const timeout = setTimeout(() => {
       unsubscribe();
-      reject(new Error(`CLI eval session timed out after ${timeoutMs}ms.`));
+      reject(
+        new CliEvalTimeoutError(
+          `CLI eval session timed out after ${timeoutMs}ms.`,
+        ),
+      );
     }, timeoutMs);
     const inspect = () => {
       const session = store
@@ -158,6 +192,65 @@ function waitForSession(
     const unsubscribe = store.subscribe(inspect);
     inspect();
   });
+}
+
+async function cancelSessionAndWait(
+  store: StoreApi<RoomState>,
+  sessionId: string,
+): Promise<void> {
+  const ai = store.getState().ai;
+  const chat = ai.getSessionChat(sessionId);
+  const abortController = ai.getAbortController(sessionId);
+  ai.cancelAnalysis(sessionId);
+  try {
+    await chat?.stop();
+  } catch {
+    // Cancellation errors are represented by the original eval failure.
+  }
+  const deadline = Date.now() + DEFAULT_TIMEOUT_MS;
+  while (
+    abortController &&
+    store.getState().ai.getAbortController(sessionId) === abortController
+  ) {
+    if (Date.now() >= deadline) {
+      throw new Error(`CLI eval session ${sessionId} failed to stop.`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
+async function resetCliEvalWorkspace(
+  store: StoreApi<RoomState>,
+): Promise<void> {
+  const sessionIds = store
+    .getState()
+    .ai.config.sessions.map((session) => session.id);
+  for (const sessionId of sessionIds) {
+    const session = store
+      .getState()
+      .ai.config.sessions.find((candidate) => candidate.id === sessionId);
+    if (session?.isRunning) await cancelSessionAndWait(store, sessionId);
+    store.getState().artifactAi.removeAllLinksForSession(sessionId);
+    store.getState().ai.deleteSession(sessionId);
+  }
+
+  const artifactIds = Object.keys(
+    store.getState().artifacts.config.artifactsById,
+  );
+  for (const artifactId of artifactIds) {
+    store.getState().artifactAi.removeAllLinksForArtifact(artifactId);
+    store.getState().artifacts.deleteArtifact(artifactId);
+  }
+
+  for (const artifactId of Object.keys(
+    store.getState().blockDocuments.config.artifacts,
+  )) {
+    store.getState().blockDocuments.removeBlockDocument(artifactId);
+  }
+  for (const mapId of Object.keys(store.getState().deckMaps.config.mapsById)) {
+    store.getState().deckMaps.removeMap(mapId);
+  }
+  store.getState().artifactAi.setConfig({sessionArtifactLinks: []});
 }
 
 function eventsFromMessages(
@@ -255,9 +348,7 @@ function createHeadlessStore(
 } {
   const modelIdentity = getLanguageModelIdentity(model);
   const connector = createNodeDuckDbConnector(createCliEvalDuckDbOptions());
-  const artifactTypes = defineArtifactTypes({
-    worksheet: createCliWorksheetArtifactDefinition(),
-  });
+  const artifactTypes = createCliHeadlessArtifactTypes(profile);
   const roomStore = createStore<RoomState>()((set, get, store) => {
     const typedStore = store as StoreApi<RoomState>;
     const tools = createCliAiTools({
@@ -361,6 +452,7 @@ export function createCliEvalTarget(
         );
       }
       await this.initialize();
+      await resetCliEvalWorkspace(store);
       const startedAt = now();
       const initialState = snapshotCliEvalState(store.getState());
       const errors: ObservedError[] = [];
@@ -394,6 +486,9 @@ export function createCliEvalTarget(
           await completion;
         }
       } catch (error) {
+        if (error instanceof CliEvalTimeoutError && sessionId) {
+          await cancelSessionAndWait(store, sessionId);
+        }
         errors.push(observedError(error, options.sensitiveValues ?? []));
       }
 
@@ -448,7 +543,7 @@ export function createCliEvalTarget(
           data: {kind: mutations[0]!.kind},
         });
       }
-      return RunEvidenceSchema.parse({
+      const evidence = RunEvidenceSchema.parse({
         schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
         runId: `${scenario.id}-${repetition}-${startedAt.getTime()}`,
         scenario: {id: scenario.id, version: scenario.version, repetition},
@@ -476,6 +571,7 @@ export function createCliEvalTarget(
         oracleResults,
         metadata: {initialState},
       });
+      return redactRunEvidence(evidence, options.sensitiveValues ?? []);
     },
     async dispose() {
       if (disposed) return;

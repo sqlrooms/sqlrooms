@@ -1,11 +1,13 @@
 import {describe, expect, it, jest} from '@jest/globals';
 import {
   createAnswerGroundingOracle,
+  createErrorOracle,
   createScriptedLanguageModel,
   createWorkspaceStateOracle,
   defineScenario,
   type JsonValue,
 } from '@sqlrooms/evals';
+import {CLI_ARTIFACT_TYPES} from '../../artifactTypeIds';
 import {createCliEvalTarget} from '../createCliEvalTarget';
 import {CLI_EVAL_TARGET_TABLE} from '../fixture';
 
@@ -24,6 +26,39 @@ function workspaceFacts(workspace: JsonValue | undefined) {
 }
 
 describe('createCliEvalTarget', () => {
+  it('builds artifact capabilities and commands from the selected profile', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      await target.initialize();
+      const state = target.store.getState();
+      expect(Object.keys(state.artifacts.artifactTypes).sort()).toEqual(
+        [...CLI_ARTIFACT_TYPES].sort(),
+      );
+      expect(
+        Object.fromEntries(
+          CLI_ARTIFACT_TYPES.map((type) => [
+            type,
+            state.artifacts.artifactTypes[type]?.canCreate,
+          ]),
+        ),
+      ).toEqual(
+        Object.fromEntries(
+          CLI_ARTIFACT_TYPES.map((type) => [type, type === 'worksheet']),
+        ),
+      );
+      expect(
+        state.commands
+          .listCommands()
+          .map((command) => command.id)
+          .filter((id) => id.endsWith('.create-artifact')),
+      ).toEqual(['worksheet.create-artifact']);
+    } finally {
+      await target.dispose();
+    }
+  });
+
   it('runs the production chat and nested worksheet tool loop without a browser or network', async () => {
     const scripted = createScriptedLanguageModel({
       steps: [
@@ -200,6 +235,168 @@ describe('createCliEvalTarget', () => {
     }
   }, 30_000);
 
+  it('resets workspace and session state before every run', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {content: [{type: 'text', text: 'First run complete.'}]},
+        {content: [{type: 'text', text: 'Second run complete.'}]},
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+    const scenario = defineScenario({
+      id: 'cli.repeated-run',
+      version: 1,
+      title: 'Repeated isolated run',
+      compatibleProfiles: ['worksheet-charts-maps'],
+      turns: [{id: 'run', input: 'Complete this isolated run.'}],
+      expectations: [{oracleId: 'answer', description: 'The run completes.'}],
+    });
+    const oracles = [
+      createAnswerGroundingOracle({
+        id: 'answer',
+        evaluate: (answer) => ({
+          pass: answer.includes('run complete'),
+          reason: 'The scripted run completed.',
+        }),
+      }),
+    ];
+
+    try {
+      await target.run({scenario, oracles});
+      target.store.getState().deckMaps.ensureMap('stale-map');
+
+      const evidence = await target.run({scenario, oracles});
+      const initialState = evidence.metadata.initialState as {
+        artifacts: {artifactsById: Record<string, unknown>};
+        maps: unknown[];
+      };
+      const finalState = workspaceFacts(evidence.finalState);
+
+      expect(Object.keys(initialState.artifacts.artifactsById)).toHaveLength(0);
+      expect(initialState.maps).toHaveLength(0);
+      expect(finalState.worksheets).toHaveLength(1);
+      expect(finalState.maps).toHaveLength(0);
+      expect(target.store.getState().ai.config.sessions).toHaveLength(1);
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('cancels and awaits a timed-out session before returning evidence', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'Too late.'}]}],
+    });
+    let abortObserved = false;
+    let cancellationSettled = false;
+    const slowModel = {
+      ...scripted.model,
+      doStream: async (
+        callOptions: Parameters<typeof scripted.model.doStream>[0],
+      ) => {
+        await new Promise<void>((resolve, reject) => {
+          const fallback = setTimeout(resolve, 1_000);
+          callOptions.abortSignal?.addEventListener(
+            'abort',
+            () => {
+              abortObserved = true;
+              clearTimeout(fallback);
+              setTimeout(() => {
+                cancellationSettled = true;
+                reject(new DOMException('Aborted', 'AbortError'));
+              }, 10);
+            },
+            {once: true},
+          );
+        });
+        return scripted.model.doStream(callOptions);
+      },
+    };
+    const target = createCliEvalTarget({model: slowModel, timeoutMs: 5});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.timeout',
+          version: 1,
+          title: 'Timeout cancellation',
+          compatibleProfiles: ['worksheet-charts-maps'],
+          turns: [{id: 'run', input: 'Wait for the timeout.'}],
+          expectations: [
+            {oracleId: 'answer', description: 'The timeout is captured.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: () => ({pass: true, reason: 'Timeout captured.'}),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('error');
+      expect(abortObserved).toBe(true);
+      expect(cancellationSettled).toBe(true);
+      expect(JSON.stringify(evidence)).toContain('timed out');
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('redacts sensitive values across the complete evidence envelope', async () => {
+    const secret = 'provider-secret-token';
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          expectation: {promptIncludes: [secret]},
+          content: [{type: 'text', text: `Completed with ${secret}.`}],
+        },
+      ],
+    });
+    const target = createCliEvalTarget({
+      model: scripted.model,
+      sensitiveValues: [secret],
+      repository: {
+        commitSha: `sha-${secret}`,
+        dirty: false,
+        workflowUrl: `https://example.test/run?token=${secret}`,
+      },
+    });
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.redaction',
+          version: 1,
+          title: 'Complete evidence redaction',
+          compatibleProfiles: ['worksheet-charts-maps'],
+          turns: [{id: 'run', input: `Use ${secret} safely.`}],
+          expectations: [
+            {oracleId: 'answer', description: 'The answer is evaluated.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: (answer) => ({
+              pass: answer.includes(secret),
+              reason: `Observed ${secret}.`,
+              evidence: {answer, secret},
+            }),
+          }),
+        ],
+      });
+
+      const serialized = JSON.stringify(evidence);
+      expect(evidence.status).toBe('passed');
+      expect(serialized).toContain('[REDACTED]');
+      expect(serialized).not.toContain(secret);
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
   it('records actionable redacted transport errors', async () => {
     const secret = 'provider-secret-token';
     const scripted = createScriptedLanguageModel({
@@ -230,6 +427,15 @@ describe('createCliEvalTarget', () => {
             {oracleId: 'error', description: 'The error is retained safely.'},
           ],
         }),
+        oracles: [
+          createErrorOracle({
+            id: 'error',
+            evaluate: (errors) => ({
+              pass: errors.length > 0,
+              reason: 'The transport error was captured.',
+            }),
+          }),
+        ],
       });
 
       const serialized = JSON.stringify(evidence);
