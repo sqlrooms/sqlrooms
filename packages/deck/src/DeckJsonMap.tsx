@@ -331,9 +331,9 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       () => normalizeDatasets(datasets),
       [datasets],
     );
-    const datasetIdKey = Object.keys(normalizedDatasets).sort().join('\u0001');
+    const datasetIdKey = JSON.stringify(Object.keys(normalizedDatasets).sort());
     const datasetIds = useMemo(
-      () => (datasetIdKey === '' ? [] : datasetIdKey.split('\u0001')),
+      () => JSON.parse(datasetIdKey) as string[],
       [datasetIdKey],
     );
     const datasetStates = usePreparedDatasetStates(normalizedDatasets);
