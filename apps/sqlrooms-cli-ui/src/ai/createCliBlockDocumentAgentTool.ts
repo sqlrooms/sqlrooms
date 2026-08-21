@@ -579,12 +579,14 @@ export function createCliBlockDocumentAgentTool(
   } = options;
 
   return tool({
-    description: `An AI agent that creates DATA ANALYSIS WORKSHEETS with:
+    description: `An AI agent that builds content inside an existing DATA ANALYSIS WORKSHEET with:
 - CHART BLOCKS (histograms, scatter plots, heatmaps, etc.)
 - TEXT BLOCKS (headings, paragraphs, lists)
 ${dashboardBlocksEnabled ? '- DASHBOARD BLOCKS (interactive dashboards for multi-faceted exploration)' : ''}
 ${dataTableBlocksEnabled ? '- DATA TABLE EXPLORER BLOCKS' : ''}
 ${htmlAppBlocksEnabled ? '- HTML APP BLOCKS (custom browser apps powered by window.sqlrooms.query/queryRows)' : ''}
+
+This tool requires the target Worksheet's blockDocumentId and does not create the Worksheet artifact container. For a new Worksheet, first execute the block-document.create command exactly once, then call this tool with the returned data.artifactId as blockDocumentId. Delegate the requested Worksheet blocks to this agent instead of creating charts or maps through generic commands.
 
 ${
   dashboardBlocksEnabled

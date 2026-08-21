@@ -38,6 +38,14 @@ This SQLRooms session exposes worksheet artifacts with text, chart, and direct m
 - Use standalone chart tools only for inline chat visualizations or when no worksheet target is available.
 `;
 
+const WORKSHEET_AGENT_ROUTING_INSTRUCTIONS = `
+The ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} tool edits an existing Worksheet and requires its blockDocumentId; it does not create the Worksheet artifact container.
+
+- When the user requests a new Worksheet and no Worksheet artifact ID is available in run context, use the command tools to execute block-document.create exactly once. Then call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} with the returned data.artifactId as blockDocumentId and delegate all requested text, chart, map, and other block creation to it.
+- After creating the Worksheet container, do not create its requested chart or map blocks through generic block-document commands. The Worksheet agent owns those block writes and has the specialized authoring contracts needed to produce valid content.
+- When a Worksheet artifact ID is already available in run context, call ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} with that ID directly and do not create another Worksheet.
+`;
+
 /** Builds the production CLI assistant instructions for a capability profile. */
 export function createCliAiInstructions(
   store: StoreApi<RoomState>,
@@ -48,6 +56,7 @@ export function createCliAiInstructions(
     profile.name === 'worksheet-charts-maps'
       ? WORKSHEET_CHARTS_MAPS_AI_INSTRUCTIONS.trim()
       : STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
+    WORKSHEET_AGENT_ROUTING_INSTRUCTIONS.trim(),
     profile.ai.instructionSets.includes('experimental')
       ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
       : '',
