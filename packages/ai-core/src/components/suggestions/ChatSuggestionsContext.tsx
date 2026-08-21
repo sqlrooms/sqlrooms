@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type FC,
-  type PropsWithChildren,
-} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {isChatSessionEmpty} from '../../contextSelection';
 import {
@@ -13,10 +6,8 @@ import {
   useChatComposer,
   type ChatComposerMode,
 } from '../composer/ChatComposerContext';
-import {
-  useChatRuntime,
-  type LocalAgentChatRuntime,
-} from '../ChatRuntimeContext';
+import type {LocalAgentChatRuntime} from '../ChatRuntimeContext';
+import {createDualModeChatContext} from '../primitives/createDualModeChatContext';
 
 /**
  * Normalized prompt-suggestions state and actions, identical in shape across
@@ -24,8 +15,7 @@ import {
  *
  * Read via {@link usePromptSuggestions}. This is the behavior layer: no DOM,
  * no styling. `send` and `isReadyToSend` reuse the composer's own send action
- * and readiness signals, so a suggestion and the send control never
- * disagree.
+ * and readiness signals, so a suggestion and the send control never disagree.
  */
 export interface ChatSuggestionsState {
   /** Which runtime this state was sourced from. */
@@ -64,19 +54,33 @@ export interface ChatSuggestionsState {
   isReadyToSend: boolean;
 }
 
-const ChatSuggestionsContext = createContext<ChatSuggestionsState | null>(null);
-
 const EMPTY_ITEMS: readonly string[] = [];
 
 /**
- * Session-mode suggestions state. Visibility and the empty-session flag come
- * from the AI slice; `fill` and `send` from {@link useChatComposer}.
+ * The only values the two runtime modes actually disagree on. Everything else
+ * in {@link ChatSuggestionsState} is derived identically by
+ * {@link useSuggestionsState}.
  */
-function useSessionSuggestionsState(): ChatSuggestionsState {
-  const visible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
-  const setVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const hasResolvableModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
+type SuggestionsSource = Pick<
+  ChatSuggestionsState,
+  'mode' | 'visible' | 'setVisible' | 'items' | 'isSessionEmpty'
+> & {
+  /**
+   * The mode-specific half of send readiness, ANDed with "not busy" by the
+   * shared derivation. Session mode requires a resolvable model; local-agent
+   * mode has no such concept and always passes `true`.
+   */
+  hasSendableTarget: boolean;
+};
+
+/**
+ * Completes a {@link SuggestionsSource} into full suggestions state, taking
+ * `fill`, `send`, and the busy half of readiness from the composer so a
+ * suggestion and the send control can never disagree.
+ */
+function useSuggestionsState(source: SuggestionsSource): ChatSuggestionsState {
+  const {mode, visible, setVisible, items, isSessionEmpty, hasSendableTarget} =
+    source;
   const composer = useChatComposer();
 
   const toggle = useCallback(() => setVisible(!visible), [visible, setVisible]);
@@ -86,67 +90,26 @@ function useSessionSuggestionsState(): ChatSuggestionsState {
   );
   const send = useCallback((text: string) => composer.send(text), [composer]);
 
-  const isSessionEmpty = isChatSessionEmpty(currentSession);
-  const isReadyToSend = hasResolvableModel && !composer.isBusy;
+  const isReadyToSend = hasSendableTarget && !composer.isBusy;
 
   return useMemo(
     () => ({
-      mode: 'session' as const,
+      mode,
       visible,
       setVisible,
       toggle,
-      items: EMPTY_ITEMS,
-      isSessionEmpty,
-      fill,
-      send,
-      isReadyToSend,
-    }),
-    [visible, setVisible, toggle, isSessionEmpty, fill, send, isReadyToSend],
-  );
-}
-
-/**
- * Local-agent-mode suggestions state, sourced from the local-agent chat
- * runtime for visibility and items, and from {@link useChatComposer} for
- * `fill` and `send`. Never reads the AI slice.
- */
-function useLocalAgentSuggestionsState(
-  runtime: LocalAgentChatRuntime,
-): ChatSuggestionsState {
-  const {suggestionsVisible, setSuggestionsVisible, initialSuggestions} =
-    runtime;
-  const composer = useChatComposer();
-
-  const toggle = useCallback(
-    () => setSuggestionsVisible(!suggestionsVisible),
-    [suggestionsVisible, setSuggestionsVisible],
-  );
-  const fill = useCallback(
-    (text: string) => composer.setPrompt(text),
-    [composer],
-  );
-  const send = useCallback((text: string) => composer.send(text), [composer]);
-
-  const isSessionEmpty = runtime.messages.length === 0;
-  const isReadyToSend = !composer.isBusy;
-
-  return useMemo(
-    () => ({
-      mode: 'local-agent' as const,
-      visible: suggestionsVisible,
-      setVisible: setSuggestionsVisible,
-      toggle,
-      items: initialSuggestions,
+      items,
       isSessionEmpty,
       fill,
       send,
       isReadyToSend,
     }),
     [
-      suggestionsVisible,
-      setSuggestionsVisible,
+      mode,
+      visible,
+      setVisible,
       toggle,
-      initialSuggestions,
+      items,
       isSessionEmpty,
       fill,
       send,
@@ -155,64 +118,75 @@ function useLocalAgentSuggestionsState(
   );
 }
 
+/** Session-mode suggestions state: visibility and emptiness from the AI slice. */
+function useSessionSuggestionsState(): ChatSuggestionsState {
+  const visible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
+  const setVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const hasResolvableModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
+
+  return useSuggestionsState({
+    mode: 'session',
+    visible,
+    setVisible,
+    items: EMPTY_ITEMS,
+    isSessionEmpty: isChatSessionEmpty(currentSession),
+    hasSendableTarget: hasResolvableModel,
+  });
+}
+
+/**
+ * Local-agent-mode suggestions state: visibility and items from the local-agent
+ * chat runtime. Never reads the AI slice.
+ */
+function useLocalAgentSuggestionsState(
+  runtime: LocalAgentChatRuntime,
+): ChatSuggestionsState {
+  return useSuggestionsState({
+    mode: 'local-agent',
+    visible: runtime.suggestionsVisible,
+    setVisible: runtime.setSuggestionsVisible,
+    items: runtime.initialSuggestions,
+    isSessionEmpty: runtime.messages.length === 0,
+    hasSendableTarget: true,
+  });
+}
+
+const suggestionsContext = createDualModeChatContext<ChatSuggestionsState>({
+  hookName: 'usePromptSuggestions',
+  localAgentProviderName: 'LocalAgentChatSuggestionsProvider',
+  boundaryName: 'ChatSuggestionsStateBoundary',
+  useSessionState: useSessionSuggestionsState,
+  useLocalAgentState: useLocalAgentSuggestionsState,
+  // Suggestions state reads the composer's, so a bare boundary has to publish
+  // composer state before the session provider below it runs.
+  BoundaryOuter: ChatComposerStateBoundary,
+});
+
 /**
  * Publishes normalized session-mode suggestions state. Rendered by
  * `Chat.Root`, inside its `SessionChatComposerProvider` (this provider reads
  * {@link useChatComposer}, so it must be nested under one).
  */
-export const SessionChatSuggestionsProvider: FC<PropsWithChildren> = ({
-  children,
-}) => {
-  const value = useSessionSuggestionsState();
-  return (
-    <ChatSuggestionsContext.Provider value={value}>
-      {children}
-    </ChatSuggestionsContext.Provider>
-  );
-};
+export const SessionChatSuggestionsProvider =
+  suggestionsContext.SessionProvider;
 
 /**
  * Publishes normalized local-agent-mode suggestions state. Rendered by
  * `Chat.LocalAgentRoot`, inside both its `LocalAgentChatRuntimeProvider` and
  * its `LocalAgentChatComposerProvider`.
  */
-export const LocalAgentChatSuggestionsProvider: FC<PropsWithChildren> = ({
-  children,
-}) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode !== 'local-agent') {
-    throw new Error(
-      'LocalAgentChatSuggestionsProvider must be rendered inside LocalAgentChatRuntimeProvider (i.e. under Chat.LocalAgentRoot).',
-    );
-  }
-  const value = useLocalAgentSuggestionsState(runtime);
-  return (
-    <ChatSuggestionsContext.Provider value={value}>
-      {children}
-    </ChatSuggestionsContext.Provider>
-  );
-};
+export const LocalAgentChatSuggestionsProvider =
+  suggestionsContext.LocalAgentProvider;
 
 /**
  * Wraps `children` so that {@link usePromptSuggestions} always has state to
  * read, mirroring {@link ChatComposerStateBoundary}. If an ancestor already
  * published suggestions state, `children` render unchanged; otherwise a
  * session-mode provider (and, since it depends on composer state, a composer
- * boundary beneath it) is rendered around them.
+ * boundary above it) is rendered around them.
  */
-export const ChatSuggestionsStateBoundary: FC<PropsWithChildren> = ({
-  children,
-}) => {
-  const provided = useContext(ChatSuggestionsContext);
-  if (provided) return <>{children}</>;
-  return (
-    <ChatComposerStateBoundary>
-      <SessionChatSuggestionsProvider>
-        {children}
-      </SessionChatSuggestionsProvider>
-    </ChatComposerStateBoundary>
-  );
-};
+export const ChatSuggestionsStateBoundary = suggestionsContext.StateBoundary;
 
 /**
  * Reads normalized prompt-suggestions state and actions.
@@ -227,14 +201,4 @@ export const ChatSuggestionsStateBoundary: FC<PropsWithChildren> = ({
  * `Chat.LocalAgentRoot`, or {@link ChatSuggestionsStateBoundary}. Throws
  * otherwise rather than guessing a mode, matching {@link useChatComposer}.
  */
-export function usePromptSuggestions(): ChatSuggestionsState {
-  const provided = useContext(ChatSuggestionsContext);
-  if (!provided) {
-    throw new Error(
-      'usePromptSuggestions() found no suggestions state. Render it under <Chat>, ' +
-        '<Chat.Root>, <Chat.LocalAgentRoot>, or wrap it in ' +
-        '<ChatSuggestionsStateBoundary>.',
-    );
-  }
-  return provided;
-}
+export const usePromptSuggestions = suggestionsContext.useChatState;

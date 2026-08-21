@@ -8,133 +8,33 @@
  */
 import {jest} from '@jest/globals';
 import React, {act} from 'react';
-import {createRoot, type Root} from 'react-dom/client';
-import {createStore} from 'zustand';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
-  createBaseRoomSlice,
-  RoomStateProvider,
-  type BaseRoomStoreState,
-} from '@sqlrooms/room-store';
-import {TooltipProvider} from '@sqlrooms/ui';
-import {TransformStream} from 'node:stream/web';
-import {TextEncoder, TextDecoder} from 'node:util';
-import type {AiSliceState} from '../src/AiSlice';
-import type {LocalAgentChatRuntime} from '../src/components/ChatRuntimeContext';
+  cleanup,
+  createSessionTestStore,
+  fireKeyDown,
+  mockChatRuntimeModule,
+  renderTree,
+  setMockRuntime,
+  stubAnalysisActions,
+  textarea,
+  typeInto,
+} from './support';
 
-class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
+jest.unstable_mockModule(
+  '../src/components/ChatRuntimeContext',
+  mockChatRuntimeModule,
+);
 
-Object.assign(globalThis, {
-  TransformStream,
-  TextEncoder,
-  TextDecoder,
-  ResizeObserver: ResizeObserverStub,
-  IS_REACT_ACT_ENVIRONMENT: true,
-});
-
-function createMockLocalAgentRuntime(
-  overrides: Partial<LocalAgentChatRuntime> = {},
-): LocalAgentChatRuntime {
-  return {
-    mode: 'local-agent',
-    messages: [],
-    status: 'ready',
-    isStreaming: false,
-    prompt: '',
-    setPrompt: jest.fn<(value: string) => void>(),
-    sendPrompt: jest.fn<(value?: string) => void>(),
-    stop: jest.fn<() => Promise<void>>(async () => {}),
-    initialSuggestions: [],
-    suggestionsVisible: true,
-    setSuggestionsVisible: jest.fn<(visible: boolean) => void>(),
-    ...overrides,
-  };
-}
-
-let mockRuntime: LocalAgentChatRuntime = createMockLocalAgentRuntime();
-
-jest.unstable_mockModule('../src/components/ChatRuntimeContext', () => ({
-  useChatRuntime: () => mockRuntime,
-}));
-
-const {createAiSlice} = await import('../src/AiSlice');
+const {TooltipProvider} = await import('@sqlrooms/ui');
 const {LocalAgentChatComposerProvider} =
   await import('../src/components/composer');
 const {QueryControls} = await import('../src/components/QueryControls');
 const {InlineApiKeyInput} = await import('../src/components/InlineApiKeyInput');
 
-type TestState = BaseRoomStoreState & AiSliceState;
-
-function createSessionTestStore() {
-  return createStore<TestState>()((set, get, storeApi) => ({
-    ...createBaseRoomSlice()(set, get, storeApi),
-    ...createAiSlice({
-      tools: {},
-      getInstructions: () => 'test instructions',
-      config: {sessions: []},
-    })(set, get, storeApi),
-  }));
-}
-
-type SessionTestStore = ReturnType<typeof createSessionTestStore>;
-
-function stubAnalysisActions(store: SessionTestStore) {
-  const startAnalysis = jest.fn<(sessionId: string) => Promise<void>>(
-    async () => {},
-  );
-  const startAnalysisWhenReady = jest.fn<
-    (sessionId: string) => Promise<boolean>
-  >(async () => true);
-  store.setState((state) => ({
-    ai: {...state.ai, startAnalysis, startAnalysisWhenReady},
-  }));
-  return {startAnalysis, startAnalysisWhenReady};
-}
-
-async function renderTree(node: React.ReactElement) {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(node);
-  });
-  return {container, root};
-}
-
-async function cleanup(container: HTMLElement, root: Root) {
-  await act(async () => root.unmount());
-  container.remove();
-}
-
-function textarea(container: HTMLElement) {
-  return container.querySelector('textarea');
-}
-
-function typeInto(el: HTMLTextAreaElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(
-    window.HTMLTextAreaElement.prototype,
-    'value',
-  )!.set!;
-  setter.call(el, value);
-  el.dispatchEvent(new Event('input', {bubbles: true}));
-}
-
-function fireEnter(el: Element) {
-  el.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      key: 'Enter',
-      bubbles: true,
-      cancelable: true,
-    }),
-  );
-}
-
 describe('QueryControls — unified across runtime modes', () => {
   beforeEach(() => {
-    mockRuntime = createMockLocalAgentRuntime();
+    setMockRuntime();
   });
 
   it('sends in session mode', async () => {
@@ -153,7 +53,7 @@ describe('QueryControls — unified across runtime modes', () => {
       typeInto(textarea(container)!, 'plot revenue');
     });
     await act(async () => {
-      fireEnter(textarea(container)!);
+      fireKeyDown(textarea(container)!);
     });
 
     const session = store.getState().ai.getCurrentSession();
@@ -164,7 +64,7 @@ describe('QueryControls — unified across runtime modes', () => {
   });
 
   it('sends in local-agent mode', async () => {
-    mockRuntime = createMockLocalAgentRuntime({prompt: 'hello agent'});
+    const runtime = setMockRuntime({prompt: 'hello agent'});
 
     const {container, root} = await renderTree(
       <LocalAgentChatComposerProvider>
@@ -173,10 +73,11 @@ describe('QueryControls — unified across runtime modes', () => {
     );
 
     await act(async () => {
-      fireEnter(textarea(container)!);
+      fireKeyDown(textarea(container)!);
     });
 
-    expect(mockRuntime.sendPrompt).toHaveBeenCalledWith(undefined);
+    // No argument: `send()` sends whatever the prompt currently holds.
+    expect(runtime.sendPrompt).toHaveBeenCalledWith();
 
     await cleanup(container, root);
   });
@@ -198,7 +99,7 @@ describe('QueryControls — unified across runtime modes', () => {
       typeInto(textarea(container)!, 'do not send this');
     });
     await act(async () => {
-      fireEnter(textarea(container)!);
+      fireKeyDown(textarea(container)!);
     });
 
     expect(onRun).toHaveBeenCalledWith('do not send this');
@@ -209,7 +110,7 @@ describe('QueryControls — unified across runtime modes', () => {
   });
 
   it('onRun returning false vetoes the send in local-agent mode', async () => {
-    mockRuntime = createMockLocalAgentRuntime({prompt: 'do not send this'});
+    const runtime = setMockRuntime({prompt: 'do not send this'});
     const onRun = jest.fn<(prompt?: string) => false>(() => false);
 
     const {container, root} = await renderTree(
@@ -219,11 +120,11 @@ describe('QueryControls — unified across runtime modes', () => {
     );
 
     await act(async () => {
-      fireEnter(textarea(container)!);
+      fireKeyDown(textarea(container)!);
     });
 
     expect(onRun).toHaveBeenCalledWith('do not send this');
-    expect(mockRuntime.sendPrompt).not.toHaveBeenCalled();
+    expect(runtime.sendPrompt).not.toHaveBeenCalled();
 
     await cleanup(container, root);
   });
@@ -249,7 +150,7 @@ describe('QueryControls — unified across runtime modes', () => {
   });
 
   it('session-only chrome is absent in local-agent mode and nothing throws', async () => {
-    mockRuntime = createMockLocalAgentRuntime();
+    setMockRuntime();
 
     const {container, root} = await renderTree(
       <LocalAgentChatComposerProvider>

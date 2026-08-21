@@ -1,23 +1,12 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type FC,
-  type PropsWithChildren,
-} from 'react';
+import {useCallback, useMemo} from 'react';
 import {useStoreWithAi} from '../../AiSlice';
+import type {LocalAgentChatRuntime} from '../ChatRuntimeContext';
 import {
-  useChatRuntime,
-  type LocalAgentChatRuntime,
-} from '../ChatRuntimeContext';
+  createDualModeChatContext,
+  type ChatComposerMode,
+} from '../primitives/createDualModeChatContext';
 
-/**
- * Which chat runtime a {@link ChatComposerState} was normalized from:
- * `'session'` reads the AI slice, `'local-agent'` reads
- * {@link LocalAgentChatRuntime} and never touches the slice.
- */
-export type ChatComposerMode = 'session' | 'local-agent';
+export type {ChatComposerMode};
 
 /**
  * Normalized composer state and actions, identical in shape across both chat
@@ -25,7 +14,7 @@ export type ChatComposerMode = 'session' | 'local-agent';
  *
  * Read via {@link useChatComposer}. This is the behavior layer: it carries no
  * DOM and no styling, and is the supported integration point for a prompt
- * input that is not textarea-shaped (see {@link Input}'s tsdoc for the
+ * input that is not textarea-shaped (see `Input`'s tsdoc for the
  * textarea-shaped contract that primitive is limited to).
  */
 export interface ChatComposerState {
@@ -46,9 +35,7 @@ export interface ChatComposerState {
    * this creates a session first if none is active.
    */
   send: (text?: string) => void;
-  /**
-   * Cancels the in-flight run, if any. A no-op when nothing is running.
-   */
+  /** Cancels the in-flight run, if any. A no-op when nothing is running. */
   cancel: () => void;
   /**
    * True when {@link send} would currently do something: a model is
@@ -70,8 +57,6 @@ export interface ChatComposerState {
    */
   needsApiKey: boolean;
 }
-
-const ChatComposerContext = createContext<ChatComposerState | null>(null);
 
 /**
  * Session-mode composer state, sourced entirely from the AI slice. The prompt
@@ -225,40 +210,25 @@ function useLocalAgentComposerState(
   );
 }
 
+const composerContext = createDualModeChatContext<ChatComposerState>({
+  hookName: 'useChatComposer',
+  localAgentProviderName: 'LocalAgentChatComposerProvider',
+  boundaryName: 'ChatComposerStateBoundary',
+  useSessionState: useSessionComposerState,
+  useLocalAgentState: useLocalAgentComposerState,
+});
+
 /**
  * Publishes normalized session-mode composer state. Rendered by `Chat.Root`.
  */
-export const SessionChatComposerProvider: FC<PropsWithChildren> = ({
-  children,
-}) => {
-  const value = useSessionComposerState();
-  return (
-    <ChatComposerContext.Provider value={value}>
-      {children}
-    </ChatComposerContext.Provider>
-  );
-};
+export const SessionChatComposerProvider = composerContext.SessionProvider;
 
 /**
  * Publishes normalized local-agent-mode composer state. Rendered by
  * `Chat.LocalAgentRoot`, inside its `LocalAgentChatRuntimeProvider`.
  */
-export const LocalAgentChatComposerProvider: FC<PropsWithChildren> = ({
-  children,
-}) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode !== 'local-agent') {
-    throw new Error(
-      'LocalAgentChatComposerProvider must be rendered inside LocalAgentChatRuntimeProvider (i.e. under Chat.LocalAgentRoot).',
-    );
-  }
-  const value = useLocalAgentComposerState(runtime);
-  return (
-    <ChatComposerContext.Provider value={value}>
-      {children}
-    </ChatComposerContext.Provider>
-  );
-};
+export const LocalAgentChatComposerProvider =
+  composerContext.LocalAgentProvider;
 
 /**
  * Wraps `children` so that {@link useChatComposer} always has state to read.
@@ -267,18 +237,8 @@ export const LocalAgentChatComposerProvider: FC<PropsWithChildren> = ({
  * `Chat.LocalAgentRoot`), `children` render unchanged. Otherwise a
  * session-mode provider is rendered around them, so a composer used without a
  * `<Chat>` ancestor still works.
- *
- * Dispatching here rather than inside {@link useChatComposer} keeps the
- * session provider's hooks in a child that mounts as a unit, so local-agent
- * trees — which must never touch the AI slice — never render it at all.
  */
-export const ChatComposerStateBoundary: FC<PropsWithChildren> = ({
-  children,
-}) => {
-  const provided = useContext(ChatComposerContext);
-  if (provided) return <>{children}</>;
-  return <SessionChatComposerProvider>{children}</SessionChatComposerProvider>;
-};
+export const ChatComposerStateBoundary = composerContext.StateBoundary;
 
 /**
  * Reads normalized composer state and actions.
@@ -293,14 +253,4 @@ export const ChatComposerStateBoundary: FC<PropsWithChildren> = ({
  * otherwise rather than guessing a mode, since a silent session-mode default
  * would reach for the AI slice in trees that may not have one.
  */
-export function useChatComposer(): ChatComposerState {
-  const provided = useContext(ChatComposerContext);
-  if (!provided) {
-    throw new Error(
-      'useChatComposer() found no composer state. Render it under <Chat>, ' +
-        '<Chat.Root>, <Chat.LocalAgentRoot>, or wrap it in ' +
-        '<ChatComposerStateBoundary>.',
-    );
-  }
-  return provided;
-}
+export const useChatComposer = composerContext.useChatState;

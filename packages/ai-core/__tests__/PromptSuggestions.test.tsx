@@ -3,56 +3,23 @@
  */
 import {jest} from '@jest/globals';
 import React, {act} from 'react';
-import {createRoot, type Root as ReactRoot} from 'react-dom/client';
-import {createStore} from 'zustand';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
-  createBaseRoomSlice,
-  RoomStateProvider,
-  type BaseRoomStoreState,
-} from '@sqlrooms/room-store';
-import {TransformStream} from 'node:stream/web';
-import {TextEncoder, TextDecoder} from 'node:util';
-import type {AiSliceState} from '../src/AiSlice';
-import type {LocalAgentChatRuntime} from '../src/components/ChatRuntimeContext';
+  cleanup,
+  createSessionTestStore,
+  mockChatRuntimeModule,
+  renderTree,
+  setMockRuntime,
+  stubAnalysisActions,
+  type SessionTestStore,
+} from './support';
 
-Object.assign(globalThis, {
-  TransformStream,
-  TextEncoder,
-  TextDecoder,
-  IS_REACT_ACT_ENVIRONMENT: true,
-});
-Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
-  configurable: true,
-  value: jest.fn(),
-});
-
-function createMockLocalAgentRuntime(
-  overrides: Partial<LocalAgentChatRuntime> = {},
-): LocalAgentChatRuntime {
-  return {
-    mode: 'local-agent',
-    messages: [],
-    status: 'ready',
-    isStreaming: false,
-    prompt: '',
-    setPrompt: jest.fn<(value: string) => void>(),
-    sendPrompt: jest.fn<(value?: string) => void>(),
-    stop: jest.fn<() => Promise<void>>(async () => {}),
-    initialSuggestions: [],
-    suggestionsVisible: true,
-    setSuggestionsVisible: jest.fn<(visible: boolean) => void>(),
-    ...overrides,
-  };
-}
-
-let mockRuntime: LocalAgentChatRuntime = createMockLocalAgentRuntime();
-
-jest.unstable_mockModule('../src/components/ChatRuntimeContext', () => ({
-  useChatRuntime: () => mockRuntime,
-}));
+jest.unstable_mockModule(
+  '../src/components/ChatRuntimeContext',
+  mockChatRuntimeModule,
+);
 
 const {TooltipProvider} = await import('@sqlrooms/ui');
-const {createAiSlice} = await import('../src/AiSlice');
 const {SessionChatComposerProvider, LocalAgentChatComposerProvider} =
   await import('../src/components/composer');
 const {
@@ -65,49 +32,7 @@ const {
 } = await import('../src/components/suggestions');
 const {PromptSuggestions} = await import('../src/components/PromptSuggestions');
 
-type TestState = BaseRoomStoreState & AiSliceState;
-
-function createSessionTestStore() {
-  return createStore<TestState>()((set, get, storeApi) => ({
-    ...createBaseRoomSlice()(set, get, storeApi),
-    ...createAiSlice({
-      tools: {},
-      getInstructions: () => 'test instructions',
-      config: {sessions: []},
-    })(set, get, storeApi),
-  }));
-}
-
-type SessionTestStore = ReturnType<typeof createSessionTestStore>;
-
-function stubAnalysisActions(store: SessionTestStore) {
-  const startAnalysis = jest.fn<(sessionId: string) => Promise<void>>(
-    async () => {},
-  );
-  const startAnalysisWhenReady = jest.fn<
-    (sessionId: string) => Promise<boolean>
-  >(async () => true);
-  store.setState((state) => ({
-    ai: {...state.ai, startAnalysis, startAnalysisWhenReady},
-  }));
-  return {startAnalysis, startAnalysisWhenReady};
-}
-
-async function renderTree(node: React.ReactElement) {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  await act(async () => {
-    root.render(node);
-  });
-  return {container, root};
-}
-
-async function cleanup(container: HTMLElement, root: ReactRoot) {
-  await act(async () => root.unmount());
-  container.remove();
-}
-
+/** Session-mode provider stack: store, composer state, suggestions state. */
 function SessionTree({
   children,
   store,
@@ -126,6 +51,7 @@ function SessionTree({
   );
 }
 
+/** Local-agent provider stack — deliberately no room store at all. */
 function LocalAgentTree({children}: {children: React.ReactNode}) {
   return (
     <LocalAgentChatComposerProvider>
@@ -266,7 +192,7 @@ describe('suggestions primitives — Item activation', () => {
   });
 
   it('local-agent mode: is disabled while streaming', async () => {
-    mockRuntime = createMockLocalAgentRuntime({isStreaming: true});
+    setMockRuntime({isStreaming: true});
     const {container, root} = await renderTree(
       <LocalAgentTree>
         <Item text="Show revenue by month" />
@@ -279,7 +205,7 @@ describe('suggestions primitives — Item activation', () => {
   });
 
   it('local-agent mode: fills by default and submits when opted in', async () => {
-    mockRuntime = createMockLocalAgentRuntime();
+    const fillRuntime = setMockRuntime();
     const fillRender = await renderTree(
       <LocalAgentTree>
         <Item text="Show revenue by month" />
@@ -288,11 +214,11 @@ describe('suggestions primitives — Item activation', () => {
     await act(async () => {
       fillRender.container.querySelector('button')!.click();
     });
-    expect(mockRuntime.setPrompt).toHaveBeenCalledWith('Show revenue by month');
-    expect(mockRuntime.sendPrompt).not.toHaveBeenCalled();
+    expect(fillRuntime.setPrompt).toHaveBeenCalledWith('Show revenue by month');
+    expect(fillRuntime.sendPrompt).not.toHaveBeenCalled();
     await cleanup(fillRender.container, fillRender.root);
 
-    mockRuntime = createMockLocalAgentRuntime();
+    const submitRuntime = setMockRuntime();
     const submitRender = await renderTree(
       <LocalAgentTree>
         <Item text="Show revenue by month" submit />
@@ -301,7 +227,7 @@ describe('suggestions primitives — Item activation', () => {
     await act(async () => {
       submitRender.container.querySelector('button')!.click();
     });
-    expect(mockRuntime.sendPrompt).toHaveBeenCalledWith(
+    expect(submitRuntime.sendPrompt).toHaveBeenCalledWith(
       'Show revenue by month',
     );
     await cleanup(submitRender.container, submitRender.root);
@@ -408,7 +334,7 @@ describe('recipe — Chat.PromptSuggestions (the new vertical default)', () => {
   });
 
   it('local-agent mode: auto-renders runtime-supplied items with no children', async () => {
-    mockRuntime = createMockLocalAgentRuntime({
+    const runtime = setMockRuntime({
       initialSuggestions: ['What does this data show?'],
     });
 
@@ -423,7 +349,7 @@ describe('recipe — Chat.PromptSuggestions (the new vertical default)', () => {
     await act(async () => {
       container.querySelector('button[title]')!.click();
     });
-    expect(mockRuntime.sendPrompt).toHaveBeenCalledWith(
+    expect(runtime.sendPrompt).toHaveBeenCalledWith(
       'What does this data show?',
     );
 
@@ -431,7 +357,7 @@ describe('recipe — Chat.PromptSuggestions (the new vertical default)', () => {
   });
 
   it('local-agent mode: renders with no AI slice present and does not throw', async () => {
-    mockRuntime = createMockLocalAgentRuntime({
+    setMockRuntime({
       initialSuggestions: ['Suggestion without a store'],
     });
 
