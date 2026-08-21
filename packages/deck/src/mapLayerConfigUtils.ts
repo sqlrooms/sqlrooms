@@ -463,7 +463,7 @@ export function setDeckMapLayerType(
       '@@type': layerType,
     };
     const lt = layerType.toLowerCase();
-    if (lt === 'geoarrowheatmaplayer' || lt === 'heatmaplayer') {
+    if (lt === 'geoarrowheatmaplayer') {
       if (
         !Array.isArray(nextLayer.colorRange) ||
         nextLayer.colorRange.length === 0
@@ -481,11 +481,7 @@ export function setDeckMapLayerType(
     ) {
       nextLayer.getFillColor = [...DECK_MAP_DEFAULT_LAYER_COLOR];
     }
-    if (
-      lt === 'geoarrowcolumnlayer' ||
-      lt === 'columnlayer' ||
-      lt === 'deckcolumnlayer'
-    ) {
+    if (lt === 'geoarrowcolumnlayer') {
       const radius =
         typeof nextLayer.radius === 'number' &&
         Number.isFinite(nextLayer.radius) &&
