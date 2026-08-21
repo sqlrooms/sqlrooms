@@ -392,7 +392,9 @@ export function EvalObservatory() {
                       timestamp: selectedTrajectoryNode.timestamp,
                       input: selectedTrajectoryNode.data.input,
                       output: selectedTrajectoryNode.data.output,
-                      error: selectedTrajectoryNode.data.errorText,
+                      error:
+                        selectedTrajectoryNode.data.errorText ??
+                        selectedTrajectoryNode.data.message,
                       relatedOracleEvidence: relatedOracles(
                         selectedTrajectoryNode,
                         selectedTrajectoryNode.id.startsWith(`${selected.id}:`)
