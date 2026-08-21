@@ -4,6 +4,7 @@ import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands'
 import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
   EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
 } from '../profiles';
 
 const table = {
@@ -19,6 +20,22 @@ const table = {
 
 function command(id: string) {
   const result = createCliBlockDocumentCommands().find(
+    (item) => item.id === id,
+  );
+  if (!result) throw new Error(`Missing ${id}`);
+  return result;
+}
+
+function profileCommand(
+  id: string,
+  statefulBlockTypes: readonly (
+    | 'dashboard'
+    | 'data-table'
+    | 'html-app'
+    | 'map'
+  )[],
+) {
+  const result = createCliBlockDocumentCommands({statefulBlockTypes}).find(
     (item) => item.id === id,
   );
   if (!result) throw new Error(`Missing ${id}`);
@@ -138,6 +155,80 @@ describe('createCliBlockDocumentCommands', () => {
         'block-document.add-map-block',
       ]),
     );
+
+    const worksheetCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes:
+        WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(worksheetCommandIds).toEqual([
+      'block-document.update-block-metadata',
+      'block-document.add-map-block',
+    ]);
+  });
+
+  it('rejects metadata edits for stateful blocks disabled by the profile', async () => {
+    const {state} = setup();
+    state.blockDocuments.getBlocks = () => [
+      {
+        id: 'dashboard-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        caption: 'Dashboard',
+      },
+    ];
+    const updateMetadata = profileCommand(
+      'block-document.update-block-metadata',
+      WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    );
+
+    expect(() =>
+      updateMetadata.execute({getState: () => state} as any, {
+        blockDocumentId: 'worksheet-1',
+        blockId: 'dashboard-block',
+        caption: 'Changed',
+      }),
+    ).toThrow(
+      'Stateful block type dashboard is not available in the selected capability profile',
+    );
+    expect(state.blockDocuments.updateBlock).not.toHaveBeenCalled();
+  });
+
+  it('creates a direct worksheet map without a model or dashboard command', async () => {
+    const {state, invokeCommand, mapsById} = setup();
+    const result = await command('block-document.add-map-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'worksheet-1',
+        title: 'New Earthquake Map',
+        tableName: 'earthquakes',
+        config: {
+          datasets: {earthquakes: {source: {tableName: 'earthquakes'}}},
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {dataset: 'earthquakes'},
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    expect(result).toMatchObject({success: true});
+    const mapId = (result as any).data.mapId as string;
+    expect(mapsById[mapId]).toMatchObject({title: 'New Earthquake Map'});
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'block-document.create-stateful-block',
+      expect.objectContaining({blockType: 'map', blockInstanceId: mapId}),
+      expect.anything(),
+    );
+    expect(
+      invokeCommand.mock.calls.some(([id]) =>
+        String(id).startsWith('dashboard.'),
+      ),
+    ).toBe(false);
   });
 
   it('updates worksheet maps as resources without dashboard commands or panelId', async () => {

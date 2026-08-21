@@ -493,6 +493,22 @@ def test_api_config_with_named_capability_profile(tmp_path):
     assert response.json()["experimentalEnabled"] is True
 
 
+def test_api_config_with_worksheet_charts_maps_profile(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        capability_profile="worksheet-charts-maps",
+    )
+    response = TestClient(server._build_app()).get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["capabilityProfile"] == "worksheet-charts-maps"
+    assert response.json()["experimentalEnabled"] is False
+
+
 def test_server_rejects_unknown_or_conflicting_capability_profile(tmp_path):
     with pytest.raises(ValueError, match="Unknown SQLRooms capability profile"):
         SqlroomsHttpServer(
@@ -523,6 +539,17 @@ def test_server_rejects_unknown_or_conflicting_capability_profile(tmp_path):
             open_browser=False,
             experimental_enabled=True,
             capability_profile="default",
+        )
+
+    with pytest.raises(ValueError, match="sync_enabled requires"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db",
+            host="127.0.0.1",
+            port=0,
+            ws_port=None,
+            open_browser=False,
+            capability_profile="default",
+            sync_enabled=True,
         )
 
 

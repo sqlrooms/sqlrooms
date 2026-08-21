@@ -7,6 +7,7 @@ import {toast} from '@sqlrooms/ui';
 import {convertToUniqueColumnOrTableName} from '@sqlrooms/utils';
 import {useCallback} from 'react';
 import {useCliRoomStoreApi, useRoomStore} from '../roomStoreHooks';
+import {cliCapabilityProfile} from '../runtimeEnvironment';
 import type {RoomState} from '../store-types';
 
 export const LOCAL_DATA_ACCEPTED_FORMATS = {
@@ -38,6 +39,7 @@ function getCurrentOrFirstWorksheetArtifactId(
 function ensureImportWorksheetForTable(
   getState: () => RoomState,
   tableName: string,
+  createDataTableBlock: boolean,
 ) {
   const state = getState();
   const worksheetArtifactId =
@@ -49,6 +51,7 @@ function ensureImportWorksheetForTable(
 
   state.artifacts.setCurrentArtifact(worksheetArtifactId);
   state.blockDocuments.ensureBlockDocument(worksheetArtifactId);
+  if (!createDataTableBlock) return;
 
   const nextState = getState();
   const existingBlocks =
@@ -122,7 +125,11 @@ export function useLocalFileLoader() {
         return;
       }
       for (const {tableName} of createdTables) {
-        ensureImportWorksheetForTable(roomStore.getState, tableName);
+        ensureImportWorksheetForTable(
+          roomStore.getState,
+          tableName,
+          cliCapabilityProfile.blocks.stateful.includes('data-table'),
+        );
       }
       for (const {fileName, tableName} of createdTables) {
         toast.success('Table created', {

@@ -196,7 +196,9 @@ published files.
 Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 `@sqlrooms/artifacts` with `@sqlrooms/ai`. The factory handles primary artifact
 selection and run-context updates; the app supplies artifact payload readers for
-domain-specific types such as documents or dashboards.
+domain-specific types such as documents or dashboards. Apps with capability
+profiles can pass `isArtifactAllowed` to apply the same eligibility rule when
+listing, reading, or selecting a primary context artifact.
 
 Artifact-aware room commands can use `resolveArtifactTargetId()` to preserve
 the same per-turn target. Its precedence is an explicit command artifact ID,

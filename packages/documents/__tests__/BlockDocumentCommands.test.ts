@@ -21,7 +21,13 @@ type TestRoomState = BaseRoomStoreState &
   BlockDocumentsSliceState &
   CommandSliceState<any>;
 
-function createTestStore() {
+function createTestStore({
+  allowedBlockTypes,
+}: {
+  allowedBlockTypes?: Parameters<
+    typeof createBlockDocumentCommands<TestRoomState>
+  >[0]['allowedBlockTypes'];
+} = {}) {
   let timestamp = 100;
   const ensuredStatefulBlocks: Array<{id: string; title: string}> = [];
   const now = () => timestamp++;
@@ -54,6 +60,7 @@ function createTestStore() {
           },
         },
       ],
+      allowedBlockTypes,
     }),
   );
   return {store, ensuredStatefulBlocks};
@@ -333,6 +340,108 @@ describe('block document commands', () => {
       success: false,
       error: 'Unsupported stateful block type "notebook".',
     });
+  });
+
+  it('restricts generic mutations to configured block capabilities', async () => {
+    const {store} = createTestStore({
+      allowedBlockTypes: ['paragraph', 'chart', 'statefulBlock'],
+    });
+    await expect(
+      store.getState().commands.invokeCommand('block-document.create', {
+        blocks: [{id: 'image-1', type: 'image', assetId: 'asset-1'}],
+      }),
+    ).resolves.toMatchObject({success: false});
+    const createResult = await store
+      .getState()
+      .commands.invokeCommand('block-document.create');
+    const artifactId = (createResult.data as any).artifactId as string;
+
+    await expect(
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
+        artifactId,
+        blocks: [{id: 'image-1', type: 'image', assetId: 'asset-1'}],
+      }),
+    ).resolves.toMatchObject({success: false});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
+        artifactId,
+        blocks: [
+          {
+            id: 'document-1',
+            type: 'statefulBlock',
+            blockType: 'document',
+            blockInstanceId: 'document-1',
+          },
+        ],
+      }),
+    ).resolves.toMatchObject({success: false});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.append-blocks', {
+        artifactId,
+        blocks: [
+          {
+            id: 'dashboard-1',
+            type: 'statefulBlock',
+            blockType: 'dashboard',
+            blockInstanceId: 'dashboard-1',
+          },
+        ],
+      }),
+    ).resolves.toMatchObject({success: true});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.update-block', {
+        artifactId,
+        blockId: 'dashboard-1',
+        block: {id: 'ignored', type: 'image', assetId: 'asset-1'},
+      }),
+    ).resolves.toMatchObject({success: false});
+    store.getState().blockDocuments.appendBlocks(artifactId, [
+      {
+        id: 'persisted-document-1',
+        type: 'statefulBlock',
+        blockType: 'document',
+        blockInstanceId: 'persisted-document-1',
+      },
+    ]);
+    await expect(
+      store.getState().commands.invokeCommand('block-document.update-block', {
+        artifactId,
+        blockId: 'persisted-document-1',
+        block: {
+          id: 'ignored',
+          type: 'paragraph',
+          text: [{type: 'text', text: 'Replacement'}],
+        },
+      }),
+    ).resolves.toMatchObject({success: false});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.remove-block', {
+        artifactId,
+        blockId: 'persisted-document-1',
+      }),
+    ).resolves.toMatchObject({success: false});
+    await expect(
+      store.getState().commands.invokeCommand('block-document.move-block', {
+        artifactId,
+        blockId: 'persisted-document-1',
+        toIndex: 0,
+      }),
+    ).resolves.toMatchObject({success: false});
+
+    expect(store.getState().blockDocuments.getBlocks(artifactId)).toEqual([
+      {
+        id: 'dashboard-1',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+      },
+      {
+        id: 'persisted-document-1',
+        type: 'statefulBlock',
+        blockType: 'document',
+        blockInstanceId: 'persisted-document-1',
+      },
+    ]);
   });
 
   it('fails clearly for invalid targets', async () => {

@@ -11,7 +11,6 @@ import {
 import type {
   CliCapabilityProfile,
   CliCommandGroupId,
-  CliLifecycleSliceId,
   CliTopLevelToolGroupId,
 } from './types';
 
@@ -34,32 +33,6 @@ const TOP_LEVEL_TOOL_GROUPS: readonly CliTopLevelToolGroupId[] = [
   'webcontainer',
   'chart',
   'chart-image-for-markdown',
-];
-
-const LIFECYCLE_SLICES: readonly CliLifecycleSliceId[] = [
-  'ai',
-  'ai-settings',
-  'app-project',
-  'artifacts',
-  'artifact-ai',
-  'block-documents',
-  'canvas',
-  'cells',
-  'crdt',
-  'dashboard',
-  'dashboard-features',
-  'db-settings',
-  'deck-maps',
-  'documents',
-  'html-apps',
-  'mosaic',
-  'notebook',
-  'pivot',
-  'python',
-  'room-shell',
-  'sql-editor',
-  'webcontainer',
-  'workspace-ui',
 ];
 
 function findDuplicates(values: readonly string[]): string[] {
@@ -92,14 +65,11 @@ export function validateCliCapabilityProfile(
     ['artifacts.runContext', profile.artifacts.runContext],
     ['blocks.stateful', profile.blocks.stateful],
     ['blocks.aiContext', profile.blocks.aiContext],
-    ['blocks.interactiveRenderers', profile.blocks.interactiveRenderers],
-    ['blocks.placeholderRenderers', profile.blocks.placeholderRenderers],
     ['commands', profile.commands],
     ['ai.instructionSets', profile.ai.instructionSets],
     ['ai.topLevelToolGroups', profile.ai.topLevelToolGroups],
     ['ai.nestedAgents', profile.ai.nestedAgents],
     ['skills', profile.skills],
-    ['lifecycleSlices', profile.lifecycleSlices],
   ];
   for (const [label, values] of lists) {
     for (const duplicate of findDuplicates(values)) {
@@ -134,21 +104,7 @@ export function validateCliCapabilityProfile(
       profile.ai.topLevelToolGroups,
       TOP_LEVEL_TOOL_GROUPS,
     ),
-    ...validateKnownValues(
-      'lifecycleSlices',
-      profile.lifecycleSlices,
-      LIFECYCLE_SLICES,
-    ),
   );
-
-  const lifecycleSlices = new Set<string>(profile.lifecycleSlices);
-  for (const lifecycleSlice of LIFECYCLE_SLICES) {
-    if (!lifecycleSlices.has(lifecycleSlice)) {
-      errors.push(
-        `lifecycleSlices is missing required persisted state "${lifecycleSlice}".`,
-      );
-    }
-  }
 
   const stateful = new Set<string>(profile.blocks.stateful);
   for (const blockType of profile.blocks.aiContext) {
@@ -157,26 +113,6 @@ export function validateCliCapabilityProfile(
         `AI context block "${blockType}" must also be an enabled stateful block.`,
       );
     }
-  }
-
-  const interactive = new Set<string>(profile.blocks.interactiveRenderers);
-  const placeholders = new Set<string>(profile.blocks.placeholderRenderers);
-  for (const blockType of STATEFUL_BLOCK_ARTIFACT_TYPES) {
-    const rendererCount =
-      Number(interactive.has(blockType)) + Number(placeholders.has(blockType));
-    if (rendererCount !== 1) {
-      errors.push(
-        `Stateful block "${blockType}" must have exactly one interactive or placeholder renderer.`,
-      );
-    }
-    if (stateful.has(blockType) !== interactive.has(blockType)) {
-      errors.push(
-        `Stateful block "${blockType}" must be interactive exactly when it is enabled.`,
-      );
-    }
-  }
-  if (!interactive.has('chart')) {
-    errors.push('The built-in chart block requires an interactive renderer.');
   }
 
   const commands = new Set<string>(profile.commands);
@@ -208,6 +144,11 @@ export function validateCliCapabilityProfile(
       'The dashboard-agent tool group and dashboard nested agent must be enabled together.',
     );
   }
+  if (tools.has('dashboard-agent') && !artifacts.has('dashboard')) {
+    errors.push(
+      'The top-level dashboard agent requires creatable dashboard artifacts.',
+    );
+  }
   if (tools.has('worksheet-agent') !== nestedAgents.has('worksheet')) {
     errors.push(
       'The worksheet-agent tool group and worksheet nested agent must be enabled together.',
@@ -218,12 +159,18 @@ export function validateCliCapabilityProfile(
       'The html-app-agent tool group and HTML app nested agent must be enabled together.',
     );
   }
+  if (nestedAgents.has('worksheet-dashboard') && !stateful.has('dashboard')) {
+    errors.push(
+      'The embedded worksheet-dashboard agent requires dashboard blocks.',
+    );
+  }
   if (
     nestedAgents.has('worksheet') &&
+    stateful.has('dashboard') &&
     !nestedAgents.has('worksheet-dashboard')
   ) {
     errors.push(
-      'The worksheet agent requires its embedded worksheet-dashboard agent.',
+      'A worksheet agent with dashboard blocks requires its embedded worksheet-dashboard agent.',
     );
   }
 

@@ -163,9 +163,13 @@ export function blockDocumentAgentTool(
     ...baseOptions,
     databaseAdapter,
     blockDocumentAdapter,
-    dashboardAgentTool,
     htmlAppBlocksEnabled: profile.blocks.stateful.includes('html-app'),
     mapBlocksEnabled: profile.blocks.stateful.includes('map'),
+    dashboardBlocksEnabled: profile.blocks.stateful.includes('dashboard'),
+    dataTableBlocksEnabled: profile.blocks.stateful.includes('data-table'),
+    ...(profile.ai.nestedAgents.includes('worksheet-dashboard')
+      ? {dashboardAgentTool}
+      : {}),
     addDashboardBlock: async ({blockDocumentId, title, tableName, intent}) => {
       const result = await store
         .getState()

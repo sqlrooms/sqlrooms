@@ -44,19 +44,6 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
       "chart",
       "dashboard",
     ],
-    "interactiveRenderers": [
-      "chart",
-      "dashboard",
-      "data-table",
-    ],
-    "placeholderRenderers": [
-      "pivot",
-      "map",
-      "document",
-      "sql-query",
-      "html-app",
-      "python",
-    ],
     "stateful": [
       "dashboard",
       "data-table",
@@ -71,31 +58,6 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
   "dashboard": {
     "deckMaps": false,
   },
-  "lifecycleSlices": [
-    "ai",
-    "ai-settings",
-    "app-project",
-    "artifacts",
-    "artifact-ai",
-    "block-documents",
-    "canvas",
-    "cells",
-    "crdt",
-    "dashboard",
-    "dashboard-features",
-    "db-settings",
-    "deck-maps",
-    "documents",
-    "html-apps",
-    "mosaic",
-    "notebook",
-    "pivot",
-    "python",
-    "room-shell",
-    "sql-editor",
-    "webcontainer",
-    "workspace-ui",
-  ],
   "name": "default",
   "skills": [],
   "version": 1,
@@ -159,18 +121,6 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "html-app",
       "map",
     ],
-    "interactiveRenderers": [
-      "chart",
-      "dashboard",
-      "pivot",
-      "data-table",
-      "map",
-      "document",
-      "sql-query",
-      "html-app",
-      "python",
-    ],
-    "placeholderRenderers": [],
     "stateful": [
       "dashboard",
       "pivot",
@@ -194,32 +144,53 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   "dashboard": {
     "deckMaps": true,
   },
-  "lifecycleSlices": [
-    "ai",
-    "ai-settings",
-    "app-project",
-    "artifacts",
-    "artifact-ai",
-    "block-documents",
-    "canvas",
-    "cells",
-    "crdt",
-    "dashboard",
-    "dashboard-features",
-    "db-settings",
-    "deck-maps",
-    "documents",
-    "html-apps",
-    "mosaic",
-    "notebook",
-    "pivot",
-    "python",
-    "room-shell",
-    "sql-editor",
-    "webcontainer",
-    "workspace-ui",
-  ],
   "name": "experimental",
+  "skills": [],
+  "version": 1,
+}
+`;
+
+exports[`CLI capability profiles locks the worksheet-charts-maps capability baseline 1`] = `
+{
+  "ai": {
+    "instructionSets": [
+      "stable",
+    ],
+    "nestedAgents": [
+      "worksheet",
+    ],
+    "topLevelToolGroups": [
+      "default-data-analysis",
+      "artifact-context",
+      "worksheet-agent",
+      "chart",
+    ],
+  },
+  "artifacts": {
+    "creatable": [
+      "worksheet",
+    ],
+    "runContext": [
+      "worksheet",
+    ],
+  },
+  "blocks": {
+    "aiContext": [
+      "chart",
+      "map",
+    ],
+    "stateful": [
+      "map",
+    ],
+  },
+  "commands": [
+    "block-document",
+    "cli-block-document",
+  ],
+  "dashboard": {
+    "deckMaps": false,
+  },
+  "name": "worksheet-charts-maps",
   "skills": [],
   "version": 1,
 }

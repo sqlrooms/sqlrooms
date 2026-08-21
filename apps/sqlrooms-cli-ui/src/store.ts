@@ -86,6 +86,7 @@ import {
   WebContainerPersistConfig,
 } from '@sqlrooms/webcontainer';
 import {produce} from 'immer';
+import type {Tool} from 'ai';
 
 import {createHttpDbBridge} from '@sqlrooms/db';
 import {
@@ -99,6 +100,7 @@ import {
   createDocumentCommands,
   createDocumentsSlice,
   DocumentsSliceConfig,
+  type BlockDocumentBlock,
 } from '@sqlrooms/documents';
 import {createDocumentsCrdtMirror} from '@sqlrooms/documents/crdt';
 import {toast} from '@sqlrooms/ui';
@@ -160,6 +162,14 @@ const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
 const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
 const BLOCK_DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents/block-document';
 const BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER = '@sqlrooms/python/block-document';
+const WORKSHEET_CHARTS_MAPS_ALLOWED_BLOCK_TYPES = [
+  'heading',
+  'paragraph',
+  'list',
+  'todo',
+  'chart',
+  'statefulBlock',
+] as const satisfies readonly BlockDocumentBlock['type'][];
 const AI_SETTINGS_SAVE_FAILED_TOAST_ID = 'ai-settings-save-failed';
 const STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS = `
 In the SQLRooms CLI app, a Worksheet is a block document artifact. When the user asks to create, edit, inspect, or add content to a worksheet, target the current worksheet artifact using block-document commands and block-document agent tools. Use the word Worksheet in user-facing replies, but use block-document tool names and command IDs when invoking tools. The artifact type may still be "worksheet"; its editable content model is a block document.
@@ -183,6 +193,14 @@ Experimental SQLRooms tools are available in this session. Use them for app, map
 - If a new top-level html-app artifact is needed, first execute the html-app.create-artifact command, then call html_app_agent with appId set to the returned artifactId.
 - For HTML app undo, redo, or restoring an earlier version, use list_commands and execute_command with html-app.undo-revision, html-app.redo-revision, or html-app.restore-revision. Do not rewrite, delete, or edit chat messages to perform app undo/redo.
 - If an embedded worksheet HTML app target is ambiguous, ask the user to select the app/block or provide appId instead of mutating a guessed app.
+`;
+const WORKSHEET_CHARTS_MAPS_AI_INSTRUCTIONS = `
+This SQLRooms session exposes worksheet artifacts with text, chart, and direct map blocks.
+
+- Use ${CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME} for worksheet creation, analysis, charts, maps, block edits, and block reordering.
+- If run context contains a kind:"block" item, pass its blockDocumentId and targetBlock fields unchanged so only that worksheet block is edited.
+- For worksheet maps, use the worksheet agent's direct map tool. Preserve existing map datasets and layers for incremental edits.
+- Use standalone chart tools only for inline chat visualizations or when no worksheet target is available.
 `;
 
 const BLOCK_DOCUMENT_OPTIONS = {
@@ -626,6 +644,9 @@ function getRuntimeBridgeConfig() {
   return undefined;
 }
 
+// Capability profiles gate exposed behavior, not lifecycle state. Keep every
+// persisted slice registered so disabled content round-trips through narrower
+// profiles and can be restored when its capability is enabled again.
 const sliceConfigSchemas = {
   room: BaseRoomConfig,
   layout: LayoutConfig,
@@ -730,13 +751,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       const dashboardSlice: RoomState['dashboard'] = {
         initialize: async () => {
-          if (cliCapabilityProfile.commands.includes('dashboard')) {
-            registerCommandsForOwner(
-              store,
-              DASHBOARD_COMMAND_OWNER,
-              createDashboardCommands({artifactTypes: cliArtifactTypes}),
-            );
-          }
+          registerCommandsForOwner(
+            store,
+            DASHBOARD_COMMAND_OWNER,
+            createDashboardCommands({artifactTypes: cliArtifactTypes}),
+          );
           if (cliCapabilityProfile.commands.includes('mosaic-dashboard')) {
             registerCommandsForOwner(
               store,
@@ -760,6 +779,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 statefulBlockTypes: createStatefulBlockCommandTypes({
                   profile: cliCapabilityProfile,
                 }),
+                allowedBlockTypes:
+                  cliCapabilityProfile.name === 'worksheet-charts-maps'
+                    ? WORKSHEET_CHARTS_MAPS_ALLOWED_BLOCK_TYPES
+                    : undefined,
               }),
             );
           }
@@ -1125,6 +1148,40 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
         ...(() => {
           const webContainerToolkit = createWebContainerToolkit(store);
+          const enabledTools = new Set(
+            cliCapabilityProfile.ai.topLevelToolGroups,
+          );
+          const tools: Record<string, Tool> = {};
+          if (enabledTools.has('default-data-analysis')) {
+            Object.assign(tools, createDefaultAiTools(store, {query: {}}));
+          }
+          if (enabledTools.has('artifact-context')) {
+            Object.assign(tools, createArtifactContextAiTools(store));
+          }
+          if (enabledTools.has('dashboard-agent')) {
+            tools.dashboard_agent = dashboardAgentTool(store, {
+              deckMapsEnabled: cliCapabilityProfile.dashboard.deckMaps,
+            });
+          }
+          if (enabledTools.has('html-app-agent')) {
+            tools.html_app_agent = htmlAppAgentTool(store);
+          }
+          if (enabledTools.has('worksheet-agent')) {
+            tools[CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME] = blockDocumentAgentTool(
+              store,
+              {profile: cliCapabilityProfile},
+            );
+          }
+          if (enabledTools.has('webcontainer')) {
+            Object.assign(tools, webContainerToolkit.tools);
+          }
+          if (enabledTools.has('chart')) {
+            tools.chart = createVegaChartTool();
+          }
+          if (enabledTools.has('chart-image-for-markdown')) {
+            tools.chart_image_for_markdown =
+              createChartImageForMarkdownTool(store);
+          }
           return createAiSlice({
             config: AiSliceConfig.parse({sessions: []}),
             defaultProvider: defaultProviderFromConfig as any,
@@ -1137,7 +1194,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             getInstructions: () =>
               [
                 createDefaultAiInstructions(store),
-                STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
+                cliCapabilityProfile.name === 'worksheet-charts-maps'
+                  ? WORKSHEET_CHARTS_MAPS_AI_INSTRUCTIONS.trim()
+                  : STABLE_SQLROOMS_CLI_AI_INSTRUCTIONS.trim(),
                 cliCapabilityProfile.ai.instructionSets.includes('experimental')
                   ? EXPERIMENTAL_SQLROOMS_CLI_AI_INSTRUCTIONS.trim()
                   : '',
@@ -1150,25 +1209,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               }),
             formatRunContextInstructions: ({runContext}) =>
               formatRunContextInstructions(runContext, store),
-            tools: {
-              ...createDefaultAiTools(store, {query: {}}),
-              ...createArtifactContextAiTools(store),
-              dashboard_agent: dashboardAgentTool(store, {
-                deckMapsEnabled: cliCapabilityProfile.dashboard.deckMaps,
-              }),
-              ...(cliCapabilityProfile.ai.topLevelToolGroups.includes(
-                'html-app-agent',
-              )
-                ? {html_app_agent: htmlAppAgentTool(store)}
-                : {}),
-              [CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME]: blockDocumentAgentTool(
-                store,
-                {profile: cliCapabilityProfile},
-              ),
-              ...webContainerToolkit.tools,
-              chart: createVegaChartTool(),
-              chart_image_for_markdown: createChartImageForMarkdownTool(store),
-            },
+            tools,
             toolRenderers: {
               ...createDefaultAiToolRenderers(),
               ...webContainerToolkit.toolRenderers,

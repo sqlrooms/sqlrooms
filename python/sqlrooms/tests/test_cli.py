@@ -80,6 +80,10 @@ def test_resolve_capability_profile_defaults_and_alias():
         _resolve_capability_profile("experimental", None, experimental=False)
         == "experimental"
     )
+    assert (
+        _resolve_capability_profile(None, "default", experimental=True)
+        == "experimental"
+    )
 
 
 def test_resolve_capability_profile_prefers_cli_over_config():
@@ -135,6 +139,34 @@ def test_cli_passes_named_profile_to_server(monkeypatch):
 
     assert result.exit_code == 0
     assert captured["capability_profile"] == "experimental"
+
+
+def test_cli_passes_worksheet_charts_maps_profile_to_server(monkeypatch):
+    captured = {}
+
+    class FakeServer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+        async def start(self):
+            return None
+
+    monkeypatch.setattr("sqlrooms.cli.SqlroomsHttpServer", FakeServer)
+    monkeypatch.setattr("sqlrooms.cli._resolve_http_port", lambda *args: 3000)
+
+    result = runner.invoke(
+        app,
+        [
+            "--no-config",
+            "--no-open-browser",
+            "--profile",
+            "worksheet-charts-maps",
+            ":memory:",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["capability_profile"] == "worksheet-charts-maps"
 
 
 def test_cli_loads_profile_from_config(monkeypatch, tmp_path):

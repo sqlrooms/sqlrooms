@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 DB_BRIDGE_ID = "sqlrooms-cli-http-bridge"
 UPLOAD_COPY_CHUNK_SIZE = 1024 * 1024
 NO_STORE_HEADERS = {"Cache-Control": "no-store"}
-CAPABILITY_PROFILE_NAMES = ("default", "experimental")
+CAPABILITY_PROFILE_NAMES = ("default", "experimental", "worksheet-charts-maps")
 
 
 async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
@@ -518,6 +518,8 @@ class SqlroomsHttpServer:
                 f"'{resolved_capability_profile}'."
             )
         self.capability_profile = resolved_capability_profile
+        if sync_enabled and self.capability_profile != "experimental":
+            raise ValueError("sync_enabled requires capability_profile 'experimental'.")
         self.experimental_enabled = self.capability_profile == "experimental"
         self.ai_devtools = bool(ai_devtools)
         self.mcp_enabled_default = bool(mcp_enabled)

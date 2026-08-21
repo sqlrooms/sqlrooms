@@ -343,9 +343,13 @@ renderers via `BlockDocumentStatefulBlockRendererProps`:
 
 If no renderer is registered, chart and stateful blocks render a clear
 unsupported state while preserving their Tiptap JSON attributes. `blockTypes`
-controls the host-specific entries shown in the plus menu. Chart renderers also
-receive a `selected` flag so their controls can reflect whether the block is the
-active Tiptap node selection.
+controls both the host-specific entries shown in the plus menu and which
+stateful block types are editable. A persisted stateful block with a registered
+renderer but no matching `blockTypes` entry renders read-only and cannot be
+turned into, dragged, or deleted with the editor's shared block controls. This
+lets hosts preserve disabled blocks as placeholders without making the rest of
+the document read-only. Chart renderers also receive a `selected` flag so their
+controls can reflect whether the block is the active Tiptap node selection.
 When a block is converted through the handle menu, custom `createNode`
 callbacks receive an optional `{initialText}` value with the source block text;
 hosts can use it to seed stateful blocks such as embedded Markdown documents.
@@ -517,6 +521,11 @@ the package API generic.
 
 Hosts can pass `statefulBlockTypes` to expose supported feature-backed block
 types to `block-document.create-stateful-block`.
+
+Hosts with a narrower block surface can also pass `allowedBlockTypes`. The
+generic create, append, insert, and update commands then reject other block
+kinds; allowed `statefulBlock` payloads are additionally restricted to the
+configured `statefulBlockTypes`.
 
 Block mutation command results include the full refreshed document data plus
 focused mutation payloads such as `blockId`, `blockIds`, `blockType`,

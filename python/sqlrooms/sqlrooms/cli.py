@@ -39,7 +39,7 @@ else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 3000
-CAPABILITY_PROFILE_NAMES = ("default", "experimental")
+CAPABILITY_PROFILE_NAMES = ("default", "experimental", "worksheet-charts-maps")
 DEFAULT_CAPABILITY_PROFILE = "default"
 EXPERIMENTAL_CAPABILITY_PROFILE = "experimental"
 
@@ -155,6 +155,18 @@ def _resolve_capability_profile(
     experimental: bool,
 ) -> str:
     """Resolve CLI/config selection and the legacy ``--experimental`` alias."""
+    if experimental:
+        if (
+            explicit_profile is not None
+            and explicit_profile.strip() != EXPERIMENTAL_CAPABILITY_PROFILE
+        ):
+            raise RuntimeError(
+                f"--experimental conflicts with capability profile "
+                f"'{explicit_profile.strip()}'. "
+                "Use --profile experimental or remove one of the selections."
+            )
+        return EXPERIMENTAL_CAPABILITY_PROFILE
+
     selected = explicit_profile if explicit_profile is not None else config_profile
     if selected is not None:
         selected = selected.strip()
@@ -165,13 +177,6 @@ def _resolve_capability_profile(
                 f"Expected one of: {expected}."
             )
 
-    if experimental and selected and selected != EXPERIMENTAL_CAPABILITY_PROFILE:
-        raise RuntimeError(
-            f"--experimental conflicts with capability profile '{selected}'. "
-            "Use --profile experimental or remove one of the selections."
-        )
-    if experimental:
-        return EXPERIMENTAL_CAPABILITY_PROFILE
     return selected or DEFAULT_CAPABILITY_PROFILE
 
 
@@ -544,7 +549,7 @@ def main(
     capability_profile: str | None = typer.Option(
         None,
         "--profile",
-        help="Named capability profile: default or experimental. Overrides [app].profile from the config file.",
+        help="Named capability profile: default, experimental, or worksheet-charts-maps. Overrides [app].profile from the config file.",
     ),
     experimental_sync: bool = typer.Option(
         False,

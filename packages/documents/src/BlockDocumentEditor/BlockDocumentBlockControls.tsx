@@ -50,6 +50,7 @@ import {
   useState,
 } from 'react';
 import {
+  isBlockDocumentStatefulBlockTypeEnabled,
   type BlockDocumentStatefulBlockCreateNodeOptions,
   type BlockDocumentStatefulBlockType,
   useBlockDocumentStatefulBlockTypes,
@@ -761,6 +762,15 @@ export const BlockDocumentBlockControls: FC<
     () => buildMediaBlockMenuItems(statefulBlockTypes),
     [statefulBlockTypes],
   );
+  const isBlockReadOnly = useCallback(
+    (node: ReturnType<typeof getNodeAt>) =>
+      node?.type.name === 'blockDocumentStatefulBlock' &&
+      !isBlockDocumentStatefulBlockTypeEnabled(
+        statefulBlockTypes,
+        typeof node.attrs.blockType === 'string' ? node.attrs.blockType : '',
+      ),
+    [statefulBlockTypes],
+  );
   const filteredTextMenuItems = useMemo(
     () =>
       textMenuItems.filter((item) =>
@@ -870,7 +880,8 @@ export const BlockDocumentBlockControls: FC<
       }
       const pos = getBlockPos(editor, element);
       const node = pos == null ? null : getNodeAt(editor, pos);
-      if (pos == null || !node || isTitleNode(node)) {
+      if (pos == null || !node || isTitleNode(node) || isBlockReadOnly(node)) {
+        setActiveBlock(null);
         if (!menuOpen) scheduleHide();
         return;
       }
@@ -882,7 +893,14 @@ export const BlockDocumentBlockControls: FC<
         top: getBlockControlsTop(elementRect, scrollElement),
       });
     },
-    [cancelHide, editor, menuOpen, scheduleHide, scrollElement],
+    [
+      cancelHide,
+      editor,
+      isBlockReadOnly,
+      menuOpen,
+      scheduleHide,
+      scrollElement,
+    ],
   );
 
   const updateFocusedTextBlock = useCallback(
@@ -1052,7 +1070,7 @@ export const BlockDocumentBlockControls: FC<
     (block: BlockControlState | null, item: BlockMenuItem) => {
       if (!editor || !block) return;
       const node = getNodeAt(editor, block.pos);
-      if (!node || isTitleNode(node)) return;
+      if (!node || isTitleNode(node) || isBlockReadOnly(node)) return;
 
       const replacement = preserveTextInNode(
         item.createNode(getNodeId(node, generateBlockId), {
@@ -1093,7 +1111,7 @@ export const BlockDocumentBlockControls: FC<
       clearBlockTypeSearchView();
       setActiveBlock(null);
     },
-    [clearBlockTypeSearchView, editor, generateBlockId],
+    [clearBlockTypeSearchView, editor, generateBlockId, isBlockReadOnly],
   );
 
   const turnActiveBlockInto = useCallback(
@@ -1229,7 +1247,7 @@ export const BlockDocumentBlockControls: FC<
     if (!editor || !activeBlock) return;
     const node = getNodeAt(editor, activeBlock.pos);
     const paragraph = editor.schema.nodes.paragraph;
-    if (!node || !paragraph) return;
+    if (!node || !paragraph || isBlockReadOnly(node)) return;
 
     const tr = editor.state.tr.delete(
       activeBlock.pos,
@@ -1241,7 +1259,7 @@ export const BlockDocumentBlockControls: FC<
     editor.view.dispatch(tr.scrollIntoView());
     editor.commands.focus();
     setActiveBlock(null);
-  }, [activeBlock, editor, generateBlockId]);
+  }, [activeBlock, editor, generateBlockId, isBlockReadOnly]);
 
   const handlePlusMouseDown = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -1275,7 +1293,7 @@ export const BlockDocumentBlockControls: FC<
   const handleDragStart = (event: DragEvent<HTMLButtonElement>) => {
     if (!editor || !activeBlock || !event.dataTransfer) return;
     const node = getNodeAt(editor, activeBlock.pos);
-    if (!node || isTitleNode(node)) return;
+    if (!node || isTitleNode(node) || isBlockReadOnly(node)) return;
     dragSourceRef.current = {pos: activeBlock.pos, node};
     suppressHandleClickRef.current = true;
     setHandleMenuOpen(false);

@@ -53,6 +53,13 @@ export type BlockDocumentStatefulBlockCommandType<TRoomState> = {
   ) => void;
 };
 
+/**
+ * Configuration for a reusable block-document command family.
+ *
+ * `allowedBlockTypes` constrains generic block mutations. If it includes
+ * `statefulBlock`, an individual stateful block is accepted only when its
+ * `blockType` is also configured in `statefulBlockTypes`.
+ */
 export type CreateBlockDocumentCommandsOptions<
   TRoomState extends BlockDocumentCommandState = BlockDocumentCommandState,
 > = {
@@ -62,6 +69,14 @@ export type CreateBlockDocumentCommandsOptions<
   commandGroup?: string;
   defaultTitle?: string;
   statefulBlockTypes?: BlockDocumentStatefulBlockCommandType<TRoomState>[];
+  /**
+   * Top-level block kinds accepted by generic create, append, insert, and
+   * update commands. Omit to accept every block kind.
+   *
+   * When `statefulBlock` is allowed, its `blockType` must also be present in
+   * `statefulBlockTypes`.
+   */
+  allowedBlockTypes?: readonly BlockDocumentBlockType['type'][];
 };
 
 type BlockDocumentCommandState = BaseRoomStoreState & {
@@ -228,6 +243,49 @@ function labelFromBlockType(blockType: string) {
     .join(' ');
 }
 
+function getBlockCapabilityError(
+  block: BlockDocumentBlockType,
+  allowedBlockTypes: ReadonlySet<string> | undefined,
+  statefulBlockTypes: ReadonlySet<string>,
+): string | undefined {
+  if (!allowedBlockTypes) return undefined;
+  if (!allowedBlockTypes.has(block.type)) {
+    return `Unsupported block type "${block.type}".`;
+  }
+  if (
+    block.type === 'statefulBlock' &&
+    !statefulBlockTypes.has(block.blockType)
+  ) {
+    return `Unsupported stateful block type "${block.blockType}".`;
+  }
+  return undefined;
+}
+
+function constrainBlockInput<TSchema extends z.ZodType<unknown>>(
+  schema: TSchema,
+  blocksFromInput: (input: z.infer<TSchema>) => BlockDocumentBlockType[],
+  allowedBlockTypes: ReadonlySet<string> | undefined,
+  statefulBlockTypes: ReadonlySet<string>,
+): TSchema {
+  if (!allowedBlockTypes) return schema;
+  return schema.superRefine((input, ctx) => {
+    for (const [index, block] of blocksFromInput(input).entries()) {
+      const error = getBlockCapabilityError(
+        block,
+        allowedBlockTypes,
+        statefulBlockTypes,
+      );
+      if (error) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['blocks', index],
+          message: error,
+        });
+      }
+    }
+  }) as TSchema;
+}
+
 export function createBlockDocumentCommandIds(
   commandNamespace = 'block-document',
 ) {
@@ -242,9 +300,11 @@ export function createBlockDocumentCommandIds(
  * and labelled with `artifactLabel`, so a host can register more than one
  * block-document family (for example worksheets and generic documents).
  *
- * @param options - Artifact type, labels, namespace, and supported stateful
- * block types. All fields are optional and default to generic block-document
- * values.
+ * @param options - Artifact type, labels, namespace, supported stateful block
+ * types, and optional generic-mutation constraints. When `allowedBlockTypes`
+ * includes `statefulBlock`, only block types configured in
+ * `statefulBlockTypes` are accepted. All fields are optional and default to
+ * generic block-document values.
  * @returns The list of {@link RoomCommand}s to register with the host store.
  */
 export function createBlockDocumentCommands<
@@ -256,6 +316,7 @@ export function createBlockDocumentCommands<
   commandGroup = artifactLabel,
   defaultTitle = artifactLabel,
   statefulBlockTypes = [],
+  allowedBlockTypes,
 }: CreateBlockDocumentCommandsOptions<TRoomState> = {}): RoomCommand<TRoomState>[] {
   const label = artifactLabel;
   const labelLower = lowerLabel(label);
@@ -264,6 +325,56 @@ export function createBlockDocumentCommands<
   const statefulBlockTypesByType = new Map(
     statefulBlockTypes.map((blockType) => [blockType.blockType, blockType]),
   );
+  const allowedBlockTypeSet = allowedBlockTypes
+    ? new Set<string>(allowedBlockTypes)
+    : undefined;
+  const statefulBlockTypeSet = new Set(statefulBlockTypesByType.keys());
+  const createInputSchema = constrainBlockInput(
+    BlockDocumentCreateInput,
+    (input) => input.blocks ?? [],
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const blocksInputSchema = constrainBlockInput(
+    BlockDocumentBlocksInput,
+    (input) => input.blocks,
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const insertBlocksInputSchema = constrainBlockInput(
+    BlockDocumentInsertBlocksInput,
+    (input) => input.blocks,
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const updateBlockInputSchema = constrainBlockInput(
+    BlockDocumentUpdateBlockInput,
+    (input) => [input.block],
+    allowedBlockTypeSet,
+    statefulBlockTypeSet,
+  );
+  const resolveMutableBlock = (
+    state: BlockDocumentCommandState,
+    artifactId: string,
+    blockId: string,
+    mutationCommandId: string,
+  ) => {
+    const block = findBlockById(state, artifactId, blockId);
+    if (!block) return missingBlock(mutationCommandId, blockId);
+    const error = getBlockCapabilityError(
+      block,
+      allowedBlockTypeSet,
+      statefulBlockTypeSet,
+    );
+    if (error) {
+      return {
+        success: false as const,
+        commandId: mutationCommandId,
+        error: `Block "${blockId}" cannot be changed: ${error}`,
+      };
+    }
+    return {success: true as const, block};
+  };
 
   const commandsBySuffix = {
     list: {
@@ -336,7 +447,7 @@ export function createBlockDocumentCommands<
       description: `Create a ${label} artifact with optional initial blocks`,
       group: commandGroup,
       keywords: [labelLower, 'create', 'new', 'blocks'],
-      inputSchema: BlockDocumentCreateInput,
+      inputSchema: createInputSchema,
       inputDescription: 'Optional title, initial blocks, and select flag.',
       metadata: {readOnly: false, idempotent: false, riskLevel: 'low'},
       execute: (context, input) => {
@@ -379,7 +490,7 @@ export function createBlockDocumentCommands<
       description: `Append top-level blocks to a ${label} artifact`,
       group: commandGroup,
       keywords: [labelLower, 'append', 'blocks'],
-      inputSchema: BlockDocumentBlocksInput,
+      inputSchema: blocksInputSchema,
       inputDescription: `${label} artifact ID and blocks to append.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
@@ -412,7 +523,7 @@ export function createBlockDocumentCommands<
       description: `Insert top-level blocks into a ${label} artifact`,
       group: commandGroup,
       keywords: [labelLower, 'insert', 'blocks'],
-      inputSchema: BlockDocumentInsertBlocksInput,
+      inputSchema: insertBlocksInputSchema,
       inputDescription: `${label} artifact ID, insertion index, and blocks.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
@@ -448,7 +559,7 @@ export function createBlockDocumentCommands<
       description: `Replace one top-level ${label} block by block ID`,
       group: commandGroup,
       keywords: [labelLower, 'update', 'block'],
-      inputSchema: BlockDocumentUpdateBlockInput,
+      inputSchema: updateBlockInputSchema,
       inputDescription: `${label} artifact ID, block ID, and replacement block.`,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
       execute: ({getState}, input) => {
@@ -465,6 +576,13 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('update-block'),
+        );
+        if (!target.success) return target;
         const replacementBlock = {
           ...block,
           id: blockId,
@@ -507,7 +625,13 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
-        const block = findBlockById(state, artifactId, blockId);
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('remove-block'),
+        );
+        if (!target.success) return target;
         const removed = state.blockDocuments.removeBlock(artifactId, blockId);
         if (!removed) return missingBlock(commandId('remove-block'), blockId);
         return blockMutationSuccess(
@@ -515,7 +639,10 @@ export function createBlockDocumentCommands<
           commandId('remove-block'),
           artifactId,
           labelLower,
-          block ? {removedBlock: block, ...blockResultData([block])} : {},
+          {
+            removedBlock: target.block,
+            ...blockResultData([target.block]),
+          },
         );
       },
     },
@@ -542,7 +669,13 @@ export function createBlockDocumentCommands<
           labelLower,
         );
         if (!resolved.success) return resolved;
-        const block = findBlockById(state, artifactId, blockId);
+        const target = resolveMutableBlock(
+          state,
+          artifactId,
+          blockId,
+          commandId('move-block'),
+        );
+        if (!target.success) return target;
         const moved = state.blockDocuments.moveBlock(
           artifactId,
           blockId,
@@ -556,7 +689,7 @@ export function createBlockDocumentCommands<
           labelLower,
           {
             toIndex,
-            ...(block ? blockResultData([block]) : {}),
+            ...blockResultData([target.block]),
           },
         );
       },

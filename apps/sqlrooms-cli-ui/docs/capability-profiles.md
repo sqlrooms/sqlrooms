@@ -3,49 +3,51 @@
 The SQLRooms CLI exposes complete, named production capability profiles. The
 profile is selected by the Python launcher, included in `/api/config`, and
 resolved once by the UI. Artifact creation, worksheet blocks and renderers,
-command registration, run context, instructions, tools, nested agents, and
-dashboard map support all consume that same profile.
+command registration, run context, instructions, tools, nested agents, block
+renderer selection, and dashboard map support all consume that same profile.
 
 The checked-in Jest snapshots in
 `src/__tests__/__snapshots__/cliCapabilityProfiles.test.ts.snap` are the
 deterministic baseline for the exact profile contents. The coherence validator
-also checks dependencies between blocks, renderers, commands, artifacts, and AI
-tools.
+also checks dependencies between blocks, commands, artifacts, and AI tools.
 
 ## Current profiles
 
-| Surface                               | `default`             | `experimental`                                                                                    |
-| ------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------- |
-| Creatable artifacts                   | worksheet, dashboard  | worksheet, dashboard, pivot, notebook, document, SQL query, HTML app, Python, canvas, app builder |
-| Worksheet stateful blocks             | dashboard, data table | dashboard, pivot, data table, map, document, SQL query, HTML app, Python                          |
-| AI-editable worksheet blocks          | chart, dashboard      | chart, dashboard, HTML app, map                                                                   |
-| Additional command owners             | none                  | document, Python block, HTML app revision                                                         |
-| Additional top-level tools            | none                  | HTML app agent                                                                                    |
-| Dashboard and embedded-dashboard maps | no                    | yes                                                                                               |
-| Additional instructions               | none                  | experimental app/map/HTML-app routing                                                             |
-| Skills                                | none                  | none                                                                                              |
+| Surface                               | `default`             | `experimental`                                                                                    | `worksheet-charts-maps` |
+| ------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------- | ----------------------- |
+| Creatable artifacts                   | worksheet, dashboard  | worksheet, dashboard, pivot, notebook, document, SQL query, HTML app, Python, canvas, app builder | worksheet               |
+| Worksheet stateful blocks             | dashboard, data table | dashboard, pivot, data table, map, document, SQL query, HTML app, Python                          | map                     |
+| AI-editable worksheet blocks          | chart, dashboard      | chart, dashboard, HTML app, map                                                                   | chart, map              |
+| Additional command owners             | none                  | document, Python block, HTML app revision                                                         | none                    |
+| Top-level agents                      | dashboard, worksheet  | dashboard, worksheet, HTML app                                                                    | worksheet               |
+| Dashboard and embedded-dashboard maps | no                    | yes                                                                                               | no dashboards           |
+| Additional instructions               | none                  | experimental app/map/HTML-app routing                                                             | worksheet chart/map     |
+| Skills                                | none                  | none                                                                                              | none                    |
 
-Both profiles retain lifecycle state for every currently persisted app slice.
-This is intentional: opening a workspace under the narrower `default` profile
-must preserve disabled experimental state and show placeholders rather than
-deleting or mutating it. The profile controls creation, editing, discovery,
-commands, AI exposure, and interactive rendering.
+The CLI app retains lifecycle state for every currently persisted app slice,
+independently of the selected profile. This app-level invariant is intentional:
+opening a workspace under a narrower profile must preserve disabled state and
+show placeholders rather than deleting or mutating it. Profiles control
+creation, editing, discovery, commands, AI exposure, and interactive rendering;
+they do not control store construction or persistence.
 
-## Planned dashboard-free profile
+`blocks.stateful` is the renderer source of truth. Enabled stateful block types
+use their interactive renderer; every other persisted stateful block type uses
+the placeholder renderer. Chart rendering remains available as the built-in
+non-stateful worksheet surface.
 
-The later `worksheet-charts-maps` profile is intentionally not part of this
-behavior-preserving extraction. Compared with today's profiles, it will keep
-worksheet artifacts, text/chart/data-table blocks, direct worksheet map blocks,
-data-analysis tools, and the worksheet agent, while removing dashboard
-artifacts, dashboard blocks, dashboard commands, dashboard agents, dashboard
-routing instructions, and unrelated experimental surfaces. That profile needs
-its own dependency/coherence coverage and lands separately so this baseline can
-prove that `default` and `experimental` did not change.
+The `worksheet-charts-maps` profile is dashboard-free. It keeps worksheet text,
+chart, and direct-map authoring plus data-analysis and artifact-context tools.
+Dashboard artifacts, blocks, commands, tools, nested agents, and routing
+instructions are not registered. Persisted state remains loaded so opening a
+workspace under this narrower profile does not delete disabled content.
 
 ## Selection and compatibility
 
 - `--profile default` selects the current normal CLI behavior.
 - `--profile experimental` selects the current experimental behavior.
+- `--profile worksheet-charts-maps` selects worksheet text/chart/direct-map
+  authoring without dashboard capabilities.
 - `--experimental` remains a compatibility alias for
   `--profile experimental`.
 - `[app].profile` in the SQLRooms TOML config selects a profile when no CLI

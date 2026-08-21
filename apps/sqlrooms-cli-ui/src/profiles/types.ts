@@ -8,6 +8,7 @@ import type {
 export const CLI_CAPABILITY_PROFILE_NAMES = [
   'default',
   'experimental',
+  'worksheet-charts-maps',
 ] as const;
 
 /** A production capability profile name accepted by the CLI runtime. */
@@ -41,31 +42,6 @@ export type CliNestedAgentId =
   | 'worksheet-dashboard'
   | 'html-app';
 
-export type CliLifecycleSliceId =
-  | 'ai'
-  | 'ai-settings'
-  | 'app-project'
-  | 'artifacts'
-  | 'artifact-ai'
-  | 'block-documents'
-  | 'canvas'
-  | 'cells'
-  | 'crdt'
-  | 'dashboard'
-  | 'dashboard-features'
-  | 'db-settings'
-  | 'deck-maps'
-  | 'documents'
-  | 'html-apps'
-  | 'mosaic'
-  | 'notebook'
-  | 'pivot'
-  | 'python'
-  | 'room-shell'
-  | 'sql-editor'
-  | 'webcontainer'
-  | 'workspace-ui';
-
 /**
  * Complete, app-private description of a coherent SQLRooms CLI capability set.
  *
@@ -82,11 +58,6 @@ export type CliCapabilityProfile = {
   readonly blocks: {
     readonly stateful: readonly StatefulBlockArtifactType[];
     readonly aiContext: readonly CliAiBlockType[];
-    readonly interactiveRenderers: readonly (
-      | 'chart'
-      | StatefulBlockArtifactType
-    )[];
-    readonly placeholderRenderers: readonly StatefulBlockArtifactType[];
   };
   readonly commands: readonly CliCommandGroupId[];
   readonly ai: {
@@ -95,7 +66,6 @@ export type CliCapabilityProfile = {
     readonly nestedAgents: readonly CliNestedAgentId[];
   };
   readonly skills: readonly string[];
-  readonly lifecycleSlices: readonly CliLifecycleSliceId[];
   readonly dashboard: {
     readonly deckMaps: boolean;
   };

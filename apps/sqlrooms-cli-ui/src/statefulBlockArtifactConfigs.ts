@@ -14,12 +14,14 @@ import {
   type StatefulBlockArtifactType,
 } from './artifactTypeIds';
 import type {RoomState} from './store-types';
-import {
-  DEFAULT_CLI_CAPABILITY_PROFILE,
-  type CliCapabilityProfile,
-} from './profiles';
 
 export type FeatureStability = 'stable' | 'experimental';
+
+type StatefulBlockCapabilityProfile = {
+  readonly blocks: {
+    readonly stateful: readonly StatefulBlockArtifactType[];
+  };
+};
 
 export type StatefulBlockArtifactConfig<TArtifactType extends string = string> =
   {
@@ -215,7 +217,7 @@ export function getStatefulBlockArtifactConfig(
 
 /** Returns stateful block artifact types enabled by a production profile. */
 export function getEnabledStatefulBlockArtifactTypes(
-  profile: CliCapabilityProfile = DEFAULT_CLI_CAPABILITY_PROFILE,
+  profile: StatefulBlockCapabilityProfile,
 ): StatefulBlockArtifactType[] {
   return STATEFUL_BLOCK_ARTIFACT_TYPES.filter((artifactType) =>
     profile.blocks.stateful.includes(artifactType),
@@ -224,10 +226,10 @@ export function getEnabledStatefulBlockArtifactTypes(
 
 export function createStatefulBlockTypes({
   getState,
-  profile = DEFAULT_CLI_CAPABILITY_PROFILE,
+  profile,
 }: {
   getState: () => RoomState;
-  profile?: CliCapabilityProfile;
+  profile: StatefulBlockCapabilityProfile;
 }): BlockDocumentStatefulBlockType[] {
   return getEnabledStatefulBlockArtifactTypes(profile).map((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
@@ -264,10 +266,10 @@ export function createStatefulBlockTypes({
 }
 
 export function createStatefulBlockCommandTypes({
-  profile = DEFAULT_CLI_CAPABILITY_PROFILE,
+  profile,
 }: {
-  profile?: CliCapabilityProfile;
-} = {}): BlockDocumentStatefulBlockCommandType<RoomState>[] {
+  profile: StatefulBlockCapabilityProfile;
+}): BlockDocumentStatefulBlockCommandType<RoomState>[] {
   return getEnabledStatefulBlockArtifactTypes(profile).map((artifactType) => {
     const config = getStatefulBlockArtifactConfig(artifactType);
     return {

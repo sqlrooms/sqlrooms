@@ -5,6 +5,7 @@ import {
   type ArtifactContextToolsOptions,
 } from '@sqlrooms/artifacts/ai';
 import type {StoreApi} from 'zustand';
+import {cliCapabilityProfile} from '../runtimeEnvironment';
 import type {RoomState} from '../store-types';
 
 function readCliArtifact({
@@ -156,6 +157,9 @@ function readCliArtifact({
 function createArtifactContextOptions(
   store: StoreApi<RoomState>,
 ): ArtifactContextToolsOptions<RoomState> {
+  const supportedArtifactTypes = new Set<string>(
+    cliCapabilityProfile.artifacts.runContext,
+  );
   const getContextSessionId = (
     state: RoomState,
     context?: ArtifactContextToolExecutionContext,
@@ -177,6 +181,8 @@ function createArtifactContextOptions(
     },
     readArtifact: ({state, artifactId}) =>
       readCliArtifact({state, artifactId, store}),
+    isArtifactAllowed: ({artifact}) =>
+      supportedArtifactTypes.has(artifact.type),
   };
 }
 

@@ -4,7 +4,10 @@ import {
 } from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import {getRunContext} from '../context/getRunContext';
-import {EXPERIMENTAL_CLI_CAPABILITY_PROFILE} from '../profiles';
+import {
+  EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+} from '../profiles';
 import type {RoomState} from '../store-types';
 
 function createMockStore() {
@@ -131,6 +134,16 @@ describe('getRunContext', () => {
       })?.items.map((item) => item.type),
     ).toEqual(['chart', 'dashboard', 'html-app', 'map']);
   });
+
+  it('keeps only chart and map block targets in the worksheet profile', () => {
+    const {store} = createMockStore();
+
+    expect(
+      getRunContext(store, 'session-1', {
+        profile: WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+      })?.items.map((item) => item.type),
+    ).toEqual(['chart', 'map']);
+  });
 });
 
 function createMultiArtifactStore(
@@ -151,6 +164,16 @@ function createMultiArtifactStore(
             id: 'worksheet-new',
             type: 'worksheet',
             title: 'Newer Worksheet',
+          },
+          'dashboard-1': {
+            id: 'dashboard-1',
+            type: 'dashboard',
+            title: 'Dashboard',
+          },
+          'html-app-1': {
+            id: 'html-app-1',
+            type: 'html-app',
+            title: 'HTML App',
           },
         },
       },
@@ -230,6 +253,59 @@ describe('getRunContext primary artifact selection', () => {
         {kind: 'artifact', id: 'worksheet-old'},
         {kind: 'artifact', id: 'worksheet-new'},
       ],
+    });
+  });
+
+  it('filters disabled artifacts from explicit worksheet-profile context', () => {
+    const store = createMultiArtifactStore(undefined, {
+      draftContextItemIds: ['worksheet-old', 'dashboard-1', 'html-app-1'],
+    });
+
+    expect(
+      getRunContext(store, 'session-1', {
+        profile: WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+      })?.items.map((item) => item.id),
+    ).toEqual(['worksheet-new', 'worksheet-old']);
+  });
+
+  it('filters disabled artifacts from stored worksheet-profile context', () => {
+    const store = createMultiArtifactStore(undefined, {
+      draftContextItemIds: undefined,
+      runContext: {
+        items: [
+          {
+            kind: 'artifact',
+            id: 'dashboard-1',
+            type: 'dashboard',
+            title: 'Dashboard',
+          },
+          {
+            kind: 'artifact',
+            id: 'worksheet-old',
+            type: 'worksheet',
+            title: 'Older Worksheet',
+          },
+          {
+            kind: 'artifact',
+            id: 'html-app-1',
+            type: 'html-app',
+            title: 'HTML App',
+          },
+        ],
+        primaryItemId: 'dashboard-1',
+        primaryItemKind: 'artifact',
+        capturedAt: 1000,
+      },
+    });
+
+    expect(
+      getRunContext(store, 'session-1', {
+        profile: WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+      }),
+    ).toMatchObject({
+      items: [{kind: 'artifact', id: 'worksheet-old'}],
+      primaryItemId: 'worksheet-old',
+      capturedAt: 1000,
     });
   });
 });

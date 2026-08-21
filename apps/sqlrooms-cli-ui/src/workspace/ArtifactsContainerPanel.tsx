@@ -231,7 +231,10 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
     (artifactType) =>
       artifactType !== 'worksheet' &&
-      Boolean(artifactActions.artifactTypes[artifactType]),
+      Boolean(
+        artifactActions.artifactTypes[artifactType] &&
+        artifactActions.artifactTypes[artifactType]?.canCreate !== false,
+      ),
   );
 
   const handleClose = useCallback(() => {
