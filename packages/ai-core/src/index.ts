@@ -112,6 +112,39 @@ export {
   SessionChatRuntimeProvider,
 } from './components/ChatRuntimeContext';
 export {
+  useChatComposer,
+  useRegisterBeforeSend,
+  ChatComposerStateBoundary,
+  Input as ChatComposerInput,
+  Send as ChatComposerSend,
+  Stop as ChatComposerStop,
+  DropTarget as ChatComposerDropTarget,
+} from './components/composer';
+export type {
+  ChatComposerMode,
+  ChatComposerState,
+  BeforeSendHandler,
+  ChatComposerInputProps,
+  ChatComposerSendProps,
+  ChatComposerStopProps,
+  ChatComposerDropTargetProps,
+} from './components/composer';
+export {
+  usePromptSuggestions,
+  ChatSuggestionsStateBoundary,
+  Root as ChatSuggestionsRoot,
+  Item as ChatSuggestionsItem,
+  VisibilityToggle as ChatSuggestionsVisibilityToggle,
+  Dismiss as ChatSuggestionsDismiss,
+} from './components/suggestions';
+export type {
+  ChatSuggestionsState,
+  ChatSuggestionsRootProps,
+  ChatSuggestionsItemProps,
+  ChatSuggestionsVisibilityToggleProps,
+  ChatSuggestionsDismissProps,
+} from './components/suggestions';
+export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,
   getChatTurnsFromUiMessages,
