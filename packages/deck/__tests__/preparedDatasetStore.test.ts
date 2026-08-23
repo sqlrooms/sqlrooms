@@ -381,4 +381,62 @@ describe('PreparedDatasetStore', () => {
       status: 'ready',
     });
   });
+
+  it('passes DESCRIBE columns through to dataset preparation', async () => {
+    const dataTable = new Table({
+      Latitude: vectorFromArray([1]),
+      Longitude: vectorFromArray([2]),
+    });
+    const describeTable = new Table({
+      column_name: vectorFromArray(['Latitude', 'Longitude']),
+      column_type: vectorFromArray(['DOUBLE', 'DOUBLE']),
+    });
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({
+        datasetId,
+        table: nextTable,
+        describedColumns,
+      }: {
+        datasetId: string;
+        table: Table;
+        describedColumns?: {name: string; type: string}[];
+      }) => {
+        expect(describedColumns).toEqual([
+          {name: 'Latitude', type: 'DOUBLE'},
+          {name: 'Longitude', type: 'DOUBLE'},
+        ]);
+        return createPreparedDataset(datasetId, nextTable);
+      },
+    );
+    const executeSql = jest.fn(async (sql: string) => {
+      if (sql.startsWith('DESCRIBE ')) {
+        return Promise.resolve(describeTable) as unknown as QueryHandle;
+      }
+      return Promise.resolve(dataTable) as unknown as QueryHandle;
+    });
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {
+      sqlQuery: 'SELECT Latitude, Longitude FROM earthquakes',
+    };
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+
+    await waitForEntry(store, cacheKey);
+
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+    expect(store.getState().entries[cacheKey]).toMatchObject({
+      status: 'ready',
+    });
+  });
 });

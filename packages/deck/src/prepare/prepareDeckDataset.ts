@@ -1,4 +1,15 @@
 import type * as arrow from 'apache-arrow';
+import type {DescribedSqlColumn} from '../datasets/wrapGeometryAsWkb';
+import {
+  isSqlDatasetInput,
+  isTableDatasetInput,
+  type DeckDatasetInput,
+} from '../types';
+import type {DeckMapDatasetSource} from '../mapConfig';
+import {
+  DeckMapResourceConfigError,
+  getLonLatMissingGeometryIssue,
+} from '../mapResourceAuthoring';
 import {detectGeometryColumn} from './detectGeometryColumn';
 import {
   buildNativeGeoArrowBinaryData,
@@ -17,7 +28,20 @@ type PrepareDeckDatasetOptions = {
   table: arrow.Table;
   geometryColumn?: string;
   geometryEncodingHint?: GeometryEncodingHint;
+  describedColumns?: readonly DescribedSqlColumn[];
+  input?: DeckDatasetInput;
 };
+
+function datasetInputToSource(
+  input: DeckDatasetInput | undefined,
+): DeckMapDatasetSource | undefined {
+  if (!input) return undefined;
+  if (isSqlDatasetInput(input)) return {sqlQuery: input.sqlQuery};
+  if (isTableDatasetInput(input)) {
+    return {tableName: input.tableName, transformSql: input.transformSql};
+  }
+  return undefined;
+}
 
 /**
  * Build the reusable deck-facing geometry helpers for one resolved Arrow table.
@@ -68,7 +92,18 @@ type PrepareDeckDatasetOptions = {
 export function prepareDeckDataset(
   options: PrepareDeckDatasetOptions,
 ): PreparedDeckDataset {
-  const {datasetId, table, geometryColumn, geometryEncodingHint} = options;
+  const {
+    datasetId,
+    table,
+    geometryColumn,
+    geometryEncodingHint,
+    describedColumns,
+    input,
+  } = options;
+  const source = datasetInputToSource(input);
+  const schemaColumns =
+    describedColumns ??
+    table.schema.fields.map((field) => ({name: field.name, type: ''}));
   const resolvedGeometryCache = new Map<string, ResolvedGeometryColumn>();
   const geoArrowCache = new Map<string, PreparedGeoArrowLayerData>();
   const geoJsonBinaryCache = new Map<string, unknown>();
@@ -80,10 +115,21 @@ export function prepareDeckDataset(
       return cached;
     }
 
+    const missingGeometry = getLonLatMissingGeometryIssue({
+      columns: schemaColumns,
+      datasetId,
+      source,
+      geometryColumn: geometryColumnOverride ?? geometryColumn,
+    });
+    if (missingGeometry) {
+      throw new DeckMapResourceConfigError([missingGeometry]);
+    }
+
     const resolved = detectGeometryColumn({
       table,
       geometryColumn: geometryColumnOverride ?? geometryColumn,
       geometryEncodingHint,
+      describedColumns,
     });
     resolvedGeometryCache.set(cacheKey, resolved);
     return resolved;

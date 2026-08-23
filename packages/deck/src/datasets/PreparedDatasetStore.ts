@@ -26,6 +26,7 @@ import {
   geometryColumnsNeedingWkbWrap,
   parseDescribeSqlColumns,
   wrapSqlGeometryColumnsAsWkb,
+  type DescribedSqlColumn,
 } from './wrapGeometryAsWkb';
 
 /**
@@ -168,6 +169,7 @@ export function createPreparedDatasetStore(
         try {
           let table = resolveArrowTable(input);
           let geometryEncodingHint = input.geometryEncodingHint;
+          let describedColumns: DescribedSqlColumn[] | undefined;
           if (
             !table &&
             (isSqlDatasetInput(input) || isTableDatasetInput(input))
@@ -186,9 +188,9 @@ export function createPreparedDatasetStore(
               );
               if (describeHandle) {
                 const describeTable = await describeHandle;
-                const geometryColumns = geometryColumnsNeedingWkbWrap(
-                  parseDescribeSqlColumns(describeTable),
-                );
+                describedColumns = parseDescribeSqlColumns(describeTable);
+                const geometryColumns =
+                  geometryColumnsNeedingWkbWrap(describedColumns);
                 const wrapped = wrapSqlGeometryColumnsAsWkb(
                   baseSql,
                   geometryColumns,
@@ -229,6 +231,8 @@ export function createPreparedDatasetStore(
             table,
             geometryColumn: input.geometryColumn,
             geometryEncodingHint,
+            describedColumns,
+            input,
           });
 
           set((state) => ({

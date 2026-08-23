@@ -3,6 +3,11 @@ import {
   getGeometryColumnsFromSchema,
 } from '@loaders.gl/geoarrow';
 import * as arrow from 'apache-arrow';
+import {
+  geometryColumnsNeedingWkbWrap,
+  KNOWN_GEOMETRY_COLUMN_NAMES,
+  type DescribedSqlColumn,
+} from '../datasets/wrapGeometryAsWkb';
 import {isDirectGeoArrowEncoding} from './geoarrow';
 import type {
   GeometryEncodingHint,
@@ -14,6 +19,8 @@ type DetectGeometryColumnOptions = {
   table: arrow.Table;
   geometryColumn?: string;
   geometryEncodingHint?: GeometryEncodingHint;
+  /** DuckDB DESCRIBE columns; used to keep native GEOMETRY names after WKB wrap. */
+  describedColumns?: readonly DescribedSqlColumn[];
 };
 
 const LON_NAMES = new Set([
@@ -31,6 +38,23 @@ function getFieldNames(table: arrow.Table) {
 }
 
 /**
+ * Detects longitude/latitude columns by matching names against known
+ * patterns (case-insensitive). Returns the original names if found.
+ */
+export function findCoordinateColumnNames(
+  names: readonly string[],
+): {lonField: string; latField: string} | null {
+  let lonField: string | undefined;
+  let latField: string | undefined;
+  for (const name of names) {
+    const lower = name.toLowerCase();
+    if (!lonField && LON_NAMES.has(lower)) lonField = name;
+    if (!latField && LAT_NAMES.has(lower)) latField = name;
+  }
+  return lonField && latField ? {lonField, latField} : null;
+}
+
+/**
  * Detects longitude/latitude columns in an Arrow table by matching
  * field names against known patterns (case-insensitive).
  * Returns the original field names if found, or null.
@@ -38,18 +62,10 @@ function getFieldNames(table: arrow.Table) {
 export function findCoordinateColumns(
   table: arrow.Table,
 ): {lonField: string; latField: string} | null {
-  const fields = table.schema.fields;
-  let lonField: string | undefined;
-  let latField: string | undefined;
-  for (const field of fields) {
-    const lower = field.name.toLowerCase();
-    if (!lonField && LON_NAMES.has(lower)) lonField = field.name;
-    if (!latField && LAT_NAMES.has(lower)) latField = field.name;
-  }
-  return lonField && latField ? {lonField, latField} : null;
+  return findCoordinateColumnNames(getFieldNames(table));
 }
 
-const KNOWN_GEOM_NAMES = ['geometry', 'geom', 'wkb_geometry', 'the_geom'];
+const KNOWN_GEOM_NAMES: readonly string[] = KNOWN_GEOMETRY_COLUMN_NAMES;
 
 function getFieldVector(table: arrow.Table, fieldName: string) {
   const vector = table.getChild(fieldName);
@@ -130,7 +146,8 @@ function inferEncodingFromVector(
 export function detectGeometryColumn(
   options: DetectGeometryColumnOptions,
 ): ResolvedGeometryColumn {
-  const {table, geometryColumn, geometryEncodingHint} = options;
+  const {table, geometryColumn, geometryEncodingHint, describedColumns} =
+    options;
   const fieldNames = getFieldNames(table);
   const fieldMetadata = getGeometryColumnsFromSchema(table.schema as never);
   const geoMetadata = getGeoMetadata(table.schema as never);
@@ -139,6 +156,13 @@ export function detectGeometryColumn(
     ...Object.keys(geoMetadata?.columns ?? {}),
   ]);
 
+  const describedGeometryColumns = describedColumns
+    ? geometryColumnsNeedingWkbWrap(describedColumns).filter((name) =>
+        fieldNames.some(
+          (fieldName) => fieldName.toLowerCase() === name.toLowerCase(),
+        ),
+      )
+    : [];
   const namedCandidates = fieldNames.filter((fieldName) =>
     /^(geom|geometry)$/i.test(fieldName),
   );
@@ -146,6 +170,9 @@ export function detectGeometryColumn(
   const explicitGeometryColumn = geometryColumn;
   const detectedGeometryColumn =
     explicitGeometryColumn ??
+    (describedGeometryColumns.length === 1
+      ? describedGeometryColumns[0]
+      : undefined) ??
     (metadataCandidates.size === 1 ? [...metadataCandidates][0] : undefined) ??
     (namedCandidates.length === 1 ? namedCandidates[0] : undefined);
 

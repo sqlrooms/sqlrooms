@@ -11,14 +11,31 @@ import {
   isDeckMapSqlDatasetSource,
   isDeckMapTableDatasetSource,
 } from './mapConfig';
+import {describedColumnsIncludeGeometry} from './datasets/wrapGeometryAsWkb';
 import {hasSelectStarAsWkbCollision} from './selectStarAsWkbCollision';
 import {getDeckMapSharedAiContractRules} from './mapAiSharedInstructions';
 import {DECK_MAP_LAYER_TYPE_OPTIONS} from './mapLayerConfigUtils';
+import {findCoordinateColumnNames} from './prepare/detectGeometryColumn';
 
 export type DeckMapResourceConfigIssue = {
   path: string;
+  /** Short explanation shown in the map overlay. */
   message: string;
+  /** Repair instructions for AI retry; omitted from the user overlay. */
+  repair?: string;
 };
+
+/**
+ * Format a config issue for AI retry. Includes `repair` when present.
+ * The map overlay shows only `issue.message`.
+ */
+export function formatDeckMapResourceConfigIssueForAgent(
+  issue: DeckMapResourceConfigIssue,
+): string {
+  return issue.repair
+    ? `${issue.path}: ${issue.message} ${issue.repair}`
+    : `${issue.path}: ${issue.message}`;
+}
 
 export type DeckMapResourceConfigValidationOptions = {
   /** Empty resources are valid while waiting for a user-selected table. */
@@ -40,7 +57,7 @@ export class DeckMapResourceConfigError extends Error {
   constructor(issues: DeckMapResourceConfigIssue[]) {
     super(
       `Invalid Deck map resource config: ${issues
-        .map((issue) => `${issue.path}: ${issue.message}`)
+        .map((issue) => formatDeckMapResourceConfigIssueForAgent(issue))
         .join('; ')}`,
     );
     this.name = 'DeckMapResourceConfigError';
@@ -165,6 +182,100 @@ function hasBadStMakeLinePointOrderBy(sql: string): boolean {
     }
   }
   return false;
+}
+
+function getLonLatMissingGeometryRepair(options: {
+  datasetId: string;
+  source: DeckMapDatasetSource | undefined;
+  lon: string;
+  lat: string;
+}): string {
+  const quotedLon = options.lon.replace(/"/g, '""');
+  const quotedLat = options.lat.replace(/"/g, '""');
+  const pointExpr = `ST_AsWKB(ST_Point("${quotedLon}", "${quotedLat}"))`;
+  const bind =
+    `then set datasets.${options.datasetId}.geometryColumn and _sqlroomsBinding.geometryColumn to "__sqlrooms_geom" with geometryEncodingHint "wkb". ` +
+    `Do not put longitudeColumn/latitudeColumn on _sqlroomsBinding — those are only valid on fitToData.`;
+
+  if (isDeckMapSqlDatasetSource(options.source)) {
+    return (
+      `Revise source.sqlQuery so it projects ${pointExpr} AS "__sqlrooms_geom" ` +
+      `(wrap the current query if needed: SELECT src.*, ${pointExpr} AS "__sqlrooms_geom" FROM (<current sqlQuery>) AS src). ` +
+      `Do not add transformSql or read from __sqlrooms_source — this dataset is a pinned sqlQuery. ` +
+      bind
+    );
+  }
+
+  return (
+    `Use transformSql such as SELECT *, ${pointExpr} AS "__sqlrooms_geom" FROM __sqlrooms_source ` +
+    `WHERE "${quotedLon}" IS NOT NULL AND "${quotedLat}" IS NOT NULL, ` +
+    bind
+  );
+}
+
+function pickColumnName(
+  names: readonly string[],
+  wanted: string,
+): string | undefined {
+  return names.find((name) => name.toLowerCase() === wanted.toLowerCase());
+}
+
+/**
+ * Missing-geometry issue derived from actual output columns (DuckDB DESCRIBE
+ * or the prepared Arrow schema). Does not inspect authored SQL text.
+ */
+export function getLonLatMissingGeometryIssue(options: {
+  columns: readonly {name: string; type?: string}[];
+  datasetId: string;
+  source?: DeckMapDatasetSource;
+  geometryColumn?: string;
+  longitudeColumn?: string;
+  latitudeColumn?: string;
+  path?: string;
+}): DeckMapResourceConfigIssue | undefined {
+  const describedColumns = options.columns.map((column) => ({
+    name: column.name,
+    type: column.type ?? '',
+  }));
+  if (
+    describedColumnsIncludeGeometry(describedColumns, options.geometryColumn)
+  ) {
+    return undefined;
+  }
+
+  const names = describedColumns.map((column) => column.name);
+  const explicitLon = options.longitudeColumn
+    ? pickColumnName(names, options.longitudeColumn)
+    : undefined;
+  const explicitLat = options.latitudeColumn
+    ? pickColumnName(names, options.latitudeColumn)
+    : undefined;
+  const coords =
+    explicitLon && explicitLat
+      ? {lonField: explicitLon, latField: explicitLat}
+      : findCoordinateColumnNames(names);
+  if (!coords) return undefined;
+
+  return {
+    path: options.path ?? `datasets.${options.datasetId}`,
+    message:
+      'This map needs point locations, not just longitude and latitude columns.',
+    repair: getLonLatMissingGeometryRepair({
+      datasetId: options.datasetId,
+      source: options.source,
+      lon: coords.lonField,
+      lat: coords.latField,
+    }),
+  };
+}
+
+/** Overlay text for a config/render error. Omits agent-only `repair`. */
+export function getDeckMapOverlayErrorMessage(error: Error | string): string {
+  if (typeof error === 'string') return error;
+  if (error instanceof DeckMapResourceConfigError) {
+    return error.issues.map((issue) => issue.message).join('\n\n');
+  }
+  return error.message;
 }
 
 function mergeOptionalRecord(
