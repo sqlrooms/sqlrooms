@@ -2,7 +2,7 @@
 
 The SQLRooms CLI exposes complete, named production capability profiles. The
 profile is selected by the Python launcher, included in `/api/config`, and
-resolved once by the UI. Artifact creation, worksheet blocks and renderers,
+resolved once by the UI. Artifact creation, document blocks and renderers,
 command registration, run context, instructions, tools, nested agents, block
 renderer selection, and dashboard map support all consume that same profile.
 
@@ -13,16 +13,16 @@ also checks dependencies between blocks, commands, artifacts, and AI tools.
 
 ## Current profiles
 
-| Surface                               | `default`             | `experimental`                                                                                    | `worksheet-charts-maps` |
-| ------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------- | ----------------------- |
-| Creatable artifacts                   | worksheet, dashboard  | worksheet, dashboard, pivot, notebook, document, SQL query, HTML app, Python, canvas, app builder | worksheet               |
-| Worksheet stateful blocks             | dashboard, data table | dashboard, pivot, data table, map, document, SQL query, HTML app, Python                          | map                     |
-| AI-editable worksheet blocks          | chart, dashboard      | chart, dashboard, HTML app, map                                                                   | chart, map              |
-| Additional command owners             | none                  | document, Python block, HTML app revision                                                         | none                    |
-| Top-level agents                      | dashboard, worksheet  | dashboard, worksheet, HTML app                                                                    | worksheet               |
-| Dashboard and embedded-dashboard maps | no                    | yes                                                                                               | no dashboards           |
-| Additional instructions               | none                  | experimental app/map/HTML-app routing                                                             | worksheet chart/map     |
-| Skills                                | none                  | none                                                                                              | none                    |
+| Surface                               | `default`             | `experimental`                                                                                   | `document-charts-maps` |
+| ------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------ | ---------------------- |
+| Creatable artifacts                   | document, dashboard   | document, dashboard, pivot, notebook, Markdown, SQL query, HTML app, Python, canvas, app builder | document               |
+| Document stateful blocks              | dashboard, data table | dashboard, pivot, data table, map, Markdown, SQL query, HTML app, Python                         | map                    |
+| AI-editable document blocks           | chart, dashboard      | chart, dashboard, HTML app, map                                                                  | chart, map             |
+| Additional command owners             | none                  | Markdown, Python block, HTML app revision                                                        | none                   |
+| Top-level agents                      | dashboard, document   | dashboard, document, HTML app                                                                    | document               |
+| Dashboard and embedded-dashboard maps | no                    | yes                                                                                              | no dashboards          |
+| Additional instructions               | none                  | experimental app/map/HTML-app routing                                                            | document chart/map     |
+| Skills                                | none                  | none                                                                                             | none                   |
 
 The CLI app retains lifecycle state for every currently persisted app slice,
 independently of the selected profile. This app-level invariant is intentional:
@@ -34,9 +34,9 @@ they do not control store construction or persistence.
 `blocks.stateful` is the renderer source of truth. Enabled stateful block types
 use their interactive renderer; every other persisted stateful block type uses
 the placeholder renderer. Chart rendering remains available as the built-in
-non-stateful worksheet surface.
+non-stateful document surface.
 
-The `worksheet-charts-maps` profile is dashboard-free. It keeps worksheet text,
+The `document-charts-maps` profile is dashboard-free. It keeps document text,
 chart, and direct-map authoring plus data-analysis and artifact-context tools.
 Dashboard artifacts, blocks, commands, tools, nested agents, and routing
 instructions are not registered. Persisted state remains loaded so opening a
@@ -46,7 +46,7 @@ workspace under this narrower profile does not delete disabled content.
 
 - `--profile default` selects the current normal CLI behavior.
 - `--profile experimental` selects the current experimental behavior.
-- `--profile worksheet-charts-maps` selects worksheet text/chart/direct-map
+- `--profile document-charts-maps` selects document text/chart/direct-map
   authoring without dashboard capabilities.
 - `--experimental` remains a compatibility alias for
   `--profile experimental`.
@@ -61,7 +61,7 @@ workspace under this narrower profile does not delete disabled content.
 ## Model construction baseline
 
 The top-level assistant receives its provider and model from runtime AI
-configuration and the current session. Dashboard, worksheet, embedded
+configuration and the current session. Dashboard, document, embedded
 dashboard, and HTML-app agents reuse the current session's provider, base URL,
 API key, and model through an OpenAI-compatible AI SDK model. Their historical
 fallback remains `openai` / `gpt-4.1`; the top-level historical fallback remains
@@ -74,7 +74,7 @@ history, persistence, retry, or cancellation behavior.
 
 The production CLI path currently includes the SQLRooms chat transport,
 run-context capture, command registry, DuckDB websocket connector, persisted
-worksheet/document state, Mosaic chart/dashboard state, Deck map state, and the
+Document/Markdown state, Mosaic chart/dashboard state, Deck map state, and the
 profile-selected agents and tools.
 
 The following leaves are browser/UI-specific and will require explicit adapters
@@ -87,7 +87,7 @@ or omissions in a future headless eval target:
 - IndexedDB persistence and optional CRDT websocket synchronization;
 - file picker, drag/drop upload, toast, layout, and sidebar interactions.
 
-The behavioral factories and durable stores behind worksheet, chart, dashboard,
+The behavioral factories and durable stores behind document, chart, dashboard,
 map, command, context, and agent behavior are the intended production reuse
 boundary. A future headless target must consume these profile modules instead of
 copying their lists.

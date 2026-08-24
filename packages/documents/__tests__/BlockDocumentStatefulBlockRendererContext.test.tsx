@@ -24,7 +24,7 @@ const emptyDocument = {type: 'doc' as const, content: []};
 function createEditorContext(editor: Editor): BlockDocumentEditorContextValue {
   return {
     editor,
-    documentId: 'worksheet-1',
+    documentId: 'document-1',
     value: emptyDocument,
     assets: {},
     onChange: jest.fn(),

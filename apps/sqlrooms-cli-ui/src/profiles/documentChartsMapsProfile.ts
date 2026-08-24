@@ -1,12 +1,12 @@
 import type {CliCapabilityProfile} from './types';
 
-/** Worksheet-only production profile with chart and direct map authoring. */
-export const WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE = {
-  name: 'worksheet-charts-maps',
+/** Document-only production profile with chart and direct map authoring. */
+export const DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE = {
+  name: 'document-charts-maps',
   version: 1,
   artifacts: {
-    creatable: ['worksheet'],
-    runContext: ['worksheet'],
+    creatable: ['document'],
+    runContext: ['document'],
   },
   blocks: {
     stateful: ['map'],
@@ -18,10 +18,10 @@ export const WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE = {
     topLevelToolGroups: [
       'default-data-analysis',
       'artifact-context',
-      'worksheet-agent',
+      'document-agent',
       'chart',
     ],
-    nestedAgents: ['worksheet'],
+    nestedAgents: ['document'],
   },
   skills: [],
   dashboard: {deckMaps: false},

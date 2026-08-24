@@ -1,7 +1,7 @@
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 import {PivotBlock} from '@sqlrooms/pivot';
 
-export const WorksheetPivotBlockRenderer = ({
+export const DocumentPivotBlockRenderer = ({
   blockInstanceId,
   blockType,
   caption,

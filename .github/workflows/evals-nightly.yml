@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  worksheet-canary:
-    name: Worksheet charts/maps canary
+  document-canary:
+    name: Document charts/maps canary
     runs-on: ubuntu-latest
     continue-on-error: true
     timeout-minutes: 45

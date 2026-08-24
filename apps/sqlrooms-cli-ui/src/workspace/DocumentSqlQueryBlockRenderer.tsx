@@ -1,7 +1,7 @@
 import {SqlQueryBlock, SQL_QUERY_BLOCK_TYPE} from '@sqlrooms/sql-editor';
 import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents';
 
-export const WorksheetSqlQueryBlockRenderer = ({
+export const DocumentSqlQueryBlockRenderer = ({
   blockInstanceId,
   blockType,
   readOnly,
@@ -15,10 +15,6 @@ export const WorksheetSqlQueryBlockRenderer = ({
   }
 
   return (
-    <SqlQueryBlock
-      queryId={blockInstanceId}
-      readOnly={readOnly}
-      compact
-    />
+    <SqlQueryBlock queryId={blockInstanceId} readOnly={readOnly} compact />
   );
 };

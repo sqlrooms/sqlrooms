@@ -198,31 +198,31 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
     });
 
     const tableIdSet = new Set(tableItems.map((t) => t.id));
-    const worksheetArtifactId =
-      owningArtifactId && artifactsById[owningArtifactId]?.type === 'worksheet'
+    const documentArtifactId =
+      owningArtifactId && artifactsById[owningArtifactId]?.type === 'document'
         ? owningArtifactId
         : currentArtifactId &&
-            artifactsById[currentArtifactId]?.type === 'worksheet'
+            artifactsById[currentArtifactId]?.type === 'document'
           ? currentArtifactId
           : undefined;
-    const worksheet = worksheetArtifactId
-      ? artifactsById[worksheetArtifactId]
+    const document = documentArtifactId
+      ? artifactsById[documentArtifactId]
       : undefined;
     const blockItems =
-      worksheetArtifactId && worksheet
-        ? (blockDocuments[worksheetArtifactId]?.content.content ?? [])
-            .map((node) => blockTargetFromNode(worksheetArtifactId, node))
+      documentArtifactId && document
+        ? (blockDocuments[documentArtifactId]?.content.content ?? [])
+            .map((node) => blockTargetFromNode(documentArtifactId, node))
             .filter((target): target is BlockAiTarget => Boolean(target))
             .map((target) => ({
               id: blockContextItemId(target),
               kind: 'block',
               title: getBlockTitle(target),
               type: target.blockType,
-              subtitle: `${getBlockTitle({...target, title: undefined})} in ${worksheet.title}`,
+              subtitle: `${getBlockTitle({...target, title: undefined})} in ${document.title}`,
               keywords: [
                 getBlockTitle(target),
                 target.blockType,
-                worksheet.title,
+                document.title,
                 target.blockInstanceId ?? '',
               ],
             }))

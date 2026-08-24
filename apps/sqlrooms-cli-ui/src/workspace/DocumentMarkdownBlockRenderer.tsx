@@ -5,7 +5,7 @@ import {
 import {useEffect} from 'react';
 import {useRoomStore} from '../roomStoreHooks';
 
-export const WorksheetMarkdownDocumentBlockRenderer = ({
+export const DocumentMarkdownBlockRenderer = ({
   blockInstanceId,
   blockType,
   caption,
@@ -15,12 +15,12 @@ export const WorksheetMarkdownDocumentBlockRenderer = ({
   );
 
   useEffect(() => {
-    if (blockType === 'document' && blockInstanceId) {
+    if (blockType === 'markdown' && blockInstanceId) {
       ensureDocument(blockInstanceId);
     }
   }, [blockInstanceId, blockType, ensureDocument]);
 
-  if (!blockInstanceId || blockType !== 'document') {
+  if (!blockInstanceId || blockType !== 'markdown') {
     return (
       <div className="text-muted-foreground p-4 text-sm">
         Unsupported stateful block type: {blockType || 'Unconfigured'}

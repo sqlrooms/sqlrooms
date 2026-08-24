@@ -60,10 +60,10 @@ function evidence(status: 'passed' | 'failed'): RunEvidence {
   return {
     schemaVersion: 1,
     runId: `run-${status}`,
-    scenario: {id: 'worksheet.create-chart-map', version: 1, repetition: 0},
+    scenario: {id: 'document.create-chart-map', version: 1, repetition: 0},
     target: {
       type: 'cli-in-process',
-      profileName: 'worksheet-charts-maps',
+      profileName: 'document-charts-maps',
       profileVersion: 1,
     },
     repository: {commitSha: 'abc123', dirty: false},
@@ -79,7 +79,7 @@ function evidence(status: 'passed' | 'failed'): RunEvidence {
       latencyMs: status === 'passed' ? 1000 : 1200,
     },
     status,
-    promptTurns: [{id: 'create', input: 'Create a worksheet.'}],
+    promptTurns: [{id: 'create', input: 'Create a document.'}],
     finalAnswer: 'Created a chart and map from analytics.events.',
     events: [
       {
@@ -98,7 +98,7 @@ function evidence(status: 'passed' | 'failed'): RunEvidence {
       },
     ],
     usage: {inputTokens: 100, outputTokens: 20, totalTokens: 120},
-    finalState: {worksheets: [{id: 'worksheet-1'}]},
+    finalState: {documents: [{id: 'document-1'}]},
     oracleResults: [
       {
         oracleId: 'workspace-shape',
@@ -134,8 +134,8 @@ function insertRun(
       id,
       'eval-1',
       1_776_254_400_000,
-      '{"vars":{"scenarioId":"worksheet.create-chart-map"}}',
-      '{"raw":"Create a worksheet."}',
+      '{"vars":{"scenarioId":"document.create-chart-map"}}',
+      '{"raw":"Create a document."}',
       '{"id":"openrouter","label":"deepseek"}',
       runEvidence.timing.latencyMs,
       0.002,
@@ -199,8 +199,8 @@ describe('Promptfoo SQLite observatory adapter', () => {
 
     expect(run).toMatchObject({
       id: 'run-failed',
-      scenario: {id: 'worksheet.create-chart-map', version: 1},
-      profile: {name: 'worksheet-charts-maps', version: 1},
+      scenario: {id: 'document.create-chart-map', version: 1},
+      profile: {name: 'document-charts-maps', version: 1},
       repository: {commitSha: 'abc123'},
       status: 'failed',
       counts: {tools: 1, nestedAgents: 1, errors: 0},
@@ -264,7 +264,7 @@ describe('Promptfoo SQLite observatory adapter', () => {
       new Date('2026-08-19T13:00:00.000Z'),
     );
     const filtered = filterObservatoryRuns(exported.runs, {
-      scenario: 'worksheet.create-chart-map',
+      scenario: 'document.create-chart-map',
       status: 'passed',
     });
     expect(exported.schemaVersion).toBe(1);
@@ -290,7 +290,7 @@ describe('Promptfoo SQLite observatory adapter', () => {
     });
     expect(computeCalibrationRates([filtered[0]!, failed])).toEqual([
       expect.objectContaining({
-        scenarioId: 'worksheet.create-chart-map',
+        scenarioId: 'document.create-chart-map',
         oracleId: 'workspace-shape',
         total: 2,
         passed: 1,

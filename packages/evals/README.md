@@ -42,21 +42,21 @@ import {
 } from '@sqlrooms/evals';
 
 const scenario = defineScenario({
-  id: 'worksheet.create-chart-map',
+  id: 'document.create-chart-map',
   version: 1,
   title: 'Create a chart and map',
-  compatibleProfiles: ['worksheet-charts-maps'],
-  turns: [{id: 'create', input: 'Create a worksheet with a chart and map.'}],
+  compatibleProfiles: ['document-charts-maps'],
+  turns: [{id: 'create', input: 'Create a document with a chart and map.'}],
   expectations: [
     {
-      oracleId: 'worksheet-has-chart-map',
-      description: 'The worksheet contains valid chart and map blocks.',
+      oracleId: 'document-has-chart-map',
+      description: 'The document contains valid chart and map blocks.',
     },
   ],
 });
 
 const oracle = createWorkspaceStateOracle({
-  id: 'worksheet-has-chart-map',
+  id: 'document-has-chart-map',
   evaluate: (workspace) => ({
     pass: workspace !== undefined,
     reason: workspace

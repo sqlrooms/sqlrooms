@@ -11,14 +11,14 @@ describe('run evidence', () => {
       schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
       runId: 'run-1',
       scenario: {
-        id: 'worksheet.create-chart-map',
+        id: 'document.create-chart-map',
         version: 1,
         repetition: 0,
         futureScenarioField: 'preserved',
       },
       target: {
         type: 'cli-in-process',
-        profileName: 'worksheet-charts-maps',
+        profileName: 'document-charts-maps',
         profileVersion: 1,
         futureTargetField: 'preserved',
       },
@@ -43,17 +43,17 @@ describe('run evidence', () => {
       promptTurns: [
         {
           id: 'create',
-          input: 'Create a worksheet.',
+          input: 'Create a document.',
           futurePromptField: 'preserved',
         },
       ],
-      finalAnswer: 'Created the worksheet.',
+      finalAnswer: 'Created the document.',
       events: [
         {
           sequence: 0,
           timestamp: '2026-08-19T12:00:00.500Z',
           type: 'mutation' as const,
-          data: {artifactId: 'worksheet-1'},
+          data: {artifactId: 'document-1'},
           futureEventField: 'preserved',
         },
       ],
@@ -61,14 +61,14 @@ describe('run evidence', () => {
         totalTokens: 10,
         futureUsageField: 'preserved',
       },
-      finalState: {worksheetCount: 1},
+      finalState: {documentCount: 1},
       oracleResults: [
         {
           oracleId: 'workspace',
           kind: 'workspace-state' as const,
           pass: true,
           score: 1,
-          reason: 'Worksheet exists.',
+          reason: 'Document exists.',
           evidence: {},
           metadata: {futureOracleMetadata: {value: 42}},
         },
@@ -112,10 +112,10 @@ describe('run evidence', () => {
       parseRunEvidence({
         schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
         runId: 'run-ordering',
-        scenario: {id: 'worksheet.ordering', version: 1, repetition: 0},
+        scenario: {id: 'document.ordering', version: 1, repetition: 0},
         target: {
           type: 'cli-in-process',
-          profileName: 'worksheet-charts-maps',
+          profileName: 'document-charts-maps',
           profileVersion: 1,
         },
         model: {provider: 'scripted', modelId: 'scripted-v1'},
@@ -147,10 +147,10 @@ describe('run evidence', () => {
       parseRunEvidence({
         schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
         runId: 'run-json-extension',
-        scenario: {id: 'worksheet.json-extension', version: 1, repetition: 0},
+        scenario: {id: 'document.json-extension', version: 1, repetition: 0},
         target: {
           type: 'cli-in-process',
-          profileName: 'worksheet-charts-maps',
+          profileName: 'document-charts-maps',
           profileVersion: 1,
         },
         model: {provider: 'scripted', modelId: 'scripted-v1'},
@@ -174,13 +174,13 @@ describe('run evidence', () => {
       schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
       runId: 'run-defaults',
       scenario: {
-        id: 'worksheet.defaults',
+        id: 'document.defaults',
         version: 1,
         repetition: 0,
       },
       target: {
         type: 'cli-in-process',
-        profileName: 'worksheet-charts-maps',
+        profileName: 'document-charts-maps',
         profileVersion: 1,
       },
       model: {

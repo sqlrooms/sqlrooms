@@ -101,6 +101,7 @@ import {dashboardAgentTool} from './createDashboardAgent';
 import {htmlAppAgentTool} from './createHtmlAppAgent';
 import {getDefaultScaffoldTree} from './helpers';
 import {createLayout, migrateCliLayoutConfig} from './layout';
+import {migrateCliPersistedWorkspace} from './migrateCliPersistedWorkspace';
 import {
   cliDuckDbConnector as connector,
   MOSAIC_PREAGG_SCHEMA_REF,
@@ -625,10 +626,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       storage: cliUiPersistStorage,
       partialize: persistHelpers.partialize,
       merge: (persistedState, currentState) => {
-        const persistedRecord = (persistedState ?? {}) as Record<
-          string,
-          unknown
-        >;
+        const persistedRecord = migrateCliPersistedWorkspace(
+          persistedState ?? {},
+        );
         const persistedCells = CellsSliceConfig.parse(
           persistedRecord.cells ?? currentState.cells.config,
         );
@@ -969,7 +969,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               sync: createCliCrdtSyncConnector(),
               mirrors: {
                 documentState: createDocumentsCrdtMirror<RoomState>({
-                  blockDocumentArtifactTypes: ['worksheet'],
+                  blockDocumentArtifactTypes: ['document'],
                 }),
               },
             })(set, get, store)

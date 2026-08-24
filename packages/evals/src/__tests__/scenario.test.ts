@@ -4,25 +4,25 @@ import {defineScenario} from '../scenario';
 describe('behavioral scenarios', () => {
   it('expresses compatible profiles and target-neutral outcomes', () => {
     const scenario = defineScenario({
-      id: 'worksheet.create-chart-map',
+      id: 'document.create-chart-map',
       version: 1,
       title: 'Create chart and map',
-      compatibleProfiles: ['worksheet-charts-maps'],
+      compatibleProfiles: ['document-charts-maps'],
       fixture: {database: 'ambiguous-geospatial'},
-      turns: [{id: 'create', input: 'Create a worksheet.'}],
+      turns: [{id: 'create', input: 'Create a document.'}],
       expectations: [
         {
           oracleId: 'workspace-chart-map',
-          description: 'Chart and map blocks exist in one worksheet.',
+          description: 'Chart and map blocks exist in one document.',
         },
       ],
       metadata: {owner: 'sqlrooms'},
     });
 
-    expect(scenario.compatibleProfiles).toEqual(['worksheet-charts-maps']);
+    expect(scenario.compatibleProfiles).toEqual(['document-charts-maps']);
     expect(scenario.expectations[0]).toEqual({
       oracleId: 'workspace-chart-map',
-      description: 'Chart and map blocks exist in one worksheet.',
+      description: 'Chart and map blocks exist in one document.',
       config: {},
     });
   });
@@ -30,7 +30,7 @@ describe('behavioral scenarios', () => {
   it('rejects unstable scenario identifiers and empty turns', () => {
     expect(() =>
       defineScenario({
-        id: 'Worksheet Create',
+        id: 'Document Create',
         version: 1,
         title: 'Invalid',
         compatibleProfiles: ['default'],
@@ -42,7 +42,7 @@ describe('behavioral scenarios', () => {
 
   it('allocates fresh object defaults for every parsed scenario', () => {
     const input = {
-      id: 'worksheet.defaults',
+      id: 'document.defaults',
       version: 1,
       title: 'Fresh defaults',
       compatibleProfiles: ['default'],

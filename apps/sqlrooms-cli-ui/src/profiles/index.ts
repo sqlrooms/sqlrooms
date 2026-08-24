@@ -1,6 +1,6 @@
 export {DEFAULT_CLI_CAPABILITY_PROFILE} from './defaultProfile';
 export {EXPERIMENTAL_CLI_CAPABILITY_PROFILE} from './experimentalProfile';
-export {WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE} from './worksheetChartsMapsProfile';
+export {DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE} from './documentChartsMapsProfile';
 export {
   listCliCapabilityProfiles,
   resolveCliCapabilityProfile,

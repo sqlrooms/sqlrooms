@@ -298,7 +298,7 @@ export function createBlockDocumentCommandIds(
  * Builds the set of room commands (list, get, create, append-blocks, …) for a
  * block-document artifact type. Commands are namespaced by `commandNamespace`
  * and labelled with `artifactLabel`, so a host can register more than one
- * block-document family (for example worksheets and generic documents).
+ * block-document family (for example documents and generic documents).
  *
  * @param options - Artifact type, labels, namespace, supported stateful block
  * types, and optional generic-mutation constraints. When `allowedBlockTypes`

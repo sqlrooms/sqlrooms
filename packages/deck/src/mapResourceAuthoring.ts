@@ -840,13 +840,13 @@ export function assertDeckMapResourceConfig(config: DeckMapConfig): void {
 }
 
 /**
- * Returns the package-owned authoring contract for hosts with direct worksheet
+ * Returns the package-owned authoring contract for hosts with direct document
  * map capability. Host adapters opt into it; they do not maintain prompt copies.
  */
 export function getDeckMapResourceAiInstructions(): string {
-  return `## Direct worksheet Deck map resources
+  return `## Direct document Deck map resources
 
-When authoring a worksheet map config, use the resource-native Deck JSON contract:
+When authoring a document map config, use the resource-native Deck JSON contract:
 - A new map must contain at least one config.datasets entry and at least one spec.layers entry.
 - Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
 - Bind every layer to a dataset with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable resource binding.

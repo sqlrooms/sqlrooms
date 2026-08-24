@@ -32,12 +32,12 @@ export function createMarkdownDocumentBlockDefinition<
   render = DefaultMarkdownDocumentBlock as ComponentType<
     MarkdownDocumentBlockRenderProps<TRoomState>
   >,
-  label = 'Document',
-  defaultTitle = 'Document',
+  label = 'Markdown',
+  defaultTitle = 'Markdown',
   defaultMarkdown = '',
 }: CreateMarkdownDocumentBlockDefinitionOptions<TRoomState> = {}): StatefulBlockDefinition<TRoomState> {
   return {
-    type: 'document',
+    type: 'markdown',
     label,
     defaultTitle,
     icon: ScrollTextIcon,

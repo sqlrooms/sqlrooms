@@ -306,13 +306,13 @@ describe('createDashboardAgentTool', () => {
   });
 
   it('re-authorizes a dashboard before mutations after the subagent starts', async () => {
-    let ownedByCapturedWorksheet = true;
+    let ownedByCapturedDocument = true;
     let lateToolResult: any;
     const setSelectedTable = jest.fn();
     const addPanel = jest.fn(() => 'panel-1');
     const authorizeDashboard = jest.fn(() => {
-      if (!ownedByCapturedWorksheet) {
-        throw new Error('Dashboard does not belong to the captured worksheet.');
+      if (!ownedByCapturedDocument) {
+        throw new Error('Dashboard does not belong to the captured document.');
       }
     });
     const dashboard = {
@@ -336,7 +336,7 @@ describe('createDashboardAgentTool', () => {
     };
     const store = {getState: () => state};
     const runSubAgent = jest.fn(async ({agent}: any) => {
-      ownedByCapturedWorksheet = false;
+      ownedByCapturedDocument = false;
       lateToolResult = await agent.tools[
         KnownDashboardTools.create_dashboard_panel_data_table_explorer
       ].execute({
@@ -376,7 +376,7 @@ describe('createDashboardAgentTool', () => {
     expect(lateToolResult).toMatchObject({
       llmResult: {
         success: false,
-        errorMessage: 'Dashboard does not belong to the captured worksheet.',
+        errorMessage: 'Dashboard does not belong to the captured document.',
       },
     });
     expect(setSelectedTable).toHaveBeenCalledTimes(1);
@@ -447,7 +447,7 @@ describe('createDashboardAgentTool', () => {
       }),
     };
     const authorizeDashboard = jest.fn(() => {
-      throw new Error('Dashboard does not belong to the captured worksheet.');
+      throw new Error('Dashboard does not belong to the captured document.');
     });
     const tool = createDashboardAgentTool({
       store: store as any,
@@ -466,7 +466,7 @@ describe('createDashboardAgentTool', () => {
     expect(result).toMatchObject({
       success: false,
       dashboardId: 'dashboard-1',
-      finalOutput: 'Dashboard does not belong to the captured worksheet.',
+      finalOutput: 'Dashboard does not belong to the captured document.',
     });
     expect(authorizeDashboard).toHaveBeenCalledTimes(1);
     expect(setSelectedTable).not.toHaveBeenCalled();

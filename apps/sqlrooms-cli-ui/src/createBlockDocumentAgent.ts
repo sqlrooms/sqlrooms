@@ -37,9 +37,9 @@ function createBlockDocumentMapBlockTool(
   blockDocumentId: string,
 ): Tool {
   return tool({
-    description: `Create or update a direct worksheet map block from a native Deck JSON map config.
+    description: `Create or update a direct document map block from a native Deck JSON map config.
 
-Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.
+Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a document. This creates a document map block directly; do not create a dashboard block just to show a map.
 
 ${getDeckMapResourceAiInstructions()}`,
     inputSchema: BlockDocumentMapBlockToolInput,
@@ -56,7 +56,7 @@ ${getDeckMapResourceAiInstructions()}`,
           throw new Error(
             result.error ??
               result.message ??
-              'Failed to add worksheet map block.',
+              'Failed to add document map block.',
           );
         }
         const data = result.data as
@@ -136,7 +136,7 @@ export function blockDocumentAgentTool(
 
             if (!ownsDashboard) {
               throw new Error(
-                `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+                `Dashboard "${dashboardId}" is not owned by document "${blockDocumentId}".`,
               );
             }
           },
@@ -157,7 +157,7 @@ export function blockDocumentAgentTool(
 
             if (!ownsDashboard) {
               throw new Error(
-                `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+                `Dashboard "${dashboardId}" is not owned by document "${blockDocumentId}".`,
               );
             }
           },
@@ -171,7 +171,7 @@ export function blockDocumentAgentTool(
     mapBlocksEnabled: profile.blocks.stateful.includes('map'),
     dashboardBlocksEnabled: profile.blocks.stateful.includes('dashboard'),
     dataTableBlocksEnabled: profile.blocks.stateful.includes('data-table'),
-    ...(profile.ai.nestedAgents.includes('worksheet-dashboard')
+    ...(profile.ai.nestedAgents.includes('document-dashboard')
       ? {dashboardAgentTool}
       : {}),
     addDashboardBlock: async ({blockDocumentId, title, tableName, intent}) => {

@@ -1,6 +1,6 @@
 import {afterAll, beforeEach, describe, expect, it, jest} from '@jest/globals';
 import type {RunEvidence} from '@sqlrooms/evals';
-import {CREATE_WORKSHEET_CHART_MAP_SCENARIO} from '../scenarios';
+import {CREATE_DOCUMENT_CHART_MAP_SCENARIO} from '../scenarios';
 
 const runMock = jest.fn<() => Promise<RunEvidence>>();
 const disposeMock = jest.fn<() => Promise<void>>();
@@ -35,13 +35,13 @@ function runEvidence(): RunEvidence {
     schemaVersion: 1,
     runId: 'provider-cost-test',
     scenario: {
-      id: CREATE_WORKSHEET_CHART_MAP_SCENARIO.id,
-      version: CREATE_WORKSHEET_CHART_MAP_SCENARIO.version,
+      id: CREATE_DOCUMENT_CHART_MAP_SCENARIO.id,
+      version: CREATE_DOCUMENT_CHART_MAP_SCENARIO.version,
       repetition: 0,
     },
     target: {
       type: 'cli-in-process',
-      profileName: 'worksheet-charts-maps',
+      profileName: 'document-charts-maps',
       profileVersion: 1,
     },
     model: {
@@ -51,7 +51,7 @@ function runEvidence(): RunEvidence {
     },
     timing: {startedAt: timestamp, endedAt: timestamp, latencyMs: 0},
     status: 'passed',
-    promptTurns: CREATE_WORKSHEET_CHART_MAP_SCENARIO.turns,
+    promptTurns: CREATE_DOCUMENT_CHART_MAP_SCENARIO.turns,
     finalAnswer: 'Created a chart and map from analytics.events.',
     events: [],
     usage: {inputTokens: 100, outputTokens: 20, totalTokens: 120},
@@ -96,8 +96,8 @@ describe('SqlroomsCliEvalProvider cost propagation', () => {
       const provider = new SqlroomsCliEvalProvider({});
 
       const response = await provider.callApi(
-        CREATE_WORKSHEET_CHART_MAP_SCENARIO.turns[0]!.input,
-        {vars: {scenarioId: CREATE_WORKSHEET_CHART_MAP_SCENARIO.id}},
+        CREATE_DOCUMENT_CHART_MAP_SCENARIO.turns[0]!.input,
+        {vars: {scenarioId: CREATE_DOCUMENT_CHART_MAP_SCENARIO.id}},
       );
 
       expect(response).toMatchObject({

@@ -2,7 +2,7 @@ import {describe, expect, test} from '@jest/globals';
 import {directDeckMapDataAdapter} from '../src/DeckMapSurface';
 
 describe('directDeckMapDataAdapter', () => {
-  test('resolves worksheet datasets without Mosaic selection state', () => {
+  test('resolves document datasets without Mosaic selection state', () => {
     const map = {
       id: 'map-1',
       title: 'Places',

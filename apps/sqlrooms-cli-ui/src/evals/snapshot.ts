@@ -8,8 +8,8 @@ function toJsonValue(value: unknown): JsonValue {
 
 /** Captures the durable CLI state used by target-neutral behavioral oracles. */
 export function snapshotCliEvalState(state: RoomState): JsonObject {
-  const worksheets = Object.values(state.artifacts.config.artifactsById)
-    .filter((artifact) => artifact.type === 'worksheet')
+  const documents = Object.values(state.artifacts.config.artifactsById)
+    .filter((artifact) => artifact.type === 'document')
     .map((artifact) => ({
       id: artifact.id,
       title: artifact.title,
@@ -18,7 +18,7 @@ export function snapshotCliEvalState(state: RoomState): JsonObject {
   const maps = Object.values(state.deckMaps.config.mapsById);
   return {
     artifacts: toJsonValue(state.artifacts.config),
-    worksheets: toJsonValue(worksheets),
+    documents: toJsonValue(documents),
     maps: toJsonValue(maps),
     tables: state.db.tables.map((table) => getTableIdentity(table.table)),
   };

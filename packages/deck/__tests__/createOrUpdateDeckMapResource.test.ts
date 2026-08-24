@@ -55,7 +55,7 @@ describe('createOrUpdateDeckMapResource', () => {
 
     await expect(
       createOrUpdateDeckMapResource(h, {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         config: invalidConfig,
         tableName: 'coffee_shops_nyc',
         createMapId: () => 'map-1',
@@ -71,7 +71,7 @@ describe('createOrUpdateDeckMapResource', () => {
   test('creates a durable map and returns no panel identity', async () => {
     const h = host();
     const result = await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       config,
       title: 'Places',
       createMapId: () => 'map-1',
@@ -117,7 +117,7 @@ describe('createOrUpdateDeckMapResource', () => {
     };
 
     await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       config: transformedConfig,
       createMapId: () => 'map-1',
     });
@@ -155,7 +155,7 @@ describe('createOrUpdateDeckMapResource', () => {
 
     await expect(
       createOrUpdateDeckMapResource(h, {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         config: invalidTransformConfig,
         createMapId: () => 'map-1',
       }),
@@ -177,7 +177,7 @@ describe('createOrUpdateDeckMapResource', () => {
 
     await expect(
       createOrUpdateDeckMapResource(h, {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         config: ambiguousConfig,
         tableName: 'analytics.events',
         createMapId: () => 'map-1',
@@ -192,7 +192,7 @@ describe('createOrUpdateDeckMapResource', () => {
     const createMapId = jest.fn(() => 'generated-map');
 
     const result = await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       config,
       mapId: 'requested-map',
       missingMapBlockBehavior: 'create',
@@ -210,7 +210,7 @@ describe('createOrUpdateDeckMapResource', () => {
     const h = host();
 
     const result = await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       config,
       missingMapBlockBehavior: 'create',
       createMapId: () => 'generated-map',
@@ -229,7 +229,7 @@ describe('createOrUpdateDeckMapResource', () => {
       findMap: jest.fn(() => ({id: 'map-1', title: 'Saved title', config})),
     });
     await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       mapId: 'map-1',
       config,
     });
@@ -249,7 +249,7 @@ describe('createOrUpdateDeckMapResource', () => {
     });
 
     await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       mapId: 'map-1',
       config,
     });
@@ -279,7 +279,7 @@ describe('createOrUpdateDeckMapResource', () => {
       }),
     });
     await createOrUpdateDeckMapResource(h, {
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       mapId: 'map-1',
       title: 'New',
       config,
@@ -299,7 +299,7 @@ describe('createOrUpdateDeckMapResource', () => {
     });
     await expect(
       createOrUpdateDeckMapResource(h, {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         mapId: 'map-1',
         title: 'New',
         config,

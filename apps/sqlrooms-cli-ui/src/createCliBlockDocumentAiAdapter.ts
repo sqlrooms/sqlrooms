@@ -7,13 +7,13 @@ import {
 import type {StoreApi} from 'zustand';
 import type {RoomState} from './store-types';
 
-/** Creates the CLI block-document adapter for Worksheet artifacts. */
+/** Creates the CLI block-document adapter for Document artifacts. */
 export function createCliBlockDocumentAiAdapter(
   store: StoreApi<RoomState>,
 ): BlockDocumentAiAdapter & BlockDocumentMoveBlockAiAdapter {
   const adapter = createBlockDocumentCommandAiAdapter({
     store,
-    isBlockDocumentArtifact: (artifact) => artifact.type === 'worksheet',
+    isBlockDocumentArtifact: (artifact) => artifact.type === 'document',
   });
 
   return {

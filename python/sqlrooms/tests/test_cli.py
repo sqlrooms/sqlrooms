@@ -141,7 +141,7 @@ def test_cli_passes_named_profile_to_server(monkeypatch):
     assert captured["capability_profile"] == "experimental"
 
 
-def test_cli_passes_worksheet_charts_maps_profile_to_server(monkeypatch):
+def test_cli_passes_document_charts_maps_profile_to_server(monkeypatch):
     captured = {}
 
     class FakeServer:
@@ -160,13 +160,13 @@ def test_cli_passes_worksheet_charts_maps_profile_to_server(monkeypatch):
             "--no-config",
             "--no-open-browser",
             "--profile",
-            "worksheet-charts-maps",
+            "document-charts-maps",
             ":memory:",
         ],
     )
 
     assert result.exit_code == 0
-    assert captured["capability_profile"] == "worksheet-charts-maps"
+    assert captured["capability_profile"] == "document-charts-maps"
 
 
 def test_cli_loads_profile_from_config(monkeypatch, tmp_path):

@@ -30,12 +30,12 @@ import {
   createStatefulBlockTypes,
   type StatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
-import {WorksheetDashboardBlockRenderer} from './WorksheetDashboardBlockRenderer';
-import {WorksheetMapBlockRenderer} from './WorksheetMapBlockRenderer';
-import {WorksheetMarkdownDocumentBlockRenderer} from './WorksheetMarkdownDocumentBlockRenderer';
-import {WorksheetPivotBlockRenderer} from './WorksheetPivotBlockRenderer';
-import {WorksheetSqlQueryBlockRenderer} from './WorksheetSqlQueryBlockRenderer';
-import {createProfiledWorksheetStatefulBlockRenderers} from './worksheetStatefulBlockRenderers';
+import {DocumentDashboardBlockRenderer} from './DocumentDashboardBlockRenderer';
+import {DocumentMapBlockRenderer} from './DocumentMapBlockRenderer';
+import {DocumentMarkdownBlockRenderer} from './DocumentMarkdownBlockRenderer';
+import {DocumentPivotBlockRenderer} from './DocumentPivotBlockRenderer';
+import {DocumentSqlQueryBlockRenderer} from './DocumentSqlQueryBlockRenderer';
+import {createProfiledDocumentStatefulBlockRenderers} from './documentStatefulBlockRenderers';
 
 function normalizeStatefulBlockOwnership(ownership: string | undefined) {
   return ownership === 'owned' ||
@@ -45,7 +45,7 @@ function normalizeStatefulBlockOwnership(ownership: string | undefined) {
     : undefined;
 }
 
-const WorksheetDataTableBlockRenderer: FC<
+const DocumentDataTableBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => {
   const updateBlock = useRoomStore((state) => state.blockDocuments.updateBlock);
@@ -89,7 +89,7 @@ const WorksheetDataTableBlockRenderer: FC<
   );
 };
 
-const WorksheetHtmlAppBlockRenderer: FC<
+const DocumentHtmlAppBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => {
   const appTitle = useRoomStore((state) =>
@@ -107,7 +107,7 @@ const WorksheetHtmlAppBlockRenderer: FC<
   );
 };
 
-const WorksheetPythonBlockRenderer: FC<
+const DocumentPythonBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
 > = (props) => {
   const pythonTitle = useRoomStore((state) =>
@@ -127,21 +127,21 @@ const WorksheetPythonBlockRenderer: FC<
   );
 };
 
-const WORKSHEET_STATEFUL_BLOCK_RENDERERS = {
-  dashboard: WorksheetDashboardBlockRenderer,
-  map: WorksheetMapBlockRenderer,
-  pivot: WorksheetPivotBlockRenderer,
-  'data-table': WorksheetDataTableBlockRenderer,
-  document: WorksheetMarkdownDocumentBlockRenderer,
-  'sql-query': WorksheetSqlQueryBlockRenderer,
-  'html-app': WorksheetHtmlAppBlockRenderer,
-  python: WorksheetPythonBlockRenderer,
+const DOCUMENT_STATEFUL_BLOCK_RENDERERS = {
+  dashboard: DocumentDashboardBlockRenderer,
+  map: DocumentMapBlockRenderer,
+  pivot: DocumentPivotBlockRenderer,
+  'data-table': DocumentDataTableBlockRenderer,
+  markdown: DocumentMarkdownBlockRenderer,
+  'sql-query': DocumentSqlQueryBlockRenderer,
+  'html-app': DocumentHtmlAppBlockRenderer,
+  python: DocumentPythonBlockRenderer,
 } satisfies Record<
   StatefulBlockArtifactType,
   BlockDocumentStatefulBlockRenderer
 >;
 
-function getEnabledWorksheetAiBlockTypes(
+function getEnabledDocumentAiBlockTypes(
   profile: CliCapabilityProfile,
 ): Set<string> {
   return new Set<string>(profile.blocks.aiContext);
@@ -172,16 +172,16 @@ function createStartBlockScopedChatActions(
   };
 }
 
-function createWorksheetStatefulBlockRenderers(
+function createDocumentStatefulBlockRenderers(
   profile: CliCapabilityProfile,
 ): Record<StatefulBlockArtifactType, BlockDocumentStatefulBlockRenderer> {
-  return createProfiledWorksheetStatefulBlockRenderers(
+  return createProfiledDocumentStatefulBlockRenderers(
     profile,
-    WORKSHEET_STATEFUL_BLOCK_RENDERERS,
+    DOCUMENT_STATEFUL_BLOCK_RENDERERS,
   );
 }
 
-export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
+export const DocumentArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const roomStore = useCliRoomStoreApi();
   const artifactId = (meta?.artifactId as string) ?? panelId;
   const artifact = useRoomStore((state) =>
@@ -197,7 +197,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
   const [editor, setEditor] = useState<Editor | null>(null);
 
   useEffect(() => {
-    if (artifact?.type === 'worksheet') {
+    if (artifact?.type === 'document') {
       ensureBlockDocument(artifactId);
     }
   }, [artifact?.type, artifactId, ensureBlockDocument]);
@@ -211,12 +211,12 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     [roomStore],
   );
   const statefulBlockRenderers = useMemo(
-    () => createWorksheetStatefulBlockRenderers(cliCapabilityProfile),
+    () => createDocumentStatefulBlockRenderers(cliCapabilityProfile),
     [],
   );
 
-  const enabledWorksheetAiBlockTypes = useMemo(
-    () => getEnabledWorksheetAiBlockTypes(cliCapabilityProfile),
+  const enabledDocumentAiBlockTypes = useMemo(
+    () => getEnabledDocumentAiBlockTypes(cliCapabilityProfile),
     [],
   );
 
@@ -235,7 +235,7 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
     () =>
       createAskAiBlockHeaderAction({
         supportsAiEditing: (blockType) =>
-          enabledWorksheetAiBlockTypes.has(blockType),
+          enabledDocumentAiBlockTypes.has(blockType),
         onSubmit: (
           ctx: AskAiBlockHeaderActionRenderContext,
           prompt: string,
@@ -251,15 +251,15 @@ export const WorksheetArtifact: RoomPanelComponent = ({panelId, meta}) => {
             revealAssistant,
             actions: createStartBlockScopedChatActions(roomStore.getState),
             isValidBlockDocumentArtifact: (candidate) =>
-              candidate.type === 'worksheet',
-            artifactLabel: 'worksheet',
+              candidate.type === 'document',
+            artifactLabel: 'document',
           });
         },
       }),
-    [revealAssistant, enabledWorksheetAiBlockTypes],
+    [revealAssistant, enabledDocumentAiBlockTypes],
   );
 
-  if (!artifact || artifact.type !== 'worksheet') {
+  if (!artifact || artifact.type !== 'document') {
     return null;
   }
 

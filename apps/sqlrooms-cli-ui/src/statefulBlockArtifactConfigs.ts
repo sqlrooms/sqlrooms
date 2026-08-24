@@ -123,12 +123,12 @@ export const STATEFUL_BLOCK_ARTIFACT_CONFIGS = {
       state.deckMaps.removeMap(artifactId);
     },
   },
-  document: {
-    artifactType: 'document',
+  markdown: {
+    artifactType: 'markdown',
     stability: 'experimental',
-    label: 'Document',
-    defaultTitle: 'Document',
-    embeddedTitle: 'Embedded Document',
+    label: 'Markdown',
+    defaultTitle: 'Markdown',
+    embeddedTitle: 'Embedded Markdown',
     embeddedDescription: 'Embedded Markdown document',
     ensureState: (state, artifactId, _title, options) => {
       state.documents.ensureDocument(artifactId, options?.initialText);

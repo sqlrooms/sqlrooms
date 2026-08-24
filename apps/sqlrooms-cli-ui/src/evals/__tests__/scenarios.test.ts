@@ -1,17 +1,17 @@
 import {describe, expect, it} from '@jest/globals';
 import type {JsonValue, OracleContext} from '@sqlrooms/evals';
 import {
-  CREATE_WORKSHEET_CHART_MAP_SCENARIO,
-  MUTATE_WORKSHEET_SCENARIO,
+  CREATE_DOCUMENT_CHART_MAP_SCENARIO,
+  MUTATE_DOCUMENT_SCENARIO,
   createCliScenarioOracles,
 } from '../scenarios';
 
 function workspace() {
   return {
-    artifacts: {artifactsById: {worksheet: {type: 'worksheet'}}},
-    worksheets: [
+    artifacts: {artifactsById: {document: {type: 'document'}}},
+    documents: [
       {
-        id: 'worksheet',
+        id: 'document',
         blocks: [
           {
             id: 'seed-heading',
@@ -34,14 +34,14 @@ function workspace() {
             id: 'seed-map-block',
             type: 'statefulBlock',
             blockType: 'map',
-            blockInstanceId: 'worksheet-map',
+            blockInstanceId: 'document-map',
           },
         ],
       },
     ],
     maps: [
       {
-        id: 'worksheet-map',
+        id: 'document-map',
         config: {
           datasets: {
             events: {source: {tableName: '"analytics"."events"'}},
@@ -86,19 +86,19 @@ function context(
 describe('CLI behavioral scenario oracles', () => {
   it('rejects a chart that uses the right table with the wrong fields', async () => {
     const current = workspace();
-    current.worksheets[0]!.blocks[1]!.config = {
+    current.documents[0]!.blocks[1]!.config = {
       chartType: 'bar',
       x: {field: 'wrong-category'},
       y: {field: 'wrong-metric', aggregate: 'sum'},
       title: 'Original metric chart',
     };
     const oracle = createCliScenarioOracles(
-      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+      CREATE_DOCUMENT_CHART_MAP_SCENARIO,
     ).find((candidate) => candidate.id === 'canonical-bindings');
 
     expect(
       await oracle?.evaluate(
-        context(CREATE_WORKSHEET_CHART_MAP_SCENARIO, current),
+        context(CREATE_DOCUMENT_CHART_MAP_SCENARIO, current),
       ),
     ).toMatchObject({pass: false});
   });
@@ -116,12 +116,12 @@ describe('CLI behavioral scenario oracles', () => {
       latitudeColumn: 'latitude',
     };
     const oracle = createCliScenarioOracles(
-      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+      CREATE_DOCUMENT_CHART_MAP_SCENARIO,
     ).find((candidate) => candidate.id === 'canonical-bindings');
 
     expect(
       await oracle?.evaluate(
-        context(CREATE_WORKSHEET_CHART_MAP_SCENARIO, current),
+        context(CREATE_DOCUMENT_CHART_MAP_SCENARIO, current),
       ),
     ).toMatchObject({pass: false});
   });
@@ -130,64 +130,64 @@ describe('CLI behavioral scenario oracles', () => {
     const initial = workspace();
     const unchanged = workspace();
     const changed = workspace();
-    changed.worksheets[0]!.blocks[0]!.text = [
+    changed.documents[0]!.blocks[0]!.text = [
       {type: 'text', text: 'Changed analysis'},
     ];
     const changedMapBlock = workspace();
-    changedMapBlock.worksheets[0]!.blocks[2]!.blockInstanceId = 'other-map';
-    const oracle = createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO).find(
+    changedMapBlock.documents[0]!.blocks[2]!.blockInstanceId = 'other-map';
+    const oracle = createCliScenarioOracles(MUTATE_DOCUMENT_SCENARIO).find(
       (candidate) => candidate.id === 'unrelated-state-preserved',
     );
 
     expect(
       await oracle?.evaluate(
-        context(MUTATE_WORKSHEET_SCENARIO, unchanged, initial),
+        context(MUTATE_DOCUMENT_SCENARIO, unchanged, initial),
       ),
     ).toMatchObject({pass: true});
     expect(
       await oracle?.evaluate(
-        context(MUTATE_WORKSHEET_SCENARIO, changed, initial),
+        context(MUTATE_DOCUMENT_SCENARIO, changed, initial),
       ),
     ).toMatchObject({pass: false});
     expect(
       await oracle?.evaluate(
-        context(MUTATE_WORKSHEET_SCENARIO, changedMapBlock, initial),
+        context(MUTATE_DOCUMENT_SCENARIO, changedMapBlock, initial),
       ),
     ).toMatchObject({pass: false});
   });
 
   it('requires an exact chart title and a distinct source paragraph', async () => {
     const combinedTitle = workspace();
-    combinedTitle.worksheets[0]!.blocks[1]!.config!.title =
+    combinedTitle.documents[0]!.blocks[1]!.config!.title =
       'Metric by category — Source: analytics.events';
     const valid = workspace();
-    valid.worksheets[0]!.blocks[1]!.config!.title = 'Metric by category';
-    valid.worksheets[0]!.blocks.push({
+    valid.documents[0]!.blocks[1]!.config!.title = 'Metric by category';
+    valid.documents[0]!.blocks.push({
       id: 'source-note',
       type: 'paragraph',
       text: [{type: 'text', text: 'Source: analytics.events'}],
-    } as (typeof valid.worksheets)[number]['blocks'][number]);
-    const oracle = createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO).find(
+    } as (typeof valid.documents)[number]['blocks'][number]);
+    const oracle = createCliScenarioOracles(MUTATE_DOCUMENT_SCENARIO).find(
       (candidate) => candidate.id === 'mutated-in-place',
     );
 
     expect(
-      await oracle?.evaluate(context(MUTATE_WORKSHEET_SCENARIO, combinedTitle)),
+      await oracle?.evaluate(context(MUTATE_DOCUMENT_SCENARIO, combinedTitle)),
     ).toMatchObject({pass: false});
     expect(
-      await oracle?.evaluate(context(MUTATE_WORKSHEET_SCENARIO, valid)),
+      await oracle?.evaluate(context(MUTATE_DOCUMENT_SCENARIO, valid)),
     ).toMatchObject({pass: true});
   });
 
   it('requires the grounded answer to name the intended chart and map result', async () => {
     const oracle = createCliScenarioOracles(
-      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+      CREATE_DOCUMENT_CHART_MAP_SCENARIO,
     ).find((candidate) => candidate.id === 'grounded-answer');
     if (!oracle) throw new Error('Missing grounded-answer oracle.');
 
     const evaluate = (finalAnswer: string) =>
       oracle.evaluate({
-        scenario: CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+        scenario: CREATE_DOCUMENT_CHART_MAP_SCENARIO,
         finalAnswer,
         errors: [],
         mutations: [],
@@ -205,12 +205,12 @@ describe('CLI behavioral scenario oracles', () => {
   it('recognizes a canonical quoted table identity in map dataset state', async () => {
     const current = workspace();
     const oracle = createCliScenarioOracles(
-      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+      CREATE_DOCUMENT_CHART_MAP_SCENARIO,
     ).find((candidate) => candidate.id === 'canonical-bindings');
     if (!oracle) throw new Error('Missing canonical-bindings oracle.');
 
     const result = await oracle.evaluate(
-      context(CREATE_WORKSHEET_CHART_MAP_SCENARIO, current),
+      context(CREATE_DOCUMENT_CHART_MAP_SCENARIO, current),
     );
 
     expect(result.pass).toBe(true);

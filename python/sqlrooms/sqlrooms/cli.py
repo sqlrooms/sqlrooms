@@ -39,7 +39,7 @@ else:
     _config_base = Path.home() / ".config" / "sqlrooms"
 DEFAULT_CONFIG_PATH = _config_base / "config.toml"
 DEFAULT_HTTP_PORT = 3000
-CAPABILITY_PROFILE_NAMES = ("default", "experimental", "worksheet-charts-maps")
+CAPABILITY_PROFILE_NAMES = ("default", "experimental", "document-charts-maps")
 DEFAULT_CAPABILITY_PROFILE = "default"
 EXPERIMENTAL_CAPABILITY_PROFILE = "experimental"
 
@@ -549,7 +549,7 @@ def main(
     capability_profile: str | None = typer.Option(
         None,
         "--profile",
-        help="Named capability profile: default, experimental, or worksheet-charts-maps. Overrides [app].profile from the config file.",
+        help="Named capability profile: default, experimental, or document-charts-maps. Overrides [app].profile from the config file.",
     ),
     experimental_sync: bool = typer.Option(
         False,
@@ -606,12 +606,12 @@ def main(
     ),
 ):
     """
-    Launch a local SQLRooms project for adding data and building worksheets with Mosaic charts and dashboards.
+    Launch a local SQLRooms project for adding data and building documents with Mosaic charts and dashboards.
 
     Example: sqlrooms ./my-project.duckdb
 
     - Boots a DuckDB websocket server (sqlrooms-server).
-    - Serves the worksheet UI with persisted state stored in DuckDB.
+    - Serves the document UI with persisted state stored in DuckDB.
     """
     _configure_logging(debug=debug)
 

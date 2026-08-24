@@ -18,7 +18,7 @@ export const LOCAL_DATA_ACCEPTED_FORMATS = {
   'application/geo+json': ['.geojson'],
 };
 
-function getCurrentOrFirstWorksheetArtifactId(
+function getCurrentOrFirstDocumentArtifactId(
   state: RoomState,
 ): string | undefined {
   const currentArtifactId = state.artifacts.config.currentArtifactId;
@@ -26,36 +26,36 @@ function getCurrentOrFirstWorksheetArtifactId(
     ? state.artifacts.config.artifactsById[currentArtifactId]
     : undefined;
 
-  if (currentArtifact?.type === 'worksheet') {
+  if (currentArtifact?.type === 'document') {
     return currentArtifactId;
   }
 
   return state.artifacts.config.artifactOrder.find(
     (artifactId) =>
-      state.artifacts.config.artifactsById[artifactId]?.type === 'worksheet',
+      state.artifacts.config.artifactsById[artifactId]?.type === 'document',
   );
 }
 
-function ensureImportWorksheetForTable(
+function ensureImportDocumentForTable(
   getState: () => RoomState,
   tableName: string,
   createDataTableBlock: boolean,
 ) {
   const state = getState();
-  const worksheetArtifactId =
-    getCurrentOrFirstWorksheetArtifactId(state) ??
+  const documentArtifactId =
+    getCurrentOrFirstDocumentArtifactId(state) ??
     state.artifacts.createArtifact({
-      type: 'worksheet',
-      title: 'Worksheet',
+      type: 'document',
+      title: 'Document',
     });
 
-  state.artifacts.setCurrentArtifact(worksheetArtifactId);
-  state.blockDocuments.ensureBlockDocument(worksheetArtifactId);
+  state.artifacts.setCurrentArtifact(documentArtifactId);
+  state.blockDocuments.ensureBlockDocument(documentArtifactId);
   if (!createDataTableBlock) return;
 
   const nextState = getState();
   const existingBlocks =
-    nextState.blockDocuments.config.artifacts[worksheetArtifactId]?.content
+    nextState.blockDocuments.config.artifacts[documentArtifactId]?.content
       .content ?? [];
   const hasDataTableExplorer = existingBlocks.some((node) => {
     const block = blockDocumentNodeToBlock(node);
@@ -81,7 +81,7 @@ function ensureImportWorksheetForTable(
     intent: `Initial profile for imported table ${tableName}`,
   };
 
-  nextState.blockDocuments.appendBlocks(worksheetArtifactId, [block]);
+  nextState.blockDocuments.appendBlocks(documentArtifactId, [block]);
 }
 
 export function useLocalFileLoader() {
@@ -125,7 +125,7 @@ export function useLocalFileLoader() {
         return;
       }
       for (const {tableName} of createdTables) {
-        ensureImportWorksheetForTable(
+        ensureImportDocumentForTable(
           roomStore.getState,
           tableName,
           cliCapabilityProfile.blocks.stateful.includes('data-table'),

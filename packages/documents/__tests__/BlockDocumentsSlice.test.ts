@@ -141,7 +141,7 @@ describe('BlockDocumentsSlice', () => {
     ).toEqual([block]);
   });
 
-  it('preserves legacy worksheet table reference strings in block nodes', () => {
+  it('preserves legacy document table reference strings in block nodes', () => {
     const tableReferences = [
       'events',
       '"main"."events"',
