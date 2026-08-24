@@ -305,6 +305,14 @@ describe('CLI behavioral scenario oracles', () => {
     dataset.source.transformSql =
       'WITH __sqlrooms_source AS (SELECT * FROM archive.events) SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source';
     expect(await evaluate()).toMatchObject({pass: false});
+
+    dataset.source.transformSql =
+      'WITH decoy AS (SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source) SELECT ST_AsWKB(ST_Point(x, y)) AS geom FROM __sqlrooms_source';
+    expect(await evaluate()).toMatchObject({pass: false});
+
+    dataset.source.transformSql =
+      'SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM archive.__sqlrooms_source';
+    expect(await evaluate()).toMatchObject({pass: false});
   });
 
   it('requires the grounded answer to name the intended chart and map result', async () => {

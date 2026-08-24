@@ -80,17 +80,22 @@ function hasCanonicalChartBinding(value: unknown): boolean {
   }
 }
 
-function sqlIdentifierName(expression: string): string | undefined {
+function sqlIdentifierParts(expression: string): string[] | undefined {
   const parts = expression.split('.').map((part) => part.trim());
   const identifiers = parts.map((part) => {
     const quoted = /^"((?:[^"]|"")+)"$/.exec(part);
-    if (quoted) return quoted[1]!.replace(/""/g, '"');
-    return /^[a-z_][a-z0-9_$]*$/i.test(part) ? part : undefined;
+    if (quoted) return quoted[1]!.replace(/""/g, '"').toLowerCase();
+    return /^[a-z_][a-z0-9_$]*$/i.test(part) ? part.toLowerCase() : undefined;
   });
   if (identifiers.some((identifier) => identifier === undefined)) {
     return undefined;
   }
-  return identifiers[identifiers.length - 1]?.toLowerCase();
+  return identifiers as string[];
+}
+
+function sqlIdentifierName(expression: string): string | undefined {
+  const identifiers = sqlIdentifierParts(expression);
+  return identifiers?.[identifiers.length - 1];
 }
 
 function maskSqlCommentsAndLiterals(sql: string): string {
@@ -151,13 +156,60 @@ function maskSqlCommentsAndLiterals(sql: string): string {
   return masked.join('');
 }
 
+function outerSelectProjection(transformSql: string): string | undefined {
+  const sql = maskSqlCommentsAndLiterals(transformSql);
+  let depth = 0;
+  let selectEnd: number | undefined;
+  let projection: string | undefined;
+
+  const hasKeywordAt = (index: number, keyword: string) => {
+    const before = sql[index - 1];
+    const after = sql[index + keyword.length];
+    return (
+      sql.slice(index, index + keyword.length).toLowerCase() === keyword &&
+      (!before || !/[a-z0-9_$]/i.test(before)) &&
+      (!after || !/[a-z0-9_$]/i.test(after))
+    );
+  };
+
+  for (let index = 0; index < sql.length; index += 1) {
+    if (sql[index] === '"') {
+      while (++index < sql.length) {
+        if (sql[index] !== '"') continue;
+        if (sql[index + 1] !== '"') break;
+        index += 1;
+      }
+    } else if (sql[index] === '(') {
+      depth += 1;
+    } else if (sql[index] === ')') {
+      depth -= 1;
+      if (depth < 0) return undefined;
+    } else if (depth === 0 && hasKeywordAt(index, 'select')) {
+      if (selectEnd !== undefined || projection !== undefined) return undefined;
+      selectEnd = index + 'select'.length;
+      index = selectEnd - 1;
+    } else if (
+      depth === 0 &&
+      selectEnd !== undefined &&
+      hasKeywordAt(index, 'from')
+    ) {
+      projection = sql.slice(selectEnd, index);
+      selectEnd = undefined;
+      index += 'from'.length - 1;
+    }
+  }
+
+  return depth === 0 ? projection : undefined;
+}
+
 function hasPointGeometryBinding(
   transformSql: string,
   geometryColumn: string,
 ): boolean {
-  const pointCalls = maskSqlCommentsAndLiterals(transformSql).matchAll(
+  const pointCalls = outerSelectProjection(transformSql)?.matchAll(
     /\bst_aswkb\s*\(\s*st_point\s*\(\s*([^(),]+?)\s*,\s*([^(),]+?)\s*\)\s*\)\s+as\s+("(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)/gi,
   );
+  if (!pointCalls) return false;
   return Array.from(pointCalls).some(
     ([, longitude, latitude, alias]) =>
       sqlIdentifierName(longitude!) === 'longitude' &&
@@ -170,11 +222,14 @@ function usesOnlyTargetTransformSource(transformSql: string): boolean {
   const sourceReferences = maskSqlCommentsAndLiterals(transformSql).matchAll(
     /\b(?:from|join)\s+((?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)(?:\s*\.\s*(?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)){0,2})/gi,
   );
-  const names = Array.from(sourceReferences, ([, reference]) =>
-    sqlIdentifierName(reference!),
+  const references = Array.from(sourceReferences, ([, reference]) =>
+    sqlIdentifierParts(reference!),
   );
   return (
-    names.length > 0 && names.every((name) => name === '__sqlrooms_source')
+    references.length > 0 &&
+    references.every(
+      (parts) => parts?.length === 1 && parts[0] === '__sqlrooms_source',
+    )
   );
 }
 
