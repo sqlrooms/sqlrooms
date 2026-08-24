@@ -103,6 +103,24 @@ describe('CLI behavioral scenario oracles', () => {
     ).toMatchObject({pass: false});
   });
 
+  it('rejects incidental chart field names outside chart settings', async () => {
+    const current = workspace();
+    current.documents[0]!.blocks[1]!.config = {
+      chartType: 'count-plot',
+      settings: {field: 'category', metric: 'count'},
+      dataPolicy: {reason: 'metric'},
+    } as unknown as (typeof current.documents)[number]['blocks'][number]['config'];
+    const oracle = createCliScenarioOracles(
+      CREATE_DOCUMENT_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'canonical-bindings');
+
+    expect(
+      await oracle?.evaluate(
+        context(CREATE_DOCUMENT_CHART_MAP_SCENARIO, current),
+      ),
+    ).toMatchObject({pass: false});
+  });
+
   it('rejects a map whose active layer uses a decoy dataset', async () => {
     const current = workspace();
     Object.assign(current.maps[0]!.config.datasets, {
@@ -118,6 +136,20 @@ describe('CLI behavioral scenario oracles', () => {
     const oracle = createCliScenarioOracles(
       CREATE_DOCUMENT_CHART_MAP_SCENARIO,
     ).find((candidate) => candidate.id === 'canonical-bindings');
+
+    expect(
+      await oracle?.evaluate(
+        context(CREATE_DOCUMENT_CHART_MAP_SCENARIO, current),
+      ),
+    ).toMatchObject({pass: false});
+  });
+
+  it('requires the document map block to reference the persisted map', async () => {
+    const current = workspace();
+    current.documents[0]!.blocks[2]!.blockInstanceId = 'other-map';
+    const oracle = createCliScenarioOracles(
+      CREATE_DOCUMENT_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'document-shape');
 
     expect(
       await oracle?.evaluate(
@@ -188,6 +220,7 @@ describe('CLI behavioral scenario oracles', () => {
       chartType: 'count-plot',
       settings: {
         field: 'category',
+        metric: 'aggregate',
         valueField: 'metric',
         aggregate: 'sum',
       },
@@ -207,9 +240,13 @@ describe('CLI behavioral scenario oracles', () => {
       dataset: 'events',
       geometryColumn: 'geom',
     } as unknown as (typeof current.maps)[0]['config']['spec']['layers'][number]['_sqlroomsBinding'];
+    Object.assign(current.maps[0]!.config.spec.layers[0]!, {
+      '@@type': 'GeoArrowScatterplotLayer',
+    });
     current.maps[0]!.config.fitToData = {
       dataset: 'events',
-      geometryColumn: 'geom',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
     } as unknown as (typeof current.maps)[0]['config']['fitToData'];
     const oracle = createCliScenarioOracles(
       CREATE_DOCUMENT_CHART_MAP_SCENARIO,
@@ -218,8 +255,25 @@ describe('CLI behavioral scenario oracles', () => {
 
     const evaluate = () =>
       oracle.evaluate(context(CREATE_DOCUMENT_CHART_MAP_SCENARIO, current));
+    const dataset = current.maps[0]!.config.datasets.events! as unknown as {
+      geometryEncodingHint?: string;
+      source: {transformSql: string};
+    };
+    const layer = current.maps[0]!.config.spec.layers[0]! as unknown as {
+      '@@type': string;
+      _sqlroomsBinding: {geometryColumn?: string};
+    };
+    const validTransformSql = dataset.source.transformSql;
 
     expect(await evaluate()).toMatchObject({pass: true});
+
+    delete dataset.geometryEncodingHint;
+    expect(await evaluate()).toMatchObject({pass: true});
+    dataset.geometryEncodingHint = 'wkb';
+
+    delete layer._sqlroomsBinding.geometryColumn;
+    expect(await evaluate()).toMatchObject({pass: true});
+    layer._sqlroomsBinding.geometryColumn = 'geom';
 
     current.documents[0]!.blocks[1]!.config = {
       chartType: 'box-plot',
@@ -227,20 +281,29 @@ describe('CLI behavioral scenario oracles', () => {
     } as unknown as (typeof current.documents)[number]['blocks'][number]['config'];
     expect(await evaluate()).toMatchObject({pass: true});
 
-    (
-      current.maps[0]!.config.datasets.events!.source as unknown as {
-        transformSql: string;
-      }
-    ).transformSql =
+    dataset.source.transformSql =
       'SELECT longitude, latitude, ST_AsWKB(ST_Point(x, y)) AS geom FROM __sqlrooms_source';
     expect(await evaluate()).toMatchObject({pass: false});
 
-    (
-      current.maps[0]!.config.datasets.events!.source as unknown as {
-        transformSql: string;
-      }
-    ).transformSql =
+    dataset.source.transformSql =
       "SELECT ST_AsWKB(ST_Point(x, y)) AS geom, 'ST_Point(longitude, latitude)' AS note FROM __sqlrooms_source -- ST_Point(longitude, latitude)";
+    expect(await evaluate()).toMatchObject({pass: false});
+
+    dataset.source.transformSql =
+      'SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS decoy, ST_AsWKB(ST_Point(0, 0)) AS geom FROM __sqlrooms_source';
+    expect(await evaluate()).toMatchObject({pass: false});
+
+    dataset.source.transformSql = validTransformSql;
+    dataset.geometryEncodingHint = 'wkt';
+    expect(await evaluate()).toMatchObject({pass: false});
+
+    dataset.geometryEncodingHint = 'wkb';
+    layer['@@type'] = 'GeoArrowPolygonLayer';
+    expect(await evaluate()).toMatchObject({pass: false});
+
+    layer['@@type'] = 'GeoArrowScatterplotLayer';
+    dataset.source.transformSql =
+      'WITH __sqlrooms_source AS (SELECT * FROM archive.events) SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source';
     expect(await evaluate()).toMatchObject({pass: false});
   });
 

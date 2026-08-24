@@ -14,6 +14,11 @@ const CLI_EVAL_TARGET_TABLES = new Set([
   CLI_EVAL_TARGET_TABLE,
 ]);
 const CLI_EVAL_DECOY_TABLES = new Set(['archive.events', '"archive"."events"']);
+const POINT_LAYER_TYPES = new Set([
+  'GeoArrowScatterplotLayer',
+  'GeoArrowHeatmapLayer',
+  'GeoArrowColumnLayer',
+]);
 
 type WorkspaceSnapshot = {
   artifacts: {artifactsById: Record<string, {type: string}>};
@@ -52,17 +57,27 @@ function object(value: unknown): Record<string, unknown> | undefined {
   return hasObjectShape(value) ? (value as Record<string, unknown>) : undefined;
 }
 
-function hasFieldBinding(value: unknown, field: string): boolean {
-  if (typeof value === 'string') return value === field;
-  if (Array.isArray(value)) {
-    return value.some((item) => hasFieldBinding(item, field));
+function hasCanonicalChartBinding(value: unknown): boolean {
+  const config = object(value);
+  const settings = object(config?.settings);
+  switch (config?.chartType) {
+    case 'count-plot':
+      return (
+        settings?.field === 'category' &&
+        settings.metric === 'aggregate' &&
+        settings.valueField === 'metric' &&
+        typeof settings.aggregate === 'string'
+      );
+    case 'box-plot':
+      return settings?.x === 'category' && settings.y === 'metric';
+    case 'bar':
+      return (
+        object(config.x)?.field === 'category' &&
+        object(config.y)?.field === 'metric'
+      );
+    default:
+      return false;
   }
-  if (!value || typeof value !== 'object') return false;
-  const record = value as Record<string, unknown>;
-  return (
-    record.field === field ||
-    Object.values(record).some((item) => hasFieldBinding(item, field))
-  );
 }
 
 function sqlIdentifierName(expression: string): string | undefined {
@@ -136,14 +151,30 @@ function maskSqlCommentsAndLiterals(sql: string): string {
   return masked.join('');
 }
 
-function hasPointCoordinateBinding(transformSql: string): boolean {
+function hasPointGeometryBinding(
+  transformSql: string,
+  geometryColumn: string,
+): boolean {
   const pointCalls = maskSqlCommentsAndLiterals(transformSql).matchAll(
-    /\bst_point\s*\(\s*([^(),]+?)\s*,\s*([^(),]+?)\s*\)/gi,
+    /\bst_aswkb\s*\(\s*st_point\s*\(\s*([^(),]+?)\s*,\s*([^(),]+?)\s*\)\s*\)\s+as\s+("(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)/gi,
   );
   return Array.from(pointCalls).some(
-    ([, longitude, latitude]) =>
+    ([, longitude, latitude, alias]) =>
       sqlIdentifierName(longitude!) === 'longitude' &&
-      sqlIdentifierName(latitude!) === 'latitude',
+      sqlIdentifierName(latitude!) === 'latitude' &&
+      sqlIdentifierName(alias!) === geometryColumn.toLowerCase(),
+  );
+}
+
+function usesOnlyTargetTransformSource(transformSql: string): boolean {
+  const sourceReferences = maskSqlCommentsAndLiterals(transformSql).matchAll(
+    /\b(?:from|join)\s+((?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)(?:\s*\.\s*(?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)){0,2})/gi,
+  );
+  const names = Array.from(sourceReferences, ([, reference]) =>
+    sqlIdentifierName(reference!),
+  );
+  return (
+    names.length > 0 && names.every((name) => name === '__sqlrooms_source')
   );
 }
 
@@ -162,7 +193,8 @@ function hasCanonicalMapBinding(
   if (!fitMatches) return false;
 
   return activeLayers.every((layer) => {
-    const binding = object(object(layer)?._sqlroomsBinding);
+    const layerConfig = object(layer);
+    const binding = object(layerConfig?._sqlroomsBinding);
     const dataset = binding?.dataset;
     if (typeof dataset !== 'string' || dataset !== fitDataset) return false;
     const datasetConfig = object(map.config.datasets[dataset]);
@@ -174,21 +206,39 @@ function hasCanonicalMapBinding(
       return false;
     }
 
+    const transformSql = source.transformSql;
+    const datasetGeometryColumn = datasetConfig?.geometryColumn;
+    const usesDerivedGeometry =
+      typeof transformSql === 'string' ||
+      typeof datasetGeometryColumn === 'string';
     const usesDirectCoordinates =
+      !usesDerivedGeometry &&
       binding?.longitudeColumn === 'longitude' &&
       binding?.latitudeColumn === 'latitude' &&
       fitToData?.longitudeColumn === 'longitude' &&
       fitToData?.latitudeColumn === 'latitude';
     if (usesDirectCoordinates) return true;
 
-    const geometryColumn = binding?.geometryColumn;
-    const transformSql = source.transformSql;
+    const layerGeometryColumn = binding?.geometryColumn;
+    const layerGeometryMatches =
+      layerGeometryColumn === undefined ||
+      layerGeometryColumn === datasetGeometryColumn;
+    const fitGeometryMatches =
+      fitToData?.geometryColumn === datasetGeometryColumn;
+    const fitCoordinateMatches =
+      fitToData?.longitudeColumn === 'longitude' &&
+      fitToData?.latitudeColumn === 'latitude';
+    const encodingHint = datasetConfig?.geometryEncodingHint;
     return (
-      typeof geometryColumn === 'string' &&
-      datasetConfig?.geometryColumn === geometryColumn &&
-      fitToData?.geometryColumn === geometryColumn &&
+      typeof datasetGeometryColumn === 'string' &&
+      layerGeometryMatches &&
+      (fitGeometryMatches || fitCoordinateMatches) &&
+      typeof layerConfig?.['@@type'] === 'string' &&
+      POINT_LAYER_TYPES.has(layerConfig['@@type']) &&
+      (encodingHint === undefined || encodingHint === 'wkb') &&
       typeof transformSql === 'string' &&
-      hasPointCoordinateBinding(transformSql)
+      hasPointGeometryBinding(transformSql, datasetGeometryColumn) &&
+      usesOnlyTargetTransformSource(transformSql)
     );
   });
 }
@@ -352,6 +402,7 @@ export function createCliScenarioOracles(
           charts.length === 1 &&
           mapBlocks.length === 1 &&
           workspace.maps.length === 1 &&
+          mapBlocks[0]?.blockInstanceId === workspace.maps[0]?.id &&
           hasObjectShape(charts[0]?.config) &&
           hasObjectShape(workspace.maps[0]?.config.spec);
         return {
@@ -379,8 +430,7 @@ export function createCliScenarioOracles(
             (chart) =>
               typeof chart.tableName === 'string' &&
               CLI_EVAL_TARGET_TABLES.has(chart.tableName) &&
-              hasFieldBinding(chart.config, 'category') &&
-              hasFieldBinding(chart.config, 'metric'),
+              hasCanonicalChartBinding(chart.config),
           ) &&
           workspace.maps.some(hasCanonicalMapBinding) &&
           !mapTables.some((tableName) => CLI_EVAL_DECOY_TABLES.has(tableName));
