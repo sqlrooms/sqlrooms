@@ -105,9 +105,9 @@ function resolveBlockDocumentArtifact(
   blockDocumentId: string,
 ) {
   const artifact = state.artifacts.getArtifact(blockDocumentId);
-  if (!artifact || artifact.type !== 'worksheet') {
+  if (!artifact || artifact.type !== 'document') {
     throw new Error(
-      `Artifact ${blockDocumentId} is not a Worksheet block document`,
+      `Artifact ${blockDocumentId} is not a Document block document`,
     );
   }
   state.blockDocuments.ensureBlockDocument(blockDocumentId);
@@ -167,7 +167,7 @@ function findStatefulBlock(
     });
 }
 
-/** Creates CLI worksheet commands allowed by the selected block capabilities. */
+/** Creates CLI document commands allowed by the selected block capabilities. */
 export function createCliBlockDocumentCommands({
   statefulBlockTypes = STATEFUL_BLOCK_ARTIFACT_TYPES,
 }: {
@@ -179,7 +179,7 @@ export function createCliBlockDocumentCommands({
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add block document dashboard block',
       description: 'Add an owned dashboard block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'dashboard', 'block', 'add'],
       inputSchema: BlockDocumentAddDashboardBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -230,7 +230,7 @@ export function createCliBlockDocumentCommands({
       id: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
       name: 'Add block document data table block',
       description: 'Add a data table explorer block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'data table', 'block', 'add'],
       inputSchema: BlockDocumentAddDataTableBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -277,7 +277,7 @@ export function createCliBlockDocumentCommands({
       id: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
       name: 'Add block document HTML app block',
       description: 'Add an owned HTML app block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'html', 'app', 'block', 'add'],
       inputSchema: BlockDocumentAddHtmlAppBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -314,7 +314,7 @@ export function createCliBlockDocumentCommands({
       id: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
       name: 'Update block document block metadata',
       description: 'Update caption or height for a block document block.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'block', 'metadata', 'update'],
       inputSchema: BlockDocumentUpdateBlockMetadataInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -371,7 +371,7 @@ export function createCliBlockDocumentCommands({
       id: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
       name: 'Add or update block document map block',
       description: 'Create or update a direct block document map block.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'map', 'deck', 'block', 'add', 'update'],
       inputSchema: BlockDocumentMapBlockToolParameters,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},

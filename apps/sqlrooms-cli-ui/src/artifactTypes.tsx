@@ -21,7 +21,7 @@ import {
 import {createSqlQueryBlockDefinition} from '@sqlrooms/sql-editor';
 import type {RoomState} from './store-types';
 import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
-import {WorksheetArtifact} from './workspace/WorksheetArtifact';
+import {DocumentArtifact} from './workspace/DocumentArtifact';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
@@ -31,7 +31,7 @@ import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
   type CliCapabilityProfile,
 } from './profiles';
-import {createCliWorksheetArtifactDefinition} from './createCliWorksheetArtifactDefinition';
+import {createCliDocumentArtifactDefinition} from './createCliDocumentArtifactDefinition';
 
 type FeatureStability = 'stable' | 'experimental';
 
@@ -40,11 +40,11 @@ type CliArtifactTypeDefinition = ArtifactTypeDefinition<RoomState> & {
 };
 
 const ARTIFACT_STABILITY = {
-  worksheet: 'stable',
+  document: 'stable',
   dashboard: 'stable',
   pivot: 'experimental',
   notebook: 'experimental',
-  document: 'experimental',
+  markdown: 'experimental',
   'sql-query': 'experimental',
   'html-app': 'experimental',
   python: 'experimental',
@@ -101,8 +101,8 @@ const pivotBlockDefinition = createPivotBlockDefinition<RoomState>({
 
 const markdownDocumentBlockDefinition =
   createMarkdownDocumentBlockDefinition<RoomState>({
-    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.label,
-    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.defaultTitle,
+    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.markdown.label,
+    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.markdown.defaultTitle,
   });
 
 const sqlQueryBlockDefinition = createSqlQueryBlockDefinition<RoomState>({
@@ -130,10 +130,10 @@ export function createCliArtifactTypes({
 }: {
   profile?: CliCapabilityProfile;
 } = {}) {
-  const worksheetDefinition: ArtifactTypeDefinition<RoomState> = {
-    ...createCliWorksheetArtifactDefinition(),
+  const documentDefinition: ArtifactTypeDefinition<RoomState> = {
+    ...createCliDocumentArtifactDefinition(),
     icon: FileStackIcon,
-    component: WorksheetArtifact,
+    component: DocumentArtifact,
   };
 
   const notebookDefinition: ArtifactTypeDefinition<RoomState> = {
@@ -179,7 +179,7 @@ export function createCliArtifactTypes({
   };
 
   return defineArtifactTypes({
-    worksheet: withStability('worksheet', worksheetDefinition, profile),
+    document: withStability('document', documentDefinition, profile),
     dashboard: withStability(
       'dashboard',
       createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
@@ -191,8 +191,8 @@ export function createCliArtifactTypes({
       profile,
     ),
     notebook: withStability('notebook', notebookDefinition, profile),
-    document: withStability(
-      'document',
+    markdown: withStability(
+      'markdown',
       createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
       profile,
     ),

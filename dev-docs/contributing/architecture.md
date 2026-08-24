@@ -37,7 +37,7 @@ React components registered in `layout.panels` with `title`, `icon`, `component`
 
 `@sqlrooms/blocks` owns shared block contracts and vocabulary. A block is a composable unit of content or behavior that can live inside a container. Blocks should not imply a tab, global selection, or independent workspace lifecycle by themselves.
 
-`@sqlrooms/documents` owns `BlockDocument`: an ordered Tiptap-backed block container for narrative text, images, standalone charts, and host-provided stateful blocks. A Worksheet in the CLI app is a user-facing artifact shell around a `BlockDocument`.
+`@sqlrooms/documents` owns `BlockDocument`: an ordered Tiptap-backed block container for narrative text, images, standalone charts, and host-provided stateful blocks. A Document in the CLI app is a user-facing artifact shell around a `BlockDocument`.
 
 Stateful blocks are feature-backed blocks whose backing state lives in the owning feature slice, such as dashboards in Mosaic, pivots in Pivot, or Markdown documents in Documents. They can also be wrapped as single-block artifacts through `@sqlrooms/artifacts` when the same feature needs to be opened as a workspace tab.
 

@@ -8,14 +8,14 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
     ],
     "nestedAgents": [
       "dashboard",
-      "worksheet",
-      "worksheet-dashboard",
+      "document",
+      "document-dashboard",
     ],
     "topLevelToolGroups": [
       "default-data-analysis",
       "artifact-context",
       "dashboard-agent",
-      "worksheet-agent",
+      "document-agent",
       "webcontainer",
       "chart",
       "chart-image-for-markdown",
@@ -23,15 +23,15 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
   },
   "artifacts": {
     "creatable": [
-      "worksheet",
+      "document",
       "dashboard",
     ],
     "runContext": [
-      "worksheet",
+      "document",
       "dashboard",
       "pivot",
       "notebook",
-      "document",
+      "markdown",
       "sql-query",
       "html-app",
       "python",
@@ -64,6 +64,52 @@ exports[`CLI capability profiles locks the default capability baseline 1`] = `
 }
 `;
 
+exports[`CLI capability profiles locks the document-charts-maps capability baseline 1`] = `
+{
+  "ai": {
+    "instructionSets": [
+      "stable",
+    ],
+    "nestedAgents": [
+      "document",
+    ],
+    "topLevelToolGroups": [
+      "default-data-analysis",
+      "artifact-context",
+      "document-agent",
+      "chart",
+    ],
+  },
+  "artifacts": {
+    "creatable": [
+      "document",
+    ],
+    "runContext": [
+      "document",
+    ],
+  },
+  "blocks": {
+    "aiContext": [
+      "chart",
+      "map",
+    ],
+    "stateful": [
+      "map",
+    ],
+  },
+  "commands": [
+    "block-document",
+    "cli-block-document",
+  ],
+  "dashboard": {
+    "deckMaps": false,
+  },
+  "name": "document-charts-maps",
+  "skills": [],
+  "version": 1,
+}
+`;
+
 exports[`CLI capability profiles locks the experimental capability baseline 1`] = `
 {
   "ai": {
@@ -73,8 +119,8 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
     ],
     "nestedAgents": [
       "dashboard",
-      "worksheet",
-      "worksheet-dashboard",
+      "document",
+      "document-dashboard",
       "html-app",
     ],
     "topLevelToolGroups": [
@@ -82,7 +128,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "artifact-context",
       "dashboard-agent",
       "html-app-agent",
-      "worksheet-agent",
+      "document-agent",
       "webcontainer",
       "chart",
       "chart-image-for-markdown",
@@ -90,11 +136,11 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   },
   "artifacts": {
     "creatable": [
-      "worksheet",
+      "document",
       "dashboard",
       "pivot",
       "notebook",
-      "document",
+      "markdown",
       "sql-query",
       "html-app",
       "python",
@@ -102,11 +148,11 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "app-builder",
     ],
     "runContext": [
-      "worksheet",
+      "document",
       "dashboard",
       "pivot",
       "notebook",
-      "document",
+      "markdown",
       "sql-query",
       "html-app",
       "python",
@@ -126,7 +172,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
       "pivot",
       "data-table",
       "map",
-      "document",
+      "markdown",
       "sql-query",
       "html-app",
       "python",
@@ -135,7 +181,7 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
   "commands": [
     "dashboard",
     "mosaic-dashboard",
-    "document",
+    "markdown",
     "block-document",
     "cli-block-document",
     "block-document-python",
@@ -145,52 +191,6 @@ exports[`CLI capability profiles locks the experimental capability baseline 1`] 
     "deckMaps": true,
   },
   "name": "experimental",
-  "skills": [],
-  "version": 1,
-}
-`;
-
-exports[`CLI capability profiles locks the worksheet-charts-maps capability baseline 1`] = `
-{
-  "ai": {
-    "instructionSets": [
-      "stable",
-    ],
-    "nestedAgents": [
-      "worksheet",
-    ],
-    "topLevelToolGroups": [
-      "default-data-analysis",
-      "artifact-context",
-      "worksheet-agent",
-      "chart",
-    ],
-  },
-  "artifacts": {
-    "creatable": [
-      "worksheet",
-    ],
-    "runContext": [
-      "worksheet",
-    ],
-  },
-  "blocks": {
-    "aiContext": [
-      "chart",
-      "map",
-    ],
-    "stateful": [
-      "map",
-    ],
-  },
-  "commands": [
-    "block-document",
-    "cli-block-document",
-  ],
-  "dashboard": {
-    "deckMaps": false,
-  },
-  "name": "worksheet-charts-maps",
   "skills": [],
   "version": 1,
 }

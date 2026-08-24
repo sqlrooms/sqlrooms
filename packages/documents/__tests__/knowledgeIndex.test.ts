@@ -5,8 +5,8 @@ describe('buildKnowledgeIndex', () => {
     const index = buildKnowledgeIndex({
       artifacts: {
         artifactsById: {
-          a: {id: 'a', type: 'document', title: 'Alpha'},
-          b: {id: 'b', type: 'document', title: 'Beta'},
+          a: {id: 'a', type: 'markdown', title: 'Alpha'},
+          b: {id: 'b', type: 'markdown', title: 'Beta'},
         },
         artifactOrder: ['a', 'b'],
       },
@@ -34,9 +34,9 @@ describe('buildKnowledgeIndex', () => {
     const index = buildKnowledgeIndex({
       artifacts: {
         artifactsById: {
-          a: {id: 'a', type: 'document', title: 'Alpha'},
-          b: {id: 'b', type: 'document', title: 'Duplicate'},
-          c: {id: 'c', type: 'document', title: 'Duplicate'},
+          a: {id: 'a', type: 'markdown', title: 'Alpha'},
+          b: {id: 'b', type: 'markdown', title: 'Duplicate'},
+          c: {id: 'c', type: 'markdown', title: 'Duplicate'},
         },
         artifactOrder: ['a', 'b', 'c'],
       },
@@ -72,7 +72,7 @@ describe('buildKnowledgeIndex', () => {
     const index = buildKnowledgeIndex({
       artifacts: {
         artifactsById: {
-          a: {id: 'a', type: 'document', title: 'Alpha'},
+          a: {id: 'a', type: 'markdown', title: 'Alpha'},
         },
         artifactOrder: ['a'],
       },

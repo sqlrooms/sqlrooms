@@ -174,7 +174,7 @@ export interface DeckMapSettingsPanelProps {
   /** Custom maps stay on the JSON editor so basic controls cannot clobber them. */
   customConfig?: boolean;
   /**
-   * Worksheet maps own their dataset in `config.datasets`. Prefer that table
+   * Document maps own their dataset in `config.datasets`. Prefer that table
    * over `selectedTable`, which is only a sidecar. Dashboards leave this false
    * so the shared dashboard selected table is shown.
    */

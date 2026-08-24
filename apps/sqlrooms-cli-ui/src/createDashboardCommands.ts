@@ -107,9 +107,9 @@ function createArtifactCommand(
       });
       if (artifactType === 'notebook') {
         state.notebook.ensureArtifact(artifactId);
-      } else if (artifactType === 'worksheet') {
-        state.blockDocuments.ensureBlockDocument(artifactId);
       } else if (artifactType === 'document') {
+        state.blockDocuments.ensureBlockDocument(artifactId);
+      } else if (artifactType === 'markdown') {
         state.documents.ensureDocument(artifactId);
       } else if (artifactType === 'sql-query') {
         state.sqlEditor.ensureQuery(artifactId, {name: uniqueTitle});
@@ -189,8 +189,8 @@ const ARTIFACT_CREATE_COMMANDS: {
   command: () => RoomCommand<RoomState>;
 }[] = [
   {
-    artifactType: 'worksheet',
-    command: () => createArtifactCommand('worksheet', 'Worksheet'),
+    artifactType: 'document',
+    command: () => createArtifactCommand('document', 'Document'),
   },
   {
     artifactType: 'pivot',
@@ -201,8 +201,8 @@ const ARTIFACT_CREATE_COMMANDS: {
     command: () => createArtifactCommand('notebook', 'Notebook'),
   },
   {
-    artifactType: 'document',
-    command: () => createArtifactCommand('document', 'Document'),
+    artifactType: 'markdown',
+    command: () => createArtifactCommand('markdown', 'Markdown'),
   },
   {
     artifactType: 'sql-query',
@@ -286,10 +286,10 @@ export function createDashboardCommands({
         if (artifact.type === 'notebook') {
           state.notebook.ensureArtifact(artifactId);
         }
-        if (artifact.type === 'worksheet') {
+        if (artifact.type === 'document') {
           state.blockDocuments.ensureBlockDocument(artifactId);
         }
-        if (artifact.type === 'document') {
+        if (artifact.type === 'markdown') {
           state.documents.ensureDocument(artifactId);
         }
         if (artifact.type === 'sql-query') {

@@ -31,7 +31,7 @@ describe('Deck map settings controls', () => {
     expect(filterDeckMapColumns(columns, 'all')).toBe(columns);
   });
 
-  test('shares one Mosaic-free settings panel across worksheet and dashboard adapters', () => {
+  test('shares one Mosaic-free settings panel across document and dashboard adapters', () => {
     const packageRoot = [
       process.cwd(),
       join(process.cwd(), 'packages/deck'),
@@ -42,25 +42,25 @@ describe('Deck map settings controls', () => {
     const readSource = (fileName: string) =>
       readFileSync(join(packageRoot!, 'src', fileName), 'utf8');
     const panelSource = readSource('MapSettings.tsx');
-    const worksheetAdapterSource = readSource('BlockMapSettings.tsx');
-    const worksheetSurfaceSource = readSource('DeckMapSurface.tsx');
+    const documentAdapterSource = readSource('BlockMapSettings.tsx');
+    const documentSurfaceSource = readSource('DeckMapSurface.tsx');
     const dashboardAdapterSource = readSource('DashboardMapSettings.tsx');
 
     expect(panelSource).not.toContain('@sqlrooms/mosaic');
     expect(panelSource).not.toContain('configIssues');
-    expect(worksheetAdapterSource).not.toContain('@sqlrooms/mosaic');
-    expect(worksheetAdapterSource).toContain('<DeckMapSettingsPanel');
-    expect(worksheetAdapterSource).not.toContain('configIssues');
-    expect(worksheetAdapterSource).not.toContain('Invalid map configuration:');
-    expect(worksheetSurfaceSource).toContain('Invalid map configuration:');
-    expect(worksheetSurfaceSource).toContain('autoFit: true');
-    expect(worksheetSurfaceSource).toContain("kind: 'fit-error'");
-    expect(worksheetSurfaceSource).toContain("onClearIssue('fit-error')");
+    expect(documentAdapterSource).not.toContain('@sqlrooms/mosaic');
+    expect(documentAdapterSource).toContain('<DeckMapSettingsPanel');
+    expect(documentAdapterSource).not.toContain('configIssues');
+    expect(documentAdapterSource).not.toContain('Invalid map configuration:');
+    expect(documentSurfaceSource).toContain('Invalid map configuration:');
+    expect(documentSurfaceSource).toContain('autoFit: true');
+    expect(documentSurfaceSource).toContain("kind: 'fit-error'");
+    expect(documentSurfaceSource).toContain("onClearIssue('fit-error')");
     expect(dashboardAdapterSource).toContain('<DeckMapSettingsPanel');
     expect(dashboardAdapterSource).toContain('customConfig=');
     expect(panelSource).toContain('value={sourceDataTable}');
-    expect(worksheetAdapterSource).toContain('applyDeckMapTableSelection');
-    expect(worksheetAdapterSource).toContain('preferDatasetSource');
+    expect(documentAdapterSource).toContain('applyDeckMapTableSelection');
+    expect(documentAdapterSource).toContain('preferDatasetSource');
     expect(dashboardAdapterSource).not.toContain('preferDatasetSource');
   });
 });

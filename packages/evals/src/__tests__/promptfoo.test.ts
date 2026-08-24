@@ -8,10 +8,10 @@ import {
 const evidence: RunEvidence = {
   schemaVersion: 1,
   runId: 'run-1',
-  scenario: {id: 'worksheet.verify', version: 1, repetition: 0},
+  scenario: {id: 'document.verify', version: 1, repetition: 0},
   target: {
     type: 'cli-in-process',
-    profileName: 'worksheet-charts-maps',
+    profileName: 'document-charts-maps',
     profileVersion: 1,
   },
   model: {provider: 'scripted', modelId: 'scripted-v1', settings: {}},

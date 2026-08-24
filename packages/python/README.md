@@ -92,11 +92,11 @@ example, the SQLRooms CLI app uses:
 
 ```ts
 createPythonBlockCommands({
-  artifactType: 'worksheet',
-  artifactLabel: 'Worksheet',
+  artifactType: 'document',
+  artifactLabel: 'Document',
   commandNamespace: 'block-document',
 });
 ```
 
-That keeps Worksheet as the host-facing artifact label while registering
+That keeps Document as the host-facing artifact label while registering
 block-document command IDs such as `block-document.add-python-block`.

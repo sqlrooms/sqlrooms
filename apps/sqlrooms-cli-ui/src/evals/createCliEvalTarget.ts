@@ -27,7 +27,7 @@ import type {StoreApi} from 'zustand';
 import {createStore} from 'zustand/vanilla';
 import {createCliAiInstructions} from '../createCliAiInstructions';
 import {createCliAiTools} from '../createCliAiTools';
-import {createCliHeadlessArtifactTypes} from '../createCliWorksheetArtifactDefinition';
+import {createCliHeadlessArtifactTypes} from '../createCliDocumentArtifactDefinition';
 import {artifactChatAssociationMiddleware} from '../artifactChatAssociation';
 import {formatRunContextInstructions} from '../context/formatRunContextInstructions';
 import {getRunContext} from '../context/getRunContext';
@@ -617,33 +617,33 @@ function createHeadlessStore(
 
 function fixtureWorkspaceMode(
   scenario: ScenarioDefinition,
-): 'empty' | 'worksheet' | 'worksheet-chart-map' {
+): 'empty' | 'document' | 'document-chart-map' {
   const mode = scenario.fixture.workspace;
   if (
     mode === 'empty' ||
-    mode === 'worksheet' ||
-    mode === 'worksheet-chart-map'
+    mode === 'document' ||
+    mode === 'document-chart-map'
   ) {
     return mode;
   }
-  return 'worksheet';
+  return 'document';
 }
 
-function seedWorksheet(
+function seedDocument(
   store: StoreApi<RoomState>,
   scenario: ScenarioDefinition,
   repetition: number,
-  mode: 'worksheet' | 'worksheet-chart-map',
+  mode: 'document' | 'document-chart-map',
 ): string {
-  const worksheetId = store.getState().artifacts.createArtifact({
+  const documentId = store.getState().artifacts.createArtifact({
     id: `eval-${scenario.id}-${repetition}`,
-    type: 'worksheet',
-    title: 'Evaluation Worksheet',
+    type: 'document',
+    title: 'Evaluation Document',
   });
-  store.getState().blockDocuments.ensureBlockDocument(worksheetId);
-  if (mode === 'worksheet-chart-map') {
-    const mapId = `${worksheetId}-map`;
-    store.getState().blockDocuments.appendBlocks(worksheetId, [
+  store.getState().blockDocuments.ensureBlockDocument(documentId);
+  if (mode === 'document-chart-map') {
+    const mapId = `${documentId}-map`;
+    store.getState().blockDocuments.appendBlocks(documentId, [
       {
         id: 'seed-heading',
         type: 'heading',
@@ -697,7 +697,7 @@ function seedWorksheet(
       },
     });
   }
-  return worksheetId;
+  return documentId;
 }
 
 /** Creates an isolated, in-process CLI eval target using production wiring. */
@@ -705,7 +705,7 @@ export function createCliEvalTarget(
   options: CliEvalTargetOptions,
 ): CliEvalTarget {
   const profile = resolveCliCapabilityProfile({
-    profileName: 'worksheet-charts-maps',
+    profileName: 'document-charts-maps',
   });
   const modelIdentity = getLanguageModelIdentity(options.model);
   const usageRecorder = createModelUsageRecorder(options.model);
@@ -753,12 +753,12 @@ export function createCliEvalTarget(
         let sessionId = '';
         try {
           const workspaceMode = fixtureWorkspaceMode(scenario);
-          const worksheetId =
+          const documentId =
             workspaceMode === 'empty'
               ? undefined
-              : seedWorksheet(store, scenario, repetition, workspaceMode);
+              : seedDocument(store, scenario, repetition, workspaceMode);
           fixtureState = snapshotCliEvalState(store.getState());
-          if (worksheetId) {
+          if (documentId) {
             sessionId =
               store
                 .getState()
@@ -779,10 +779,10 @@ export function createCliEvalTarget(
           }
           if (!sessionId)
             throw new Error('Failed to create an eval AI session.');
-          if (worksheetId) {
+          if (documentId) {
             store
               .getState()
-              .artifactAi.addSessionArtifactLink(sessionId, worksheetId);
+              .artifactAi.addSessionArtifactLink(sessionId, documentId);
           }
           for (const turn of scenario.turns) {
             store.getState().ai.setPrompt(sessionId, turn.input);

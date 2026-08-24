@@ -88,7 +88,7 @@ export function createEmptyDeckMapConfig(): DeckMapConfig {
   };
 }
 
-/** Adapter-facing dashboard panel shape; worksheet resources never store it. */
+/** Adapter-facing dashboard panel shape; document resources never store it. */
 export type DeckMapDashboardPanelConfig = DeckMapConfig;
 export type DeckMapDashboardDatasetConfig = DeckMapDatasetConfig;
 export type DeckMapDashboardDatasetSource = DeckMapDatasetSource;

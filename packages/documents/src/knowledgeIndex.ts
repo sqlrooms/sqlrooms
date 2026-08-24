@@ -51,7 +51,7 @@ export function buildKnowledgeIndex({
     ArtifactMetadataType
   >;
   for (const artifact of Object.values(artifactsById)) {
-    if (artifact.type !== 'document') continue;
+    if (artifact.type !== 'markdown') continue;
     const ids = titleToArtifactIds.get(artifact.title) ?? [];
     ids.push(artifact.id);
     titleToArtifactIds.set(artifact.title, ids);
@@ -66,7 +66,7 @@ export function buildKnowledgeIndex({
 
   for (const document of Object.values(documents.artifacts)) {
     const artifact = artifactsById[document.id];
-    if (!artifact || artifact.type !== 'document') continue;
+    if (!artifact || artifact.type !== 'markdown') continue;
 
     const sourceTitle = artifact.title;
     const sourceLinks: DocumentLink[] = [];

@@ -8,7 +8,7 @@ import type {
 export const CLI_CAPABILITY_PROFILE_NAMES = [
   'default',
   'experimental',
-  'worksheet-charts-maps',
+  'document-charts-maps',
 ] as const;
 
 /** A production capability profile name accepted by the CLI runtime. */
@@ -18,7 +18,7 @@ export type CliCapabilityProfileName =
 export type CliCommandGroupId =
   | 'dashboard'
   | 'mosaic-dashboard'
-  | 'document'
+  | 'markdown'
   | 'block-document'
   | 'cli-block-document'
   | 'block-document-python'
@@ -31,15 +31,15 @@ export type CliTopLevelToolGroupId =
   | 'artifact-context'
   | 'dashboard-agent'
   | 'html-app-agent'
-  | 'worksheet-agent'
+  | 'document-agent'
   | 'webcontainer'
   | 'chart'
   | 'chart-image-for-markdown';
 
 export type CliNestedAgentId =
   | 'dashboard'
-  | 'worksheet'
-  | 'worksheet-dashboard'
+  | 'document'
+  | 'document-dashboard'
   | 'html-app';
 
 /**

@@ -10,14 +10,11 @@ import {
 import {CLI_ARTIFACT_TYPES} from '../../artifactTypeIds';
 import {createCliEvalTarget} from '../createCliEvalTarget';
 import {CLI_EVAL_TARGET_TABLE} from '../fixture';
-import {
-  MUTATE_WORKSHEET_SCENARIO,
-  createCliScenarioOracles,
-} from '../scenarios';
+import {MUTATE_DOCUMENT_SCENARIO, createCliScenarioOracles} from '../scenarios';
 
 function workspaceFacts(workspace: JsonValue | undefined) {
   return workspace as {
-    worksheets: Array<{
+    documents: Array<{
       blocks: Array<{
         type: string;
         tableName?: string;
@@ -49,7 +46,7 @@ describe('createCliEvalTarget', () => {
         ),
       ).toEqual(
         Object.fromEntries(
-          CLI_ARTIFACT_TYPES.map((type) => [type, type === 'worksheet']),
+          CLI_ARTIFACT_TYPES.map((type) => [type, type === 'document']),
         ),
       );
       expect(
@@ -57,7 +54,7 @@ describe('createCliEvalTarget', () => {
           .listCommands()
           .map((command) => command.id)
           .filter((id) => id.endsWith('.create-artifact')),
-      ).toEqual(['worksheet.create-artifact']);
+      ).toEqual(['document.create-artifact']);
     } finally {
       await target.dispose();
     }
@@ -79,20 +76,20 @@ describe('createCliEvalTarget', () => {
     }
   });
 
-  it('runs the production chat and nested worksheet tool loop without a browser or network', async () => {
+  it('runs the production chat and nested document tool loop without a browser or network', async () => {
     const scripted = createScriptedLanguageModel({
       steps: [
         {
-          expectation: {promptIncludes: ['Current artifact: worksheet']},
+          expectation: {promptIncludes: ['Current artifact: document']},
           usage: {inputTokens: 10, outputTokens: 2},
           content: [
             {
               type: 'tool-call',
               toolName: 'block_document_agent',
               input: {
-                reasoning: 'Build the requested worksheet visualizations.',
+                reasoning: 'Build the requested document visualizations.',
                 intent: 'Add a metric chart and geographic event map.',
-                blockDocumentId: 'eval-cli.worksheet-chart-map-0',
+                blockDocumentId: 'eval-cli.document-chart-map-0',
                 maxSteps: 8,
               },
             },
@@ -100,7 +97,7 @@ describe('createCliEvalTarget', () => {
         },
         {
           expectation: {
-            promptIncludes: ['worksheet builder AI agent', 'direct map'],
+            promptIncludes: ['document builder AI agent', 'direct map'],
           },
           usage: {inputTokens: 20, outputTokens: 3},
           content: [
@@ -152,7 +149,7 @@ describe('createCliEvalTarget', () => {
           content: [
             {
               type: 'text',
-              text: 'Created the metric chart and event map in the worksheet.',
+              text: 'Created the metric chart and event map in the document.',
             },
           ],
         },
@@ -172,16 +169,16 @@ describe('createCliEvalTarget', () => {
     try {
       const evidence = await target.run({
         scenario: defineScenario({
-          id: 'cli.worksheet-chart-map',
+          id: 'cli.document-chart-map',
           version: 1,
-          title: 'Create a worksheet chart and map',
-          compatibleProfiles: ['worksheet-charts-maps'],
+          title: 'Create a document chart and map',
+          compatibleProfiles: ['document-charts-maps'],
           fixture: {targetTable: CLI_EVAL_TARGET_TABLE},
           turns: [
             {
               id: 'create',
               input:
-                'In the current worksheet, chart metric and map latitude/longitude from analytics.events, not archive.events.',
+                'In the current document, chart metric and map latitude/longitude from analytics.events, not archive.events.',
             },
           ],
           expectations: [
@@ -197,26 +194,26 @@ describe('createCliEvalTarget', () => {
             id: 'workspace',
             evaluate: (workspace) => {
               const facts = workspaceFacts(workspace);
-              const [worksheet] = facts.worksheets;
-              const chart = worksheet?.blocks.find(
+              const [document] = facts.documents;
+              const chart = document?.blocks.find(
                 (block) => block.type === 'chart',
               );
-              const map = worksheet?.blocks.find(
+              const map = document?.blocks.find(
                 (block) =>
                   block.type === 'statefulBlock' && block.blockType === 'map',
               );
               const pass =
-                facts.worksheets.length === 1 &&
+                facts.documents.length === 1 &&
                 chart?.tableName === CLI_EVAL_TARGET_TABLE &&
                 Boolean(map?.blockInstanceId) &&
                 facts.maps.length === 1;
               return {
                 pass,
                 reason: pass
-                  ? 'One worksheet contains a canonical chart and direct map.'
+                  ? 'One document contains a canonical chart and direct map.'
                   : 'Expected canonical chart/map state was not materialized.',
                 evidence: {
-                  worksheetCount: facts.worksheets.length,
+                  documentCount: facts.documents.length,
                   chartTable: chart?.tableName ?? null,
                   mapCount: facts.maps.length,
                 },
@@ -237,7 +234,7 @@ describe('createCliEvalTarget', () => {
       expect(evidence.status).toBe('passed');
       expect(evidence.target).toEqual({
         type: 'cli-in-process',
-        profileName: 'worksheet-charts-maps',
+        profileName: 'document-charts-maps',
         profileVersion: 1,
       });
       expect(
@@ -272,22 +269,22 @@ describe('createCliEvalTarget', () => {
 
     try {
       const evidence = await target.run({
-        scenario: MUTATE_WORKSHEET_SCENARIO,
-        oracles: createCliScenarioOracles(MUTATE_WORKSHEET_SCENARIO),
+        scenario: MUTATE_DOCUMENT_SCENARIO,
+        oracles: createCliScenarioOracles(MUTATE_DOCUMENT_SCENARIO),
       });
       const initialState = evidence.metadata.initialState as {
-        worksheets: unknown[];
+        documents: unknown[];
         maps: unknown[];
       };
       const fixtureState = evidence.metadata.fixtureState as {
-        worksheets: Array<{blocks: Array<{id: string}>}>;
+        documents: Array<{blocks: Array<{id: string}>}>;
         maps: unknown[];
       };
 
-      expect(initialState.worksheets).toHaveLength(0);
+      expect(initialState.documents).toHaveLength(0);
       expect(initialState.maps).toHaveLength(0);
       expect(
-        fixtureState.worksheets[0]?.blocks.map((block) => block.id),
+        fixtureState.documents[0]?.blocks.map((block) => block.id),
       ).toEqual(
         expect.arrayContaining([
           'seed-heading',
@@ -314,7 +311,7 @@ describe('createCliEvalTarget', () => {
       id: 'cli.repeated-run',
       version: 1,
       title: 'Repeated isolated run',
-      compatibleProfiles: ['worksheet-charts-maps'],
+      compatibleProfiles: ['document-charts-maps'],
       turns: [{id: 'run', input: 'Complete this isolated run.'}],
       expectations: [{oracleId: 'answer', description: 'The run completes.'}],
     });
@@ -361,7 +358,7 @@ describe('createCliEvalTarget', () => {
       expect(
         initialState.tables.some((table) => table.includes('derived_events')),
       ).toBe(false);
-      expect(finalState.worksheets).toHaveLength(1);
+      expect(finalState.documents).toHaveLength(1);
       expect(finalState.maps).toHaveLength(0);
       expect(target.store.getState().room.config.dataSources).toHaveLength(0);
       expect(target.store.getState().ai.config.sessions).toHaveLength(1);
@@ -398,7 +395,7 @@ describe('createCliEvalTarget', () => {
       id: 'cli.concurrent-run',
       version: 1,
       title: 'Concurrent run isolation',
-      compatibleProfiles: ['worksheet-charts-maps'],
+      compatibleProfiles: ['document-charts-maps'],
       turns: [{id: 'run', input: 'Complete this run.'}],
       expectations: [{oracleId: 'answer', description: 'The run completes.'}],
     });
@@ -433,8 +430,8 @@ describe('createCliEvalTarget', () => {
       const initialArtifactId = target.store
         .getState()
         .artifacts.createArtifact({
-          type: 'worksheet',
-          title: 'Initial worksheet',
+          type: 'document',
+          title: 'Initial document',
         });
       const sessionId = target.store
         .getState()
@@ -442,7 +439,7 @@ describe('createCliEvalTarget', () => {
       expect(sessionId).toBeDefined();
 
       const result = await target.store.getState().commands.invokeCommand(
-        'worksheet.create-artifact',
+        'document.create-artifact',
         {title: 'Created by AI'},
         {
           surface: 'ai',
@@ -502,7 +499,7 @@ describe('createCliEvalTarget', () => {
           id: 'cli.timeout',
           version: 1,
           title: 'Timeout cancellation',
-          compatibleProfiles: ['worksheet-charts-maps'],
+          compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Wait for the timeout.'}],
           expectations: [
             {oracleId: 'answer', description: 'The timeout is captured.'},
@@ -551,7 +548,7 @@ describe('createCliEvalTarget', () => {
           id: 'cli.start-failure',
           version: 1,
           title: 'Start failure cleanup',
-          compatibleProfiles: ['worksheet-charts-maps'],
+          compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Fail before streaming.'}],
           expectations: [
             {oracleId: 'error', description: 'The start error is captured.'},
@@ -597,7 +594,7 @@ describe('createCliEvalTarget', () => {
           id: 'cli.usage',
           version: 1,
           title: 'Usage accounting',
-          compatibleProfiles: ['worksheet-charts-maps'],
+          compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Record usage.'}],
           expectations: [
             {oracleId: 'answer', description: 'The run completes.'},
@@ -647,7 +644,7 @@ describe('createCliEvalTarget', () => {
           id: 'cli.redaction',
           version: 1,
           title: 'Complete evidence redaction',
-          compatibleProfiles: ['worksheet-charts-maps'],
+          compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: `Use ${secret} safely.`}],
           expectations: [
             {oracleId: 'answer', description: 'The answer is evaluated.'},
@@ -699,7 +696,7 @@ describe('createCliEvalTarget', () => {
           id: 'cli.transport-error',
           version: 1,
           title: 'Transport error evidence',
-          compatibleProfiles: ['worksheet-charts-maps'],
+          compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Trigger the scripted mismatch.'}],
           expectations: [
             {oracleId: 'error', description: 'The error is retained safely.'},

@@ -493,19 +493,19 @@ def test_api_config_with_named_capability_profile(tmp_path):
     assert response.json()["experimentalEnabled"] is True
 
 
-def test_api_config_with_worksheet_charts_maps_profile(tmp_path):
+def test_api_config_with_document_charts_maps_profile(tmp_path):
     server = SqlroomsHttpServer(
         db_path=tmp_path / "test.db",
         host="127.0.0.1",
         port=0,
         ws_port=None,
         open_browser=False,
-        capability_profile="worksheet-charts-maps",
+        capability_profile="document-charts-maps",
     )
     response = TestClient(server._build_app()).get("/api/config")
 
     assert response.status_code == 200
-    assert response.json()["capabilityProfile"] == "worksheet-charts-maps"
+    assert response.json()["capabilityProfile"] == "document-charts-maps"
     assert response.json()["experimentalEnabled"] is False
 
 

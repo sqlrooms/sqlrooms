@@ -11,7 +11,7 @@ import {
 } from '@sqlrooms/room-store';
 import {createStore} from 'zustand';
 import {
-  createDocumentCommands,
+  createMarkdownCommands,
   createDocumentsSlice,
   type DocumentsSliceState,
 } from '../src';
@@ -25,7 +25,7 @@ function createTestStore() {
   let timestamp = 100;
   const now = () => timestamp++;
   const artifactTypes = defineArtifactTypes({
-    document: {label: 'Document', defaultTitle: 'Document'},
+    markdown: {label: 'Markdown', defaultTitle: 'Markdown'},
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
   });
 
@@ -40,18 +40,18 @@ function createTestStore() {
     .getState()
     .commands.registerCommands(
       '@sqlrooms/documents',
-      createDocumentCommands<TestRoomState>(),
+      createMarkdownCommands<TestRoomState>(),
     );
   return store;
 }
 
-describe('document commands', () => {
-  it('creates, lists, and reads document artifacts', async () => {
+describe('Markdown commands', () => {
+  it('creates, lists, and reads Markdown artifacts', async () => {
     const store = createTestStore();
 
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create', {
+      .commands.invokeCommand('markdown.create', {
         title: 'Notes',
         markdown: '# Hello',
       });
@@ -60,7 +60,7 @@ describe('document commands', () => {
     const artifactId = (createResult.data as any).artifactId as string;
     expect(store.getState().artifacts.getArtifact(artifactId)).toMatchObject({
       id: artifactId,
-      type: 'document',
+      type: 'markdown',
       title: 'Notes',
     });
     expect(store.getState().documents.getDocument(artifactId)).toMatchObject({
@@ -77,9 +77,9 @@ describe('document commands', () => {
 
     const listResult = await store
       .getState()
-      .commands.invokeCommand('document.list');
+      .commands.invokeCommand('markdown.list');
     expect(listResult.success).toBe(true);
-    expect((listResult.data as any).documents).toEqual([
+    expect((listResult.data as any).markdownArtifacts).toEqual([
       {
         artifactId,
         title: 'Notes',
@@ -91,7 +91,7 @@ describe('document commands', () => {
 
     const explicitGetResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {artifactId});
+      .commands.invokeCommand('markdown.get', {artifactId});
     expect(explicitGetResult.success).toBe(true);
     expect(explicitGetResult.data).toMatchObject({
       artifactId,
@@ -104,7 +104,7 @@ describe('document commands', () => {
     store.getState().artifacts.setCurrentArtifact(artifactId);
     const currentGetResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {});
+      .commands.invokeCommand('markdown.get', {});
     expect(currentGetResult.success).toBe(true);
     expect(currentGetResult.data).toMatchObject({
       artifactId,
@@ -118,14 +118,14 @@ describe('document commands', () => {
   it('keeps an AI command on its captured artifact target', async () => {
     const store = createTestStore();
     const artifactA = store.getState().artifacts.createArtifact({
-      type: 'document',
-      title: 'Document A',
+      type: 'markdown',
+      title: 'Markdown A',
     });
     store.getState().documents.ensureDocument(artifactA);
     store.getState().documents.setMarkdown(artifactA, 'Content A');
     const artifactB = store.getState().artifacts.createArtifact({
-      type: 'document',
-      title: 'Document B',
+      type: 'markdown',
+      title: 'Markdown B',
     });
     store.getState().documents.ensureDocument(artifactB);
     store.getState().documents.setMarkdown(artifactB, 'Content B');
@@ -137,7 +137,7 @@ describe('document commands', () => {
     };
     const capturedResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {}, aiInvocation);
+      .commands.invokeCommand('markdown.get', {}, aiInvocation);
     expect(capturedResult.data).toMatchObject({
       artifactId: artifactA,
       markdown: 'Content A',
@@ -146,7 +146,7 @@ describe('document commands', () => {
     const explicitResult = await store
       .getState()
       .commands.invokeCommand(
-        'document.get',
+        'markdown.get',
         {artifactId: artifactB},
         aiInvocation,
       );
@@ -157,7 +157,7 @@ describe('document commands', () => {
 
     const paletteResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {}, {surface: 'palette'});
+      .commands.invokeCommand('markdown.get', {}, {surface: 'palette'});
     expect(paletteResult.data).toMatchObject({
       artifactId: artifactB,
       markdown: 'Content B',
@@ -168,7 +168,7 @@ describe('document commands', () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create', {
+      .commands.invokeCommand('markdown.create', {
         title: 'Charts',
         markdown: '![Chart](asset://chart-1)',
       });
@@ -185,15 +185,15 @@ describe('document commands', () => {
 
     const listResult = await store
       .getState()
-      .commands.invokeCommand('document.list');
-    expect((listResult.data as any).documents[0]).toMatchObject({
+      .commands.invokeCommand('markdown.list');
+    expect((listResult.data as any).markdownArtifacts[0]).toMatchObject({
       artifactId,
       assetCount: 1,
     });
 
     const getResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {artifactId});
+      .commands.invokeCommand('markdown.get', {artifactId});
     expect(getResult.data).toMatchObject({
       assets: [
         {
@@ -212,14 +212,14 @@ describe('document commands', () => {
     const store = createTestStore();
     const createResult = await store
       .getState()
-      .commands.invokeCommand('document.create', {
+      .commands.invokeCommand('markdown.create', {
         markdown: '# First',
       });
     const artifactId = (createResult.data as any).artifactId as string;
 
     const setResult = await store
       .getState()
-      .commands.invokeCommand('document.set-markdown', {
+      .commands.invokeCommand('markdown.set-markdown', {
         artifactId,
         markdown: '# Replacement',
       });
@@ -231,7 +231,7 @@ describe('document commands', () => {
 
     const appendResult = await store
       .getState()
-      .commands.invokeCommand('document.append-markdown', {
+      .commands.invokeCommand('markdown.append-markdown', {
         artifactId,
         markdown: 'More text',
       });
@@ -242,12 +242,12 @@ describe('document commands', () => {
     });
   });
 
-  it('fails clearly for invalid artifact IDs and non-document artifacts', async () => {
+  it('fails clearly for invalid artifact IDs and non-Markdown artifacts', async () => {
     const store = createTestStore();
 
     const missingResult = await store
       .getState()
-      .commands.invokeCommand('document.get', {artifactId: 'missing'});
+      .commands.invokeCommand('markdown.get', {artifactId: 'missing'});
     expect(missingResult).toMatchObject({
       success: false,
       error: 'Unknown artifact "missing".',
@@ -259,27 +259,27 @@ describe('document commands', () => {
     });
     const wrongTypeResult = await store
       .getState()
-      .commands.invokeCommand('document.set-markdown', {
+      .commands.invokeCommand('markdown.set-markdown', {
         artifactId: dashboardId,
         markdown: '# Nope',
       });
     expect(wrongTypeResult).toMatchObject({
       success: false,
-      error: `Artifact "${dashboardId}" is not a document artifact.`,
+      error: `Artifact "${dashboardId}" is not a Markdown artifact.`,
     });
   });
 
-  it('reads missing document content without creating it', async () => {
+  it('reads missing Markdown content without creating it', async () => {
     const store = createTestStore();
     const artifactId = store.getState().artifacts.createArtifact({
-      type: 'document',
+      type: 'markdown',
       title: 'Empty',
     });
     store.getState().documents.removeDocument(artifactId);
 
     const result = await store
       .getState()
-      .commands.invokeCommand('document.get', {artifactId});
+      .commands.invokeCommand('markdown.get', {artifactId});
 
     expect(result).toMatchObject({
       success: true,
@@ -288,7 +288,7 @@ describe('document commands', () => {
     expect(store.getState().documents.getDocument(artifactId)).toBeUndefined();
   });
 
-  it('can create without selecting the new document', async () => {
+  it('can create without selecting the new Markdown artifact', async () => {
     const store = createTestStore();
     const dashboardId = store.getState().artifacts.createArtifact({
       type: 'dashboard',
@@ -298,7 +298,7 @@ describe('document commands', () => {
 
     const result = await store
       .getState()
-      .commands.invokeCommand('document.create', {
+      .commands.invokeCommand('markdown.create', {
         title: 'Background',
         select: false,
       });

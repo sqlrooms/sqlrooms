@@ -13,7 +13,7 @@ const CLI_EVAL_DECOY_TABLES = new Set(['archive.events', '"archive"."events"']);
 
 type WorkspaceSnapshot = {
   artifacts: {artifactsById: Record<string, {type: string}>};
-  worksheets: Array<{
+  documents: Array<{
     id: string;
     blocks: Array<{
       id: string;
@@ -91,25 +91,25 @@ function hasCanonicalMapBinding(
 }
 
 /** Pinned production-model scenario that starts from an empty workspace. */
-export const CREATE_WORKSHEET_CHART_MAP_SCENARIO = defineScenario({
-  id: 'worksheet.create-chart-map',
+export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
+  id: 'document.create-chart-map',
   version: 1,
-  title: 'Create a worksheet with a chart and map',
+  title: 'Create a document with a chart and map',
   description:
-    'Creates one worksheet from ambiguous tables and materializes chart/map state.',
-  compatibleProfiles: ['worksheet-charts-maps'],
+    'Creates one document from ambiguous tables and materializes chart/map state.',
+  compatibleProfiles: ['document-charts-maps'],
   fixture: {database: 'ambiguous-geospatial-v1', workspace: 'empty'},
   turns: [
     {
       id: 'create',
       input:
-        'Create exactly one new Worksheet named Event analysis. In it, add a quantitative chart of metric by category and a geographic point map using latitude and longitude from analytics.events. Do not use archive.events and do not create a dashboard or a second worksheet. Summarize exactly what you created and which table you used.',
+        'Create exactly one new Document named Event analysis. In it, add a quantitative chart of metric by category and a geographic point map using latitude and longitude from analytics.events. Do not use archive.events and do not create a dashboard or a second document. Summarize exactly what you created and which table you used.',
     },
   ],
   expectations: [
     {
-      oracleId: 'worksheet-shape',
-      description: 'Exactly one worksheet contains one chart and one map.',
+      oracleId: 'document-shape',
+      description: 'Exactly one document contains one chart and one map.',
     },
     {
       oracleId: 'canonical-bindings',
@@ -118,7 +118,7 @@ export const CREATE_WORKSHEET_CHART_MAP_SCENARIO = defineScenario({
     },
     {
       oracleId: 'artifact-policy',
-      description: 'No dashboard or second worksheet is created.',
+      description: 'No dashboard or second document is created.',
     },
     {
       oracleId: 'grounded-answer',
@@ -129,23 +129,23 @@ export const CREATE_WORKSHEET_CHART_MAP_SCENARIO = defineScenario({
   metadata: {suite: 'nightly', owner: 'sqlrooms'},
 });
 
-/** Pinned production-model scenario that mutates an existing worksheet. */
-export const MUTATE_WORKSHEET_SCENARIO = defineScenario({
-  id: 'worksheet.mutate-chart-map',
+/** Pinned production-model scenario that mutates an existing document. */
+export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
+  id: 'document.mutate-chart-map',
   version: 1,
-  title: 'Mutate an existing worksheet in place',
+  title: 'Mutate an existing document in place',
   description:
     'Changes one seeded chart and adds a note while preserving the seeded map.',
-  compatibleProfiles: ['worksheet-charts-maps'],
+  compatibleProfiles: ['document-charts-maps'],
   fixture: {
     database: 'ambiguous-geospatial-v1',
-    workspace: 'worksheet-chart-map',
+    workspace: 'document-chart-map',
   },
   turns: [
     {
       id: 'mutate',
       input:
-        'In the current Worksheet, update the existing chart in place so its title is "Metric by category", then add one short paragraph saying "Source: analytics.events". Preserve the existing map and heading exactly. Do not create another chart, map, worksheet, or dashboard. Report only changes that actually succeeded.',
+        'In the current Document, update the existing chart in place so its title is "Metric by category", then add one short paragraph saying "Source: analytics.events". Preserve the existing map and heading exactly. Do not create another chart, map, document, or dashboard. Report only changes that actually succeeded.',
     },
   ],
   expectations: [
@@ -171,32 +171,32 @@ export const MUTATE_WORKSHEET_SCENARIO = defineScenario({
 });
 
 /** Non-blocking continuity smoke using two turns and one run context. */
-export const MULTI_TURN_WORKSHEET_SCENARIO = defineScenario({
-  id: 'worksheet.multi-turn-continuity',
+export const MULTI_TURN_DOCUMENT_SCENARIO = defineScenario({
+  id: 'document.multi-turn-continuity',
   version: 1,
-  title: 'Create and then modify one worksheet',
-  compatibleProfiles: ['worksheet-charts-maps'],
+  title: 'Create and then modify one document',
+  compatibleProfiles: ['document-charts-maps'],
   fixture: {database: 'ambiguous-geospatial-v1', workspace: 'empty'},
   turns: [
     {
       id: 'create',
       input:
-        'Create one Worksheet named Continuity and add a chart of metric by category from analytics.events.',
+        'Create one Document named Continuity and add a chart of metric by category from analytics.events.',
     },
     {
       id: 'modify',
       input:
-        'In that same Worksheet, add a map of latitude and longitude from analytics.events. Do not create another artifact.',
+        'In that same Document, add a map of latitude and longitude from analytics.events. Do not create another artifact.',
     },
   ],
   expectations: [
     {
-      oracleId: 'worksheet-shape',
-      description: 'One worksheet contains both requested visualizations.',
+      oracleId: 'document-shape',
+      description: 'One document contains both requested visualizations.',
     },
     {
       oracleId: 'artifact-policy',
-      description: 'The follow-up reuses the first-turn worksheet.',
+      description: 'The follow-up reuses the first-turn document.',
     },
     {oracleId: 'no-errors', description: 'The target records no errors.'},
   ],
@@ -205,17 +205,17 @@ export const MULTI_TURN_WORKSHEET_SCENARIO = defineScenario({
 
 /** Stable scenarios run by the nightly production-model canary. */
 export const CLI_BEHAVIORAL_SCENARIOS: readonly ScenarioDefinition[] = [
-  CREATE_WORKSHEET_CHART_MAP_SCENARIO,
-  MUTATE_WORKSHEET_SCENARIO,
+  CREATE_DOCUMENT_CHART_MAP_SCENARIO,
+  MUTATE_DOCUMENT_SCENARIO,
 ];
 
 function chartAndMap(workspace: WorkspaceSnapshot) {
-  const [worksheet] = workspace.worksheets;
+  const [document] = workspace.documents;
   return {
-    worksheet,
-    charts: worksheet?.blocks.filter((block) => block.type === 'chart') ?? [],
+    document,
+    charts: document?.blocks.filter((block) => block.type === 'chart') ?? [],
     mapBlocks:
-      worksheet?.blocks.filter(
+      document?.blocks.filter(
         (block) => block.type === 'statefulBlock' && block.blockType === 'map',
       ) ?? [],
   };
@@ -239,13 +239,13 @@ export function createCliScenarioOracles(
   scenario: ScenarioDefinition,
 ): readonly BehavioralOracle[] {
   const byId: Record<string, BehavioralOracle> = {
-    'worksheet-shape': createWorkspaceStateOracle({
-      id: 'worksheet-shape',
+    'document-shape': createWorkspaceStateOracle({
+      id: 'document-shape',
       evaluate: (value) => {
         const workspace = snapshot(value);
         const {charts, mapBlocks} = chartAndMap(workspace);
         const pass =
-          workspace.worksheets.length === 1 &&
+          workspace.documents.length === 1 &&
           charts.length === 1 &&
           mapBlocks.length === 1 &&
           workspace.maps.length === 1 &&
@@ -254,10 +254,10 @@ export function createCliScenarioOracles(
         return {
           pass,
           reason: pass
-            ? 'One worksheet contains structurally valid chart and map state.'
-            : 'Expected one worksheet with durable chart and map state.',
+            ? 'One document contains structurally valid chart and map state.'
+            : 'Expected one document with durable chart and map state.',
           evidence: {
-            worksheetCount: workspace.worksheets.length,
+            documentCount: workspace.documents.length,
             chartCount: charts.length,
             mapBlockCount: mapBlocks.length,
             mapCount: workspace.maps.length,
@@ -302,14 +302,14 @@ export function createCliScenarioOracles(
           (artifact) => artifact.type,
         );
         const pass =
-          workspace.worksheets.length === 1 &&
-          types.filter((type) => type === 'worksheet').length === 1 &&
+          workspace.documents.length === 1 &&
+          types.filter((type) => type === 'document').length === 1 &&
           !types.includes('dashboard');
         return {
           pass,
           reason: pass
-            ? 'Only the intended worksheet artifact exists.'
-            : 'A duplicate worksheet or disallowed dashboard was created.',
+            ? 'Only the intended document artifact exists.'
+            : 'A duplicate document or disallowed dashboard was created.',
           evidence: {artifactTypes: types},
         };
       },
@@ -318,11 +318,11 @@ export function createCliScenarioOracles(
       id: 'mutated-in-place',
       evaluate: (value) => {
         const workspace = snapshot(value);
-        const {worksheet, charts} = chartAndMap(workspace);
+        const {document, charts} = chartAndMap(workspace);
         const chartConfig = hasObjectShape(charts[0]?.config)
           ? (charts[0]!.config as Record<string, unknown>)
           : {};
-        const sourceNote = worksheet?.blocks.find(
+        const sourceNote = document?.blocks.find(
           (block) =>
             block.type === 'paragraph' &&
             JSON.stringify(block.text ?? null).includes(
@@ -343,7 +343,7 @@ export function createCliScenarioOracles(
             chartTitle:
               typeof chartConfig.title === 'string' ? chartConfig.title : null,
             sourceNote: asJson(sourceNote ?? null),
-            blocks: asJson(worksheet?.blocks ?? []),
+            blocks: asJson(document?.blocks ?? []),
           },
         };
       },
@@ -355,10 +355,10 @@ export function createCliScenarioOracles(
         const initial = snapshot(
           (context.metadata.initialState as JsonValue | undefined) ?? undefined,
         );
-        const heading = workspace.worksheets[0]?.blocks.find(
+        const heading = workspace.documents[0]?.blocks.find(
           (block) => block.id === 'seed-heading',
         );
-        const initialHeading = initial.worksheets[0]?.blocks.find(
+        const initialHeading = initial.documents[0]?.blocks.find(
           (block) => block.id === 'seed-heading',
         );
         const map = workspace.maps.find((candidate) =>
@@ -367,10 +367,10 @@ export function createCliScenarioOracles(
         const initialMap = initial.maps.find((candidate) =>
           candidate.id.endsWith('-map'),
         );
-        const mapBlock = workspace.worksheets[0]?.blocks.find(
+        const mapBlock = workspace.documents[0]?.blocks.find(
           (block) => block.id === 'seed-map-block',
         );
-        const initialMapBlock = initial.worksheets[0]?.blocks.find(
+        const initialMapBlock = initial.documents[0]?.blocks.find(
           (block) => block.id === 'seed-map-block',
         );
         const pass =
@@ -399,7 +399,7 @@ export function createCliScenarioOracles(
         const workspace = snapshot(value);
         const {charts, mapBlocks} = chartAndMap(workspace);
         const pass =
-          workspace.worksheets.length === 1 &&
+          workspace.documents.length === 1 &&
           charts.length === 1 &&
           mapBlocks.length === 1 &&
           workspace.maps.length === 1;
@@ -409,7 +409,7 @@ export function createCliScenarioOracles(
             ? 'No stray artifact or visualization was created.'
             : 'The mutation created duplicate or stray durable state.',
           evidence: {
-            worksheetCount: workspace.worksheets.length,
+            documentCount: workspace.documents.length,
             chartCount: charts.length,
             mapBlockCount: mapBlocks.length,
             mapCount: workspace.maps.length,

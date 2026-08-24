@@ -105,7 +105,7 @@ export {
   type DocumentAssetInput,
   type DocumentsSliceState,
 } from './DocumentsSlice';
-export {createDocumentCommands} from './documentCommands';
+export {createMarkdownCommands} from './markdownCommands';
 export {
   BLOCK_DOCUMENT_COMMAND_SUFFIXES,
   createBlockDocumentCommandIds,

@@ -17,7 +17,7 @@ import type {
 const COMMAND_GROUPS: readonly CliCommandGroupId[] = [
   'dashboard',
   'mosaic-dashboard',
-  'document',
+  'markdown',
   'block-document',
   'cli-block-document',
   'block-document-python',
@@ -29,7 +29,7 @@ const TOP_LEVEL_TOOL_GROUPS: readonly CliTopLevelToolGroupId[] = [
   'artifact-context',
   'dashboard-agent',
   'html-app-agent',
-  'worksheet-agent',
+  'document-agent',
   'webcontainer',
   'chart',
   'chart-image-for-markdown',
@@ -116,8 +116,8 @@ export function validateCliCapabilityProfile(
   }
 
   const commands = new Set<string>(profile.commands);
-  if (commands.has('document') && !stateful.has('document')) {
-    errors.push('Document commands require the document stateful block.');
+  if (commands.has('markdown') && !stateful.has('markdown')) {
+    errors.push('Markdown commands require the markdown stateful block.');
   }
   if (commands.has('block-document-python') && !stateful.has('python')) {
     errors.push('Python block commands require the python stateful block.');
@@ -149,9 +149,9 @@ export function validateCliCapabilityProfile(
       'The top-level dashboard agent requires creatable dashboard artifacts.',
     );
   }
-  if (tools.has('worksheet-agent') !== nestedAgents.has('worksheet')) {
+  if (tools.has('document-agent') !== nestedAgents.has('document')) {
     errors.push(
-      'The worksheet-agent tool group and worksheet nested agent must be enabled together.',
+      'The document-agent tool group and document nested agent must be enabled together.',
     );
   }
   if (tools.has('html-app-agent') !== nestedAgents.has('html-app')) {
@@ -159,18 +159,18 @@ export function validateCliCapabilityProfile(
       'The html-app-agent tool group and HTML app nested agent must be enabled together.',
     );
   }
-  if (nestedAgents.has('worksheet-dashboard') && !stateful.has('dashboard')) {
+  if (nestedAgents.has('document-dashboard') && !stateful.has('dashboard')) {
     errors.push(
-      'The embedded worksheet-dashboard agent requires dashboard blocks.',
+      'The embedded document-dashboard agent requires dashboard blocks.',
     );
   }
   if (
-    nestedAgents.has('worksheet') &&
+    nestedAgents.has('document') &&
     stateful.has('dashboard') &&
-    !nestedAgents.has('worksheet-dashboard')
+    !nestedAgents.has('document-dashboard')
   ) {
     errors.push(
-      'A worksheet agent with dashboard blocks requires its embedded worksheet-dashboard agent.',
+      'A document agent with dashboard blocks requires its embedded document-dashboard agent.',
     );
   }
 

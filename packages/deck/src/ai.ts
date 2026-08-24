@@ -80,7 +80,7 @@ ${getDeckMapSharedAiContractRules()}
 - Create maps with a SINGLE layer unless the user explicitly asks for multiple layers. If you think multiple layers would better serve the user's request, ask the user for confirmation before adding them.
 - IMPORTANT: Browsers limit the number of active WebGL contexts (typically 8–16 per page). Each map panel uses one context. Do NOT create more than 4–5 map panels in a single dashboard — exceeding the limit causes older maps to lose their rendering context and show errors. If the user asks for many datasets, prefer combining compatible layers into fewer maps rather than creating one map per dataset.
 - After calling create_dashboard_map, call list_dashboard_panels before your final response and check the map panel issue. If it has a render-error, repair the map config in place instead of saying the map is complete.
-- IMPORTANT: Dashboard map tools replace the full panel config — always include datasets and layers on updates. Omitting datasets is only valid for worksheet sparse patches that merge with durable state.
+- IMPORTANT: Dashboard map tools replace the full panel config — always include datasets and layers on updates. Omitting datasets is only valid for document sparse patches that merge with durable state.
 - SWITCHING LAYER TYPE: On type switch/replace, send only the new layer (replaceLayers: true for merge patches; full desired layers list for dashboard updates). Do not leave the old layer as visible: false.
 `;
 

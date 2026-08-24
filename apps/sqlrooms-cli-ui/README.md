@@ -51,7 +51,7 @@ In the UI, drag in:
 /Users/ilya/Workspace/sqlrooms/python/sqlrooms/tests/fixtures/cars.csv
 ```
 
-Verify `cars` appears, create a worksheet/Mosaic chart/dashboard, stop the
+Verify `cars` appears, create a document/Mosaic chart/dashboard, stop the
 server, restart the same command, and confirm the state comes back.
 
 ## Python CLI release workflow
@@ -83,7 +83,7 @@ sqlrooms --no-open-browser /tmp/sqlrooms-smoke.duckdb
 ```
 
 Open the printed UI URL, drag in the CSV fixture listed above, create a
-worksheet/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
+document/chart/dashboard, then restart against the same `/tmp/sqlrooms-smoke.duckdb` and
 confirm the imported data and workspace state come back.
 
 1. Choose the package target:
@@ -191,15 +191,15 @@ layout. Explicit dashboard creation commands and AI tools require `layoutType`
 so the choice is made once at creation time; auto-created dashboards from chart
 or Data Table Explorer flows use `grid`.
 
-## Worksheet Artifacts
+## Document Artifacts
 
-Worksheet artifacts are block-composed documents for active analytical work.
+Document artifacts are block-composed documents for active analytical work.
 They can contain editable text, images, standalone Mosaic/vgplot chart blocks, and
 direct stateful blocks such as dashboards, pivot tables, Data Table Explorers,
 SQL queries, and Markdown documents.
 
 Standalone chart blocks reuse the same Mosaic chart view and settings panel as
-dashboard charts. Charts with the same `selectionGroupId` in one Worksheet share
+dashboard charts. Charts with the same `selectionGroupId` in one Document share
 a crossfilter selection; charts without a group are independent.
 Agent-created blocks can persist an `intent` string describing the purpose they
 were created to serve, which helps later edits distinguish durable intent from
@@ -207,7 +207,7 @@ raw model input.
 
 Hosted dashboards are stored as direct stateful blocks keyed by their block
 instance id. Each hosted dashboard keeps its own Mosaic dashboard state and
-selection scope, so multiple dashboards in one Worksheet crossfilter
+selection scope, so multiple dashboards in one Document crossfilter
 independently.
 
 Hosted SQL queries reuse the `@sqlrooms/sql-editor` single-query block surface.
@@ -215,7 +215,7 @@ The same query block can also be opened as a top-level SQL Query artifact tab.
 
 ## HTML App Revision History
 
-Generated `html-app` artifacts and worksheet HTML app blocks store source
+Generated `html-app` artifacts and document HTML app blocks store source
 revisions in `@sqlrooms/app-runtime` state. The CLI registers these room
 commands for palette and AI surfaces:
 
@@ -227,17 +227,17 @@ commands for palette and AI surfaces:
 
 Commands accept an optional `appId`. If omitted, the CLI resolves only a clearly
 selected top-level `html-app` artifact or a single known HTML app runtime.
-Ambiguous worksheet cases fail with a clear message so the caller can ask the
+Ambiguous document cases fail with a clear message so the caller can ask the
 user to select the target block. Chat undo/redo should execute these commands
 instead of mutating app state through hidden paths or rewriting chat messages.
 
-## Worksheet AI Block Writes
+## Document AI Block Writes
 
-Worksheet AI tools compose generic block-document helpers with CLI-specific
+Document AI tools compose generic block-document helpers with CLI-specific
 agent policy. Durable block appends route through the registered
 `block-document.append-blocks` command, so text and chart block creation use the
 same traceable mutation path as palette, API, and future skill surfaces.
-Stateful worksheet blocks use CLI-owned commands that wrap the generic document
+Stateful document blocks use CLI-owned commands that wrap the generic document
 commands and feature-specific state creation:
 
 - `block-document.add-dashboard-block`

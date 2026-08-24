@@ -57,7 +57,7 @@ describe('createCliBlockDocumentAiTools', () => {
         execute: async () => ({success: true}),
       }),
       chartToolsOptions: {chartTypes: []},
-      blockDocumentId: 'worksheet-1',
+      blockDocumentId: 'document-1',
       createDashboardBlock: ({title}: {title: string}) => ({
         dashboardId: 'dashboard-1',
         block: {
@@ -96,7 +96,7 @@ describe('createCliBlockDocumentAiTools', () => {
     ).toBeUndefined();
   });
 
-  it('omits dashboard and data-table tools for a worksheet charts/maps profile', () => {
+  it('omits dashboard and data-table tools for a document charts/maps profile', () => {
     const directMapTool = tool({
       description: 'mock direct map tool',
       inputSchema: {} as any,
@@ -128,7 +128,7 @@ describe('createCliBlockDocumentAiTools', () => {
     );
   });
 
-  it('creates and updates worksheet charts deterministically', async () => {
+  it('creates and updates document charts deterministically', async () => {
     let currentBlocks: BlockDocumentNode[] = [];
     const addBlock = jest.fn(
       (_documentId: string, block: BlockDocumentBlock) => block.id,
@@ -158,7 +158,7 @@ describe('createCliBlockDocumentAiTools', () => {
 
     expect(created).toMatchObject({success: true});
     expect(addBlock).toHaveBeenCalledWith(
-      'worksheet-1',
+      'document-1',
       expect.objectContaining({type: 'chart'}),
     );
 
@@ -181,7 +181,7 @@ describe('createCliBlockDocumentAiTools', () => {
 
     expect(updated).toMatchObject({success: true});
     expect(updateBlock).toHaveBeenCalledWith(
-      'worksheet-1',
+      'document-1',
       existingBlock.id,
       expect.objectContaining({caption: 'Updated Magnitude Distribution'}),
     );
@@ -209,7 +209,7 @@ describe('createCliBlockDocumentAiTools', () => {
       toIndex: 0,
       message: 'Moved block paragraph-1 to index 0',
     });
-    expect(moveBlock).toHaveBeenCalledWith('worksheet-1', 'paragraph-1', 0);
+    expect(moveBlock).toHaveBeenCalledWith('document-1', 'paragraph-1', 0);
   });
 
   it('rejects HTML app block tools when the embedded app agent is unavailable', () => {

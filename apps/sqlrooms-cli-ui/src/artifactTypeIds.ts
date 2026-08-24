@@ -1,9 +1,9 @@
 export const CLI_ARTIFACT_TYPES = [
-  'worksheet',
+  'document',
   'dashboard',
   'pivot',
   'notebook',
-  'document',
+  'markdown',
   'sql-query',
   'html-app',
   'python',
@@ -13,7 +13,7 @@ export const CLI_ARTIFACT_TYPES = [
 
 export type CliArtifactType = (typeof CLI_ARTIFACT_TYPES)[number];
 
-/** Block types that support the "Ask AI" affordance in the CLI worksheet (v1). */
+/** Block types that support the "Ask AI" affordance in the CLI document (v1). */
 export const CLI_AI_BLOCK_TYPES = [
   'chart',
   'dashboard',
@@ -29,7 +29,7 @@ export const STATEFUL_BLOCK_ARTIFACT_TYPES = [
   'pivot',
   'data-table',
   'map',
-  'document',
+  'markdown',
   'sql-query',
   'html-app',
   'python',

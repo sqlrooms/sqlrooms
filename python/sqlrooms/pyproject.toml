@@ -1,7 +1,7 @@
 [project]
 name = "sqlrooms"
 dynamic = ["version"]
-description = "Local-first SQLRooms project launcher for DuckDB worksheets and Mosaic dashboards."
+description = "Local-first SQLRooms project launcher for DuckDB documents and Mosaic dashboards."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
