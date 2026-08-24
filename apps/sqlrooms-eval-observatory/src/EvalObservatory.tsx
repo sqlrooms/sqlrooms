@@ -97,6 +97,12 @@ export function EvalObservatory() {
     baselineTrajectory,
   );
   const selectedTrajectoryNode = selectedTrajectoryNodeMatch?.node;
+  const selectedTrajectoryNodeOwner = findTrajectoryNodeOwner(
+    selectedTrajectoryNodeMatch,
+    selectedTrajectory,
+    selected,
+    baseline,
+  );
   const grouped = useMemo(() => {
     const result = new Map<string, ObservatoryRun[]>();
     for (const run of filtered) {
@@ -389,9 +395,11 @@ export function EvalObservatory() {
                   onSelectNode={setSelectedNodeId}
                 />
               )}
-              {selectedTrajectoryNode && (
+              {selectedTrajectoryNode && selectedTrajectoryNodeOwner && (
                 <section className="trajectory-node-detail">
-                  <p className="eyebrow">Selected trajectory item</p>
+                  <p className="eyebrow">
+                    {selectedTrajectoryNodeOwner.label} trajectory item
+                  </p>
                   <h3>
                     {selectedTrajectoryNode.kind}:{' '}
                     {selectedTrajectoryNode.label}
@@ -408,10 +416,7 @@ export function EvalObservatory() {
                         selectedTrajectoryNode.data.message,
                       relatedOracleEvidence: relatedOracles(
                         selectedTrajectoryNode,
-                        selectedTrajectoryNodeMatch?.trajectory ===
-                          selectedTrajectory
-                          ? selected
-                          : baseline,
+                        selectedTrajectoryNodeOwner.run,
                       ),
                       raw: selectedTrajectoryNode.data,
                     }}
@@ -473,7 +478,22 @@ export function findTrajectoryNode(
   return undefined;
 }
 
-function relatedOracles(
+export function findTrajectoryNodeOwner(
+  match: ReturnType<typeof findTrajectoryNode>,
+  selectedTrajectory: ObservatoryTrajectory | undefined,
+  selected: ObservatoryRun | undefined,
+  baseline: ObservatoryRun | undefined,
+):
+  | {label: 'Selected'; run: ObservatoryRun | undefined}
+  | {label: 'Baseline'; run: ObservatoryRun | undefined}
+  | undefined {
+  if (!match) return undefined;
+  return match.trajectory === selectedTrajectory
+    ? {label: 'Selected', run: selected}
+    : {label: 'Baseline', run: baseline};
+}
+
+export function relatedOracles(
   node: ObservatoryTrajectoryNode,
   ...runs: Array<ObservatoryRun | undefined>
 ) {
@@ -539,9 +559,7 @@ export function TrajectoryComparison({
                   />
                 </div>
               ) : (
-                <div className="trajectory-note">
-                  Graph omitted. {baseline.recommendationReason}
-                </div>
+                <div className="trajectory-note">Graph omitted.</div>
               )}
               <small>{baseline.recommendationReason}</small>
             </article>
