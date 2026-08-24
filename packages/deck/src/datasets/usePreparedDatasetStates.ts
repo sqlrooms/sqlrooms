@@ -3,7 +3,7 @@ import {useEffect, useId, useMemo, useState} from 'react';
 import {useStore} from 'zustand';
 import {type DeckDatasetInput, type PreparedDeckDatasetState} from '../types';
 import {
-  getDatasetRegistryFingerprint,
+  areDatasetRegistriesEqual,
   getPreparedDatasetStatesIdentity,
 } from './helpers';
 import {
@@ -23,10 +23,7 @@ function useStableDatasets(
   datasets: Record<string, DeckDatasetInput>,
 ): Record<string, DeckDatasetInput> {
   const [stable, setStable] = useState(datasets);
-  if (
-    getDatasetRegistryFingerprint(stable) !==
-    getDatasetRegistryFingerprint(datasets)
-  ) {
+  if (!areDatasetRegistriesEqual(stable, datasets)) {
     setStable(datasets);
   }
   return stable;

@@ -6,7 +6,7 @@ import {
   resolvePreparedDeckDatasetState,
 } from '../src/datasets/PreparedDatasetStore';
 import {
-  getDatasetRegistryFingerprint,
+  areDatasetRegistriesEqual,
   getPreparedDatasetStatesIdentity,
   resolvePreparedDatasetCacheKey,
 } from '../src/datasets/helpers';
@@ -440,7 +440,7 @@ describe('PreparedDatasetStore', () => {
   });
 });
 
-describe('getDatasetRegistryFingerprint', () => {
+describe('areDatasetRegistriesEqual', () => {
   it('ignores wrapper object identity for equivalent table inputs', () => {
     const first = {
       places: {
@@ -457,18 +457,52 @@ describe('getDatasetRegistryFingerprint', () => {
       },
     };
 
-    expect(getDatasetRegistryFingerprint(first)).toBe(
-      getDatasetRegistryFingerprint(second),
-    );
+    expect(areDatasetRegistriesEqual(first, second)).toBe(true);
   });
 
-  it('changes when the source query changes', () => {
+  it('returns false when the source query changes', () => {
     const first = {places: {sqlQuery: 'select 1'}};
     const second = {places: {sqlQuery: 'select 2'}};
 
-    expect(getDatasetRegistryFingerprint(first)).not.toBe(
-      getDatasetRegistryFingerprint(second),
-    );
+    expect(areDatasetRegistriesEqual(first, second)).toBe(false);
+  });
+
+  it('treats missing and empty optional fields as equal (fingerprint parity)', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        transformSql: '',
+        geometryColumn: 'geom',
+        geometryEncodingHint: undefined,
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(true);
+  });
+
+  it('returns false when geometry options differ', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb' as const,
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkt' as const,
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(false);
   });
 });
 

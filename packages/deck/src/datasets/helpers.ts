@@ -102,6 +102,42 @@ export function getDatasetRegistryFingerprint(
 }
 
 /**
+ * Content equality for one dataset input, ignoring object-wrapper identity.
+ *
+ * Implemented via {@link getDatasetInputFingerprint} so normalization stays
+ * identical to the fingerprint path (`''` vs `undefined`, pending Arrow, etc.).
+ * A hand-rolled field compare previously treated those differently and caused
+ * `useStableDatasets` to churn, which desynced MapLibre from deck layers.
+ */
+export function areDatasetInputsEqual(
+  left: DeckDatasetInput,
+  right: DeckDatasetInput,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  return getDatasetInputFingerprint(left) === getDatasetInputFingerprint(right);
+}
+
+/**
+ * Content equality for a dataset registry, ignoring object-wrapper identity.
+ *
+ * Prefer this at call sites that want a boolean compare; it is fingerprint-
+ * backed so behavior matches {@link getDatasetRegistryFingerprint}.
+ */
+export function areDatasetRegistriesEqual(
+  left: Record<string, DeckDatasetInput>,
+  right: Record<string, DeckDatasetInput>,
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  return (
+    getDatasetRegistryFingerprint(left) === getDatasetRegistryFingerprint(right)
+  );
+}
+
+/**
  * Identity of prepared dataset *payloads*, not the wrapper object.
  *
  * Used so JSONConverter is not rebuilt when a new `datasetStates` record
