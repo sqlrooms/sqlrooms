@@ -179,40 +179,27 @@ describe('CLI behavioral scenario oracles', () => {
     ).toMatchObject({pass: true});
   });
 
-  it('accepts a grounded answer that explicitly says the decoy table was not used', async () => {
+  it('requires the grounded answer to name the intended chart and map result', async () => {
     const oracle = createCliScenarioOracles(
       CREATE_WORKSHEET_CHART_MAP_SCENARIO,
     ).find((candidate) => candidate.id === 'grounded-answer');
     if (!oracle) throw new Error('Missing grounded-answer oracle.');
 
-    const result = await oracle.evaluate({
-      scenario: CREATE_WORKSHEET_CHART_MAP_SCENARIO,
-      finalAnswer:
-        'Created a chart and map from analytics.events. archive.events was explicitly not used.',
-      errors: [],
-      mutations: [],
-      metadata: {},
-    });
+    const evaluate = (finalAnswer: string) =>
+      oracle.evaluate({
+        scenario: CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+        finalAnswer,
+        errors: [],
+        mutations: [],
+        metadata: {},
+      });
 
-    expect(result.pass).toBe(true);
-  });
-
-  it('rejects a grounded answer that claims the decoy table was used', async () => {
-    const oracle = createCliScenarioOracles(
-      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
-    ).find((candidate) => candidate.id === 'grounded-answer');
-    if (!oracle) throw new Error('Missing grounded-answer oracle.');
-
-    const result = await oracle.evaluate({
-      scenario: CREATE_WORKSHEET_CHART_MAP_SCENARIO,
-      finalAnswer:
-        'Created a chart and map from analytics.events, but archive.events was also used.',
-      errors: [],
-      mutations: [],
-      metadata: {},
-    });
-
-    expect(result.pass).toBe(false);
+    expect(
+      await evaluate('Created a chart and map from analytics.events.'),
+    ).toMatchObject({pass: true});
+    expect(
+      await evaluate('Created a chart from analytics.events.'),
+    ).toMatchObject({pass: false});
   });
 
   it('recognizes a canonical quoted table identity in map dataset state', async () => {

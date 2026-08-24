@@ -2,6 +2,7 @@ import {describe, expect, it} from '@jest/globals';
 import type {ObservatoryTrajectory} from '@sqlrooms/evals/promptfoo/read-model';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {
+  EventList,
   TrajectoryComparison,
   baselineIdAfterRunSelection,
   findTrajectoryNode,
@@ -59,5 +60,20 @@ describe('EvalObservatory trajectory comparison', () => {
     expect(markup).toContain('The ordered event list is clearer.');
     expect(markup).not.toContain('trajectory-canvas');
     expect(markup).not.toContain('Selected · selected');
+  });
+
+  it('exposes the selected event state semantically', () => {
+    const selected = trajectory('selected', true);
+    selected.nodes[0]!.sequence = 0;
+
+    const markup = renderToStaticMarkup(
+      <EventList
+        trajectory={selected}
+        selectedNodeId="selected:run"
+        onSelectNode={() => undefined}
+      />,
+    );
+
+    expect(markup).toContain('aria-pressed="true"');
   });
 });

@@ -552,7 +552,7 @@ export function TrajectoryComparison({
   );
 }
 
-function EventList({
+export function EventList({
   trajectory,
   selectedNodeId,
   onSelectNode,
@@ -572,6 +572,7 @@ function EventList({
           <button
             type="button"
             className={selectedNodeId === node.id ? 'selected' : ''}
+            aria-pressed={selectedNodeId === node.id}
             onClick={() => onSelectNode(node.id)}
           >
             <span>{node.sequence}</span>
