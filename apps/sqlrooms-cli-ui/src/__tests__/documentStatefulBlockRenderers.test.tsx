@@ -16,7 +16,7 @@ describe('document stateful block renderers', () => {
       map: renderer('map'),
       pivot: renderer('pivot'),
       'data-table': renderer('data-table'),
-      document: renderer('document'),
+      markdown: renderer('markdown'),
       'sql-query': renderer('sql-query'),
       'html-app': renderer('html-app'),
       python: renderer('python'),

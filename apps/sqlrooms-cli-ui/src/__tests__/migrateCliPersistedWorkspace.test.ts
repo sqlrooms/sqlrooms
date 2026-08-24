@@ -1,6 +1,18 @@
 import {migrateCliPersistedWorkspace} from '../migrateCliPersistedWorkspace';
 
-function persistedWorkspace() {
+type PersistedWorkspaceFixture = {
+  artifacts: {
+    artifactsById: Record<string, {id: string; type: string; title: string}>;
+  };
+  documents: {
+    artifacts: Record<string, {id: string; markdown: string}>;
+  };
+  blockDocuments: {
+    artifacts: Record<string, {id: string; content: unknown}>;
+  };
+};
+
+function persistedWorkspace(): PersistedWorkspaceFixture {
   return {
     artifacts: {
       artifactsById: {

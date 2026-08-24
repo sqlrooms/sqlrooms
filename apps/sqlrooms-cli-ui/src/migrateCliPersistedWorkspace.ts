@@ -13,7 +13,9 @@ function hasArtifact(
   artifactId: string,
 ): boolean {
   const artifacts = asRecord(slice?.artifacts);
-  return artifacts ? Object.hasOwn(artifacts, artifactId) : false;
+  return artifacts
+    ? Object.prototype.hasOwnProperty.call(artifacts, artifactId)
+    : false;
 }
 
 function migrateEmbeddedMarkdownBlockTypes(value: unknown): unknown {
@@ -121,7 +123,9 @@ const CliPersistedWorkspaceRecord = z
     if (!markdownArtifacts || !blockDocumentArtifacts) return;
 
     for (const artifactId of Object.keys(markdownArtifacts)) {
-      if (Object.hasOwn(blockDocumentArtifacts, artifactId)) {
+      if (
+        Object.prototype.hasOwnProperty.call(blockDocumentArtifacts, artifactId)
+      ) {
         ctx.addIssue({
           code: 'custom',
           path: ['artifacts', 'artifactsById', artifactId, 'type'],
