@@ -1,12 +1,12 @@
 import {describe, expect, it} from '@jest/globals';
-import type {RunEvidence} from '../evidence';
+import {RUN_EVIDENCE_SCHEMA_VERSION, type RunEvidence} from '../evidence';
 import {
   toPromptfooAssertionResult,
   toPromptfooProviderResponse,
 } from '../promptfoo';
 
 const evidence: RunEvidence = {
-  schemaVersion: 1,
+  schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
   runId: 'run-1',
   scenario: {id: 'document.verify', version: 1, repetition: 0},
   target: {
@@ -24,7 +24,7 @@ const evidence: RunEvidence = {
   promptTurns: [],
   finalAnswer: 'Done.',
   events: [],
-  oracleResults: [],
+  checkResults: [],
   metadata: {},
 };
 
@@ -36,11 +36,11 @@ describe('Promptfoo boundary helpers', () => {
     });
   });
 
-  it('converts oracle results to one assertion result', () => {
+  it('converts check results to one assertion result', () => {
     expect(
       toPromptfooAssertionResult([
         {
-          oracleId: 'workspace',
+          checkId: 'workspace',
           kind: 'workspace-state',
           pass: true,
           score: 1,
@@ -49,7 +49,7 @@ describe('Promptfoo boundary helpers', () => {
           metadata: {},
         },
         {
-          oracleId: 'answer',
+          checkId: 'answer',
           kind: 'answer-grounding',
           pass: false,
           score: 0.25,
@@ -70,14 +70,14 @@ describe('Promptfoo boundary helpers', () => {
     expect(toPromptfooAssertionResult([])).toEqual({
       pass: false,
       score: 0,
-      reason: 'No SQLRooms oracle results were produced.',
+      reason: 'No SQLRooms check results were produced.',
       namedScores: {},
     });
   });
 
-  it('rejects duplicate oracle result IDs', () => {
+  it('rejects duplicate check result IDs', () => {
     const result = {
-      oracleId: 'workspace',
+      checkId: 'workspace',
       kind: 'workspace-state' as const,
       pass: true,
       score: 1,
@@ -87,7 +87,7 @@ describe('Promptfoo boundary helpers', () => {
     };
 
     expect(() => toPromptfooAssertionResult([result, result])).toThrow(
-      'Duplicate oracle result IDs: workspace.',
+      'Duplicate check result IDs: workspace.',
     );
   });
 });

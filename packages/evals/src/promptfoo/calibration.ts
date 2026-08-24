@@ -16,11 +16,11 @@ export type EvalFailureClassification = {
   note?: string;
 };
 
-/** Pass-rate row that keeps scenario, oracle, model, and revision explicit. */
+/** Pass-rate row that keeps scenario, check, model, and revision explicit. */
 export type CalibrationRate = {
   scenarioId: string;
   scenarioVersion?: number;
-  oracleId: string;
+  checkId: string;
   modelId: string;
   revision?: string;
   total: number;
@@ -28,7 +28,7 @@ export type CalibrationRate = {
   passRate: number;
 };
 
-/** Computes per-scenario/per-oracle rates without inventing release thresholds. */
+/** Computes per-scenario/per-check rates without inventing release thresholds. */
 export function computeCalibrationRates(
   runs: readonly ObservatoryRun[],
 ): CalibrationRate[] {
@@ -40,18 +40,18 @@ export function computeCalibrationRates(
     }
   >();
   for (const run of runs) {
-    for (const oracle of run.oracleResults) {
+    for (const check of run.checkResults) {
       const identity = {
         scenarioId: run.scenario.id,
         scenarioVersion: run.scenario.version,
-        oracleId: oracle.oracleId,
+        checkId: check.checkId,
         modelId: run.model.modelId,
         revision: run.model.revision,
       };
       const key = JSON.stringify(identity);
       const group = groups.get(key) ?? {...identity, total: 0, passed: 0};
       group.total += 1;
-      group.passed += Number(oracle.pass);
+      group.passed += Number(check.pass);
       groups.set(key, group);
     }
   }

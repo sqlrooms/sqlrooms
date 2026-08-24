@@ -7,9 +7,9 @@ import {createNodeDuckDbConnector} from '@sqlrooms/duckdb-node';
 import {
   RUN_EVIDENCE_SCHEMA_VERSION,
   RunEvidenceSchema,
-  evaluateOracles,
-  summarizeOracleResults,
-  type BehavioralOracle,
+  evaluateBehavioralChecks,
+  summarizeBehavioralCheckResults,
+  type BehavioralCheck,
   type JsonObject,
   type ObservedError,
   type ObservedMutation,
@@ -74,7 +74,7 @@ export type CliEvalTargetOptions = {
 
 export type CliEvalRunOptions = {
   scenario: ScenarioDefinition;
-  oracles?: readonly BehavioralOracle[];
+  checks?: readonly BehavioralCheck[];
   repetition?: number;
 };
 
@@ -732,7 +732,7 @@ export function createCliEvalTarget(
       await store.getState().db.refreshTableSchemas();
       initialized = true;
     },
-    async run({scenario, oracles = [], repetition = 0}) {
+    async run({scenario, checks = [], repetition = 0}) {
       if (runInProgress) {
         throw new Error('CLI eval target already has a run in progress.');
       }
@@ -830,7 +830,7 @@ export function createCliEvalTarget(
           JSON.stringify(fixtureState) === JSON.stringify(finalState)
             ? []
             : [{kind: 'workspace-state', data: {finalState}}];
-        const oracleResults = await evaluateOracles(oracles, {
+        const checkResults = await evaluateBehavioralChecks(checks, {
           scenario,
           workspace: finalState,
           database: {tables: finalState.tables},
@@ -839,7 +839,7 @@ export function createCliEvalTarget(
           mutations,
           metadata: {initialState: fixtureState},
         });
-        const summary = summarizeOracleResults(oracleResults);
+        const summary = summarizeBehavioralCheckResults(checkResults);
         const status =
           errors.length > 0 ? 'error' : summary.pass ? 'passed' : 'failed';
         const events = eventsFromMessages(
@@ -899,7 +899,7 @@ export function createCliEvalTarget(
           events,
           usage: usageFromMessages(messages, usageRecorder.snapshot()),
           finalState,
-          oracleResults,
+          checkResults,
           metadata: {initialState, fixtureState},
         });
         return redactRunEvidence(evidence, options.sensitiveValues ?? []);

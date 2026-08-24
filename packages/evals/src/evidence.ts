@@ -1,10 +1,43 @@
 import {z} from 'zod';
 import {JsonObjectSchema, JsonValueSchema} from './json.js';
-import {OracleResultSchema} from './oracle.js';
+import {BehavioralCheckResultSchema} from './behavioralCheck.js';
 import {ScenarioIdSchema} from './scenario.js';
 
 /** Current version of the durable run-evidence envelope. */
-export const RUN_EVIDENCE_SCHEMA_VERSION = 1 as const;
+export const RUN_EVIDENCE_SCHEMA_VERSION = 2 as const;
+
+const LEGACY_RUN_EVIDENCE_SCHEMA_VERSION = 1 as const;
+
+function migrateLegacyRunEvidence(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return input;
+  }
+
+  const legacyEvidence = input as Record<string, unknown>;
+  if (
+    legacyEvidence.schemaVersion !== LEGACY_RUN_EVIDENCE_SCHEMA_VERSION ||
+    !Array.isArray(legacyEvidence.oracleResults)
+  ) {
+    return input;
+  }
+
+  const {oracleResults, ...evidence} = legacyEvidence;
+  return {
+    ...evidence,
+    schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
+    checkResults: oracleResults.map((result) => {
+      if (
+        typeof result !== 'object' ||
+        result === null ||
+        Array.isArray(result)
+      ) {
+        return result;
+      }
+      const {oracleId, ...checkResult} = result as Record<string, unknown>;
+      return {...checkResult, checkId: oracleId};
+    }),
+  };
+}
 
 /** Ordered event captured while a behavioral scenario runs. */
 export const RunEvidenceEventSchema = z
@@ -25,7 +58,7 @@ export const RunEvidenceEventSchema = z
   .catchall(JsonValueSchema);
 
 /** Versioned evidence persisted for one behavioral scenario run. */
-export const RunEvidenceSchema = z
+const CurrentRunEvidenceSchema = z
   .looseObject({
     schemaVersion: z.literal(RUN_EVIDENCE_SCHEMA_VERSION),
     runId: z.string().min(1),
@@ -99,10 +132,16 @@ export const RunEvidenceSchema = z
       .catchall(JsonValueSchema)
       .optional(),
     finalState: JsonValueSchema.optional(),
-    oracleResults: z.array(OracleResultSchema),
+    checkResults: z.array(BehavioralCheckResultSchema),
     metadata: JsonObjectSchema.default(() => ({})),
   })
   .catchall(JsonValueSchema);
+
+/** Current run evidence, with version 1 evidence migrated when parsed. */
+export const RunEvidenceSchema = z.preprocess(
+  migrateLegacyRunEvidence,
+  CurrentRunEvidenceSchema,
+);
 
 /** Parsed run-evidence envelope. */
 export type RunEvidence = z.infer<typeof RunEvidenceSchema>;

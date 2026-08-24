@@ -1,5 +1,5 @@
 import {afterAll, beforeEach, describe, expect, it, jest} from '@jest/globals';
-import type {RunEvidence} from '@sqlrooms/evals';
+import {RUN_EVIDENCE_SCHEMA_VERSION, type RunEvidence} from '@sqlrooms/evals';
 import {CREATE_DOCUMENT_CHART_MAP_SCENARIO} from '../scenarios';
 
 const runMock = jest.fn<() => Promise<RunEvidence>>();
@@ -32,7 +32,7 @@ const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
 function runEvidence(): RunEvidence {
   const timestamp = '2026-08-21T12:00:00.000Z';
   return {
-    schemaVersion: 1,
+    schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
     runId: 'provider-cost-test',
     scenario: {
       id: CREATE_DOCUMENT_CHART_MAP_SCENARIO.id,
@@ -55,9 +55,9 @@ function runEvidence(): RunEvidence {
     finalAnswer: 'Created a chart and map from analytics.events.',
     events: [],
     usage: {inputTokens: 100, outputTokens: 20, totalTokens: 120},
-    oracleResults: [
+    checkResults: [
       {
-        oracleId: 'grounded-answer',
+        checkId: 'grounded-answer',
         kind: 'answer-grounding',
         pass: true,
         score: 1,

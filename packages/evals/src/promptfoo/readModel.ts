@@ -1,9 +1,56 @@
 import {z} from 'zod';
 import {JsonObjectSchema, JsonValueSchema} from '../json.js';
-import {OracleResultSchema} from '../oracle.js';
+import {BehavioralCheckResultSchema} from '../behavioralCheck.js';
 import {RunEvidenceEventSchema} from '../evidence.js';
 
 export * from './trajectory.js';
+
+/** Current version of the portable observatory export. */
+export const OBSERVATORY_EXPORT_SCHEMA_VERSION = 2 as const;
+
+const LEGACY_OBSERVATORY_EXPORT_SCHEMA_VERSION = 1 as const;
+
+function migrateLegacyObservatoryExport(input: unknown): unknown {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return input;
+  }
+
+  const legacyExport = input as Record<string, unknown>;
+  if (
+    legacyExport.schemaVersion !== LEGACY_OBSERVATORY_EXPORT_SCHEMA_VERSION ||
+    !Array.isArray(legacyExport.runs)
+  ) {
+    return input;
+  }
+
+  return {
+    ...legacyExport,
+    schemaVersion: OBSERVATORY_EXPORT_SCHEMA_VERSION,
+    runs: legacyExport.runs.map((run) => {
+      if (typeof run !== 'object' || run === null || Array.isArray(run)) {
+        return run;
+      }
+      const legacyRun = run as Record<string, unknown>;
+      if (!Array.isArray(legacyRun.oracleResults)) return run;
+
+      const {oracleResults, ...currentRun} = legacyRun;
+      return {
+        ...currentRun,
+        checkResults: oracleResults.map((result) => {
+          if (
+            typeof result !== 'object' ||
+            result === null ||
+            Array.isArray(result)
+          ) {
+            return result;
+          }
+          const {oracleId, ...checkResult} = result as Record<string, unknown>;
+          return {...checkResult, checkId: oracleId};
+        }),
+      };
+    }),
+  };
+}
 
 /** Promptfoo-independent span retained for run diagnosis. */
 export const ObservatorySpanSchema = z.looseObject({
@@ -60,7 +107,7 @@ export const ObservatoryRunSchema = z.looseObject({
   }),
   promptTurns: z.array(z.object({id: z.string(), input: z.string()})),
   answer: z.string(),
-  oracleResults: z.array(OracleResultSchema),
+  checkResults: z.array(BehavioralCheckResultSchema),
   graderFeedback: JsonValueSchema.optional(),
   events: z.array(RunEvidenceEventSchema),
   spans: z.array(ObservatorySpanSchema),
@@ -72,16 +119,19 @@ export const ObservatoryRunSchema = z.looseObject({
 export type ObservatoryRun = z.infer<typeof ObservatoryRunSchema>;
 
 /** Portable output emitted from one or more retained Promptfoo databases. */
-export const ObservatoryExportSchema = z.looseObject({
-  schemaVersion: z.literal(1),
-  exportedAt: z.string().datetime(),
-  source: z.object({
-    kind: z.enum(['promptfoo-sqlite', 'summary']),
-    label: z.string(),
+export const ObservatoryExportSchema = z.preprocess(
+  migrateLegacyObservatoryExport,
+  z.looseObject({
+    schemaVersion: z.literal(OBSERVATORY_EXPORT_SCHEMA_VERSION),
+    exportedAt: z.string().datetime(),
+    source: z.object({
+      kind: z.enum(['promptfoo-sqlite', 'summary']),
+      label: z.string(),
+    }),
+    runs: z.array(ObservatoryRunSchema),
+    unknownMetadata: JsonObjectSchema.default({}),
   }),
-  runs: z.array(ObservatoryRunSchema),
-  unknownMetadata: JsonObjectSchema.default({}),
-});
+);
 
 /** Portable output emitted from one or more retained Promptfoo databases. */
 export type ObservatoryExport = z.infer<typeof ObservatoryExportSchema>;
@@ -187,12 +237,12 @@ export function compareObservatoryRuns(
   selected: ObservatoryRun,
   baseline: ObservatoryRun,
 ) {
-  const selectedFailed = selected.oracleResults
+  const selectedFailed = selected.checkResults
     .filter((result) => !result.pass)
-    .map((result) => result.oracleId);
-  const baselineFailed = baseline.oracleResults
+    .map((result) => result.checkId);
+  const baselineFailed = baseline.checkResults
     .filter((result) => !result.pass)
-    .map((result) => result.oracleId);
+    .map((result) => result.checkId);
   return {
     selectedRunId: selected.id,
     baselineRunId: baseline.id,
@@ -206,11 +256,11 @@ export function compareObservatoryRuns(
       baseline.usage?.totalTokens !== undefined
         ? selected.usage.totalTokens - baseline.usage.totalTokens
         : undefined,
-    newlyFailingOracles: selectedFailed.filter(
-      (oracleId) => !baselineFailed.includes(oracleId),
+    newlyFailingChecks: selectedFailed.filter(
+      (checkId) => !baselineFailed.includes(checkId),
     ),
-    recoveredOracles: baselineFailed.filter(
-      (oracleId) => !selectedFailed.includes(oracleId),
+    recoveredChecks: baselineFailed.filter(
+      (checkId) => !selectedFailed.includes(checkId),
     ),
     eventCountDelta: selected.events.length - baseline.events.length,
   };

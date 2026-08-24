@@ -12,7 +12,7 @@ describe('behavioral scenarios', () => {
       turns: [{id: 'create', input: 'Create a document.'}],
       expectations: [
         {
-          oracleId: 'workspace-chart-map',
+          checkId: 'workspace-chart-map',
           description: 'Chart and map blocks exist in one document.',
         },
       ],
@@ -21,7 +21,7 @@ describe('behavioral scenarios', () => {
 
     expect(scenario.compatibleProfiles).toEqual(['document-charts-maps']);
     expect(scenario.expectations[0]).toEqual({
-      oracleId: 'workspace-chart-map',
+      checkId: 'workspace-chart-map',
       description: 'Chart and map blocks exist in one document.',
       config: {},
     });
@@ -48,7 +48,7 @@ describe('behavioral scenarios', () => {
       compatibleProfiles: ['default'],
       turns: [{id: 'verify', input: 'Verify defaults.'}],
       expectations: [
-        {oracleId: 'workspace', description: 'Workspace is valid.'},
+        {checkId: 'workspace', description: 'Workspace is valid.'},
       ],
     };
 

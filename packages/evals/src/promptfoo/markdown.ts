@@ -46,12 +46,12 @@ export function renderObservatoryMarkdown(exported: ObservatoryExport): string {
     '',
     '## Per run',
     '',
-    '| Scenario | Repetition | Status | Failed oracles | Latency |',
+    '| Scenario | Repetition | Status | Failed checks | Latency |',
     '| --- | ---: | --- | --- | ---: |',
     ...exported.runs.map((run) => {
-      const failures = run.oracleResults
+      const failures = run.checkResults
         .filter((result) => !result.pass)
-        .map((result) => result.oracleId)
+        .map((result) => result.checkId)
         .join(', ');
       return `| ${run.scenario.id}@${run.scenario.version ?? '?'} | ${run.scenario.repetition ?? '?'} | ${run.status} | ${failures || '—'} | ${run.latencyMs ?? '—'} ms |`;
     }),

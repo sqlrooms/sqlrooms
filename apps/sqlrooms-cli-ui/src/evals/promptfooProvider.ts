@@ -10,7 +10,7 @@ import type {LanguageModel} from 'ai';
 import {createCliEvalTarget} from './createCliEvalTarget';
 import {loadLocalEvalEnvironment} from './loadLocalEvalEnvironment';
 import {createOpenRouterCostTracker} from './openRouterCost';
-import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioOracles} from './scenarios';
+import {CLI_BEHAVIORAL_SCENARIOS, createCliScenarioChecks} from './scenarios';
 
 loadLocalEvalEnvironment();
 
@@ -132,7 +132,7 @@ export default class SqlroomsCliEvalProvider {
     try {
       const runEvidence = await target.run({
         scenario,
-        oracles: createCliScenarioOracles(scenario),
+        checks: createCliScenarioChecks(scenario),
         repetition: repeatIndex,
       });
       const cost = costTracker.resolveCost(runEvidence.usage);
@@ -147,7 +147,7 @@ export default class SqlroomsCliEvalProvider {
           }
         : runEvidence;
       const response = toPromptfooProviderResponse(evidence);
-      const assertion = toPromptfooAssertionResult(evidence.oracleResults);
+      const assertion = toPromptfooAssertionResult(evidence.checkResults);
       return {
         output: response.output,
         tokenUsage: evidence.usage

@@ -6,7 +6,7 @@ export type ObservatoryTrajectoryNode = {
   id: string;
   kind:
     | 'run'
-    | 'oracle'
+    | 'check'
     | 'model'
     | 'tool'
     | 'nested-agent'
@@ -19,7 +19,7 @@ export type ObservatoryTrajectoryNode = {
   timestamp?: string;
   durationMs?: number;
   data: JsonObject;
-  relatedOracleIds: string[];
+  relatedCheckIds: string[];
 };
 
 /** Semantic relationship in a runner-independent observatory trajectory. */
@@ -48,10 +48,10 @@ function numberValue(value: JsonValue | undefined): number | undefined {
     : undefined;
 }
 
-function oracleIds(data: JsonObject): string[] {
-  const one = stringValue(data.oracleId);
-  const many = Array.isArray(data.oracleIds)
-    ? data.oracleIds.filter(
+function checkIds(data: JsonObject): string[] {
+  const one = stringValue(data.checkId);
+  const many = Array.isArray(data.checkIds)
+    ? data.checkIds.filter(
         (value): value is string => typeof value === 'string',
       )
     : [];
@@ -81,7 +81,7 @@ export function createObservatoryTrajectory(
         scenarioVersion: run.scenario.version ?? null,
         repetition: run.scenario.repetition ?? null,
       },
-      relatedOracleIds: run.oracleResults.map((result) => result.oracleId),
+      relatedCheckIds: run.checkResults.map((result) => result.checkId),
     },
   ];
   const links: ObservatoryTrajectoryLink[] = [];
@@ -104,7 +104,7 @@ export function createObservatoryTrajectory(
       timestamp: event.timestamp,
       durationMs: numberValue(event.data.durationMs),
       data: event.data,
-      relatedOracleIds: oracleIds(event.data),
+      relatedCheckIds: checkIds(event.data),
     });
   }
 
@@ -136,12 +136,12 @@ export function createObservatoryTrajectory(
     }
   }
 
-  for (const result of run.oracleResults) {
-    const id = `${run.id}:oracle:${result.oracleId}`;
+  for (const result of run.checkResults) {
+    const id = `${run.id}:check:${result.checkId}`;
     nodes.push({
       id,
-      kind: 'oracle',
-      label: result.oracleId,
+      kind: 'check',
+      label: result.checkId,
       status: result.pass ? 'passed' : 'failed',
       data: {
         reason: result.reason,
@@ -149,7 +149,7 @@ export function createObservatoryTrajectory(
         evidence: result.evidence,
         metadata: result.metadata,
       },
-      relatedOracleIds: [result.oracleId],
+      relatedCheckIds: [result.checkId],
     });
     links.push({sourceId: runNodeId, targetId: id, kind: 'assertion'});
   }

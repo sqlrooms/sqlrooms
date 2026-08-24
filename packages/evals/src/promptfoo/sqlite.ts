@@ -2,6 +2,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {RunEvidenceSchema, type RunEvidence} from '../evidence.js';
 import type {JsonObject, JsonValue} from '../json.js';
 import {
+  OBSERVATORY_EXPORT_SCHEMA_VERSION,
   ObservatoryExportSchema,
   ObservatoryRunSchema,
   type ObservatoryExport,
@@ -348,7 +349,7 @@ export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
           {id: 'promptfoo', input: promptText(row.prompt)},
         ],
         answer: evidence?.finalAnswer ?? responseText(row.response),
-        oracleResults: evidence?.oracleResults ?? [],
+        checkResults: evidence?.checkResults ?? [],
         graderFeedback: grading,
         events,
         spans: traceId ? (traceSpans.get(traceId) ?? []) : [],
@@ -384,7 +385,7 @@ export function exportPromptfooSqlite(
   now: Date = new Date(),
 ): ObservatoryExport {
   return ObservatoryExportSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: OBSERVATORY_EXPORT_SCHEMA_VERSION,
     exportedAt: now.toISOString(),
     source: {kind: 'promptfoo-sqlite', label: databasePath},
     runs: readPromptfooSqlite(databasePath),

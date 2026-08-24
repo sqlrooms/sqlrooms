@@ -2,7 +2,7 @@
 
 The nightly suite runs the production `document-charts-maps@1` CLI profile
 through the in-process target. Promptfoo schedules and retains runs; SQLRooms'
-deterministic state and policy oracles decide pass/fail. No LLM grader is used,
+deterministic state and policy checks decide pass/fail. No LLM grader is used,
 so application token usage remains separate from the zero grader usage recorded
 in the evidence envelope.
 
@@ -30,7 +30,7 @@ three repetitions are pinned in `promptfooconfig.yaml`. Promptfoo stores its
 SQLite database beneath `PROMPTFOO_CONFIG_DIR` (or its normal user config
 directory). The CI job uploads that database plus JSON and compact Markdown
 summaries for 30 days. Provider/transport errors are tagged separately from
-behavioral oracle failures in provider metadata.
+behavioral check failures in provider metadata.
 
 The scripted-model test in Jest is wiring coverage only. It proves the real
 transport/tool/state path is connected without credentials or network access;

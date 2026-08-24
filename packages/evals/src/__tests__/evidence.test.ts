@@ -62,15 +62,15 @@ describe('run evidence', () => {
         futureUsageField: 'preserved',
       },
       finalState: {documentCount: 1},
-      oracleResults: [
+      checkResults: [
         {
-          oracleId: 'workspace',
+          checkId: 'workspace',
           kind: 'workspace-state' as const,
           pass: true,
           score: 1,
           reason: 'Document exists.',
           evidence: {},
-          metadata: {futureOracleMetadata: {value: 42}},
+          metadata: {futureCheckMetadata: {value: 42}},
         },
       ],
       metadata: {futureRunnerMetadata: {traceId: 'trace-1'}},
@@ -80,8 +80,8 @@ describe('run evidence', () => {
     const parsed = parseRunEvidence(serializeRunEvidence(input));
 
     expect(parsed.metadata).toEqual(input.metadata);
-    expect(parsed.oracleResults[0]?.metadata).toEqual(
-      input.oracleResults[0]?.metadata,
+    expect(parsed.checkResults[0]?.metadata).toEqual(
+      input.checkResults[0]?.metadata,
     );
     expect(parsed.events[0]).toHaveProperty('futureEventField', 'preserved');
     expect(parsed.scenario).toHaveProperty('futureScenarioField', 'preserved');
@@ -100,8 +100,46 @@ describe('run evidence', () => {
     expect(parsed).toHaveProperty('futureEnvelopeField', {retained: true});
   });
 
+  it('migrates version 1 check evidence to the current vocabulary', () => {
+    const parsed = parseRunEvidence({
+      schemaVersion: 1,
+      runId: 'legacy-run',
+      scenario: {id: 'document.legacy', version: 1, repetition: 0},
+      target: {
+        type: 'cli-in-process',
+        profileName: 'document-charts-maps',
+        profileVersion: 1,
+      },
+      model: {provider: 'scripted', modelId: 'scripted-v1'},
+      timing: {
+        startedAt: '2026-08-19T12:00:00.000Z',
+        endedAt: '2026-08-19T12:00:00.010Z',
+        latencyMs: 10,
+      },
+      status: 'passed',
+      promptTurns: [{id: 'verify', input: 'Verify the document.'}],
+      finalAnswer: 'Verified.',
+      events: [],
+      oracleResults: [
+        {
+          oracleId: 'workspace',
+          kind: 'workspace-state',
+          pass: true,
+          score: 1,
+          reason: 'Document exists.',
+        },
+      ],
+    });
+
+    expect(parsed.schemaVersion).toBe(RUN_EVIDENCE_SCHEMA_VERSION);
+    expect(parsed.checkResults).toEqual([
+      expect.objectContaining({checkId: 'workspace', pass: true}),
+    ]);
+    expect(parsed).not.toHaveProperty('oracleResults');
+  });
+
   it('rejects unsupported evidence versions', () => {
-    expect(() => parseRunEvidence({schemaVersion: 2})).toThrow();
+    expect(() => parseRunEvidence({schemaVersion: 3})).toThrow();
   });
 
   it.each([
@@ -132,7 +170,7 @@ describe('run evidence', () => {
           timestamp: '2026-08-19T12:00:00.005Z',
           type: 'tool',
         })),
-        oracleResults: [],
+        checkResults: [],
       }),
     ).toThrow('Event sequence values must be strictly increasing.');
   });
@@ -163,7 +201,7 @@ describe('run evidence', () => {
         promptTurns: [],
         finalAnswer: 'Done.',
         events: [],
-        oracleResults: [],
+        checkResults: [],
         futureEnvelopeField: value,
       }),
     ).toThrow();
@@ -202,9 +240,9 @@ describe('run evidence', () => {
           type: 'tool',
         },
       ],
-      oracleResults: [
+      checkResults: [
         {
-          oracleId: 'workspace',
+          checkId: 'workspace',
           kind: 'workspace-state',
           pass: true,
           score: 1,
@@ -219,11 +257,11 @@ describe('run evidence', () => {
     expect(first.metadata).not.toBe(second.metadata);
     expect(first.model.settings).not.toBe(second.model.settings);
     expect(first.events[0]?.data).not.toBe(second.events[0]?.data);
-    expect(first.oracleResults[0]?.evidence).not.toBe(
-      second.oracleResults[0]?.evidence,
+    expect(first.checkResults[0]?.evidence).not.toBe(
+      second.checkResults[0]?.evidence,
     );
-    expect(first.oracleResults[0]?.metadata).not.toBe(
-      second.oracleResults[0]?.metadata,
+    expect(first.checkResults[0]?.metadata).not.toBe(
+      second.checkResults[0]?.metadata,
     );
   });
 });

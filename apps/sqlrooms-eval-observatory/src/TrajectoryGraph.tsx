@@ -30,7 +30,7 @@ function color(node: ObservatoryTrajectoryNode): readonly number[] {
   if (node.status === 'failed' || node.status === 'error') {
     return [0.89, 0.25, 0.2, 1];
   }
-  if (node.kind === 'oracle') return [0.96, 0.66, 0.18, 1];
+  if (node.kind === 'check') return [0.96, 0.66, 0.18, 1];
   if (node.kind === 'nested-agent') return [0.51, 0.34, 0.91, 1];
   if (node.kind === 'tool') return [0.15, 0.65, 0.48, 1];
   if (node.kind === 'model') return [0.2, 0.53, 0.86, 1];
@@ -48,7 +48,7 @@ function graphArrays(trajectory: ObservatoryTrajectory) {
   for (const [index, node] of trajectory.nodes.entries()) {
     const sequence = node.sequence ?? index;
     const lane =
-      node.kind === 'oracle'
+      node.kind === 'check'
         ? 2
         : node.kind === 'nested-agent'
           ? -1

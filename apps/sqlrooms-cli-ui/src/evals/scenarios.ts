@@ -1,9 +1,9 @@
 import {
-  createAnswerGroundingOracle,
-  createErrorOracle,
-  createWorkspaceStateOracle,
+  createAnswerGroundingCheck,
+  createErrorCheck,
+  createWorkspaceStateCheck,
   defineScenario,
-  type BehavioralOracle,
+  type BehavioralCheck,
   type JsonValue,
   type ScenarioDefinition,
 } from '@sqlrooms/evals';
@@ -177,23 +177,23 @@ export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
   ],
   expectations: [
     {
-      oracleId: 'document-shape',
+      checkId: 'document-shape',
       description: 'Exactly one document contains one chart and one map.',
     },
     {
-      oracleId: 'canonical-bindings',
+      checkId: 'canonical-bindings',
       description:
         'Both visualizations use analytics.events and expected fields.',
     },
     {
-      oracleId: 'artifact-policy',
+      checkId: 'artifact-policy',
       description: 'No dashboard or second document is created.',
     },
     {
-      oracleId: 'grounded-answer',
+      checkId: 'grounded-answer',
       description: 'The answer names the actual table and visualizations.',
     },
-    {oracleId: 'no-errors', description: 'The target records no errors.'},
+    {checkId: 'no-errors', description: 'The target records no errors.'},
   ],
   metadata: {suite: 'nightly', owner: 'sqlrooms'},
 });
@@ -219,22 +219,22 @@ export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
   ],
   expectations: [
     {
-      oracleId: 'mutated-in-place',
+      checkId: 'mutated-in-place',
       description: 'The seeded chart is updated and one source note is added.',
     },
     {
-      oracleId: 'unrelated-state-preserved',
+      checkId: 'unrelated-state-preserved',
       description: 'The seeded heading and map remain unchanged.',
     },
     {
-      oracleId: 'no-stray-artifacts',
+      checkId: 'no-stray-artifacts',
       description: 'No duplicate artifact or visualization is created.',
     },
     {
-      oracleId: 'grounded-answer',
+      checkId: 'grounded-answer',
       description: 'The answer reports the requested successful mutation.',
     },
-    {oracleId: 'no-errors', description: 'The target records no errors.'},
+    {checkId: 'no-errors', description: 'The target records no errors.'},
   ],
   metadata: {suite: 'nightly', owner: 'sqlrooms'},
 });
@@ -260,14 +260,14 @@ export const MULTI_TURN_DOCUMENT_SCENARIO = defineScenario({
   ],
   expectations: [
     {
-      oracleId: 'document-shape',
+      checkId: 'document-shape',
       description: 'One document contains both requested visualizations.',
     },
     {
-      oracleId: 'artifact-policy',
+      checkId: 'artifact-policy',
       description: 'The follow-up reuses the first-turn document.',
     },
-    {oracleId: 'no-errors', description: 'The target records no errors.'},
+    {checkId: 'no-errors', description: 'The target records no errors.'},
   ],
   metadata: {suite: 'smoke', owner: 'sqlrooms'},
 });
@@ -303,12 +303,12 @@ function mapDatasetTableNames(workspace: WorkspaceSnapshot): string[] {
   );
 }
 
-/** Deterministic state and policy oracles for a pinned CLI scenario. */
-export function createCliScenarioOracles(
+/** Deterministic state and policy checks for a pinned CLI scenario. */
+export function createCliScenarioChecks(
   scenario: ScenarioDefinition,
-): readonly BehavioralOracle[] {
-  const byId: Record<string, BehavioralOracle> = {
-    'document-shape': createWorkspaceStateOracle({
+): readonly BehavioralCheck[] {
+  const byId: Record<string, BehavioralCheck> = {
+    'document-shape': createWorkspaceStateCheck({
       id: 'document-shape',
       evaluate: (value) => {
         const workspace = snapshot(value);
@@ -335,7 +335,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'canonical-bindings': createWorkspaceStateOracle({
+    'canonical-bindings': createWorkspaceStateCheck({
       id: 'canonical-bindings',
       evaluate: (value) => {
         const workspace = snapshot(value);
@@ -364,7 +364,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'artifact-policy': createWorkspaceStateOracle({
+    'artifact-policy': createWorkspaceStateCheck({
       id: 'artifact-policy',
       evaluate: (value) => {
         const workspace = snapshot(value);
@@ -384,7 +384,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'mutated-in-place': createWorkspaceStateOracle({
+    'mutated-in-place': createWorkspaceStateCheck({
       id: 'mutated-in-place',
       evaluate: (value) => {
         const workspace = snapshot(value);
@@ -421,7 +421,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'unrelated-state-preserved': createWorkspaceStateOracle({
+    'unrelated-state-preserved': createWorkspaceStateCheck({
       id: 'unrelated-state-preserved',
       evaluate: (value, context) => {
         const workspace = snapshot(value);
@@ -466,7 +466,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'no-stray-artifacts': createWorkspaceStateOracle({
+    'no-stray-artifacts': createWorkspaceStateCheck({
       id: 'no-stray-artifacts',
       evaluate: (value) => {
         const workspace = snapshot(value);
@@ -490,7 +490,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'grounded-answer': createAnswerGroundingOracle({
+    'grounded-answer': createAnswerGroundingCheck({
       id: 'grounded-answer',
       evaluate: (answer) => {
         const normalized = answer.toLowerCase();
@@ -510,7 +510,7 @@ export function createCliScenarioOracles(
         };
       },
     }),
-    'no-errors': createErrorOracle({
+    'no-errors': createErrorCheck({
       id: 'no-errors',
       evaluate: (errors) => ({
         pass: errors.length === 0,
@@ -524,12 +524,12 @@ export function createCliScenarioOracles(
   };
 
   return scenario.expectations.map((expectation) => {
-    const oracle = byId[expectation.oracleId];
-    if (!oracle) {
+    const check = byId[expectation.checkId];
+    if (!check) {
       throw new Error(
-        `Scenario ${scenario.id} references unknown oracle ${expectation.oracleId}.`,
+        `Scenario ${scenario.id} references unknown check ${expectation.checkId}.`,
       );
     }
-    return oracle;
+    return check;
   });
 }
