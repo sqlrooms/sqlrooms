@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import {useStoreWithAi} from '../../AiSlice';
+import {useBlockSends} from '../composer';
 import {InlineApiKeyInputButton} from '../InlineApiKeyInput';
 import {ComposerFooterStrip} from './ComposerFooterStrip';
 import {useDelayedFocus} from './useDelayedFocus';
@@ -26,6 +27,9 @@ function formatProviderLabel(provider: string): string {
  *
  * Rendered instead of the composer when a host passed `<InlineApiKeyInput>` as
  * a child and no usable key is stored yet.
+ *
+ * While mounted it blocks sends chat-wide, since the missing credential
+ * applies to the whole chat and not just the textarea this replaces.
  */
 export const InlineApiKeyComposer: FC<{
   className?: string;
@@ -47,6 +51,8 @@ export const InlineApiKeyComposer: FC<{
   const {onSaveApiKey} = inlineApiKeyInput.props;
 
   useDelayedFocus(inputRef);
+
+  useBlockSends();
 
   const save = useCallback(() => {
     const key = apiKeyInput.trim();

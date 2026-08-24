@@ -81,9 +81,8 @@ const SessionQueryControls: FC<QueryControlsProps> = ({
     />
   );
 
-  // Swap in key entry when a host supplied the input and one is actually
-  // needed. Taken from the composer rather than recomputed, so the recipe and
-  // any host reading `needsApiKey` cannot disagree.
+  // From the composer rather than recomputed, so the recipe and any host
+  // reading `needsApiKey` cannot disagree.
   const needsKeyEntry = inlineApiKeyInput !== null && composer.needsApiKey;
 
   if (needsKeyEntry && inlineApiKeyInput) {

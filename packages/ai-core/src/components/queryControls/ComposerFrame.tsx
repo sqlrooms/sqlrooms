@@ -61,16 +61,15 @@ export function ComposerFrame({
 
   useDelayedFocus(textareaRef);
 
-  // Runs before a session is created, so a host can create artifacts first.
-  // Registered on the composer state rather than wired into this frame's own
-  // controls, so it also applies to sends that originate elsewhere — a prompt
-  // suggestion row, say. A policy the composer enforces and a suggestion
-  // bypasses is a policy two surfaces disagree about.
+  // Registered on the composer state, not wired into this frame's controls, so
+  // it also covers sends originating elsewhere (a suggestion row). Chat-wide
+  // by design — see `useRegisterBeforeSend`.
   useRegisterBeforeSend(
     useMemo(
       () => (onRun ? (text: string) => onRun(text) !== false : undefined),
       [onRun],
     ),
+    'onRun',
   );
 
   const handleStopClick = useCallback(

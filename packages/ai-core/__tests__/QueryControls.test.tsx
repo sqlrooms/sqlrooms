@@ -28,7 +28,7 @@ jest.unstable_mockModule(
 
 const {TooltipProvider} = await import('@sqlrooms/ui');
 const {DndContext, useDndContext} = await import('@dnd-kit/core');
-const {LocalAgentChatComposerProvider} =
+const {LocalAgentChatComposerProvider, ChatComposerStateBoundary} =
   await import('../src/components/composer');
 const {Item: ChatSuggestionsItem, ChatSuggestionsStateBoundary} =
   await import('../src/components/suggestions');
@@ -240,7 +240,9 @@ describe('QueryControls — unified across runtime modes', () => {
     // `hasResolvableModel()` is true for this app by design. Gating the swap
     // on resolvability alone would newly demand a browser-held key from an app
     // whose credentials live behind its own proxy.
-    const store = createSessionTestStore({getCustomModel: () => undefined});
+    const store = createSessionTestStore({
+      getCustomModel: () => ({}) as never,
+    });
 
     const {container, root} = await renderTree(
       <TooltipProvider>
@@ -291,6 +293,158 @@ describe('QueryControls — unified across runtime modes', () => {
 
     expect(droppableIds.at(-1)).toContain('composer-drop');
 
+    await cleanup(container, root);
+  });
+
+  it('still swaps to API-key entry when a configured factory returns undefined', async () => {
+    // The transport falls back to the OpenAI-compatible client in that case,
+    // which consumes the settings key — so the key input must stay reachable.
+    const store = createSessionTestStore({getCustomModel: () => undefined});
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls>
+            <InlineApiKeyInput onSaveApiKey={() => {}} />
+          </QueryControls>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    expect(container.querySelector('input[type="password"]')).not.toBeNull();
+
+    await cleanup(container, root);
+  });
+
+  it('blocks sends from other surfaces while swapped to API-key entry', async () => {
+    // The composer itself has no textarea in this mode, but a suggestion row
+    // is a one-click send and would otherwise fire a request with an empty key
+    // while the password field is on screen.
+    const store = createSessionTestStore();
+    const {startAnalysisWhenReady} = stubAnalysisActions(store);
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <ChatSuggestionsStateBoundary>
+            <QueryControls>
+              <InlineApiKeyInput onSaveApiKey={() => {}} />
+            </QueryControls>
+            <ChatSuggestionsItem text="plot revenue" submit>
+              plot revenue
+            </ChatSuggestionsItem>
+          </ChatSuggestionsStateBoundary>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    // Precondition: the composer really is in credential-entry mode.
+    expect(container.querySelector('input[type="password"]')).not.toBeNull();
+
+    const suggestion = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.textContent === 'plot revenue',
+    )!;
+
+    // Disabled, not merely inert: a live-looking row that silently does
+    // nothing is its own bug.
+    expect(suggestion.disabled).toBe(true);
+
+    await act(async () => {
+      suggestion.click();
+    });
+
+    expect(startAnalysisWhenReady).not.toHaveBeenCalled();
+    expect(store.getState().ai.getCurrentSession()).toBeUndefined();
+
+    await cleanup(container, root);
+  });
+
+  it('two composers under one root deliberately share one send policy', async () => {
+    // Not a fix for the shared-veto report so much as a decision about it: two
+    // composers under one root are two views of one chat — same session, same
+    // prompt — so a pre-send policy is chat-level and applies to sends from
+    // either. Locking that in, because the alternative (scoping onRun to its
+    // own composer) is what let a suggestion row bypass onRun entirely.
+    const store = createSessionTestStore();
+    const {startAnalysisWhenReady} = stubAnalysisActions(store);
+    const vetoFromFirst = jest.fn<(prompt?: string) => false>(() => false);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <ChatComposerStateBoundary>
+            <QueryControls onRun={vetoFromFirst} />
+            <QueryControls />
+          </ChatComposerStateBoundary>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    // Both composers share the prompt, which is why the policy is shared too.
+    const boxes = container.querySelectorAll('textarea');
+    expect(boxes.length).toBe(2);
+
+    await act(async () => {
+      typeInto(boxes[1]!, 'sent from the second composer');
+    });
+    await act(async () => {
+      fireKeyDown(boxes[1]!);
+    });
+
+    // The first composer's veto stopped the second composer's send.
+    expect(vetoFromFirst).toHaveBeenCalledWith('sent from the second composer');
+    expect(startAnalysisWhenReady).not.toHaveBeenCalled();
+
+    warn.mockRestore();
+    await cleanup(container, root);
+  });
+
+  it('warns when two composers under one root each register an onRun', async () => {
+    // Chat-wide registration is what stops a suggestion bypassing onRun, but it
+    // also means two composers share vetoes. Ambiguous rather than composable,
+    // so it warns instead of silently merging.
+    const store = createSessionTestStore();
+    stubAnalysisActions(store);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <ChatComposerStateBoundary>
+            <QueryControls onRun={() => {}} />
+            <QueryControls onRun={() => {}} />
+          </ChatComposerStateBoundary>
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    expect(
+      warn.mock.calls.some(([msg]) => String(msg).includes("'onRun'")),
+    ).toBe(true);
+
+    warn.mockRestore();
+    await cleanup(container, root);
+  });
+
+  it('does not warn for a single composer with an onRun', async () => {
+    const store = createSessionTestStore();
+    stubAnalysisActions(store);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const {container, root} = await renderTree(
+      <TooltipProvider>
+        <RoomStateProvider roomStore={store}>
+          <QueryControls onRun={() => {}} />
+        </RoomStateProvider>
+      </TooltipProvider>,
+    );
+
+    expect(
+      warn.mock.calls.some(([msg]) => String(msg).includes("'onRun'")),
+    ).toBe(false);
+
+    warn.mockRestore();
     await cleanup(container, root);
   });
 

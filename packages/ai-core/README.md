@@ -24,7 +24,7 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 
 Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
 
-Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when `getCustomModel` is configured, since that factory supplies its own fully configured client. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
+Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` only when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. Keep the factory cheap and idempotent — it is called during render. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
@@ -130,7 +130,7 @@ popover-anchored suggestions panel, or a horizontal carousel instead of the
 vertical default.
 
 `useChatComposer()` returns
-`{mode, prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey}`.
+`{mode, prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey, sendBlocked}`.
 Use it directly for anything that isn't textarea-shaped (a rich editor, a
 custom input surface); `Input` below is built on it for the common textarea
 case. It (and `ChatComposerStateBoundary`, for use outside any `<Chat>`
@@ -194,6 +194,18 @@ whatever triggered it — the composer's own controls, a prompt suggestion row, 
 command. This is what `Chat.Composer`'s `onRun` prop is built on, and why
 clicking a suggestion cannot bypass a veto the composer enforces. The handler
 is synchronous; return `false` to abort.
+
+The registry is **one per `<Chat>` root**, which is what gives it that reach.
+Two `Chat.Composer`s under one root are two views of one chat — same session,
+same prompt — so a policy registered by either applies to sends from both;
+independent surfaces need their own root, and a duplicate `onRun` warns in
+development rather than merging silently.
+
+For a state that makes sending impossible outright rather than conditionally —
+a missing credential, say — use `useBlockSends()` instead. It reports through
+`useChatComposer()`'s `sendBlocked`, so `canSend` and suggestion rows render
+disabled rather than looking live and doing nothing. `Chat.Composer` uses it
+when it swaps to inline API-key entry.
 
 `usePromptSuggestions()` returns
 `{mode, visible, setVisible, toggle, items, isSessionEmpty, fill, send, isReadyToSend}`,

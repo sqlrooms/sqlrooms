@@ -114,6 +114,7 @@ export {
 export {
   useChatComposer,
   useRegisterBeforeSend,
+  useBlockSends,
   ChatComposerStateBoundary,
   Input as ChatComposerInput,
   Send as ChatComposerSend,

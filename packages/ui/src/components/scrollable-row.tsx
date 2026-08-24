@@ -30,13 +30,11 @@ type ScrollableRowProps = {
  * A horizontally scrolling row with overflow-aware previous/next arrows, which
  * appear only in the direction there is more content.
  *
- * **Two refs, two elements.** The forwarded ref points at the **outer
- * wrapper** — the element that also receives `className` and any extra `div`
- * props — so wrapping this component in something that needs a DOM handle,
- * such as a Radix `Slot` or a drop target, works. `scrollRef` instead points
- * at the **inner scrolling container**; pass it when you need to read or set
- * `scrollLeft`. Supplying `scrollRef` replaces the internal ref, so the arrows
- * keep working either way.
+ * **Two refs, two elements.** The forwarded ref is the **outer wrapper** (which
+ * also takes `className` and extra `div` props), so wrapping this in a Radix
+ * `Slot` or a drop target works. `scrollRef` is the **inner scrolling
+ * container**, for reading or setting `scrollLeft`; supplying it replaces the
+ * internal ref, and the arrows keep working either way.
  */
 export const ScrollableRow = React.forwardRef<
   HTMLDivElement,

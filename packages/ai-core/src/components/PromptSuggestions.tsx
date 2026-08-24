@@ -6,13 +6,33 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {Lightbulb, X} from 'lucide-react';
-import {Children, type FC, type PropsWithChildren, type ReactNode} from 'react';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  type FC,
+  type PropsWithChildren,
+  type ReactNode,
+} from 'react';
 import {Dismiss, Item, Root, VisibilityToggle} from './suggestions';
 import {usePromptSuggestions} from './suggestions/ChatSuggestionsContext';
 
-/** Whether `node` would render anything — `null`, `false` and `[]` do not. */
+/**
+ * Whether `node` would render anything — `null`, `false`, `[]` and fragments
+ * containing only those do not.
+ *
+ * `Children.toArray` drops nullish and boolean children but does **not**
+ * flatten fragments, so `<>{false}</>` counts as one child. Hence the
+ * recursion: `<>{ready && <Item />}</>` is the ordinary conditional shape.
+ */
 function hasRenderableContent(node: ReactNode): boolean {
-  return Children.toArray(node).length > 0;
+  return Children.toArray(node).some((child) =>
+    isValidElement(child) && child.type === Fragment
+      ? hasRenderableContent(
+          (child.props as {children?: ReactNode} | null)?.children,
+        )
+      : true,
+  );
 }
 
 const ROW_CLASSES = cn(
@@ -43,12 +63,9 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
 }) => {
   const suggestions = usePromptSuggestions();
 
-  // Emptiness is decided on *renderable* content, not on `children !==
-  // undefined`. `null` and `false` are what a host's own conditional renders
-  // when it has nothing to show, so they count as no children rather than as
-  // an explicit — and then permanently empty — list, which would leave the
-  // frame and its dismiss button wrapped around nothing. `Children.toArray`
-  // is the test that drops them; `Children.count` counts `false` as one.
+  // Emptiness is decided on *renderable* content, so a host's conditional that
+  // renders nothing does not count as an explicit empty list — which would
+  // leave the frame and its dismiss button wrapped around nothing.
   const content = hasRenderableContent(children)
     ? children
     : suggestions.items.map((text) => <RecipeItem key={text} text={text} />);

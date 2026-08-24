@@ -18,11 +18,9 @@ export type ActionButtonProps = ComponentPropsWithoutRef<'button'> & {
  * merges the host's `onClick` ahead of `onActivate`.
  *
  * `type="button"` is supplied in both cases, so a substituted `<button>` child
- * that sets no type of its own does not fall back to `submit` and post the
- * enclosing form — silently losing a draft. `Slot` gives child props
- * precedence, so a child that sets its own `type` keeps it, and a caller
- * whose `asChild` child is not a `<button>` can pass `type={undefined}` to
- * suppress the attribute entirely.
+ * that sets no type does not default to `submit` and post the enclosing form.
+ * `Slot` gives child props precedence, so a child's own `type` wins, and a
+ * non-button child can pass `type={undefined}` to drop the attribute.
  *
  * Internal — each primitive wraps this with its own state and naming.
  */

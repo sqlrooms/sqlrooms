@@ -38,10 +38,9 @@ export type ChatComposerDropTargetProps = ComponentPropsWithoutRef<'div'> & {
  * HTML5 file-drag events. A file drop needs a separate primitive built on
  * native drag events.
  *
- * **Requires a dnd-kit `DndContext` ancestor.** This subscribes to drag events
- * via `useDndMonitor`, which throws outside one — unlike the other composer
- * primitives, rendering this without the right ancestor is an error rather
- * than a degraded no-op. In a SQLRooms room, `RoomDndProvider` supplies it.
+ * **Requires a dnd-kit `DndContext` ancestor** — `useDndMonitor` throws
+ * outside one, so unlike the other primitives this errors rather than
+ * degrading to a no-op. `RoomDndProvider` supplies it inside a room.
  *
  * While an accepted drag is over the element, `data-drop-active` is present,
  * so a host can style the hover state (e.g. Tailwind's

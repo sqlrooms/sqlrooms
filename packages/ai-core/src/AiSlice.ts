@@ -211,20 +211,19 @@ export type AiSliceState = {
      */
     hasResolvableModel: () => boolean;
     /**
-     * Whether the model resolution path in effect needs a browser-held API key
-     * at all.
+     * Whether the model resolution path in effect needs a browser-held API key.
      *
-     * `false` when a custom-model factory is configured
-     * ({@link AiSliceOptions.getCustomModel}): that factory supplies a fully
-     * configured client, so credentials live wherever the host put them — a
-     * server-side proxy, for instance — and never reach the browser. `true`
-     * otherwise, when requests go out through the built-in
-     * OpenAI-compatible client and it needs a key.
+     * `false` only when {@link AiSliceOptions.getCustomModel} is configured
+     * *and currently returns a model*, which carries its own credentials.
+     * `true` otherwise — including when a configured factory returns
+     * `undefined`, since the transport then falls back to the built-in
+     * OpenAI-compatible client, which does consume the key.
      *
-     * Symmetric with {@link AiSliceState.ai.hasResolvableModel}: both treat a
-     * configured factory as authoritative and neither invokes it. Use this to
-     * gate API-key entry UI, so an app behind a model proxy is not asked for a
-     * key it has no use for.
+     * **Unlike {@link AiSliceState.ai.hasResolvableModel}, this invokes the
+     * factory**, discarding the result. Deliberate: guessing optimistically
+     * about readiness only risks a failed send, but guessing optimistically
+     * about credentials hides the only UI for entering one. Keep the factory
+     * cheap and idempotent — it is called during render.
      */
     requiresApiKey: () => boolean;
     /**
@@ -1113,10 +1112,17 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return Boolean(currentSession.modelProvider && currentSession.model);
         },
 
-        // A configured factory owns its own credentials, so the built-in
-        // client — the only thing that consumes a browser-held key — is out of
-        // the picture. Checked, never invoked, matching `hasResolvableModel`.
-        requiresApiKey: () => typeof getCustomModel !== 'function',
+        requiresApiKey: () => {
+          if (typeof getCustomModel !== 'function') return true;
+          try {
+            return getCustomModel() === undefined;
+          } catch {
+            // Must not throw: this runs in a selector, so it would crash a
+            // render. Assume a key is needed — showing key entry needlessly is
+            // recoverable, hiding it is not.
+            return true;
+          }
+        },
 
         /**
          * Get the current active session

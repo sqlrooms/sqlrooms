@@ -214,19 +214,34 @@ describe('AiSlice hasResolvableModel', () => {
 });
 
 describe('AiSlice requiresApiKey', () => {
-  it('does not require a key when a custom-model factory was configured', () => {
-    // The factory supplies a fully configured client, so credentials live
-    // wherever the host put them — a server-side proxy, typically — and the
-    // built-in OpenAI-compatible client that consumes a browser-held key is
-    // never reached. Without this, `hasResolvableModel()` turning true for
-    // these apps would newly raise an API-key prompt they have no use for.
+  /** A stand-in for a host-constructed model; never invoked by these tests. */
+  const someModel = {} as LanguageModel;
+
+  it('does not require a key when a configured factory returns a model', () => {
+    // That model carries its own credentials — a server-side proxy, typically —
+    // so the built-in OpenAI-compatible client that consumes a browser-held key
+    // is never reached.
+    const store = createTestStore({
+      getCustomModel: () => someModel,
+      aiSettingsConfig: createSettingsConfig([]),
+      sessionConfig: createSessionConfig('proxy', 'unlisted-model'),
+    });
+
+    expect(store.getState().ai.requiresApiKey()).toBe(false);
+  });
+
+  it('requires a key when a configured factory returns undefined', () => {
+    // The transport falls back to the OpenAI-compatible client in exactly this
+    // case (see `chatTransport`), and that client does consume the settings
+    // key. Reporting "no key needed" here would hide the inline key input and
+    // leave the user unable to supply a credential the request needs.
     const store = createTestStore({
       getCustomModel: () => undefined,
       aiSettingsConfig: createSettingsConfig([]),
       sessionConfig: createSessionConfig('proxy', 'unlisted-model'),
     });
 
-    expect(store.getState().ai.requiresApiKey()).toBe(false);
+    expect(store.getState().ai.requiresApiKey()).toBe(true);
   });
 
   it('requires a key when no custom-model factory was configured', () => {
@@ -240,14 +255,32 @@ describe('AiSlice requiresApiKey', () => {
     expect(store.getState().ai.requiresApiKey()).toBe(true);
   });
 
-  it('never invokes the factory, matching hasResolvableModel', () => {
+  it('invokes the factory, unlike hasResolvableModel', () => {
+    // The asymmetry is deliberate: readiness can guess optimistically because
+    // the cost is a failed send, but guessing about credentials hides the only
+    // UI for entering one. Documented on both predicates.
     const getCustomModel = jest.fn<() => LanguageModel | undefined>(
-      () => undefined,
+      () => someModel,
     );
     const store = createTestStore({getCustomModel});
 
     store.getState().ai.requiresApiKey();
+    expect(getCustomModel).toHaveBeenCalledTimes(1);
 
+    getCustomModel.mockClear();
+    store.getState().ai.hasResolvableModel();
     expect(getCustomModel).not.toHaveBeenCalled();
+  });
+
+  it('requires a key, and does not throw, when the factory throws', () => {
+    // This runs inside a Zustand selector, so propagating would crash a render.
+    const store = createTestStore({
+      getCustomModel: () => {
+        throw new Error('provider misconfigured');
+      },
+    });
+
+    expect(() => store.getState().ai.requiresApiKey()).not.toThrow();
+    expect(store.getState().ai.requiresApiKey()).toBe(true);
   });
 });

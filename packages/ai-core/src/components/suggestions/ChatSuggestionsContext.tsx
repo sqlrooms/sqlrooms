@@ -55,6 +55,12 @@ export interface ChatSuggestionsState {
    * signals as {@link useChatComposer}'s `canSend`, minus its non-empty-prompt
    * requirement, which is the wrong question for an item supplying its own
    * text.
+   *
+   * Built on `sendBlocked` rather than `needsApiKey`: the latter is also true
+   * for apps needing no browser key at all (a remote `chatEndPoint`, or no
+   * `@sqlrooms/ai-settings` slice), so gating on it would disable suggestions
+   * that work fine. A composer swapped to credential entry blocks sends
+   * chat-wide instead, which disables the row rather than letting it no-op.
    */
   isReadyToSend: boolean;
 }
@@ -77,10 +83,9 @@ type SuggestionsSource = Pick<
    */
   hasSendableTarget: boolean;
   /**
-   * The message half of {@link ChatSuggestionsState.isSessionEmpty}. The
-   * prompt half is added by the shared derivation from the composer's own
-   * normalized prompt, which is the only place that already accounts for a
-   * draft typed before a session exists.
+   * The message half of {@link ChatSuggestionsState.isSessionEmpty}. The prompt
+   * half comes from the composer's normalized prompt, which already accounts
+   * for a draft typed before a session exists.
    */
   hasNoMessages: boolean;
 };
@@ -102,7 +107,8 @@ function useSuggestionsState(source: SuggestionsSource): ChatSuggestionsState {
   );
   const send = useCallback((text: string) => composer.send(text), [composer]);
 
-  const isReadyToSend = hasSendableTarget && !composer.isBusy;
+  const isReadyToSend =
+    hasSendableTarget && !composer.sendBlocked && !composer.isBusy;
   const isSessionEmpty = hasNoMessages && composer.prompt.trim().length === 0;
 
   return useMemo(
@@ -135,9 +141,8 @@ function useSuggestionsState(source: SuggestionsSource): ChatSuggestionsState {
 function useSessionSuggestionsState(): ChatSuggestionsState {
   const visible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
   const setVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
-  // Derive the boolean inside the selector: the session object is replaced as
-  // messages stream in, so selecting it would re-render every suggestions
-  // surface on each token for a flag that flips once.
+  // Derive inside the selector: the session object is replaced on every
+  // streamed token, for a flag that flips once.
   const hasNoMessages = useStoreWithAi(
     (s) => (s.ai.getCurrentSession()?.uiMessages.length ?? 0) === 0,
   );

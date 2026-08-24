@@ -5,7 +5,11 @@ import {
   createDualModeChatContext,
   type ChatComposerMode,
 } from '../primitives/createDualModeChatContext';
-import {ChatComposerBeforeSendProvider, useVetoableSend} from './beforeSend';
+import {
+  ChatComposerBeforeSendProvider,
+  useSendsBlocked,
+  useVetoableSend,
+} from './beforeSend';
 
 export type {ChatComposerMode};
 
@@ -34,11 +38,10 @@ export interface ChatComposerState {
    * Sends the current prompt, or `text` when provided instead. A no-op when
    * sending is not currently possible (see {@link canSend}).
    *
-   * Every registered pre-send veto is consulted first (see
-   * {@link useRegisterBeforeSend}), so a host policy applies to *any* surface
-   * that sends — the composer's own controls, a suggestion row, a command —
-   * rather than only the one that installed it. In session mode a session is
-   * created first if none is active, after the vetoes pass.
+   * Registered pre-send vetoes are consulted first (see
+   * {@link useRegisterBeforeSend}), so a host policy covers any surface that
+   * sends, not just the one that installed it. In session mode a session is
+   * created if none is active, after the vetoes pass.
    */
   send: (text?: string) => void;
   /** Cancels the in-flight run, if any. A no-op when nothing is running. */
@@ -59,13 +62,18 @@ export interface ChatComposerState {
   /**
    * True when an API key must be supplied before sending can succeed.
    *
-   * Always `false` in local-agent mode, which has no concept of a
-   * browser-held API key — and also `false` in session mode when the model is
-   * resolved by a custom-model factory, which supplies its own credentials
-   * (see the slice's `requiresApiKey`). An app streaming through a
-   * server-side proxy therefore never sees a key prompt.
+   * Always `false` in local-agent mode, and in session mode when a
+   * custom-model factory supplies the model along with its own credentials
+   * (see the slice's `requiresApiKey`), so a proxy-backed app sees no prompt.
    */
   needsApiKey: boolean;
+  /**
+   * True while some surface has blocked sending outright — a composer swapped
+   * to credential entry, say. Already folded into {@link canSend}; read it
+   * directly for controls that ignore `canSend`, such as a suggestion row
+   * carrying its own text.
+   */
+  sendBlocked: boolean;
 }
 
 /**
@@ -116,13 +124,16 @@ function useSessionComposerState(): ChatComposerState {
 
   // One predicate for both `canSend` (over the current prompt) and `send`'s own
   // guard (over an optional override), so the two cannot disagree.
+  const sendBlocked = useSendsBlocked();
+
   const canSendText = useCallback(
     (text: string) =>
       hasResolvableModel &&
+      !sendBlocked &&
       !isRunning &&
       !isSummarizing &&
       text.trim().length > 0,
-    [hasResolvableModel, isRunning, isSummarizing],
+    [hasResolvableModel, sendBlocked, isRunning, isSummarizing],
   );
 
   const canSend = canSendText(prompt);
@@ -168,8 +179,8 @@ function useSessionComposerState(): ChatComposerState {
 
   const isBusy = isRunning || isSummarizing;
 
-  // Gated on `requiresApiKey` first: a resolvable model whose credentials the
-  // host owns must not raise a key prompt just because settings hold no key.
+  // `requiresApiKey` first: a model whose credentials the host owns must not
+  // raise a prompt just because settings hold no key.
   const needsApiKey =
     requiresApiKey &&
     hasResolvableModel &&
@@ -186,8 +197,19 @@ function useSessionComposerState(): ChatComposerState {
       isRunning,
       isBusy,
       needsApiKey,
+      sendBlocked,
     }),
-    [prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey],
+    [
+      prompt,
+      setPrompt,
+      send,
+      cancel,
+      canSend,
+      isRunning,
+      isBusy,
+      needsApiKey,
+      sendBlocked,
+    ],
   );
 }
 
@@ -210,7 +232,8 @@ function useLocalAgentComposerState(
     void stop();
   }, [stop]);
 
-  const canSend = !isStreaming && prompt.trim().length > 0;
+  const sendBlocked = useSendsBlocked();
+  const canSend = !isStreaming && !sendBlocked && prompt.trim().length > 0;
 
   return useMemo(
     () => ({
@@ -223,8 +246,9 @@ function useLocalAgentComposerState(
       isRunning: isStreaming,
       isBusy: isStreaming,
       needsApiKey: false,
+      sendBlocked,
     }),
-    [prompt, setPrompt, send, cancel, canSend, isStreaming],
+    [prompt, setPrompt, send, cancel, canSend, isStreaming, sendBlocked],
   );
 }
 

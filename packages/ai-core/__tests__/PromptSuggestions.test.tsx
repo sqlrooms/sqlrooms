@@ -442,6 +442,51 @@ describe('recipe — Chat.PromptSuggestions (the new vertical default)', () => {
     await cleanup(container, root);
   });
 
+  it('sees through a fragment whose contents are all falsy', async () => {
+    // `Children.toArray` drops bare `false` but does *not* flatten fragments —
+    // it returns the fragment element itself — so `<>{ready && <Item/>}</>`
+    // would otherwise report content and render an empty frame. Grouping
+    // conditional rows in a fragment is the ordinary shape, so this is the
+    // common case, not an edge one.
+    setMockRuntime({initialSuggestions: []});
+    const isReady = false;
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <PromptSuggestions>
+          <>
+            {isReady && <PromptSuggestions.Item text="host item" />}
+            {isReady && <PromptSuggestions.Item text="another" />}
+          </>
+        </PromptSuggestions>
+      </LocalAgentTree>,
+    );
+
+    expect(container.querySelector('button')).toBeNull();
+
+    await cleanup(container, root);
+  });
+
+  it('keeps a fragment that does have renderable contents', async () => {
+    // The negative control: recursing into fragments must not make a fragment
+    // with real children look empty.
+    setMockRuntime({initialSuggestions: []});
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <PromptSuggestions>
+          <>
+            <PromptSuggestions.Item text="host item" />
+          </>
+        </PromptSuggestions>
+      </LocalAgentTree>,
+    );
+
+    expect(container.textContent).toContain('host item');
+
+    await cleanup(container, root);
+  });
+
   it('renders nothing when neither children nor runtime items have content', async () => {
     setMockRuntime({initialSuggestions: []});
     const isReady = false;

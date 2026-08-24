@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type FC,
   type PropsWithChildren,
 } from 'react';
@@ -16,15 +17,30 @@ import {
 export type BeforeSendHandler = (text: string) => boolean | void;
 
 type BeforeSendRegistry = {
-  /** Adds `handler` to the veto set and returns its remover. */
-  register: (handler: BeforeSendHandler) => () => void;
+  /**
+   * Adds `handler` to the veto set and returns its remover. `exclusiveKey`
+   * names a role only one registration should fill; a second one still takes
+   * effect (dropping a host's veto would be worse) but warns in development.
+   */
+  register: (handler: BeforeSendHandler, exclusiveKey?: string) => () => void;
   /** Runs the registered handlers in mount order; `false` if one vetoed. */
   run: (text: string) => boolean;
+  /**
+   * Marks sends as unconditionally blocked while the returned disposer is
+   * unused. Unlike a veto — a function nobody can inspect ahead of time — this
+   * is reactive state, so controls can render as disabled instead of looking
+   * live and silently doing nothing.
+   */
+  block: () => () => void;
+  /** True while any {@link block} is held. */
+  blocked: boolean;
 };
 
 const NO_VETOES: BeforeSendRegistry = {
   register: () => () => {},
   run: () => true,
+  block: () => () => {},
+  blocked: false,
 };
 
 const BeforeSendContext = createContext<BeforeSendRegistry | null>(null);
@@ -32,34 +48,61 @@ const BeforeSendContext = createContext<BeforeSendRegistry | null>(null);
 /**
  * Holds the pre-send vetoes that {@link useChatComposer}'s `send` consults.
  *
- * Rendered *above* the composer state providers, because `send` is built there
- * while the vetoes come from descendants — a composer recipe deep in the tree,
- * typically. A mutable set read at call time is what bridges that gap: the
- * registry's identity stays stable, so registering a veto never rebuilds
- * `send` or re-renders anything reading composer state.
+ * Sits *above* the composer state providers, since `send` is built there while
+ * vetoes come from descendants. A mutable set read at call time bridges that:
+ * the registry identity is stable, so registering never rebuilds `send`.
  *
- * Idempotent. If an ancestor already provides a registry, `children` render
- * unchanged, so a nested boundary cannot split registration from the `send`
- * that consults it.
+ * Idempotent — an inherited registry passes through, so a nested boundary
+ * cannot split registration from the `send` that consults it.
  */
 export const ChatComposerBeforeSendProvider: FC<PropsWithChildren> = ({
   children,
 }) => {
   const inherited = useContext(BeforeSendContext);
   const handlers = useRef<Set<BeforeSendHandler>>(new Set()).current;
+  const exclusiveCounts = useRef<Map<string, number>>(new Map()).current;
+  // Reactive, unlike `handlers`: whether sends are blocked has to reach the
+  // state providers above, so controls can disable rather than no-op.
+  const [blockCount, setBlockCount] = useState(0);
 
   const registry = useMemo<BeforeSendRegistry>(
     () => ({
-      register: (handler) => {
+      block: () => {
+        setBlockCount((n) => n + 1);
+        let released = false;
+        return () => {
+          if (released) return;
+          released = true;
+          setBlockCount((n) => n - 1);
+        };
+      },
+      blocked: blockCount > 0,
+      register: (handler, exclusiveKey) => {
+        if (exclusiveKey !== undefined) {
+          const held = exclusiveCounts.get(exclusiveKey) ?? 0;
+          if (held > 0 && process.env.NODE_ENV !== 'production') {
+            console.warn(
+              `[sqlrooms] Two chat surfaces under one <Chat> root registered a ` +
+                `'${exclusiveKey}' pre-send veto, so both run for every send ` +
+                `from either surface. Pass a chat-wide policy once via ` +
+                `useRegisterBeforeSend(), or give each surface its own root.`,
+            );
+          }
+          exclusiveCounts.set(exclusiveKey, held + 1);
+        }
         handlers.add(handler);
         return () => {
           handlers.delete(handler);
+          if (exclusiveKey !== undefined) {
+            const held = exclusiveCounts.get(exclusiveKey) ?? 1;
+            if (held <= 1) exclusiveCounts.delete(exclusiveKey);
+            else exclusiveCounts.set(exclusiveKey, held - 1);
+          }
         };
       },
-      // Stops at the first veto: handlers are expected to have side effects
-      // (creating a session, say), so an aborted send should trigger as few of
-      // them as possible. Stacking several vetoes is not a designed use case;
-      // with more than one, they run in mount order.
+      // Stops at the first veto: handlers may have side effects (creating a
+      // session), so an aborted send should trigger as few as possible.
+      // Multiple vetoes run in mount order.
       run: (text) => {
         for (const handler of handlers) {
           if (handler(text) === false) return false;
@@ -67,7 +110,7 @@ export const ChatComposerBeforeSendProvider: FC<PropsWithChildren> = ({
         return true;
       },
     }),
-    [handlers],
+    [handlers, exclusiveCounts, blockCount],
   );
 
   if (inherited) return <>{children}</>;
@@ -78,39 +121,56 @@ export const ChatComposerBeforeSendProvider: FC<PropsWithChildren> = ({
   );
 };
 
-/**
- * Reads the veto registry, falling back to a no-op one so a primitive used
- * outside any provider still works.
- */
+/** Falls back to a no-op registry so primitives work outside any provider. */
 function useBeforeSendRegistry(): BeforeSendRegistry {
   return useContext(BeforeSendContext) ?? NO_VETOES;
 }
 
 /**
- * Wraps `send` so the registered pre-send vetoes are consulted first.
+ * Whether sends are currently blocked outright — see the registry's `block`.
+ */
+export function useSendsBlocked(): boolean {
+  return useBeforeSendRegistry().blocked;
+}
+
+/**
+ * Blocks every send while the calling component is mounted, reported through
+ * {@link ChatComposerState.sendBlocked} so controls render disabled instead of
+ * appearing live and doing nothing.
  *
- * Applied inside each mode's state hook, which is what makes a veto reach
- * *every* caller of {@link useChatComposer}'s `send` — a suggestion row, a
- * command, a host's own button — and not just the composer's own controls.
+ * For a state that makes sending impossible chat-wide (a missing credential);
+ * conditional policies want {@link useRegisterBeforeSend}.
+ */
+export function useBlockSends(enabled = true): void {
+  const {block} = useBeforeSendRegistry();
+  useEffect(() => {
+    if (!enabled) return;
+    return block();
+  }, [block, enabled]);
+}
+
+/**
+ * Wraps `send` so registered vetoes are consulted first. Applied inside each
+ * mode's state hook, which is what makes a veto reach every caller of
+ * `send` — a suggestion row, a command — not just the composer's controls.
  *
  * @param send - The mode's raw send action.
- * @param prompt - The current prompt, used as the veto's argument when `send`
- *   is called with no text of its own.
+ * @param prompt - Used as the veto's argument when `send` gets no text.
  */
 export function useVetoableSend(
   send: (text?: string) => void,
   prompt: string,
 ): (text?: string) => void {
-  const {run} = useBeforeSendRegistry();
+  const {run, blocked} = useBeforeSendRegistry();
   return useCallback(
-    // Rest args rather than a named parameter, so "no text" is forwarded as no
-    // argument instead of an explicit `undefined` — the wrapper stays
-    // invisible to a `send` that distinguishes the two.
+    // Rest args, so "no text" forwards as no argument rather than an explicit
+    // `undefined` — invisible to a `send` that distinguishes the two.
     (...args: [text?: string]) => {
+      if (blocked) return;
       if (!run(args[0] ?? prompt)) return;
       send(...args);
     },
-    [run, send, prompt],
+    [run, blocked, send, prompt],
   );
 }
 
@@ -121,12 +181,19 @@ export function useVetoableSend(
  * whatever triggered it — which is the point: a policy the composer enforces
  * and a suggestion row bypasses is a policy two surfaces disagree about.
  *
+ * **Chat-wide, not per-surface.** One `<Chat>` root has one registry, which is
+ * what stops a suggestion row bypassing a policy the composer enforces — but
+ * it also means two composers under one root share vetoes. Independent
+ * surfaces need separate roots.
+ *
  * @param handler - Called with the text about to be sent; return `false` to
- *   abort. May be a fresh closure each render — the latest one is always the
- *   one called. Pass `undefined` to register nothing.
+ *   abort. May be a fresh closure each render. `undefined` registers nothing.
+ * @param exclusiveKey - Names a role only one registration should fill, for a
+ *   dev-time duplicate warning. Omit for policies that may legitimately stack.
  */
 export function useRegisterBeforeSend(
   handler: BeforeSendHandler | undefined,
+  exclusiveKey?: string,
 ): void {
   const {register} = useBeforeSendRegistry();
   const latest = useRef(handler);
@@ -139,8 +206,8 @@ export function useRegisterBeforeSend(
 
   useEffect(() => {
     if (!enabled) return;
-    // A stable trampoline is registered rather than `handler` itself, so a
-    // caller passing a new closure each render does not churn the registry.
-    return register((text) => latest.current?.(text));
-  }, [register, enabled]);
+    // A stable trampoline, so a fresh closure each render does not churn the
+    // registry.
+    return register((text) => latest.current?.(text), exclusiveKey);
+  }, [register, enabled, exclusiveKey]);
 }

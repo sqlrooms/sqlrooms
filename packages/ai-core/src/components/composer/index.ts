@@ -9,6 +9,8 @@ export type {ChatComposerMode, ChatComposerState} from './ChatComposerContext';
 export {
   ChatComposerBeforeSendProvider,
   useRegisterBeforeSend,
+  useBlockSends,
+  useSendsBlocked,
 } from './beforeSend';
 export type {BeforeSendHandler} from './beforeSend';
 
