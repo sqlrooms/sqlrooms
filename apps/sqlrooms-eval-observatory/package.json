@@ -8,18 +8,24 @@
     "dev": "vite --host --port 3200",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sqlrooms/cosmos": "workspace:*",
     "@sqlrooms/evals": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "@sqlrooms/preset-jest": "workspace:*",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
     "eslint": "^9.36.0",
+    "ts-jest": "^29.4.4",
     "typescript": "^5.9.2",
     "vite": "^8.2.0"
   }

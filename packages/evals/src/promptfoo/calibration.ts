@@ -1,4 +1,4 @@
-import type {ObservatoryRun} from './readModel';
+import type {ObservatoryRun} from './readModel.js';
 
 /** Failure classes used while calibrating behavioral canaries. */
 export type EvalFailureClass =

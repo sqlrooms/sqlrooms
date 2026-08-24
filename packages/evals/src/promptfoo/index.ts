@@ -1,12 +1,12 @@
-import type {OracleResult} from '../oracle';
-import {OracleResultSchema, summarizeOracleResults} from '../oracle';
-import type {RunEvidence} from '../evidence';
-import {RunEvidenceSchema} from '../evidence';
+import type {OracleResult} from '../oracle.js';
+import {OracleResultSchema, summarizeOracleResults} from '../oracle.js';
+import type {RunEvidence} from '../evidence.js';
+import {RunEvidenceSchema} from '../evidence.js';
 
-export * from './readModel';
-export * from './calibration';
-export * from './markdown';
-export * from './sqlite';
+export * from './readModel.js';
+export * from './calibration.js';
+export * from './markdown.js';
+export * from './sqlite.js';
 
 /** Promptfoo-compatible provider response without a Promptfoo dependency. */
 export type PromptfooProviderResponse = {

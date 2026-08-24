@@ -178,4 +178,41 @@ describe('CLI behavioral scenario oracles', () => {
       await oracle?.evaluate(context(MUTATE_WORKSHEET_SCENARIO, valid)),
     ).toMatchObject({pass: true});
   });
+
+  it('requires the grounded answer to name the intended chart and map result', async () => {
+    const oracle = createCliScenarioOracles(
+      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'grounded-answer');
+    if (!oracle) throw new Error('Missing grounded-answer oracle.');
+
+    const evaluate = (finalAnswer: string) =>
+      oracle.evaluate({
+        scenario: CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+        finalAnswer,
+        errors: [],
+        mutations: [],
+        metadata: {},
+      });
+
+    expect(
+      await evaluate('Created a chart and map from analytics.events.'),
+    ).toMatchObject({pass: true});
+    expect(
+      await evaluate('Created a chart from analytics.events.'),
+    ).toMatchObject({pass: false});
+  });
+
+  it('recognizes a canonical quoted table identity in map dataset state', async () => {
+    const current = workspace();
+    const oracle = createCliScenarioOracles(
+      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'canonical-bindings');
+    if (!oracle) throw new Error('Missing canonical-bindings oracle.');
+
+    const result = await oracle.evaluate(
+      context(CREATE_WORKSHEET_CHART_MAP_SCENARIO, current),
+    );
+
+    expect(result.pass).toBe(true);
+  });
 });

@@ -85,9 +85,106 @@ describe('createOrUpdateDeckMapResource', () => {
     expect(h.writeMap).toHaveBeenCalledWith({
       mapId: 'map-1',
       title: 'Places',
-      config,
+      config: {
+        ...config,
+        datasets: {
+          places: {source: {tableName: 'main.places'}},
+        },
+      },
       selectedTable: 'main.places',
     });
+  });
+
+  test('canonicalizes table-backed dataset sources before writing', async () => {
+    const h = host({
+      findTable: jest.fn((tableName) =>
+        tableName === 'analytics.events'
+          ? {tableIdentity: '"analytics"."events"'}
+          : undefined,
+      ),
+    });
+    const transformedConfig: DeckMapConfig = {
+      ...config,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'analytics.events',
+            transformSql:
+              'SELECT * FROM __sqlrooms_source WHERE longitude IS NOT NULL',
+          },
+        },
+      },
+    };
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'worksheet-1',
+      config: transformedConfig,
+      createMapId: () => 'map-1',
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          datasets: {
+            places: {
+              source: {
+                tableName: '"analytics"."events"',
+                transformSql:
+                  'SELECT * FROM __sqlrooms_source WHERE longitude IS NOT NULL',
+              },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  test('rejects table transforms that bypass the reserved source relation', async () => {
+    const h = host();
+    const invalidTransformConfig: DeckMapConfig = {
+      ...config,
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql: 'SELECT * FROM places',
+          },
+        },
+      },
+    };
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'worksheet-1',
+        config: invalidTransformConfig,
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Deck table dataset transformSql must reference __sqlrooms_source.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('rejects unresolved ambiguous dataset table sources', async () => {
+    const h = host({findTable: jest.fn(() => undefined)});
+    const ambiguousConfig: DeckMapConfig = {
+      ...config,
+      datasets: {
+        places: {source: {tableName: 'events'}},
+      },
+    };
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'worksheet-1',
+        config: ambiguousConfig,
+        tableName: 'analytics.events',
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow('Dataset "places" table "events" was not found.');
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
   });
 
   test('uses a requested map id when create mode recovers a missing block', async () => {

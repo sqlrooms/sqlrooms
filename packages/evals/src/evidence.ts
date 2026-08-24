@@ -1,7 +1,7 @@
 import {z} from 'zod';
-import {JsonObjectSchema, JsonValueSchema} from './json';
-import {OracleResultSchema} from './oracle';
-import {ScenarioIdSchema} from './scenario';
+import {JsonObjectSchema, JsonValueSchema} from './json.js';
+import {OracleResultSchema} from './oracle.js';
+import {ScenarioIdSchema} from './scenario.js';
 
 /** Current version of the durable run-evidence envelope. */
 export const RUN_EVIDENCE_SCHEMA_VERSION = 1 as const;
