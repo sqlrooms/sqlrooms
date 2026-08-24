@@ -31,6 +31,15 @@ const context: BehavioralCheckContext = {
 };
 
 describe('behavioral checks', () => {
+  it('rejects an empty check ID at creation', () => {
+    expect(() =>
+      createDatabaseCheck({
+        id: '',
+        evaluate: () => ({pass: true, reason: 'Database is valid.'}),
+      }),
+    ).toThrow('Behavioral check ID must not be empty.');
+  });
+
   it('composes database, workspace, answer, error, and policy checks', async () => {
     const results = await evaluateBehavioralChecks(
       [

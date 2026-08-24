@@ -86,6 +86,10 @@ function createSpecializedCheck<TValue>(
   options: BehavioralCheckOptions<TValue>,
   select: (context: BehavioralCheckContext) => TValue,
 ): BehavioralCheck {
+  if (options.id.length === 0) {
+    throw new Error('Behavioral check ID must not be empty.');
+  }
+
   return {
     id: options.id,
     kind,
