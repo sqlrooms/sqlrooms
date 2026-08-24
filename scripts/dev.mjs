@@ -1,7 +1,13 @@
 import {spawn, spawnSync} from 'node:child_process';
 import net from 'node:net';
-import {tmpdir} from 'node:os';
 import path from 'node:path';
+import {
+  getPythonCliDevArgs,
+  hasOption,
+  hostForUrl,
+  publicHost,
+  readOptionValue,
+} from './cli-dev-args.mjs';
 
 /**
  * Dev entrypoint for this monorepo.
@@ -86,28 +92,6 @@ const childEnv = {
 const CLI_DEV_API_DEFAULT_PORT = 4273;
 const CLI_DEV_UI_DEFAULT_PORT = 3100;
 
-function readOptionValue(args, name) {
-  const prefix = `${name}=`;
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === name) return args[index + 1] ?? null;
-    if (arg.startsWith(prefix)) return arg.slice(prefix.length);
-  }
-  return null;
-}
-
-function hasOption(args, name) {
-  return readOptionValue(args, name) !== null;
-}
-
-function publicHost(host) {
-  return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
-}
-
-function hostForUrl(host) {
-  return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
-}
-
 function portProbeHosts(host) {
   return host === 'localhost' ? ['127.0.0.1', '::1'] : [host];
 }
@@ -171,42 +155,6 @@ function parsePortOption(args, name) {
   return Number.isFinite(port) ? port : null;
 }
 
-function hasDbPathArg(args) {
-  if (
-    readOptionValue(args, '--db-path') !== null ||
-    readOptionValue(args, '-d') !== null
-  ) {
-    return true;
-  }
-
-  const optionsWithValue = new Set([
-    '--config',
-    '--db-path',
-    '--host',
-    '--meta-db',
-    '--meta-namespace',
-    '--port',
-    '--ui',
-    '--ws-port',
-    '-d',
-  ]);
-
-  for (let index = 0; index < args.length; index += 1) {
-    const arg = args[index];
-    if (arg === '--') {
-      return args.slice(index + 1).some((value) => !value.startsWith('-'));
-    }
-    if (arg.startsWith('--') && arg.includes('=')) continue;
-    if (optionsWithValue.has(arg)) {
-      index += 1;
-      continue;
-    }
-    if (!arg.startsWith('-')) return true;
-  }
-
-  return false;
-}
-
 async function getCliDevPorts(args) {
   const host = readOptionValue(args, '--host') ?? '127.0.0.1';
   const proxyHost = hostForUrl(publicHost(host));
@@ -229,27 +177,6 @@ async function getCliDevPorts(args) {
     uiReservedPorts,
   );
   return {apiPort, proxyHost, uiPort};
-}
-
-function getPythonCliDevArgs(args, apiPort, uiPort) {
-  const hasDbPath = hasDbPathArg(args);
-  const apiPortArgs = hasOption(args, '--port')
-    ? args
-    : ['--port', String(apiPort), ...args];
-  const externalUrlArgs =
-    hasOption(args, '--external-url') || process.env.SQLROOMS_EXTERNAL_URL
-      ? apiPortArgs
-      : ['--external-url', `http://localhost:${uiPort}`, ...apiPortArgs];
-  const experimentalArgs = externalUrlArgs.includes('--experimental')
-    ? externalUrlArgs
-    : ['--experimental', ...externalUrlArgs];
-  return hasDbPath
-    ? experimentalArgs
-    : [
-        '--db-path',
-        path.join(tmpdir(), `sqlrooms-${uiPort}.db`),
-        ...experimentalArgs,
-      ];
 }
 
 function turboRunArgs(task, filters, extraArgs = []) {
@@ -338,7 +265,12 @@ if (target !== 'cli') {
   }
 } else if (isDryRun) {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
-  const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
+  const pythonCliArgs = getPythonCliDevArgs(
+    cliArgs,
+    apiPort,
+    uiPort,
+    proxyHost,
+  );
   console.log(
     `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
@@ -433,7 +365,12 @@ process.on('SIGTERM', () => {
 
 if (target === 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
-  const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
+  const pythonCliArgs = getPythonCliDevArgs(
+    cliArgs,
+    apiPort,
+    uiPort,
+    proxyHost,
+  );
   startProcess(
     'sqlrooms CLI UI dev server',
     ['--host', '--port', String(uiPort)],
