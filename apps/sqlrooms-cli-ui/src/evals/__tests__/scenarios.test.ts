@@ -230,7 +230,7 @@ describe('CLI behavioral scenario oracles', () => {
         source: {
           tableName: 'analytics.events',
           transformSql:
-            'SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source',
+            'SELECT *, ST_AsWKB(ST_Point("longitude", "latitude")) AS "geom" FROM __sqlrooms_source WHERE "longitude" IS NOT NULL AND "latitude" IS NOT NULL',
         },
         geometryColumn: 'geom',
         geometryEncodingHint: 'wkb',
@@ -281,16 +281,17 @@ describe('CLI behavioral scenario oracles', () => {
     } as unknown as (typeof current.documents)[number]['blocks'][number]['config'];
     expect(await evaluate()).toMatchObject({pass: true});
 
-    dataset.source.transformSql =
-      'SELECT longitude, latitude, ST_AsWKB(ST_Point(x, y)) AS geom FROM __sqlrooms_source';
-    expect(await evaluate()).toMatchObject({pass: false});
+    dataset.source.transformSql = ` ${validTransformSql}; `;
+    expect(await evaluate()).toMatchObject({pass: true});
 
     dataset.source.transformSql =
-      "SELECT ST_AsWKB(ST_Point(x, y)) AS geom, 'ST_Point(longitude, latitude)' AS note FROM __sqlrooms_source -- ST_Point(longitude, latitude)";
+      'SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source';
     expect(await evaluate()).toMatchObject({pass: false});
 
-    dataset.source.transformSql =
-      'SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS decoy, ST_AsWKB(ST_Point(0, 0)) AS geom FROM __sqlrooms_source';
+    dataset.source.transformSql = validTransformSql.replace(
+      'ST_Point("longitude", "latitude")',
+      'ST_Point("x", "y")',
+    );
     expect(await evaluate()).toMatchObject({pass: false});
 
     dataset.source.transformSql = validTransformSql;
@@ -299,19 +300,6 @@ describe('CLI behavioral scenario oracles', () => {
 
     dataset.geometryEncodingHint = 'wkb';
     layer['@@type'] = 'GeoArrowPolygonLayer';
-    expect(await evaluate()).toMatchObject({pass: false});
-
-    layer['@@type'] = 'GeoArrowScatterplotLayer';
-    dataset.source.transformSql =
-      'WITH __sqlrooms_source AS (SELECT * FROM archive.events) SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source';
-    expect(await evaluate()).toMatchObject({pass: false});
-
-    dataset.source.transformSql =
-      'WITH decoy AS (SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source) SELECT ST_AsWKB(ST_Point(x, y)) AS geom FROM __sqlrooms_source';
-    expect(await evaluate()).toMatchObject({pass: false});
-
-    dataset.source.transformSql =
-      'SELECT ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM archive.__sqlrooms_source';
     expect(await evaluate()).toMatchObject({pass: false});
   });
 

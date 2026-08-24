@@ -7,6 +7,7 @@ import {
   type JsonValue,
   type ScenarioDefinition,
 } from '@sqlrooms/evals';
+import {createDeckMapPointTransformSql} from '@sqlrooms/deck';
 import {CLI_EVAL_TARGET_TABLE} from './fixture';
 
 const CLI_EVAL_TARGET_TABLES = new Set([
@@ -80,157 +81,17 @@ function hasCanonicalChartBinding(value: unknown): boolean {
   }
 }
 
-function sqlIdentifierParts(expression: string): string[] | undefined {
-  const parts = expression.split('.').map((part) => part.trim());
-  const identifiers = parts.map((part) => {
-    const quoted = /^"((?:[^"]|"")+)"$/.exec(part);
-    if (quoted) return quoted[1]!.replace(/""/g, '"').toLowerCase();
-    return /^[a-z_][a-z0-9_$]*$/i.test(part) ? part.toLowerCase() : undefined;
-  });
-  if (identifiers.some((identifier) => identifier === undefined)) {
-    return undefined;
-  }
-  return identifiers as string[];
-}
-
-function sqlIdentifierName(expression: string): string | undefined {
-  const identifiers = sqlIdentifierParts(expression);
-  return identifiers?.[identifiers.length - 1];
-}
-
-function maskSqlCommentsAndLiterals(sql: string): string {
-  const masked = sql.split('');
-  const mask = (index: number) => {
-    if (masked[index] !== '\n' && masked[index] !== '\r') masked[index] = ' ';
-  };
-
-  for (let index = 0; index < sql.length; index += 1) {
-    if (sql[index] === "'") {
-      mask(index);
-      while (++index < sql.length) {
-        mask(index);
-        if (sql[index] === '\\') {
-          if (++index < sql.length) mask(index);
-        } else if (sql[index] === "'") {
-          if (sql[index + 1] !== "'") break;
-          if (++index < sql.length) mask(index);
-        }
-      }
-    } else if (sql[index] === '"') {
-      while (++index < sql.length && sql[index] !== '"') {}
-      while (sql[index + 1] === '"') {
-        index += 1;
-        while (++index < sql.length && sql[index] !== '"') {}
-      }
-    } else if (sql[index] === '-' && sql[index + 1] === '-') {
-      while (index < sql.length && sql[index] !== '\n') mask(index++);
-    } else if (sql[index] === '/' && sql[index + 1] === '*') {
-      let depth = 1;
-      mask(index);
-      mask(++index);
-      while (++index < sql.length && depth > 0) {
-        if (sql[index] === '/' && sql[index + 1] === '*') {
-          depth += 1;
-          mask(index);
-          mask(++index);
-        } else if (sql[index] === '*' && sql[index + 1] === '/') {
-          depth -= 1;
-          mask(index);
-          mask(++index);
-        } else {
-          mask(index);
-        }
-      }
-    } else if (sql[index] === '$') {
-      const delimiter = /^\$[a-z_][a-z0-9_]*\$|^\$\$/i.exec(
-        sql.slice(index),
-      )?.[0];
-      if (!delimiter) continue;
-      const end = sql.indexOf(delimiter, index + delimiter.length);
-      const endIndex = end < 0 ? sql.length - 1 : end + delimiter.length - 1;
-      while (index <= endIndex) mask(index++);
-      index -= 1;
-    }
-  }
-
-  return masked.join('');
-}
-
-function outerSelectProjection(transformSql: string): string | undefined {
-  const sql = maskSqlCommentsAndLiterals(transformSql);
-  let depth = 0;
-  let selectEnd: number | undefined;
-  let projection: string | undefined;
-
-  const hasKeywordAt = (index: number, keyword: string) => {
-    const before = sql[index - 1];
-    const after = sql[index + keyword.length];
-    return (
-      sql.slice(index, index + keyword.length).toLowerCase() === keyword &&
-      (!before || !/[a-z0-9_$]/i.test(before)) &&
-      (!after || !/[a-z0-9_$]/i.test(after))
-    );
-  };
-
-  for (let index = 0; index < sql.length; index += 1) {
-    if (sql[index] === '"') {
-      while (++index < sql.length) {
-        if (sql[index] !== '"') continue;
-        if (sql[index + 1] !== '"') break;
-        index += 1;
-      }
-    } else if (sql[index] === '(') {
-      depth += 1;
-    } else if (sql[index] === ')') {
-      depth -= 1;
-      if (depth < 0) return undefined;
-    } else if (depth === 0 && hasKeywordAt(index, 'select')) {
-      if (selectEnd !== undefined || projection !== undefined) return undefined;
-      selectEnd = index + 'select'.length;
-      index = selectEnd - 1;
-    } else if (
-      depth === 0 &&
-      selectEnd !== undefined &&
-      hasKeywordAt(index, 'from')
-    ) {
-      projection = sql.slice(selectEnd, index);
-      selectEnd = undefined;
-      index += 'from'.length - 1;
-    }
-  }
-
-  return depth === 0 ? projection : undefined;
-}
-
-function hasPointGeometryBinding(
+function hasCanonicalPointTransform(
   transformSql: string,
   geometryColumn: string,
 ): boolean {
-  const pointCalls = outerSelectProjection(transformSql)?.matchAll(
-    /\bst_aswkb\s*\(\s*st_point\s*\(\s*([^(),]+?)\s*,\s*([^(),]+?)\s*\)\s*\)\s+as\s+("(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)/gi,
-  );
-  if (!pointCalls) return false;
-  return Array.from(pointCalls).some(
-    ([, longitude, latitude, alias]) =>
-      sqlIdentifierName(longitude!) === 'longitude' &&
-      sqlIdentifierName(latitude!) === 'latitude' &&
-      sqlIdentifierName(alias!) === geometryColumn.toLowerCase(),
-  );
-}
-
-function usesOnlyTargetTransformSource(transformSql: string): boolean {
-  const sourceReferences = maskSqlCommentsAndLiterals(transformSql).matchAll(
-    /\b(?:from|join)\s+((?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)(?:\s*\.\s*(?:"(?:[^"]|"")+"|[a-z_][a-z0-9_$]*)){0,2})/gi,
-  );
-  const references = Array.from(sourceReferences, ([, reference]) =>
-    sqlIdentifierParts(reference!),
-  );
-  return (
-    references.length > 0 &&
-    references.every(
-      (parts) => parts?.length === 1 && parts[0] === '__sqlrooms_source',
-    )
-  );
+  const expected = createDeckMapPointTransformSql({
+    longitudeColumn: 'longitude',
+    latitudeColumn: 'latitude',
+    geometryColumn,
+  });
+  const normalize = (sql: string) => sql.trim().replace(/(?:\s*;+\s*)+$/, '');
+  return normalize(transformSql) === normalize(expected);
 }
 
 function hasCanonicalMapBinding(
@@ -292,8 +153,7 @@ function hasCanonicalMapBinding(
       POINT_LAYER_TYPES.has(layerConfig['@@type']) &&
       (encodingHint === undefined || encodingHint === 'wkb') &&
       typeof transformSql === 'string' &&
-      hasPointGeometryBinding(transformSql, datasetGeometryColumn) &&
-      usesOnlyTargetTransformSource(transformSql)
+      hasCanonicalPointTransform(transformSql, datasetGeometryColumn)
     );
   });
 }
