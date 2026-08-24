@@ -32,6 +32,8 @@ export type RuntimeConfig = {
   llmProvider?: string;
   llmModel?: string;
   configWritable?: boolean;
+  capabilityProfile?: string;
+  /** @deprecated Use capabilityProfile. Kept for older Python runtimes. */
   experimentalEnabled?: boolean;
   aiDevtools?: boolean;
   syncEnabled?: boolean;

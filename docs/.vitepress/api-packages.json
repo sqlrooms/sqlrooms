@@ -86,7 +86,7 @@
       },
       {
         "name": "documents",
-        "description": "Markdown document artifacts, structured BlockDocument and Worksheet surfaces, rich editors, document assets, and document CRDT sync."
+        "description": "Markdown document artifacts, structured BlockDocument and Document surfaces, rich editors, document assets, and document CRDT sync."
       },
       {
         "name": "dropzone",

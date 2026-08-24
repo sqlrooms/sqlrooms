@@ -5,6 +5,10 @@ import {
   type ArtifactContextToolsOptions,
 } from '@sqlrooms/artifacts/ai';
 import type {StoreApi} from 'zustand';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from '../profiles';
 import type {RoomState} from '../store-types';
 
 function readCliArtifact({
@@ -24,7 +28,7 @@ function readCliArtifact({
     };
   }
 
-  if (artifact.type === 'document') {
+  if (artifact.type === 'markdown') {
     const document = state.documents.getDocument(artifactId);
     return {
       success: true as const,
@@ -34,7 +38,7 @@ function readCliArtifact({
         type: artifact.type,
       },
       payload: {
-        kind: 'document',
+        kind: 'markdown',
         markdown: document?.markdown ?? '',
         assets: Object.values(document?.assets ?? {}).map((asset) => ({
           id: asset.id,
@@ -51,8 +55,8 @@ function readCliArtifact({
     };
   }
 
-  if (artifact.type === 'worksheet') {
-    const worksheet = state.blockDocuments.getBlockDocument(artifactId);
+  if (artifact.type === 'document') {
+    const document = state.blockDocuments.getBlockDocument(artifactId);
     return {
       success: true as const,
       artifact: {
@@ -61,9 +65,9 @@ function readCliArtifact({
         type: artifact.type,
       },
       payload: {
-        kind: 'worksheet',
+        kind: 'document',
         blocks: state.blockDocuments.getBlocks(artifactId),
-        assets: Object.values(worksheet?.assets ?? {}).map((asset) => ({
+        assets: Object.values(document?.assets ?? {}).map((asset) => ({
           id: asset.id,
           filename: asset.filename,
           mediaType: asset.mediaType,
@@ -73,7 +77,7 @@ function readCliArtifact({
           createdAt: asset.createdAt,
           updatedAt: asset.updatedAt,
         })),
-        updatedAt: worksheet?.updatedAt,
+        updatedAt: document?.updatedAt,
       },
     };
   }
@@ -148,14 +152,16 @@ function readCliArtifact({
       kind: 'metadata-only',
       unsupportedPayload: true,
       details:
-        'This artifact type is available as context, but read_context_artifact only returns full payloads for worksheet, document, and dashboard artifacts in v1.',
+        'This artifact type is available as context, but read_context_artifact only returns full payloads for document, document, and dashboard artifacts in v1.',
     },
   };
 }
 
 function createArtifactContextOptions(
   store: StoreApi<RoomState>,
+  profile: CliCapabilityProfile,
 ): ArtifactContextToolsOptions<RoomState> {
+  const supportedArtifactTypes = new Set<string>(profile.artifacts.runContext);
   const getContextSessionId = (
     state: RoomState,
     context?: ArtifactContextToolExecutionContext,
@@ -177,6 +183,8 @@ function createArtifactContextOptions(
     },
     readArtifact: ({state, artifactId}) =>
       readCliArtifact({state, artifactId, store}),
+    isArtifactAllowed: ({artifact}) =>
+      supportedArtifactTypes.has(artifact.type),
   };
 }
 
@@ -184,16 +192,20 @@ export function makeArtifactPrimaryForAiRun(
   store: StoreApi<RoomState>,
   artifactId: string,
   context?: ArtifactContextToolExecutionContext,
+  profile: CliCapabilityProfile = DEFAULT_CLI_CAPABILITY_PROFILE,
 ) {
   return makeReusableArtifactPrimaryForAiRun(
-    createArtifactContextOptions(store),
+    createArtifactContextOptions(store, profile),
     artifactId,
     context,
   );
 }
 
-export function createArtifactContextAiTools(store: StoreApi<RoomState>) {
+export function createArtifactContextAiTools(
+  store: StoreApi<RoomState>,
+  profile: CliCapabilityProfile = DEFAULT_CLI_CAPABILITY_PROFILE,
+) {
   return createReusableArtifactContextAiTools(
-    createArtifactContextOptions(store),
+    createArtifactContextOptions(store, profile),
   );
 }

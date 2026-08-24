@@ -21,6 +21,10 @@ import {
   KnownBlockDocumentTools,
 } from './ai/constants';
 import {BlockDocumentMapBlockToolParameters} from './createCliBlockDocumentCommands';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from './profiles';
 
 const BlockDocumentMapBlockToolInput = BlockDocumentMapBlockToolParameters.omit(
   {
@@ -33,9 +37,9 @@ function createBlockDocumentMapBlockTool(
   blockDocumentId: string,
 ): Tool {
   return tool({
-    description: `Create or update a direct worksheet map block from a native Deck JSON map config.
+    description: `Create or update a direct document map block from a native Deck JSON map config.
 
-Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a worksheet. This creates a worksheet map block directly; do not create a dashboard block just to show a map.
+Use this for map, geospatial, spatial, longitude/latitude, geometry, H3, route, or location visualizations inside a document. This creates a document map block directly; do not create a dashboard block just to show a map.
 
 ${getDeckMapResourceAiInstructions()}`,
     inputSchema: BlockDocumentMapBlockToolInput,
@@ -52,7 +56,7 @@ ${getDeckMapResourceAiInstructions()}`,
           throw new Error(
             result.error ??
               result.message ??
-              'Failed to add worksheet map block.',
+              'Failed to add document map block.',
           );
         }
         const data = result.data as
@@ -81,9 +85,11 @@ ${getDeckMapResourceAiInstructions()}`,
 export function blockDocumentAgentTool(
   store: StoreApi<RoomState>,
   {
-    experimentalEnabled = false,
+    profile = DEFAULT_CLI_CAPABILITY_PROFILE,
+    getModel,
   }: {
-    experimentalEnabled?: boolean;
+    profile?: CliCapabilityProfile;
+    getModel?: BaseAgentToolOptions<RoomState>['getModel'];
   } = {},
 ) {
   const blockDocumentAdapter = createCliBlockDocumentAiAdapter(store);
@@ -91,18 +97,20 @@ export function blockDocumentAgentTool(
 
   const baseOptions: BaseAgentToolOptions<RoomState> = {
     store,
-    getModel: ({state}) => {
-      const currentSession = state.ai.getCurrentSession();
-      const provider = currentSession?.modelProvider || 'openai';
-      const modelId = currentSession?.model || 'gpt-4.1';
+    getModel:
+      getModel ??
+      (({state}) => {
+        const currentSession = state.ai.getCurrentSession();
+        const provider = currentSession?.modelProvider || 'openai';
+        const modelId = currentSession?.model || 'gpt-4.1';
 
-      return createOpenAICompatible({
-        apiKey: state.ai.getApiKeyFromSettings(),
-        name: provider || '',
-        baseURL:
-          state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
-      }).chatModel(modelId);
-    },
+        return createOpenAICompatible({
+          apiKey: state.ai.getApiKeyFromSettings(),
+          name: provider || '',
+          baseURL:
+            state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+        }).chatModel(modelId);
+      }),
     createDataTools: () =>
       createDefaultAiTools(store, {query: {}, tables: true, commands: false}),
     runSubAgent: ({agent, prompt, parentToolCallId, abortSignal}) =>
@@ -110,7 +118,7 @@ export function blockDocumentAgentTool(
   };
 
   const dashboardAgentTool = (blockDocumentId: string) =>
-    experimentalEnabled
+    profile.dashboard.deckMaps
       ? createDashboardAgentToolWithDeckMaps({
           ...baseOptions,
           databaseAdapter,
@@ -128,7 +136,7 @@ export function blockDocumentAgentTool(
 
             if (!ownsDashboard) {
               throw new Error(
-                `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+                `Dashboard "${dashboardId}" is not owned by document "${blockDocumentId}".`,
               );
             }
           },
@@ -149,7 +157,7 @@ export function blockDocumentAgentTool(
 
             if (!ownsDashboard) {
               throw new Error(
-                `Dashboard "${dashboardId}" is not owned by worksheet "${blockDocumentId}".`,
+                `Dashboard "${dashboardId}" is not owned by document "${blockDocumentId}".`,
               );
             }
           },
@@ -159,9 +167,13 @@ export function blockDocumentAgentTool(
     ...baseOptions,
     databaseAdapter,
     blockDocumentAdapter,
-    dashboardAgentTool,
-    htmlAppBlocksEnabled: experimentalEnabled,
-    mapBlocksEnabled: experimentalEnabled,
+    htmlAppBlocksEnabled: profile.blocks.stateful.includes('html-app'),
+    mapBlocksEnabled: profile.blocks.stateful.includes('map'),
+    dashboardBlocksEnabled: profile.blocks.stateful.includes('dashboard'),
+    dataTableBlocksEnabled: profile.blocks.stateful.includes('data-table'),
+    ...(profile.ai.nestedAgents.includes('document-dashboard')
+      ? {dashboardAgentTool}
+      : {}),
     addDashboardBlock: async ({blockDocumentId, title, tableName, intent}) => {
       const result = await store
         .getState()
@@ -251,7 +263,7 @@ export function blockDocumentAgentTool(
       tableName,
       caption: title,
     }),
-    additionalInstructions: experimentalEnabled
+    additionalInstructions: profile.ai.instructionSets.includes('experimental')
       ? EXPERIMENTAL_BLOCK_DOCUMENT_AGENT_INSTRUCTIONS
       : undefined,
     extraTools: ({blockDocumentId}) => {

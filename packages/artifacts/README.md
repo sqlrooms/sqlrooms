@@ -154,6 +154,37 @@ The artifact shell still owns workspace metadata such as id, title, tabs,
 current selection, and AI context. The stateful block definition owns the
 feature-specific rendering and backing-state lifecycle.
 
+## Entry Points
+
+| Import                       | Contains                                                                                                            | Pulls React |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `@sqlrooms/artifacts`        | Slices, components, artifact types — the full package                                                               | Yes         |
+| `@sqlrooms/artifacts/config` | Serializable shapes only: `ArtifactMetadata`, `ArtifactsSliceConfig`, `ArtifactType`, `ArtifactSessionLink(Schema)` | No          |
+| `@sqlrooms/artifacts/ai`     | Assistant tools for artifact context                                                                                | No          |
+
+Prefer `@sqlrooms/artifacts/config` when you only need the persisted data model
+and want to stay out of the React dependency — a test runner, a config
+migration, or server-side code:
+
+```ts
+import {
+  ArtifactMetadata,
+  ArtifactSessionLinkSchema,
+} from '@sqlrooms/artifacts/config';
+
+const link = ArtifactSessionLinkSchema.parse(row);
+```
+
+Import these shapes from `/config` rather than from an internal module path such
+as `@sqlrooms/artifacts/dist/ArtifactsSliceConfig`. The subpath is the supported
+surface and will keep working when the underlying modules are reorganized;
+internal paths have moved before.
+
+All entries target bundlers and transpilers (`moduleResolution: "bundler"`), so
+emitted re-exports are extensionless. Being React-free is what makes `/config`
+and `/ai` usable from Node toolchains, not native `node` resolution of the
+published files.
+
 ## AI Context Tools
 
 `@sqlrooms/artifacts/ai` provides reusable assistant tools for artifact context:
@@ -165,7 +196,9 @@ feature-specific rendering and backing-state lifecycle.
 Use `createArtifactContextAiTools({store, readArtifact})` in apps that combine
 `@sqlrooms/artifacts` with `@sqlrooms/ai`. The factory handles primary artifact
 selection and run-context updates; the app supplies artifact payload readers for
-domain-specific types such as documents or dashboards.
+domain-specific types such as documents or dashboards. Apps with capability
+profiles can pass `isArtifactAllowed` to apply the same eligibility rule when
+listing, reading, or selecting a primary context artifact.
 
 Artifact-aware room commands can use `resolveArtifactTargetId()` to preserve
 the same per-turn target. Its precedence is an explicit command artifact ID,

@@ -225,13 +225,16 @@ function useCreateCliArtifactCommand(): CreateCliArtifactCommand {
 function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
   const artifactActions = useCliArtifactWorkspaceActions();
   const invokeCreateArtifactCommand = useCreateCliArtifactCommand();
-  const WorksheetIcon = artifactActions.artifactTypes.worksheet?.icon;
+  const DocumentIcon = artifactActions.artifactTypes.document?.icon;
   const returnArtifactId =
     artifactActions.selectedArtifactId ?? artifactActions.artifactIds[0];
   const secondaryArtifactTypes = CLI_ARTIFACT_TYPES.filter(
     (artifactType) =>
-      artifactType !== 'worksheet' &&
-      Boolean(artifactActions.artifactTypes[artifactType]),
+      artifactType !== 'document' &&
+      Boolean(
+        artifactActions.artifactTypes[artifactType] &&
+        artifactActions.artifactTypes[artifactType]?.canCreate !== false,
+      ),
   );
 
   const handleClose = useCallback(() => {
@@ -258,15 +261,15 @@ function CliArtifactsStartScreen({onDone}: {onDone?: () => void}) {
           size="lg"
           className="h-12 px-6 text-base"
           onClick={() => {
-            void invokeCreateArtifactCommand('worksheet.create-artifact').then(
+            void invokeCreateArtifactCommand('document.create-artifact').then(
               (artifactId) => {
                 if (artifactId) onDone?.();
               },
             );
           }}
         >
-          {WorksheetIcon ? <WorksheetIcon className="h-5 w-5" /> : null}
-          New Worksheet
+          {DocumentIcon ? <DocumentIcon className="h-5 w-5" /> : null}
+          New Document
         </Button>
 
         <section

@@ -160,7 +160,7 @@ export function createDocumentsCrdtMirror<
     options.blockDocumentArtifactTypes ?? ['block-document'],
   );
   const isSyncedArtifact = (artifact: ArtifactMetadataType) =>
-    artifact.type === 'document' ||
+    artifact.type === 'markdown' ||
     blockDocumentArtifactTypes.has(artifact.type);
   const isNonSyncedArtifact = (artifact: ArtifactMetadataType) =>
     !isSyncedArtifact(artifact);
@@ -242,7 +242,7 @@ export function createDocumentsCrdtMirror<
             artifact.id,
             ArtifactMetadata.parse({
               id: artifact.id,
-              type: artifact.type ?? 'document',
+              type: artifact.type ?? 'markdown',
               title: artifact.title,
             }),
           ]),

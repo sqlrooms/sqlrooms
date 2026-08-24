@@ -4,10 +4,14 @@ import {
 } from '@sqlrooms/documents';
 import type {StoreApi} from 'zustand';
 import {getRunContext} from '../context/getRunContext';
+import {
+  EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+} from '../profiles';
 import type {RoomState} from '../store-types';
 
 function createMockStore() {
-  const blockDocumentId = 'worksheet-1';
+  const blockDocumentId = 'document-1';
   const targets = [
     {
       blockDocumentId,
@@ -39,8 +43,8 @@ function createMockStore() {
         artifactsById: {
           [blockDocumentId]: {
             id: blockDocumentId,
-            type: 'worksheet',
-            title: 'Worksheet',
+            type: 'document',
+            title: 'Document',
           },
         },
       },
@@ -113,7 +117,7 @@ function createMockStore() {
 }
 
 describe('getRunContext', () => {
-  it('omits experimental block targets when experimental mode is disabled', () => {
+  it('omits experimental block targets in the default profile', () => {
     const {store} = createMockStore();
 
     expect(
@@ -121,14 +125,24 @@ describe('getRunContext', () => {
     ).toEqual(['chart', 'dashboard']);
   });
 
-  it('includes experimental block targets when experimental mode is enabled', () => {
+  it('includes experimental block targets in the experimental profile', () => {
     const {store} = createMockStore();
 
     expect(
-      getRunContext(store, 'session-1', {experimentalEnabled: true})?.items.map(
-        (item) => item.type,
-      ),
+      getRunContext(store, 'session-1', {
+        profile: EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+      })?.items.map((item) => item.type),
     ).toEqual(['chart', 'dashboard', 'html-app', 'map']);
+  });
+
+  it('keeps only chart and map block targets in the document profile', () => {
+    const {store} = createMockStore();
+
+    expect(
+      getRunContext(store, 'session-1', {
+        profile: DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+      })?.items.map((item) => item.type),
+    ).toEqual(['chart', 'map']);
   });
 });
 
@@ -141,32 +155,42 @@ function createMultiArtifactStore(
       config: {
         currentArtifactId,
         artifactsById: {
-          'worksheet-old': {
-            id: 'worksheet-old',
-            type: 'worksheet',
-            title: 'Older Worksheet',
+          'document-old': {
+            id: 'document-old',
+            type: 'document',
+            title: 'Older Document',
           },
-          'worksheet-new': {
-            id: 'worksheet-new',
-            type: 'worksheet',
-            title: 'Newer Worksheet',
+          'document-new': {
+            id: 'document-new',
+            type: 'document',
+            title: 'Newer Document',
+          },
+          'dashboard-1': {
+            id: 'dashboard-1',
+            type: 'dashboard',
+            title: 'Dashboard',
+          },
+          'html-app-1': {
+            id: 'html-app-1',
+            type: 'html-app',
+            title: 'HTML App',
           },
         },
       },
     },
     artifactAi: {
       config: {
-        // session-1 is linked to worksheet-old first, then worksheet-new later,
-        // so the most recently linked artifact is worksheet-new.
+        // session-1 is linked to document-old first, then document-new later,
+        // so the most recently linked artifact is document-new.
         sessionArtifactLinks: [
           {
             sessionId: 'session-1',
-            artifactId: 'worksheet-old',
+            artifactId: 'document-old',
             linkedAt: 1000,
           },
           {
             sessionId: 'session-1',
-            artifactId: 'worksheet-new',
+            artifactId: 'document-new',
             linkedAt: 2000,
           },
         ],
@@ -188,10 +212,10 @@ function createMultiArtifactStore(
 
 describe('getRunContext primary artifact selection', () => {
   it('directs the run at the currently selected artifact, not the latest link', () => {
-    const store = createMultiArtifactStore('worksheet-old');
+    const store = createMultiArtifactStore('document-old');
 
     expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
-      'worksheet-old',
+      'document-old',
     );
   });
 
@@ -199,36 +223,89 @@ describe('getRunContext primary artifact selection', () => {
     const store = createMultiArtifactStore(undefined);
 
     expect(getRunContext(store, 'session-1')?.primaryItemId).toBe(
-      'worksheet-new',
+      'document-new',
     );
   });
 
   it('updates a cached run context when invoked from another linked artifact', () => {
-    const store = createMultiArtifactStore('worksheet-old', {
+    const store = createMultiArtifactStore('document-old', {
       draftContextItemIds: undefined,
       runContext: {
         items: [
           {
             kind: 'artifact',
-            id: 'worksheet-new',
-            type: 'worksheet',
-            title: 'Newer Worksheet',
+            id: 'document-new',
+            type: 'document',
+            title: 'Newer Document',
           },
         ],
-        primaryItemId: 'worksheet-new',
+        primaryItemId: 'document-new',
         primaryItemKind: 'artifact',
         capturedAt: 1000,
       },
     });
 
     expect(getRunContext(store, 'session-1')).toMatchObject({
-      primaryItemId: 'worksheet-old',
+      primaryItemId: 'document-old',
       primaryItemKind: 'artifact',
       capturedAt: 1000,
       items: [
-        {kind: 'artifact', id: 'worksheet-old'},
-        {kind: 'artifact', id: 'worksheet-new'},
+        {kind: 'artifact', id: 'document-old'},
+        {kind: 'artifact', id: 'document-new'},
       ],
+    });
+  });
+
+  it('filters disabled artifacts from explicit document-profile context', () => {
+    const store = createMultiArtifactStore(undefined, {
+      draftContextItemIds: ['document-old', 'dashboard-1', 'html-app-1'],
+    });
+
+    expect(
+      getRunContext(store, 'session-1', {
+        profile: DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+      })?.items.map((item) => item.id),
+    ).toEqual(['document-new', 'document-old']);
+  });
+
+  it('filters disabled artifacts from stored document-profile context', () => {
+    const store = createMultiArtifactStore(undefined, {
+      draftContextItemIds: undefined,
+      runContext: {
+        items: [
+          {
+            kind: 'artifact',
+            id: 'dashboard-1',
+            type: 'dashboard',
+            title: 'Dashboard',
+          },
+          {
+            kind: 'artifact',
+            id: 'document-old',
+            type: 'document',
+            title: 'Older Document',
+          },
+          {
+            kind: 'artifact',
+            id: 'html-app-1',
+            type: 'html-app',
+            title: 'HTML App',
+          },
+        ],
+        primaryItemId: 'dashboard-1',
+        primaryItemKind: 'artifact',
+        capturedAt: 1000,
+      },
+    });
+
+    expect(
+      getRunContext(store, 'session-1', {
+        profile: DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+      }),
+    ).toMatchObject({
+      items: [{kind: 'artifact', id: 'document-old'}],
+      primaryItemId: 'document-old',
+      capturedAt: 1000,
     });
   });
 });

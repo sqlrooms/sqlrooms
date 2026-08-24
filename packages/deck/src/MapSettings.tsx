@@ -97,8 +97,11 @@ import {
 } from './MapSettingsControls';
 import {regenerateMapConfigForTable} from './mapConfigUtils';
 import {useDeckMapDatasetSchema} from './useDeckMapDatasetSchema';
+import {
+  detectHeatmapScheme,
+  heatmapSchemeToColorRange,
+} from './json/heatmapDefaults';
 
-const HEATMAP_COLOR_STEPS = 6;
 const EMPTY_COLUMNS: DataTable['columns'] = [];
 
 function getColorScaleColumnKind(
@@ -158,49 +161,6 @@ export function resolveColorScaleFieldAndType(
   };
 }
 
-function schemeToColorRange(
-  scheme: string,
-): Array<[number, number, number, number]> {
-  const interpolator =
-    continuousSequentialInterpolators[
-      scheme as keyof typeof continuousSequentialInterpolators
-    ];
-  if (!interpolator) {
-    return continuousSequentialInterpolators.Viridis
-      ? Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
-          parseColorString(
-            continuousSequentialInterpolators.Viridis(
-              i / (HEATMAP_COLOR_STEPS - 1),
-            ),
-          ),
-        )
-      : [];
-  }
-  return Array.from({length: HEATMAP_COLOR_STEPS}, (_, i) =>
-    parseColorString(interpolator(i / (HEATMAP_COLOR_STEPS - 1))),
-  );
-}
-
-function detectHeatmapScheme(colorRange: unknown): string {
-  if (!Array.isArray(colorRange) || colorRange.length === 0) return 'Viridis';
-  for (const scheme of continuousSequentialSchemes) {
-    const sampled = schemeToColorRange(scheme);
-    if (sampled.length === colorRange.length) {
-      const matches = sampled.every((color, idx) => {
-        const actual = colorRange[idx];
-        if (!Array.isArray(actual)) return false;
-        return (
-          Math.abs(color[0] - actual[0]) < 2 &&
-          Math.abs(color[1] - actual[1]) < 2 &&
-          Math.abs(color[2] - actual[2]) < 2
-        );
-      });
-      if (matches) return scheme;
-    }
-  }
-  return 'Viridis';
-}
-
 export interface DeckMapSettingsPanelProps {
   title: string;
   selectedTable?: string;
@@ -214,7 +174,7 @@ export interface DeckMapSettingsPanelProps {
   /** Custom maps stay on the JSON editor so basic controls cannot clobber them. */
   customConfig?: boolean;
   /**
-   * Worksheet maps own their dataset in `config.datasets`. Prefer that table
+   * Document maps own their dataset in `config.datasets`. Prefer that table
    * over `selectedTable`, which is only a sidecar. Dashboards leave this false
    * so the shared dashboard selected table is shown.
    */
@@ -1568,7 +1528,8 @@ export const DeckMapSettingsPanel: FC<DeckMapSettingsPanelProps> = ({
                                   activeLayerIndex,
                                   (layer) => ({
                                     ...layer,
-                                    colorRange: schemeToColorRange(value),
+                                    colorRange:
+                                      heatmapSchemeToColorRange(value),
                                   }),
                                 ),
                               )

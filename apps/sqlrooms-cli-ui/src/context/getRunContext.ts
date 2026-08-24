@@ -5,6 +5,8 @@ import {
 } from '@sqlrooms/duckdb';
 import {
   createBlockContextItem,
+  getAiRunContextItems,
+  getAiRunContextPrimaryItem,
   getRunContextItemIds,
   setAiRunContextPrimaryItem,
   type AiRunContext,
@@ -22,14 +24,16 @@ import {
 } from '@sqlrooms/documents';
 import type {RoomState} from '../store-types';
 import type {StoreApi} from 'zustand';
-import {CLI_AI_BLOCK_TYPES, CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
+import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {
-  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from '../profiles';
 
-const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
 const CLI_BLOCK_CONTEXT_TYPES = new Set<string>(CLI_AI_BLOCK_TYPES);
 
 type TableInfo = {
@@ -156,6 +160,7 @@ function resolveContextItem(
   state: RoomState,
   artifactsById: Record<string, ArtifactMetadataType>,
   tablesByQualifiedName: Map<string, TableInfo>,
+  supportedContextArtifactTypes: ReadonlySet<string>,
   enabledCliBlockContextTypes: ReadonlySet<string>,
 ): AiRunContextItem | undefined {
   const blockItem = resolveBlockContextItem(
@@ -169,7 +174,7 @@ function resolveContextItem(
 
   // Check if it's an artifact
   const artifact = artifactsById[itemId];
-  if (artifact) {
+  if (artifact && supportedContextArtifactTypes.has(artifact.type)) {
     return createArtifactContextItem(artifact);
   }
 
@@ -182,13 +187,43 @@ function resolveContextItem(
   return undefined;
 }
 
+function filterStoredRunContext(
+  runContext: AiRunContext,
+  supportedContextArtifactTypes: ReadonlySet<string>,
+  enabledCliBlockContextTypes: ReadonlySet<string>,
+): AiRunContext | undefined {
+  const items = getAiRunContextItems(runContext).filter((item) => {
+    if (item.kind === 'artifact') {
+      return (
+        item.type !== undefined && supportedContextArtifactTypes.has(item.type)
+      );
+    }
+    if (item.kind === 'block') {
+      return (
+        item.type !== undefined && enabledCliBlockContextTypes.has(item.type)
+      );
+    }
+    return true;
+  });
+  if (items.length === 0) return undefined;
+
+  const previousPrimaryItem = getAiRunContextPrimaryItem(runContext);
+  const primaryItem =
+    items.find(
+      (item) =>
+        item.id === previousPrimaryItem?.id &&
+        item.kind === previousPrimaryItem.kind,
+    ) ?? items[0];
+  return setAiRunContextPrimaryItem({...runContext, items}, primaryItem);
+}
+
 export function getRunContext(
   store: StoreApi<RoomState>,
   sessionId: string,
   {
-    experimentalEnabled = false,
+    profile = DEFAULT_CLI_CAPABILITY_PROFILE,
   }: {
-    experimentalEnabled?: boolean;
+    profile?: CliCapabilityProfile;
   } = {},
 ): AiRunContext | undefined {
   const state = store.getState();
@@ -198,25 +233,32 @@ export function getRunContext(
     (candidate) => candidate.id === sessionId,
   );
   const tablesByQualifiedName = buildTablesMap(tables);
-  const enabledCliBlockContextTypes = new Set<string>([
-    'chart',
-    ...getEnabledStatefulBlockArtifactTypes(experimentalEnabled).filter(
-      (type) => CLI_BLOCK_CONTEXT_TYPES.has(type),
+  const supportedContextArtifactTypes = new Set<string>(
+    profile.artifacts.runContext,
+  );
+  const enabledCliBlockContextTypes = new Set<string>(
+    profile.blocks.aiContext.filter((type) =>
+      CLI_BLOCK_CONTEXT_TYPES.has(type),
     ),
-  ]);
+  );
 
   if (
     session?.draftContextItemIds === undefined &&
     session?.runContext &&
     getRunContextItemIds(session.runContext).length > 0
   ) {
+    const storedRunContext = filterStoredRunContext(
+      session.runContext,
+      supportedContextArtifactTypes,
+      enabledCliBlockContextTypes,
+    );
     const currentArtifactId = state.artifacts.config.currentArtifactId;
     const currentArtifact = currentArtifactId
       ? artifactsById[currentArtifactId]
       : undefined;
     const currentArtifactIsLinked = Boolean(
       currentArtifact &&
-      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(currentArtifact.type) &&
+      supportedContextArtifactTypes.has(currentArtifact.type) &&
       isAiSessionVisibleForArtifact({
         sessionArtifactLinks: state.artifactAi.config.sessionArtifactLinks,
         sessionId,
@@ -226,11 +268,11 @@ export function getRunContext(
 
     if (currentArtifact && currentArtifactIsLinked) {
       return setAiRunContextPrimaryItem(
-        session.runContext,
+        storedRunContext,
         createArtifactContextItem(currentArtifact),
       );
     }
-    return session.runContext;
+    return storedRunContext;
   }
 
   const explicitContextItemIds = session?.draftContextItemIds ?? [];
@@ -241,6 +283,7 @@ export function getRunContext(
         state,
         artifactsById,
         tablesByQualifiedName,
+        supportedContextArtifactTypes,
         enabledCliBlockContextTypes,
       ),
     )
@@ -251,7 +294,7 @@ export function getRunContext(
     artifactsById,
     extraItems,
     isSupportedArtifactType: (artifactType) =>
-      SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(artifactType),
+      supportedContextArtifactTypes.has(artifactType),
     // Prefer the artifact the run is initiated from over the most recently
     // linked one, so asking AI from an older linked artifact directs the run
     // at that artifact.

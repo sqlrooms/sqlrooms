@@ -34,7 +34,7 @@ The client-side code is similar to the `ai-core` example but configured to use a
 
 ### Prerequisites
 
-- Node.js >= 22
+- Node.js >= 24.9
 - OpenAI API key (or other supported AI provider)
 - pnpm package manager
 

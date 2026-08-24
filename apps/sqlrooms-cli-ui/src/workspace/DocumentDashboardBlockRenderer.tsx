@@ -2,7 +2,7 @@ import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents'
 import {MosaicDashboard} from '@sqlrooms/mosaic';
 import {FC} from 'react';
 
-export const WorksheetDashboardBlockRenderer: FC<
+export const DocumentDashboardBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
 > = ({blockInstanceId, blockType, caption, readOnly, headerActions}) => {
   if (!blockInstanceId || blockType !== 'dashboard') {

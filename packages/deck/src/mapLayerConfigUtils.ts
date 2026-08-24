@@ -1,6 +1,7 @@
 import type {ColorScaleConfig, ColorScaleScheme} from '@sqlrooms/color-scales';
 import type {DeckMapConfig} from './mapConfig';
 import type {DeckAutoLayerType} from './types';
+import {DEFAULT_HEATMAP_COLOR_RANGE} from './json/heatmapDefaults';
 import {isColorScaleFunction} from './json/layerConfig';
 
 export type DeckMapLayerRecord = Record<string, unknown>;
@@ -462,11 +463,25 @@ export function setDeckMapLayerType(
       '@@type': layerType,
     };
     const lt = layerType.toLowerCase();
+    if (lt === 'geoarrowheatmaplayer') {
+      if (
+        !Array.isArray(nextLayer.colorRange) ||
+        nextLayer.colorRange.length === 0
+      ) {
+        nextLayer.colorRange = DEFAULT_HEATMAP_COLOR_RANGE;
+      }
+      return nextLayer;
+    }
+
+    const colorAccessors = getDeckMapColorAccessorOptions(layerType);
     if (
-      lt === 'geoarrowcolumnlayer' ||
-      lt === 'columnlayer' ||
-      lt === 'deckcolumnlayer'
+      colorAccessors.some((option) => option.value === 'getFillColor') &&
+      nextLayer.getFillColor === undefined &&
+      nextLayer.filled !== false
     ) {
+      nextLayer.getFillColor = [...DECK_MAP_DEFAULT_LAYER_COLOR];
+    }
+    if (lt === 'geoarrowcolumnlayer') {
       const radius =
         typeof nextLayer.radius === 'number' &&
         Number.isFinite(nextLayer.radius) &&

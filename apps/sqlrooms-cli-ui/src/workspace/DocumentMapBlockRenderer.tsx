@@ -3,15 +3,15 @@ import type {BlockDocumentStatefulBlockRendererProps} from '@sqlrooms/documents'
 import {DeckMapBlockRenderer} from '@sqlrooms/deck';
 
 /**
- * Renders a worksheet map stateful block through the Deck embeddable map surface.
+ * Renders a document map stateful block through the Deck embeddable map surface.
  *
  * Map blocks use TipTap's native node selection (no custom SelectablePanelWrapper).
  *
  * @param props - Stateful block renderer props, including the map block instance
- * ID, block type, and caption from the worksheet document.
+ * ID, block type, and caption from the document document.
  * @returns The configured Deck map block renderer, or an unsupported block message.
  */
-export const WorksheetMapBlockRenderer: FC<
+export const DocumentMapBlockRenderer: FC<
   BlockDocumentStatefulBlockRendererProps
 > = ({
   blockInstanceId,

@@ -21,12 +21,17 @@ import {
 import {createSqlQueryBlockDefinition} from '@sqlrooms/sql-editor';
 import type {RoomState} from './store-types';
 import {STATEFUL_BLOCK_ARTIFACT_CONFIGS} from './statefulBlockArtifactConfigs';
-import {WorksheetArtifact} from './workspace/WorksheetArtifact';
+import {DocumentArtifact} from './workspace/DocumentArtifact';
 import {AppBuilderArtifact} from './workspace/AppBuilderArtifact';
 import {CanvasArtifact} from './workspace/CanvasArtifact';
 import {DashboardArtifact} from './workspace/dashboard/DashboardArtifact';
 import {NotebookArtifact} from './workspace/dashboard/NotebookArtifact';
 import {type CliArtifactType} from './artifactTypeIds';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  type CliCapabilityProfile,
+} from './profiles';
+import {createCliDocumentArtifactDefinition} from './createCliDocumentArtifactDefinition';
 
 type FeatureStability = 'stable' | 'experimental';
 
@@ -35,11 +40,11 @@ type CliArtifactTypeDefinition = ArtifactTypeDefinition<RoomState> & {
 };
 
 const ARTIFACT_STABILITY = {
-  worksheet: 'stable',
+  document: 'stable',
   dashboard: 'stable',
   pivot: 'experimental',
   notebook: 'experimental',
-  document: 'experimental',
+  markdown: 'experimental',
   'sql-query': 'experimental',
   'html-app': 'experimental',
   python: 'experimental',
@@ -66,10 +71,10 @@ const ExperimentalArtifactPlaceholder: RoomPanelComponent = ({panelInfo}) => {
 function withStability<T extends ArtifactTypeDefinition<RoomState>>(
   type: CliArtifactType,
   definition: T,
-  experimentalEnabled: boolean,
+  profile: CliCapabilityProfile,
 ): CliArtifactTypeDefinition {
   const stability = ARTIFACT_STABILITY[type];
-  if (stability === 'stable' || experimentalEnabled) {
+  if (profile.artifacts.creatable.includes(type)) {
     return {...definition, stability, canCreate: true};
   }
   return {
@@ -96,8 +101,8 @@ const pivotBlockDefinition = createPivotBlockDefinition<RoomState>({
 
 const markdownDocumentBlockDefinition =
   createMarkdownDocumentBlockDefinition<RoomState>({
-    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.label,
-    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.document.defaultTitle,
+    label: STATEFUL_BLOCK_ARTIFACT_CONFIGS.markdown.label,
+    defaultTitle: STATEFUL_BLOCK_ARTIFACT_CONFIGS.markdown.defaultTitle,
   });
 
 const sqlQueryBlockDefinition = createSqlQueryBlockDefinition<RoomState>({
@@ -121,24 +126,14 @@ const pythonBlockDefinition = createPythonBlockDefinition<RoomState>({
 });
 
 export function createCliArtifactTypes({
-  experimentalEnabled = false,
+  profile = DEFAULT_CLI_CAPABILITY_PROFILE,
 }: {
-  experimentalEnabled?: boolean;
+  profile?: CliCapabilityProfile;
 } = {}) {
-  const worksheetDefinition: ArtifactTypeDefinition<RoomState> = {
-    label: 'Worksheet',
-    defaultTitle: 'Worksheet',
+  const documentDefinition: ArtifactTypeDefinition<RoomState> = {
+    ...createCliDocumentArtifactDefinition(),
     icon: FileStackIcon,
-    component: WorksheetArtifact,
-    onCreate: ({artifactId, store}) => {
-      store.getState().blockDocuments.ensureBlockDocument(artifactId);
-    },
-    onEnsure: ({artifactId, store}) => {
-      store.getState().blockDocuments.ensureBlockDocument(artifactId);
-    },
-    onDelete: ({artifactId, store}) => {
-      store.getState().blockDocuments.removeBlockDocument(artifactId);
-    },
+    component: DocumentArtifact,
   };
 
   const notebookDefinition: ArtifactTypeDefinition<RoomState> = {
@@ -184,52 +179,40 @@ export function createCliArtifactTypes({
   };
 
   return defineArtifactTypes({
-    worksheet: withStability(
-      'worksheet',
-      worksheetDefinition,
-      experimentalEnabled,
-    ),
+    document: withStability('document', documentDefinition, profile),
     dashboard: withStability(
       'dashboard',
       createArtifactTypeFromStatefulBlock(dashboardBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     pivot: withStability(
       'pivot',
       createArtifactTypeFromStatefulBlock(pivotBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
-    notebook: withStability(
-      'notebook',
-      notebookDefinition,
-      experimentalEnabled,
-    ),
-    document: withStability(
-      'document',
+    notebook: withStability('notebook', notebookDefinition, profile),
+    markdown: withStability(
+      'markdown',
       createArtifactTypeFromStatefulBlock(markdownDocumentBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     'sql-query': withStability(
       'sql-query',
       createArtifactTypeFromStatefulBlock(sqlQueryBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     'html-app': withStability(
       'html-app',
       createArtifactTypeFromStatefulBlock(htmlAppBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
     python: withStability(
       'python',
       createArtifactTypeFromStatefulBlock(pythonBlockDefinition),
-      experimentalEnabled,
+      profile,
     ),
-    canvas: withStability('canvas', canvasDefinition, experimentalEnabled),
-    'app-builder': withStability(
-      'app-builder',
-      appDefinition,
-      experimentalEnabled,
-    ),
+    canvas: withStability('canvas', canvasDefinition, profile),
+    'app-builder': withStability('app-builder', appDefinition, profile),
   } satisfies Record<CliArtifactType, CliArtifactTypeDefinition>);
 }
 

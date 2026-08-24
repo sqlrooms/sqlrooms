@@ -91,7 +91,7 @@ describe('Mosaic block-document AI tools', () => {
       panelId: 'chart-block-1',
       title: 'Depth histogram',
       settings: {field: 'Depth'},
-      reasoning: 'Update the existing worksheet chart block.',
+      reasoning: 'Update the existing document chart block.',
     });
 
     expect(result.success).toBe(true);
@@ -134,7 +134,7 @@ describe('Mosaic block-document AI tools', () => {
       panelId: 'missing-chart-block',
       title: 'Depth histogram',
       settings: {field: 'Depth'},
-      reasoning: 'Update the existing worksheet chart block.',
+      reasoning: 'Update the existing document chart block.',
     });
 
     expect(result.success).toBe(false);

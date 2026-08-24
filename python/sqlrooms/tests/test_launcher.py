@@ -43,6 +43,7 @@ def test_api_config(server):
     assert "dbBridge" in data
     assert "aiProviders" in data
     assert data["aiDevtools"] is False
+    assert data["capabilityProfile"] == "default"
     assert data["experimentalEnabled"] is False
     assert data["dbBridge"]["id"] == "sqlrooms-cli-http-bridge"
     assert data["dbBridge"]["connections"] == []
@@ -472,7 +473,84 @@ def test_api_config_with_experimental_enabled(tmp_path):
     response = client.get("/api/config")
 
     assert response.status_code == 200
+    assert response.json()["capabilityProfile"] == "experimental"
     assert response.json()["experimentalEnabled"] is True
+
+
+def test_api_config_with_named_capability_profile(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        capability_profile="experimental",
+    )
+    response = TestClient(server._build_app()).get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["capabilityProfile"] == "experimental"
+    assert response.json()["experimentalEnabled"] is True
+
+
+def test_api_config_with_document_charts_maps_profile(tmp_path):
+    server = SqlroomsHttpServer(
+        db_path=tmp_path / "test.db",
+        host="127.0.0.1",
+        port=0,
+        ws_port=None,
+        open_browser=False,
+        capability_profile="document-charts-maps",
+    )
+    response = TestClient(server._build_app()).get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json()["capabilityProfile"] == "document-charts-maps"
+    assert response.json()["experimentalEnabled"] is False
+
+
+def test_server_rejects_unknown_or_conflicting_capability_profile(tmp_path):
+    with pytest.raises(ValueError, match="Unknown SQLRooms capability profile"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db",
+            host="127.0.0.1",
+            port=0,
+            ws_port=None,
+            open_browser=False,
+            capability_profile="",
+        )
+
+    with pytest.raises(ValueError, match="Unknown SQLRooms capability profile"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db",
+            host="127.0.0.1",
+            port=0,
+            ws_port=None,
+            open_browser=False,
+            capability_profile="unknown",
+        )
+
+    with pytest.raises(ValueError, match="conflicts with capability_profile"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db",
+            host="127.0.0.1",
+            port=0,
+            ws_port=None,
+            open_browser=False,
+            experimental_enabled=True,
+            capability_profile="default",
+        )
+
+    with pytest.raises(ValueError, match="sync_enabled requires"):
+        SqlroomsHttpServer(
+            db_path=tmp_path / "test.db",
+            host="127.0.0.1",
+            port=0,
+            ws_port=None,
+            open_browser=False,
+            capability_profile="default",
+            sync_enabled=True,
+        )
 
 
 def test_pick_free_port_scans_up_from_occupied_port():

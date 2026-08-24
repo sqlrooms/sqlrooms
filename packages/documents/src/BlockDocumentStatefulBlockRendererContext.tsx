@@ -117,6 +117,14 @@ export function useBlockDocumentStatefulBlockTypes() {
   return useContext(BlockDocumentStatefulBlockRendererContext).blockTypes;
 }
 
+/** Returns whether a stateful block type is enabled for creation and editing. */
+export function isBlockDocumentStatefulBlockTypeEnabled(
+  blockTypes: readonly Pick<BlockDocumentStatefulBlockType, 'blockType'>[],
+  blockType: string,
+) {
+  return blockTypes.some((candidate) => candidate.blockType === blockType);
+}
+
 /** Returns the host-provided renderer for block header actions, when configured. */
 export function useBlockDocumentRenderBlockHeaderActions() {
   return useContext(BlockDocumentStatefulBlockRendererContext)

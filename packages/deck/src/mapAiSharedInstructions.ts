@@ -1,9 +1,9 @@
 import {DECK_TABLE_DATASET_SOURCE_RELATION} from './datasets/tableDatasetSql';
 
-/** Shared Deck map AI rules for dashboard and worksheet prompts. */
+/** Shared Deck map AI rules for dashboard and document prompts. */
 export function getDeckMapSharedAiContractRules(): string {
   const src = DECK_TABLE_DATASET_SOURCE_RELATION;
-  return `Shared Deck map authoring rules (dashboard and worksheet):
+  return `Shared Deck map authoring rules (dashboard and document):
 - Scatterplot/Heatmap/Column require Point positions — do not bind them to Polygon/MultiPolygon geom. Prefer GeoArrowPolygonLayer for Polygon, GeoJsonLayer for WKB/WKT MultiPolygon, or transformSql with ST_AsWKB(ST_Centroid(geom)) / ST_PointOnSurface(geom) when the user wants points (e.g. SELECT * EXCLUDE (geom), ST_AsWKB(ST_Centroid(geom)) AS geom FROM ${src}). The runtime will not invent centroids.
 - Mixed Point/LineString/Polygon columns: use GeoJsonLayer. Typed GeoArrowPolygon/Path/Scatterplot layers need a uniform geometry type. To keep one class, filter with WHERE ST_GeometryType(geom) IN (...) then use the matching typed layer.
 - Never write SELECT *, ST_AsWKB(col) AS col — DuckDB keeps the original column and the WKB alias collides. Use SELECT * EXCLUDE (col), ST_AsWKB(...) AS col, or omit transformSql when geom already exists. Bare ST_Point(...) / table GEOMETRY columns are projected to WKB by the dataset pipeline; prefer explicit ST_AsWKB when practical.

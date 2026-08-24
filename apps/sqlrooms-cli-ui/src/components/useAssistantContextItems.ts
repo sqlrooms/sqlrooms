@@ -27,10 +27,9 @@ import {
 } from '@sqlrooms/artifacts/ai';
 import {CLI_AI_BLOCK_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../roomStoreHooks';
-import {experimentalEnabled} from '../runtimeEnvironment';
+import {cliCapabilityProfile} from '../runtimeEnvironment';
 import {isContextArtifactType} from './assistantUtils';
 import {
-  getEnabledStatefulBlockArtifactTypes,
   getStatefulBlockArtifactConfig,
   isStatefulBlockArtifactType,
 } from '../statefulBlockArtifactConfigs';
@@ -60,12 +59,9 @@ function getOwningArtifactId(
 }
 
 function isEnabledCliBlockType(blockType: string): boolean {
-  if (blockType === 'chart') return true;
-  if (!isStatefulBlockArtifactType(blockType)) return false;
   return (
-    getEnabledStatefulBlockArtifactTypes(experimentalEnabled).includes(
-      blockType,
-    ) && CLI_BLOCK_CONTEXT_TYPES.has(blockType)
+    CLI_BLOCK_CONTEXT_TYPES.has(blockType) &&
+    cliCapabilityProfile.blocks.aiContext.some((type) => type === blockType)
   );
 }
 
@@ -202,31 +198,31 @@ export function useContextSelectorItems(): ContextSelectorItem[] {
     });
 
     const tableIdSet = new Set(tableItems.map((t) => t.id));
-    const worksheetArtifactId =
-      owningArtifactId && artifactsById[owningArtifactId]?.type === 'worksheet'
+    const documentArtifactId =
+      owningArtifactId && artifactsById[owningArtifactId]?.type === 'document'
         ? owningArtifactId
         : currentArtifactId &&
-            artifactsById[currentArtifactId]?.type === 'worksheet'
+            artifactsById[currentArtifactId]?.type === 'document'
           ? currentArtifactId
           : undefined;
-    const worksheet = worksheetArtifactId
-      ? artifactsById[worksheetArtifactId]
+    const document = documentArtifactId
+      ? artifactsById[documentArtifactId]
       : undefined;
     const blockItems =
-      worksheetArtifactId && worksheet
-        ? (blockDocuments[worksheetArtifactId]?.content.content ?? [])
-            .map((node) => blockTargetFromNode(worksheetArtifactId, node))
+      documentArtifactId && document
+        ? (blockDocuments[documentArtifactId]?.content.content ?? [])
+            .map((node) => blockTargetFromNode(documentArtifactId, node))
             .filter((target): target is BlockAiTarget => Boolean(target))
             .map((target) => ({
               id: blockContextItemId(target),
               kind: 'block',
               title: getBlockTitle(target),
               type: target.blockType,
-              subtitle: `${getBlockTitle({...target, title: undefined})} in ${worksheet.title}`,
+              subtitle: `${getBlockTitle({...target, title: undefined})} in ${document.title}`,
               keywords: [
                 getBlockTitle(target),
                 target.blockType,
-                worksheet.title,
+                document.title,
                 target.blockInstanceId ?? '',
               ],
             }))

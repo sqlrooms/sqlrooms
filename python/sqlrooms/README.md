@@ -1,6 +1,6 @@
 # sqlrooms CLI
 
-Launch a local SQLRooms DuckDB project for adding data, authoring worksheets, and building Mosaic charts and dashboards.
+Launch a local SQLRooms DuckDB project for adding data, authoring documents, and building Mosaic charts and dashboards.
 
 ## Quick start
 
@@ -11,7 +11,7 @@ uvx sqlrooms ./sqlrooms.db
 What happens:
 
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on a free local port.
-- Serves the SQLRooms worksheet UI on `http://localhost:3000`, or the next free port, and opens your browser (disable with `--no-open-browser`).
+- Serves the SQLRooms document UI on `http://localhost:3000`, or the next free port, and opens your browser (disable with `--no-open-browser`).
 - Drag-and-drop CSV, TSV, JSON, Parquet, and DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
@@ -22,8 +22,9 @@ What happens:
 - `--db-path`: DuckDB database to use as a flag alternative. Pass a filepath to persist, or `:memory:` for an explicit temporary in-memory session.
 - `--host` / `--port`: HTTP host/port for the UI. The default bind address is `127.0.0.1`. If `--port` is omitted, `3000` or the next free port is chosen automatically.
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
-- `--experimental`: Enable experimental artifacts, blocks, commands, and agent tools.
-- `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires `--experimental`.
+- `--profile`: Select a complete production capability profile: `default`, `experimental`, or `document-charts-maps`.
+- `--experimental`: Compatibility alias for `--profile experimental`.
+- `--experimental-sync`: Enable experimental sync (CRDT) over WebSocket (Loro). Requires the `experimental` profile.
 - `--ai-devtools`: Enable the AI session devtools button in the UI, including production-built UI bundles. Can also be set with `SQLROOMS_AI_DEVTOOLS=1`.
 - `--debug`: Enable verbose debug logging, including HTTP access logs and DuckDB query timing.
 - `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
@@ -77,14 +78,15 @@ Then open the printed UI URL and verify:
 - Dragging a small CSV file into the data panel creates a table.
 - The uploaded CSV lands next to `smoke.duckdb` under `sqlrooms_uploads/`.
 - The data sidebar shows `main.cars` and does not show SQLRooms internal metadata.
-- A worksheet is created or selected automatically and contains a `cars` data-table explorer block.
-- Users can create worksheet and dashboard artifacts from the `New` menu without enabling `--experimental`.
+- A document is created or selected automatically and contains a `cars` data-table explorer block.
+- Users can create document and dashboard artifacts from the `New` menu without enabling `--experimental`.
 - Map, notebook, canvas, app, HTML app, pivot, and SQL query surfaces stay hidden unless `--experimental` is provided.
 - Restarting the same command with `./smoke.duckdb` restores the imported table and persisted workspace state.
 
 ## Config file
 
-`sqlrooms` reads AI provider and connector settings from a TOML config file.
+`sqlrooms` reads the app capability profile, AI provider settings, and connector
+settings from a TOML config file.
 AI settings changed in the CLI UI are saved back to this file automatically
 when config loading is enabled and the config file is writable:
 
@@ -96,6 +98,9 @@ Override with `--config <path>`, or disable with `--no-config`.
 Example config file:
 
 ```toml
+[app]
+profile = "default"
+
 [ai]
 default_provider = "openai"
 default_model = "gpt-5"

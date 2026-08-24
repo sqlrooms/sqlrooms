@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -b && vite build",
     "dev": "vite --host --port 3100",
+    "evals:provider:build": "vite build -c evals/vite.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
@@ -48,7 +49,10 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@duckdb/node-api": "^1.4.4-r.3",
     "@jest/globals": "^30.3.0",
+    "@sqlrooms/duckdb-node": "workspace:*",
+    "@sqlrooms/evals": "workspace:*",
     "@sqlrooms/preset-jest": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.2.7",

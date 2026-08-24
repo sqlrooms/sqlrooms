@@ -12,7 +12,7 @@ import {
 } from '@sqlrooms/artifacts';
 import {createArtifactContextAiTools} from '@sqlrooms/artifacts/ai';
 import {
-  createDocumentCommands,
+  createMarkdownCommands,
   createDocumentsSlice,
   type DocumentsSliceState,
 } from '@sqlrooms/documents';
@@ -32,7 +32,7 @@ type TestState = BaseRoomStoreState &
 
 function createTestStore() {
   const artifactTypes = defineArtifactTypes({
-    document: {label: 'Document', defaultTitle: 'Document'},
+    markdown: {label: 'Markdown', defaultTitle: 'Markdown'},
   });
   return createStore<TestState>()((set, get, store) => ({
     ...createBaseRoomSlice()(set, get, store),
@@ -90,17 +90,17 @@ describe('per-turn artifact command targeting', () => {
       .getState()
       .commands.registerCommands(
         'documents',
-        createDocumentCommands<TestState>(),
+        createMarkdownCommands<TestState>(),
       );
     const artifactA = store.getState().artifacts.createArtifact({
-      type: 'document',
-      title: 'Document A',
+      type: 'markdown',
+      title: 'Markdown A',
     });
     store.getState().documents.ensureDocument(artifactA);
     store.getState().documents.setMarkdown(artifactA, 'Content A');
     const artifactB = store.getState().artifacts.createArtifact({
-      type: 'document',
-      title: 'Document B',
+      type: 'markdown',
+      title: 'Markdown B',
     });
     store.getState().documents.ensureDocument(artifactB);
     store.getState().documents.setMarkdown(artifactB, 'Content B');
@@ -128,7 +128,7 @@ describe('per-turn artifact command targeting', () => {
     store.getState().artifacts.setCurrentArtifact(artifactB);
     store.getState().ai.createSession('Session B');
     const firstResult = (await commandTools.execute_command?.execute?.(
-      {commandId: 'document.get', confirmed: false},
+      {commandId: 'markdown.get', confirmed: false},
       toolExecutionContext,
     )) as any;
 
@@ -143,7 +143,7 @@ describe('per-turn artifact command targeting', () => {
       toolExecutionContext,
     );
     const retargetedResult = (await commandTools.execute_command?.execute?.(
-      {commandId: 'document.get', confirmed: false},
+      {commandId: 'markdown.get', confirmed: false},
       toolExecutionContext,
     )) as any;
     expect(retargetedResult.result.data).toMatchObject({

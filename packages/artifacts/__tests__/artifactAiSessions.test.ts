@@ -260,15 +260,15 @@ describe('artifact AI session helpers', () => {
         sessions: [
           {
             ...createSession('older-draft-match', 1),
-            draftContextItemIds: ['block:worksheet:block-a'],
+            draftContextItemIds: ['block:document:block-a'],
           },
           {
             ...createSession('newer-draft-match', 2),
-            draftContextItemIds: ['block:worksheet:block-a'],
+            draftContextItemIds: ['block:document:block-a'],
           },
           {
             ...createSession('other-artifact-match', 3),
-            draftContextItemIds: ['block:worksheet:block-a'],
+            draftContextItemIds: ['block:document:block-a'],
           },
         ],
         sessionArtifactLinks: [
@@ -289,7 +289,7 @@ describe('artifact AI session helpers', () => {
           },
         ],
         artifactId: 'artifact-a',
-        contextItemId: 'block:worksheet:block-a',
+        contextItemId: 'block:document:block-a',
       }),
     ).toBe('newer-draft-match');
   });
@@ -304,7 +304,7 @@ describe('artifact AI session helpers', () => {
               items: [
                 {
                   kind: 'block',
-                  id: 'block:worksheet:block-a',
+                  id: 'block:document:block-a',
                   title: 'Chart',
                 },
               ],
@@ -320,7 +320,7 @@ describe('artifact AI session helpers', () => {
           },
         ],
         artifactId: 'artifact-a',
-        contextItemId: 'block:worksheet:block-a',
+        contextItemId: 'block:document:block-a',
       }),
     ).toBe('run-match');
   });
@@ -328,7 +328,7 @@ describe('artifact AI session helpers', () => {
   it('skips running context matches unless requested', () => {
     const matchingRunningSession = {
       ...createSession('running-match', 3, true),
-      draftContextItemIds: ['block:worksheet:block-a'],
+      draftContextItemIds: ['block:document:block-a'],
     };
     const testLinks = [
       {
@@ -343,7 +343,7 @@ describe('artifact AI session helpers', () => {
         sessions: [matchingRunningSession],
         sessionArtifactLinks: testLinks,
         artifactId: 'artifact-a',
-        contextItemId: 'block:worksheet:block-a',
+        contextItemId: 'block:document:block-a',
       }),
     ).toBeUndefined();
 
@@ -352,7 +352,7 @@ describe('artifact AI session helpers', () => {
         sessions: [matchingRunningSession],
         sessionArtifactLinks: testLinks,
         artifactId: 'artifact-a',
-        contextItemId: 'block:worksheet:block-a',
+        contextItemId: 'block:document:block-a',
         includeRunning: true,
       }),
     ).toBe('running-match');
@@ -364,7 +364,7 @@ describe('artifact AI session helpers', () => {
         sessions: [
           {
             ...createSession('no-match', 1),
-            draftContextItemIds: ['block:worksheet:block-b'],
+            draftContextItemIds: ['block:document:block-b'],
           },
         ],
         sessionArtifactLinks: [
@@ -375,7 +375,7 @@ describe('artifact AI session helpers', () => {
           },
         ],
         artifactId: 'artifact-a',
-        contextItemId: 'block:worksheet:block-a',
+        contextItemId: 'block:document:block-a',
       }),
     ).toBeUndefined();
   });

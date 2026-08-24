@@ -13,6 +13,10 @@ import {
 } from '@sqlrooms/deck';
 import type {RoomCommand} from '@sqlrooms/room-shell';
 import {z} from 'zod';
+import {
+  STATEFUL_BLOCK_ARTIFACT_TYPES,
+  type StatefulBlockArtifactType,
+} from './artifactTypeIds';
 import {CLI_WORKSPACE_CATALOG} from './cliWorkspaceCatalog';
 import type {RoomState} from './store-types';
 
@@ -31,6 +35,13 @@ const BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID =
   'block-document.update-block-metadata';
 const BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID = 'block-document.add-map-block';
 const DASHBOARD_SET_SELECTED_TABLE_COMMAND_ID = 'dashboard.set-selected-table';
+
+const CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES = {
+  [BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID]: 'dashboard',
+  [BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID]: 'data-table',
+  [BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID]: 'html-app',
+  [BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID]: 'map',
+} as const satisfies Record<string, StatefulBlockArtifactType>;
 
 const BlockDocumentIdInput = z.object({
   blockDocumentId: z.string().describe('Target block document artifact ID.'),
@@ -94,9 +105,9 @@ function resolveBlockDocumentArtifact(
   blockDocumentId: string,
 ) {
   const artifact = state.artifacts.getArtifact(blockDocumentId);
-  if (!artifact || artifact.type !== 'worksheet') {
+  if (!artifact || artifact.type !== 'document') {
     throw new Error(
-      `Artifact ${blockDocumentId} is not a Worksheet block document`,
+      `Artifact ${blockDocumentId} is not a Document block document`,
     );
   }
   state.blockDocuments.ensureBlockDocument(blockDocumentId);
@@ -156,13 +167,19 @@ function findStatefulBlock(
     });
 }
 
-export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
-  return [
+/** Creates CLI document commands allowed by the selected block capabilities. */
+export function createCliBlockDocumentCommands({
+  statefulBlockTypes = STATEFUL_BLOCK_ARTIFACT_TYPES,
+}: {
+  statefulBlockTypes?: readonly StatefulBlockArtifactType[];
+} = {}): RoomCommand<RoomState>[] {
+  const statefulBlockTypeSet = new Set<string>(statefulBlockTypes);
+  const commands: RoomCommand<RoomState>[] = [
     {
       id: BLOCK_DOCUMENT_ADD_DASHBOARD_BLOCK_COMMAND_ID,
       name: 'Add block document dashboard block',
       description: 'Add an owned dashboard block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'dashboard', 'block', 'add'],
       inputSchema: BlockDocumentAddDashboardBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -213,7 +230,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_ADD_DATA_TABLE_BLOCK_COMMAND_ID,
       name: 'Add block document data table block',
       description: 'Add a data table explorer block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'data table', 'block', 'add'],
       inputSchema: BlockDocumentAddDataTableBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -260,7 +277,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_ADD_HTML_APP_BLOCK_COMMAND_ID,
       name: 'Add block document HTML app block',
       description: 'Add an owned HTML app block to a block document.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'html', 'app', 'block', 'add'],
       inputSchema: BlockDocumentAddHtmlAppBlockInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -297,7 +314,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_UPDATE_BLOCK_METADATA_COMMAND_ID,
       name: 'Update block document block metadata',
       description: 'Update caption or height for a block document block.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'block', 'metadata', 'update'],
       inputSchema: BlockDocumentUpdateBlockMetadataInput,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -313,6 +330,14 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
         if (!existing) {
           throw new Error(
             `Block document block ${blockId} was not found in ${blockDocumentId}`,
+          );
+        }
+        if (
+          existing.type === 'statefulBlock' &&
+          !statefulBlockTypeSet.has(existing.blockType)
+        ) {
+          throw new Error(
+            `Stateful block type ${existing.blockType} is not available in the selected capability profile`,
           );
         }
         const updated = state.blockDocuments.updateBlock(
@@ -346,7 +371,7 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       id: BLOCK_DOCUMENT_ADD_MAP_BLOCK_COMMAND_ID,
       name: 'Add or update block document map block',
       description: 'Create or update a direct block document map block.',
-      group: 'Worksheet',
+      group: 'Document',
       keywords: ['block document', 'map', 'deck', 'block', 'add', 'update'],
       inputSchema: BlockDocumentMapBlockToolParameters,
       metadata: {readOnly: false, idempotent: false, riskLevel: 'medium'},
@@ -478,4 +503,12 @@ export function createCliBlockDocumentCommands(): RoomCommand<RoomState>[] {
       },
     },
   ];
+  const enabledBlockTypes = new Set(statefulBlockTypes);
+  return commands.filter((command) => {
+    const blockType =
+      CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES[
+        command.id as keyof typeof CLI_BLOCK_DOCUMENT_COMMAND_STATEFUL_BLOCK_TYPES
+      ];
+    return blockType === undefined || enabledBlockTypes.has(blockType);
+  });
 }

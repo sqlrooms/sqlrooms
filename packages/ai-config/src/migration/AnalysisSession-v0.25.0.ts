@@ -96,7 +96,7 @@ function migrateStreamMessage(streamMessage: unknown) {
   }
 
   const parts = (streamMessage as {parts: Record<string, unknown>[]}).parts;
-  const newParts = [];
+  const newParts: Record<string, unknown>[] = [];
 
   for (const part of parts) {
     if (part.type === 'text') {

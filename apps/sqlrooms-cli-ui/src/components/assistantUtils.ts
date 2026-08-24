@@ -1,9 +1,8 @@
 import {useMemo} from 'react';
 import {getVisibleSessionContextItemIds} from '@sqlrooms/ai';
-import {CLI_ARTIFACT_TYPES} from '../artifactTypeIds';
 import {useRoomStore} from '../roomStoreHooks';
-
-const SUPPORTED_CONTEXT_ARTIFACT_TYPES = new Set<string>(CLI_ARTIFACT_TYPES);
+import {cliCapabilityProfile} from '../runtimeEnvironment';
+import type {CliCapabilityProfile} from '../profiles';
 
 type ArtifactDragPayload = {
   kind: 'artifact';
@@ -22,8 +21,13 @@ function isArtifactDragPayload(data: unknown): data is ArtifactDragPayload {
   );
 }
 
-export function isContextArtifactType(type: string) {
-  return SUPPORTED_CONTEXT_ARTIFACT_TYPES.has(type);
+export function isContextArtifactType(
+  type: string,
+  profile: CliCapabilityProfile = cliCapabilityProfile,
+) {
+  return profile.artifacts.runContext.some(
+    (artifactType) => artifactType === type,
+  );
 }
 
 export function useAssistantContextDropTarget() {

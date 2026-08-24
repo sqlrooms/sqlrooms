@@ -8,8 +8,8 @@ import type {RoomState} from '../store-types';
 
 it('links a newly selected artifact to the invoking chat and keeps it selected', async () => {
   const sourceSessionId = 'source-session';
-  const sourceArtifactId = 'worksheet-a';
-  const targetArtifactId = 'worksheet-b';
+  const sourceArtifactId = 'document-a';
+  const targetArtifactId = 'document-b';
   const addSessionArtifactLink = jest.fn();
   const switchSession = jest.fn();
   const artifactsById: Record<
@@ -18,8 +18,8 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
   > = {
     [sourceArtifactId]: {
       id: sourceArtifactId,
-      type: 'worksheet',
-      title: 'Worksheet A',
+      type: 'document',
+      title: 'Document A',
     },
   };
   const state = {
@@ -49,14 +49,14 @@ it('links a newly selected artifact to the invoking chat and keeps it selected',
   } as unknown as RoomCommandExecutionContext<RoomState>;
 
   const result = await artifactChatAssociationMiddleware(
-    {id: 'worksheet.create'} as RegisteredRoomCommand<RoomState>,
+    {id: 'block-document.create'} as RegisteredRoomCommand<RoomState>,
     undefined,
     context,
     async () => {
       state.artifacts.config.artifactsById[targetArtifactId] = {
         id: targetArtifactId,
-        type: 'worksheet',
-        title: 'Worksheet B',
+        type: 'document',
+        title: 'Document B',
       };
       state.artifacts.config.currentArtifactId = targetArtifactId;
       return {artifactId: targetArtifactId};
@@ -77,21 +77,21 @@ it('does not associate an artifact that was created without being selected', asy
     string,
     {id: string; type: string; title: string}
   > = {
-    'worksheet-a': {
-      id: 'worksheet-a',
-      type: 'worksheet',
-      title: 'Worksheet A',
+    'document-a': {
+      id: 'document-a',
+      type: 'document',
+      title: 'Document A',
     },
-    'worksheet-b': {
-      id: 'worksheet-b',
-      type: 'worksheet',
-      title: 'Worksheet B',
+    'document-b': {
+      id: 'document-b',
+      type: 'document',
+      title: 'Document B',
     },
   };
   const state = {
     artifacts: {
       config: {
-        currentArtifactId: 'worksheet-a',
+        currentArtifactId: 'document-a',
         artifactsById,
       },
       getArtifact: (artifactId: string) =>
@@ -115,13 +115,13 @@ it('does not associate an artifact that was created without being selected', asy
   } as unknown as RoomCommandExecutionContext<RoomState>;
 
   await artifactChatAssociationMiddleware(
-    {id: 'worksheet.create'} as RegisteredRoomCommand<RoomState>,
+    {id: 'block-document.create'} as RegisteredRoomCommand<RoomState>,
     undefined,
     context,
     async () => ({
       success: true,
-      commandId: 'worksheet.create',
-      data: {artifactId: 'worksheet-b'},
+      commandId: 'block-document.create',
+      data: {artifactId: 'document-b'},
     }),
   );
 

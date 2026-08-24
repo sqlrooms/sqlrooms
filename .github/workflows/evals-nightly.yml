@@ -1,0 +1,63 @@
+name: Behavioral Evals Nightly
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  document-canary:
+    name: Document charts/maps canary
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 45
+    env:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      PROMPTFOO_CONFIG_DIR: ${{ github.workspace }}/.promptfoo
+      PROMPTFOO_DISABLE_TELEMETRY: '1'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build
+
+      - name: Create artifact directory
+        run: mkdir -p artifacts
+
+      - name: Run production-model scenarios
+        run: pnpm evals:nightly --output artifacts/results.json --no-table
+
+      - name: Export compact observatory summary
+        if: always()
+        run: pnpm evals:export --database "$PROMPTFOO_CONFIG_DIR/promptfoo.db" --output artifacts/summary.json --markdown artifacts/summary.md
+
+      - name: Upload retained run history
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: sqlrooms-behavioral-evals-${{ github.sha }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            ${{ github.workspace }}/.promptfoo/promptfoo.db
+            artifacts/results.json
+            artifacts/summary.json
+            artifacts/summary.md

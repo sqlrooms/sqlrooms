@@ -4,7 +4,7 @@ preparation.
 
 ## Map resources and dashboard adapters
 
-Worksheet maps are first-class `deckMaps` resources. The root package export
+Document maps are first-class `deckMaps` resources. The root package export
 contains the resource slice, renderer, settings, direct DuckDB data adapter,
 and resource orchestration APIs. It does not require Mosaic.
 
@@ -14,14 +14,14 @@ selection, and issue translation inside that adapter boundary.
 
 `DeckMapSettingsPanel` is the shared host-neutral editor for both surfaces. It
 receives a map config, selected table, available tables, and edit callbacks;
-worksheet resources and Mosaic panels only adapt their respective stores to
+document resources and Mosaic panels only adapt their respective stores to
 that contract. Layer, binding, style, extrusion, and code-view controls therefore
-stay consistent without putting Mosaic APIs in the worksheet settings path.
+stay consistent without putting Mosaic APIs in the document settings path.
 
 Use `getDeckMapDataPolicy(...)` to resolve a map config into the exported
 `DeckMapDataPolicy` runtime row-limit policy.
 
-Worksheet map runtime issues distinguish dataset SQL failures (`sql-error`)
+Document map runtime issues distinguish dataset SQL failures (`sql-error`)
 from fit-to-data bounds failures (`fit-error`), so each issue is cleared only
 after its corresponding operation recovers.
 
@@ -29,7 +29,7 @@ after its corresponding operation recovers.
 fit-to-data bounds queries. The direct adapter uses the authored source for
 bounds while applying the configured row-limit policy only to rendered rows.
 
-Worksheet maps deliberately use independent selection semantics. Their direct
+Document maps deliberately use independent selection semantics. Their direct
 data adapter executes each configured SQL/table dataset through the room's
 DuckDB connector and neither reads nor publishes Mosaic selections. This drops
 the old incidental intra-map cross-filtering between datasets; a future
@@ -268,11 +268,11 @@ Runtime issue recovery can call `deckMaps.clearMapIssue(mapId, kind)` to clear
 only a matching issue kind; omit `kind` when the map state should clear any
 stale issue. Replacing a map config clears its prior render issue, while data
 issues remain until the corresponding dataset recovery is reported.
-Direct worksheet maps automatically fit the configured dataset when the map or
+Direct document maps automatically fit the configured dataset when the map or
 its source first becomes ready; the header action remains available for manual
 refitting.
 
-Hosts that expose direct worksheet-map AI capability should include
+Hosts that expose direct document-map AI capability should include
 `getDeckMapResourceAiInstructions()` in the responsible agent and tool
 instructions. `createOrUpdateDeckMapResource(...)` validates the fully merged
 resource before any durable block or map write: each dataset needs a

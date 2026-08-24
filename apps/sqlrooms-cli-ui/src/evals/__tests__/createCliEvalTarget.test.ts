@@ -1,0 +1,728 @@
+import {describe, expect, it, jest} from '@jest/globals';
+import {
+  createAnswerGroundingOracle,
+  createErrorOracle,
+  createScriptedLanguageModel,
+  createWorkspaceStateOracle,
+  defineScenario,
+  type JsonValue,
+} from '@sqlrooms/evals';
+import {CLI_ARTIFACT_TYPES} from '../../artifactTypeIds';
+import {createCliEvalTarget} from '../createCliEvalTarget';
+import {CLI_EVAL_TARGET_TABLE} from '../fixture';
+import {MUTATE_DOCUMENT_SCENARIO, createCliScenarioOracles} from '../scenarios';
+
+function workspaceFacts(workspace: JsonValue | undefined) {
+  return workspace as {
+    documents: Array<{
+      blocks: Array<{
+        type: string;
+        tableName?: string;
+        blockType?: string;
+        blockInstanceId?: string;
+      }>;
+    }>;
+    maps: Array<{config: {datasets: Record<string, unknown>}}>;
+  };
+}
+
+describe('createCliEvalTarget', () => {
+  it('builds artifact capabilities and commands from the selected profile', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      await target.initialize();
+      const state = target.store.getState();
+      expect(Object.keys(state.artifacts.artifactTypes).sort()).toEqual(
+        [...CLI_ARTIFACT_TYPES].sort(),
+      );
+      expect(
+        Object.fromEntries(
+          CLI_ARTIFACT_TYPES.map((type) => [
+            type,
+            state.artifacts.artifactTypes[type]?.canCreate,
+          ]),
+        ),
+      ).toEqual(
+        Object.fromEntries(
+          CLI_ARTIFACT_TYPES.map((type) => [type, type === 'document']),
+        ),
+      );
+      expect(
+        state.commands
+          .listCommands()
+          .map((command) => command.id)
+          .filter((id) => id.endsWith('.create-artifact')),
+      ).toEqual(['document.create-artifact']);
+    } finally {
+      await target.dispose();
+    }
+  });
+
+  it('uses the target timeout for the underlying chat run', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'Done.'}]}],
+    });
+    const target = createCliEvalTarget({
+      model: scripted.model,
+      timeoutMs: 180_000,
+    });
+
+    try {
+      expect(target.store.getState().ai.timeouts.runMs).toBe(180_000);
+    } finally {
+      await target.dispose();
+    }
+  });
+
+  it('runs the production chat and nested document tool loop without a browser or network', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          expectation: {promptIncludes: ['Current artifact: document']},
+          usage: {inputTokens: 10, outputTokens: 2},
+          content: [
+            {
+              type: 'tool-call',
+              toolName: 'block_document_agent',
+              input: {
+                reasoning: 'Build the requested document visualizations.',
+                intent: 'Add a metric chart and geographic event map.',
+                blockDocumentId: 'eval-cli.document-chart-map-0',
+                maxSteps: 8,
+              },
+            },
+          ],
+        },
+        {
+          expectation: {
+            promptIncludes: ['document builder AI agent', 'direct map'],
+          },
+          usage: {inputTokens: 20, outputTokens: 3},
+          content: [
+            {
+              type: 'tool-call',
+              toolName: 'create_block_document_chart_histogram',
+              input: {
+                tableName: CLI_EVAL_TARGET_TABLE,
+                reasoning: 'Show the distribution of the numeric metric.',
+                settings: {field: 'metric', color: '#2563eb'},
+                title: 'Metric distribution',
+              },
+            },
+            {
+              type: 'tool-call',
+              toolName: 'create_block_document_map_block',
+              input: {
+                reasoning: 'Map event locations from the intended table.',
+                title: 'Event locations',
+                tableName: CLI_EVAL_TARGET_TABLE,
+                config: {
+                  datasets: {
+                    events: {source: {tableName: CLI_EVAL_TARGET_TABLE}},
+                  },
+                  spec: {
+                    layers: [
+                      {
+                        '@@type': 'GeoArrowScatterplotLayer',
+                        _sqlroomsBinding: {
+                          dataset: 'events',
+                          longitudeColumn: 'longitude',
+                          latitudeColumn: 'latitude',
+                        },
+                      },
+                    ],
+                  },
+                  fitToData: {
+                    dataset: 'events',
+                    longitudeColumn: 'longitude',
+                    latitudeColumn: 'latitude',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          usage: {inputTokens: 30, outputTokens: 4},
+          content: [
+            {
+              type: 'text',
+              text: 'Created the metric chart and event map in the document.',
+            },
+          ],
+        },
+        {
+          usage: {inputTokens: 40, outputTokens: 5},
+          content: [
+            {
+              type: 'text',
+              text: 'Created a metric distribution chart and event map from analytics.events.',
+            },
+          ],
+        },
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.document-chart-map',
+          version: 1,
+          title: 'Create a document chart and map',
+          compatibleProfiles: ['document-charts-maps'],
+          fixture: {targetTable: CLI_EVAL_TARGET_TABLE},
+          turns: [
+            {
+              id: 'create',
+              input:
+                'In the current document, chart metric and map latitude/longitude from analytics.events, not archive.events.',
+            },
+          ],
+          expectations: [
+            {oracleId: 'workspace', description: 'Chart and map are durable.'},
+            {
+              oracleId: 'answer',
+              description: 'Answer names the intended table.',
+            },
+          ],
+        }),
+        oracles: [
+          createWorkspaceStateOracle({
+            id: 'workspace',
+            evaluate: (workspace) => {
+              const facts = workspaceFacts(workspace);
+              const [document] = facts.documents;
+              const chart = document?.blocks.find(
+                (block) => block.type === 'chart',
+              );
+              const map = document?.blocks.find(
+                (block) =>
+                  block.type === 'statefulBlock' && block.blockType === 'map',
+              );
+              const pass =
+                facts.documents.length === 1 &&
+                chart?.tableName === CLI_EVAL_TARGET_TABLE &&
+                Boolean(map?.blockInstanceId) &&
+                facts.maps.length === 1;
+              return {
+                pass,
+                reason: pass
+                  ? 'One document contains a canonical chart and direct map.'
+                  : 'Expected canonical chart/map state was not materialized.',
+                evidence: {
+                  documentCount: facts.documents.length,
+                  chartTable: chart?.tableName ?? null,
+                  mapCount: facts.maps.length,
+                },
+              };
+            },
+          }),
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: (answer) => ({
+              pass: answer.includes('analytics.events'),
+              reason: 'The final answer identifies the intended table.',
+              evidence: {answer},
+            }),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('passed');
+      expect(evidence.target).toEqual({
+        type: 'cli-in-process',
+        profileName: 'document-charts-maps',
+        profileVersion: 1,
+      });
+      expect(
+        evidence.events.some((event) => event.type === 'nested-agent'),
+      ).toBe(true);
+      expect(evidence.events.some((event) => event.type === 'mutation')).toBe(
+        true,
+      );
+      expect(evidence.events.map((event) => event.name)).toEqual(
+        expect.arrayContaining([
+          'create_block_document_chart_histogram',
+          'create_block_document_map_block',
+        ]),
+      );
+      expect(evidence.oracleResults.every((result) => result.pass)).toBe(true);
+      expect(evidence.usage).toMatchObject({
+        inputTokens: 100,
+        outputTokens: 14,
+        totalTokens: 114,
+      });
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('retains both the empty initial state and seeded fixture state', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'No changes made.'}]}],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: MUTATE_DOCUMENT_SCENARIO,
+        oracles: createCliScenarioOracles(MUTATE_DOCUMENT_SCENARIO),
+      });
+      const initialState = evidence.metadata.initialState as {
+        documents: unknown[];
+        maps: unknown[];
+      };
+      const fixtureState = evidence.metadata.fixtureState as {
+        documents: Array<{blocks: Array<{id: string}>}>;
+        maps: unknown[];
+      };
+
+      expect(initialState.documents).toHaveLength(0);
+      expect(initialState.maps).toHaveLength(0);
+      expect(
+        fixtureState.documents[0]?.blocks.map((block) => block.id),
+      ).toEqual(
+        expect.arrayContaining([
+          'seed-heading',
+          'seed-chart',
+          'seed-map-block',
+        ]),
+      );
+      expect(fixtureState.maps).toHaveLength(1);
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('resets workspace and session state before every run', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {content: [{type: 'text', text: 'First run complete.'}]},
+        {content: [{type: 'text', text: 'Second run complete.'}]},
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+    const scenario = defineScenario({
+      id: 'cli.repeated-run',
+      version: 1,
+      title: 'Repeated isolated run',
+      compatibleProfiles: ['document-charts-maps'],
+      turns: [{id: 'run', input: 'Complete this isolated run.'}],
+      expectations: [{oracleId: 'answer', description: 'The run completes.'}],
+    });
+    const oracles = [
+      createAnswerGroundingOracle({
+        id: 'answer',
+        evaluate: (answer) => ({
+          pass: answer.includes('run complete'),
+          reason: 'The scripted run completed.',
+        }),
+      }),
+    ];
+
+    try {
+      await target.run({scenario, oracles});
+      target.store.getState().deckMaps.ensureMap('stale-map');
+      const connector = await target.store.getState().db.getConnector();
+      await connector.execute('CREATE TABLE derived_events AS SELECT 1 AS id')
+        .result;
+      await target.store.getState().db.refreshTableSchemas();
+      const roomConfig = target.store.getState().room.config;
+      target.store.getState().room.setConfig({
+        ...roomConfig,
+        dataSources: [
+          {
+            type: 'sql',
+            sqlQuery: 'SELECT 1 AS id',
+            tableName: 'derived_events',
+          },
+        ],
+      });
+      expect(target.store.getState().room.config.dataSources).toHaveLength(1);
+
+      const evidence = await target.run({scenario, oracles});
+      const initialState = evidence.metadata.initialState as {
+        artifacts: {artifactsById: Record<string, unknown>};
+        maps: unknown[];
+        tables: string[];
+      };
+      const finalState = workspaceFacts(evidence.finalState);
+
+      expect(Object.keys(initialState.artifacts.artifactsById)).toHaveLength(0);
+      expect(initialState.maps).toHaveLength(0);
+      expect(
+        initialState.tables.some((table) => table.includes('derived_events')),
+      ).toBe(false);
+      expect(finalState.documents).toHaveLength(1);
+      expect(finalState.maps).toHaveLength(0);
+      expect(target.store.getState().room.config.dataSources).toHaveLength(0);
+      expect(target.store.getState().ai.config.sessions).toHaveLength(1);
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('rejects overlapping runs so they cannot mutate the shared store', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'First run complete.'}]}],
+    });
+    let signalStarted!: () => void;
+    let releaseStream!: () => void;
+    const started = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const streamGate = new Promise<void>((resolve) => {
+      releaseStream = resolve;
+    });
+    const slowModel = {
+      ...scripted.model,
+      doStream: async (
+        callOptions: Parameters<typeof scripted.model.doStream>[0],
+      ) => {
+        signalStarted();
+        await streamGate;
+        return scripted.model.doStream(callOptions);
+      },
+    };
+    const target = createCliEvalTarget({model: slowModel});
+    const scenario = defineScenario({
+      id: 'cli.concurrent-run',
+      version: 1,
+      title: 'Concurrent run isolation',
+      compatibleProfiles: ['document-charts-maps'],
+      turns: [{id: 'run', input: 'Complete this run.'}],
+      expectations: [{oracleId: 'answer', description: 'The run completes.'}],
+    });
+    const oracles = [
+      createAnswerGroundingOracle({
+        id: 'answer',
+        evaluate: () => ({pass: true, reason: 'The first run completed.'}),
+      }),
+    ];
+
+    try {
+      const firstRun = target.run({scenario, oracles});
+      await started;
+      await expect(target.run({scenario, oracles})).rejects.toThrow(
+        'already has a run in progress',
+      );
+      releaseStream();
+      await expect(firstRun).resolves.toMatchObject({status: 'passed'});
+      scripted.assertComplete();
+    } finally {
+      releaseStream();
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('associates artifacts created by AI commands with the invoking session', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      await target.initialize();
+      const initialArtifactId = target.store
+        .getState()
+        .artifacts.createArtifact({
+          type: 'document',
+          title: 'Initial document',
+        });
+      const sessionId = target.store
+        .getState()
+        .artifactAi.createArtifactScopedSession();
+      expect(sessionId).toBeDefined();
+
+      const result = await target.store.getState().commands.invokeCommand(
+        'document.create-artifact',
+        {title: 'Created by AI'},
+        {
+          surface: 'ai',
+          actor: 'eval-test',
+          metadata: {aiSessionId: sessionId},
+        },
+      );
+      const createdArtifactId = (result.data as {artifactId?: string})
+        .artifactId;
+
+      expect(initialArtifactId).toBeDefined();
+      expect(createdArtifactId).toBeDefined();
+      expect(
+        target.store
+          .getState()
+          .artifactAi.hasSessionArtifactLink(sessionId!, createdArtifactId!),
+      ).toBe(true);
+    } finally {
+      await target.dispose();
+    }
+  });
+
+  it('cancels and awaits a timed-out session before returning evidence', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [{content: [{type: 'text', text: 'Too late.'}]}],
+    });
+    let abortObserved = false;
+    let cancellationSettled = false;
+    const slowModel = {
+      ...scripted.model,
+      doStream: async (
+        callOptions: Parameters<typeof scripted.model.doStream>[0],
+      ) => {
+        await new Promise<void>((resolve, reject) => {
+          const fallback = setTimeout(resolve, 1_000);
+          callOptions.abortSignal?.addEventListener(
+            'abort',
+            () => {
+              abortObserved = true;
+              clearTimeout(fallback);
+              setTimeout(() => {
+                cancellationSettled = true;
+                reject(new DOMException('Aborted', 'AbortError'));
+              }, 10);
+            },
+            {once: true},
+          );
+        });
+        return scripted.model.doStream(callOptions);
+      },
+    };
+    const target = createCliEvalTarget({model: slowModel, timeoutMs: 5});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.timeout',
+          version: 1,
+          title: 'Timeout cancellation',
+          compatibleProfiles: ['document-charts-maps'],
+          turns: [{id: 'run', input: 'Wait for the timeout.'}],
+          expectations: [
+            {oracleId: 'answer', description: 'The timeout is captured.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: () => ({pass: true, reason: 'Timeout captured.'}),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('error');
+      expect(abortObserved).toBe(true);
+      expect(cancellationSettled).toBe(true);
+      expect(JSON.stringify(evidence)).toContain('timed out');
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('cleans up the pending session wait when analysis fails to start', async () => {
+    const scripted = createScriptedLanguageModel({steps: []});
+    const target = createCliEvalTarget({model: scripted.model});
+    const unsubscribed = jest.fn();
+    const originalSubscribe = target.store.subscribe;
+    const subscribe = jest
+      .spyOn(target.store, 'subscribe')
+      .mockImplementation((listener) => {
+        const unsubscribe = originalSubscribe(listener);
+        return () => {
+          unsubscribed();
+          unsubscribe();
+        };
+      });
+    const originalAi = target.store.getState().ai;
+    const startAnalysis = jest.fn(async () => {
+      throw new Error('analysis failed to start');
+    });
+    target.store.setState({ai: {...originalAi, startAnalysis}});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.start-failure',
+          version: 1,
+          title: 'Start failure cleanup',
+          compatibleProfiles: ['document-charts-maps'],
+          turns: [{id: 'run', input: 'Fail before streaming.'}],
+          expectations: [
+            {oracleId: 'error', description: 'The start error is captured.'},
+          ],
+        }),
+        oracles: [
+          createErrorOracle({
+            id: 'error',
+            evaluate: (errors) => ({
+              pass: errors.some((error) =>
+                error.message.includes('analysis failed to start'),
+              ),
+              reason: 'The start failure was captured.',
+            }),
+          }),
+        ],
+      });
+
+      expect(evidence.status).toBe('error');
+      expect(unsubscribed).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(evidence)).toContain('analysis failed to start');
+    } finally {
+      target.store.setState({ai: originalAi});
+      subscribe.mockRestore();
+      await target.dispose();
+    }
+  });
+
+  it('derives total usage when transport metadata omits total tokens', async () => {
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          content: [{type: 'text', text: 'Usage recorded.'}],
+          usage: {inputTokens: 11, outputTokens: 7},
+        },
+      ],
+    });
+    const target = createCliEvalTarget({model: scripted.model});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.usage',
+          version: 1,
+          title: 'Usage accounting',
+          compatibleProfiles: ['document-charts-maps'],
+          turns: [{id: 'run', input: 'Record usage.'}],
+          expectations: [
+            {oracleId: 'answer', description: 'The run completes.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: () => ({pass: true, reason: 'The run completed.'}),
+          }),
+        ],
+      });
+
+      expect(evidence.usage).toMatchObject({
+        inputTokens: 11,
+        outputTokens: 7,
+        totalTokens: 18,
+      });
+    } finally {
+      await target.dispose();
+    }
+  });
+
+  it('redacts sensitive values across the complete evidence envelope', async () => {
+    const secret = 'provider-secret-token';
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          expectation: {promptIncludes: [secret]},
+          content: [{type: 'text', text: `Completed with ${secret}.`}],
+        },
+      ],
+    });
+    const target = createCliEvalTarget({
+      model: scripted.model,
+      sensitiveValues: [secret],
+      repository: {
+        commitSha: `sha-${secret}`,
+        dirty: false,
+        workflowUrl: `https://example.test/run?token=${secret}`,
+      },
+    });
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.redaction',
+          version: 1,
+          title: 'Complete evidence redaction',
+          compatibleProfiles: ['document-charts-maps'],
+          turns: [{id: 'run', input: `Use ${secret} safely.`}],
+          expectations: [
+            {oracleId: 'answer', description: 'The answer is evaluated.'},
+          ],
+        }),
+        oracles: [
+          createAnswerGroundingOracle({
+            id: 'answer',
+            evaluate: (answer) => ({
+              pass: answer.includes(secret),
+              reason: `Observed ${secret}.`,
+              evidence: {answer, secret},
+            }),
+          }),
+        ],
+      });
+
+      const serialized = JSON.stringify(evidence);
+      expect(evidence.status).toBe('passed');
+      expect(serialized).toContain('[REDACTED]');
+      expect(serialized).not.toContain(secret);
+      scripted.assertComplete();
+    } finally {
+      await target.dispose();
+    }
+  }, 30_000);
+
+  it('records actionable redacted transport errors', async () => {
+    const secret = 'provider-secret-token';
+    const scripted = createScriptedLanguageModel({
+      steps: [
+        {
+          expectation: {promptIncludes: [secret]},
+          content: [{type: 'text', text: 'unreachable'}],
+        },
+      ],
+    });
+    const target = createCliEvalTarget({
+      model: scripted.model,
+      sensitiveValues: [secret],
+    });
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    try {
+      const evidence = await target.run({
+        scenario: defineScenario({
+          id: 'cli.transport-error',
+          version: 1,
+          title: 'Transport error evidence',
+          compatibleProfiles: ['document-charts-maps'],
+          turns: [{id: 'run', input: 'Trigger the scripted mismatch.'}],
+          expectations: [
+            {oracleId: 'error', description: 'The error is retained safely.'},
+          ],
+        }),
+        oracles: [
+          createErrorOracle({
+            id: 'error',
+            evaluate: (errors) => ({
+              pass: errors.length > 0,
+              reason: 'The transport error was captured.',
+            }),
+          }),
+        ],
+      });
+
+      const serialized = JSON.stringify(evidence);
+      expect(evidence.status).toBe('error');
+      expect(evidence.events.some((event) => event.type === 'error')).toBe(
+        true,
+      );
+      expect(serialized).toContain('[REDACTED]');
+      expect(serialized).not.toContain(secret);
+    } finally {
+      await target.dispose();
+      consoleError.mockRestore();
+    }
+  }, 30_000);
+});

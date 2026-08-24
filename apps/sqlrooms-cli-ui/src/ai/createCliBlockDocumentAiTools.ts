@@ -39,20 +39,22 @@ export type CreateCliBlockDocumentAiToolsOptions = {
   blockDocumentAdapter: BlockDocumentAiAdapter &
     BlockDocumentMoveBlockAiAdapter;
   getState?: () => RoomState;
-  dashboardAgentTool: Tool;
+  dashboardAgentTool?: Tool;
   chartToolsOptions?: ChartToolsOptions;
   blockDocumentId: string;
   targetBlockId?: string;
   extraTools?: ExtraBlockDocumentAiToolsFactory;
   htmlAppBlocksEnabled?: boolean;
-  createDashboardBlock: (params: {
+  dashboardBlocksEnabled?: boolean;
+  dataTableBlocksEnabled?: boolean;
+  createDashboardBlock?: (params: {
     title: string;
     tableName: string;
     intent?: string;
   }) =>
     | {dashboardId: string; block: BlockDocumentStatefulBlockBlock}
     | Promise<{dashboardId: string; block: BlockDocumentStatefulBlockBlock}>;
-  createDataTableExplorerBlock: (params: {
+  createDataTableExplorerBlock?: (params: {
     title: string;
     tableName: string;
     intent?: string;
@@ -115,6 +117,8 @@ export function createCliBlockDocumentAiTools({
   dashboardAgentTool,
   extraTools,
   htmlAppBlocksEnabled = false,
+  dashboardBlocksEnabled = true,
+  dataTableBlocksEnabled = true,
   createDashboardBlock,
   createDataTableExplorerBlock,
   createHtmlAppBlock,
@@ -135,31 +139,42 @@ export function createCliBlockDocumentAiTools({
     blockDocumentId,
   });
 
-  const addDashboardBlockTool = createAddMosaicDashboardBlockTool({
-    blockDocumentAdapter,
-    blockDocumentId,
-    addDashboardBlock: addDashboardBlock
-      ? (params) => addDashboardBlock({blockDocumentId, ...params})
-      : undefined,
-    createDashboardBlock,
-  });
+  const addDashboardBlockTool =
+    dashboardBlocksEnabled && createDashboardBlock
+      ? createAddMosaicDashboardBlockTool({
+          blockDocumentAdapter,
+          blockDocumentId,
+          addDashboardBlock: addDashboardBlock
+            ? (params) => addDashboardBlock({blockDocumentId, ...params})
+            : undefined,
+          createDashboardBlock,
+        })
+      : undefined;
 
-  const addDataTableExplorerTool = createBlockDocumentDataTableExplorerTool({
-    databaseAdapter,
-    blockDocumentAdapter,
-    blockDocumentId,
-    addDataTableExplorerBlock: addDataTableExplorerBlock
-      ? (params) => addDataTableExplorerBlock({blockDocumentId, ...params})
-      : undefined,
-    createDataTableExplorerBlock,
-  });
+  const addDataTableExplorerTool =
+    dataTableBlocksEnabled && createDataTableExplorerBlock
+      ? createBlockDocumentDataTableExplorerTool({
+          databaseAdapter,
+          blockDocumentAdapter,
+          blockDocumentId,
+          addDataTableExplorerBlock: addDataTableExplorerBlock
+            ? (params) =>
+                addDataTableExplorerBlock({blockDocumentId, ...params})
+            : undefined,
+          createDataTableExplorerBlock,
+        })
+      : undefined;
 
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
     blockDocumentId,
-    usageHint: `Use this before updating an existing worksheet dashboard, map, or app block. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId. For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId. For map blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.create_block_document_map_block} as mapId when the direct worksheet map tool is available.${
+    usageHint: `Use this before updating an existing stateful block in the Document or reordering blocks. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId.${
+      dashboardBlocksEnabled
+        ? ` For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId.`
+        : ''
+    } For map blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.create_block_document_map_block} as mapId when the direct document map tool is available.${
       htmlAppBlocksEnabled
-        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
+        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new document HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
         : ''
     } If a map block has runtimeIssues, repair the map config in place instead of creating a replacement block.`,
     augmentBlockSummary: ({block}) => {
@@ -210,9 +225,19 @@ export function createCliBlockDocumentAiTools({
     [KnownBlockDocumentTools.list_blocks]: listBlocksTool,
     [KnownBlockDocumentTools.move_block]: moveBlockTool,
     [KnownBlockDocumentTools.add_text_block]: addTextBlockTool,
-    [KnownBlockDocumentTools.add_dashboard_block]: addDashboardBlockTool,
-    [KnownBlockDocumentTools.add_data_table_explorer]: addDataTableExplorerTool,
-    [KnownBlockDocumentTools.embedded_dashboard_agent]: dashboardAgentTool,
+    ...(addDashboardBlockTool && dashboardAgentTool
+      ? {
+          [KnownBlockDocumentTools.add_dashboard_block]: addDashboardBlockTool,
+          [KnownBlockDocumentTools.embedded_dashboard_agent]:
+            dashboardAgentTool,
+        }
+      : {}),
+    ...(addDataTableExplorerTool
+      ? {
+          [KnownBlockDocumentTools.add_data_table_explorer]:
+            addDataTableExplorerTool,
+        }
+      : {}),
     ...(htmlAppBlocksEnabled
       ? {
           [KnownBlockDocumentTools.add_html_app_block]:

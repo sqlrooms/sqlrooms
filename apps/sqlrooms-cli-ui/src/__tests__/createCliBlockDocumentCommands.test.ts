@@ -1,6 +1,11 @@
 import {jest} from '@jest/globals';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands';
+import {
+  DEFAULT_CLI_CAPABILITY_PROFILE,
+  EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
+  DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+} from '../profiles';
 
 const table = {
   table: makeQualifiedTableName({schema: 'main', table: 'earthquakes'}),
@@ -15,6 +20,22 @@ const table = {
 
 function command(id: string) {
   const result = createCliBlockDocumentCommands().find(
+    (item) => item.id === id,
+  );
+  if (!result) throw new Error(`Missing ${id}`);
+  return result;
+}
+
+function profileCommand(
+  id: string,
+  statefulBlockTypes: readonly (
+    | 'dashboard'
+    | 'data-table'
+    | 'html-app'
+    | 'map'
+  )[],
+) {
+  const result = createCliBlockDocumentCommands({statefulBlockTypes}).find(
     (item) => item.id === id,
   );
   if (!result) throw new Error(`Missing ${id}`);
@@ -75,9 +96,9 @@ function setup() {
     commands: {invokeCommand},
     artifacts: {
       getArtifact: () => ({
-        id: 'worksheet-1',
-        type: 'worksheet',
-        title: 'Worksheet',
+        id: 'document-1',
+        type: 'document',
+        title: 'Document',
       }),
     },
     blockDocuments: {
@@ -108,12 +129,117 @@ function setup() {
 }
 
 describe('createCliBlockDocumentCommands', () => {
-  it('updates worksheet maps as resources without dashboard commands or panelId', async () => {
+  it('only exposes block-creating commands enabled by the profile', () => {
+    const defaultCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes: DEFAULT_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(defaultCommandIds).toEqual(
+      expect.arrayContaining([
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+      ]),
+    );
+    expect(defaultCommandIds).not.toContain(
+      'block-document.add-html-app-block',
+    );
+    expect(defaultCommandIds).not.toContain('block-document.add-map-block');
+
+    const experimentalCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes: EXPERIMENTAL_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(experimentalCommandIds).toEqual(
+      expect.arrayContaining([
+        'block-document.add-dashboard-block',
+        'block-document.add-data-table-block',
+        'block-document.add-html-app-block',
+        'block-document.add-map-block',
+      ]),
+    );
+
+    const documentCommandIds = createCliBlockDocumentCommands({
+      statefulBlockTypes:
+        DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    }).map(({id}) => id);
+    expect(documentCommandIds).toEqual([
+      'block-document.update-block-metadata',
+      'block-document.add-map-block',
+    ]);
+  });
+
+  it('rejects metadata edits for stateful blocks disabled by the profile', async () => {
+    const {state} = setup();
+    state.blockDocuments.getBlocks = () => [
+      {
+        id: 'dashboard-block',
+        type: 'statefulBlock',
+        blockType: 'dashboard',
+        blockInstanceId: 'dashboard-1',
+        caption: 'Dashboard',
+      },
+    ];
+    const updateMetadata = profileCommand(
+      'block-document.update-block-metadata',
+      DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+    );
+
+    expect(() =>
+      updateMetadata.execute({getState: () => state} as any, {
+        blockDocumentId: 'document-1',
+        blockId: 'dashboard-block',
+        caption: 'Changed',
+      }),
+    ).toThrow(
+      'Stateful block type dashboard is not available in the selected capability profile',
+    );
+    expect(state.blockDocuments.updateBlock).not.toHaveBeenCalled();
+  });
+
+  it('creates a direct document map without a model or dashboard command', async () => {
     const {state, invokeCommand, mapsById} = setup();
     const result = await command('block-document.add-map-block').execute(
       {getState: () => state} as any,
       {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
+        title: 'New Earthquake Map',
+        tableName: 'earthquakes',
+        config: {
+          datasets: {earthquakes: {source: {tableName: 'earthquakes'}}},
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {dataset: 'earthquakes'},
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    expect(result).toMatchObject({success: true});
+    const mapId = (result as any).data.mapId as string;
+    expect(mapsById[mapId]).toMatchObject({title: 'New Earthquake Map'});
+    expect(mapsById[mapId].config.datasets.earthquakes.source.tableName).toBe(
+      '"main"."earthquakes"',
+    );
+    expect(invokeCommand).toHaveBeenCalledWith(
+      'block-document.create-stateful-block',
+      expect.objectContaining({blockType: 'map', blockInstanceId: mapId}),
+      expect.anything(),
+    );
+    expect(
+      invokeCommand.mock.calls.some(([id]) =>
+        String(id).startsWith('dashboard.'),
+      ),
+    ).toBe(false);
+  });
+
+  it('updates document maps as resources without dashboard commands or panelId', async () => {
+    const {state, invokeCommand, mapsById} = setup();
+    const result = await command('block-document.add-map-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'document-1',
         mapId: 'map-1',
         reasoning: 'change colors',
         replaceLayers: true,
@@ -145,7 +271,7 @@ describe('createCliBlockDocumentCommands', () => {
       geometryColumn: '__sqlrooms_geom',
       geometryEncodingHint: 'wkb',
       source: {
-        tableName: 'earthquakes',
+        tableName: '"main"."earthquakes"',
         transformSql: expect.stringContaining('ST_AsWKB'),
       },
     });
@@ -166,7 +292,7 @@ describe('createCliBlockDocumentCommands', () => {
     await command('block-document.add-dashboard-block').execute(
       {getState: () => state} as any,
       {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         title: 'Dashboard',
         tableName: 'earthquakes',
       },

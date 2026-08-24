@@ -1,0 +1,197 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`CLI capability profiles locks the default capability baseline 1`] = `
+{
+  "ai": {
+    "instructionSets": [
+      "stable",
+    ],
+    "nestedAgents": [
+      "dashboard",
+      "document",
+      "document-dashboard",
+    ],
+    "topLevelToolGroups": [
+      "default-data-analysis",
+      "artifact-context",
+      "dashboard-agent",
+      "document-agent",
+      "webcontainer",
+      "chart",
+      "chart-image-for-markdown",
+    ],
+  },
+  "artifacts": {
+    "creatable": [
+      "document",
+      "dashboard",
+    ],
+    "runContext": [
+      "document",
+      "dashboard",
+      "pivot",
+      "notebook",
+      "markdown",
+      "sql-query",
+      "html-app",
+      "python",
+      "canvas",
+      "app-builder",
+    ],
+  },
+  "blocks": {
+    "aiContext": [
+      "chart",
+      "dashboard",
+    ],
+    "stateful": [
+      "dashboard",
+      "data-table",
+    ],
+  },
+  "commands": [
+    "dashboard",
+    "mosaic-dashboard",
+    "block-document",
+    "cli-block-document",
+  ],
+  "dashboard": {
+    "deckMaps": false,
+  },
+  "name": "default",
+  "skills": [],
+  "version": 1,
+}
+`;
+
+exports[`CLI capability profiles locks the document-charts-maps capability baseline 1`] = `
+{
+  "ai": {
+    "instructionSets": [
+      "stable",
+    ],
+    "nestedAgents": [
+      "document",
+    ],
+    "topLevelToolGroups": [
+      "default-data-analysis",
+      "artifact-context",
+      "document-agent",
+      "chart",
+    ],
+  },
+  "artifacts": {
+    "creatable": [
+      "document",
+    ],
+    "runContext": [
+      "document",
+    ],
+  },
+  "blocks": {
+    "aiContext": [
+      "chart",
+      "map",
+    ],
+    "stateful": [
+      "map",
+    ],
+  },
+  "commands": [
+    "block-document",
+    "cli-block-document",
+  ],
+  "dashboard": {
+    "deckMaps": false,
+  },
+  "name": "document-charts-maps",
+  "skills": [],
+  "version": 1,
+}
+`;
+
+exports[`CLI capability profiles locks the experimental capability baseline 1`] = `
+{
+  "ai": {
+    "instructionSets": [
+      "stable",
+      "experimental",
+    ],
+    "nestedAgents": [
+      "dashboard",
+      "document",
+      "document-dashboard",
+      "html-app",
+    ],
+    "topLevelToolGroups": [
+      "default-data-analysis",
+      "artifact-context",
+      "dashboard-agent",
+      "html-app-agent",
+      "document-agent",
+      "webcontainer",
+      "chart",
+      "chart-image-for-markdown",
+    ],
+  },
+  "artifacts": {
+    "creatable": [
+      "document",
+      "dashboard",
+      "pivot",
+      "notebook",
+      "markdown",
+      "sql-query",
+      "html-app",
+      "python",
+      "canvas",
+      "app-builder",
+    ],
+    "runContext": [
+      "document",
+      "dashboard",
+      "pivot",
+      "notebook",
+      "markdown",
+      "sql-query",
+      "html-app",
+      "python",
+      "canvas",
+      "app-builder",
+    ],
+  },
+  "blocks": {
+    "aiContext": [
+      "chart",
+      "dashboard",
+      "html-app",
+      "map",
+    ],
+    "stateful": [
+      "dashboard",
+      "pivot",
+      "data-table",
+      "map",
+      "markdown",
+      "sql-query",
+      "html-app",
+      "python",
+    ],
+  },
+  "commands": [
+    "dashboard",
+    "mosaic-dashboard",
+    "markdown",
+    "block-document",
+    "cli-block-document",
+    "block-document-python",
+    "html-app-revision",
+  ],
+  "dashboard": {
+    "deckMaps": true,
+  },
+  "name": "experimental",
+  "skills": [],
+  "version": 1,
+}
+`;

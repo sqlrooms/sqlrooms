@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
+    "jsdom": "^29.1.1",
     "loro-crdt": "^1.10.3",
     "ts-jest": "^29.4.4"
   },

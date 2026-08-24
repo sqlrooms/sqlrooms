@@ -100,9 +100,9 @@ export function htmlAppAgentTool(store: StoreApi<RoomState>) {
 
 Use this after the caller has created or identified the right container:
 - top-level html-app artifact id
-- embedded worksheet html-app blockInstanceId
+- embedded document html-app blockInstanceId
 
-This tool does not create artifacts, select artifacts, or create worksheet blocks. It creates complete app source for the requested intent, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit intent; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
+This tool does not create artifacts, select artifacts, or create document blocks. It creates complete app source for the requested intent, writes it to durable html-app runtime state, observes runtime diagnostics, and repairs files when diagnostics report errors. If explicit html or files are provided, it writes that source directly. For incremental edits to an existing app, provide appId plus the edit intent; the tool edits the current source without re-discovering data unless the request explicitly changes data/query behavior. For title-only rename requests, provide title without source; the tool updates metadata and obvious HTML title locations without regenerating the app.`,
     inputSchema: HtmlAppAgentInputSchema,
     execute: async (input, toolOptions): Promise<Record<string, unknown>> => {
       if (input.html || input.files) {

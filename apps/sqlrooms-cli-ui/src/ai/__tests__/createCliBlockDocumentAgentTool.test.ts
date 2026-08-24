@@ -88,12 +88,24 @@ describe('createCliBlockDocumentAgentTool', () => {
       {
         reasoning: 'test',
         intent: 'update this block',
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         ...input,
       },
       {toolCallId: 'tool-call-1'},
     )) as {success: boolean; finalOutput: string; error?: string};
   }
+
+  it('describes the wrapped create result and unsupported-block fallback', () => {
+    const agentTool = createCliBlockDocumentAgentTool(createOptions()) as any;
+
+    expect(agentTool.description).toContain('result.data.artifactId');
+    expect(agentTool.description).toContain(
+      'even when another Document is in run context',
+    );
+    expect(agentTool.description).toContain(
+      'Use registered block-document commands for requested block types this tool does not expose',
+    );
+  });
 
   it.each([
     {
@@ -217,7 +229,7 @@ describe('createCliBlockDocumentAgentTool', () => {
 
       expect(result).toMatchObject({
         success: true,
-        finalOutput: 'Worksheet block updated successfully.',
+        finalOutput: 'Document block updated successfully.',
       });
       expect(Object.keys(capturedAgent?.tools ?? {})).toEqual([toolName]);
       expect(executeMock).toHaveBeenCalledWith(
@@ -238,7 +250,7 @@ describe('createCliBlockDocumentAgentTool', () => {
     },
   );
 
-  it('restricts chart target blocks to worksheet chart tools', async () => {
+  it('restricts chart target blocks to document chart tools', async () => {
     let capturedAgent: ToolLoopAgent<any, any, any> | undefined;
     const options = createOptions({
       htmlAppBlocksEnabled: false,
@@ -267,7 +279,7 @@ describe('createCliBlockDocumentAgentTool', () => {
     ).toBe(true);
   });
 
-  it('creates the embedded dashboard agent for the current worksheet', async () => {
+  it('creates the embedded dashboard agent for the current document', async () => {
     const embeddedDashboardAgent = tool({
       inputSchema: z.object({dashboardId: z.string()}),
       execute: async () => ({success: true}),
@@ -282,7 +294,7 @@ describe('createCliBlockDocumentAgentTool', () => {
       {},
     );
 
-    expect(dashboardAgentTool).toHaveBeenCalledWith('worksheet-1');
+    expect(dashboardAgentTool).toHaveBeenCalledWith('document-1');
   });
 
   it('fails when no target-block tool is available', async () => {
@@ -345,7 +357,7 @@ describe('createCliBlockDocumentAgentTool', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(
-      'Target block missing-block was not found in worksheet worksheet-1.',
+      'Target block missing-block was not found in document document-1.',
     );
     expect(runSubAgent).not.toHaveBeenCalled();
   });
@@ -399,7 +411,7 @@ describe('createCliBlockDocumentAgentTool', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(
-      'Target block dashboard-block instance id does not match the current worksheet block.',
+      'Target block dashboard-block instance id does not match the current document block.',
     );
     expect(runSubAgent).not.toHaveBeenCalled();
   });
@@ -412,7 +424,57 @@ describe('createCliBlockDocumentAgentTool', () => {
 
     expect(result).toMatchObject({
       success: true,
-      finalOutput: 'Worksheet created successfully.',
+      finalOutput: 'Document created successfully.',
     });
+  });
+
+  it('uses dashboard-free tools and instructions for document charts/maps', async () => {
+    let capturedAgent: ToolLoopAgent<any, any, any> | undefined;
+    const directMapTool = tool({
+      description: 'mock direct map tool',
+      inputSchema: z.object({}),
+      execute: async () => ({success: true}),
+    });
+    const result = await executeAgentTool(
+      createOptions({
+        dashboardBlocksEnabled: false,
+        dataTableBlocksEnabled: false,
+        htmlAppBlocksEnabled: false,
+        mapBlocksEnabled: true,
+        extraTools: () => ({
+          [KnownBlockDocumentTools.create_block_document_map_block]:
+            directMapTool,
+        }),
+        runSubAgent: jest.fn<
+          CreateCliBlockDocumentAgentToolOptions['runSubAgent']
+        >(async ({agent}) => {
+          capturedAgent = agent;
+          return {};
+        }),
+      }),
+      {},
+    );
+
+    expect(result.success).toBe(true);
+    expect(capturedAgent?.tools).toHaveProperty(
+      KnownBlockDocumentTools.create_block_document_map_block,
+    );
+    expect(capturedAgent?.tools).not.toHaveProperty(
+      KnownBlockDocumentTools.add_dashboard_block,
+    );
+    expect(capturedAgent?.tools).not.toHaveProperty(
+      KnownBlockDocumentTools.embedded_dashboard_agent,
+    );
+    expect(capturedAgent?.tools).not.toHaveProperty(
+      KnownBlockDocumentTools.add_data_table_explorer,
+    );
+    const instructions = String((capturedAgent as any).settings.instructions);
+    expect(instructions).toContain('text, chart, and direct map blocks');
+    expect(instructions).not.toContain(
+      KnownBlockDocumentTools.embedded_dashboard_agent,
+    );
+    expect(instructions).not.toContain(
+      KnownBlockDocumentTools.add_dashboard_block,
+    );
   });
 });
