@@ -26,9 +26,9 @@ type TestRoomState = BaseRoomStoreState &
 
 function createTestStore(doc: LoroDoc) {
   const artifactTypes = defineArtifactTypes({
-    document: {
-      label: 'Document',
-      defaultTitle: 'Document',
+    markdown: {
+      label: 'Markdown',
+      defaultTitle: 'Markdown',
       onCreate: ({artifactId, store}) => {
         store.getState().documents.ensureDocument(artifactId);
       },
@@ -80,7 +80,7 @@ describe('documents CRDT mirrors', () => {
 
     const artifactId = storeA.getState().artifacts.createArtifact({
       id: 'doc-1',
-      type: 'document',
+      type: 'markdown',
       title: 'Notes',
     });
     storeA.getState().documents.setMarkdown(artifactId, '# Hello');
@@ -113,7 +113,7 @@ describe('documents CRDT mirrors', () => {
 
     expect(storeB.getState().artifacts.getArtifact('doc-1')).toMatchObject({
       id: 'doc-1',
-      type: 'document',
+      type: 'markdown',
       title: 'Notes',
     });
     expect(storeB.getState().artifacts.getArtifact(dashboardId)).toMatchObject({
@@ -150,7 +150,7 @@ describe('documents CRDT mirrors', () => {
     });
     const removedDocumentId = store.getState().artifacts.createArtifact({
       id: 'removed-document',
-      type: 'document',
+      type: 'markdown',
       title: 'Removed document',
     });
     store.getState().artifacts.togglePinArtifact(dashboardId);
@@ -169,8 +169,8 @@ describe('documents CRDT mirrors', () => {
     createDocumentsCrdtMirror<TestRoomState>().apply(
       {
         artifacts: [
-          {id: 'doc-1', type: 'document', title: 'Notes'},
-          {id: 'doc-2', type: 'document', title: 'Ideas'},
+          {id: 'doc-1', type: 'markdown', title: 'Notes'},
+          {id: 'doc-2', type: 'markdown', title: 'Ideas'},
         ],
         documents: [
           {id: 'doc-1', markdown: '# Notes', updatedAt: 1},
@@ -284,7 +284,7 @@ describe('documents CRDT mirrors', () => {
 
     createDocumentsCrdtMirror<TestRoomState>().apply(
       {
-        artifacts: [{id: 'doc-1', type: 'document', title: 'Notes'}],
+        artifacts: [{id: 'doc-1', type: 'markdown', title: 'Notes'}],
         documents: [
           {
             id: 'doc-1',

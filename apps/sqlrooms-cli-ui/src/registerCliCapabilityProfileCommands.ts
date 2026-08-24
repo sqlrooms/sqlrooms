@@ -1,6 +1,6 @@
 import {
   createBlockDocumentCommands,
-  createDocumentCommands,
+  createMarkdownCommands,
   type BlockDocumentBlock,
 } from '@sqlrooms/documents';
 import {createMosaicDashboardCommands} from '@sqlrooms/mosaic';
@@ -26,7 +26,7 @@ import type {CliCapabilityProfile} from './profiles';
 import {createStatefulBlockCommandTypes} from './statefulBlockArtifactConfigs';
 import type {RoomState} from './store-types';
 
-export const DOCUMENT_COMMAND_OWNER = '@sqlrooms/documents';
+export const MARKDOWN_COMMAND_OWNER = '@sqlrooms/documents/markdown';
 export const MOSAIC_DASHBOARD_COMMAND_OWNER = '@sqlrooms/mosaic/dashboard';
 export const BLOCK_DOCUMENT_COMMAND_OWNER =
   '@sqlrooms/documents/block-document';
@@ -34,14 +34,14 @@ export const BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER =
   '@sqlrooms/python/block-document';
 
 const BLOCK_DOCUMENT_OPTIONS = {
-  artifactType: 'worksheet',
-  artifactLabel: 'Worksheet',
+  artifactType: 'document',
+  artifactLabel: 'Document',
   commandNamespace: 'block-document',
-  commandGroup: 'Worksheet',
-  defaultTitle: 'Worksheet',
+  commandGroup: 'Document',
+  defaultTitle: 'Document',
 } as const;
 
-const WORKSHEET_CHARTS_MAPS_ALLOWED_BLOCK_TYPES = [
+const DOCUMENT_CHARTS_MAPS_ALLOWED_BLOCK_TYPES = [
   'heading',
   'paragraph',
   'list',
@@ -68,11 +68,11 @@ export function registerCliCapabilityProfileCommands(
       createMosaicDashboardCommands<RoomState>(),
     );
   }
-  if (profile.commands.includes('document')) {
+  if (profile.commands.includes('markdown')) {
     registerCommandsForOwner(
       store,
-      DOCUMENT_COMMAND_OWNER,
-      createDocumentCommands<RoomState>(),
+      MARKDOWN_COMMAND_OWNER,
+      createMarkdownCommands<RoomState>(),
     );
   }
   if (profile.commands.includes('block-document')) {
@@ -83,8 +83,8 @@ export function registerCliCapabilityProfileCommands(
         ...BLOCK_DOCUMENT_OPTIONS,
         statefulBlockTypes: createStatefulBlockCommandTypes({profile}),
         allowedBlockTypes:
-          profile.name === 'worksheet-charts-maps'
-            ? WORKSHEET_CHARTS_MAPS_ALLOWED_BLOCK_TYPES
+          profile.name === 'document-charts-maps'
+            ? DOCUMENT_CHARTS_MAPS_ALLOWED_BLOCK_TYPES
             : undefined,
       }),
     );
@@ -125,7 +125,7 @@ export function unregisterCliCapabilityProfileCommands(
 ): void {
   unregisterCommandsForOwner(store, DASHBOARD_COMMAND_OWNER);
   unregisterCommandsForOwner(store, MOSAIC_DASHBOARD_COMMAND_OWNER);
-  unregisterCommandsForOwner(store, DOCUMENT_COMMAND_OWNER);
+  unregisterCommandsForOwner(store, MARKDOWN_COMMAND_OWNER);
   unregisterCommandsForOwner(store, BLOCK_DOCUMENT_COMMAND_OWNER);
   unregisterCommandsForOwner(store, CLI_BLOCK_DOCUMENT_COMMAND_OWNER);
   unregisterCommandsForOwner(store, BLOCK_DOCUMENT_PYTHON_COMMAND_OWNER);

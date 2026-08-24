@@ -1,6 +1,6 @@
 # SQLRooms production-model behavioral evals
 
-The nightly suite runs the production `worksheet-charts-maps@1` CLI profile
+The nightly suite runs the production `document-charts-maps@1` CLI profile
 through the in-process target. Promptfoo schedules and retains runs; SQLRooms'
 deterministic state and policy oracles decide pass/fail. No LLM grader is used,
 so application token usage remains separate from the zero grader usage recorded
@@ -18,7 +18,7 @@ pnpm build
 cp .env.example .env.local
 # Edit .env.local and set OPENROUTER_API_KEY.
 pnpm evals:nightly
-pnpm evals:nightly --filter-pattern 'worksheet.create-chart-map'
+pnpm evals:nightly --filter-pattern 'document.create-chart-map'
 ```
 
 An existing environment variable takes precedence over `.env.local`. The

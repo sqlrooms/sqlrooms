@@ -16,7 +16,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Features
 
-* [WIP] worksheets ([#831](https://github.com/sqlrooms/sqlrooms/issues/831)) ([ef870bf](https://github.com/sqlrooms/sqlrooms/commit/ef870bfa331c1a81c50de9e1bab3252ad9ca9220))
+* [WIP] documents ([#831](https://github.com/sqlrooms/sqlrooms/issues/831)) ([ef870bf](https://github.com/sqlrooms/sqlrooms/commit/ef870bfa331c1a81c50de9e1bab3252ad9ca9220))
 * **ai-core:** add active chat status and opt-in timeouts ([#814](https://github.com/sqlrooms/sqlrooms/issues/814)) ([a6dd90f](https://github.com/sqlrooms/sqlrooms/commit/a6dd90fd03dfcd4ee58d851189fd5707fddbe19a))
 * customizable chat presentation ([#828](https://github.com/sqlrooms/sqlrooms/issues/828)) ([8085903](https://github.com/sqlrooms/sqlrooms/commit/8085903d0a76a5fb908d0218251c05825fe69dbb))
 * port Mosaic + Datafusion + Zarr example ([#834](https://github.com/sqlrooms/sqlrooms/issues/834)) ([5c8052f](https://github.com/sqlrooms/sqlrooms/commit/5c8052f254890bbce58eb0f301887d42b64534ec))
@@ -46,10 +46,10 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 * add "Ask AI on a block" popover for block-document blocks ([#798](https://github.com/sqlrooms/sqlrooms/issues/798)) ([1f748a6](https://github.com/sqlrooms/sqlrooms/commit/1f748a6b698437676d168ba2d8417136b22bb113))
 * clean up table reference type boundaries ([#775](https://github.com/sqlrooms/sqlrooms/issues/775)) ([3864f8f](https://github.com/sqlrooms/sqlrooms/commit/3864f8f2e78f23b69c62ec92d3798b4ff04a7c6c))
-* **cli:** adapt worksheet internals to block documents ([#780](https://github.com/sqlrooms/sqlrooms/issues/780)) ([ae147e9](https://github.com/sqlrooms/sqlrooms/commit/ae147e9c0a5781cf9946c0db00aead7407ecc8e5))
+* **cli:** adapt document internals to block documents ([#780](https://github.com/sqlrooms/sqlrooms/issues/780)) ([ae147e9](https://github.com/sqlrooms/sqlrooms/commit/ae147e9c0a5781cf9946c0db00aead7407ecc8e5))
 * **deck:** add configMode for AI map generation ([#777](https://github.com/sqlrooms/sqlrooms/issues/777)) ([79d0064](https://github.com/sqlrooms/sqlrooms/commit/79d0064efbdb1a112d64574127f123a1cb2032eb))
 * **deck:** add table dataset transforms ([#778](https://github.com/sqlrooms/sqlrooms/issues/778)) ([c6ad8a7](https://github.com/sqlrooms/sqlrooms/commit/c6ad8a7eabf3cf25e3c5dba3118e99987c71dfcb))
-* decouple worksheet Deck map resources ([#806](https://github.com/sqlrooms/sqlrooms/issues/806)) ([bd69eb9](https://github.com/sqlrooms/sqlrooms/commit/bd69eb9bed2d5cddfe1afa0656d92671622ab181))
+* decouple document Deck map resources ([#806](https://github.com/sqlrooms/sqlrooms/issues/806)) ([bd69eb9](https://github.com/sqlrooms/sqlrooms/commit/bd69eb9bed2d5cddfe1afa0656d92671622ab181))
 * **documents:** add block reorder AI tool ([#790](https://github.com/sqlrooms/sqlrooms/issues/790)) ([45b4135](https://github.com/sqlrooms/sqlrooms/commit/45b4135b1e2acbf39c78a632def9024df8eb79c5))
 * extract reusable CLI package primitives ([#784](https://github.com/sqlrooms/sqlrooms/issues/784)) ([3997caf](https://github.com/sqlrooms/sqlrooms/commit/3997cafae27afd258406a7bd71e741d68f55c8c2))
 * Improve sidebar dropdown states ([#804](https://github.com/sqlrooms/sqlrooms/issues/804)) ([fe38148](https://github.com/sqlrooms/sqlrooms/commit/fe38148054c09df94a9f507748a898c95d1c0a9d))
@@ -86,11 +86,11 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * Add AI debug session view ([#729](https://github.com/sqlrooms/sqlrooms/issues/729)) ([ed64d40](https://github.com/sqlrooms/sqlrooms/commit/ed64d40edad8cfd97a2ea2159dc0ba8750dbf181))
 * Add app runtime bridge for sandboxed HTML apps ([#737](https://github.com/sqlrooms/sqlrooms/issues/737)) ([496de33](https://github.com/sqlrooms/sqlrooms/commit/496de333b538cec0e44d307365405846689671fa))
 * Add block type dropdown for focused empty paragraphs ([#752](https://github.com/sqlrooms/sqlrooms/issues/752)) ([6203805](https://github.com/sqlrooms/sqlrooms/commit/6203805b125b2b6ca598307aaac6ed15ae813217))
-* add direct worksheet map blocks ([#757](https://github.com/sqlrooms/sqlrooms/issues/757)) ([28e6cd5](https://github.com/sqlrooms/sqlrooms/commit/28e6cd5d4f30cf9ccfd1240507cf0280363a804e))
+* add direct document map blocks ([#757](https://github.com/sqlrooms/sqlrooms/issues/757)) ([28e6cd5](https://github.com/sqlrooms/sqlrooms/commit/28e6cd5d4f30cf9ccfd1240507cf0280363a804e))
 * add HTML app revision history ([#748](https://github.com/sqlrooms/sqlrooms/issues/748)) ([ab14232](https://github.com/sqlrooms/sqlrooms/commit/ab1423243b93c11a85d21b49d13ad6d29045eb22))
 * add intent metadata for AI-created blocks ([#749](https://github.com/sqlrooms/sqlrooms/issues/749)) ([9e23f71](https://github.com/sqlrooms/sqlrooms/commit/9e23f71f9d9c975e900c42f95c08cb42da9e03b8))
 * Add python block artifacts to the CLI UI ([#762](https://github.com/sqlrooms/sqlrooms/issues/762)) ([730effd](https://github.com/sqlrooms/sqlrooms/commit/730effdb081f2da29ac25d01741e37bca04902a5))
-* add Python cell worksheet blocks ([#753](https://github.com/sqlrooms/sqlrooms/issues/753)) ([de90cf1](https://github.com/sqlrooms/sqlrooms/commit/de90cf1a115d25b46fa6ffc61d4ff7669e18d540))
+* add Python cell document blocks ([#753](https://github.com/sqlrooms/sqlrooms/issues/753)) ([de90cf1](https://github.com/sqlrooms/sqlrooms/commit/de90cf1a115d25b46fa6ffc61d4ff7669e18d540))
 * Add rename and delete actions to CLI artifact sidebar ([#738](https://github.com/sqlrooms/sqlrooms/issues/738)) ([571cae1](https://github.com/sqlrooms/sqlrooms/commit/571cae1c1f5ac47637322e2efaf8b8c7c9e0d2d4))
 * Add table delete action to the CLI sidebar ([#744](https://github.com/sqlrooms/sqlrooms/issues/744)) ([7be3da6](https://github.com/sqlrooms/sqlrooms/commit/7be3da65320cbcfcc0757268a3cbd02c6709bb98))
 * **cli:** prepare sqlrooms publishing ([#754](https://github.com/sqlrooms/sqlrooms/issues/754)) ([8245678](https://github.com/sqlrooms/sqlrooms/commit/8245678b3c497f9115074cd2812cd0826973121b))
@@ -103,7 +103,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * Persist chat request errors in session state ([#750](https://github.com/sqlrooms/sqlrooms/issues/750)) ([2eca7bb](https://github.com/sqlrooms/sqlrooms/commit/2eca7bb0e351cfc92b9ea1d04bfdce728d389423))
 * reuse empty artifact chat sessions ([#742](https://github.com/sqlrooms/sqlrooms/issues/742)) ([bd26a35](https://github.com/sqlrooms/sqlrooms/commit/bd26a355a555544ca595bb170b0475c3c82fe933))
 * Show a disconnect dialog for lost DuckDB WebSocket connections ([#763](https://github.com/sqlrooms/sqlrooms/issues/763)) ([213239f](https://github.com/sqlrooms/sqlrooms/commit/213239fb5c79e7f0efb23ef20db06ae0cdf7cf41))
-* Worksheet agent ([#711](https://github.com/sqlrooms/sqlrooms/issues/711)) ([0f40da8](https://github.com/sqlrooms/sqlrooms/commit/0f40da84c74f4facfd6a058fbce4b2ae91cb0ec5))
+* Document agent ([#711](https://github.com/sqlrooms/sqlrooms/issues/711)) ([0f40da8](https://github.com/sqlrooms/sqlrooms/commit/0f40da84c74f4facfd6a058fbce4b2ae91cb0ec5))
 
 # [0.29.0-rc.8](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.7...v0.29.0-rc.8) (2026-06-17)
 
@@ -130,7 +130,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 * Improving tableSchema AI tools ([#683](https://github.com/sqlrooms/sqlrooms/issues/683)) ([1948bfd](https://github.com/sqlrooms/sqlrooms/commit/1948bfdc196c72b0d364a4da58190bc83cdf1fb2))
 * Line chart legend ([#706](https://github.com/sqlrooms/sqlrooms/issues/706)) ([c1bba26](https://github.com/sqlrooms/sqlrooms/commit/c1bba26551a767bb16ef6d543ed59b4486fe62da))
 * Rename bubble chart to scatter chart ([#705](https://github.com/sqlrooms/sqlrooms/issues/705)) ([bbbf173](https://github.com/sqlrooms/sqlrooms/commit/bbbf173fe937c9da909f307091ce88c56eac240b))
-* reset filters in worksheets and block captions ([#690](https://github.com/sqlrooms/sqlrooms/issues/690)) ([f9f87cd](https://github.com/sqlrooms/sqlrooms/commit/f9f87cd0587ddbb70dd3979af18b57798e9b6f09))
+* reset filters in documents and block captions ([#690](https://github.com/sqlrooms/sqlrooms/issues/690)) ([f9f87cd](https://github.com/sqlrooms/sqlrooms/commit/f9f87cd0587ddbb70dd3979af18b57798e9b6f09))
 * Update cli UI ([#699](https://github.com/sqlrooms/sqlrooms/issues/699)) ([75367c9](https://github.com/sqlrooms/sqlrooms/commit/75367c97f39bbd6afc250c8354d7707686ea6ba7))
 
 # [0.29.0-rc.7](https://github.com/sqlrooms/sqlrooms/compare/v0.29.0-rc.6...v0.29.0-rc.7) (2026-06-05)

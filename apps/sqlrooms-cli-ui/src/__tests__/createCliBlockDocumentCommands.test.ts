@@ -4,7 +4,7 @@ import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands'
 import {
   DEFAULT_CLI_CAPABILITY_PROFILE,
   EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
-  WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+  DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
 } from '../profiles';
 
 const table = {
@@ -96,9 +96,9 @@ function setup() {
     commands: {invokeCommand},
     artifacts: {
       getArtifact: () => ({
-        id: 'worksheet-1',
-        type: 'worksheet',
-        title: 'Worksheet',
+        id: 'document-1',
+        type: 'document',
+        title: 'Document',
       }),
     },
     blockDocuments: {
@@ -156,11 +156,11 @@ describe('createCliBlockDocumentCommands', () => {
       ]),
     );
 
-    const worksheetCommandIds = createCliBlockDocumentCommands({
+    const documentCommandIds = createCliBlockDocumentCommands({
       statefulBlockTypes:
-        WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+        DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
     }).map(({id}) => id);
-    expect(worksheetCommandIds).toEqual([
+    expect(documentCommandIds).toEqual([
       'block-document.update-block-metadata',
       'block-document.add-map-block',
     ]);
@@ -179,12 +179,12 @@ describe('createCliBlockDocumentCommands', () => {
     ];
     const updateMetadata = profileCommand(
       'block-document.update-block-metadata',
-      WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
+      DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE.blocks.stateful,
     );
 
     expect(() =>
       updateMetadata.execute({getState: () => state} as any, {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         blockId: 'dashboard-block',
         caption: 'Changed',
       }),
@@ -194,12 +194,12 @@ describe('createCliBlockDocumentCommands', () => {
     expect(state.blockDocuments.updateBlock).not.toHaveBeenCalled();
   });
 
-  it('creates a direct worksheet map without a model or dashboard command', async () => {
+  it('creates a direct document map without a model or dashboard command', async () => {
     const {state, invokeCommand, mapsById} = setup();
     const result = await command('block-document.add-map-block').execute(
       {getState: () => state} as any,
       {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         title: 'New Earthquake Map',
         tableName: 'earthquakes',
         config: {
@@ -234,12 +234,12 @@ describe('createCliBlockDocumentCommands', () => {
     ).toBe(false);
   });
 
-  it('updates worksheet maps as resources without dashboard commands or panelId', async () => {
+  it('updates document maps as resources without dashboard commands or panelId', async () => {
     const {state, invokeCommand, mapsById} = setup();
     const result = await command('block-document.add-map-block').execute(
       {getState: () => state} as any,
       {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         mapId: 'map-1',
         reasoning: 'change colors',
         replaceLayers: true,
@@ -292,7 +292,7 @@ describe('createCliBlockDocumentCommands', () => {
     await command('block-document.add-dashboard-block').execute(
       {getState: () => state} as any,
       {
-        blockDocumentId: 'worksheet-1',
+        blockDocumentId: 'document-1',
         title: 'Dashboard',
         tableName: 'earthquakes',
       },

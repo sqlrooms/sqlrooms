@@ -6,7 +6,7 @@ export const DEFAULT_CLI_CAPABILITY_PROFILE = {
   name: 'default',
   version: 1,
   artifacts: {
-    creatable: ['worksheet', 'dashboard'],
+    creatable: ['document', 'dashboard'],
     runContext: CLI_ARTIFACT_TYPES,
   },
   blocks: {
@@ -25,12 +25,12 @@ export const DEFAULT_CLI_CAPABILITY_PROFILE = {
       'default-data-analysis',
       'artifact-context',
       'dashboard-agent',
-      'worksheet-agent',
+      'document-agent',
       'webcontainer',
       'chart',
       'chart-image-for-markdown',
     ],
-    nestedAgents: ['dashboard', 'worksheet', 'worksheet-dashboard'],
+    nestedAgents: ['dashboard', 'document', 'document-dashboard'],
   },
   skills: [],
   dashboard: {deckMaps: false},

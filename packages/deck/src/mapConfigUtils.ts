@@ -705,7 +705,7 @@ export function regenerateMapConfigForTable(
 }
 
 /**
- * Applies a worksheet map table pick: regenerate geospatial config when
+ * Applies a document map table pick: regenerate geospatial config when
  * possible, otherwise retarget the single table-backed dataset.
  */
 export function applyDeckMapTableSelection(

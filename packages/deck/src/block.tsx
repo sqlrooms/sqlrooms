@@ -115,7 +115,7 @@ export type DeckMapBlockRendererProps = {
   dataAdapter?: DeckMapDataAdapter;
 };
 
-/** Mosaic-free worksheet map renderer backed only by `deckMaps`. */
+/** Mosaic-free document map renderer backed only by `deckMaps`. */
 export function DeckMapBlockRenderer({
   mapId,
   title,

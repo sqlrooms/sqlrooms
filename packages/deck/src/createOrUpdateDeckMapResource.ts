@@ -111,7 +111,7 @@ function resolveTableDatasetSources(
   return changed ? {...config, datasets} : config;
 }
 
-/** Resource-native worksheet map orchestration with metadata-after-map-write ordering. */
+/** Resource-native document map orchestration with metadata-after-map-write ordering. */
 export async function createOrUpdateDeckMapResource(
   host: CreateOrUpdateDeckMapResourceHost,
   params: CreateOrUpdateDeckMapResourceParams,

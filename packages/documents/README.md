@@ -13,7 +13,7 @@ import {
   buildKnowledgeIndex,
   createBlockDocumentCommands,
   createBlockDocumentFeatureSlices,
-  createDocumentCommands,
+  createMarkdownCommands,
   createDocumentsSlice,
   createMarkdownDocumentBlockDefinition,
 } from '@sqlrooms/documents';
@@ -23,10 +23,10 @@ import {
   defineArtifactTypes,
 } from '@sqlrooms/artifacts';
 
-const documentBlockDefinition = createMarkdownDocumentBlockDefinition();
+const markdownBlockDefinition = createMarkdownDocumentBlockDefinition();
 
 const artifactTypes = defineArtifactTypes({
-  document: createArtifactTypeFromStatefulBlock(documentBlockDefinition),
+  markdown: createArtifactTypeFromStatefulBlock(markdownBlockDefinition),
   'block-document': {
     label: 'Block Document',
     defaultTitle: 'Block Document',
@@ -96,13 +96,13 @@ be opened alongside it and edits the same canonical Markdown string:
 />
 ```
 
-Document Markdown can reference document-owned assets with `asset://` URLs:
+Markdown artifacts can reference artifact-owned assets with `asset://` URLs:
 
 ```md
 ![Revenue by week](asset://chart-revenue-week)
 ```
 
-Pass the document asset map to `MarkdownDocumentEditor` to render those links as
+Pass the artifact asset map to `MarkdownDocumentEditor` to render those links as
 browser-loadable image data while preserving the canonical `asset://` link in
 Markdown source. `MarkdownDocument` handles this automatically for artifacts
 stored in the documents slice.
@@ -492,16 +492,16 @@ layout, or when dashboard AI tools are the natural authoring path.
 
 ## Commands
 
-`createDocumentCommands()` registers AI- and palette-friendly commands for
-document artifacts:
+`createMarkdownCommands()` registers AI- and palette-friendly commands for
+Markdown artifacts:
 
-- `document.list`
-- `document.get`
-- `document.create`
-- `document.set-markdown`
-- `document.append-markdown`
+- `markdown.list`
+- `markdown.get`
+- `markdown.create`
+- `markdown.set-markdown`
+- `markdown.append-markdown`
 
-`createBlockDocumentCommands()` registers commands for structured blocks
+`createBlockDocumentCommands()` registers commands for structured block
 document artifacts. By default the command IDs are:
 
 - `block-document.list`
@@ -551,9 +551,9 @@ createCrdtSlice({
 });
 ```
 
-`createDocumentsCrdtMirror()` syncs Markdown document bodies, block document
-Tiptap JSON content, document-owned assets, standalone chart block configs,
-block document/document artifact metadata, and document artifact tab order.
+`createDocumentsCrdtMirror()` syncs Markdown bodies, block document Tiptap JSON
+content, document-owned assets, standalone chart block configs, block document
+and Markdown artifact metadata, and their artifact tab order.
 The current artifact selection is kept local.
 
 By default, the mirror treats `block-document` artifacts as block documents.
@@ -581,5 +581,5 @@ const index = buildKnowledgeIndex({
 ```
 
 It extracts `[[Document Title]]` wikilinks, body hashtags such as `#metrics`,
-and optional frontmatter tags. Links are resolved against document artifact
+and optional frontmatter tags. Links are resolved against Markdown artifact
 titles. Missing or ambiguous titles are reported as unresolved links.

@@ -55,7 +55,7 @@ export function createCliAiTools({
     }
     tools.html_app_agent = createHtmlAppAgentTool(store);
   }
-  if (enabledTools.has('worksheet-agent')) {
+  if (enabledTools.has('document-agent')) {
     tools[CLI_BLOCK_DOCUMENT_AGENT_TOOL_NAME] = blockDocumentAgentTool(store, {
       profile,
       ...(nestedAgentModel ? {getModel: () => nestedAgentModel} : {}),

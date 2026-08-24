@@ -1,12 +1,12 @@
 import type {BlockDocumentStatefulBlockRenderer} from '@sqlrooms/documents';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE} from '../profiles';
+import {DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE} from '../profiles';
 import {
-  createProfiledWorksheetStatefulBlockRenderers,
+  createProfiledDocumentStatefulBlockRenderers,
   ProfileDisabledStatefulBlockPlaceholder,
-} from '../workspace/worksheetStatefulBlockRenderers';
+} from '../workspace/documentStatefulBlockRenderers';
 
-describe('worksheet stateful block renderers', () => {
+describe('document stateful block renderers', () => {
   it('keeps map enabled and replaces a disabled default block', () => {
     const renderer =
       (blockType: string): BlockDocumentStatefulBlockRenderer =>
@@ -16,14 +16,14 @@ describe('worksheet stateful block renderers', () => {
       map: renderer('map'),
       pivot: renderer('pivot'),
       'data-table': renderer('data-table'),
-      document: renderer('document'),
+      markdown: renderer('markdown'),
       'sql-query': renderer('sql-query'),
       'html-app': renderer('html-app'),
       python: renderer('python'),
     };
 
-    const renderers = createProfiledWorksheetStatefulBlockRenderers(
-      WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+    const renderers = createProfiledDocumentStatefulBlockRenderers(
+      DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
       registeredRenderers,
     );
 
@@ -34,7 +34,7 @@ describe('worksheet stateful block renderers', () => {
 
     const markup = renderToStaticMarkup(
       <ProfileDisabledStatefulBlockPlaceholder
-        documentId="worksheet-1"
+        documentId="document-1"
         blockId="table-1"
         blockType="data-table"
         blockInstanceId="table-1"

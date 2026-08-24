@@ -77,7 +77,7 @@ export type CreateAddHtmlAppBlockDocumentBlockToolOptions = {
 };
 
 /**
- * Creates a tool for adding empty HTML app block containers to a worksheet
+ * Creates a tool for adding empty HTML app block containers to a document
  * block document.
  */
 export function createAddHtmlAppBlockDocumentBlockTool({
@@ -87,11 +87,11 @@ export function createAddHtmlAppBlockDocumentBlockTool({
   createHtmlAppBlock,
 }: CreateAddHtmlAppBlockDocumentBlockToolOptions) {
   return tool<AddHtmlAppBlockToolInput, AddHtmlAppBlockToolOutput>({
-    description: `Create an EMPTY html-app block container in the worksheet.
+    description: `Create an EMPTY html-app block container in the document.
 
 This tool ONLY creates the container structure. To write app files and observe runtime diagnostics, use embedded_html_app_agent afterward with the returned appId.
 
-Use this when you need to create a custom HTML, D3, Chart.js, or browser app block inside a worksheet.`,
+Use this when you need to create a custom HTML, D3, Chart.js, or browser app block inside a document.`,
     inputSchema: AddHtmlAppBlockToolInput,
     execute: async ({appTitle, intent}) => {
       try {
@@ -101,7 +101,7 @@ Use this when you need to create a custom HTML, D3, Chart.js, or browser app blo
             success: true,
             appId: result.appId,
             blockId: result.blockId,
-            message: 'Added HTML app block to worksheet',
+            message: 'Added HTML app block to document',
           };
         }
 
@@ -123,7 +123,7 @@ Use this when you need to create a custom HTML, D3, Chart.js, or browser app blo
           success: true,
           appId,
           blockId,
-          message: 'Added HTML app block to worksheet',
+          message: 'Added HTML app block to document',
         };
       } catch (error) {
         return {

@@ -9,19 +9,19 @@ describe('scripted AI SDK model', () => {
       steps: [
         {
           expectation: {
-            promptIncludes: ['Inspect the worksheet'],
+            promptIncludes: ['Inspect the document'],
             availableToolNames: ['inspect_workspace'],
           },
           content: [
             {
               type: 'tool-call',
               toolName: 'inspect_workspace',
-              input: {worksheetId: 'worksheet-1'},
+              input: {documentId: 'document-1'},
             },
           ],
         },
         {
-          content: [{type: 'text', text: 'The worksheet is valid.'}],
+          content: [{type: 'text', text: 'The document is valid.'}],
           usage: {inputTokens: 10, outputTokens: 5},
         },
       ],
@@ -29,18 +29,18 @@ describe('scripted AI SDK model', () => {
 
     const result = await generateText({
       model: scripted.model,
-      prompt: 'Inspect the worksheet.',
+      prompt: 'Inspect the document.',
       tools: {
         inspect_workspace: tool({
           description: 'Inspect durable workspace state.',
-          inputSchema: z.object({worksheetId: z.string()}),
-          execute: async ({worksheetId}) => ({worksheetId, valid: true}),
+          inputSchema: z.object({documentId: z.string()}),
+          execute: async ({documentId}) => ({documentId, valid: true}),
         }),
       },
       stopWhen: stepCountIs(2),
     });
 
-    expect(result.text).toBe('The worksheet is valid.');
+    expect(result.text).toBe('The document is valid.');
     expect(scripted.calls).toHaveLength(2);
     expect(scripted.remainingSteps()).toBe(0);
     expect(() => scripted.assertComplete()).not.toThrow();

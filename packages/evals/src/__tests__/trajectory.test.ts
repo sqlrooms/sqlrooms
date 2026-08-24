@@ -7,13 +7,13 @@ function run(events: ObservatoryRun['events']): ObservatoryRun {
     id: 'run-1',
     evalId: 'eval-1',
     createdAt: '2026-08-19T12:00:00.000Z',
-    scenario: {id: 'worksheet.create-chart-map', version: 1, repetition: 0},
-    profile: {name: 'worksheet-charts-maps', version: 1},
+    scenario: {id: 'document.create-chart-map', version: 1, repetition: 0},
+    profile: {name: 'document-charts-maps', version: 1},
     repository: {commitSha: 'abc123'},
     model: {provider: 'openrouter', modelId: 'deepseek'},
     status: 'failed',
     counts: {tools: 1, nestedAgents: 1, errors: 0},
-    promptTurns: [{id: 'create', input: 'Create a worksheet.'}],
+    promptTurns: [{id: 'create', input: 'Create a document.'}],
     answer: 'Done.',
     oracleResults: [
       {
@@ -48,7 +48,7 @@ describe('observatory trajectory read model', () => {
           sequence: 0,
           timestamp: '2026-08-19T12:00:00.100Z',
           type: 'nested-agent',
-          name: 'worksheet-agent',
+          name: 'document-agent',
           data: {toolCallId: 'parent', state: 'complete'},
         },
         {

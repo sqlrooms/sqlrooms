@@ -10,7 +10,7 @@ Inventory captured for the staged cleanup in the Obsidian plan `SQLRooms Table R
 ## Saved State Shapes
 
 - Mosaic dashboards use string-shaped `selectedTable` and `lastSelectedTable` fields.
-- Worksheet, dashboard, and data-table block commands accept `tableName: string`.
+- Document, dashboard, and data-table block commands accept `tableName: string`.
 - Deck map datasets use `source.tableName?: string` and sometimes pair it with a SQL query.
 - AI tool inputs and durable context still expose compatibility names such as `tableName`.
 
@@ -26,7 +26,7 @@ Inventory captured for the staged cleanup in the Obsidian plan `SQLRooms Table R
 ## Rehydration Boundaries
 
 - JSON/Zod dashboard and panel schemas.
-- Worksheet command schemas.
+- Document command schemas.
 - AI tool schemas and outputs.
 - App artifact context.
 - `db.findTable(...)`, `useDataTable(...)`, and related lookup helpers.
@@ -36,7 +36,7 @@ Legacy bare table names remain accepted only at explicit resolution boundaries. 
 ## Compatibility And Migration Policy
 
 Saved workspace state continues to resolve table references lazily at runtime.
-Dashboard selected tables, dashboard panel dataset sources, worksheet chart
+Dashboard selected tables, dashboard panel dataset sources, document chart
 blocks, data-table blocks, and map blocks may still contain old bare names,
 canonical identities such as `"main"."events"`, fully qualified default-database
 identities such as `"memory"."main"."events"`, or attached-database identities

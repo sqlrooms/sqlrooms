@@ -2,7 +2,7 @@ import {
   createCliCapabilityProfileSnapshot,
   DEFAULT_CLI_CAPABILITY_PROFILE,
   EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
-  WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
+  DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE,
   listCliCapabilityProfiles,
   resolveCliCapabilityProfile,
 } from '../profiles';
@@ -29,7 +29,7 @@ describe('CLI capability profiles', () => {
 
   it('keeps disabled default capabilities out of UI and AI exposure', () => {
     expect(DEFAULT_CLI_CAPABILITY_PROFILE.artifacts.creatable).toEqual([
-      'worksheet',
+      'document',
       'dashboard',
     ]);
     expect(DEFAULT_CLI_CAPABILITY_PROFILE.blocks.stateful).toEqual([
@@ -54,22 +54,22 @@ describe('CLI capability profiles', () => {
       EXPERIMENTAL_CLI_CAPABILITY_PROFILE,
     );
     expect(
-      resolveCliCapabilityProfile({profileName: 'worksheet-charts-maps'}),
-    ).toBe(WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE);
+      resolveCliCapabilityProfile({profileName: 'document-charts-maps'}),
+    ).toBe(DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE);
   });
 
-  it('keeps the worksheet charts/maps profile dashboard-free', () => {
-    const profile = WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
-    expect(profile.artifacts.creatable).toEqual(['worksheet']);
+  it('keeps the document charts/maps profile dashboard-free', () => {
+    const profile = DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
+    expect(profile.artifacts.creatable).toEqual(['document']);
     expect(profile.blocks.stateful).toEqual(['map']);
     expect(profile.blocks.aiContext).toEqual(['chart', 'map']);
     expect(profile.ai.topLevelToolGroups).not.toContain('dashboard-agent');
     expect(profile.ai.nestedAgents).not.toContain('dashboard');
-    expect(profile.ai.nestedAgents).not.toContain('worksheet-dashboard');
+    expect(profile.ai.nestedAgents).not.toContain('document-dashboard');
   });
 
-  it('registers only map stateful blocks for the worksheet profile', () => {
-    const profile = WORKSHEET_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
+  it('registers only map stateful blocks for the document profile', () => {
+    const profile = DOCUMENT_CHARTS_MAPS_CLI_CAPABILITY_PROFILE;
 
     expect(getEnabledStatefulBlockArtifactTypes(profile)).toEqual(['map']);
     expect(

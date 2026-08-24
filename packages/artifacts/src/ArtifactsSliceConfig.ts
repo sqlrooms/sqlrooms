@@ -1,6 +1,6 @@
 import {z} from 'zod';
 
-/** Discriminator for an artifact's kind, e.g. `"map"` or `"worksheet"`. */
+/** Discriminator for an artifact's kind, e.g. `"map"` or `"document"`. */
 export const ArtifactType = z.string();
 export type ArtifactType = z.infer<typeof ArtifactType>;
 

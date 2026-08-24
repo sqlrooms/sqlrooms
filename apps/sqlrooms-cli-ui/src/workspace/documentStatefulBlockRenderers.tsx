@@ -35,7 +35,7 @@ export const ProfileDisabledStatefulBlockPlaceholder: FC<
   );
 };
 
-export function createProfiledWorksheetStatefulBlockRenderers(
+export function createProfiledDocumentStatefulBlockRenderers(
   profile: CliCapabilityProfile,
   registeredRenderers: Record<
     StatefulBlockArtifactType,

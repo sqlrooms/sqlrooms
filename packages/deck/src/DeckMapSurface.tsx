@@ -55,7 +55,7 @@ function applyDataPolicy(
 }
 
 /**
- * Host-neutral data boundary for Deck map resources. Worksheet maps use the
+ * Host-neutral data boundary for Deck map resources. Document maps use the
  * direct adapter below and are intentionally independent: no Mosaic selection
  * or cross-filter state is read or published.
  */

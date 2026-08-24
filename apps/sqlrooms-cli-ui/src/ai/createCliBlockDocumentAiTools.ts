@@ -168,13 +168,13 @@ export function createCliBlockDocumentAiTools({
   const listBlocksTool = createListBlockDocumentBlocksTool({
     blockDocumentAdapter,
     blockDocumentId,
-    usageHint: `Use this before updating an existing worksheet stateful block or reordering blocks. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId.${
+    usageHint: `Use this before updating an existing stateful block in the Document or reordering blocks. Stateful blocks include statefulBlock.blockType and statefulBlock.blockInstanceId.${
       dashboardBlocksEnabled
         ? ` For dashboard blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_dashboard_agent} as dashboardId.`
         : ''
-    } For map blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.create_block_document_map_block} as mapId when the direct worksheet map tool is available.${
+    } For map blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.create_block_document_map_block} as mapId when the direct document map tool is available.${
       htmlAppBlocksEnabled
-        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new worksheet HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
+        ? ` For html-app blocks, pass statefulBlock.blockInstanceId to ${KnownBlockDocumentTools.embedded_html_app_agent} as appId. For a new document HTML app, use ${KnownBlockDocumentTools.add_html_app_block} first.`
         : ''
     } If a map block has runtimeIssues, repair the map config in place instead of creating a replacement block.`,
     augmentBlockSummary: ({block}) => {

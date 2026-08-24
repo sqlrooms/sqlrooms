@@ -12,10 +12,10 @@ import {
 import {defineScenario} from '../scenario';
 
 const scenario = defineScenario({
-  id: 'worksheet.verify-outcomes',
+  id: 'document.verify-outcomes',
   version: 1,
   title: 'Verify outcomes',
-  compatibleProfiles: ['worksheet-charts-maps'],
+  compatibleProfiles: ['document-charts-maps'],
   turns: [{id: 'verify', input: 'Verify the result.'}],
   expectations: [{oracleId: 'database', description: 'Database is grounded.'}],
 });
@@ -23,10 +23,10 @@ const scenario = defineScenario({
 const context: OracleContext = {
   scenario,
   database: {canonicalTable: 'analytics.events'},
-  workspace: {worksheetCount: 1},
-  finalAnswer: 'Created one worksheet from analytics.events.',
+  workspace: {documentCount: 1},
+  finalAnswer: 'Created one document from analytics.events.',
   errors: [],
-  mutations: [{kind: 'worksheet.create', targetId: 'worksheet-1'}],
+  mutations: [{kind: 'document.create', targetId: 'document-1'}],
   metadata: {},
 };
 

@@ -37,7 +37,7 @@ function createTestStore({
       defaultTitle: 'Block Document',
     },
     dashboard: {label: 'Dashboard', defaultTitle: 'Dashboard'},
-    document: {label: 'Document', defaultTitle: 'Document'},
+    markdown: {label: 'Markdown', defaultTitle: 'Markdown'},
   });
 
   const store = createStore<TestRoomState>()((...args) => ({
@@ -369,7 +369,7 @@ describe('block document commands', () => {
           {
             id: 'document-1',
             type: 'statefulBlock',
-            blockType: 'document',
+            blockType: 'markdown',
             blockInstanceId: 'document-1',
           },
         ],
@@ -399,7 +399,7 @@ describe('block document commands', () => {
       {
         id: 'persisted-document-1',
         type: 'statefulBlock',
-        blockType: 'document',
+        blockType: 'markdown',
         blockInstanceId: 'persisted-document-1',
       },
     ]);
@@ -438,7 +438,7 @@ describe('block document commands', () => {
       {
         id: 'persisted-document-1',
         type: 'statefulBlock',
-        blockType: 'document',
+        blockType: 'markdown',
         blockInstanceId: 'persisted-document-1',
       },
     ]);
@@ -446,9 +446,9 @@ describe('block document commands', () => {
 
   it('fails clearly for invalid targets', async () => {
     const {store} = createTestStore();
-    const documentId = store.getState().artifacts.createArtifact({
-      type: 'document',
-      title: 'Document',
+    const markdownId = store.getState().artifacts.createArtifact({
+      type: 'markdown',
+      title: 'Markdown',
     });
 
     await expect(
@@ -461,11 +461,11 @@ describe('block document commands', () => {
     });
     await expect(
       store.getState().commands.invokeCommand('block-document.get', {
-        artifactId: documentId,
+        artifactId: markdownId,
       }),
     ).resolves.toMatchObject({
       success: false,
-      error: `Artifact "${documentId}" is not a Block Document artifact.`,
+      error: `Artifact "${markdownId}" is not a Block Document artifact.`,
     });
   });
 });

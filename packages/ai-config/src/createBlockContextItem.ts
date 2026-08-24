@@ -20,7 +20,7 @@ export const BlockAiRunContextItemSchema = AiRunContextItemSchema.extend({
 /**
  * Context item describing a block-scoped AI request.
  *
- * Use this when a run starts from an individual worksheet/document block rather
+ * Use this when a run starts from an individual document/document block rather
  * than from the whole artifact.
  */
 export type BlockAiRunContextItem = z.infer<typeof BlockAiRunContextItemSchema>;
