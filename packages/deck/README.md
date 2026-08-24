@@ -612,6 +612,10 @@ scenes. It accepts resolved Arrow tables with geometry stored as:
 - WKB / GeoArrow WKB
 - WKT / GeoArrow WKT
 
+The returned `PreparedDeckDataset` records the dataset-level
+`datasetGeometryColumn` and `datasetGeometryEncodingHint` used to prepare
+and identify that payload.
+
 It then produces canonical deck-facing geometry outputs for:
 
 - GeoArrow-native layers such as `GeoArrowScatterplotLayer`

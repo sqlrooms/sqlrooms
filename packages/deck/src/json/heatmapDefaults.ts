@@ -8,6 +8,11 @@ import {
 
 const HEATMAP_COLOR_STEPS = 6;
 
+/**
+ * Heatmap GPU weights-texture size.
+ */
+export const DEFAULT_HEATMAP_WEIGHTS_TEXTURE_SIZE = 512;
+
 /** Default heatmap scheme (YlOrRd, matching deck.gl's built-in default). */
 export const DEFAULT_HEATMAP_SCHEME: ContinuousSequentialScheme = 'YlOrRd';
 

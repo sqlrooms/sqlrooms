@@ -228,6 +228,18 @@ const TripsTimeControl: FC<{
   );
 };
 
+function getDeckLayerTypeName(layer: unknown): string {
+  if (!layer || typeof layer !== 'object') return '?';
+  const ctor = (
+    layer as {
+      constructor?: {layerName?: string; name?: string};
+    }
+  ).constructor;
+  // Prefer static layerName: table-to-RecordBatch adapters all share
+  // constructor.name "Adapter", which would miss heatmap ↔ scatterplot swaps.
+  return ctor?.layerName ?? ctor?.name ?? '?';
+}
+
 // Workaround for deck.gl HeatmapLayer not releasing its WebGL framebuffer
 // when replaced by another layer type (e.g. switching heatmap → scatterplot).
 // We detect layer class changes and clear layers for one animation frame,
@@ -245,13 +257,7 @@ function DeckOverlayControl({
 
   const layers = deckProps.layers as unknown[] | undefined;
   const layerKey = Array.isArray(layers)
-    ? layers
-        .map((l) => {
-          if (!l || typeof l !== 'object') return '?';
-          const ctor = (l as {constructor?: {name?: string}}).constructor;
-          return ctor?.name ?? '?';
-        })
-        .join(',')
+    ? layers.map(getDeckLayerTypeName).join(',')
     : '';
 
   useEffect(() => {
@@ -325,9 +331,10 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
       () => normalizeDatasets(datasets),
       [datasets],
     );
+    const datasetIdKey = JSON.stringify(Object.keys(normalizedDatasets).sort());
     const datasetIds = useMemo(
-      () => Object.keys(normalizedDatasets),
-      [normalizedDatasets],
+      () => JSON.parse(datasetIdKey) as string[],
+      [datasetIdKey],
     );
     const datasetStates = usePreparedDatasetStates(normalizedDatasets);
     const onDatasetStatesChangeRef = useRef(onDatasetStatesChange);
@@ -594,7 +601,7 @@ export const DeckJsonMap = forwardRef<DeckJsonMapHandle, DeckJsonMapProps>(
               datasetStates,
             })
           : [],
-      [availableSpec, datasetIds, datasetStates, showLegends],
+      [availableSpec, datasetIds, showLegends, datasetStates],
     );
 
     return (

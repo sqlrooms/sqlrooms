@@ -104,4 +104,20 @@ describe('DeckMapsSlice', () => {
     store.getState().deckMaps.clearMapIssue('map-1', 'fit-error');
     expect(store.getState().deckMaps.runtime.issuesByMapId).toEqual({});
   });
+
+  test('preserves other map object identity when one map config is updated', () => {
+    const store = createStore<any>(createDeckMapsSlice() as any);
+    store.getState().deckMaps.ensureMap('map-1', {title: 'One'});
+    store.getState().deckMaps.ensureMap('map-2', {title: 'Two'});
+    const map2Before = store.getState().deckMaps.config.mapsById['map-2'];
+
+    store.getState().deckMaps.updateMap('map-1', {
+      config: {
+        spec: {layers: [{id: 'a', '@@type': 'GeoArrowScatterplotLayer'}]},
+        datasets: {places: {source: {tableName: 'places'}}},
+      },
+    });
+
+    expect(store.getState().deckMaps.config.mapsById['map-2']).toBe(map2Before);
+  });
 });

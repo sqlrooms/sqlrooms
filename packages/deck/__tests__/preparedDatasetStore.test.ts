@@ -5,15 +5,30 @@ import {
   createPreparedDatasetStore,
   resolvePreparedDeckDatasetState,
 } from '../src/datasets/PreparedDatasetStore';
-import {resolvePreparedDatasetCacheKey} from '../src/datasets/helpers';
-import type {PreparedDeckDataset} from '../src/prepare/types';
+import {
+  areDatasetRegistriesEqual,
+  getPreparedDatasetStatesIdentity,
+  resolvePreparedDatasetCacheKey,
+} from '../src/datasets/helpers';
+import type {
+  GeometryEncodingHint,
+  PreparedDeckDataset,
+} from '../src/prepare/types';
 import type {DeckDatasetInput} from '../src/types';
 
-function createPreparedDataset(datasetId: string, table: Table) {
+function createPreparedDataset(
+  datasetId: string,
+  table: Table,
+  options?: {
+    geometryColumn?: string;
+    geometryEncodingHint?: GeometryEncodingHint;
+  },
+) {
   return {
     datasetId,
     table,
-    datasetGeometryColumn: undefined,
+    datasetGeometryColumn: options?.geometryColumn,
+    datasetGeometryEncodingHint: options?.geometryEncodingHint,
     resolveGeometry: (() => {
       throw new Error('Not used in preparedDatasetStore tests.');
     }) as PreparedDeckDataset['resolveGeometry'],
@@ -380,5 +395,182 @@ describe('PreparedDatasetStore', () => {
     expect(store.getState().entries[secondKey]).toMatchObject({
       status: 'ready',
     });
+  });
+
+  it('does not replace entries on a cache hit', async () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const connector = {};
+    const prepareDataset = jest.fn(
+      ({datasetId, table: nextTable}: {datasetId: string; table: Table}) =>
+        createPreparedDataset(datasetId, nextTable),
+    );
+    const executeSql = jest.fn(
+      async () => Promise.resolve(table) as unknown as QueryHandle,
+    );
+    const store = createPreparedDatasetStore({prepareDataset});
+    const input: DeckDatasetInput = {sqlQuery: 'select * from earthquakes'};
+    const cacheKey = resolvePreparedDatasetCacheKey({
+      input,
+      sqlSourceIdentity: connector,
+    })!;
+
+    store.getState().syncConsumer('consumer-a', [cacheKey]);
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+    await waitForEntry(store, cacheKey);
+
+    const entriesAfterReady = store.getState().entries;
+    const accessedAt = store.getState().entries[cacheKey]!.lastAccessedAt;
+    store.getState().ensureEntry({
+      cacheKey,
+      datasetId: 'earthquakes',
+      executeSql,
+      input,
+    });
+
+    expect(store.getState().entries).toBe(entriesAfterReady);
+    expect(store.getState().entries[cacheKey]?.lastAccessedAt).toBeGreaterThan(
+      accessedAt,
+    );
+    expect(prepareDataset).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('areDatasetRegistriesEqual', () => {
+  it('ignores wrapper object identity for equivalent table inputs', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        transformSql: 'SELECT * FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        transformSql: 'SELECT * FROM __sqlrooms_source',
+        geometryColumn: 'geom',
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(true);
+  });
+
+  it('returns false when the source query changes', () => {
+    const first = {places: {sqlQuery: 'select 1'}};
+    const second = {places: {sqlQuery: 'select 2'}};
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(false);
+  });
+
+  it('treats missing and empty optional fields as equal (fingerprint parity)', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        transformSql: '',
+        geometryColumn: 'geom',
+        geometryEncodingHint: undefined,
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(true);
+  });
+
+  it('returns false when geometry options differ', () => {
+    const first = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb' as const,
+      },
+    };
+    const second = {
+      places: {
+        tableName: 'places',
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkt' as const,
+      },
+    };
+
+    expect(areDatasetRegistriesEqual(first, second)).toBe(false);
+  });
+});
+
+describe('getPreparedDatasetStatesIdentity', () => {
+  function readyState(
+    table: Table,
+    options?: {
+      geometryColumn?: string;
+      geometryEncodingHint?: GeometryEncodingHint;
+    },
+  ) {
+    return {
+      status: 'ready' as const,
+      prepared: createPreparedDataset('places', table, options),
+    };
+  }
+
+  it('keeps the same identity when only the datasetStates wrapper changes', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+    const prepared = createPreparedDataset('places', table, {
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    });
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: {status: 'ready', prepared},
+      }),
+    ).toBe(
+      getPreparedDatasetStatesIdentity({
+        places: {status: 'ready', prepared},
+      }),
+    );
+  });
+
+  it('distinguishes ready states that share a table but differ in geometry options', () => {
+    const table = new Table({value: vectorFromArray([1, 2, 3])});
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    ).not.toBe(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'other_geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    );
+
+    expect(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkb',
+        }),
+      }),
+    ).not.toBe(
+      getPreparedDatasetStatesIdentity({
+        places: readyState(table, {
+          geometryColumn: 'geom',
+          geometryEncodingHint: 'wkt',
+        }),
+      }),
+    );
   });
 });
