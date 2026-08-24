@@ -93,6 +93,10 @@ export default defineConfig({
     proxy: {
       '/api': apiProxyTarget,
       '/config.json': apiProxyTarget,
+      '/ws': {
+        target: apiProxyTarget,
+        ws: true,
+      },
     },
   },
   preview: {

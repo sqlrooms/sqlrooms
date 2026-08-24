@@ -232,13 +232,18 @@ async function getCliDevPorts(args) {
 }
 
 function getPythonCliDevArgs(args, apiPort, uiPort) {
+  const hasDbPath = hasDbPathArg(args);
   const apiPortArgs = hasOption(args, '--port')
     ? args
     : ['--port', String(apiPort), ...args];
-  const experimentalArgs = apiPortArgs.includes('--experimental')
-    ? apiPortArgs
-    : ['--experimental', ...apiPortArgs];
-  return hasDbPathArg(experimentalArgs)
+  const externalUrlArgs =
+    hasOption(args, '--external-url') || process.env.SQLROOMS_EXTERNAL_URL
+      ? apiPortArgs
+      : ['--external-url', `http://localhost:${uiPort}`, ...apiPortArgs];
+  const experimentalArgs = externalUrlArgs.includes('--experimental')
+    ? externalUrlArgs
+    : ['--experimental', ...externalUrlArgs];
+  return hasDbPath
     ? experimentalArgs
     : [
         '--db-path',
