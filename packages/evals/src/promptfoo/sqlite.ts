@@ -2,7 +2,6 @@ import {DatabaseSync} from 'node:sqlite';
 import {RunEvidenceSchema, type RunEvidence} from '../evidence.js';
 import type {JsonObject, JsonValue} from '../json.js';
 import {
-  OBSERVATORY_EXPORT_SCHEMA_VERSION,
   ObservatoryExportSchema,
   ObservatoryRunSchema,
   type ObservatoryExport,
@@ -385,7 +384,7 @@ export function exportPromptfooSqlite(
   now: Date = new Date(),
 ): ObservatoryExport {
   return ObservatoryExportSchema.parse({
-    schemaVersion: OBSERVATORY_EXPORT_SCHEMA_VERSION,
+    schemaVersion: 1,
     exportedAt: now.toISOString(),
     source: {kind: 'promptfoo-sqlite', label: databasePath},
     runs: readPromptfooSqlite(databasePath),

@@ -6,8 +6,6 @@ import {basename, dirname, join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {RUN_EVIDENCE_SCHEMA_VERSION, type RunEvidence} from '../evidence';
 import {
-  OBSERVATORY_EXPORT_SCHEMA_VERSION,
-  ObservatoryExportSchema,
   UnsupportedPromptfooSchemaError,
   compareObservatoryRuns,
   computeCalibrationRates,
@@ -269,22 +267,7 @@ describe('Promptfoo SQLite observatory adapter', () => {
       scenario: 'document.create-chart-map',
       status: 'passed',
     });
-    expect(exported.schemaVersion).toBe(OBSERVATORY_EXPORT_SCHEMA_VERSION);
-
-    const migratedExport = ObservatoryExportSchema.parse({
-      ...exported,
-      schemaVersion: 1,
-      runs: exported.runs.map(({checkResults, ...run}) => ({
-        ...run,
-        oracleResults: checkResults.map(({checkId, ...result}) => ({
-          ...result,
-          oracleId: checkId,
-        })),
-      })),
-    });
-    expect(migratedExport.runs[0]?.checkResults[0]?.checkId).toBe(
-      'workspace-shape',
-    );
+    expect(exported.schemaVersion).toBe(1);
     expect(summarizeObservatoryRuns(filtered)).toMatchObject({
       runCount: 1,
       passed: 1,

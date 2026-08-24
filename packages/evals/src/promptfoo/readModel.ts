@@ -5,53 +5,6 @@ import {RunEvidenceEventSchema} from '../evidence.js';
 
 export * from './trajectory.js';
 
-/** Current version of the portable observatory export. */
-export const OBSERVATORY_EXPORT_SCHEMA_VERSION = 2 as const;
-
-const LEGACY_OBSERVATORY_EXPORT_SCHEMA_VERSION = 1 as const;
-
-function migrateLegacyObservatoryExport(input: unknown): unknown {
-  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
-    return input;
-  }
-
-  const legacyExport = input as Record<string, unknown>;
-  if (
-    legacyExport.schemaVersion !== LEGACY_OBSERVATORY_EXPORT_SCHEMA_VERSION ||
-    !Array.isArray(legacyExport.runs)
-  ) {
-    return input;
-  }
-
-  return {
-    ...legacyExport,
-    schemaVersion: OBSERVATORY_EXPORT_SCHEMA_VERSION,
-    runs: legacyExport.runs.map((run) => {
-      if (typeof run !== 'object' || run === null || Array.isArray(run)) {
-        return run;
-      }
-      const legacyRun = run as Record<string, unknown>;
-      if (!Array.isArray(legacyRun.oracleResults)) return run;
-
-      const {oracleResults, ...currentRun} = legacyRun;
-      return {
-        ...currentRun,
-        checkResults: oracleResults.map((result) => {
-          if (
-            typeof result !== 'object' ||
-            result === null ||
-            Array.isArray(result)
-          ) {
-            return result;
-          }
-          const {oracleId, ...checkResult} = result as Record<string, unknown>;
-          return {...checkResult, checkId: oracleId};
-        }),
-      };
-    }),
-  };
-}
-
 /** Promptfoo-independent span retained for run diagnosis. */
 export const ObservatorySpanSchema = z.looseObject({
   traceId: z.string(),
@@ -119,19 +72,16 @@ export const ObservatoryRunSchema = z.looseObject({
 export type ObservatoryRun = z.infer<typeof ObservatoryRunSchema>;
 
 /** Portable output emitted from one or more retained Promptfoo databases. */
-export const ObservatoryExportSchema = z.preprocess(
-  migrateLegacyObservatoryExport,
-  z.looseObject({
-    schemaVersion: z.literal(OBSERVATORY_EXPORT_SCHEMA_VERSION),
-    exportedAt: z.string().datetime(),
-    source: z.object({
-      kind: z.enum(['promptfoo-sqlite', 'summary']),
-      label: z.string(),
-    }),
-    runs: z.array(ObservatoryRunSchema),
-    unknownMetadata: JsonObjectSchema.default({}),
+export const ObservatoryExportSchema = z.looseObject({
+  schemaVersion: z.literal(1),
+  exportedAt: z.string().datetime(),
+  source: z.object({
+    kind: z.enum(['promptfoo-sqlite', 'summary']),
+    label: z.string(),
   }),
-);
+  runs: z.array(ObservatoryRunSchema),
+  unknownMetadata: JsonObjectSchema.default({}),
+});
 
 /** Portable output emitted from one or more retained Promptfoo databases. */
 export type ObservatoryExport = z.infer<typeof ObservatoryExportSchema>;
