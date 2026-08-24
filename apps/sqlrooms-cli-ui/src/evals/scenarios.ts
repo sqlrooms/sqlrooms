@@ -78,8 +78,66 @@ function sqlIdentifierName(expression: string): string | undefined {
   return identifiers[identifiers.length - 1]?.toLowerCase();
 }
 
+function maskSqlCommentsAndLiterals(sql: string): string {
+  const masked = sql.split('');
+  const mask = (index: number) => {
+    if (masked[index] !== '\n' && masked[index] !== '\r') masked[index] = ' ';
+  };
+
+  for (let index = 0; index < sql.length; index += 1) {
+    if (sql[index] === "'") {
+      mask(index);
+      while (++index < sql.length) {
+        mask(index);
+        if (sql[index] === '\\') {
+          if (++index < sql.length) mask(index);
+        } else if (sql[index] === "'") {
+          if (sql[index + 1] !== "'") break;
+          if (++index < sql.length) mask(index);
+        }
+      }
+    } else if (sql[index] === '"') {
+      while (++index < sql.length && sql[index] !== '"') {}
+      while (sql[index + 1] === '"') {
+        index += 1;
+        while (++index < sql.length && sql[index] !== '"') {}
+      }
+    } else if (sql[index] === '-' && sql[index + 1] === '-') {
+      while (index < sql.length && sql[index] !== '\n') mask(index++);
+    } else if (sql[index] === '/' && sql[index + 1] === '*') {
+      let depth = 1;
+      mask(index);
+      mask(++index);
+      while (++index < sql.length && depth > 0) {
+        if (sql[index] === '/' && sql[index + 1] === '*') {
+          depth += 1;
+          mask(index);
+          mask(++index);
+        } else if (sql[index] === '*' && sql[index + 1] === '/') {
+          depth -= 1;
+          mask(index);
+          mask(++index);
+        } else {
+          mask(index);
+        }
+      }
+    } else if (sql[index] === '$') {
+      const delimiter = /^\$[a-z_][a-z0-9_]*\$|^\$\$/i.exec(
+        sql.slice(index),
+      )?.[0];
+      if (!delimiter) continue;
+      const end = sql.indexOf(delimiter, index + delimiter.length);
+      const endIndex = end < 0 ? sql.length - 1 : end + delimiter.length - 1;
+      while (index <= endIndex) mask(index++);
+      index -= 1;
+    }
+  }
+
+  return masked.join('');
+}
+
 function hasPointCoordinateBinding(transformSql: string): boolean {
-  const pointCalls = transformSql.matchAll(
+  const pointCalls = maskSqlCommentsAndLiterals(transformSql).matchAll(
     /\bst_point\s*\(\s*([^(),]+?)\s*,\s*([^(),]+?)\s*\)/gi,
   );
   return Array.from(pointCalls).some(

@@ -234,6 +234,14 @@ describe('CLI behavioral scenario oracles', () => {
     ).transformSql =
       'SELECT longitude, latitude, ST_AsWKB(ST_Point(x, y)) AS geom FROM __sqlrooms_source';
     expect(await evaluate()).toMatchObject({pass: false});
+
+    (
+      current.maps[0]!.config.datasets.events!.source as unknown as {
+        transformSql: string;
+      }
+    ).transformSql =
+      "SELECT ST_AsWKB(ST_Point(x, y)) AS geom, 'ST_Point(longitude, latitude)' AS note FROM __sqlrooms_source -- ST_Point(longitude, latitude)";
+    expect(await evaluate()).toMatchObject({pass: false});
   });
 
   it('requires the grounded answer to name the intended chart and map result', async () => {
