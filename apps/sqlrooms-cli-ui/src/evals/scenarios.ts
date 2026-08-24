@@ -19,6 +19,7 @@ const POINT_LAYER_TYPES = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
   'GeoArrowColumnLayer',
+  'GeoJsonLayer',
 ]);
 
 type WorkspaceSnapshot = {
@@ -161,7 +162,7 @@ function hasCanonicalMapBinding(
 /** Pinned production-model scenario that starts from an empty workspace. */
 export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
   id: 'document.create-chart-map',
-  version: 1,
+  version: 2,
   title: 'Create a document with a chart and map',
   description:
     'Creates one document from ambiguous tables and materializes chart/map state.',
@@ -200,7 +201,7 @@ export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
 /** Pinned production-model scenario that mutates an existing document. */
 export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
   id: 'document.mutate-chart-map',
-  version: 1,
+  version: 2,
   title: 'Mutate an existing document in place',
   description:
     'Changes one seeded chart and adds a note while preserving the seeded map.',
@@ -241,7 +242,7 @@ export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
 /** Non-blocking continuity smoke using two turns and one run context. */
 export const MULTI_TURN_DOCUMENT_SCENARIO = defineScenario({
   id: 'document.multi-turn-continuity',
-  version: 1,
+  version: 2,
   title: 'Create and then modify one document',
   compatibleProfiles: ['document-charts-maps'],
   fixture: {database: 'ambiguous-geospatial-v1', workspace: 'empty'},

@@ -275,6 +275,10 @@ describe('CLI behavioral scenario oracles', () => {
     expect(await evaluate()).toMatchObject({pass: true});
     layer._sqlroomsBinding.geometryColumn = 'geom';
 
+    layer['@@type'] = 'GeoJsonLayer';
+    expect(await evaluate()).toMatchObject({pass: true});
+    layer['@@type'] = 'GeoArrowScatterplotLayer';
+
     current.documents[0]!.blocks[1]!.config = {
       chartType: 'box-plot',
       settings: {x: 'category', y: 'metric'},
