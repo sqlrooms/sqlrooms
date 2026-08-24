@@ -158,10 +158,13 @@ describe('CLI behavioral scenario oracles', () => {
 
   it('requires an exact chart title and a distinct source paragraph', async () => {
     const combinedTitle = workspace();
-    combinedTitle.worksheets[0]!.blocks[1]!.config!.title =
-      'Metric by category — Source: analytics.events';
+    Object.assign(combinedTitle.worksheets[0]!.blocks[1]!, {
+      caption: 'Metric by category — Source: analytics.events',
+    });
     const valid = workspace();
-    valid.worksheets[0]!.blocks[1]!.config!.title = 'Metric by category';
+    Object.assign(valid.worksheets[0]!.blocks[1]!, {
+      caption: 'Metric by category',
+    });
     valid.worksheets[0]!.blocks.push({
       id: 'source-note',
       type: 'paragraph',
@@ -177,6 +180,52 @@ describe('CLI behavioral scenario oracles', () => {
     expect(
       await oracle?.evaluate(context(MUTATE_WORKSHEET_SCENARIO, valid)),
     ).toMatchObject({pass: true});
+  });
+
+  it('accepts production chart fields and derived point geometry', async () => {
+    const current = workspace();
+    current.worksheets[0]!.blocks[1]!.config = {
+      chartType: 'count-plot',
+      settings: {
+        field: 'category',
+        valueField: 'metric',
+        aggregate: 'sum',
+      },
+    } as (typeof current.worksheets)[number]['blocks'][number]['config'];
+    current.maps[0]!.config.datasets = {
+      events: {
+        source: {
+          tableName: 'analytics.events',
+          transformSql:
+            'SELECT *, ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source',
+        },
+        geometryColumn: 'geom',
+        geometryEncodingHint: 'wkb',
+      },
+    } as (typeof current.maps)[0]['config']['datasets'];
+    current.maps[0]!.config.spec.layers[0]!._sqlroomsBinding = {
+      dataset: 'events',
+      geometryColumn: 'geom',
+    } as (typeof current.maps)[0]['config']['spec']['layers'][number]['_sqlroomsBinding'];
+    current.maps[0]!.config.fitToData = {
+      dataset: 'events',
+      geometryColumn: 'geom',
+    } as (typeof current.maps)[0]['config']['fitToData'];
+    const oracle = createCliScenarioOracles(
+      CREATE_WORKSHEET_CHART_MAP_SCENARIO,
+    ).find((candidate) => candidate.id === 'canonical-bindings');
+    if (!oracle) throw new Error('Missing canonical-bindings oracle.');
+
+    const evaluate = () =>
+      oracle.evaluate(context(CREATE_WORKSHEET_CHART_MAP_SCENARIO, current));
+
+    expect(await evaluate()).toMatchObject({pass: true});
+
+    current.worksheets[0]!.blocks[1]!.config = {
+      chartType: 'box-plot',
+      settings: {x: 'category', y: 'metric'},
+    } as (typeof current.worksheets)[number]['blocks'][number]['config'];
+    expect(await evaluate()).toMatchObject({pass: true});
   });
 
   it('requires the grounded answer to name the intended chart and map result', async () => {

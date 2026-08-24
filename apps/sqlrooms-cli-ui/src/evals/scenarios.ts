@@ -9,6 +9,10 @@ import {
 } from '@sqlrooms/evals';
 import {CLI_EVAL_TARGET_TABLE} from './fixture';
 
+const CLI_EVAL_TARGET_TABLES = new Set([
+  'analytics.events',
+  CLI_EVAL_TARGET_TABLE,
+]);
 const CLI_EVAL_DECOY_TABLES = new Set(['archive.events', '"archive"."events"']);
 
 type WorkspaceSnapshot = {
@@ -49,6 +53,7 @@ function object(value: unknown): Record<string, unknown> | undefined {
 }
 
 function hasFieldBinding(value: unknown, field: string): boolean {
+  if (typeof value === 'string') return value === field;
   if (Array.isArray(value)) {
     return value.some((item) => hasFieldBinding(item, field));
   }
@@ -71,21 +76,45 @@ function hasCanonicalMapBinding(
   );
   const fitToData = object((map.config as {fitToData?: unknown}).fitToData);
   const fitDataset = fitToData?.dataset;
-  const fitMatches =
-    typeof fitDataset === 'string' &&
-    fitToData?.longitudeColumn === 'longitude' &&
-    fitToData?.latitudeColumn === 'latitude';
-  if (!fitMatches || activeLayers.length === 0) return false;
+  const fitMatches = typeof fitDataset === 'string' && activeLayers.length > 0;
+  if (!fitMatches) return false;
 
   return activeLayers.every((layer) => {
     const binding = object(object(layer)?._sqlroomsBinding);
     const dataset = binding?.dataset;
     if (typeof dataset !== 'string' || dataset !== fitDataset) return false;
-    const source = object(object(map.config.datasets[dataset])?.source);
-    return (
-      source?.tableName === CLI_EVAL_TARGET_TABLE &&
+    const datasetConfig = object(map.config.datasets[dataset]);
+    const source = object(datasetConfig?.source);
+    if (
+      typeof source?.tableName !== 'string' ||
+      !CLI_EVAL_TARGET_TABLES.has(source.tableName)
+    ) {
+      return false;
+    }
+
+    const usesDirectCoordinates =
       binding?.longitudeColumn === 'longitude' &&
-      binding?.latitudeColumn === 'latitude'
+      binding?.latitudeColumn === 'latitude' &&
+      fitToData?.longitudeColumn === 'longitude' &&
+      fitToData?.latitudeColumn === 'latitude';
+    if (usesDirectCoordinates) return true;
+
+    const geometryColumn = binding?.geometryColumn;
+    const transformSql = source.transformSql;
+    return (
+      typeof geometryColumn === 'string' &&
+      datasetConfig?.geometryColumn === geometryColumn &&
+      fitToData?.geometryColumn === geometryColumn &&
+      typeof transformSql === 'string' &&
+      transformSql.toLowerCase().includes('st_point') &&
+      hasFieldBinding(
+        transformSql.toLowerCase().split(/[^a-z0-9_]+/),
+        'longitude',
+      ) &&
+      hasFieldBinding(
+        transformSql.toLowerCase().split(/[^a-z0-9_]+/),
+        'latitude',
+      )
     );
   });
 }
@@ -274,7 +303,8 @@ export function createCliScenarioOracles(
         const pass =
           charts.some(
             (chart) =>
-              chart.tableName === CLI_EVAL_TARGET_TABLE &&
+              typeof chart.tableName === 'string' &&
+              CLI_EVAL_TARGET_TABLES.has(chart.tableName) &&
               hasFieldBinding(chart.config, 'category') &&
               hasFieldBinding(chart.config, 'metric'),
           ) &&
@@ -322,6 +352,10 @@ export function createCliScenarioOracles(
         const chartConfig = hasObjectShape(charts[0]?.config)
           ? (charts[0]!.config as Record<string, unknown>)
           : {};
+        const chartTitle =
+          typeof charts[0]?.caption === 'string'
+            ? charts[0].caption
+            : chartConfig.title;
         const sourceNote = worksheet?.blocks.find(
           (block) =>
             block.type === 'paragraph' &&
@@ -332,7 +366,7 @@ export function createCliScenarioOracles(
         const pass =
           charts.length === 1 &&
           charts[0]?.id === 'seed-chart' &&
-          chartConfig.title === 'Metric by category' &&
+          chartTitle === 'Metric by category' &&
           Boolean(sourceNote);
         return {
           pass,
@@ -340,8 +374,7 @@ export function createCliScenarioOracles(
             ? 'The seeded chart was updated in place and the source note was added.'
             : 'The requested in-place chart/note mutation is incomplete.',
           evidence: {
-            chartTitle:
-              typeof chartConfig.title === 'string' ? chartConfig.title : null,
+            chartTitle: typeof chartTitle === 'string' ? chartTitle : null,
             sourceNote: asJson(sourceNote ?? null),
             blocks: asJson(worksheet?.blocks ?? []),
           },
