@@ -7,9 +7,20 @@ import {
   type JsonValue,
   type ScenarioDefinition,
 } from '@sqlrooms/evals';
+import {createDeckMapPointTransformSql} from '@sqlrooms/deck';
 import {CLI_EVAL_TARGET_TABLE} from './fixture';
 
+const CLI_EVAL_TARGET_TABLES = new Set([
+  'analytics.events',
+  CLI_EVAL_TARGET_TABLE,
+]);
 const CLI_EVAL_DECOY_TABLES = new Set(['archive.events', '"archive"."events"']);
+const POINT_LAYER_TYPES = new Set([
+  'GeoArrowScatterplotLayer',
+  'GeoArrowHeatmapLayer',
+  'GeoArrowColumnLayer',
+  'GeoJsonLayer',
+]);
 
 type WorkspaceSnapshot = {
   artifacts: {artifactsById: Record<string, {type: string}>};
@@ -48,16 +59,40 @@ function object(value: unknown): Record<string, unknown> | undefined {
   return hasObjectShape(value) ? (value as Record<string, unknown>) : undefined;
 }
 
-function hasFieldBinding(value: unknown, field: string): boolean {
-  if (Array.isArray(value)) {
-    return value.some((item) => hasFieldBinding(item, field));
+function hasCanonicalChartBinding(value: unknown): boolean {
+  const config = object(value);
+  const settings = object(config?.settings);
+  switch (config?.chartType) {
+    case 'count-plot':
+      return (
+        settings?.field === 'category' &&
+        settings.metric === 'aggregate' &&
+        settings.valueField === 'metric' &&
+        typeof settings.aggregate === 'string'
+      );
+    case 'box-plot':
+      return settings?.x === 'category' && settings.y === 'metric';
+    case 'bar':
+      return (
+        object(config.x)?.field === 'category' &&
+        object(config.y)?.field === 'metric'
+      );
+    default:
+      return false;
   }
-  if (!value || typeof value !== 'object') return false;
-  const record = value as Record<string, unknown>;
-  return (
-    record.field === field ||
-    Object.values(record).some((item) => hasFieldBinding(item, field))
-  );
+}
+
+function hasCanonicalPointTransform(
+  transformSql: string,
+  geometryColumn: string,
+): boolean {
+  const expected = createDeckMapPointTransformSql({
+    longitudeColumn: 'longitude',
+    latitudeColumn: 'latitude',
+    geometryColumn,
+  });
+  const normalize = (sql: string) => sql.trim().replace(/(?:\s*;+\s*)+$/, '');
+  return normalize(transformSql) === normalize(expected);
 }
 
 function hasCanonicalMapBinding(
@@ -71,21 +106,55 @@ function hasCanonicalMapBinding(
   );
   const fitToData = object((map.config as {fitToData?: unknown}).fitToData);
   const fitDataset = fitToData?.dataset;
-  const fitMatches =
-    typeof fitDataset === 'string' &&
-    fitToData?.longitudeColumn === 'longitude' &&
-    fitToData?.latitudeColumn === 'latitude';
-  if (!fitMatches || activeLayers.length === 0) return false;
+  const fitMatches = typeof fitDataset === 'string' && activeLayers.length > 0;
+  if (!fitMatches) return false;
 
   return activeLayers.every((layer) => {
-    const binding = object(object(layer)?._sqlroomsBinding);
+    const layerConfig = object(layer);
+    const binding = object(layerConfig?._sqlroomsBinding);
     const dataset = binding?.dataset;
     if (typeof dataset !== 'string' || dataset !== fitDataset) return false;
-    const source = object(object(map.config.datasets[dataset])?.source);
-    return (
-      source?.tableName === CLI_EVAL_TARGET_TABLE &&
+    const datasetConfig = object(map.config.datasets[dataset]);
+    const source = object(datasetConfig?.source);
+    if (
+      typeof source?.tableName !== 'string' ||
+      !CLI_EVAL_TARGET_TABLES.has(source.tableName)
+    ) {
+      return false;
+    }
+
+    const transformSql = source.transformSql;
+    const datasetGeometryColumn = datasetConfig?.geometryColumn;
+    const usesDerivedGeometry =
+      typeof transformSql === 'string' ||
+      typeof datasetGeometryColumn === 'string';
+    const usesDirectCoordinates =
+      !usesDerivedGeometry &&
       binding?.longitudeColumn === 'longitude' &&
-      binding?.latitudeColumn === 'latitude'
+      binding?.latitudeColumn === 'latitude' &&
+      fitToData?.longitudeColumn === 'longitude' &&
+      fitToData?.latitudeColumn === 'latitude';
+    if (usesDirectCoordinates) return true;
+
+    const layerGeometryColumn = binding?.geometryColumn;
+    const layerGeometryMatches =
+      layerGeometryColumn === undefined ||
+      layerGeometryColumn === datasetGeometryColumn;
+    const fitGeometryMatches =
+      fitToData?.geometryColumn === datasetGeometryColumn;
+    const fitCoordinateMatches =
+      fitToData?.longitudeColumn === 'longitude' &&
+      fitToData?.latitudeColumn === 'latitude';
+    const encodingHint = datasetConfig?.geometryEncodingHint;
+    return (
+      typeof datasetGeometryColumn === 'string' &&
+      layerGeometryMatches &&
+      (fitGeometryMatches || fitCoordinateMatches) &&
+      typeof layerConfig?.['@@type'] === 'string' &&
+      POINT_LAYER_TYPES.has(layerConfig['@@type']) &&
+      (encodingHint === undefined || encodingHint === 'wkb') &&
+      typeof transformSql === 'string' &&
+      hasCanonicalPointTransform(transformSql, datasetGeometryColumn)
     );
   });
 }
@@ -93,7 +162,7 @@ function hasCanonicalMapBinding(
 /** Pinned production-model scenario that starts from an empty workspace. */
 export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
   id: 'document.create-chart-map',
-  version: 1,
+  version: 2,
   title: 'Create a document with a chart and map',
   description:
     'Creates one document from ambiguous tables and materializes chart/map state.',
@@ -132,7 +201,7 @@ export const CREATE_DOCUMENT_CHART_MAP_SCENARIO = defineScenario({
 /** Pinned production-model scenario that mutates an existing document. */
 export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
   id: 'document.mutate-chart-map',
-  version: 1,
+  version: 2,
   title: 'Mutate an existing document in place',
   description:
     'Changes one seeded chart and adds a note while preserving the seeded map.',
@@ -173,7 +242,7 @@ export const MUTATE_DOCUMENT_SCENARIO = defineScenario({
 /** Non-blocking continuity smoke using two turns and one run context. */
 export const MULTI_TURN_DOCUMENT_SCENARIO = defineScenario({
   id: 'document.multi-turn-continuity',
-  version: 1,
+  version: 2,
   title: 'Create and then modify one document',
   compatibleProfiles: ['document-charts-maps'],
   fixture: {database: 'ambiguous-geospatial-v1', workspace: 'empty'},
@@ -249,6 +318,7 @@ export function createCliScenarioOracles(
           charts.length === 1 &&
           mapBlocks.length === 1 &&
           workspace.maps.length === 1 &&
+          mapBlocks[0]?.blockInstanceId === workspace.maps[0]?.id &&
           hasObjectShape(charts[0]?.config) &&
           hasObjectShape(workspace.maps[0]?.config.spec);
         return {
@@ -274,9 +344,9 @@ export function createCliScenarioOracles(
         const pass =
           charts.some(
             (chart) =>
-              chart.tableName === CLI_EVAL_TARGET_TABLE &&
-              hasFieldBinding(chart.config, 'category') &&
-              hasFieldBinding(chart.config, 'metric'),
+              typeof chart.tableName === 'string' &&
+              CLI_EVAL_TARGET_TABLES.has(chart.tableName) &&
+              hasCanonicalChartBinding(chart.config),
           ) &&
           workspace.maps.some(hasCanonicalMapBinding) &&
           !mapTables.some((tableName) => CLI_EVAL_DECOY_TABLES.has(tableName));
@@ -322,6 +392,10 @@ export function createCliScenarioOracles(
         const chartConfig = hasObjectShape(charts[0]?.config)
           ? (charts[0]!.config as Record<string, unknown>)
           : {};
+        const chartTitle =
+          typeof charts[0]?.caption === 'string'
+            ? charts[0].caption
+            : chartConfig.title;
         const sourceNote = document?.blocks.find(
           (block) =>
             block.type === 'paragraph' &&
@@ -332,7 +406,7 @@ export function createCliScenarioOracles(
         const pass =
           charts.length === 1 &&
           charts[0]?.id === 'seed-chart' &&
-          chartConfig.title === 'Metric by category' &&
+          chartTitle === 'Metric by category' &&
           Boolean(sourceNote);
         return {
           pass,
@@ -340,8 +414,7 @@ export function createCliScenarioOracles(
             ? 'The seeded chart was updated in place and the source note was added.'
             : 'The requested in-place chart/note mutation is incomplete.',
           evidence: {
-            chartTitle:
-              typeof chartConfig.title === 'string' ? chartConfig.title : null,
+            chartTitle: typeof chartTitle === 'string' ? chartTitle : null,
             sourceNote: asJson(sourceNote ?? null),
             blocks: asJson(document?.blocks ?? []),
           },
