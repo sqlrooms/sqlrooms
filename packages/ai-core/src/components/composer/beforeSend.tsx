@@ -65,17 +65,22 @@ export const ChatComposerBeforeSendProvider: FC<PropsWithChildren> = ({
   // state providers above, so controls can disable rather than no-op.
   const [blockCount, setBlockCount] = useState(0);
 
+  // Stable identity, deliberately: `useBlockSends` has this in its effect
+  // deps, so a `block` that changed with `blockCount` would make every block
+  // release and re-acquire itself on the render it just caused.
+  const block = useCallback(() => {
+    setBlockCount((n) => n + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      setBlockCount((n) => n - 1);
+    };
+  }, []);
+
   const registry = useMemo<BeforeSendRegistry>(
     () => ({
-      block: () => {
-        setBlockCount((n) => n + 1);
-        let released = false;
-        return () => {
-          if (released) return;
-          released = true;
-          setBlockCount((n) => n - 1);
-        };
-      },
+      block,
       blocked: blockCount > 0,
       register: (handler, exclusiveKey) => {
         if (exclusiveKey !== undefined) {
@@ -110,7 +115,7 @@ export const ChatComposerBeforeSendProvider: FC<PropsWithChildren> = ({
         return true;
       },
     }),
-    [handlers, exclusiveCounts, blockCount],
+    [handlers, exclusiveCounts, blockCount, block],
   );
 
   if (inherited) return <>{children}</>;

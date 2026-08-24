@@ -86,10 +86,17 @@ function useSessionComposerState(): ChatComposerState {
   // stream in, which would re-render every composer on each token.
   const sessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
 
-  const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
-  const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
+  // One selector, and it short-circuits: `requiresApiKey()` invokes the host's
+  // custom-model factory, and this runs on every store update — once per
+  // streamed token. A usable key already answers the question, so the factory
+  // is only consulted when there isn't one.
+  const needsApiKey = useStoreWithAi((s) => {
+    const apiKey = s.ai.getApiKeyFromSettings();
+    const hasUsableKey = apiKey.trim().length > 0 && !s.ai.hasApiKeyError();
+    if (hasUsableKey) return false;
+    return s.ai.hasResolvableModel() && s.ai.requiresApiKey();
+  });
   const hasResolvableModel = useStoreWithAi((s) => s.ai.hasResolvableModel());
-  const requiresApiKey = useStoreWithAi((s) => s.ai.requiresApiKey());
 
   const isRunning = useStoreWithAi((s) =>
     sessionId ? s.ai.getIsRunning(sessionId) : false,
@@ -178,13 +185,6 @@ function useSessionComposerState(): ChatComposerState {
   }, [sessionId, cancelAnalysis]);
 
   const isBusy = isRunning || isSummarizing;
-
-  // `requiresApiKey` first: a model whose credentials the host owns must not
-  // raise a prompt just because settings hold no key.
-  const needsApiKey =
-    requiresApiKey &&
-    hasResolvableModel &&
-    (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
 
   return useMemo(
     () => ({
