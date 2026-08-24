@@ -6,7 +6,7 @@ function toJsonValue(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
 }
 
-/** Captures the durable CLI state used by target-neutral behavioral oracles. */
+/** Captures the durable CLI state used by target-neutral behavioral checks. */
 export function snapshotCliEvalState(state: RoomState): JsonObject {
   const documents = Object.values(state.artifacts.config.artifactsById)
     .filter((artifact) => artifact.type === 'document')

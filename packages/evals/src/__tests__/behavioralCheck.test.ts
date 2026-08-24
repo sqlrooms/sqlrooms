@@ -1,14 +1,14 @@
 import {describe, expect, it} from '@jest/globals';
 import {
-  createAnswerGroundingOracle,
-  createDatabaseOracle,
-  createErrorOracle,
-  createPolicyOracle,
-  createWorkspaceStateOracle,
-  evaluateOracles,
-  summarizeOracleResults,
-  type OracleContext,
-} from '../oracle';
+  createAnswerGroundingCheck,
+  createDatabaseCheck,
+  createErrorCheck,
+  createPolicyCheck,
+  createWorkspaceStateCheck,
+  evaluateBehavioralChecks,
+  summarizeBehavioralCheckResults,
+  type BehavioralCheckContext,
+} from '../behavioralCheck';
 import {defineScenario} from '../scenario';
 
 const scenario = defineScenario({
@@ -17,10 +17,10 @@ const scenario = defineScenario({
   title: 'Verify outcomes',
   compatibleProfiles: ['document-charts-maps'],
   turns: [{id: 'verify', input: 'Verify the result.'}],
-  expectations: [{oracleId: 'database', description: 'Database is grounded.'}],
+  expectations: [{checkId: 'database', description: 'Database is grounded.'}],
 });
 
-const context: OracleContext = {
+const context: BehavioralCheckContext = {
   scenario,
   database: {canonicalTable: 'analytics.events'},
   workspace: {documentCount: 1},
@@ -30,11 +30,20 @@ const context: OracleContext = {
   metadata: {},
 };
 
-describe('behavioral oracles', () => {
+describe('behavioral checks', () => {
+  it('rejects an empty check ID at creation', () => {
+    expect(() =>
+      createDatabaseCheck({
+        id: '',
+        evaluate: () => ({pass: true, reason: 'Database is valid.'}),
+      }),
+    ).toThrow('Behavioral check ID must not be empty.');
+  });
+
   it('composes database, workspace, answer, error, and policy checks', async () => {
-    const results = await evaluateOracles(
+    const results = await evaluateBehavioralChecks(
       [
-        createDatabaseOracle({
+        createDatabaseCheck({
           id: 'database',
           evaluate: (database) => ({
             pass:
@@ -45,14 +54,14 @@ describe('behavioral oracles', () => {
             reason: 'Canonical table matched.',
           }),
         }),
-        createWorkspaceStateOracle({
+        createWorkspaceStateCheck({
           id: 'workspace',
           evaluate: (workspace) => ({
             pass: workspace !== undefined,
             reason: 'Workspace snapshot exists.',
           }),
         }),
-        createAnswerGroundingOracle({
+        createAnswerGroundingCheck({
           id: 'answer',
           evaluate: (answer) => ({
             pass: answer.includes('analytics.events'),
@@ -60,14 +69,14 @@ describe('behavioral oracles', () => {
             reason: 'Answer names the selected table.',
           }),
         }),
-        createErrorOracle({
+        createErrorCheck({
           id: 'errors',
           evaluate: (errors) => ({
             pass: errors.length === 0,
             reason: 'No errors observed.',
           }),
         }),
-        createPolicyOracle({
+        createPolicyCheck({
           id: 'policy',
           evaluate: (mutations) => ({
             pass: mutations.length === 1,
@@ -81,13 +90,16 @@ describe('behavioral oracles', () => {
 
     expect(results).toHaveLength(5);
     expect(results.every((result) => result.pass)).toBe(true);
-    expect(summarizeOracleResults(results)).toEqual({pass: true, score: 0.96});
+    expect(summarizeBehavioralCheckResults(results)).toEqual({
+      pass: true,
+      score: 0.96,
+    });
   });
 
   it('keeps failure reasons and structured evidence', async () => {
-    const [result] = await evaluateOracles(
+    const [result] = await evaluateBehavioralChecks(
       [
-        createPolicyOracle({
+        createPolicyCheck({
           id: 'read-only',
           evaluate: (mutations) => ({
             pass: mutations.length === 0,
@@ -102,7 +114,7 @@ describe('behavioral oracles', () => {
           ...scenario,
           expectations: [
             {
-              oracleId: 'read-only',
+              checkId: 'read-only',
               description: 'Workspace remains read-only.',
             },
           ],
@@ -118,43 +130,46 @@ describe('behavioral oracles', () => {
     });
   });
 
-  it('does not pass when no oracle results were produced', () => {
-    expect(summarizeOracleResults([])).toEqual({pass: false, score: 0});
+  it('does not pass when no check results were produced', () => {
+    expect(summarizeBehavioralCheckResults([])).toEqual({
+      pass: false,
+      score: 0,
+    });
   });
 
-  it('rejects a passing subset when required oracles are missing', async () => {
+  it('rejects a passing subset when required checks are missing', async () => {
     const scenarioWithMultipleExpectations = defineScenario({
       ...scenario,
       expectations: [
         ...scenario.expectations,
         {
-          oracleId: 'workspace',
+          checkId: 'workspace',
           description: 'Workspace state is valid.',
         },
       ],
     });
 
     await expect(
-      evaluateOracles(
+      evaluateBehavioralChecks(
         [
-          createDatabaseOracle({
+          createDatabaseCheck({
             id: 'database',
             evaluate: () => ({pass: true, reason: 'Database is valid.'}),
           }),
         ],
         {...context, scenario: scenarioWithMultipleExpectations},
       ),
-    ).rejects.toThrow('Missing required oracle implementations: workspace.');
+    ).rejects.toThrow('Missing required check implementations: workspace.');
   });
 
-  it('rejects duplicate oracle implementations', async () => {
-    const duplicateOracle = createDatabaseOracle({
+  it('rejects duplicate check implementations', async () => {
+    const duplicateCheck = createDatabaseCheck({
       id: 'database',
       evaluate: () => ({pass: true, reason: 'Database is valid.'}),
     });
 
     await expect(
-      evaluateOracles([duplicateOracle, duplicateOracle], context),
-    ).rejects.toThrow('Duplicate oracle implementations: database.');
+      evaluateBehavioralChecks([duplicateCheck, duplicateCheck], context),
+    ).rejects.toThrow('Duplicate check implementations: database.');
   });
 });

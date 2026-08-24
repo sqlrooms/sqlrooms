@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {JsonObjectSchema, JsonValueSchema} from '../json.js';
-import {OracleResultSchema} from '../oracle.js';
+import {BehavioralCheckResultSchema} from '../behavioralCheck.js';
 import {RunEvidenceEventSchema} from '../evidence.js';
 
 export * from './trajectory.js';
@@ -60,7 +60,7 @@ export const ObservatoryRunSchema = z.looseObject({
   }),
   promptTurns: z.array(z.object({id: z.string(), input: z.string()})),
   answer: z.string(),
-  oracleResults: z.array(OracleResultSchema),
+  checkResults: z.array(BehavioralCheckResultSchema),
   graderFeedback: JsonValueSchema.optional(),
   events: z.array(RunEvidenceEventSchema),
   spans: z.array(ObservatorySpanSchema),
@@ -187,12 +187,12 @@ export function compareObservatoryRuns(
   selected: ObservatoryRun,
   baseline: ObservatoryRun,
 ) {
-  const selectedFailed = selected.oracleResults
+  const selectedFailed = selected.checkResults
     .filter((result) => !result.pass)
-    .map((result) => result.oracleId);
-  const baselineFailed = baseline.oracleResults
+    .map((result) => result.checkId);
+  const baselineFailed = baseline.checkResults
     .filter((result) => !result.pass)
-    .map((result) => result.oracleId);
+    .map((result) => result.checkId);
   return {
     selectedRunId: selected.id,
     baselineRunId: baseline.id,
@@ -206,11 +206,11 @@ export function compareObservatoryRuns(
       baseline.usage?.totalTokens !== undefined
         ? selected.usage.totalTokens - baseline.usage.totalTokens
         : undefined,
-    newlyFailingOracles: selectedFailed.filter(
-      (oracleId) => !baselineFailed.includes(oracleId),
+    newlyFailingChecks: selectedFailed.filter(
+      (checkId) => !baselineFailed.includes(checkId),
     ),
-    recoveredOracles: baselineFailed.filter(
-      (oracleId) => !selectedFailed.includes(oracleId),
+    recoveredChecks: baselineFailed.filter(
+      (checkId) => !selectedFailed.includes(checkId),
     ),
     eventCountDelta: selected.events.length - baseline.events.length,
   };

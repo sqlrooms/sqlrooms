@@ -414,7 +414,7 @@ export function EvalObservatory() {
                       error:
                         selectedTrajectoryNode.data.errorText ??
                         selectedTrajectoryNode.data.message,
-                      relatedOracleEvidence: relatedOracles(
+                      relatedCheckEvidence: relatedChecks(
                         selectedTrajectoryNode,
                         selectedTrajectoryNodeOwner.run,
                       ),
@@ -430,8 +430,8 @@ export function EvalObservatory() {
                 <Detail title="Final answer">
                   <p className="answer">{selected.answer}</p>
                 </Detail>
-                <Detail title="Oracle results">
-                  <Json value={selected.oracleResults} />
+                <Detail title="Check results">
+                  <Json value={selected.checkResults} />
                 </Detail>
                 <Detail title="Grader feedback">
                   <Json value={selected.graderFeedback ?? null} />
@@ -493,13 +493,13 @@ export function findTrajectoryNodeOwner(
     : {label: 'Baseline', run: baseline};
 }
 
-export function relatedOracles(
+export function relatedChecks(
   node: ObservatoryTrajectoryNode,
   ...runs: Array<ObservatoryRun | undefined>
 ) {
   return runs
-    .flatMap((run) => run?.oracleResults ?? [])
-    .filter((oracle) => node.relatedOracleIds.includes(oracle.oracleId));
+    .flatMap((run) => run?.checkResults ?? [])
+    .filter((check) => node.relatedCheckIds.includes(check.checkId));
 }
 
 export function TrajectoryComparison({

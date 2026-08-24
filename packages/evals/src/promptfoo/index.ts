@@ -1,5 +1,8 @@
-import type {OracleResult} from '../oracle.js';
-import {OracleResultSchema, summarizeOracleResults} from '../oracle.js';
+import type {BehavioralCheckResult} from '../behavioralCheck.js';
+import {
+  BehavioralCheckResultSchema,
+  summarizeBehavioralCheckResults,
+} from '../behavioralCheck.js';
 import type {RunEvidence} from '../evidence.js';
 import {RunEvidenceSchema} from '../evidence.js';
 
@@ -34,45 +37,45 @@ export function toPromptfooProviderResponse(
 }
 
 /**
- * Converts oracle results into one Promptfoo assertion result.
+ * Converts check results into one Promptfoo assertion result.
  *
- * @throws When multiple results use the same oracle ID.
+ * @throws When multiple results use the same check ID.
  */
 export function toPromptfooAssertionResult(
-  results: readonly OracleResult[],
+  results: readonly BehavioralCheckResult[],
 ): PromptfooAssertionResult {
   const parsedResults = results.map((result) =>
-    OracleResultSchema.parse(result),
+    BehavioralCheckResultSchema.parse(result),
   );
-  const duplicateOracleIds = Array.from(
+  const duplicateCheckIds = Array.from(
     new Set(
       parsedResults
-        .map((result) => result.oracleId)
+        .map((result) => result.checkId)
         .filter(
-          (oracleId, index, oracleIds) => oracleIds.indexOf(oracleId) !== index,
+          (checkId, index, checkIds) => checkIds.indexOf(checkId) !== index,
         ),
     ),
   );
-  if (duplicateOracleIds.length > 0) {
+  if (duplicateCheckIds.length > 0) {
     throw new Error(
-      `Duplicate oracle result IDs: ${duplicateOracleIds.join(', ')}.`,
+      `Duplicate check result IDs: ${duplicateCheckIds.join(', ')}.`,
     );
   }
 
-  const summary = summarizeOracleResults(parsedResults);
+  const summary = summarizeBehavioralCheckResults(parsedResults);
   const failures = parsedResults.filter((result) => !result.pass);
   return {
     ...summary,
     reason:
       parsedResults.length === 0
-        ? 'No SQLRooms oracle results were produced.'
+        ? 'No SQLRooms check results were produced.'
         : failures.length === 0
-          ? `${parsedResults.length} SQLRooms oracle${parsedResults.length === 1 ? '' : 's'} passed.`
+          ? `${parsedResults.length} SQLRooms check${parsedResults.length === 1 ? '' : 's'} passed.`
           : failures
-              .map((result) => `${result.oracleId}: ${result.reason}`)
+              .map((result) => `${result.checkId}: ${result.reason}`)
               .join('; '),
     namedScores: Object.fromEntries(
-      parsedResults.map((result) => [result.oracleId, result.score]),
+      parsedResults.map((result) => [result.checkId, result.score]),
     ),
   };
 }

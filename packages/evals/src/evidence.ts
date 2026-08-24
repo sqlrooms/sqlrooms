@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {JsonObjectSchema, JsonValueSchema} from './json.js';
-import {OracleResultSchema} from './oracle.js';
+import {BehavioralCheckResultSchema} from './behavioralCheck.js';
 import {ScenarioIdSchema} from './scenario.js';
 
 /** Current version of the durable run-evidence envelope. */
@@ -99,7 +99,7 @@ export const RunEvidenceSchema = z
       .catchall(JsonValueSchema)
       .optional(),
     finalState: JsonValueSchema.optional(),
-    oracleResults: z.array(OracleResultSchema),
+    checkResults: z.array(BehavioralCheckResultSchema),
     metadata: JsonObjectSchema.default(() => ({})),
   })
   .catchall(JsonValueSchema);

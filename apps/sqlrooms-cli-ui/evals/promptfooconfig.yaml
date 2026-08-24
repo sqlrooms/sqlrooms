@@ -20,7 +20,7 @@ tests:
       profile: document-charts-maps@1
     assert:
       - type: javascript
-        metric: sqlrooms-oracles
+        metric: sqlrooms-checks
         value: context.metadata.sqlroomsAssertion
   - description: document.mutate-chart-map@1
     vars:
@@ -32,7 +32,7 @@ tests:
       profile: document-charts-maps@1
     assert:
       - type: javascript
-        metric: sqlrooms-oracles
+        metric: sqlrooms-checks
         value: context.metadata.sqlroomsAssertion
 
 evaluateOptions:

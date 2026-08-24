@@ -348,7 +348,7 @@ export function readPromptfooSqlite(databasePath: string): ObservatoryRun[] {
           {id: 'promptfoo', input: promptText(row.prompt)},
         ],
         answer: evidence?.finalAnswer ?? responseText(row.response),
-        oracleResults: evidence?.oracleResults ?? [],
+        checkResults: evidence?.checkResults ?? [],
         graderFeedback: grading,
         events,
         spans: traceId ? (traceSpans.get(traceId) ?? []) : [],

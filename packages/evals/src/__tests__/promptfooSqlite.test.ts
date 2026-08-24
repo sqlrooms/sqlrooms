@@ -4,7 +4,7 @@ import {mkdtempSync, readFileSync, readdirSync, rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {basename, dirname, join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
-import type {RunEvidence} from '../evidence';
+import {RUN_EVIDENCE_SCHEMA_VERSION, type RunEvidence} from '../evidence';
 import {
   UnsupportedPromptfooSchemaError,
   compareObservatoryRuns,
@@ -58,7 +58,7 @@ function fixtureDatabase() {
 
 function evidence(status: 'passed' | 'failed'): RunEvidence {
   return {
-    schemaVersion: 1,
+    schemaVersion: RUN_EVIDENCE_SCHEMA_VERSION,
     runId: `run-${status}`,
     scenario: {id: 'document.create-chart-map', version: 1, repetition: 0},
     target: {
@@ -99,9 +99,9 @@ function evidence(status: 'passed' | 'failed'): RunEvidence {
     ],
     usage: {inputTokens: 100, outputTokens: 20, totalTokens: 120},
     finalState: {documents: [{id: 'document-1'}]},
-    oracleResults: [
+    checkResults: [
       {
-        oracleId: 'workspace-shape',
+        checkId: 'workspace-shape',
         kind: 'workspace-state',
         pass: status === 'passed',
         score: status === 'passed' ? 1 : 0,
@@ -146,7 +146,7 @@ function insertRun(
       null,
       runEvidence.status === 'passed' ? 1 : 0,
       runEvidence.status === 'passed' ? 1 : 0,
-      '{"reason":"deterministic oracles"}',
+      '{"reason":"deterministic checks"}',
       JSON.stringify({
         futureResult: 'preserved',
         promptfoo: {traceLinkage: {traceId}},
@@ -280,18 +280,16 @@ describe('Promptfoo SQLite observatory adapter', () => {
       id: 'failed-copy',
       status: 'failed' as const,
       latencyMs: 1300,
-      oracleResults: [
-        {...filtered[0]!.oracleResults[0]!, pass: false, score: 0},
-      ],
+      checkResults: [{...filtered[0]!.checkResults[0]!, pass: false, score: 0}],
     };
     expect(compareObservatoryRuns(failed, filtered[0]!)).toMatchObject({
       latencyDeltaMs: 300,
-      newlyFailingOracles: ['workspace-shape'],
+      newlyFailingChecks: ['workspace-shape'],
     });
     expect(computeCalibrationRates([filtered[0]!, failed])).toEqual([
       expect.objectContaining({
         scenarioId: 'document.create-chart-map',
-        oracleId: 'workspace-shape',
+        checkId: 'workspace-shape',
         total: 2,
         passed: 1,
         passRate: 0.5,

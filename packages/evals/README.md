@@ -2,7 +2,7 @@
 
 Private, evaluator-neutral behavioral evaluation primitives for SQLRooms.
 
-The package defines versioned scenarios, composable oracle results, a durable
+The package defines versioned scenarios, composable check results, a durable
 run-evidence envelope, and a deterministic AI SDK language model. It has no CLI
 application, React, browser, or Promptfoo runtime dependency. Its observatory
 adapter uses Node's built-in SQLite API.
@@ -11,8 +11,8 @@ adapter uses Node's built-in SQLite API.
 
 - Scenarios describe user turns, compatible production profiles, fixtures, and
   target-neutral outcome expectations.
-- Oracles inspect the final answer, database snapshot, workspace state, errors,
-  and mutations. Oracle IDs must be unique and cover every scenario
+- Checks inspect the final answer, database snapshot, workspace state, errors,
+  and mutations. Check IDs must be unique and cover every scenario
   expectation; they do not require one exact tool trajectory.
 - Run evidence records strictly ordered events and durable outcomes in a
   versioned JSON envelope. Preserved extension fields must contain JSON values.
@@ -36,9 +36,9 @@ working target such as MCP exists.
 
 ```ts
 import {
-  createWorkspaceStateOracle,
+  createWorkspaceStateCheck,
   defineScenario,
-  evaluateOracles,
+  evaluateBehavioralChecks,
 } from '@sqlrooms/evals';
 
 const scenario = defineScenario({
@@ -49,13 +49,13 @@ const scenario = defineScenario({
   turns: [{id: 'create', input: 'Create a document with a chart and map.'}],
   expectations: [
     {
-      oracleId: 'document-has-chart-map',
+      checkId: 'document-has-chart-map',
       description: 'The document contains valid chart and map blocks.',
     },
   ],
 });
 
-const oracle = createWorkspaceStateOracle({
+const check = createWorkspaceStateCheck({
   id: 'document-has-chart-map',
   evaluate: (workspace) => ({
     pass: workspace !== undefined,
@@ -65,7 +65,7 @@ const oracle = createWorkspaceStateOracle({
   }),
 });
 
-const results = await evaluateOracles([oracle], {
+const results = await evaluateBehavioralChecks([check], {
   scenario,
   workspace: {artifacts: []},
   finalAnswer: '',

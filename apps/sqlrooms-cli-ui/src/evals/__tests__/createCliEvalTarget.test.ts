@@ -1,16 +1,16 @@
 import {describe, expect, it, jest} from '@jest/globals';
 import {
-  createAnswerGroundingOracle,
-  createErrorOracle,
+  createAnswerGroundingCheck,
+  createErrorCheck,
   createScriptedLanguageModel,
-  createWorkspaceStateOracle,
+  createWorkspaceStateCheck,
   defineScenario,
   type JsonValue,
 } from '@sqlrooms/evals';
 import {CLI_ARTIFACT_TYPES} from '../../artifactTypeIds';
 import {createCliEvalTarget} from '../createCliEvalTarget';
 import {CLI_EVAL_TARGET_TABLE} from '../fixture';
-import {MUTATE_DOCUMENT_SCENARIO, createCliScenarioOracles} from '../scenarios';
+import {MUTATE_DOCUMENT_SCENARIO, createCliScenarioChecks} from '../scenarios';
 
 function workspaceFacts(workspace: JsonValue | undefined) {
   return workspace as {
@@ -182,15 +182,15 @@ describe('createCliEvalTarget', () => {
             },
           ],
           expectations: [
-            {oracleId: 'workspace', description: 'Chart and map are durable.'},
+            {checkId: 'workspace', description: 'Chart and map are durable.'},
             {
-              oracleId: 'answer',
+              checkId: 'answer',
               description: 'Answer names the intended table.',
             },
           ],
         }),
-        oracles: [
-          createWorkspaceStateOracle({
+        checks: [
+          createWorkspaceStateCheck({
             id: 'workspace',
             evaluate: (workspace) => {
               const facts = workspaceFacts(workspace);
@@ -220,7 +220,7 @@ describe('createCliEvalTarget', () => {
               };
             },
           }),
-          createAnswerGroundingOracle({
+          createAnswerGroundingCheck({
             id: 'answer',
             evaluate: (answer) => ({
               pass: answer.includes('analytics.events'),
@@ -249,7 +249,7 @@ describe('createCliEvalTarget', () => {
           'create_block_document_map_block',
         ]),
       );
-      expect(evidence.oracleResults.every((result) => result.pass)).toBe(true);
+      expect(evidence.checkResults.every((result) => result.pass)).toBe(true);
       expect(evidence.usage).toMatchObject({
         inputTokens: 100,
         outputTokens: 14,
@@ -270,7 +270,7 @@ describe('createCliEvalTarget', () => {
     try {
       const evidence = await target.run({
         scenario: MUTATE_DOCUMENT_SCENARIO,
-        oracles: createCliScenarioOracles(MUTATE_DOCUMENT_SCENARIO),
+        checks: createCliScenarioChecks(MUTATE_DOCUMENT_SCENARIO),
       });
       const initialState = evidence.metadata.initialState as {
         documents: unknown[];
@@ -313,10 +313,10 @@ describe('createCliEvalTarget', () => {
       title: 'Repeated isolated run',
       compatibleProfiles: ['document-charts-maps'],
       turns: [{id: 'run', input: 'Complete this isolated run.'}],
-      expectations: [{oracleId: 'answer', description: 'The run completes.'}],
+      expectations: [{checkId: 'answer', description: 'The run completes.'}],
     });
-    const oracles = [
-      createAnswerGroundingOracle({
+    const checks = [
+      createAnswerGroundingCheck({
         id: 'answer',
         evaluate: (answer) => ({
           pass: answer.includes('run complete'),
@@ -326,7 +326,7 @@ describe('createCliEvalTarget', () => {
     ];
 
     try {
-      await target.run({scenario, oracles});
+      await target.run({scenario, checks});
       target.store.getState().deckMaps.ensureMap('stale-map');
       const connector = await target.store.getState().db.getConnector();
       await connector.execute('CREATE TABLE derived_events AS SELECT 1 AS id')
@@ -345,7 +345,7 @@ describe('createCliEvalTarget', () => {
       });
       expect(target.store.getState().room.config.dataSources).toHaveLength(1);
 
-      const evidence = await target.run({scenario, oracles});
+      const evidence = await target.run({scenario, checks});
       const initialState = evidence.metadata.initialState as {
         artifacts: {artifactsById: Record<string, unknown>};
         maps: unknown[];
@@ -397,19 +397,19 @@ describe('createCliEvalTarget', () => {
       title: 'Concurrent run isolation',
       compatibleProfiles: ['document-charts-maps'],
       turns: [{id: 'run', input: 'Complete this run.'}],
-      expectations: [{oracleId: 'answer', description: 'The run completes.'}],
+      expectations: [{checkId: 'answer', description: 'The run completes.'}],
     });
-    const oracles = [
-      createAnswerGroundingOracle({
+    const checks = [
+      createAnswerGroundingCheck({
         id: 'answer',
         evaluate: () => ({pass: true, reason: 'The first run completed.'}),
       }),
     ];
 
     try {
-      const firstRun = target.run({scenario, oracles});
+      const firstRun = target.run({scenario, checks});
       await started;
-      await expect(target.run({scenario, oracles})).rejects.toThrow(
+      await expect(target.run({scenario, checks})).rejects.toThrow(
         'already has a run in progress',
       );
       releaseStream();
@@ -502,11 +502,11 @@ describe('createCliEvalTarget', () => {
           compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Wait for the timeout.'}],
           expectations: [
-            {oracleId: 'answer', description: 'The timeout is captured.'},
+            {checkId: 'answer', description: 'The timeout is captured.'},
           ],
         }),
-        oracles: [
-          createAnswerGroundingOracle({
+        checks: [
+          createAnswerGroundingCheck({
             id: 'answer',
             evaluate: () => ({pass: true, reason: 'Timeout captured.'}),
           }),
@@ -551,11 +551,11 @@ describe('createCliEvalTarget', () => {
           compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Fail before streaming.'}],
           expectations: [
-            {oracleId: 'error', description: 'The start error is captured.'},
+            {checkId: 'error', description: 'The start error is captured.'},
           ],
         }),
-        oracles: [
-          createErrorOracle({
+        checks: [
+          createErrorCheck({
             id: 'error',
             evaluate: (errors) => ({
               pass: errors.some((error) =>
@@ -597,11 +597,11 @@ describe('createCliEvalTarget', () => {
           compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Record usage.'}],
           expectations: [
-            {oracleId: 'answer', description: 'The run completes.'},
+            {checkId: 'answer', description: 'The run completes.'},
           ],
         }),
-        oracles: [
-          createAnswerGroundingOracle({
+        checks: [
+          createAnswerGroundingCheck({
             id: 'answer',
             evaluate: () => ({pass: true, reason: 'The run completed.'}),
           }),
@@ -647,11 +647,11 @@ describe('createCliEvalTarget', () => {
           compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: `Use ${secret} safely.`}],
           expectations: [
-            {oracleId: 'answer', description: 'The answer is evaluated.'},
+            {checkId: 'answer', description: 'The answer is evaluated.'},
           ],
         }),
-        oracles: [
-          createAnswerGroundingOracle({
+        checks: [
+          createAnswerGroundingCheck({
             id: 'answer',
             evaluate: (answer) => ({
               pass: answer.includes(secret),
@@ -699,11 +699,11 @@ describe('createCliEvalTarget', () => {
           compatibleProfiles: ['document-charts-maps'],
           turns: [{id: 'run', input: 'Trigger the scripted mismatch.'}],
           expectations: [
-            {oracleId: 'error', description: 'The error is retained safely.'},
+            {checkId: 'error', description: 'The error is retained safely.'},
           ],
         }),
-        oracles: [
-          createErrorOracle({
+        checks: [
+          createErrorCheck({
             id: 'error',
             evaluate: (errors) => ({
               pass: errors.length > 0,

@@ -15,9 +15,9 @@ function run(events: ObservatoryRun['events']): ObservatoryRun {
     counts: {tools: 1, nestedAgents: 1, errors: 0},
     promptTurns: [{id: 'create', input: 'Create a document.'}],
     answer: 'Done.',
-    oracleResults: [
+    checkResults: [
       {
-        oracleId: 'workspace-shape',
+        checkId: 'workspace-shape',
         kind: 'workspace-state',
         pass: false,
         score: 0,

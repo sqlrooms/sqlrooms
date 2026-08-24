@@ -18,5 +18,5 @@ Runs with explicit nested-agent or parent/child tool evidence also get a linked
 ordered event list. Graph nodes are derived from the normalized SQLRooms
 evidence model, never directly from Promptfoo spans, and selecting a node shows
 its exact recorded input, output, duration, status, and explicitly related
-oracle evidence. When a baseline is available, graph-worthy trajectories appear
+check evidence. When a baseline is available, graph-worthy trajectories appear
 side by side.

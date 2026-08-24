@@ -17,7 +17,7 @@ export const ScenarioTurnSchema = z.object({
 
 /** An outcome contract evaluated after a scenario run. */
 export const ScenarioExpectationSchema = z.object({
-  oracleId: z.string().min(1),
+  checkId: z.string().min(1),
   description: z.string().min(1),
   config: JsonObjectSchema.default(() => ({})),
 });

@@ -10,7 +10,7 @@ import {
   baselineIdAfterRunSelection,
   findTrajectoryNode,
   findTrajectoryNodeOwner,
-  relatedOracles,
+  relatedChecks,
 } from '../EvalObservatory';
 
 function trajectory(
@@ -29,23 +29,23 @@ function trajectory(
         kind: 'run',
         label: runId,
         data: {},
-        relatedOracleIds: [],
+        relatedCheckIds: [],
       },
     ],
     links: [],
   };
 }
 
-function runWithOracle(id: string, oracleId: string): ObservatoryRun {
+function runWithCheck(id: string, checkId: string): ObservatoryRun {
   return {
     id,
-    oracleResults: [
+    checkResults: [
       {
-        oracleId,
+        checkId,
         kind: 'workspace-state',
         pass: true,
         score: 1,
-        reason: `${oracleId} passed.`,
+        reason: `${checkId} passed.`,
         evidence: {},
         metadata: {},
       },
@@ -69,13 +69,13 @@ describe('EvalObservatory trajectory comparison', () => {
     });
   });
 
-  it('uses each trajectory owner for its label and oracle evidence', () => {
+  it('uses each trajectory owner for its label and check evidence', () => {
     const selectedTrajectory = trajectory('selected', true);
     const baselineTrajectory = trajectory('baseline', true);
-    selectedTrajectory.nodes[0]!.relatedOracleIds = ['selected-oracle'];
-    baselineTrajectory.nodes[0]!.relatedOracleIds = ['baseline-oracle'];
-    const selectedRun = runWithOracle('selected', 'selected-oracle');
-    const baselineRun = runWithOracle('baseline', 'baseline-oracle');
+    selectedTrajectory.nodes[0]!.relatedCheckIds = ['selected-check'];
+    baselineTrajectory.nodes[0]!.relatedCheckIds = ['baseline-check'];
+    const selectedRun = runWithCheck('selected', 'selected-check');
+    const baselineRun = runWithCheck('baseline', 'baseline-check');
     const selectedMatch = findTrajectoryNode(
       'selected:run',
       selectedTrajectory,
@@ -104,12 +104,12 @@ describe('EvalObservatory trajectory comparison', () => {
     );
 
     expect(selectedOwner?.label).toBe('Selected');
-    expect(relatedOracles(selectedMatch.node, selectedOwner?.run)).toEqual(
-      selectedRun.oracleResults,
+    expect(relatedChecks(selectedMatch.node, selectedOwner?.run)).toEqual(
+      selectedRun.checkResults,
     );
     expect(baselineOwner?.label).toBe('Baseline');
-    expect(relatedOracles(baselineMatch.node, baselineOwner?.run)).toEqual(
-      baselineRun.oracleResults,
+    expect(relatedChecks(baselineMatch.node, baselineOwner?.run)).toEqual(
+      baselineRun.checkResults,
     );
   });
 
