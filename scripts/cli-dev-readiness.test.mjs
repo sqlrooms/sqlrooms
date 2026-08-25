@@ -31,3 +31,22 @@ test('CLI API readiness retries non-success responses', async () => {
 
   assert.equal(attempts, 2);
 });
+
+test('CLI API readiness stays aborted when an in-flight request succeeds', async () => {
+  const controller = new AbortController();
+  let attemptSignal;
+  const readiness = waitForCliApi('http://127.0.0.1:4273/api/status', {
+    fetchImpl: async (_url, options) => {
+      attemptSignal = options.signal;
+      await new Promise((resolve) => setImmediate(resolve));
+      return {ok: true, status: 200};
+    },
+    signal: controller.signal,
+    timeoutMs: 1_000,
+  });
+
+  controller.abort(new Error('shutdown requested'));
+
+  await assert.rejects(readiness, /shutdown requested/);
+  assert.equal(attemptSignal.aborted, true);
+});

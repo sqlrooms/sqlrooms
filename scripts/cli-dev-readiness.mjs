@@ -13,6 +13,7 @@ export async function waitForCliApi(
     attemptTimeoutMs = DEFAULT_ATTEMPT_TIMEOUT_MS,
     fetchImpl = globalThis.fetch,
     retryDelayMs = DEFAULT_RETRY_DELAY_MS,
+    signal,
     timeoutMs = DEFAULT_TIMEOUT_MS,
   } = {},
 ) {
@@ -20,16 +21,25 @@ export async function waitForCliApi(
   let lastError;
 
   do {
+    signal?.throwIfAborted();
     const remainingMs = Math.max(1, deadline - Date.now());
     try {
+      const attemptSignal = AbortSignal.any(
+        [
+          signal,
+          AbortSignal.timeout(
+            Math.max(1, Math.min(attemptTimeoutMs, remainingMs)),
+          ),
+        ].filter(Boolean),
+      );
       const response = await fetchImpl(url, {
-        signal: AbortSignal.timeout(
-          Math.max(1, Math.min(attemptTimeoutMs, remainingMs)),
-        ),
+        signal: attemptSignal,
       });
+      signal?.throwIfAborted();
       if (response.ok) return;
       lastError = new Error(`CLI API returned HTTP ${response.status}.`);
     } catch (error) {
+      signal?.throwIfAborted();
       lastError = error;
     }
 

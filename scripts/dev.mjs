@@ -277,6 +277,7 @@ if (target !== 'cli') {
 }
 
 const children = new Set();
+const cliStartupController = new AbortController();
 let exiting = false;
 
 function stopChildren(signal = 'SIGTERM') {
@@ -347,12 +348,14 @@ function startProcess(
 
 process.on('SIGINT', () => {
   exiting = true;
+  cliStartupController.abort();
   stopChildren('SIGINT');
   setTimeout(() => process.exit(130), 1000).unref();
 });
 
 process.on('SIGTERM', () => {
   exiting = true;
+  cliStartupController.abort();
   stopChildren('SIGTERM');
   setTimeout(() => process.exit(143), 1000).unref();
 });
@@ -369,25 +372,29 @@ if (target === 'cli') {
   });
   const apiStatusUrl = `http://${proxyHost}:${apiPort}/api/status`;
   try {
-    await waitForCliApi(apiStatusUrl);
+    await waitForCliApi(apiStatusUrl, {signal: cliStartupController.signal});
   } catch (error) {
-    exiting = true;
-    stopChildren();
-    console.error('SQLRooms CLI API failed to become ready.', error);
-    process.exit(1);
+    if (!exiting) {
+      exiting = true;
+      stopChildren();
+      console.error('SQLRooms CLI API failed to become ready.', error);
+      process.exit(1);
+    }
   }
-  startProcess(
-    'sqlrooms CLI UI dev server',
-    ['--host', '--port', String(uiPort)],
-    {
-      command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
-      cwd: path.resolve('apps/sqlrooms-cli-ui'),
-      env: {
-        SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
-        VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: String(proxyCliDevWebSockets),
+  if (!exiting) {
+    startProcess(
+      'sqlrooms CLI UI dev server',
+      ['--host', '--port', String(uiPort)],
+      {
+        command: path.resolve('apps/sqlrooms-cli-ui', 'node_modules/.bin/vite'),
+        cwd: path.resolve('apps/sqlrooms-cli-ui'),
+        env: {
+          SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+          VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: String(proxyCliDevWebSockets),
+        },
       },
-    },
-  );
+    );
+  }
 } else {
   startProcess(
     'turbo dependency dev watchers',
