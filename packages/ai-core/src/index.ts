@@ -9,6 +9,7 @@ export type {
   AiSliceState,
   AiSliceOptions,
   ForkSessionFromMessageArgs,
+  ModelSelection,
 } from './AiSlice';
 export type {AiTimeoutOptions} from './timeouts';
 export {
@@ -137,6 +138,7 @@ export {
   Item as ChatSuggestionsItem,
   VisibilityToggle as ChatSuggestionsVisibilityToggle,
   Dismiss as ChatSuggestionsDismiss,
+  useControlledVisibility,
 } from './components/suggestions';
 export type {
   ChatSuggestionsState,
@@ -144,6 +146,7 @@ export type {
   ChatSuggestionsItemProps,
   ChatSuggestionsVisibilityToggleProps,
   ChatSuggestionsDismissProps,
+  ControlledVisibility,
 } from './components/suggestions';
 export {
   getAnalysisResultsFromUiMessages,

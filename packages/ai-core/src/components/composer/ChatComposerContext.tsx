@@ -5,6 +5,7 @@ import {
   createDualModeChatContext,
   type ChatComposerMode,
 } from '../primitives/createDualModeChatContext';
+import {withProvider} from '../primitives/withProvider';
 import {
   ChatComposerBeforeSendProvider,
   useSendsBlocked,
@@ -39,9 +40,8 @@ export interface ChatComposerState {
    * sending is not currently possible (see {@link canSend}).
    *
    * Registered pre-send vetoes are consulted first (see
-   * {@link useRegisterBeforeSend}), so a host policy covers any surface that
-   * sends, not just the one that installed it. In session mode a session is
-   * created if none is active, after the vetoes pass.
+   * {@link useRegisterBeforeSend}). In session mode a session is created if
+   * none is active, after the vetoes pass.
    */
   send: (text?: string) => void;
   /** Cancels the in-flight run, if any. A no-op when nothing is running. */
@@ -63,15 +63,14 @@ export interface ChatComposerState {
    * True when an API key must be supplied before sending can succeed.
    *
    * Always `false` in local-agent mode, and in session mode when a
-   * custom-model factory supplies the model along with its own credentials
-   * (see the slice's `requiresApiKey`), so a proxy-backed app sees no prompt.
+   * custom-model factory supplies its own credentials (see the slice's
+   * `requiresApiKey`).
    */
   needsApiKey: boolean;
   /**
-   * True while some surface has blocked sending outright — a composer swapped
-   * to credential entry, say. Already folded into {@link canSend}; read it
-   * directly for controls that ignore `canSend`, such as a suggestion row
-   * carrying its own text.
+   * True while a surface has blocked sending outright (credential entry, say).
+   * Already folded into {@link canSend}; read directly for controls that carry
+   * their own text.
    */
   sendBlocked: boolean;
 }
@@ -86,10 +85,8 @@ function useSessionComposerState(): ChatComposerState {
   // stream in, which would re-render every composer on each token.
   const sessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
 
-  // One selector, and it short-circuits: `requiresApiKey()` invokes the host's
-  // custom-model factory, and this runs on every store update — once per
-  // streamed token. A usable key already answers the question, so the factory
-  // is only consulted when there isn't one.
+  // Short-circuits: `requiresApiKey()` invokes the host's factory, and this
+  // selector re-runs once per streamed token.
   const needsApiKey = useStoreWithAi((s) => {
     const apiKey = s.ai.getApiKeyFromSettings();
     const hasUsableKey = apiKey.trim().length > 0 && !s.ai.hasApiKeyError();
@@ -266,22 +263,12 @@ const composerContext = createDualModeChatContext<ChatComposerState>({
   useLocalAgentState: useLocalAgentComposerState,
 });
 
-/**
- * Wraps a state provider in the pre-send veto registry, which has to sit above
- * it: the provider builds `send`, and `send` consults the registry.
- */
-function withBeforeSend(
+/** Mounts the veto registry above a state provider, since `send` reads it. */
+const withBeforeSend = (
   Provider: FC<PropsWithChildren>,
   displayName: string,
-): FC<PropsWithChildren> {
-  const Wrapped: FC<PropsWithChildren> = ({children}) => (
-    <ChatComposerBeforeSendProvider>
-      <Provider>{children}</Provider>
-    </ChatComposerBeforeSendProvider>
-  );
-  Wrapped.displayName = displayName;
-  return Wrapped;
-}
+): FC<PropsWithChildren> =>
+  withProvider(ChatComposerBeforeSendProvider, Provider, displayName);
 
 /**
  * Publishes normalized session-mode composer state. Rendered by `Chat.Root`.

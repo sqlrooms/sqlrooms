@@ -15,11 +15,9 @@ export type ChatSuggestionsRootProps = ComponentPropsWithoutRef<'div'> & {
    * and suggestions visibility should simply follow it, rather than
    * maintaining a second, possibly-disagreeing visibility flag.
    *
-   * Pair it with {@link onOpenChange}: while controlled, `Dismiss` and
-   * `VisibilityToggle` rendered inside this root report through that callback
-   * instead of writing the store this prop overrides. Without it they cannot
-   * affect what is rendered, which is the disagreement this prop exists to
-   * avoid.
+   * Pair with {@link onOpenChange}: while controlled, `Dismiss` and
+   * `VisibilityToggle` inside this root report through it instead of writing
+   * the store this prop overrides.
    */
   open?: boolean;
   /**

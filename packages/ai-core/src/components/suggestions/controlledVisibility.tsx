@@ -11,13 +11,10 @@ const ControlledVisibilityContext = createContext<ControlledVisibility | null>(
 );
 
 /**
- * Publishes a controlled `Root`'s `open`/`onOpenChange` pair to the visibility
- * controls beneath it, so `Dismiss` and `VisibilityToggle` write to the host's
- * state instead of the store the host has overridden.
- *
- * Renders no DOM. Controls rendered *outside* a controlled `Root` — a toggle in
- * the composer footer, say — see no override and keep targeting the store, so a
- * host controlling one list does not silently retarget unrelated controls.
+ * Publishes a controlled `Root`'s `open`/`onOpenChange` to `Dismiss` and
+ * `VisibilityToggle` beneath it, so they write the host's state rather than the
+ * overridden store. Controls *outside* a controlled root see no override and
+ * keep targeting the store.
  */
 export function ControlledVisibilityProvider({
   open,

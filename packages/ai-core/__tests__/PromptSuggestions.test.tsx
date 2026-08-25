@@ -290,7 +290,9 @@ describe('controlled visibility', () => {
       (b) => b.textContent === 'dismiss',
     )!;
 
-    // Reports the host's state, not the store's.
+    // Always `true` inside a controlled root, which renders nothing while
+    // hidden — the point of the assertion is that it reads the host's state
+    // rather than the store, which says `true` here too by construction.
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
 
     await act(async () => {

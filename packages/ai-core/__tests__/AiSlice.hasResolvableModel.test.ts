@@ -347,6 +347,31 @@ describe('AiSlice requiresApiKey', () => {
     expect(getCustomModel).toHaveBeenCalledTimes(1);
   });
 
+  it('re-probes after the AI settings change', () => {
+    // A conditional factory reads the settings, so a cache keyed only on the
+    // selection would answer "needs a key" for the store's lifetime and keep
+    // the inline key input showing after one was entered.
+    const withKey = createSettingsConfig([
+      {provider: 'openai', modelName: 'shared-model'},
+    ]);
+    withKey.providers['openai']!.apiKey = 'sk-entered-later';
+
+    let hasKey = false;
+    const store = createTestStore({
+      getCustomModel: () => (hasKey ? someModel : undefined),
+      aiSettingsConfig: createSettingsConfig([
+        {provider: 'openai', modelName: 'shared-model'},
+      ]),
+    });
+
+    expect(store.getState().ai.requiresApiKey()).toBe(true);
+
+    hasKey = true;
+    store.setState({aiSettings: {config: withKey}});
+
+    expect(store.getState().ai.requiresApiKey()).toBe(false);
+  });
+
   it('requires a key, and does not throw, when the factory throws', () => {
     // This runs inside a Zustand selector, so propagating would crash a render.
     const store = createTestStore({

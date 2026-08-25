@@ -712,8 +712,20 @@ for suggestions). See the "Composable composer and prompt-suggestions
 primitives" section of the [`@sqlrooms/ai-core` README](https://github.com/sqlrooms/sqlrooms/blob/main/packages/ai-core/README.md)
 for the full layering and API.
 
-Two behavior changes ship alongside the new primitives:
+Three behavior changes ship alongside the new primitives:
 
+- **`Chat.Composer`'s `onRun` is now a chat-wide pre-send veto, not a
+  per-control one.** It is registered on the composer state rather than wired
+  into the composer's own button and keymap, so it also runs for sends that
+  originate elsewhere under the same `<Chat>` root — clicking a prompt
+  suggestion, or a host calling `useChatComposer().send()`. This is deliberate:
+  a policy the composer enforces and a suggestion row bypasses is a policy two
+  surfaces disagree about. Two consequences to check: `onRun` may now fire for
+  a prompt the user never typed into the composer, and two `Chat.Composer`s
+  under one root share one registry, so both `onRun`s run for either surface's
+  sends (a duplicate warns in development). Give independent surfaces their own
+  `<Chat>` root. `onRun` is still skipped entirely when sending is not possible,
+  so it never fires for a send that does not happen.
 - **Local-agent `Enter` while streaming no longer stops the run.** It is now
   a no-op, matching session mode: `Enter` sends when ready, and never
   cancels a run in flight.

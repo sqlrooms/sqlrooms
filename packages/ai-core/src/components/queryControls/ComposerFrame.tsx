@@ -1,12 +1,6 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  type MouseEvent,
-  type ReactNode,
-} from 'react';
+import {useCallback, useRef, type MouseEvent, type ReactNode} from 'react';
 import {
   Input,
   Send,
@@ -61,14 +55,10 @@ export function ComposerFrame({
 
   useDelayedFocus(textareaRef);
 
-  // Registered on the composer state, not wired into this frame's controls, so
-  // it also covers sends originating elsewhere (a suggestion row). Chat-wide
-  // by design — see `useRegisterBeforeSend`.
+  // Registered on the composer state, not this frame's controls, so it also
+  // covers sends from elsewhere (a suggestion row).
   useRegisterBeforeSend(
-    useMemo(
-      () => (onRun ? (text: string) => onRun(text) !== false : undefined),
-      [onRun],
-    ),
+    onRun ? (text: string) => onRun(text) !== false : undefined,
     'onRun',
   );
 

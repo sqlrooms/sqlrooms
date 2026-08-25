@@ -6,12 +6,10 @@ export {
 } from './ChatComposerContext';
 export type {ChatComposerMode, ChatComposerState} from './ChatComposerContext';
 
-export {
-  ChatComposerBeforeSendProvider,
-  useRegisterBeforeSend,
-  useBlockSends,
-  useSendsBlocked,
-} from './beforeSend';
+// `ChatComposerBeforeSendProvider` and `useSendsBlocked` stay internal: the
+// state boundaries mount the provider, and `useChatComposer().sendBlocked` is
+// the public read.
+export {useRegisterBeforeSend, useBlockSends} from './beforeSend';
 export type {BeforeSendHandler} from './beforeSend';
 
 export {Input} from './Input';

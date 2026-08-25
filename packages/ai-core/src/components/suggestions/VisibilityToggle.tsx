@@ -19,9 +19,11 @@ export type ChatSuggestionsVisibilityToggleProps = Omit<
  * list itself — and stays in sync, because visibility lives in the normalized
  * state rather than a container-scoped context.
  *
- * Inside a controlled `Root`, both `aria-pressed` and the toggle follow that
- * root's `open`/`onOpenChange` instead of the store it overrides, so the
- * reported state cannot contradict what is rendered.
+ * Inside a controlled `Root`, writes through that root's `onOpenChange` rather
+ * than the store it overrides. Note that such a root renders nothing while
+ * hidden, so a toggle *inside* one can only ever close it and `aria-pressed`
+ * is always `true` there — {@link Dismiss} says that more plainly. Render the
+ * toggle outside the root for a control that can also re-open it.
  */
 export const VisibilityToggle = forwardRef<
   HTMLButtonElement,

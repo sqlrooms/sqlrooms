@@ -19,3 +19,4 @@ export {Dismiss} from './Dismiss';
 export type {ChatSuggestionsDismissProps} from './Dismiss';
 
 export {useControlledVisibility} from './controlledVisibility';
+export type {ControlledVisibility} from './controlledVisibility';

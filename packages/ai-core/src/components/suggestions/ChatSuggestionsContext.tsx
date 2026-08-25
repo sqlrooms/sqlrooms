@@ -32,21 +32,16 @@ export interface ChatSuggestionsState {
    */
   items: readonly string[];
   /**
-   * True when the chat has no messages *and* no in-progress prompt — in both
-   * modes, and including a draft typed before any session exists, which in
-   * session mode lives outside the session itself.
-   *
-   * A suitable predicate for a host that wants to show suggestions only on a
-   * genuinely empty chat. No `when`-style prop is provided for this; branch on
-   * this flag instead.
+   * True when the chat has no messages and no in-progress prompt, in both
+   * modes — including a draft typed before any session exists. Branch on this
+   * instead of a `when`-style prop.
    */
   isSessionEmpty: boolean;
   /** Writes `text` into the prompt without sending it. */
   fill: (text: string) => void;
   /**
    * Sends `text` immediately, subject to {@link isReadyToSend}. Routed through
-   * the composer's `send`, so any pre-send veto a host registered applies here
-   * too — a suggestion cannot bypass a policy the composer enforces.
+   * the composer's `send`, so pre-send vetoes apply.
    */
   send: (text: string) => void;
   /**
@@ -56,11 +51,8 @@ export interface ChatSuggestionsState {
    * requirement, which is the wrong question for an item supplying its own
    * text.
    *
-   * Built on `sendBlocked` rather than `needsApiKey`: the latter is also true
-   * for apps needing no browser key at all (a remote `chatEndPoint`, or no
-   * `@sqlrooms/ai-settings` slice), so gating on it would disable suggestions
-   * that work fine. A composer swapped to credential entry blocks sends
-   * chat-wide instead, which disables the row rather than letting it no-op.
+   * Built on `sendBlocked`, not `needsApiKey`: the latter is also true for apps
+   * needing no browser key (remote `chatEndPoint`, no ai-settings slice).
    */
   isReadyToSend: boolean;
 }
@@ -83,9 +75,8 @@ type SuggestionsSource = Pick<
    */
   hasSendableTarget: boolean;
   /**
-   * The message half of {@link ChatSuggestionsState.isSessionEmpty}. The prompt
-   * half comes from the composer's normalized prompt, which already accounts
-   * for a draft typed before a session exists.
+   * The message half of {@link ChatSuggestionsState.isSessionEmpty}; the prompt
+   * half comes from the composer.
    */
   hasNoMessages: boolean;
 };

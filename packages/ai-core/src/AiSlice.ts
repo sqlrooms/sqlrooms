@@ -92,6 +92,9 @@ const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
 export type {ForkSessionFromMessageArgs} from './chatSessionForking';
 
+/** A resolved provider/model pair — what the next send would actually use. */
+export type ModelSelection = {modelProvider: string; model: string};
+
 export type AiSliceState = {
   ai: {
     initialize?: () => Promise<void>;
@@ -194,7 +197,7 @@ export type AiSliceState = {
      * lazily created session would receive. Useful before any session exists,
      * e.g. to know which provider a first-time API key belongs to.
      */
-    getSelectedModel: () => {modelProvider: string; model: string};
+    getSelectedModel: () => ModelSelection;
     /**
      * Whether a model is resolvable by *any* configured path: a custom-model
      * factory supplied to {@link AiSliceOptions.getCustomModel}, or — once a
@@ -213,17 +216,15 @@ export type AiSliceState = {
     /**
      * Whether the model resolution path in effect needs a browser-held API key.
      *
-     * `false` only when {@link AiSliceOptions.getCustomModel} is configured
-     * *and currently returns a model*, which carries its own credentials.
-     * `true` otherwise — including when a configured factory returns
-     * `undefined`, since the transport then falls back to the built-in
-     * OpenAI-compatible client, which does consume the key.
+     * `false` only when a `chatEndPoint` is configured (the request is sent
+     * server-side), or when {@link AiSliceOptions.getCustomModel} is configured
+     * *and currently returns a model*, which carries its own credentials. A
+     * factory returning `undefined` still needs one: the transport then falls
+     * back to the built-in OpenAI-compatible client.
      *
-     * **Unlike {@link AiSliceState.ai.hasResolvableModel}, this invokes the
-     * factory**, discarding the result. Deliberate: guessing optimistically
-     * about readiness only risks a failed send, but guessing optimistically
-     * about credentials hides the only UI for entering one. Keep the factory
-     * cheap and idempotent — it is called during render.
+     * Unlike {@link AiSliceState.ai.hasResolvableModel} this **invokes the
+     * factory**, so keep it cheap — it is called during render. The result is
+     * cached per selection and retired when the AI settings change.
      */
     requiresApiKey: () => boolean;
     /**
@@ -404,30 +405,33 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
 }
 
 /**
- * Calls `getCustomModel` at most once per resolved provider/model pair.
+ * Caches `getCustomModel` per resolved selection, for the settings it was
+ * probed under.
  *
- * `requiresApiKey()` needs to know whether the factory actually yields a model,
- * but it is read from a selector that re-runs on every store mutation — once
- * per streamed token — and the apps that configure a factory are exactly the
- * ones with no API key, so no cheap short-circuit covers them. The factory
- * takes no arguments and its result is documented as pre-constructed, so the
- * resolved selection is the only input it can legitimately vary on; caching on
- * that collapses per-token calls to one without changing the answer.
- *
- * A throwing factory is cached as `undefined`, i.e. "a key is needed": showing
- * key entry needlessly is recoverable, hiding it is not, and this must never
- * throw out of a selector.
+ * `requiresApiKey()` is read from a selector that re-runs once per streamed
+ * token, and the apps configuring a factory are exactly the ones with no API
+ * key, so no key-based short-circuit covers them. A zero-argument factory can
+ * only vary on the selection and on the settings it reads, so those are the
+ * cache key. A throwing factory caches as `undefined` ("a key is needed") —
+ * this must never throw out of a selector.
  */
 function createCustomModelProbe(
   getCustomModel: (() => LanguageModel | undefined) | undefined,
 ) {
-  // Keyed rather than single-slot: switching A -> B -> A must not re-invoke a
-  // possibly side-effecting factory for A. Bounded by the number of distinct
-  // provider/model pairs a session actually selects.
+  // Keyed, not single-slot: A -> B -> A must not re-invoke the factory for A.
   const cache = new Map<string, LanguageModel | undefined>();
+  let probedSettings: unknown;
 
-  return (selection: {modelProvider: string; model: string}) => {
+  return (selection: ModelSelection, settingsConfig: unknown) => {
     if (!getCustomModel) return undefined;
+    // A conditional factory reads the settings — a key entered later, a
+    // provider reconfigured — so a new settings object retires every answer.
+    // Streaming mutates sessions, not settings, so the per-token case still
+    // hits the cache.
+    if (settingsConfig !== probedSettings) {
+      cache.clear();
+      probedSettings = settingsConfig;
+    }
     const key = `${selection.modelProvider}\u0000${selection.model}`;
     // `has`, not a truthiness check: `undefined` is a cached answer ("a key is
     // needed"), not a cache miss.
@@ -663,7 +667,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     const getResolvedModelSelection = (
       candidateProvider?: string,
       candidateModel?: string,
-    ): {modelProvider: string; model: string} => {
+    ): ModelSelection => {
       const availableModels = getAvailableModels?.() ?? [];
       const modelIsAvailable = (
         provider: string | undefined,
@@ -1158,7 +1162,13 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           // never holds a provider key regardless of how the model resolves.
           if (chatEndPoint.trim().length > 0) return false;
           if (typeof getCustomModel !== 'function') return true;
-          return customModelProbe(get().ai.getSelectedModel()) === undefined;
+          const state = get();
+          return (
+            customModelProbe(
+              state.ai.getSelectedModel(),
+              hasAiSettingsConfig(state) ? state.aiSettings.config : undefined,
+            ) === undefined
+          );
         },
 
         /**

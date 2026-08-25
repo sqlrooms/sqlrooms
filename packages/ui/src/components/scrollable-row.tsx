@@ -2,39 +2,29 @@ import {ChevronLeft, ChevronRight} from 'lucide-react';
 import React, {useEffect, useRef, useState} from 'react';
 import {cn} from '../lib/utils';
 
-/**
- * Props for {@link ScrollableRow}. Any other `div` prop is spread onto the
- * outer wrapper, so the component composes through a slot.
- */
 type ScrollableRowProps = {
   children: React.ReactNode;
-  /** Classes for the outer wrapper, which positions the arrows. */
   className?: string;
-  /** Classes for the inner horizontally scrolling container. */
   scrollClassName?: string;
   /**
-   * Ref to the inner scrolling container, for reading or driving its scroll
-   * position. Distinct from the component's forwarded ref, which points at the
-   * outer wrapper — see {@link ScrollableRow}.
+   * Ref to the inner scrolling container. Replaces the internal ref; the
+   * arrows keep working.
    */
   scrollRef?: React.RefObject<HTMLDivElement>;
   /** Pixels scrolled per arrow activation. Defaults to 200. */
   scrollAmount?: number;
-  /** Whether the arrows appear on hover only, or stay visible. */
   arrowVisibility?: 'hover' | 'always';
   arrowClassName?: string;
   arrowIconClassName?: string;
 } & Omit<React.ComponentPropsWithoutRef<'div'>, 'children' | 'className'>;
 
 /**
- * A horizontally scrolling row with overflow-aware previous/next arrows, which
- * appear only in the direction there is more content.
+ * A horizontally scrolling row with arrows that appear only where there is more
+ * content.
  *
- * **Two refs, two elements.** The forwarded ref is the **outer wrapper** (which
- * also takes `className` and extra `div` props), so wrapping this in a Radix
- * `Slot` or a drop target works. `scrollRef` is the **inner scrolling
- * container**, for reading or setting `scrollLeft`; supplying it replaces the
- * internal ref, and the arrows keep working either way.
+ * The forwarded ref and `className` target the outer wrapper (so `Slot` or
+ * drop-target wrapping works); `scrollRef` targets the inner scrolling
+ * container.
  */
 export const ScrollableRow = React.forwardRef<
   HTMLDivElement,

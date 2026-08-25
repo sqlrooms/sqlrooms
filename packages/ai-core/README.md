@@ -245,10 +245,20 @@ Suggestions primitives:
   default; pass `submit` to send immediately instead. Disabled whenever
   `isReadyToSend` is `false`.
 - **`VisibilityToggle`** — toggles visibility; exposes `aria-pressed` for
-  styling pressed/unpressed, following a controlled `Root`'s `open` when
-  inside one so the reported state cannot contradict what is rendered.
+  styling pressed/unpressed. Inside a controlled `Root` it writes through
+  `onOpenChange` rather than the overridden store, but since such a root
+  renders nothing while hidden it can only close from there — render it
+  outside the root for a control that also re-opens.
 - **`Dismiss`** — hides suggestions unconditionally (unlike
   `VisibilityToggle`, it never re-shows them).
+
+`useControlledVisibility()` returns the nearest controlled `Root`'s
+`{visible, setVisible}`, or `null` when visibility is owned by the normalized
+store. A host writing its own visibility control needs it: writing
+`usePromptSuggestions().setVisible(false)` directly has no effect inside a
+controlled root, whose `open` overrides the store. Prefer the controlled state
+when it is present and fall back to the store otherwise, which is what
+`Dismiss` and `VisibilityToggle` do.
 
 None of the suggestions primitives carry position, size, overflow,
 truncation, or tooltip styling — a host's own vertical list, popover, or

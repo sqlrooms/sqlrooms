@@ -22,14 +22,12 @@ import {
   VisibilityToggle,
 } from './suggestions';
 import {usePromptSuggestions} from './suggestions/ChatSuggestionsContext';
+import {withProvider} from './primitives/withProvider';
 
 /**
- * Whether `node` would render anything — `null`, `false`, `[]` and fragments
- * containing only those do not.
- *
- * `Children.toArray` drops nullish and boolean children but does **not**
- * flatten fragments, so `<>{false}</>` counts as one child. Hence the
- * recursion: `<>{ready && <Item />}</>` is the ordinary conditional shape.
+ * Whether `node` renders anything. `Children.toArray` drops nullish and boolean
+ * children but does not flatten fragments, hence the recursion for the ordinary
+ * `<>{ready && <Item />}</>` shape.
  */
 function hasRenderableContent(node: ReactNode): boolean {
   return Children.toArray(node).some((child) =>
@@ -53,6 +51,16 @@ type PromptSuggestionsContainerProps = PropsWithChildren<{
 }>;
 
 /**
+ * Wraps a styled entry point so it works with no `<Chat>` ancestor, matching
+ * `QueryControls`.
+ */
+const withSuggestionsBoundary = <TProps extends object>(
+  Component: React.FC<TProps>,
+  displayName: string,
+): React.FC<TProps> =>
+  withProvider(ChatSuggestionsStateBoundary, Component, displayName);
+
+/**
  * SQLRooms' default prompt-suggestions recipe: a full-width vertical list with
  * a bounded max height and internal scrolling, built from {@link Root},
  * {@link Item}, {@link Dismiss} and {@link usePromptSuggestions}.
@@ -62,24 +70,6 @@ type PromptSuggestionsContainerProps = PropsWithChildren<{
  * {@link Root}, so a host embedding the primitives picks its own height
  * policy.
  */
-/**
- * Wraps a styled entry point so it works with no `<Chat>` ancestor, matching
- * `QueryControls`. These are public API that previously read the AI store
- * directly, so requiring a chat root would break existing standalone use.
- */
-function withSuggestionsBoundary<TProps extends object>(
-  Component: React.FC<TProps>,
-  displayName: string,
-): React.FC<TProps> {
-  const Wrapped: React.FC<TProps> = (props) => (
-    <ChatSuggestionsStateBoundary>
-      <Component {...props} />
-    </ChatSuggestionsStateBoundary>
-  );
-  Wrapped.displayName = displayName;
-  return Wrapped;
-}
-
 const ContainerBody: React.FC<PromptSuggestionsContainerProps> = ({
   isLoading = false,
   className,
@@ -87,14 +77,14 @@ const ContainerBody: React.FC<PromptSuggestionsContainerProps> = ({
 }) => {
   const suggestions = usePromptSuggestions();
 
-  // Emptiness is decided on *renderable* content, so a host's conditional that
-  // renders nothing does not count as an explicit empty list — which would
-  // leave the frame and its dismiss button wrapped around nothing.
-  const content = hasRenderableContent(children)
+  // A host conditional that renders nothing is not an explicit empty list —
+  // the frame and its dismiss button would wrap nothing.
+  const hasChildren = hasRenderableContent(children);
+  const content = hasChildren
     ? children
     : suggestions.items.map((text) => <RecipeItem key={text} text={text} />);
 
-  if (!isLoading && !hasRenderableContent(content)) {
+  if (!isLoading && !hasChildren && suggestions.items.length === 0) {
     return null;
   }
 

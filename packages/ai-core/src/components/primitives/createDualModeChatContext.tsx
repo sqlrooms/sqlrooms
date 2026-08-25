@@ -93,12 +93,9 @@ export function createDualModeChatContext<TState>({
     const runtime = useChatRuntime();
     if (provided) return <>{children}</>;
 
-    // Dispatch on the surrounding runtime, not on session mode unconditionally:
-    // a host may render `LocalAgentChatRuntimeProvider` directly without either
-    // `Chat` root, and defaulting to session there would read an AI slice that
-    // such a store need not have.
-    // `BoundaryOuter` wraps either branch: the suggestions context depends on
-    // composer state being published first, in both modes.
+    // Dispatch on the runtime: a host may mount `LocalAgentChatRuntimeProvider`
+    // without either `Chat` root, and session mode would read an absent AI
+    // slice. `BoundaryOuter` wraps either branch.
     const inner =
       runtime.mode === 'local-agent' ? (
         <LocalAgentProvider>{children}</LocalAgentProvider>
