@@ -26,7 +26,10 @@ function host(overrides: Partial<CreateOrUpdateDeckMapResourceHost> = {}) {
     updateBlockMetadata: jest.fn(),
     ensureMap: jest.fn(),
     writeMap: jest.fn(),
-    findTable: jest.fn(() => ({tableIdentity: 'main.places'})),
+    findTable: jest.fn(() => ({
+      tableIdentity: 'main.places',
+      columns: [{name: 'longitude'}, {name: 'latitude'}],
+    })),
     ...overrides,
   };
   return value;
@@ -95,11 +98,154 @@ describe('createOrUpdateDeckMapResource', () => {
     });
   });
 
+  test('normalizes serialized point-layer bindings before writing', async () => {
+    const h = host();
+    const serializedConfig: DeckMapConfig = {
+      spec: JSON.stringify({
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              longitudeColumn: 'old_lon',
+              latitudeColumn: 'old_lat',
+            },
+          },
+        ],
+      }),
+      datasets: {places: {source: {tableName: 'places'}}},
+    };
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config: serializedConfig,
+      pointBinding: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+        geometryColumn: 'geom',
+      },
+      createMapId: () => 'map-1',
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          spec: {
+            layers: [
+              expect.objectContaining({
+                _sqlroomsBinding: {
+                  dataset: 'places',
+                  geometryColumn: 'geom',
+                },
+              }),
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
+  test('rejects point geometry aliases that collide with source columns', async () => {
+    const h = host({
+      findTable: jest.fn(() => ({
+        tableIdentity: 'main.places',
+        columns: [
+          {name: 'longitude'},
+          {name: 'latitude'},
+          {name: '__sqlrooms_geom'},
+        ],
+      })),
+    });
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding geometryColumn "__sqlrooms_geom" conflicts with an existing source column.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('rejects missing point coordinate columns before writing', async () => {
+    const h = host();
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'lon',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding longitudeColumn "lon" was not found in source columns.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
+  test('rejects a selected table that would override the point-bound source', async () => {
+    const h = host({
+      findTable: jest.fn((tableName) => {
+        if (tableName === 'places') {
+          return {
+            tableIdentity: 'main.places',
+            columns: [{name: 'longitude'}, {name: 'latitude'}],
+          };
+        }
+        if (tableName === 'cities') {
+          return {
+            tableIdentity: 'main.cities',
+            columns: [{name: 'longitude'}, {name: 'latitude'}],
+          };
+        }
+        return undefined;
+      }),
+    });
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        tableName: 'cities',
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding dataset "places" resolves to table "main.places", but selected table "main.cities" would override it.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
   test('canonicalizes table-backed dataset sources before writing', async () => {
     const h = host({
       findTable: jest.fn((tableName) =>
         tableName === 'analytics.events'
-          ? {tableIdentity: '"analytics"."events"'}
+          ? {
+              tableIdentity: '"analytics"."events"',
+              columns: [{name: 'longitude'}, {name: 'latitude'}],
+            }
           : undefined,
       ),
     });

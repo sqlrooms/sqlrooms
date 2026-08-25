@@ -851,6 +851,7 @@ When authoring a document map config, use the resource-native Deck JSON contract
 - Every dataset must define source.tableName, source.tableName plus source.transformSql, or source.sqlQuery. Never put sql directly on the dataset object.
 - Bind every layer to a dataset with _sqlroomsBinding.dataset. Never use data: "@@#datasetId" or an implicit single-dataset binding as a durable resource binding.
 - Use supported Deck JSON layer classes such as GeoArrowScatterplotLayer, GeoArrowHeatmapLayer, GeoArrowPolygonLayer, GeoArrowPathLayer, GeoArrowTripsLayer, GeoArrowArcLayer, GeoArrowColumnLayer, GeoArrowH3HexagonLayer, or GeoJsonLayer. Prefer typed GeoArrow* layers when geometry type is known; GeoJsonLayer is valid for table-backed WKB/GeoJSON via _sqlroomsBinding.
+- For a standard table-backed longitude/latitude point map, pass the tool's top-level pointBinding with dataset, longitudeColumn, and latitudeColumn. Do not author transformSql, geometryColumn, geometryEncodingHint, or layer geometryColumn for that dataset; the resource writer generates and aligns canonical WKB point geometry. Set geometryColumn in pointBinding only when the default __sqlrooms_geom name is unsuitable.
 ${getDeckMapSharedAiContractRules()}
 - For table-backed datasets, also pass the same table through the tool's top-level tableName field. A selected table does not replace the required dataset source.
 - transformSql must be a single SELECT and must read from __sqlrooms_source. Use source.sqlQuery only for a standalone pinned query.
@@ -862,5 +863,5 @@ ${getDeckMapSharedAiContractRules()}
 - If a map write reports an invalid resource config, repair the reported paths and retry the same direct map operation; do not replace it with a dashboard-backed map.
 
 Minimal table-backed point map shape:
-{"configMode":"basic","datasets":{"places":{"source":{"tableName":"places"},"geometryColumn":"geom","geometryEncodingHint":"wkb"}},"spec":{"layers":[{"@@type":"GeoArrowScatterplotLayer","id":"places","_sqlroomsBinding":{"dataset":"places","geometryColumn":"geom"},"getRadius":4,"radiusUnits":"pixels","pickable":true}]},"fitToData":{"dataset":"places","geometryColumn":"geom"}}`;
+{"tableName":"places","pointBinding":{"dataset":"places","longitudeColumn":"longitude","latitudeColumn":"latitude"},"config":{"configMode":"basic","datasets":{"places":{"source":{"tableName":"places"}}},"spec":{"layers":[{"@@type":"GeoArrowScatterplotLayer","id":"places","_sqlroomsBinding":{"dataset":"places"},"getRadius":4,"radiusUnits":"pixels","pickable":true}]}}}`;
 }

@@ -1,5 +1,6 @@
 import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
+  applyDeckMapPointBinding,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
   regenerateMapConfigForTable,
@@ -26,6 +27,122 @@ describe('normalizeDeckMapPointConfig', () => {
       }),
     ).toContain(DECK_TABLE_DATASET_SOURCE_RELATION);
   });
+
+  it('applies structured point provenance with canonical SQL and bindings', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoJsonLayer',
+            id: 'places',
+            getPosition: '@@=[old_lon, old_lat]',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              longitudeColumn: 'old_lon',
+              latitudeColumn: 'old_lat',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            sqlQuery: 'SELECT * FROM archived_places',
+            transformSql:
+              'SELECT ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+          },
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'old_lon',
+        latitudeColumn: 'old_lat',
+      },
+      interaction: {
+        type: 'point-radius-brush' as const,
+        dataset: 'places',
+        longitudeColumn: 'old_lon',
+        latitudeColumn: 'old_lat',
+        radiusMeters: 1000,
+      },
+    };
+
+    const next = applyDeckMapPointBinding({
+      config,
+      pointBinding: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+        geometryColumn: 'geom',
+      },
+      sourceColumns: placesTable.columns,
+    });
+
+    expect(next.datasets.places).toEqual({
+      source: {
+        tableName: 'places',
+        transformSql: createDeckMapPointTransformSql({
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: 'geom',
+        }),
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    });
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'places',
+      geometryColumn: 'geom',
+    });
+    expect(next.spec.layers[0]).not.toHaveProperty('getPosition');
+    expect(next.fitToData).toEqual({
+      dataset: 'places',
+      geometryColumn: 'geom',
+    });
+    expect(next.interaction).toEqual({
+      type: 'point-radius-brush',
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+      radiusMeters: 1000,
+    });
+  });
+
+  it.each([
+    {
+      bindingName: 'longitudeColumn',
+      longitudeColumn: 'missing_longitude',
+      latitudeColumn: 'latitude',
+    },
+    {
+      bindingName: 'latitudeColumn',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'missing_latitude',
+    },
+  ])(
+    'rejects a missing $bindingName before generating point SQL',
+    ({bindingName, longitudeColumn, latitudeColumn}) => {
+      expect(() =>
+        applyDeckMapPointBinding({
+          config: {
+            spec: {layers: []},
+            datasets: {places: {source: {tableName: 'places'}}},
+          },
+          pointBinding: {
+            dataset: 'places',
+            longitudeColumn,
+            latitudeColumn,
+          },
+          sourceColumns: placesTable.columns,
+        }),
+      ).toThrow(
+        `Point binding ${bindingName} "${
+          bindingName === 'longitudeColumn' ? longitudeColumn : latitudeColumn
+        }" was not found in source columns.`,
+      );
+    },
+  );
 
   it('injects transformSql and geometry bindings for lon/lat table sources', () => {
     const config = {

@@ -6,6 +6,11 @@ import {
   hasSqlOnlyDatasetSource,
 } from './datasetSourceUtils';
 import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
+import {
+  applyDeckMapPointBinding,
+  type DeckMapConfigColumn,
+  type DeckMapPointBinding,
+} from './mapConfigUtils';
 
 /**
  * Host callbacks used to coordinate a durable Deck map resource with its block
@@ -40,7 +45,11 @@ export type CreateOrUpdateDeckMapResourceHost = {
     config: DeckMapConfig;
     selectedTable?: string;
   }) => void | Promise<void>;
-  findTable: (tableName: string) => {tableIdentity: string} | undefined;
+  findTable: (
+    tableName: string,
+  ) =>
+    | {tableIdentity: string; columns: readonly DeckMapConfigColumn[]}
+    | undefined;
   prepareConfig?: (options: {
     config: DeckMapConfig;
     existingMapConfig?: DeckMapConfig;
@@ -54,6 +63,8 @@ export type CreateOrUpdateDeckMapResourceHost = {
 export type CreateOrUpdateDeckMapResourceParams = {
   blockDocumentId: string;
   config: DeckMapConfig;
+  /** Generates canonical point geometry from structured lon/lat provenance. */
+  pointBinding?: DeckMapPointBinding;
   mapId?: string;
   tableName?: string;
   title?: string;
@@ -142,7 +153,31 @@ export async function createOrUpdateDeckMapResource(
         replaceDatasets: params.replaceDatasets,
       })
     : params.config;
-  const resolvedConfig = resolveTableDatasetSources(host, preparedConfig);
+  const pointBindingDataset = params.pointBinding
+    ? preparedConfig.datasets[params.pointBinding.dataset.trim()]
+    : undefined;
+  const pointBindingTable = isDeckMapTableDatasetSource(
+    pointBindingDataset?.source,
+  )
+    ? host.findTable(pointBindingDataset.source.tableName)
+    : undefined;
+  if (
+    params.pointBinding &&
+    isDeckMapTableDatasetSource(pointBindingDataset?.source) &&
+    !pointBindingTable
+  ) {
+    throw new Error(
+      `Dataset "${params.pointBinding.dataset.trim()}" table "${pointBindingDataset.source.tableName}" was not found.`,
+    );
+  }
+  const pointBoundConfig = params.pointBinding
+    ? applyDeckMapPointBinding({
+        config: preparedConfig,
+        pointBinding: params.pointBinding,
+        sourceColumns: pointBindingTable?.columns ?? [],
+      })
+    : preparedConfig;
+  const resolvedConfig = resolveTableDatasetSources(host, pointBoundConfig);
   assertDeckMapResourceConfig(resolvedConfig);
   const tableName =
     requestedTable ?? getFirstDatasetSourceTableName(resolvedConfig);
@@ -159,6 +194,20 @@ export async function createOrUpdateDeckMapResource(
   const table = tableName ? host.findTable(tableName) : undefined;
   if (tableName && !table)
     throw new Error(`Table "${tableName}" was not found.`);
+  const tableDatasetCount = Object.values(resolvedConfig.datasets).filter(
+    (dataset) => isDeckMapTableDatasetSource(dataset.source),
+  ).length;
+  if (
+    params.pointBinding &&
+    tableDatasetCount === 1 &&
+    pointBindingTable &&
+    table &&
+    pointBindingTable.tableIdentity !== table.tableIdentity
+  ) {
+    throw new Error(
+      `Point binding dataset "${params.pointBinding.dataset.trim()}" resolves to table "${pointBindingTable.tableIdentity}", but selected table "${table.tableIdentity}" would override it.`,
+    );
+  }
 
   const caption =
     params.caption?.trim() ||

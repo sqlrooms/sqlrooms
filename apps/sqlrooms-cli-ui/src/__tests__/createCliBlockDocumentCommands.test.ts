@@ -1,4 +1,5 @@
 import {jest} from '@jest/globals';
+import {createDeckMapPointTransformSql} from '@sqlrooms/deck';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {createCliBlockDocumentCommands} from '../createCliBlockDocumentCommands';
 import {
@@ -232,6 +233,67 @@ describe('createCliBlockDocumentCommands', () => {
         String(id).startsWith('dashboard.'),
       ),
     ).toBe(false);
+  });
+
+  it('generates canonical point geometry from structured provenance', async () => {
+    const {state, mapsById} = setup();
+    const result = await command('block-document.add-map-block').execute(
+      {getState: () => state} as any,
+      {
+        blockDocumentId: 'document-1',
+        title: 'Earthquake Points',
+        tableName: 'earthquakes',
+        pointBinding: {
+          dataset: 'earthquakes',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: 'geom',
+        },
+        config: {
+          datasets: {
+            earthquakes: {
+              source: {
+                tableName: 'earthquakes',
+                transformSql:
+                  'SELECT * EXCLUDE (latitude, longitude), ST_AsWKB(ST_Point(longitude, latitude)) AS geom FROM __sqlrooms_source',
+              },
+            },
+          },
+          spec: {
+            layers: [
+              {
+                '@@type': 'GeoArrowScatterplotLayer',
+                _sqlroomsBinding: {dataset: 'earthquakes'},
+              },
+            ],
+          },
+        },
+      },
+    );
+
+    expect(result).toMatchObject({success: true});
+    const mapId = (result as any).data.mapId as string;
+    const config = mapsById[mapId].config;
+    expect(config.datasets.earthquakes).toMatchObject({
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+      source: {
+        tableName: '"main"."earthquakes"',
+        transformSql: createDeckMapPointTransformSql({
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: 'geom',
+        }),
+      },
+    });
+    expect(config.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'earthquakes',
+      geometryColumn: 'geom',
+    });
+    expect(config.fitToData).toMatchObject({
+      dataset: 'earthquakes',
+      geometryColumn: 'geom',
+    });
   });
 
   it('updates document maps as resources without dashboard commands or panelId', async () => {

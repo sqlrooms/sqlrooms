@@ -447,7 +447,10 @@ export function createCliBlockDocumentCommands({
             findTable: (tableName) => {
               const table = state.db.findTable(tableName);
               return table
-                ? {tableIdentity: getTableIdentity(table.table)}
+                ? {
+                    tableIdentity: getTableIdentity(table.table),
+                    columns: table.columns,
+                  }
                 : undefined;
             },
             prepareConfig: ({
@@ -477,6 +480,7 @@ export function createCliBlockDocumentCommands({
           {
             blockDocumentId: params.blockDocumentId,
             config: params.config,
+            pointBinding: params.pointBinding,
             mapId: params.mapId,
             tableName: params.tableName,
             title: params.title,

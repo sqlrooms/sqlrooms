@@ -272,7 +272,16 @@ const DECK_MAP_POINT_LAYER_TYPES = new Set([
   'GeoArrowScatterplotLayer',
   'GeoArrowHeatmapLayer',
   'GeoArrowColumnLayer',
+  'GeoJsonLayer',
 ]);
+
+/** Structured provenance for a table-backed longitude/latitude point dataset. */
+export type DeckMapPointBinding = {
+  dataset: string;
+  longitudeColumn: string;
+  latitudeColumn: string;
+  geometryColumn?: string;
+};
 
 function isDeckMapConfigRecord(
   value: unknown,
@@ -326,11 +335,16 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
     const binding = isDeckMapConfigRecord(layer._sqlroomsBinding)
       ? layer._sqlroomsBinding
       : {};
+    const geometryBinding = {...binding};
+    delete geometryBinding.longitudeColumn;
+    delete geometryBinding.latitudeColumn;
+    const pointLayer = {...layer};
+    delete pointLayer.getPosition;
 
     return {
-      ...layer,
+      ...pointLayer,
       _sqlroomsBinding: {
-        ...binding,
+        ...geometryBinding,
         dataset:
           typeof binding.dataset === 'string'
             ? binding.dataset
@@ -341,6 +355,128 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
   });
 
   return (changed ? layers : options.layers) as T;
+}
+
+/**
+ * Applies a structured longitude/latitude point binding to a native Deck map
+ * config. The generated geometry SQL intentionally comes from the same
+ * canonical helper used by first-party map builders.
+ */
+export function applyDeckMapPointBinding<
+  T extends DeckMapDashboardPanelConfig,
+>(options: {
+  config: T;
+  pointBinding: DeckMapPointBinding;
+  sourceColumns: readonly DeckMapConfigColumn[];
+}): T {
+  const {config, pointBinding} = options;
+  const datasetId = pointBinding.dataset.trim();
+  const longitudeColumn = pointBinding.longitudeColumn.trim();
+  const latitudeColumn = pointBinding.latitudeColumn.trim();
+  if (!datasetId || !longitudeColumn || !latitudeColumn) {
+    throw new Error(
+      'Point binding requires dataset, longitudeColumn, and latitudeColumn.',
+    );
+  }
+
+  const dataset = config.datasets[datasetId];
+  if (!dataset) {
+    throw new Error(`Point binding references unknown dataset "${datasetId}".`);
+  }
+  if (!isDeckMapTableDatasetSource(dataset.source)) {
+    throw new Error(
+      `Point binding dataset "${datasetId}" must use source.tableName.`,
+    );
+  }
+
+  const geometryColumn =
+    pointBinding.geometryColumn?.trim() || DEFAULT_GEOMETRY_COLUMN;
+  const sourceColumnNames = new Set(
+    options.sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  for (const [bindingName, columnName] of [
+    ['longitudeColumn', longitudeColumn],
+    ['latitudeColumn', latitudeColumn],
+  ] as const) {
+    if (!sourceColumnNames.has(columnName.toLowerCase())) {
+      throw new Error(
+        `Point binding ${bindingName} "${columnName}" was not found in source columns.`,
+      );
+    }
+  }
+  if (sourceColumnNames.has(geometryColumn.toLowerCase())) {
+    throw new Error(
+      `Point binding geometryColumn "${geometryColumn}" conflicts with an existing source column.`,
+    );
+  }
+  const datasetIds = Object.keys(config.datasets);
+  let parsedSpec: unknown = config.spec;
+  if (typeof parsedSpec === 'string') {
+    try {
+      parsedSpec = JSON.parse(parsedSpec);
+    } catch {
+      // Durable resource validation reports the invalid serialized spec.
+    }
+  }
+  const spec = isDeckMapConfigRecord(parsedSpec)
+    ? {
+        ...parsedSpec,
+        ...(Array.isArray(parsedSpec.layers)
+          ? {
+              layers: normalizeDeckMapPointLayers({
+                layers: parsedSpec.layers,
+                datasetId,
+                datasetIds,
+                geometryColumn,
+              }),
+            }
+          : {}),
+      }
+    : parsedSpec;
+  let fitToData = config.fitToData;
+  if (isDeckMapConfigRecord(fitToData) && fitToData.dataset === datasetId) {
+    const geometryFit = {...fitToData};
+    delete geometryFit.longitudeColumn;
+    delete geometryFit.latitudeColumn;
+    delete geometryFit.geometryColumns;
+    delete geometryFit.h3Column;
+    fitToData = {...geometryFit, geometryColumn};
+  } else if (!fitToData) {
+    fitToData = {
+      dataset: datasetId,
+      geometryColumn,
+      padding: 40,
+      maxZoom: 12,
+    };
+  }
+  const interaction =
+    config.interaction?.type === 'point-radius-brush' &&
+    config.interaction.dataset === datasetId
+      ? {...config.interaction, longitudeColumn, latitudeColumn}
+      : config.interaction;
+
+  return {
+    ...config,
+    spec,
+    ...(interaction !== config.interaction ? {interaction} : {}),
+    datasets: {
+      ...config.datasets,
+      [datasetId]: {
+        ...dataset,
+        source: {
+          tableName: dataset.source.tableName,
+          transformSql: createDeckMapPointTransformSql({
+            longitudeColumn,
+            latitudeColumn,
+            geometryColumn,
+          }),
+        },
+        geometryColumn,
+        geometryEncodingHint: 'wkb',
+      },
+    },
+    fitToData,
+  } as T;
 }
 
 /**
