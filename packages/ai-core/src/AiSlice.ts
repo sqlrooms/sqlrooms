@@ -421,21 +421,24 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
 function createCustomModelProbe(
   getCustomModel: (() => LanguageModel | undefined) | undefined,
 ) {
-  let cachedKey: string | undefined;
-  let cachedModel: LanguageModel | undefined;
+  // Keyed rather than single-slot: switching A -> B -> A must not re-invoke a
+  // possibly side-effecting factory for A. Bounded by the number of distinct
+  // provider/model pairs a session actually selects.
+  const cache = new Map<string, LanguageModel | undefined>();
 
   return (selection: {modelProvider: string; model: string}) => {
     if (!getCustomModel) return undefined;
     const key = `${selection.modelProvider}\u0000${selection.model}`;
-    if (key !== cachedKey) {
-      cachedKey = key;
+    // `has`, not a truthiness check: `undefined` is a cached answer ("a key is
+    // needed"), not a cache miss.
+    if (!cache.has(key)) {
       try {
-        cachedModel = getCustomModel();
+        cache.set(key, getCustomModel());
       } catch {
-        cachedModel = undefined;
+        cache.set(key, undefined);
       }
     }
-    return cachedModel;
+    return cache.get(key);
   };
 }
 

@@ -316,6 +316,37 @@ describe('AiSlice requiresApiKey', () => {
     expect(getCustomModel).toHaveBeenCalledTimes(2);
   });
 
+  it('does not re-probe a selection it has already seen (A -> B -> A)', () => {
+    // A single-slot cache would re-invoke for A on the way back, repeating any
+    // side effect the factory has.
+    const getCustomModel = jest.fn<() => LanguageModel | undefined>(
+      () => someModel,
+    );
+    const store = createTestStore({getCustomModel});
+
+    store.getState().ai.requiresApiKey();
+    store.getState().ai.setAiModel('openai', 'model-b');
+    store.getState().ai.requiresApiKey();
+    store.getState().ai.setAiModel('openai', 'shared-model');
+    store.getState().ai.requiresApiKey();
+
+    expect(getCustomModel).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches an undefined answer rather than re-probing for it', () => {
+    // `undefined` means "a key is needed" — a real answer, not a cache miss.
+    const getCustomModel = jest.fn<() => LanguageModel | undefined>(
+      () => undefined,
+    );
+    const store = createTestStore({getCustomModel});
+
+    for (let i = 0; i < 10; i++) {
+      expect(store.getState().ai.requiresApiKey()).toBe(true);
+    }
+
+    expect(getCustomModel).toHaveBeenCalledTimes(1);
+  });
+
   it('requires a key, and does not throw, when the factory throws', () => {
     // This runs inside a Zustand selector, so propagating would crash a render.
     const store = createTestStore({
