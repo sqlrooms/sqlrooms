@@ -33,7 +33,7 @@ export type DualModeChatContextConfig<TState> = {
   /** Builds local-agent-mode state from an already-narrowed runtime. */
   useLocalAgentState: (runtime: LocalAgentChatRuntime) => TState;
   /**
-   * Rendered around the session provider inside the boundary, for state that
+   * Rendered around whichever provider the boundary mounts, for state that
    * depends on another context being published first.
    */
   BoundaryOuter?: FC<PropsWithChildren>;
@@ -52,10 +52,11 @@ export type DualModeChatContextConfig<TState> = {
  *
  * **Why the boundary dispatches, not the reader.** The session state hook
  * reads the AI slice, so it must not run in local-agent trees — which may have
- * no AI slice in their room store at all. Choosing in the boundary keeps that
+ * no AI slice in their room store at all. The boundary reads
+ * {@link useChatRuntime} and mounts the matching provider, keeping each mode's
  * hook inside a child that mounts as a unit, so a local-agent tree never
- * renders it. A reader that silently defaulted to session mode would reach for
- * a slice that isn't there.
+ * renders the session one. A reader that silently defaulted to session mode
+ * would reach for a slice that isn't there.
  */
 export function createDualModeChatContext<TState>({
   hookName,
@@ -89,9 +90,22 @@ export function createDualModeChatContext<TState>({
 
   const StateBoundary: FC<PropsWithChildren> = ({children}) => {
     const provided = useContext(Context);
+    const runtime = useChatRuntime();
     if (provided) return <>{children}</>;
-    const session = <SessionProvider>{children}</SessionProvider>;
-    return BoundaryOuter ? <BoundaryOuter>{session}</BoundaryOuter> : session;
+
+    // Dispatch on the surrounding runtime, not on session mode unconditionally:
+    // a host may render `LocalAgentChatRuntimeProvider` directly without either
+    // `Chat` root, and defaulting to session there would read an AI slice that
+    // such a store need not have.
+    // `BoundaryOuter` wraps either branch: the suggestions context depends on
+    // composer state being published first, in both modes.
+    const inner =
+      runtime.mode === 'local-agent' ? (
+        <LocalAgentProvider>{children}</LocalAgentProvider>
+      ) : (
+        <SessionProvider>{children}</SessionProvider>
+      );
+    return BoundaryOuter ? <BoundaryOuter>{inner}</BoundaryOuter> : inner;
   };
   StateBoundary.displayName = boundaryName;
 

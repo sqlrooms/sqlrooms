@@ -1,6 +1,7 @@
 import {Slot} from '@sqlrooms/ui';
 import {forwardRef, type ComponentPropsWithoutRef} from 'react';
 import {usePromptSuggestions} from './ChatSuggestionsContext';
+import {ControlledVisibilityProvider} from './controlledVisibility';
 
 /**
  * Props for {@link Root}.
@@ -13,8 +14,20 @@ export type ChatSuggestionsRootProps = ComponentPropsWithoutRef<'div'> & {
    * host's own popover, dropdown, or overlay already owns open/closed state
    * and suggestions visibility should simply follow it, rather than
    * maintaining a second, possibly-disagreeing visibility flag.
+   *
+   * Pair it with {@link onOpenChange}: while controlled, `Dismiss` and
+   * `VisibilityToggle` rendered inside this root report through that callback
+   * instead of writing the store this prop overrides. Without it they cannot
+   * affect what is rendered, which is the disagreement this prop exists to
+   * avoid.
    */
   open?: boolean;
+  /**
+   * Called by the visibility controls inside this root while {@link open} is
+   * provided. Ignored when uncontrolled, where those controls write the
+   * normalized store directly.
+   */
+  onOpenChange?: (open: boolean) => void;
 };
 
 /**
@@ -28,7 +41,7 @@ export type ChatSuggestionsRootProps = ComponentPropsWithoutRef<'div'> & {
  * carousel.
  */
 export const Root = forwardRef<HTMLDivElement, ChatSuggestionsRootProps>(
-  function Root({asChild, open, ...rest}, ref) {
+  function Root({asChild, open, onOpenChange, ...rest}, ref) {
     const suggestions = usePromptSuggestions();
     const isVisible = open ?? suggestions.visible;
 
@@ -36,6 +49,10 @@ export const Root = forwardRef<HTMLDivElement, ChatSuggestionsRootProps>(
 
     const Comp = asChild ? Slot : 'div';
 
-    return <Comp ref={ref} {...rest} />;
+    return (
+      <ControlledVisibilityProvider open={open} onOpenChange={onOpenChange}>
+        <Comp ref={ref} {...rest} />
+      </ControlledVisibilityProvider>
+    );
   },
 );

@@ -14,7 +14,13 @@ import {
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
-import {Dismiss, Item, Root, VisibilityToggle} from './suggestions';
+import {
+  ChatSuggestionsStateBoundary,
+  Dismiss,
+  Item,
+  Root,
+  VisibilityToggle,
+} from './suggestions';
 import {usePromptSuggestions} from './suggestions/ChatSuggestionsContext';
 
 /**
@@ -56,7 +62,25 @@ type PromptSuggestionsContainerProps = PropsWithChildren<{
  * {@link Root}, so a host embedding the primitives picks its own height
  * policy.
  */
-const Container: React.FC<PromptSuggestionsContainerProps> = ({
+/**
+ * Wraps a styled entry point so it works with no `<Chat>` ancestor, matching
+ * `QueryControls`. These are public API that previously read the AI store
+ * directly, so requiring a chat root would break existing standalone use.
+ */
+function withSuggestionsBoundary<TProps extends object>(
+  Component: React.FC<TProps>,
+  displayName: string,
+): React.FC<TProps> {
+  const Wrapped: React.FC<TProps> = (props) => (
+    <ChatSuggestionsStateBoundary>
+      <Component {...props} />
+    </ChatSuggestionsStateBoundary>
+  );
+  Wrapped.displayName = displayName;
+  return Wrapped;
+}
+
+const ContainerBody: React.FC<PromptSuggestionsContainerProps> = ({
   isLoading = false,
   className,
   children,
@@ -212,9 +236,19 @@ const PromptSuggestionsVisibilityToggle: FC<
  * <PromptSuggestions.VisibilityToggle />
  * ```
  */
+const Container = withSuggestionsBoundary(ContainerBody, 'PromptSuggestions');
+const BoundedItem = withSuggestionsBoundary(
+  RecipeItem,
+  'PromptSuggestions.Item',
+);
+const BoundedVisibilityToggle = withSuggestionsBoundary(
+  PromptSuggestionsVisibilityToggle,
+  'PromptSuggestions.VisibilityToggle',
+);
+
 export const PromptSuggestions = Object.assign(Container, {
   /** @deprecated Render `<PromptSuggestions>` directly. */
   Container,
-  Item: RecipeItem,
-  VisibilityToggle: PromptSuggestionsVisibilityToggle,
+  Item: BoundedItem,
+  VisibilityToggle: BoundedVisibilityToggle,
 });

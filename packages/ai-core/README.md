@@ -24,7 +24,7 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 
 Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
 
-Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` only when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. Keep the factory cheap and idempotent — it is called during render. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
+Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when a `chatEndPoint` is configured (the remote transport sends server-side, so no key reaches the browser), and `false` when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. The result is cached per resolved provider/model pair, so a mounted composer probes the factory once per selection rather than once per store update; keep it idempotent for a given selection. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
@@ -122,7 +122,8 @@ for hosts that need a different visual shape.
    size, overflow, truncation, or other visual styling of their own.
 3. **Recipes** — `Chat.Composer` and `Chat.PromptSuggestions`. SQLRooms' own
    opinionated, styled defaults, built entirely from the primitives above.
-   Most apps only need these.
+   Most apps only need these. Both supply their own state boundary, so they
+   also work under a bare `RoomStateProvider` with no `<Chat>` ancestor.
 
 Reach for a lower layer only when a recipe's fixed appearance does not fit —
 a host design system's own textarea, button, or list component, a
@@ -222,12 +223,18 @@ Suggestions primitives:
 
 - **`Root`** — visibility gate: renders nothing when suggestions are hidden,
   its child otherwise. Accepts an `open` override for hosts whose own
-  popover, dropdown, or overlay already owns open/closed state.
+  popover, dropdown, or overlay already owns open/closed state; pair it with
+  `onOpenChange`, since while controlled the `VisibilityToggle` and `Dismiss`
+  controls _inside_ this root report through that callback instead of writing
+  the store `open` overrides. Controls rendered outside a controlled root keep
+  targeting the store, so controlling one list does not retarget unrelated
+  toggles.
 - **`Item`** — a single suggestion. Fills the prompt on activation by
   default; pass `submit` to send immediately instead. Disabled whenever
   `isReadyToSend` is `false`.
 - **`VisibilityToggle`** — toggles visibility; exposes `aria-pressed` for
-  styling pressed/unpressed.
+  styling pressed/unpressed, following a controlled `Root`'s `open` when
+  inside one so the reported state cannot contradict what is rendered.
 - **`Dismiss`** — hides suggestions unconditionally (unlike
   `VisibilityToggle`, it never re-shows them).
 

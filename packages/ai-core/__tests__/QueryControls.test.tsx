@@ -16,6 +16,7 @@ import {
   mockChatRuntimeModule,
   renderTree,
   setMockRuntime,
+  setMockSessionRuntime,
   stubAnalysisActions,
   textarea,
   typeInto,
@@ -37,7 +38,9 @@ const {InlineApiKeyInput} = await import('../src/components/InlineApiKeyInput');
 
 describe('QueryControls — unified across runtime modes', () => {
   beforeEach(() => {
-    setMockRuntime();
+    // Session mode by default, as an unmocked tree would be; the local-agent
+    // tests install a local-agent runtime themselves.
+    setMockSessionRuntime();
   });
 
   it('sends in session mode', async () => {
@@ -445,6 +448,24 @@ describe('QueryControls — unified across runtime modes', () => {
     ).toBe(false);
 
     warn.mockRestore();
+    await cleanup(container, root);
+  });
+
+  it('follows a bare LocalAgentChatRuntimeProvider with no Chat root', async () => {
+    // A documented advanced path: the runtime provider used directly. The
+    // boundary must dispatch on the runtime, not assume session mode, or the
+    // composer reaches for an AI slice such a store need not have — there is no
+    // RoomStateProvider here at all.
+    const runtime = setMockRuntime({prompt: 'hello agent'});
+
+    const {container, root} = await renderTree(<QueryControls />);
+
+    await act(async () => {
+      fireKeyDown(textarea(container)!);
+    });
+
+    expect(runtime.sendPrompt).toHaveBeenCalledWith();
+
     await cleanup(container, root);
   });
 

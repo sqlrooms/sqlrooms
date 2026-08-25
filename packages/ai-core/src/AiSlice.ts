@@ -403,6 +403,42 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
   };
 }
 
+/**
+ * Calls `getCustomModel` at most once per resolved provider/model pair.
+ *
+ * `requiresApiKey()` needs to know whether the factory actually yields a model,
+ * but it is read from a selector that re-runs on every store mutation — once
+ * per streamed token — and the apps that configure a factory are exactly the
+ * ones with no API key, so no cheap short-circuit covers them. The factory
+ * takes no arguments and its result is documented as pre-constructed, so the
+ * resolved selection is the only input it can legitimately vary on; caching on
+ * that collapses per-token calls to one without changing the answer.
+ *
+ * A throwing factory is cached as `undefined`, i.e. "a key is needed": showing
+ * key entry needlessly is recoverable, hiding it is not, and this must never
+ * throw out of a selector.
+ */
+function createCustomModelProbe(
+  getCustomModel: (() => LanguageModel | undefined) | undefined,
+) {
+  let cachedKey: string | undefined;
+  let cachedModel: LanguageModel | undefined;
+
+  return (selection: {modelProvider: string; model: string}) => {
+    if (!getCustomModel) return undefined;
+    const key = `${selection.modelProvider}\u0000${selection.model}`;
+    if (key !== cachedKey) {
+      cachedKey = key;
+      try {
+        cachedModel = getCustomModel();
+      } catch {
+        cachedModel = undefined;
+      }
+    }
+    return cachedModel;
+  };
+}
+
 export function createAiSlice<TTools extends ToolSet = ToolSet>(
   params: AiSliceOptions<TTools>,
 ): StateCreator<AiSliceState> {
@@ -722,6 +758,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
     // Rehydrate toolTimings and agentProgress from persisted messages
     const initialRehydrated = rehydrateFromSessions(baseConfig);
+
+    const customModelProbe = createCustomModelProbe(getCustomModel);
 
     return {
       ai: {
@@ -1113,15 +1151,11 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
         },
 
         requiresApiKey: () => {
+          // A remote chat endpoint sends requests server-side, so the browser
+          // never holds a provider key regardless of how the model resolves.
+          if (chatEndPoint.trim().length > 0) return false;
           if (typeof getCustomModel !== 'function') return true;
-          try {
-            return getCustomModel() === undefined;
-          } catch {
-            // Must not throw: this runs in a selector, so it would crash a
-            // render. Assume a key is needed — showing key entry needlessly is
-            // recoverable, hiding it is not.
-            return true;
-          }
+          return customModelProbe(get().ai.getSelectedModel()) === undefined;
         },
 
         /**

@@ -10,6 +10,7 @@ import {
   mockChatRuntimeModule,
   renderTree,
   setMockRuntime,
+  setMockSessionRuntime,
   stubAnalysisActions,
   type SessionTestStore,
 } from './support';
@@ -232,6 +233,104 @@ describe('suggestions primitives — Item activation', () => {
       'Show revenue by month',
     );
     await cleanup(submitRender.container, submitRender.root);
+  });
+});
+
+describe('recipe entries work standalone (no <Chat> ancestor)', () => {
+  // These are public API that previously read the AI store directly, so
+  // requiring a chat root would break existing usage with no migration note.
+  it('Container, Item and VisibilityToggle render under a bare store', async () => {
+    setMockSessionRuntime();
+    const store = createSessionTestStore();
+    stubAnalysisActions(store);
+
+    const {container, root} = await renderTree(
+      <RoomStateProvider roomStore={store}>
+        <TooltipProvider>
+          <PromptSuggestions>
+            <PromptSuggestions.Item text="standalone row" />
+          </PromptSuggestions>
+          <PromptSuggestions.VisibilityToggle />
+        </TooltipProvider>
+      </RoomStateProvider>,
+    );
+
+    expect(container.textContent).toContain('standalone row');
+    expect(
+      Array.from(container.querySelectorAll('button')).some(
+        (b) => b.getAttribute('aria-pressed') !== null,
+      ),
+    ).toBe(true);
+
+    await cleanup(container, root);
+  });
+});
+
+describe('controlled visibility', () => {
+  it('routes Dismiss and VisibilityToggle to onOpenChange, not the store', async () => {
+    // A controlled root permanently prefers `open`, so controls that only wrote
+    // the store could not affect what is rendered — and `aria-pressed` could
+    // contradict it.
+    const runtime = setMockRuntime({suggestionsVisible: true});
+    const onOpenChange = jest.fn<(open: boolean) => void>();
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <Root open onOpenChange={onOpenChange}>
+          <VisibilityToggle>toggle</VisibilityToggle>
+          <Dismiss>dismiss</Dismiss>
+        </Root>
+      </LocalAgentTree>,
+    );
+
+    const toggle = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent === 'toggle',
+    )!;
+    const dismiss = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent === 'dismiss',
+    )!;
+
+    // Reports the host's state, not the store's.
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+
+    await act(async () => {
+      dismiss.click();
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    await act(async () => {
+      toggle.click();
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    // The overridden store was never written.
+    expect(runtime.setSuggestionsVisible).not.toHaveBeenCalled();
+
+    await cleanup(container, root);
+  });
+
+  it('a toggle outside a controlled root still targets the store', async () => {
+    // Controlling one list must not silently retarget unrelated controls.
+    const runtime = setMockRuntime({suggestionsVisible: true});
+    const onOpenChange = jest.fn<(open: boolean) => void>();
+
+    const {container, root} = await renderTree(
+      <LocalAgentTree>
+        <Root open onOpenChange={onOpenChange} />
+        <VisibilityToggle>outside</VisibilityToggle>
+      </LocalAgentTree>,
+    );
+
+    await act(async () => {
+      Array.from(container.querySelectorAll('button'))
+        .find((b) => b.textContent === 'outside')!
+        .click();
+    });
+
+    expect(runtime.setSuggestionsVisible).toHaveBeenCalledWith(false);
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    await cleanup(container, root);
   });
 });
 

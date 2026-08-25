@@ -17,3 +17,5 @@ export type {ChatSuggestionsVisibilityToggleProps} from './VisibilityToggle';
 
 export {Dismiss} from './Dismiss';
 export type {ChatSuggestionsDismissProps} from './Dismiss';
+
+export {useControlledVisibility} from './controlledVisibility';

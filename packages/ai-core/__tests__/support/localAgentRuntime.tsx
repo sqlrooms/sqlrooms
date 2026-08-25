@@ -28,8 +28,21 @@ export function createMockLocalAgentRuntime(
 }
 
 // Held in a box rather than exported directly, so the mock factory below reads
-// whatever the current test most recently installed.
-const runtimeRef = {current: createMockLocalAgentRuntime()};
+// whatever the current test most recently installed. Defaults to session mode,
+// matching the real context's default — the mocked module replaces the whole
+// context, so a local-agent default would put every session-mode test in the
+// wrong runtime.
+const runtimeRef: {current: LocalAgentChatRuntime | {mode: 'session'}} = {
+  current: {mode: 'session'},
+};
+
+/**
+ * Installs a session-mode runtime, as an unmocked tree would see by default.
+ * Use in `beforeEach` to reset between tests.
+ */
+export function setMockSessionRuntime(): void {
+  runtimeRef.current = {mode: 'session'};
+}
 
 /**
  * Installs a fresh runtime double as the one `useChatRuntime()` will return,

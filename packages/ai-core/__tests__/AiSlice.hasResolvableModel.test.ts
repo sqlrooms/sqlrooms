@@ -37,6 +37,7 @@ function createTestStore(options?: {
   getCustomModel?: () => LanguageModel | undefined;
   aiSettingsConfig?: AiSettingsSliceConfig;
   sessionConfig?: ReturnType<typeof createSessionConfig>;
+  chatEndPoint?: string;
 }) {
   const sliceOptions: AiSliceOptions = {
     tools: {} as any,
@@ -44,6 +45,7 @@ function createTestStore(options?: {
     defaultProvider: 'openai',
     defaultModel: 'shared-model',
     getCustomModel: options?.getCustomModel,
+    chatEndPoint: options?.chatEndPoint,
     config:
       options?.sessionConfig ?? createSessionConfig('openai', 'shared-model'),
   };
@@ -270,6 +272,48 @@ describe('AiSlice requiresApiKey', () => {
     getCustomModel.mockClear();
     store.getState().ai.hasResolvableModel();
     expect(getCustomModel).not.toHaveBeenCalled();
+  });
+
+  it('does not require a key when a remote chat endpoint is configured', () => {
+    // The remote transport sends server-side, so the browser never holds a
+    // provider key however the model resolves. Without this, a remote-backed
+    // app is gated behind credential entry it has no use for.
+    const store = createTestStore({
+      chatEndPoint: 'https://example.test/chat',
+      aiSettingsConfig: createSettingsConfig([]),
+    });
+
+    expect(store.getState().ai.requiresApiKey()).toBe(false);
+  });
+
+  it('calls the factory once across repeated reads for one selection', () => {
+    // Read from a selector that re-runs on every store mutation — once per
+    // streamed token — and the apps configuring a factory are exactly the ones
+    // with no key, so no key-based short-circuit covers them.
+    const getCustomModel = jest.fn<() => LanguageModel | undefined>(
+      () => someModel,
+    );
+    const store = createTestStore({getCustomModel});
+
+    for (let i = 0; i < 25; i++) store.getState().ai.requiresApiKey();
+
+    expect(getCustomModel).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-probes the factory when the selected model changes', () => {
+    // The cache key is the resolved selection, so a factory that answers
+    // differently per model is still asked again when the model changes.
+    const getCustomModel = jest.fn<() => LanguageModel | undefined>(
+      () => someModel,
+    );
+    const store = createTestStore({getCustomModel});
+
+    store.getState().ai.requiresApiKey();
+    expect(getCustomModel).toHaveBeenCalledTimes(1);
+
+    store.getState().ai.setAiModel('openai', 'a-different-model');
+    store.getState().ai.requiresApiKey();
+    expect(getCustomModel).toHaveBeenCalledTimes(2);
   });
 
   it('requires a key, and does not throw, when the factory throws', () => {
