@@ -5,8 +5,36 @@ import {
   getCliDevHosts,
   getPythonCliDevArgs,
   hasDbPathArg,
+  readOptionValue,
   shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
+
+test('option parsing stops at the end-of-options marker', () => {
+  assert.equal(
+    readOptionValue(
+      ['--port', '4273', '--', '--port', 'database.db'],
+      '--port',
+    ),
+    '4273',
+  );
+  assert.equal(
+    readOptionValue(['--', '--port', 'database.db'], '--port'),
+    null,
+  );
+  assert.equal(
+    readOptionValue(
+      ['--', '--external-ws-url=wss://example.test/ws/duckdb'],
+      '--external-ws-url',
+    ),
+    null,
+  );
+  assert.equal(
+    shouldProxyCliDevWebSockets(['--', '--external-ws-url', 'database.db'], {
+      externalWsUrl: null,
+    }),
+    true,
+  );
+});
 
 test('external URL option values are not treated as database paths', () => {
   for (const args of [

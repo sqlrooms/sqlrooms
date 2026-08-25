@@ -6,6 +6,7 @@ export function readOptionValue(args, name) {
   const prefix = `${name}=`;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    if (arg === '--') return null;
     if (arg === name) return args[index + 1] ?? null;
     if (arg.startsWith(prefix)) return arg.slice(prefix.length);
   }
