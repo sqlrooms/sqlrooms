@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import socket
 
@@ -11,6 +12,7 @@ from sqlrooms.web.db_bridge import PostgresConnectorSettings, SnowflakeConnector
 from sqlrooms.web.launcher import SqlroomsHttpServer
 from sqlrooms.web.launcher import _can_bind_port
 from sqlrooms.web.launcher import _pick_free_port
+from sqlrooms.web.launcher import _relay_duckdb_websockets
 from sqlrooms.web.launcher import _write_ai_settings_to_toml
 from sqlrooms.web.launcher import _write_db_connectors_to_toml
 from sqlrooms.web.launcher import _write_upload_to_path
@@ -185,6 +187,50 @@ def test_duckdb_websocket_proxy_accepts_first_message_auth(server, caplog):
     assert exc_info.value.code == 1013
     assert "DuckDB websocket backend unavailable" in caplog.text
     assert "DuckDB websocket proxy failed" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_duckdb_websocket_relay_cleans_up_on_cancellation():
+    class BlockingClientWebSocket:
+        def __init__(self):
+            self.started = asyncio.Event()
+            self.cancelled = False
+
+        async def receive(self):
+            self.started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                self.cancelled = True
+                raise
+
+    class BlockingUpstreamWebSocket:
+        def __init__(self):
+            self.started = asyncio.Event()
+            self.cancelled = False
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            self.started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                self.cancelled = True
+                raise
+
+    client_ws = BlockingClientWebSocket()
+    upstream_ws = BlockingUpstreamWebSocket()
+    relay = asyncio.create_task(_relay_duckdb_websockets(client_ws, upstream_ws))
+    await asyncio.gather(client_ws.started.wait(), upstream_ws.started.wait())
+
+    relay.cancel()
+    await relay
+
+    assert relay.cancelled() is False
+    assert client_ws.cancelled is True
+    assert upstream_ws.cancelled is True
 
 
 def test_mcp_browser_bridge_requires_auth(server):
