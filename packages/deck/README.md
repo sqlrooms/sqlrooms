@@ -370,9 +370,11 @@ WKB point SQL through `createDeckMapPointTransformSql(...)` and aligns the targe
 dataset, point layers, brush interaction, and fit binding. The host table lookup
 also supplies source columns so missing coordinate columns and a generated
 geometry alias that would duplicate an existing column are rejected before
-durable state is written. This is the preferred path for standard table-backed
-longitude/latitude maps; raw `transformSql` remains available for custom spatial
-transforms.
+durable state is written. For a single table-backed dataset, its canonical table
+identity must also match the selected table because that selection overrides the
+authored dataset source at render time. This is the preferred path for standard
+table-backed longitude/latitude maps; raw `transformSql` remains available for
+custom spatial transforms.
 `normalizeDeckMapPointConfig(...)` only adds
 the standard lon/lat point transform to table-backed datasets that do not
 already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`

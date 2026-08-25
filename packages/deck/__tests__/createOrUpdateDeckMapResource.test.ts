@@ -199,6 +199,45 @@ describe('createOrUpdateDeckMapResource', () => {
     expect(h.writeMap).not.toHaveBeenCalled();
   });
 
+  test('rejects a selected table that would override the point-bound source', async () => {
+    const h = host({
+      findTable: jest.fn((tableName) => {
+        if (tableName === 'places') {
+          return {
+            tableIdentity: 'main.places',
+            columns: [{name: 'longitude'}, {name: 'latitude'}],
+          };
+        }
+        if (tableName === 'cities') {
+          return {
+            tableIdentity: 'main.cities',
+            columns: [{name: 'longitude'}, {name: 'latitude'}],
+          };
+        }
+        return undefined;
+      }),
+    });
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        tableName: 'cities',
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding dataset "places" resolves to table "main.places", but selected table "main.cities" would override it.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
   test('canonicalizes table-backed dataset sources before writing', async () => {
     const h = host({
       findTable: jest.fn((tableName) =>

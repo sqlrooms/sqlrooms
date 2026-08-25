@@ -194,6 +194,20 @@ export async function createOrUpdateDeckMapResource(
   const table = tableName ? host.findTable(tableName) : undefined;
   if (tableName && !table)
     throw new Error(`Table "${tableName}" was not found.`);
+  const tableDatasetCount = Object.values(resolvedConfig.datasets).filter(
+    (dataset) => isDeckMapTableDatasetSource(dataset.source),
+  ).length;
+  if (
+    params.pointBinding &&
+    tableDatasetCount === 1 &&
+    pointBindingTable &&
+    table &&
+    pointBindingTable.tableIdentity !== table.tableIdentity
+  ) {
+    throw new Error(
+      `Point binding dataset "${params.pointBinding.dataset.trim()}" resolves to table "${pointBindingTable.tableIdentity}", but selected table "${table.tableIdentity}" would override it.`,
+    );
+  }
 
   const caption =
     params.caption?.trim() ||
