@@ -570,8 +570,8 @@ export function getColValAsNumber(
   if (v === undefined || v === null) {
     return NaN;
   }
-  // if it's an array (can be returned by duckdb as bigint)
-  return Number(v[0] ?? v);
+  // BigInts can be returned wrapped in an array by DuckDB connectors.
+  return Number(Array.isArray(v) ? v[0] : v);
 }
 
 /**
