@@ -127,6 +127,7 @@ function webSocketUrl(pageUrl: string, pathname: string): string {
 export function resolveCliDevProxyConfig(
   config: RuntimeConfig,
   pageUrl: string,
+  {proxyWebSockets = true}: {proxyWebSockets?: boolean} = {},
 ): RuntimeConfig {
   if (config.apiBaseUrl) return config;
 
@@ -134,8 +135,7 @@ export function resolveCliDevProxyConfig(
   return {
     ...config,
     apiBaseUrl: '',
-    wsUrl,
-    crdtWsUrl: wsUrl,
+    ...(proxyWebSockets ? {wsUrl, crdtWsUrl: wsUrl} : {}),
     mcp: config.mcp
       ? {
           ...config.mcp,

@@ -6,6 +6,7 @@ import {
   getPythonCliDevArgs,
   hasOption,
   readOptionValue,
+  shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
 
 /**
@@ -61,6 +62,7 @@ const forwardedCliArgs =
     ? controlArgs.filter((arg) => arg !== '--dry' && !arg.startsWith('--dry='))
     : unwrapForwardedArgs(restArgs);
 const cliArgs = target === 'cli' ? forwardedCliArgs : [];
+const proxyCliDevWebSockets = shouldProxyCliDevWebSockets(cliArgs);
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;
 const isDryRun = controlArgs.some(
   (arg) => arg === '--dry' || arg.startsWith('--dry='),
@@ -265,7 +267,7 @@ if (target !== 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
   console.log(
-    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=${proxyCliDevWebSockets} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   console.log(
     `(cd python/sqlrooms && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
@@ -367,6 +369,7 @@ if (target === 'cli') {
       cwd: path.resolve('apps/sqlrooms-cli-ui'),
       env: {
         SQLROOMS_CLI_API_PROXY_TARGET: `http://${proxyHost}:${apiPort}`,
+        VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS: String(proxyCliDevWebSockets),
       },
     },
   );

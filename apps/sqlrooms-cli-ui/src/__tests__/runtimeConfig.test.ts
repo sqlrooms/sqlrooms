@@ -47,4 +47,18 @@ describe('resolveCliDevProxyConfig', () => {
       config,
     );
   });
+
+  test('preserves an explicit external WebSocket URL', () => {
+    const config = {
+      apiBaseUrl: '',
+      wsUrl: 'wss://tunnel.example.test/ws/duckdb',
+      crdtWsUrl: 'wss://tunnel.example.test/ws/duckdb',
+    };
+
+    expect(
+      resolveCliDevProxyConfig(config, 'http://localhost:3100', {
+        proxyWebSockets: false,
+      }),
+    ).toMatchObject(config);
+  });
 });

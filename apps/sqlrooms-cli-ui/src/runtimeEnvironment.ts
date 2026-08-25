@@ -5,7 +5,10 @@ const fetchedRuntimeConfig = await fetchRuntimeConfig();
 
 /** Runtime configuration loaded once during CLI UI startup. */
 export const runtimeConfig = import.meta.env.DEV
-  ? resolveCliDevProxyConfig(fetchedRuntimeConfig, globalThis.location.href)
+  ? resolveCliDevProxyConfig(fetchedRuntimeConfig, globalThis.location.href, {
+      proxyWebSockets:
+        import.meta.env.VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS !== 'false',
+    })
   : fetchedRuntimeConfig;
 
 /** Whether AI development tools are enabled for this runtime. */

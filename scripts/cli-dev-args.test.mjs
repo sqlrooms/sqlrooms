@@ -5,6 +5,7 @@ import {
   getCliDevHosts,
   getPythonCliDevArgs,
   hasDbPathArg,
+  shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
 
 test('external URL option values are not treated as database paths', () => {
@@ -26,6 +27,27 @@ test('explicit external URLs still receive a development database path', () => {
     const result = getPythonCliDevArgs(args, 4273, 3100);
     assert.notEqual(result.indexOf('--db-path'), -1, args.join(' '));
   }
+});
+
+test('explicit WebSocket URLs bypass the Vite WebSocket proxy', () => {
+  for (const args of [
+    ['--external-ws-url', 'wss://example.test/ws/duckdb'],
+    ['--external-ws-url=wss://example.test/ws/duckdb'],
+  ]) {
+    assert.equal(
+      shouldProxyCliDevWebSockets(args, {externalWsUrl: null}),
+      false,
+      args.join(' '),
+    );
+  }
+
+  assert.equal(
+    shouldProxyCliDevWebSockets([], {
+      externalWsUrl: 'wss://example.test/ws/duckdb',
+    }),
+    false,
+  );
+  assert.equal(shouldProxyCliDevWebSockets([], {externalWsUrl: null}), true);
 });
 
 test('a dash-prefixed database path after -- is preserved', () => {

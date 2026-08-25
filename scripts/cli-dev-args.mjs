@@ -17,6 +17,14 @@ export function hasOption(args, name) {
   return readOptionValue(args, name) !== null;
 }
 
+/** Return whether Vite should proxy CLI WebSocket connections. */
+export function shouldProxyCliDevWebSockets(
+  args,
+  {externalWsUrl = process.env.SQLROOMS_EXTERNAL_WS_URL} = {},
+) {
+  return !hasOption(args, '--external-ws-url') && !externalWsUrl;
+}
+
 /** Convert a wildcard bind host into a host clients can connect to. */
 export function publicHost(host) {
   return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
