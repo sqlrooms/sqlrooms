@@ -7,7 +7,7 @@ const fetchedRuntimeConfig = await fetchRuntimeConfig();
 export const runtimeConfig = import.meta.env.DEV
   ? resolveCliDevProxyConfig(fetchedRuntimeConfig, globalThis.location.href, {
       proxyWebSockets:
-        import.meta.env.VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS !== 'false',
+        import.meta.env.VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS === 'true',
     })
   : fetchedRuntimeConfig;
 

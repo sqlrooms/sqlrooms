@@ -16,6 +16,7 @@ describe('resolveCliDevProxyConfig', () => {
           },
         },
         'http://192.0.2.10:3100/workspace',
+        {proxyWebSockets: true},
       ),
     ).toMatchObject({
       wsUrl: 'ws://192.0.2.10:3100/ws/duckdb',
@@ -30,7 +31,9 @@ describe('resolveCliDevProxyConfig', () => {
 
   test('uses secure WebSockets for an HTTPS development page', () => {
     expect(
-      resolveCliDevProxyConfig({}, 'https://dev.example.test:3100'),
+      resolveCliDevProxyConfig({}, 'https://dev.example.test:3100', {
+        proxyWebSockets: true,
+      }),
     ).toMatchObject({
       wsUrl: 'wss://dev.example.test:3100/ws/duckdb',
       crdtWsUrl: 'wss://dev.example.test:3100/ws/duckdb',
@@ -56,9 +59,7 @@ describe('resolveCliDevProxyConfig', () => {
     };
 
     expect(
-      resolveCliDevProxyConfig(config, 'http://localhost:3100', {
-        proxyWebSockets: false,
-      }),
+      resolveCliDevProxyConfig(config, 'http://localhost:3100'),
     ).toMatchObject(config);
   });
 });
