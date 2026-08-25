@@ -53,7 +53,7 @@ export function hasDbPathArg(args) {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--') {
-      return args.slice(index + 1).some((value) => !value.startsWith('-'));
+      return index + 1 < args.length;
     }
     if (arg.startsWith('--') && arg.includes('=')) continue;
     if (optionsWithValue.has(arg)) {

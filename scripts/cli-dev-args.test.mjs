@@ -26,13 +26,24 @@ test('explicit external URLs still receive a development database path', () => {
   }
 });
 
+test('a dash-prefixed database path after -- is preserved', () => {
+  const args = ['--', '-dev.db'];
+  const result = getPythonCliDevArgs(args, 4273, 3100, 'localhost', {
+    externalUrl: null,
+  });
+
+  assert.equal(hasDbPathArg(args), true);
+  assert.equal(result.includes('--db-path'), false);
+  assert.deepEqual(result.slice(-2), args);
+});
+
 test('the default external URL preserves the selected public host', () => {
   const result = getPythonCliDevArgs(
     ['--host', '192.0.2.10'],
     4273,
     3100,
     '192.0.2.10',
-    {externalUrl: undefined},
+    {externalUrl: null},
   );
   const externalUrlIndex = result.indexOf('--external-url');
 
