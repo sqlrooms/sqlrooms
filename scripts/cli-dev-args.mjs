@@ -22,25 +22,17 @@ export function publicHost(host) {
   return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
 }
 
-/** Choose the browser-visible host used by the documented Vite development URL. */
-export function browserHost(host) {
-  return ['0.0.0.0', '::', '127.0.0.1', '::1'].includes(host)
-    ? 'localhost'
-    : host;
-}
-
 /** Format a host for use in a URL, including IPv6 brackets when needed. */
 export function hostForUrl(host) {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
 }
 
-/** Resolve bind, backend-proxy, and browser-visible hosts for CLI development. */
+/** Resolve bind and backend-proxy hosts for CLI development. */
 export function getCliDevHosts(args) {
   const host = readOptionValue(args, '--host') ?? '127.0.0.1';
   return {
     host,
     proxyHost: hostForUrl(publicHost(host)),
-    externalHost: hostForUrl(browserHost(host)),
   };
 }
 
@@ -84,24 +76,14 @@ export function hasDbPathArg(args) {
 }
 
 /** Build the Python CLI arguments used by the combined CLI development flow. */
-export function getPythonCliDevArgs(
-  args,
-  apiPort,
-  uiPort,
-  externalHost,
-  {externalUrl = process.env.SQLROOMS_EXTERNAL_URL} = {},
-) {
+export function getPythonCliDevArgs(args, apiPort, uiPort) {
   const hasDbPath = hasDbPathArg(args);
   const apiPortArgs = hasOption(args, '--port')
     ? args
     : ['--port', String(apiPort), ...args];
-  const externalUrlArgs =
-    hasOption(args, '--external-url') || externalUrl
-      ? apiPortArgs
-      : ['--external-url', `http://${externalHost}:${uiPort}`, ...apiPortArgs];
-  const experimentalArgs = externalUrlArgs.includes('--experimental')
-    ? externalUrlArgs
-    : ['--experimental', ...externalUrlArgs];
+  const experimentalArgs = apiPortArgs.includes('--experimental')
+    ? apiPortArgs
+    : ['--experimental', ...apiPortArgs];
   return hasDbPath
     ? experimentalArgs
     : [

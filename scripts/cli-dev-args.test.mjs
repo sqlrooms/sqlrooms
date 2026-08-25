@@ -23,49 +23,37 @@ test('explicit external URLs still receive a development database path', () => {
     ['--external-url', 'https://example.test'],
     ['--external-url=https://example.test'],
   ]) {
-    const result = getPythonCliDevArgs(args, 4273, 3100, 'localhost', {
-      externalUrl: undefined,
-    });
+    const result = getPythonCliDevArgs(args, 4273, 3100);
     assert.notEqual(result.indexOf('--db-path'), -1, args.join(' '));
   }
 });
 
 test('a dash-prefixed database path after -- is preserved', () => {
   const args = ['--', '-dev.db'];
-  const result = getPythonCliDevArgs(args, 4273, 3100, 'localhost', {
-    externalUrl: null,
-  });
+  const result = getPythonCliDevArgs(args, 4273, 3100);
 
   assert.equal(hasDbPathArg(args), true);
   assert.equal(result.includes('--db-path'), false);
   assert.deepEqual(result.slice(-2), args);
 });
 
-test('the default external URL preserves the selected public host', () => {
-  const result = getPythonCliDevArgs(
-    ['--host', '192.0.2.10'],
-    4273,
-    3100,
-    '192.0.2.10',
-    {externalUrl: null},
-  );
-  const externalUrlIndex = result.indexOf('--external-url');
-
-  assert.equal(result[externalUrlIndex + 1], 'http://192.0.2.10:3100');
-});
-
-test('the default loopback API host uses the documented localhost UI origin', () => {
+test('the default loopback API host remains available to the Vite proxy', () => {
   assert.deepEqual(getCliDevHosts([]), {
     host: '127.0.0.1',
     proxyHost: '127.0.0.1',
-    externalHost: 'localhost',
   });
 });
 
-test('an explicit network host remains browser-visible', () => {
+test('an explicit network host is used by the local backend proxy', () => {
   assert.deepEqual(getCliDevHosts(['--host', '192.0.2.10']), {
     host: '192.0.2.10',
     proxyHost: '192.0.2.10',
-    externalHost: '192.0.2.10',
+  });
+});
+
+test('wildcard binds use loopback only for the local backend proxy', () => {
+  assert.deepEqual(getCliDevHosts(['--host', '0.0.0.0']), {
+    host: '0.0.0.0',
+    proxyHost: 'localhost',
   });
 });
