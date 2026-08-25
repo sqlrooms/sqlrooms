@@ -22,9 +22,26 @@ export function publicHost(host) {
   return host === '0.0.0.0' || host === '::' ? 'localhost' : host;
 }
 
+/** Choose the browser-visible host used by the documented Vite development URL. */
+export function browserHost(host) {
+  return ['0.0.0.0', '::', '127.0.0.1', '::1'].includes(host)
+    ? 'localhost'
+    : host;
+}
+
 /** Format a host for use in a URL, including IPv6 brackets when needed. */
 export function hostForUrl(host) {
   return host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+}
+
+/** Resolve bind, backend-proxy, and browser-visible hosts for CLI development. */
+export function getCliDevHosts(args) {
+  const host = readOptionValue(args, '--host') ?? '127.0.0.1';
+  return {
+    host,
+    proxyHost: hostForUrl(publicHost(host)),
+    externalHost: hostForUrl(browserHost(host)),
+  };
 }
 
 /** Determine whether CLI arguments include a positional or option database path. */

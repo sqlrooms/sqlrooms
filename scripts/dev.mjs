@@ -2,10 +2,9 @@ import {spawn, spawnSync} from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
 import {
+  getCliDevHosts,
   getPythonCliDevArgs,
   hasOption,
-  hostForUrl,
-  publicHost,
   readOptionValue,
 } from './cli-dev-args.mjs';
 
@@ -156,8 +155,7 @@ function parsePortOption(args, name) {
 }
 
 async function getCliDevPorts(args) {
-  const host = readOptionValue(args, '--host') ?? '127.0.0.1';
-  const proxyHost = hostForUrl(publicHost(host));
+  const {externalHost, host, proxyHost} = getCliDevHosts(args);
   const explicitApiPort = parsePortOption(args, '--port');
   const explicitWsPort = parsePortOption(args, '--ws-port');
   const reservedPorts = new Set(
@@ -176,7 +174,7 @@ async function getCliDevPorts(args) {
     '0.0.0.0',
     uiReservedPorts,
   );
-  return {apiPort, proxyHost, uiPort};
+  return {apiPort, externalHost, proxyHost, uiPort};
 }
 
 function turboRunArgs(task, filters, extraArgs = []) {
@@ -264,12 +262,13 @@ if (target !== 'cli') {
     process.exit(1);
   }
 } else if (isDryRun) {
-  const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
+  const {apiPort, externalHost, proxyHost, uiPort} =
+    await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(
     cliArgs,
     apiPort,
     uiPort,
-    proxyHost,
+    externalHost,
   );
   console.log(
     `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} ./node_modules/.bin/vite --host --port ${uiPort})`,
@@ -364,12 +363,13 @@ process.on('SIGTERM', () => {
 });
 
 if (target === 'cli') {
-  const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
+  const {apiPort, externalHost, proxyHost, uiPort} =
+    await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(
     cliArgs,
     apiPort,
     uiPort,
-    proxyHost,
+    externalHost,
   );
   startProcess(
     'sqlrooms CLI UI dev server',

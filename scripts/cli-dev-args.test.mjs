@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {getPythonCliDevArgs, hasDbPathArg} from './cli-dev-args.mjs';
+import {
+  getCliDevHosts,
+  getPythonCliDevArgs,
+  hasDbPathArg,
+} from './cli-dev-args.mjs';
 
 test('external URL option values are not treated as database paths', () => {
   for (const args of [
@@ -48,4 +52,20 @@ test('the default external URL preserves the selected public host', () => {
   const externalUrlIndex = result.indexOf('--external-url');
 
   assert.equal(result[externalUrlIndex + 1], 'http://192.0.2.10:3100');
+});
+
+test('the default loopback API host uses the documented localhost UI origin', () => {
+  assert.deepEqual(getCliDevHosts([]), {
+    host: '127.0.0.1',
+    proxyHost: '127.0.0.1',
+    externalHost: 'localhost',
+  });
+});
+
+test('an explicit network host remains browser-visible', () => {
+  assert.deepEqual(getCliDevHosts(['--host', '192.0.2.10']), {
+    host: '192.0.2.10',
+    proxyHost: '192.0.2.10',
+    externalHost: '192.0.2.10',
+  });
 });
