@@ -54,6 +54,14 @@ const BeforeSendContext = createContext<BeforeSendRegistry | null>(null);
  *
  * Idempotent — an inherited registry passes through, so a nested boundary
  * cannot split registration from the `send` that consults it.
+ *
+ * **Sharing is by React ancestry.** Two *sibling* surfaces that each fall back
+ * to their own state boundary — a standalone `QueryControls` next to a
+ * standalone `PromptSuggestions`, say — get separate registries, so a policy
+ * registered by one is not observed by the other. Give them a common `<Chat>`
+ * or `ChatSuggestionsStateBoundary` ancestor when the policy must span both.
+ * This is not detectable at registration time: a lone standalone composer with
+ * an `onRun` is correct and common, and indistinguishable from the sibling case.
  */
 export const ChatComposerBeforeSendProvider: FC<PropsWithChildren> = ({
   children,
@@ -161,21 +169,30 @@ export function useBlockSends(enabled = true): void {
  *
  * @param send - The mode's raw send action.
  * @param prompt - Used as the veto's argument when `send` gets no text.
+ * @param canSendText - The mode's readiness predicate, consulted before any
+ *   handler runs so a vetoed-or-impossible send triggers no side effects.
  */
 export function useVetoableSend(
   send: (text?: string) => void,
   prompt: string,
+  canSendText: (text: string) => boolean,
 ): (text?: string) => void {
   const {run, blocked} = useBeforeSendRegistry();
   return useCallback(
     // Rest args, so "no text" forwards as no argument rather than an explicit
     // `undefined` — invisible to a `send` that distinguishes the two.
     (...args: [text?: string]) => {
-      if (blocked) return;
-      if (!run(args[0] ?? prompt)) return;
+      const text = args[0] ?? prompt;
+      // Readiness is checked *before* the vetoes, not after. Handlers have side
+      // effects — creating an artifact or a session — and `send` is documented
+      // as a no-op when sending isn't possible, so running them ahead of the
+      // mode's own guard would perform those effects for a send that never
+      // happens.
+      if (blocked || !canSendText(text)) return;
+      if (!run(text)) return;
       send(...args);
     },
-    [run, blocked, send, prompt],
+    [run, blocked, canSendText, send, prompt],
   );
 }
 

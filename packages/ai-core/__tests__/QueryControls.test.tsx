@@ -29,8 +29,11 @@ jest.unstable_mockModule(
 
 const {TooltipProvider} = await import('@sqlrooms/ui');
 const {DndContext, useDndContext} = await import('@dnd-kit/core');
-const {LocalAgentChatComposerProvider, ChatComposerStateBoundary} =
-  await import('../src/components/composer');
+const {
+  LocalAgentChatComposerProvider,
+  ChatComposerStateBoundary,
+  useChatComposer,
+} = await import('../src/components/composer');
 const {Item: ChatSuggestionsItem, ChatSuggestionsStateBoundary} =
   await import('../src/components/suggestions');
 const {QueryControls} = await import('../src/components/QueryControls');
@@ -400,6 +403,61 @@ describe('QueryControls — unified across runtime modes', () => {
     expect(startAnalysisWhenReady).not.toHaveBeenCalled();
 
     warn.mockRestore();
+    await cleanup(container, root);
+  });
+
+  it('does not run onRun when the send cannot proceed', async () => {
+    // `onRun` exists so a host can create an artifact before the session, so
+    // firing it for a send that never happens leaves an orphan. `send` is
+    // documented as a no-op when sending isn't possible, and the pre-send
+    // handlers have to sit inside that no-op, not ahead of it.
+    const runtime = setMockRuntime({prompt: '   ', isStreaming: false});
+    const onRun = jest.fn<(prompt?: string) => void>(() => {});
+
+    const {container, root} = await renderTree(
+      <LocalAgentChatComposerProvider>
+        <QueryControls onRun={onRun} />
+      </LocalAgentChatComposerProvider>,
+    );
+
+    // Whitespace-only prompt: not sendable.
+    await act(async () => {
+      fireKeyDown(textarea(container)!);
+    });
+
+    expect(onRun).not.toHaveBeenCalled();
+    expect(runtime.sendPrompt).not.toHaveBeenCalled();
+
+    await cleanup(container, root);
+  });
+
+  it('does not run onRun for a programmatic send while a run is in flight', async () => {
+    // The public `useChatComposer().send()` is reachable by hosts and by
+    // suggestion rows, so the guard has to live in the composer state rather
+    // than in the recipe's own key handler.
+    const runtime = setMockRuntime({prompt: 'hello', isStreaming: true});
+    const onRun = jest.fn<(prompt?: string) => void>(() => {});
+    let programmaticSend: ((text?: string) => void) | undefined;
+
+    function SendProbe() {
+      programmaticSend = useChatComposer().send;
+      return null;
+    }
+
+    const {container, root} = await renderTree(
+      <LocalAgentChatComposerProvider>
+        <QueryControls onRun={onRun} />
+        <SendProbe />
+      </LocalAgentChatComposerProvider>,
+    );
+
+    await act(async () => {
+      programmaticSend?.('some text');
+    });
+
+    expect(onRun).not.toHaveBeenCalled();
+    expect(runtime.sendPrompt).not.toHaveBeenCalled();
+
     await cleanup(container, root);
   });
 

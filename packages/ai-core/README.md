@@ -123,7 +123,9 @@ for hosts that need a different visual shape.
 3. **Recipes** — `Chat.Composer` and `Chat.PromptSuggestions`. SQLRooms' own
    opinionated, styled defaults, built entirely from the primitives above.
    Most apps only need these. Both supply their own state boundary, so they
-   also work under a bare `RoomStateProvider` with no `<Chat>` ancestor.
+   also work under a bare `RoomStateProvider` with no `<Chat>` ancestor —
+   though as siblings that gives each its own state, so a shared pre-send
+   policy needs a common ancestor (see below).
 
 Reach for a lower layer only when a recipe's fixed appearance does not fit —
 a host design system's own textarea, button, or list component, a
@@ -172,10 +174,12 @@ Composer primitives (imported from `@sqlrooms/ai-core`, or via
   items dragged into the composer (built on dnd-kit). **Handles in-app
   context items only, not file uploads** — dnd-kit observes pointer-driven
   drags between elements it manages, not native HTML5 file-drag events; a
-  file drop needs a separate, native-drag-based primitive. **Requires a
-  dnd-kit `DndContext` ancestor** (`RoomDndProvider` supplies one inside a
-  room); unlike the other primitives, rendering it without one throws rather
-  than degrading to a no-op.
+  file drop needs a separate, native-drag-based primitive. **Requires
+  `RoomDndProvider`**, not merely any dnd-kit `DndContext`: without a
+  `DndContext` at all it throws rather than degrading to a no-op, and under a
+  plain one it renders but never fires `onDrop`, because drops are accepted
+  only for collisions carrying the `pointerWithin` marker that
+  `RoomDndProvider`'s collision detector adds.
 
 ### Pre-send policy: `useRegisterBeforeSend`
 
@@ -201,6 +205,14 @@ Two `Chat.Composer`s under one root are two views of one chat — same session,
 same prompt — so a policy registered by either applies to sends from both;
 independent surfaces need their own root, and a duplicate `onRun` warns in
 development rather than merging silently.
+
+Sharing is by React ancestry, which has one consequence worth knowing when
+using the recipes **standalone**. `Chat.Composer` and `Chat.PromptSuggestions`
+each supply their own state boundary when no `<Chat>` is above them, so as
+siblings under a bare `RoomStateProvider` they get _separate_ registries and a
+suggestion click will not run the composer's `onRun`. Give them a common
+`<Chat>` or `<ChatSuggestionsStateBoundary>` ancestor whenever the policy has
+to span both — which is also what `<Chat>` does for you by default.
 
 For a state that makes sending impossible outright rather than conditionally —
 a missing credential, say — use `useBlockSends()` instead. It reports through

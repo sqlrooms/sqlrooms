@@ -177,7 +177,7 @@ function useSessionComposerState(): ChatComposerState {
     ],
   );
 
-  const send = useVetoableSend(rawSend, prompt);
+  const send = useVetoableSend(rawSend, prompt, canSendText);
 
   const cancel = useCallback(() => {
     if (!sessionId) return;
@@ -223,17 +223,23 @@ function useLocalAgentComposerState(
 ): ChatComposerState {
   const {prompt, setPrompt, sendPrompt, stop, isStreaming} = runtime;
 
+  const sendBlocked = useSendsBlocked();
+  // Shared by `canSend` and the pre-send wrapper's guard, so a handler cannot
+  // fire for text this mode would refuse to send.
+  const canSendText = useCallback(
+    (text: string) => !isStreaming && !sendBlocked && text.trim().length > 0,
+    [isStreaming, sendBlocked],
+  );
+  const canSend = canSendText(prompt);
+
   // `sendPrompt` already matches `send`'s signature and applies the same
   // guards, so only the veto wrapper is added. `stop` returns a promise, so it
   // is wrapped to match `cancel`'s `void` contract.
-  const send = useVetoableSend(sendPrompt, prompt);
+  const send = useVetoableSend(sendPrompt, prompt, canSendText);
 
   const cancel = useCallback(() => {
     void stop();
   }, [stop]);
-
-  const sendBlocked = useSendsBlocked();
-  const canSend = !isStreaming && !sendBlocked && prompt.trim().length > 0;
 
   return useMemo(
     () => ({
