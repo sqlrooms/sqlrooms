@@ -386,13 +386,21 @@ export function applyDeckMapPointBinding<
   const geometryColumn =
     pointBinding.geometryColumn?.trim() || DEFAULT_GEOMETRY_COLUMN;
   const datasetIds = Object.keys(config.datasets);
-  const spec = isDeckMapConfigRecord(config.spec)
+  let parsedSpec: unknown = config.spec;
+  if (typeof parsedSpec === 'string') {
+    try {
+      parsedSpec = JSON.parse(parsedSpec);
+    } catch {
+      // Durable resource validation reports the invalid serialized spec.
+    }
+  }
+  const spec = isDeckMapConfigRecord(parsedSpec)
     ? {
-        ...config.spec,
-        ...(Array.isArray(config.spec.layers)
+        ...parsedSpec,
+        ...(Array.isArray(parsedSpec.layers)
           ? {
               layers: normalizeDeckMapPointLayers({
-                layers: config.spec.layers,
+                layers: parsedSpec.layers,
                 datasetId,
                 datasetIds,
                 geometryColumn,
@@ -400,7 +408,7 @@ export function applyDeckMapPointBinding<
             }
           : {}),
       }
-    : config.spec;
+    : parsedSpec;
   let fitToData = config.fitToData;
   if (isDeckMapConfigRecord(fitToData) && fitToData.dataset === datasetId) {
     const geometryFit = {...fitToData};

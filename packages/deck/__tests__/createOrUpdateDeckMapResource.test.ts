@@ -95,6 +95,54 @@ describe('createOrUpdateDeckMapResource', () => {
     });
   });
 
+  test('normalizes serialized point-layer bindings before writing', async () => {
+    const h = host();
+    const serializedConfig: DeckMapConfig = {
+      spec: JSON.stringify({
+        layers: [
+          {
+            '@@type': 'GeoArrowScatterplotLayer',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              longitudeColumn: 'old_lon',
+              latitudeColumn: 'old_lat',
+            },
+          },
+        ],
+      }),
+      datasets: {places: {source: {tableName: 'places'}}},
+    };
+
+    await createOrUpdateDeckMapResource(h, {
+      blockDocumentId: 'document-1',
+      config: serializedConfig,
+      pointBinding: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+        geometryColumn: 'geom',
+      },
+      createMapId: () => 'map-1',
+    });
+
+    expect(h.writeMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          spec: {
+            layers: [
+              expect.objectContaining({
+                _sqlroomsBinding: {
+                  dataset: 'places',
+                  geometryColumn: 'geom',
+                },
+              }),
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
   test('canonicalizes table-backed dataset sources before writing', async () => {
     const h = host({
       findTable: jest.fn((tableName) =>
