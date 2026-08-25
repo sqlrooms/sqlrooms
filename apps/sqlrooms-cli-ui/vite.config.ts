@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
+import {createCliDevProxy} from './cliDevProxy.mjs';
 import scaffoldsPlugin from './plugins/scaffolds.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -90,10 +91,7 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Resource-Policy': 'cross-origin',
     },
-    proxy: {
-      '/api': apiProxyTarget,
-      '/config.json': apiProxyTarget,
-    },
+    proxy: createCliDevProxy(apiProxyTarget),
   },
   preview: {
     port: 3101,

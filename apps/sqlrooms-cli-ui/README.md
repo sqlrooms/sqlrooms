@@ -139,7 +139,7 @@ pnpm dev cli
 This starts:
 
 - the Python API server on `http://127.0.0.1:4273` with `--experimental` and without serving static UI, or the next free port
-- the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api` and `/config.json` to the selected Python API port
+- the Vite UI on `http://localhost:3100`, or the next free port, proxying `/api`, `/config.json`, and `/ws` to the selected Python API port
 - a per-session dev database named after the selected UI port, for example `sqlrooms-3100.db`
 
 If you want fixed ports, pass them to the Python server:

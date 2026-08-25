@@ -9,7 +9,7 @@
     "evals:provider:build": "vite build -c evals/vite.config.ts",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest && node --test ../../scripts/cli-dev-args.test.mjs ../../scripts/cli-dev-readiness.test.mjs cliDevProxy.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

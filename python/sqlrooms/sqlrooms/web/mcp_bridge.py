@@ -59,6 +59,8 @@ class McpBridgeBroker:
         await websocket.accept()
         try:
             authenticated = await asyncio.wait_for(websocket.receive_json(), timeout=5)
+        except WebSocketDisconnect:
+            return
         except Exception:
             await websocket.close(code=4401, reason="authentication required")
             return

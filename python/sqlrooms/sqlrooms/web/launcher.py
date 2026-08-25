@@ -61,6 +61,47 @@ async def _write_upload_to_path(file: UploadFile, target: Path) -> int:
     return bytes_written
 
 
+async def _relay_duckdb_websockets(client_ws: WebSocket, upstream_ws: Any) -> None:
+    async def client_to_upstream() -> None:
+        while True:
+            message = await client_ws.receive()
+            if message["type"] == "websocket.disconnect":
+                await upstream_ws.close()
+                return
+            if message.get("bytes") is not None:
+                await upstream_ws.send(message["bytes"])
+            elif message.get("text") is not None:
+                await upstream_ws.send(message["text"])
+
+    async def upstream_to_client() -> None:
+        async for message in upstream_ws:
+            if isinstance(message, bytes):
+                await client_ws.send_bytes(message)
+            else:
+                await client_ws.send_text(message)
+
+    relay_tasks = {
+        asyncio.create_task(client_to_upstream()),
+        asyncio.create_task(upstream_to_client()),
+    }
+    try:
+        done, _ = await asyncio.wait(
+            relay_tasks,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for task in done:
+            task.result()
+    except asyncio.CancelledError:
+        # The dev supervisor cancels active ASGI connections during Ctrl+C.
+        # Treat that as a normal WebSocket shutdown rather than an app error.
+        return
+    finally:
+        for task in relay_tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*relay_tasks, return_exceptions=True)
+
+
 def _normalize_config_string(value: Any) -> str | None:
     if isinstance(value, (int, float)):
         return str(value)
@@ -1011,36 +1052,7 @@ class SqlroomsHttpServer:
                     upstream_url,
                     max_size=None,
                 ) as upstream_ws:
-
-                    async def client_to_upstream() -> None:
-                        while True:
-                            message = await client_ws.receive()
-                            if message["type"] == "websocket.disconnect":
-                                await upstream_ws.close()
-                                return
-                            if message.get("bytes") is not None:
-                                await upstream_ws.send(message["bytes"])
-                            elif message.get("text") is not None:
-                                await upstream_ws.send(message["text"])
-
-                    async def upstream_to_client() -> None:
-                        async for message in upstream_ws:
-                            if isinstance(message, bytes):
-                                await client_ws.send_bytes(message)
-                            else:
-                                await client_ws.send_text(message)
-
-                    done, pending = await asyncio.wait(
-                        {
-                            asyncio.create_task(client_to_upstream()),
-                            asyncio.create_task(upstream_to_client()),
-                        },
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    for task in pending:
-                        task.cancel()
-                    for task in done:
-                        task.result()
+                    await _relay_duckdb_websockets(client_ws, upstream_ws)
             except WebSocketDisconnect:
                 return
             except OSError as exc:

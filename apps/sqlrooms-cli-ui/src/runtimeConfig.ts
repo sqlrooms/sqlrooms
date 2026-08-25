@@ -114,6 +114,37 @@ export type RuntimeConfig = {
   };
 };
 
+function webSocketUrl(pageUrl: string, pathname: string): string {
+  const url = new URL(pathname, pageUrl);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString();
+}
+
+/**
+ * Route development connections through Vite using the page's actual origin.
+ * Explicit external URLs are preserved for tunnels and other custom setups.
+ */
+export function resolveCliDevProxyConfig(
+  config: RuntimeConfig,
+  pageUrl: string,
+  {proxyWebSockets = false}: {proxyWebSockets?: boolean} = {},
+): RuntimeConfig {
+  if (config.apiBaseUrl) return config;
+
+  const wsUrl = webSocketUrl(pageUrl, '/ws/duckdb');
+  return {
+    ...config,
+    apiBaseUrl: '',
+    ...(proxyWebSockets ? {wsUrl, crdtWsUrl: wsUrl} : {}),
+    mcp: config.mcp
+      ? {
+          ...config.mcp,
+          bridgeUrl: webSocketUrl(pageUrl, '/ws/mcp-bridge'),
+        }
+      : undefined,
+  };
+}
+
 const RUNTIME_CONFIG_TIMEOUT_MS = 20_000;
 const RUNTIME_CONFIG_RETRY_DELAY_MS = 250;
 
