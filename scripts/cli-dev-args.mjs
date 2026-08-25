@@ -1,6 +1,13 @@
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 
+/** Preserve the end-of-options marker when forwarding CLI arguments. */
+export function getForwardedCliArgs(args) {
+  const separatorIndex = args.indexOf('--');
+  if (separatorIndex === -1) return args;
+  return args.slice(separatorIndex);
+}
+
 /** Read a separate or equals-form CLI option value. */
 export function readOptionValue(args, name) {
   const prefix = `${name}=`;

@@ -2,6 +2,7 @@ import {spawn, spawnSync} from 'node:child_process';
 import net from 'node:net';
 import path from 'node:path';
 import {
+  getForwardedCliArgs,
   getCliDevHosts,
   getPythonCliDevArgs,
   hasOption,
@@ -45,12 +46,6 @@ const targetConfig =
 const resolvedTarget = targetConfig?.packageName ?? null;
 const filter = resolvedTarget ? `${resolvedTarget}...` : '@sqlrooms/*';
 
-function unwrapForwardedArgs(args) {
-  const separatorIndex = args.indexOf('--');
-  if (separatorIndex === -1) return args;
-  return args.slice(separatorIndex + 1);
-}
-
 function getControlArgs(args) {
   const separatorIndex = args.indexOf('--');
   if (separatorIndex === -1) return args;
@@ -61,7 +56,7 @@ const controlArgs = getControlArgs(restArgs);
 const forwardedCliArgs =
   restArgs.indexOf('--') === -1
     ? controlArgs.filter((arg) => arg !== '--dry' && !arg.startsWith('--dry='))
-    : unwrapForwardedArgs(restArgs);
+    : getForwardedCliArgs(restArgs);
 const cliArgs = target === 'cli' ? forwardedCliArgs : [];
 const proxyCliDevWebSockets = shouldProxyCliDevWebSockets(cliArgs);
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;

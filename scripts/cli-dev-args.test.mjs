@@ -2,12 +2,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  getForwardedCliArgs,
   getCliDevHosts,
   getPythonCliDevArgs,
   hasDbPathArg,
   readOptionValue,
   shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
+
+test('the root launcher preserves the end-of-options marker', () => {
+  assert.deepEqual(getForwardedCliArgs(['--dry', '--', '-dev.db']), [
+    '--',
+    '-dev.db',
+  ]);
+});
 
 test('option parsing stops at the end-of-options marker', () => {
   assert.equal(
