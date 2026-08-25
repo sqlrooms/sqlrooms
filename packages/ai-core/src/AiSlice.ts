@@ -63,6 +63,7 @@ import {
 } from './devtools/providerContextDiagnostics';
 import {
   fixIncompleteToolCalls,
+  isModelInSettings,
   normalizeAiConfig,
   ToolAbortError,
 } from './utils';
@@ -90,6 +91,9 @@ import {createSessionChatRuntime} from './sessionChatRuntime';
 const AI_COMMAND_OWNER = '@sqlrooms/ai-core';
 
 export type {ForkSessionFromMessageArgs} from './chatSessionForking';
+
+/** A resolved provider/model pair — what the next send would actually use. */
+export type ModelSelection = {modelProvider: string; model: string};
 
 export type AiSliceState = {
   ai: {
@@ -193,7 +197,36 @@ export type AiSliceState = {
      * lazily created session would receive. Useful before any session exists,
      * e.g. to know which provider a first-time API key belongs to.
      */
-    getSelectedModel: () => {modelProvider: string; model: string};
+    getSelectedModel: () => ModelSelection;
+    /**
+     * Whether a model is resolvable by *any* configured path: a custom-model
+     * factory supplied to {@link AiSliceOptions.getCustomModel}, or — once a
+     * session exists — its provider/model pair being present in the
+     * `@sqlrooms/ai-settings` model list. With no session yet, the resolved
+     * default is assumed available.
+     *
+     * Only checks that a factory **was configured**; never calls it, since
+     * invoking it may have side effects and a factory returning `undefined`
+     * means "configured but not currently ready".
+     *
+     * Prefer this over re-deriving readiness from `aiSettings.config`, so UI
+     * and runtime agree on one source of truth.
+     */
+    hasResolvableModel: () => boolean;
+    /**
+     * Whether the model resolution path in effect needs a browser-held API key.
+     *
+     * `false` only when a `chatEndPoint` is configured (the request is sent
+     * server-side), or when {@link AiSliceOptions.getCustomModel} is configured
+     * *and currently returns a model*, which carries its own credentials. A
+     * factory returning `undefined` still needs one: the transport then falls
+     * back to the built-in OpenAI-compatible client.
+     *
+     * Unlike {@link AiSliceState.ai.hasResolvableModel} this **invokes the
+     * factory**, so keep it cheap — it is called during render. The result is
+     * cached per selection and retired when the AI settings change.
+     */
+    requiresApiKey: () => boolean;
     /**
      * Create a new chat session, make it the current session, and open it in a
      * tab. When `modelProvider`/`model` are omitted the current selection (or
@@ -368,6 +401,48 @@ export interface AiSliceOptions<TTools extends ToolSet = ToolSet> {
     maxAgentSnapshotBytes?: number;
     captureProviderContexts?: boolean;
     maxProviderContextRecords?: number;
+  };
+}
+
+/**
+ * Caches `getCustomModel` per resolved selection, for the settings it was
+ * probed under.
+ *
+ * `requiresApiKey()` is read from a selector that re-runs once per streamed
+ * token, and the apps configuring a factory are exactly the ones with no API
+ * key, so no key-based short-circuit covers them. A zero-argument factory can
+ * only vary on the selection and on the settings it reads, so those are the
+ * cache key. A throwing factory caches as `undefined` ("a key is needed") —
+ * this must never throw out of a selector.
+ */
+function createCustomModelProbe(
+  getCustomModel: (() => LanguageModel | undefined) | undefined,
+) {
+  // Keyed, not single-slot: A -> B -> A must not re-invoke the factory for A.
+  const cache = new Map<string, LanguageModel | undefined>();
+  let probedSettings: unknown;
+
+  return (selection: ModelSelection, settingsConfig: unknown) => {
+    if (!getCustomModel) return undefined;
+    // A conditional factory reads the settings — a key entered later, a
+    // provider reconfigured — so a new settings object retires every answer.
+    // Streaming mutates sessions, not settings, so the per-token case still
+    // hits the cache.
+    if (settingsConfig !== probedSettings) {
+      cache.clear();
+      probedSettings = settingsConfig;
+    }
+    const key = `${selection.modelProvider}\u0000${selection.model}`;
+    // `has`, not a truthiness check: `undefined` is a cached answer ("a key is
+    // needed"), not a cache miss.
+    if (!cache.has(key)) {
+      try {
+        cache.set(key, getCustomModel());
+      } catch {
+        cache.set(key, undefined);
+      }
+    }
+    return cache.get(key);
   };
 }
 
@@ -592,7 +667,7 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
     const getResolvedModelSelection = (
       candidateProvider?: string,
       candidateModel?: string,
-    ): {modelProvider: string; model: string} => {
+    ): ModelSelection => {
       const availableModels = getAvailableModels?.() ?? [];
       const modelIsAvailable = (
         provider: string | undefined,
@@ -690,6 +765,8 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
 
     // Rehydrate toolTimings and agentProgress from persisted messages
     const initialRehydrated = rehydrateFromSessions(baseConfig);
+
+    const customModelProbe = createCustomModelProbe(getCustomModel);
 
     return {
       ai: {
@@ -1051,6 +1128,46 @@ export function createAiSlice<TTools extends ToolSet = ToolSet>(
           return getResolvedModelSelection(
             currentSession?.modelProvider,
             currentSession?.model,
+          );
+        },
+
+        hasResolvableModel: () => {
+          // A configured custom-model factory is authoritative and is never
+          // invoked here — only its presence is checked.
+          if (typeof getCustomModel === 'function') {
+            return true;
+          }
+
+          const state = get();
+          const currentSession = state.ai.getCurrentSession();
+          // No session yet: a lazily created session will use the resolved
+          // default provider/model, so a model is available.
+          if (!currentSession) {
+            return true;
+          }
+
+          if (hasAiSettingsConfig(state)) {
+            return isModelInSettings(
+              state.aiSettings.config,
+              currentSession.modelProvider,
+              currentSession.model,
+            );
+          }
+
+          return Boolean(currentSession.modelProvider && currentSession.model);
+        },
+
+        requiresApiKey: () => {
+          // A remote chat endpoint sends requests server-side, so the browser
+          // never holds a provider key regardless of how the model resolves.
+          if (chatEndPoint.trim().length > 0) return false;
+          if (typeof getCustomModel !== 'function') return true;
+          const state = get();
+          return (
+            customModelProbe(
+              state.ai.getSelectedModel(),
+              hasAiSettingsConfig(state) ? state.aiSettings.config : undefined,
+            ) === undefined
           );
         },
 

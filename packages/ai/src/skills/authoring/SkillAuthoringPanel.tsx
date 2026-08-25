@@ -129,7 +129,10 @@ export const SkillAuthoringPanel: React.FC<SkillAuthoringPanelProps> = ({
               <div className="flex h-full min-h-0 flex-col">
                 <Chat.Messages className="min-h-0 flex-1" />
                 <Chat.PromptSuggestions />
-                <Chat.Composer placeholder="Describe the skill you want to build..." />
+                <Chat.Composer
+                  placeholder="Describe the skill you want to build..."
+                  topActions={<Chat.PromptSuggestions.VisibilityToggle />}
+                />
               </div>
             </Chat.LocalAgentRoot>
           </ResizablePanel>

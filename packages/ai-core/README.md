@@ -20,6 +20,11 @@ You typically import Chat components from `@sqlrooms/ai-core`, but `@sqlrooms/ui
 - `getInstructions`
 - `toolRenderers` (optional) – a `ToolRendererRegistry` mapping tool names to React components
 - `getAvailableModels` (optional) – returns selectable `{provider, value}` pairs so new sessions can fall back to the first available model when the configured default is missing
+- `getCustomModel` (optional) – returns a pre-constructed AI SDK `LanguageModel`, bypassing the OpenAI-compatible fallback entirely. Use this when a model is produced some other way, e.g. an app streaming through a server-side model proxy so no API key ever reaches the browser.
+
+Send readiness (`ai.hasResolvableModel()`) reflects whichever of these paths can produce a model, so apps relying solely on `getCustomModel` do not need to register a phantom entry in `@sqlrooms/ai-settings`'s model list just to satisfy the composer's UI check. The predicate only checks that `getCustomModel` **was configured**; it never calls it.
+
+Its counterpart `ai.requiresApiKey()` reports whether the path in effect needs a browser-held key at all — `false` when a `chatEndPoint` is configured (the remote transport sends server-side, so no key reaches the browser), and `false` when `getCustomModel` is configured **and currently returns a model**, since that model carries its own credentials. A configured factory returning `undefined` still needs a key, because the transport then falls back to the built-in OpenAI-compatible client. Unlike `hasResolvableModel()`, this predicate therefore invokes the factory: guessing optimistically about readiness only risks a failed send, but guessing optimistically about credentials hides the only UI for entering one. The result is cached per resolved provider/model pair — keyed, so returning to a previously selected model does not re-probe — meaning a mounted composer asks the factory once per distinct selection rather than once per store update. Keep it idempotent for a given selection. The composer's `needsApiKey` is gated on it, so an app behind a server-side proxy is never asked for a key it has no use for.
 
 > **Upgrading from 0.28.x?** See the [0.29.0 migration guide](https://sqlrooms.org/upgrade-guide#_0-29-0-upcoming) for the full list of breaking changes: `parameters` → `inputSchema`, `component` → `toolRenderers`, `setSessionToolAdditionalData` removed.
 
@@ -93,6 +98,187 @@ and the first `ai.createSession()` transfers it to the new session.
 
 Use `Chat.Composer`'s `topActions` slot for compact controls that should sit in
 the prompt's top row, right-aligned beside context selectors.
+
+> `<InlineApiKeyInput>` assumes session mode: it calls `useStoreWithAi`
+> unconditionally, so passing it as a `Chat.Composer` child under
+> `Chat.LocalAgentRoot` throws. Local-agent apps have no concept of a
+> browser-held API key, so omit it there.
+
+### Composable composer and prompt-suggestions primitives
+
+`Chat.Composer` and `Chat.PromptSuggestions` are recipes: fully-styled,
+opinionated defaults built on two lower layers that are themselves public API
+for hosts that need a different visual shape.
+
+**Layering**, thinnest to thickest:
+
+1. **Behavior hooks** — `useChatComposer()` and `usePromptSuggestions()`. No
+   DOM, no styling. Normalized state and actions that read identically
+   whether the surrounding `Chat` is in session mode (`Chat.Root`) or
+   local-agent mode (`Chat.LocalAgentRoot`).
+2. **Unstyled primitives** — thin components built on the hooks above. All
+   accept `asChild` (via Radix's `Slot`) to render as a single host-supplied
+   child instead of their default DOM element, and none carry position,
+   size, overflow, truncation, or other visual styling of their own.
+3. **Recipes** — `Chat.Composer` and `Chat.PromptSuggestions`. SQLRooms' own
+   opinionated, styled defaults, built entirely from the primitives above.
+   Most apps only need these. Both supply their own state boundary, so they
+   also work under a bare `RoomStateProvider` with no `<Chat>` ancestor —
+   though as siblings that gives each its own state, so a shared pre-send
+   policy needs a common ancestor (see below).
+
+Reach for a lower layer only when a recipe's fixed appearance does not fit —
+a host design system's own textarea, button, or list component, a
+popover-anchored suggestions panel, or a horizontal carousel instead of the
+vertical default.
+
+`useChatComposer()` returns
+`{mode, prompt, setPrompt, send, cancel, canSend, isRunning, isBusy, needsApiKey, sendBlocked}`.
+Use it directly for anything that isn't textarea-shaped (a rich editor, a
+custom input surface); `Input` below is built on it for the common textarea
+case. It (and `ChatComposerStateBoundary`, for use outside any `<Chat>`
+ancestor) is also how a suggestions list rendered elsewhere in the tree can
+stay in sync with a composer mounted somewhere else.
+
+Composer primitives (imported from `@sqlrooms/ai-core`, or via
+`Chat.Composer.Input` / `.Send` / `.Stop` / `.DropTarget`):
+
+- **`Input`** — binds the composer's prompt to a `<textarea>` (or, with
+  `asChild`, a host-supplied one). Owns the Enter-to-send keymap (with an
+  IME-composition guard and a no-modifiers check), optional auto-resize, and
+  disables itself while busy. Host event handlers passed as props are
+  merged, not replaced: the host's handler runs first, and calling
+  `event.preventDefault()` suppresses this component's own behavior for that
+  event — this is how `submitOnEnter` can be overridden by a host that wants
+  full keymap control. Accepts a synchronous `onBeforeSend` pre-send veto
+  (return `false` to abort a send).
+
+  **The forwarded ref must reach the real DOM `<textarea>`.** With `asChild`,
+  auto-resize measures and mutates inline `height` through the ref this
+  component receives; if the host component that owns that ref does not
+  forward it down to its own `<textarea>`, auto-resize silently does
+  nothing — no error, and nothing a type check would catch.
+
+- **`Send`** — sends the current prompt on activation. Renders nothing
+  (`null`) while a run is in flight; disabled whenever `canSend` is `false`.
+  Accepts the same synchronous `onBeforeSend` veto as `Input`.
+
+  Both primitives render a `<button type="button">`, including under
+  `asChild` — an untyped HTML button defaults to `submit`, which would post an
+  enclosing host `<form>` and lose the draft. An `asChild` child that sets its
+  own `type` keeps it.
+
+- **`Stop`** — cancels the in-flight run on activation. Renders nothing while
+  idle; never disabled once a run is in flight.
+- **`DropTarget`** — marks an element as a drop target for in-app context
+  items dragged into the composer (built on dnd-kit). **Handles in-app
+  context items only, not file uploads** — dnd-kit observes pointer-driven
+  drags between elements it manages, not native HTML5 file-drag events; a
+  file drop needs a separate, native-drag-based primitive. **Requires
+  `RoomDndProvider`**, not merely any dnd-kit `DndContext`: without a
+  `DndContext` at all it throws rather than degrading to a no-op, and under a
+  plain one it renders but never fires `onDrop`, because drops are accepted
+  only for collisions carrying the `pointerWithin` marker that
+  `RoomDndProvider`'s collision detector adds.
+
+### Pre-send policy: `useRegisterBeforeSend`
+
+`onBeforeSend` on `Input` and `Send` vetoes sends from _that control_. When the
+policy belongs to the chat rather than to one button — "create an artifact
+before the first message", "route this through my own session management" —
+register it on the composer state instead:
+
+```tsx
+useRegisterBeforeSend(
+  useCallback((text: string) => (isAllowed(text) ? undefined : false), []),
+);
+```
+
+Every send routed through `useChatComposer()`'s `send` then consults it,
+whatever triggered it — the composer's own controls, a prompt suggestion row, a
+command. This is what `Chat.Composer`'s `onRun` prop is built on, and why
+clicking a suggestion cannot bypass a veto the composer enforces. The handler
+is synchronous; return `false` to abort.
+
+The registry is **one per `<Chat>` root**, which is what gives it that reach.
+Two `Chat.Composer`s under one root are two views of one chat — same session,
+same prompt — so a policy registered by either applies to sends from both;
+independent surfaces need their own root, and a duplicate `onRun` warns in
+development rather than merging silently.
+
+Sharing is by React ancestry, which has one consequence worth knowing when
+using the recipes **standalone**. `Chat.Composer` and `Chat.PromptSuggestions`
+each supply their own state boundary when no `<Chat>` is above them, so as
+siblings under a bare `RoomStateProvider` they get _separate_ registries and a
+suggestion click will not run the composer's `onRun`. Give them a common
+`<Chat>` or `<ChatSuggestionsStateBoundary>` ancestor whenever the policy has
+to span both — which is also what `<Chat>` does for you by default.
+
+For a state that makes sending impossible outright rather than conditionally —
+a missing credential, say — use `useBlockSends()` instead. It reports through
+`useChatComposer()`'s `sendBlocked`, so `canSend` and suggestion rows render
+disabled rather than looking live and doing nothing. `Chat.Composer` uses it
+when it swaps to inline API-key entry.
+
+`usePromptSuggestions()` returns
+`{mode, visible, setVisible, toggle, items, isSessionEmpty, fill, send, isReadyToSend}`,
+normalized the same way across both runtime modes. `send`/`isReadyToSend` reuse
+the composer's own send action and readiness signals, so a suggestion and the
+composer's send control can never disagree about whether sending is currently
+possible — and any registered pre-send veto applies to both.
+
+`isSessionEmpty` is true only when the chat has no messages _and_ no
+in-progress prompt, counting a draft typed before any session exists. Branch on
+it to show suggestions only on a genuinely empty chat.
+
+Suggestions primitives:
+
+- **`Root`** — visibility gate: renders nothing when suggestions are hidden,
+  its child otherwise. Accepts an `open` override for hosts whose own
+  popover, dropdown, or overlay already owns open/closed state; pair it with
+  `onOpenChange`, since while controlled the `VisibilityToggle` and `Dismiss`
+  controls _inside_ this root report through that callback instead of writing
+  the store `open` overrides. Controls rendered outside a controlled root keep
+  targeting the store, so controlling one list does not retarget unrelated
+  toggles.
+- **`Item`** — a single suggestion. Fills the prompt on activation by
+  default; pass `submit` to send immediately instead. Disabled whenever
+  `isReadyToSend` is `false`.
+- **`VisibilityToggle`** — toggles visibility; exposes `aria-pressed` for
+  styling pressed/unpressed. Inside a controlled `Root` it writes through
+  `onOpenChange` rather than the overridden store, but since such a root
+  renders nothing while hidden it can only close from there — render it
+  outside the root for a control that also re-opens.
+- **`Dismiss`** — hides suggestions unconditionally (unlike
+  `VisibilityToggle`, it never re-shows them).
+
+`useControlledVisibility()` returns the nearest controlled `Root`'s
+`{visible, setVisible}`, or `null` when visibility is owned by the normalized
+store. A host writing its own visibility control needs it: writing
+`usePromptSuggestions().setVisible(false)` directly has no effect inside a
+controlled root, whose `open` overrides the store. Prefer the controlled state
+when it is present and fall back to the store otherwise, which is what
+`Dismiss` and `VisibilityToggle` do.
+
+None of the suggestions primitives carry position, size, overflow,
+truncation, or tooltip styling — a host's own vertical list, popover, or
+horizontal scroller owns all of that. `examples/ai-rag` builds a horizontal
+carousel directly from these primitives (composed with `@sqlrooms/ui`'s
+`ScrollableRow`) — it stays in the repo specifically to prove the primitives
+impose no layout of their own, alongside `examples/ai`'s use of the vertical
+recipe.
+
+#### Breaking changes in this release
+
+- **Local-agent `Enter` while streaming no longer stops the run.** It is now
+  a no-op, matching session mode: `Enter` sends when ready, and never
+  cancels a run in flight.
+- **`Chat.PromptSuggestions` now defaults to a full-width vertical list**
+  with click-to-send and CSS-ellipsis truncation (plus a native `title` for
+  the full text), replacing the previous horizontal card carousel that
+  filled the prompt for editing and truncated by character count. A
+  horizontal layout is still available — build it from the suggestions
+  primitives, as `examples/ai-rag` does.
 
 ### Customizable chat presentation
 

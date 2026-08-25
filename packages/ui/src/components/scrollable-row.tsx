@@ -6,23 +6,43 @@ type ScrollableRowProps = {
   children: React.ReactNode;
   className?: string;
   scrollClassName?: string;
+  /**
+   * Ref to the inner scrolling container. Replaces the internal ref; the
+   * arrows keep working.
+   */
   scrollRef?: React.RefObject<HTMLDivElement>;
+  /** Pixels scrolled per arrow activation. Defaults to 200. */
   scrollAmount?: number;
   arrowVisibility?: 'hover' | 'always';
   arrowClassName?: string;
   arrowIconClassName?: string;
-};
+} & Omit<React.ComponentPropsWithoutRef<'div'>, 'children' | 'className'>;
 
-export function ScrollableRow({
-  children,
-  className,
-  scrollClassName,
-  scrollRef,
-  scrollAmount = 200,
-  arrowVisibility = 'hover',
-  arrowClassName,
-  arrowIconClassName,
-}: ScrollableRowProps) {
+/**
+ * A horizontally scrolling row with arrows that appear only where there is more
+ * content.
+ *
+ * The forwarded ref and `className` target the outer wrapper (so `Slot` or
+ * drop-target wrapping works); `scrollRef` targets the inner scrolling
+ * container.
+ */
+export const ScrollableRow = React.forwardRef<
+  HTMLDivElement,
+  ScrollableRowProps
+>(function ScrollableRow(
+  {
+    children,
+    className,
+    scrollClassName,
+    scrollRef,
+    scrollAmount = 200,
+    arrowVisibility = 'hover',
+    arrowClassName,
+    arrowIconClassName,
+    ...rest
+  },
+  forwardedRef,
+) {
   const internalRef = useRef<HTMLDivElement>(null);
   const containerRef = scrollRef ?? internalRef;
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -72,7 +92,7 @@ export function ScrollableRow({
   );
 
   return (
-    <div className={cn('relative', className)}>
+    <div ref={forwardedRef} className={cn('relative', className)} {...rest}>
       <button
         type="button"
         onClick={() => scrollBy('left')}
@@ -120,4 +140,6 @@ export function ScrollableRow({
       </button>
     </div>
   );
-}
+});
+
+ScrollableRow.displayName = 'ScrollableRow';

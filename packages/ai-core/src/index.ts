@@ -9,6 +9,7 @@ export type {
   AiSliceState,
   AiSliceOptions,
   ForkSessionFromMessageArgs,
+  ModelSelection,
 } from './AiSlice';
 export type {AiTimeoutOptions} from './timeouts';
 export {
@@ -111,6 +112,42 @@ export {
   LocalAgentChatRuntimeProvider,
   SessionChatRuntimeProvider,
 } from './components/ChatRuntimeContext';
+export {
+  useChatComposer,
+  useRegisterBeforeSend,
+  useBlockSends,
+  ChatComposerStateBoundary,
+  Input as ChatComposerInput,
+  Send as ChatComposerSend,
+  Stop as ChatComposerStop,
+  DropTarget as ChatComposerDropTarget,
+} from './components/composer';
+export type {
+  ChatComposerMode,
+  ChatComposerState,
+  BeforeSendHandler,
+  ChatComposerInputProps,
+  ChatComposerSendProps,
+  ChatComposerStopProps,
+  ChatComposerDropTargetProps,
+} from './components/composer';
+export {
+  usePromptSuggestions,
+  ChatSuggestionsStateBoundary,
+  Root as ChatSuggestionsRoot,
+  Item as ChatSuggestionsItem,
+  VisibilityToggle as ChatSuggestionsVisibilityToggle,
+  Dismiss as ChatSuggestionsDismiss,
+  useControlledVisibility,
+} from './components/suggestions';
+export type {
+  ChatSuggestionsState,
+  ChatSuggestionsRootProps,
+  ChatSuggestionsItemProps,
+  ChatSuggestionsVisibilityToggleProps,
+  ChatSuggestionsDismissProps,
+  ControlledVisibility,
+} from './components/suggestions';
 export {
   getAnalysisResultsFromUiMessages,
   getChatRequestErrorMessage,

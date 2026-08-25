@@ -1,16 +1,49 @@
 import {
   cn,
-  Button,
+  Spinner,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  Spinner,
-  ScrollableRow,
 } from '@sqlrooms/ui';
 import {Lightbulb, X} from 'lucide-react';
-import {PropsWithChildren, useCallback, useRef} from 'react';
-import {useStoreWithAi} from '../AiSlice';
-import {truncate} from '@sqlrooms/utils';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  type FC,
+  type PropsWithChildren,
+  type ReactNode,
+} from 'react';
+import {
+  ChatSuggestionsStateBoundary,
+  Dismiss,
+  Item,
+  Root,
+  VisibilityToggle,
+} from './suggestions';
+import {usePromptSuggestions} from './suggestions/ChatSuggestionsContext';
+import {withProvider} from './primitives/withProvider';
+
+/**
+ * Whether `node` renders anything. `Children.toArray` drops nullish and boolean
+ * children but does not flatten fragments, hence the recursion for the ordinary
+ * `<>{ready && <Item />}</>` shape.
+ */
+function hasRenderableContent(node: ReactNode): boolean {
+  return Children.toArray(node).some((child) =>
+    isValidElement(child) && child.type === Fragment
+      ? hasRenderableContent(
+          (child.props as {children?: ReactNode} | null)?.children,
+        )
+      : true,
+  );
+}
+
+const ROW_CLASSES = cn(
+  'flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs',
+  'text-muted-foreground hover:bg-muted hover:text-foreground transition-colors',
+  'disabled:pointer-events-none disabled:opacity-50',
+);
 
 type PromptSuggestionsContainerProps = PropsWithChildren<{
   isLoading?: boolean;
@@ -18,207 +51,159 @@ type PromptSuggestionsContainerProps = PropsWithChildren<{
 }>;
 
 /**
- * Container component for prompt suggestions
- * Shows suggestions when visible, returns null when not visible
+ * Wraps a styled entry point so it works with no `<Chat>` ancestor, matching
+ * `QueryControls`.
  */
-const Container: React.FC<PromptSuggestionsContainerProps> = ({
+const withSuggestionsBoundary = <TProps extends object>(
+  Component: React.FC<TProps>,
+  displayName: string,
+): React.FC<TProps> =>
+  withProvider(ChatSuggestionsStateBoundary, Component, displayName);
+
+/**
+ * SQLRooms' default prompt-suggestions recipe: a full-width vertical list with
+ * a bounded max height and internal scrolling, built from {@link Root},
+ * {@link Item}, {@link Dismiss} and {@link usePromptSuggestions}.
+ *
+ * Replaces the previous horizontal card carousel; see the package README for
+ * the breaking changes that carries. The max-height lives here rather than in
+ * {@link Root}, so a host embedding the primitives picks its own height
+ * policy.
+ */
+const ContainerBody: React.FC<PromptSuggestionsContainerProps> = ({
   isLoading = false,
   className,
   children,
 }) => {
-  const isVisible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
-  const setIsVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
+  const suggestions = usePromptSuggestions();
 
-  const toggleVisibility = useCallback(() => {
-    setIsVisible(!isVisible);
-  }, [isVisible, setIsVisible]);
+  // A host conditional that renders nothing is not an explicit empty list —
+  // the frame and its dismiss button would wrap nothing.
+  const hasChildren = hasRenderableContent(children);
+  const content = hasChildren
+    ? children
+    : suggestions.items.map((text) => <RecipeItem key={text} text={text} />);
 
-  if (!isVisible) {
+  if (!isLoading && !hasChildren && suggestions.items.length === 0) {
     return null;
   }
 
   return (
-    <div className={cn('w-full py-1', className)}>
-      {/* Container with scrollable suggestions and hide button */}
-      <div className="flex h-full w-full gap-2">
-        <ScrollableRow
-          className="min-w-0 flex-1"
-          scrollClassName="flex flex-1 snap-x snap-mandatory scroll-pl-7 scroll-pr-7 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          arrowVisibility="always"
-          arrowIconClassName="h-4 w-4 opacity-80"
-        >
+    <Root className={cn('flex w-full items-start gap-2 py-1', className)}>
+      <div className="max-h-40 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col gap-0.5 p-1">
           {isLoading
-            ? // Show placeholder buttons with spinners while loading
-              Array.from({length: 3}).map((_, index) => (
-                <div key={index} className="shrink-0 snap-start">
-                  <Button
-                    disabled
-                    className={cn(
-                      'bg-muted/50 border-border border',
-                      'rounded-lg',
-                      'text-muted-foreground text-xs',
-                      'relative',
-                      'flex items-center justify-center',
-                      'px-4 py-2',
-                      'h-18 max-h-14 min-h-14 w-48 max-w-48 min-w-48',
-                    )}
-                    type="button"
-                  >
-                    <Spinner className="text-muted-foreground h-3.5 w-3.5" />
-                  </Button>
+            ? Array.from({length: 3}).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-muted/50 border-border text-muted-foreground flex h-9 items-center justify-center rounded-md border"
+                >
+                  <Spinner className="h-3.5 w-3.5" />
                 </div>
               ))
-            : children}
-        </ScrollableRow>
-
-        <div className="flex shrink-0 items-center pr-1">
-          <Button
-            onClick={toggleVisibility}
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground h-6 w-6 shrink-0"
-            title="Hide prompt suggestions"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+            : content}
         </div>
       </div>
-    </div>
+
+      <div className="flex shrink-0 items-center pr-1">
+        <Dismiss
+          className="text-muted-foreground hover:text-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+          aria-label="Hide prompt suggestions"
+          title="Hide prompt suggestions"
+        >
+          <X className="h-4 w-4" />
+        </Dismiss>
+      </div>
+    </Root>
   );
 };
 
 type PromptSuggestionsItemProps = {
   text: string;
   className?: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   /**
-   * Optional onClick handler. If provided, it will be called instead of
-   * the default behavior of setting the prompt in the current session.
-   * Useful when there is no active session (e.g., on a start screen).
+   * Replaces the default click-to-send behavior — for a suggestion that should
+   * do something other than send into the current chat, such as loading a
+   * template from a start screen.
    */
   onClick?: (text: string) => void;
 };
 
 /**
- * Individual prompt suggestion item component
- * Displays a single prompt suggestion and handles click events
+ * A single row in the default vertical recipe. Sends immediately on click (via
+ * {@link Item}'s `submit`) unless `onClick` overrides that. Text renders in
+ * full, ellipsizing by CSS with a native `title` — never cut at a fixed
+ * character count.
  */
-const Item: React.FC<PromptSuggestionsItemProps> = ({
+const RecipeItem: FC<PromptSuggestionsItemProps> = ({
   text,
   className,
   icon,
   onClick,
-}) => {
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
-  const setDraftPrompt = useStoreWithAi((s) => s.ai.setDraftPrompt);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  const handleClick = useCallback(() => {
-    if (onClick) {
-      // Use custom onClick if provided
-      onClick(text);
-    } else if (currentSession?.id) {
-      // Default behavior: set prompt in current session
-      setPrompt(currentSession.id, text);
-    } else {
-      setDraftPrompt(text);
+}) => (
+  <Item
+    text={text}
+    submit
+    title={text}
+    className={cn(ROW_CLASSES, className)}
+    // Host-first merging means preventing default suppresses `Item`'s own
+    // submit, so an override replaces sending while keeping the row's
+    // readiness-driven disabled state.
+    onClick={
+      onClick &&
+      ((event) => {
+        event.preventDefault();
+        onClick(text);
+      })
     }
-    // Scroll the clicked item into view
-    buttonRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
-  }, [text, setPrompt, setDraftPrompt, currentSession, onClick]);
-
-  return (
-    <div className="shrink-0 snap-start">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            ref={buttonRef}
-            onClick={handleClick}
-            className={cn(
-              'bg-muted/50 hover:bg-muted hover:shadow-lg',
-              'border-border hover:border-primary/50 border',
-              'rounded-lg',
-              'text-muted-foreground hover:text-foreground text-xs',
-              'transition-all duration-200 ease-in-out',
-              'hover:-translate-y-0.5 hover:scale-[1.02]',
-              'cursor-pointer',
-              'relative',
-              'flex items-start justify-start',
-              'text-left',
-              'overflow-hidden',
-              'py-2 pr-4 pl-8',
-              'h-18 max-h-14 min-h-14 w-48 max-w-48 min-w-48',
-              className,
-            )}
-            type="button"
-            title={text}
-          >
-            <span className="absolute top-3 left-2 opacity-60">
-              {icon ?? <Lightbulb className="h-3.5 w-3.5" />}
-            </span>
-            <span className="line-clamp-2 text-wrap wrap-break-word">
-              {truncate(text, 40)}
-            </span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="max-w-xs">{text}</p>
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  );
-};
+  >
+    <span className="shrink-0 opacity-60">
+      {icon ?? <Lightbulb className="h-3.5 w-3.5" />}
+    </span>
+    <span className="min-w-0 flex-1 truncate">{text}</span>
+  </Item>
+);
 
 type PromptSuggestionsVisibilityToggleProps = {
   className?: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 };
 
 /**
- * Toggle button for showing/hiding prompt suggestions
- * Can be placed anywhere in the UI
- * Always shows a Lightbulb icon with styling that changes based on state
+ * Toggle button for showing/hiding prompt suggestions. Can be placed
+ * anywhere under `<Chat>`, independent of where the list itself renders.
  */
-const VisibilityToggle: React.FC<PromptSuggestionsVisibilityToggleProps> = ({
-  className,
-  icon,
-}) => {
-  const isVisible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
-  const setIsVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
-
-  const toggleVisibility = useCallback(() => {
-    setIsVisible(!isVisible);
-  }, [isVisible, setIsVisible]);
+const PromptSuggestionsVisibilityToggle: FC<
+  PromptSuggestionsVisibilityToggleProps
+> = ({className, icon}) => {
+  const suggestions = usePromptSuggestions();
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button
-          onClick={toggleVisibility}
-          variant="ghost"
-          size="icon"
+        <VisibilityToggle
           className={cn(
-            'h-6 w-6 shrink-0',
-            isVisible
+            'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
+            suggestions.visible
               ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
               : 'text-muted-foreground hover:text-foreground',
             className,
           )}
           aria-label={
-            isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'
+            suggestions.visible
+              ? 'Hide prompt suggestions'
+              : 'Show prompt suggestions'
           }
         >
           {icon ?? <Lightbulb className="h-4 w-4" />}
-        </Button>
+        </VisibilityToggle>
       </TooltipTrigger>
       <TooltipContent>
         <p>
-          {isVisible ? 'Hide prompt suggestions' : 'Show prompt suggestions'}
+          {suggestions.visible
+            ? 'Hide prompt suggestions'
+            : 'Show prompt suggestions'}
         </p>
       </TooltipContent>
     </Tooltip>
@@ -226,20 +211,34 @@ const VisibilityToggle: React.FC<PromptSuggestionsVisibilityToggleProps> = ({
 };
 
 /**
- * Composable PromptSuggestions component with Container, Item, and VisibilityToggle subcomponents
+ * Composable PromptSuggestions component with Container, Item, and
+ * VisibilityToggle subcomponents.
  *
  * @example
  * ```tsx
- * <PromptSuggestions.Container isLoading={false}>
+ * <PromptSuggestions isLoading={false} />
+ *
+ * <PromptSuggestions>
  *   <PromptSuggestions.Item text="What are the top selling products?" />
  *   <PromptSuggestions.Item text="Show me the revenue trends" />
- * </PromptSuggestions.Container>
+ * </PromptSuggestions>
  *
  * <PromptSuggestions.VisibilityToggle />
  * ```
  */
-export const PromptSuggestions = {
+const Container = withSuggestionsBoundary(ContainerBody, 'PromptSuggestions');
+const BoundedItem = withSuggestionsBoundary(
+  RecipeItem,
+  'PromptSuggestions.Item',
+);
+const BoundedVisibilityToggle = withSuggestionsBoundary(
+  PromptSuggestionsVisibilityToggle,
+  'PromptSuggestions.VisibilityToggle',
+);
+
+export const PromptSuggestions = Object.assign(Container, {
+  /** @deprecated Render `<PromptSuggestions>` directly. */
   Container,
-  Item,
-  VisibilityToggle,
-};
+  Item: BoundedItem,
+  VisibilityToggle: BoundedVisibilityToggle,
+});

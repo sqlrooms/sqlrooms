@@ -160,6 +160,45 @@ export function extractModelsFromSettings(
 }
 
 /**
+ * Whether a `(provider, model)` pair is present in an
+ * {@link AiSettingsSliceConfig}.
+ *
+ * Mirrors {@link extractModelsFromSettings}' treatment of `'custom'` as the
+ * union of `config.providers['custom']` and `config.customModels`, and guards
+ * the `config.providers` lookup with an own-property check so an inherited
+ * `Object.prototype` key (`'constructor'`, `'__proto__'`, …) reports `false`
+ * rather than throwing.
+ *
+ * @param config - The AI settings configuration to search.
+ * @param provider - The provider key (`'custom'` also matches custom models).
+ * @param model - The model name to look for.
+ */
+export function isModelInSettings(
+  config: AiSettingsSliceConfig,
+  provider: string | undefined,
+  model: string | undefined,
+): boolean {
+  if (!provider || !model) return false;
+
+  if (
+    Object.hasOwn(config.providers, provider) &&
+    config.providers[provider]?.models?.some(
+      (providerModel) => providerModel.modelName === model,
+    )
+  ) {
+    return true;
+  }
+
+  if (provider === 'custom') {
+    return config.customModels.some(
+      (customModel) => customModel.modelName === model,
+    );
+  }
+
+  return false;
+}
+
+/**
  * Type guard to check if a UIMessagePart is a text part
  * @param part - The message part to check
  * @returns True if the part is a text part

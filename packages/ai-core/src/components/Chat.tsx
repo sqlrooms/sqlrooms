@@ -6,19 +6,25 @@ import {
   useChatRuntime,
   type LocalAgentChatRootProps,
 } from './ChatRuntimeContext';
+import {
+  DropTarget as ComposerDropTarget,
+  Input as ComposerInput,
+  LocalAgentChatComposerProvider,
+  Send as ComposerSend,
+  SessionChatComposerProvider,
+  Stop as ComposerStop,
+} from './composer';
+import {
+  LocalAgentChatSuggestionsProvider,
+  SessionChatSuggestionsProvider,
+} from './suggestions';
 import {ChatRendering, type ChatRenderingProps} from './ChatRenderingContext';
 import {
   type ToolRenderBehavior,
   ToolRenderBehaviorProvider,
 } from './FlatAgentRenderer';
 import {InlineApiKeyInput} from './InlineApiKeyInput';
-import {LocalAgentChatComposer} from './LocalAgentChatComposer';
 import {LocalAgentChatMessages} from './LocalAgentChatMessages';
-import {
-  LocalAgentPromptSuggestionItem,
-  LocalAgentPromptSuggestionsContainer,
-  LocalAgentPromptSuggestionsVisibilityToggle,
-} from './LocalAgentPromptSuggestions';
 import {ModelSelector} from './ModelSelector';
 import {PromptSuggestions} from './PromptSuggestions';
 import {QueryControls} from './QueryControls';
@@ -44,12 +50,14 @@ type ChatComponent = FC<RootProps> & {
   Header: typeof ChatHeader;
   History: typeof ChatHistoryView;
   Messages: FC<ComponentProps<typeof ChatMessagesContainer>>;
-  Composer: FC<ComponentProps<typeof QueryControls>>;
-  InlineApiKeyInput: typeof InlineApiKeyInput;
-  PromptSuggestions: typeof PromptSuggestions.Container & {
-    Item: typeof PromptSuggestions.Item;
-    VisibilityToggle: typeof PromptSuggestions.VisibilityToggle;
+  Composer: FC<ComponentProps<typeof QueryControls>> & {
+    Input: typeof ComposerInput;
+    Send: typeof ComposerSend;
+    Stop: typeof ComposerStop;
+    DropTarget: typeof ComposerDropTarget;
   };
+  InlineApiKeyInput: typeof InlineApiKeyInput;
+  PromptSuggestions: typeof PromptSuggestions;
   Search: typeof ChatSearch;
   ModelSelector: typeof ModelSelector;
   ContextSelector: typeof ContextSelector;
@@ -63,7 +71,11 @@ const EMPTY_BEHAVIOR: ToolRenderBehavior = {};
 const Root: FC<RootProps> = ({children, toolRenderBehavior}) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <SessionChatRuntimeProvider>
-      <ChatSearchProvider>{children}</ChatSearchProvider>
+      <SessionChatComposerProvider>
+        <SessionChatSuggestionsProvider>
+          <ChatSearchProvider>{children}</ChatSearchProvider>
+        </SessionChatSuggestionsProvider>
+      </SessionChatComposerProvider>
     </SessionChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
 );
@@ -75,7 +87,11 @@ const LocalAgentRoot: FC<LocalAgentChatRootProps> = ({
 }) => (
   <ToolRenderBehaviorProvider value={toolRenderBehavior ?? EMPTY_BEHAVIOR}>
     <LocalAgentChatRuntimeProvider {...props}>
-      {children}
+      <LocalAgentChatComposerProvider>
+        <LocalAgentChatSuggestionsProvider>
+          {children}
+        </LocalAgentChatSuggestionsProvider>
+      </LocalAgentChatComposerProvider>
     </LocalAgentChatRuntimeProvider>
   </ToolRenderBehaviorProvider>
 );
@@ -88,44 +104,11 @@ const Messages: FC<ComponentProps<typeof ChatMessagesContainer>> = (props) => {
   return <ChatMessagesContainer {...props} />;
 };
 
-const Composer: FC<ComponentProps<typeof QueryControls>> = (props) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode === 'local-agent') {
-    return <LocalAgentChatComposer {...props} />;
-  }
-  return <QueryControls {...props} />;
-};
-
-const PromptSuggestionsContainer: typeof PromptSuggestions.Container = (
-  props,
-) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode === 'local-agent') {
-    return <LocalAgentPromptSuggestionsContainer {...props} />;
-  }
-  return <PromptSuggestions.Container {...props} />;
-};
-
-const PromptSuggestionsItem: typeof PromptSuggestions.Item = (props) => {
-  const runtime = useChatRuntime();
-  if (runtime.mode === 'local-agent') {
-    return <LocalAgentPromptSuggestionItem {...props} />;
-  }
-  return <PromptSuggestions.Item {...props} />;
-};
-
-const PromptSuggestionsVisibilityToggle: typeof PromptSuggestions.VisibilityToggle =
-  (props) => {
-    const runtime = useChatRuntime();
-    if (runtime.mode === 'local-agent') {
-      return <LocalAgentPromptSuggestionsVisibilityToggle {...props} />;
-    }
-    return <PromptSuggestions.VisibilityToggle {...props} />;
-  };
-
-const PromptSuggestionsCompound = Object.assign(PromptSuggestionsContainer, {
-  Item: PromptSuggestionsItem,
-  VisibilityToggle: PromptSuggestionsVisibilityToggle,
+const Composer = Object.assign(QueryControls, {
+  Input: ComposerInput,
+  Send: ComposerSend,
+  Stop: ComposerStop,
+  DropTarget: ComposerDropTarget,
 });
 
 export const Chat: ChatComponent = Object.assign(Root, {
@@ -138,7 +121,7 @@ export const Chat: ChatComponent = Object.assign(Root, {
   Messages,
   Composer,
   InlineApiKeyInput: InlineApiKeyInput,
-  PromptSuggestions: PromptSuggestionsCompound,
+  PromptSuggestions,
   Search: ChatSearch,
   ModelSelector: ModelSelector,
   ContextSelector: ContextSelector,
