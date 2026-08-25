@@ -426,7 +426,7 @@ export function applyDeckMapPointBinding<
       [datasetId]: {
         ...dataset,
         source: {
-          ...dataset.source,
+          tableName: dataset.source.tableName,
           transformSql: createDeckMapPointTransformSql({
             longitudeColumn,
             latitudeColumn,

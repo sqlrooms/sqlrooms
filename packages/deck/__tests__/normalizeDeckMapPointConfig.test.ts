@@ -47,6 +47,7 @@ describe('normalizeDeckMapPointConfig', () => {
         places: {
           source: {
             tableName: 'places',
+            sqlQuery: 'SELECT * FROM archived_places',
             transformSql:
               'SELECT ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
           },
