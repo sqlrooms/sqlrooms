@@ -477,6 +477,7 @@ export function createCliBlockDocumentCommands({
           {
             blockDocumentId: params.blockDocumentId,
             config: params.config,
+            pointBinding: params.pointBinding,
             mapId: params.mapId,
             tableName: params.tableName,
             title: params.title,

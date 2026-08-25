@@ -26,6 +26,7 @@ export {
 } from './mapConfig';
 export {getDeckMapDataPolicy, type DeckMapDataPolicy} from './mapDataPolicy';
 export {
+  applyDeckMapPointBinding,
   createDeckMapDashboardConfigForTable,
   createDeckMapConfigForTable,
   createDeckMapDashboardPanelConfigForTable,
@@ -42,6 +43,7 @@ export {
 export type {
   DeckMapConfigColumn,
   DeckMapFillColor,
+  DeckMapPointBinding,
   DeckMapTableReference,
 } from './mapConfigUtils';
 export {

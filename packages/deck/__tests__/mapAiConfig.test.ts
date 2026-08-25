@@ -49,4 +49,35 @@ describe('DeckMapResourceConfigParameter', () => {
     expect(result.data?.replaceLayers).toBe(true);
     expect(result.data?.replaceDatasets).toBe(true);
   });
+
+  test('accepts structured point provenance', () => {
+    const result = DeckMapResourceToolParameters.safeParse({
+      title: 'Places',
+      reasoning: 'Map table coordinates',
+      tableName: 'places',
+      pointBinding: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+      },
+      config: {
+        spec: {
+          layers: [
+            {
+              '@@type': 'GeoArrowScatterplotLayer',
+              _sqlroomsBinding: {dataset: 'places'},
+            },
+          ],
+        },
+        datasets: {places: {source: {tableName: 'places'}}},
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data?.pointBinding).toEqual({
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+    });
+  });
 });

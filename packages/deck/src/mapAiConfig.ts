@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import type {DeckMapConfig} from './mapConfig';
+import type {DeckMapPointBinding} from './mapConfigUtils';
 
 const DeckMapDatasetSource = z.union([
   z.looseObject({
@@ -38,6 +39,13 @@ const DeckMapFitToDataConfig = z.looseObject({
   maxZoom: z.number().optional(),
 });
 
+const DeckMapPointBindingParameter = z.object({
+  dataset: z.string().trim().min(1),
+  longitudeColumn: z.string().trim().min(1),
+  latitudeColumn: z.string().trim().min(1),
+  geometryColumn: z.string().trim().min(1).optional(),
+}) satisfies z.ZodType<DeckMapPointBinding>;
+
 /** Validates the portable Deck map config accepted from commands and AI tools. */
 export const DeckMapResourceConfigParameter = z.looseObject({
   spec: z.union([z.string(), z.record(z.string(), z.unknown())]),
@@ -66,6 +74,9 @@ export const DeckMapResourceConfigParameter = z.looseObject({
 export const DeckMapResourceToolParameters = z.object({
   title: z.string().optional().default('Map'),
   config: DeckMapResourceConfigParameter,
+  pointBinding: DeckMapPointBindingParameter.optional().describe(
+    'Structured point provenance for a table-backed dataset. Prefer this over authoring transformSql when longitude and latitude columns should become WKB point geometry.',
+  ),
   tableName: z.string().optional(),
   replaceLayers: z
     .boolean()

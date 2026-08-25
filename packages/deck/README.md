@@ -334,6 +334,11 @@ const result = await createOrUpdateDeckMapResource(
     blockDocumentId,
     mapId,
     config,
+    pointBinding: {
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+    },
     tableName,
     title,
     intent,
@@ -355,10 +360,16 @@ title and uses it as the default block caption. Block metadata is written only
 after the map write succeeds.
 
 Map authoring helpers such as `normalizeDeckMapPointConfig(...)`,
-`normalizeDeckMapFillColor(...)`, `regenerateMapConfigForTable(...)`, and
+`applyDeckMapPointBinding(...)`, `normalizeDeckMapFillColor(...)`,
+`regenerateMapConfigForTable(...)`, and
 dataset-source helpers such as `getFirstDatasetSourceTableName(...)` are
 exported so hosts can normalize AI-authored configs before calling
-`createOrUpdateDeckMapResource(...)`. `normalizeDeckMapPointConfig(...)` only adds
+`createOrUpdateDeckMapResource(...)`. Passing structured `pointBinding` to the
+resource helper applies `applyDeckMapPointBinding(...)`: it generates canonical
+WKB point SQL through `createDeckMapPointTransformSql(...)` and aligns the target
+dataset, point layers, and fit binding. This is the preferred path for standard
+table-backed longitude/latitude maps; raw `transformSql` remains available for
+custom spatial transforms. `normalizeDeckMapPointConfig(...)` only adds
 the standard lon/lat point transform to table-backed datasets that do not
 already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
 and whose resolved table does not expose a native geometry column; native

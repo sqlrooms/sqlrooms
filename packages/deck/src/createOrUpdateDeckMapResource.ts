@@ -6,6 +6,10 @@ import {
   hasSqlOnlyDatasetSource,
 } from './datasetSourceUtils';
 import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
+import {
+  applyDeckMapPointBinding,
+  type DeckMapPointBinding,
+} from './mapConfigUtils';
 
 /**
  * Host callbacks used to coordinate a durable Deck map resource with its block
@@ -54,6 +58,8 @@ export type CreateOrUpdateDeckMapResourceHost = {
 export type CreateOrUpdateDeckMapResourceParams = {
   blockDocumentId: string;
   config: DeckMapConfig;
+  /** Generates canonical point geometry from structured lon/lat provenance. */
+  pointBinding?: DeckMapPointBinding;
   mapId?: string;
   tableName?: string;
   title?: string;
@@ -142,7 +148,13 @@ export async function createOrUpdateDeckMapResource(
         replaceDatasets: params.replaceDatasets,
       })
     : params.config;
-  const resolvedConfig = resolveTableDatasetSources(host, preparedConfig);
+  const pointBoundConfig = params.pointBinding
+    ? applyDeckMapPointBinding({
+        config: preparedConfig,
+        pointBinding: params.pointBinding,
+      })
+    : preparedConfig;
+  const resolvedConfig = resolveTableDatasetSources(host, pointBoundConfig);
   assertDeckMapResourceConfig(resolvedConfig);
   const tableName =
     requestedTable ?? getFirstDatasetSourceTableName(resolvedConfig);

@@ -1,5 +1,6 @@
 import {makeQualifiedTableName, type DataTable} from '@sqlrooms/duckdb';
 import {
+  applyDeckMapPointBinding,
   createDeckMapPointTransformSql,
   normalizeDeckMapPointConfig,
   regenerateMapConfigForTable,
@@ -25,6 +26,69 @@ describe('normalizeDeckMapPointConfig', () => {
         geometryColumn: '__sqlrooms_geom',
       }),
     ).toContain(DECK_TABLE_DATASET_SOURCE_RELATION);
+  });
+
+  it('applies structured point provenance with canonical SQL and bindings', () => {
+    const config = {
+      spec: {
+        layers: [
+          {
+            '@@type': 'GeoJsonLayer',
+            id: 'places',
+            _sqlroomsBinding: {
+              dataset: 'places',
+              longitudeColumn: 'old_lon',
+              latitudeColumn: 'old_lat',
+            },
+          },
+        ],
+      },
+      datasets: {
+        places: {
+          source: {
+            tableName: 'places',
+            transformSql:
+              'SELECT ST_AsWKB(ST_Point(lon, lat)) AS geom FROM __sqlrooms_source',
+          },
+        },
+      },
+      fitToData: {
+        dataset: 'places',
+        longitudeColumn: 'old_lon',
+        latitudeColumn: 'old_lat',
+      },
+    };
+
+    const next = applyDeckMapPointBinding({
+      config,
+      pointBinding: {
+        dataset: 'places',
+        longitudeColumn: 'longitude',
+        latitudeColumn: 'latitude',
+        geometryColumn: 'geom',
+      },
+    });
+
+    expect(next.datasets.places).toEqual({
+      source: {
+        tableName: 'places',
+        transformSql: createDeckMapPointTransformSql({
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+          geometryColumn: 'geom',
+        }),
+      },
+      geometryColumn: 'geom',
+      geometryEncodingHint: 'wkb',
+    });
+    expect(next.spec.layers[0]._sqlroomsBinding).toEqual({
+      dataset: 'places',
+      geometryColumn: 'geom',
+    });
+    expect(next.fitToData).toEqual({
+      dataset: 'places',
+      geometryColumn: 'geom',
+    });
   });
 
   it('injects transformSql and geometry bindings for lon/lat table sources', () => {
