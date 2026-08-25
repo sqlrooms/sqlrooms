@@ -8,6 +8,7 @@ import {
   readOptionValue,
   shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
+import {waitForCliApi} from './cli-dev-readiness.mjs';
 
 /**
  * Dev entrypoint for this monorepo.
@@ -267,12 +268,13 @@ if (target !== 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
   console.log(
-    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=${proxyCliDevWebSockets} ./node_modules/.bin/vite --host --port ${uiPort})`,
-  );
-  console.log(
     `(cd python/sqlrooms && SQLROOMS_CLI_DEV_ARGS=${JSON.stringify(
       pythonCliArgs,
     )} node scripts/dev.mjs)`,
+  );
+  console.log(`(wait for http://${proxyHost}:${apiPort}/api/status)`);
+  console.log(
+    `(cd apps/sqlrooms-cli-ui && SQLROOMS_CLI_API_PROXY_TARGET=http://${proxyHost}:${apiPort} VITE_SQLROOMS_CLI_PROXY_WEBSOCKETS=${proxyCliDevWebSockets} ./node_modules/.bin/vite --host --port ${uiPort})`,
   );
   process.exit(0);
 }
@@ -361,6 +363,22 @@ process.on('SIGTERM', () => {
 if (target === 'cli') {
   const {apiPort, proxyHost, uiPort} = await getCliDevPorts(cliArgs);
   const pythonCliArgs = getPythonCliDevArgs(cliArgs, apiPort, uiPort);
+  startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
+    command: process.execPath,
+    cwd: path.resolve('python/sqlrooms'),
+    env: {
+      SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
+    },
+  });
+  const apiStatusUrl = `http://${proxyHost}:${apiPort}/api/status`;
+  try {
+    await waitForCliApi(apiStatusUrl);
+  } catch (error) {
+    exiting = true;
+    stopChildren();
+    console.error('SQLRooms CLI API failed to become ready.', error);
+    process.exit(1);
+  }
   startProcess(
     'sqlrooms CLI UI dev server',
     ['--host', '--port', String(uiPort)],
@@ -373,13 +391,6 @@ if (target === 'cli') {
       },
     },
   );
-  startProcess('sqlrooms Python CLI dev server', ['scripts/dev.mjs'], {
-    command: process.execPath,
-    cwd: path.resolve('python/sqlrooms'),
-    env: {
-      SQLROOMS_CLI_DEV_ARGS: JSON.stringify(pythonCliArgs),
-    },
-  });
 } else {
   startProcess(
     'turbo dependency dev watchers',
