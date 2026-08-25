@@ -550,12 +550,13 @@ export const isNumericDuckType = (type: string) =>
 
 /**
  * Extracts a numeric value from an Arrow Table at the specified column and row index.
- * Handles both column name and index-based access. Converts BigInt values to numbers.
+ * Converts scalar values to numbers, or unwraps and converts the first element
+ * when the value is an array. Returns NaN for nullish values.
  *
  * @param res - The Arrow Table containing the data
  * @param column - The column name or index (0-based) to read from. Defaults to first column (0)
  * @param index - The row index (0-based) to read from. Defaults to first row (0)
- * @returns The numeric value at the specified position, or NaN if the value is null/undefined
+ * @returns The converted numeric value, or NaN if the value is nullish
  * @example
  * const value = getColValAsNumber(table, "amount", 0)
  */
@@ -570,8 +571,8 @@ export function getColValAsNumber(
   if (v === undefined || v === null) {
     return NaN;
   }
-  // if it's an array (can be returned by duckdb as bigint)
-  return Number(v[0] ?? v);
+  // BigInts can be returned wrapped in an array by DuckDB connectors.
+  return Number(Array.isArray(v) ? v[0] : v);
 }
 
 /**
