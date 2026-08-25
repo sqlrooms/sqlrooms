@@ -10,11 +10,26 @@ import {
   shouldProxyCliDevWebSockets,
 } from './cli-dev-args.mjs';
 
-test('the root launcher preserves the end-of-options marker', () => {
+test('the direct root launcher preserves the end-of-options marker', () => {
   assert.deepEqual(getForwardedCliArgs(['--dry', '--', '-dev.db']), [
     '--',
     '-dev.db',
   ]);
+});
+
+test('the package script drops its separator and preserves the user marker', () => {
+  assert.deepEqual(
+    getForwardedCliArgs(['--dry', '--', '--port', '4274'], {
+      stripScriptSeparator: true,
+    }),
+    ['--port', '4274'],
+  );
+  assert.deepEqual(
+    getForwardedCliArgs(['--dry', '--', '--', '-dev.db'], {
+      stripScriptSeparator: true,
+    }),
+    ['--', '-dev.db'],
+  );
 });
 
 test('option parsing stops at the end-of-options marker', () => {

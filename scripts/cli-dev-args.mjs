@@ -1,11 +1,11 @@
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 
-/** Preserve the end-of-options marker when forwarding CLI arguments. */
-export function getForwardedCliArgs(args) {
+/** Remove a package manager's separator while preserving a user-supplied one. */
+export function getForwardedCliArgs(args, {stripScriptSeparator = false} = {}) {
   const separatorIndex = args.indexOf('--');
   if (separatorIndex === -1) return args;
-  return args.slice(separatorIndex);
+  return args.slice(separatorIndex + (stripScriptSeparator ? 1 : 0));
 }
 
 /** Read a separate or equals-form CLI option value. */

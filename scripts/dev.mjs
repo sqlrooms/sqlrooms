@@ -56,7 +56,9 @@ const controlArgs = getControlArgs(restArgs);
 const forwardedCliArgs =
   restArgs.indexOf('--') === -1
     ? controlArgs.filter((arg) => arg !== '--dry' && !arg.startsWith('--dry='))
-    : getForwardedCliArgs(restArgs);
+    : getForwardedCliArgs(restArgs, {
+        stripScriptSeparator: Boolean(process.env.npm_execpath),
+      });
 const cliArgs = target === 'cli' ? forwardedCliArgs : [];
 const proxyCliDevWebSockets = shouldProxyCliDevWebSockets(cliArgs);
 const turboArgsForTarget = target === 'cli' ? [] : restArgs;
