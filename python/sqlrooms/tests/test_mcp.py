@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import mcp.types as types
 import pytest
 from mcp import Client
+from starlette.websockets import WebSocketDisconnect
 
 from sqlrooms.web.mcp import SqlroomsMcpService
 from sqlrooms.web.mcp_bridge import McpBridgeBroker, McpBridgeError
@@ -47,6 +48,30 @@ def test_mcp_bridge_status_reports_expired_lease_as_waiting(monkeypatch):
     monotonic_time = 16.0
 
     assert broker.status()["status"] == "waiting"
+
+
+@pytest.mark.asyncio
+async def test_mcp_bridge_ignores_disconnect_before_authentication():
+    class DisconnectedWebSocket:
+        accepted = False
+        close_called = False
+
+        async def accept(self):
+            self.accepted = True
+
+        async def receive_json(self):
+            raise WebSocketDisconnect(code=1006)
+
+        async def close(self, **_kwargs):
+            self.close_called = True
+
+    websocket = DisconnectedWebSocket()
+    broker = McpBridgeBroker("token")
+
+    await broker.handle_websocket(websocket)
+
+    assert websocket.accepted is True
+    assert websocket.close_called is False
 
 
 @pytest.mark.asyncio
