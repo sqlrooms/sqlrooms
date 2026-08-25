@@ -109,6 +109,41 @@ describe('normalizeDeckMapPointConfig', () => {
     });
   });
 
+  it.each([
+    {
+      bindingName: 'longitudeColumn',
+      longitudeColumn: 'missing_longitude',
+      latitudeColumn: 'latitude',
+    },
+    {
+      bindingName: 'latitudeColumn',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'missing_latitude',
+    },
+  ])(
+    'rejects a missing $bindingName before generating point SQL',
+    ({bindingName, longitudeColumn, latitudeColumn}) => {
+      expect(() =>
+        applyDeckMapPointBinding({
+          config: {
+            spec: {layers: []},
+            datasets: {places: {source: {tableName: 'places'}}},
+          },
+          pointBinding: {
+            dataset: 'places',
+            longitudeColumn,
+            latitudeColumn,
+          },
+          sourceColumns: placesTable.columns,
+        }),
+      ).toThrow(
+        `Point binding ${bindingName} "${
+          bindingName === 'longitudeColumn' ? longitudeColumn : latitudeColumn
+        }" was not found in source columns.`,
+      );
+    },
+  );
+
   it('injects transformSql and geometry bindings for lon/lat table sources', () => {
     const config = {
       spec: {

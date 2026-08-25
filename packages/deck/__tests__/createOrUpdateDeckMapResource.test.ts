@@ -177,6 +177,28 @@ describe('createOrUpdateDeckMapResource', () => {
     expect(h.writeMap).not.toHaveBeenCalled();
   });
 
+  test('rejects missing point coordinate columns before writing', async () => {
+    const h = host();
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'lon',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding longitudeColumn "lon" was not found in source columns.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
   test('canonicalizes table-backed dataset sources before writing', async () => {
     const h = host({
       findTable: jest.fn((tableName) =>

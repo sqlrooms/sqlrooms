@@ -161,6 +161,15 @@ export async function createOrUpdateDeckMapResource(
   )
     ? host.findTable(pointBindingDataset.source.tableName)
     : undefined;
+  if (
+    params.pointBinding &&
+    isDeckMapTableDatasetSource(pointBindingDataset?.source) &&
+    !pointBindingTable
+  ) {
+    throw new Error(
+      `Dataset "${params.pointBinding.dataset.trim()}" table "${pointBindingDataset.source.tableName}" was not found.`,
+    );
+  }
   const pointBoundConfig = params.pointBinding
     ? applyDeckMapPointBinding({
         config: preparedConfig,

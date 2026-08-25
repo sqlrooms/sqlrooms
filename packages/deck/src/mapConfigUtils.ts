@@ -391,11 +391,20 @@ export function applyDeckMapPointBinding<
 
   const geometryColumn =
     pointBinding.geometryColumn?.trim() || DEFAULT_GEOMETRY_COLUMN;
-  if (
-    options.sourceColumns.some(
-      (column) => column.name.toLowerCase() === geometryColumn.toLowerCase(),
-    )
-  ) {
+  const sourceColumnNames = new Set(
+    options.sourceColumns.map((column) => column.name.toLowerCase()),
+  );
+  for (const [bindingName, columnName] of [
+    ['longitudeColumn', longitudeColumn],
+    ['latitudeColumn', latitudeColumn],
+  ] as const) {
+    if (!sourceColumnNames.has(columnName.toLowerCase())) {
+      throw new Error(
+        `Point binding ${bindingName} "${columnName}" was not found in source columns.`,
+      );
+    }
+  }
+  if (sourceColumnNames.has(geometryColumn.toLowerCase())) {
     throw new Error(
       `Point binding geometryColumn "${geometryColumn}" conflicts with an existing source column.`,
     );
