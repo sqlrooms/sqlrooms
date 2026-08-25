@@ -35,6 +35,7 @@ describe('normalizeDeckMapPointConfig', () => {
           {
             '@@type': 'GeoJsonLayer',
             id: 'places',
+            getPosition: '@@=[old_lon, old_lat]',
             _sqlroomsBinding: {
               dataset: 'places',
               longitudeColumn: 'old_lon',
@@ -58,6 +59,13 @@ describe('normalizeDeckMapPointConfig', () => {
         longitudeColumn: 'old_lon',
         latitudeColumn: 'old_lat',
       },
+      interaction: {
+        type: 'point-radius-brush' as const,
+        dataset: 'places',
+        longitudeColumn: 'old_lon',
+        latitudeColumn: 'old_lat',
+        radiusMeters: 1000,
+      },
     };
 
     const next = applyDeckMapPointBinding({
@@ -68,6 +76,7 @@ describe('normalizeDeckMapPointConfig', () => {
         latitudeColumn: 'latitude',
         geometryColumn: 'geom',
       },
+      sourceColumns: placesTable.columns,
     });
 
     expect(next.datasets.places).toEqual({
@@ -86,9 +95,17 @@ describe('normalizeDeckMapPointConfig', () => {
       dataset: 'places',
       geometryColumn: 'geom',
     });
+    expect(next.spec.layers[0]).not.toHaveProperty('getPosition');
     expect(next.fitToData).toEqual({
       dataset: 'places',
       geometryColumn: 'geom',
+    });
+    expect(next.interaction).toEqual({
+      type: 'point-radius-brush',
+      dataset: 'places',
+      longitudeColumn: 'longitude',
+      latitudeColumn: 'latitude',
+      radiusMeters: 1000,
     });
   });
 

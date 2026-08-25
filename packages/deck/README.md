@@ -367,9 +367,12 @@ exported so hosts can normalize AI-authored configs before calling
 `createOrUpdateDeckMapResource(...)`. Passing structured `pointBinding` to the
 resource helper applies `applyDeckMapPointBinding(...)`: it generates canonical
 WKB point SQL through `createDeckMapPointTransformSql(...)` and aligns the target
-dataset, point layers, and fit binding. This is the preferred path for standard
-table-backed longitude/latitude maps; raw `transformSql` remains available for
-custom spatial transforms. `normalizeDeckMapPointConfig(...)` only adds
+dataset, point layers, brush interaction, and fit binding. The host table lookup
+also supplies source columns so a generated geometry alias that would duplicate
+an existing column is rejected before durable state is written. This is the
+preferred path for standard table-backed longitude/latitude maps; raw
+`transformSql` remains available for custom spatial transforms.
+`normalizeDeckMapPointConfig(...)` only adds
 the standard lon/lat point transform to table-backed datasets that do not
 already declare `geometryColumn`, `source.sqlQuery`, or `source.transformSql`
 and whose resolved table does not expose a native geometry column; native

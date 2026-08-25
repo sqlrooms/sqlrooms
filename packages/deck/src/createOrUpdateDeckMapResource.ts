@@ -8,6 +8,7 @@ import {
 import {assertDeckMapResourceConfig} from './mapResourceAuthoring';
 import {
   applyDeckMapPointBinding,
+  type DeckMapConfigColumn,
   type DeckMapPointBinding,
 } from './mapConfigUtils';
 
@@ -44,7 +45,11 @@ export type CreateOrUpdateDeckMapResourceHost = {
     config: DeckMapConfig;
     selectedTable?: string;
   }) => void | Promise<void>;
-  findTable: (tableName: string) => {tableIdentity: string} | undefined;
+  findTable: (
+    tableName: string,
+  ) =>
+    | {tableIdentity: string; columns: readonly DeckMapConfigColumn[]}
+    | undefined;
   prepareConfig?: (options: {
     config: DeckMapConfig;
     existingMapConfig?: DeckMapConfig;
@@ -148,10 +153,19 @@ export async function createOrUpdateDeckMapResource(
         replaceDatasets: params.replaceDatasets,
       })
     : params.config;
+  const pointBindingDataset = params.pointBinding
+    ? preparedConfig.datasets[params.pointBinding.dataset.trim()]
+    : undefined;
+  const pointBindingTable = isDeckMapTableDatasetSource(
+    pointBindingDataset?.source,
+  )
+    ? host.findTable(pointBindingDataset.source.tableName)
+    : undefined;
   const pointBoundConfig = params.pointBinding
     ? applyDeckMapPointBinding({
         config: preparedConfig,
         pointBinding: params.pointBinding,
+        sourceColumns: pointBindingTable?.columns ?? [],
       })
     : preparedConfig;
   const resolvedConfig = resolveTableDatasetSources(host, pointBoundConfig);

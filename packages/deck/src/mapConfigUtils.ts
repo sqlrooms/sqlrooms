@@ -338,9 +338,11 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
     const geometryBinding = {...binding};
     delete geometryBinding.longitudeColumn;
     delete geometryBinding.latitudeColumn;
+    const pointLayer = {...layer};
+    delete pointLayer.getPosition;
 
     return {
-      ...layer,
+      ...pointLayer,
       _sqlroomsBinding: {
         ...geometryBinding,
         dataset:
@@ -362,7 +364,11 @@ function normalizeDeckMapPointLayers<T extends unknown[]>(options: {
  */
 export function applyDeckMapPointBinding<
   T extends DeckMapDashboardPanelConfig,
->(options: {config: T; pointBinding: DeckMapPointBinding}): T {
+>(options: {
+  config: T;
+  pointBinding: DeckMapPointBinding;
+  sourceColumns: readonly DeckMapConfigColumn[];
+}): T {
   const {config, pointBinding} = options;
   const datasetId = pointBinding.dataset.trim();
   const longitudeColumn = pointBinding.longitudeColumn.trim();
@@ -385,6 +391,15 @@ export function applyDeckMapPointBinding<
 
   const geometryColumn =
     pointBinding.geometryColumn?.trim() || DEFAULT_GEOMETRY_COLUMN;
+  if (
+    options.sourceColumns.some(
+      (column) => column.name.toLowerCase() === geometryColumn.toLowerCase(),
+    )
+  ) {
+    throw new Error(
+      `Point binding geometryColumn "${geometryColumn}" conflicts with an existing source column.`,
+    );
+  }
   const datasetIds = Object.keys(config.datasets);
   let parsedSpec: unknown = config.spec;
   if (typeof parsedSpec === 'string') {
@@ -425,10 +440,16 @@ export function applyDeckMapPointBinding<
       maxZoom: 12,
     };
   }
+  const interaction =
+    config.interaction?.type === 'point-radius-brush' &&
+    config.interaction.dataset === datasetId
+      ? {...config.interaction, longitudeColumn, latitudeColumn}
+      : config.interaction;
 
   return {
     ...config,
     spec,
+    ...(interaction !== config.interaction ? {interaction} : {}),
     datasets: {
       ...config.datasets,
       [datasetId]: {

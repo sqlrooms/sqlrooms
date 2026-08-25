@@ -26,7 +26,10 @@ function host(overrides: Partial<CreateOrUpdateDeckMapResourceHost> = {}) {
     updateBlockMetadata: jest.fn(),
     ensureMap: jest.fn(),
     writeMap: jest.fn(),
-    findTable: jest.fn(() => ({tableIdentity: 'main.places'})),
+    findTable: jest.fn(() => ({
+      tableIdentity: 'main.places',
+      columns: [{name: 'longitude'}, {name: 'latitude'}],
+    })),
     ...overrides,
   };
   return value;
@@ -143,11 +146,45 @@ describe('createOrUpdateDeckMapResource', () => {
     );
   });
 
+  test('rejects point geometry aliases that collide with source columns', async () => {
+    const h = host({
+      findTable: jest.fn(() => ({
+        tableIdentity: 'main.places',
+        columns: [
+          {name: 'longitude'},
+          {name: 'latitude'},
+          {name: '__sqlrooms_geom'},
+        ],
+      })),
+    });
+
+    await expect(
+      createOrUpdateDeckMapResource(h, {
+        blockDocumentId: 'document-1',
+        config,
+        pointBinding: {
+          dataset: 'places',
+          longitudeColumn: 'longitude',
+          latitudeColumn: 'latitude',
+        },
+        createMapId: () => 'map-1',
+      }),
+    ).rejects.toThrow(
+      'Point binding geometryColumn "__sqlrooms_geom" conflicts with an existing source column.',
+    );
+    expect(h.createMapBlock).not.toHaveBeenCalled();
+    expect(h.ensureMap).not.toHaveBeenCalled();
+    expect(h.writeMap).not.toHaveBeenCalled();
+  });
+
   test('canonicalizes table-backed dataset sources before writing', async () => {
     const h = host({
       findTable: jest.fn((tableName) =>
         tableName === 'analytics.events'
-          ? {tableIdentity: '"analytics"."events"'}
+          ? {
+              tableIdentity: '"analytics"."events"',
+              columns: [{name: 'longitude'}, {name: 'latitude'}],
+            }
           : undefined,
       ),
     });
