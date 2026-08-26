@@ -173,6 +173,10 @@ const tools = {
 };
 ```
 
+The block-listing tool returns the target `blockDocumentId` and a
+`documentExists` flag alongside `blocks`, so agents can distinguish an empty
+document from a missing or incompatible artifact.
+
 `BlockDocumentAiAdapter.addBlock` may return a block ID synchronously or from a
 promise. Hosts that already expose block-document mutations as room commands can
 therefore use `createBlockDocumentCommandAiAdapter` to invoke the canonical

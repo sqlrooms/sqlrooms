@@ -166,6 +166,8 @@ describe('block document AI helpers', () => {
 
     expect(result).toEqual({
       success: true,
+      blockDocumentId: 'document-1',
+      documentExists: true,
       blocks: [
         {
           blockId: 'block-1',
@@ -229,6 +231,8 @@ describe('block document AI helpers', () => {
 
     expect(result).toEqual({
       success: true,
+      blockDocumentId: 'document-1',
+      documentExists: true,
       blocks: [
         {
           blockId: 'block-1',
@@ -246,6 +250,38 @@ describe('block document AI helpers', () => {
           ],
         },
       ],
+    });
+  });
+
+  it('distinguishes an empty block document from a missing one', async () => {
+    const blockDocumentAdapter: BlockDocumentAiAdapter = {
+      setCurrentBlockDocument: () => {},
+      ensureBlockDocument: () => {},
+      getBlocks: (blockDocumentId) =>
+        blockDocumentId === 'empty-document' ? [] : undefined,
+      addBlock: (_blockDocumentId, block) => block.id,
+    };
+
+    const emptyDocumentTool = createListBlockDocumentBlocksTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'empty-document',
+    });
+    const missingDocumentTool = createListBlockDocumentBlocksTool({
+      blockDocumentAdapter,
+      blockDocumentId: 'missing-document',
+    });
+
+    await expect((emptyDocumentTool as any).execute({})).resolves.toEqual({
+      success: true,
+      blockDocumentId: 'empty-document',
+      documentExists: true,
+      blocks: [],
+    });
+    await expect((missingDocumentTool as any).execute({})).resolves.toEqual({
+      success: true,
+      blockDocumentId: 'missing-document',
+      documentExists: false,
+      blocks: [],
     });
   });
 
