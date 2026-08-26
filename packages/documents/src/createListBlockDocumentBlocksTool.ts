@@ -39,8 +39,8 @@ type BlockDocumentToolOutput<T> =
   | {success: false; errorMessage: string};
 
 type ListBlockDocumentBlocksToolOutput = BlockDocumentToolOutput<{
-  blockDocumentId?: string;
-  documentExists?: boolean;
+  blockDocumentId: string;
+  documentExists: boolean;
   blocks?: BlockDocumentBlockSummary[];
 }>;
 
