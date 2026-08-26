@@ -39,6 +39,8 @@ type BlockDocumentToolOutput<T> =
   | {success: false; errorMessage: string};
 
 type ListBlockDocumentBlocksToolOutput = BlockDocumentToolOutput<{
+  blockDocumentId: string;
+  documentExists: boolean;
   blocks?: BlockDocumentBlockSummary[];
 }>;
 
@@ -130,10 +132,12 @@ export function createListBlockDocumentBlocksTool({
     inputSchema: ListBlockDocumentBlocksToolInput,
     execute: async () => {
       try {
-        const blocks = blockDocumentAdapter.getBlocks(blockDocumentId) ?? [];
+        const nodes = blockDocumentAdapter.getBlocks(blockDocumentId);
         return {
           success: true,
-          blocks: blocks
+          blockDocumentId,
+          documentExists: nodes !== undefined,
+          blocks: (nodes ?? [])
             .map((node, index) =>
               (() => {
                 const block = blockDocumentNodeToBlock(node);
