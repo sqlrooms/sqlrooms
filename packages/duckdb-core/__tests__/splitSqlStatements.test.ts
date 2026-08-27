@@ -1,4 +1,8 @@
-import {separateLastStatement, splitSqlStatements} from '../src/duckdb-utils';
+import {
+  makeLimitQuery,
+  separateLastStatement,
+  splitSqlStatements,
+} from '../src/duckdb-utils';
 
 describe('splitSqlStatements', () => {
   it('ignores semicolons in quoted strings and identifiers', () => {
@@ -83,5 +87,14 @@ describe('separateLastStatement', () => {
       precedingStatements: ['-- setup\nCREATE TEMP TABLE t AS SELECT 1'],
       lastStatement: 'SELECT/* final */ * FROM t',
     });
+  });
+
+  it('preserves dollar-quoted comment text when rewriting the last statement', () => {
+    const query = `SELECT $$one; -- not a comment$$ AS value`;
+    const {lastStatement} = separateLastStatement(query);
+
+    expect(
+      makeLimitQuery(lastStatement, {limit: 10, sanitize: false}),
+    ).toContain(query);
   });
 });
