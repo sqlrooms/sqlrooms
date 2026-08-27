@@ -265,21 +265,100 @@ describe('NodeDuckDbConnector', () => {
       expect(table.getChild('answer')?.get(0)).toBe(42);
     });
 
-    it('should return rows from INSERT RETURNING', async () => {
+    it.each([
+      ['line', 'SELECT 42 as answer; -- explanation'],
+      ['block', 'SELECT 42 as answer; /* explanation */'],
+    ])(
+      'should accept a terminator before a trailing %s comment',
+      async (_, sql) => {
+        const table = await connector.query(sql);
+
+        expect(table.getChild('answer')?.get(0)).toBe(42);
+      },
+    );
+
+    it('should preserve rows and types from INSERT RETURNING', async () => {
       await connector.query(
-        'CREATE TABLE returning_test (id INTEGER, payload BLOB)',
+        `CREATE TABLE returning_test (
+          id INTEGER,
+          ts TIMESTAMP,
+          d DATE,
+          dec_value DECIMAL(10,4),
+          lst INTEGER[],
+          strct STRUCT(a INTEGER),
+          payload BLOB
+        )`,
       );
 
-      const table = await connector.query(
-        "INSERT INTO returning_test VALUES (7, '\\xFF'::BLOB) RETURNING *",
-      );
+      const table = await connector.query(`
+        INSERT INTO returning_test VALUES (
+          7,
+          TIMESTAMP '2024-01-02 03:04:05.123456',
+          DATE '2024-01-02',
+          1.25,
+          [1, 2],
+          {'a': 1},
+          '\\xFF'::BLOB
+        ) RETURNING *, NULL::INTEGER AS typed_null
+      `);
 
       expect(table.numRows).toBe(1);
       expect(table.getChild('id')?.get(0)).toBe(7);
+      const typeOf = (name: string) => String(table.getChild(name)?.type);
+      expect(typeOf('id')).toBe('Int32');
+      expect(typeOf('ts')).toBe('Timestamp<MICROSECOND>');
+      expect(typeOf('d')).toBe('Date32<DAY>');
+      expect(typeOf('dec_value')).toMatch(/^Decimal/);
+      expect(typeOf('lst')).toBe('List<Int32>');
+      expect(typeOf('strct')).toBe('Struct<{a:Int32}>');
+      expect(typeOf('typed_null')).toBe('Int32');
+      expect(table.getChild('typed_null')?.get(0)).toBeNull();
       expect(table.getChild('payload')?.type).toBeInstanceOf(arrow.Binary);
       expect(
         Array.from(table.getChild('payload')?.get(0) as Uint8Array),
       ).toEqual([0xff]);
+    });
+
+    it('should serialize concurrent operations on the shared connection', async () => {
+      const connection = connector.getConnection();
+      const extractStatements = connection.extractStatements.bind(connection);
+      let releaseFirst!: () => void;
+      const firstCanContinue = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      let markFirstStarted!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        markFirstStarted = resolve;
+      });
+      let shouldBlockFirst = true;
+      let secondStarted = false;
+      connection.extractStatements = async (sql) => {
+        if (sql.includes('first_value') && shouldBlockFirst) {
+          shouldBlockFirst = false;
+          markFirstStarted();
+          await firstCanContinue;
+        }
+        if (sql.includes('second_value')) {
+          secondStarted = true;
+        }
+        return extractStatements(sql);
+      };
+
+      const first = connector.query('SELECT 1 AS first_value');
+      await firstStarted;
+      const second = connector.query('SELECT 2 AS second_value');
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(secondStarted).toBe(false);
+      } finally {
+        releaseFirst();
+      }
+
+      const [firstTable, secondTable] = await Promise.all([first, second]);
+      expect(firstTable.getChild('first_value')?.get(0)).toBe(1);
+      expect(secondTable.getChild('second_value')?.get(0)).toBe(2);
+      expect(secondStarted).toBe(true);
+      connection.extractStatements = extractStatements;
     });
 
     it('should surface the real error for a broken query', async () => {

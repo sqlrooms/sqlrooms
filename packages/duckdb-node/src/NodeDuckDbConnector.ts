@@ -75,6 +75,16 @@ export function createNodeDuckDbConnector(
 
   let instance: DuckDBInstance | null = null;
   let connection: DuckDBConnection | null = null;
+  let operationQueue = Promise.resolve();
+
+  const enqueueOperation = <T>(operation: () => Promise<T>): Promise<T> => {
+    const result = operationQueue.then(operation);
+    operationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
 
   const ensureConnection = (): DuckDBConnection => {
     if (!connection) {
@@ -95,6 +105,7 @@ export function createNodeDuckDbConnector(
     },
 
     async destroyInternal() {
+      await operationQueue;
       if (connection) {
         try {
           connection.closeSync();
@@ -113,10 +124,12 @@ export function createNodeDuckDbConnector(
       sql: string,
       signal: AbortSignal,
     ): Promise<arrow.Table<T>> {
-      if (signal.aborted) {
-        throw new DOMException('Query was cancelled', 'AbortError');
-      }
-      return queryToArrowTable<T>(ensureConnection(), sql);
+      return enqueueOperation(async () => {
+        if (signal.aborted) {
+          throw new DOMException('Query was cancelled', 'AbortError');
+        }
+        return queryToArrowTable<T>(ensureConnection(), sql);
+      });
     },
 
     async loadArrowInternal(
@@ -148,7 +161,9 @@ export function createNodeDuckDbConnector(
 
       const qualifiedName = buildQualifiedName(tableName, opts?.schema);
       const sql = objectsToCreateTableSql(data, qualifiedName);
-      await ensureConnection().run(sql);
+      await enqueueOperation(async () => {
+        await ensureConnection().run(sql);
+      });
     },
 
     async loadFileInternal(
@@ -168,7 +183,9 @@ export function createNodeDuckDbConnector(
           ? `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`
           : `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
 
-      await ensureConnection().run(sql);
+      await enqueueOperation(async () => {
+        await ensureConnection().run(sql);
+      });
     },
   };
 

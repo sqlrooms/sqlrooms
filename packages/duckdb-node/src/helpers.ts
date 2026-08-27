@@ -1,7 +1,6 @@
 import {
   DuckDBConnection,
   DuckDBResultReader,
-  DuckDBTypeId,
   ResultReturnType,
   StatementType,
 } from '@duckdb/node-api';
@@ -154,23 +153,74 @@ function emptyTable<T extends arrow.TypeMap = any>(): arrow.Table<T> {
   return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
 }
 
-/** Converts a materialized non-SELECT result to Arrow without dropping rows. */
-function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
+let nextResultTableId = 0;
+
+/** Quotes a DuckDB identifier. */
+function quoteIdentifier(identifier: string): string {
+  return `"${identifier.replaceAll('"', '""')}"`;
+}
+
+/**
+ * Converts a materialized non-SELECT result to Arrow without losing its
+ * declared DuckDB types.
+ *
+ * The native result values are copied through a temporary table, then that
+ * table is serialized by `to_arrow_ipc()`. This keeps the fallback path on the
+ * same type-exact conversion mechanism as ordinary SELECT results.
+ */
+async function resultReaderToArrowTable<T extends arrow.TypeMap = any>(
+  conn: DuckDBConnection,
   reader: DuckDBResultReader,
-): arrow.Table<T> {
-  const columns = reader.getColumnsJS();
-  const vectors: Record<string, arrow.Vector> = {};
-  for (let i = 0; i < reader.columnCount; i++) {
-    const type =
-      reader.columnTypeId(i) === DuckDBTypeId.BLOB
-        ? new arrow.Binary()
-        : undefined;
-    const values = columns[i] ?? [];
-    vectors[reader.columnName(i)] = type
-      ? arrow.vectorFromArray(values, type)
-      : arrow.vectorFromArray(values);
+): Promise<arrow.Table<T>> {
+  if (reader.columnCount === 0 || reader.currentRowCount === 0) {
+    return emptyTable<T>();
   }
-  return new arrow.Table(vectors) as unknown as arrow.Table<T>;
+
+  const tableName = `__sqlrooms_arrow_result_${nextResultTableId++}`;
+  const columnTypes = reader.columnTypes();
+  const columnDefinitions = columnTypes
+    .map((type, i) => `c${i} ${type}`)
+    .join(', ');
+  await conn.run(`CREATE TEMP TABLE ${tableName} (${columnDefinitions})`);
+
+  let appender: Awaited<ReturnType<DuckDBConnection['createAppender']>> | null =
+    null;
+  try {
+    appender = await conn.createAppender(tableName);
+    const columns = reader.getColumns();
+    for (let row = 0; row < reader.currentRowCount; row++) {
+      for (let column = 0; column < reader.columnCount; column++) {
+        appender.appendValue(
+          columns[column]?.[row] ?? null,
+          columnTypes[column],
+        );
+      }
+      appender.endRow();
+    }
+    appender.closeSync();
+    appender = null;
+
+    const projection = reader
+      .columnNames()
+      .map((name, i) => `c${i} AS ${quoteIdentifier(name)}`)
+      .join(', ');
+    return await queryToArrowTableViaIpc<T>(
+      conn,
+      `SELECT ${projection} FROM ${tableName}`,
+    );
+  } finally {
+    appender?.closeSync();
+    await conn.run(`DROP TABLE IF EXISTS ${tableName}`);
+  }
+}
+
+/**
+ * Removes one top-level statement terminator before trailing SQL trivia.
+ * Comments stay attached to the query for diagnostics and source fidelity.
+ */
+function stripTrailingStatementTerminator(sql: string): string {
+  const trailingTrivia = String.raw`(?:\s|--[^\r\n]*(?:\r?\n|$)|\/\*[\s\S]*?\*\/)*`;
+  return sql.replace(new RegExp(`;(${trailingTrivia})$`), '$1');
 }
 
 /**
@@ -187,9 +237,9 @@ async function queryToArrowTableViaIpc<T extends arrow.TypeMap = any>(
 ): Promise<arrow.Table<T>> {
   // A statement terminator is valid at the top level but not inside the
   // parenthesized subquery passed to `to_arrow_ipc()`.
-  const normalizedSql = sql.replace(/;(\s*)$/, '$1');
+  const normalizedSql = stripTrailingStatementTerminator(sql);
   const reader = await conn.runAndReadAll(
-    `SELECT * FROM to_arrow_ipc((${normalizedSql}))`,
+    `SELECT * FROM to_arrow_ipc((${normalizedSql}\n))`,
   );
   const buffers = reader.getColumnsJS()[0] as Uint8Array[] | undefined;
   if (!buffers?.length) {
@@ -218,7 +268,7 @@ async function runStatementToArrow<T extends arrow.TypeMap = any>(
     }
     const reader = await conn.runAndReadAll(sql);
     return reader.returnType === ResultReturnType.QUERY_RESULT
-      ? resultReaderToArrowTable<T>(reader)
+      ? resultReaderToArrowTable<T>(conn, reader)
       : emptyTable<T>();
   }
 }
