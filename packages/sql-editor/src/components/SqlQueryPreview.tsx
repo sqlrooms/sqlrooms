@@ -58,7 +58,7 @@ export const SqlQueryPreview: React.FC<SqlQueryPreviewProps> = ({
     // Apply limit to the query
     const limited = makeLimitQuery(lastStatement, {
       limit,
-      sanitize: true,
+      sanitize: false,
     });
 
     return {limitedQuery: limited, error: null};
